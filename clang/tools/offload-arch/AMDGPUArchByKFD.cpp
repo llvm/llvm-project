@@ -34,10 +34,8 @@ constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
 
 // For A0, print gfx1250-strict to match rocminfo
-std::string strictHelper(long GFXVersion, long ASICRevision) {
-  if (GFXVersion == GFX1250_VERSION && ASICRevision == 0)
-    return "-strict";
-  return "";
+static StringRef getRevisionSuffix(long GFXVersion, long ASICRevision) {
+  return (GFXVersion == GFX1250_VERSION && ASICRevision == 0) ? "-strict" : "";
 }
 
 // Exposed for testing
@@ -81,8 +79,8 @@ int printGPUsByKFD(StringRef NodePath) {
         if (Line.drop_while([](char C) { return std::isspace(C); })
                 .consumeInteger(10, GFXVersion))
           return 1;
-        // ' ' is necessary to differentiate capability and capability2
-      } else if (Line.consume_front("capability ")) {
+        // Differentiate between capability and capability2
+      } else if (Line.consume_front("capability") && !Line.starts_with('2')) {
         if (Line.drop_while([](char C) { return std::isspace(C); })
                 .consumeInteger(10, Capability))
           return 1;
@@ -102,7 +100,7 @@ int printGPUsByKFD(StringRef NodePath) {
   for (const auto &[Node, GFXVersion, ASICRevision] : Devices) {
     outs() << "gfx" << getMajor(GFXVersion) << getMinor(GFXVersion)
            << format_hex_no_prefix(getStep(GFXVersion), 1)
-           << strictHelper(GFXVersion, ASICRevision) << '\n';
+           << getRevisionSuffix(GFXVersion, ASICRevision) << '\n';
   }
 
   return 0;
