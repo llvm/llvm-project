@@ -8019,10 +8019,10 @@ public:
   bool CheckMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
                        CastKind &Kind);
 
-  // CheckCoopMatrixCast - Check type constraints for cooperative matrix casts.
-  // We allow casting between cooperative matrixes of the same scope, use, and
-  // same dimensions i.e. when they have the same number of rows and columns.
-  // Returns true if the cast is invalid.
+  /// Check type constraints for cooperative matrix casts. We allow casting
+  /// between cooperative matrixes of the same scope, use, and same dimensions
+  /// i.e. when they have the same number of rows and columns. Returns true if
+  /// the cast is invalid.
   bool CheckCoopMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
                            CastKind &Kind);
 
@@ -15324,7 +15324,6 @@ public:
   /// Run the required checks for the extended vector type.
   QualType BuildExtVectorType(QualType T, Expr *ArraySize,
                               SourceLocation AttrLoc);
-
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);
 

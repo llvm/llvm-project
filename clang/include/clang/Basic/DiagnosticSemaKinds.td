@@ -11952,6 +11952,9 @@ def err_openclcxx_placement_new : Error<
   "use of placement new requires explicit declaration">;
 
 // OpenCL C Cooperative Matrix.
+def ext_coopmat_without_pragma
+    : Error<"cooperative matrix types require OpenCL extension '%0' to be enabled via pragma">;
+
 def err_invalid_coopmat_attr
     : Error<"invalid argument of cooperative matrix attribute">;
 

@@ -10719,8 +10719,7 @@ static bool areCompatMatrixTypes(const ConstantMatrixType *LHS,
          LHS->getNumColumns() == RHS->getNumColumns();
 }
 
-/// areCompatCoopMatrixTypes - Return true if the two specified cooperative
-/// matrix types are compatible.
+/// Return true if the two specified cooperative matrix types are compatible.
 static bool areCompatCoopMatrixTypes(const CooperativeMatrixType *LHS,
                                      const CooperativeMatrixType *RHS) {
   assert(LHS->isCanonicalUnqualified() && RHS->isCanonicalUnqualified());

@@ -5,6 +5,8 @@
 // RUN:   -finclude-default-header -emit-llvm -O0 -o - %s \
 // RUN:   | FileCheck %s
 
+#pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
+
 // ---------------------------------------------------------------------------
 // Type definitions.
 // ---------------------------------------------------------------------------

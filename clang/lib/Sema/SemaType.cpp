@@ -2648,8 +2648,19 @@ QualType Sema::BuildCoopMatrixType(QualType ElementTy, Expr *ScopeExpr,
     Diag(AttrLoc, diag::err_invalid_coopmat_attr) << ColRange << "matrix use";
     return QualType();
   }
-  return Context.getCooperativeMatrixType(ElementTy, Scope, MatrixRows,
-                                          MatrixColumns, Use);
+  auto Result = Context.getCooperativeMatrixType(ElementTy, Scope, MatrixRows,
+                                                 MatrixColumns, Use);
+  if (getLangOpts().OpenCL) {
+    if (!getOpenCLOptions().isSupported("cl_khr_cooperative_matrix",
+                                        getLangOpts()))
+      Diag(AttrLoc, diag::err_opencl_requires_extension)
+          << 0 << Result << "cl_khr_cooperative_matrix";
+    else if (!getOpenCLOptions().isAvailableOption("cl_khr_cooperative_matrix",
+                                                   getLangOpts()))
+      Diag(AttrLoc, diag::ext_coopmat_without_pragma)
+          << "cl_khr_cooperative_matrix";
+  }
+  return Result;
 }
 
 bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
@@ -9041,6 +9052,7 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
         << Attr << 2;
     return;
   }
+
   Expr *RowsExpr = Attr.getArgAsExpr(0);
   Expr *ColsExpr = Attr.getArgAsExpr(1);
   QualType T = S.BuildMatrixType(CurType, RowsExpr, ColsExpr, Attr.getLoc());
@@ -9048,7 +9060,7 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     CurType = T;
 }
 
-/// HandleCoopMatrixTypeAttr - "coop_mat" attribute, like ext_vector_type
+/// "coop_mat" attribute, like ext_vector_type
 static void HandleCoopMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S) {
   if (Attr.getNumArgs() != 4) {
