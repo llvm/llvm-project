@@ -220,10 +220,10 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
                                 function_ref<void(Instruction *)> Fn);
 using PointersAndHasReadsOutsideSet =
     std::pair<SmallSetVector<Value *, 8>, bool>;
-static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
-                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
-                           Loop *L);
+static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
+    MemorySSA *MSSA, AliasAnalysis *AA, DominatorTree *DT,
+    ICFLoopSafetyInfo *SafetyInfo,
+    const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -441,11 +441,22 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // there is currently no general solution for this. Similar issues could also
   // potentially happen in other passes where instructions are being moved
   // across that edge.
-  bool HasCoroSuspendInst = llvm::any_of(L->getBlocks(), [](BasicBlock *BB) {
-    using namespace PatternMatch;
-    return any_of(make_pointer_range(*BB),
-                  match_fn(m_Intrinsic<Intrinsic::coro_suspend>()));
-  });
+  bool HasCoroSuspendInst = false;
+
+  // AA metadata declared to be local to each iteration cannot be used to infer
+  // alias information when promoting stores.
+  SmallPtrSet<const MDNode *, 4> LoopLocalAliasScopes;
+
+  for (BasicBlock *BB : L->getBlocks()) {
+    for (Instruction &I : *BB) {
+      using namespace PatternMatch;
+      HasCoroSuspendInst |= match(&I, m_Intrinsic<Intrinsic::coro_suspend>());
+
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        for (const MDOperand &Op : Decl->getScopeList()->operands())
+          LoopLocalAliasScopes.insert(cast<MDNode>(Op.get()));
+    }
+  }
 
   MemorySSAUpdater MSSAU(MSSA);
   SinkAndHoistLICMFlags Flags(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
@@ -516,7 +527,8 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       do {
         LocalPromoted = false;
         for (auto [PointerMustAliases, HasReadsOutsideSet] :
-             collectPromotionCandidates(MSSA, AA, DT, &SafetyInfo, L)) {
+             collectPromotionCandidates(MSSA, AA, DT, &SafetyInfo,
+                                        LoopLocalAliasScopes, L)) {
           LocalPromoted |= promoteLoopAccessesToScalars(
               PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC, LI,
               DT, AC, TLI, TTI, L, MSSAU, &SafetyInfo, ORE,
@@ -2349,11 +2361,21 @@ static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
   return false;
 }
 
+/// Returns whether \p N has any operand from the set \p Operands.
+static bool
+hasAnyMDOperandsFrom(const MDNode *N,
+                     const SmallPtrSetImpl<const MDNode *> &Operands) {
+  return N && llvm::any_of(N->operands(), [&](const MDOperand &Op) {
+           return Operands.contains(cast<MDNode>(Op.get()));
+         });
+}
+
 /// Returns the potentially promotable stores with AA tags that are valid along
 /// all non-unwinding execution paths of the loop \p L, which allows for the AA
 /// tags to be used when deciding promotions.
-static SmallPtrSet<const StoreInst *, 8>
-collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
+static SmallPtrSet<const StoreInst *, 8> collectStoresWithInvariantAATags(
+    MemorySSA *MSSA, DominatorTree *DT,
+    const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
   SmallDenseMap<MemoryLocation, SmallVector<const StoreInst *, 1>, 4>
       StoresByLoc;
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
@@ -2368,7 +2390,16 @@ collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
   L->getExitingBlocks(ExitingBlocks);
 
   SmallPtrSet<const StoreInst *, 8> StoresWithInvariantAATags;
-  for (const auto &Stores : llvm::make_second_range(StoresByLoc)) {
+  for (const auto &Pair : StoresByLoc) {
+    const MemoryLocation &Loc = Pair.first;
+    const SmallVector<const StoreInst *, 1> &Stores = Pair.second;
+
+    // A scope declared inside the loop denotes a different scope on each
+    // iteration, and thus should not be preserved.
+    if (hasAnyMDOperandsFrom(Loc.AATags.Scope, LoopLocalAliasScopes) ||
+        hasAnyMDOperandsFrom(Loc.AATags.NoAlias, LoopLocalAliasScopes))
+      continue;
+
     // Without exiting blocks the loop is never left, and promotion has no
     // exit block to insert a store into either.
     if (llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {
@@ -2383,10 +2414,10 @@ collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
 
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
-static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
-                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
-                           Loop *L) {
+static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
+    MemorySSA *MSSA, AliasAnalysis *AA, DominatorTree *DT,
+    ICFLoopSafetyInfo *SafetyInfo,
+    const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
   BatchAAResults BatchAA(*AA);
   AliasSetTracker AST(BatchAA);
 
@@ -2395,7 +2426,8 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
   std::optional<SmallPtrSet<const StoreInst *, 8>> StoresWithInvariantAATags;
   auto HasInvariantAATags = [&](const StoreInst *SI) {
     if (!StoresWithInvariantAATags)
-      StoresWithInvariantAATags = collectStoresWithInvariantAATags(MSSA, DT, L);
+      StoresWithInvariantAATags =
+          collectStoresWithInvariantAATags(MSSA, DT, LoopLocalAliasScopes, L);
     return StoresWithInvariantAATags->contains(SI);
   };
 
