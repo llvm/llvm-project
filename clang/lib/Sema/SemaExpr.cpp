@@ -18309,13 +18309,12 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
-  
   EvalProxy SProxy(*this);
   bool Folded =
       (getLangOpts().CPlusPlus
-          ? E->EvaluateAsMandatedConstantRValue(EvalResult, Context, SProxy)
-          : E->EvaluateAsRValue(EvalResult, Context,
-                                /*isConstantContext=*/true)) &&
+           ? E->EvaluateAsMandatedConstantRValue(EvalResult, Context, SProxy)
+           : E->EvaluateAsRValue(EvalResult, Context,
+                                 /*isConstantContext=*/true)) &&
       EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
       (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
@@ -18686,9 +18685,9 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   Eval.Diag = &Notes;
   ConstantExpr *CE = Candidate.getPointer();
   EvalProxy SProxy(SemaRef);
-  bool Result = CE->EvaluateAsMandatedConstantExpr(
-      Eval, SemaRef.getASTContext(), SProxy,
-      ConstantExprKind::ImmediateInvocation);
+  bool Result =
+      CE->EvaluateAsMandatedConstantExpr(Eval, SemaRef.getASTContext(), SProxy,
+                                         ConstantExprKind::ImmediateInvocation);
   if (!Result || !Notes.empty()) {
     SemaRef.FailedImmediateInvocations.insert(CE);
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();

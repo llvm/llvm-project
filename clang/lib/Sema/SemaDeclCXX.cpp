@@ -16579,8 +16579,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *ClassDecl) {
       HasConstantInit = VD->evaluateValue();
     SmallVector<PartialDiagnosticAt, 8> Notes;
     sema::EvalProxy SProxy(*this);
-    if (!VD->evaluateConstantDestruction(Notes, SProxy) &&
-        VD->isConstexpr() && HasConstantInit) {
+    if (!VD->evaluateConstantDestruction(Notes, SProxy) && VD->isConstexpr() &&
+        HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
       for (const PartialDiagnosticAt &Note : Notes)
