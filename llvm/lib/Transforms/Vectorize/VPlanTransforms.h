@@ -460,6 +460,14 @@ struct VPlanTransforms {
   static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
 
+  /// Convert loads through a select of two consecutive addresses whose value
+  /// is only stored back to one of the selected addresses, i.e.
+  /// `q[i] = c ? p[i] : q[i]`, to a masked load from `p` and a masked store to
+  /// `q` using `c` as mask. The store of the loaded value for lanes where `c`
+  /// is false is a no-op. Whether the masked accesses are profitable is left to
+  /// the cost model.
+  static void convertSelectPtrLoadStoreToMasked(VPlan &Plan);
+
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
   static void
