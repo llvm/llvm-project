@@ -78,6 +78,58 @@ def replacereg_nonroot : GICombineRule<
   (match (COPY $dst, $tmp), (COPY $tmp, $src)),
   (apply (GIReplaceReg $dst, $src), (GIReplaceReg $tmp, $src))>;
 
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'GIReplaceRegWithConstant' cannot be used in a 'match' pattern
+def replaceregconstant_in_match : GICombineRule<
+  (defs root:$dst),
+  (match (GIReplaceRegWithConstant $dst, 0)),
+  (apply (COPY $dst, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: expected operand 1 of 'GIReplaceRegWithConstant' to be an immediate value
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceRegWithConstant ?:$dst, ?:$src)'
+def replaceregconstant_nonimm : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $src)),
+  (apply (GIReplaceRegWithConstant $dst, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: expected operand 1 of 'GIReplaceRegWithConstant' to be an immediate value
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceRegWithConstant ?:$dst, (i32 0):$k)'
+def replaceregconstant_namedimm : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $src)),
+  (apply (GIReplaceRegWithConstant $dst, (i32 0):$k))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: GIReplaceRegWithConstant cannot replace 'tmp': this builtin can only replace a register defined by the match root
+def replaceregconstant_nonroot : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $tmp), (COPY $tmp, $src)),
+  (apply (GIReplaceReg $dst, $src), (GIReplaceRegWithConstant $tmp, 0))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: 'GIReplaceRegWithFConstant' cannot be used in a 'match' pattern
+def replaceregfconstant_in_match : GICombineRule<
+  (defs root:$dst),
+  (match (GIReplaceRegWithFConstant $dst, 0)),
+  (apply (COPY $dst, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: expected operand 1 of 'GIReplaceRegWithFConstant' to be an immediate value
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceRegWithFConstant ?:$dst, ?:$src)'
+def replaceregfconstant_nonimm : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $src)),
+  (apply (GIReplaceRegWithFConstant $dst, $src))>;
+
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: expected operand 1 of 'GIReplaceRegWithFConstant' to be an immediate value
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(GIReplaceRegWithFConstant ?:$dst, (i32 0):$k)'
+def replaceregfconstant_namedimm : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $src)),
+  (apply (GIReplaceRegWithFConstant $dst, (i32 0):$k))>;
+
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: GIReplaceRegWithFConstant cannot replace 'tmp': this builtin can only replace a register defined by the match root
+def replaceregfconstant_nonroot : GICombineRule<
+  (defs root:$dst),
+  (match (COPY $dst, $tmp), (COPY $tmp, $src)),
+  (apply (GIReplaceReg $dst, $src), (GIReplaceRegWithFConstant $tmp, 0))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombiner<"GenMyCombiner", [
@@ -90,5 +142,13 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
   eraseroot_notinstmatch,
   replacereg_in_match,
   replacereg_ops,
-  replacereg_nonroot
+  replacereg_nonroot,
+  replaceregconstant_in_match,
+  replaceregconstant_nonimm,
+  replaceregconstant_namedimm,
+  replaceregconstant_nonroot,
+  replaceregfconstant_in_match,
+  replaceregfconstant_nonimm,
+  replaceregfconstant_namedimm,
+  replaceregfconstant_nonroot
 ]>;
