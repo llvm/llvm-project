@@ -710,6 +710,27 @@ public:
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
 
+  unsigned getTreeSizeExcludingGathers() const {
+    unsigned Cnt = 0;
+    SmallDenseSet<unsigned> GatherTreeNodes;
+    for (unsigned NodeIdx : seq<unsigned>(VectorizableTree.size())) {
+      auto &TE = VectorizableTree[NodeIdx];
+      if (DeletedNodes.contains(TE.get()))
+        continue;
+      auto IsGather = [&](TreeEntry *TE) {
+        return TE->isGather() || TransformedToGatherNodes.contains(TE) ||
+               GatherTreeNodes.contains(TE->Idx);
+      };
+      if (IsGather(TE.get()) || (!TE->UserTreeIndex.UserTE && NodeIdx != 0) ||
+          (TE->UserTreeIndex.UserTE && (IsGather(TE->UserTreeIndex.UserTE)))) {
+        GatherTreeNodes.insert(NodeIdx);
+        continue;
+      }
+      ++Cnt;
+    }
+    return Cnt;
+  }
+
   /// Returns the base graph size, before any transformations.
   unsigned getCanonicalGraphSize() const { return BaseGraphSize; }
 
@@ -3726,9 +3747,9 @@ private:
   mutable SmallDenseMap<std::tuple<Type *, Type *, unsigned>, unsigned>
       NumberOfPartsCache;
 
-  /// Values, already been analyzed for mininmal bitwidth and found to be
-  /// non-profitable.
-  DenseSet<Value *> AnalyzedMinBWVals;
+  /// Values already analyzed for minimal bitwidth and found to be
+  /// non-profitable, mapped to the size of the tree used for the analysis.
+  SmallDenseMap<Value *, unsigned> AnalyzedMinBWVals;
 
   /// A list of values that need to extracted out of the tree.
   /// This list holds pairs of (Internal Scalar : External User). External User
@@ -28218,8 +28239,14 @@ void BoUpSLP::computeMinimumValueSizes() {
     ++NodeIdx;
   }
 
+  auto IsAnalyzedMinBWVal = [&](Value *V, unsigned SizeExGathers) {
+    auto It = AnalyzedMinBWVals.find(V);
+    return It != AnalyzedMinBWVals.end() && It->second >= SizeExGathers;
+  };
+
   // Analyzed the reduction already and not profitable - exit.
-  if (AnalyzedMinBWVals.contains(VectorizableTree[NodeIdx]->Scalars.front()))
+  if (IsAnalyzedMinBWVal(VectorizableTree[NodeIdx]->Scalars.front(),
+                         getTreeSizeExcludingGathers()))
     return;
 
   SmallVector<unsigned> ToDemote;
@@ -28281,8 +28308,9 @@ void BoUpSLP::computeMinimumValueSizes() {
     if (!TreeRootIT)
       return 0u;
 
+    unsigned SizeExGathers = getTreeSizeExcludingGathers();
     if (any_of(E.Scalars,
-               [&](Value *V) { return AnalyzedMinBWVals.contains(V); }))
+               [&](Value *V) { return IsAnalyzedMinBWVal(V, SizeExGathers); }))
       return 0u;
 
     unsigned NumParts =
@@ -28524,7 +28552,8 @@ void BoUpSLP::computeMinimumValueSizes() {
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
       if (UserIgnoreList)
-        AnalyzedMinBWVals.insert_range(TreeRoot);
+        for (Value *V : TreeRoot)
+          AnalyzedMinBWVals[V] = getTreeSizeExcludingGathers();
       NodesToKeepBWs.insert_range(ToDemote);
       continue;
     }
