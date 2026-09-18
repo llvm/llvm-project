@@ -109,7 +109,7 @@ struct largest_bitmask_enum_bit<
 template <typename E>
 constexpr std::underlying_type_t<E> bitmask_enum_mask() noexcept {
   using UnderlyingTy = std::underlying_type_t<E>;
-  constexpr int Width = bit_width(largest_bitmask_enum_bit<E>::value);
+  constexpr int Width = bit_width_constexpr(largest_bitmask_enum_bit<E>::value);
   // Shifting by the full width of the type would be undefined, so handle a
   // largest bit in the top position separately: the mask is then every bit.
   return Width == std::numeric_limits<UnderlyingTy>::digits
@@ -127,7 +127,8 @@ constexpr std::underlying_type_t<E> bitmask_enum_to_underlying(E Val) noexcept {
 
 template <typename E, typename _ = std::enable_if_t<is_bitmask_enum_v<E>>>
 struct bitmask_enum_num_bits {
-  static constexpr int value = bit_width(largest_bitmask_enum_bit<E>::value);
+  static constexpr int value =
+      orc_rt::bit_width_constexpr(largest_bitmask_enum_bit<E>::value);
 };
 
 template <typename E>
