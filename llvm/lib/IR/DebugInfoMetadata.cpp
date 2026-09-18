@@ -2782,5 +2782,5 @@ void DIArgList::dropAllReferences(bool Untrack) {
   if (Untrack)
     untrack();
   Args.clear();
-  ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
+  ReplaceableUses::resolveAllUses(/* ResolveUsers */ false);
 }

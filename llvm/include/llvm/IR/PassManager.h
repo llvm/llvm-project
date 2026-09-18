@@ -44,6 +44,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
@@ -85,10 +86,9 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
     auto PassName = MapClassName2PassName(ClassName);
     OS << PassName;
   }
-
-  // TODO: remove once out of tree users are updated.
-  static bool isRequired() { return false; }
 };
+
+bool shouldSkipOptimizationForOptBisect(IRUnitRef IR, StringRef PassName);
 } // namespace detail
 
 class Function;
@@ -101,6 +101,11 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 template <typename DerivedT>
 struct RequiredPassInfoMixin : detail::PassInfoMixin<DerivedT> {
   static bool isRequired() { return true; }
+
+public:
+  bool shouldSkipOptimizationForOptBisect(IRUnitRef IR) {
+    return detail::shouldSkipOptimizationForOptBisect(IR, DerivedT::name());
+  }
 };
 
 /// A CRTP mix-in for passes that can be skipped.

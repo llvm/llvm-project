@@ -567,3 +567,10 @@ define i32 @metadata_ref_global_dtors() {
 !9 = !{!"DetailedSummary", !10}
 !10 = !{!11}
 !11 = !{i32 10000, i64 1, i32 1}
+
+; CHECK: error: unknown value 'invalid' for 'disable-tail-calls' attribute
+define void @disable_tail_calls_invalid() #0 {
+  ret void
+}
+
+attributes #0 = { "disable-tail-calls"="invalid" }

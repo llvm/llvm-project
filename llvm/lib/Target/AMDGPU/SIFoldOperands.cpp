@@ -921,6 +921,20 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
         return true;
     }
 
+    // Inlineable constant might have been folded into Imm operand of fmaak or
+    // fmamk and we are trying to fold a non-inlinable constant.
+    if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
+        OpToFold.isImm()) {
+      std::optional<int64_t> ImmVal = OpToFold.getEffectiveImmVal();
+      if (ImmVal && !TII->isInlineConstant(*MI, OpNo, *ImmVal)) {
+        unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
+        MachineOperand &OpImm = MI->getOperand(ImmIdx);
+        if (!OpImm.isReg() &&
+            TII->isInlineConstant(*MI, MI->getOperand(OpNo), OpImm))
+          return tryToFoldAsFMAAKorMK();
+      }
+    }
+
     // Special case for s_setreg_b32
     if (OpToFold.isImm()) {
       unsigned ImmOpc = 0;
