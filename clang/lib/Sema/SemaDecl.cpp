@@ -17400,7 +17400,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-  ProcessDeclAttributeList(S, D, Attrs);
+  ProcessDeclAttributeList(S, D, Attrs, ProcessDeclAttributeOptions());
   ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
@@ -20183,6 +20183,27 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       if (const auto *IFD = dyn_cast<IndirectFieldDecl>(I))
         if (IFD->getDeclName())
           ++NumNamedMembers;
+    }
+  }
+
+  if (!getLangOpts().ExperimentalLateParseAttributes) {
+    // Perform FieldDecl-dependent validation for counted_by family attributes.
+    for (auto *D : Fields) {
+      FieldDecl *FD = cast<FieldDecl>(D);
+      if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+        if (CheckCountedByAttrOnField(FD, CAT->getCountExpr(),
+                                      CAT->isCountInBytes(), CAT->isOrNull())) {
+          // Rejected. Strip the CountAttributedType so the field keeps its
+          // plain wrapped type. The pre-refactor eager path built the type only
+          // after this check passed, so on failure no CAT ever existed; leaving
+          // it here would flow an invalid CAT downstream. Mirrors the late path
+          // in Sema::ActOnLateParsedTypeAttrArgument.
+          QualType Wrapped = CAT->desugar();
+          FD->setType(Wrapped);
+          FD->setTypeSourceInfo(
+              Context.getTrivialTypeSourceInfo(Wrapped, FD->getLocation()));
+        }
+      }
     }
   }
 
