@@ -326,7 +326,7 @@ reserveClipCullSignatureRows(MutableArrayRef<SignatureRow> SignatureRows,
   }
 
   if (State.SignatureRows[0] + 1 != State.SignatureRows[1])
-    return SignaturePackingError::ClipCullOverflow;
+    return SignaturePackingError::ClipCullNotAdjacent;
   return std::nullopt;
 }
 

@@ -1375,6 +1375,56 @@ TEST_F(HLSLSemanticSignaturePackingTest,
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableRejectsNonAdjacentClipCullRows) {
+  // These seven clip/cull components fit in two rows, but Color separates the
+  // reserved rows. Clip1 cannot span them without moving existing elements.
+
+  // struct VSOut {
+  //   float3 Clip0   : SV_ClipDistance0;
+  //   float4 Color   : COLOR;
+  //   float2 Cull0   : SV_CullDistance0;
+  //   float Clip1[2] : SV_ClipDistance1;
+  // };
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear,
+        /*SemanticIndex=*/1}});
+  verifyPackingError(PackingMethod::PrefixStable, Config,
+                     SignaturePackingError::ClipCullNotAdjacent,
+                     /*ExpectedElementIndex=*/3);
+
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  EXPECT_THAT_EXPECTED(
+      pack(PackingMethod::PrefixStable, Elements, Config),
+      FailedWithMessage("indexed clip/cull elements require adjacent signature "
+                        "rows (element 3)"));
+  for (unsigned I = 0; I != 3; ++I) {
+    EXPECT_EQ(Elements[I].StartRow, I) << "element " << I;
+    EXPECT_EQ(Elements[I].StartCol, 0u) << "element " << I;
+  }
+  EXPECT_EQ(Elements[3].StartRow, UnallocatedRow);
+  EXPECT_EQ(Elements[3].StartCol, UnallocatedCol);
+
+  // Declaring Color last leaves adjacent clip/cull rows and the same
+  // components fit. This is an adjacency failure, not a clip/cull overflow.
+  ElementConfig Color = Config.Elements[1];
+  Config.Elements.erase(Config.Elements.begin() + 1);
+  Config.Elements.push_back(Color);
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/3},
+                 {/*Row=*/2, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
        PrefixStableClipCullExtensionAtSignatureBoundary) {
   // A two-row clip/cull range can end at the last signature row, but cannot
   // extend beyond it. The latter is still a genuine capacity overflow.
