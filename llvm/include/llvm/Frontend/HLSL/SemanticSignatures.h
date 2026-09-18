@@ -80,6 +80,13 @@ getInterpolationSamplingLocation(InterpolationModifier Modifiers);
 LLVM_ABI dxbc::PSV::InterpolationMode
 getInterpolationMode(InterpolationModifier Modifiers);
 
+// Apply component-type defaults, SV_Position's noperspective requirement, and
+// the shader-stage restriction. Only pixel shader inputs are interpolated;
+// callers should leave output signatures Undefined.
+LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
+    dxbc::PSV::InterpolationMode Mode, dxil::ElementType CompType,
+    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage);
+
 enum class SemanticInterpretation {
   Invalid,
   NotAllocated,

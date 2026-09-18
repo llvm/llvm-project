@@ -256,7 +256,8 @@ protected:
       const clang::DeclaratorDecl *Decl,
       specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
       specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-      SemanticSignatures &Signature);
+      SemanticSignatures &Signature,
+      llvm::hlsl::InterpolationModifier Modifiers);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr> handleStructSemanticStore(
       llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Value *Source,
@@ -270,7 +271,9 @@ protected:
                      llvm::Type *Type, const clang::DeclaratorDecl *Decl,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> begin,
                      specific_attr_iterator<HLSLAppliedSemanticAttr> end,
-                     SemanticSignatures &Signature);
+                     SemanticSignatures &Signature,
+                     llvm::hlsl::InterpolationModifier Modifiers =
+                         llvm::hlsl::InterpolationModifier::None);
 
   specific_attr_iterator<HLSLAppliedSemanticAttr>
   handleSemanticStore(llvm::IRBuilder<> &B, const FunctionDecl *FD,

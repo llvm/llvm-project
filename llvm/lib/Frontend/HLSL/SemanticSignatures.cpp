@@ -81,6 +81,43 @@ hlsl::getInterpolationMode(InterpolationModifier Modifiers) {
   }
 }
 
+dxbc::PSV::InterpolationMode hlsl::normalizeInterpolationMode(
+    dxbc::PSV::InterpolationMode Mode, dxil::ElementType CompType,
+    dxbc::PSV::SemanticKind Kind, Triple::EnvironmentType Stage) {
+  if (Stage != Triple::Pixel)
+    return InterpolationMode::Undefined;
+
+  if (Mode == InterpolationMode::Undefined) {
+    switch (CompType) {
+    case dxil::ElementType::F16:
+    case dxil::ElementType::F32:
+    case dxil::ElementType::SNormF16:
+    case dxil::ElementType::UNormF16:
+    case dxil::ElementType::SNormF32:
+    case dxil::ElementType::UNormF32:
+      Mode = InterpolationMode::Linear;
+      break;
+    default:
+      Mode = InterpolationMode::Constant;
+      break;
+    }
+  }
+
+  if (Kind == dxbc::PSV::SemanticKind::Position) {
+    switch (Mode) {
+    case InterpolationMode::Linear:
+      return InterpolationMode::LinearNoperspective;
+    case InterpolationMode::LinearCentroid:
+      return InterpolationMode::LinearNoperspectiveCentroid;
+    case InterpolationMode::LinearSample:
+      return InterpolationMode::LinearNoperspectiveSample;
+    default:
+      break;
+    }
+  }
+  return Mode;
+}
+
 dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
   if (!SemanticName.consume_front_insensitive("SV_"))
     return dxbc::PSV::SemanticKind::Arbitrary;

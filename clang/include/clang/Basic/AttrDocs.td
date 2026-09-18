@@ -9399,6 +9399,11 @@ inherited from an enclosing declaration.
 `nointerpolation` cannot be combined with another interpolation modifier and
 cannot be used on `SV_Position`. Integer, boolean, and 64-bit floating-point
 input components only support `nointerpolation`.
+
+Unqualified pixel shader inputs default to `linear` for floating-point
+components of at most 32 bits and `nointerpolation` otherwise. `SV_Position`
+uses the corresponding `noperspective` mode. Other shader stages and output
+signatures have no interpolation mode and are ignored.
   }];
 }
 

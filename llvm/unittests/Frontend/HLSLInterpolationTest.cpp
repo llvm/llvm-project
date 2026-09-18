@@ -13,6 +13,8 @@ using namespace llvm;
 using namespace llvm::hlsl;
 using Mod = InterpolationModifier;
 using InterpMode = dxbc::PSV::InterpolationMode;
+using SemanticKind = dxbc::PSV::SemanticKind;
+using CompType = dxil::ElementType;
 
 TEST(HLSLInterpolationTest, AllModifierSets) {
   // Cover every subset, including redundant linear/center modifiers and all
@@ -69,4 +71,57 @@ TEST(HLSLInterpolationTest, SamplingLocations) {
       SCOPED_TRACE(static_cast<unsigned>(Modifiers));
       EXPECT_EQ(getInterpolationSamplingLocation(Modifiers), Case.Expected);
     }
+}
+
+TEST(HLSLInterpolationTest, ComponentDefaults) {
+  for (CompType Type :
+       {CompType::F16, CompType::F32, CompType::SNormF16, CompType::UNormF16,
+        CompType::SNormF32, CompType::UNormF32})
+    EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
+                                         SemanticKind::Arbitrary,
+                                         Triple::Pixel),
+              InterpMode::Linear);
+  for (CompType Type :
+       {CompType::I1, CompType::I16, CompType::U16, CompType::I32,
+        CompType::U32, CompType::I64, CompType::U64, CompType::F64,
+        CompType::SNormF64, CompType::UNormF64})
+    EXPECT_EQ(normalizeInterpolationMode(InterpMode::Undefined, Type,
+                                         SemanticKind::Arbitrary,
+                                         Triple::Pixel),
+              InterpMode::Constant);
+}
+
+TEST(HLSLInterpolationTest, PositionAndExplicitModes) {
+  constexpr InterpMode PositionModes[] = {
+      InterpMode::LinearNoperspective,
+      InterpMode::Constant,
+      InterpMode::LinearNoperspective,
+      InterpMode::LinearNoperspectiveCentroid,
+      InterpMode::LinearNoperspective,
+      InterpMode::LinearNoperspectiveCentroid,
+      InterpMode::LinearNoperspectiveSample,
+      InterpMode::LinearNoperspectiveSample,
+      InterpMode::Invalid};
+  for (unsigned I = 0; I != 9; ++I) {
+    auto Mode = static_cast<InterpMode>(I);
+    EXPECT_EQ(normalizeInterpolationMode(Mode, CompType::F32,
+                                         SemanticKind::Position, Triple::Pixel),
+              PositionModes[I]);
+    if (Mode != InterpMode::Undefined)
+      EXPECT_EQ(normalizeInterpolationMode(Mode, CompType::F32,
+                                           SemanticKind::Arbitrary,
+                                           Triple::Pixel),
+                Mode);
+  }
+}
+
+TEST(HLSLInterpolationTest, OtherStages) {
+  for (auto Stage :
+       {Triple::Vertex, Triple::Geometry, Triple::Hull, Triple::Domain,
+        Triple::Mesh, Triple::Compute, Triple::Amplification, Triple::Library})
+    for (unsigned I = 0; I != 9; ++I)
+      for (auto Kind : {SemanticKind::Arbitrary, SemanticKind::Position})
+        EXPECT_EQ(normalizeInterpolationMode(static_cast<InterpMode>(I),
+                                             CompType::F32, Kind, Stage),
+                  InterpMode::Undefined);
 }
