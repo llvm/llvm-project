@@ -354,8 +354,9 @@ body: |
 ...
 
 # Self-loop: bb.1 is its own predecessor. A live CMP below the redundant
-# compare in bb.1 shadows bb.0's producer on iteration 2+. The upfront
-# below-CmpInstr scan spots the clobber and keeps the compare.
+# compare in bb.1 shadows bb.0's producer on iteration 2+. The below-CmpInstr
+# scan (triggered when the walk detects CmpMBB is on a cycle) spots the
+# clobber and keeps the compare.
 ---
 name: selfloop_shadow_below
 tracksRegLiveness: true
@@ -403,9 +404,10 @@ body: |
 ...
 
 # Two-block cycle bb.1 -> bb.2 -> bb.1. A live CMP below the redundant compare
-# in bb.1 shadows bb.0's producer on the back-edge. The upfront below-CmpInstr
-# scan spots the clobber and keeps the compare. Guards against a self-loop-only
-# cycle check that would miss this shape.
+# in bb.1 shadows bb.0's producer on the back-edge. The below-CmpInstr scan
+# (triggered when the walk detects CmpMBB is on a cycle) spots the clobber and
+# keeps the compare. Guards against a self-loop-only cycle check that would
+# miss this shape.
 ---
 name: twoblock_cycle_shadow_below
 tracksRegLiveness: true
@@ -463,10 +465,11 @@ body: |
 ...
 
 # Self-loop where the below-CmpInstr region holds an NF-convertible dead clobber.
-# The upfront below-CmpInstr scan stages the IMUL, the backward walk finds
-# bb.0's producer, and the reuse succeeds: the redundant compare is removed
-# and the IMUL is rewritten to its NF variant. Exercises the positive path of
-# the new scan (the shadow_below cases only exercise the bail path).
+# The backward walk finds bb.0's producer and detects the cycle back-edge into
+# MultiPredMBB; the below-CmpInstr scan then stages the IMUL, and the reuse
+# succeeds: the redundant compare is removed and the IMUL is rewritten to its
+# NF variant. Exercises the positive path of the new scan (the shadow_below
+# cases only exercise the bail path).
 ---
 name: selfloop_nfconvertible_below
 tracksRegLiveness: true

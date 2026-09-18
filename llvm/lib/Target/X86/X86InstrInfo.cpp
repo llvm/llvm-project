@@ -5355,59 +5355,43 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   // bailing on any other clobber (it would shadow the producer's flags from
   // CmpInstr).
   //
-  // Both scans stage clobbers in Pending and only commit on success. The
-  // predecessor walk seeds Visited with MultiPredMBB so it doesn't re-scan
-  // the single-predecessor chain the caller already staged.
-  //
-  // If CmpMBB is on a CFG cycle, the region below CmpInstr executes on the
-  // back-edge before the next iteration's CmpInstr and is scanned by neither
-  // the caller nor the predecessor walk. Handle it here: bail on any non-
-  // NF-convertible EFLAGS clobber, stage NF-convertible ones.
+  // Clobbers are staged in Pending and committed only on success. Visited
+  // is seeded with the caller's single-predecessor chain (CmpMBB through
+  // MultiPredMBB) so the walk doesn't re-scan blocks the caller already
+  // staged. The walk doubles as a cycle detector: a predecessor equal to
+  // CmpMBB is a back-edge from CmpMBB's successors into the walked region,
+  // which means CmpMBB is on a CFG cycle. In that case the region below
+  // CmpInstr executes on the back-edge before the next iteration's CmpInstr
+  // and must be checked too: bail on any non-NF-convertible EFLAGS clobber,
+  // stage NF-convertible ones.
   //
   // Each NF conversion trades a compact legacy/EVEX-compressed encoding for a
   // wider EVEX (often NDD three-operand) one, growing code size, while the
   // reuse only removes a single compare. Cap the total number of conversions
-  // (caller chain + below-scan + predecessor walk) so the reuse cannot bloat
+  // (caller chain + predecessor walk + below-scan) so the reuse cannot bloat
   // code just to delete one compare.
   MachineInstr *Sub = nullptr;
   MachineBasicBlock *SubMBB = nullptr;
   SmallVector<std::pair<MachineInstr *, unsigned>, 4> Pending;
 
   MachineBasicBlock *CmpMBB = CmpInstr.getParent();
-  auto IsCmpMBBOnCycle = [&] {
-    SmallPtrSet<MachineBasicBlock *, 8> Seen;
-    SmallVector<MachineBasicBlock *, 8> Stack(CmpMBB->succ_begin(),
-                                              CmpMBB->succ_end());
-    while (!Stack.empty()) {
-      MachineBasicBlock *Succ = Stack.pop_back_val();
-      if (Succ == CmpMBB)
-        return true;
-      if (!Seen.insert(Succ).second)
-        continue;
-      Stack.append(Succ->succ_begin(), Succ->succ_end());
-    }
-    return false;
-  };
-  if (IsCmpMBBOnCycle()) {
-    for (MachineInstr &Inst : make_range(
-             std::next(MachineBasicBlock::iterator(CmpInstr)), CmpMBB->end())) {
-      if (!Inst.modifiesRegister(X86::EFLAGS, TRI))
-        continue;
-      unsigned NewOpc = X86::getNFVariantIfClobberRemovable(Inst, TRI);
-      if (!NewOpc)
-        return nullptr;
-      if (InstsToUpdate.size() + Pending.size() >= MaxNFConversions)
-        return nullptr;
-      Pending.push_back(std::make_pair(&Inst, NewOpc));
-    }
-  }
-
   SmallPtrSet<MachineBasicBlock *, 8> Visited;
   SmallVector<MachineBasicBlock *, 8> Worklist;
+  for (MachineBasicBlock *MBB = CmpMBB; MBB != MultiPredMBB;
+       MBB = MBB->getSinglePredecessor())
+    Visited.insert(MBB);
   Visited.insert(MultiPredMBB);
-  for (MachineBasicBlock *Pred : MultiPredMBB->predecessors())
+
+  bool CmpMBBOnCycle = false;
+  auto TryPush = [&](MachineBasicBlock *Pred) {
+    if (Pred == CmpMBB)
+      CmpMBBOnCycle = true;
     if (Visited.insert(Pred).second)
       Worklist.push_back(Pred);
+  };
+
+  for (MachineBasicBlock *Pred : MultiPredMBB->predecessors())
+    TryPush(Pred);
   while (!Worklist.empty()) {
     MachineBasicBlock *MBB = Worklist.pop_back_val();
     MachineInstr *Producer = nullptr;
@@ -5438,8 +5422,7 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
     if (MBB->pred_empty())
       return nullptr;
     for (MachineBasicBlock *Pred : MBB->predecessors())
-      if (Visited.insert(Pred).second)
-        Worklist.push_back(Pred);
+      TryPush(Pred);
   }
   if (!Sub)
     return nullptr;
@@ -5452,6 +5435,22 @@ MachineInstr *X86InstrInfo::findDominatingRedundantFlagInstr(
   // to producers that yield identical flags.
   if (IsSwapped || ImmDelta != 0)
     return nullptr;
+
+  // If CmpMBB is on a CFG cycle, its below-CmpInstr region is on the back-edge
+  // path and must also be free of non-NF-convertible EFLAGS clobbers.
+  if (CmpMBBOnCycle) {
+    for (MachineInstr &Inst : make_range(
+             std::next(MachineBasicBlock::iterator(CmpInstr)), CmpMBB->end())) {
+      if (!Inst.modifiesRegister(X86::EFLAGS, TRI))
+        continue;
+      unsigned NewOpc = X86::getNFVariantIfClobberRemovable(Inst, TRI);
+      if (!NewOpc)
+        return nullptr;
+      if (InstsToUpdate.size() + Pending.size() >= MaxNFConversions)
+        return nullptr;
+      Pending.push_back(std::make_pair(&Inst, NewOpc));
+    }
+  }
 
   InstsToUpdate.append(Pending.begin(), Pending.end());
   return Sub;
