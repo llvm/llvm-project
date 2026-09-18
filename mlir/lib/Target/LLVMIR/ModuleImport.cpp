@@ -2551,6 +2551,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                    builder.getStringAttr(asmI->getConstraintString()),
                    asmI->hasSideEffects(), asmI->isAlignStack(),
                    convertTailCallKindFromLLVM(callInst->getTailCallKind()),
+                   callInst->hasFnAttr(llvm::Attribute::Convergent),
                    AsmDialectAttr::get(
                        mlirModule.getContext(),
                        convertAsmDialectFromLLVM(asmI->getDialect())),
@@ -2787,8 +2788,9 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // Process debug records attached to this instruction. Debug variable records
   // are stored for later processing after all SSA values are converted, while
   // debug label records can be converted immediately.
-  if (inst->DebugMarker) {
-    for (llvm::DbgRecord &dbgRecord : inst->DebugMarker->getDbgRecordRange()) {
+  if (inst->getDbgMarker()) {
+    for (llvm::DbgRecord &dbgRecord :
+         inst->getDbgMarker()->getDbgRecordRange()) {
       // Store debug variable records for later processing.
       if (auto *dbgVariableRecord =
               dyn_cast<llvm::DbgVariableRecord>(&dbgRecord)) {
@@ -2901,6 +2903,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("alwaysinline"),
     StringLiteral("cold"),
     StringLiteral("convergent"),
+    StringLiteral("disable-tail-calls"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
     StringLiteral("hot"),
@@ -3090,6 +3093,16 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 
   if (func->hasFnAttribute("use-sample-profile"))
     funcOp.setUseSampleProfile(true);
+
+  if (llvm::Attribute attr = func->getFnAttribute("disable-tail-calls");
+      attr.isStringAttribute()) {
+    StringRef val = attr.getValueAsString();
+    if (val == "true")
+      funcOp.setDisableTailCalls(true);
+    else if (val != "false")
+      emitError(funcOp.getLoc())
+          << "unknown value '" << val << "' for 'disable-tail-calls' attribute";
+  }
 
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())
@@ -3381,6 +3394,8 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
     llvm::MDNode *metadataNode = node;
     auto emitUnhandledFunctionMetadataWarning = [&]() {
+      if (!emitExpensiveWarnings)
+        return;
       emitWarning(funcOp.getLoc())
           << "unhandled function metadata: "
           << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);

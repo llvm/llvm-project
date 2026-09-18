@@ -393,21 +393,19 @@ define <2 x i32> @ucmp_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX12-SDAG-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v3.l, v2.l
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX12-SDAG-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v0.h, v1.h
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX12-SDAG-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e32 v0, -1, v4, vcc_lo
-; GFX12-SDAG-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v3.l, v2.l
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e32 v2, -1, v2, vcc_lo
+; GFX12-SDAG-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v0.h, v1.h
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e32 v1, -1, v5, vcc_lo
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v1, -1, v3 :: v_dual_mov_b32 v0, v2
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: ucmp_v2i16:

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o -                                         | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
 // PR 4349
 
 union reg
