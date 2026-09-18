@@ -61,7 +61,7 @@ Options
    ``NULL``. By default this check will only replace the ``NULL`` macro and will
    skip any similar user-defined macros.
 
-.. option:: useNullptrT
+.. option:: UseNullptrT
 
    Boolean controlling whether we should replace ``decltype(nullptr)`` with the
    type ``std::nullptr_t`` from ``<cstddef>``. Defaults to ``true``.
