@@ -14,6 +14,11 @@
 extern "C" {
 
 void RTDECL(CUFInit)();
+
+// Mirrors the host executionEnvironment (sanitized: no host argc/argv/envp)
+// into the device image's copy. Called by CUFInit; a no-op unless Flang-RT
+// was built with device offload support.
+void RTDECL(CUFSyncExecutionEnvironment)();
 }
 
 #endif // FORTRAN_RUNTIME_CUDA_INIT_H_

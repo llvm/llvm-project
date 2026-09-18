@@ -26,19 +26,8 @@ void RTDEF(CUFInit)() {
   // copy, so that the environment variables documented in
   // flang/docs/RuntimeEnvironment.md have the same effect in runtime code
   // compiled for the device as they have on the host. Without this, the
-  // device copy stays at its default-initialized values. When the program
-  // links no device-side flang-rt, the symbol is not registered with the
-  // CUDA runtime; treat that as nothing to sync.
-  void *devicePtr{nullptr};
-  if (cudaGetSymbolAddress(
-          &devicePtr, &Fortran::runtime::executionEnvironment) == cudaSuccess) {
-    CUDA_REPORT_IF_ERROR(
-        cudaMemcpy(devicePtr, &Fortran::runtime::executionEnvironment,
-            sizeof(Fortran::runtime::executionEnvironment),
-            cudaMemcpyHostToDevice));
-  } else {
-    // Clear the sticky cudaErrorInvalidSymbol.
-    (void)cudaGetLastError();
-  }
+  // device copy stays at its default-initialized values. A no-op unless
+  // Flang-RT was built with device offload support (see environment.cpp).
+  RTNAME(CUFSyncExecutionEnvironment)();
 }
 }
