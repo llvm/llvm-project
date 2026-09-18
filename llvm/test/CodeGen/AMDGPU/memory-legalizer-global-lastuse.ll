@@ -63,35 +63,26 @@ entry:
 define amdgpu_kernel void @global_last_use_load_1(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX12-LABEL: global_last_use_load_1:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x8
-; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-NEXT:    v_and_b32_e64 v1, v1, s2
+; GFX12-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX12-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX12-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
 ; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v3
-; GFX12-NEXT:    s_mov_b32 s2, 2
+; GFX12-NEXT:    s_mov_b32 s4, 2
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_lshlrev_b64_e64 v[2:3], s2, v[1:2]
-; GFX12-NEXT:    s_mov_b32 s3, s4
-; GFX12-NEXT:    v_mov_b32_e32 v1, v2
-; GFX12-NEXT:    s_mov_b32 s2, s5
-; GFX12-NEXT:    v_mov_b32_e32 v2, v3
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_add_co_u32 v1, s3, s3, v1
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, s2, s2, v2, s3
-; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX12-NEXT:    v_mov_b32_e32 v2, v3
-; GFX12-NEXT:    global_load_b32 v1, v[1:2], off th:TH_LOAD_LU
+; GFX12-NEXT:    v_lshlrev_b64_e64 v[1:2], s4, v[1:2]
+; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2 killed $exec
+; GFX12-NEXT:    global_load_b32 v1, v1, s[2:3] th:TH_LOAD_LU
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -207,35 +198,26 @@ entry:
 define amdgpu_kernel void @global_last_use_and_nontemporal_load(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GFX12-LABEL: global_last_use_and_nontemporal_load:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v0
-; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_load_b64 s[2:3], s[0:1], 0x8
-; GFX12-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX12-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-NEXT:    v_and_b32_e64 v1, v1, s2
+; GFX12-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX12-NEXT:    v_and_b32_e64 v1, v1, s4
 ; GFX12-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
 ; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v3
-; GFX12-NEXT:    s_mov_b32 s2, 2
+; GFX12-NEXT:    s_mov_b32 s4, 2
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_lshlrev_b64_e64 v[2:3], s2, v[1:2]
-; GFX12-NEXT:    s_mov_b32 s3, s4
-; GFX12-NEXT:    v_mov_b32_e32 v1, v2
-; GFX12-NEXT:    s_mov_b32 s2, s5
-; GFX12-NEXT:    v_mov_b32_e32 v2, v3
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_add_co_u32 v1, s3, s3, v1
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, s2, s2, v2, s3
-; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
-; GFX12-NEXT:    v_mov_b32_e32 v2, v3
-; GFX12-NEXT:    global_load_b32 v1, v[1:2], off th:TH_LOAD_LU
+; GFX12-NEXT:    v_lshlrev_b64_e64 v[1:2], s4, v[1:2]
+; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2 killed $exec
+; GFX12-NEXT:    global_load_b32 v1, v1, s[2:3] th:TH_LOAD_LU
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
