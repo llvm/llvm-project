@@ -1040,9 +1040,8 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     SectionSP header_sp = std::make_shared<Section>(
-        module_sp, this, ~user_id_t(0), ConstString("PECOFF header"),
-        eSectionTypeOther, m_coff_header_opt.image_base,
-        m_coff_header_opt.header_size,
+        module_sp, this, ~user_id_t(0), "PECOFF header", eSectionTypeOther,
+        m_coff_header_opt.image_base, m_coff_header_opt.header_size,
         /*file_offset*/ 0, m_coff_header_opt.header_size,
         m_coff_header_opt.sect_alignment,
         /*flags*/ 0);
@@ -1053,14 +1052,13 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     const uint32_t nsects = m_sect_headers.size();
     for (uint32_t idx = 0; idx < nsects; ++idx) {
       llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
-      ConstString const_sect_name(sect_name);
       SectionType section_type = GetSectionType(sect_name, m_sect_headers[idx]);
 
       SectionSP section_sp = std::make_shared<Section>(
           module_sp,       // Module to which this section belongs
           this,            // Object file to which this section belongs
           idx + 1,         // Section ID is the 1 based section index.
-          const_sect_name, // Name of this section
+          sect_name.str(), // Name of this section
           section_type,
           m_coff_header_opt.image_base +
               m_sect_headers[idx].vmaddr, // File VM address == addresses as

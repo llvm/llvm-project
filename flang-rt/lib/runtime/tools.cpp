@@ -366,9 +366,9 @@ RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
 }
 
 // The ShallowCopyModifiedSuffix family must stay inside the offload API
-// group: its caller CopyOutAssign is an offload API entry point (see the
-// RT_EXT_API_GROUP markers in assign.cpp), so offload builds compile and
-// call it in device code.
+// group: its callers CopyOutAssignDirect and CopyOutAssign are offload API
+// entry points (see the RT_EXT_API_GROUP markers in assign.cpp), so offload
+// builds compile and call them in device code.
 // Compares one element bitwise. As in the ShallowCopy* helpers above, the
 // compile-time element size lets the compiler inline the comparison.
 template <typename P>
