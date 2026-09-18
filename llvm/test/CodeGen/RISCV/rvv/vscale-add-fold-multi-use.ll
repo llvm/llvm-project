@@ -26,8 +26,8 @@ define <vscale x 64 x i32> @ret_split_nxv64i32(ptr %x) {
    ret <vscale x 64 x i32> %v
 }
 
-define <vscale x 32 x i64> @lrint_nxv32f16(<vscale x 32 x float> %x) {
-; CHECK-LABEL: lrint_nxv32f16:
+define <vscale x 32 x i64> @lrint_nxv32f32(<vscale x 32 x float> %x) {
+; CHECK-LABEL: lrint_nxv32f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a2, a1, 4
@@ -45,6 +45,6 @@ define <vscale x 32 x i64> @lrint_nxv32f16(<vscale x 32 x float> %x) {
 ; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    vs8r.v v8, (a1)
 ; CHECK-NEXT:    ret
-      %a = call <vscale x 32 x i64> @llvm.lrint.nxv32i64.nxv32f16(<vscale x 32 x float> %x)
+      %a = call <vscale x 32 x i64> @llvm.lrint.nxv32i64.nxv32f32(<vscale x 32 x float> %x)
    ret <vscale x 32 x i64> %a
 }
