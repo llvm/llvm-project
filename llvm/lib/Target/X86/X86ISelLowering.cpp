@@ -50519,8 +50519,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // This should constant fold.
       SDValue Diff = DAG.getNode(ISD::SUB, DL, VT, Const, Add.getOperand(1));
       SDValue CMov =
-          DAG.getNode(X86ISD::CMOV, DL, VT, Diff, Add.getOperand(0),
-                      DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond);
+          DAG.getNode(X86ISD::CMOV, DL, VT,
+                      {Diff, Add.getOperand(0),
+                       DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond},
+                      N->getFlags());
       return DAG.getNode(ISD::ADD, DL, VT, CMov, Add.getOperand(1));
     }
   }

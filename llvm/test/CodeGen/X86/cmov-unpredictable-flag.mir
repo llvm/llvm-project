@@ -101,7 +101,7 @@ body: |
   ; CHECK-NEXT:   [[BSF32rr:%[0-9]+]]:gr32 = BSF32rr [[DEF]], [[COPY]], implicit-def dead $eflags
   ; CHECK-NEXT:   TEST32rr [[COPY]], [[COPY]], implicit-def $eflags
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 32
-  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = CMOV32rr [[MOV32ri]], killed [[BSF32rr]], 5, implicit $eflags
+  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = unpredictable CMOV32rr [[MOV32ri]], killed [[BSF32rr]], 5, implicit $eflags
   ; CHECK-NEXT:   [[INC32r:%[0-9]+]]:gr32 = INC32r [[CMOV32rr]], implicit-def dead $eflags
   ; CHECK-NEXT:   $eax = COPY [[INC32r]]
   ; CHECK-NEXT:   RET 0, $eax
