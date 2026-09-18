@@ -15,6 +15,8 @@
 // ---------------------------------------------------------------------------
 // Type definitions shared across all tests.
 // ---------------------------------------------------------------------------
+#pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
+
 typedef float __attribute__((coop_mat(CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
                                       16, 16,
                                       CLK_COOPERATIVE_MATRIX_A)))           MatA_t;

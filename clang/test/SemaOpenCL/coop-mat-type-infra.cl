@@ -29,6 +29,8 @@
 #define USE_B  CLK_COOPERATIVE_MATRIX_B
 #define USE_C  CLK_COOPERATIVE_MATRIX_ACCUMULATOR
 
+#pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
+
 // ---------------------------------------------------------------------------
 // Basic type construction — four use roles, float element type.
 // ---------------------------------------------------------------------------
