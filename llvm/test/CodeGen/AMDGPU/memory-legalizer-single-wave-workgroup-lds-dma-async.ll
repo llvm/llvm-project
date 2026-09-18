@@ -17,8 +17,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    ds_load_b32 v1, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
@@ -32,7 +30,7 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
   ret void
 }
 
-define amdgpu_kernel void @lds_async_dma_wg_fence_release_single32(ptr addrspace(1) %g, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @lds_async_dma_wg_fence_release_single32(ptr addrspace(1) %g, ptr addrspace(3) %lds) #1 {
 ; GFX1250-LABEL: lds_async_dma_wg_fence_release_single32:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
@@ -64,4 +62,5 @@ define amdgpu_kernel void @lds_async_dma_wg_fence_release_single32(ptr addrspace
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" "amdgpu-no-async" }
+attributes #1 = { nounwind "amdgpu-flat-work-group-size"="32,32" }

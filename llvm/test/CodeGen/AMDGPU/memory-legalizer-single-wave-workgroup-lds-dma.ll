@@ -16,7 +16,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_write_b32 v0, v1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_read_b32 v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
@@ -33,7 +32,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    ds_write_b32 v0, v1
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    ds_read_b32 v1, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
@@ -50,8 +48,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    ds_write_b32 v0, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    ds_read_b32 v1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
@@ -75,7 +71,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_write_b32 v0, v1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    ds_read_b32 v1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
@@ -92,7 +87,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    ds_write_b32 v0, v1
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    ds_read_b32 v1, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
@@ -100,23 +94,39 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
 ; GFX942-NEXT:    ds_write_b32 v0, v1
 ; GFX942-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: lds_wg_fence_release_single64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v1, 1
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    ds_write_b32 v0, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    ds_read_b32 v1, v0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    ds_write_b32 v0, v1
-; GFX10-NEXT:    s_endpgm
+; GFX10-W32-LABEL: lds_wg_fence_release_single64:
+; GFX10-W32:       ; %bb.0:
+; GFX10-W32-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-W32-NEXT:    v_mov_b32_e32 v1, 1
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W32-NEXT:    ds_write_b32 v0, v1
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W32-NEXT:    ds_read_b32 v1, v0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    ds_write_b32 v0, v1
+; GFX10-W32-NEXT:    s_endpgm
+;
+; GFX10-W64-LABEL: lds_wg_fence_release_single64:
+; GFX10-W64:       ; %bb.0:
+; GFX10-W64-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W64-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-W64-NEXT:    v_mov_b32_e32 v1, 1
+; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W64-NEXT:    ds_write_b32 v0, v1
+; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W64-NEXT:    ds_read_b32 v1, v0
+; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W64-NEXT:    ds_write_b32 v0, v1
+; GFX10-W64-NEXT:    s_endpgm
   store i32 1, ptr addrspace(3) %lds, align 4
   fence syncscope("workgroup") release
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -124,7 +134,7 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
   ret void
 }
 
-define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds) #2 {
 ; GFX9-LABEL: lds_dma_wg_fence_release_single32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b64 s[6:7], s[4:5]
@@ -236,8 +246,6 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" }
-attributes #1 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX10-W32: {{.*}}
-; GFX10-W64: {{.*}}
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" "amdgpu-no-async" }
+attributes #1 = { nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-no-async" }
+attributes #2 = { nounwind "amdgpu-flat-work-group-size"="32,32" }

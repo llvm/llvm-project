@@ -3404,6 +3404,45 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
 }
 
+bool isAsyncIntrinsic(unsigned IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b8:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds:
+  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark:
+  case Intrinsic::amdgcn_s_wait_asynccnt:
+  case Intrinsic::amdgcn_s_wait_tensorcnt:
+  case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+    return true;
+  default:
+    return false;
+  }
+}
+
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,
