@@ -90,10 +90,10 @@ OptTable::OptTable(const StringTable &StrTable,
     unsigned Kind = getInfo(i + 1).Kind;
     if (Kind == Option::InputClass) {
       assert(!InputOptionID && "Cannot have multiple input options!");
-      InputOptionID = getInfo(i + 1).ID;
+      InputOptionID = i + 1;
     } else if (Kind == Option::UnknownClass) {
       assert(!UnknownOptionID && "Cannot have multiple unknown options!");
-      UnknownOptionID = getInfo(i + 1).ID;
+      UnknownOptionID = i + 1;
     } else if (Kind != Option::GroupClass) {
       FirstSearchableIndex = i;
       break;

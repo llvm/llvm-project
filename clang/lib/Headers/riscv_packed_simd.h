@@ -75,6 +75,23 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __v[__idx];                                                         \
   }
 
+#define __packed_subvector_extract8(name, rty, ty)                             \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __v,              \
+                                                          unsigned __idx)      \
+      __attribute__((__enable_if__(                                            \
+          __idx <= 1, "index must be a constant integer from 0 to 1"))) {      \
+    return __idx ? __builtin_shufflevector(__v, __v, 4, 5, 6, 7)               \
+                 : __builtin_shufflevector(__v, __v, 0, 1, 2, 3);              \
+  }
+#define __packed_subvector_extract4(name, rty, ty)                             \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __v,              \
+                                                          unsigned __idx)      \
+      __attribute__((__enable_if__(                                            \
+          __idx <= 1, "index must be a constant integer from 0 to 1"))) {      \
+    return __idx ? __builtin_shufflevector(__v, __v, 2, 3)                     \
+                 : __builtin_shufflevector(__v, __v, 0, 1);                    \
+  }
+
 #define __packed_store(name, ty, elt_ty)                                       \
   static __inline__ void __DEFAULT_FN_ATTRS __riscv_##name(elt_ty *__p,        \
                                                            ty __v) {           \
@@ -364,6 +381,24 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
+
+/* Scalar Bitmanip */
+__packed_unary_builtin(rev_32, uint32_t, __builtin_bitreverse32)
+#if __riscv_xlen == 64
+__packed_unary_builtin(rev_64, uint64_t, __builtin_bitreverse64)
+#endif
+
+/* Scalar Saturating Addition and Subtraction */
+__packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(ssub_i32, int32_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(ssubu_u32, uint32_t, __builtin_elementwise_sub_sat)
+
+/* Scalar Absolute Value */
+__packed_pabs(abs_u32, int32_t, uint32_t)
+#if __riscv_xlen == 64
+__packed_pabs(abs_u64, int64_t, uint64_t)
+#endif
 
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
@@ -1114,6 +1149,12 @@ __packed_concat4(pjoin2_u8x8, uint8x8_t, uint8x4_t)
 __packed_concat2(pjoin2_i16x4, int16x4_t, int16x2_t)
 __packed_concat2(pjoin2_u16x4, uint16x4_t, uint16x2_t)
 
+/* Packed Subvector Extract */
+__packed_subvector_extract8(pget_i8x8_i8x4, int8x4_t, int8x8_t)
+__packed_subvector_extract8(pget_u8x8_u8x4, uint8x4_t, uint8x8_t)
+__packed_subvector_extract4(pget_i16x4_i16x2, int16x2_t, int16x4_t)
+__packed_subvector_extract4(pget_u16x4_u16x2, uint16x2_t, uint16x4_t)
+
 /* Packed Store (32-bit) */
 __packed_store(pst_i8x4, int8x4_t, int8_t)
 __packed_store(pst_u8x4, uint8x4_t, uint8_t)
@@ -1309,6 +1350,8 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_abdsum
 #undef __packed_ternary_builtin_cast
 #undef __packed_extract
+#undef __packed_subvector_extract8
+#undef __packed_subvector_extract4
 #undef __packed_insert
 #undef __packed_join2
 #undef __packed_join4
