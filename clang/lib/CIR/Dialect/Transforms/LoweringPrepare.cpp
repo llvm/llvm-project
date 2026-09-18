@@ -1365,7 +1365,12 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // CIRGen, so this pass does not need a live ASTContext to read them.
   std::optional<cir::StaticLocalInfoAttr> infoOption =
       globalOp.getStaticLocalInfo();
-  assert(infoOption.has_value());
+  // Verified IR guarantees this
+  if (!infoOption.has_value()) {
+    globalOp->emitError(
+        "static-local global with a guard is missing 'static_local_info'");
+    return;
+  }
   cir::StaticLocalInfoAttr info = infoOption.value();
 
   builder.setInsertionPointAfter(localInitOp);

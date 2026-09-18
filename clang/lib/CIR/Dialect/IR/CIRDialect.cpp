@@ -2293,6 +2293,11 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
+  // A guard implies the info attribute;
+  if (getStaticLocalGuard().has_value() && !getStaticLocalInfo().has_value())
+    return emitOpError(
+        "'static_local_guard' requires 'static_local_info' to be present");
+
   if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
       return emitOpError("cannot have both static local and tls references");

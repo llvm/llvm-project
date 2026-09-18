@@ -1,0 +1,13 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// A guarded static-local relies on 'static_local_info' during LoweringPrepare,
+// so the GlobalOp verifier rejects a 'static_local_guard' without it. This
+// guards the static-local lowering path against hand-written or serialized
+// .cir that would otherwise crash lowering with a missing info attribute.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // expected-error@+1 {{'static_local_guard' requires 'static_local_info' to be present}}
+  cir.global "private" internal static_local_guard<"_ZGVZ1fvE1x"> @_ZZ1fvE1x : !s32i
+}
