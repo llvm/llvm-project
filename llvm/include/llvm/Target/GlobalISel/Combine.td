@@ -1415,10 +1415,10 @@ def rotate_out_of_range : GICombineRule<
 >;
 
 def icmp_to_true_false_known_bits : GICombineRule<
-  (defs root:$d, build_fn_matchinfo:$matchinfo),
+  (defs root:$d, int64_matchinfo:$matchinfo),
   (match (G_ICMP $dst, $pred, $src1, $src2):$d,
          [{ return Helper.matchICmpToTrueFalseKnownBits(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
 def icmp_to_lhs_known_bits : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),

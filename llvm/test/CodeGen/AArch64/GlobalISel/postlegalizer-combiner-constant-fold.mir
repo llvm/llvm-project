@@ -532,3 +532,55 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            udiv_vector_by_zero
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; A zero divisor in any lane must refuse the whole vector fold.
+    ; CHECK-LABEL: name: udiv_vector_by_zero
+    ; CHECK: %a0:_(i64) = G_CONSTANT i64 40
+    ; CHECK-NEXT: %a1:_(i64) = G_CONSTANT i64 10
+    ; CHECK-NEXT: %b0:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: %b1:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    ; CHECK-NEXT: %bv:_(<2 x i64>) = G_BUILD_VECTOR %b0(i64), %b1(i64)
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_UDIV %av, %bv
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i64) = G_CONSTANT i64 40
+    %a1:_(i64) = G_CONSTANT i64 10
+    %b0:_(i64) = G_CONSTANT i64 2
+    %b1:_(i64) = G_CONSTANT i64 0
+    %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    %bv:_(<2 x i64>) = G_BUILD_VECTOR %b0(i64), %b1(i64)
+    %res:_(<2 x i64>) = G_UDIV %av, %bv
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            add_vector_undef_lane
+legalized:       true
+body:             |
+  bb.1.entry:
+    ; An undef lane must refuse the whole vector fold.
+    ; CHECK-LABEL: name: add_vector_undef_lane
+    ; CHECK: %a0:_(i64) = G_CONSTANT i64 40
+    ; CHECK-NEXT: %a1:_(i64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %b:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    ; CHECK-NEXT: %bv:_(<2 x i64>) = G_BUILD_VECTOR %b(i64), %b(i64)
+    ; CHECK-NEXT: %res:_(<2 x i64>) = G_ADD %av, %bv
+    ; CHECK-NEXT: $q0 = COPY %res(<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %a0:_(i64) = G_CONSTANT i64 40
+    %a1:_(i64) = G_IMPLICIT_DEF
+    %b:_(i64) = G_CONSTANT i64 2
+    %av:_(<2 x i64>) = G_BUILD_VECTOR %a0(i64), %a1(i64)
+    %bv:_(<2 x i64>) = G_BUILD_VECTOR %b(i64), %b(i64)
+    %res:_(<2 x i64>) = G_ADD %av, %bv
+    $q0 = COPY %res(<2 x i64>)
+    RET_ReallyLR implicit $q0
+
+...

@@ -169,8 +169,10 @@ public:
   /// perform a FewerElements action on the target.
   LLVM_ABI bool isLegalOrHasFewerElements(const LegalityQuery &Query) const;
 
-  /// \return true if the combine is running prior to legalization, or if \p Ty
-  /// is a legal integer constant type on the target.
+  /// \return true if the combine is running prior to legalization, or if a
+  /// scalar \p Ty G_CONSTANT is legal. For fixed vectors, also requires
+  /// G_BUILD_VECTOR of those scalar constants to be legal. Scalable vectors are
+  /// not constant folded and return false.
   LLVM_ABI bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
 
   /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
@@ -724,7 +726,7 @@ public:
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
   LLVM_ABI bool matchICmpToTrueFalseKnownBits(MachineInstr &MI,
-                                              BuildFnTy &MatchInfo) const;
+                                              int64_t &MatchInfo) const;
 
   /// \returns true if a G_ICMP \p MI can be replaced with its LHS based off of
   /// KnownBits information.
