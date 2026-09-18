@@ -1624,8 +1624,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
                 {fir::SequenceType::getUnknownExtent()}, eleTy);
           }
           if (!extents.empty()) {
-            mlir::Value seqRef = builder.createConvert(
-                loc, fir::ReferenceType::get(viewTy), entity);
+            // The view must keep the source memory qualification: dropping
+            // VOLATILE here would let the copy read the element sequence
+            // with non-volatile accesses.
+            mlir::Value seqRef = builder.createConvertWithVolatileCast(
+                loc,
+                fir::ReferenceType::get(
+                    viewTy, fir::isa_volatile_type(entity.getType())),
+                entity);
             mlir::Value shape = builder.genShape(loc, extents);
             auto declare = hlfir::DeclareOp::create(
                 builder, loc, seqRef, ".sequence.assoc", shape,
