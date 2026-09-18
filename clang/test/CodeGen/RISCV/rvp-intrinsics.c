@@ -11990,3 +11990,253 @@ int16x4_t test_pjoin2_i16x4(int16x2_t lo, int16x2_t hi) {
 uint16x4_t test_pjoin2_u16x4(uint16x2_t lo, uint16x2_t hi) {
   return __riscv_pjoin2_u16x4(lo, hi);
 }
+
+/* Packed Subvector Extract */
+
+// RV32-LABEL: define dso_local i32 @test_pget_i8x8_i8x4(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV32-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT]]
+// RV32:       [[__RISCV_PGET_I8X8_I8X4_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_i8x8_i8x4(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT]]
+// RV64:       [[__RISCV_PGET_I8X8_I8X4_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int8x4_t test_pget_i8x8_i8x4(int8x8_t v) {
+  return __riscv_pget_i8x8_i8x4(v, 0);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_i8x8_i8x4_idx1(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[SHUFFLE_I_BC:%.*]] = bitcast i64 [[V_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = extractelement <2 x i32> [[SHUFFLE_I_BC]], i64 1
+// RV32-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT]]
+// RV32:       [[__RISCV_PGET_I8X8_I8X4_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_i8x8_i8x4_idx1(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 32
+// RV64-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_I8X8_I8X4_EXIT]]
+// RV64:       [[__RISCV_PGET_I8X8_I8X4_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int8x4_t test_pget_i8x8_i8x4_idx1(int8x8_t v) {
+  return __riscv_pget_i8x8_i8x4(v, 1);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_u8x8_u8x4(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV32-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT]]
+// RV32:       [[__RISCV_PGET_U8X8_U8X4_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_u8x8_u8x4(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT]]
+// RV64:       [[__RISCV_PGET_U8X8_U8X4_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint8x4_t test_pget_u8x8_u8x4(uint8x8_t v) {
+  return __riscv_pget_u8x8_u8x4(v, 0);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_u8x8_u8x4_idx1(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[SHUFFLE_I_BC:%.*]] = bitcast i64 [[V_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = extractelement <2 x i32> [[SHUFFLE_I_BC]], i64 1
+// RV32-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT]]
+// RV32:       [[__RISCV_PGET_U8X8_U8X4_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_u8x8_u8x4_idx1(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 32
+// RV64-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_U8X8_U8X4_EXIT]]
+// RV64:       [[__RISCV_PGET_U8X8_U8X4_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint8x4_t test_pget_u8x8_u8x4_idx1(uint8x8_t v) {
+  return __riscv_pget_u8x8_u8x4(v, 1);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_i16x4_i16x2(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV32-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT]]
+// RV32:       [[__RISCV_PGET_I16X4_I16X2_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_i16x4_i16x2(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT]]
+// RV64:       [[__RISCV_PGET_I16X4_I16X2_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int16x2_t test_pget_i16x4_i16x2(int16x4_t v) {
+  return __riscv_pget_i16x4_i16x2(v, 0);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_i16x4_i16x2_idx1(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[SHUFFLE_I_BC:%.*]] = bitcast i64 [[V_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = extractelement <2 x i32> [[SHUFFLE_I_BC]], i64 1
+// RV32-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT]]
+// RV32:       [[__RISCV_PGET_I16X4_I16X2_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_i16x4_i16x2_idx1(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 32
+// RV64-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_I16X4_I16X2_EXIT]]
+// RV64:       [[__RISCV_PGET_I16X4_I16X2_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int16x2_t test_pget_i16x4_i16x2_idx1(int16x4_t v) {
+  return __riscv_pget_i16x4_i16x2(v, 1);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_u16x4_u16x2(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV32-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT]]
+// RV32:       [[__RISCV_PGET_U16X4_U16X2_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_u16x4_u16x2(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 false, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    [[SHUFFLE2_I_EXTRACT:%.*]] = trunc i64 [[V_COERCE]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT]]
+// RV64:       [[__RISCV_PGET_U16X4_U16X2_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, %[[COND_TRUE_I]] ], [ [[SHUFFLE2_I_EXTRACT]], %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint16x2_t test_pget_u16x4_u16x2(uint16x4_t v) {
+  return __riscv_pget_u16x4_u16x2(v, 0);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_u16x4_u16x2_idx1(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV32:       [[COND_TRUE_I]]:
+// RV32-NEXT:    [[SHUFFLE_I_BC:%.*]] = bitcast i64 [[V_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = extractelement <2 x i32> [[SHUFFLE_I_BC]], i64 1
+// RV32-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT:.*]]
+// RV32:       [[COND_FALSE_I]]:
+// RV32-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT]]
+// RV32:       [[__RISCV_PGET_U16X4_U16X2_EXIT]]:
+// RV32-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pget_u16x4_u16x2_idx1(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    br i1 true, label %[[COND_TRUE_I:.*]], label %[[COND_FALSE_I:.*]]
+// RV64:       [[COND_TRUE_I]]:
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 32
+// RV64-NEXT:    [[SHUFFLE_I_EXTRACT:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
+// RV64-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT:.*]]
+// RV64:       [[COND_FALSE_I]]:
+// RV64-NEXT:    br label %[[__RISCV_PGET_U16X4_U16X2_EXIT]]
+// RV64:       [[__RISCV_PGET_U16X4_U16X2_EXIT]]:
+// RV64-NEXT:    [[TMP0:%.*]] = phi i32 [ [[SHUFFLE_I_EXTRACT]], %[[COND_TRUE_I]] ], [ poison, %[[COND_FALSE_I]] ]
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint16x2_t test_pget_u16x4_u16x2_idx1(uint16x4_t v) {
+  return __riscv_pget_u16x4_u16x2(v, 1);
+}
