@@ -571,9 +571,8 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
       };
       auto isDisjointExtraction = [&](Value value) {
         auto extraction = value.getDefiningOp<SubsetExtractionOpInterface>();
-        return extraction &&
-               isDisjointSubset(
-                   cast<SubsetOpInterface>(extraction.getOperation()));
+        return extraction && isDisjointSubset(cast<SubsetOpInterface>(
+                                 extraction.getOperation()));
       };
 
       // Example:
@@ -584,8 +583,7 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
       // A read from a subset does not conflict with a write to a disjoint
       // subset of an equivalent tensor. Check the operand roles explicitly
       // because not every subset extraction bufferizes to a memory read.
-      if (auto extraction =
-              dyn_cast<SubsetExtractionOpInterface>(readingOp)) {
+      if (auto extraction = dyn_cast<SubsetExtractionOpInterface>(readingOp)) {
         if (uRead == &extraction.getSourceOperand() &&
             isDisjointSubset(cast<SubsetOpInterface>(readingOp)))
           return true;
