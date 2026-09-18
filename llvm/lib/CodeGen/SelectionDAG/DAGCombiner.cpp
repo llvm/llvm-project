@@ -3974,6 +3974,7 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
 
   // USUBO_CARRY's carry-in must match boolean contents, which the matched
   // pattern does not guarantee.
+  // TODO: Extend to other boolean contents.
   if (TLI.getBooleanContents(IntVT) !=
           TargetLowering::ZeroOrOneBooleanContent ||
       !DAG.MaskedValueIsZero(
