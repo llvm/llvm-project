@@ -4,9 +4,6 @@ This file is a list of the
 [maintainers](https://llvm.org/docs/DeveloperPolicy.html#maintainers)
 for the [Extra Clang Tools](https://clang.llvm.org/extra/index.html) project.
 
-```{contents} Table of Contents
-:depth: 2
-```
 
 # Active Maintainers
 

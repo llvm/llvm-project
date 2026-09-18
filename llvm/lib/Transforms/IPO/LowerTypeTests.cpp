@@ -31,6 +31,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -368,49 +369,92 @@ enum class CfiFunctionLinkage : uint8_t {
   WeakDeclaration = 2,
 };
 
+/// The hotness of a CFI jumptable function entry.
+class CfiFunctionHotness {
+  enum class Kind : uint8_t {
+    Unknown = 0, // It's higher rank than Cold, but convenient to store as zero.
+    Cold = 1,
+    Other = 2,
+    Hot = 3,
+  };
+
+  Kind Type = Kind::Unknown;
+
+  CfiFunctionHotness(Kind Type) : Type(Type) {}
+
+public:
+  CfiFunctionHotness() = default;
+
+  // Computes the execution weight for F across its entry count and basic block
+  // counts. Placing the hottest function (i.e. the function with the highest
+  // weight) as the last jump table entry makes it more likely to benefit from
+  // the SHT_LLVM_CFI_JUMP_TABLE last-entry optimization and locks the jump
+  // table into the target's section, which is likely hot.
+  // The most important goal is to put functions which end up in .hot at the
+  // end of jumptable, to keep jump table in the same section.
+  static CfiFunctionHotness
+  fromFunction(Function &F, ProfileSummaryInfo &PSI,
+               function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+    if (F.isDeclaration())
+      return Kind::Unknown;
+
+    // We want to mimic CodeGenPrepare::_run to match section assignments.
+    const BlockFrequencyInfo &BFI = BFIGetter(F);
+    if (F.hasFnAttribute(Attribute::Hot) ||
+        PSI.isFunctionHotInCallGraph(&F, BFI)) {
+      return Kind::Hot;
+    }
+
+    if (PSI.isFunctionColdInCallGraph(&F, BFI) ||
+        F.hasFnAttribute(Attribute::Cold)) {
+      return Kind::Cold;
+    }
+
+    return (!PSI.hasPartialSampleProfile() || PSI.isFunctionHotnessUnknown(F))
+               ? Kind::Unknown
+               : Kind::Other;
+  }
+
+  static CfiFunctionHotness fromUint6(uint8_t V) {
+    return CfiFunctionHotness(static_cast<Kind>(V & 0x3));
+  }
+
+  uint8_t asUint6() const { return static_cast<uint8_t>(Type) & 0x3; }
+
+  bool operator==(const CfiFunctionHotness &Other) const {
+    return Type == Other.Type;
+  }
+
+  bool operator<(const CfiFunctionHotness &Other) const {
+    auto Rank = [](Kind K) -> int {
+      return (K == Kind::Cold) ? -1 : static_cast<int>(K);
+    };
+    return Rank(Type) < Rank(Other.Type);
+  }
+};
+
 } // namespace
 
 static CfiFunctionLinkage decodeCfiFunctionLinkage(uint8_t Encoded) {
   return static_cast<CfiFunctionLinkage>(Encoded & 0x3);
 }
 
-static uint64_t decodeCfiFunctionCount(uint8_t Encoded) {
-  uint8_t Log2 = Encoded >> 2;
-  return Log2 ? (uint64_t(1) << Log2) : 0;
+static CfiFunctionHotness decodeCfiFunctionHotness(uint8_t Encoded) {
+  return CfiFunctionHotness::fromUint6(Encoded >> 2);
 }
 
 static uint8_t encodeCfiFunctionLinkage(CfiFunctionLinkage Linkage,
-                                        uint64_t MaxCount) {
-  uint8_t Log2 = MaxCount ? std::min<unsigned>(63, Log2_64(MaxCount)) : 0;
-  uint8_t Encoded = (Log2 << 2) | (static_cast<uint8_t>(Linkage) & 0x3);
+                                        CfiFunctionHotness Hotness) {
+  uint8_t Encoded =
+      (Hotness.asUint6() << 2) | (static_cast<uint8_t>(Linkage) & 0x3);
   assert(decodeCfiFunctionLinkage(Encoded) == Linkage);
-  assert(decodeCfiFunctionCount(Encoded) == (Log2 ? (uint64_t(1) << Log2) : 0));
+  assert(decodeCfiFunctionHotness(Encoded) == Hotness);
   return Encoded;
-}
-
-// Returns the maximum execution count for F across its entry count and basic
-// block counts. Placing the hottest function (i.e. the function with the
-// hottest basic block) as the last jump table entry makes it more likely to
-// benefit from the SHT_LLVM_CFI_JUMP_TABLE last-entry optimization and locks
-// the jump table into the target's section, which is likely hot.
-static uint64_t
-getMaxCount(Function &F,
-            function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
-  if (F.hasFnAttribute(Attribute::Hot))
-    return std::numeric_limits<int64_t>::max();
-  uint64_t MaxCount = F.getEntryCount().value_or(0);
-  if (!F.isDeclaration()) {
-    const BlockFrequencyInfo &BFI = BFIGetter(F);
-    for (const BasicBlock &BB : F) {
-      if (auto Count = BFI.getBlockProfileCount(&BB))
-        MaxCount = std::max(MaxCount, *Count);
-    }
-  }
-  return MaxCount;
 }
 
 static void createCfiFunctionsMetadata(
     Module &DestM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
     function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
   auto &Ctx = DestM.getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
@@ -427,8 +471,8 @@ static void createCfiFunctionsMetadata(
     else if (F.hasExternalWeakLinkage())
       Linkage = CfiFunctionLinkage::WeakDeclaration;
 
-    uint8_t EncodedLinkage =
-        encodeCfiFunctionLinkage(Linkage, getMaxCount(F, BFIGetter));
+    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(
+        Linkage, CfiFunctionHotness::fromFunction(F, PSI, BFIGetter));
 
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt8Ty(Ctx), EncodedLinkage)));
@@ -491,8 +535,9 @@ static void createCfiSymversMetadata(Module &DestM, const Module &SrcM) {
 
 void lowertypetests::createCfiMetadata(
     Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
     function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
-  createCfiFunctionsMetadata(DestM, CfiFunctions, BFIGetter);
+  createCfiFunctionsMetadata(DestM, CfiFunctions, PSI, BFIGetter);
   createCfiAliasesMetadata(DestM, SrcM);
   createCfiSymversMetadata(DestM, SrcM);
 }
@@ -676,10 +721,8 @@ class LowerTypeTestsModule {
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
 
-  unique_function<const BlockFrequencyInfo &(Function &) const> BFIGetter;
-
   // Map from function to hotness passed via cfi.functions metadata.
-  DenseMap<const Function *, uint64_t> FunctionSummaryHotness;
+  DenseMap<const Function *, CfiFunctionHotness> FunctionSummaryHotness;
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -2177,16 +2220,13 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
       Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
 
   unique_function<bool(uint64_t, uint64_t)> Less;
-  if (!IsGlobalSet) {
-    // Estimated hotness of each jump entry.
-    std::vector<uint64_t> GTMHotness;
+  if (!IsGlobalSet && !FunctionSummaryHotness.empty()) {
+    // Estimated weight of each jump entry.
+    std::vector<CfiFunctionHotness> GTMHotness;
     GTMHotness.reserve(Globals.size());
     for (GlobalTypeMember *GTM : Globals) {
       Function *F = cast<Function>(GTM->getGlobal());
-      auto It = FunctionSummaryHotness.find(F);
-      GTMHotness.push_back(It != FunctionSummaryHotness.end()
-                               ? It->second
-                               : getMaxCount(*F, BFIGetter));
+      GTMHotness.push_back(FunctionSummaryHotness.lookup(F));
     }
 
     // Order jump table entries by hotness ascending so that the hottest
@@ -2239,9 +2279,6 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  BFIGetter = [&FAM](Function &F) -> const BlockFrequencyInfo & {
-    return FAM.getResult<BlockFrequencyAnalysis>(F);
-  };
 
   if (Arch == Triple::arm)
     CanUseArmJumpTable = true;
@@ -2631,7 +2668,8 @@ bool LowerTypeTestsModule::lower() {
                               ->getValue()
                               ->getUniqueInteger()
                               .getZExtValue();
-        FunctionSummaryHotness[F] = decodeCfiFunctionCount(Encoded);
+        // TODO: Implement for Full LTO.
+        FunctionSummaryHotness[F] = decodeCfiFunctionHotness(Encoded);
       }
     }
   }
@@ -2648,10 +2686,7 @@ bool LowerTypeTestsModule::lower() {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
       for (auto *AliasMD : AliasesMD->operands()) {
         SmallVector<Function *> Aliases;
-        for (Metadata *MD : AliasMD->operands()) {
-          auto *MDS = dyn_cast<MDString>(MD);
-          if (!MDS)
-            continue;
+        for (MDString *MDS : make_isa_range<MDString>(AliasMD->operands())) {
           StringRef AliasName = MDS->getString();
           if (!ExportedFunctions.count(AliasName))
             continue;
@@ -2698,6 +2733,10 @@ bool LowerTypeTestsModule::lower() {
         if (!CrossDsoCfi || !IsJumpTableCanonical || F->hasLocalLinkage())
           continue;
       }
+
+      // TODO: Pre-fill for full LTO.
+      // if (!ExportSummary)
+      //   FunctionSummaryHotness[F] = getHotness(*F, PSI, BFIGetter);
     }
 
     auto *GTM = GlobalTypeMember::create(Alloc, &GO, IsJumpTableCanonical,
