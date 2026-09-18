@@ -1297,7 +1297,7 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pmhraccsu_i16x2:
   case RISCV::BI__builtin_riscv_pmhraccsu_i16x4:
   case RISCV::BI__builtin_riscv_pmhraccsu_i32x2:
-  // Packed Multiply High Accumulate with Byte/Halfword Index
+  // Packed Multiply High Accumulate.
   case RISCV::BI__builtin_riscv_pmhacc_b0_i16x2:
   case RISCV::BI__builtin_riscv_pmhacc_b1_i16x2:
   case RISCV::BI__builtin_riscv_pmhaccsu_b0_i16x2:
