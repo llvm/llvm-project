@@ -376,16 +376,11 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
                                          TemplateId->NumArgs);
 
       if (TemplateId->isInvalid() ||
-          Actions.ActOnCXXNestedNameSpecifier(getCurScope(),
-                                              SS,
-                                              TemplateId->TemplateKWLoc,
-                                              TemplateId->Template,
-                                              TemplateId->TemplateNameLoc,
-                                              TemplateId->LAngleLoc,
-                                              TemplateArgsPtr,
-                                              TemplateId->RAngleLoc,
-                                              CCLoc,
-                                              EnteringContext)) {
+          Actions.ActOnCXXNestedNameSpecifier(
+              getCurScope(), SS, TemplateId->TemplateKWLoc,
+              TemplateId->Template, TemplateId->TemplateNameLoc,
+              TemplateId->LAngleLoc, TemplateArgsPtr, TemplateId->RAngleLoc,
+              CCLoc, EnteringContext)) {
         SS.SetInvalid(SourceRange(StartLoc, CCLoc));
       } else {
         RestoreScopeSpecRange(SourceRange(StartLoc, CCLoc));
