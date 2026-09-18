@@ -575,7 +575,6 @@ static LogicalResult lowerToScalarLoadOp(vector::TransferReadOp readOp,
   Value mask = computeUnitInBoundsMask(readOp, rewriter);
   auto loadOp = xegpu::LoadGatherOp::create(
       rewriter, loc, vectorType.getElementType(), flatMemref, offset, mask,
-      /*chunk_size=*/IntegerAttr{},
       /*l1_hint=*/xegpu::CachePolicyAttr{},
       /*l2_hint=*/xegpu::CachePolicyAttr{},
       /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -814,6 +813,10 @@ struct TransferWriteLowering
       if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
         return rewriter.notifyMatchFailure(
             writeOp, "Only 1D and 2D vector stores are supported for SLM");
+      // Out of bounds case is not supported for SLM stores.
+      if (writeOp.hasOutOfBoundsDim())
+        return rewriter.notifyMatchFailure(
+            writeOp, "Out-of-bounds access is not supported for SLM stores");
       // Create mem_desc for SLM
       auto memDescType =
           xegpu::MemDescType::get(rewriter.getContext(), writeMemTy.getShape(),
