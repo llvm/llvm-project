@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -422,6 +423,42 @@ public:
   SetterImpl &setMemoryManagerCreator(
       LLJITBuilderState::MemoryManagerCreator CreateMemoryManager) {
     impl().CreateMemoryManager = std::move(CreateMemoryManager);
+    return impl();
+  }
+
+  /// Use an in-process, per-JITDylib-colocating slab allocator as the JIT's
+  /// memory manager (see createColocatingInProcessMemoryManager). Keeping a
+  /// JITDylib's objects colocated lets them reference each other with direct
+  /// (e.g. 32-bit PC-relative) edges. If ReservationGranularity is not given,
+  /// MapperJITLinkMemoryManager::defaultSlabSize() is used. If Policy is not
+  /// given, each JITDylib is restricted to a single slab (see
+  /// MapperJITLinkMemoryManager::denySlabGrowth).
+  ///
+  /// Note: this only takes effect on the JITLink path. On targets that still
+  /// default to RuntimeDyld (e.g. COFF today) it has no effect unless JITLink
+  /// is also enabled (e.g. via setObjectLinkingLayerCreator).
+  SetterImpl &setColocatingSlabAllocator(
+      std::optional<size_t> ReservationGranularity = std::nullopt,
+      std::optional<MapperJITLinkMemoryManager::SlabGrowthPolicy> Policy =
+          std::nullopt) {
+    auto SharedPolicy =
+        Policy ? std::make_shared<MapperJITLinkMemoryManager::SlabGrowthPolicy>(
+                     std::move(*Policy))
+               : nullptr;
+    impl().CreateMemoryManager = [ReservationGranularity,
+                                  SharedPolicy](ExecutionSession &)
+        -> Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>> {
+      auto MM = createColocatingInProcessMemoryManager(ReservationGranularity);
+      if (!MM)
+        return MM.takeError();
+      if (SharedPolicy)
+        (*MM)->setSlabPolicy(std::move(*SharedPolicy));
+      else
+        (*MM)->denySlabGrowth();
+      // Expected<unique_ptr<Derived>> does not implicitly convert to
+      // Expected<unique_ptr<Base>>, so up-cast the pointer explicitly.
+      return std::unique_ptr<jitlink::JITLinkMemoryManager>(std::move(*MM));
+    };
     return impl();
   }
 
