@@ -19,6 +19,8 @@
 #define USE_C     CLK_COOPERATIVE_MATRIX_ACCUMULATOR
 #define ROW_MAJOR CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR
 
+#pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
+
 // ---------------------------------------------------------------------------
 // Matrix type aliases used across tests
 // ---------------------------------------------------------------------------
