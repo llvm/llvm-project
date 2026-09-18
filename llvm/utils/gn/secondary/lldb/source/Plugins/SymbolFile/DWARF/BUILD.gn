@@ -45,6 +45,7 @@ static_library("DWARF") {
     "DIERef.cpp",
     "DWARFASTParser.cpp",
     "DWARFASTParserClang.cpp",
+    "DWARFASTParserFortran.cpp",
     "DWARFAttribute.cpp",
     "DWARFBaseDIE.cpp",
     "DWARFCompileUnit.cpp",
