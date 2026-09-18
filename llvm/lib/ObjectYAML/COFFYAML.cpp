@@ -692,18 +692,22 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
   IO.mapOptional("VirtualSize", Sec.Header.VirtualSize, 0U);
   IO.mapOptional("Alignment", Sec.Alignment, 0U);
 
-  // If this is a .debug$S .debug$T .debug$P, or .debug$H section parse the
-  // semantic representation of the symbols/types.  If it is any other kind
-  // of section, just deal in raw bytes.
+  // If this is a .debug$S .debug$T .debug$P, .debug$H, or .llvm_bb_addr_map
+  // section parse the semantic representation of its contents.  If it is any
+  // other kind of section, just deal in raw bytes.
   IO.mapOptional("SectionData", Sec.SectionData);
-  if (Sec.Name == ".debug$S")
+  if (Sec.Name == ".debug$S") {
     IO.mapOptional("Subsections", Sec.DebugS);
-  else if (Sec.Name == ".debug$T")
+  } else if (Sec.Name == ".debug$T") {
     IO.mapOptional("Types", Sec.DebugT);
-  else if (Sec.Name == ".debug$P")
+  } else if (Sec.Name == ".debug$P") {
     IO.mapOptional("PrecompTypes", Sec.DebugP);
-  else if (Sec.Name == ".debug$H")
+  } else if (Sec.Name == ".debug$H") {
     IO.mapOptional("GlobalHashes", Sec.DebugH);
+  } else if (Sec.Name == ".llvm_bb_addr_map") {
+    IO.mapOptional("Entries", Sec.BBAddrMapEntries);
+    IO.mapOptional("PGOAnalyses", Sec.PGOAnalyses);
+  }
 
   IO.mapOptional("StructuredData", Sec.StructuredData);
 
@@ -716,6 +720,16 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
 
   if (!Sec.StructuredData.empty() && Sec.Header.SizeOfRawData) {
     IO.setError("StructuredData and SizeOfRawData can't be used together");
+    return;
+  }
+
+  // Entries describes the whole BBAddrMap section content and derives
+  // SizeOfRawData.
+  if (Sec.BBAddrMapEntries &&
+      (Sec.SectionData.binary_size() || !Sec.StructuredData.empty() ||
+       Sec.Header.SizeOfRawData)) {
+    IO.setError("Entries can't be used with SectionData, StructuredData or "
+                "SizeOfRawData");
     return;
   }
 
