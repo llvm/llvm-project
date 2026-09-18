@@ -646,14 +646,14 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
       return std::move(Err);
   }
 
-  if (Error Err = executeCommands(*ClangPath, CmdArgs))
-    return std::move(Err);
-
+  Error Err = executeCommands(*ClangPath, CmdArgs);
   if (SaveTemps && Triple.isAMDGPU() && !DryRun) {
-    if (sys::Wait(AsmProc, std::nullopt).ReturnCode)
-      return createStringError("'%s' failed",
-                               sys::path::filename(*ClangPath).str().c_str());
+    if (sys::Wait(AsmProc, std::nullopt).ReturnCode && !Err)
+      Err = createStringError("'%s' failed",
+                              sys::path::filename(*ClangPath).str().c_str());
   }
+  if (Err)
+    return std::move(Err);
 
   return *TempFileOrErr;
 }
