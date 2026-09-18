@@ -30,6 +30,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # grp.h entrypoints
+    libc.src.grp.endgrent
+    libc.src.grp.getgrent
+    libc.src.grp.setgrent
+
     # poll.h entrypoints
     libc.src.poll.poll
 

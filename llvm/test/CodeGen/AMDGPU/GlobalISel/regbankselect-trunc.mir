@@ -67,9 +67,9 @@ body: |
     ; GFX-NEXT: [[AND:%[0-9]+]]:vgpr(i32) = G_AND [[UV]], [[C]]
     ; GFX-NEXT: [[C1:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
     ; GFX-NEXT: [[AND1:%[0-9]+]]:vgpr(i32) = G_AND [[UV1]], [[C1]]
-    ; GFX-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](i32), [[AND1]](i32)
-    ; GFX-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 0
-    ; GFX-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[MV]](s64), [[C2]]
+    ; GFX-NEXT: [[MV:%[0-9]+]]:vgpr(i64) = G_MERGE_VALUES [[AND]](i32), [[AND1]](i32)
+    ; GFX-NEXT: [[C2:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 0
+    ; GFX-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[MV]](i64), [[C2]]
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s1) = G_TRUNC %0
 ...
@@ -103,10 +103,10 @@ body: |
     ; GFX: liveins: $vgpr0
     ; GFX-NEXT: {{  $}}
     ; GFX-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; GFX-NEXT: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[COPY]], [[C]]
-    ; GFX-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; GFX-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](s32), [[C1]]
+    ; GFX-NEXT: [[C:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 1
+    ; GFX-NEXT: [[AND:%[0-9]+]]:vgpr(i32) = G_AND [[COPY]], [[C]]
+    ; GFX-NEXT: [[C1:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
+    ; GFX-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](i32), [[C1]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
 ...
@@ -134,10 +134,10 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:vgpr(s16) = G_CONSTANT i16 1
-    ; GFX8-NEXT: [[AND:%[0-9]+]]:vgpr(s16) = G_AND [[TRUNC]], [[C]]
-    ; GFX8-NEXT: [[C1:%[0-9]+]]:vgpr(s16) = G_CONSTANT i16 0
-    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](s16), [[C1]]
+    ; GFX8-NEXT: [[C:%[0-9]+]]:vgpr(i16) = G_CONSTANT i16 1
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:vgpr(i16) = G_AND [[TRUNC]], [[C]]
+    ; GFX8-NEXT: [[C1:%[0-9]+]]:vgpr(i16) = G_CONSTANT i16 0
+    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](i16), [[C1]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s1) = G_TRUNC %1

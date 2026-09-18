@@ -86,12 +86,10 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
     auto PassName = MapClassName2PassName(ClassName);
     OS << PassName;
   }
-
-  // TODO: remove once out of tree users are updated.
-  static bool isRequired() { return false; }
 };
 
-bool shouldSkipOptimizationForOptBisect(IRUnitRef IR, StringRef PassName);
+LLVM_ABI bool shouldSkipOptimizationForOptBisect(IRUnitRef IR,
+                                                 StringRef PassName);
 } // namespace detail
 
 class Function;
