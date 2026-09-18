@@ -211,6 +211,7 @@ public:
   void Enter(const parser::OmpClause::Collapse &x);
   void Enter(const parser::OmpClause::Copyin &x);
   void Enter(const parser::OmpClause::Copyprivate &x);
+  void Enter(const parser::OmpClause::Default &x);
   void Enter(const parser::OmpClause::Defaultmap &x);
   void Enter(const parser::OmpClause::Depend &x);
   void Enter(const parser::OmpClause::Depth &x);
