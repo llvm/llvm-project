@@ -70,7 +70,6 @@ DLWRAP(cuMemFreeAsync, 2)
 
 DLWRAP(cuMemPrefetchAsync, 4)
 DLWRAP(cuPointerGetAttribute, 3)
-DLWRAP(cuPointerGetAttributes, 4)
 
 DLWRAP(cuModuleGetFunction, 3)
 DLWRAP(cuModuleGetGlobal, 4)
