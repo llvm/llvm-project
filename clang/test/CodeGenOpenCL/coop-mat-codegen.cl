@@ -79,8 +79,12 @@ kernel void test_scalar_mul(__global float *ptr, float s) {
     a = coop_mat_load(ptr, ROW_MAJOR, 16);
     r = a * s;
     (void)r;
+    MatA_t r2;
+    r2 = s * a;
+    (void)r2;
 }
 // CHECK-LABEL: @__clang_ocl_kern_imp_test_scalar_mul
+// CHECK: call {{.*}} @__spirv_CooperativeMatrixScalarMulKHR
 // CHECK: call {{.*}} @__spirv_CooperativeMatrixScalarMulKHR
 
 // ---------------------------------------------------------------------------

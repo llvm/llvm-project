@@ -14086,9 +14086,21 @@ bool Sema::IsCoopMatrixBuiltin(Expr *RHSExpr) {
   IdentifierInfo *Fname = MemberName.getAsIdentifierInfo();
   if (!Fname)
     return false;
-  if (Fname->getName().starts_with("coop_mat") &&
-      !Fname->getName().starts_with("coop_mat_length"))
+  switch (F->getBuiltinID()) {
+  case Builtin::BIcoop_mat_load:
+  case Builtin::BIcoop_mat_store:
+  case Builtin::BIcoop_mat_mulAdd:
+  case Builtin::BIcoop_mat_binary_add:
+  case Builtin::BIcoop_mat_binary_sub:
+  case Builtin::BIcoop_mat_binary_mul:
+  case Builtin::BIcoop_mat_binary_div:
+  case Builtin::BIcoop_mat_scalar_mul:
+  case Builtin::BIcoop_mat_scalar_neg:
+  case Builtin::BIcoop_mat_init:
     return true;
+  default:
+    return false;
+  }
 
   return false;
 }
