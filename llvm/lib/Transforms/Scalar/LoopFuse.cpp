@@ -676,6 +676,8 @@ private:
 
   /// Determine if it is beneficial to fuse two loops.
   bool isBeneficialFusion(unsigned ReusedValueCount) const {
+    if (Opts.loop_fusion_disable_cost_model)
+      return true;
     return ReusedValueCount >= Opts.loop_fusion_min_reused_values;
   }
 
@@ -1382,7 +1384,7 @@ private:
           return false;
         }
 
-    if (ReusedValues)
+    if (ReusedValues && !Opts.loop_fusion_disable_cost_model)
       collectReadReadReuse(FC0, FC1, *ReusedValues);
 
     return true;
