@@ -1418,6 +1418,12 @@ void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
   if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (auto attr{details->cudaDataAttr()}) {
       PutLower(os << ',', common::EnumToString(*attr));
+      // Record that the compiler applied this attribute, so that a reader can
+      // tell it from one the user wrote and let an explicit memory space on an
+      // enclosing object take precedence over it.
+      if (details->cudaDataAttrIsImplicit()) {
+        os << "(implicit)";
+      }
     }
   }
   if (symbol.owner().kind() == Scope::Kind::DerivedType &&
@@ -2010,18 +2016,28 @@ static std::optional<SourceName> GetSubmoduleParent(
   }
 }
 
+// Does this symbol carry a CUDA data attribute the user actually wrote? An
+// attribute the compiler applied on the user's behalf does not make the module
+// a definer of CUDA symbols: the user wrote no CUDA Fortran, so a consumer
+// without CUDA enabled has nothing to object to.
+static bool HasExplicitCUDADataAttr(const Symbol &symbol) {
+  const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  return object && object->cudaDataAttr() && !object->cudaDataAttrIsImplicit();
+}
+
 static bool ScopeHasCUDAModuleVariables(const Scope &scope) {
   for (const auto &[_, symbolRef] : scope) {
     const Symbol &symbol{*symbolRef};
     if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (object->cudaDataAttr()) {
+      if (HasExplicitCUDADataAttr(symbol)) {
         return true;
       }
       const DeclTypeSpec *type{object->type()};
       const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
       if (derived &&
-          FindUltimateComponent(*derived,
-              [](const Symbol &component) { return HasCUDAAttr(component); })) {
+          FindUltimateComponent(*derived, [](const Symbol &component) {
+            return HasExplicitCUDADataAttr(component);
+          })) {
         return true;
       }
     }
