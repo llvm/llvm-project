@@ -75,6 +75,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -911,6 +912,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
           SelectInst::Create(RetKnownPN, RetPN, Ret->getReturnValue(),
                              "current.ret.tr", Ret->getIterator());
       SI->setDebugLoc(Ret->getDebugLoc());
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
       RetSelects.push_back(SI);
 
       RetPN->addIncoming(SI, BB);
@@ -1025,6 +1027,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
             SelectInst::Create(RetKnownPN, RetPN, RI->getOperand(0),
                                "current.ret.tr", RI->getIterator());
         SI->setDebugLoc(DebugLoc::getCompilerGenerated());
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE, &F);
         RetSelects.push_back(SI);
         RI->setOperand(0, SI);
       }
