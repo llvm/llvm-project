@@ -5,19 +5,25 @@ module @foo {
   "test.op"() : () -> ()
 }
 
-// mlir-opt calls finalize() explicitly and the engine destructor calls it
-// again; the second call must not emit the remarks a second time.
-// --implicit-check-not pins the number of "remark:" lines and of YAML records
-// to five.
+// The two passed remarks in "category-1-passed" share an identity, so only the
+// second survives, in the first one's position. mlir-opt calls finalize()
+// explicitly and the engine destructor calls it again. The second call must not
+// emit the remarks a second time. --implicit-check-not pins the number of
+// "remark:" lines and of YAML records to five.
 
-// CHECK-DAG: remark: [Passed] test-remark | Category:category-1-passed |{{.*}}Remark="This is a test passed remark",
-// CHECK-DAG: remark: [Failure] test-remark | Category:category-2-failed
-// CHECK-DAG: remark: [Analysis] test-remark | Category:category-2-analysis
-// CHECK-DAG: remark: [Passed] test-remark | Category:category-link |{{.*}}RelatedTo=
-// CHECK-DAG: remark: [Analysis] test-remark | Category:category-link
+// CHECK: remark: [Passed] test-remark | Category:category-1-passed |{{.*}}Remark="This is a test passed remark",
+// CHECK: remark: [Failure] test-remark | Category:category-2-failed
+// CHECK: remark: [Analysis] test-remark | Category:category-2-analysis
+// CHECK: remark: [Passed] test-remark | Category:category-link |{{.*}}RelatedTo=
+// CHECK: remark: [Analysis] test-remark | Category:category-link
 
-// CHECK-YAML-DAG: --- !Passed
-// CHECK-YAML-DAG: --- !Failure
-// CHECK-YAML-DAG: --- !Analysis
-// CHECK-YAML-DAG: --- !Passed
-// CHECK-YAML-DAG: --- !Analysis
+// CHECK-YAML:      --- !Passed
+// CHECK-YAML-NEXT: Pass:{{.*}}category-1-passed
+// CHECK-YAML:      --- !Failure
+// CHECK-YAML-NEXT: Pass:{{.*}}category-2-failed
+// CHECK-YAML:      --- !Analysis
+// CHECK-YAML-NEXT: Pass:{{.*}}category-2-analysis
+// CHECK-YAML:      --- !Passed
+// CHECK-YAML-NEXT: Pass:{{.*}}category-link
+// CHECK-YAML:      --- !Analysis
+// CHECK-YAML-NEXT: Pass:{{.*}}category-link
