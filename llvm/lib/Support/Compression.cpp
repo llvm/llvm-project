@@ -308,16 +308,16 @@ static Expected<uint64_t> getUncompressedSize(ArrayRef<uint8_t> Input) {
         Input.size(), MinSize);
 
   // Decode xz index.
-  ArrayRef<uint8_t> IndexBuffer =
-      Input.drop_back(LZMA_STREAM_HEADER_SIZE)
-          .take_back(size_t(FooterFlags.backward_size));
   // liblzma stores null on failure, and lzma_index_end() ignores null.
   lzma_index *Index = nullptr;
   llvm::scope_exit FreeIndex([&] { lzma_index_end(Index, nullptr); });
   uint64_t MemLimit = UINT64_MAX;
   size_t InPos = 0;
-  Ret = lzma_index_buffer_decode(&Index, &MemLimit, nullptr, IndexBuffer.data(),
-                                 &InPos, IndexBuffer.size());
+  Ret = lzma_index_buffer_decode(
+      &Index, &MemLimit, nullptr,
+      Input.take_back(LZMA_STREAM_HEADER_SIZE + FooterFlags.backward_size)
+          .data(),
+      &InPos, Input.size());
   if (Ret != LZMA_OK)
     return createStringError("lzma_index_buffer_decode()=%s",
                              convertLZMACodeToString(Ret));
