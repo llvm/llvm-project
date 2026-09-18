@@ -220,15 +220,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
 WebAssemblyTargetMachine::~WebAssemblyTargetMachine() = default; // anchor.
 
-const WebAssemblySubtarget *WebAssemblyTargetMachine::getSubtargetImpl() const {
-  return getSubtargetImpl(std::string(getTargetCPU()),
-                          std::string(getTargetFeatureString()));
-}
-
 const WebAssemblySubtarget *
-WebAssemblyTargetMachine::getSubtargetImpl(std::string CPU,
-                                           std::string FS) const {
-  auto &I = SubtargetMap[CPU + FS];
+WebAssemblyTargetMachine::getSubtargetImpl(StringRef CPU, StringRef FS) const {
+  auto &I = SubtargetMap[CPU.str() + FS.str()];
   if (!I) {
     I = std::make_unique<WebAssemblySubtarget>(TargetTriple, CPU, FS, *this);
   }
@@ -240,10 +234,8 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
-  std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
+  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
 
   return getSubtargetImpl(CPU, FS);
 }
