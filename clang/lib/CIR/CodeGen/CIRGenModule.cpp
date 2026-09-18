@@ -3401,7 +3401,7 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   // member function, set its alignment accordingly.
   if (getTarget().getCXXABI().areMemberFunctionsAligned()) {
     if (isa<CXXMethodDecl>(decl) && f.getAlignment().value_or(1) < 2)
-      f.setAlignment(std::max(2ul, f.getAlignment().value_or(1)));
+      f.setAlignment(2);
   }
 }
 

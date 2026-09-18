@@ -136,6 +136,11 @@ static cl::opt<bool> EnableJumpTableDebugInfo(
     "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
     cl::desc("Enable debug info generation for jump tables"));
 
+// FIXME: Remove in clang 26.
+static cl::opt<bool> ReorderCfiJumpTablesProfiles(
+    "reorder-cfi-jump-tables-profiles", cl::init(true), cl::Hidden,
+    cl::desc("Reorder CFI jump tables using profile information"));
+
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -469,8 +474,12 @@ static void createCfiFunctionsMetadata(
     else if (F.hasExternalWeakLinkage())
       Linkage = CfiFunctionLinkage::WeakDeclaration;
 
-    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(
-        Linkage, CfiFunctionHotness::fromFunction(F, PSI, BFIGetter));
+    CfiFunctionHotness Hotness =
+        ReorderCfiJumpTablesProfiles
+            ? CfiFunctionHotness::fromFunction(F, PSI, BFIGetter)
+            : CfiFunctionHotness();
+
+    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(Linkage, Hotness);
 
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt8Ty(Ctx), EncodedLinkage)));

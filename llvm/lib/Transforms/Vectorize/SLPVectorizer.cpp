@@ -23245,6 +23245,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!AllNoInfs)
         I->setHasNoInfs(false);
     }
+    // Copyable lanes modeled as op(V, V) do not preserve the disjoint flag:
+    // or disjoint(V, V) is poison unless V is zero. Matched by value, so
+    // operand reordering does not affect the detection.
+    auto *PDI = dyn_cast<PossiblyDisjointInst>(I);
+    if (E->hasCopyableElements() && PDI &&
+        any_of(enumerate(E->Scalars), [&](const auto &P) {
+          Value *Scalar = P.value();
+          return E->isCopyableElement(Scalar) && !match(Scalar, m_Zero()) &&
+                 E->getOperand(0)[P.index()] == Scalar &&
+                 E->getOperand(1)[P.index()] == Scalar;
+        }))
+      PDI->setIsDisjoint(false);
     // Drop nuw flags for abs(sub(commutative), true).
     if (!MinBWs.contains(E) && Opcode == Instruction::Sub &&
         (E->hasCopyableElements() || any_of(Scalars, [](Value *Scalar) {
@@ -31362,8 +31374,15 @@ public:
               : TTI.getArithmeticReductionCost(
                     RecurrenceDescriptor::getOpcode(RdxKind), VecTy, FMF,
                     CostKind);
+      // One exit block is executed per loop execution: charge the final
+      // reductions of the largest one.
+      unsigned MaxExitRdx = 0;
+      SmallDenseMap<BasicBlock *, unsigned> ExitBlockPhis;
+      for (PHINode *ExitPhi : ExitPhis)
+        MaxExitRdx =
+            std::max(MaxExitRdx, ++ExitBlockPhis[ExitPhi->getParent()]);
       InstructionCost Cost =
-          RdxCost * ExitPhis.size() +
+          RdxCost * MaxExitRdx +
           TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
                                  /*Index=*/0);
       return Cost * R.getLoopNestScale(L->getParentLoop());
@@ -31378,8 +31397,8 @@ public:
     bool isCandidate(const Value *VectorizedTree, bool HasVectorizedSlices,
                      bool IsSupportedHorRdxIdentityOp,
                      ArrayRef<SmallVector<Value *>> ReducedVals,
-                     ArrayRef<Value *> Candidates, unsigned I, unsigned Pos,
-                     unsigned ReduxWidth, bool OptReusedScalars,
+                     ArrayRef<Value *> Candidates, unsigned CandidatesIdx,
+                     unsigned Pos, unsigned ReduxWidth, bool OptReusedScalars,
                      bool SameScaleFactor) const {
       if (!Phi || VectorizedTree || HasVectorizedSlices || Pos != 0 ||
           (OptReusedScalars && SameScaleFactor) || R.isReducedBitcastRoot() ||
@@ -31391,7 +31410,8 @@ public:
         return false;
       if (!all_of(enumerate(ReducedVals), [&](const auto &P) {
             auto [Idx, RV] = P;
-            return Idx == I || (RV.size() == 1 && RV.front() == Identity);
+            return Idx == CandidatesIdx ||
+                   (RV.size() == 1 && RV.front() == Identity);
           }))
         return false;
       if (R.getReductionType()->getElementType() != Root->getType())
