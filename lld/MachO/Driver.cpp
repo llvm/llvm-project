@@ -2493,6 +2493,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       inputFiles.insert(make<OpaqueFile>(MemoryBufferRef(), segName, sectName));
     }
 
+    // Relocation parsing was deferred so that it could be done for all input
+    // files at once, in parallel.
+    parseDeferredRelocations();
+
     gatherInputSections();
 
     if (!config->codegenDataGeneratePath.empty())
