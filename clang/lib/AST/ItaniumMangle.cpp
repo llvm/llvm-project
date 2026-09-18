@@ -304,8 +304,20 @@ class CXXNameMangler {
             AdditionalAbiTags.empty() &&
             "only function and variables need a list of additional abi tags");
         if (const auto *NS = dyn_cast<NamespaceDecl>(ND)) {
-          if (const auto *AbiTag = NS->getAttr<AbiTagAttr>())
-            llvm::append_range(UsedAbiTags, AbiTag->tags());
+          if (NS->getASTContext().getLangOpts().isCompatibleWith(
+                  LangOptions::ClangABI::Ver23)) {
+            // Clang <= 23 only considered the first declaration of the
+            // namespace (and only its first abi_tag attribute).
+            if (const auto *AbiTag = NS->getAttr<AbiTagAttr>())
+              llvm::append_range(UsedAbiTags, AbiTag->tags());
+          } else {
+            // GCC has a single entity per namespace and every reopening adds
+            // its abi_tags to that entity, so the tags of a namespace are the
+            // union of the tags on all of its declarations.
+            for (const NamespaceDecl *Redecl : NS->redecls())
+              for (const auto *AbiTag : Redecl->specific_attrs<AbiTagAttr>())
+                llvm::append_range(UsedAbiTags, AbiTag->tags());
+          }
           // Don't emit abi tags for namespaces.
           return;
         }

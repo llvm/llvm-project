@@ -112,6 +112,13 @@ features cannot lower the translation-unit ABI level;
   for homogeneous aggregate classification.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
 
+- The ABI tags of an inline namespace are now the union of the `abi_tag`
+  attributes on all declarations of that namespace, matching GCC. Clang
+  previously only used the first `abi_tag` attribute of the first declaration,
+  so tags added when reopening the namespace were silently dropped, and with
+  modules the applied tags could depend on the order in which declarations
+  were used. `-fclang-abi-compat=23` restores the previous behavior.
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes

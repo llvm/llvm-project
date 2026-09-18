@@ -167,6 +167,9 @@ ABI_VER_MAJOR(22)
 ///     faithfully reproduces Clang 23, including its crash on aggregates such
 ///     as a run of `__int128` bit-fields, where skipping the unnamed field
 ///     leaves part of a wider access unit unclassified.)
+///   - Only use the `abi_tag` attribute of the first declaration of an inline
+///     namespace (and only the first such attribute), instead of the union of
+///     the tags on all declarations of the namespace the way GCC does.
 ABI_VER_MAJOR(23)
 
 /// Conform to the underlying platform's C and C++ ABIs as closely as we can.

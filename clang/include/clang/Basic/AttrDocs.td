@@ -6911,6 +6911,20 @@ could have a different set of data members and thus have a different size. Using
 the `abi_tag` attribute, it is possible to have different mangled names for
 a global variable of the class type. Therefore, the old code could keep using
 the old mangled name and the new code will use the new mangled name with tags.
+
+On an inline namespace the attribute does not change the mangled name of the
+namespace itself. Instead, functions and variables whose type refers to an
+entity of that namespace get the tags unless they are already part of the
+mangled name. As in GCC, the attribute does not have to be repeated when the
+namespace is reopened, and the tags of the namespace are the union of the tags
+on all of its declarations:
+
+```c++
+inline namespace v1 __attribute__((abi_tag("A"))) { struct S {}; }
+inline namespace v1 { struct T {}; }                        // Still tagged "A".
+inline namespace v1 __attribute__((abi_tag("B"))) {}        // Adds tag "B".
+T f();                                                      // _Z1fB1AB1Bv
+```
   }];
 }
 
