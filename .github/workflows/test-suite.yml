@@ -107,15 +107,8 @@ jobs:
         working-directory: llvm-project
       - name: Install system dependencies
         run: |
-          # Install newer version of CMake (llvm/ci-ubuntu-24.04 image has CMake 3.28)
-          # TODO(boomanaiden154): Remove once upgraded to Ubuntu 26.04
           sudo apt-get update
-          sudo apt-get install -y wget
-          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
-          echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ noble main' | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
-
-          sudo apt-get update
-          sudo apt-get install -y cmake tcl libc6-dev-arm64-cross libc6-dev-riscv64-cross libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross libstdc++-14-dev-arm64-cross libstdc++-14-dev-riscv64-cross python3-pandas python3-tabulate
+          sudo apt-get install -y tcl libc6-dev-arm64-cross libc6-dev-riscv64-cross libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross libstdc++-14-dev-arm64-cross libstdc++-14-dev-riscv64-cross python3-pandas python3-tabulate
       - name: Configure Clang
         run: cmake -B build -C $SCRIPTS_DIR/llvm.cmake llvm -GNinja
         working-directory: llvm-project
