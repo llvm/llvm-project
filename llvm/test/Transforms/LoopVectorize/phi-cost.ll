@@ -6,7 +6,7 @@
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; DEBUG-LABEL: phi_two_incoming_values
-; DEBUG:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
+; DEBUG:       Cost of 0 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>, vp<{{.+}}>
 ; DEBUG:       Cost of 1 for VF 2: BLEND ir<%tmp5> = ir<%tmp1> ir<%tmp4>/ir<%tmp3>
 ;
 define void @phi_two_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
@@ -84,7 +84,7 @@ for.end:
 }
 
 ; DEBUG-LABEL: phi_three_incoming_values
-; DEBUG:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
+; DEBUG:       Cost of 0 for VF 2: vp<{{.+}}> = SCALAR-STEPS vp<{{.+}}>, ir<1>, vp<{{.+}}>
 ; DEBUG:       Cost of 2 for VF 2: BLEND ir<%tmp8> = ir<%tmp7> ir<3>/vp<{{.*}}> ir<9>/vp<{{.*}}>
 ;
 define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {

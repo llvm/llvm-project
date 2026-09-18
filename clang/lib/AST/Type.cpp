@@ -628,6 +628,15 @@ SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type) {
   }
 
 done:
+  // An overflow behavior type can have a qualified underlying type. It is not
+  // sugar, so the loop above cannot desugar through it to reach the
+  // qualifiers; rebuild it with an unqualified underlying type instead.
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(split.Ty)) {
+    SplitQualType SplitOBT = OBT->getSplitUnqualifiedType();
+    quals.addConsistentQualifiers(SplitOBT.Quals);
+    return SplitQualType(SplitOBT.Ty, quals);
+  }
+
   return SplitQualType(lastTypeWithQuals, quals);
 }
 
@@ -4141,10 +4150,21 @@ void TypeCoupledDeclRefInfo::setFromOpaqueValue(void *V) {
 }
 
 OverflowBehaviorType::OverflowBehaviorType(
-    QualType Canon, QualType Underlying,
+    const ASTContext &Context, QualType Canon, QualType Underlying,
     OverflowBehaviorType::OverflowBehaviorKind Kind)
     : Type(OverflowBehavior, Canon, Underlying->getDependence()),
-      UnderlyingType(Underlying), BehaviorKind(Kind) {}
+      UnderlyingType(Underlying), BehaviorKind(Kind), Context(Context) {}
+
+SplitQualType OverflowBehaviorType::getSplitUnqualifiedType() const {
+  SplitQualType SplitUnderlying = UnderlyingType.getSplitUnqualifiedType();
+  QualType UnqualUnderlyingTy(SplitUnderlying.Ty, 0);
+  if (UnqualUnderlyingTy == UnderlyingType)
+    return SplitQualType(this, Qualifiers());
+
+  QualType UnqualTy =
+      Context.getOverflowBehaviorType(BehaviorKind, UnqualUnderlyingTy);
+  return SplitQualType(UnqualTy.getTypePtr(), SplitUnderlying.Quals);
+}
 
 BoundsAttributedType::BoundsAttributedType(TypeClass TC, QualType Wrapped,
                                            QualType Canon)
@@ -4158,9 +4178,45 @@ CountAttributedType::CountAttributedType(
   CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
   CountAttributedTypeBits.CountInBytes = CountInBytes;
   CountAttributedTypeBits.OrNull = OrNull;
-  auto *DeclSlot = getTrailingObjects();
-  llvm::copy(CoupledDecls, DeclSlot);
-  Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
+  // `CoupledDecls` is already allocated by the caller (Create), so it
+  // can be retained by reference. This lets a type created by a late-parsed
+  // attribute start out with no decls and gain them later via `complete`,
+  // which a trailing-object array could not accommodate.
+  Decls = CoupledDecls;
+}
+
+/// Copy \p Decls into \p Ctx so a \c CountAttributedType can retain it by
+/// reference. The node owns this allocation rather than its callers, so both
+/// \c Create and \c complete route through here.
+static ArrayRef<TypeCoupledDeclRefInfo>
+allocateCoupledDecls(const ASTContext &Ctx,
+                     ArrayRef<TypeCoupledDeclRefInfo> Decls) {
+  if (Decls.empty())
+    return {};
+  auto *Slots = Ctx.Allocate<TypeCoupledDeclRefInfo>(Decls.size());
+  llvm::copy(Decls, Slots);
+  return ArrayRef(Slots, Decls.size());
+}
+
+CountAttributedType *
+CountAttributedType::Create(const ASTContext &Ctx, QualType Wrapped,
+                            QualType Canon, Expr *CountExpr, bool CountInBytes,
+                            bool OrNull,
+                            ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls) {
+  ArrayRef<TypeCoupledDeclRefInfo> Decls =
+      allocateCoupledDecls(Ctx, CoupledDecls);
+  return new (Ctx, alignof(CountAttributedType)) CountAttributedType(
+      Wrapped, Canon, CountExpr, CountInBytes, OrNull, Decls);
+}
+
+void CountAttributedType::complete(
+    const ASTContext &Ctx, Expr *E,
+    ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls) {
+  assert(!CountExpr && "count expression is already set");
+  assert(E && "completing with a null count expression");
+  CountExpr = E;
+  Decls = allocateCoupledDecls(Ctx, CoupledDecls);
+  CountAttributedTypeBits.NumCoupledDecls = Decls.size();
 }
 
 StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {

@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
@@ -773,6 +774,14 @@ llvm::StringRef StackArraysPass::getDescription() const {
 
 void StackArraysPass::runOnOperation() {
   mlir::func::FuncOp func = getOperation();
+
+  // This pass only runs under -fstack-arrays, so honor a function that opted
+  // out in its own policy (device code, where the stack is tiny). Functions
+  // without a policy of their own are left to the module setting.
+  if (std::optional<fir::AllocationPolicy> policy =
+          fir::getLocalAllocationPolicy(func))
+    if (!policy->stackArrays)
+      return;
 
   auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
   const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =

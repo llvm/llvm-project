@@ -2115,3 +2115,17 @@ void baz() {
   auto qux = bar<S>(true, [] {}); // expected-error {{no matching function for call to 'bar'}}
 }
 }
+
+namespace GH223220 {
+
+template <class> struct pair {
+  template <class _Tp>
+  auto operator()(_Tp __t) requires requires { __t < __t; } {return 0;}
+};
+
+pair<int> P;
+template <class _U1>
+decltype(P(_U1())) operator<=>(pair<_U1>, pair<_U1>);
+decltype(P(pair<int>())) g;
+
+}

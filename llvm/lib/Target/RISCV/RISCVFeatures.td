@@ -702,7 +702,8 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference",
+                                 [FeatureStdExtZve32x]>;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -924,7 +925,7 @@ def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
 
 // Vector Reordering Structured Data
 def FeatureStdExtZvzip
-    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+    : RISCVExperimentalExtension<0, 3, "Vector Reordering Structured Data",
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
@@ -1099,6 +1100,15 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Machine Level",
+                                 [FeatureStdExtSmcsrind, FeatureStdExtSmaia]>;
+def FeatureStdExtSsidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Supervisor Level",
+                                 [FeatureStdExtSscsrind, FeatureStdExtSsaia]>;
+
 def FeatureStdExtSmijt
     : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Machine Level">;
@@ -1129,6 +1139,15 @@ def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
                     AssemblerPredicate<(all_of FeatureStdExtSsip),
                         "'Ssip' (Support for Interrupt Handler Push/Pop at "
                         "Supervisor Level)">;
+
+def FeatureStdExtSmnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Machine Level",
+                                 [FeatureStdExtSmidctrl]>;
+def FeatureStdExtSsnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Supervisor Level",
+                                 [FeatureStdExtSsidctrl]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
