@@ -32,8 +32,6 @@ define void @caller_more_args(i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) 
 ; CHECK-NEXT:    mov w7, #8 ; =0x8
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset -16
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    b _callee_fewer_args

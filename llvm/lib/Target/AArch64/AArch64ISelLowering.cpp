@@ -10616,7 +10616,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
 
-  if (IsSibCall) {
+  // If we have a tail call that's not a sibling call but still requires the
+  // caller to pop arguments, we still need to keep the stack behavior of a
+  // sibling call. This should currently only ever happen for SME with live ZA
+  // state.
+  bool IsStackNeutralTailCall = IsTailCall && !IsSibCall &&
+                                !DoesCalleeRestoreStack(CallConv, TailCallOpt);
+  if (IsSibCall || IsStackNeutralTailCall) {
     // Since we're not changing the ABI to make this a tail call, the memory
     // operands are already available in the caller's incoming argument space.
     NumBytes = 0;
@@ -10630,7 +10636,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   int FPDiff = 0;
   const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
 
-  if (IsTailCall && !IsSibCall) {
+  if (IsTailCall && !IsSibCall && !IsStackNeutralTailCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
 
     // In general, neither NumBytes nor NumReusableBytes is guaranteed to be

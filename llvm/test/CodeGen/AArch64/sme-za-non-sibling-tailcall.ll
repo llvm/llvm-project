@@ -15,7 +15,6 @@ define void @caller0(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4,
 define void @caller1(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4,
 ; CHECK-LABEL: caller1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    b _callee
                      i64 %5, i64 %6, i64 %7, i64 %8, i64 %9) "aarch64_inout_za" {
   tail call void @callee() "aarch64_inout_za"
