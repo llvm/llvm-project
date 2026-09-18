@@ -1,0 +1,87 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=register-coalescer \
+# RUN:   -enable-subreg-liveness -verify-coalescing -o - %s | \
+# RUN:   FileCheck %s --check-prefix=COALESCER
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu \
+# RUN:   --passes='register-coalescer,print<live-intervals>' \
+# RUN:   -enable-subreg-liveness -verify-coalescing -o /dev/null %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INTERVALS
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu \
+# RUN:   -run-pass=register-coalescer,greedy,virtregrewriter \
+# RUN:   -enable-subreg-liveness -verify-coalescing -verify-regalloc \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=REGALLOC
+
+# Erasing the high-byte IMPLICIT_DEF while coalescing makes the high-byte value
+# from bb.1 reach the use in bb.5 along the bb.3 edge. Recompute the coalesced
+# interval so it reflects that change. The low-byte use in bb.3 keeps the other
+# lane live, so both lanes must be live into bb.3 during register allocation.
+# The high-byte interval check covers its definition in bb.1 through the end of
+# bb.3.
+
+# COALESCER-LABEL: name: recompute_after_subreg_implicit_def
+# COALESCER: bb.3:
+# COALESCER-NOT: IMPLICIT_DEF
+# COALESCER: TEST8rr [[REG:%[0-9]+]].sub_8bit, [[REG]].sub_8bit, implicit-def $eflags
+# COALESCER: bb.5:
+# COALESCER: TEST8rr [[REG]].sub_8bit_hi, [[REG]].sub_8bit_hi, implicit-def dead $eflags
+
+# INTERVALS: Live intervals for machine function: recompute_after_subreg_implicit_def:
+# INTERVALS: ********** INTERVALS **********
+# INTERVALS-NEXT: [[REG:%[0-9]+]] {{.*}} L0000000000000002
+# INTERVALS-SAME: [[[BB1DEF:[0-9]+]]r,[[BB3END:[0-9]+]]B:[[BB1VNI:[0-9]+]])
+# INTERVALS-SAME: {{.*}} [[BB1VNI]]@[[BB1DEF]]r
+# INTERVALS: bb.1:
+# INTERVALS: [[BB1DEF]]B [[REG]]:gr16_abcd = MOV16ri 1
+# INTERVALS: bb.3:
+# INTERVALS: [[BB3END]]B bb.4:
+# INTERVALS: bb.5:
+# INTERVALS: TEST8rr [[REG]].sub_8bit_hi:gr16_abcd, [[REG]].sub_8bit_hi:gr16_abcd
+
+# REGALLOC-LABEL: name: recompute_after_subreg_implicit_def
+# REGALLOC: bb.3:
+# REGALLOC: liveins: ${{[abcd]x}}:0x0000000000000003
+
+---
+name: recompute_after_subreg_implicit_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+
+    %0:gr16_abcd = MOV16ri 1
+    TEST8rr %0.sub_8bit, %0.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit killed $eflags
+
+  bb.2:
+    successors: %bb.5(0x80000000)
+
+    undef %1.sub_8bit_hi:gr16_abcd = COPY %0.sub_8bit_hi
+    %2:gr8_abcd_h = COPY %1.sub_8bit_hi
+    %3:gr8_abcd_h = COPY %2
+    JMP_1 %bb.5
+
+  bb.3:
+    successors: %bb.5(0x30000000), %bb.4(0x50000000)
+
+    %3:gr8_abcd_h = IMPLICIT_DEF
+    TEST8rr %0.sub_8bit, %0.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.5, 5, implicit killed $eflags
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+    %4:gr8_abcd_h = MOV8ri 2
+    %3:gr8_abcd_h = COPY %4
+
+  bb.5:
+    successors: %bb.1(0x80000000)
+
+    %5:gr8_abcd_h = COPY %3
+    TEST8rr %5, %5, implicit-def dead $eflags
+    JMP_1 %bb.1
+
+...
