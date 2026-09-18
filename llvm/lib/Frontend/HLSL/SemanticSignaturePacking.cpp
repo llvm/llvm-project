@@ -404,7 +404,7 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
   return NextRow;
 }
 
-Error llvm::hlsl::packSignaturePrefixStable(
+Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy,
     bool UseNative16BitTypes) {
@@ -416,6 +416,7 @@ Error llvm::hlsl::packSignaturePrefixStable(
 
   SmallVector<std::array<SignatureRow, MaxSignatureRows>, 1> Rows(StreamCount);
   SmallVector<ClipCullState, 1> ClipCullStates(StreamCount);
+  unsigned NumRows = 0;
   for (auto &&[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
@@ -460,14 +461,14 @@ Error llvm::hlsl::packSignaturePrefixStable(
                                   ClipCullStates[StreamIndex], Placement))
         return make_error<SignaturePackingError>(*Kind,
                                                  static_cast<unsigned>(Index));
-      continue;
-    }
-
-    if (!packElement(Element, StreamRows, Placement))
+    } else if (!packElement(Element, StreamRows, Placement)) {
       return make_error<SignaturePackingError>(
           SignaturePackingError::SignatureOverflow,
           static_cast<unsigned>(Index));
+    }
+
+    NumRows = std::max(NumRows, Element.StartRow + Element.Rows);
   }
 
-  return Error::success();
+  return NumRows;
 }

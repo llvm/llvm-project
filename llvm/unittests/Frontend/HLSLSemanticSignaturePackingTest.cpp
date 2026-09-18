@@ -11,7 +11,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 #include <initializer_list>
 
 using namespace llvm;
@@ -90,18 +89,9 @@ protected:
     switch (Method) {
     case PackingMethod::Stacked:
       return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
-    case PackingMethod::PrefixStable: {
-      if (Error E = packSignaturePrefixStable(Elements, Config.ShaderStage,
-                                             Config.IOTy,
-                                             Config.UseNative16BitTypes))
-        return std::move(E);
-
-      unsigned Rows = 0;
-      for (const SemanticSignatureElement &Element : Elements)
-        if (Element.isAllocated())
-          Rows = std::max(Rows, Element.StartRow + Element.Rows);
-      return Rows;
-    }
+    case PackingMethod::PrefixStable:
+      return packSignaturePrefixStable(Elements, Config.ShaderStage,
+                                       Config.IOTy, Config.UseNative16BitTypes);
     }
     llvm_unreachable("invalid packing method");
   }
@@ -407,6 +397,72 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
 // Basic prefix-stable packing tests
 //===----------------------------------------------------------------------===//
 
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSupportedSignatures) {
+  const struct {
+    Triple::EnvironmentType Stage;
+    IOType IOTy;
+  } Signatures[] = {{Triple::Vertex, IOType::Out},
+                    {Triple::Hull, IOType::In},
+                    {Triple::Hull, IOType::Out},
+                    {Triple::Hull, IOType::PatchConstantOrPrimitive},
+                    {Triple::Domain, IOType::In},
+                    {Triple::Domain, IOType::Out},
+                    {Triple::Domain, IOType::PatchConstantOrPrimitive},
+                    {Triple::Geometry, IOType::In},
+                    {Triple::Geometry, IOType::Out},
+                    {Triple::Pixel, IOType::In},
+                    {Triple::Mesh, IOType::Out},
+                    {Triple::Mesh, IOType::PatchConstantOrPrimitive}};
+  for (const auto &Signature : Signatures) {
+    SCOPED_TRACE(static_cast<unsigned>(Signature.Stage));
+    SCOPED_TRACE(static_cast<unsigned>(Signature.IOTy));
+    TestConfig Config(
+        Signature.Stage, Signature.IOTy,
+        {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
+    verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+                  {{/*Row=*/0, /*Col=*/0}});
+  }
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableOnlyUnallocatedElements) {
+  TestConfig Config(
+      Triple::Pixel, IOType::In,
+      {{dxbc::PSV::SemanticKind::ViewID, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/0,
+                {Unallocated});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSupportedSignatures) {
+  const struct {
+    Triple::EnvironmentType Stage;
+    IOType IOTy;
+  } Signatures[] = {{Triple::Vertex, IOType::Out},
+                    {Triple::Hull, IOType::In},
+                    {Triple::Hull, IOType::Out},
+                    {Triple::Hull, IOType::PatchConstantOrPrimitive},
+                    {Triple::Domain, IOType::In},
+                    {Triple::Domain, IOType::Out},
+                    {Triple::Domain, IOType::PatchConstantOrPrimitive},
+                    {Triple::Geometry, IOType::In},
+                    {Triple::Geometry, IOType::Out},
+                    {Triple::Pixel, IOType::In},
+                    {Triple::Mesh, IOType::Out},
+                    {Triple::Mesh, IOType::PatchConstantOrPrimitive}};
+  for (const auto &Signature : Signatures) {
+    SCOPED_TRACE(static_cast<unsigned>(Signature.Stage));
+    SCOPED_TRACE(static_cast<unsigned>(Signature.IOTy));
+    TestConfig Config(
+        Signature.Stage, Signature.IOTy,
+        {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
+    verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+                  {{/*Row=*/0, /*Col=*/0}});
+  }
+}
+
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableWhenAppended) {
   // Appending an element to a signature never moves the elements declared
   // before it; the appended element is only packed into the space they left.
@@ -467,8 +523,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableFillsAllRows) {
                                dxbc::PSV::InterpolationMode::Linear});
 
   SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-  ASSERT_THAT_EXPECTED(pack(PackingMethod::PrefixStable, Elements, Config),
-                    Succeeded());
+  Expected<unsigned> Rows = pack(PackingMethod::PrefixStable, Elements, Config);
+  ASSERT_THAT_EXPECTED(Rows, Succeeded());
+  EXPECT_EQ(*Rows, MaxSignatureRows);
 
   for (unsigned I = 0; I != MaxSignatureRows; ++I) {
     EXPECT_EQ(Elements[I].StartRow, I) << "element " << I;
@@ -1290,6 +1347,24 @@ TEST_F(HLSLSemanticSignaturePackingTest,
 //===----------------------------------------------------------------------===//
 // Prefix-stable geometry stream tests
 //===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableFullGeometryStreams) {
+  TestConfig Config(Triple::Geometry, IOType::Out, {});
+  for (unsigned Stream = 0; Stream != MaxGeometryStreams; ++Stream)
+    Config.Elements.push_back(
+        {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows,
+         /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
+         dxbc::PSV::InterpolationMode::Linear, /*SemanticIndex=*/0, Stream});
+
+  // Every stream can fill its entire register space independently. Return
+  // the maximum extent, not the sum of all streams' extents.
+  verifyPacking(PackingMethod::PrefixStable, Config,
+                /*ExpectedRows=*/MaxSignatureRows,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/0}});
+}
 
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
   // Each geometry shader output stream is packed into its own signature, so

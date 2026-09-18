@@ -70,7 +70,11 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#prefix-stable-packing for
 /// details.
-LLVM_ABI Error packSignaturePrefixStable(
+///
+/// Returns one past the highest allocated row, or zero if no elements were
+/// allocated. For geometry outputs this is the maximum extent of any stream,
+/// not the sum of their extents.
+LLVM_ABI Expected<unsigned> packSignaturePrefixStable(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy, bool UseNative16BitTypes);
 
