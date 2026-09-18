@@ -5217,9 +5217,7 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
   return std::nullopt;
 }
 
-/// This is used to control valid status that current MI supports. For example,
-/// non floating point intrinsic such as @llvm.amdgcn.sdot2 does not support NEG
-/// bit on VOP3P.
+/// Controls which SrcStatus values the user of the folded value supports.
 /// The class can be further extended to recognize support on SEL, NEG, ABS bit
 /// for different MI on different arch
 class SearchOptions {
@@ -5229,20 +5227,10 @@ private:
   bool HasOpsel = true;
 
 public:
-  SearchOptions(Register Reg, const MachineRegisterInfo &MRI) {
-    const MachineInstr *MI = MRI.getVRegDef(Reg);
-    unsigned Opc = MI->getOpcode();
-
-    if (Opc == TargetOpcode::G_INTRINSIC) {
-      Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
-      // Only float point intrinsic has neg & neg_hi bits.
-      if (IntrinsicID == Intrinsic::amdgcn_fdot2)
-        HasNeg = true;
-    } else if (TargetInstrInfo::isGenericOpcode(Opc)) {
-      // Keep same for generic op.
-      HasNeg = true;
-    }
-  }
+  // Packed integer VOP3P opcodes ignore NEG and NEG_HI, so a G_FNEG may only be
+  // folded when the consumer reads the operand as floating point.
+  SearchOptions(Register RootReg, const MachineRegisterInfo &MRI)
+      : HasNeg(MRI.getType(RootReg).isFloatOrFloatVector()) {}
   bool checkOptions(SrcStatus Stat) const {
     if (!HasNeg &&
         (Stat >= SrcStatus::NEG_START && Stat <= SrcStatus::NEG_END)) {
