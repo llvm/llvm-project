@@ -22,6 +22,8 @@
 // CHECK-ANALYSIS-LABEL: func @disjoint_insert_extract(
 // CHECK-ANALYSIS: tensor.insert_slice
 // CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "true"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
 func.func @disjoint_insert_extract(
     %t: tensor<8xf32> {bufferization.writable = true},
     %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<4xf32>) {
@@ -43,6 +45,8 @@ func.func @disjoint_insert_extract(
 // CHECK-ANALYSIS-LABEL: func @overlapping_insert_extract(
 // CHECK-ANALYSIS: tensor.insert_slice
 // CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "false"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
 func.func @overlapping_insert_extract(
     %t: tensor<8xf32> {bufferization.writable = true},
     %source: tensor<4xf32>) -> (tensor<8xf32>, tensor<4xf32>) {
@@ -64,6 +68,8 @@ func.func @overlapping_insert_extract(
 // CHECK-ANALYSIS-LABEL: func @unknown_insert_extract(
 // CHECK-ANALYSIS: tensor.insert_slice
 // CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "false", "none"]
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none"]
 func.func @unknown_insert_extract(
     %t: tensor<8xf32> {bufferization.writable = true},
     %source: tensor<4xf32>, %write_idx: index,
