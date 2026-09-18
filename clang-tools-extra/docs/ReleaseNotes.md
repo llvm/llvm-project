@@ -12,10 +12,6 @@ myst:
 {#extra-clang-tools-release-releasenotestitle}
 # Extra Clang Tools {{env.config.release}} {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') }}
 
-```{contents}
-:depth: 3
-:local: true
-```
 
 Written by the [LLVM Team](https://llvm.org/)
 
@@ -281,6 +277,16 @@ infrastructure are described first, followed by tool-specific sections.
   `std::nothrow_t`, iterator tags, lock tags, etc.) that are used
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
+
+- Improved {doc}`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check by fixing false
+  positives on pointers passed to atomic builtins, whose operands may be
+  written to, such as the `expected` parameter of
+  `atomic_compare_exchange_strong()`.
+
+- Improved {doc}`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
+  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
 
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
