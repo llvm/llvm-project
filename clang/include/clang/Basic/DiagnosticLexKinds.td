@@ -496,7 +496,7 @@ def err_pp_embed_parameter_is_macro : Error<
   "cannot use %0 as %select{an '#embed'|a '__has_embed'}1 parameter if also"
   " defined as a macro">;
 def warn_c_pp_embed_parameter_is_macro : Warning<
-  "%0 is defined as a macro and gets expanded when used as a "
+  "%0 is defined as a macro and gets expanded when used as "
   "%select{an '#embed'|a '__has_embed'}1 parameter in C; this is "
   "ill-formed in C++">,
   InGroup<EmbedParameterIsMacro>, DefaultIgnore;
