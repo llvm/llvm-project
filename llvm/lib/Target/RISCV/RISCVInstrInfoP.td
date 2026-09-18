@@ -2052,6 +2052,15 @@ def riscv_pnsrl : RVSDNode<"PNSRL", SDT_RISCVPackedNarrowingShift>;
 def riscv_pnclip  : RVSDNode<"PNCLIP", SDT_RISCVPackedNarrowingShift>;
 def riscv_pnclipu : RVSDNode<"PNCLIPU", SDT_RISCVPackedNarrowingShift>;
 
+// RV32 packed widening shift.
+def SDT_RISCVPackedWideningShift
+    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                           SDTCisOpSmallerThanOp<1, 0>,
+                           SDTCisSameNumEltsAs<0, 1>,
+                           SDTCisVT<2, XLenVT>]>;
+def riscv_pwsll : RVSDNode<"PWSLL", SDT_RISCVPackedWideningShift>;
+def riscv_pwsla : RVSDNode<"PWSLA", SDT_RISCVPackedWideningShift>;
+
 // Packed narrowing clip pair.
 def SDT_RISCVPackedNarrowingClip
     : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
@@ -2580,6 +2589,24 @@ let append Predicates = [IsRV32] in {
             (PWSUBU_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (sub (zext (v2i16 GPR:$rs1)), (zext (v2i16 GPR:$rs2)))),
             (PWSUBU_H GPR:$rs1, GPR:$rs2)>;
+
+  // Packed widening shift patterns.
+  def : Pat<(v4i16 (riscv_pwsll (v4i8 GPR:$rs1), uimm4:$imm)),
+            (PWSLLI_B GPR:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i32 (riscv_pwsll (v2i16 GPR:$rs1), uimm5:$imm)),
+            (PWSLLI_H GPR:$rs1, uimm5:$imm)>;
+  def : Pat<(v4i16 (riscv_pwsla (v4i8 GPR:$rs1), uimm4:$imm)),
+            (PWSLAI_B GPR:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i32 (riscv_pwsla (v2i16 GPR:$rs1), uimm5:$imm)),
+            (PWSLAI_H GPR:$rs1, uimm5:$imm)>;
+  def : Pat<(v4i16 (riscv_pwsll (v4i8 GPR:$rs1), shiftMask32:$rs2)),
+            (PWSLL_BS GPR:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwsll (v2i16 GPR:$rs1), shiftMask32:$rs2)),
+            (PWSLL_HS GPR:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v4i16 (riscv_pwsla (v4i8 GPR:$rs1), shiftMask32:$rs2)),
+            (PWSLA_BS GPR:$rs1, shiftMask32:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwsla (v2i16 GPR:$rs1), shiftMask32:$rs2)),
+            (PWSLA_HS GPR:$rs1, shiftMask32:$rs2)>;
 
   // Packed widening multiply patterns.
   def : Pat<(v4i16 (riscv_pwmul (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),

@@ -9545,6 +9545,29 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         if (!SplatVal)
           return SDValue();
 
+        // The 32-bit packed widening shift intrinsics produce extend followed
+        // by a scalar-splat shift. Preserve that shape as a widening shift
+        // before generic packed-shift lowering loses the narrow source.
+        if (!Subtarget.is64Bit() && Op.getOpcode() == ISD::SHL) {
+          using namespace SDPatternMatch;
+          MVT VT = Op.getSimpleValueType();
+          if (VT == MVT::v4i16 || VT == MVT::v2i32) {
+            MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+            SDValue Src;
+            unsigned ExtendOpcode = Op.getOperand(0).getOpcode();
+            if ((ExtendOpcode == ISD::SIGN_EXTEND ||
+                 ExtendOpcode == ISD::ZERO_EXTEND) &&
+                sd_match(Op.getOperand(0),
+                         m_OneUse(m_Node(ExtendOpcode,
+                                         m_Value(Src, m_SpecificVT(SrcVT)))))) {
+              unsigned Opc = ExtendOpcode == ISD::SIGN_EXTEND ? RISCVISD::PWSLA
+                                                              : RISCVISD::PWSLL;
+              SplatVal = DAG.getZExtOrTrunc(SplatVal, SDLoc(Op), MVT::i32);
+              return DAG.getNode(Opc, SDLoc(Op), VT, Src, SplatVal);
+            }
+          }
+        }
+
         unsigned Opc;
         switch (Op.getOpcode()) {
         default:
