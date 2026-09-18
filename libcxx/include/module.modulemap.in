@@ -2139,6 +2139,7 @@ module std {
     export std.memory_resource.polymorphic_allocator
     export std.new.allocate
     export std.ostream.basic_ostream
+    export std.string
     export std.type_traits.is_nothrow_constructible
     export std.vector.vector
   }

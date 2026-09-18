@@ -11,6 +11,8 @@
 
 #include <stacktrace>
 
+#include "test_macros.h"
+
 void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::stacktrace::current();
