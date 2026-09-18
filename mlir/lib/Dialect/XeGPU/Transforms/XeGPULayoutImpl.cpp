@@ -1778,8 +1778,7 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 /// consumer layout (from its result's downstream uses) and validates it
 /// against uArch constraints; if valid, the consumer's `inst_data` /
 /// `sg_layout` are honored. Otherwise the helper falls back to defaults
-/// derived from uArch block parameters. `lane_data` never comes from the
-/// consumer; see get2DBlockLoadLaneData.
+/// derived from uArch block parameters.
 xegpu::DistributeLayoutAttr
 xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                VectorType resVecTy,
@@ -1835,8 +1834,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
     // lane_layout and lane_data are the block load's own, not the consumer's: a
     // consumer may ask for more elements per lane than the hardware can pack,
-    // e.g. an f32 multi_reduction wanting 16. A downstream convert_layout
-    // reconciles the difference.
+    // e.g. an f32 multi_reduction wanting 16.
     unsigned packingSize = hasTransform || hasTranspose
                                ? uArch->getGeneralPackedFormatBitSize()
                                : uArchInstruction->getPackedFormatBitSize();

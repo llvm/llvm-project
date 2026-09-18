@@ -313,7 +313,7 @@ protected:
         {{16, false, true, false}, {kWidth16, kHeightAtLeast16, kCount1}},
         {{32, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}},
         // 4-bit elements (sub-byte):
-        {{4, false, false, false}, {kWidthAtLeast32, kHeightAtLeast1, kCount2}},
+        {{4, false, false, false}, {kWidth64, kHeightAtLeast1, kCount2}},
         {{4, false, false, true}, {kWidth32, kHeightAtLeast8, kCount4Only}},
         {{4, true, false, false}, {kWidth16, kHeight64, kCount4}},
         {{4, false, true, false}, {kWidth64, kHeightAtLeast16, kCount1}}};
