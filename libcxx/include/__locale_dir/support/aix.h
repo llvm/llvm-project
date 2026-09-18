@@ -25,6 +25,16 @@
 #  include <wctype.h>
 #endif
 
+// Forward declare for _XOPEN_SOURCE=500 and _XOPEN_SOURCE=600
+#if defined(_XOPEN_SOURCE) && _XOPEN_SOURCE < 700
+extern "C" {
+locale_t newlocale(int, const char*, locale_t) noexcept;
+locale_t duplocale(locale_t) noexcept;
+locale_t uselocale(locale_t) noexcept;
+void freelocale(locale_t) noexcept;
+}
+#endif // defined(_XOPEN_SOURCE) && _XOPEN_SOURCE < 700
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
