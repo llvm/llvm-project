@@ -61,6 +61,47 @@ define i32 @cttz_false_bitreverse(i32 %x) {
   ret i32 %b
 }
 
+define i32 @ctlz_true_zext_bitreverse(i16 %x) {
+; CHECK-LABEL: @ctlz_true_zext_bitreverse(
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i16 [[TMP1]], 16
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i16 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = tail call i16 @llvm.bitreverse.i16(i16 %x)
+  %z = zext i16 %a to i32
+  %b = tail call i32 @llvm.ctlz.i32(i32 %z, i1 true)
+  ret i32 %b
+}
+
+define i32 @ctlz_false_zext_bitreverse(i16 %x) {
+; CHECK-LABEL: @ctlz_false_zext_bitreverse(
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i16 [[TMP1]], 16
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i16 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = tail call i16 @llvm.bitreverse.i16(i16 %x)
+  %z = zext i16 %a to i32
+  %b = tail call i32 @llvm.ctlz.i32(i32 %z, i1 false)
+  ret i32 %b
+}
+
+define i64 @ctlz_i32_zext_bitreverse(i32 %x) {
+; CHECK-LABEL: @ctlz_i32_zext_bitreverse(
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[TMP1]], 32
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i32 [[TMP2]] to i64
+; CHECK-NEXT:    ret i64 [[B]]
+;
+  %a = tail call i32 @llvm.bitreverse.i32(i32 %x)
+  %z = zext i32 %a to i64
+  %b = tail call i64 @llvm.ctlz.i64(i64 %z, i1 true)
+  ret i64 %b
+}
+
+declare i64 @llvm.ctlz.i64(i64, i1)
+declare i16 @llvm.bitreverse.i16(i16)
 declare i32 @llvm.bitreverse.i32(i32)
 declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>)
 declare i32 @llvm.ctlz.i32(i32, i1)
