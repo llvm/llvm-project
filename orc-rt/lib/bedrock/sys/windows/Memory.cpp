@@ -10,10 +10,6 @@
 
 namespace orc_rt::sys {
 
-Expected<uint64_t> detectPageSize() {
-  return make_error<StringError>("Windows detectPageSize not implemented");
-}
-
 Expected<void *> reserveMemory(uint64_t) {
   return make_error<StringError>("Windows reserveMemory not implemented");
 }
