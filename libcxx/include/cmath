@@ -375,8 +375,10 @@ using ::cosf _LIBCPP_USING_IF_EXISTS;
 using ::cosh _LIBCPP_USING_IF_EXISTS;
 using ::coshf _LIBCPP_USING_IF_EXISTS;
 
-using ::exp _LIBCPP_USING_IF_EXISTS;
-using ::expf _LIBCPP_USING_IF_EXISTS;
+// The C library's exp(double) and expf(float) can't be used in constant expressions with Clang, so import libc++'s own
+// overloads instead of the C library's ones to make std::exp and std::expf constexpr in C++26 (P1383R2).
+using ::std::__math::exp;
+using ::std::__math::expf;
 
 using ::fabs _LIBCPP_USING_IF_EXISTS;
 using ::fabsf _LIBCPP_USING_IF_EXISTS;
