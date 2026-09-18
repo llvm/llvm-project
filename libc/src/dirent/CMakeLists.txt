@@ -1,8 +1,3 @@
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
-
-
 add_entrypoint_object(
   opendir
   SRCS
@@ -95,4 +90,4 @@ add_entrypoint_object(
     libc.src.__support.File.platform_dir
     libc.src.__support.macros.config
     libc.src.errno.errno
-  )
+)
