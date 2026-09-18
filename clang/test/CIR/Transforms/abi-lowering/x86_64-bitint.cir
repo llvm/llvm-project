@@ -770,12 +770,10 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_o(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_O> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !rec_O, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_O>, !rec_O
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_o(
-  // LLVM-SAME:    ptr noundef byval(%struct.O) align 8 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.O, ptr %[[ARG]]
+  // LLVM-SAME:    ptr noundef byval(%struct.O) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 
   // Returning it takes the sret path, and the caller's buffer replaces the
@@ -811,12 +809,10 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_arr(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_Arr> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !rec_Arr, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_Arr>, !rec_Arr
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_arr(
-  // LLVM-SAME:    ptr noundef byval(%struct.Arr) align 8 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.Arr, ptr %[[ARG]]
+  // LLVM-SAME:    ptr noundef byval(%struct.Arr) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 
   // A _BitInt wider than 128 bits classifies Indirect: byval on the argument
@@ -829,8 +825,6 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_b200(
   // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !cir.int<s, 200, bitint>, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0
-  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 200, bitint>>, !cir.int<s, 200, bitint>
   // CHECK-NEXT:    cir.return
 
   // The byval pointee names the padded storage type (i256), not the literal
@@ -838,9 +832,7 @@ module attributes {
   // reads: a byval(i200) would tell the backend to reserve a 25-byte copy
   // while the body reads 32 bytes through it.
   // LLVM-LABEL: define void @take_b200(
-  // LLVM-SAME:    ptr noundef byval(i256) align 8 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i256, ptr %[[ARG]]
-  // LLVM-NEXT:    %{{[0-9]+}} = trunc i256 %[[WIDE]] to i200
+  // LLVM-SAME:    ptr noundef byval(i256) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 
   // A call site builds the byval copy itself, and the call operand's own
@@ -878,15 +870,38 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_b201(
   // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 201, bitint>> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !cir.int<s, 201, bitint>, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0
-  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 201, bitint>>, !cir.int<s, 201, bitint>
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_b201(
+  // LLVM-SAME:    ptr noundef byval(i256) align 8 %{{[0-9]+}})
+  // LLVM-NEXT:    ret void
+
+  // A spilled _BitInt keeps the load and store rather than taking a byte
+  // copy: they are its conversion between the i256 in memory and the i200
+  // value, and a copy would leave the high bits unnormalized.
+  cir.func @take_b200_spilled(%arg0: !b200i) {
+    %0 = cir.alloca "x" align(8) : !cir.ptr<!b200i>
+    cir.store %arg0, %0 : !b200i, !cir.ptr<!b200i>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @take_b200_spilled(
+  // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
+  // CHECK-SAME:    , llvm.byval = !cir.int<s, 200, bitint>, llvm.noundef})
+  // CHECK-NEXT:    %[[VAL:[0-9]+]] = cir.load %arg0
+  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 200, bitint>>, !cir.int<s, 200, bitint>
+  // CHECK-NEXT:    %[[SLOT:[0-9]+]] = cir.alloca "x" align(8)
+  // CHECK-SAME:      : !cir.ptr<!cir.int<s, 200, bitint>>
+  // CHECK-NEXT:    cir.store %[[VAL]], %[[SLOT]]
+  // CHECK-SAME:      : !cir.int<s, 200, bitint>, !cir.ptr<!cir.int<s, 200, bitint>>
+
+  // LLVM-LABEL: define void @take_b200_spilled(
   // LLVM-SAME:    ptr noundef byval(i256) align 8 %[[ARG:[0-9]+]])
   // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i256, ptr %[[ARG]]
-  // LLVM-NEXT:    %{{[0-9]+}} = trunc i256 %[[WIDE]] to i201
-  // LLVM-NEXT:    ret void
+  // LLVM-NEXT:    %[[VAL:[0-9]+]] = trunc i256 %[[WIDE]] to i200
+  // LLVM-NEXT:    %[[SLOT:[0-9]+]] = alloca i256, align 8
+  // LLVM-NEXT:    %[[EXT:[0-9]+]] = sext i200 %[[VAL]] to i256
+  // LLVM-NEXT:    store i256 %[[EXT]], ptr %[[SLOT]], align 8
 
   // Signedness only affects the extend direction on the memory round trip,
   // not the classification.
@@ -897,14 +912,10 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_ub200(
   // CHECK-SAME:    %arg0: !cir.ptr<!cir.int<u, 200, bitint>> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !cir.int<u, 200, bitint>, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0
-  // CHECK-SAME:      : !cir.ptr<!cir.int<u, 200, bitint>>, !cir.int<u, 200, bitint>
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_ub200(
-  // LLVM-SAME:    ptr noundef byval(i256) align 8 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %[[WIDE:[0-9]+]] = load i256, ptr %[[ARG]]
-  // LLVM-NEXT:    %{{[0-9]+}} = trunc i256 %[[WIDE]] to i200
+  // LLVM-SAME:    ptr noundef byval(i256) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 
   // Returning a _BitInt wider than 128 bits takes the sret path, the same as
@@ -971,12 +982,10 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_d(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_D> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !rec_D, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_D>, !rec_D
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_d(
-  // LLVM-SAME:    ptr noundef byval(%struct.D) align 8 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.D, ptr %[[ARG]]
+  // LLVM-SAME:    ptr noundef byval(%struct.D) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 
   // A union member wider than 128 bits recurses through the same rule via
@@ -989,12 +998,10 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_ud(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_UD> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !rec_UD, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_UD>, !rec_UD
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_ud(
-  // LLVM-SAME:    ptr noundef byval(%union.UD) align 8 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %{{[0-9]+}} = load %union.UD, ptr %[[ARG]]
+  // LLVM-SAME:    ptr noundef byval(%union.UD) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 
   // An array of a width wider than 128 bits recurses through the element type,
@@ -1006,11 +1013,9 @@ module attributes {
   // CHECK-LABEL: cir.func{{.*}} @take_ad(
   // CHECK-SAME:    %arg0: !cir.ptr<!rec_AD> {llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !rec_AD, llvm.noundef})
-  // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_AD>, !rec_AD
   // CHECK-NEXT:    cir.return
 
   // LLVM-LABEL: define void @take_ad(
-  // LLVM-SAME:    ptr noundef byval(%struct.AD) align 8 %[[ARG:[0-9]+]])
-  // LLVM-NEXT:    %{{[0-9]+}} = load %struct.AD, ptr %[[ARG]]
+  // LLVM-SAME:    ptr noundef byval(%struct.AD) align 8 %{{[0-9]+}})
   // LLVM-NEXT:    ret void
 }

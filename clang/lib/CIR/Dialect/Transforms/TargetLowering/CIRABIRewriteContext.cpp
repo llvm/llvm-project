@@ -558,6 +558,17 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
       load->erase();
 }
 
+/// The store that spills indirect parameter \p blockArg, if the parameter's
+/// only use is that store.  Null otherwise.
+static cir::StoreOp maybeFindParamSpill(mlir::BlockArgument blockArg) {
+  if (!blockArg.hasOneUse())
+    return {};
+  auto store = dyn_cast<cir::StoreOp>(*blockArg.user_begin());
+  if (!store || store.getValue() != blockArg)
+    return {};
+  return store;
+}
+
 /// The store that spills non-byval indirect parameter \p blockArg, and the
 /// slot it spills into.  CIRGen spills every by-value parameter into a local
 /// alloca with a single store before any other use, and this pass runs on that
@@ -568,19 +579,17 @@ static std::pair<cir::StoreOp, cir::AllocaOp>
 findParamSpill(mlir::BlockArgument blockArg) {
   if (blockArg.use_empty())
     return {};
-  assert(blockArg.hasOneUse() &&
-         "non-byval arg must have exactly one use (the CIRGen param spill)");
-  auto store = cast<cir::StoreOp>(*blockArg.user_begin());
-  assert(store.getValue() == blockArg &&
-         "non-byval arg's use must be the value operand of its store");
+  cir::StoreOp store = maybeFindParamSpill(blockArg);
+  assert(store && "non-byval arg's only use must be its CIRGen param spill");
   return {store, cast<cir::AllocaOp>(store.getAddr().getDefiningOp())};
 }
 
 /// For each Direct arg with a coerced type, change the block argument's type
 /// to the coerced type and insert a coercion at function entry that maps it
 /// back to the original type for body uses.  For each Indirect byval arg,
-/// change the block argument's type to a pointer and insert a load at entry
-/// so the body sees a local copy of the original value type.  For each
+/// change the block argument's type to a pointer, then replace a record's
+/// param spill with a copy from that pointer, or insert a load at entry for a
+/// body that reads the parameter as a value.  For each
 /// Indirect non-byval arg, change the block argument to a pointer and queue
 /// the CIRGen param-slot alloca to be replaced by it (no entry load /
 /// byte-copy) so the body operates on the caller's storage in place.  For each
@@ -770,8 +779,8 @@ void insertArgCoercion(
     } else if (ac.kind == ArgKind::Indirect) {
       // byval and non-byval both lower to !cir.ptr<T>, and which it is shows
       // up only in the attrs updateArgAttrs applies.  Body lowering differs:
-      // byval copies into the callee (load at entry), while non-byval must
-      // operate on the caller's storage in place.
+      // byval gives the callee its own copy of the incoming object, while
+      // non-byval must operate on the caller's storage in place.
       auto ptrTy = cir::PointerType::get(blockArg.getType());
 
       if (!ac.byVal) {
@@ -797,14 +806,44 @@ void insertArgCoercion(
         if (destAlloca)
           pendingParamSlots.emplace_back(destAlloca, blockArg);
       } else {
-        // byval: load the incoming pointer so the body sees a T value (and
-        // any CIRGen param-slot store becomes a local copy of that value).
+        // With byval the callee works on its own copy.  A record's padding
+        // bytes can hold another union member's live data, so its spill slot
+        // is filled by a byte copy of the incoming object.  A _BitInt keeps
+        // its load and spill store, which are its conversion between value
+        // and in-memory form.
+        cir::StoreOp paramStore;
+        if (mlir::isa<cir::RecordType>(blockArg.getType()))
+          paramStore = maybeFindParamSpill(blockArg);
+
+        // Erasing the spill before the block argument is retyped keeps the
+        // store from being left with a value operand of the wrong type.
+        mlir::Value destAddr;
+        mlir::IntegerAttr destAlign;
+        mlir::Operation *spillPos = nullptr;
+        if (paramStore) {
+          destAddr = paramStore.getAddr();
+          if (auto destAlloca =
+                  dyn_cast_or_null<cir::AllocaOp>(destAddr.getDefiningOp()))
+            destAlign = destAlloca.getAlignmentAttr();
+          spillPos = paramStore->getNextNode();
+          paramStore->erase();
+        }
+
         blockArg.setType(ptrTy);
 
-        builder.setInsertionPointToStart(&entry);
-        auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
-        SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
-        blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+        if (destAddr) {
+          mlir::OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPoint(spillPos);
+          cir::CopyOp::create(
+              builder, funcOp.getLoc(), destAddr, blockArg, destAlign,
+              builder.getI64IntegerAttr(ac.indirectAlign.value()));
+        } else if (!blockArg.use_empty()) {
+          // No spill to replace, so materialize the value the body reads.
+          builder.setInsertionPointToStart(&entry);
+          auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
+          SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
+          blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+        }
       }
     }
     // Ignore, Extend, and Direct-without-coerce need no block-level changes.
@@ -1390,10 +1429,34 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
         continue;
       }
       auto ptrTy = cir::PointerType::get(arg.getType());
-      auto slot = cir::AllocaOp::create(
-          builder, call.getLoc(), ptrTy, builder.getStringAttr("byval"),
-          builder.getI64IntegerAttr(ac.indirectAlign.value()));
-      cir::StoreOp::create(builder, call.getLoc(), arg, slot);
+      mlir::IntegerAttr slotAlign =
+          builder.getI64IntegerAttr(ac.indirectAlign.value());
+
+      // A record operand that names storage is copied from that storage
+      // instead of stored from the loaded value: a record value carries only
+      // the fields of its type, so a store leaves the type's padding bytes
+      // unwritten, and for a union those can be another member's live data.
+      // The copy replaces the load at the load's position, so it reads the
+      // memory state the load read.  A _BitInt keeps the load and store,
+      // which are its conversion between value and in-memory form.
+      cir::LoadOp srcLoad;
+      if (mlir::isa<cir::RecordType>(arg.getType()))
+        srcLoad = maybeGetSimpleLoad(arg);
+
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      if (srcLoad)
+        builder.setInsertionPoint(srcLoad);
+
+      auto slot =
+          cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
+                                builder.getStringAttr("byval"), slotAlign);
+      if (srcLoad) {
+        cir::CopyOp::create(builder, call.getLoc(), slot, srcLoad.getAddr(),
+                            slotAlign, srcLoad.getAlignmentAttr());
+        deadRecordLoads.push_back(srcLoad);
+      } else {
+        cir::StoreOp::create(builder, call.getLoc(), arg, slot);
+      }
       newArgs.push_back(slot);
     } else {
       newArgs.push_back(arg);
