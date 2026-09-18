@@ -1455,6 +1455,9 @@ static void computeKnownBitsForRecurrenceOperands(
     const PHINode *P, Value *Start, Value *Step, const APInt &DemandedElts,
     KnownBits &KnownStart, KnownBits &KnownStep, const SimplifyQuery &Q,
     unsigned Depth) {
+  // Change the context instruction to the "edge" that flows into the phi. This
+  // is important because that is where the value is actually "evaluated" even
+  // though it is used later somewhere else. (see also D69571).
   SimplifyQuery RecQ = Q.getWithoutCondContext();
   unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
 
