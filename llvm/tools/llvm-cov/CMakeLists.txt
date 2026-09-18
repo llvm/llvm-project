@@ -11,6 +11,7 @@ add_llvm_tool(llvm-cov
   llvm-cov.cpp
   gcov.cpp
   CodeCoverage.cpp
+  CoverageExclusions.cpp
   CoverageExporterJson.cpp
   CoverageExporterLcov.cpp
   CoverageFilters.cpp
