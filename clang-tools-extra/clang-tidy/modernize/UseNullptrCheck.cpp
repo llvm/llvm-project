@@ -88,7 +88,7 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
           unless(hasAncestor(functionDecl(isDefaulted())))),
       this);
 
-  if (NullptrCStddef)
+  if (useNullptrt)
     Finder->addMatcher(typeLoc(loc(decltypeType(decltypeTypeNullptrLiteral())))
                            .bind("matchDecltypeNullptr"),
                        this);
@@ -507,7 +507,7 @@ UseNullptrCheck::UseNullptrCheck(StringRef Name, ClangTidyContext *Context)
       NullMacrosStr(Options.get("NullMacros", "NULL")),
       IgnoredTypes(utils::options::parseStringList(Options.get(
           "IgnoredTypes", "_CmpUnspecifiedParam;^std::__cmp_cat::__unspec"))),
-      NullptrCStddef(Options.get("NullptrCStddef", true)),
+      useNullptrt(Options.get("useNullptrt", true)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {
@@ -525,7 +525,7 @@ void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoredTypes",
                 utils::options::serializeStringList(IgnoredTypes));
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
-  Options.store(Opts, "NullptrCStddef", NullptrCStddef);
+  Options.store(Opts, "useNullptrt", useNullptrt);
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {

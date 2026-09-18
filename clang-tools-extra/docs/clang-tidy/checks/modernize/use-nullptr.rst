@@ -61,10 +61,15 @@ Options
    ``NULL``. By default this check will only replace the ``NULL`` macro and will
    skip any similar user-defined macros.
 
-.. option:: NullptrCStddef
+.. option:: useNullptrt
 
-   Boolean controlling wether we should replace ``decltype(nullptr)`` with the
-   type ``std::nullptr_t`` from ``cstddef``. Defaults to ``true``.
+   Boolean controlling whether we should replace ``decltype(nullptr)`` with the
+   type ``std::nullptr_t`` from ``<cstddef>``. Defaults to ``true``.
+
+.. option:: IncludeStyle
+
+   A string specifying which include-style is used, `llvm` or `google`. Default
+   is `llvm`.
 
 Example
 ^^^^^^^
