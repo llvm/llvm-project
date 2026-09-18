@@ -605,9 +605,16 @@ public:
 
   GlobalDecl CurSEHParent;
 
-  /// True if the current function is an outlined SEH helper. This can be a
-  /// finally block or filter expression.
-  bool IsOutlinedSEHHelper = false;
+  /// Pointer to the outlined SEH helper statement if current function is an
+  /// outlined SEH helper, nullptr otherwise. This can be a finally block or
+  /// a filter expression.
+  const Stmt *OutlinedSEHStmt = nullptr;
+
+  /// True if the current function is an outlined SEH helper.
+  bool IsOutlinedSEHHelper() const { return OutlinedSEHStmt != nullptr; }
+
+  /// True if Label is found within OutlinedSEHStmt.
+  bool IsLabelWithinSEHHelper(const LabelDecl *Label) const;
 
   /// True if CodeGen currently emits code inside presereved access index
   /// region.
@@ -3695,6 +3702,8 @@ public:
   void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
 
+  /// Look up the destination for a break/continue statement, nullptr if not
+  /// found.
   const BreakContinue *GetDestForLoopControlStmt(const LoopControlStmt &S);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);

@@ -306,4 +306,91 @@ int exception_code_in_except(void) {
 // CHECK: %[[ret2:[^ ]*]] = load i32, ptr %[[ret_slot]]
 // CHECK: ret i32 %[[ret2]]
 
+// __except handlers run within the enclosing function, so goto's within the
+// function are still technically legal and should produce a br.
+// __finally handlers run in a separate function, so goto's out of them are UB
+// and should produce unreachable instead (tested in exceptions-seh-finally.c).
+int goto_out_of_except_body(void) {
+  __try {
+    try_body(0, 0, 0);
+  } __except(1) {
+    goto out;
+  }
+out:
+  return 0;
+}
+
+// CHECK-LABEL: define dso_local {{.*}}i32 @goto_out_of_except_body()
+// CHECK: %[[pad:[^ ]*]] = catchpad
+// CHECK: catchret from %[[pad]]
+// CHECK: br label %[[out:[^ ]*]]
+// CHECK-NOT: unreachable
+// CHECK: [[out]]
+// CHECK: ret i32 0
+
+// Filter expressions get outlined into a helper function, so a jump that leaves
+// it is UB and should produce unreachable, while a jump to a label inside it
+// should still produce a br.
+int goto_in_and_out_of_filter(void) {
+  __try {
+    try_body(0, 0, 0);
+  } __except(({
+              retry:
+                if (returns_int())
+                  goto retry;
+                if (returns_int())
+                  goto out;
+                1;
+            })) {
+  }
+out:
+  return 0;
+}
+
+// CHECK-LABEL: define dso_local {{.*}}i32 @goto_in_and_out_of_filter()
+// CHECK: catchpad within %{{[^ ]*}} [ptr @"?filt$0@0@goto_in_and_out_of_filter@@"]
+
+// CHECK-LABEL: define internal {{.*}}i32 @"?filt$0@0@goto_in_and_out_of_filter@@"({{.*}})
+// CHECK: br label %[[retry:[^ ]*]]
+//
+// CHECK: [[retry]]
+// CHECK: call {{.*}}i32 @returns_int()
+// CHECK: br i1 %{{.*}}, label %[[ifthen1:[^ ]*]], label %[[ifend1:[^ ]*]]
+//
+// CHECK: [[ifthen1]]
+// Internal jump within filter handler should generate normally.
+// CHECK: br label %[[retry]]
+//
+// CHECK: [[ifend1]]
+// CHECK: call {{.*}}i32 @returns_int()
+// CHECK: br i1 %{{.*}}, label %[[ifthen2:[^ ]*]], label %[[ifend2:[^ ]*]]
+//
+// CHECK: [[ifthen2]]
+// Jumps out of filter handler should be unreachable.
+// CHECK: unreachable
+//
+// CHECK: [[ifend2]]
+// CHECK: ret i32
+
+// A break in a filter expression leaves the filter function, so generate
+// unreachable here.
+int break_out_of_filter(void) {
+  for (int i = 0; i < 4; i++) {
+    __try {
+      try_body(0, 0, 0);
+    } __except(({ break; 1; })) {
+    }
+  }
+  return 0;
+}
+
+// CHECK-LABEL: define dso_local {{.*}}i32 @break_out_of_filter()
+// CHECK: catchpad within %{{[^ ]*}} [ptr @"?filt$0@0@break_out_of_filter@@"]
+
+// CHECK-LABEL: define internal {{.*}}i32 @"?filt$0@0@break_out_of_filter@@"({{.*}})
+// CHECK: store i32 %{{.*}}, ptr %__exception_code
+// CHECK-NOT: br
+// CHECK-NOT: ret i32
+// CHECK: unreachable
+
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }
