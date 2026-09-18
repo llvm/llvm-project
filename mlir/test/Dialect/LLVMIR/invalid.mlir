@@ -1416,6 +1416,27 @@ func.func @insert_vector_invalid_source_vector_size(%arg0 : vector<16385xi8>, %a
 
 // -----
 
+func.func @insert_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<536870913xi8> into vector<16xi8>
+}
+
+// -----
+
+func.func @insert_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>, %arg1 : vector<[16]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<[4294967296]xi8> into vector<[16]xi8>
+}
+
+// -----
+
+func.func @insert_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>, %arg1 : vector<16xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<2305843009213693953xi8> into vector<16xi8>
+}
+
+// -----
+
 func.func @insert_vector_invalid_dest_vector_size(%arg0 : vector<16xi8>, %arg1 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.insert %arg0, %arg1[0] : vector<16xi8> into vector<[16385]xi8>
@@ -1433,6 +1454,27 @@ func.func @insert_scalable_into_fixed_length_vector(%arg0 : vector<[8]xf32>, %ar
 func.func @extract_vector_invalid_source_vector_size(%arg0 : vector<[16385]xi8>) {
   // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
   %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[16385]xi8>
+}
+
+// -----
+
+func.func @extract_vector_overflowing_source_vector_size(%arg0 : vector<536870913xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<536870913xi8>
+}
+
+// -----
+
+func.func @extract_scalable_vector_truncating_source_vector_size(%arg0 : vector<[4294967296]xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<[4294967296]xi8>
+}
+
+// -----
+
+func.func @extract_vector_saturating_source_vector_size(%arg0 : vector<2305843009213693953xi8>) {
+  // expected-error@+1 {{op failed to verify that vectors are not bigger than 2^17 bits.}}
+  %0 = llvm.intr.vector.extract %arg0[0] : vector<16xi8> from vector<2305843009213693953xi8>
 }
 
 // -----
@@ -2257,22 +2299,43 @@ llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @alias_re
 // -----
 
 llvm.func @invalid_sincos_nonhomogeneous_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f64)>
 }
 
 // -----
 
 llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> f32
 }
 
 // -----
 
 llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
-  // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+llvm.func @invalid_modf_nonhomogeneous_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f64)>
+}
+
+// -----
+
+llvm.func @invalid_modf_non_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> f32
+}
+
+// -----
+
+llvm.func @invalid_modf_gt_2_element_struct_return_type(%f: f32) -> () {
+  // expected-error@+1 {{op expected result type to be a homogeneous struct with two elements matching the operand type}}
+  llvm.intr.modf(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
 }
 
 // -----

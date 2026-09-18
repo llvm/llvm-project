@@ -82,6 +82,10 @@ namespace __pstl {
 // ---------------
 // - max_element
 //
+// minmax_element family
+// -------------------
+// No other algorithms based on minmax_element
+//
 // mismatch family
 // ---------------
 // - adjacent_find

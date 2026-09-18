@@ -27,6 +27,7 @@ namespace abi {
 
 enum class TypeKind {
   Void,
+  Atomic,
   MemberPointer,
   Complex,
   Integer,
@@ -34,6 +35,7 @@ enum class TypeKind {
   Pointer,
   Array,
   Vector,
+  Tuple,
   Record,
 };
 
@@ -59,29 +61,42 @@ protected:
   TypeKind Kind;
   TypeSize SizeInBits;
   Align ABIAlignment;
+  Align UnadjustedAlignment;
 
   Type(TypeKind K, TypeSize SizeInBits, Align ABIAlign)
-      : Kind(K), SizeInBits(SizeInBits), ABIAlignment(ABIAlign) {}
+      : Type(K, SizeInBits, ABIAlign, ABIAlign) {}
+  Type(TypeKind K, TypeSize SizeInBits, Align ABIAlign, Align UnadjustedAlign)
+      : Kind(K), SizeInBits(SizeInBits), ABIAlignment(ABIAlign),
+        UnadjustedAlignment(UnadjustedAlign) {}
 
 public:
   TypeKind getKind() const { return Kind; }
   TypeSize getSizeInBits() const { return SizeInBits; }
   Align getAlignment() const { return ABIAlignment; }
 
+  /// Alignment before record-level adjustments such as aligned attributes.
+  /// Equal to getAlignment() unless a distinct unadjusted alignment was
+  /// provided when the type was created.
+  Align getUnadjustedAlignment() const { return UnadjustedAlignment; }
+
   TypeSize getTypeAllocSize() const {
     return alignTo(getTypeStoreSize(), getAlignment().value());
   }
 
   bool isVoid() const { return Kind == TypeKind::Void; }
+  bool isAtomic() const { return Kind == TypeKind::Atomic; }
   bool isInteger() const { return Kind == TypeKind::Integer; }
   bool isFloat() const { return Kind == TypeKind::Float; }
   bool isPointer() const { return Kind == TypeKind::Pointer; }
   bool isArray() const { return Kind == TypeKind::Array; }
   bool isVector() const { return Kind == TypeKind::Vector; }
+  bool isTuple() const { return Kind == TypeKind::Tuple; }
   bool isRecord() const { return Kind == TypeKind::Record; }
   bool isMemberPointer() const { return Kind == TypeKind::MemberPointer; }
   bool isComplex() const { return Kind == TypeKind::Complex; }
-  bool isZeroSize() const { return getSizeInBits().getFixedValue() == 0; }
+  bool isZeroSize() const { return getSizeInBits().isZero(); }
+
+  LLVM_ABI bool isSVESizelessType() const;
 };
 
 class VoidType : public Type {
@@ -89,6 +104,22 @@ public:
   VoidType() : Type(TypeKind::Void, TypeSize::getFixed(0), Align(1)) {}
 
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Void; }
+};
+
+class AtomicType : public Type {
+public:
+  AtomicType(const Type *ValueType, uint64_t SizeInBits, Align Alignment)
+      : Type(TypeKind::Atomic, TypeSize::getFixed(SizeInBits), Alignment),
+        ValueType(ValueType) {}
+
+  const Type *getValueType() const { return ValueType; }
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Atomic;
+  }
+
+private:
+  const Type *ValueType;
 };
 
 class ComplexType : public Type {
@@ -209,26 +240,92 @@ public:
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Array; }
 };
 
+/// Distinguishes the vector flavors that ABIs have to treat differently.
+/// Scalability is not part of the kind. It is tracked by the vector's
+/// ElementCount, because some flavors have both a scalable and a
+/// fixed-length spelling.
+enum class VectorKind {
+  /// A plain vector, such as a Neon vector or a GCC vector_size vector.
+  Generic,
+
+  /// An AArch64 SVE data vector, such as svint32_t. Data vectors are
+  /// passed in Z registers. Tuples of these vectors use TupleType.
+  SVEData,
+
+  /// An AArch64 SVE predicate vector, such as svbool_t. These are passed
+  /// in P registers. Sizeless predicates have one-bit elements; the
+  /// fixed-length arm_sve_vector_bits form keeps unsigned char (i8)
+  /// elements, matching the Clang AST. Both use this kind. Tuples of
+  /// these vectors use TupleType.
+  SVEPredicate,
+
+  /// The AArch64 __SVCount_t type. It is opaque rather than a real vector,
+  /// but it occupies a predicate register, so it is given the same shape as
+  /// svbool_t.
+  SVECount,
+};
+
 class VectorType : public Type {
 private:
   const Type *ElementType;
   ElementCount NumElements;
+  VectorKind VecKind;
+
+  static TypeSize computeSizeInBits(const Type *ElementType,
+                                    ElementCount NumElements) {
+    return TypeSize(ElementType->getSizeInBits().getFixedValue() *
+                        NumElements.getKnownMinValue(),
+                    NumElements.isScalable());
+  }
 
 public:
-  VectorType(const Type *ElementType, ElementCount NumElements, Align ABIAlign)
-      : Type(TypeKind::Vector,
-             TypeSize(ElementType->getSizeInBits().getFixedValue() *
-                          NumElements.getKnownMinValue(),
-                      NumElements.isScalable()),
+  VectorType(const Type *ElementType, ElementCount NumElements, Align ABIAlign,
+             VectorKind VecKind = VectorKind::Generic)
+      : Type(TypeKind::Vector, computeSizeInBits(ElementType, NumElements),
              ABIAlign),
-        ElementType(ElementType), NumElements(NumElements) {}
+        ElementType(ElementType), NumElements(NumElements), VecKind(VecKind) {}
 
   const Type *getElementType() const { return ElementType; }
   ElementCount getNumElements() const { return NumElements; }
 
+  VectorKind getVectorKind() const { return VecKind; }
+
+  bool isScalable() const { return NumElements.isScalable(); }
+  bool isFixedLength() const { return !NumElements.isScalable(); }
+
+  bool isSVEData() const { return VecKind == VectorKind::SVEData; }
+  bool isSVEPredicate() const { return VecKind == VectorKind::SVEPredicate; }
+  bool isSVECount() const { return VecKind == VectorKind::SVECount; }
+
+  /// Returns true for any of the AArch64 SVE flavors.
+  bool isSVEType() const { return VecKind != VectorKind::Generic; }
+
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Vector;
   }
+};
+
+/// A homogeneous tuple of 2, 3, or 4 identical vectors, such as the
+/// AArch64 SVE types svint32x3_t and svboolx2_t.
+///
+/// The contained vector describes one register-shaped member. Size and
+/// alignment of the tuple cover the whole group: size is NumVectors times
+/// the vector size, and alignment matches the contained vector.
+class TupleType : public Type {
+private:
+  const VectorType *Vec;
+  unsigned NumVectors;
+
+public:
+  TupleType(const VectorType *Vec, unsigned NumVectors)
+      : Type(TypeKind::Tuple, (Vec->getSizeInBits() * NumVectors),
+             Vec->getAlignment()),
+        Vec(Vec), NumVectors(NumVectors) {}
+
+  const VectorType *getVectorType() const { return Vec; }
+  unsigned getNumVectors() const { return NumVectors; }
+
+  static bool classof(const Type *T) { return T->getKind() == TypeKind::Tuple; }
 };
 
 struct FieldInfo {
@@ -273,12 +370,12 @@ private:
 
 public:
   RecordType(ArrayRef<FieldInfo> StructFields, ArrayRef<FieldInfo> Bases,
-             ArrayRef<FieldInfo> VBases, TypeSize Size, Align Align,
-             StructPacking Pack = StructPacking::Default,
+             ArrayRef<FieldInfo> VBases, TypeSize Size, Align ABIAlign,
+             Align UnadjustedAlign, StructPacking Pack = StructPacking::Default,
              RecordFlags RecFlags = RecordFlags::None)
-      : Type(TypeKind::Record, Size, Align), Fields(StructFields),
-        BaseClasses(Bases), VirtualBaseClasses(VBases), Packing(Pack),
-        Flags(RecFlags) {}
+      : Type(TypeKind::Record, Size, ABIAlign, UnadjustedAlign),
+        Fields(StructFields), BaseClasses(Bases), VirtualBaseClasses(VBases),
+        Packing(Pack), Flags(RecFlags) {}
   uint32_t getNumFields() const { return Fields.size(); }
   StructPacking getPacking() const { return Packing; }
 
@@ -345,6 +442,12 @@ public:
     return new (Allocator.Allocate<VoidType>()) VoidType();
   }
 
+  const AtomicType *getAtomicType(const Type *ValueType, uint64_t SizeInBits,
+                                  Align Align) {
+    return new (Allocator.Allocate<AtomicType>())
+        AtomicType(ValueType, SizeInBits, Align);
+  }
+
   const IntegerType *getIntegerType(uint64_t BitWidth, Align Align, bool Signed,
                                     bool IsBitInt = false) {
     return new (Allocator.Allocate<IntegerType>())
@@ -369,13 +472,32 @@ public:
   }
 
   const VectorType *getVectorType(const Type *ElementType,
-                                  ElementCount NumElements, Align Align) {
+                                  ElementCount NumElements, Align Align,
+                                  VectorKind VecKind = VectorKind::Generic) {
     return new (Allocator.Allocate<VectorType>())
-        VectorType(ElementType, NumElements, Align);
+        VectorType(ElementType, NumElements, Align, VecKind);
+  }
+
+  /// Creates a homogeneous tuple of \p NumVectors copies of \p Vec.
+  /// \p NumVectors must be 2, 3, or 4.
+  const TupleType *getTupleType(const VectorType *Vec, unsigned NumVectors) {
+    assert(NumVectors >= 2 && NumVectors <= 4 &&
+           "tuple types hold 2, 3, or 4 vectors");
+    return new (Allocator.Allocate<TupleType>()) TupleType(Vec, NumVectors);
+  }
+
+  /// Creates the AArch64 __SVCount_t type. The type is opaque, so it is
+  /// modeled with the shape of svbool_t: a scalable vector of 16 one-bit
+  /// elements.
+  const VectorType *getSVECountType(Align ABIAlign) {
+    const Type *PredicateBit =
+        getIntegerType(1, Align(1), /*Signed=*/false, /*IsBitInt=*/false);
+    return getVectorType(PredicateBit, ElementCount::getScalable(16), ABIAlign,
+                         VectorKind::SVECount);
   }
 
   const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,
-                                  Align Align,
+                                  Align ABIAlign, Align UnadjustedAlign,
                                   StructPacking Pack = StructPacking::Default,
                                   ArrayRef<FieldInfo> BaseClasses = {},
                                   ArrayRef<FieldInfo> VirtualBaseClasses = {},
@@ -401,11 +523,12 @@ public:
     ArrayRef<FieldInfo> VBasesRef(VBaseArray, VirtualBaseClasses.size());
 
     return new (Allocator.Allocate<RecordType>())
-        RecordType(FieldsRef, BasesRef, VBasesRef, Size, Align, Pack, RecFlags);
+        RecordType(FieldsRef, BasesRef, VBasesRef, Size, ABIAlign,
+                   UnadjustedAlign, Pack, RecFlags);
   }
 
   const RecordType *getUnionType(ArrayRef<FieldInfo> Fields, TypeSize Size,
-                                 Align Align,
+                                 Align ABIAlign, Align UnadjustedAlign,
                                  StructPacking Pack = StructPacking::Default,
                                  RecordFlags RecFlags = RecordFlags::None) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
@@ -418,9 +541,9 @@ public:
 
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());
 
-    return new (Allocator.Allocate<RecordType>())
-        RecordType(FieldsRef, ArrayRef<FieldInfo>(), ArrayRef<FieldInfo>(),
-                   Size, Align, Pack, RecFlags | RecordFlags::IsUnion);
+    return new (Allocator.Allocate<RecordType>()) RecordType(
+        FieldsRef, ArrayRef<FieldInfo>(), ArrayRef<FieldInfo>(), Size, ABIAlign,
+        UnadjustedAlign, Pack, RecFlags | RecordFlags::IsUnion);
   }
 
   const ComplexType *getComplexType(const Type *ElementType, Align Align) {
