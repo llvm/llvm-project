@@ -640,6 +640,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   sys::ProcessInfo AsmProc;
   if (SaveTemps && Triple.isAMDGPU()) {
     SmallVector<StringRef, 16> AsmArgs(CmdArgs);
+    llvm::erase(AsmArgs, "-Wl,--save-temps");
     AsmArgs.append({"-Xlinker", "--lto-emit-asm"});
     if (Error Err = executeCommands(*ClangPath, AsmArgs, &AsmProc))
       return std::move(Err);
