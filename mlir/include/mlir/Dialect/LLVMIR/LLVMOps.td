@@ -629,8 +629,8 @@ class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
     auto *val = builder.Create}] # instName # [{($arg, $_resultType);
     $res = val;
     if ($dereferenceable) {
-      llvm::Instruction *inst = dyn_cast<llvm::Instruction>(val);
-      moduleTranslation.setDereferenceableMetadata(op, inst);
+      if (auto *inst = dyn_cast<llvm::Instruction>(val))
+        moduleTranslation.setDereferenceableMetadata(op, inst);
     }
   }];
   string mlirBuilder = [{
@@ -2159,7 +2159,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
     OptionalAttr<LLVM_FunctionMetadataArrayAttr>:$function_metadata,
     OptionalAttr<UWTableKindAttr>:$uwtable_kind,
-    OptionalAttr<BoolAttr>:$use_sample_profile
+    OptionalAttr<BoolAttr>:$use_sample_profile,
+    OptionalAttr<BoolAttr>:$disable_tail_calls
   );
 
   let regions = (region AnyRegion:$body);

@@ -805,7 +805,8 @@ ArgInfo X86_64TargetInfo::classifyReturnType(const Type *RetTy) const {
       const Type *X87Type =
           TB.getFloatType(APFloat::x87DoubleExtended(), Align(16));
       FieldInfo Fields[] = {FieldInfo(X87Type, 0), FieldInfo(X87Type, 80)};
-      ResType = TB.getRecordType(Fields, TypeSize::getFixed(160), Align(16));
+      ResType = TB.getRecordType(Fields, TypeSize::getFixed(160), Align(16),
+                                 /*UnadjustedAlign=*/Align(16));
     }
     break;
   }
@@ -923,7 +924,7 @@ const Type *X86_64TargetInfo::createPairType(const Type *Lo,
   uint64_t PairSizeInBits =
       Fields[1].OffsetInBits + Hi->getSizeInBits().getFixedValue();
   return TB.getRecordType(Fields, TypeSize::getFixed(PairSizeInBits), Align(8),
-                          StructPacking::Default);
+                          /*UnadjustedAlign=*/Align(8), StructPacking::Default);
 }
 
 static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,

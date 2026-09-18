@@ -19,6 +19,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -32,12 +33,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
-// Check if physical register from src<SrcIdx> operand of MI<CompIdx> matches
-// register class constraints in corresponding VOPDOpc operand with name
-// src/vsrc<SrcIdx><CompIdx>.
-static bool isValidVOPDSrc(const SIInstrInfo &TII, int VOPDOpc,
-                           unsigned CompIdx, unsigned SrcIdx,
-                           Register PhysSrcReg) {
+// Return the register class of the VOPDOpc operand named
+// src/vsrc<SrcIdx><CompIdx>, which is the slot src<SrcIdx> of MI<CompIdx> maps
+// to.
+static const TargetRegisterClass *getVOPDSrcRegClass(const SIInstrInfo &TII,
+                                                     int VOPDOpc,
+                                                     unsigned CompIdx,
+                                                     unsigned SrcIdx) {
   using namespace AMDGPU;
   int OpIdx = -1;
   const bool IsX = CompIdx == VOPD::X;
@@ -58,7 +60,17 @@ static bool isValidVOPDSrc(const SIInstrInfo &TII, int VOPDOpc,
   }
 
   assert(OpIdx != -1);
-  return TII.getRegClass(TII.get(VOPDOpc), OpIdx)->contains(PhysSrcReg);
+  return TII.getRegClass(TII.get(VOPDOpc), OpIdx);
+}
+
+// Check if physical register from src<SrcIdx> operand of MI<CompIdx> matches
+// register class constraints in corresponding VOPDOpc operand with name
+// src/vsrc<SrcIdx><CompIdx>.
+static bool isValidVOPDSrc(const SIInstrInfo &TII, int VOPDOpc,
+                           unsigned CompIdx, unsigned SrcIdx,
+                           Register PhysSrcReg) {
+  return getVOPDSrcRegClass(TII, VOPDOpc, CompIdx, SrcIdx)
+      ->contains(PhysSrcReg);
 }
 
 static const MachineOperand &getNamedOp(const MachineInstr &MI,
@@ -93,10 +105,18 @@ static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
          getNamedOp(MI, AMDGPU::OpName::src2).getReg();
 }
 
-bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
-                                   const MachineInstr &MIX,
-                                   const MachineInstr &MIY, bool IsVOPD3,
-                                   bool AllowSameVGPR) {
+static bool canMaterializeVOPDLiterals(const MachineFunction &MF) {
+  // A free register cannot be found without liveness. A move also makes the
+  // code longer, so a function which asked for small code keeps its literals.
+  return MF.getProperties().hasTracksLiveness() &&
+         !MF.getFunction().hasOptSize();
+}
+
+static bool
+checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
+                        const MachineInstr &MIY, bool IsVOPD3,
+                        bool AllowSameVGPR,
+                        SmallVectorImpl<VOPDLiteralFixup> &LiteralFixups) {
   namespace VOPD = AMDGPU::VOPD;
 
   const MachineFunction *MF = MIX.getMF();
@@ -110,6 +130,10 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
 
+  // Collected here and handed over only on success, so a failed check cannot
+  // leave anything behind.
+  SmallVector<VOPDLiteralFixup, 2> Fixups;
+
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   // Literals also count against scalar bus limit
@@ -121,6 +145,9 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     }
     UniqueLiterals.push_back(&Op);
   };
+  // Immediates which the caller will move into a scalar register. Identical
+  // values share one register, so they count like one scalar operand each.
+  SmallSet<int32_t, 2> MaterializedLiterals;
   SmallSet<Register, 4> UniqueScalarRegs;
 
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
@@ -138,12 +165,33 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     if (Src0.isReg()) {
       if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 0, Src0.getReg()))
         return false;
-      if (!TRI->isVectorRegister(MRI, Src0.getReg()))
+      if (TII.regUsesConstantBus(Src0, MRI))
         UniqueScalarRegs.insert(Src0.getReg());
     } else if (!TII.isInlineConstant(Src0)) {
-      if (IsVOPD3)
-        return false;
-      AddLiteral(Src0);
+      if (!IsVOPD3) {
+        AddLiteral(Src0);
+      } else {
+        // A VOPD3 component cannot encode a literal, but src0 can read a
+        // scalar register. The pair is therefore still possible if the caller
+        // moves the value into one.
+        if (!canMaterializeVOPDLiterals(*MF) || !Src0.isImm())
+          return false;
+        // Only a 32-bit slot is handled, because the caller produces the value
+        // with a single S_MOV_B32.
+        int OpIdx = getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+        if (TII.getOpSize(MI, OpIdx) != 4)
+          return false;
+        const TargetRegisterClass *SlotRC =
+            TRI->getCommonSubClass(getVOPDSrcRegClass(TII, VOPDOpc, CompIdx, 0),
+                                   &AMDGPU::SGPR_32RegClass);
+        if (!SlotRC)
+          return false;
+        // Only the low bits reach the register, so two operands which name
+        // the same value share one move whichever way they were written.
+        int32_t Imm = static_cast<int32_t>(Src0.getImm());
+        MaterializedLiterals.insert(Imm);
+        Fixups.push_back({CompIdx, static_cast<unsigned>(OpIdx), Imm, SlotRC});
+      }
     }
 
     // V_FMAMK_F32 (src1) and V_FMAAK_F32 (src2) have a mandatory literal.
@@ -180,7 +228,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
             return false;
           if (!isValidVOPDSrc(TII, VOPDOpc, CompIdx, 2, Src2->getReg()))
             return false;
-          if (!TRI->isVectorRegister(MRI, Src2->getReg())) {
+          if (TII.regUsesConstantBus(*Src2, MRI)) {
             assert(MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64);
             UniqueScalarRegs.insert(Src2->getReg());
           }
@@ -206,7 +254,12 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (UniqueLiterals.size() > 1)
     return false;
-  if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
+  // Keep materialization pair-local and do not increase instruction count or
+  // register pressure by producing two different values for one pair.
+  if (MaterializedLiterals.size() > 1)
+    return false;
+  if ((UniqueLiterals.size() + MaterializedLiterals.size() +
+       UniqueScalarRegs.size()) > 2)
     return false;
 
   auto GetVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
@@ -230,6 +283,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX
                     << "\n\tY: " << MIY << "\n");
+  LiteralFixups.assign(Fixups);
   return true;
 }
 
@@ -257,9 +311,15 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   const GCNSubtarget &ST = TII.getSubtarget();
   bool AllowSameVGPR = ST.hasGFX12Insts();
 
+  // Only a VOPD3 component can need a fixup; a plain one may hold a literal.
+  // checkVOPDRegConstraints() only writes this when it succeeds.
+  SmallVector<VOPDLiteralFixup, 2> Fixups;
+
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
-    if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR))
-      return VOPDMatchInfo{&FirstMI, &SecondMI, IsVOPD3};
+    if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR,
+                                Fixups))
+      return VOPDMatchInfo{
+          {&FirstMI, &SecondMI}, 0, IsVOPD3, std::move(Fixups)};
   }
 
   if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
@@ -269,8 +329,10 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
     AllowSameVGPR &= !IsAntiDep;
     if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
       return std::nullopt;
-    if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR))
-      return VOPDMatchInfo{&SecondMI, &FirstMI, IsVOPD3};
+    if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR,
+                                Fixups))
+      return VOPDMatchInfo{
+          {&FirstMI, &SecondMI}, 1, IsVOPD3, std::move(Fixups)};
   }
 
   return std::nullopt;

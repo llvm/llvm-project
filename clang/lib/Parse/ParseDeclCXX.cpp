@@ -740,7 +740,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
       return nullptr;
     }
 
-    ProhibitAttributes(PrefixAttrs);
+    ProhibitAttributes(PrefixAttrs, Tok.getLocation());
 
     Decl *DeclFromDeclSpec = nullptr;
     Scope *CurScope = getCurScope();
