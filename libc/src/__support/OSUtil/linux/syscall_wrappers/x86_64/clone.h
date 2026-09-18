@@ -21,9 +21,10 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
-namespace detail {
 
-constexpr uintptr_t STACK_ADJUSTMENT = 16;
+constexpr uintptr_t CLONE_STACK_ALIGNMENT = 16;
+
+namespace detail {
 
 LIBC_INLINE long clone_impl(int flags, void *child_stack, pid_t *parent_tid,
                             void *tls, pid_t *child_tid) {
@@ -42,8 +43,10 @@ LIBC_INLINE long clone_impl(int flags, void *child_stack, pid_t *parent_tid,
                   "call *%%rax\n\t"
                   "movl %%eax, %%edi\n\t"
                   "movl %[sys_exit], %%eax\n\t"
+                  // Does not return.
                   "syscall\n\t"
-                  "hlt\n\t"
+                  // Just in case it does..
+                  "ud2\n\t"
                   "1:\n\t" : "=a"(ret) : "0"(SYS_clone),
                   "D"(flags), "S"(child_stack), "d"(parent_tid), "r"(r10),
                   "r"(r8), [sys_exit] "i"(SYS_exit) : "rcx", "r11", "memory");

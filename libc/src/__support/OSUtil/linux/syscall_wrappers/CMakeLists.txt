@@ -1129,6 +1129,7 @@ add_header_library(
     libc.include.sys_syscall
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.architectures

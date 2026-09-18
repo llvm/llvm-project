@@ -49,7 +49,7 @@ LLVM_LIBC_FUNCTION(int, clone,
   }
 
   uintptr_t stack_as_integer = reinterpret_cast<uintptr_t>(stack);
-  stack_as_integer &= ~15;
+  stack_as_integer &= ~(linux_syscalls::CLONE_STACK_ALIGNMENT - 1);
   stack = reinterpret_cast<void *>(stack_as_integer);
 
   // In some situations, we need to invalidate parent's tid cache. We cannot do

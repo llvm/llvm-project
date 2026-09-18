@@ -74,6 +74,8 @@ add_object_library(
     libc.src.__support.OSUtil.linux.syscall_wrappers.write
     libc.src.__support.threads.thread_common
     libc.src.__support.threads.thread_attributes
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
 )
 
 add_header_library(

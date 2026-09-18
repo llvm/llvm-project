@@ -18,6 +18,7 @@
 #include "hdr/types/pid_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
@@ -43,11 +44,13 @@ LIBC_INLINE ErrorOr<pid_t> clone(int (*func)(void *), void *stack, int flags,
                                  void *arg, pid_t *parent_tid = nullptr,
                                  void *tls = nullptr,
                                  pid_t *child_tid = nullptr) {
+  uintptr_t sp = reinterpret_cast<uintptr_t>(stack);
+  LIBC_ASSERT(sp % CLONE_STACK_ALIGNMENT == 0);
+
   // Set up func and arg at the top of the child stack in C++ so the assembly
   // only needs to pass the standard system call arguments.
-  uintptr_t sp = reinterpret_cast<uintptr_t>(stack);
-  sp -= detail::STACK_ADJUSTMENT;
-  static_assert(sizeof(ChildStackFrame) <= detail::STACK_ADJUSTMENT);
+  static_assert(sizeof(ChildStackFrame) <= CLONE_STACK_ALIGNMENT);
+  sp -= CLONE_STACK_ALIGNMENT;
   auto *child_stack = reinterpret_cast<ChildStackFrame *>(sp);
   child_stack->func = func;
   child_stack->arg = arg;
