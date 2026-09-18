@@ -354,7 +354,7 @@ without using static initializers, do this manually:
   - Note: You can forward-declare and call `const char
     *__llvm_profile_get_filename(void)` to get the currently configured
     filename. This returns a `malloc`-allocated string that must be passed to
-    `free()` (or `""` on allocation failure).
+    `free()` (or a *static* `""` on allocation failure).
 - Forward-declare `int __llvm_profile_write_file(void)` and call it to write
   out a profile. This function returns 0 on success, and a non-zero value
   otherwise. Calling this function multiple times appends profile data to an
