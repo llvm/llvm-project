@@ -232,6 +232,25 @@ template <int V> constexpr int f() noexcept { return V; }
 void h() { constexpr S s; }
 }  // namespace from_constexpr_destructor
 
+namespace with_friend {
+template<class T> struct vector {
+  constexpr int f(const T& t = T()) const;  // #1
+};
+
+class A {
+  friend constexpr int vector<A>::f(const A&) const;  // #2
+  static constexpr int v = 2;
+};
+
+consteval int g(const vector<A> &v) { return v.f(); }
+
+template <class T>
+constexpr int vector<T>::f(const T &t) const { return T().v; }
+
+constexpr vector<A> v;
+static_assert(g(v) == 2, "");
+}  // namespace
+
 namespace GH115118 {
 
 struct foo {

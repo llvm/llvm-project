@@ -1938,7 +1938,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 
 static void compileFunction(InterpState &S, const Function *Func,
                             CodePtr OpPC) {
-  const FunctionDecl *Fn = Func->getDecl();
+  const FunctionDecl *Fn = Func->getDecl()->getMostRecentDecl();
 
   // [C++26] [temp.inst] p5
   // [...] the function template specialization is implicitly instantiated
