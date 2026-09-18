@@ -414,18 +414,7 @@ public:
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-
-    // We need the pointee range over (const) BlocktTy & instead of (const)
-    // BlockTy * for filter_range to work properly.
-    auto Filter =
-        make_filter_range(make_pointee_range(Range),
-                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
-      return cast<BlockTy>(&Block);
-    });
+    return make_isa_range<BlockTy>(std::forward<T>(Range));
   }
 
   /// Return an iterator range over \p Range with each block cast to \p
