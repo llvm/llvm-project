@@ -30,6 +30,7 @@ class ASTContext;
 class CharUnits;
 class Expr;
 class CallExpr;
+class CXXRecordDecl;
 class FunctionDecl;
 } // namespace clang
 using namespace clang;
@@ -112,6 +113,9 @@ EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
 
 const Expr *ignorePointerCastsAndParens(const Expr *E);
+
+bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
+bool isReadByLvalueToRvalueConversion(QualType T);
 
 /// Whether we can instantiate FD during constant evaluation
 bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);

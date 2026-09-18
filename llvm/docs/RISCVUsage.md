@@ -83,7 +83,14 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
+- `rva23p1s64`
+- `rvb23p1s64`
 - `rvm23u32`
+
+The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
+as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
+must be requested explicitly, for example
+`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
 
 (riscv-extensions)=
 
@@ -379,7 +386,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 `experimental-zvzip`
 
-: LLVM implements the [0.1 draft specification](https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc).
+: LLVM implements the [0.3 draft specification](https://github.com/riscv/riscv-isa-manual/pull/3233).
 
 `experimental-zvvfmm`
 

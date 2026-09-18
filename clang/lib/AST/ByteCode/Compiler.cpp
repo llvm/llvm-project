@@ -268,7 +268,9 @@ template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
       : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
-    Ctx->InitStackActive = Active;
+    // An explicit initializer nested in a default member initializer still
+    // needs the surrounding default initializer's `this` reconstruction.
+    Ctx->InitStackActive = OldValue || Active;
     if (Active)
       Ctx->InitStack.push_back(InitLink::DIE());
   }
@@ -776,7 +778,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
         return this->emitFnPtrCast(E);
       }
       if (FromT == PT_Ptr)
-        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), E);
+        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(),
+                                    E->getType().getTypePtr(), E);
       return true;
     }
 
@@ -2315,22 +2318,36 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->emitInvalid(E);
   }
 
-  // Handle discarding first.
-  if (DiscardResult) {
-    for (const Expr *Init : Inits) {
-      if (!this->discard(Init))
-        return false;
-    }
-    return true;
-  }
-
-  // Primitive values.
+  // Primitive values. A discarded one can simply discard each initializer;
+  // there is no object to establish.
   if (OptPrimType T = classify(QT)) {
-    assert(!DiscardResult);
+    if (DiscardResult) {
+      for (const Expr *Init : Inits) {
+        if (!this->discard(Init))
+          return false;
+      }
+      return true;
+    }
     if (Inits.size() == 0)
       return this->visitZeroInitializer(*T, QT, E);
     assert(Inits.size() == 1);
     return this->delegate(Inits[0]);
+  }
+
+  assert(!canClassify(E->getType()));
+
+  // A composite prvalue needs somewhere to live even when it is discarded: a
+  // default member initializer may read subobjects initialized earlier in this
+  // same list, so those have to actually be written and `this` has to denote
+  // the object. Materialize one and initialize into it.
+  if (DiscardResult && !Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+    InitLinkScope<Emitter> ILS2(this, InitLink::Temp(*LocalIndex));
+    return this->visitInitializerPop(E);
   }
 
   if (QT->isRecordType()) {
@@ -6142,6 +6159,15 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   return true;
 }
 
+static bool isTrivialMemoryOperation(const CXXMethodDecl *MD) {
+  if (!MD || !MD->isDefaulted())
+    return false;
+  if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
+    return false;
+  return MD->getParent()->isUnion() ||
+         (MD->isTrivial() && isReadByLvalueToRvalueConversion(MD->getParent()));
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   if (E->containsErrors())
@@ -6174,6 +6200,35 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   LocalScope<Emitter> CallScope(this, ScopeKind::Call);
+  ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
+  bool ActivateLHS = false;
+
+  // Emit a special op for trivial copy/move operators.
+  if (isTrivialMemoryOperation(dyn_cast_if_present<CXXMethodDecl>(FuncDecl))) {
+    const Function *Func = getFunction(FuncDecl);
+    if (!Func)
+      return false;
+
+    if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
+        OCE && OCE->isAssignmentOp()) {
+      const CXXRecordDecl *LHSRecord = Args[0]->getType()->getAsCXXRecordDecl();
+      ActivateLHS = LHSRecord && LHSRecord->hasTrivialDefaultConstructor();
+    }
+    if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(E))
+      if (!this->visit(MCE->getImplicitObjectArgument()))
+        return false;
+
+    if (!this->visitCallArgs(Args, FuncDecl, /*ActivateLHS=*/ActivateLHS,
+                             isa<CXXOperatorCallExpr>(E)))
+      return false;
+
+    if (!this->emitTrivialCopy(ActivateLHS, Func, E))
+      return false;
+
+    if (!DiscardResult)
+      return CallScope.destroyLocals();
+    return this->emitPopPtr(E) && CallScope.destroyLocals();
+  }
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   OptPrimType T = classify(ReturnType);
@@ -6202,11 +6257,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
   const Expr *ReversedArgs[2];
-
   bool IsAssignmentOperatorCall = false;
-  bool ActivateLHS = false;
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
@@ -6220,6 +6272,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     ReversedArgs[1] = Args[0];
     Args = ReversedArgs;
   }
+
   // Calling a static operator will still
   // pass the instance, but we don't need it.
   // Discard it here.

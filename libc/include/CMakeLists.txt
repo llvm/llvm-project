@@ -69,6 +69,7 @@ add_header_macro(
     .llvm-libc-types.struct_flock64
     .llvm-libc-types.pid_t
     .llvm-libc-types.off_t
+    .llvm-libc-types.off64_t
     .llvm_libc_common_h
 )
 
