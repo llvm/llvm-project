@@ -73,6 +73,16 @@
 #define ORC_RT_C_EXPORT
 #endif
 
+/* ORC_RT_MAYBE_UNUSED indicates that a symbol may not be used, and that the
+   compiler should not issue unused-symbol warnings for it. */
+#if defined(__cplusplus)
+#define ORC_RT_MAYBE_UNUSED [[maybe_unused]]
+#elif defined(__has_attribute) && __has_attribute(unused)
+#define ORC_RT_MAYBE_UNUSED __attribute__((unused))
+#else
+#define ORC_RT_MAYBE_UNUSED
+#endif
+
 /* ORC_RT_C_NOTHROW indicates that a function won't throw a C++ exception. */
 #if defined(__cplusplus)
 #define ORC_RT_C_NOTHROW noexcept

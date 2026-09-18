@@ -711,7 +711,11 @@ public:
   /// of operations they contain.
   template <typename T>
   static void insert(Dialect &dialect) {
-    insert(std::make_unique<Model<T>>(&dialect), T::getAttributeNames());
+    static_assert(sizeof(Model<T>) == sizeof(Impl));
+    static_assert(alignof(Model<T>) == alignof(Impl));
+    std::unique_ptr<Impl> ownedModel(new (allocateModelStorage())
+                                         Model<T>(&dialect));
+    insert(std::move(ownedModel), T::getAttributeNames());
   }
   /// The use of this method is in general discouraged in favor of
   /// 'insert<CustomOp>(dialect)'.
@@ -729,6 +733,9 @@ public:
   }
 
 private:
+  /// Allocate storage for one type-erased operation model.
+  static void *allocateModelStorage();
+
   RegisteredOperationName(Impl *impl) : OperationName(impl) {}
 
   /// Allow access to the constructor.

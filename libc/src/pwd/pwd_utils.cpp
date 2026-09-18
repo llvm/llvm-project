@@ -13,10 +13,13 @@
 
 #include "src/pwd/pwd_utils.h"
 #include "hdr/errno_macros.h"
+#include "hdr/types/size_t.h"
 #include "hdr/types/struct_passwd.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h"
-#include "src/pwd/flat_file_db.h"
+#include "src/__support/pwd/dynamic_buffer.h"
+#include "src/__support/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
 
 #ifndef LIBC_COPT_PWD_FILE_PATH
@@ -32,24 +35,45 @@ ErrorOr<struct passwd> parse_passwd_line(char *line) {
 
   struct passwd pwd;
   size_t len = internal::string_length(line);
-  if (!parse_line(cpp::span<char>(line, len + 1), &pwd))
-    return Error(EINVAL);
+  auto res = parse_line(cpp::span<char>(line, len + 1), {}, &pwd);
+  if (!res.has_value())
+    return Error(res.error());
 
   return pwd;
 }
 
-} // namespace pwd
+// Exposed via TESTONLY_set_passwd_path for unit testing to direct operations
+// to hermetic temporary files.
+static const char *passwd_file_path = LIBC_COPT_PWD_FILE_PATH;
 
-namespace passwd {
-
-static LIBC_CONSTINIT pwd::FlatFileDatabase<struct passwd>
+static LIBC_CONSTINIT FlatFileDatabase<struct passwd>
     db(LIBC_COPT_PWD_FILE_PATH);
 // Note: These static buffers are process-global and NOT protected by a mutex
 // at this stage. POSIX getpwent is non-reentrant.
-static char line_buffer[1024];
-static struct passwd pwd_entry;
+//
+// A single static buffer and struct passwd are reused across getpwent,
+// getpwnam, and getpwuid per POSIX ("The return value may point to a static
+// area which is overwritten by a subsequent call to getpwent(), getpwnam(),
+// or getpwuid()"), growing only to the high-water mark of the largest record
+// seen. endpwent() closes the file stream without freeing the buffer so that
+// pointers returned prior to endpwent() remain valid until the next
+// non-reentrant call.
+static LIBC_CONSTINIT DynamicBuffer line_buffer;
+static LIBC_CONSTINIT struct passwd pwd_entry = {};
 
-void TESTONLY_set_passwd_path(const char *path) { db.set_path(path); }
+void TESTONLY_set_passwd_path(const char *path) {
+  close();
+  line_buffer.release();
+  passwd_file_path = path;
+  db.set_path(path);
+}
+
+void TESTONLY_reset_passwd_path() {
+  close();
+  line_buffer.release();
+  passwd_file_path = LIBC_COPT_PWD_FILE_PATH;
+  db.set_path(LIBC_COPT_PWD_FILE_PATH);
+}
 
 ErrorOr<void> open() { return db.setdb(); }
 
@@ -64,5 +88,60 @@ ErrorOr<struct passwd *> read_next() {
   return &pwd_entry;
 }
 
-} // namespace passwd
+namespace {
+
+// The lookups are shared between the caller-supplied fixed buffer used by the
+// reentrant entrypoints and the process-global growable buffer used by the
+// non-reentrant ones.
+template <typename BufferType>
+ErrorOr<bool> lookup_by_name(cpp::string_view name, struct passwd *pwd,
+                             BufferType &buffer, const char *path) {
+  ScopedFlatFileDatabase<struct passwd> local_db(path);
+  auto matcher = [name](const struct passwd &entry) {
+    return cpp::string_view(entry.pw_name) == name;
+  };
+  return local_db.lookup(matcher, pwd, buffer);
+}
+
+template <typename BufferType>
+ErrorOr<bool> lookup_by_uid(uid_t uid, struct passwd *pwd, BufferType &buffer,
+                            const char *path) {
+  ScopedFlatFileDatabase<struct passwd> local_db(path);
+  auto matcher = [uid](const struct passwd &entry) {
+    return entry.pw_uid == uid;
+  };
+  return local_db.lookup(matcher, pwd, buffer);
+}
+
+} // namespace
+
+ErrorOr<bool> find_by_name(cpp::string_view name, struct passwd *pwd,
+                           cpp::span<char> buffer, const char *path) {
+  return lookup_by_name(name, pwd, buffer, path ? path : passwd_file_path);
+}
+
+ErrorOr<bool> find_by_uid(uid_t uid, struct passwd *pwd, cpp::span<char> buffer,
+                          const char *path) {
+  return lookup_by_uid(uid, pwd, buffer, path ? path : passwd_file_path);
+}
+
+ErrorOr<struct passwd *> find_by_name(cpp::string_view name) {
+  auto res = lookup_by_name(name, &pwd_entry, line_buffer, passwd_file_path);
+  if (!res.has_value())
+    return Error(res.error());
+  if (!res.value())
+    return nullptr;
+  return &pwd_entry;
+}
+
+ErrorOr<struct passwd *> find_by_uid(uid_t uid) {
+  auto res = lookup_by_uid(uid, &pwd_entry, line_buffer, passwd_file_path);
+  if (!res.has_value())
+    return Error(res.error());
+  if (!res.value())
+    return nullptr;
+  return &pwd_entry;
+}
+
+} // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL

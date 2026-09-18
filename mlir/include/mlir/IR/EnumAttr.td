@@ -525,19 +525,19 @@ class EnumParameter<EnumInfo enumInfo>
 // def MyEnumAttr : EnumAttr<MyDialect, MyEnum, "enum">;
 // ```
 //
-// By default, the assembly format of the attribute works best with operation
-// assembly formats. For example:
+// By default, the assembly format of the attribute wraps the symbolic value in
+// angle brackets. Use the `enum` directive to print only the symbolic value in
+// an operation assembly format. For example:
 //
 // ```
 // def MyOp : Op<MyDialect, "my_op"> {
 //   let arguments = (ins MyEnumAttr:$enum);
-//   let assemblyFormat = "$enum attr-dict";
+//   let assemblyFormat = "enum($enum) attr-dict";
 // }
 // ```
 //
 // The op will appear in the IR as `my_dialect.my_op first`. However, the
-// generic format of the attribute will be `#my_dialect<"enum first">`. Override
-// the attribute's assembly format as required.
+// generic format of the attribute will be `#my_dialect.enum<first>`.
 class EnumAttr<Dialect dialect, EnumInfo enumInfo, string name = "",
                list <Trait> traits = []>
     : AttrDef<dialect, enumInfo.className, traits> {
@@ -566,9 +566,8 @@ class EnumAttr<Dialect dialect, EnumInfo enumInfo, string name = "",
   // If a mnemonic was provided, use it to generate a custom assembly format.
   let mnemonic = name;
 
-  // The default assembly format for enum attributes. Selected to best work with
-  // operation assembly formats.
-  let assemblyFormat = "$value";
+  // The default assembly format for enum attributes.
+  let assemblyFormat = "`<` $value `>`";
 }
 
 // An EnumAttr used as a parameter of another attribute or type. This retains
@@ -585,6 +584,13 @@ class EnumAttrParameter<EnumAttr enumAttr, string desc = "">
 class OptionalEnumAttrParameter<EnumAttr enumAttr, string desc = "">
     : EnumAttrParameter<enumAttr, desc> {
   let defaultValue = cppStorageType # "()";
+}
+
+// An EnumAttr parameter with a default value.
+class DefaultValuedEnumAttrParameter<EnumAttr enumAttr, string value,
+                                     string desc = "">
+    : EnumAttrParameter<enumAttr, desc> {
+  let defaultValue = value;
 }
 
 // A property wrapping by a C++ enum. This class will automatically create bytecode

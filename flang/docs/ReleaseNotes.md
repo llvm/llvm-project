@@ -31,6 +31,60 @@ page](https://llvm.org/releases/).
 
 ## Bug Fixes
 
+- Fixed `fir::getTypeSizeAndAlignment` returning the wrong allocation size for
+  **packed `fir::RecordType`s** (produced by the AIX lowering of `BIND(C)`
+  derived types, or declared directly in textual FIR). Fields in a packed
+  record are placed back-to-back using each component's allocation size
+  (`alignTo(storeSize, ABIalign)`), not its raw store size, and the record's
+  ABI alignment is 1. For example, a packed `{i32, f64}` on x86-64 now
+  correctly reports 12 bytes instead of 16.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed `fir::getTypeSizeAndAlignment` omitting **tail padding** from unpacked
+  derived types. The returned size is now rounded up to the record's own ABI
+  alignment, matching the allocation extent used by array element strides, CUDA
+  shared-memory layout, and stack/heap allocation placement. For example,
+  `{i32, i8}` (store size 5 bytes, align 4) now correctly reports 8 bytes
+  instead of 5.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed a **`BIND(C)` / `VALUE` argument-passing ABI bug** on SystemZ:
+  derived types whose allocation size fits in a GPR were incorrectly passed
+  indirectly (by reference) instead of as an integer register value, because
+  `getTypeSizeAndAlignment` was returning the unpadded store size rather than
+  the allocation size. For example, `{i32, i8}` (allocation size 8 bytes) is
+  now correctly passed as `i64`, and `{i16, i8}` (4 bytes) as `i32`, matching
+  the C ABI.
+  Fortran programs with `BIND(C)` `VALUE` derived-type arguments of these shapes
+  that interoperate with C were already producing incorrect results; programs
+  compiled entirely in Fortran that relied on the old (incorrect) convention
+  must be recompiled.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed a **`BIND(C)` / `VALUE` argument-passing ABI bug** on PPC64le:
+  derived types were classified using the unpadded store size rather than the
+  allocation size, producing the wrong number of GPR slots. The argument was
+  already passed by value; only the slot count was wrong. For example,
+  `{f128, i8}` (allocation size 32 bytes) is now correctly passed as
+  `[4 x i64]` instead of `[3 x i64]`, matching the C ABI.
+  Fortran programs with `BIND(C)` `VALUE` derived-type arguments of these shapes
+  that interoperate with C were already producing incorrect results; programs
+  compiled entirely in Fortran that relied on the old (incorrect) convention
+  must be recompiled.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed the `TRANSFER` intrinsic inline path to compare sizes using
+  `getTypeSizeAndAlignment` (which includes tail padding for `RecordType`,
+  matching the allocation extent used by `STORAGE_SIZE` and the runtime
+  `TRANSFER` path). For `RecordType` sources, the inline path now copies
+  the record data via `fir.copy` into result-aligned storage when the source
+  alignment is less than the result alignment, preserving both internal and
+  tail padding bytes and satisfying the F2023 16.9.212 requirement that the
+  result's physical representation be identical to the source's when both have
+  the same length.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+
 ## Non-comprehensive list of changes in this release
 
 - Added support for the OpenMP implementation-defined extension sentinels
@@ -42,6 +96,11 @@ page](https://llvm.org/releases/).
   (mostly) full path to clang's behavior which is to use the source filename
   as specified on the command line (except that ./foo.f90 removes the ./
   prefix).
+
+- Fortran-standard-compliant reassociation within individual `REAL` and
+  `COMPLEX` sum expressions is now enabled by default at all optimization
+  levels. This may change exact floating-point results. Flang users can
+  restore left-to-right evaluation with `-fno-fp-sum-reassociation`.
 
 - The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
   `fir.array_update`, `fir.array_modify`, `fir.array_access`,
@@ -69,7 +128,20 @@ page](https://llvm.org/releases/).
   that unit. Constants of an intrinsic module such as `iso_fortran_env` are
   not described yet, because no compilation unit defines them.
 
+- A reference with a constant subscript that is out of range is now accepted with
+  a warning instead of being rejected with an error. A subscript is required to be
+  within its bounds only when the reference is executed (F'2023 9.5.3.1 paragraph
+  2), and that cannot be determined in general, so programs that keep such a
+  reference in a branch or procedure that never runs are no longer rejected. The
+  same applies to array section endpoints, but not to cosubscripts, which remain
+  errors. Use `-fno-out-of-bounds-subscripts` to get an error again, or
+  `-Wno-out-of-bounds-subscripts` to silence the warning.
+
 ## New Compiler Flags
+- Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of
+  rejecting an out-of-range constant subscript with an error. See the entry above
+  for the change in default behavior.
+
 - Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
   floating-point exception halting mode of the main program. It takes a
   comma-separated list of `invalid`, `zero`, `overflow`, `underflow`, `inexact`,
