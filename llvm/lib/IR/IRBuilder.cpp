@@ -346,8 +346,8 @@ static bool isConstantOne(const Value *Val) {
   return CVal && CVal->isOne();
 }
 
-CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                      Value *AllocSize, Value *ArraySize,
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                      Value *ArraySize,
                                       ArrayRef<OperandBundleDef> OpB,
                                       Function *MallocF, const Twine &Name) {
   // malloc(type) becomes:
@@ -389,12 +389,11 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
   return MCall;
 }
 
-CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                      Value *AllocSize, Value *ArraySize,
-                                      Function *MallocF, const Twine &Name) {
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                      Value *ArraySize, Function *MallocF,
+                                      const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {}, MallocF,
-                      Name);
+  return CreateMalloc(IntPtrTy, AllocSize, ArraySize, {}, MallocF, Name);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.

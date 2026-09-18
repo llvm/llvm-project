@@ -462,7 +462,6 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
       vectorShape);
   auto gatherOp = xegpu::LoadGatherOp::create(
       rewriter, loc, vectorType, flatMemref, localOffsets, mask,
-      /*chunk_size=*/IntegerAttr{},
       /*l1_hint=*/xegpu::CachePolicyAttr{},
       /*l2_hint=*/xegpu::CachePolicyAttr{},
       /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -497,7 +496,6 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
       vectorShape);
   xegpu::StoreScatterOp::create(rewriter, loc, writeOp.getVector(), flatMemref,
                                 localOffsets, mask,
-                                /*chunk_size=*/IntegerAttr{},
                                 /*l1_hint=*/xegpu::CachePolicyAttr{},
                                 /*l2_hint=*/xegpu::CachePolicyAttr{},
                                 /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -742,7 +740,6 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
 
     auto xeGatherOp = xegpu::LoadGatherOp::create(
         rewriter, loc, vectorType, flatMemref, localOffsets, gatherOp.getMask(),
-        /*chunk_size=*/IntegerAttr{},
         /*l1_hint=*/xegpu::CachePolicyAttr{},
         /*l2_hint=*/xegpu::CachePolicyAttr{},
         /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -777,7 +774,6 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
 
     xegpu::StoreScatterOp::create(rewriter, loc, scatterOp.getValueToStore(),
                                   flatMemref, localOffsets, scatterOp.getMask(),
-                                  /*chunk_size=*/IntegerAttr{},
                                   /*l1_hint=*/xegpu::CachePolicyAttr{},
                                   /*l2_hint=*/xegpu::CachePolicyAttr{},
                                   /*l3_hint=*/xegpu::CachePolicyAttr{},
@@ -966,9 +962,9 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
       return rewriter.notifyMatchFailure(contractOp,
                                          "Expects operands of rank 4 or less");
 
-    auto dpasOp = xegpu::DpasOp::create(rewriter, loc,
-                                        TypeRange{contractOp.getResultType()},
-                                        ValueRange{lhs, rhs, acc});
+    auto dpasOp = xegpu::DpasOp::create(
+        rewriter, loc, contractOp.getResultType(), lhs, rhs, acc,
+        /*layout_a=*/nullptr, /*layout_b=*/nullptr, /*layout_cd=*/nullptr);
     rewriter.replaceOp(contractOp, dpasOp);
 
     return success();

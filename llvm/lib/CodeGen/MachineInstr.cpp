@@ -1037,7 +1037,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   // Assume that all registers in a memory operand are pointers.
   if (F.isMemKind())
-    return TRI->getPointerRegClass();
+    return TII->getInlineAsmMemoryOperandRegClass(F.getMemoryConstraintID());
 
   return nullptr;
 }
@@ -2746,16 +2746,10 @@ void MachineInstr::insert(mop_iterator InsertBefore,
   }
 
   unsigned OpIdx = getOperandNo(InsertBefore);
-  unsigned NumOperands = getNumOperands();
-  unsigned OpsToMove = NumOperands - OpIdx;
+  SmallVector<MachineOperand> MovingOps(InsertBefore, operands_end());
 
-  SmallVector<MachineOperand> MovingOps;
-  MovingOps.reserve(OpsToMove);
-
-  for (unsigned I = 0; I < OpsToMove; ++I) {
-    MovingOps.emplace_back(getOperand(OpIdx));
-    removeOperand(OpIdx);
-  }
+  for (unsigned I = getNumOperands(); I > OpIdx; --I)
+    removeOperand(I - 1);
   for (const MachineOperand &MO : Ops)
     addOperand(MO);
   for (const MachineOperand &OpMoved : MovingOps)

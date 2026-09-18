@@ -1,0 +1,156 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.func private @_Z8externalv()
+cir.func private @_Z5innerv()
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+
+// void target() throw(int)
+cir.func @filter_with_types() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+}
+
+// CHECK-LABEL: cir.func @filter_with_types()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @_Z8externalv() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception filter [@_ZTIi]
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[DISPATCH]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[FILTER:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[FILTER]](%[[F_EXN:.*]]: !cir.ptr<!void>, %[[F_TID:.*]]: !u32i):
+// CHECK:         %[[SID:.*]] = cir.cast integral %[[F_TID]] : !u32i -> !s32i
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         %[[CMP:.*]] = cir.cmp lt %[[SID]], %[[ZERO]] : !s32i
+// CHECK:         cir.brcond %[[CMP]] ^[[VIOLATED:bb[0-9]+]](%[[F_EXN]], %[[F_TID]] : !cir.ptr<!void>, !u32i), ^[[PERMITTED:bb[0-9]+]](%[[F_EXN]], %[[F_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[VIOLATED]](%[[V_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_call_unexpected(%[[V_EXN]]){{.*}}noreturn
+// CHECK:         cir.unreachable
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+// CHECK:       ^[[PERMITTED]](%[[P_EXN:.*]]: !cir.ptr<!void>, %[[P_TID:.*]]: !u32i):
+// CHECK:         cir.resume.flat %[[P_EXN]], %[[P_TID]]
+
+// void target() throw()
+cir.func @filter_without_types() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter() : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.unreachable
+}
+
+// CHECK-LABEL: cir.func @filter_without_types()
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception filter []
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[DISPATCH]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[VIOLATED:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[VIOLATED]](%[[V_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_call_unexpected(%[[V_EXN]]){{.*}}noreturn
+// CHECK:         cir.unreachable
+// CHECK:         cir.unreachable
+
+// Catch then filter: the landing pad lists the catch type and then the filter.
+cir.func @catch_then_filter() {
+  cir.try_call @_Z5innerv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb8
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb5
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  %ct, %exn = cir.begin_catch %eh_token.1
+      : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+  cir.end_catch %ct : !cir.catch_token
+  cir.br ^bb8
+^bb5(%eh_token.2: !cir.eh_token):
+  cir.br ^bb6(%eh_token.2 : !cir.eh_token)
+^bb6(%eh_token.3: !cir.eh_token):
+  cir.eh.dispatch %eh_token.3 : !cir.eh_token [
+    filter() : ^bb7,
+    unwind : ^bb9
+  ]
+^bb7(%eh_token.4: !cir.eh_token):
+  cir.eh.unexpected %eh_token.4 : !cir.eh_token
+^bb8:
+  cir.return
+^bb9(%eh_token.5: !cir.eh_token):
+  cir.unreachable
+}
+
+// CHECK-LABEL: cir.func @catch_then_filter()
+// CHECK-SAME: personality(@__gxx_personality_v0)
+// CHECK:         cir.try_call @_Z5innerv() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EXN:.*]], %[[TID:.*]] = cir.eh.inflight_exception [@_ZTIi] filter []
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EXN]], %[[TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[DISPATCH]](%[[D_EXN:.*]]: !cir.ptr<!void>, %[[D_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[CATCH_CMP:bb[0-9]+]](%[[D_EXN]], %[[D_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[CATCH_CMP]](%[[C_EXN:.*]]: !cir.ptr<!void>, %[[C_TID:.*]]: !u32i):
+// CHECK:         %[[TYPEID:.*]] = cir.eh.typeid @_ZTIi
+// CHECK:         %[[CMP:.*]] = cir.cmp eq %[[C_TID]], %[[TYPEID]] : !u32i
+// CHECK:         cir.brcond %[[CMP]] ^[[CATCH:bb[0-9]+]](%[[C_EXN]], %[[C_TID]] : !cir.ptr<!void>, !u32i), ^[[NOT_CAUGHT:bb[0-9]+]](%[[C_EXN]], %[[C_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[CATCH]](%[[H_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         %[[OBJ:.*]] = cir.call @__cxa_begin_catch(%[[H_EXN]]) : (!cir.ptr<!void>) -> !cir.ptr<!u8i>
+// CHECK:         cir.cast bitcast %[[OBJ]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CHECK:         cir.call @__cxa_end_catch() : () -> ()
+// CHECK:         cir.br ^[[RETURN]]
+// Not caught by the handler: continue unwinding into the filter dispatch,
+// which is an empty filter and so always calls __cxa_call_unexpected.
+// CHECK:       ^[[NOT_CAUGHT]](%[[N_EXN:.*]]: !cir.ptr<!void>, %[[N_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[FILTER_ENTRY:bb[0-9]+]](%[[N_EXN]], %[[N_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[FILTER_ENTRY]](%[[FE_EXN:.*]]: !cir.ptr<!void>, %[[FE_TID:.*]]: !u32i):
+// CHECK:         cir.br ^[[VIOLATED:bb[0-9]+]](%[[FE_EXN]], %[[FE_TID]] : !cir.ptr<!void>, !u32i)
+// CHECK:       ^[[VIOLATED]](%[[V_EXN:.*]]: !cir.ptr<!void>, %{{.*}}: !u32i):
+// CHECK:         cir.call @__cxa_call_unexpected(%[[V_EXN]]){{.*}}noreturn
+// CHECK:         cir.unreachable
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// CHECK: cir.func {{.*}} @__cxa_call_unexpected(!cir.ptr<!void>)
+
+}
