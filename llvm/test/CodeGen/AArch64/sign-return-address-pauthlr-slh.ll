@@ -89,9 +89,10 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x30, x30, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csdb
 ; CHECK-PAUTH-PAUTHLR-NEXT:    mov x1, sp
+; CHECK-PAUTH-PAUTHLR-NEXT:    autiasppc .Ltmp0
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x1, x1, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    mov sp, x1
-; CHECK-PAUTH-PAUTHLR-NEXT:    retaasppc .Ltmp0
+; CHECK-PAUTH-PAUTHLR-NEXT:    ret
 entry:
   %0 = tail call ptr @llvm.returnaddress(i32 0)
   tail call void asm sideeffect "", "r"(ptr %0)

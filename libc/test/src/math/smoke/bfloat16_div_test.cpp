@@ -12,4 +12,4 @@
 
 static bfloat16 div_func(bfloat16 x, bfloat16 y) { return x / y; }
 
-LIST_DIV_TESTS(bfloat16, bfloat16, div_func)
+LIST_DIV_TESTS(Bfloat16Div, bfloat16, bfloat16, div_func)
