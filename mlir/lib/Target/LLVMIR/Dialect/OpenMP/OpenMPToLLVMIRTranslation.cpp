@@ -7643,8 +7643,9 @@ static omp::MapInfoOp getFirstOrLastMappedMemberPtr(omp::MapInfoOp mapInfo,
 static std::vector<llvm::Value *>
 calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
                       llvm::IRBuilderBase &builder, bool isArrayTy,
-                      OperandRange bounds) {
+                      OperandRange bounds, bool &isByteOffset) {
   std::vector<llvm::Value *> idx;
+  isByteOffset = false;
   // There's no bounds to calculate an offset from, we can safely
   // ignore and return no indices.
   if (bounds.empty())
@@ -7666,30 +7667,37 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
     // If we do not have an array type, but we have bounds, then we're dealing
     // with a pointer that's being treated like an array and we have the
     // underlying type e.g. an i32, or f64 etc, e.g. a fortran descriptor base
-    // address (pointer pointing to the actual data) so we must caclulate the
-    // offset using a single index which the following loop attempts to
-    // compute using the standard column-major algorithm e.g for a 3D array:
+    // address (pointer pointing to the actual data), so we must calculate the
+    // offset to the first mapped element as a single linear index into that
+    // data.
     //
-    // ((((c_idx * b_len) + b_idx) * a_len) + a_idx)
+    // Each bound carries the stride between consecutive elements along its
+    // dimension, so the linear offset to the section's origin is:
     //
-    // It is of note that it's doing column-major rather than row-major at the
-    // moment, but having a way for the frontend to indicate which major format
-    // to use or standardizing/canonicalizing the order of the bounds to compute
-    // the offset may be useful in the future when there's other frontends with
-    // different formats.
-    for (int i = bounds.size() - 1; i >= 0; --i) {
-      if (auto boundOp = dyn_cast_if_present<omp::MapBoundsOp>(
-              bounds[i].getDefiningOp())) {
-        if (i == ((int)bounds.size() - 1))
-          idx.emplace_back(
-              moduleTranslation.lookupValue(boundOp.getLowerBound()));
-        else
-          idx.back() = builder.CreateAdd(
-              builder.CreateMul(idx.back(), moduleTranslation.lookupValue(
-                                                boundOp.getExtent())),
-              moduleTranslation.lookupValue(boundOp.getLowerBound()));
-      }
+    //   sum_d lower_bound[d] * stride[d]
+    //
+    // The per-dimension stride is the correct linearization weight regardless
+    // of how much of each dimension the section spans. Using the section
+    // extents (upper - lower + 1) instead - as the size calculation
+    // legitimately does - is only correct when every inner dimension is fully
+    // spanned; for a section that maps a single element (or any partial inner
+    // dimension) of a multi-dimensional array the extents collapse and all
+    // elements would alias onto the same begin pointer.
+    llvm::Value *offset = builder.getInt64(0);
+    for (Value bound : bounds) {
+      auto boundOp =
+          dyn_cast_if_present<omp::MapBoundsOp>(bound.getDefiningOp());
+      if (!boundOp || !boundOp.getStride())
+        continue;
+      llvm::Value *lb = moduleTranslation.lookupValue(boundOp.getLowerBound());
+      llvm::Value *stride = moduleTranslation.lookupValue(boundOp.getStride());
+      offset = builder.CreateAdd(offset, builder.CreateMul(lb, stride));
+      // Fortran descriptors provide strides in bytes; when that's the case the
+      // accumulated offset is a byte offset and must be consumed with a byte
+      // (i8) GEP at the call site to avoid double-scaling by the element size.
+      isByteOffset = boundOp.getStrideInBytes();
     }
+    idx.push_back(offset);
   }
 
   return idx;
@@ -8222,15 +8230,17 @@ createAlteredByCaptureMap(MapInfoData &mapData,
       switch (captureKind) {
       case omp::VariableCaptureKind::ByRef: {
         llvm::Value *newV = mapData.Pointers[i];
+        bool isByteOffset = false;
         std::vector<llvm::Value *> offsetIdx = calculateBoundsOffset(
             moduleTranslation, builder, mapData.BaseType[i]->isArrayTy(),
-            mapOp.getBounds());
+            mapOp.getBounds(), isByteOffset);
         if (isPtrTy)
           newV = builder.CreateLoad(builder.getPtrTy(), newV);
 
         if (!offsetIdx.empty())
-          newV = builder.CreateInBoundsGEP(mapData.BaseType[i], newV, offsetIdx,
-                                           "array_offset");
+          newV = builder.CreateInBoundsGEP(
+              isByteOffset ? builder.getInt8Ty() : mapData.BaseType[i], newV,
+              offsetIdx, "array_offset");
         mapData.Pointers[i] = newV;
       } break;
       case omp::VariableCaptureKind::ByCopy: {
