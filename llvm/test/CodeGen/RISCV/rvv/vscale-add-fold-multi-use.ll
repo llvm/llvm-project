@@ -5,23 +5,22 @@ define fastcc <vscale x 64 x i32> @ret_split_nxv64i32(ptr %x) {
 ; CHECK-LABEL: ret_split_nxv64i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    add a4, a2, a3
-; CHECK-NEXT:    add a5, a1, a4
+; CHECK-NEXT:    slli a3, a2, 4
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a4, a1, a3
+; CHECK-NEXT:    add a5, a4, a2
 ; CHECK-NEXT:    vl8re32.v v8, (a5)
-; CHECK-NEXT:    add a5, a1, a3
-; CHECK-NEXT:    vl8re32.v v16, (a5)
 ; CHECK-NEXT:    add a5, a1, a2
-; CHECK-NEXT:    vl8re32.v v24, (a5)
+; CHECK-NEXT:    vl8re32.v v16, (a5)
+; CHECK-NEXT:    vl8re32.v v24, (a4)
 ; CHECK-NEXT:    vl8re32.v v0, (a1)
 ; CHECK-NEXT:    vs8r.v v0, (a0)
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    vs8r.v v24, (a2)
 ; CHECK-NEXT:    add a3, a0, a3
-; CHECK-NEXT:    vs8r.v v16, (a3)
-; CHECK-NEXT:    add a0, a0, a4
-; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    vs8r.v v24, (a3)
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vs8r.v v16, (a0)
+; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    vs8r.v v8, (a2)
 ; CHECK-NEXT:    ret
      %v = load <vscale x 64 x i32>, ptr %x
    ret <vscale x 64 x i32> %v
@@ -39,21 +38,20 @@ define <vscale x 32 x i64> @lrint_nxv32bf16(<vscale x 32 x bfloat> %x) {
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v4, v14
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v24, v4
-; CHECK-NEXT:    slli a2, a1, 3
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a3, a1, a2
-; CHECK-NEXT:    add a3, a0, a3
+; CHECK-NEXT:    slli a2, a1, 4
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a3, a2, a1
 ; CHECK-NEXT:    vs8r.v v24, (a3)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v12, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v24, v12
-; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vs8r.v v16, (a1)
+; CHECK-NEXT:    vs8r.v v16, (a2)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v16, v8
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    vs8r.v v24, (a2)
+; CHECK-NEXT:    add a1, a0, a1
+; CHECK-NEXT:    vs8r.v v24, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.x.f.v v8, v16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
