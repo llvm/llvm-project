@@ -23,6 +23,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -298,8 +299,8 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
   return {};
 }
 
-void AArch64MCLFIRewriter::onLabel(const MCSymbol *, MCStreamer &Out) {
-  if (Guard)
+void AArch64MCLFIRewriter::onLabel(const MCSymbol *Symbol, MCStreamer &Out) {
+  if (Guard || (Symbol && Symbol->isTemporary()))
     return;
 
   // Flush a deferred LR guard before the label, since the label is a potential

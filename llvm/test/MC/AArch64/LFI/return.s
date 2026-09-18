@@ -1,3 +1,4 @@
+// RUN: llvm-mc -triple aarch64_lfi -filetype=obj %s -o /dev/null
 // RUN: llvm-mc -triple aarch64_lfi %s | FileCheck %s
 
 .arch_extension pauth
@@ -62,6 +63,30 @@ b some_func
 // CHECK:      mov x30, x0
 // CHECK-NEXT: add x30, x27, w30, uxtw
 // CHECK-NEXT: b some_func
+
+// A temporary label does not flush the deferred LR guard, allowing a
+// following authentication instruction to run on the signed pointer.
+ldp x29, x30, [sp]
+.Ltmp0:
+autiasp
+ret
+// CHECK:      ldp x29, x30, [sp]
+// CHECK:      autiasp
+// CHECK-NEXT: add x30, x27, w30, uxtw
+// CHECK-NEXT: ret
+
+// DWARF CFI directives (which emit internal temporary labels) also must not
+// flush the deferred LR guard before authentication.
+.cfi_startproc
+ldp x29, x30, [sp], #16
+.cfi_def_cfa_offset 0
+autiasp
+ret
+.cfi_endproc
+// CHECK:      ldp x29, x30, [sp], #16
+// CHECK:      autiasp
+// CHECK-NEXT: add x30, x27, w30, uxtw
+// CHECK-NEXT: ret
 
 mov x30, x0
 // CHECK:      mov x30, x0
