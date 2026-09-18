@@ -4330,6 +4330,8 @@ def CIR_FuncOp : CIR_Op<"func", [
     >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
     UnitAttr:$comdat,
+    OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<I64Attr>:$preferred_alignment,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
@@ -4422,6 +4424,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     matchAndRewriteAlias(cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty,
                          OpAdaptor adaptor,
                          mlir::ConversionPatternRewriter &rewriter) const;
+
+    mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+    mlir::SymbolRefAttr getComdatAttr(cir::FuncOp &op,
+                                      mlir::OpBuilder &builder) const;
   }];
 }
 
