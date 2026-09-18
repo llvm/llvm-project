@@ -195,9 +195,9 @@ if(CLANG_ENABLE_CIR)
     message(FATAL_ERROR
       "ClangIR is not yet supported in the standalone build.")
   endif()
-  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
+  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
     message(FATAL_ERROR
-      "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
+      "Cannot build ClangIR without MLIR enabled")
   endif()
 endif()
 
@@ -632,6 +632,43 @@ if(CLANG_LIBS)
   endforeach()
 endif()
 
+# ClangIR's MLIR dependency is excluded from the aggregate build and install.
+# Promote and install only the MLIR targets reachable from Clang's SDK, along
+# with the headers needed to consume those targets. If Clang itself is an
+# implicit Flang dependency, Flang packages the required targets instead.
+if(CLANG_ENABLE_CIR AND "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS AND
+   NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  get_property(clang_exports GLOBAL PROPERTY CLANG_EXPORTS)
+  llvm_install_dependency_target_closure(
+    PROJECT Clang
+    COMPONENT clang-dependencies
+    ROOT_TARGETS ${clang_exports})
+
+  if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+    get_target_property(mlir_source_dir mlir-headers SOURCE_DIR)
+    get_target_property(mlir_binary_dir mlir-headers BINARY_DIR)
+    install(DIRECTORY
+      "${mlir_source_dir}/include/mlir"
+      "${mlir_source_dir}/include/mlir-c"
+      "${mlir_binary_dir}/include/mlir"
+      "${mlir_binary_dir}/include/mlir-c"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT clang-dependency-headers
+      OPTIONAL
+      FILES_MATCHING
+      PATTERN "*.def"
+      PATTERN "*.h"
+      PATTERN "*.gen"
+      PATTERN "*.inc"
+      PATTERN "*.td"
+      PATTERN "CMakeFiles" EXCLUDE)
+  endif()
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-clang-dependency-headers
+      DEPENDS clang-dependencies COMPONENT clang-dependency-headers)
+  endif()
+endif()
+
 add_subdirectory(cmake/modules)
 
 if(CLANG_STAGE)
@@ -851,7 +888,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   # Populate the passthrough variables
   foreach(variableName ${CLANG_BOOTSTRAP_PASSTHROUGH} ${_BOOTSTRAP_DEFAULT_PASSTHROUGH})
     if(DEFINED ${variableName})
-      if("${${variableName}}" STREQUAL "")
+      if(variableName STREQUAL "LLVM_ENABLE_PROJECTS")
+        # Forward only requested roots; the next stage re-adds dependencies.
+        set(llvm_enable_projects "${LLVM_ENABLE_PROJECTS}")
+        if(DEFINED LLVM_REQUESTED_PROJECTS)
+          set(llvm_enable_projects "${LLVM_REQUESTED_PROJECTS}")
+        endif()
+        string(REPLACE ";" "|" value "${llvm_enable_projects}")
+        unset(llvm_enable_projects)
+      elseif("${${variableName}}" STREQUAL "")
         set(value "")
       else()
         string(REPLACE ";" "|" value "${${variableName}}")

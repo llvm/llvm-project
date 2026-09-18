@@ -59,6 +59,10 @@ public:
   FileSpec GetModuleCacheDirectory() const;
   bool SetModuleCacheDirectory(const FileSpec &dir_spec);
 
+  /// The timeout to use when expanding launch arguments via the shell.
+  /// A value of std::nullopt means no timeout should be enforced.
+  Timeout<std::micro> GetShellExpandTimeout() const;
+
 private:
   void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };

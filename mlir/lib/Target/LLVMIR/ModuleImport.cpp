@@ -2551,6 +2551,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                    builder.getStringAttr(asmI->getConstraintString()),
                    asmI->hasSideEffects(), asmI->isAlignStack(),
                    convertTailCallKindFromLLVM(callInst->getTailCallKind()),
+                   callInst->hasFnAttr(llvm::Attribute::Convergent),
                    AsmDialectAttr::get(
                        mlirModule.getContext(),
                        convertAsmDialectFromLLVM(asmI->getDialect())),
@@ -2787,8 +2788,9 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // Process debug records attached to this instruction. Debug variable records
   // are stored for later processing after all SSA values are converted, while
   // debug label records can be converted immediately.
-  if (inst->DebugMarker) {
-    for (llvm::DbgRecord &dbgRecord : inst->DebugMarker->getDbgRecordRange()) {
+  if (inst->getDbgMarker()) {
+    for (llvm::DbgRecord &dbgRecord :
+         inst->getDbgMarker()->getDbgRecordRange()) {
       // Store debug variable records for later processing.
       if (auto *dbgVariableRecord =
               dyn_cast<llvm::DbgVariableRecord>(&dbgRecord)) {
@@ -2901,6 +2903,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("alwaysinline"),
     StringLiteral("cold"),
     StringLiteral("convergent"),
+    StringLiteral("disable-tail-calls"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
     StringLiteral("hot"),
@@ -2925,6 +2928,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("target-features"),
     StringLiteral("trap-func-name"),
     StringLiteral("tune-cpu"),
+    StringLiteral("uniform-work-group-size"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
@@ -3023,6 +3027,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setOptsize(true);
   if (func->hasFnAttribute("save-reg-params"))
     funcOp.setSaveRegParams(true);
+  if (func->hasFnAttribute("uniform-work-group-size"))
+    funcOp.setUniformWorkGroupSize(true);
   if (func->hasFnAttribute(llvm::Attribute::MinSize))
     funcOp.setMinsize(true);
   if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
@@ -3087,6 +3093,16 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 
   if (func->hasFnAttribute("use-sample-profile"))
     funcOp.setUseSampleProfile(true);
+
+  if (llvm::Attribute attr = func->getFnAttribute("disable-tail-calls");
+      attr.isStringAttribute()) {
+    StringRef val = attr.getValueAsString();
+    if (val == "true")
+      funcOp.setDisableTailCalls(true);
+    else if (val != "false")
+      emitError(funcOp.getLoc())
+          << "unknown value '" << val << "' for 'disable-tail-calls' attribute";
+  }
 
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())
@@ -3237,6 +3253,9 @@ static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
 
 LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
                                                     InvokeOp op) {
+  llvm::AttributeList invokeAttrs = inst->getAttributes();
+  op.setUniformWorkGroupSize(
+      invokeAttrs.getFnAttr("uniform-work-group-size").isValid());
   return convertCallBaseAttributes(inst, op);
 }
 
@@ -3256,6 +3275,8 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setUniformWorkGroupSize(
+      callAttrs.getFnAttr("uniform-work-group-size").isValid());
   op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
@@ -3373,6 +3394,8 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
     llvm::MDNode *metadataNode = node;
     auto emitUnhandledFunctionMetadataWarning = [&]() {
+      if (!emitExpensiveWarnings)
+        return;
       emitWarning(funcOp.getLoc())
           << "unhandled function metadata: "
           << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);
