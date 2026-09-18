@@ -35,6 +35,28 @@ TEST_P(olMemAllocAllocTypesTest, Success) {
   olMemFree(Context, Alloc);
 }
 
+TEST_P(olMemAllocAllocTypesTest, SuccessSmallSizesWordSizeAlignment) {
+  const std::vector<size_t> Sizes = {1, 2, 3, 4, 5, 6, 7, 8, 14};
+  std::vector<void *> Allocs;
+  Allocs.reserve(Sizes.size());
+
+  for (size_t Size : Sizes) {
+    SCOPED_TRACE("size: " + std::to_string(Size));
+    void *Alloc = nullptr;
+    ASSERT_SUCCESS(allocateDeviceOrHost(Size, &Alloc));
+    ASSERT_NE(Alloc, nullptr);
+
+    // Check word-size alignment without requesting explicit alignment.
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(Alloc) % alignof(uintptr_t), 0U);
+
+    Allocs.push_back(Alloc);
+  }
+
+  for (auto *A : Allocs) {
+    ASSERT_SUCCESS(olMemFree(Context, A));
+  }
+}
+
 TEST_P(olMemAllocTest, SuccessAllocMany) {
   std::vector<void *> Allocs;
   Allocs.reserve(TestAllocsNum);
