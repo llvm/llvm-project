@@ -109,6 +109,24 @@ static bool ShouldUseLLDBServer() {
   return LLDB_ENABLE_LIBXML2;
 }
 
+/// Maps a real OS thread ID onto the user-visible thread that stands for it,
+/// or returns it unchanged.
+static lldb::tid_t GetUserThreadID(ThreadList &thread_list, lldb::tid_t tid) {
+  if (thread_list.FindThreadByID(tid, /*can_update=*/false))
+    return tid;
+
+  const uint32_t num_threads = thread_list.GetSize(/*can_update=*/false);
+  for (uint32_t i = 0; i < num_threads; ++i) {
+    ThreadSP thread = thread_list.GetThreadAtIndex(i, /*can_update=*/false);
+    if (!thread)
+      continue;
+    ThreadSP backing_thread = thread->GetBackingThread();
+    if (backing_thread && backing_thread->GetID() == tid)
+      return thread->GetID();
+  }
+  return tid;
+}
+
 void ProcessWindows::Initialize() {
   if (!ShouldUseLLDBServer()) {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -177,12 +195,12 @@ Status ProcessWindows::DoDetach(bool keep_stopped) {
                  GetPrivateState());
 
         LLDB_LOG(log, "resuming {0} threads for detach.",
-                 m_thread_list.GetSize());
+                 m_thread_list_real.GetSize());
 
         bool failed = false;
-        for (uint32_t i = 0; i < m_thread_list.GetSize(); ++i) {
+        for (uint32_t i = 0; i < m_thread_list_real.GetSize(); ++i) {
           auto thread = std::static_pointer_cast<TargetThreadWindows>(
-              m_thread_list.GetThreadAtIndex(i));
+              m_thread_list_real.GetThreadAtIndex(i));
           Status result = thread->DoResume();
           if (result.Fail()) {
             failed = true;
@@ -255,12 +273,12 @@ Status ProcessWindows::DoResume(RunDirection direction) {
              m_session_data->m_debugger->GetProcess().GetProcessId(),
              GetPrivateState());
 
-    LLDB_LOG(log, "resuming {0} threads.", m_thread_list.GetSize());
+    LLDB_LOG(log, "resuming {0} threads.", m_thread_list_real.GetSize());
 
     bool failed = false;
-    for (uint32_t i = 0; i < m_thread_list.GetSize(); ++i) {
+    for (uint32_t i = 0; i < m_thread_list_real.GetSize(); ++i) {
       auto thread = std::static_pointer_cast<TargetThreadWindows>(
-          m_thread_list.GetThreadAtIndex(i));
+          m_thread_list_real.GetThreadAtIndex(i));
       Status result = thread->DoResume();
       if (result.Fail()) {
         failed = true;
@@ -348,10 +366,16 @@ void ProcessWindows::RefreshStateAfterStop() {
   }
 
   StopInfoSP stop_info;
-  m_thread_list.SetSelectedThreadByID(active_exception->GetThreadID());
+  m_thread_list.SetSelectedThreadByID(
+      GetUserThreadID(m_thread_list, active_exception->GetThreadID()));
   ThreadSP stop_thread = m_thread_list.GetSelectedThread();
   if (!stop_thread)
     return;
+
+  // Hardware breakpoint slots live on the real thread's register context.
+  ThreadSP real_stop_thread = stop_thread;
+  if (ThreadSP backing_thread = stop_thread->GetBackingThread())
+    real_stop_thread = backing_thread;
 
   RegisterContextSP register_context = stop_thread->GetRegisterContext();
   uint64_t pc = register_context->GetPC();
@@ -365,7 +389,7 @@ void ProcessWindows::RefreshStateAfterStop() {
   switch (active_exception->GetExceptionValue()) {
   case EXCEPTION_SINGLE_STEP: {
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
-        stop_thread->GetRegisterContext().get());
+        real_stop_thread->GetRegisterContext().get());
     uint32_t slot_id = reg_ctx->GetTriggeredHardwareBreakpointSlotId();
     if (slot_id != LLDB_INVALID_INDEX32) {
       int id = m_watchpoint_ids[slot_id];
@@ -931,8 +955,8 @@ Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
   info.read = wp_sp->WatchpointRead();
   info.write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
 
-  for (unsigned i = 0U; i < m_thread_list.GetSize(); i++) {
-    Thread *thread = m_thread_list.GetThreadAtIndex(i).get();
+  for (unsigned i = 0U; i < m_thread_list_real.GetSize(); i++) {
+    Thread *thread = m_thread_list_real.GetThreadAtIndex(i).get();
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         thread->GetRegisterContext().get());
     if (!reg_ctx->AddHardwareBreakpoint(info.slot_id, info.address, info.size,
@@ -944,8 +968,8 @@ Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
     }
   }
   if (error.Fail()) {
-    for (unsigned i = 0U; i < m_thread_list.GetSize(); i++) {
-      Thread *thread = m_thread_list.GetThreadAtIndex(i).get();
+    for (unsigned i = 0U; i < m_thread_list_real.GetSize(); i++) {
+      Thread *thread = m_thread_list_real.GetThreadAtIndex(i).get();
       auto *reg_ctx = static_cast<RegisterContextWindows *>(
           thread->GetRegisterContext().get());
       reg_ctx->RemoveHardwareBreakpoint(info.slot_id);
@@ -976,8 +1000,8 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
     return error;
   }
 
-  for (unsigned i = 0U; i < m_thread_list.GetSize(); i++) {
-    Thread *thread = m_thread_list.GetThreadAtIndex(i).get();
+  for (unsigned i = 0U; i < m_thread_list_real.GetSize(); i++) {
+    Thread *thread = m_thread_list_real.GetThreadAtIndex(i).get();
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         thread->GetRegisterContext().get());
     if (!reg_ctx->RemoveHardwareBreakpoint(it->second.slot_id)) {
