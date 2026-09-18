@@ -58,6 +58,8 @@ func.func @reading_xfer_write(%t: tensor<5x10xf32>, %v: vector<4x11xf32>) -> ten
 // CHECK-ANALYSIS-LABEL: func @disjoint_transfer_read_write(
 // CHECK-ANALYSIS: vector.transfer_write
 // CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["none", "true", "none"]
+// CHECK-ANALYSIS: vector.transfer_read
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none", "none"]
 func.func @disjoint_transfer_read_write(
     %t: tensor<8xf32> {bufferization.writable = true},
     %v: vector<4xf32>) -> (tensor<8xf32>, vector<4xf32>) {
@@ -83,6 +85,8 @@ func.func @disjoint_transfer_read_write(
 // CHECK-ANALYSIS-LABEL: func @overlapping_transfer_read_write(
 // CHECK-ANALYSIS: vector.transfer_write
 // CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
+// CHECK-ANALYSIS: vector.transfer_read
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none", "none"]
 func.func @overlapping_transfer_read_write(
     %t: tensor<8xf32> {bufferization.writable = true},
     %v: vector<4xf32>) -> (tensor<8xf32>, vector<4xf32>) {
@@ -108,6 +112,8 @@ func.func @overlapping_transfer_read_write(
 // CHECK-ANALYSIS-LABEL: func @unknown_transfer_read_write(
 // CHECK-ANALYSIS: vector.transfer_write
 // CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
+// CHECK-ANALYSIS: vector.transfer_read
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none", "none"]
 func.func @unknown_transfer_read_write(
     %t: tensor<8xf32> {bufferization.writable = true},
     %v: vector<4xf32>, %write_idx: index,
