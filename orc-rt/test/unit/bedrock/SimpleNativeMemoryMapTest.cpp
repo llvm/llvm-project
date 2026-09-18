@@ -9,6 +9,7 @@
 // Test SimpleNativeMemoryMap APIs.
 //
 //===----------------------------------------------------------------------===//
+#ifndef _WIN32
 
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
 #include "orc-rt/bedrock/Session.h"
@@ -322,3 +323,4 @@ TEST(SimpleNativeMemoryMapTest, ReserveInitializeDetachShutdown) {
 
   EXPECT_EQ(SentinelValue, 42);
 }
+#endif

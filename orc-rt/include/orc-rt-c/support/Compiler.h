@@ -65,8 +65,12 @@
 
    TODO: Add the Windows __declspec(dllexport) / __declspec(dllimport) and
    static-build cases once there is a shared-library build to exercise them. */
-#if defined(__has_attribute) && __has_attribute(visibility)
+#if defined(_WIN32)
+#define ORC_RT_C_EXPORT
+#elif defined(__has_attribute) && __has_attribute(visibility)
 #define ORC_RT_C_EXPORT __attribute__((visibility("default")))
+#else
+#define ORC_RT_C_EXPORT
 #endif
 
 #if !defined(ORC_RT_C_EXPORT)

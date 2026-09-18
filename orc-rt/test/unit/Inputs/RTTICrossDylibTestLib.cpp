@@ -7,7 +7,7 @@
 #include "RTTICrossDylibTestError.h"
 
 #if defined(_WIN32)
-#define TEST_EXPORT __declspec(dllexport)
+#define TEST_EXPORT
 #else
 #define TEST_EXPORT __attribute__((visibility("default")))
 #endif
