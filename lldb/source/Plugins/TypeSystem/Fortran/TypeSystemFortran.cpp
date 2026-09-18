@@ -107,9 +107,10 @@ ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
   case FortranType::KIND_REAL:
   case FortranType::KIND_COMPLEX:
     return fortran_type->GetName();
-  default:
+  case FortranType::KIND_UNKNOWN:
     return ConstString("Unsupported");
   }
+  return ConstString("Unsupported");
 }
 
 CompilerType
