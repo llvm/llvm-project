@@ -568,9 +568,9 @@ exit:
 
 ; The truncate feeds off an identity operation on the induction, which VPlan
 ; folds away before the narrowing runs.
-define void @cast_induction_through_identity_op(ptr noalias %dst) {
+define void @cast_induction_through_identity_op(ptr %dst) {
 ; VF4-LABEL: define void @cast_induction_through_identity_op(
-; VF4-SAME: ptr noalias [[DST:%.*]]) {
+; VF4-SAME: ptr [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
 ; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
@@ -590,7 +590,7 @@ define void @cast_induction_through_identity_op(ptr noalias %dst) {
 ; VF4-NEXT:    ret void
 ;
 ; IC2-LABEL: define void @cast_induction_through_identity_op(
-; IC2-SAME: ptr noalias [[DST:%.*]]) {
+; IC2-SAME: ptr [[DST:%.*]]) {
 ; IC2-NEXT:  [[ENTRY:.*:]]
 ; IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
