@@ -24,6 +24,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -4224,6 +4225,39 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
           II->getIterator());
       return replaceInstUsesWith(CI, NewUnOp);
+    }
+    break;
+  }
+  case Intrinsic::vector_partial_reduce_add: {
+    Value *Acc = II->getArgOperand(0);
+    Value *Input = II->getArgOperand(1);
+    if (Acc->getType() == Input->getType())
+      return BinaryOperator::CreateAdd(Acc, Input);
+
+    // Separate the accumulator so the constant input can be reduced using
+    // the same grouping as a fully constant partial reduction.
+    if (auto *C = dyn_cast<Constant>(Input)) {
+      Constant *Zero = Constant::getNullValue(Acc->getType());
+      if (Constant *Sum =
+              ConstantFoldCall(II, II->getCalledFunction(), {Zero, C}, &TLI))
+        return BinaryOperator::CreateAdd(Acc, Sum);
+    }
+
+    ElementCount AccEC = cast<VectorType>(Acc->getType())->getElementCount();
+    ElementCount InputEC =
+        cast<VectorType>(Input->getType())->getElementCount();
+    // A fixed accumulator and scalable input have a vscale-dependent ratio.
+    if (AccEC.isScalable() != InputEC.isScalable())
+      break;
+
+    // Avoid creating an additional splat when the input has other uses.
+    if (Value *Splat = Input->hasOneUse() ? getSplatValue(Input) : nullptr) {
+      unsigned Ratio = InputEC.getKnownMinValue() / AccEC.getKnownMinValue();
+      Value *Sum = Builder.CreateMul(
+          Splat, ConstantInt::get(Splat->getType(), Ratio, /*IsSigned=*/false,
+                                  /*ImplicitTrunc=*/true));
+      return BinaryOperator::CreateAdd(Acc,
+                                       Builder.CreateVectorSplat(AccEC, Sum));
     }
     break;
   }

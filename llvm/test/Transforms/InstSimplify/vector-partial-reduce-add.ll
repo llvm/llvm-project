@@ -5,8 +5,7 @@
 define <2 x i8> @zero_input(<2 x i8> %acc) {
 ; CHECK-LABEL: define {{[^@]+}}@zero_input
 ; CHECK-SAME: (<2 x i8> [[ACC:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.vector.partial.reduce.add.v2i8.v4i8(<2 x i8> [[ACC]], <4 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> [[ACC]]
 ;
   %r = call <2 x i8> @llvm.vector.partial.reduce.add.v2i8.v4i8(<2 x i8> %acc, <4 x i8> zeroinitializer)
   ret <2 x i8> %r
@@ -15,8 +14,7 @@ define <2 x i8> @zero_input(<2 x i8> %acc) {
 define <vscale x 2 x i8> @scalable_zero_input(<vscale x 2 x i8> %acc) {
 ; CHECK-LABEL: define {{[^@]+}}@scalable_zero_input
 ; CHECK-SAME: (<vscale x 2 x i8> [[ACC:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv4i8(<vscale x 2 x i8> [[ACC]], <vscale x 4 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 2 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i8> [[ACC]]
 ;
   %r = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv4i8(<vscale x 2 x i8> %acc, <vscale x 4 x i8> zeroinitializer)
   ret <vscale x 2 x i8> %r
@@ -25,8 +23,7 @@ define <vscale x 2 x i8> @scalable_zero_input(<vscale x 2 x i8> %acc) {
 define <2 x i8> @mixed_zero_input(<2 x i8> %acc) {
 ; CHECK-LABEL: define {{[^@]+}}@mixed_zero_input
 ; CHECK-SAME: (<2 x i8> [[ACC:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.vector.partial.reduce.add.v2i8.nxv4i8(<2 x i8> [[ACC]], <vscale x 4 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> [[ACC]]
 ;
   %r = call <2 x i8> @llvm.vector.partial.reduce.add.v2i8.nxv4i8(<2 x i8> %acc, <vscale x 4 x i8> zeroinitializer)
   ret <2 x i8> %r

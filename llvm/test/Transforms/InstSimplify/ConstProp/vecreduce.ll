@@ -969,8 +969,7 @@ define <4 x i32> @partial_reduce_add_nonconstant_input(<16 x i32> %input) {
 
 define <4 x i32> @partial_reduce_add_mixed_fixed_scalable() {
 ; CHECK-LABEL: @partial_reduce_add_mixed_fixed_scalable(
-; CHECK-NEXT:    [[X:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.nxv8i32(<4 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <4 x i32> [[X]]
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
 ;
   %x = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.nxv8i32(
   <4 x i32> zeroinitializer, <vscale x 8 x i32> zeroinitializer)
@@ -1032,8 +1031,7 @@ define <2 x i8> @partial_reduce_add_wrap() {
 
 define <vscale x 2 x i8> @partial_reduce_add_scalable_zero() {
 ; CHECK-LABEL: @partial_reduce_add_scalable_zero(
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv4i8(<vscale x 2 x i8> splat (i8 3), <vscale x 4 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 2 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i8> splat (i8 3)
 ;
   %r = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv4i8(<vscale x 2 x i8> splat (i8 3), <vscale x 4 x i8> zeroinitializer)
   ret <vscale x 2 x i8> %r
@@ -1041,8 +1039,7 @@ define <vscale x 2 x i8> @partial_reduce_add_scalable_zero() {
 
 define <vscale x 2 x i8> @partial_reduce_add_scalable_splat() {
 ; CHECK-LABEL: @partial_reduce_add_scalable_splat(
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv6i8(<vscale x 2 x i8> splat (i8 3), <vscale x 6 x i8> splat (i8 5))
-; CHECK-NEXT:    ret <vscale x 2 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i8> splat (i8 18)
 ;
   %r = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv6i8(<vscale x 2 x i8> splat (i8 3), <vscale x 6 x i8> splat (i8 5))
   ret <vscale x 2 x i8> %r
@@ -1050,8 +1047,7 @@ define <vscale x 2 x i8> @partial_reduce_add_scalable_splat() {
 
 define <vscale x 2 x i8> @partial_reduce_add_scalable_wrap() {
 ; CHECK-LABEL: @partial_reduce_add_scalable_wrap(
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv8i8(<vscale x 2 x i8> splat (i8 127), <vscale x 8 x i8> splat (i8 127))
-; CHECK-NEXT:    ret <vscale x 2 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i8> splat (i8 123)
 ;
   %r = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv8i8(<vscale x 2 x i8> splat (i8 127), <vscale x 8 x i8> splat (i8 127))
   ret <vscale x 2 x i8> %r
@@ -1059,8 +1055,7 @@ define <vscale x 2 x i8> @partial_reduce_add_scalable_wrap() {
 
 define <vscale x 2 x i1> @partial_reduce_add_scalable_i1() {
 ; CHECK-LABEL: @partial_reduce_add_scalable_i1(
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i1> @llvm.vector.partial.reduce.add.nxv2i1.nxv4i1(<vscale x 2 x i1> splat (i1 true), <vscale x 4 x i1> splat (i1 true))
-; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %r = call <vscale x 2 x i1> @llvm.vector.partial.reduce.add.nxv2i1.nxv4i1(<vscale x 2 x i1> splat (i1 true), <vscale x 4 x i1> splat (i1 true))
   ret <vscale x 2 x i1> %r
@@ -1068,8 +1063,7 @@ define <vscale x 2 x i1> @partial_reduce_add_scalable_i1() {
 
 define <vscale x 2 x i8> @partial_reduce_add_scalable_poison() {
 ; CHECK-LABEL: @partial_reduce_add_scalable_poison(
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv4i8(<vscale x 2 x i8> splat (i8 3), <vscale x 4 x i8> poison)
-; CHECK-NEXT:    ret <vscale x 2 x i8> [[R]]
+; CHECK-NEXT:    ret <vscale x 2 x i8> poison
 ;
   %r = call <vscale x 2 x i8> @llvm.vector.partial.reduce.add.nxv2i8.nxv4i8(<vscale x 2 x i8> splat (i8 3), <vscale x 4 x i8> poison)
   ret <vscale x 2 x i8> %r
