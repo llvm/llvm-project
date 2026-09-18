@@ -11,6 +11,8 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/Support/Casting.h"
 #include <map>
 #include <variant>
 
@@ -100,6 +102,15 @@ public:
   /// BinaryContext is used by default, thus pass an instance explicitly if
   /// this function may be called from multithreaded code.
   uint64_t computeAddress(const MCCodeEmitter *Emitter = nullptr) const;
+
+  /// Returns the only preceding instruction, or std::nullopt if multiple or no
+  /// predecessors are possible.
+  ///
+  /// If CFG information is available, basic block boundary can be crossed,
+  /// provided there is exactly one predecessor. If CFG is not available, the
+  /// preceding instruction in the offset order is returned, unless this is the
+  /// first instruction of the function.
+  std::optional<MCInstReference> getSinglePredecessor();
 
   raw_ostream &print(raw_ostream &OS) const;
 
@@ -247,6 +258,7 @@ template <typename T> class OpMatcher {
   mutable std::optional<T> Value;
   mutable std::optional<T> SavedValue;
 
+protected:
   // Remember/restore the last Value - to be called by matchInst.
   void remember() const { SavedValue = Value; }
   void restore() const { Value = SavedValue; }
@@ -306,6 +318,67 @@ public:
   Imm(std::optional<int64_t> ImmToMatch = std::nullopt)
       : OpMatcher<int64_t>(ImmToMatch) {}
 };
+
+class SymbolWithSpecifier;
+
+class Symbol : public OpMatcher<const MCSymbol *> {
+  bool matches(const MCOperand &Op) const {
+    if (!Op.isExpr())
+      return false;
+
+    return matchExpr(Op.getExpr());
+  }
+
+  bool matchExpr(const MCExpr *Expr) const {
+    if (auto *SymbolRef = dyn_cast<MCSymbolRefExpr>(Expr))
+      return matchValue(&SymbolRef->getSymbol());
+
+    return false;
+  }
+
+  template <class... OpMatchers>
+  friend bool matchInst(const MCInst &, unsigned, const OpMatchers &...);
+
+  friend class SymbolWithSpecifier;
+
+public:
+  Symbol(std::optional<MCSymbol *> SymToMatch = std::nullopt)
+      : OpMatcher<const MCSymbol *>(SymToMatch) {}
+
+  SymbolWithSpecifier withSpec(unsigned Specifier);
+};
+
+// Wrapper class to be instantiated by Symbol::withSpec().
+class SymbolWithSpecifier {
+  const Symbol &Parent;
+  const unsigned Specifier;
+
+  SymbolWithSpecifier(Symbol &Parent, unsigned Specifier)
+      : Parent(Parent), Specifier(Specifier) {}
+
+  void remember() const { Parent.remember(); }
+  void restore() const { Parent.restore(); }
+
+  bool matches(const MCOperand &Op) const {
+    if (!Op.isExpr())
+      return false;
+
+    auto *Expr = dyn_cast<MCSpecifierExpr>(Op.getExpr());
+    if (!Expr || Expr->getSpecifier() != Specifier)
+      return false;
+
+    return Parent.matchExpr(Expr->getSubExpr());
+  }
+
+  template <class... OpMatchers>
+  friend bool matchInst(const MCInst &, unsigned, const OpMatchers &...);
+
+  friend class Symbol;
+};
+
+inline SymbolWithSpecifier Symbol::withSpec(unsigned Specifier) {
+  return SymbolWithSpecifier(*this, Specifier);
+}
 
 /// Tries to match Inst and updates Ops on success.
 ///
