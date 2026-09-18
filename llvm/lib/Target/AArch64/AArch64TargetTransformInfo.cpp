@@ -2032,9 +2032,7 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
                      m_Value(NarrowOp1))) &&
       match(Op2, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
                      m_Value(NarrowOp2))) &&
-      NarrowOp1->getType() == NarrowOp2->getType() &&
-      NarrowOp1->getType()->isScalableTy() &&
-      NarrowOp1->getType()->isIntOrIntVectorTy(1)) {
+      NarrowOp1->getType() == NarrowOp2->getType()) {
     Value *SimpleNarrow = simplifyBinOp(Opc, NarrowOp1, NarrowOp2, DL);
     if (SimpleNarrow && !isa<UndefValue>(SimpleNarrow)) {
       if (match(SimpleNarrow, m_ZeroInt()))
@@ -2044,9 +2042,9 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
       else if (SimpleNarrow == NarrowOp2)
         SimpleII = Op2;
       else
-        SimpleII = IC.Builder.CreateIntrinsic(
-            Intrinsic::aarch64_sve_convert_to_svbool, {SimpleNarrow->getType()},
-            {SimpleNarrow});
+        SimpleII =
+            IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                       SimpleNarrow->getType(), SimpleNarrow);
     }
   }
 
@@ -4647,6 +4645,28 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     if (Index == 0 && !Ty->getScalarType()->isIntegerTy())
       return 0;
 
+    // SVE has no scalar move to an arbitrary lane above the low 128-bit portion
+    // of a Z register, e.g. there is no equivalent of "mov z0.d[9], d0".
+    // Fixed-length vectors wider than 128 bits therefore need
+    // [splice]/index/pred/splat/cmp/pred-mov when scalarizing inserts for those
+    // lanes, so model them as more expensive than ordinary NEON lane accesses.
+    if (ST->useSVEForFixedLengthVectors()) {
+      InstructionCost Cost = CostKind == TTI::TCK_CodeSize
+                                 ? 1
+                                 : ST->getVectorInsertExtractBaseCost();
+      if (Index * Ty->getScalarSizeInBits() < 128)
+        return Cost;
+      if (Index * Ty->getScalarSizeInBits() < 512 &&
+          Opcode == Instruction::ExtractElement)
+        // Integer extracts (>128b, <512b) require extra mov from FPR -> GPR.
+        return Ty->getScalarType()->isIntegerTy() ? Cost + 1 : Cost;
+      if (Opcode == Instruction::ExtractElement)
+        return Cost + 2; // cost of mov imm + whilels + lastb
+      if (Opcode == Instruction::InsertElement)
+        return Cost + 3; // cost of insert with cmp/splice
+      llvm_unreachable("unexpected opcode");
+    }
+
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
@@ -5706,7 +5726,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     const MCSchedModel &Sched = ST->getSchedModel();
     const TargetInstrInfo *TII = ST->getInstrInfo();
     unsigned SchedClass = TII->get(Inst).getSchedClass();
-    const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+    const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
+                                      ? Sched.getSchedClassDesc(SchedClass)
+                                      : nullptr;
+    // If the cpu has no scheduling model, or it doesn't describe the load, then
+    // fall back to the default load latency. Variant scheduling classes can't
+    // be resolved without a MachineInstr, so treat them the same way.
+    if (!SCD || !SCD->isValid() || SCD->isVariant())
+      return (LT.first - 1) + ST->getLoadLatency();
     // We need to convert the number of loads before the last to a float here,
     // as the reciprocal throughput may be fractional.
     float NumLoads = (LT.first - 1).getValue();
@@ -5797,12 +5824,18 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       return InstructionCost::getInvalid();
   }
 
+  auto LT = getTypeLegalizationCost(VecTy);
+  unsigned MaxNativeInterleaveFactor = TLI->getMaxSupportedInterleaveFactor();
   // Vectorization for masked interleaved accesses is only enabled for scalable
-  // VF.
-  if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps))
+  // VF. For fixed-length SVE, avoid non-native interleave factor because
+  // the generic fallback costs wide fixed-vector shuffles too optimistically.
+  if (!VecTy->isScalableTy() &&
+      (UseMaskForCond || UseMaskForGaps ||
+       (Factor > MaxNativeInterleaveFactor &&
+        TLI->useSVEForFixedLengthVectorVT(LT.second))))
     return InstructionCost::getInvalid();
 
-  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  if (!UseMaskForGaps && Factor <= MaxNativeInterleaveFactor) {
     ElementCount EC = VecVTy->getElementCount();
     auto *SubVecTy = VectorType::get(VecVTy->getElementType(),
                                      EC.divideCoefficientBy(Factor));

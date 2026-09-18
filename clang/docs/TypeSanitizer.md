@@ -68,8 +68,9 @@ $ cmake -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang" -DLLVM_ENABLE_
 
 Compile and link your program with `-fsanitize=type` flag. The
 TypeSanitizer run-time library should be linked to the final executable, so
-make sure to use `clang` (not `ld`) for the final link step. To
-get a reasonable performance add `-O1` or higher.
+make sure to use ``clang`` (not ``ld``) for the final link step. To increase performance, you can optimise with ``-O1``.
+Higher levels of optimization may result in certain strict type aliasing violations being optimized away
+(perhaps leading to unintended behavior). This results in the instrumentation giving users false-negatives.
 TypeSanitizer by default doesn't print the full stack trace in error messages. Use `TYSAN_OPTIONS=print_stacktrace=1`
 to print the full trace. To get nicer stack traces in error messages add `-fno-omit-frame-pointer` and
 `-g`. To get perfect stack traces you may need to disable inlining (just use `-O1`) and tail call elimination
