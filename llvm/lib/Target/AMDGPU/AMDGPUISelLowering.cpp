@@ -4087,6 +4087,11 @@ static SDValue simplifyMul24(SDNode *Node24,
 
   APInt Demanded = APInt::getLowBitsSet(LHS.getValueSizeInBits(), 24);
 
+  // The 24 bit multiplies only read bits [23:0] of each source.
+  if (DAG.MaskedValueIsZero(LHS, Demanded) ||
+      DAG.MaskedValueIsZero(RHS, Demanded))
+    return DAG.getConstant(0, SDLoc(Node24), Node24->getValueType(0));
+
   // First try to simplify using SimplifyMultipleUseDemandedBits which allows
   // the operands to have other uses, but will only perform simplifications that
   // involve bypassing some nodes for this user.
