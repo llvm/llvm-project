@@ -86,10 +86,20 @@ subroutine value_seq_static()
 end subroutine
 
 ! Runtime-shaped dummy: the copied view covers the remaining sequence of the
-! base array (its extent is computed, not a constant).
+! base array. The full length computation is bound: length = base size
+! minus the column-major offset of the element.
 ! CHECK-LABEL: func.func @_QPvalue_seq_dynamic
-! CHECK: %[[DELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
-! CHECK: %[[DLEN:.*]] = arith.subi %{{[0-9]+}}, %{{[0-9]+}} : index
+! CHECK: %[[DEXT:.*]] = arith.constant 4 : index
+! CHECK: %[[DBSHP:.*]] = fir.shape %[[DEXT]] : (index) -> !fir.shape<1>
+! CHECK: %[[DV:.*]]:2 = hlfir.declare %{{.*}}(%[[DBSHP]]) {uniq_name = "_QFvalue_seq_dynamicEv"}
+! CHECK: %[[DELT:.*]] = hlfir.designate %[[DV]]#0 (%[[DIDX:.*]])  : (!fir.ref<!fir.array<4xi32>>, index) -> !fir.ref<i32>
+! CHECK: %[[DSUB:.*]] = arith.subi %[[DIDX]], %[[DONE:.*]] : index
+! CHECK: %[[DMUL:.*]] = arith.muli %[[DSUB]], %[[DSTRIDE:.*]] : index
+! CHECK: %[[DOFF:.*]] = arith.addi %[[DZERO:.*]], %[[DMUL]] : index
+! CHECK: %[[DUBM1:.*]] = arith.subi %[[DEXT]], %[[DONE]] : index
+! CHECK: %[[DUB:.*]] = arith.addi %[[DUBM1]], %[[DSTRIDE]] : index
+! CHECK: %[[DTOT:.*]] = arith.muli %[[DSTRIDE]], %[[DUB]] : index
+! CHECK: %[[DLEN:.*]] = arith.subi %[[DTOT]], %[[DOFF]] : index
 ! CHECK: %[[DSEQ:.*]] = fir.convert %[[DELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK: %[[DSHAPE:.*]] = fir.shape %[[DLEN]] : (index) -> !fir.shape<1>
 ! CHECK: %[[DVIEW:.*]]:2 = hlfir.declare %[[DSEQ]](%[[DSHAPE]]) {uniq_name = ".sequence.assoc"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
@@ -163,8 +173,17 @@ end subroutine
 ! component (its extent is computed from the component shape, including a
 ! nondefault lower bound).
 ! CHECK-LABEL: func.func @_QPvalue_seq_component
-! CHECK: %[[CMELT:.*]] = hlfir.designate %{{.*}}{"a"} <%{{.*}}> (%{{.*}})  : (!fir.ref<!fir.type<_QMmTtc{a:!fir.array<4xi32>}>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
-! CHECK: %[[CMLEN:.*]] = arith.subi %{{[0-9]+}}, %{{[0-9]+}} : index
+! CHECK: %[[CMSS:.*]] = fir.shape_shift %[[CMLB:.*]], %[[CMEXT:.*]] : (index, index) -> !fir.shapeshift<1>
+! CHECK: %[[CMELT:.*]] = hlfir.designate %{{.*}}{"a"} <%[[CMSS]]> (%[[CMIDX:.*]])  : (!fir.ref<!fir.type<_QMmTtc{a:!fir.array<4xi32>}>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
+! CHECK: %[[CMADD:.*]] = arith.addi %[[CMLB]], %[[CMEXT]] : index
+! CHECK: %[[CMUB:.*]] = arith.subi %[[CMADD]], %[[CMONE:.*]] : index
+! CHECK: %[[CMSUB:.*]] = arith.subi %[[CMIDX]], %[[CMLB]] : index
+! CHECK: %[[CMMUL:.*]] = arith.muli %[[CMSUB]], %[[CMSTRIDE:.*]] : index
+! CHECK: %[[CMOFF:.*]] = arith.addi %[[CMZERO:.*]], %[[CMMUL]] : index
+! CHECK: %[[CME:.*]] = arith.subi %[[CMUB]], %[[CMLB]] : index
+! CHECK: %[[CMEP:.*]] = arith.addi %[[CME]], %[[CMSTRIDE]] : index
+! CHECK: %[[CMTOT:.*]] = arith.muli %[[CMSTRIDE]], %[[CMEP]] : index
+! CHECK: %[[CMLEN:.*]] = arith.subi %[[CMTOT]], %[[CMOFF]] : index
 ! CHECK: %[[CMSEQ:.*]] = fir.convert %[[CMELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK: %[[CMSHAPE:.*]] = fir.shape %[[CMLEN]] : (index) -> !fir.shape<1>
 ! CHECK: %[[CMVIEW:.*]]:2 = hlfir.declare %[[CMSEQ]](%[[CMSHAPE]]) {uniq_name = ".sequence.assoc"}
@@ -178,8 +197,25 @@ end subroutine
 ! Element of a nested rank-two array component with nondefault bounds: the
 ! remaining extent is computed from the component's own shape.
 ! CHECK-LABEL: func.func @_QPvalue_seq_nested_rank2
-! CHECK: %[[NELT:.*]] = hlfir.designate %{{.*}}{"a"} <%{{.*}}> (%{{.*}}, %{{.*}})  : (!fir.ref<!fir.type<_QMmTinner{a:!fir.array<2x3xi32>}>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
-! CHECK: %[[NLEN:.*]] = arith.subi %{{[0-9]+}}, %{{[0-9]+}} : index
+! CHECK: %[[NSS:.*]] = fir.shape_shift %[[NLB1:.*]], %[[NEXT1:.*]], %[[NLB2:.*]], %[[NEXT2:.*]] : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK: %[[NELT:.*]] = hlfir.designate %{{.*}}{"a"} <%[[NSS]]> (%[[NIDX1:.*]], %[[NIDX2:.*]])  : (!fir.ref<!fir.type<_QMmTinner{a:!fir.array<2x3xi32>}>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
+! CHECK: %[[NADD1:.*]] = arith.addi %[[NLB1]], %[[NEXT1]] : index
+! CHECK: %[[NUB1:.*]] = arith.subi %[[NADD1]], %[[NONE:.*]] : index
+! CHECK: %[[NADD2:.*]] = arith.addi %[[NLB2]], %[[NEXT2]] : index
+! CHECK: %[[NUB2:.*]] = arith.subi %[[NADD2]], %[[NONE]] : index
+! CHECK: %[[NSUB1:.*]] = arith.subi %[[NIDX1]], %[[NLB1]] : index
+! CHECK: %[[NMUL1:.*]] = arith.muli %[[NSUB1]], %[[NSTRIDE:.*]] : index
+! CHECK: %[[NOFF1:.*]] = arith.addi %[[NZERO:.*]], %[[NMUL1]] : index
+! CHECK: %[[NE1:.*]] = arith.subi %[[NUB1]], %[[NLB1]] : index
+! CHECK: %[[NE1P:.*]] = arith.addi %[[NE1]], %[[NSTRIDE]] : index
+! CHECK: %[[NSTRIDE2:.*]] = arith.muli %[[NSTRIDE]], %[[NE1P]] : index
+! CHECK: %[[NSUB2:.*]] = arith.subi %[[NIDX2]], %[[NLB2]] : index
+! CHECK: %[[NMUL2:.*]] = arith.muli %[[NSUB2]], %[[NSTRIDE2]] : index
+! CHECK: %[[NOFF:.*]] = arith.addi %[[NOFF1]], %[[NMUL2]] : index
+! CHECK: %[[NE2:.*]] = arith.subi %[[NUB2]], %[[NLB2]] : index
+! CHECK: %[[NE2P:.*]] = arith.addi %[[NE2]], %[[NSTRIDE]] : index
+! CHECK: %[[NTOT:.*]] = arith.muli %[[NSTRIDE2]], %[[NE2P]] : index
+! CHECK: %[[NLEN:.*]] = arith.subi %[[NTOT]], %[[NOFF]] : index
 ! CHECK: %[[NSEQ:.*]] = fir.convert %[[NELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK: %[[NSHAPE:.*]] = fir.shape %[[NLEN]] : (index) -> !fir.shape<1>
 ! CHECK: %[[NVIEW:.*]]:2 = hlfir.declare %[[NSEQ]](%[[NSHAPE]]) {uniq_name = ".sequence.assoc"}
@@ -251,9 +287,19 @@ end subroutine
 ! actual): the view keeps the intrinsic element type and the rebox adds
 ! the addendum.
 ! CHECK-LABEL: func.func @_QPvalue_seq_optional_star
-! CHECK: %[[OELT:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.ref<!fir.array<6xf64>>, index) -> !fir.ref<f64>
-! CHECK: %[[OLEN:.*]] = arith.subi %{{[0-9]+}}, %{{[0-9]+}} : index
+! CHECK: %[[OEXT:.*]] = arith.constant 6 : index
+! CHECK: %[[OBSHP:.*]] = fir.shape %[[OEXT]] : (index) -> !fir.shape<1>
+! CHECK: %[[OV:.*]]:2 = hlfir.declare %{{.*}}(%[[OBSHP]]) {uniq_name = "_QFvalue_seq_optional_starEvr"}
+! CHECK: %[[OELT:.*]] = hlfir.designate %[[OV]]#0 (%[[OIDX:.*]])  : (!fir.ref<!fir.array<6xf64>>, index) -> !fir.ref<f64>
+! CHECK: %[[OSUB:.*]] = arith.subi %[[OIDX]], %[[OONE:.*]] : index
+! CHECK: %[[OMUL:.*]] = arith.muli %[[OSUB]], %[[OSTRIDE:.*]] : index
+! CHECK: %[[OOFF:.*]] = arith.addi %[[OZERO:.*]], %[[OMUL]] : index
+! CHECK: %[[OUBM1:.*]] = arith.subi %[[OEXT]], %[[OONE]] : index
+! CHECK: %[[OUB:.*]] = arith.addi %[[OUBM1]], %[[OSTRIDE]] : index
+! CHECK: %[[OTOT:.*]] = arith.muli %[[OSTRIDE]], %[[OUB]] : index
+! CHECK: %[[OLEN:.*]] = arith.subi %[[OTOT]], %[[OOFF]] : index
 ! CHECK: %[[OSEQ:.*]] = fir.convert %[[OELT]] : (!fir.ref<f64>) -> !fir.ref<!fir.array<?xf64>>
+! CHECK: %[[OSHAPE:.*]] = fir.shape %[[OLEN]] : (index) -> !fir.shape<1>
 ! CHECK: %[[OVIEW:.*]]:2 = hlfir.declare %[[OSEQ]](%{{.*}}) {uniq_name = ".sequence.assoc"}
 ! CHECK: %[[OTMP:.*]]:3 = hlfir.associate
 ! CHECK: fir.rebox %[[OTMP]]#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.class<!fir.array<?xnone>>
