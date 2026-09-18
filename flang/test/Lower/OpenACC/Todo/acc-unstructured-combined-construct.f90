@@ -13,8 +13,8 @@ subroutine test_unstructured_collapse_cycle(a)
   do j = 1, 8
     do i = 1, 8
       if (i == jdiag) then
+        if (j == jdiag) cycle
         a(i, j) = 0.0d0
-        cycle
       end if
       a(i, j) = real(i + j, 8)
     end do
