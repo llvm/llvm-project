@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include <optional>
 
 using namespace clang;
@@ -31,6 +32,10 @@ private:
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
   mutable llvm::DenseSet<const ValueDecl *> CreateOrCopyOutArguments;
   mutable llvm::DenseSet<const Expr *> CreateOrCopyFnCall;
+  // Leaks are reported once the enclosing function body has been traversed
+  // since an expression may be marked as consumed after it has been visited,
+  // e.g. by a return statement which follows it.
+  mutable SmallVector<std::pair<const Expr *, const Decl *>, 16> PendingLeaks;
   mutable RetainTypeChecker RTC;
 
 public:
@@ -61,9 +66,22 @@ public:
 
       bool TraverseDecl(Decl *D) {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
-        if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
+        // Whether D is a function or a method which isn't nested in another
+        // one, e.g. via a lambda or a local class.
+        bool IsOutermostCallable = false;
+        if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D))) {
+          IsOutermostCallable = !DeclWithIssue;
           DeclWithIssue = D;
-        return Base::TraverseDecl(D);
+        }
+        bool Result = Base::TraverseDecl(D);
+        // Every +1 value in a function body is consumed by that same body or
+        // else leaked, so the pending reports can be flushed here instead of
+        // being accumulated for the entire translation unit. Nested callables
+        // must not flush since a return statement later in the enclosing body
+        // may still consume a value which precedes them.
+        if (IsOutermostCallable)
+          Checker->reportPendingLeaks();
+        return Result;
       }
 
       bool TraverseClassTemplateDecl(ClassTemplateDecl *CTD) {
@@ -114,6 +132,22 @@ public:
         false /* trackOSObjects */);
     RTC.visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
+
+    // Flush whatever was found outside of a function body such as a global
+    // variable's initializer.
+    reportPendingLeaks();
+  }
+
+  // Reports the leaks found in the function body which has just been traversed
+  // and discards the state which only pertains to that body.
+  void reportPendingLeaks() const {
+    for (auto &[E, DeclWithIssue] : PendingLeaks) {
+      if (!CreateOrCopyFnCall.contains(E))
+        reportLeak(E, DeclWithIssue);
+    }
+    PendingLeaks.clear();
+    CreateOrCopyFnCall.clear();
+    CreateOrCopyOutArguments.clear();
   }
 
   bool isAdoptFn(const Decl *FnDecl) const {
@@ -223,11 +257,9 @@ public:
       return;
     if (RTC.isARCEnabled())
       return; // ARC never leaks.
-    if (CreateOrCopyFnCall.contains(ObjCMsgExpr))
-      return;
     if (Inner)
       CreateOrCopyFnCall.insert(Inner); // Avoid double reporting.
-    reportLeak(ObjCMsgExpr, DeclWithIssue);
+    PendingLeaks.emplace_back(ObjCMsgExpr, DeclWithIssue);
   }
 
   void checkCreateOrCopyFunction(const CallExpr *CE,
@@ -268,8 +300,7 @@ public:
     switch (Summary->getRetEffect().getKind()) {
     case RetEffect::OwnedSymbol:
     case RetEffect::OwnedWhenTrackedReceiver:
-      if (!CreateOrCopyFnCall.contains(CE))
-        reportLeak(CE, DeclWithIssue);
+      PendingLeaks.emplace_back(CE, DeclWithIssue);
       break;
     default:
       break;
@@ -393,10 +424,10 @@ public:
   void visitReturnStmt(const ReturnStmt *RS, const Decl *DeclWithIssue) const {
     if (!DeclWithIssue)
       return;
-    auto *RetValue = RS->getRetValue();
-    if (!RetValue)
+    auto *RawRetValue = RS->getRetValue();
+    if (!RawRetValue)
       return;
-    RetValue = RetValue->IgnoreParenCasts();
+    auto *RetValue = RawRetValue->IgnoreParenCasts();
     std::optional<bool> retainsRet;
     if (auto *FnDecl = dyn_cast<FunctionDecl>(DeclWithIssue))
       retainsRet = retainsReturnValue(FnDecl);
@@ -404,15 +435,17 @@ public:
       retainsRet = retainsReturnValue(MethodDecl);
     else
       return;
-    if (!retainsRet || !*retainsRet) {
-      // Under ARC, returning [[X alloc] init] doesn't leak X.
-      if (RTC.isUnretained(RetValue->getType()))
-        return;
-    }
     if (retainsRet && *retainsRet) {
-      CreateOrCopyFnCall.insert(RetValue);
+      // The caller of this function owns the returned value so any +1 value
+      // which flows into the return value is not leaked here.
+      markOwnershipTransferred(RetValue);
+      // Conversely, returning a +0 value results in an over-release.
+      checkReturnsPlusZero(RawRetValue, DeclWithIssue);
       return;
     }
+    // Under ARC, returning [[X alloc] init] doesn't leak X.
+    if (RTC.isUnretained(RetValue->getType()))
+      return;
     if (auto *CE = dyn_cast<CallExpr>(RetValue)) {
       auto *Callee = CE->getDirectCallee();
       if (!Callee || !isCreateOrCopyFunction(Callee))
@@ -426,6 +459,111 @@ public:
       if (Inner)
         CreateOrCopyFnCall.insert(Inner);
     }
+  }
+
+  /// Marks every expression the value of \p E may originate from as having its
+  /// ownership transferred to the caller so that it's not reported as a leak.
+  void markOwnershipTransferred(const Expr *E, unsigned Depth = 0) const {
+    static constexpr unsigned MaxDepth = 16;
+    if (!E || Depth > MaxDepth)
+      return;
+    E = E->IgnoreParenCasts();
+    if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E)) {
+      CreateOrCopyFnCall.insert(E);
+      markOwnershipTransferred(BTE->getSubExpr(), Depth + 1);
+      return;
+    }
+    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+      if (unsigned SemanticExprCount = POE->getNumSemanticExprs()) {
+        CreateOrCopyFnCall.insert(E);
+        markOwnershipTransferred(POE->getSemanticExpr(SemanticExprCount - 1),
+                                 Depth + 1);
+        return;
+      }
+    }
+    if (auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+      markOwnershipTransferred(CO->getTrueExpr(), Depth + 1);
+      markOwnershipTransferred(CO->getFalseExpr(), Depth + 1);
+      return;
+    }
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      // A local variable holding onto the +1 value until it's returned.
+      auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
+      if (VD && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
+        markOwnershipTransferred(VD->getInit(), Depth + 1);
+      return;
+    }
+    CreateOrCopyFnCall.insert(E);
+    const Expr *Inner = nullptr;
+    if (isAllocInit(E, &Inner)) {
+      if (Inner)
+        CreateOrCopyFnCall.insert(Inner);
+      return;
+    }
+    if (auto *CE = dyn_cast<CallExpr>(E)) {
+      // Casting and bridging helpers simply pass the ownership of their
+      // argument through to their return value.
+      if (isOwnershipPassThroughFunction(CE))
+        markOwnershipTransferred(CE->getArg(0), Depth + 1);
+    }
+  }
+
+  bool isOwnershipPassThroughFunction(const CallExpr *CE) const {
+    auto *Callee = CE->getDirectCallee();
+    if (!Callee || CE->getNumArgs() != 1)
+      return false;
+    auto Name = safeGetName(Callee);
+    return Name == "bridge_cast" || Name == "bridge_id_cast" ||
+           Name == "checked_cf_cast" || Name == "dynamic_cf_cast" ||
+           Name == "checked_objc_cast" || Name == "dynamic_objc_cast";
+  }
+
+  /// Reports returning a +0 value from a function which is expected to return
+  /// a +1 value, which results in an over-release by the caller.
+  void checkReturnsPlusZero(const Expr *RawRetValue,
+                            const Decl *DeclWithIssue) const {
+    // A __bridge_retained cast produces a +1 value out of a +0 one but
+    // IgnoreParenCasts would strip it away.
+    for (auto *E = RawRetValue; E;) {
+      E = E->IgnoreParens();
+      if (isa<ObjCBridgedCastExpr>(E))
+        return;
+      auto *Cast = dyn_cast<CastExpr>(E);
+      E = Cast ? Cast->getSubExpr() : nullptr;
+    }
+    checkReturnValueIsOwned(RawRetValue->IgnoreParenCasts(), DeclWithIssue);
+  }
+
+  void checkReturnValueIsOwned(const Expr *RetValue,
+                               const Decl *DeclWithIssue) const {
+    if (auto *CO = dyn_cast<AbstractConditionalOperator>(RetValue)) {
+      checkReturnValueIsOwned(CO->getTrueExpr()->IgnoreParenCasts(),
+                              DeclWithIssue);
+      checkReturnValueIsOwned(CO->getFalseExpr()->IgnoreParenCasts(),
+                              DeclWithIssue);
+      return;
+    }
+    // Returning null is always allowed.
+    if (isNullPtr(RetValue))
+      return;
+    if (auto *DRE = dyn_cast<DeclRefExpr>(RetValue)) {
+      auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl());
+      // A local variable may be assigned a +1 value after its declaration so
+      // don't infer the retain count of the returned value from it.
+      if (VD && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
+        return;
+      // The ownership of a consumed parameter belongs to this function.
+      if (VD &&
+          (VD->hasAttr<CFConsumedAttr>() || VD->hasAttr<NSConsumedAttr>()))
+        return;
+    }
+    // Only raw CF / NS pointers can be returned at the wrong retain count.
+    // Under ARC, the compiler retains Objective-C objects as needed.
+    if (!RTC.isUnretained(RetValue->getType()))
+      return;
+    if (isOwned(RetValue) != IsOwnedResult::NotOwned)
+      return;
+    reportUseAfterFreeForReturn(RetValue, DeclWithIssue);
   }
 
   template <typename CallableType>
@@ -523,6 +661,8 @@ public:
           if (safeGetName(MD) == "leakRef" &&
               isRetainPtrOrOSPtr(safeGetName(Cls)))
             return IsOwnedResult::Owned;
+          if (safeGetName(MD) == "get" && isRetainPtrOrOSPtr(safeGetName(Cls)))
+            return IsOwnedResult::NotOwned;
         }
       }
       if (auto *CE = dyn_cast<CallExpr>(E)) {
@@ -620,6 +760,23 @@ public:
 
     Os << "The return value is +1 and results in a memory leak.";
 
+    PathDiagnosticLocation BSLoc(E->getSourceRange().getBegin(),
+                                 BR->getSourceManager());
+    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+    Report->addRange(E->getSourceRange());
+    Report->setDeclWithIssue(DeclWithIssue);
+    BR->emitReport(std::move(Report));
+  }
+
+  void reportUseAfterFreeForReturn(const Expr *E,
+                                   const Decl *DeclWithIssue) const {
+    SmallString<100> Buf;
+    llvm::raw_svector_ostream Os(Buf);
+
+    Os << "The function is expected to return +1 but the return value is +0, "
+          "which results in an use-after-free.";
+
+    assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(E->getSourceRange().getBegin(),
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);

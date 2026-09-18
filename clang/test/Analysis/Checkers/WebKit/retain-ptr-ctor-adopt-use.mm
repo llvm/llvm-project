@@ -73,7 +73,6 @@ void basic_correct_arc() {
 
 - (SomeObj *)mutableCopy {
   auto *copy = [[SomeObj alloc] init];
-  // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   [copy setValue:_number];
   [copy setNext:_next];
   [copy setOther:_other];
@@ -86,7 +85,6 @@ void basic_correct_arc() {
 
 - (SomeObj *)copyWithValue:(int)value {
   auto *copy = [[SomeObj alloc] init];
-  // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   [copy setValue:_number];
   [copy setNext:_next];
   [copy setOther:_other];
@@ -201,6 +199,18 @@ RetainPtr<CFTypeRef> getObject() {
   return adoptCF(obj);
 }
 
+// A +1 out argument is only tracked within the function body which passes it,
+// so adopting it elsewhere is reported. Doing so isn't safe anyway since every
+// call to adoptGlobalObject would adopt the same +1 value.
+static CFTypeRef gObj;
+void fillGlobalObject() {
+  GetObj(&gObj);
+}
+RetainPtr<CFTypeRef> adoptGlobalObject() {
+  return adoptCF(gObj);
+  // expected-warning@-1{{Incorrect use of adoptCF. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
 CFArrayRef CreateSingleArray(CFStringRef);
 CFArrayRef CreateSingleArray(CFDictionaryRef);
 CFArrayRef CreateSingleArray(CFArrayRef);
@@ -297,6 +307,88 @@ CFArrayRef make_array() CF_RETURNS_RETAINED;
 
 RetainPtr<CFArrayRef> adopt_make_array() {
   return adoptCF(make_array());
+}
+
+CFArrayRef provide_array();
+RetainPtr<CGImageRef> provide_image();
+RetainPtr<CFMutableArrayRef> create_mutable_array();
+
+// A +1 function may return a +1 value through a conditional operator,
+// a local variable, or a casting / bridging helper function.
+CFArrayRef CreateArrayEitherWay(bool flag) {
+  return flag ? create_cf_array().leakRef() : make_array();
+}
+
+CFArrayRef CreateArrayViaLocalVariable() {
+  auto *array = create_cf_array().leakRef();
+  return array;
+}
+
+CFMutableArrayRef CreateCheckedArray() {
+  return checked_cf_cast<CFMutableArrayRef>(create_mutable_array().leakRef());
+}
+
+NSObject *createBridgedObject() NS_RETURNS_RETAINED {
+  return bridge_cast(provide_image().leakRef());
+}
+
+CFArrayRef CreateNoArray() {
+  return nullptr;
+}
+
+CFArrayRef CreateArrayFromConsumedArg(CF_CONSUMED CFArrayRef array) {
+  return array;
+}
+
+// A +1 function must not return a +0 value.
+CFArrayRef CreateArrayPlusZero() {
+  return provide_array();
+  // expected-warning@-1{{The function is expected to return +1 but the return value is +0, which results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
+CFArrayRef CreateArrayFromArg(CFArrayRef array) {
+  return array;
+  // expected-warning@-1{{The function is expected to return +1 but the return value is +0, which results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
+CFArrayRef CreateArrayFromRetainPtr() {
+  auto array = create_cf_array();
+  return array.get();
+  // expected-warning@-1{{The function is expected to return +1 but the return value is +0, which results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
+CGImageRef CopyImagePlusZero() {
+  return provide_image().get();
+  // expected-warning@-1{{The function is expected to return +1 but the return value is +0, which results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
+SomeObj *makeSomeObjPlusZero(SomeObj *obj) NS_RETURNS_RETAINED {
+  return obj;
+  // expected-warning@-1{{The function is expected to return +1 but the return value is +0, which results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
+// A nested callable must not report the enclosing body's +1 values before its
+// return statement has been seen.
+CFMutableArrayRef CreateArrayWithLambda() {
+  auto *result = CFArrayCreateMutable(kCFAllocatorDefault, 1);
+  auto leaksToo = [] {
+    CFArrayCreateMutable(kCFAllocatorDefault, 1);
+    // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  };
+  leaksToo();
+  return result;
+}
+
+CFMutableArrayRef CreateArrayWithLocalClass() {
+  auto *result = CFArrayCreateMutable(kCFAllocatorDefault, 1);
+  struct Helper {
+    static void leaksToo() {
+      CFArrayCreateMutable(kCFAllocatorDefault, 1);
+      // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+    }
+  };
+  Helper::leaksToo();
+  return result;
 }
 
 @interface SomeObject : NSObject
