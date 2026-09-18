@@ -44,13 +44,23 @@ jobs:
           fi
 
   bazel-build:
-    name: "Bazel Build/Test"
+    name: "Bazel ${{ matrix.name }}"
     # Only run on US Central workers so we only have to keep one cache warm as
     # the cache buckets are per cluster.
     runs-on:
       group: llvm-premerge-cluster-us-central
       labels: llvm-premerge-linux-runners
     if: github.repository == 'llvm/llvm-project'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Build/Test"
+            flags: ""
+            targets: "@llvm-project//... //..."
+          - name: "LLVM-libc Fullbuild Tests"
+            flags: "--@llvm-project//libc:build_mode=full"
+            targets: "@llvm-project//libc/..."
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -74,4 +84,5 @@ jobs:
             --remote_cache=https://storage.googleapis.com/$CACHE_GCS_BUCKET-bazel \
             --google_default_credentials \
             --remote_download_outputs=minimal \
-            @llvm-project//... //...
+            ${{ matrix.flags }} \
+            ${{ matrix.targets }}
