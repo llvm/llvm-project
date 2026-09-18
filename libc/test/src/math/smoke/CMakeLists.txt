@@ -4764,6 +4764,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinhbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sinhbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.sinhbf16
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   sinhf16_test
   SUITE
     libc-math-smoke-tests

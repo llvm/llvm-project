@@ -3756,6 +3756,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sinhbf16
+  SRCS
+    sinhbf16.cpp
+  HDRS
+    ../sinhbf16.h
+  DEPENDS
+    libc.src.__support.math.sinhbf16
+)
+
+add_entrypoint_object(
   sinhf16
   SRCS
     sinhf16.cpp

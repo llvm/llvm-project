@@ -2659,6 +2659,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: sinhbf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
   - name: sinhf16
     standards:
       - stdc
