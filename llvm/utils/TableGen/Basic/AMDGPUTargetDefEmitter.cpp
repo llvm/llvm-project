@@ -488,9 +488,10 @@ validateGenericFeatures(const Record *GPU,
   std::vector<const Record *> Covered =
       GPU->getValueAsListOfDefs("CoveredGPUs");
   if (Covered.empty()) {
-    if (Name.starts_with("gfx") && Name.ends_with("-generic"))
+    if (Name.starts_with("gfx") && Name.ends_with("-generic")) {
       PrintFatalError(GPU->getLoc(), "generic target '" + Name +
                                          "' must cover at least one GPU");
+    }
     return;
   }
 
@@ -500,11 +501,12 @@ validateGenericFeatures(const Record *GPU,
   for (const Record *Member : Covered) {
     if (!Member->isSubClassOf("AMDGPUGPUInfo") ||
         !Member->isSubClassOf("ProcessorModel") ||
-        Member->getValueAsBit("IsPseudoTarget") || isGenericTarget(Member))
+        Member->getValueAsBit("IsPseudoTarget") || isGenericTarget(Member)) {
       PrintFatalError(GPU->getLoc(),
                       "generic target '" + Name + "' covers '" +
                           Member->getValueAsString("Name") +
                           "', which is not a concrete AMDGPU GPU");
+    }
 
     SetVector<const Record *> MemberFeatures =
         collectGenericFeatures(Member, FeatureIdx);
@@ -523,11 +525,12 @@ validateGenericFeatures(const Record *GPU,
   }
 
   for (const Record *F : GenericFeatures) {
-    if (!CoveredFeatures.contains(F))
+    if (!CoveredFeatures.contains(F)) {
       PrintFatalError(GPU->getLoc(),
                       "generic target '" + GPU->getValueAsString("Name") +
                           "' exposes feature '" + F->getValueAsString("Name") +
                           "' not supported by any covered GPU");
+    }
   }
 }
 

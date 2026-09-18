@@ -16,9 +16,9 @@
 // Implied features are checked according to their own classes.
 // This checks feature membership, not numeric ordering of feature values.
 class AMDGPUGenericAnyFeature<string name, string fieldName, string value,
-                             string description,
-                             list<SubtargetFeature> implies = [],
-                             InlineBehavior ib = InlineDefault>
+                              string description,
+                              list<SubtargetFeature> implies = [],
+                              InlineBehavior ib = InlineDefault>
     : SubtargetFeature<name, fieldName, value, description, implies, ib>;
 
 // Marks a Processor/ProcessorModel record as a canonical GPU.
