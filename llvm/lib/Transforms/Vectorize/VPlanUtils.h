@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -221,6 +223,31 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
 
+/// Insert phis to reconstruct SSA for a single value starting from \p VPBB. \p
+/// Defs is a map of definitions at specific blocks. Returns the
+/// reconstructed value at VPBB. Use if the CFG has been modified such that a
+/// def no longer dominates all its uses. Every block leading to VPBB must be
+/// reachable from the entry and the plan must be plain-CFG (not contain any
+/// regions).
+LLVM_ABI_FOR_TEST VPValue *
+reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
+
+/// Denominator of the frequencies computed by computeExecutionFrequencies, i.e.
+/// the frequency of a block that always executes. Wider than
+/// BranchProbability's 31-bit one, which truncates rarely executed blocks to 0.
+inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
+
+/// Returns \p Freq as a BranchProbability, relative to AlwaysExecutesFreq.
+BranchProbability getExecutionProbability(BlockFrequency Freq);
+
+/// Computes for each block in \p Blocks, which must be in reverse post-order,
+/// the frequency with which it executes relative to the first (header) block,
+/// and whether that frequency was composed using any estimated branch weights.
+/// The frequency of a block is the sum over its incoming edges, or std::nullopt
+/// if any edge on a path reaching it lacks branch weights.
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.
@@ -357,9 +384,11 @@ public:
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
-    for (auto *Pred : to_vector(Old->getPredecessors()))
+    auto Preds = to_vector(Old->getPredecessors());
+    auto Succs = to_vector(Old->getSuccessors());
+    for (auto *Pred : Preds)
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors()))
+    for (auto *Succ : Succs)
       Succ->replacePredecessor(Old, New);
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());

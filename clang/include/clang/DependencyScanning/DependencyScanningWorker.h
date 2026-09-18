@@ -90,6 +90,8 @@ public:
     return TracingFS.get();
   }
 
+  DependencyScanningService &getService() const { return Service; }
+
   // MaxNumOfByNameQueries is the upper limit of the number of names the by-name
   // scanning API (computeDependenciesByName) can drain per call. At the time of
   // this commit, the estimated number of total unique importable names is

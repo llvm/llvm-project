@@ -128,6 +128,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fclose
     libc.src.stdio.fgetc
     libc.src.stdio.fgets
     libc.src.stdio.fprintf
@@ -136,6 +137,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fread
     libc.src.stdio.fscanf
     libc.src.stdio.fwrite
+    libc.src.stdio.fseek
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftell
+    libc.src.stdio.ftello
     libc.src.stdio.getc
     libc.src.stdio.getchar
     libc.src.stdio.printf
@@ -420,6 +425,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fadd
     libc.src.math.fdim
     libc.src.math.fdimf
+    libc.src.math.fdimf128
     libc.src.math.fdiml
     libc.src.math.fdiv
     libc.src.math.fdivl
@@ -439,11 +445,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_mag_num
     libc.src.math.fmaximum_mag_numf
+    libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_mag_numl
     libc.src.math.fmaximum_magf
+    libc.src.math.fmaximum_magf128
     libc.src.math.fmaximum_magl
     libc.src.math.fmaximum_num
     libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf128
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximumf
     libc.src.math.fmaximumf128
@@ -456,11 +465,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_mag_num
     libc.src.math.fminimum_mag_numf
+    libc.src.math.fminimum_mag_numf128
     libc.src.math.fminimum_mag_numl
     libc.src.math.fminimum_magf
+    libc.src.math.fminimum_magf128
     libc.src.math.fminimum_magl
     libc.src.math.fminimum_num
     libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf128
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
     libc.src.math.fminimumf128
@@ -772,15 +784,8 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.dsqrtf128
     libc.src.math.dsubf128
     libc.src.math.faddf128
-    libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
-    libc.src.math.fmaximum_mag_numf128
-    libc.src.math.fmaximum_magf128
-    libc.src.math.fmaximum_numf128
-    libc.src.math.fminimum_mag_numf128
-    libc.src.math.fminimum_magf128
-    libc.src.math.fminimum_numf128
     libc.src.math.fmodf128
     libc.src.math.fmulf128
     libc.src.math.frexpf128
@@ -984,6 +989,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.diviulr
     libc.src.stdfix.diviuk
     libc.src.stdfix.diviulk
+    libc.src.stdfix.rdivi
+    libc.src.stdfix.lrdivi
+    libc.src.stdfix.kdivi
+    libc.src.stdfix.lkdivi
+    libc.src.stdfix.urdivi
+    libc.src.stdfix.ulrdivi
+    libc.src.stdfix.ukdivi
+    libc.src.stdfix.ulkdivi
   )
 endif()
 

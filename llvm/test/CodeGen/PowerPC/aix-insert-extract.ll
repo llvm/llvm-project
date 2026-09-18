@@ -1,6 +1,6 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi \
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64-ibm-aix-xcoff -target-abi=vec-extabi \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-64
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc-ibm-aix-xcoff -vec-extabi \
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc-ibm-aix-xcoff -target-abi=vec-extabi \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-32
 
 define <4 x float> @_Z7testInsILj0ELj0EDv4_fET1_S1_S1_(<4 x float> %a, <4 x float> %b) {
