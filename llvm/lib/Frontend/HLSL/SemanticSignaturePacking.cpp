@@ -435,7 +435,8 @@ Error llvm::hlsl::packSignaturePrefixStable(
             Interpretation == SemanticInterpretation::SGV ||
             Interpretation == SemanticInterpretation::ClipCull ||
             Interpretation == SemanticInterpretation::TessFactor) &&
-           "unexpected semantic interpretation for prefix-stable packing");
+           "unexpected semantic interpretation for prefix-stable packing, "
+           "should have been diagnosed by Sema");
 
     const unsigned ComponentWidth =
         getComponentWidth(Element.CompType, UseNative16BitTypes);
