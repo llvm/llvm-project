@@ -150,14 +150,15 @@ Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd, const Twine &Comment) {
 
 Error CodeViewRecordIO::mapWriteInt128(const APSInt &Value,
                                        const Twine &Comment) {
+  APSInt V = Value.extOrTrunc(128);
   if (isStreaming()) {
     emitComment(Comment);
-    Streamer->emitAPSIntValue(Value, 16);
+    Streamer->emitAPSIntValue(V);
     incrStreamedLen(16);
     return Error::success();
   }
 
-  return Writer->writeInt128(Value);
+  return Writer->writeInt128(V);
 }
 
 Error CodeViewRecordIO::mapEncodedInteger(int64_t &Value,
@@ -171,7 +172,7 @@ Error CodeViewRecordIO::mapEncodedInteger(int64_t &Value,
   }
 
   if (Value >= 0)
-    return mapWriteEncodedUnsignedInteger(APSInt(APInt(Value, 64), true),
+    return mapWriteEncodedUnsignedInteger(APSInt(APInt(64, Value), true),
                                           Comment);
 
   return mapWriteEncodedSignedInteger(APSInt(APInt(64, Value, true), false),
@@ -318,7 +319,7 @@ Error CodeViewRecordIO::mapWriteEncodedUnsignedInteger(const APSInt &APValue,
                                                        const Twine &Comment) {
   assert(APValue.isUnsigned());
 
-  if (LLVM_UNLIKELY(!APValue.isSingleWord())) {
+  if (LLVM_UNLIKELY(APValue.getActiveBits() > 64)) {
     // All values >64 bit are encoded as 128 bit integers (possibly truncated).
     if (Error Err = mapWriteInteger<uint16_t>(LF_UOCTWORD))
       return Err;

@@ -97,25 +97,26 @@ Error llvm::codeview::consume(BinaryStreamReader &Reader, APSInt &Num) {
     return Error::success();
   }
   case LF_OCTWORD: {
-    ArrayRef<uint8_t> Data;
-    if (auto EC = Reader.readBytes(Data, 16))
+    uint64_t Lo = 0, Hi = 0;
+    if (auto EC = Reader.readInteger(Lo))
       return EC;
-    uint64_t N[2];
-    std::memcpy(N, Data.data(), sizeof(N));
-    Num = APSInt(APInt(128, {N, 2}), false);
-    if constexpr (endianness::native == endianness::big)
-      Num = Num.byteSwap();
+    if (auto EC = Reader.readInteger(Hi))
+      return EC;
+    // APInt expects the low words first and each word in native endian. Since
+    // we know that the integer was encoded in little endian, there's no need to
+    // swap the words.
+    uint64_t Words[2] = {Lo, Hi};
+    Num = APSInt(APInt(128, Words), /*isUnsigned=*/false);
     return Error::success();
   }
   case LF_UOCTWORD: {
-    ArrayRef<uint8_t> Data;
-    if (auto EC = Reader.readBytes(Data, 16))
+    uint64_t Lo = 0, Hi = 0;
+    if (auto EC = Reader.readInteger(Lo))
       return EC;
-    uint64_t N[2];
-    std::memcpy(N, Data.data(), sizeof(N));
-    Num = APSInt(APInt(128, {N, 2}), true);
-    if constexpr (endianness::native == endianness::big)
-      Num = Num.byteSwap();
+    if (auto EC = Reader.readInteger(Hi))
+      return EC;
+    uint64_t Words[2] = {Lo, Hi};
+    Num = APSInt(APInt(128, Words), /*isUnsigned=*/true);
     return Error::success();
   }
   }

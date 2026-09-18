@@ -42,7 +42,9 @@ static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {
   if (N < LF_NUMERIC)
     return 2;
 
-  assert(N <= LF_DATE && (N <= LF_COMPLEX128 || N >= LF_OCTWORD));
+  if (N > LF_DATE)
+    return 0;
+
   constexpr uint32_t Sizes[] = {
       1,  // LF_CHAR
       2,  // LF_SHORT
@@ -56,10 +58,10 @@ static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {
       8,  // LF_QUADWORD
       8,  // LF_UQUADWORD
       6,  // LF_REAL48
-      4,  // LF_COMPLEX32
-      8,  // LF_COMPLEX64
-      10, // LF_COMPLEX80
-      16, // LF_COMPLEX128
+      8,  // LF_COMPLEX32
+      16, // LF_COMPLEX64
+      20, // LF_COMPLEX80
+      32, // LF_COMPLEX128
       0,  // LF_VARSTRING (variable length)
       0,  // 0x8011 (Unused)
       0,  // 0x8012 (Unused)

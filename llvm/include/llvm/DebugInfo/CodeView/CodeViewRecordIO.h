@@ -33,7 +33,7 @@ class CodeViewRecordStreamer {
 public:
   virtual void emitBytes(StringRef Data) = 0;
   virtual void emitIntValue(uint64_t Value, unsigned Size) = 0;
-  virtual void emitAPSIntValue(const APSInt &Value, unsigned ByteSize) = 0;
+  virtual void emitAPSIntValue(const APSInt &Value) = 0;
   virtual void emitBinaryData(StringRef Data) = 0;
   virtual void AddComment(const Twine &T) = 0;
   virtual void AddRawComment(const Twine &T) = 0;

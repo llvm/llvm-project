@@ -86,13 +86,8 @@ public:
     OS->emitIntValueInHex(Value, Size);
   }
 
-  void emitAPSIntValue(const APSInt &Value, unsigned ByteSize) override {
-    if (Value.getBitWidth() != ByteSize * 8) {
-      APSInt Trunc = Value.extOrTrunc(ByteSize * 8);
-      OS->emitIntValue(Value);
-    } else {
-      OS->emitIntValue(Value);
-    }
+  void emitAPSIntValue(const APSInt &Value) override {
+    OS->emitIntValue(Value);
   }
 
   void emitBinaryData(StringRef Data) override { OS->emitBinaryData(Data); }
