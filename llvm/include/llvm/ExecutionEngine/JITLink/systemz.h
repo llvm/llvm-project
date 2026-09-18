@@ -87,6 +87,14 @@ enum EdgeKind_systemz : Edge::Kind {
   ///
   Pointer8,
 
+  /// GOFF: Absolute add (field += value) for length 64 and 32.
+  Pointer64Add,
+  Pointer32Add,
+
+  /// GOFF: Absolute subtract (field -= value) for length 64 and 32.
+  Pointer64Sub,
+  Pointer32Sub,
+
   /// A 64-bit delta.
   ///
   /// Delta from the fixup to the target.
@@ -934,6 +942,63 @@ public:
 /// target address is in range. For this edge kind, if the target is in range,
 /// replace a indirect jump by plt stub with a direct jump to the target.
 LLVM_ABI Error optimizeGOTAndStubAccesses(LinkGraph &G);
+
+/// Apply fixup expression for edge to block content for GOFF.
+inline Error applyGOFFFixup(LinkGraph &G, Block &B, const Edge &E) {
+  using namespace support;
+
+  char *BlockWorkingMem = B.getAlreadyMutableContent().data();
+  char *FixupPtr = BlockWorkingMem + E.getOffset();
+  int64_t S = E.getTarget().getAddress().getValue();
+  int64_t A = E.getAddend();
+  assert(A == 0 && "Edge addend should be 0");
+
+  int64_t Value = S;
+  orc::ExecutorAddr FixupAddress = B.getAddress() + E.getOffset();
+  int64_t P = FixupAddress.getValue();
+  Edge::Kind K = E.getKind();
+
+  DEBUG_WITH_TYPE("jitlink", {
+    dbgs() << "    Applying fixup on " << G.getEdgeKindName(K)
+           << " edge, (S, P) = (" << formatv("{0:x}", S) << ", "
+           << formatv("{0:x}", P) << ")\n";
+  });
+
+  auto apply = [&](auto write, auto read, auto op) {
+    auto Current = read(FixupPtr);
+    DEBUG_WITH_TYPE("jitlink", {
+      dbgs() << "       Addend = " << formatv("{0:x}", Current) << "\n";
+    });
+    write(FixupPtr, static_cast<decltype(Current)>(op(Current, Value)));
+  };
+
+  switch (K) {
+  case Pointer64:
+    write64be(FixupPtr, Value);
+    break;
+  case Pointer32:
+    write32be(FixupPtr, Value);
+    break;
+  case Pointer64Add:
+    apply(write64be, read64be, std::plus<uint64_t>{});
+    break;
+  case Pointer32Add:
+    apply(write32be, read32be, std::plus<uint32_t>{});
+    break;
+  case Pointer64Sub:
+    apply(write64be, read64be, std::minus<uint64_t>{});
+    break;
+  case Pointer32Sub:
+    apply(write32be, read32be, std::minus<uint32_t>{});
+    break;
+  default:
+    return make_error<JITLinkError>(
+        "In graph " + G.getName() + ", section " + B.getSection().getName() +
+        " unsupported edge kind " + getEdgeKindName(E.getKind()));
+  }
+
+  return Error::success();
+}
 
 } // namespace systemz
 } // namespace jitlink

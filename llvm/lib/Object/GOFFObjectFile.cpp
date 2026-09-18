@@ -384,6 +384,12 @@ Expected<StringRef> GOFFObjectFile::getSymbolName(SymbolRef Symbol) const {
   return getSymbolName(Symbol.getRawDataRefImpl());
 }
 
+Expected<StringRef> GOFFObjectFile::getSymbolName(uint32_t SymIndex) const {
+  DataRefImpl Symb;
+  Symb.d.a = SymIndex;
+  return getSymbolName(Symb);
+}
+
 Expected<uint64_t> GOFFObjectFile::getSymbolAddress(DataRefImpl Symb) const {
   uint32_t Offset;
   const uint8_t *EsdRecord = getSymbolEsdRecord(Symb);
@@ -651,6 +657,48 @@ Expected<StringRef> GOFFObjectFile::getSectionName(DataRefImpl Sec) const {
     Name = Res;
   }
   return Name;
+}
+
+Error GOFFObjectFile::getSectionUniqueName(
+    DataRefImpl Sec, SmallVectorImpl<char> &Result) const {
+
+  SectionEntryImpl EsdIds = SectionList[Sec.d.a];
+
+  const uint8_t *EsdRecord = EsdPtrs[EsdIds.d.a];
+  uint32_t ParentEsdId = 0;
+  ESDRecord::getParentEsdId(EsdRecord, ParentEsdId);
+  assert(ParentEsdId && "Should have parent");
+
+  DataRefImpl ParentEdSym;
+  ParentEdSym.d.a = ParentEsdId;
+  const uint8_t *ParentRecord = getSymbolEsdRecord(ParentEdSym);
+  GOFF::ESDSymbolType ParentSymbolType;
+  ESDRecord::getSymbolType(ParentRecord, ParentSymbolType);
+  assert(ParentSymbolType == GOFF::ESD_ST_SectionDefinition && "Not SD");
+
+  Expected<StringRef> ParentNameOrErr = getSymbolName(ParentEdSym);
+  if (!ParentNameOrErr)
+    return ParentNameOrErr.takeError();
+
+  Result.append(ParentNameOrErr->begin(), ParentNameOrErr->end());
+
+  Expected<StringRef> NameOrErr = getSymbolName(EsdIds.d.a);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+
+  Result.append(1, '.');
+  Result.append(NameOrErr->begin(), NameOrErr->end());
+
+  if (EsdIds.d.b) {
+    Expected<StringRef> PrNameOrErr = getSymbolName(EsdIds.d.b);
+    if (!PrNameOrErr)
+      return PrNameOrErr.takeError();
+
+    Result.append(1, '.');
+    Result.append(PrNameOrErr->begin(), PrNameOrErr->end());
+  }
+
+  return Error::success();
 }
 
 uint64_t GOFFObjectFile::getSectionAddress(DataRefImpl Sec) const {

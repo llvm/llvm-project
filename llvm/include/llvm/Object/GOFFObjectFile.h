@@ -139,6 +139,8 @@ public:
   bool isSectionNoLoad(DataRefImpl Sec) const;
   bool isSectionReadOnlyData(DataRefImpl Sec) const;
   bool isSectionZeroInit(DataRefImpl Sec) const;
+  Error getSectionUniqueName(DataRefImpl Sec,
+                             SmallVectorImpl<char> &Result) const;
 
 private:
   // SymbolRef.
@@ -154,6 +156,7 @@ private:
   const uint8_t *getSymbolEsdRecord(DataRefImpl Symb) const;
   bool isSymbolUnresolved(DataRefImpl Symb) const;
   bool isSymbolIndirect(DataRefImpl Symb) const;
+  Expected<StringRef> getSymbolName(uint32_t SymIndex) const;
 
   // SectionRef.
   void moveSectionNext(DataRefImpl &Sec) const override;
