@@ -33,6 +33,7 @@ public:
     SignatureOverflow,
     ClipCullOverflow,
     ClipCullNotAdjacent,
+    InvalidGeometryStream,
   };
 
   static char ID;

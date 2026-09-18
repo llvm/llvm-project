@@ -369,6 +369,11 @@ void SignaturePackingError::log(raw_ostream &OS) const {
   case ClipCullNotAdjacent:
     OS << "indexed clip/cull elements require adjacent signature rows";
     break;
+  case InvalidGeometryStream:
+    OS << "signature element has an invalid geometry stream: expected an index "
+          "less than "
+       << MaxGeometryStreams << " for geometry outputs, or zero otherwise";
+    break;
   }
   OS << " (element " << ElementIndex << ")";
 }
@@ -435,8 +440,10 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
     assert(Element.Rows > 0 && "signature element must have at least one row");
     assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
            "signature element must have between 1 and 4 columns");
-    assert(Element.GSStream < StreamCount &&
-           "signature element has an unexpected geometry stream");
+    if (Element.GSStream >= StreamCount)
+      return make_error<SignaturePackingError>(
+          SignaturePackingError::InvalidGeometryStream,
+          static_cast<unsigned>(Index));
 
     SemanticInterpretation Interpretation =
         getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
@@ -464,7 +471,7 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
                                         ComponentWidth, Element.InterpMode,
                                         PackingInterpretation};
 
-    const unsigned StreamIndex = StreamCount == 1 ? 0 : Element.GSStream;
+    const unsigned StreamIndex = Element.GSStream;
     MutableArrayRef<SignatureRow> StreamRows = Rows[StreamIndex];
 
     if (Interpretation == SemanticInterpretation::ClipCull) {

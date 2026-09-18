@@ -1548,6 +1548,53 @@ TEST_F(HLSLSemanticSignaturePackingTest,
 // Prefix-stable geometry stream tests
 //===----------------------------------------------------------------------===//
 
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsInvalidStreams) {
+  // Validate stream indices before indexing packing state, including in
+  // release builds. Only geometry outputs may use a nonzero stream.
+  const struct {
+    Triple::EnvironmentType Stage;
+    IOType IOTy;
+    unsigned InvalidStream;
+  } Signatures[] = {{Triple::Geometry, IOType::Out, MaxGeometryStreams},
+                    {Triple::Geometry, IOType::Out, ~uint32_t{0}},
+                    {Triple::Geometry, IOType::In, 1},
+                    {Triple::Vertex, IOType::Out, 1},
+                    {Triple::Pixel, IOType::In, 1}};
+  for (const auto &Signature : Signatures) {
+    SCOPED_TRACE(static_cast<unsigned>(Signature.Stage));
+    SCOPED_TRACE(static_cast<unsigned>(Signature.IOTy));
+    SCOPED_TRACE(Signature.InvalidStream);
+    TestConfig Config(
+        Signature.Stage, Signature.IOTy,
+        {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+         {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear,
+          /*SemanticIndex=*/1, Signature.InvalidStream},
+         {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear,
+          /*SemanticIndex=*/2}});
+    verifyPackingError(PackingMethod::PrefixStable, Config,
+                       SignaturePackingError::InvalidGeometryStream,
+                       /*ExpectedElementIndex=*/1);
+
+    SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+    EXPECT_THAT_EXPECTED(
+        pack(PackingMethod::PrefixStable, Elements, Config),
+        FailedWithMessage(
+            "signature element has an invalid geometry stream: expected an "
+            "index less than " +
+            std::to_string(MaxGeometryStreams) +
+            " for geometry outputs, or zero otherwise (element 1)"));
+    EXPECT_EQ(Elements[0].StartRow, 0u);
+    EXPECT_EQ(Elements[0].StartCol, 0u);
+    for (unsigned I = 1; I != Elements.size(); ++I) {
+      EXPECT_EQ(Elements[I].StartRow, UnallocatedRow) << "element " << I;
+      EXPECT_EQ(Elements[I].StartCol, UnallocatedCol) << "element " << I;
+    }
+  }
+}
+
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableFullGeometryStreams) {
   TestConfig Config(Triple::Geometry, IOType::Out, {});
   for (unsigned Stream = 0; Stream != MaxGeometryStreams; ++Stream)
