@@ -1726,9 +1726,9 @@ loopWillBeIndependent(Fortran::lower::AbstractConverter &converter,
 // Attach an implicit firstprivate on a combined loop in addition to the
 // compute clause.  On a combined construct, private and reduction already
 // apply to both the compute region and the loop; firstprivate should too.
-// Controlled by -f[no-]openacc-combined-loop-firstprivate (default on).
-// Applies to parallel loop and serial loop (kernels cannot take
-// firstprivate), all types (scalars, arrays, derived, etc.), and all
+// Controlled by -f[no-]openacc-combined-loop-explicit-firstprivate
+// (default on). Applies to parallel loop and serial loop (kernels cannot
+// take firstprivate), all types (scalars, arrays, derived, etc.), and all
 // parallelism modes (independent, seq, auto).
 static bool shouldAttachFirstprivateOnCombinedLoop(
     Fortran::lower::AbstractConverter &converter,
@@ -1738,7 +1738,8 @@ static bool shouldAttachFirstprivateOnCombinedLoop(
   if (*combinedConstructs != mlir::acc::CombinedConstructsType::ParallelLoop &&
       *combinedConstructs != mlir::acc::CombinedConstructsType::SerialLoop)
     return false;
-  return converter.getLoweringOptions().getOpenACCCombinedLoopFirstprivate();
+  return converter.getLoweringOptions()
+      .getOpenACCCombinedLoopExplicitFirstprivate();
 }
 
 // Helper to visit Bounds of DO LOOP nest.
