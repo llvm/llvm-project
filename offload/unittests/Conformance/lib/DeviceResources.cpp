@@ -24,10 +24,9 @@ using namespace mathtest;
 // Helpers
 //===----------------------------------------------------------------------===//
 
-void detail::freeDeviceMemory(ol_context_handle_t Context,
-                              void *Address) noexcept {
+void detail::freeDeviceMemory(void *Address) noexcept {
   if (Address)
-    OL_CHECK(olMemFree(Context, Address));
+    OL_CHECK(olMemFree(Address));
 }
 
 //===----------------------------------------------------------------------===//
