@@ -128,7 +128,10 @@ void foo() {
 // CIR-AFTER-FULL: %[[CONST_FALSE:.*]] = cir.const #false
 // CIR-AFTER-FULL: %[[SELECT_CONDITION:.*]] = cir.select if %[[IS_C_REAL_NAN]] then %[[IS_C_IMAG_NAN]] else %[[CONST_FALSE]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 // CIR-AFTER-FULL: %[[RESULT:.*]] = cir.ternary(%[[SELECT_CONDITION]], true {
-// CIR-AFTER-FULL:   %[[LIBC_COMPLEX:.*]] = cir.call @__mulsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.complex<!cir.float>
+// CIR-AFTER-FULL:   %[[LIBC_COERCED:.*]] = cir.call @__mulsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.vector<2 x !cir.float>
+// CIR-AFTER-FULL:   cir.store %[[LIBC_COERCED]], %[[COERCE_SLOT:.*]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
+// CIR-AFTER-FULL:   %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE_SLOT]] : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER-FULL:   %[[LIBC_COMPLEX:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER-FULL:   cir.yield %[[LIBC_COMPLEX]] : !cir.complex<!cir.float>
 // CIR-AFTER-FULL: }, false {
 // CIR-AFTER-FULL:   cir.yield %[[COMPLEX]] : !cir.complex<!cir.float>
@@ -157,7 +160,9 @@ void foo() {
 // LLVM-FULL: %[[SELECT_CONDITION:.*]] = and i1 %[[IS_C_REAL_NAN]], %[[IS_C_IMAG_NAN]]
 // LLVM-FULL: br i1 %[[SELECT_CONDITION]], label %[[THEN_LABEL:.*]], label %[[ELSE_LABEL:.*]]
 // LLVM-FULL: [[THEN_LABEL]]:
-// LLVM-FULL:  %[[LIBC_COMPLEX:.*]] = call { float, float } @__mulsc3(float %[[A_REAL]], float %[[A_IMAG]], float %[[B_REAL]], float %[[B_IMAG]])
+// LLVM-FULL:  %[[LIBC_COERCED:.*]] = call <2 x float> @__mulsc3(float %[[A_REAL]], float %[[A_IMAG]], float %[[B_REAL]], float %[[B_IMAG]])
+// LLVM-FULL:  store <2 x float> %[[LIBC_COERCED]], ptr %[[COERCE_SLOT:.*]], align 8
+// LLVM-FULL:  %[[LIBC_COMPLEX:.*]] = load { float, float }, ptr %[[COERCE_SLOT]], align 4
 // LLVM-FULL:  br label %[[PHI_BRANCH:.*]]
 // LLVM-FULL: [[ELSE_LABEL]]:
 // LLVM-FULL:  br label %[[PHI_BRANCH:]]
@@ -648,7 +653,10 @@ void foo3() {
 // CIR-AFTER-FULL: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-FULL: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-FULL: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-FULL: %[[RESULT:.*]] = cir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.complex<!cir.float>
+// CIR-AFTER-FULL: %[[COERCED:.*]] = cir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.vector<2 x !cir.float>
+// CIR-AFTER-FULL: cir.store %[[COERCED]], %[[COERCE_SLOT:.*]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
+// CIR-AFTER-FULL: %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE_SLOT]] : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER-FULL: %[[RESULT:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER-FULL: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM-FULL: %[[A_ADDR:.*]] = alloca { float, float }, align 4
@@ -660,7 +668,9 @@ void foo3() {
 // LLVM-FULL: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
 // LLVM-FULL: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
 // LLVM-FULL: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
-// LLVM-FULL: %[[RESULT:.*]] = call { float, float } @__divsc3(float %[[A_REAL]], float %[[A_IMAG]], float %[[B_REAL]], float %[[B_IMAG]])
+// LLVM-FULL: %[[COERCED:.*]] = call <2 x float> @__divsc3(float %[[A_REAL]], float %[[A_IMAG]], float %[[B_REAL]], float %[[B_IMAG]])
+// LLVM-FULL: store <2 x float> %[[COERCED]], ptr %[[COERCE_SLOT:.*]], align 8
+// LLVM-FULL: %[[RESULT:.*]] = load { float, float }, ptr %[[COERCE_SLOT]], align 4
 // LLVM-FULL: store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG-FULL: %[[A_ADDR:.*]] = alloca { float, float }, align 4
@@ -1140,7 +1150,10 @@ void foo6() {
 // CIR-AFTER-FULL: %[[A_IMAG:.*]] = cir.complex.imag %[[COMPLEX_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-FULL: %[[B_REAL:.*]] = cir.complex.real %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-FULL: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
-// CIR-AFTER-FULL: %[[RESULT:.*]] = cir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.complex<!cir.float>
+// CIR-AFTER-FULL: %[[COERCED:.*]] = cir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) : (!cir.float, !cir.float, !cir.float, !cir.float) -> !cir.vector<2 x !cir.float>
+// CIR-AFTER-FULL: cir.store %[[COERCED]], %[[COERCE_SLOT:.*]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
+// CIR-AFTER-FULL: %[[COERCE_PTR:.*]] = cir.cast bitcast %[[COERCE_SLOT]] : !cir.ptr<!cir.vector<2 x !cir.float>> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR-AFTER-FULL: %[[RESULT:.*]] = cir.load %[[COERCE_PTR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR-AFTER-FULL: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM-FULL: %[[A_ADDR:.*]] = alloca float, align 4
@@ -1149,10 +1162,12 @@ void foo6() {
 // LLVM-FULL: %[[TMP_A:.*]] = load float, ptr %[[A_ADDR]], align 4
 // LLVM-FULL: %[[TMP_B:.*]] = load { float, float }, ptr %[[B_ADDR]], align 4
 // LLVM-FULL: %[[TMP_COMPLEX_A:.*]] = insertvalue { float, float } {{.*}}, float %[[TMP_A]], 0
-// LLVM-FULL: %[[COMPLEX_A:.*]] = insertvalue { float, float } %6, float 0.000000e+00, 1
+// LLVM-FULL: %[[COMPLEX_A:.*]] = insertvalue { float, float } %[[TMP_COMPLEX_A]], float 0.000000e+00, 1
 // LLVM-FULL: %[[B_REAL:.*]] = extractvalue { float, float } %[[TMP_B]], 0
 // LLVM-FULL: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
-// LLVM-FULL: %[[RESULT:.*]] = call { float, float } @__divsc3(float %[[TMP_A]], float 0.000000e+00, float %[[B_REAL]], float %[[B_IMAG]])
+// LLVM-FULL: %[[COERCED:.*]] = call <2 x float> @__divsc3(float %[[TMP_A]], float 0.000000e+00, float %[[B_REAL]], float %[[B_IMAG]])
+// LLVM-FULL: store <2 x float> %[[COERCED]], ptr %[[COERCE_SLOT:.*]], align 8
+// LLVM-FULL: %[[RESULT:.*]] = load { float, float }, ptr %[[COERCE_SLOT]], align 4
 // LLVM-FULL: store { float, float } %[[RESULT]], ptr %[[C_ADDR]], align 4
 
 // OGCG-FULL: %[[A_ADDR:.*]] = alloca float, align 4

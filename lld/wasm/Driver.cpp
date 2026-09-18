@@ -155,24 +155,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info optInfo[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES,                                                                     \
-   SUBCOMMANDIDS_OFFSET},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -981,9 +964,8 @@ static void createSyntheticSymbols() {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
         ctx.arg.libcallThreadContext ? "__init_tls_base" : "__tls_base";
-    ctx.sym.tlsBase =
-        createGlobalVariable(tls_base_name, !ctx.arg.libcallThreadContext,
-                             WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsBase = createGlobalVariable(tls_base_name, true,
+                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
@@ -1494,7 +1476,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   createOptionalSymbols();
 
   // Resolve any variant symbols that were created due to signature
-  // mismatchs.
+  // mismatches.
   symtab->handleSymbolVariants();
   if (errorCount())
     return;

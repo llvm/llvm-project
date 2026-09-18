@@ -53,9 +53,7 @@ static uint64_t getClangVectorWidthInBits(const VectorType *VT) {
     EltWidth = getClangIntegerWidthInBits(IT);
   uint64_t Width =
       std::max<uint64_t>(8, EltWidth * VT->getNumElements().getKnownMinValue());
-  if (Width & (Width - 1))
-    Width = llvm::alignTo(Width, llvm::bit_ceil(Width));
-  return Width;
+  return llvm::bit_ceil(Width);
 }
 
 // The storage-container width of a type, mirroring Clang's getTypeSize. Used on
@@ -74,9 +72,9 @@ public:
   enum Class { Integer, Sse, SseUp, X87, X87Up, ComplexX87, NoClass, Memory };
 
 private:
-  TypeBuilder &TB;
   X86AVXABILevel AVXLevel;
   bool Has64BitPointers;
+  X86ABICompatInfo X86CompatInfo;
 
   static Class merge(Class Accum, Class Field);
 
@@ -111,16 +109,24 @@ private:
   ArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
                                unsigned &NeededInt, unsigned &NeededSse,
                                bool IsNamedArg, bool IsRegCall = false) const;
-  const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
-                   bool Has64BitPtrs, const ABICompatInfo &Compat)
-      : TargetInfo(Compat), TB(TypeBuilder), AVXLevel(AVXABILevel),
-        Has64BitPointers(Has64BitPtrs) {}
+                   bool Has64BitPtrs, const X86ABICompatInfo &Compat)
+      : TargetInfo(TypeBuilder), AVXLevel(AVXABILevel),
+        Has64BitPointers(Has64BitPtrs), X86CompatInfo(Compat) {}
 
   bool has64BitPointers() const { return Has64BitPointers; }
+
+  const ABICompatInfo &getABICompatInfo() const override {
+    return X86CompatInfo;
+  }
+
+  const X86ABICompatInfo &getX86ABICompatInfo() const { return X86CompatInfo; }
 };
+
+static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
+                                  unsigned EndBit);
 
 // Gets the "best" type to represent the union.
 static const Type *reduceUnionForX8664(const RecordType *UnionType,
@@ -146,6 +152,16 @@ static const Type *reduceUnionForX8664(const RecordType *UnionType,
       StorageType = FieldType;
       break;
     }
+
+    // A member that holds no user data supplies no bytes for a coercion to
+    // read, so it must not become the storage type however wide or aligned it
+    // is declared.  Clang compares lowered types instead, where an empty class
+    // is a byte array whose i8 leaf lets getIntegerTypeAtOffset narrow the
+    // coercion.  A record mapped here holds no fields, so there is no such
+    // leaf and the eightbyte would be sized from the union.
+    if (bitsContainNoUserData(FieldType, 0,
+                              FieldType->getSizeInBits().getFixedValue()))
+      continue;
 
     if (!StorageType ||
         FieldType->getAlignment() > StorageType->getAlignment() ||
@@ -183,7 +199,7 @@ void X86_64TargetInfo::postMerge(unsigned AggregateSize, Class &Lo,
 
   if (Hi == Memory)
     Lo = Memory;
-  if (Hi == X87Up && Lo != X87 && getABICompatInfo().HonorsRevision98)
+  if (Hi == X87Up && Lo != X87 && getX86ABICompatInfo().HonorsRevision98)
     Lo = Memory;
   if (AggregateSize > 128 && (Lo != Sse || Hi != SseUp))
     Lo = Memory;
@@ -350,7 +366,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       // platform compiler, we must continue to use integer.
       if (const auto *IT = dyn_cast<IntegerType>(ElementType)) {
         uint64_t ElemBits = IT->getSizeInBits().getFixedValue();
-        if (!getABICompatInfo().ClassifyIntegerMMXAsSSE && ElemBits == 64 &&
+        if (!getX86ABICompatInfo().ClassifyIntegerMMXAsSSE && ElemBits == 64 &&
             !IT->isBitInt()) {
           Current = Integer;
         } else {
@@ -368,7 +384,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       if (const auto *IT = dyn_cast<IntegerType>(ElementType)) {
         uint64_t ElemBits = IT->getSizeInBits().getFixedValue();
         // gcc passes 256 and 512 bit <X x __int128> vectors in memory. :(
-        if (getABICompatInfo().PassInt128VectorsInMem && Size != 128 &&
+        if (getX86ABICompatInfo().PassInt128VectorsInMem && Size != 128 &&
             ElemBits == 128 && !IT->isBitInt())
           return;
       }
@@ -525,7 +541,7 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
         Lo = merge(Lo, FieldLo);
         Hi = merge(Hi, FieldHi);
 
-        if (getABICompatInfo().ReturnCXXRecordGreaterThan128InMem &&
+        if (getX86ABICompatInfo().ReturnCXXRecordGreaterThan128InMem &&
             (Size > 128 &&
              (Size != Base.FieldType->getSizeInBits().getFixedValue() ||
               Size > getNativeVectorSizeForAVXABI(AVXLevel))))
@@ -540,12 +556,17 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
     // Classify the fields one at a time, merging the results.
 
-    bool IsUnion = RT->isUnion() && !getABICompatInfo().Clang11Compat;
+    bool IsUnion = RT->isUnion() && !getX86ABICompatInfo().Clang11Compat;
     for (const auto &Field : RT->getFields()) {
       uint64_t Offset = OffsetBase + Field.OffsetInBits;
       bool BitField = Field.IsBitField;
 
-      if (BitField && Field.IsUnnamedBitfield)
+      // Ignore padding bit-fields. Normally only zero-length bit-fields are
+      // padding, but under Clang 23 compatibility every unnamed bit-field is,
+      // faithfully reproducing Clang 23.
+      if (BitField && (getX86ABICompatInfo().ClassifyUnnamedBitFields
+                           ? Field.BitFieldWidth == 0
+                           : Field.IsUnnamedBitfield))
         continue;
 
       if (Size > 128 &&
@@ -594,18 +615,6 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
   Lo = Memory;
   Hi = NoClass;
-}
-
-const Type *
-X86_64TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
-  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
-    if (RT->isUnion() && RT->isTransparentUnion()) {
-      auto Fields = RT->getFields();
-      assert(!Fields.empty() && "transparent union cannot be empty");
-      return Fields.front().FieldType;
-    }
-  }
-  return Ty;
 }
 
 ArgInfo
@@ -803,7 +812,8 @@ ArgInfo X86_64TargetInfo::classifyReturnType(const Type *RetTy) const {
       const Type *X87Type =
           TB.getFloatType(APFloat::x87DoubleExtended(), Align(16));
       FieldInfo Fields[] = {FieldInfo(X87Type, 0), FieldInfo(X87Type, 80)};
-      ResType = TB.getRecordType(Fields, TypeSize::getFixed(160), Align(16));
+      ResType = TB.getRecordType(Fields, TypeSize::getFixed(160), Align(16),
+                                 /*UnadjustedAlign=*/Align(16));
     }
     break;
   }
@@ -921,7 +931,7 @@ const Type *X86_64TargetInfo::createPairType(const Type *Lo,
   uint64_t PairSizeInBits =
       Fields[1].OffsetInBits + Hi->getSizeInBits().getFixedValue();
   return TB.getRecordType(Fields, TypeSize::getFixed(PairSizeInBits), Align(8),
-                          StructPacking::Default);
+                          /*UnadjustedAlign=*/Align(8), StructPacking::Default);
 }
 
 static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
@@ -1045,9 +1055,22 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
   if (const auto *RTy = dyn_cast<RecordType>(ABIType)) {
     if (RTy->isUnion()) {
       const Type *ReducedType = reduceUnionForX8664(RTy, TB);
-      if (ReducedType)
-        return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
-                                      SourceOffset, true);
+      if (ReducedType) {
+        if (ABIOffset * 8 < ReducedType->getSizeInBits().getFixedValue())
+          return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
+                                        SourceOffset, true);
+        // The storage type stops before this offset, so size the coercion
+        // from the union itself: a byte when the rest of this eightbyte
+        // holds no data, and the union's remaining bytes otherwise.
+        if (bitsContainNoUserData(SourceTy, SourceOffset * 8 + 8,
+                                  SourceOffset * 8 + 64))
+          return TB.getIntegerType(8, Align(1), /*Signed=*/false);
+        unsigned RemainingBytes =
+            llvm::divideCeil(SourceTy->getSizeInBits().getFixedValue(), 8) -
+            SourceOffset;
+        return TB.getIntegerType(std::min(RemainingBytes, 8U) * 8, Align(1),
+                                 /*Signed=*/false);
+      }
     }
     if (const FieldInfo *Element =
             RTy->getElementContainingOffset(ABIOffset * 8)) {
@@ -1215,7 +1238,7 @@ const Type *X86_64TargetInfo::getByteVectorType(const Type *Ty) const {
   if (const VectorType *VT = dyn_cast<VectorType>(Ty)) {
     // Don't pass vXi128 vectors in their native type, the backend can't
     // legalize them.
-    if (getABICompatInfo().PassInt128VectorsInMem &&
+    if (getX86ABICompatInfo().PassInt128VectorsInMem &&
         VT->getElementType()->isInteger() &&
         cast<IntegerType>(VT->getElementType())->getSizeInBits() == 128) {
       unsigned Size = VT->getSizeInBits().getFixedValue();
@@ -1303,7 +1326,7 @@ bool X86_64TargetInfo::isIllegalVectorType(const Type *Ty) const {
 
     // Check for 128-bit integer element vectors that should be passed in memory
     const Type *EltTy = VecTy->getElementType();
-    if (getABICompatInfo().PassInt128VectorsInMem && EltTy->isInteger()) {
+    if (getX86ABICompatInfo().PassInt128VectorsInMem && EltTy->isInteger()) {
       const auto *IntTy = cast<IntegerType>(EltTy);
       if (IntTy->getSizeInBits().getFixedValue() == 128)
         return true;
@@ -1392,24 +1415,6 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
   return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 }
 
-static bool classifyCXXReturnType(FunctionInfo &FI) {
-  const abi::Type *Ty = FI.getReturnType();
-
-  if (const auto *RT = llvm::dyn_cast<abi::RecordType>(Ty)) {
-    if (!RT->canPassInRegisters()) {
-      // A C++ record that cannot pass in registers (non-trivial copy/dtor)
-      // is returned indirectly with ByVal=false, matching
-      // ItaniumCXXABI::classifyReturnType. This is the RAA path and is distinct
-      // from getIndirectReturnResult (plain aggregates), which uses ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   CallingConv::ID CallingConv = FI.getCallingConvention();
 
@@ -1428,7 +1433,7 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   unsigned FreeSSERegs = 8;
   unsigned NeededInt = 0, NeededSSE = 0;
 
-  if (!classifyCXXReturnType(FI)) {
+  if (!maybeCommonClassifyReturnType(FI)) {
     const Type *RetTy = FI.getReturnType();
     FI.getReturnInfo() = classifyReturnType(RetTy);
   }
@@ -1465,7 +1470,7 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
 
 std::unique_ptr<TargetInfo>
 createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
-                       bool Has64BitPointers, const ABICompatInfo &Compat) {
+                       bool Has64BitPointers, const X86ABICompatInfo &Compat) {
   return std::make_unique<X86_64TargetInfo>(TB, AVXLevel, Has64BitPointers,
                                             Compat);
 }

@@ -1299,13 +1299,6 @@ def Bounded : IgnoredAttr {
   let Spellings = [GNU<"bounded">];
 }
 
-def CarriesDependency : InheritableParamAttr {
-  let Spellings = [GNU<"carries_dependency">,
-                   CXX11<"","carries_dependency", 200809>];
-  let Subjects = SubjectList<[ParmVar, ObjCMethod, Function], ErrorDiag>;
-  let Documentation = [CarriesDependencyDocs];
-}
-
 def CDecl : DeclOrTypeAttr {
   let Spellings = [GCC<"cdecl">, CustomKeyword<"__cdecl">, CustomKeyword<"_cdecl">];
 //  let Subjects = [Function, ObjCMethod];
@@ -1653,10 +1646,7 @@ def CUDALaunchBounds : InheritableAttr {
               ExprArgument<"MaxBlocks", 1>];
   let LangOpts = [CUDA];
   let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
-  // An AST node is created for this attribute, but is not used by other parts
-  // of the compiler. However, this node needs to exist in the AST because
-  // non-LLVM backends may be relying on the attribute's presence.
-  let Documentation = [Undocumented];
+  let Documentation = [LaunchBoundsDocs];
 }
 
 def CUDAShared : InheritableAttr {
@@ -1826,11 +1816,13 @@ def OpenCLGlobalAddressSpace : TypeAttr {
   let Documentation = [OpenCLAddressSpaceGlobalDocs];
 }
 
+// TODO: Remove OpenCLGlobalDeviceAddressSpace after deprecation.
 def OpenCLGlobalDeviceAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_device">];
   let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
 }
 
+// TODO: Remove OpenCLGlobalHostAddressSpace after deprecation.
 def OpenCLGlobalHostAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_host">];
   let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
@@ -1852,6 +1844,36 @@ def OpenCLGenericAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__generic">, CustomKeyword<"generic">,
                    Clang<"opencl_generic">];
   let Documentation = [OpenCLAddressSpaceGenericDocs];
+}
+
+def SYCLPrivateAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_private">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGlobalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_global">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLLocalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_local">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLConstantAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_constant">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGenericAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_generic">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
 }
 
 def OpenCLNoSVM : Attr {
@@ -1997,7 +2019,7 @@ def MinSize : InheritableAttr {
 }
 
 def FlagEnum : InheritableAttr {
-  let Spellings = [Clang<"flag_enum">];
+  let Spellings = [ClangGCC<"flag_enum">];
   let Subjects = SubjectList<[Enum]>;
   let Documentation = [FlagEnumDocs];
   let SimpleHandler = 1;
@@ -2423,6 +2445,8 @@ def NoInline : DeclOrStmtAttr {
   let SimpleHandler = 1;
 }
 
+def : MutualExclusions<[AlwaysInline, NoInline]>;
+
 def NoOutline : DeclOrStmtAttr {
   let Spellings = [Clang<"no_outline">];
   let Subjects = SubjectList<[Function, ObjCMethod, Block], ErrorDiag>;
@@ -2591,7 +2615,7 @@ def WebAssemblyExportName : InheritableAttr,
   let Spellings = [Clang<"export_name">];
   let Args = [StringArgument<"ExportName">];
   let Documentation = [WebAssemblyExportNameDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def WebAssemblyImportModule : InheritableAttr,
@@ -2599,7 +2623,7 @@ def WebAssemblyImportModule : InheritableAttr,
   let Spellings = [Clang<"import_module">];
   let Args = [StringArgument<"ImportModule">];
   let Documentation = [WebAssemblyImportModuleDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def WebAssemblyImportName : InheritableAttr,
@@ -2607,7 +2631,7 @@ def WebAssemblyImportName : InheritableAttr,
   let Spellings = [Clang<"import_name">];
   let Args = [StringArgument<"ImportName">];
   let Documentation = [WebAssemblyImportNameDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def NoSplitStack : InheritableAttr {
@@ -4888,6 +4912,20 @@ def OMPAssume : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [OMPAssumeDocs];
   let Args = [StringArgument<"Assumption">];
+}
+
+def OMPInvariantPredicateBound : StmtAttr {
+  // Internal droppable hint on an `#pragma omp tile` intra-tile loop.
+  // RectCond: rectangular bound (`t < floor + T`) used instead of the stored
+  //           `min(floor + T, N)` condition.
+  // TileSize: constant intra-tile trip count T.
+  // Predicate: optional overshoot guard (`t < N`); omitted when N % T == 0.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Subjects = SubjectList<[Stmt], ErrorDiag>;
+  let Args = [ExprArgument<"RectCond">, ExprArgument<"TileSize">,
+              ExprArgument<"Predicate", 1>];
+  let Documentation = [InternalOnly];
 }
 
 def InternalLinkage : InheritableAttr {

@@ -3,6 +3,18 @@
 ; Make sure these missing libcalls emit a proper diagnostic rather
 ; than fatal erroring.
 
+; CHECK: error: no libcall available for lrint
+define i32 @test_lrint_ppcf128(ppc_fp128 %x) nounwind {
+  %r = call i32 @llvm.lrint.i32.ppcf128(ppc_fp128 %x)
+  ret i32 %r
+}
+
+; CHECK: error: no libcall available for lround
+define i32 @test_lround_ppcf128(ppc_fp128 %x) nounwind {
+  %r = call i32 @llvm.lround.i32.ppcf128(ppc_fp128 %x)
+  ret i32 %r
+}
+
 ; CHECK: error: no libcall available for llrint
 define i64 @test_llrint_ppcf128(ppc_fp128 %x) nounwind {
   %r = call i64 @llvm.llrint.i64.ppcf128(ppc_fp128 %x)

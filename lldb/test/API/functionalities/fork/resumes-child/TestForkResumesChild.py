@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-@requireNotWasm  # no fork() on WebAssembly
+@requireNotWasm("no fork() on WebAssembly")
 class TestForkResumesChild(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

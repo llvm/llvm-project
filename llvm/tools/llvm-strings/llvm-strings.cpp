@@ -61,7 +61,6 @@ public:
     setDashDashParsing(true);
   }
 };
-} // namespace
 
 static StringRef ToolName;
 
@@ -71,8 +70,9 @@ static cl::list<std::string> InputFileNames(cl::Positional,
 static int MinLength = 4;
 static bool PrintFileName;
 
-enum radix { none, octal, hexadecimal, decimal };
-static radix Radix;
+enum class Radix { None, Octal, Hexadecimal, Decimal };
+static Radix Radix;
+} // namespace
 
 [[noreturn]] static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ToolName) << Message << "\n";
@@ -89,21 +89,21 @@ static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
 }
 
 static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
-  auto print = [&OS, FileName](unsigned Offset, StringRef L) {
+  auto Print = [&OS, FileName](unsigned Offset, StringRef L) {
     if (L.size() < static_cast<size_t>(MinLength))
       return;
     if (PrintFileName)
       OS << FileName << ": ";
     switch (Radix) {
-    case none:
+    case Radix::None:
       break;
-    case octal:
+    case Radix::Octal:
       OS << format("%7o ", Offset);
       break;
-    case hexadecimal:
+    case Radix::Hexadecimal:
       OS << format("%7x ", Offset);
       break;
-    case decimal:
+    case Radix::Decimal:
       OS << format("%7u ", Offset);
       break;
     }
@@ -117,12 +117,12 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
       if (S == nullptr)
         S = P;
     } else if (S) {
-      print(S - B, StringRef(S, P - S));
+      Print(S - B, StringRef(S, P - S));
       S = nullptr;
     }
   }
   if (S)
-    print(S - B, StringRef(S, E - S));
+    Print(S - B, StringRef(S, E - S));
 }
 
 int main(int argc, char **argv) {
@@ -151,18 +151,20 @@ int main(int argc, char **argv) {
 
   parseIntArg(Args, OPT_bytes_EQ, MinLength);
   PrintFileName = Args.hasArg(OPT_print_file_name);
-  StringRef R = Args.getLastArgValue(OPT_radix_EQ);
-  if (R.empty())
-    Radix = none;
-  else if (R == "o")
-    Radix = octal;
-  else if (R == "d")
-    Radix = decimal;
-  else if (R == "x")
-    Radix = hexadecimal;
-  else
-    reportCmdLineError("--radix value should be one of: '' (no offset), 'o' "
-                       "(octal), 'd' (decimal), 'x' (hexadecimal)");
+  Arg *RadixArg = Args.getLastArg(OPT_radix_EQ);
+  if (!RadixArg) {
+    Radix = Radix::None;
+  } else {
+    Radix = llvm::StringSwitch<enum Radix>(RadixArg->getValue())
+                .Case("o", Radix::Octal)
+                .Case("d", Radix::Decimal)
+                .Case("x", Radix::Hexadecimal)
+                .Default(Radix::None);
+    if (Radix == Radix::None)
+      reportCmdLineError("'" + StringRef(RadixArg->getValue()) +
+                         "' is not a valid value for '" +
+                         RadixArg->getSpelling() + "'");
+  }
 
   if (MinLength == 0) {
     errs() << "invalid minimum string length 0\n";

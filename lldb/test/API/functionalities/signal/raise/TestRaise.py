@@ -20,7 +20,7 @@ class RaiseTestCase(TestBase):
         # passing of SIGSTOP is not correctly handled, so not testing that
         # scenario: https://llvm.org/bugs/show_bug.cgi?id=23574
 
-    @requireNotDarwin  # darwin does not support real time signals
+    @requireNotDarwin("darwin does not support real time signals")
     @skipIfTargetAndroid()
     def test_sigsigrtmin(self):
         self.build()

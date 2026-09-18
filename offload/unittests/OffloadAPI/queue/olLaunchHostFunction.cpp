@@ -57,7 +57,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   LaunchArgs.DynSharedMemory = 0;
 
   ol_queue_handle_t Queue;
-  ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+  ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
 
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
