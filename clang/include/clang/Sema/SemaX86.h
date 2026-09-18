@@ -29,6 +29,7 @@ public:
   bool CheckBuiltinGatherScatterScale(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckBuiltinTileArgumentsRange(CallExpr *TheCall, ArrayRef<int> ArgNums);
+  bool CheckBuiltinScaleGroup(CallExpr *TheCall, int ArgNum);
   bool CheckBuiltinTileDuplicate(CallExpr *TheCall, ArrayRef<int> ArgNums);
   bool CheckBuiltinTileRangeAndDuplicate(CallExpr *TheCall,
                                          ArrayRef<int> ArgNums);

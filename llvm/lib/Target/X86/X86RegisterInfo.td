@@ -421,6 +421,8 @@ def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
 let PositionOrder = 3 in {
 // Tile config registers.
 def TMMCFG: X86Reg<"tmmcfg", 0>;
+// Block Scale Register (ACE)
+def BSR0 : X86Reg<"bsr0", 0>;
 // Tile "registers".
 def TMM0:  X86Reg<"tmm0",   0>;
 def TMM1:  X86Reg<"tmm1",   1>;

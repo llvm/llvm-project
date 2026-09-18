@@ -270,8 +270,9 @@ bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
   scope_exit ClearStateOnExit([this] { releaseMemory(); });
 
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  // Early exit in the common case of non-AMX code.
-  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+  // Early exit in the common case of non-AMX/ACE code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA &&
+      X86FI->getACEProgModel() != ACEProgModelEnum::ACE_ManagedRA)
     return false;
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
@@ -450,7 +451,10 @@ bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
         .addReg(Xmm);
   }
   // Fill in the palette first.
-  addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV8mi)), SS).addImm(1);
+  // Use Palette 2 for ACE v1, Palette 1 for AMX.
+  int PaletteId = ST.hasACEV1() ? 2 : 1;
+  addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV8mi)), SS)
+      .addImm(PaletteId);
 
   return true;
 }
