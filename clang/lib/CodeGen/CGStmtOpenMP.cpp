@@ -89,15 +89,6 @@ hasLoopLastprivateVariable(const OMPLoopDirective &S,
   return false;
 }
 
-static bool canEmitGPUNoLoopKernel(CodeGenModule &CGM,
-                                   const OMPLoopDirective &S) {
-  const auto *D = dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&S);
-  return S.getLoopsNumber() == 1 &&
-         CGM.getOpenMPRuntime().canPromoteToNoLoop(S) &&
-         !S.getSingleClause<OMPScheduleClause>() &&
-         !S.getSingleClause<OMPDistScheduleClause>() && !(D && D->hasCancel());
-}
-
 namespace {
 /// Lexical scope for OpenMP executable constructs, that handles correct codegen
 /// for captured expressions.
@@ -3785,7 +3776,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
     CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, EKind, HasCancel);
 
     CodeGenModule &CGM = CGF.CGM;
-    if (canEmitGPUNoLoopKernel(CGM, S)) {
+    if (CGM.getOpenMPRuntime().canPromoteToNoLoop()) {
       // Prepare the loop variables and their privatization.
       emitLoopIterationspaceVars(CGF, S);
       OMPLoopScope PreInitScope(CGF, S);
@@ -6408,7 +6399,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
         EmitOMPReductionClauseInit(S, LoopScope);
 
       // Defer lastprivate init to the parallel region for no-loop
-      const bool NoLoopKernel = canEmitGPUNoLoopKernel(CGM, S);
+      const bool NoLoopKernel = CGM.getOpenMPRuntime().canPromoteToNoLoop();
       if (!NoLoopKernel)
         HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
 
@@ -8801,30 +8792,6 @@ void CodeGenFunction::EmitOMPParallelGenericLoopDirective(
   checkForLastprivateConditionalUpdate(*this, S);
 }
 
-void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
-    const OMPTeamsGenericLoopDirective &S) {
-  // To be consistent with current behavior of 'target teams loop', emit
-  // 'teams loop' as if its constituent constructs are 'teams' and 'distribute'.
-  auto &&CodeGenDistribute = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-    CGF.EmitOMPDistributeLoop(S, emitOMPLoopBodyWithStopPoint, S.getInc());
-  };
-
-  // Emit teams region as a standalone region.
-  auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
-                                            PrePostActionTy &Action) {
-    Action.Enter(CGF);
-    OMPPrivateScope PrivateScope(CGF);
-    CGF.EmitOMPReductionClauseInit(S, PrivateScope);
-    (void)PrivateScope.Privatize();
-    CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_distribute,
-                                                    CodeGenDistribute);
-    CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
-  };
-  emitCommonOMPTeamsDirective(*this, S, OMPD_distribute, CodeGen);
-  emitPostUpdateForReductionClause(*this, S,
-                                   [](CodeGenFunction &) { return nullptr; });
-}
-
 #ifndef NDEBUG
 static void emitTargetTeamsLoopCodegenStatus(CodeGenFunction &CGF,
                                              std::string StatusMsg,
@@ -8844,10 +8811,9 @@ static void emitTargetTeamsLoopCodegenStatus(CodeGenFunction &CGF,
 }
 #endif
 
-static void emitTargetTeamsGenericLoopRegionAsParallel(
-    CodeGenFunction &CGF, PrePostActionTy &Action,
-    const OMPTargetTeamsGenericLoopDirective &S) {
-  Action.Enter(CGF);
+static void
+emitTeamsGenericLoopAsDistributeParallelFor(CodeGenFunction &CGF,
+                                            const OMPLoopDirective &S) {
   // Emit 'teams loop' as if its constituent constructs are 'distribute,
   // 'parallel, and 'for'.
   auto &&CodeGenDistribute = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
@@ -8873,6 +8839,42 @@ static void emitTargetTeamsGenericLoopRegionAsParallel(
                               CodeGenTeams);
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });
+}
+
+void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
+    const OMPTeamsGenericLoopDirective &S) {
+  if (CGM.getOpenMPRuntime().canPromoteToNoLoop()) {
+    emitTeamsGenericLoopAsDistributeParallelFor(*this, S);
+    return;
+  }
+
+  // To be consistent with current behavior of 'target teams loop', emit
+  // 'teams loop' as if its constituent constructs are 'teams' and 'distribute'.
+  auto &&CodeGenDistribute = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+    CGF.EmitOMPDistributeLoop(S, emitOMPLoopBodyWithStopPoint, S.getInc());
+  };
+
+  // Emit teams region as a standalone region.
+  auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
+                                            PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    OMPPrivateScope PrivateScope(CGF);
+    CGF.EmitOMPReductionClauseInit(S, PrivateScope);
+    (void)PrivateScope.Privatize();
+    CGF.CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_distribute,
+                                                    CodeGenDistribute);
+    CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
+  };
+  emitCommonOMPTeamsDirective(*this, S, OMPD_distribute, CodeGen);
+  emitPostUpdateForReductionClause(*this, S,
+                                   [](CodeGenFunction &) { return nullptr; });
+}
+
+static void emitTargetTeamsGenericLoopRegionAsParallel(
+    CodeGenFunction &CGF, PrePostActionTy &Action,
+    const OMPTargetTeamsGenericLoopDirective &S) {
+  Action.Enter(CGF);
+  emitTeamsGenericLoopAsDistributeParallelFor(CGF, S);
 }
 
 static void emitTargetTeamsGenericLoopRegionAsDistribute(
