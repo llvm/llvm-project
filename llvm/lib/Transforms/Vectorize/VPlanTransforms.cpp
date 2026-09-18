@@ -5904,9 +5904,6 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // precision and other casts depend on the pointer size.
       if (VPI.getOpcode() != Instruction::Trunc)
         continue;
-      auto *Trunc = cast_or_null<TruncInst>(VPI.getUnderlyingValue());
-      if (!Trunc)
-        continue;
 
       // A truncate that is not widened is left to the scalarization decisions
       // made earlier.
@@ -5929,11 +5926,16 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // needs an update instruction regardless.
       auto IsNarrowingProfitable = [&](ElementCount VF) {
         return WideIV->getPHINode() == PrimaryIV ||
-               !CostCtx.TTI.isTruncateFree(toVectorTy(Trunc->getSrcTy(), VF),
-                                           toVectorTy(Trunc->getDestTy(), VF));
+               !CostCtx.TTI.isTruncateFree(
+                   toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
+                   toVectorTy(VPI.getScalarType(), VF));
       };
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(
               IsNarrowingProfitable, Range))
+        continue;
+
+      auto *Trunc = cast_or_null<TruncInst>(VPI.getUnderlyingValue());
+      if (!Trunc)
         continue;
 
       // Wrap flags of the original induction do not hold in the truncated
