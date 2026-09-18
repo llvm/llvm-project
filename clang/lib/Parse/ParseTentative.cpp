@@ -1286,7 +1286,13 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     // OpenCL pipe
   case tok::kw_pipe:
 
-    // HLSL address space qualifiers
+    // HLSL interpolation and address space qualifiers
+  case tok::kw_nointerpolation:
+  case tok::kw_linear:
+  case tok::kw_centroid:
+  case tok::kw_noperspective:
+  case tok::kw_sample:
+  case tok::kw_center:
   case tok::kw_groupshared:
   case tok::kw_in:
   case tok::kw_inout:
