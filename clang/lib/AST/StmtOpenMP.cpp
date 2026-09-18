@@ -181,7 +181,7 @@ bool OMPLoopBasedDirective::doForAllLoops(
     // If we peel a loop-transformation directive, the enclosing ForStmt is
     // compiler-synthesized and its body may hold helper statements (e.g.
     // `reverse` injects `.reversed.iv` and update exprs) before the next
-    // loop. Scan it as an imperfect nest so that e.g. `omp tile` followed by
+    // loop. Scan it as an imperfect nest so that, e.g., `omp tile` followed by
     // `omp reverse` is accepted.
     bool PeeledTransformation = false;
     while (true) {
