@@ -12,4 +12,4 @@
 
 static bfloat16 mul_func(bfloat16 x, bfloat16 y) { return x * y; }
 
-LIST_MUL_TESTS(bfloat16, bfloat16, mul_func)
+LIST_MUL_TESTS(Bfloat16Mul, bfloat16, bfloat16, mul_func)
