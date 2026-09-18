@@ -6616,8 +6616,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
           vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
-      Instruction *Instr = cast_or_null<Instruction>(VPI.getUnderlyingValue());
-      if (!Instr)
+      // We cannot handle VPInstructions without underlying values, as we would
+      // not be able to create a Replicate without it.
+      if (!VPI.getUnderlyingValue())
         continue;
 
       Builder.setInsertPoint(&VPI);
@@ -6626,7 +6627,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
           RecipeBuilder.tryToCreateWidenNonPhiRecipe(&VPI, Range);
 
       if (isa_and_nonnull<VPWidenIntOrFpInductionRecipe>(Recipe) &&
-          isa<TruncInst>(Instr)) {
+          VPI.getOpcode() == Instruction::Trunc) {
         // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be
         // moved to the phi section in the header.
         Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
