@@ -377,8 +377,7 @@ Type *TruncInstCombine::getBestTruncatedType() {
         unsigned MinBitWidth = 0;
         for (const auto &Op : II->args()) {
           KnownBits Known = computeKnownBits(Op);
-          MinBitWidth =
-              std::max(Known.getMaxValue().getActiveBits(), MinBitWidth);
+          MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
           if (MinBitWidth >= OrigBitWidth)
             return nullptr;
         }
