@@ -3238,7 +3238,9 @@ class CodeCompletionResults(Structure):
                 self.ccr = ccr
 
             def __len__(self) -> int:
-                return int(conf.lib.clang_codeCompleteGetNumDiagnostics(byref(self.ccr)))
+                return int(
+                    conf.lib.clang_codeCompleteGetNumDiagnostics(byref(self.ccr))
+                )
 
             def __getitem__(self, key: int) -> Diagnostic:
                 return conf.lib.clang_codeCompleteGetDiagnostic(byref(self.ccr), key)  # type: ignore [no-any-return]
@@ -4133,7 +4135,11 @@ FUNCTION_LIST: list[LibFunc] = [
         [TranslationUnit, c_interop_string, c_int, c_int, c_void_p, c_int, c_int],
         POINTER(CodeCompletionResults),
     ),
-    ("clang_codeCompleteGetDiagnostic", [POINTER(CodeCompletionResults), c_int], Diagnostic),
+    (
+        "clang_codeCompleteGetDiagnostic",
+        [POINTER(CodeCompletionResults), c_int],
+        Diagnostic
+    ),
     ("clang_codeCompleteGetNumDiagnostics", [POINTER(CodeCompletionResults)], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
     ("clang_createTranslationUnit", [Index, c_interop_string], c_object_p),
