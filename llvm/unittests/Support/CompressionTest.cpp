@@ -39,6 +39,11 @@ static void testZlibCompression(StringRef Input, int Level) {
   EXPECT_FALSE(std::move(E));
   EXPECT_EQ(Input, toStringRef(Uncompressed));
 
+  // decompress infers zlib from the RFC 1950 header.
+  E = compression::decompress(Compressed, Uncompressed, Input.size());
+  EXPECT_FALSE(std::move(E));
+  EXPECT_EQ(Input, toStringRef(Uncompressed));
+
   if (Input.size() > 0) {
     // Decompression fails if expected length is too short.
     E = zlib::decompress(Compressed, Uncompressed, Input.size() - 1);
@@ -84,6 +89,11 @@ static void testZstdCompression(StringRef Input, int Level) {
   EXPECT_FALSE(std::move(E));
   EXPECT_EQ(Input, toStringRef(Uncompressed));
 
+  // decompress infers Zstd from the frame magic.
+  E = compression::decompress(Compressed, Uncompressed, Input.size());
+  EXPECT_FALSE(std::move(E));
+  EXPECT_EQ(Input, toStringRef(Uncompressed));
+
   if (Input.size() > 0) {
     // Decompression fails if expected length is too short.
     E = zstd::decompress(Compressed, Uncompressed, Input.size() - 1);
@@ -111,4 +121,36 @@ TEST(CompressionTest, Zstd) {
   testZstdCompression(BinaryDataStr, zstd::DefaultCompression);
 }
 #endif
+
+TEST(CompressionTest, IdentifyHeaders) {
+  EXPECT_STREQ("unknown compression format",
+               getReasonIfUnsupported(ArrayRef<uint8_t>()));
+  uint8_t Truncated[] = {0x78};
+  EXPECT_STREQ("unknown compression format", getReasonIfUnsupported(Truncated));
+
+  // RFC 1950 headers LLVM's compress2 does not emit.
+  uint8_t SmallWindow[] = {0x28, 0x15}; // CINFO=2, FCHECK valid
+  EXPECT_EQ(getReasonIfUnsupported(Format::Zlib),
+            getReasonIfUnsupported(ArrayRef<uint8_t>(SmallWindow)));
+  uint8_t WithDict[] = {0x78, 0x20}; // FDICT set, FCHECK valid
+  EXPECT_EQ(getReasonIfUnsupported(Format::Zlib),
+            getReasonIfUnsupported(ArrayRef<uint8_t>(WithDict)));
+
+  uint8_t BadFCheck[] = {0x78, 0x00};
+  EXPECT_STREQ("unknown compression format", getReasonIfUnsupported(BadFCheck));
+  uint8_t BadCINFO[] = {0x88, 0x01};
+  EXPECT_STREQ("unknown compression format", getReasonIfUnsupported(BadCINFO));
+  uint8_t BadCM[] = {0x79, 0x9c};
+  EXPECT_STREQ("unknown compression format", getReasonIfUnsupported(BadCM));
+
+  uint8_t ZstdMagic[] = {0x28, 0xb5, 0x2f, 0xfd};
+  EXPECT_EQ(getReasonIfUnsupported(Format::Zstd),
+            getReasonIfUnsupported(ArrayRef<uint8_t>(ZstdMagic)));
+
+  uint8_t Unknown[] = {0x00, 0x01, 0x02, 0x03};
+  EXPECT_STREQ("unknown compression format", getReasonIfUnsupported(Unknown));
+  SmallVector<uint8_t, 0> Out;
+  Error E = compression::decompress(ArrayRef<uint8_t>(Unknown), Out, 0);
+  EXPECT_EQ("unknown compression format", toString(std::move(E)));
 }
+} // namespace
