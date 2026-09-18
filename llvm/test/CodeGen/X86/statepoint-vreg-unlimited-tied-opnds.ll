@@ -31,28 +31,29 @@ define i32 @test_spill(
   ; CHECK-VREG-NEXT:   [[MOV64rm10:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.1, align 16)
   ; CHECK-VREG-NEXT:   [[MOV64rm11:%[0-9]+]]:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0)
   ; CHECK-VREG-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-VREG-NEXT:   [[MOV64rm11]]:gr64, [[MOV64rm10]]:gr64, [[MOV64rm9]]:gr64, [[MOV64rm8]]:gr64, [[MOV64rm7]]:gr64, [[MOV64rm6]]:gr64, [[MOV64rm5]]:gr64, [[MOV64rm4]]:gr64, [[MOV64rm3]]:gr64, [[MOV64rm2]]:gr64, [[MOV64rm1]]:gr64, [[MOV64rm]]:gr64, [[COPY]]:gr64, [[COPY1]]:gr64, [[COPY2]]:gr64, [[COPY3]]:gr64, [[COPY4]]:gr64, [[COPY5]]:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 18, [[MOV64rm11]](tied-def 0), [[MOV64rm10]](tied-def 1), [[MOV64rm9]](tied-def 2), [[MOV64rm8]](tied-def 3), [[MOV64rm7]](tied-def 4), [[MOV64rm6]](tied-def 5), [[MOV64rm5]](tied-def 6), [[MOV64rm4]](tied-def 7), [[MOV64rm3]](tied-def 8), [[MOV64rm2]](tied-def 9), [[MOV64rm1]](tied-def 10), [[MOV64rm]](tied-def 11), [[COPY]](tied-def 12), [[COPY1]](tied-def 13), [[COPY2]](tied-def 14), [[COPY3]](tied-def 15), [[COPY4]](tied-def 16), [[COPY5]](tied-def 17), 2, 0, 2, 18, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-VREG-NEXT:   [[MOV64rm11:%[0-9]+]]:gr64, [[MOV64rm10:%[0-9]+]]:gr64, [[MOV64rm9:%[0-9]+]]:gr64, [[MOV64rm8:%[0-9]+]]:gr64, [[MOV64rm7:%[0-9]+]]:gr64, [[MOV64rm6:%[0-9]+]]:gr64, [[MOV64rm5:%[0-9]+]]:gr64, [[MOV64rm4:%[0-9]+]]:gr64, [[MOV64rm3:%[0-9]+]]:gr64, [[MOV64rm2:%[0-9]+]]:gr64, [[MOV64rm1:%[0-9]+]]:gr64, [[MOV64rm:%[0-9]+]]:gr64, [[COPY:%[0-9]+]]:gr64, [[COPY1:%[0-9]+]]:gr64, [[COPY2:%[0-9]+]]:gr64, [[COPY3:%[0-9]+]]:gr64, [[COPY4:%[0-9]+]]:gr64, [[COPY5:%[0-9]+]]:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 18, [[MOV64rm11]](tied-def 0), [[MOV64rm10]](tied-def 1), [[MOV64rm9]](tied-def 2), [[MOV64rm8]](tied-def 3), [[MOV64rm7]](tied-def 4), [[MOV64rm6]](tied-def 5), [[MOV64rm5]](tied-def 6), [[MOV64rm4]](tied-def 7), [[MOV64rm3]](tied-def 8), [[MOV64rm2]](tied-def 9), [[MOV64rm1]](tied-def 10), [[MOV64rm]](tied-def 11), [[COPY]](tied-def 12), [[COPY1]](tied-def 13), [[COPY2]](tied-def 14), [[COPY3]](tied-def 15), [[COPY4]](tied-def 16), [[COPY5]](tied-def 17), 2, 0, 2, 18, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, csr_64, implicit-def $rsp, implicit-def $ssp
   ; CHECK-VREG-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY5]], 1, $noreg, 4, $noreg :: (load (s32) from %ir.gep00, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm]], [[COPY4]], 1, $noreg, 8, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep01, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[COPY3]], 1, $noreg, 12, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep02, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[COPY2]], 1, $noreg, 16, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep03, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[COPY1]], 1, $noreg, 20, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep04, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[COPY]], 1, $noreg, 24, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep05, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm]], 1, $noreg, 28, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep06, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm1]], 1, $noreg, 32, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep07, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm2]], 1, $noreg, 36, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep08, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm3]], 1, $noreg, 40, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep09, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm4]], 1, $noreg, 44, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep10, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm5]], 1, $noreg, 48, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep11, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm6]], 1, $noreg, 52, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep12, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm7]], 1, $noreg, 56, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep13, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm8]], 1, $noreg, 60, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep14, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm9]], 1, $noreg, 64, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep15, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm10]], 1, $noreg, 68, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep16, addrspace 1)
-  ; CHECK-VREG-NEXT:   [[ADD32rm1:%[0-9]+]]:gr32 = ADD32rm [[ADD32rm1]], [[MOV64rm11]], 1, $noreg, 72, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep17, addrspace 1)
-  ; CHECK-VREG-NEXT:   $eax = COPY [[ADD32rm1]]
-  ; CHECK-VREG-NEXT:   RET 0, killed $eax
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY4]], 1, $noreg, 8, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep01, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY3]], 1, $noreg, 12, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep02, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY2]], 1, $noreg, 16, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep03, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY1]], 1, $noreg, 20, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep04, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[COPY]], 1, $noreg, 24, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep05, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm]], 1, $noreg, 28, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep06, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm1]], 1, $noreg, 32, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep07, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm2]], 1, $noreg, 36, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep08, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm3]], 1, $noreg, 40, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep09, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm4]], 1, $noreg, 44, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep10, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm5]], 1, $noreg, 48, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep11, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm6]], 1, $noreg, 52, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep12, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm7]], 1, $noreg, 56, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep13, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm8]], 1, $noreg, 60, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep14, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm9]], 1, $noreg, 64, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep15, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm10]], 1, $noreg, 68, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep16, addrspace 1)
+  ; CHECK-VREG-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = ADD32rm [[MOV32rm]], [[MOV64rm11]], 1, $noreg, 72, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep17, addrspace 1)
+  ; CHECK-VREG-NEXT:   $eax = COPY [[MOV32rm]]
+  ; CHECK-VREG-NEXT:   RET 0, $eax
+  ;
   ; CHECK-PREG-LABEL: name: test_spill
   ; CHECK-PREG: bb.0 (%ir-block.0):
   ; CHECK-PREG-NEXT:   liveins: $rcx, $rdi, $rdx, $rsi, $r8, $r9
