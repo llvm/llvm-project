@@ -869,7 +869,9 @@ private:
           std::string cycleName = getConstructName(*cycleStmt);
           if (cycleName.empty() || cycleName == doName)
             // This candidate will match doStmt's EndDoStmt.
-            ifCandidateStack.push_back({it, {}, /*isCycleStmt=*/true,
+            ifCandidateStack.push_back({it,
+                                        {},
+                                        /*isCycleStmt=*/true,
                                         /*hasLeadingStmts=*/true});
         }
       }
