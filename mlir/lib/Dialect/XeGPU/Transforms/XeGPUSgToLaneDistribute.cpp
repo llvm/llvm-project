@@ -85,18 +85,23 @@ static bool isValidSubgroupMultiReductionOp(vector::MultiDimReductionOp op) {
   return op.getReductionDims().size() == 1;
 }
 
-/// A vector::MultiDimReductionOp is doing lane-local reduction if each lane
-/// is doing its own local reduction. In this case the result layout ensures
-/// that result vector is distributed to lanes, i.e. the result vector type is
-/// different from the distributed result vector type.
+/// A vector::MultiDimReductionOp reduces lane-locally when no data is combined
+/// across lanes, which holds exactly when the source's lane_layout along the
+/// reduction dimension is 1: every reduced element then lives in one lane.
 static bool isReductionLaneLocal(vector::MultiDimReductionOp op) {
   // Must be valid MultiDimReductionOp.
   assert(isValidSubgroupMultiReductionOp(op) && "Expecting a valid subgroup "
                                                 "MultiDimReductionOp");
-  auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-  VectorType resTy = dyn_cast<VectorType>(op.getType());
-  auto resDistTypeOrFailure = getDistVecTypeBasedOnLaneLayout(resLayout, resTy);
-  return resTy != resDistTypeOrFailure.value();
+  auto srcLayout = xegpu::getTemporaryLayout(op->getOpOperand(0));
+  ArrayRef<int64_t> reductionDims = op.getReductionDims();
+  assert(reductionDims.size() == 1 &&
+         "Expecting single reduction dimension for subgroup multi "
+         "reduction op");
+  int64_t reductionDim = reductionDims[0];
+  SmallVector<int64_t> srcLaneLayout = srcLayout.getEffectiveLaneLayoutAsInt();
+  assert(reductionDim < static_cast<int64_t>(srcLaneLayout.size()) &&
+         "Expecting a source lane_layout covering the reduction dimension");
+  return srcLaneLayout[reductionDim] == 1;
 }
 
 /// Given a vector type and its distributed vector type, return the list of
@@ -1484,13 +1489,6 @@ struct SgToLaneVectorInsertStridedSlice
             op, "only single dimension distribution is supported");
       int64_t destDistDim = destDistributedDims[0];
 
-      const auto *uArch =
-          xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
-      if (!uArch)
-        return rewriter.notifyMatchFailure(
-            op, "target attribute required to determine subgroup size");
-      int subgroupSize = uArch->getSubgroupSize();
-
       VectorType srcType = op.getSourceVectorType();
       // The distributed dim must be in the last k (source rank) dims of dest.
       int64_t sourceDistDim =
@@ -1519,21 +1517,29 @@ struct SgToLaneVectorInsertStridedSlice
         return rewriter.notifyMatchFailure(
             op, "expecting unit lane data along the distributed dimension");
 
+      // The distributed dimension may span only a subset of the subgroup, so
+      // divide its size and offset by the lanes that actually cover it.
+      auto destLaneLayout = destLayout.getEffectiveLaneLayoutAsInt();
+      int64_t numLanesAlongDim =
+          destDistDim < static_cast<int64_t>(destLaneLayout.size())
+              ? destLaneLayout[destDistDim]
+              : 1;
+
       int64_t srcDistrDimSize = srcType.getDimSize(sourceDistDim);
-      if (srcDistrDimSize % subgroupSize != 0)
+      if (srcDistrDimSize % numLanesAlongDim != 0)
         return rewriter.notifyMatchFailure(
             op, "source distributed dim size is not a multiple of "
-                "subgroup size");
+                "the number of lanes along that dimension");
 
       int64_t destDistrDimOffset =
           cast<IntegerAttr>(op.getOffsets()[destDistDim]).getInt();
-      if (destDistrDimOffset % subgroupSize != 0)
+      if (destDistrDimOffset % numLanesAlongDim != 0)
         return rewriter.notifyMatchFailure(
             op, "offset along distributed dim is not a multiple of "
-                "subgroup size");
+                "the number of lanes along that dimension");
       // Adjust offset for the distributed dimension.
       updatedOffsets[destDistDim] =
-          rewriter.getI64IntegerAttr(destDistrDimOffset / subgroupSize);
+          rewriter.getI64IntegerAttr(destDistrDimOffset / numLanesAlongDim);
     }
 
     auto newOp = vector::InsertStridedSliceOp::create(

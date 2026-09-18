@@ -704,6 +704,28 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane() {
   gpu.return
 }
 
+// lane_data packs all 16 reduced elements of dim1 into a single lane and
+// lane_layout is 1 everywhere, so the reduction is lane-local and must lower to
+// a plain vector.reduction.
+// CHECK-LABEL: gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local
+// CHECK:         %[[F0:.*]] = vector.shape_cast %{{.*}} : vector<1x16x1xf32> to vector<16xf32>
+// CHECK:         %[[A0:.*]] = vector.extract %{{.*}}[0, 0] : f32 from vector<1x1xf32>
+// CHECK:         %[[R0:.*]] = vector.reduction <add>, %[[F0]], %[[A0]] : vector<16xf32> into f32
+// CHECK:         vector.insert %[[R0]], %{{.*}} [0, 0] : f32 into vector<1x1xf32>
+// CHECK-NOT:     gpu.shuffle
+// CHECK:         gpu.return
+gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local() {
+    %src = arith.constant dense<0.0>  : vector<1x16x1xf32>
+    %acc = arith.constant dense<0.0>  : vector<1x1xf32>
+    %1 = vector.multi_reduction <add>, %src, %acc
+      [1] : vector<1x16x1xf32> to vector<1x1xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1], lane_data = [1, 16, 1]>, dims = [1]>
+    }> : vector<1x1xf32>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @vector_extract_from_2d
 // CHECK: %[[EXT:.*]] = vector.extract %{{.*}}[0] : vector<1xf32> from vector<4x1xf32>
 gpu.func @vector_extract_from_2d() {
@@ -913,6 +935,22 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
     <{
       target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     }> : vector<64x32xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_partial_lanes
+// CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [3, 0], strides = [1, 1] : vector<1x1xf32> into vector<16x1xf32>
+gpu.func @vector_insert_strided_slice_inner_partial_lanes() {
+  %0 = "test.some_op"()
+    : () -> vector<1x2xf32>
+  %1 = "test.some_op"()
+    : () -> vector<16x2xf32>
+  %2 = vector.insert_strided_slice %0, %1 offsets = [3, 0], strides = [1, 1]
+    : vector<1x2xf32> into vector<16x2xf32>
+  %cl2 = xegpu.convert_layout %2
+    <{
+      target_layout = #xegpu.layout<lane_layout = [1, 2], lane_data = [1, 1]>
+    }> : vector<16x2xf32>
   gpu.return
 }
 
