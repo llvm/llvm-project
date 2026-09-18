@@ -27,7 +27,6 @@ CHECK-NEXT:	Common
 CHECK-NEXT:	Const
 CHECK-NEXT:	ConsumableAutoCast
 CHECK-NEXT:	ConsumableSetOnRead
-CHECK-NEXT:	CoopMatrixType
 CHECK-NEXT:	FormatArg
 CHECK-NEXT:	GuardedBy
 CHECK-NEXT:	GuardedVar
@@ -89,4 +88,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 83
+CHECK-NEXT: Total: 82
