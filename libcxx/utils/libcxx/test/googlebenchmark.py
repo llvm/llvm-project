@@ -190,13 +190,14 @@ def prepare(config, litConfig):
             "configure",
             [
                 cmake,
-                "-S",
-                SOURCE_DIR,
-                "-B",
-                buildDir,
+                "-S", SOURCE_DIR,
+                "-B", buildDir,
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DCMAKE_CXX_COMPILER={}".format(compiler),
                 "-DCMAKE_CXX_FLAGS={}".format(" ".join(flags)),
+                # Set CMAKE_EXE_LINKER_FLAGS in addition to BENCHMARK_CXX_LIBRARIES since we
+                # need CMake's own probe executables to have the right linker flags.
+                "-DCMAKE_EXE_LINKER_FLAGS={}".format(" ".join("-l{}".format(lib) for lib in libraries)),
                 "-DCMAKE_INSTALL_PREFIX={}".format(installDir),
                 "-DCMAKE_INSTALL_LIBDIR=lib",
                 "-DBENCHMARK_CXX_LIBRARIES={}".format(";".join(libraries)),
