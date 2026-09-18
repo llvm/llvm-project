@@ -54,7 +54,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   float80_test
-  NEED_MPFR
+  NEED_MPFR_F80
   SUITE
     libc-fputil-tests
   SRCS
