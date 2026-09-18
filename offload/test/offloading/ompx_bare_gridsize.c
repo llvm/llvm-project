@@ -23,7 +23,7 @@ void get_gridsizes(int *nblocks, int *nthreads) {
 int main(int argc, char *argv[]) {
   int nblocks[3], nthreads[3];
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,1,1] blocks and [32,1,1]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,1,1] blocks and [32,4,1]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,1,1] blocks and [32,4,2]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,16,1] blocks and [32,1,1]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,16,1] blocks and [32,4,1]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,16,1] blocks and [32,4,2]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,16,8] blocks and [32,1,1]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,16,8] blocks and [32,4,1]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "nblocks: %d %d %d, nthreads: %d %d %d\n", nblocks[0],
           nblocks[1], nblocks[2], nthreads[0], nthreads[1], nthreads[2]);
 
-  // CHECK: PluginInterface device 0 info: Launching kernel
+  // CHECK: omptarget device 0 info: Launching kernel
   // CHECK-SAME: __omp_offloading_{{.*}} with [64,16,8] blocks and [32,4,2]
   // CHECK-SAME: threads in BARE mode
   nblocks[0] = nblocks[1] = nblocks[2] = nthreads[0] = nthreads[1] =
