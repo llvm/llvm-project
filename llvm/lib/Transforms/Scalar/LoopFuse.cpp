@@ -107,10 +107,6 @@ static cl::opt<uint32_t> FusionPeelMaxCount(
     cl::desc("Max number of iterations to be peeled from a loop, such that "
              "fusion can take place"));
 
-static cl::opt<bool> EnableFusionCostModel(
-    "loop-fusion-cost-model", cl::Hidden, cl::init(false),
-    cl::desc("Enable the loop fusion profitability model"));
-
 static cl::opt<unsigned> FusionMinReusedValues(
     "loop-fusion-min-reused-values", cl::Hidden, cl::init(1),
     cl::desc("Minimum number of distinct values reused across fused loops"));
@@ -612,9 +608,6 @@ private:
 
   /// Determine if it is beneficial to fuse two loops.
   bool isBeneficialFusion(unsigned ReusedValueCount) const {
-    if (!EnableFusionCostModel)
-      return true;
-
     return ReusedValueCount >= FusionMinReusedValues;
   }
 
@@ -856,9 +849,7 @@ private:
         // Check the dependencies across the loops and do not fuse if it would
         // violate them.
         ReusedValueSet ReusedValues;
-        if (!dependencesAllowFusion(FC0, FC1,
-                                    EnableFusionCostModel ? &ReusedValues
-                                                          : nullptr)) {
+        if (!dependencesAllowFusion(FC0, FC1, &ReusedValues)) {
           LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
           ++InvalidDependencies;
           reportLoopFusion<OptimizationRemarkMissed>(
@@ -1165,8 +1156,8 @@ private:
         continue;
 
       ReusedValues.insert(MatchingLoad);
-      LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via " << *MatchingLoad
-                        << "\n");
+      LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via "
+                        << *MatchingLoad << "\n");
       if (ReusedValues.size() >= FusionMinReusedValues)
         return;
     }
@@ -1735,9 +1726,9 @@ private:
         << RemarkMsg);
   }
 
-  void reportFusionInsufficientReuse(
-      const FusionCandidate &FC0, const FusionCandidate &FC1,
-      unsigned ReusedValueCount) {
+  void reportFusionInsufficientReuse(const FusionCandidate &FC0,
+                                     const FusionCandidate &FC1,
+                                     unsigned ReusedValueCount) {
     assert(ReusedValueCount < FusionMinReusedValues &&
            "Expected insufficient reuse");
 
@@ -1747,11 +1738,9 @@ private:
              << "[" << FC0.Preheader->getParent()->getName()
              << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
              << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
-             << ": found "
-             << NV("ReusedValueCount", ReusedValueCount)
+             << ": found " << NV("ReusedValueCount", ReusedValueCount)
              << " cross-loop reused values; configured minimum is "
-             << NV("MinimumReusedValues",
-                   unsigned(FusionMinReusedValues)));
+             << NV("MinimumReusedValues", unsigned(FusionMinReusedValues)));
   }
 
   /// Fuse two guarded fusion candidates, creating a new fused loop.
