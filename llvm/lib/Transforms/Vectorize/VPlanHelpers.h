@@ -271,11 +271,6 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
-  /// and return the resulting value.
-  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
-                                       const VPLane &Lane);
-
   /// Add the backedge (latch) incoming value to the canonical, reduction and
   /// first-order recurrence phis in all loop headers state's plan, after
   /// the loop body has been generated.
