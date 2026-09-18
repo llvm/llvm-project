@@ -17,6 +17,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -32,9 +33,18 @@ constexpr static long getMajor(long Ver) { return (Ver / 10000) % 100; }
 constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
 
+// HSA_DISABLE_GFX12_STRICT=1 will disable the "-strict" suffix on A0
+static bool isStrictDisabled() {
+  auto DisableEnvVar = sys::Process::GetEnv("HSA_DISABLE_GFX12_STRICT");
+  return (DisableEnvVar.has_value() && DisableEnvVar.value() == "1");
+}
+
 // For A0, print gfx1250-strict to match rocminfo
 static StringRef getRevisionSuffix(long GFXVersion, long ASICRevision) {
-  return (GFXVersion == GFX1250_VERSION && ASICRevision == 0) ? "-strict" : "";
+  return (GFXVersion == GFX1250_VERSION && ASICRevision == 0 &&
+          !isStrictDisabled())
+             ? "-strict"
+             : "";
 }
 
 // Exposed for testing
