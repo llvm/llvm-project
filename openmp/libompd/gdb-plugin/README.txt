@@ -20,6 +20,7 @@ Instructions to use OpenMP specific debugging support for debugging C/C++ OpenMP
 
         - The gdb command 'help ompd' lists the subcommands available for OpenMP-specific debugging.
         - The command 'ompd init' needs to be run first to load the libompd.so available in the $LD_LIBRARY_PATH environment variable, and to initialize the OMPD library.
+        - The plugin uses LLVM Support to load libompd.so. Put the directory that contains libLLVMSupport.so (or libLLVM.so) on LD_LIBRARY_PATH if GDB cannot load the plugin.
         - The 'ompd init' command starts the program run, and the program stops at a temporary breakpoint at the OpenMP internal location ompd_dll_locations_valid().
         - The user can 'continue' from the temporary breakpoint for further debugging.
         - The user may place breakpoints at the OpenMP internal locations 'ompd_bp_thread_begin' and 'ompd_bp_thread_end' to catch the OpenMP thread begin and thread end events.

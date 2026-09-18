@@ -325,7 +325,8 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
           })
-          .Case([&SE, &PSE, L](const VPWidenPointerInductionRecipe *R) {
+          .Case([&SE, &PSE,
+                 L](const VPWidenPointerInductionRecipe *R) -> const SCEV * {
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Start))
@@ -335,7 +336,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getCouldNotCompute();
             return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
           })
-          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) -> const SCEV * {
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
             const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
@@ -963,7 +964,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       bool GuaranteedNotPoison =
           ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
       if (!GuaranteedNotPoison)
-        RHS = Builder.createScalarFreeze(RHS, DL);
+        RHS = Builder.createFreeze(RHS, DL);
       if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
         RHS = Builder.createScalarIntrinsic(
             Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(Ty, 1)}, Ty,
@@ -1058,7 +1059,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       VPValue *OpV = expand(SCEVOp);
       SafeUDivMode = PrevSafeMode;
       if (MayShortCircuit)
-        OpV = Builder.createScalarFreeze(OpV, DL);
+        OpV = Builder.createFreeze(OpV, DL);
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
@@ -1339,30 +1340,71 @@ void vputils::detail::pullOutPermutationsImpl(
     function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
-      if (!Def || !isElementwise(Def))
+    for (VPSingleDefRecipe &Def :
+         make_early_inc_range(make_isa_range<VPSingleDefRecipe>(*VPBB))) {
+      if (!isElementwise(&Def))
         continue;
 
       // At least one of the ops must be a permutation.
-      if (none_of(Def->operands(), MatchPerm))
+      if (none_of(Def.operands(), MatchPerm))
         continue;
 
       // All operands must be a single-use permutation or a live in (splat).
-      if (!all_of(Def->operands(), [&MatchPerm](VPValue *Op) {
+      if (!all_of(Def.operands(), [&MatchPerm](VPValue *Op) {
             return (Op->hasOneUse() && MatchPerm(Op)) || match(Op, m_LiveIn());
           }))
         continue;
 
       // Remove the inner permutations.
-      for (unsigned I = 0, E = Def->getNumOperands(); I != E; ++I)
-        if (VPValue *X = MatchPerm(Def->getOperand(I)))
-          Def->setOperand(I, X);
+      for (unsigned I = 0, E = Def.getNumOperands(); I != E; ++I)
+        if (VPValue *X = MatchPerm(Def.getOperand(I)))
+          Def.setOperand(I, X);
 
-      VPSingleDefRecipe *Res = BuildPerm(Def);
-      Res->insertAfter(Def);
-      Def->replaceUsesWithIf(
+      VPSingleDefRecipe *Res = BuildPerm(&Def);
+      Res->insertAfter(&Def);
+      Def.replaceUsesWithIf(
           Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
     }
   }
+}
+
+// Implements the algorithm described in "Simple and Efficient Construction of
+// Static Single Assignment Form" by Braun et al.
+VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
+                                 DenseMap<VPBasicBlock *, VPValue *> &Defs) {
+  assert(!Defs.empty() && "Defs shouldn't be empty");
+  assert(
+      is_contained(vp_depth_first_shallow(VPBB->getPlan()->getEntry()), VPBB) &&
+      "VPBB isn't reachable from entry");
+  if (VPValue *Def = Defs.lookup(VPBB))
+    return Def;
+  // If the entry block is reached and there's still no def, then Defs is
+  // missing a definition that covers this path.
+  assert(VPBB->getNumPredecessors() && "Not all paths have def");
+
+  if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
+    return reconstructSSA(cast<VPBasicBlock>(Pred), Defs);
+
+  // Multiple predecessors, create a join.
+  Type *Ty = Defs.begin()->second->getScalarType();
+  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+                   .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
+  Defs[VPBB] = Phi;
+  for (auto *Pred : VPBB->predecessors())
+    Phi->addIncoming(reconstructSSA(cast<VPBasicBlock>(Pred), Defs));
+
+  // Fold away trivial phis.
+  // TODO: Remove phi users which have become trivial too.
+  if (all_equal(Phi->incoming_values())) {
+    VPValue *Common = Phi->getIncomingValue(0);
+    Phi->replaceAllUsesWith(Common);
+    for (auto &[_, V] : Defs)
+      if (V == Phi)
+        V = Common;
+    Defs[VPBB] = Common;
+    Phi->eraseFromParent();
+    return Common;
+  }
+
+  return Phi;
 }
