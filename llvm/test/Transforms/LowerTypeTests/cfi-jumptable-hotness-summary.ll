@@ -4,18 +4,26 @@
 ; Tests that functions in a jump table are reordered according to hotness passed
 ; in cfi.functions metadata:
 ; 1. (Highest priority) Within each strict type, hotter functions are placed later:
-;    Cold (0) < Unknown (1) < None (2) < Hot (3) < Critical (4).
+;    Cold (-1) < Unknown (0) < Other (2) < Hot (3).
 ; 2. (High priority) Across fragments, the fragment with the globally hottest function
-;    (@f_critical) is placed at the very end of the jump table.
+;    (@f_hot) is placed at the very end of the jump table.
 ; 3. (Best effort) Each strict type's members remain contiguous (lowered to range checks, no holes).
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-@0 = private unnamed_addr constant [8 x ptr] [ptr @f_critical, ptr @g_unknown, ptr @f_cold, ptr @g_hot, ptr @f_none, ptr @g_cold, ptr @f_unknown, ptr @f_hot], align 16
+@0 = private unnamed_addr constant [7 x ptr] [
+  ptr @f_hot,
+  ptr @g_unknown,
+  ptr @f_cold,
+  ptr @g_other,
+  ptr @f_other,
+  ptr @g_cold,
+  ptr @f_unknown
+], align 16
 
 ; Strict typeid1 and typeid2 functions defined in scrambled order:
-define void @f_critical() !type !0 !type !1 !guid !{i64 14457025706112322155} {
+define void @f_hot() !type !0 !type !1 !guid !{i64 9377218764429055595} {
   ret void
 }
 
@@ -27,11 +35,11 @@ define void @f_cold() !type !0 !type !1 !guid !{i64 3658589069114391263} {
   ret void
 }
 
-define void @g_hot() !type !2 !type !1 !guid !{i64 18081025037889099144} {
+define void @g_other() !type !2 !type !1 !guid !{i64 18081025037889099144} {
   ret void
 }
 
-define void @f_none() !type !0 !type !1 !guid !{i64 1928809046209326017} {
+define void @f_other() !type !0 !type !1 !guid !{i64 1928809046209326017} {
   ret void
 }
 
@@ -40,10 +48,6 @@ define void @g_cold() !type !2 !type !1 !guid !{i64 4485074774011110174} {
 }
 
 define void @f_unknown() !type !0 !type !1 !guid !{i64 1205929326482009600} {
-  ret void
-}
-
-define void @f_hot() !type !0 !type !1 !guid !{i64 9377218764429055595} {
   ret void
 }
 
@@ -68,118 +72,108 @@ define i1 @test_generalized(ptr %p) {
 !1 = !{i32 0, !"typeid2"}
 !2 = !{i32 0, !"typeid.generalized"}
 
-!cfi.functions = !{!3, !4, !5, !6, !7, !8, !9, !10}
-!3 = !{!"f_cold", i8 0, i64 3658589069114391263, !0}
-!4 = !{!"f_unknown", i8 4, i64 1205929326482009600, !0}
-!5 = !{!"f_none", i8 8, i64 1928809046209326017, !0}
+!cfi.functions = !{!3, !4, !5, !6, !7, !8, !9}
+!3 = !{!"f_cold", i8 4, i64 3658589069114391263, !0}
+!4 = !{!"f_unknown", i8 0, i64 1205929326482009600, !0}
+!5 = !{!"f_other", i8 8, i64 1928809046209326017, !0}
 !6 = !{!"f_hot", i8 12, i64 9377218764429055595, !0}
-!7 = !{!"f_critical", i8 16, i64 14457025706112322155, !0}
-!8 = !{!"g_cold", i8 0, i64 4485074774011110174, !2}
-!9 = !{!"g_unknown", i8 4, i64 16691380702939550262, !2}
-!10 = !{!"g_hot", i8 12, i64 18081025037889099144, !2}
-
+!7 = !{!"g_cold", i8 4, i64 4485074774011110174, !2}
+!8 = !{!"g_unknown", i8 0, i64 16691380702939550262, !2}
+!9 = !{!"g_other", i8 8, i64 18081025037889099144, !2}
 
 ^0 = module: (path: "cfi-jumptable-hotness-summary.o", hash: (0, 0, 0, 0, 0))
-^1 = gv: (guid: 100, summaries: (function: (module: ^0, flags: (live: 1), insts: 1, refs: (^2, ^3, ^4, ^5, ^6, ^7, ^8, ^9))))
+^1 = gv: (guid: 100, summaries: (function: (module: ^0, flags: (live: 1), insts: 1, refs: (^2, ^3, ^4, ^5, ^6, ^7, ^8))))
 ^2 = gv: (guid: 3658589069114391263, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
 ^3 = gv: (guid: 1205929326482009600, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
 ^4 = gv: (guid: 1928809046209326017, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
 ^5 = gv: (guid: 9377218764429055595, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
-^6 = gv: (guid: 14457025706112322155, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
-^7 = gv: (guid: 4485074774011110174, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
-^8 = gv: (guid: 16691380702939550262, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
-^9 = gv: (guid: 18081025037889099144, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
-; CHECK-LABEL: define hidden void @f_critical.cfi(
-; CHECK-SAME: ) !type [[META1:![0-9]+]] !type [[META10:![0-9]+]] !guid [[META11:![0-9]+]] {
+^6 = gv: (guid: 4485074774011110174, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
+^7 = gv: (guid: 16691380702939550262, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
+^8 = gv: (guid: 18081025037889099144, summaries: (function: (module: ^0, flags: (live: 1), insts: 1)))
+; CHECK-LABEL: define hidden void @f_hot.cfi(
+; CHECK-SAME: ) !type [[META1:![0-9]+]] !type [[META9:![0-9]+]] !guid [[META10:![0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define hidden void @g_unknown.cfi(
-; CHECK-SAME: ) !type [[META7:![0-9]+]] !type [[META10]] !guid [[META12:![0-9]+]] {
+; CHECK-SAME: ) !type [[META6:![0-9]+]] !type [[META9]] !guid [[META11:![0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define hidden void @f_cold.cfi(
-; CHECK-SAME: ) !type [[META1]] !type [[META10]] !guid [[META13:![0-9]+]] {
+; CHECK-SAME: ) !type [[META1]] !type [[META9]] !guid [[META12:![0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define hidden void @g_hot.cfi(
-; CHECK-SAME: ) !type [[META7]] !type [[META10]] !guid [[META14:![0-9]+]] {
+; CHECK-LABEL: define hidden void @g_other.cfi(
+; CHECK-SAME: ) !type [[META6]] !type [[META9]] !guid [[META13:![0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define hidden void @f_none.cfi(
-; CHECK-SAME: ) !type [[META1]] !type [[META10]] !guid [[META15:![0-9]+]] {
+; CHECK-LABEL: define hidden void @f_other.cfi(
+; CHECK-SAME: ) !type [[META1]] !type [[META9]] !guid [[META14:![0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define hidden void @g_cold.cfi(
-; CHECK-SAME: ) !type [[META7]] !type [[META10]] !guid [[META16:![0-9]+]] {
+; CHECK-SAME: ) !type [[META6]] !type [[META9]] !guid [[META15:![0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define hidden void @f_unknown.cfi(
-; CHECK-SAME: ) !type [[META1]] !type [[META10]] !guid [[META17:![0-9]+]] {
-; CHECK-NEXT:    ret void
-;
-;
-; CHECK-LABEL: define hidden void @f_hot.cfi(
-; CHECK-SAME: ) !type [[META1]] !type [[META10]] !guid [[META18:![0-9]+]] {
+; CHECK-SAME: ) !type [[META1]] !type [[META9]] !guid [[META16:![0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define i1 @test_typeid1(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 32) to i64), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 24) to i64), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 3
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 ;
 ; CHECK-LABEL: define i1 @test_typeid2(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 56) to i64), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 48) to i64), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 7
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 6
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 ;
 ; CHECK-LABEL: define i1 @test_generalized(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 56) to i64), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 48) to i64), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 2
 ; CHECK-NEXT:    ret i1 [[TMP4]]
 ;
 ;
 ; CHECK-LABEL: define private void @.cfi.jumptable(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] prefalign(8) !elf_section_properties [[META19:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] prefalign(8) !elf_section_properties [[META17:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_critical.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_cold.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_none.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_unknown.cfi)
 ; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_hot.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_cold.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_other.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_unknown.cfi)
 ; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_unknown.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_hot.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_other.cfi)
 ; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_cold.cfi)
 ; CHECK-NEXT:    unreachable
 ;
 ;.
 ; CHECK: [[META1]] = !{i32 0, !"typeid1"}
-; CHECK: [[META7]] = !{i32 0, !"typeid.generalized"}
-; CHECK: [[META10]] = !{i32 0, !"typeid2"}
-; CHECK: [[META11]] = !{i64 -3989718367597229461}
-; CHECK: [[META12]] = !{i64 -1755363370770001354}
-; CHECK: [[META13]] = !{i64 3658589069114391263}
-; CHECK: [[META14]] = !{i64 -365719035820452472}
-; CHECK: [[META15]] = !{i64 1928809046209326017}
-; CHECK: [[META16]] = !{i64 4485074774011110174}
-; CHECK: [[META17]] = !{i64 1205929326482009600}
-; CHECK: [[META18]] = !{i64 -9069525309280496021}
-; CHECK: [[META19]] = !{i64 1879002126, i64 8}
+; CHECK: [[META6]] = !{i32 0, !"typeid.generalized"}
+; CHECK: [[META9]] = !{i32 0, !"typeid2"}
+; CHECK: [[META10]] = !{i64 -9069525309280496021}
+; CHECK: [[META11]] = !{i64 -1755363370770001354}
+; CHECK: [[META12]] = !{i64 3658589069114391263}
+; CHECK: [[META13]] = !{i64 -365719035820452472}
+; CHECK: [[META14]] = !{i64 1928809046209326017}
+; CHECK: [[META15]] = !{i64 4485074774011110174}
+; CHECK: [[META16]] = !{i64 1205929326482009600}
+; CHECK: [[META17]] = !{i64 1879002126, i64 8}
 ;.
