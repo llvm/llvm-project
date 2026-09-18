@@ -32349,8 +32349,43 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getZExtOrTrunc(Res, DL, VT);
   }
 
-  if (VT == MVT::i8 || ExpandFunnel)
+  // If expanding the funnel shift is required OR the value type is unsupported
+  if (VT == MVT::i8 || ExpandFunnel) {
+    // DAG Combiner would combine an OR on a masked value and a shifted value
+    // into a shift followed by a funnel shift. The following fold reverses that
+    // operation in case `ExpandFunnel` is set, i.e., if we are not optimizing
+    // for size and if funnel-shift is slow. The fold applies if one operand is
+    // the result of an ISD::SHL or the node is MVT::i8, for which X86 does not
+    // have a funnel-shift instruction.
+    if (Op1.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Amt.getNode())) {
+
+      auto *C = dyn_cast<ConstantSDNode>(Amt.getNode());
+      SDValue SHLOperandShiftAmount = Op1->getOperand(1);
+      uint64_t InvMaskWidth = C->getAPIntValue().urem(EltSizeInBits);
+
+      if (ConstantSDNode *EC =
+              dyn_cast<ConstantSDNode>(SHLOperandShiftAmount.getNode())) {
+        const APInt &ExpectedShiftAmount = EC->getAPIntValue();
+
+        // Check if the shift amounts match.
+        if (ExpectedShiftAmount != InvMaskWidth)
+          return SDValue();
+      }
+
+      uint64_t ShiftAmount = EltSizeInBits - InvMaskWidth;
+      SDValue SHLOperand = Op1.getOperand(0);
+
+      APInt Mask = APInt::getLowBitsSet(EltSizeInBits, ShiftAmount);
+
+      SDValue MaskBitNum = DAG.getShiftAmountConstant(
+          ShiftAmount, SHLOperand.getValueType(), DL);
+      SDValue MaskNode = DAG.getConstant(Mask, DL, VT);
+      SDValue AndMask = DAG.getNode(ISD::AND, DL, VT, SHLOperand, MaskNode);
+      SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, Op0, MaskBitNum);
+      return DAG.getNode(ISD::OR, DL, VT, AndMask, SHL);
+    }
     return SDValue();
+  }
 
   // i16 needs to modulo the shift amount, but i32/i64 have implicit modulo.
   if (VT == MVT::i16) {
