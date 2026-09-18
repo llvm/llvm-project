@@ -52,6 +52,8 @@ void testAssignment(void) {
 U0 ug2 = (U0){ .f1 = 0 }; // expected-error {{cannot copy-initialize an object of type 'U0' since it is a union that is non-trivial to copy}}
 S0 sg3 = (S0){ .f0 = {0}, .f1 = 0 }; // expected-error {{cannot copy-initialize an object of type 'S0' since it contains a union that is non-trivial to copy}}
 S0 *sg4 = &(S0){ .f1 = 0 }; // expected-error {{cannot default-initialize an object of type 'U0' since it is a union that is non-trivial to default-initialize}}
+// A union element cannot be constant-evaluated, but is a constant initializer.
+S0 *sg5 = &(S0){ .f0 = {0}, .f1 = 0 };
 
 void testCompoundLiteral(void) {
   const U0 *t0 = &(U0){ .f0 = g0 }; // expected-error {{cannot construct an automatic compound literal of type 'U0' since it is a union that is non-trivial to destruct}}

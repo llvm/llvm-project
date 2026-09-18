@@ -7542,11 +7542,13 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   //  initializer list shall consist of constant expressions."
   if (IsFileScope)
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr)) {
-      // A default argument or default member initializer containing an
-      // immediate call or source_location is rebuilt at each use site.
-      bool InDefaultArgOrInit =
+      // An element with an immediate call or source_location is left for the
+      // use site; a rebuild in an immediate function context is too early, as
+      // its default arguments still carry the definition's location.
+      bool DeferImmediate =
           isCheckingDefaultArgumentOrInitializer() ||
-          InnermostDeclarationWithDelayedImmediateInvocations().has_value();
+          (InnermostDeclarationWithDelayedImmediateInvocations().has_value() &&
+           isImmediateFunctionContext());
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
         // An immediate invocation is already a ConstantExpr and receives its
@@ -7557,6 +7559,15 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
           continue;
         }
+        if (DeferImmediate) {
+          ImmediateCallVisitor V(Context);
+          V.TraverseStmt(Init);
+          if (V.HasImmediateCalls) {
+            ILE->setInit(i, ConstantExpr::Create(Context, Init));
+            continue;
+          }
+        }
+
         // A glvalue element binds a reference member; store its address.
         bool IsRef = Init->isGLValue();
         Expr::EvalResult Eval;
@@ -7573,16 +7584,9 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
               << Init->getSourceBitField();
           return ExprError();
         }
-
         // Store the value so CodeGen does not re-evaluate the element outside
         // a constant context.
-        bool DeferToUseSite = false;
-        if (InDefaultArgOrInit) {
-          ImmediateCallVisitor V(Context);
-          V.TraverseStmt(Init);
-          DeferToUseSite = V.HasImmediateCalls;
-        }
-        if (Evaluated && !DeferToUseSite)
+        if (Evaluated)
           ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
         else
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
@@ -7592,7 +7596,8 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
                                               LiteralExpr, IsFileScope);
   if (IsFileScope) {
-    if (!LiteralExpr->isTypeDependent() &&
+    // The elements of an initializer list were checked above.
+    if (!isa<InitListExpr>(LiteralExpr) && !LiteralExpr->isTypeDependent() &&
         !LiteralExpr->isValueDependent() &&
         !literalType->isDependentType()) // C99 6.5.2.5p3
       if (CheckForConstantInitializer(LiteralExpr))
