@@ -6,10 +6,13 @@ define { float, float, float } @test(float %x0, float %x1, float %x2, float %x3)
 ; CHECK-SAME: float [[X0:%.*]], float [[X1:%.*]], float [[X2:%.*]], float [[X3:%.*]]) {
 ; CHECK-NEXT:    [[Q0:%.*]] = fdiv float [[X0]], 3.000000e+00
 ; CHECK-NEXT:    [[Q1:%.*]] = fdiv float [[X1]], [[Q0]]
-; CHECK-NEXT:    [[Q2:%.*]] = fdiv float [[X2]], 5.000000e+00
-; CHECK-NEXT:    [[Q3:%.*]] = fdiv float [[X3]], 7.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X2]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[X3]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fdiv <2 x float> [[TMP2]], <float 5.000000e+00, float 7.000000e+00>
 ; CHECK-NEXT:    [[R0:%.*]] = insertvalue { float, float, float } poison, float [[Q1]], 0
+; CHECK-NEXT:    [[Q2:%.*]] = extractelement <2 x float> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { float, float, float } [[R0]], float [[Q2]], 1
+; CHECK-NEXT:    [[Q3:%.*]] = extractelement <2 x float> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[R2:%.*]] = insertvalue { float, float, float } [[R1]], float [[Q3]], 2
 ; CHECK-NEXT:    ret { float, float, float } [[R2]]
 ;
