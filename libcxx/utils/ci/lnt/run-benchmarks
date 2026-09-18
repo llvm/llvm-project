@@ -14,6 +14,7 @@ import logging
 import os
 import pathlib
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -45,6 +46,43 @@ def gather_machine_information(args):
             info['spec'] = f.read().strip()
 
     return info
+
+def gather_lit_features(lit, lit_params, tests):
+    """
+    Gather the Lit features in effect for the configuration we benchmarked, as a dictionary of
+    feature name to feature value.
+    """
+    # Lit features that we report as part of the machine information, and the names
+    # we use in that machine information.
+    REPORTED_FEATURES = {
+        'libcpp-abi-version': 'abi_version',
+        'libcpp-hardening-mode': 'hardening_mode',
+    }
+
+    if not lit.is_file():
+        logging.warning(f'{lit} does not exist: not reporting any Lit feature')
+        return {}
+
+    # Lit prints the features of the configuration it discovered and exits without running anything.
+    command = [str(c) for c in [lit, '--show-suites', *lit_params, tests]]
+    logging.debug(f'$ {" ".join(command)}')
+    try:
+        output = subprocess.check_output(command, stderr=subprocess.PIPE).decode()
+    except subprocess.CalledProcessError as e:
+        logging.warning(f'Could not determine the Lit features in effect: {e.stderr.decode()}')
+        return {}
+
+    matches = re.findall(r'^\s*Available Features:\s*(.+)$', output, flags=re.MULTILINE)
+    if len(matches) != 1:
+        logging.warning(f'Expected exactly one list of features in the output of Lit, got {len(matches)}')
+        return {}
+    parsed = dict(f.split('=', 1) for f in matches[0].split() if '=' in f)
+
+    reported = {}
+    for (name, value) in parsed.items():
+        if name in REPORTED_FEATURES:
+            reported[REPORTED_FEATURES[name]] = value
+    return reported
 
 def gather_run_information(args):
     """
@@ -168,25 +206,28 @@ def main(argv):
         run(build_cmd, enforce_success=False) # if the build fails, carry on: we'll fail later and submit empty LNT results
 
         logging.info(f'Running benchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
+        lit_params = ['--param', f'compiler={args.compiler}',
+                      '--param', 'optimization=speed',
+                      '--param', 'std=c++26',
+                      '--param', 'enable_werror=False'] # older versions of the library trigger new warnings, don't fail
+        if args.spec_dir is not None:
+            lit_params += ['--param', f'spec_dir={args.spec_dir}']
         cmd = [args.git_repo / 'libcxx/utils/test-at-commit',
                             '--git-repo', args.git_repo,
-                            '--build-dir', artifacts / 'benchmarks',
+                            '--build-dir', artifacts / 'benchmarks-build',
                             '--test-suite-commit', args.test_suite_commit,
+                            '--tmp-src-dir', artifacts / 'benchmarks-src',
                             '--libcxx-installation', artifacts / 'libcxx-install',
                             '--compiler', args.compiler,
                             '--',
                             '-j1', '--time-tests', '--test-output=failed',
-                            '--param', f'compiler={args.compiler}',
-                            '--param', 'optimization=speed',
-                            '--param', 'std=c++26',
-                            '--param', 'enable_werror=False', # older versions of the library trigger new warnings, don't fail
-                            artifacts / 'benchmarks/libcxx/test/benchmarks']
-        if args.spec_dir is not None:
-            cmd += ['--param', f'spec_dir={args.spec_dir}']
+                            *lit_params,
+                            artifacts / 'benchmarks-build/libcxx/test/benchmarks']
         if args.filter is not None:
             cmd += ['--filter', args.filter]
         run(cmd, enforce_success=False) # some benchmarks may fail to build/run at some commits, and that's okay
-        consolidate = [args.git_repo / 'libcxx/utils/consolidate-benchmarks', artifacts / 'benchmarks']
+
+        consolidate = [args.git_repo / 'libcxx/utils/consolidate-benchmarks', artifacts / 'benchmarks-build']
         if args.dry_run:
             run(consolidate)
         else:
@@ -198,7 +239,10 @@ def main(argv):
         importreport = ['lnt', 'importreport', '--order', str(order), '--machine', args.machine]
         for arg in dict_to_params(gather_run_information(args)):
             importreport += ['--run-info', arg]
-        for arg in dict_to_params(gather_machine_information(args)):
+        machine_info = {**gather_machine_information(args),
+                        **gather_lit_features(artifacts / 'benchmarks-build/bin/llvm-lit', lit_params,
+                                              artifacts / 'benchmarks-build/libcxx/test/benchmarks')}
+        for arg in dict_to_params(machine_info):
             importreport += ['--machine-info', arg]
         output = args.output.resolve()
         importreport += [artifacts / 'benchmarks.lnt', output]

@@ -1472,9 +1472,10 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   }
 
   // The active set is precomputed separately from the ownership par_dims for
-  // privatizations; prefer that attribute when present. The inactive dims are
+  // privatizations, and a predicate region may likewise state which dims run
+  // it unpredicated; prefer that attribute when present. The inactive dims are
   // the launch dims which are not active.
-  if (isa<acc::PrivateLocalOp, acc::PrivatizeOp>(op)) {
+  if (isa<acc::PrivateLocalOp, acc::PrivatizeOp, acc::PredicateRegionOp>(op)) {
     if (mlir::acc::ActiveParDimsAttr precomputedActiveParDims =
             getActiveParDimsAttr(op)) {
       mlir::acc::GPUParallelDimAttr lowestParDim =
@@ -2324,10 +2325,8 @@ void ACCCGToGPULowering::processPredicateRegion(
           bool predicatesThreadX = llvm::any_of(
               parDimsPair.second,
               [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
-          if (predicatesThreadX) {
-            createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
-                                   interOp->getContext(), parDimsPair.second));
-          }
+          if (predicatesThreadX)
+            createPerRowBarrier(loc);
         }
         // For acc routine ThreadY routines, skip barrier
       } else if (!parDimsPair.first.empty()) {
@@ -2776,11 +2775,11 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   Value load;
   if (threadYIsActive) {
     Value threadYId = getThreadId(loc, gpu::Dimension::y);
-    load = memref::LoadOp::create(rewriter, privatize->getLoc(), baseTy, alloca,
+    load = memref::LoadOp::create(rewriter, privatize->getLoc(), alloca,
                                   ValueRange{threadYId});
   } else {
-    load =
-        memref::LoadOp::create(rewriter, privatize->getLoc(), baseTy, alloca);
+    load = memref::LoadOp::create(rewriter, privatize->getLoc(), alloca,
+                                  ValueRange{});
   }
   rewriter.setInsertionPointAfter(load.getDefiningOp());
   mapping.map(privatize.getResult(), load);
@@ -3948,7 +3947,8 @@ void ACCCGToGPULowering::processReductionCombineOp(acc::ReductionCombineOp op) {
       // by the parent predicate_region processing.
       // Reloading a grid-shared slot races with other blocks; record
       // it and replace with the block-reduced register value in the fixup.
-      auto srcLoad = memref::LoadOp::create(rewriter, loc, srcMemref);
+      auto srcLoad =
+          memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
       pendingCombineReloads.push_back({srcMemref, srcLoad});
       constructAtomicAccumulation(loc, destMemref, /*indices=*/{}, srcLoad,
                                   kind);
@@ -3993,7 +3993,8 @@ void ACCCGToGPULowering::processCombineRegionOp(
             return;
           Value srcMemref = mapping.lookupOrDefault(accumulateOp.getMemref());
           // Recorded and patched in the fixup to avoid the reload race.
-          auto reductionLoad = memref::LoadOp::create(rewriter, loc, srcMemref);
+          auto reductionLoad =
+              memref::LoadOp::create(rewriter, loc, srcMemref, ValueRange{});
           pendingCombineReloads.push_back({srcMemref, reductionLoad});
           constructAtomicAccumulation(loc,
                                       mapping.lookupOrDefault(op.getDestVar()),
@@ -4009,7 +4010,7 @@ void ACCCGToGPULowering::processCombineRegionOp(
       if (isa<ComplexType>(memrefTy.getElementType())) {
         Location loc = op.getLoc();
         Value reductionResult =
-            memref::LoadOp::create(rewriter, loc, privateMemref);
+            memref::LoadOp::create(rewriter, loc, privateMemref, ValueRange{});
         arith::AtomicRMWKind kind = arith::AtomicRMWKind::addf;
         op.getRegion().walk([&](Operation *innerOp) {
           if (isa<complex::MulOp>(innerOp))
