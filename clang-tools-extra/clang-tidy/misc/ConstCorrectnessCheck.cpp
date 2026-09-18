@@ -40,14 +40,10 @@ AST_MATCHER(ReferenceType, isSpelledAsLValue) {
   return Node.isSpelledAsLValue();
 }
 AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
+AST_MATCHER(AutoType, isDecltypeAuto) { return Node.isDecltypeAuto(); }
 
 AST_MATCHER(TypeLoc, hasContainedAutoType) {
   return !Node.getContainedAutoTypeLoc().isNull();
-}
-
-AST_MATCHER(TypeLoc, hasContainedDecltypeAutoType) {
-  const AutoTypeLoc Loc = Node.getContainedAutoTypeLoc();
-  return !Loc.isNull() && Loc.isDecltypeAuto();
 }
 
 AST_MATCHER(FunctionDecl, isTemplate) {
@@ -148,7 +144,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(hasCanonicalType(referenceType(pointee(functionType()))));
 
   // 'const' cannot be combined with 'decltype(auto)'.
-  const auto DecltypeAutoType = hasTypeLoc(hasContainedDecltypeAutoType());
+  const auto DecltypeAutoType = hasType(autoType(isDecltypeAuto()));
 
   const auto CommonExcludeTypes =
       anyOf(ConstType, ConstReference, RValueReference, TemplateType,

@@ -60,9 +60,6 @@ Limitations
 
 The check does not run on `C` code.
 
-Variables declared with ``decltype(auto)`` are not analyzed, because
-``decltype(auto)`` cannot be combined with ``const``.
-
 The check will not analyze templated variables, template functions or variables
 that are instantiation dependent. Different instantiations can result
 in different ``const`` correctness properties and in general it is not
