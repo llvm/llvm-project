@@ -144,18 +144,22 @@ TypeSanitizer::TypeSanitizer(Module &M)
 }
 
 void TypeSanitizer::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(M.getContext());
+  LLVMContext &C = M.getContext();
+  IRBuilder<> IRB(C);
   OrdTy = IRB.getInt32Ty();
   U64Ty = IRB.getInt64Ty();
   Type *BoolType = IRB.getInt1Ty();
 
   AttributeList Attr;
-  Attr = Attr.addFnAttribute(M.getContext(), Attribute::NoUnwind);
+  Attr = Attr.addFnAttribute(C, Attribute::NoUnwind);
+  Attribute::AttrKind ZExtAttr =
+    TargetLibraryInfo::getExtAttrForI32Param(TargetTriple, /*Signed=*/false);
+
   // Initialize the callbacks.
   TysanCheck = M.getOrInsertFunction(
       kTysanCheckName,
-      Attr.addParamAttribute(M.getContext(), 1, Attribute::ZExt)
-          .addParamAttribute(M.getContext(), 3, Attribute::NoExt),
+      Attr.addParamExtAttribute(C, 1, ZExtAttr)
+          .addParamExtAttribute(C, 3, Attribute::NoExt),
       IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer to data to be read.
       OrdTy,          // Size of the data in bytes.
@@ -168,7 +172,7 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
 
   TysanIntrumentMemInst = M.getOrInsertFunction(
       "__tysan_instrument_mem_inst",
-      Attr.addParamAttribute(M.getContext(), 3, Attribute::ZExt),
+      Attr.addParamExtAttribute(C, 3, ZExtAttr),
       IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer of data to be written to
       IRB.getPtrTy(), // Pointer of data to write
@@ -178,8 +182,8 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
 
   TysanInstrumentWithShadowUpdate = M.getOrInsertFunction(
       "__tysan_instrument_with_shadow_update",
-      Attr.addParamAttribute(M.getContext(), 2, Attribute::ZExt)
-          .addParamAttribute(M.getContext(), 4, Attribute::NoExt),
+      Attr.addParamExtAttribute(C, 2, ZExtAttr)
+          .addParamExtAttribute(C, 4, Attribute::NoExt),
       IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer to data to be read
       IRB.getPtrTy(), // Pointer to type descriptor
