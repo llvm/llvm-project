@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
 
 constexpr int expr() {
-  if (({
+  if (({ // expected-error {{value of type 'void' is not contextually convertible to 'bool'}}
         int f;
         f = 0;
         if (f)

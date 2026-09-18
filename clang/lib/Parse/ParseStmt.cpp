@@ -1185,7 +1185,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       ParsedStmtContext::Compound |
       (isStmtExpr ? ParsedStmtContext::InStmtExpr : ParsedStmtContext());
 
-  bool LastIsError = false;
+  bool LastIsInvalid = false;
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
     if (Tok.is(tok::annot_pragma_unused)) {
@@ -1242,14 +1242,16 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 
     if (R.isUsable())
       Stmts.push_back(R.get());
-    LastIsError = R.isInvalid();
+    LastIsInvalid = R.isInvalid();
   }
-  // StmtExpr needs to do copy initialization for last statement.
-  // If last statement is invalid, the last statement in `Stmts` will be
-  // incorrect. Then the whole compound statement should also be marked as
-  // invalid to prevent subsequent errors.
-  if (isStmtExpr && LastIsError && !Stmts.empty())
-    return StmtError();
+  // The last statement of a statement expression is its value and was already
+  // copy-initialized when parsed. If it was dropped, the statement now at the
+  // end must not become the value, so replace the dropped one with a null
+  // statement. Don't return StmtError here: an invalid statement does not
+  // imply an error was diagnosed (e.g. `__typeof__(x);` only warns), and an
+  // undiagnosed ExprError silently drops the statement expression.
+  if (isStmtExpr && LastIsInvalid)
+    Stmts.push_back(Actions.ActOnNullStmt(PrevTokLocation).get());
 
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using
