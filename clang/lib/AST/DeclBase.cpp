@@ -547,10 +547,6 @@ TranslationUnitDecl *Decl::getTranslationUnitDecl() {
   return cast<TranslationUnitDecl>(DC);
 }
 
-ASTContext &Decl::getASTContext() const {
-  return getTranslationUnitDecl()->getASTContext();
-}
-
 /// Helper to get the language options from the ASTContext.
 /// Defined out of line to avoid depending on ASTContext.h.
 const LangOptions &Decl::getLangOpts() const {
@@ -1486,6 +1482,18 @@ DeclContext *DeclContext::getNonTransparentContext() {
     assert(DC && "All transparent contexts should have a parent!");
   }
   return DC;
+}
+
+ASTContext &DeclContext::getParentASTContextSlow() const {
+  const DeclContext *DC = this;
+  while (!DC->isTranslationUnit()) {
+    DC = DC->getParent();
+    assert(DC && "This decl context is not contained in a translation unit!");
+  }
+
+  ASTContext &Context = cast<TranslationUnitDecl>(DC)->getASTContext();
+  CachedASTContext = &Context;
+  return Context;
 }
 
 DeclContext *DeclContext::getPrimaryContext() {
