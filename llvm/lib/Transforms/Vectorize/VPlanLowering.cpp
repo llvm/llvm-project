@@ -171,11 +171,16 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan, bool IVUpdateMayOverflow) {
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
   LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
+  // If the canonical IV increment could overflow, adjust the trip count (TC)
+  // to TC - VF * UF.
   VPValue *IncrementValue = CanonicalIVIncrement;
   if (IVUpdateMayOverflow) {
     IncrementValue = TopRegion->getCanonicalIV();
-    TC = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
-                              {TC, &Plan.getVFxUF()}, DL);
+    VPValue &VFxUF = Plan.getVFxUF();
+    VPValue *Sub = Builder.createSub(TC, &VFxUF);
+    VPValue *Cmp = Builder.createICmp(CmpInst::Predicate::ICMP_UGT, TC, &VFxUF);
+    VPValue *Zero = Plan.getConstantInt(TC->getScalarType(), 0);
+    TC = Builder.createSelect(Cmp, Sub, Zero);
   }
 
   // Create the active lane mask for the next iteration of the loop before the

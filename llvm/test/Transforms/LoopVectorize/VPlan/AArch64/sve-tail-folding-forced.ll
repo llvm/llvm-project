@@ -20,7 +20,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: vector.ph:
 ; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = wide active lane mask ir<0>, vp<[[TC]]>, ir<1>
 ; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY_EXTRACT:%.+]]> = extract-vector-for-part vp<[[LANEMASK_ENTRY]]>, ir<0>
-; VPLANS-NEXT:   EMIT vp<[[TC_MINUS_VF:%[0-9]+]]> = TC > VF ? TC - VF : 0 vp<[[TC]]>, vp<[[VFxUF]]>
+; VPLANS-NEXT:   EMIT vp<[[SUB:%.+]]> = sub vp<[[TC]]>, vp<[[VFxUF]]>
+; VPLANS-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp ugt vp<[[TC]]>, vp<[[VFxUF]]>
+; VPLANS-NEXT:   EMIT vp<[[TC_MINUS_VF:%.+]]> = select vp<[[CMP]]>, vp<[[SUB]]>, ir<0>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
