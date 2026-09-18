@@ -12,6 +12,13 @@
 #define USE_C     CLK_COOPERATIVE_MATRIX_ACCUMULATOR
 #define ROW_MAJOR CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR
 
+// ---------------------------------------------------------------------------
+// 0. Use of coop mat type without specifying pragma
+// ---------------------------------------------------------------------------
+typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatX_t; // expected-error {{cooperative matrix types require OpenCL extension 'cl_khr_cooperative_matrix' to be enabled via pragma}}
+
+#pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
+
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_t;
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_B))) MatB_t;
 typedef int   __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_int_t;
