@@ -9,9 +9,36 @@
 #ifndef LLVM_SUPPORT_LLVMDRIVER_H
 #define LLVM_SUPPORT_LLVMDRIVER_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorOr.h"
+
+#include <functional>
+#include <memory>
+
 namespace llvm {
 
-struct ToolContext {
+class ToolSession;
+class ToolContext;
+
+using ToolMainFn = std::function<int(int, char **, const ToolContext &)>;
+
+/// An LLVM command-line tool that can be invoked without creating a process.
+struct CallableTool {
+  StringRef Name;
+  ToolMainFn Main;
+
+  explicit operator bool() const { return static_cast<bool>(Main); }
+};
+
+/// Describes how a tool was invoked and provides access to its host session.
+class ToolContext {
+  ToolSession *Session = nullptr;
+
+  friend class ToolSession;
+
+public:
   const char *Path;
   const char *PrependArg;
   // PrependArg will be added unconditionally by the llvm-driver, but
@@ -20,6 +47,51 @@ struct ToolContext {
   // point to the llvm-driver executable, where PrependArg will be needed to
   // invoke the correct tool.
   bool NeedsPrependArg;
+
+  ToolContext(const char *Path, const char *PrependArg, bool NeedsPrependArg)
+      : Path(Path), PrependArg(PrependArg), NeedsPrependArg(NeedsPrependArg) {}
+
+  /// Finds a tool registered with the session that owns this context.
+  LLVM_ABI ErrorOr<CallableTool> getCallableTool(StringRef Name) const;
+
+  /// Invokes another tool registered with the same host session.
+  LLVM_ABI ErrorOr<int> callTool(ArrayRef<const char *> Args) const;
+
+  /// Returns true when this invocation is owned by a tool session.
+  bool hasSession() const { return Session != nullptr; }
+};
+
+/// Owns LLVM process initialization and an in-process tool registry.
+///
+/// A long-lived host constructs one session and uses it for every embedded
+/// tool invocation. The individual tools borrow a ToolContext and therefore do
+/// not initialize or shut down LLVM themselves.
+///
+/// LLVM tools may use process-global state. Tool invocations must be externally
+/// serialized; concurrent calls are not supported.
+class LLVM_ABI ToolSession {
+public:
+  ToolSession(int &Argc, char **&Argv, ArrayRef<CallableTool> Tools,
+              bool InstallPipeSignalExitHandler = true,
+              bool NeedsPOSIXUtilitySignalHandling = false);
+  ~ToolSession();
+
+  ToolSession(const ToolSession &) = delete;
+  ToolSession &operator=(const ToolSession &) = delete;
+
+  /// Invokes the tool named by Args[0]. Args may instead contain a
+  /// process-style argv beginning with the session executable or an LLVM
+  /// multicall name.
+  ErrorOr<int> callTool(ArrayRef<const char *> Args);
+
+private:
+  struct Impl;
+  std::unique_ptr<Impl> PImpl;
+
+  ErrorOr<CallableTool> findTool(StringRef Name) const;
+  ToolContext makeContext(StringRef InvokedName, const char *PrependArg);
+
+  friend class ToolContext;
 };
 
 } // namespace llvm

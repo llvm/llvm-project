@@ -13,6 +13,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -22,6 +23,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -205,6 +207,9 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
 
 void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                     CrashReportInfo *CrashInfo) const {
+  if (InProcessToolContext)
+    OS << " (in-process)\n";
+
   // Always quote the exe.
   OS << ' ';
   llvm::sys::printArg(OS, Executable, /*Quote=*/true);
@@ -367,6 +372,21 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
 
   auto Args = llvm::toStringRefArray(Argv.data());
 
+  if (InProcessToolContext) {
+    llvm::ErrorOr<int> Result = InProcessToolContext->callTool(
+        ArrayRef<const char *>(Argv).drop_back());
+    if (!Result) {
+      if (ErrMsg)
+        *ErrMsg = Result.getError().message();
+      if (ExecutionFailed)
+        *ExecutionFailed = true;
+      return -1;
+    }
+    if (ExecutionFailed)
+      *ExecutionFailed = false;
+    return *Result;
+  }
+
   // Use Job-specific redirect files if they are present.
   if (!RedirectFiles.empty()) {
     std::vector<std::optional<StringRef>> RedirectFilesOptional;
@@ -387,6 +407,12 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
                                    ErrMsg, ExecutionFailed, &ProcStat);
 }
 
+void Command::enableFree() {
+  llvm::erase_if(Arguments, [](const char *Arg) {
+    return StringRef(Arg) == "-disable-free";
+  });
+}
+
 CC1Command::CC1Command(const Action &Source, const Tool &Creator,
                        ResponseFileSupport ResponseSupport,
                        const char *Executable,
@@ -396,6 +422,7 @@ CC1Command::CC1Command(const Action &Source, const Tool &Creator,
     : Command(Source, Creator, ResponseSupport, Executable, Arguments, Inputs,
               Outputs, PrependArg) {
   InProcess = true;
+  SupportsDisableFree = true;
 }
 
 void CC1Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,

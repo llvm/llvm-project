@@ -24,6 +24,10 @@
 #include <utility>
 #include <vector>
 
+namespace llvm {
+class ToolContext;
+}
+
 namespace clang {
 namespace driver {
 
@@ -151,6 +155,10 @@ class Command {
   /// Information on executable run provided by OS.
   mutable std::optional<llvm::sys::ProcessStatistics> ProcStat;
 
+  /// Non-owning host context used to invoke this command without spawning a
+  /// process.
+  const llvm::ToolContext *InProcessToolContext = nullptr;
+
   /// The bound architecture for this command (e.g. "arm64", "gfx90a").
   std::string BoundArchStr;
 
@@ -176,6 +184,9 @@ public:
 
   /// Whether the command will be executed in this process or not.
   bool InProcess = false;
+
+  /// Whether this command accepts -disable-free.
+  bool SupportsDisableFree = false;
 
   Command(const Action &Source, const Tool &Creator,
           ResponseFileSupport ResponseSupport, const char *Executable,
@@ -237,6 +248,15 @@ public:
   }
 
   void replaceExecutable(const char *Exe) { Executable = Exe; }
+
+  /// Execute this command through a tool registered with the host session.
+  void setInProcessToolContext(const llvm::ToolContext &Context) {
+    InProcessToolContext = &Context;
+    InProcess = true;
+  }
+
+  /// Ensure that this command frees memory before returning to its caller.
+  void enableFree();
 
   const char *getExecutable() const { return Executable; }
 
