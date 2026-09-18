@@ -96,6 +96,11 @@ def main(argv):
              'separated from other arguments with a `--`.')
     parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
         help='Optional path to the Git repository to use. By default, the current working directory is used.')
+    parser.add_argument('--tmp-src-dir', type=pathlib.Path, required=False,
+        help='Optional path to use for the ephemeral checkout of the test suite. By default, a temporary '
+             'directory is used and it is cleaned up after the run. If a custom directory is specified, it '
+             'is not cleaned up automatically. Note that the build directory refers to that checkout, so '
+             'keeping it around is required in order to use the build directory after the run.')
     args = parser.parse_args(argv)
 
     args.build_dir = args.build_dir.resolve()
@@ -115,8 +120,11 @@ def main(argv):
         if args.test_suite_commit is None:
             test_suite_sources = args.git_repo
         else:
-            tempdirs.append(tempfile.TemporaryDirectory())
-            test_suite_sources = pathlib.Path(tempdirs[-1].name)
+            if args.tmp_src_dir is not None:
+                test_suite_sources = args.tmp_src_dir
+            else:
+                tempdirs.append(tempfile.TemporaryDirectory())
+                test_suite_sources = pathlib.Path(tempdirs[-1].name)
             checkout_dirs = [d for d in LIBCXX_REQUIRED_DIRECTORIES if exists_in_commit(args.git_repo, args.test_suite_commit, d)]
             checkout_subdirectories(args.git_repo, args.test_suite_commit, checkout_dirs, test_suite_sources)
 
