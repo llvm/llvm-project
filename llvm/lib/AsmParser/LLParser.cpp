@@ -1618,10 +1618,11 @@ bool LLParser::parseGlobal(const std::string &Name, unsigned NameID,
       if (Alignment)
         GV->setAlignment(*Alignment);
     } else if (Lex.getKind() == lltok::kw_code_model) {
-      CodeModel::Model CodeModel;
+      std::optional<CodeModel::Model> CodeModel;
       if (parseOptionalCodeModel(CodeModel))
         return true;
-      GV->setCodeModel(CodeModel);
+      if (CodeModel)
+        GV->setCodeModel(*CodeModel);
     } else if (Lex.getKind() == lltok::MetadataVar) {
       if (parseGlobalObjectMetadataAttachment(*GV))
         return true;
@@ -2644,10 +2645,12 @@ bool LLParser::parseOptionalPrefAlignment(MaybeAlign &Alignment) {
 /// parseOptionalCodeModel
 ///   ::= /* empty */
 ///   ::= 'code_model' "large"
-bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
-  Lex.Lex();
+bool LLParser::parseOptionalCodeModel(std::optional<CodeModel::Model> &model) {
+  model = std::nullopt;
+  if (!EatIfPresent(lltok::kw_code_model))
+    return false;
   auto StrVal = Lex.getStrVal();
-  auto ErrMsg = "expected global code model string";
+  auto ErrMsg = "expected code model string";
   if (StrVal == "tiny")
     model = CodeModel::Tiny;
   else if (StrVal == "small")
@@ -7241,6 +7244,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   std::string Section;
   std::string Partition;
   MaybeAlign Alignment, PrefAlignment;
+  std::optional<CodeModel::Model> FnCodeModel;
   std::string GC;
   GlobalValue::UnnamedAddr UnnamedAddr = GlobalValue::UnnamedAddr::None;
   unsigned AddrSpace = 0;
@@ -7259,6 +7263,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
       parseOptionalComdat(FunctionName, C) ||
       parseOptionalAlignment(Alignment) ||
       parseOptionalPrefAlignment(PrefAlignment) ||
+      parseOptionalCodeModel(FnCodeModel) ||
       (EatIfPresent(lltok::kw_gc) && parseStringConstant(GC)) ||
       (EatIfPresent(lltok::kw_prefix) && parseGlobalTypeAndValue(Prefix)) ||
       (EatIfPresent(lltok::kw_prologue) && parseGlobalTypeAndValue(Prologue)) ||
@@ -7361,6 +7366,8 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
   if (Alignment)
     Fn->setAlignment(*Alignment);
   Fn->setPreferredAlignment(PrefAlignment);
+  if (FnCodeModel)
+    Fn->setCodeModel(*FnCodeModel);
   Fn->setSection(Section);
   Fn->setPartition(Partition);
   Fn->setComdat(C);
