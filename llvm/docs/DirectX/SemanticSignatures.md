@@ -193,8 +193,8 @@ constraints are satisfied:
 - Components are ordered from arbitrary values, to system values, to system
   generated values.
 - A system value or system generated value cannot be placed in a dynamically
-  indexed row. Multi-row elements define the dynamically indexed range that
-  they cover.
+  indexed row. A dynamically indexed row is a row within the range covered by
+  a multi-row element, where the row is selected using a dynamic index.
 
 Some semantic interpretations require additional handling:
 
