@@ -9,10 +9,10 @@
 #ifndef FLANG_RT_RUNTIME_ENVIRONMENT_H_
 #define FLANG_RT_RUNTIME_ENVIRONMENT_H_
 
-#include "../lib/runtime/array.h"
 #include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Runtime/entry-names.h"
+#include "array.h"
 
 struct EnvironmentDefaultList;
 

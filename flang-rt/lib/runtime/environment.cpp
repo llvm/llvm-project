@@ -1,4 +1,3 @@
-#include <string_view>
 //===-- lib/runtime/environment.cpp -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "environment-default-list.h"
 #include "flang-rt/runtime/environment.h"
+#include "environment-default-list.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
@@ -135,7 +134,7 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
     }
 
     // unitList is not yet correct, might be nullptr or pointing to ':'.
-    unitListStr = strchr(exceptionStr, ':');
+    unitListStr = std::strchr(exceptionStr, ':');
 
     if (firstException && (nullptr == unitListStr) &&
         !isdigit(exceptionStr[0])) {
@@ -187,7 +186,7 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
       lb = ub = -1;
 #if _WIN32
       units =
-          strtok_s(unitListSvptr ? nullptr : unitListStr, ";", &unitListSvptr);
+          strtok_s(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
 #else
       units =
           strtok_r(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
@@ -198,12 +197,12 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
 
       // single unit or range of units.
       // If hyphen is detected in units, assume range
-      if (strchr(units, '-')) {
+      if (std::strchr(units, '-')) {
         nexpected = 2;
-        nread = sscanf(units, "%u-%u%1s", &lb, &ub, remStr);
+        nread = std::sscanf(units, "%u-%u%1s", &lb, &ub, remStr);
       } else {
         nexpected = 1;
-        nread = sscanf(units, "%u%1s", &lb, remStr);
+        nread = std::sscanf(units, "%u%1s", &lb, remStr);
         ub = lb;
       }
       if (nread != nexpected || (lb < 0) || (ub < 0) || (lb > ub)) {
@@ -219,7 +218,7 @@ bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
     }
   }
 
-  free(envStr); // from strdup()
+  std::free(envStr); // from strdup()
 
   if (success) {
     conversion = gblConversion;

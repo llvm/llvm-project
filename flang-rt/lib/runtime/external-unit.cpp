@@ -132,7 +132,6 @@ bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
     convert = explicitRtConvert;
   }
 
-  executionEnvironment.UnitRtConvert(unitNumber());
   swapEndianness_ = convert == Convert::Swap ||
       (convert == Convert::LittleEndian && !isHostLittleEndian) ||
       (convert == Convert::BigEndian && isHostLittleEndian);
