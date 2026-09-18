@@ -17,6 +17,11 @@
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/mman.h>
 #include <unistd.h>
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#elif !defined(MAP_ANONYMOUS) && defined(_AIX)
+#define MAP_ANONYMOUS 0x10
+#endif
 #endif
 
 using namespace Fortran::runtime;
