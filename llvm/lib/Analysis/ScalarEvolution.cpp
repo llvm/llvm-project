@@ -13381,6 +13381,7 @@ const SCEV *ScalarEvolution::computeMaxBECountForLT(const SCEV *Start,
   APInt Delta = MaxEnd - MinStart;
 
   // Try to refine Delta in case End - Start gives a tighter bound after
+  // folding.
   Delta = APIntOps::umin(Delta, getUnsignedRangeMax(getMinusSCEV(End, Start)));
 
   return getUDivCeilSCEV(getConstant(Delta), getConstant(StrideForMaxBECount));
