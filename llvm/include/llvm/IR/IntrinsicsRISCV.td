@@ -2126,10 +2126,11 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
 
-  // Packed Multiply High Accumulate with Byte/Halfword Index.
+  // Packed Multiply High Accumulate.
   // The result and first two operands have the same vector type; the third
-  // operand's elements are half as wide (byte index for .b forms, halfword
-  // index for .w forms), with twice the element count.
+  // operand's elements are half as wide, with twice the element count. For
+  // the .b forms the third operand holds bytes, for the .w forms it holds
+  // halfwords.
   def int_riscv_pmhacc_b0
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,

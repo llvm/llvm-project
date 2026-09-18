@@ -2012,9 +2012,9 @@ def riscv_mhraccu  : RVSDNode<"MHRACCU", SDT_RISCVSameTernary>;
 def riscv_mhaccsu  : RVSDNode<"MHACCSU", SDT_RISCVSameTernary>;
 def riscv_mhraccsu : RVSDNode<"MHRACCSU", SDT_RISCVSameTernary>;
 
-// Multiply high accumulate with byte/halfword index operations. The packed
-// form's third operand has smaller elements than the result; the scalar form
-// (RV32) accumulates one word of the result.
+// Multiply high accumulate operations. The packed form's third operand has
+// smaller elements than the result; the scalar form (RV32) accumulates one
+// word of the result.
 def SDT_RISCVMulHighAccumulateByHalves
     : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                            SDTCisSameAs<0, 2>]>;
@@ -2995,7 +2995,7 @@ let append Predicates = [IsRV32] in {
   def : Pat<(XLenVT (riscv_nclipu XLenVT:$lo, XLenVT:$hi, timm:$imm)),
             (NCLIPIU (BuildGPRPair GPR:$lo, GPR:$hi), timm:$imm)>;
 
-  // 16-bit multiply high accumulate with byte index patterns
+  // 16-bit multiply high accumulate patterns
   def : Pat<(XLenVecI16VT (riscv_mhacc_h_b0 (XLenVecI16VT GPR:$rd),
                           (XLenVecI16VT GPR:$rs1),
                           (XLenVecI8VT GPR:$rs2))),
@@ -3013,9 +3013,8 @@ let append Predicates = [IsRV32] in {
                            (XLenVecI8VT GPR:$rs2))),
             (PMHACCSU_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
-  // Packed multiply high accumulate with halfword index, scalar halfword
-  // (RV32). The packed intrinsic expands to a pair of these, one per result
-  // word.
+  // Packed multiply high accumulate, scalar halfword (RV32). The packed
+  // intrinsic expands to a pair of these, one per result word.
   def : Pat<(XLenVT (riscv_mhacc_w_h0 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
                         (v2i16 GPR:$rs2))),
             (MHACC_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
@@ -3195,7 +3194,7 @@ let append Predicates = [IsRV64] in {
   def : PatMulPartsAcc<riscv_pmaccsu_halves_00, PMACCSU_W_H00, v2i32, v4i16>;
   def : PatMulPartsAcc<riscv_pmaccsu_halves_11, PMACCSU_W_H11, v2i32, v4i16>;
 
-  // Packed multiply high accumulate with byte index patterns (v4i16 form)
+  // Packed multiply high accumulate patterns (v4i16 form)
   def : Pat<(v4i16 (riscv_mhacc_h_b0 (v4i16 GPR:$rd),
                                     (v4i16 GPR:$rs1),
                                     (v8i8 GPR:$rs2))),
@@ -3213,7 +3212,7 @@ let append Predicates = [IsRV64] in {
                                       (v8i8 GPR:$rs2))),
             (PMHACCSU_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
-  // Packed multiply high accumulate with halfword index patterns
+  // Packed multiply high accumulate patterns (v2i32 form)
   def : Pat<(v2i32 (riscv_mhacc_w_h0 (v2i32 GPR:$rd),
                                     (v2i32 GPR:$rs1),
                                     (v4i16 GPR:$rs2))),

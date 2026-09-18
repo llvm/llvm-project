@@ -12369,7 +12369,7 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
   }
 }
 
-/// Return the multiply high accumulate by-halves node for \p IntNo.
+/// Return the multiply high accumulate node for \p IntNo.
 static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:

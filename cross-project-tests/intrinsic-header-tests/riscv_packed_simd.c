@@ -4404,7 +4404,7 @@ int32x2_t test_pmaccsu_h11_i32x2(int32x2_t rd, int16x4_t a, uint16x4_t b) {
   return __riscv_pmaccsu_h11_i32x2(rd, a, b);
 }
 
-// Packed Multiply High Accumulate with Byte Index (32-bit)
+// Packed Multiply High Accumulate (32-bit)
 // CHECK-LABEL: test_pmhacc_b0_i16x2:
 // CHECK:       pmhacc.h.b0
 int16x2_t test_pmhacc_b0_i16x2(int16x2_t rd, int16x2_t a, int8x4_t b) {
@@ -4429,7 +4429,7 @@ int16x2_t test_pmhaccsu_b1_i16x2(int16x2_t rd, int16x2_t a, uint8x4_t b) {
   return __riscv_pmhaccsu_b1_i16x2(rd, a, b);
 }
 
-// Packed Multiply High Accumulate with Byte Index (64-bit)
+// Packed Multiply High Accumulate (64-bit)
 // CHECK-LABEL: test_pmhacc_b0_i16x4:
 // CHECK:       pmhacc.h.b0
 int16x4_t test_pmhacc_b0_i16x4(int16x4_t rd, int16x4_t a, int8x8_t b) {
@@ -4454,7 +4454,7 @@ int16x4_t test_pmhaccsu_b1_i16x4(int16x4_t rd, int16x4_t a, uint8x8_t b) {
   return __riscv_pmhaccsu_b1_i16x4(rd, a, b);
 }
 
-// Packed Multiply High Accumulate with Halfword Index (64-bit)
+// Packed Multiply High Accumulate (64-bit, word forms)
 // CHECK-LABEL: test_pmhacc_h0_i32x2:
 // RV32-COUNT-2: mhacc.h0
 // RV64:         pmhacc.w.h0

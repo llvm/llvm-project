@@ -3828,7 +3828,7 @@ define i32 @test_maccsu_h11_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
   ret i32 %r
 }
 
-; Packed multiply high accumulate with byte index (RV32 only form)
+; Packed multiply high accumulate (v2i16 form)
 define <2 x i16> @test_pmhacc_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
 ; CHECK-LABEL: test_pmhacc_b0_v2i16:
 ; CHECK:       # %bb.0:

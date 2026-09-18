@@ -8129,7 +8129,7 @@ define i64 @test_maccsu_w11_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
   ret i64 %r
 }
 
-; Packed multiply high accumulate with byte index (RV32 only form)
+; Packed multiply high accumulate (v2i16 form)
 define <2 x i16> @test_pmhacc_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
 ; CHECK-LABEL: test_pmhacc_b0_v2i16:
 ; CHECK:       # %bb.0:
@@ -8166,7 +8166,7 @@ define <2 x i16> @test_pmhaccsu_b1_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8>
   ret <2 x i16> %res
 }
 
-; Packed multiply high accumulate with byte index (packed form)
+; Packed multiply high accumulate (v4i16 form)
 define <4 x i16> @test_pmhacc_b0_v4i16(<4 x i16> %rd, <4 x i16> %rs1, <8 x i8> %rs2) {
 ; RV32-LABEL: test_pmhacc_b0_v4i16:
 ; RV32:       # %bb.0:
@@ -8227,7 +8227,7 @@ define <4 x i16> @test_pmhaccsu_b1_v4i16(<4 x i16> %rd, <4 x i16> %rs1, <8 x i8>
   ret <4 x i16> %res
 }
 
-; Packed multiply high accumulate with halfword index
+; Packed multiply high accumulate (v2i32 form)
 define <2 x i32> @test_pmhacc_h0_v2i32(<2 x i32> %rd, <2 x i32> %rs1, <4 x i16> %rs2) {
 ; RV32-LABEL: test_pmhacc_h0_v2i32:
 ; RV32:       # %bb.0:
