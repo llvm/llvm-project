@@ -15,6 +15,7 @@
 //
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include <queue>
@@ -360,60 +361,37 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
 void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
                                         const SIInstrInfo *TII) {
   bool RevisitRequired = false;
-  bool ExitSet = false;
-  unsigned ThisBlock = MBB.getNumber();
-  if (MBB.pred_empty()) {
-    // There are no predecessors, so use the default starting status.
-    BlockInfo[ThisBlock]->Pred = DefaultStatus;
-    ExitSet = true;
-  } else {
-    // Build a status that is common to all the predecessors by intersecting
-    // all the predecessor exit status values.
-    // Mask bits (which represent the Mode bits with a known value) can only be
-    // added by explicit SETREG instructions or the initial default value -
-    // the intersection process may remove Mask bits.
-    // If we find a predecessor that has not yet had an exit value determined
-    // (this can happen for example if a block is its own predecessor) we defer
-    // use of that value as the Mask will be all zero, and we will revisit this
-    // block again later (unless the only predecessor without an exit value is
-    // this block).
-    MachineBasicBlock::pred_iterator P = MBB.pred_begin(), E = MBB.pred_end();
-    MachineBasicBlock &PB = *(*P);
-    unsigned PredBlock = PB.getNumber();
-    if ((ThisBlock == PredBlock) && (std::next(P) == E)) {
-      BlockInfo[ThisBlock]->Pred = DefaultStatus;
-      ExitSet = true;
-    } else if (BlockInfo[PredBlock]->ExitSet) {
-      BlockInfo[ThisBlock]->Pred = BlockInfo[PredBlock]->Exit;
-      ExitSet = true;
-    } else if (PredBlock != ThisBlock)
+  BlockData &Info = *BlockInfo[MBB.getNumber()];
+  // The entry block is entered with the default mode even if it has preds.
+  bool ExitSet = MBB.isEntryBlock();
+  if (ExitSet)
+    Info.Pred = DefaultStatus;
+  // Build a status that is common to all the predecessors by intersecting
+  // all the predecessor exit status values.
+  // Mask bits (which represent the Mode bits with a known value) can only be
+  // added by explicit SETREG instructions or the initial default value -
+  // the intersection process may remove Mask bits.
+  // A predecessor with no exit value yet defers the block rather than guessing.
+  for (MachineBasicBlock *Pred : MBB.predecessors()) {
+    const BlockData &PredInfo = *BlockInfo[Pred->getNumber()];
+    if (!PredInfo.ExitSet) {
       RevisitRequired = true;
-
-    for (P = std::next(P); P != E; P = std::next(P)) {
-      MachineBasicBlock *Pred = *P;
-      unsigned PredBlock = Pred->getNumber();
-      if (BlockInfo[PredBlock]->ExitSet) {
-        if (BlockInfo[ThisBlock]->ExitSet) {
-          BlockInfo[ThisBlock]->Pred =
-              BlockInfo[ThisBlock]->Pred.intersect(BlockInfo[PredBlock]->Exit);
-        } else {
-          BlockInfo[ThisBlock]->Pred = BlockInfo[PredBlock]->Exit;
-        }
-        ExitSet = true;
-      } else if (PredBlock != ThisBlock)
-        RevisitRequired = true;
+    } else if (ExitSet) {
+      Info.Pred = Info.Pred.intersect(PredInfo.Exit);
+    } else {
+      Info.Pred = PredInfo.Exit;
+      ExitSet = true;
     }
   }
-  Status TmpStatus =
-      BlockInfo[ThisBlock]->Pred.merge(BlockInfo[ThisBlock]->Change);
-  if (BlockInfo[ThisBlock]->Exit != TmpStatus) {
-    BlockInfo[ThisBlock]->Exit = TmpStatus;
+  Status TmpStatus = Info.Pred.merge(Info.Change);
+  if (Info.Exit != TmpStatus) {
+    Info.Exit = TmpStatus;
     // Add the successors to the work list so we can propagate the changed exit
     // status.
     for (MachineBasicBlock *Succ : MBB.successors())
       Phase2List.push(Succ);
   }
-  BlockInfo[ThisBlock]->ExitSet = ExitSet;
+  Info.ExitSet = ExitSet;
   if (RevisitRequired)
     Phase2List.push(&MBB);
 }
@@ -456,6 +434,8 @@ bool SIModeRegister::run(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   if (F.hasFnAttribute(llvm::Attribute::StrictFP))
     return Changed;
+  if (MF.empty())
+    return Changed;
   BlockInfo.resize(MF.getNumBlockIDs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -467,11 +447,20 @@ bool SIModeRegister::run(MachineFunction &MF) {
   for (MachineBasicBlock &BB : MF)
     processBlockPhase1(BB, TII);
 
-  // Phase 2 - determine the exit mode from each block. We add all blocks to the
-  // list here, but will also add any that need to be revisited during Phase 2
-  // processing.
-  for (MachineBasicBlock &BB : MF)
-    Phase2List.push(&BB);
+  // Phase 2 - determine the exit mode from each block. We add all reachable
+  // blocks to the list here, and any that need revisiting during Phase 2.
+  // Unreachable blocks never derive an exit value, so they are seeded instead.
+  df_iterator_default_set<MachineBasicBlock *> Reachable;
+  for (MachineBasicBlock *BB : depth_first_ext(&MF.front(), Reachable))
+    Phase2List.push(BB);
+  for (MachineBasicBlock &BB : MF) {
+    if (Reachable.contains(&BB))
+      continue;
+    BlockData &Info = *BlockInfo[BB.getNumber()];
+    Info.Pred = DefaultStatus;
+    Info.Exit = Info.Pred.merge(Info.Change);
+    Info.ExitSet = true;
+  }
   while (!Phase2List.empty()) {
     processBlockPhase2(*Phase2List.front(), TII);
     Phase2List.pop();
