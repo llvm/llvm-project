@@ -1455,6 +1455,7 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   ];
 
   let hasCanonicalizeMethod = 1;
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -8421,7 +8422,7 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
     %exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi] filter []
-    ``
+    ```
   }];
 
   let arguments = (ins UnitAttr:$cleanup,

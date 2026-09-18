@@ -2,19 +2,19 @@
 
 void lvalue_with_imag_int() {
   int i;
-  __imag__ i = 0;   // expected-error {{expression is not assignable}}
+  __imag__ i = 0;   // expected-error {{'__imag' operator with non-complex operand type 'int' is not assignable}}
 }
 
 void lvalue_with_imag_float() {
   float i;
-  __imag__ i = 0;   // expected-error {{expression is not assignable}}
+  __imag__ i = 0;   // expected-error {{'__imag' operator with non-complex operand type 'float' is not assignable}}
 }
 
 _Complex float foo()
 {
   float f;
   __real__ f = 0;
-  __imag__ f = 0;    // expected-error {{expression is not assignable}}
+  __imag__ f = 0;    // expected-error {{'__imag' operator with non-complex operand type 'float' is not assignable}}
   return f;
 }
 
@@ -25,12 +25,22 @@ _Complex float baz()
   __imag__
 } // expected-error {{expected expression}}
 
+void lvalue_with_imag_bitint() {
+  _BitInt(7) a;
+  __imag a = 0;      // expected-error {{'__imag' operator with non-complex operand type '_BitInt(7)' is not assignable}}
+}
+
+void lvalue_with_imag_enum() {
+  enum Number { One, Two };
+  Number n;
+  __imag n = Number::One;  // expected-error {{'__imag' operator with non-complex operand type 'Number' is not assignable}} 
+}
 
 typedef float C;
 C lvalue_with_imag_float_with_typedef()
 {
   C f;
   __real__ f = 0;
-  __imag__ f = 0;   // expected-error {{expression is not assignable}}
+  __imag__ f = 0;   // expected-error {{'__imag' operator with non-complex operand type 'C' (aka 'float') is not assignable}}
   return f;
 }

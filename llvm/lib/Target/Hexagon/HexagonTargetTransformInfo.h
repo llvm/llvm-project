@@ -38,6 +38,10 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 
   const HexagonSubtarget &ST;
   const HexagonTargetLowering &TLI;
+  // Set when the function is annotated `hexagon_hmx`, meaning it is intended
+  // to run on a thread dedicated to HMX work. See areInlineCompatible for why
+  // HVX must be kept out of such a function.
+  const bool IsHMX;
 
   const HexagonSubtarget *getST() const { return &ST; }
   const HexagonTargetLowering *getTLI() const { return &TLI; }
@@ -52,8 +56,8 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 
 public:
   explicit HexagonTTIImpl(const HexagonTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getDataLayout()),
-        ST(*TM->getSubtargetImpl(F)), TLI(*ST.getTargetLowering()) {}
+      : BaseT(TM, F.getDataLayout()), ST(*TM->getSubtargetImpl(F)),
+        TLI(*ST.getTargetLowering()), IsHMX(F.hasFnAttribute("hexagon_hmx")) {}
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -124,9 +128,7 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr,
-                 TTI::VectorInstrContext VIC =
-                     TTI::VectorInstrContext::None) const override;
+                 const Instruction *CxtI = nullptr) const override;
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -189,6 +191,9 @@ public:
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const override;
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const override;
 };
 
 } // end namespace llvm

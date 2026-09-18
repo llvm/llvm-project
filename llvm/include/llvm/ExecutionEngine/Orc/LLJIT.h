@@ -286,7 +286,7 @@ protected:
 
 /// An extended version of LLJIT that supports lazy function-at-a-time
 /// compilation of LLVM IR.
-class LLLazyJIT : public LLJIT {
+class LLVM_ABI LLLazyJIT : public LLJIT {
   template <typename, typename, typename> friend class LLJITBuilderSetters;
 
 public:
@@ -296,13 +296,13 @@ public:
     IPLayer->setPartitionFunction(std::move(Partition));
   }
 
-  LLVM_ABI ~LLLazyJIT();
+  ~LLLazyJIT();
 
   /// Returns a reference to the on-demand layer.
   CompileOnDemandLayer &getCompileOnDemandLayer() { return *CODLayer; }
 
   /// Add a module to be lazily compiled to JITDylib JD.
-  LLVM_ABI Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
+  Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
 
   /// Add a module to be lazily compiled to the main JITDylib.
   Error addLazyIRModule(ThreadSafeModule M) {

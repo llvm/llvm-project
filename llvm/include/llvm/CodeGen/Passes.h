@@ -18,6 +18,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 #include <functional>
 #include <string>
@@ -34,9 +35,6 @@ class raw_ostream;
 enum class RunOutliner;
 
 template <typename T> class IntrusiveRefCntPtr;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 } // namespace llvm
 
@@ -122,7 +120,8 @@ LLVM_ABI MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
 /// DiagnosticInfoISelFallback for every MachineFunction it resets.
 /// If AbortOnFailedISel is true, abort compilation instead of resetting.
 LLVM_ABI MachineFunctionPass *
-createResetMachineFunctionPass(bool EmitFallbackDiag, bool AbortOnFailedISel);
+createResetMachineFunctionLegacyPass(bool EmitFallbackDiag,
+                                     bool AbortOnFailedISel);
 
 /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
 /// matching during instruction selection.
