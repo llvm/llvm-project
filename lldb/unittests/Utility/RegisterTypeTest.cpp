@@ -16,6 +16,7 @@
 
 using namespace lldb_private;
 using namespace lldb;
+using ::testing::Optional;
 
 TEST(RegisterTypeTest, Field) {
   // We assume that start <= end is always true, so that is not tested here.
@@ -628,4 +629,165 @@ TEST(RegisterTypeBuiltinTest, DoesNotSerialize) {
 
   type.ToXMLElement(strm);
   EXPECT_TRUE(strm.GetString().empty());
+}
+
+TEST(RegisterTypeVectorTest, ConstructionAndXML) {
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector vector_type("v4f", &element_type, 4);
+
+  EXPECT_EQ(vector_type.GetID(), "v4f");
+  EXPECT_EQ(vector_type.GetElementType(), &element_type);
+  EXPECT_EQ(vector_type.GetCount(), 4u);
+  ASSERT_TRUE(vector_type.GetByteSize());
+  EXPECT_EQ(*vector_type.GetByteSize(), 16u);
+  EXPECT_TRUE(vector_type.IsByteSizeCompatible(16));
+  EXPECT_FALSE(vector_type.IsByteSizeCompatible(12));
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  vector_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<vector id=\"v4f\" type=\"ieee_single\" count=\"4\"/>\n");
+}
+
+TEST(RegisterTypeVectorTest, NestedVectorXML) {
+  RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector inner_type("v2f", &element_type, 2);
+  RegisterTypeVector outer_type("v2v2f", &inner_type, 2);
+
+  ASSERT_TRUE(outer_type.GetByteSize());
+  EXPECT_EQ(*outer_type.GetByteSize(), 16u);
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  outer_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<vector id=\"v2f\" type=\"ieee_single\" count=\"2\"/>\n"
+            "<vector id=\"v2v2f\" type=\"v2f\" count=\"2\"/>\n");
+}
+
+TEST(RegisterTypeVectorTest, ByteSizeOverflow) {
+  RegisterTypeBuiltin large_element("large", eEncodingUint, eFormatHex,
+                                    UINT32_MAX);
+  RegisterTypeVector large_vector("large_vector", &large_element, UINT32_MAX);
+  ASSERT_TRUE(large_vector.GetByteSize());
+
+  RegisterTypeVector overflow("overflow", &large_vector, 2);
+  EXPECT_FALSE(overflow.GetByteSize());
+}
+
+TEST(RegisterTypeVectorTest, TargetDependentByteSize) {
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, std::nullopt);
+  RegisterTypeVector inner_type("pointer_pair", &pointer_type, 2);
+  RegisterTypeVector outer_type("pointer_pairs", &inner_type, 3);
+
+  EXPECT_FALSE(inner_type.GetByteSize());
+  EXPECT_TRUE(inner_type.IsByteSizeCompatible(16));
+  EXPECT_FALSE(inner_type.IsByteSizeCompatible(15));
+  EXPECT_TRUE(outer_type.IsByteSizeCompatible(48));
+  EXPECT_FALSE(outer_type.IsByteSizeCompatible(15));
+}
+
+TEST(RegisterTypeVectorTest, XMLAttributeEscaping) {
+  RegisterTypeBuiltin element_type("u<&\"'", eEncodingUint, eFormatHex, 1);
+  RegisterTypeVector vector_type("v<&\"'", &element_type, 4);
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  vector_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<vector id=\"v&lt;&amp;&quot;&apos;\" "
+            "type=\"u&lt;&amp;&quot;&apos;\" count=\"4\"/>\n");
+}
+
+TEST(RegisterTypeUnionTest, ConstructionAndXML) {
+  RegisterTypeBuiltin float_type("ieee_single", eEncodingIEEE754, eFormatFloat,
+                                 4);
+  RegisterTypeBuiltin double_type("ieee_double", eEncodingIEEE754, eFormatFloat,
+                                  8);
+  RegisterTypeUnion union_type("views",
+                               {RegisterTypeUnion::Field("f32", &float_type),
+                                RegisterTypeUnion::Field("f64", &double_type)});
+
+  EXPECT_EQ(union_type.GetID(), "views");
+  ASSERT_EQ(union_type.GetFields().size(), 2u);
+  EXPECT_EQ(union_type.GetFields()[0].GetName(), "f32");
+  EXPECT_EQ(union_type.GetFields()[0].GetType(), &float_type);
+  EXPECT_THAT(union_type.GetByteSize(), Optional(8u));
+  EXPECT_TRUE(union_type.IsByteSizeCompatible(8));
+  EXPECT_FALSE(union_type.IsByteSizeCompatible(4));
+  EXPECT_TRUE(union_type.IsByteSizeCompatible(16));
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  union_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(), "<union id=\"views\">\n"
+                              "  <field name=\"f32\" type=\"ieee_single\"/>\n"
+                              "  <field name=\"f64\" type=\"ieee_double\"/>\n"
+                              "</union>\n");
+}
+
+TEST(RegisterTypeUnionTest, NestedDependenciesAndXML) {
+  RegisterTypeBuiltin float_type("ieee_single", eEncodingIEEE754, eFormatFloat,
+                                 4);
+  RegisterTypeVector vector_type("v2f", &float_type, 2);
+  RegisterTypeUnion inner_type(
+      "inner", {RegisterTypeUnion::Field("scalar", &float_type),
+                RegisterTypeUnion::Field("lanes", &vector_type)});
+  RegisterTypeUnion outer_type("outer",
+                               {RegisterTypeUnion::Field("view", &inner_type)});
+
+  EXPECT_THAT(outer_type.GetByteSize(), Optional(8u));
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  outer_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(),
+            "<vector id=\"v2f\" type=\"ieee_single\" count=\"2\"/>\n"
+            "<union id=\"inner\">\n"
+            "  <field name=\"scalar\" type=\"ieee_single\"/>\n"
+            "  <field name=\"lanes\" type=\"v2f\"/>\n"
+            "</union>\n"
+            "<union id=\"outer\">\n"
+            "  <field name=\"view\" type=\"inner\"/>\n"
+            "</union>\n");
+}
+
+TEST(RegisterTypeUnionTest, TargetDependentByteSize) {
+  RegisterTypeBuiltin pointer_type("data_ptr", eEncodingUint,
+                                   eFormatAddressInfo, std::nullopt);
+  RegisterTypeBuiltin uint128_type("uint128", eEncodingUint, eFormatHex, 16);
+  RegisterTypeUnion pointer_view(
+      "pointer_view", {RegisterTypeUnion::Field("pointer", &pointer_type)});
+  RegisterTypeUnion mixed_view(
+      "mixed_view", {RegisterTypeUnion::Field("pointer", &pointer_type),
+                     RegisterTypeUnion::Field("wide", &uint128_type)});
+
+  EXPECT_FALSE(pointer_view.GetByteSize());
+  EXPECT_TRUE(pointer_view.IsByteSizeCompatible(8));
+  EXPECT_FALSE(pointer_view.IsByteSizeCompatible(0));
+  EXPECT_FALSE(mixed_view.GetByteSize());
+  EXPECT_FALSE(mixed_view.IsByteSizeCompatible(8));
+  EXPECT_TRUE(mixed_view.IsByteSizeCompatible(16));
+
+  RegisterTypeVector pointer_views("pointer_views", &pointer_view, 2);
+  EXPECT_TRUE(pointer_views.IsByteSizeCompatible(16));
+  EXPECT_FALSE(pointer_views.IsByteSizeCompatible(15));
+}
+
+TEST(RegisterTypeUnionTest, XMLAttributeEscaping) {
+  RegisterTypeBuiltin element_type("u<&\"'", eEncodingUint, eFormatHex, 1);
+  RegisterTypeUnion union_type(
+      "v<&\"'", {RegisterTypeUnion::Field("f<&\"'", &element_type)});
+
+  StreamString strm;
+  std::unordered_set<std::string> previously_emitted;
+  union_type.ToXML(strm, previously_emitted);
+  EXPECT_EQ(strm.GetString(), "<union id=\"v&lt;&amp;&quot;&apos;\">\n"
+                              "  <field name=\"f&lt;&amp;&quot;&apos;\" "
+                              "type=\"u&lt;&amp;&quot;&apos;\"/>\n"
+                              "</union>\n");
 }

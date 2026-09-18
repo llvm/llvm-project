@@ -645,11 +645,8 @@ void test_long_long_long_long(va_list *ap) {
 // SPARC64-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
 // SPARC64-NEXT:    store float [[X_REAL]], ptr [[COERCE_REALP]], align 4
 // SPARC64-NEXT:    store float [[X_IMAG]], ptr [[COERCE_IMAGP]], align 4
-// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 0
-// SPARC64-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
-// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1
-// SPARC64-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, float inreg noundef [[TMP2]], float inreg noundef [[TMP4]])
+// SPARC64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[COERCE]], align 4
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 noundef [[TMP1]])
 // SPARC64-NEXT:    ret void
 //
 void test_complex_float(va_list *ap) {
@@ -683,11 +680,8 @@ void test_complex_float(va_list *ap) {
 // SPARC64-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 8
 // SPARC64-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 8
 // SPARC64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[X]], ptr align 8 [[ARGP_CUR]], i64 8, i1 false)
-// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT_FLOAT]], ptr [[X]], i32 0, i32 0
-// SPARC64-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
-// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT_FLOAT]], ptr [[X]], i32 0, i32 1
-// SPARC64-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, float inreg [[TMP2]], float inreg [[TMP4]])
+// SPARC64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[X]], align 4
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 [[TMP1]])
 // SPARC64-NEXT:    ret void
 //
 void test_float_float(va_list *ap) {
@@ -753,11 +747,11 @@ void test_float_float(va_list *ap) {
 // SPARC64-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
 // SPARC64-NEXT:    store double [[X_REAL]], ptr [[COERCE_REALP]], align 8
 // SPARC64-NEXT:    store double [[X_IMAG]], ptr [[COERCE_IMAGP]], align 8
-// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 0
-// SPARC64-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
-// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[COERCE]], i32 0, i32 1
-// SPARC64-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP3]], align 8
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, double noundef [[TMP2]], double noundef [[TMP4]])
+// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 0
+// SPARC64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[COERCE]], i32 0, i32 1
+// SPARC64-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 noundef [[TMP2]], i64 noundef [[TMP4]])
 // SPARC64-NEXT:    ret void
 //
 void test_complex_double(va_list *ap) {
@@ -791,11 +785,11 @@ void test_complex_double(va_list *ap) {
 // SPARC64-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 16
 // SPARC64-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 8
 // SPARC64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[X]], ptr align 8 [[ARGP_CUR]], i64 16, i1 false)
-// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_DOUBLE_DOUBLE]], ptr [[X]], i32 0, i32 0
-// SPARC64-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
-// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_DOUBLE_DOUBLE]], ptr [[X]], i32 0, i32 1
-// SPARC64-NEXT:    [[TMP4:%.*]] = load double, ptr [[TMP3]], align 8
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, double [[TMP2]], double [[TMP4]])
+// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[X]], i32 0, i32 0
+// SPARC64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
+// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[X]], i32 0, i32 1
+// SPARC64-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 8
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 [[TMP2]], i64 [[TMP4]])
 // SPARC64-NEXT:    ret void
 //
 void test_double_double(va_list *ap) {
@@ -976,13 +970,11 @@ void test_aligned_int(va_list *ap) {
 // SPARC64-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR_ALIGNED]], i64 16
 // SPARC64-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 8
 // SPARC64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[X]], ptr align 16 [[ARGP_CUR_ALIGNED]], i64 16, i1 false)
-// SPARC64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, i32, i64 }, ptr [[X]], i32 0, i32 0
-// SPARC64-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 16
-// SPARC64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { float, i32, i64 }, ptr [[X]], i32 0, i32 1
-// SPARC64-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// SPARC64-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw { float, i32, i64 }, ptr [[X]], i32 0, i32 2
-// SPARC64-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 8
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, float inreg [[TMP3]], i32 inreg [[TMP5]], i64 inreg [[TMP7]])
+// SPARC64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[X]], i32 0, i32 0
+// SPARC64-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 16
+// SPARC64-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[X]], i32 0, i32 1
+// SPARC64-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 undef, i64 [[TMP3]], i64 [[TMP5]])
 // SPARC64-NEXT:    ret void
 //
 void test_aligned_float(va_list *ap) {
@@ -1054,15 +1046,11 @@ void test_int_int_int_int(va_list *ap) {
 // SPARC64-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i64 16
 // SPARC64-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 8
 // SPARC64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[X]], ptr align 8 [[ARGP_CUR]], i64 16, i1 false)
-// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT_FLOAT_FLOAT_FLOAT]], ptr [[X]], i32 0, i32 0
-// SPARC64-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
-// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT_FLOAT_FLOAT_FLOAT]], ptr [[X]], i32 0, i32 1
-// SPARC64-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP3]], align 4
-// SPARC64-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT_FLOAT_FLOAT_FLOAT]], ptr [[X]], i32 0, i32 2
-// SPARC64-NEXT:    [[TMP6:%.*]] = load float, ptr [[TMP5]], align 4
-// SPARC64-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[STRUCT_FLOAT_FLOAT_FLOAT_FLOAT]], ptr [[X]], i32 0, i32 3
-// SPARC64-NEXT:    [[TMP8:%.*]] = load float, ptr [[TMP7]], align 4
-// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, float inreg [[TMP2]], float inreg [[TMP4]], float inreg [[TMP6]], float inreg [[TMP8]])
+// SPARC64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[X]], i32 0, i32 0
+// SPARC64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
+// SPARC64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[X]], i32 0, i32 1
+// SPARC64-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 4
+// SPARC64-NEXT:    call void (i32, ...) @sink(i32 noundef signext 0, i64 [[TMP2]], i64 [[TMP4]])
 // SPARC64-NEXT:    ret void
 //
 void test_float_float_float_float(va_list *ap) {

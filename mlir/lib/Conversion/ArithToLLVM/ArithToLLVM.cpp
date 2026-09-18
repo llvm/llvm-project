@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -114,9 +115,10 @@ using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
 using DivUIOpLowering =
     VectorConvertToLLVMPattern<arith::DivUIOp, LLVM::UDivOp>;
-using ExtFOpLowering = VectorConvertToLLVMPattern<arith::ExtFOp, LLVM::FPExtOp,
-                                                  AttrConvertPassThrough,
-                                                  /*FailOnUnsupportedFP=*/true>;
+using ExtFOpLowering =
+    VectorConvertToLLVMPattern<arith::ExtFOp, LLVM::FPExtOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
 using ExtSIOpLowering =
     VectorConvertToLLVMPattern<arith::ExtSIOp, LLVM::SExtOp>;
 using ExtUIOpLowering =
@@ -203,7 +205,7 @@ using SubIOpLowering =
 using TruncFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp,
                                           /*HasRoundingMode=*/false,
-                                          AttrConvertPassThrough,
+                                          arith::AttrConvertFastMathToLLVM,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
     arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, /*HasRoundingMode=*/true,
@@ -798,11 +800,13 @@ struct ArithToLLVMConversionPass
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
 
-    LowerToLLVMOptions options(&getContext());
+    const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    LowerToLLVMOptions options(&getContext(),
+                               dataLayoutAnalysis.getAtOrAbove(getOperation()));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    LLVMTypeConverter converter(&getContext(), options);
+    LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(converter, patterns);
 

@@ -1748,13 +1748,13 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     if (shstr_data.SetData(object_data, offset, byte_size) == byte_size) {
       for (SectionHeaderCollIter I = section_headers.begin();
            I != section_headers.end(); ++I) {
-        static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
+        static constexpr llvm::StringLiteral g_sect_name_gnu_debuglink(
+            ".gnu_debuglink");
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
-        ConstString name(shstr_data.PeekCStr(I->sh_name));
-
-        I->section_name = name;
+        llvm::StringRef name(shstr_data.PeekCStr(I->sh_name));
+        I->section_name = name.str();
 
         if (arch_spec.IsMIPS()) {
           uint32_t arch_flags = arch_spec.GetFlags();
@@ -1856,7 +1856,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
 
         // The section header ".note.android.ident" is stored as a
         // PROGBITS type header but it is actually a note header.
-        static ConstString g_sect_name_android_ident(".note.android.ident");
+        static constexpr llvm::StringLiteral g_sect_name_android_ident(
+            ".note.android.ident");
         if (!is_note_header && name == g_sect_name_android_ident)
           is_note_header = true;
 
@@ -1912,11 +1913,11 @@ ObjectFileELF::GetSectionHeaderByIndex(lldb::user_id_t id) {
   return nullptr;
 }
 
-lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
-  if (!name || !name[0] || !ParseSectionHeaders())
+lldb::user_id_t ObjectFileELF::GetSectionIndexByName(llvm::StringRef name) {
+  if (name.empty() || !ParseSectionHeaders())
     return 0;
   for (size_t i = 1; i < m_section_headers.size(); ++i)
-    if (m_section_headers[i].section_name == ConstString(name))
+    if (m_section_headers[i].section_name == name)
       return i;
   return 0;
 }
@@ -1960,7 +1961,7 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_DYNAMIC:
     return eSectionTypeELFDynamicLinkInfo;
   }
-  return GetSectionTypeFromName(H.section_name.GetStringRef());
+  return GetSectionTypeFromName(H.section_name);
 }
 
 static Permissions GetPermissions(const ELFSectionHeader &H) {
@@ -2148,7 +2149,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     uint32_t Log2Align = llvm::Log2_64(std::max<elf_xword>(PHdr.p_align, 1));
     SectionSP Segment = std::make_shared<Section>(
         GetModule(), this, SegmentID(EnumPHdr.index()),
-        ConstString(provider.GetNextSegmentName()), eSectionTypeContainer,
+        provider.GetNextSegmentName(), eSectionTypeContainer,
         InfoOr->GetRangeBase(), InfoOr->GetByteSize(), PHdr.p_offset,
         PHdr.p_filesz, Log2Align, /*flags*/ 0);
     Segment->SetPermissions(GetPermissions(PHdr));
@@ -2166,7 +2167,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
        I != m_section_headers.end(); ++I) {
     const ELFSectionHeaderInfo &header = *I;
 
-    ConstString &name = I->section_name;
+    const std::string &name = I->section_name;
     const uint64_t file_size =
         header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
 
@@ -2320,18 +2321,17 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   // caller may be another object file.
   FileAddressToAddressClassMap address_class_map;
 
-  static ConstString text_section_name(".text");
-  static ConstString init_section_name(".init");
-  static ConstString fini_section_name(".fini");
-  static ConstString ctors_section_name(".ctors");
-  static ConstString dtors_section_name(".dtors");
+  static constexpr llvm::StringLiteral text_section_name(".text");
+  static constexpr llvm::StringLiteral init_section_name(".init");
+  static constexpr llvm::StringLiteral fini_section_name(".fini");
+  static constexpr llvm::StringLiteral ctors_section_name(".ctors");
+  static constexpr llvm::StringLiteral dtors_section_name(".dtors");
 
-  static ConstString data_section_name(".data");
-  static ConstString rodata_section_name(".rodata");
-  static ConstString rodata1_section_name(".rodata1");
-  static ConstString data2_section_name(".data1");
-  static ConstString bss_section_name(".bss");
-  static ConstString opd_section_name(".opd"); // For ppc64
+  static constexpr llvm::StringLiteral data_section_name(".data");
+  static constexpr llvm::StringLiteral rodata_section_name(".rodata");
+  static constexpr llvm::StringLiteral rodata1_section_name(".rodata1");
+  static constexpr llvm::StringLiteral data2_section_name(".data1");
+  static constexpr llvm::StringLiteral bss_section_name(".bss");
 
   // On Android the oatdata and the oatexec symbols in the oat and odex files
   // covers the full .text section what causes issues with displaying unusable
@@ -2374,6 +2374,16 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // linkage.
     if (llvm::StringRef(symbol_name).starts_with(".L"))
       continue;
+
+    // The mold linker emits an extra function symbol like "foo$plt" in
+    // .symtab/.dynsym that overlaps the PLT stub which ParsePLTRelocations
+    // will synthesize as an eSymbolTypeTrampoline named "foo". Drop the
+    // redundant sibling here so the finalized symbol table has a single
+    // clean entry per PLT function.
+    if (symbol.getType() == STT_FUNC &&
+        llvm::StringRef(symbol_name).ends_with("$plt"))
+      continue;
+
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
@@ -3413,7 +3423,7 @@ void ObjectFileELF::RelocateSection(lldb_private::Section *section)
   for (SectionHeaderCollIter I = m_section_headers.begin();
        I != m_section_headers.end(); ++I) {
     if (I->sh_type == SHT_RELA || I->sh_type == SHT_REL) {
-      llvm::StringRef hay_name = I->section_name.GetStringRef();
+      llvm::StringRef hay_name(I->section_name);
       if (hay_name.empty())
         continue;
       if (needle == hay_name || needlea == hay_name) {
@@ -3760,8 +3770,8 @@ void ObjectFileELF::DumpELFSectionHeaders(Stream *s) {
        I != m_section_headers.end(); ++I, ++idx) {
     s->Printf("[%2u] ", idx);
     ObjectFileELF::DumpELFSectionHeader(s, *I);
-    const char *section_name = I->section_name.AsCString("");
-    if (section_name)
+    const std::string &section_name = I->section_name;
+    if (!section_name.empty())
       *s << ' ' << section_name << "\n";
   }
 }
