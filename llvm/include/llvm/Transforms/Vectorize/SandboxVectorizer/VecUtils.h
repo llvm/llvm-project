@@ -418,7 +418,7 @@ public:
 
     /// Erase candidates recorded by \c collectPotentiallyDeadInstrs() that
     /// now have no uses, then clear the candidate set.
-    void tryEraseDeadInstrs();
+    LLVM_ABI void tryEraseDeadInstrs();
 
 #ifndef NDEBUG
     void print(raw_ostream &OS) const {

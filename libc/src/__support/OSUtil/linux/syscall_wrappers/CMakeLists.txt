@@ -216,6 +216,42 @@ add_header_library(
 )
 
 add_header_library(
+  flistxattr
+  HDRS
+    flistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  listxattr
+  HDRS
+    listxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  llistxattr
+  HDRS
+    llistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   read
   HDRS
     read.h
@@ -1303,4 +1339,20 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  fallocate
+  HDRS
+    fallocate.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.common
+    libc.src.__support.OSUtil.osutil
+    libc.include.sys_syscall
+    libc.hdr.types.off_t
+    libc.hdr.errno_macros
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.bit
+    libc.src.__support.error_or
 )
