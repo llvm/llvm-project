@@ -2373,8 +2373,9 @@ private:
   // __assign_no_alias is invoked for assignment operations where we
   // have proof that the input does not alias the current instance.
   // For example, operator=(basic_string) performs a 'self' check.
+  // The string has to be null terminated at __n.
   template <bool __is_short>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_no_alias(const value_type* __s, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void __assign_no_alias(const value_type* __s, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __erase_to_end(size_type __pos) {
     _LIBCPP_ASSERT_INTERNAL(__pos <= capacity(), "Trying to erase at position outside the strings capacity!");
@@ -2727,28 +2728,43 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_without_replace(
 
 template <class _CharT, class _Traits, class _Allocator>
 template <bool __is_short>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE void
 basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(const value_type* __s, size_type __n) {
+  _LIBCPP_ASSERT_INTERNAL(__s[__n] == '\0', "`__s` should be null-terminated at __s[__n]");
+
   const auto __cap  = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
-  const auto __size = __is_short ? __get_short_size() : __get_long_size();
   if (__n >= __cap) {
-    __grow_by_and_replace(__cap - 1, __n - __cap + 1, __size, 0, __size, __n, __s);
-    return *this;
+    return [] [[__gnu__::__noinline__]] (basic_string& __this, const value_type* __ls, size_type __ln) static {
+      std::__assume(__this.__is_long() == !__is_short);
+      std::__assume(!__alloc_traits::is_always_equal::value || __ln <= __this.max_size());
+      __this.__annotate_delete();
+      auto __annotate_guard = std::__make_scope_guard(__annotate_new_size(__this));
+      if _LIBCPP_CONSTEXPR (!__is_short)
+        __alloc_traits::deallocate(__this.__alloc_, __this.__get_long_pointer(), __this.__get_long_cap());
+      auto __guard   = std::__make_exception_guard([&] {
+        if _LIBCPP_CONSTEXPR (!__is_short)
+          __this.__rep_ = __rep();
+      });
+      auto __new_cap = __this.__get_amortized_growth_capacity(__ln);
+      std::__assume(__new_cap <= __this.max_size());
+      __this.__init_internal_buffer(__new_cap);
+      __this.__set_long_size(__ln);
+      __guard.__complete();
+      traits_type::copy(std::__to_address(__this.__get_long_pointer()), __ls, __ln + 1);
+    }(*this, __s, __n);
   }
 
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
   pointer __p;
-  if (__is_short) {
+  if _LIBCPP_CONSTEXPR (__is_short) {
     __p = __get_short_pointer();
     __set_short_size(__n);
   } else {
     __p = __get_long_pointer();
     __set_long_size(__n);
   }
-  traits_type::copy(std::__to_address(__p), __s, __n);
-  traits_type::assign(__p[__n], value_type());
-  return *this;
+  traits_type::copy(std::__to_address(__p), __s, __n + 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2826,11 +2842,15 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str) 
 
   __copy_assign_alloc(__str);
 
-  if (__is_long())
-    return __assign_no_alias<false>(__str.data(), __str.size());
+  if (__is_long()) {
+     __assign_no_alias<false>(__str.data(), __str.size());
+     return *this;
+  }
 
-  if (__str.__is_long())
-    return __assign_no_alias<true>(__str.data(), __str.size());
+  if (__str.__is_long()) {
+    __assign_no_alias<true>(__str.data(), __str.size());
+    return *this;
+  }
 
   __annotate_delete();
   auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
