@@ -1576,3 +1576,20 @@ func.func @producer_consumer_with_outmost_user(%arg0 : f16) {
 
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir
 
+// -----
+
+// CHECK-LABEL: func @vector_transfer_read
+func.func @vector_transfer_read(%arg0: memref<4xf32>) {
+  %c0 = arith.constant 0.0 : f32
+
+  affine.for %i = 0 to 4 {
+    affine.store %c0, %arg0[%i] : memref<4xf32>
+  }
+
+  affine.for %i = 0 to 4 {
+    %0 = vector.transfer_read %arg0[%i], %c0
+        : memref<4xf32>, vector<4xf32>
+  }
+
+  return
+}
