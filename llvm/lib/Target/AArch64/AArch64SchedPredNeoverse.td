@@ -106,3 +106,13 @@ def NeoverseAllActivePredicate : MCSchedPredicate<
                                    ]>>;
 
 
+// Identify a load or store using the register offset addressing mode
+// with a scaled register.
+def NeoverseScaledIdxFn       : TIIPredicate<"isNeoverseScaledAddr",
+                                     MCOpcodeSwitchStatement<
+                                       [MCOpcodeSwitchCase<
+                                          IsLoadStoreRegOffsetOp.ValidOpcodes,
+                                          MCReturnStatement<
+                                            CheckAny<[CheckMemScaled]>>>],
+                                       MCReturnStatement<FalsePred>>>;
+def NeoverseScaledIdxPred     : MCSchedPredicate<NeoverseScaledIdxFn>;
