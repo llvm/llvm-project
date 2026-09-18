@@ -545,6 +545,42 @@ def CIR_PtrStrideOp : CIR_Op<"ptr_stride", [
 }
 
 //===----------------------------------------------------------------------===//
+// PtrMaskOp
+//===----------------------------------------------------------------------===//
+
+def CIR_PtrMaskOp : CIR_Op<"ptr_mask", [
+  Pure, AllTypesMatch<["ptr", "result"]>
+]> {
+  let summary = "Clear bits of a pointer";
+  let description = [{
+    The `cir.ptr_mask` operation clears the bits of `ptr` that are not set in
+    `mask`.  The result stays a pointer, whereas masking it as an integer
+    would lose provenance.
+
+    `mask` must be exactly the target's pointer index width.
+
+    ```
+    %m = cir.const #cir.int<-32> : !s64i
+    %0 = cir.ptr_mask %p, %m : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_PointerType:$ptr,
+    CIR_AnyFundamentalIntType:$mask
+  );
+
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $ptr`,` $mask `:` functional-type(operands, results) attr-dict
+  }];
+
+  let llvmOp = "PtrMaskOp";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
