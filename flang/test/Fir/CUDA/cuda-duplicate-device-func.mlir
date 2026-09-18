@@ -1,4 +1,4 @@
-// RUN: fir-opt --cuf-duplicate-device-func %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-duplicate-device-func %s | FileCheck %s
 
 module attributes {fir.allocation_policy = #fir.allocation_policy<stack_arrays = true, small_array_threshold = 1024, total_stack_limit = 4194304>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = ""} {
 
@@ -109,3 +109,68 @@ func.func @_QPhostcaller(%arg0: !fir.ref<i32>) {
 // CHECK: fir.call @_QPhostdev(
 // CHECK: fir.call @host_used_in_device()
 // CHECK: fir.address_of(@by_address)
+
+// -----
+
+// Three host_device procedures calling each other. Two separate chains come
+// out: the copies call the copies and the originals keep calling the originals.
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = ""} {
+
+func.func @_QPlevel3(%arg0: !fir.ref<i32>) attributes {cuf.proc_attr = #cuf.cuda_proc<host_device>} {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  return
+}
+
+func.func @_QPlevel2(%arg0: !fir.ref<i32>) attributes {cuf.proc_attr = #cuf.cuda_proc<host_device>} {
+  fir.call @_QPlevel3(%arg0) : (!fir.ref<i32>) -> ()
+  return
+}
+
+func.func @_QPlevel1(%arg0: !fir.ref<i32>) attributes {cuf.proc_attr = #cuf.cuda_proc<host_device>} {
+  fir.call @_QPlevel2(%arg0) : (!fir.ref<i32>) -> ()
+  return
+}
+
+func.func @_QPkernel(%arg0: !fir.ref<i32>) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  fir.call @_QPlevel1(%arg0) : (!fir.ref<i32>) -> ()
+  return
+}
+
+func.func @_QPhostcaller(%arg0: !fir.ref<i32>) {
+  fir.call @_QPlevel1(%arg0) : (!fir.ref<i32>) -> ()
+  return
+}
+
+}
+
+// The original chain, untouched.
+// CHECK-LABEL: func.func @_QPlevel3(
+// CHECK-SAME: cuf.proc_attr = #cuf.cuda_proc<host_device>
+// CHECK: fir.load
+// CHECK-LABEL: func.func @_QPlevel3.device(
+// CHECK-SAME: cuf.device_copy_of = @_QPlevel3
+// CHECK: fir.load
+
+// CHECK-LABEL: func.func @_QPlevel2(
+// CHECK-SAME: cuf.proc_attr = #cuf.cuda_proc<host_device>
+// CHECK: fir.call @_QPlevel3(
+// CHECK-NOT: .device
+// CHECK-LABEL: func.func @_QPlevel2.device(
+// CHECK-SAME: cuf.device_copy_of = @_QPlevel2
+// CHECK: fir.call @_QPlevel3.device(
+
+// CHECK-LABEL: func.func @_QPlevel1(
+// CHECK-SAME: cuf.proc_attr = #cuf.cuda_proc<host_device>
+// CHECK: fir.call @_QPlevel2(
+// CHECK-NOT: .device
+// CHECK-LABEL: func.func @_QPlevel1.device(
+// CHECK-SAME: cuf.device_copy_of = @_QPlevel1
+// CHECK: fir.call @_QPlevel2.device(
+
+// Device code enters the copy chain, host code the original one.
+// CHECK-LABEL: func.func @_QPkernel(
+// CHECK: fir.call @_QPlevel1.device(
+// CHECK-LABEL: func.func @_QPhostcaller(
+// CHECK: fir.call @_QPlevel1(
+// CHECK-NOT: .device
