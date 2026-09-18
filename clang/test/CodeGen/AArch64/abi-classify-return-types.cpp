@@ -90,3 +90,9 @@ struct ZeroSize {
 };
 ZeroSize ret_zerosize() { return {}; }
 // CHECK: define{{.*}} void @_Z12ret_zerosizev()
+
+struct NestedZeroSize {
+  ZeroSize inner;
+};
+NestedZeroSize ret_nested_zerosize() { return {}; }
+// CHECK: define{{.*}} void @_Z19ret_nested_zerosizev()

@@ -191,3 +191,12 @@ ZeroSize ret_zerosize(void) {
   return z;
 }
 // CHECK: define{{.*}} void @ret_zerosize()
+
+typedef struct {
+  ZeroSize inner;
+} NestedZeroSize;
+NestedZeroSize ret_nested_zerosize(void) {
+  NestedZeroSize z;
+  return z;
+}
+// CHECK: define{{.*}} void @ret_nested_zerosize()

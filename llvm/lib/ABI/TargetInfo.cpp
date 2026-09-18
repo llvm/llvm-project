@@ -91,15 +91,6 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
   return false;
 }
 
-namespace {
-
-bool isEmptyRecordForHA(const Type *Ty) {
-  const auto *RT = dyn_cast<RecordType>(Ty);
-  return RT && RT->isEmpty();
-}
-
-} // namespace
-
 bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
                                         uint64_t &Members) const {
   // TODO: Add handling for Clang 23 compatibility with matrix types.
@@ -122,7 +113,7 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
         return false;
 
       for (const FieldInfo &BaseField : RT->getBaseClasses()) {
-        if (isEmptyRecordForHA(BaseField.FieldType))
+        if (BaseField.FieldType->isEmptyRecord())
           continue;
 
         uint64_t FldMembers = 0;
@@ -145,7 +136,7 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
           return false;
         FT = AT->getElementType();
       }
-      if (isEmptyRecordForHA(FT))
+      if (FT->isEmptyRecord())
         continue;
 
       if (isZeroLengthBitfieldPermittedInHomogeneousAggregate() &&

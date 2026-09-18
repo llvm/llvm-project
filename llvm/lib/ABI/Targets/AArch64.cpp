@@ -94,10 +94,8 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     return ArgInfo::getDirect();
   }
 
-  TypeSize TySize = RetTy->getSizeInBits();
-  uint64_t Size = TySize.isFixed() ? TySize.getFixedValue() : 0;
-  if (!RetTy->isSVESizelessType() &&
-      (Size == 0 || (RetTy->isRecord() && cast<RecordType>(RetTy)->isEmpty())))
+  uint64_t Size = RetTy->getFixedSizeInBitsOrZero();
+  if (!RetTy->isSVESizelessType() && (RetTy->isEmptyRecord() || Size == 0))
     return ArgInfo::getIgnore();
 
   const Type *Base = nullptr;
@@ -148,17 +146,13 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
                                            RecordArgABI::RAA_DirectInMemory);
   }
 
-  // Empty records:
-  // AAPCS64 does not say that empty records are ignored as arguments,
+  // AAPCS64 does not say that empty C records are ignored as arguments,
   // but other compilers do so in certain situations, and we copy that behavior.
-  // Those situations are in fact language-mode-specific, which seems really
-  // unfortunate, but it's something we just have to accept. If this doesn't
-  // apply, just fall through to the standard argument-handling path.
-  // Darwin overrides the psABI here to ignore all empty records in all modes.
-  TypeSize TySize = Ty->getSizeInBits();
-  uint64_t Size = TySize.isFixed() ? TySize.getFixedValue() : 0;
-  const auto *RT = dyn_cast<RecordType>(Ty);
-  if (!Ty->isSVESizelessType() && ((RT && RT->isEmpty()) || Size == 0)) {
+  uint64_t Size = Ty->getFixedSizeInBitsOrZero();
+  if (!Ty->isSVESizelessType() && (Ty->isEmptyRecord() || Size == 0)) {
+    // Darwin overrides the psABI here to ignore all empty records in all modes.
+    // The ABI explicitly says that an empty class shall be treated as if its
+    // type were an aggregate with a single member of type unsigned byte.
     if (!Opts.IsCXX || isDarwinPCS())
       return ArgInfo::getIgnore();
 

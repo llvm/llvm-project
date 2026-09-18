@@ -833,7 +833,6 @@ TEST_F(AArch64TargetInfoTest, ClassifyEmptyAndZeroSizeIgnore) {
     std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Ty, {});
-    FI->getReturnInfo() = ArgInfo::getDirect();
     TI->computeInfo(*FI);
     return FI->getReturnInfo();
   };
