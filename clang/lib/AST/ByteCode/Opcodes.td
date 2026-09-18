@@ -73,6 +73,7 @@ def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
 def ArgTypePtr : ArgType { let Name = "const Type *"; }
 def ArgDeclOrExpr : ArgType { let Name = "DeclOrExpr"; }
+def ArgOptPrimType : ArgType { let Name = "OptPrimType"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -227,6 +228,32 @@ def NoRet : Opcode {
 }
 
 
+/// Exceptions
+def AfterRet : SuccessOpcode {
+  let CanReturn = 1;
+}
+
+def Throw : Opcode;
+def ReThrow : Opcode;
+def SaveException : Opcode {
+  let Args = [ArgTypePtr, ArgOptPrimType];
+}
+
+def GetExceptionValue : Opcode {
+  let Types = [AllTypeClass];
+  let HasGroup = 1;
+  let NeedsOpPC = 0;
+}
+def GetPtrExceptionValue : SuccessOpcode;
+
+def AllocException : SuccessOpcode {
+  let Args = [ArgDesc];
+}
+
+def ThrowTrap : SuccessOpcode;
+
+
+/// Calls
 def Call : Opcode {
   let Args = [ArgFunction, ArgUint32];
 }
