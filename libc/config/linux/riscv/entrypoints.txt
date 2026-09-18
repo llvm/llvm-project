@@ -55,6 +55,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.posix_fadvise
     libc.src.fcntl.posix_fadvise64
 
+    # grp.h entrypoints
+    libc.src.grp.endgrent
+    libc.src.grp.getgrent
+    libc.src.grp.setgrent
+
     # net/if.h entrypoints
     libc.src.net.if_indextoname
     libc.src.net.if_nametoindex

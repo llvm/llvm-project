@@ -400,6 +400,21 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
+  if (!ST->isShader()) {
+    if (F.hasRetAttribute(Attribute::ZExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+    if (F.hasRetAttribute(Attribute::SExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+  }
+
   // Name the function.
   if (F.hasName())
     buildOpName(FuncVReg, F.getName(), MIRBuilder);
