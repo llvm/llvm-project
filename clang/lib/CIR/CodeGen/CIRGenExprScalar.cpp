@@ -806,6 +806,10 @@ public:
   }
 
   mlir::Value VisitUnaryMinus(const UnaryOperator *e, QualType promotionType) {
+    if (e->getSubExpr()->getType()->isCooperativeMatrixType()) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "cooperative matrix unary minus");
+      return {};
+    }
     ignoreResultAssign = false;
     mlir::Value operand;
     if (!promotionType.isNull())
@@ -1138,6 +1142,11 @@ public:
 // Binary operators and binary compound assignment operators.
 #define HANDLEBINOP(OP)                                                        \
   mlir::Value VisitBin##OP(const BinaryOperator *e) {                          \
+    if (e->getType()->isCooperativeMatrixType()) {                             \
+      cgf.cgm.errorNYI(e->getSourceRange(),                                    \
+                       "cooperative matrix binary operator");                  \
+      return {};                                                               \
+    }                                                                          \
     QualType promotionTy = getPromotionType(e->getType());                     \
     auto result = emit##OP(emitBinOps(e, promotionTy));                        \
     if (result && !promotionTy.isNull())                                       \
