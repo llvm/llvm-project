@@ -23025,9 +23025,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
               UserOps.emplace_back(UserTE->getOpcode(),
                                    TE->UserTreeIndex.EdgeIdx);
             }
-            assert(UserOps.size() &&
-                   "Ought to at least match with current entry");
-            return true;
+            return !UserOps.empty();
           };
       ContextHint =
           TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);

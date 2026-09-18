@@ -5,6 +5,21 @@
 ; an assertion failure in #213104 because E.isSame(E.Scalars) == false.
 
 define void @reordered_gather(ptr %in, ptr %out, i64 %a, i64 %b, i64 %c) #0 {
+; CHECK-LABEL: define void @reordered_gather(
+; CHECK-SAME: ptr [[IN:%.*]], ptr [[OUT:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr i64, ptr [[IN]], i64 0
+; CHECK-NEXT:    [[V0:%.*]] = ptrtoint ptr [[IN]] to i64
+; CHECK-NEXT:    [[H:%.*]] = ptrtoint ptr [[IN]] to i64
+; CHECK-NEXT:    [[O0:%.*]] = getelementptr i64, ptr [[OUT]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[P0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> <i64 undef, i64 undef, i64 0, i64 0>, <4 x i64> [[TMP2]], <4 x i32> <i32 4, i32 2, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr [[O0]], align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   %p0 = getelementptr i64, ptr %in, i64 0
   %p1 = getelementptr i64, ptr %in, i64 1
