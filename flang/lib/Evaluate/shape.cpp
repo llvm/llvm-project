@@ -368,7 +368,9 @@ public:
         if (dimension_ < GetRank(lb)) {
           return Result{lb[dimension_]};
         }
-      } else { // operation
+      } else if (!(UnwrapProcedureRef(expr) && IsVariable(expr))) {
+        // operation (a reference to a POINTER-valued function is a variable
+        // whose lower bounds come from its result's descriptor)
         return Result{1};
       }
     } else {
