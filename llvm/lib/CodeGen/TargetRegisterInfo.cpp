@@ -14,6 +14,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -407,6 +408,7 @@ bool TargetRegisterInfo::getRegAllocationHints(
   if (!Hints_MRI)
     return false;
 
+  SmallSet<Register, 32> HintedRegs;
   // First hint may be a target hint.
   bool Skip = (Hints_MRI->first != 0);
   for (auto Reg : Hints_MRI->second) {
@@ -420,6 +422,10 @@ bool TargetRegisterInfo::getRegAllocationHints(
     if (VRM && Phys.isVirtual())
       Phys = VRM->getPhys(Phys);
 
+    // Don't add the same reg twice (Hints_MRI may contain multiple virtual
+    // registers allocated to the same physreg).
+    if (!HintedRegs.insert(Phys).second)
+      continue;
     // Check that Phys is a valid hint in VirtReg's register class.
     if (!Phys.isPhysical())
       continue;
@@ -429,12 +435,6 @@ bool TargetRegisterInfo::getRegAllocationHints(
     // from VirtReg's register class if they aren't in the allocation order. The
     // target probably has a reason for removing the register.
     if (!is_contained(Order, Phys))
-      continue;
-
-    // Don't add the same reg twice (Hints_MRI may contain multiple virtual
-    // registers allocated to the same physreg, or Hints may already contain
-    // it).
-    if (is_contained(Hints, Phys))
       continue;
 
     // All clear, tell the register allocator to prefer this register.

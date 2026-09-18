@@ -2578,7 +2578,8 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // Compute an in-file position for a given section. The file offset must be the
 // same with its virtual address modulo the page size, so that the loader can
 // load executables without any address adjustment.
-static uint64_t computeFileOffset(Ctx &ctx, OutputSection *os, uint64_t off) {
+static uint64_t computeFileOffset(Ctx &ctx, OutputSection *os, uint64_t off,
+                                  PhdrEntry *nobitsLoad) {
   // The first section in a PT_LOAD has to have congruent offset and address
   // modulo the maximum page size.
   if (os->ptLoad && os->ptLoad->firstSec == os)
@@ -2593,6 +2594,12 @@ static uint64_t computeFileOffset(Ctx &ctx, OutputSection *os, uint64_t off) {
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
      return alignToPowerOf2(off, os->addralign);
+
+  // An empty section after a NOBITS section in the same PT_LOAD has no file
+  // contents either. Skip the formula below, which would reserve file bytes
+  // for the NOBITS section and inflate p_filesz.
+  if (os->size == 0 && os->ptLoad == nobitsLoad)
+    return off;
 
   // If two sections share the same PT_LOAD the file offset is calculated
   // using this formula: Off2 = Off1 + (VA2 - VA1).
@@ -2637,13 +2644,16 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 
   // Layout SHF_ALLOC sections before non-SHF_ALLOC sections. A non-SHF_ALLOC
   // will not occupy file offsets contained by a PT_LOAD.
+  PhdrEntry *nobitsLoad = nullptr;
   for (OutputSection *sec : ctx.outputSections) {
     if (!(sec->flags & SHF_ALLOC))
       continue;
-    off = computeFileOffset(ctx, sec, off);
+    off = computeFileOffset(ctx, sec, off, nobitsLoad);
     sec->offset = off;
     if (sec->type != SHT_NOBITS)
       off += sec->size;
+    else if (sec->ptLoad)
+      nobitsLoad = sec->ptLoad;
 
     // If this is a last section of the last executable segment and that
     // segment is the last loadable segment, align the offset of the

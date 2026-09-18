@@ -909,9 +909,23 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
         return !(nList[lhs].n_desc & N_WEAK_DEF) && (nList[rhs].n_desc & N_WEAK_DEF);
       return nList[lhs].n_value < nList[rhs].n_value;
     });
+    size_t sameAddrGroupIdx = 0;
+    bool sameAddrHasRegularSymbol = false;
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
       const uint32_t symIndex = symbolIndices[j];
       const NList &sym = nList[symIndex];
+      // An ordinary symbol establishes an atom boundary for every symbol at
+      // its address, even when a local alt entry precedes it in the nlist.
+      if (j == sameAddrGroupIdx) {
+        sameAddrHasRegularSymbol = false;
+        while (sameAddrGroupIdx < symbolIndices.size()) {
+          const NList &sameAddrSym = nList[symbolIndices[sameAddrGroupIdx]];
+          if (sameAddrSym.n_value != sym.n_value)
+            break;
+          sameAddrHasRegularSymbol |= !(sameAddrSym.n_desc & N_ALT_ENTRY);
+          ++sameAddrGroupIdx;
+        }
+      }
       StringRef name = getSymName(sym);
       Subsection &subsec = subsections.back();
       InputSection *isec = subsec.isec;
@@ -922,15 +936,18 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
           j + 1 < symbolIndices.size()
               ? nList[symbolIndices[j + 1]].n_value - sym.n_value
               : isec->data.size() - symbolOffset;
+      const bool isInteriorAltEntry =
+          (sym.n_desc & N_ALT_ENTRY) && !sameAddrHasRegularSymbol;
       // There are 4 cases where we do not need to create a new subsection:
       //   1. If the input file does not use subsections-via-symbols.
       //   2. Multiple symbols at the same address only induce one subsection.
       //      (The symbolOffset == 0 check covers both this case as well as
       //      the first loop iteration.)
-      //   3. Alternative entry points do not induce new subsections.
+      //   3. Alternative entry points without a coincident ordinary symbol do
+      //      not induce new subsections.
       //   4. If we have a literal section (e.g. __cstring and __literal4).
-      if (!subsectionsViaSymbols || symbolOffset == 0 ||
-          sym.n_desc & N_ALT_ENTRY || !isa<ConcatInputSection>(isec)) {
+      if (!subsectionsViaSymbols || symbolOffset == 0 || isInteriorAltEntry ||
+          !isa<ConcatInputSection>(isec)) {
         isec->hasAltEntry = symbolOffset != 0;
         symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
                                           symbolSize, forceHidden);
