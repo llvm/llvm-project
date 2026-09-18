@@ -352,7 +352,7 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
                                 std::make_unique<raw_svector_ostream>(
                                     buf[task].second));
                           },
-                          cache));
+                          cache, ctx.arg.ltoPartitionsUsesThinLTOCache));
 
   // Emit empty index files for non-indexed files but not in single-module mode.
   if (ctx.arg.thinLTOModulesToCompile.empty()) {
@@ -379,9 +379,23 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     return {};
   }
 
-  if (!ctx.arg.thinLTOCacheDir.empty())
+  if (!ctx.arg.thinLTOCacheDir.empty()) {
+    // If we re-use the ThinLTO cache for --lto-partitions, add the LTO
+    // partition buffers to "files" so cache pruning can take them into account.
+    if (ctx.arg.ltoPartitionsUsesThinLTOCache) {
+      for (auto &e : buf) {
+        files.push_back(MemoryBuffer::getMemBuffer(e.second, "", false));
+      }
+    }
     check(
         pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
+  }
+
+  if (!ctx.arg.ltoObjPath.empty()) {
+    saveBuffer(buf[0].second, ctx.arg.ltoObjPath);
+    for (unsigned i = 1; i != maxTasks; ++i)
+      saveBuffer(buf[i].second, ctx.arg.ltoObjPath + Twine(i));
+  }
 
   bool savePrelink = ctx.arg.saveTempsArgs.contains("prelink");
   SmallVector<std::unique_ptr<InputFile>, 0> ret;

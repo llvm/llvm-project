@@ -43,6 +43,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -108,6 +109,87 @@ struct LTOCodeGenerator {
   void setSaveIRBeforeOptPath(std::string Value) {
     SaveIRBeforeOptPath = std::move(Value);
   }
+
+  /**
+   * \defgroup Cache controlling options
+   *
+   * These entry points control the regular LTO cache used by parallel code
+   * generation (`splitModule`). The cache is intended to support incremental
+   * build, and thus needs to be persistent accross build. The client enabled
+   * the cache by supplying a path to an existing directory. The code generator
+   * will use this to store objects files that may be reused during a subsequent
+   * build. To avoid filling the disk space, a few knobs are provided:
+   *  - The pruning interval limit the frequency at which the garbage collector
+   *    will try to scan the cache directory to prune it from expired entries.
+   *    Setting to -1 disable the pruning (default). Setting to 0 will force
+   *    pruning to occur.
+   *  - The pruning expiration time indicates to the garbage collector how old
+   *    an entry needs to be to be removed.
+   *  - Finally, the garbage collector can be instructed to prune the cache till
+   *    the occupied space goes below a threshold.
+   * @{
+   */
+
+  struct CachingOptions {
+    std::string Path; // Path to the cache, empty to disable.
+    CachePruningPolicy Policy;
+  };
+
+  /// Provide a path to a directory where to store the cached files for
+  /// incremental build.
+  void setCacheDir(std::string Path) { CacheOptions.Path = std::move(Path); }
+
+  /// Cache policy: interval (seconds) between two prunes of the cache. Set to a
+  /// negative value to disable pruning. A value of 0 will force pruning to
+  /// occur.
+  void setCachePruningInterval(int Interval) {
+    if (Interval < 0)
+      CacheOptions.Policy.Interval.reset();
+    else
+      CacheOptions.Policy.Interval = std::chrono::seconds(Interval);
+  }
+
+  /// Cache policy: expiration (in seconds) for an entry.
+  /// A value of 0 will be ignored.
+  void setCacheEntryExpiration(unsigned Expiration) {
+    if (Expiration)
+      CacheOptions.Policy.Expiration = std::chrono::seconds(Expiration);
+  }
+
+  /**
+   * Sets the maximum cache size that can be persistent across build, in terms
+   * of percentage of the available space on the disk. Set to 100 to indicate
+   * no limit, 50 to indicate that the cache size will not be left over
+   * half the available space. A value over 100 will be reduced to 100, and a
+   * value of 0 will be ignored.
+   *
+   *
+   * The formula looks like:
+   *  AvailableSpace = FreeSpace + ExistingCacheSize
+   *  NewCacheSize = AvailableSpace * P/100
+   *
+   */
+  void setMaxCacheSizeRelativeToAvailableSpace(unsigned Percentage) {
+    if (Percentage)
+      CacheOptions.Policy.MaxSizePercentageOfAvailableSpace = Percentage;
+  }
+
+  /// Cache policy: the maximum size for the cache directory in bytes. A value
+  /// over the amount of available space on the disk will be reduced to the
+  /// amount of available space. A value of 0 will be ignored.
+  void setCacheMaxSizeBytes(uint64_t MaxSizeBytes) {
+    if (MaxSizeBytes)
+      CacheOptions.Policy.MaxSizeBytes = MaxSizeBytes;
+  }
+
+  /// Cache policy: the maximum number of files in the cache directory. A value
+  /// of 0 will be ignored.
+  void setCacheMaxSizeFiles(unsigned MaxSizeFiles) {
+    if (MaxSizeFiles)
+      CacheOptions.Policy.MaxSizeFiles = MaxSizeFiles;
+  }
+
+  /**@}*/
 
   /// Restore linkage of globals
   ///
@@ -247,6 +329,7 @@ private:
   LLVMRemarkFileHandle DiagnosticOutputFile;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
   std::string SaveIRBeforeOptPath;
+  CachingOptions CacheOptions;
 
   lto::Config Config;
 };

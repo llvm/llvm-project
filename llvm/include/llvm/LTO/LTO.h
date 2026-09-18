@@ -42,6 +42,7 @@ class LLVMContext;
 class MemoryBufferRef;
 class Module;
 class raw_pwrite_stream;
+class SHA1;
 class ToolOutputFile;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes
@@ -67,6 +68,10 @@ LLVM_ABI void thinLTOInternalizeAndPromoteInIndex(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr = nullptr);
+
+/// Add the information in \p Config to \p Hasher. This also adds the compiler
+/// revision.
+LLVM_ABI void computeLTOConfigHash(const lto::Config &Conf, SHA1 &Hasher);
 
 /// Computes a unique hash for the Module considering the current list of
 /// export/import and other global analysis results.
@@ -435,9 +440,13 @@ public:
   /// The Cache parameter is optional. If supplied, it will be used to cache
   /// native object files and add them to the link.
   ///
+  /// If \p CacheLTOPartitions is true, \p Cache will also be used by regular
+  /// LTO to cache parallel codegen partitions when parallel codegen is enabled.
+  ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  virtual Error run(AddStreamFn AddStream, FileCache Cache = {});
+  virtual Error run(AddStreamFn AddStream, FileCache Cache = {},
+                    bool CacheLTOPartitions = false);
 
   /// Wait for cleanup work started by run() to finish.
   ///
@@ -634,7 +643,7 @@ private:
   addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
              ArrayRef<SymbolResolution> Res);
 
-  Error runRegularLTO(AddStreamFn AddStream);
+  Error runRegularLTO(AddStreamFn AddStream, FileCache LTOPartitionsCache);
   Error runThinLTO(AddStreamFn AddStream, FileCache Cache,
                    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols);
 
