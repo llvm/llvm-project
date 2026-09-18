@@ -16,7 +16,7 @@
 ; AcquireRelease       = 0x008 =   8 -> with CrossWorkgroup: 520, with Workgroup: 264
 ; SequentiallyConsistent = 0x010 = 16 -> with CrossWorkgroup: 528, with Workgroup: 272
 ; Acquire              = 0x002 =   2 -> with CrossWorkgroup: 514
-; 0x300 = 768 -> with AcquireRelease: 776
+; CrossWorkgroupMemory (0x200) | WorkgroupMemory (0x100) = 768 -> with AcquireRelease: 776
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#MemSem_AcqRel_CW:]] = OpConstant %[[#Int]] 520
