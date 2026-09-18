@@ -1314,18 +1314,29 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear});
 
-  // Expected layout:
-  // reg0: First.xyz       | WithFirst.w
-  // reg1: Clip0.x         | Cull1[0].yz | Clip1.w
-  // reg2: unused.x        | Cull1[1].yz | unused.w
-  // reg3: AfterClipCull.x | unused.yzw
-  verifyPacking(PackingMethod::PrefixStable, ExtendedConfig, /*ExpectedRows=*/4,
-                {{/*Row=*/0, /*Col=*/0},
-                 {/*Row=*/1, /*Col=*/0},
-                 {/*Row=*/1, /*Col=*/1},
-                 {/*Row=*/1, /*Col=*/3},
-                 {/*Row=*/0, /*Col=*/3},
-                 {/*Row=*/3, /*Col=*/0}});
+  // The complete layout is covered by PrefixStableIndexedClipCull. Here,
+  // check that each appended element leaves all earlier locations unchanged.
+  SmallVector<SemanticSignatureElement> PreviousElements =
+      makeSignature(PrefixConfig);
+  ASSERT_THAT_EXPECTED(
+      pack(PackingMethod::PrefixStable, PreviousElements, PrefixConfig),
+      Succeeded());
+  for (unsigned Count = PrefixConfig.Elements.size() + 1;
+       Count <= ExtendedConfig.Elements.size(); ++Count) {
+    SCOPED_TRACE(Count);
+    TestConfig Config = ExtendedConfig;
+    Config.Elements.resize(Count);
+    SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+    ASSERT_THAT_EXPECTED(pack(PackingMethod::PrefixStable, Elements, Config),
+                         Succeeded());
+    for (unsigned I = 0; I != PreviousElements.size(); ++I) {
+      EXPECT_EQ(Elements[I].StartRow, PreviousElements[I].StartRow)
+          << "element " << I;
+      EXPECT_EQ(Elements[I].StartCol, PreviousElements[I].StartCol)
+          << "element " << I;
+    }
+    PreviousElements = std::move(Elements);
+  }
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsClipCullOverflow) {
