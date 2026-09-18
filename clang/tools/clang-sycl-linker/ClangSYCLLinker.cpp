@@ -985,7 +985,7 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
 
   // Code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    StringRef Stem = OutputFile.rsplit('.').first;
+    StringRef Stem = sys::path::filename(OutputFile).rsplit('.').first;
     std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
 
     if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath,

@@ -135,6 +135,14 @@
 ; AOT-INTEL-CPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: graniterapids
 ; AOT-INTEL-CPU-NOT:  {{.+}}
 ;
+; Test that AOT temp file names ("<stem>_<index>.spv"/".out") are derived from
+; -o's basename only, not its full path, so they land in the current directory.
+; RUN: mkdir -p %t/outdir
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=bmg_g21 %t/input1.bc -o %t/outdir/nested.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=AOT-STEM-BASENAME
+; AOT-STEM-BASENAME:      LLVM backend: input: {{.*}}.bc, output: nested_0.spv
+; AOT-STEM-BASENAME-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-output nested_0.out -file nested_0.spv
+;
 ; Check that the output file must be specified.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NOOUTPUT
