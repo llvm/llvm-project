@@ -3552,6 +3552,26 @@ LogicalResult cir::CopyOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// PtrMaskOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::PtrMaskOp::verify() {
+  mlir::DataLayout layout = mlir::DataLayout::closest(*this);
+  std::optional<uint64_t> indexWidth =
+      layout.getTypeIndexBitwidth(getPtr().getType());
+  if (!indexWidth)
+    return emitOpError() << "pointer has no index width";
+
+  uint64_t maskWidth = getMask().getType().getWidth();
+  if (maskWidth != *indexWidth)
+    return emitOpError() << "mask width " << maskWidth
+                         << " must equal the pointer index width "
+                         << *indexWidth;
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetRuntimeMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
