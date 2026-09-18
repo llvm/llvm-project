@@ -327,14 +327,18 @@ auto inPlaceClass() {
 
 auto isOptionalNulloptConstructor() {
   return cxxConstructExpr(
-      hasDeclaration(cxxConstructorDecl(parameterCountIs(1),
-                                        hasParameter(0, hasNulloptType()))),
+      hasDeclaration(cxxConstructorDecl(
+          anyOf(allOf(parameterCountIs(1), hasParameter(0, hasNulloptType())),
+                hasReturnTypestateAttr(ReturnTypestateAttr::Consumed)))),
       hasOptionalOrDerivedType());
 }
 
 auto isOptionalInPlaceConstructor() {
-  return cxxConstructExpr(hasArgument(0, hasType(inPlaceClass())),
-                          hasOptionalOrDerivedType());
+  return cxxConstructExpr(
+      anyOf(hasArgument(0, hasType(inPlaceClass())),
+            hasDeclaration(cxxConstructorDecl(
+                hasReturnTypestateAttr(ReturnTypestateAttr::Unconsumed)))),
+      hasOptionalOrDerivedType());
 }
 
 auto isOptionalValueOrConversionConstructor() {
@@ -350,7 +354,8 @@ auto isOptionalValueOrConversionAssignment() {
       hasOverloadedOperatorName("="),
       callee(cxxMethodDecl(ofClass(optionalOrDerivedClass()))),
       unless(hasDeclaration(cxxMethodDecl(
-          anyOf(isCopyAssignmentOperator(), isMoveAssignmentOperator())))),
+          anyOf(isCopyAssignmentOperator(), isMoveAssignmentOperator(),
+                hasSetTypestateAttr(SetTypestateAttr::Consumed))))),
       argumentCountIs(2), hasArgument(1, unless(hasNulloptType())));
 }
 
@@ -358,7 +363,10 @@ auto isOptionalNulloptAssignment() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("="),
       callee(cxxMethodDecl(ofClass(optionalOrDerivedClass()))),
-      argumentCountIs(2), hasArgument(1, hasNulloptType()));
+      argumentCountIs(2),
+      anyOf(hasArgument(1, hasNulloptType()),
+            callee(cxxMethodDecl(
+                hasSetTypestateAttr(SetTypestateAttr::Consumed)))));
 }
 
 auto isStdSwapCall() {
