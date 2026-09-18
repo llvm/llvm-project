@@ -22,10 +22,10 @@ static constexpr uint64_t CacheDiskMismatch =
 // The cached value reflects that the file doesn't exist.
 static constexpr uint64_t FileNotFound = CacheDiskMismatch - 1;
 
-FileCache::FileCache(llvm::StringRef Path)
-    : Path(Path), ValidTime(std::chrono::steady_clock::time_point::min()),
+FileCache::FileCache(PathRef Path)
+    : Path(Path.raw()), ValidTime(std::chrono::steady_clock::time_point::min()),
       ModifiedTime(), Size(CacheDiskMismatch) {
-  assert(llvm::sys::path::is_absolute(Path));
+  assert(Path.isAbsolute());
 }
 
 void FileCache::read(

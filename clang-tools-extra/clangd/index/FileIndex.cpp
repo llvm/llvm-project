@@ -182,7 +182,7 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
 std::vector<llvm::StringRef> FileShardedIndex::getAllSources() const {
   // It should be enough to construct a vector with {Shards.keys().begin(),
   // Shards.keys().end()} but MSVC fails to compile that.
-  std::vector<PathRef> Result;
+  std::vector<llvm::StringRef> Result;
   Result.reserve(Shards.size());
   for (auto Key : Shards.keys())
     Result.push_back(Key);
@@ -471,7 +471,7 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   auto Contents = indexMainDecls(AST);
   MainFileSymbols.update(
-      URI::create(Path).toString(),
+      URI::create(Path.raw()).toString(),
       std::make_unique<SymbolSlab>(std::move(std::get<0>(Contents))),
       std::make_unique<RefSlab>(std::move(std::get<1>(Contents))),
       std::make_unique<RelationSlab>(std::move(std::get<2>(Contents))),

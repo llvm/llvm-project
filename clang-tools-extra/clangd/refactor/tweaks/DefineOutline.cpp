@@ -475,7 +475,7 @@ public:
   }
 
   bool prepare(const Selection &Sel) override {
-    SameFile = !isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts());
+    SameFile = !isHeaderFile(Sel.AST->tuPath().raw(), Sel.AST->getLangOpts());
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
 
     // Bail out if the selection is not a function declaration.
@@ -561,22 +561,22 @@ public:
     std::optional<Path> CCFile;
     auto Anchor = getDefinitionOfAdjacentDecl(Sel);
     if (Anchor) {
-      CCFile = Anchor->Loc.uri.file();
+      CCFile = Path(Anchor->Loc.uri.file());
     } else {
-      CCFile = SameFile ? Sel.AST->tuPath().str()
-                        : getSourceFile(Sel.AST->tuPath(), Sel);
+      CCFile = SameFile ? Sel.AST->tuPath().owned()
+                        : getSourceFile(Sel.AST->tuPath().raw(), Sel);
     }
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");
     assert(Sel.FS && "FS Must be set in apply");
-    auto Buffer = Sel.FS->getBufferForFile(*CCFile);
+    auto Buffer = Sel.FS->getBufferForFile(CCFile->raw());
     // FIXME: Maybe we should consider creating the implementation file if it
     // doesn't exist?
     if (!Buffer)
       return llvm::errorCodeToError(Buffer.getError());
 
     auto Contents = Buffer->get()->getBuffer();
-    SourceManagerForFile SMFF(*CCFile, Contents);
+    SourceManagerForFile SMFF(CCFile->raw(), Contents);
 
     std::optional<Position> InsertionPos;
     if (Anchor) {
@@ -622,14 +622,16 @@ public:
     assert(Offset);
     assert(EnclosingNamespace);
 
-    auto FuncDef = getFunctionSourceCode(
-        Source, EnclosingNamespace, Sel.AST->getTokens(),
-        Sel.AST->getHeuristicResolver(),
-        SameFile && isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts()));
+    auto FuncDef =
+        getFunctionSourceCode(Source, EnclosingNamespace, Sel.AST->getTokens(),
+                              Sel.AST->getHeuristicResolver(),
+                              SameFile && isHeaderFile(Sel.AST->tuPath().raw(),
+                                                       Sel.AST->getLangOpts()));
     if (!FuncDef)
       return FuncDef.takeError();
 
-    const tooling::Replacement InsertFunctionDef(*CCFile, *Offset, 0, *FuncDef);
+    const tooling::Replacement InsertFunctionDef(CCFile->raw(), *Offset, 0,
+                                                 *FuncDef);
     auto Effect = Effect::mainFileEdit(
         SMFF.get(), tooling::Replacements(InsertFunctionDef));
     if (!Effect)
@@ -657,7 +659,7 @@ public:
     }
 
     if (SameFile) {
-      tooling::Replacements &R = Effect->ApplyEdits[*CCFile].Replacements;
+      tooling::Replacements &R = Effect->ApplyEdits[CCFile->raw()].Replacements;
       R = R.merge(HeaderUpdates);
     } else {
       auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(), HeaderUpdates);
@@ -674,7 +676,7 @@ public:
     if (!Sel.Index)
       return {};
     std::optional<Location> Anchor;
-    std::string TuURI = URI::createFile(Sel.AST->tuPath()).toString();
+    std::string TuURI = URI::createFile(Sel.AST->tuPath().raw()).toString();
     auto CheckCandidate = [&](Decl *Candidate) {
       assert(Candidate != Source);
       if (auto Func = llvm::dyn_cast_or_null<FunctionDecl>(Candidate);
@@ -684,7 +686,8 @@ public:
       std::optional<Location> CandidateLoc;
       Sel.Index->lookup({{getSymbolID(Candidate)}}, [&](const Symbol &S) {
         if (S.Definition) {
-          if (auto Loc = indexToLSPLocation(S.Definition, Sel.AST->tuPath()))
+          if (auto Loc =
+                  indexToLSPLocation(S.Definition, Sel.AST->tuPath().raw()))
             CandidateLoc = *Loc;
           else
             log("getDefinitionOfAdjacentDecl: {0}", Loc.takeError());
