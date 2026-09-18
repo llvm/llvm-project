@@ -6478,6 +6478,10 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
+      RUN_VPLAN_PASS(VPlanTransforms::trimVFsCausingSplits, *Plan, TTI);
+      // Skip the plan if all VFs are removed.
+      if (!Plan->hasAnyVF())
+        continue;
     }
 
     if (auto P =
