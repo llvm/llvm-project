@@ -322,7 +322,8 @@ class LegalityAnalysis {
   /// Checks opcodes, types and other IR-specifics and returns a ResultReason
   /// object if not vectorizable, or nullptr otherwise.
   std::optional<ResultReason>
-  notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl);
+  notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl,
+                                        bool ExpensivePtrCheck);
 
   ScalarEvolution &SE;
   const DataLayout &DL;
@@ -365,7 +366,8 @@ public:
   /// \p SkipScheduling skips the scheduler check and is only meant for testing.
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
   LLVM_ABI const LegalityResult &canVectorize(BndlRef<Value *> Bndl,
-                                              bool SkipScheduling = false);
+                                              bool SkipScheduling = false,
+                                              bool ExpensivePtrCheck = false);
   /// \Returns a Pack with reason 'ForcePackForDebugging'.
   const LegalityResult &getForcedPackForDebugging() {
     return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);

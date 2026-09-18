@@ -13,7 +13,6 @@
 #define LLVM_SANDBOXIR_UTILS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -86,24 +85,109 @@ public:
     return llvm::MemoryLocation::getOrNone(cast<llvm::Instruction>(I->Val));
   }
 
+  static std::optional<int64_t>
+  getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
+                  const DataLayout &DL, ScalarEvolution &SE, bool StrictCheck,
+                  bool CheckType, bool ExpensivePtrCheck = false) {
+    assert(PtrA && PtrB && "Expected non-nullptr pointers.");
+
+    // Make sure that A and B are different pointers.
+    if (PtrA == PtrB)
+      return 0;
+
+    // Make sure that the element types are the same if required.
+    if (CheckType && ElemTyA != ElemTyB)
+      return std::nullopt;
+
+    unsigned ASA = PtrA->getType()->getPointerAddressSpace();
+    unsigned ASB = PtrB->getType()->getPointerAddressSpace();
+
+    // Check that the address spaces match.
+    if (ASA != ASB)
+      return std::nullopt;
+    unsigned IdxWidth = DL.getIndexSizeInBits(ASA);
+
+    APInt OffsetA(IdxWidth, 0), OffsetB(IdxWidth, 0);
+    const Value *PtrA1 = PtrA->stripAndAccumulateConstantOffsets(
+        DL, OffsetA, /*AllowNonInbounds=*/true);
+    const Value *PtrB1 = PtrB->stripAndAccumulateConstantOffsets(
+        DL, OffsetB, /*AllowNonInbounds=*/true);
+
+    std::optional<int64_t> Val;
+    if (PtrA1 == PtrB1) {
+      // Retrieve the address space again as pointer stripping now tracks
+      // through `addrspacecast`.
+      ASA = cast<PointerType>(PtrA1->getType())->getAddressSpace();
+      ASB = cast<PointerType>(PtrB1->getType())->getAddressSpace();
+      // Check that the address spaces match and that the pointers are valid.
+      if (ASA != ASB)
+        return std::nullopt;
+
+      IdxWidth = DL.getIndexSizeInBits(ASA);
+      OffsetA = OffsetA.sextOrTrunc(IdxWidth);
+      OffsetB = OffsetB.sextOrTrunc(IdxWidth);
+
+      OffsetB -= OffsetA;
+      Val = OffsetB.trySExtValue();
+    } else {
+      // Otherwise compute the distance with SCEV between the base pointers.
+      const SCEV *PtrSCEVA = SE.getSCEV(PtrA->Val);
+      const SCEV *PtrSCEVB = SE.getSCEV(PtrB->Val);
+      if (ExpensivePtrCheck) {
+        const SCEV *DistScev =
+            SE.getMinusSCEV(SE.getSCEV(PtrB->Val), SE.getSCEV(PtrA->Val));
+        if (DistScev == SE.getCouldNotCompute())
+          return std::nullopt;
+        ConstantRange DistRange = SE.getSignedRange(DistScev);
+        if (!DistRange.isSingleElement())
+          return std::nullopt;
+        // Handle index width (the width of Dist) != pointer width (the width of
+        // the Offset*s at this point).
+        APInt Dist = DistRange.getSingleElement()->sextOrTrunc(64);
+        return (OffsetB - OffsetA + Dist).sextOrTrunc(64).trySExtValue();
+      }
+
+      std::optional<APInt> Diff =
+          SE.computeConstantDifference(PtrSCEVB, PtrSCEVA);
+      if (!Diff)
+        return std::nullopt;
+      Val = Diff->trySExtValue();
+    }
+
+    if (!Val)
+      return std::nullopt;
+
+    int64_t Size = DL.getTypeStoreSize(ElemTyA->LLVMTy);
+    int64_t Dist = *Val / Size;
+
+    // Ensure that the calculated distance matches the type-based one after all
+    // the bitcasts removal in the provided pointers.
+    if (!StrictCheck || Dist * Size == Val)
+      return Dist;
+    return std::nullopt;
+  }
+
   /// \Returns the gap between the memory locations accessed by \p I0 and
   /// \p I1 in bytes. Returns nullopt if the gap can't be determined.
   template <typename LoadOrStoreT>
-  static std::optional<int> getPointerDiffInBytes(LoadOrStoreT *I0,
-                                                  LoadOrStoreT *I1,
-                                                  ScalarEvolution &SE) {
+  static std::optional<int>
+  getPointerDiffInBytes(LoadOrStoreT *I0, LoadOrStoreT *I1, ScalarEvolution &SE,
+                        bool ExpensivePtrCheck) {
     static_assert(std::is_same_v<LoadOrStoreT, LoadInst> ||
                       std::is_same_v<LoadOrStoreT, StoreInst>,
                   "Expected sandboxir::Load or sandboxir::Store!");
-    llvm::Value *Opnd0 = I0->getPointerOperand()->Val;
-    llvm::Value *Opnd1 = I1->getPointerOperand()->Val;
-    llvm::Value *Ptr0 = getUnderlyingObject(Opnd0);
-    llvm::Value *Ptr1 = getUnderlyingObject(Opnd1);
-    if (Ptr0 != Ptr1)
+    Value *Opnd0 = I0->getPointerOperand();
+    Value *Opnd1 = I1->getPointerOperand();
+    llvm::Value *LLVMOpnd0 = Opnd0->Val;
+    llvm::Value *LLVMOpnd1 = Opnd1->Val;
+    llvm::Value *LLVMPtr0 = getUnderlyingObject(LLVMOpnd0);
+    llvm::Value *LLVMPtr1 = getUnderlyingObject(LLVMOpnd1);
+    if (LLVMPtr0 != LLVMPtr1)
       return std::nullopt;
-    llvm::Type *ElemTy = llvm::Type::getInt8Ty(SE.getContext());
+    Type *ElemTy = Type::getInt8Ty(I0->getContext());
     return getPointersDiff(ElemTy, Opnd0, ElemTy, Opnd1, I0->getDataLayout(),
-                           SE, /*StrictCheck=*/false, /*CheckType=*/false);
+                           SE, /*StrictCheck=*/false, /*CheckType=*/false,
+                           ExpensivePtrCheck);
   }
 
   /// \Returns true if \p I0 accesses a memory location lower than \p I1.
@@ -112,8 +196,9 @@ public:
   /// be determined.
   template <typename LoadOrStoreT>
   static std::optional<bool> atLowerAddress(LoadOrStoreT *I0, LoadOrStoreT *I1,
-                                            ScalarEvolution &SE) {
-    auto Diff = getPointerDiffInBytes(I0, I1, SE);
+                                            ScalarEvolution &SE,
+                                            bool ExpensivePtrChecks) {
+    auto Diff = getPointerDiffInBytes(I0, I1, SE, ExpensivePtrChecks);
     if (!Diff)
       return std::nullopt;
     return *Diff > 0;

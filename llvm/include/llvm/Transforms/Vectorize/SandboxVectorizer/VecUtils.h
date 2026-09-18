@@ -56,11 +56,12 @@ public:
   /// memory addresses.
   template <typename LoadOrStoreT>
   static bool areConsecutive(LoadOrStoreT *I1, LoadOrStoreT *I2,
-                             ScalarEvolution &SE, const DataLayout &DL) {
+                             ScalarEvolution &SE, const DataLayout &DL,
+                             bool Expensive = false) {
     static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
                       std::is_same<LoadOrStoreT, StoreInst>::value,
                   "Expected Load or Store!");
-    auto Diff = Utils::getPointerDiffInBytes(I1, I2, SE);
+    auto Diff = Utils::getPointerDiffInBytes(I1, I2, SE, Expensive);
     if (!Diff)
       return false;
     int ElmBytes = Utils::getNumBits(I1) / 8;
@@ -69,7 +70,7 @@ public:
 
   template <typename LoadOrStoreT, typename ValT>
   static bool areConsecutive(ArrayRef<ValT *> Bndl, ScalarEvolution &SE,
-                             const DataLayout &DL) {
+                             const DataLayout &DL, bool Expensive = false) {
     static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
                       std::is_same<LoadOrStoreT, StoreInst>::value,
                   "Expected Load or Store!");
@@ -79,7 +80,7 @@ public:
       assert(isa<LoadOrStoreT>(V) &&
              "Unimplemented: we only support StoreInst!");
       auto *LS = cast<LoadOrStoreT>(V);
-      if (!VecUtils::areConsecutive(LastLS, LS, SE, DL))
+      if (!VecUtils::areConsecutive(LastLS, LS, SE, DL, Expensive))
         return false;
       LastLS = LS;
     }

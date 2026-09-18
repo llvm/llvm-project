@@ -144,7 +144,8 @@ public:
            "Expected Load or Store instructions!");
     auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
       return *Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
-                                    cast<LoadOrStoreT>(I1), SE);
+                                    cast<LoadOrStoreT>(I1), SE,
+                                    /*ExpensivePtrChecks=*/false);
     };
     std::sort(Seeds.begin(), Seeds.end(), Cmp);
   }
@@ -156,15 +157,17 @@ public:
   }
   bool tryInsert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
     assert(isa<LoadOrStoreT>(I) && "Expected a Store or a Load!");
+    bool ExpensivePtrChecks = false;
     // Early return if we can't determine the mem access ordering.
     auto DiffOpt = Utils::getPointerDiffInBytes(
-        cast<LoadOrStoreT>(Seeds.back()), cast<LoadOrStoreT>(I), SE);
+        cast<LoadOrStoreT>(Seeds.back()), cast<LoadOrStoreT>(I), SE,
+        ExpensivePtrChecks);
     if (!DiffOpt)
       return false;
-
-    auto Cmp = [&SE](Instruction *I0, Instruction *I1) {
+    auto Cmp = [&SE, ExpensivePtrChecks](Instruction *I0, Instruction *I1) {
       return *Utils::atLowerAddress(cast<LoadOrStoreT>(I0),
-                                    cast<LoadOrStoreT>(I1), SE);
+                                    cast<LoadOrStoreT>(I1), SE,
+                                    ExpensivePtrChecks);
     };
     // Find the first element after I in mem. Then insert I before it.
     insertAt(llvm::upper_bound(*this, I, Cmp), I);

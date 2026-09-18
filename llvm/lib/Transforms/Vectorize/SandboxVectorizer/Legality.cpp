@@ -30,7 +30,8 @@ void LegalityResult::dump() const {
 #endif // NDEBUG
 
 std::optional<ResultReason>
-LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl) {
+LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
+    BndlRef<Value *> Bndl, bool ExpensivePtrCheck) {
   auto *I0 = cast<Instruction>(Bndl[0]);
   auto Opcode = I0->getOpcode();
   // If they have different opcodes, then we cannot form a vector (for now).
@@ -147,11 +148,11 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(BndlRef<Value *> Bndl) {
   case Instruction::Opcode::Xor:
     return std::nullopt;
   case Instruction::Opcode::Load:
-    if (VecUtils::areConsecutive<LoadInst>(Bndl, SE, DL))
+    if (VecUtils::areConsecutive<LoadInst>(Bndl, SE, DL, ExpensivePtrCheck))
       return std::nullopt;
     return ResultReason::NotConsecutive;
   case Instruction::Opcode::Store:
-    if (VecUtils::areConsecutive<StoreInst>(Bndl, SE, DL))
+    if (VecUtils::areConsecutive<StoreInst>(Bndl, SE, DL, ExpensivePtrCheck))
       return std::nullopt;
     return ResultReason::NotConsecutive;
   case Instruction::Opcode::PHI:
@@ -214,7 +215,8 @@ LegalityAnalysis::getHowToCollectValues(BndlRef<Value *> Bndl) const {
 }
 
 const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
-                                                     bool SkipScheduling) {
+                                                     bool SkipScheduling,
+                                                     bool ExpensivePtrCheck) {
   // If Bndl contains values other than instructions, we need to Pack.
   if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); }))
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
@@ -237,7 +239,8 @@ const LegalityResult &LegalityAnalysis::canVectorize(BndlRef<Value *> Bndl,
         std::move(CollectDescrs));
   }
 
-  if (auto ReasonOpt = notVectorizableBasedOnOpcodesAndTypes(Bndl))
+  if (auto ReasonOpt =
+          notVectorizableBasedOnOpcodesAndTypes(Bndl, ExpensivePtrCheck))
     return createLegalityResult<Pack>(*ReasonOpt);
 
   if (!SkipScheduling) {

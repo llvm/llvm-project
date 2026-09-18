@@ -124,26 +124,70 @@ define void @foo(ptr %ptr, i64 %val, ptr %ptrY) {
   [[maybe_unused]] auto *V3L2 = cast<sandboxir::LoadInst>(&*It++);
   [[maybe_unused]] auto *V3L3 = cast<sandboxir::LoadInst>(&*It++);
 
-  // getPointerDiffInBytes
-  EXPECT_EQ(sandboxir::Utils::getPointerDiffInBytes(L0, LX, SE), std::nullopt);
-  EXPECT_EQ(sandboxir::Utils::getPointerDiffInBytes(L0, LY, SE), std::nullopt);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L1, SE), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L2, SE), 8);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L1, L0, SE), -4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L0, SE), 0);
+  using SBU = sandboxir::Utils;
+  bool ExpensiveT = true;
+  bool ExpensiveF = false;
 
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V2L1, SE), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, V3L1, SE), 4);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L2, SE), 8);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L0, V2L3, SE), 12);
-  EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L3, V2L0, SE), -12);
+  // getPointerDiff()
+  EXPECT_EQ(SBU::getPointersDiff(L0->getType(), L0->getPointerOperand(),
+                                 L1->getType(), L1->getPointerOperand(), DL, SE,
+                                 /*StrictCheck=*/true, /*CheckType=*/true,
+                                 ExpensiveF),
+            1);
+  EXPECT_EQ(SBU::getPointersDiff(L0->getType(), L0->getPointerOperand(),
+                                 L1->getType(), L1->getPointerOperand(), DL, SE,
+                                 /*StrictCheck=*/true, /*CheckType=*/true,
+                                 ExpensiveT),
+            1);
+
+  // getPointerDiffInBytes
+  EXPECT_EQ(SBU::getPointerDiffInBytes(L0, LX, SE, ExpensiveF), std::nullopt);
+  EXPECT_EQ(SBU::getPointerDiffInBytes(L0, LX, SE, ExpensiveT), std::nullopt);
+
+  EXPECT_EQ(SBU::getPointerDiffInBytes(L0, LY, SE, ExpensiveF), std::nullopt);
+  EXPECT_EQ(SBU::getPointerDiffInBytes(L0, LY, SE, ExpensiveT), std::nullopt);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, L1, SE, ExpensiveF), 4);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, L1, SE, ExpensiveT), 4);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, L2, SE, ExpensiveF), 8);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, L2, SE, ExpensiveT), 8);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L1, L0, SE, ExpensiveF), -4);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L1, L0, SE, ExpensiveT), -4);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, V2L0, SE, ExpensiveF), 0);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, V2L0, SE, ExpensiveT), 0);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, V2L1, SE, ExpensiveF), 4);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, V2L1, SE, ExpensiveT), 4);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, V3L1, SE, ExpensiveF), 4);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(L0, V3L1, SE, ExpensiveT), 4);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(V2L0, V2L2, SE, ExpensiveF), 8);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(V2L0, V2L2, SE, ExpensiveT), 8);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(V2L0, V2L3, SE, ExpensiveF), 12);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(V2L0, V2L3, SE, ExpensiveT), 12);
+
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(V2L3, V2L0, SE, ExpensiveF), -12);
+  EXPECT_EQ(*SBU::getPointerDiffInBytes(V2L3, V2L0, SE, ExpensiveT), -12);
 
   // atLowerAddress
-  EXPECT_EQ(sandboxir::Utils::atLowerAddress(L0, LX, SE), std::nullopt);
-  EXPECT_EQ(sandboxir::Utils::atLowerAddress(L0, LY, SE), std::nullopt);
-  EXPECT_TRUE(*sandboxir::Utils::atLowerAddress(L0, L1, SE));
-  EXPECT_FALSE(*sandboxir::Utils::atLowerAddress(L1, L0, SE));
-  EXPECT_FALSE(*sandboxir::Utils::atLowerAddress(L3, V3L3, SE));
+  EXPECT_EQ(SBU::atLowerAddress(L0, LX, SE, ExpensiveT), std::nullopt);
+  EXPECT_EQ(SBU::atLowerAddress(L0, LX, SE, ExpensiveF), std::nullopt);
+
+  EXPECT_EQ(SBU::atLowerAddress(L0, LY, SE, ExpensiveT), std::nullopt);
+  EXPECT_EQ(SBU::atLowerAddress(L0, LY, SE, ExpensiveF), std::nullopt);
+
+  EXPECT_TRUE(*SBU::atLowerAddress(L0, L1, SE, ExpensiveT));
+  EXPECT_TRUE(*SBU::atLowerAddress(L0, L1, SE, ExpensiveF));
+
+  EXPECT_FALSE(*SBU::atLowerAddress(L1, L0, SE, ExpensiveT));
+  EXPECT_FALSE(*SBU::atLowerAddress(L1, L0, SE, ExpensiveF));
+
+  EXPECT_FALSE(*SBU::atLowerAddress(L3, V3L3, SE, ExpensiveT));
+  EXPECT_FALSE(*SBU::atLowerAddress(L3, V3L3, SE, ExpensiveF));
 }
 
 TEST_F(UtilsTest, GetExpected) {

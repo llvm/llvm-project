@@ -334,55 +334,133 @@ define void @foo(ptr %ptr) {
   auto *V3L3 = cast<sandboxir::LoadInst>(&*It++);
 
   // Scalar
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(L0, L1, SE, DL));
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(L1, L2, SE, DL));
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(L2, L3, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L1, L0, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L2, L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L3, L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L0, L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L0, L3, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L1, L3, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L2, L0, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L3, L1, SE, DL));
+  using SBVU = sandboxir::VecUtils;
+  static constexpr bool ExpensiveT = true;
+  static constexpr bool ExpensiveF = false;
+  EXPECT_TRUE(SBVU::areConsecutive(L0, L1, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(L0, L1, SE, DL, ExpensiveF));
+
+  EXPECT_TRUE(SBVU::areConsecutive(L1, L2, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(L1, L2, SE, DL, ExpensiveF));
+
+  EXPECT_TRUE(SBVU::areConsecutive(L2, L3, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(L2, L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L1, L0, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L1, L0, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L2, L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L2, L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L3, L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L3, L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L0, L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L0, L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L0, L3, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L0, L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L1, L3, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L1, L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L2, L0, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L2, L0, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L3, L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L3, L1, SE, DL, ExpensiveF));
 
   // Check 2-wide loads
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(V2L0, V2L2, SE, DL));
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(V2L1, V2L3, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L0, V2L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L1, V2L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L2, V2L3, SE, DL));
+  EXPECT_TRUE(SBVU::areConsecutive(V2L0, V2L2, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(V2L0, V2L2, SE, DL, ExpensiveF));
 
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L3, V2L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L3, V2L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L3, V2L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L3, V2L1, SE, DL));
+  EXPECT_TRUE(SBVU::areConsecutive(V2L1, V2L3, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(V2L1, V2L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L0, V2L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L0, V2L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L1, V2L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L1, V2L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L2, V2L3, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L2, V2L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L3, V2L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L3, V2L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L3, V2L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L3, V2L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L3, V2L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L3, V2L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L3, V2L1, SE, DL, ExpensiveF));
 
   // Check 3-wide loads
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(V3L0, V3L3, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L0, V3L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L1, V3L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L2, V3L3, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L1, V3L0, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L2, V3L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L3, V3L2, SE, DL));
+  EXPECT_TRUE(SBVU::areConsecutive(V3L0, V3L3, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(V3L0, V3L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, V3L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, V3L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L1, V3L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L1, V3L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L2, V3L3, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L2, V3L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L1, V3L0, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L1, V3L0, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L2, V3L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L2, V3L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L3, V3L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L3, V3L2, SE, DL, ExpensiveF));
 
   // Check mixes of vectors and scalar
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(L0, V2L1, SE, DL));
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(L1, V2L2, SE, DL));
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(V2L0, L2, SE, DL));
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(V3L0, L3, SE, DL));
-  EXPECT_TRUE(sandboxir::VecUtils::areConsecutive(V2L0, V3L2, SE, DL));
+  EXPECT_TRUE(SBVU::areConsecutive(L0, V2L1, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(L0, V2L1, SE, DL, ExpensiveF));
 
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L0, V2L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L0, V3L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(L0, V2L3, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L0, V3L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L0, L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L0, L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L0, V2L1, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V3L0, V2L2, SE, DL));
-  EXPECT_FALSE(sandboxir::VecUtils::areConsecutive(V2L1, L0, SE, DL));
+  EXPECT_TRUE(SBVU::areConsecutive(L1, V2L2, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(L1, V2L2, SE, DL, ExpensiveF));
+
+  EXPECT_TRUE(SBVU::areConsecutive(V2L0, L2, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(V2L0, L2, SE, DL, ExpensiveF));
+
+  EXPECT_TRUE(SBVU::areConsecutive(V3L0, L3, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(V3L0, L3, SE, DL, ExpensiveF));
+
+  EXPECT_TRUE(SBVU::areConsecutive(V2L0, V3L2, SE, DL, ExpensiveT));
+  EXPECT_TRUE(SBVU::areConsecutive(V2L0, V3L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L0, V2L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L0, V2L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L0, V3L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L0, V3L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(L0, V2L3, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(L0, V2L3, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L0, V3L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L0, V3L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, V2L1, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, V2L1, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, V2L2, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V3L0, V2L2, SE, DL, ExpensiveF));
+
+  EXPECT_FALSE(SBVU::areConsecutive(V2L1, L0, SE, DL, ExpensiveT));
+  EXPECT_FALSE(SBVU::areConsecutive(V2L1, L0, SE, DL, ExpensiveF));
 }
 
 TEST_F(VecUtilsTest, GetNumLanes) {
