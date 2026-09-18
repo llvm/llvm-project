@@ -19,12 +19,12 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    str b0, [sp, #12]
 ; CHECK-NEXT:    ldrb w8, [sp, #12]
 ; CHECK-NEXT:    tbz w8, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
 ; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x9]
 ; CHECK-NEXT:    tbnz w8, #1, .LBB0_3
 ; CHECK-NEXT:    b .LBB0_4
@@ -37,6 +37,7 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    index z2.d, #0, #1
 ; CHECK-NEXT:    mov z1.d, z1.d[1]
 ; CHECK-NEXT:    mov z3.d, x8
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z2.d, z3.d
 ; CHECK-NEXT:    ldr x8, [x8]
