@@ -33,7 +33,7 @@ public:
   // LLVMO2-DAG: define available_externally void @_ZNK6HolderIiE4showEv
   void show() const {}
 
-  // CIR-DAG: cir.func always_inline available_externally @_ZNK6HolderIiE18dump_always_inlineEv{{.*}}attributes {{{.*}}} {
+  // CIR-DAG: cir.func always_inline {{.*}}available_externally @_ZNK6HolderIiE18dump_always_inlineEv{{.*}}attributes {{{.*}}} {
   // LLVM-DAG: define available_externally void @_ZNK6HolderIiE18dump_always_inlineEv
   __attribute__((always_inline)) void dump_always_inline() const {}
 };
