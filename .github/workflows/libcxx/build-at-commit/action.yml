@@ -36,6 +36,9 @@ runs:
         COMPILER: ${{ inputs.compiler }}
         INSTALL_DIR: ${{ inputs.install-dir }}
       run: |
+        # Clean up any stale install directory
+        rm -rf "${INSTALL_DIR}"
+
         # Let build-at-commit use (and clean up) its own temporary source and build directories:
         # only the installation is of interest to the caller.
         libcxx/utils/build-at-commit                       \
