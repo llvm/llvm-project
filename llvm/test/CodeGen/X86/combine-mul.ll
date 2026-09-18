@@ -552,16 +552,14 @@ define <4 x i64> @fuzz15429(<4 x i64> %InVec) {
 define i64 @mul_const_opaque() {
 ; SSE-LABEL: mul_const_opaque:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movabsq $1311768467463790320, %rcx # imm = 0x123456789ABCDEF0
-; SSE-NEXT:    movl $3, %eax
-; SSE-NEXT:    imulq %rcx, %rax
+; SSE-NEXT:    movabsq $1311768467463790320, %rax # imm = 0x123456789ABCDEF0
+; SSE-NEXT:    leaq (%rax,%rax,2), %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: mul_const_opaque:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movabsq $1311768467463790320, %rcx # imm = 0x123456789ABCDEF0
-; AVX-NEXT:    movl $3, %eax
-; AVX-NEXT:    imulq %rcx, %rax
+; AVX-NEXT:    movabsq $1311768467463790320, %rax # imm = 0x123456789ABCDEF0
+; AVX-NEXT:    leaq (%rax,%rax,2), %rax
 ; AVX-NEXT:    retq
   %c = bitcast i64 1311768467463790320 to i64
   %x = mul i64 3, %c
