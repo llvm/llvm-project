@@ -9,8 +9,10 @@
 #include "gtest/gtest.h"
 
 #include "TestingSupport/SubsystemRAII.h"
+
 #include "lldb/API/LLDB.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
