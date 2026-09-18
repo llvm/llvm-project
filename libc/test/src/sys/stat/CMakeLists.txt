@@ -162,7 +162,9 @@ add_libc_test(
   DEPENDS
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
     libc.hdr.types.struct_stat
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.sys.stat.fstatat
     libc.src.fcntl.open
