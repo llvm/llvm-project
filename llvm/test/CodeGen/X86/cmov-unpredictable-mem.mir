@@ -29,22 +29,13 @@ name: load_or_zero
 body: |
   ; CHECK-LABEL: name: load_or_zero
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $edi, $rsi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   TEST32rr [[COPY1]], [[COPY1]], implicit-def $eflags
-  ; CHECK-NEXT:   JCC_1 %bb.2, 4, implicit $eflags
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.p)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2 (%ir-block.0):
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr32 = PHI [[MOV32rm]], %bb.1, [[COPY1]], %bb.0
-  ; CHECK-NEXT:   $eax = COPY [[PHI]]
+  ; CHECK-NEXT:   [[CMOV32rm:%[0-9]+]]:gr32 = unpredictable CMOV32rm [[COPY1]], [[COPY]], 1, $noreg, 0, $noreg, 5, implicit $eflags :: (load (s32) from %ir.p)
+  ; CHECK-NEXT:   $eax = COPY [[CMOV32rm]]
   ; CHECK-NEXT:   RET 0, $eax
 ...
 ---
