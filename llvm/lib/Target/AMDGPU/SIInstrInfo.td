@@ -1483,6 +1483,10 @@ class FPT16InputModsMatchClass<bit IsFake16> : FPInputModsMatchClass<16> {
   let PredicateMethod = "isRegOrImmWithFPT16InputMods<" #
                         !if(IsFake16, "true", "false") # ">";
 }
+def FPT16_LO16InputModsMatchClass : FPInputModsMatchClass<16> {
+  let Name = "RegOrImmWithFPT16_LO16InputMods";
+  let PredicateMethod = "isRegOrImmWithFPT16_LO16InputMods";
+}
 def FP32InputModsMatchClass : FPInputModsMatchClass<32>;
 def FP64InputModsMatchClass : FPInputModsMatchClass<64>;
 
@@ -1511,6 +1515,9 @@ class FPInputMods <FPInputModsMatchClass matchClass> : InputMods <matchClass> {
 
 def FP16InputMods : FPInputMods<FP16InputModsMatchClass>;
 class FPT16InputMods<bit IsFake16> : FPInputMods<FPT16InputModsMatchClass<IsFake16>> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
+def FPT16_LO16InputMods : FPInputMods<FPT16_LO16InputModsMatchClass> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 def FP32InputMods : FPInputMods<FP32InputModsMatchClass>;
@@ -1628,6 +1635,12 @@ class FPT16VRegInputModsMatchClass<bit IsFake16> : AsmOperandClass {
                         !if(IsFake16, "true", "false") # ">";
 }
 
+def FPT16_LO16VRegInputModsMatchClass : AsmOperandClass {
+  let Name = "T16_LO16VRegWithFPInputMods";
+  let ParserMethod = "parseRegWithFPInputMods";
+  let PredicateMethod = "isT16_LO16VRegWithInputMods";
+}
+
 class FPT16_Lo128VRegInputMods<bit IsFake16 = 1>
     : InputMods <FPT16_Lo128VRegInputModsMatchClass<IsFake16>> {
   let PrintMethod = "printOperandAndFPInputMods";
@@ -1636,6 +1649,11 @@ class FPT16_Lo128VRegInputMods<bit IsFake16 = 1>
 
 class FPT16VRegInputMods<bit IsFake16 = 1>
     : InputMods <FPT16VRegInputModsMatchClass<IsFake16>> {
+  let PrintMethod = "printOperandAndFPInputMods";
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
+def FPT16_LO16VRegInputMods : InputMods <FPT16_LO16VRegInputModsMatchClass> {
   let PrintMethod = "printOperandAndFPInputMods";
   let EncoderMethod = "getMachineOpValueT16";
 }
