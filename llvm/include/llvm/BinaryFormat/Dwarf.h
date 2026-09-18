@@ -742,6 +742,7 @@ inline bool isFortran(SourceLanguage S) {
 }
 
 inline bool isC(SourceLanguage S) {
+  bool result = false;
   // Deliberately enumerate all the language options so we get a warning when
   // new language options are added (-Wswitch) that'll hopefully help keep this
   // switch up-to-date when new C++ versions are added.
@@ -753,7 +754,8 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_C99:
   case DW_LANG_C:
   case DW_LANG_ObjC:
-    return true;
+    result = true;
+    break;
   case DW_LANG_C_plus_plus:
   case DW_LANG_C_plus_plus_03:
   case DW_LANG_C_plus_plus_11:
@@ -823,14 +825,11 @@ inline bool isC(SourceLanguage S) {
   case DW_LANG_Erlang:
   case DW_LANG_Elixir:
   case DW_LANG_Gleam:
-    return false;
+    result = false;
+    break;
   }
-  // The switch above covers the DW_LANG_{lo,hi}_user boundaries, but every
-  // vendor-defined code in between is a valid SourceLanguage that no case
-  // enumerates. None of them is C.
-  if (S > DW_LANG_lo_user && S < DW_LANG_hi_user)
-    return false;
-  llvm_unreachable("Unknown language kind.");
+
+  return result;
 }
 
 inline TypeKind getArrayIndexTypeEncoding(SourceLanguage S) {
