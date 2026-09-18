@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZ.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;

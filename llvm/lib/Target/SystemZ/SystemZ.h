@@ -19,6 +19,7 @@
 
 namespace llvm {
 class FunctionPass;
+class ModulePass;
 class PassRegistry;
 class SystemZTargetMachine;
 
