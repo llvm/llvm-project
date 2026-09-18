@@ -140,3 +140,53 @@ class StepReportsStopOthers:
 
     def explains_stop(self, event):
         return True
+
+
+# Top of the plan stack, no child plan: the thread's run state is whatever
+# should_step answers.
+class RunToNextBreakpoint:
+    def __init__(self, thread_plan, args_data):
+        self.thread_plan = thread_plan
+
+    def explains_stop(self, event):
+        return False
+
+    def should_stop(self, event):
+        self.thread_plan.SetPlanComplete(True)
+        return True
+
+    def should_step(self):
+        return False
+
+
+class StepOneInstruction(RunToNextBreakpoint):
+    def should_step(self):
+        return True
+
+
+class ReturnsZeroFromShouldStep(RunToNextBreakpoint):
+    """Answers should_step with an int, not a bool."""
+
+    def should_step(self):
+        return 0
+
+
+class ReturnsOneFromShouldStep(RunToNextBreakpoint):
+    """Answers should_step with an int, not a bool."""
+
+    def should_step(self):
+        return 1
+
+
+class ReturnsStateRunningFromShouldStep(RunToNextBreakpoint):
+    """Answers should_step with a StateType, not a bool."""
+
+    def should_step(self):
+        return lldb.eStateRunning
+
+
+class ReturnsStateSteppingFromShouldStep(RunToNextBreakpoint):
+    """Answers should_step with a StateType, not a bool."""
+
+    def should_step(self):
+        return lldb.eStateStepping
