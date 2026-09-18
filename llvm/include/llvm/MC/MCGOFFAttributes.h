@@ -75,6 +75,7 @@ struct PRAttr {
   bool IsRenamable = false;
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
+  GOFF::ESDAmode Amode;
   GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
   uint32_t SortKey = 0;
 };
