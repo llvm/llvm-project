@@ -23235,6 +23235,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!AllNoInfs)
         I->setHasNoInfs(false);
     }
+    // Copyable lanes modeled as op(V, V) do not preserve the disjoint flag:
+    // or disjoint(V, V) is poison unless V is zero. Matched by value, so
+    // operand reordering does not affect the detection.
+    auto *PDI = dyn_cast<PossiblyDisjointInst>(I);
+    if (E->hasCopyableElements() && PDI &&
+        any_of(enumerate(E->Scalars), [&](const auto &P) {
+          Value *Scalar = P.value();
+          return E->isCopyableElement(Scalar) && !match(Scalar, m_Zero()) &&
+                 E->getOperand(0)[P.index()] == Scalar &&
+                 E->getOperand(1)[P.index()] == Scalar;
+        }))
+      PDI->setIsDisjoint(false);
     // Drop nuw flags for abs(sub(commutative), true).
     if (!MinBWs.contains(E) && Opcode == Instruction::Sub &&
         (E->hasCopyableElements() || any_of(Scalars, [](Value *Scalar) {
