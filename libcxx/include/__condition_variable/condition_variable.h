@@ -48,6 +48,11 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
+template <class _Duration>
+_LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
+  return chrono::steady_clock::now() + chrono::__ceil<chrono::steady_clock::duration>(__rel_time);
+}
+
 template <class _Rep, class _Period, __enable_if_t<is_floating_point<_Rep>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
   using namespace chrono;
@@ -163,7 +168,7 @@ public:
     __ns_rep __now_count_ns = std::__safe_nanosecond_cast(system_clock::now().time_since_epoch()).count();
 #  endif
 
-    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(__d).count();
+    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(chrono::__ceil<steady_clock::duration>(__d)).count();
 
     if (__now_count_ns > numeric_limits<__ns_rep>::max() - __d_ns_count) {
       __do_timed_wait(__lk, __clock_tp_ns::max());
@@ -199,7 +204,7 @@ private:
 template <class _Rep, class _Period, class _Predicate>
 inline bool
 condition_variable::wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred) {
-  return wait_until(__lk, chrono::steady_clock::now() + __d, std::move(__pred));
+  return wait_until(__lk, std::__rel_to_abs(__d), std::move(__pred));
 }
 
 #  if _LIBCPP_HAS_COND_CLOCKWAIT
