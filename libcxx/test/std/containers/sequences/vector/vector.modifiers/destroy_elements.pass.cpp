@@ -10,6 +10,8 @@
 
 // UNSUPPORTED: c++03
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
+
 #include <algorithm>
 #include <array>
 #include <cassert>
