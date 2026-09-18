@@ -1710,7 +1710,12 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
       return result;
     auto [compSize, compAlign] = *result;
     if (character.hasConstantLen())
-      compSize *= character.getLen();
+      // Use the code unit's allocation stride (aligned store size) rather than
+      // the bare store size.  Under kind mappings like a1:24 (i24, 3-byte
+      // store, 4-byte stride), multiplying by the store size under-counts the
+      // total byte footprint; using alignTo(compSize, compAlign) matches what
+      // LLVM allocates for each code unit.
+      compSize = llvm::alignTo(compSize, compAlign) * character.getLen();
     return std::pair{compSize, compAlign};
   }
   return std::nullopt;
