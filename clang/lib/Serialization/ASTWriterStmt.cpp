@@ -3084,6 +3084,7 @@ void ASTStmtWriter::VisitOMPGenericLoopDirective(OMPGenericLoopDirective *D) {
 void ASTStmtWriter::VisitOMPTeamsGenericLoopDirective(
     OMPTeamsGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+  Record.writeBool(D->canBeParallelFor());
   Code = serialization::STMT_OMP_TEAMS_GENERIC_LOOP_DIRECTIVE;
 }
 

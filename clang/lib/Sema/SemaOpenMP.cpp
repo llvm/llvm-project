@@ -11343,7 +11343,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsGenericLoopDirective(
   DSAStack->setParentTeamsRegionLoc(StartLoc);
 
   return OMPTeamsGenericLoopDirective::Create(
-      getASTContext(), StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+      getASTContext(), StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B,
+      teamsLoopCanBeParallelFor(AStmt, SemaRef));
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsGenericLoopDirective(

@@ -706,6 +706,75 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
+static bool isNoLoopCompatibleSchedule(ASTContext &Ctx,
+                                       const OMPLoopDirective &LD) {
+  const auto *C = LD.getSingleClause<OMPScheduleClause>();
+  if (!C)
+    return true;
+
+  switch (C->getScheduleKind()) {
+  case OMPC_SCHEDULE_guided:
+  case OMPC_SCHEDULE_runtime:
+    return false;
+  case OMPC_SCHEDULE_auto:
+    return true;
+  default: {
+    const Expr *ChunkSize = C->getChunkSize();
+    Expr::EvalResult Result;
+    if (!ChunkSize || !ChunkSize->EvaluateAsInt(Result, Ctx))
+      return false;
+    return Result.Val.getInt().getLimitedValue() == 1;
+  }
+  }
+}
+
+static bool isNoLoopEligible(ASTContext &Ctx, const OMPExecutableDirective &D) {
+  const LangOptions &LangOpts = Ctx.getLangOpts();
+  if (!LangOpts.OpenMPTeamSubscription || !LangOpts.OpenMPThreadSubscription)
+    return false;
+
+  const OMPExecutableDirective *Nested = &D;
+  while (true) {
+    if (Nested->hasClausesOfKind<OMPNumTeamsClause>() ||
+        Nested->hasClausesOfKind<OMPReductionClause>())
+      return false;
+    OpenMPDirectiveKind DKind = Nested->getDirectiveKind();
+    if (DKind != OMPD_target && DKind != OMPD_target_teams &&
+        DKind != OMPD_teams)
+      break;
+    const Stmt *Body =
+        Nested->getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers(
+            /*IgnoreCaptured=*/true);
+    Nested = Body ? dyn_cast_or_null<OMPExecutableDirective>(
+                        CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body))
+                  : nullptr;
+    if (!Nested)
+      return false;
+  }
+
+  const auto *LD = dyn_cast<OMPLoopDirective>(Nested);
+  if (!LD || LD->getLoopsNumber() != 1 ||
+      !isNoLoopCompatibleSchedule(Ctx, *LD) ||
+      LD->getSingleClause<OMPDistScheduleClause>())
+    return false;
+
+  if (const auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(LD))
+    return TTLD->canBeParallelFor();
+  if (const auto *TLD = dyn_cast<OMPTeamsGenericLoopDirective>(LD))
+    return TLD->canBeParallelFor();
+  if (!isOpenMPDistributeDirective(LD->getDirectiveKind()) ||
+      !isOpenMPParallelDirective(LD->getDirectiveKind()))
+    return false;
+  if (const auto *TTD =
+          dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(LD))
+    return !TTD->hasCancel();
+  if (const auto *TD = dyn_cast<OMPTeamsDistributeParallelForDirective>(LD))
+    return !TD->hasCancel();
+  if (const auto *DD = dyn_cast<OMPDistributeParallelForDirective>(LD))
+    return !DD->hasCancel();
+  return true;
+}
+
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              StringRef ParentName,
                                              llvm::Function *&OutlinedFn,
@@ -745,24 +814,25 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
   IsInTTDRegion = false;
+  KernelAttrs = {};
 }
 
 void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
-  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
-  if (IsSPMD && canPromoteToNoLoop(D))
-    Attrs.ExecFlags =
+  KernelAttrs = {};
+  if (IsSPMD && isNoLoopEligible(CGM.getContext(), D))
+    KernelAttrs.ExecFlags =
         llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
   else
-    Attrs.ExecFlags =
+    KernelAttrs.ExecFlags =
         IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
                : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
 
-  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
+  computeMinAndMaxThreadsAndTeams(D, CGF, KernelAttrs);
 
   CGBuilderTy &Bld = CGF.Builder;
-  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, Attrs));
+  Bld.restoreIP(OMPBuilder.createTargetInit(Bld, KernelAttrs));
   if (!IsSPMD)
     emitGenericVarsProlog(CGF, EST.Loc);
 }
@@ -850,6 +920,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
   IsInTTDRegion = false;
+  KernelAttrs = {};
 }
 
 void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
@@ -1148,17 +1219,6 @@ bool CGOpenMPRuntimeGPU::isDelayedVariableLengthDecl(CodeGenFunction &CGF,
 
   // Check variable declaration is delayed:
   return llvm::is_contained(I->getSecond().DelayedVariableLengthDecls, VD);
-}
-
-bool CGOpenMPRuntimeGPU::canPromoteToNoLoop(
-    const OMPExecutableDirective &D) const {
-  OpenMPDirectiveKind DKind = D.getDirectiveKind();
-  const LangOptions &LangOpts = CGM.getLangOpts();
-  return (DKind == OMPD_target_teams_distribute_parallel_for ||
-          DKind == OMPD_target_teams_distribute_parallel_for_simd) &&
-         LangOpts.OpenMPTeamSubscription && LangOpts.OpenMPThreadSubscription &&
-         !D.hasClausesOfKind<OMPNumTeamsClause>() &&
-         !D.hasClausesOfKind<OMPReductionClause>();
 }
 
 std::pair<llvm::Value *, llvm::Value *>
