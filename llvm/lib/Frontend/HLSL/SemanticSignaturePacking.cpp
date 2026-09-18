@@ -172,7 +172,7 @@ static bool canCoPack(const SignatureRow &Row,
 static std::optional<uint8_t> canPlaceAt(ArrayRef<SignatureRow> Rows,
                                          unsigned StartRow,
                                          const ElementPlacement &Placement) {
-  if (StartRow > Rows.size() || Placement.Rows > Rows.size() - StartRow)
+  if (StartRow >= Rows.size() || Placement.Rows > Rows.size() - StartRow)
     return std::nullopt;
 
   const IndexedRowRange IndexedRange =
