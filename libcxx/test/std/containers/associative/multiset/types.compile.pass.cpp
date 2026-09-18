@@ -10,7 +10,7 @@
 
 // template <class Key, class Compare = less<Key>,
 //           class Allocator = allocator<Key>>
-// class set
+// class multiset
 // {
 // public:
 //     // types:
@@ -34,9 +34,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX26 bool test() {
+void test() {
   {
-    typedef std::set<int> C;
+    typedef std::multiset<int> C;
+
     static_assert((std::is_same<C::key_type, int>::value), "");
     static_assert((std::is_same<C::value_type, int>::value), "");
     static_assert((std::is_same<C::key_compare, std::less<int> >::value), "");
@@ -51,12 +52,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
   }
 #if TEST_STD_VER >= 11
   {
-    typedef std::set<int, std::less<int>, min_allocator<int>> C;
+    typedef std::multiset<int, std::less<int>, min_allocator<int>> C;
+
     static_assert((std::is_same<C::key_type, int>::value), "");
     static_assert((std::is_same<C::value_type, int>::value), "");
     static_assert((std::is_same<C::key_compare, std::less<int> >::value), "");
     static_assert((std::is_same<C::value_compare, std::less<int> >::value), "");
-    static_assert((std::is_same<C::allocator_type, min_allocator<int> >::value), "");
+    static_assert((std::is_same<C::allocator_type, min_allocator<int>>::value), "");
     static_assert((std::is_same<C::reference, int&>::value), "");
     static_assert((std::is_same<C::const_reference, const int&>::value), "");
     static_assert((std::is_same<C::pointer, min_pointer<int>>::value), "");
@@ -66,14 +68,4 @@ TEST_CONSTEXPR_CXX26 bool test() {
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
   }
 #endif
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
-  return 0;
 }
