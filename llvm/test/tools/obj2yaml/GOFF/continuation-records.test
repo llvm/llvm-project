@@ -1,0 +1,58 @@
+; REQUIRES: systemz-registered-target
+; RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %s -o %t
+; RUN: obj2yaml %t | FileCheck %s
+
+; This test creates symbols with very long names (>8 bytes) to force ESD continuation records
+; and large text data (>56 bytes) to force TXT continuation records.
+
+; CHECK:      --- !GOFF
+; CHECK-NEXT: FileHeader:      {}
+; CHECK-NEXT: ESDRecords:
+
+; Check that long symbol names are preserved correctly
+; CHECK:        Name:            global_variable_with_an_extremely_long_name_to_test_esd_continuations
+; CHECK:        Name:            very_long_function_name_that_exceeds_eight_bytes_and_requires_continuation_records
+; CHECK:        Name:            another_extremely_long_function_name_for_testing_continuation_handling
+
+; Very long function name that will require continuation records
+; Symbol names longer than 8 bytes need continuations in ESD records
+define i32 @very_long_function_name_that_exceeds_eight_bytes_and_requires_continuation_records() {
+entry:
+  ; Create a large array to generate substantial text data
+  %arr = alloca [100 x i32], align 4
+
+  ; Initialize array elements to force generation of more code
+  %ptr0 = getelementptr inbounds [100 x i32], ptr %arr, i64 0, i64 0
+  store i32 1, ptr %ptr0, align 4
+  %ptr1 = getelementptr inbounds [100 x i32], ptr %arr, i64 0, i64 1
+  store i32 2, ptr %ptr1, align 4
+  %ptr2 = getelementptr inbounds [100 x i32], ptr %arr, i64 0, i64 2
+  store i32 3, ptr %ptr2, align 4
+  %ptr3 = getelementptr inbounds [100 x i32], ptr %arr, i64 0, i64 3
+  store i32 4, ptr %ptr3, align 4
+  %ptr4 = getelementptr inbounds [100 x i32], ptr %arr, i64 0, i64 4
+  store i32 5, ptr %ptr4, align 4
+
+  ; Load and sum some values
+  %val0 = load i32, ptr %ptr0, align 4
+  %val1 = load i32, ptr %ptr1, align 4
+  %val2 = load i32, ptr %ptr2, align 4
+  %val3 = load i32, ptr %ptr3, align 4
+  %val4 = load i32, ptr %ptr4, align 4
+
+  %sum1 = add i32 %val0, %val1
+  %sum2 = add i32 %sum1, %val2
+  %sum3 = add i32 %sum2, %val3
+  %sum4 = add i32 %sum3, %val4
+  ret i32 %sum4
+}
+
+; Another long name
+define i32 @another_extremely_long_function_name_for_testing_continuation_handling() {
+entry:
+  ret i32 100
+}
+
+; Global variable with long name
+@global_variable_with_an_extremely_long_name_to_test_esd_continuations = global i32 42, align 4
+
