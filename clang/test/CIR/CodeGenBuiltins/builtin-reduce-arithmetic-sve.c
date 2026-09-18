@@ -12,6 +12,26 @@
 
 #include <arm_sve.h>
 
+int test_sve_reduce_add(svint32_t x) {
+  // CIR-LABEL: @test_sve_reduce_add
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.add"
+  // CIR: cir.return
+  // LLVM-LABEL: @test_sve_reduce_add
+  // LLVM: call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>
+  // LLVM: ret i32
+  return __builtin_reduce_add(x);
+}
+
+int test_sve_reduce_mul(svint32_t x) {
+  // CIR-LABEL: @test_sve_reduce_mul
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.mul"
+  // CIR: cir.return
+  // LLVM-LABEL: @test_sve_reduce_mul
+  // LLVM: call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32>
+  // LLVM: ret i32
+  return __builtin_reduce_mul(x);
+}
+
 int test_sve_reduce_max(svint32_t x) {
   // CIR-LABEL: @test_sve_reduce_max
   // CIR: cir.call_llvm_intrinsic "vector.reduce.smax"
