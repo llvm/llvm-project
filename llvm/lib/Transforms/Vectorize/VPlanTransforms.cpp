@@ -5898,7 +5898,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(LoopRegion->getEntry()))) {
-    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
+    for (VPInstruction &VPI :
+         make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
       // Only truncates are handled, as sext/zext may wrap, FP conversions lose
       // precision and other casts depend on the pointer size.
       if (VPI.getOpcode() != Instruction::Trunc)
@@ -5941,7 +5942,7 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
           WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
           WideIV->getVFValue(), WideIV->getInductionDescriptor(), Trunc,
           VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
-      NarrowIV->insertBefore(VPI);
+      NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();
     }

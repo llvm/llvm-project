@@ -6584,8 +6584,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
-              VPVectorEndPointerRecipe, VPHistogramRecipe,
-              VPWidenIntOrFpInduction>(&R) ||
+              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
           (Instruction::isCast(cast<VPInstruction>(R).getOpcode()) &&
            vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
         continue;
