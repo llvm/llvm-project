@@ -4289,6 +4289,7 @@ add_entrypoint_object(
   HDRS
     ../totalorderf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.totalorderf128
 )
 
@@ -4349,6 +4350,7 @@ add_entrypoint_object(
   HDRS
     ../totalordermagf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.totalordermagf128
 )
 
