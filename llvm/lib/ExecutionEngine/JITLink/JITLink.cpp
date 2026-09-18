@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
+#include "llvm/ExecutionEngine/JITLink/GOFF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
@@ -527,6 +528,8 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
     return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
   case file_magic::xcoff_object_64:
     return createLinkGraphFromXCOFFObject(ObjectBuffer, std::move(SSP));
+  case file_magic::goff_object:
+    return createLinkGraphFromGOFFObject(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
@@ -560,6 +563,8 @@ void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
     return link_COFF(std::move(G), std::move(Ctx));
   case Triple::XCOFF:
     return link_XCOFF(std::move(G), std::move(Ctx));
+  case Triple::GOFF:
+    return link_GOFF(std::move(G), std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported object format"));
   };
