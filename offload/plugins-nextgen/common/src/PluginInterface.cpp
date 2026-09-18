@@ -1223,14 +1223,15 @@ MemoryManagerTy *PluginContextTy::getHostMemoryManager() {
 }
 
 Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
-                                           int64_t Size, TargetAllocTy Kind,
+                                           int64_t Size, void *HostPtr,
+                                           TargetAllocTy Kind,
                                            size_t Alignment) {
   MemoryManagerTy *MM = (Kind == TARGET_ALLOC_HOST)
                             ? getHostMemoryManager()
                             : getDeviceMemoryManagerFor(Device, Kind);
   if (MM)
-    return MM->allocate(Size, /*HostPtr=*/nullptr, Alignment);
-  return Device.dataAlloc(Size, /*HostPtr=*/nullptr, Kind, Alignment);
+    return MM->allocate(Size, HostPtr, Alignment);
+  return Device.dataAlloc(Size, HostPtr, Kind, Alignment);
 }
 
 Error PluginContextTy::deallocate(void *Ptr) {
@@ -1629,22 +1630,10 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
 
 void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind) {
-  // A non-null HostPtr requests pinned-buffer registration; that path bypasses
-  // the plugin context.
-  if (HostPtr) {
-    auto AllocOrErr = getDevice(DeviceId).dataAlloc(
-        Size, HostPtr, (TargetAllocTy)Kind, /*Alignment=*/0);
-    if (!AllocOrErr) {
-      REPORT() << "Failure to allocate device memory: "
-               << toString(AllocOrErr.takeError());
-      return nullptr;
-    }
-    return *AllocOrErr;
-  }
-
   auto &Device = getDevice(DeviceId);
   auto AllocOrErr = getDefaultContext(Device).allocate(
-      Device, Size, static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
+      Device, Size, HostPtr, static_cast<TargetAllocTy>(Kind),
+      /*Alignment=*/0);
   if (!AllocOrErr) {
     REPORT() << "Failure to allocate device memory: "
              << toString(AllocOrErr.takeError());

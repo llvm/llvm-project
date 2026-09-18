@@ -307,6 +307,7 @@ Error LevelZeroPluginContextTy::initAllocators() {
 
 Expected<void *> LevelZeroPluginContextTy::allocate(GenericDeviceTy &Device,
                                                     int64_t Size,
+                                                    void * /*HostPtr*/,
                                                     TargetAllocTy Kind,
                                                     size_t Alignment) {
   MemAllocatorTy *Allocator = nullptr;
