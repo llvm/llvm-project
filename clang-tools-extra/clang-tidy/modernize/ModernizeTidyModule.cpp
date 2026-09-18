@@ -32,6 +32,7 @@
 #include "TypeTraitsCheck.h"
 #include "UnaryStaticAssertCheck.h"
 #include "UseAutoCheck.h"
+#include "UseBitCastCheck.h"
 #include "UseBoolLiteralsCheck.h"
 #include "UseConstraintsCheck.h"
 #include "UseDefaultMemberInitCheck.h"
@@ -120,6 +121,7 @@ public:
     CheckFactories.registerCheck<UnaryStaticAssertCheck>(
         "modernize-unary-static-assert");
     CheckFactories.registerCheck<UseAutoCheck>("modernize-use-auto");
+    CheckFactories.registerCheck<UseBitCastCheck>("modernize-use-bit-cast");
     CheckFactories.registerCheck<UseBoolLiteralsCheck>(
         "modernize-use-bool-literals");
     CheckFactories.registerCheck<UseConstraintsCheck>(
