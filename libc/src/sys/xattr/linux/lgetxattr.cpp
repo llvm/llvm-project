@@ -25,6 +25,8 @@ LLVM_LIBC_FUNCTION(ssize_t, lgetxattr,
                     size_t size)) {
   LIBC_CRASH_ON_NULLPTR(path);
   LIBC_CRASH_ON_NULLPTR(name);
+  if (size != 0)
+    LIBC_CRASH_ON_NULLPTR(value);
 
   ErrorOr<ssize_t> ret = linux_syscalls::lgetxattr(path, name, value, size);
   if (!ret) {

@@ -23,6 +23,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(ssize_t, fgetxattr,
                    (int fd, const char *name, void *value, size_t size)) {
   LIBC_CRASH_ON_NULLPTR(name);
+  if (size != 0)
+    LIBC_CRASH_ON_NULLPTR(value);
 
   ErrorOr<ssize_t> ret = linux_syscalls::fgetxattr(fd, name, value, size);
   if (!ret) {
