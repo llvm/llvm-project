@@ -111,6 +111,7 @@ define void @xvhaddw_h_b_illegal(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
+; CHECK-NEXT:    vext2xv.h.b $xr3, $xr3
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 1
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 2
@@ -140,14 +141,13 @@ define void @xvhaddw_h_b_illegal(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 14
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 15
 ; CHECK-NEXT:    vext2xv.h.b $xr0, $xr2
 ; CHECK-NEXT:    vext2xv.h.b $xr2, $xr4
-; CHECK-NEXT:    vext2xv.h.b $xr3, $xr3
-; CHECK-NEXT:    vext2xv.h.b $xr1, $xr1
-; CHECK-NEXT:    xvadd.h $xr1, $xr2, $xr1
+; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 15
 ; CHECK-NEXT:    xvadd.h $xr0, $xr0, $xr3
+; CHECK-NEXT:    vext2xv.h.b $xr1, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a2, 0
+; CHECK-NEXT:    xvadd.h $xr1, $xr2, $xr1
 ; CHECK-NEXT:    xvst $xr1, $a2, 32
 ; CHECK-NEXT:    ret
 entry:

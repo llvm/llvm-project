@@ -73,8 +73,8 @@ define <4 x double> @sitofp_v4i32_v4f64(<4 x i32> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vslti.w $vr1, $vr0, 0
 ; CHECK-NEXT:    vilvl.w $vr2, $vr1, $vr0
-; CHECK-NEXT:    vffint.d.l $vr2, $vr2
 ; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.l $vr2, $vr2
 ; CHECK-NEXT:    vffint.d.l $vr1, $vr0
 ; CHECK-NEXT:    vori.b $vr0, $vr2, 0
 ; CHECK-NEXT:    ret
@@ -166,8 +166,8 @@ define <4 x double> @sitofp_v4i16_v4f64(<8 x i16> %a) {
 ; CHECK-NEXT:    vilvl.h $vr1, $vr1, $vr0
 ; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
-; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vffint.d.l $vr1, $vr1
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -182,8 +182,8 @@ define <4 x double> @sitofp_v8i16_v4f64(<8 x i16> %a) {
 ; CHECK-NEXT:    vilvl.h $vr1, $vr1, $vr0
 ; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
-; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vffint.d.l $vr1, $vr1
 ; CHECK-NEXT:    ret
   %cvt = sitofp <8 x i16> %a to <8 x double>
@@ -200,8 +200,8 @@ define <4 x double> @sitofp_v4i8_v4f64(<16 x i8> %a) {
 ; CHECK-NEXT:    vsrai.w $vr1, $vr0, 24
 ; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
-; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vffint.d.l $vr1, $vr1
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -218,8 +218,8 @@ define <4 x double> @sitofp_v16i8_v4f64(<16 x i8> %a) {
 ; CHECK-NEXT:    vilvl.h $vr1, $vr1, $vr0
 ; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
-; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
 ; CHECK-NEXT:    vffint.d.l $vr1, $vr1
 ; CHECK-NEXT:    ret
   %cvt = sitofp <16 x i8> %a to <16 x double>

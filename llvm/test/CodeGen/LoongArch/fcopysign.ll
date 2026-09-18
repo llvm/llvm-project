@@ -73,8 +73,8 @@ define double @fold_promote_d_s(double %a, float %b) nounwind {
 ;
 ; LA64F-LABEL: fold_promote_d_s:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    movfr2gr.s $a1, $fa0
 ; LA64F-NEXT:    lu12i.w $a2, -524288
+; LA64F-NEXT:    movfr2gr.s $a1, $fa0
 ; LA64F-NEXT:    lu32i.d $a2, 0
 ; LA64F-NEXT:    and $a1, $a1, $a2
 ; LA64F-NEXT:    slli.d $a1, $a1, 32

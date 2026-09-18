@@ -50,8 +50,8 @@ define void @select_v16i8_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v16i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI3_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -67,8 +67,8 @@ define void @select_v16i8_2(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v16i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI4_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -101,8 +101,8 @@ define void @select_v8i16_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v8i16_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI6_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI6_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -118,8 +118,8 @@ define void @select_v8i16_2(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v8i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI7_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI7_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -151,8 +151,8 @@ define void @select_v4i32_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4i32_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI9_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI9_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -168,8 +168,8 @@ define void @select_v4f32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI10_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI10_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -185,8 +185,8 @@ define void @select_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI11_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI11_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
@@ -202,8 +202,8 @@ define void @select_v2f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI12_0)
+; CHECK-NEXT:    vld $vr1, $a2, 0
 ; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI12_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0

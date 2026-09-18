@@ -19,8 +19,8 @@ define i16 @test_bswap_i16(i16 %a) nounwind {
 ; LA32R-NEXT:    lu12i.w $a1, 15
 ; LA32R-NEXT:    ori $a1, $a1, 3840
 ; LA32R-NEXT:    and $a1, $a0, $a1
-; LA32R-NEXT:    srli.w $a1, $a1, 8
 ; LA32R-NEXT:    slli.w $a0, $a0, 8
+; LA32R-NEXT:    srli.w $a1, $a1, 8
 ; LA32R-NEXT:    or $a0, $a0, $a1
 ; LA32R-NEXT:    ret
 ;
@@ -40,15 +40,15 @@ define i16 @test_bswap_i16(i16 %a) nounwind {
 define i32 @test_bswap_i32(i32 %a) nounwind {
 ; LA32R-LABEL: test_bswap_i32:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a1, $a0, 8
 ; LA32R-NEXT:    lu12i.w $a2, 15
+; LA32R-NEXT:    srli.w $a1, $a0, 8
+; LA32R-NEXT:    srli.w $a3, $a0, 24
 ; LA32R-NEXT:    ori $a2, $a2, 3840
 ; LA32R-NEXT:    and $a1, $a1, $a2
-; LA32R-NEXT:    srli.w $a3, $a0, 24
-; LA32R-NEXT:    or $a1, $a1, $a3
 ; LA32R-NEXT:    and $a2, $a0, $a2
-; LA32R-NEXT:    slli.w $a2, $a2, 8
 ; LA32R-NEXT:    slli.w $a0, $a0, 24
+; LA32R-NEXT:    slli.w $a2, $a2, 8
+; LA32R-NEXT:    or $a1, $a1, $a3
 ; LA32R-NEXT:    or $a0, $a0, $a2
 ; LA32R-NEXT:    or $a0, $a0, $a1
 ; LA32R-NEXT:    ret
@@ -70,24 +70,24 @@ define i32 @test_bswap_i32(i32 %a) nounwind {
 define i64 @test_bswap_i64(i64 %a) nounwind {
 ; LA32R-LABEL: test_bswap_i64:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a2, $a1, 8
 ; LA32R-NEXT:    lu12i.w $a3, 15
+; LA32R-NEXT:    srli.w $a2, $a1, 8
+; LA32R-NEXT:    srli.w $a4, $a1, 24
 ; LA32R-NEXT:    ori $a3, $a3, 3840
 ; LA32R-NEXT:    and $a2, $a2, $a3
-; LA32R-NEXT:    srli.w $a4, $a1, 24
 ; LA32R-NEXT:    or $a2, $a2, $a4
 ; LA32R-NEXT:    and $a4, $a1, $a3
-; LA32R-NEXT:    slli.w $a4, $a4, 8
 ; LA32R-NEXT:    slli.w $a1, $a1, 24
+; LA32R-NEXT:    slli.w $a4, $a4, 8
 ; LA32R-NEXT:    or $a1, $a1, $a4
+; LA32R-NEXT:    srli.w $a4, $a0, 24
 ; LA32R-NEXT:    or $a2, $a1, $a2
 ; LA32R-NEXT:    srli.w $a1, $a0, 8
 ; LA32R-NEXT:    and $a1, $a1, $a3
-; LA32R-NEXT:    srli.w $a4, $a0, 24
-; LA32R-NEXT:    or $a1, $a1, $a4
 ; LA32R-NEXT:    and $a3, $a0, $a3
-; LA32R-NEXT:    slli.w $a3, $a3, 8
 ; LA32R-NEXT:    slli.w $a0, $a0, 24
+; LA32R-NEXT:    slli.w $a3, $a3, 8
+; LA32R-NEXT:    or $a1, $a1, $a4
 ; LA32R-NEXT:    or $a0, $a0, $a3
 ; LA32R-NEXT:    or $a1, $a0, $a1
 ; LA32R-NEXT:    move $a0, $a2
@@ -96,8 +96,8 @@ define i64 @test_bswap_i64(i64 %a) nounwind {
 ; LA32S-LABEL: test_bswap_i64:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    revb.2h $a1, $a1
-; LA32S-NEXT:    rotri.w $a2, $a1, 16
 ; LA32S-NEXT:    revb.2h $a0, $a0
+; LA32S-NEXT:    rotri.w $a2, $a1, 16
 ; LA32S-NEXT:    rotri.w $a1, $a0, 16
 ; LA32S-NEXT:    move $a0, $a2
 ; LA32S-NEXT:    ret
@@ -115,22 +115,22 @@ define i64 @test_bswap_i64(i64 %a) nounwind {
 define i48 @test_bswap_i48(i48 %a) nounwind {
 ; LA32R-LABEL: test_bswap_i48:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    srli.w $a2, $a0, 8
 ; LA32R-NEXT:    lu12i.w $a3, 15
+; LA32R-NEXT:    srli.w $a2, $a0, 8
+; LA32R-NEXT:    srli.w $a4, $a0, 24
 ; LA32R-NEXT:    ori $a3, $a3, 3840
 ; LA32R-NEXT:    and $a2, $a2, $a3
-; LA32R-NEXT:    srli.w $a4, $a0, 24
 ; LA32R-NEXT:    or $a2, $a2, $a4
-; LA32R-NEXT:    slli.w $a2, $a2, 16
 ; LA32R-NEXT:    and $a4, $a1, $a3
-; LA32R-NEXT:    slli.w $a4, $a4, 8
 ; LA32R-NEXT:    slli.w $a1, $a1, 24
+; LA32R-NEXT:    slli.w $a4, $a4, 8
+; LA32R-NEXT:    slli.w $a2, $a2, 16
 ; LA32R-NEXT:    or $a1, $a1, $a4
 ; LA32R-NEXT:    srli.w $a1, $a1, 16
 ; LA32R-NEXT:    or $a2, $a1, $a2
 ; LA32R-NEXT:    and $a1, $a0, $a3
-; LA32R-NEXT:    slli.w $a1, $a1, 8
 ; LA32R-NEXT:    slli.w $a0, $a0, 24
+; LA32R-NEXT:    slli.w $a1, $a1, 8
 ; LA32R-NEXT:    or $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 16
 ; LA32R-NEXT:    move $a0, $a2
@@ -142,8 +142,8 @@ define i48 @test_bswap_i48(i48 %a) nounwind {
 ; LA32S-NEXT:    rotri.w $a2, $a0, 16
 ; LA32S-NEXT:    revb.2h $a0, $a1
 ; LA32S-NEXT:    rotri.w $a0, $a0, 16
-; LA32S-NEXT:    bytepick.w $a0, $a0, $a2, 2
 ; LA32S-NEXT:    srli.w $a1, $a2, 16
+; LA32S-NEXT:    bytepick.w $a0, $a0, $a2, 2
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: test_bswap_i48:
@@ -161,33 +161,33 @@ define i80 @test_bswap_i80(i80 %a) nounwind {
 ; LA32R-NEXT:    ld.w $a2, $a1, 4
 ; LA32R-NEXT:    ld.w $a3, $a1, 0
 ; LA32R-NEXT:    ld.w $a1, $a1, 8
-; LA32R-NEXT:    srli.w $a4, $a2, 8
 ; LA32R-NEXT:    lu12i.w $a5, 15
 ; LA32R-NEXT:    ori $a5, $a5, 3840
-; LA32R-NEXT:    and $a4, $a4, $a5
+; LA32R-NEXT:    srli.w $a4, $a2, 8
 ; LA32R-NEXT:    srli.w $a6, $a2, 24
+; LA32R-NEXT:    and $a4, $a4, $a5
 ; LA32R-NEXT:    or $a4, $a4, $a6
-; LA32R-NEXT:    slli.w $a4, $a4, 16
 ; LA32R-NEXT:    and $a6, $a1, $a5
-; LA32R-NEXT:    slli.w $a6, $a6, 8
 ; LA32R-NEXT:    slli.w $a1, $a1, 24
+; LA32R-NEXT:    slli.w $a6, $a6, 8
+; LA32R-NEXT:    slli.w $a4, $a4, 16
 ; LA32R-NEXT:    or $a1, $a1, $a6
+; LA32R-NEXT:    srli.w $a6, $a3, 24
 ; LA32R-NEXT:    srli.w $a1, $a1, 16
 ; LA32R-NEXT:    or $a1, $a1, $a4
 ; LA32R-NEXT:    and $a4, $a2, $a5
-; LA32R-NEXT:    slli.w $a4, $a4, 8
 ; LA32R-NEXT:    slli.w $a2, $a2, 24
+; LA32R-NEXT:    slli.w $a4, $a4, 8
 ; LA32R-NEXT:    or $a2, $a2, $a4
-; LA32R-NEXT:    srli.w $a2, $a2, 16
 ; LA32R-NEXT:    srli.w $a4, $a3, 8
 ; LA32R-NEXT:    and $a4, $a4, $a5
-; LA32R-NEXT:    srli.w $a6, $a3, 24
+; LA32R-NEXT:    srli.w $a2, $a2, 16
 ; LA32R-NEXT:    or $a4, $a4, $a6
 ; LA32R-NEXT:    slli.w $a4, $a4, 16
 ; LA32R-NEXT:    or $a2, $a4, $a2
 ; LA32R-NEXT:    and $a4, $a3, $a5
-; LA32R-NEXT:    slli.w $a4, $a4, 8
 ; LA32R-NEXT:    slli.w $a3, $a3, 24
+; LA32R-NEXT:    slli.w $a4, $a4, 8
 ; LA32R-NEXT:    or $a3, $a3, $a4
 ; LA32R-NEXT:    srli.w $a3, $a3, 16
 ; LA32R-NEXT:    st.h $a3, $a0, 8
@@ -201,12 +201,12 @@ define i80 @test_bswap_i80(i80 %a) nounwind {
 ; LA32S-NEXT:    ld.w $a3, $a1, 8
 ; LA32S-NEXT:    ld.w $a1, $a1, 0
 ; LA32S-NEXT:    revb.2h $a2, $a2
-; LA32S-NEXT:    rotri.w $a2, $a2, 16
 ; LA32S-NEXT:    revb.2h $a3, $a3
-; LA32S-NEXT:    rotri.w $a3, $a3, 16
-; LA32S-NEXT:    bytepick.w $a3, $a3, $a2, 2
 ; LA32S-NEXT:    revb.2h $a1, $a1
+; LA32S-NEXT:    rotri.w $a2, $a2, 16
+; LA32S-NEXT:    rotri.w $a3, $a3, 16
 ; LA32S-NEXT:    rotri.w $a1, $a1, 16
+; LA32S-NEXT:    bytepick.w $a3, $a3, $a2, 2
 ; LA32S-NEXT:    bytepick.w $a2, $a2, $a1, 2
 ; LA32S-NEXT:    srli.w $a1, $a1, 16
 ; LA32S-NEXT:    st.w $a2, $a0, 4
@@ -229,45 +229,45 @@ define i128 @test_bswap_i128(i128 %a) nounwind {
 ; LA32R-LABEL: test_bswap_i128:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    ld.w $a2, $a1, 12
+; LA32R-NEXT:    lu12i.w $a6, 15
 ; LA32R-NEXT:    ld.w $a3, $a1, 0
 ; LA32R-NEXT:    ld.w $a4, $a1, 4
 ; LA32R-NEXT:    ld.w $a1, $a1, 8
-; LA32R-NEXT:    srli.w $a5, $a2, 8
-; LA32R-NEXT:    lu12i.w $a6, 15
 ; LA32R-NEXT:    ori $a6, $a6, 3840
-; LA32R-NEXT:    and $a5, $a5, $a6
+; LA32R-NEXT:    srli.w $a5, $a2, 8
 ; LA32R-NEXT:    srli.w $a7, $a2, 24
+; LA32R-NEXT:    and $a5, $a5, $a6
 ; LA32R-NEXT:    or $a5, $a5, $a7
 ; LA32R-NEXT:    and $a7, $a2, $a6
-; LA32R-NEXT:    slli.w $a7, $a7, 8
 ; LA32R-NEXT:    slli.w $a2, $a2, 24
+; LA32R-NEXT:    slli.w $a7, $a7, 8
 ; LA32R-NEXT:    or $a2, $a2, $a7
+; LA32R-NEXT:    srli.w $a7, $a1, 24
 ; LA32R-NEXT:    or $a2, $a2, $a5
 ; LA32R-NEXT:    srli.w $a5, $a1, 8
 ; LA32R-NEXT:    and $a5, $a5, $a6
-; LA32R-NEXT:    srli.w $a7, $a1, 24
 ; LA32R-NEXT:    or $a5, $a5, $a7
 ; LA32R-NEXT:    and $a7, $a1, $a6
-; LA32R-NEXT:    slli.w $a7, $a7, 8
 ; LA32R-NEXT:    slli.w $a1, $a1, 24
+; LA32R-NEXT:    slli.w $a7, $a7, 8
 ; LA32R-NEXT:    or $a1, $a1, $a7
+; LA32R-NEXT:    srli.w $a7, $a4, 24
 ; LA32R-NEXT:    or $a1, $a1, $a5
 ; LA32R-NEXT:    srli.w $a5, $a4, 8
 ; LA32R-NEXT:    and $a5, $a5, $a6
-; LA32R-NEXT:    srli.w $a7, $a4, 24
 ; LA32R-NEXT:    or $a5, $a5, $a7
 ; LA32R-NEXT:    and $a7, $a4, $a6
-; LA32R-NEXT:    slli.w $a7, $a7, 8
 ; LA32R-NEXT:    slli.w $a4, $a4, 24
+; LA32R-NEXT:    slli.w $a7, $a7, 8
 ; LA32R-NEXT:    or $a4, $a4, $a7
+; LA32R-NEXT:    srli.w $a7, $a3, 24
 ; LA32R-NEXT:    or $a4, $a4, $a5
 ; LA32R-NEXT:    srli.w $a5, $a3, 8
 ; LA32R-NEXT:    and $a5, $a5, $a6
-; LA32R-NEXT:    srli.w $a7, $a3, 24
-; LA32R-NEXT:    or $a5, $a5, $a7
 ; LA32R-NEXT:    and $a6, $a3, $a6
-; LA32R-NEXT:    slli.w $a6, $a6, 8
 ; LA32R-NEXT:    slli.w $a3, $a3, 24
+; LA32R-NEXT:    slli.w $a6, $a6, 8
+; LA32R-NEXT:    or $a5, $a5, $a7
 ; LA32R-NEXT:    or $a3, $a3, $a6
 ; LA32R-NEXT:    or $a3, $a3, $a5
 ; LA32R-NEXT:    st.w $a3, $a0, 12
@@ -283,13 +283,13 @@ define i128 @test_bswap_i128(i128 %a) nounwind {
 ; LA32S-NEXT:    ld.w $a4, $a1, 8
 ; LA32S-NEXT:    ld.w $a1, $a1, 4
 ; LA32S-NEXT:    revb.2h $a2, $a2
-; LA32S-NEXT:    rotri.w $a2, $a2, 16
 ; LA32S-NEXT:    revb.2h $a4, $a4
-; LA32S-NEXT:    rotri.w $a4, $a4, 16
 ; LA32S-NEXT:    revb.2h $a1, $a1
-; LA32S-NEXT:    rotri.w $a1, $a1, 16
 ; LA32S-NEXT:    revb.2h $a3, $a3
 ; LA32S-NEXT:    rotri.w $a3, $a3, 16
+; LA32S-NEXT:    rotri.w $a2, $a2, 16
+; LA32S-NEXT:    rotri.w $a4, $a4, 16
+; LA32S-NEXT:    rotri.w $a1, $a1, 16
 ; LA32S-NEXT:    st.w $a3, $a0, 12
 ; LA32S-NEXT:    st.w $a1, $a0, 8
 ; LA32S-NEXT:    st.w $a4, $a0, 4
