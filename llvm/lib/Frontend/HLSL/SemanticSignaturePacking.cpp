@@ -316,10 +316,11 @@ reserveClipCullSignatureRows(MutableArrayRef<SignatureRow> SignatureRows,
 
   if (State.RowsUsed == 1) {
     const unsigned StartRow = State.SignatureRows[0] + 1;
-    if (StartRow >= SignatureRows.size() ||
-        !reserveClipCullRows(SignatureRows, StartRow,
-                             getClipCullReservation(Placement, 1)))
+    if (StartRow >= SignatureRows.size())
       return SignaturePackingError::SignatureOverflow;
+    if (!reserveClipCullRows(SignatureRows, StartRow,
+                             getClipCullReservation(Placement, 1)))
+      return SignaturePackingError::ClipCullNotAdjacent;
     State.SignatureRows[1] = StartRow;
     return std::nullopt;
   }
@@ -364,6 +365,9 @@ void SignaturePackingError::log(raw_ostream &OS) const {
     break;
   case ClipCullOverflow:
     OS << "clip/cull elements do not fit in " << MaxClipCullRows << " rows";
+    break;
+  case ClipCullNotAdjacent:
+    OS << "indexed clip/cull elements require adjacent signature rows";
     break;
   }
   OS << " (element " << ElementIndex << ")";

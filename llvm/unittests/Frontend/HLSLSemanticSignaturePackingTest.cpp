@@ -1339,6 +1339,73 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
   }
 }
 
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableRejectsBlockedClipCullExtension) {
+  // The signature has room, but extending Clip's reserved row for the indexed
+  // Cull element would overlap Color. Report adjacency rather than capacity.
+
+  // struct VSOut {
+  //   float Clip    : SV_ClipDistance0;
+  //   float4 Color  : COLOR;
+  //   float Cull[2] : SV_CullDistance0;
+  // };
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPackingError(PackingMethod::PrefixStable, Config,
+                     SignaturePackingError::ClipCullNotAdjacent,
+                     /*ExpectedElementIndex=*/2);
+
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  EXPECT_THAT_EXPECTED(
+      pack(PackingMethod::PrefixStable, Elements, Config),
+      FailedWithMessage("indexed clip/cull elements require adjacent signature "
+                        "rows (element 2)"));
+  EXPECT_EQ(Elements[0].StartRow, 0u);
+  EXPECT_EQ(Elements[0].StartCol, 0u);
+  EXPECT_EQ(Elements[1].StartRow, 1u);
+  EXPECT_EQ(Elements[1].StartCol, 0u);
+  EXPECT_EQ(Elements[2].StartRow, UnallocatedRow);
+  EXPECT_EQ(Elements[2].StartCol, UnallocatedCol);
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableClipCullExtensionAtSignatureBoundary) {
+  // A two-row clip/cull range can end at the last signature row, but cannot
+  // extend beyond it. The latter is still a genuine capacity overflow.
+
+  // struct VSOut {
+  //   float4 Data[30] : DATA;
+  //   float Clip      : SV_ClipDistance0;
+  //   float Cull[2]   : SV_CullDistance0;
+  // };
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows - 2,
+        /*Cols=*/4, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPacking(PackingMethod::PrefixStable, Config,
+                /*ExpectedRows=*/MaxSignatureRows,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/MaxSignatureRows - 2, /*Col=*/0},
+                 {/*Row=*/MaxSignatureRows - 2, /*Col=*/1}});
+
+  // Extending Data to 31 rows pushes Clip into the last signature row.
+  ++Config.Elements[0].Rows;
+  verifyPackingError(PackingMethod::PrefixStable, Config,
+                     SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/2);
+}
+
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsClipCullOverflow) {
   // Clip and cull distances may use at most eight components, shared between
   // them, so nine components cannot be packed.

@@ -32,6 +32,7 @@ public:
   enum ErrorKind {
     SignatureOverflow,
     ClipCullOverflow,
+    ClipCullNotAdjacent,
   };
 
   static char ID;
