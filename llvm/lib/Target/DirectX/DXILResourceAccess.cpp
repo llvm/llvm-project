@@ -613,6 +613,9 @@ struct CBufferRowIntrin {
 };
 } // namespace
 
+static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
+                                  IRBuilder<> &Builder);
+
 static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
                               dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
@@ -667,9 +670,17 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
       // because arrays and structs are always row aligned, and accesses to
       // vector elements will show up as a load of the vector followed by an
       // extractelement.
+      Value *RowOffset = *LastGEP->idx_begin();
+      if (LastGEP->getSourceElementType()->isIntegerTy(8)) {
+        Value *ByteOffset =
+            accumulateGEPOffset(cast<GetElementPtrInst>(LastGEP), Builder);
+        RowOffset = Builder.CreateExactUDiv(
+            ByteOffset, ConstantInt::get(Builder.getInt32Ty(),
+                                         hlsl::CBufferRowSizeInBytes));
+      }
       CurrentRow = cast<ConstantInt>(CurrentRow)->isZero()
-                       ? *LastGEP->idx_begin()
-                       : Builder.CreateAdd(CurrentRow, *LastGEP->idx_begin());
+                       ? RowOffset
+                       : Builder.CreateAdd(CurrentRow, RowOffset);
       CurrentIndex = 0;
     }
   }
@@ -928,6 +939,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
     std::unique_ptr<PHINode> OffsetPhi(
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
+    bool HasOffset = false;
 
     // Register a ref to this phi for a recursive phi. This is safe to add to
     // the map even if we end up deleting newly created phi below since we can't
@@ -942,9 +954,10 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       if (AccessIdx.hasGetPtrIdx())
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
       HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
-      if (AccessIdx.hasOffsetIdx())
+      if (AccessIdx.hasOffsetIdx()) {
         OffsetPhi->addIncoming(AccessIdx.OffsetIdx, BB);
-      else
+        HasOffset = true;
+      } else
         OffsetPhi->addIncoming(ConstantInt::get(Builder.getInt32Ty(), 0), BB);
     }
 
@@ -966,12 +979,14 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       Builder.Insert(HandleIdx);
     }
 
-    Value *OffsetIdx;
-    if (Value *ConstantIdx = OffsetPhi->hasConstantValue())
-      OffsetIdx = ConstantIdx;
-    else {
-      OffsetIdx = OffsetPhi.release();
-      Builder.Insert(OffsetIdx);
+    Value *OffsetIdx = nullptr;
+    if (HasOffset) {
+      if (Value *ConstantIdx = OffsetPhi->hasConstantValue())
+        OffsetIdx = ConstantIdx;
+      else {
+        OffsetIdx = OffsetPhi.release();
+        Builder.Insert(OffsetIdx);
+      }
     }
 
     DeadInsts.insert(Phi);
