@@ -15,7 +15,7 @@ template<typename T, typename U>
 struct RefObj {
   static Ref<RefObj> [[clang::annotate_type("webkit.nodelete")]] create(int = 0);
   void ref() const;
-  void deref() const;
+  void deref() const; // expected-note 2 {{'deref' has no visible definition here, so it is assumed to destruct an object}}
   int value() const;
 };
 
