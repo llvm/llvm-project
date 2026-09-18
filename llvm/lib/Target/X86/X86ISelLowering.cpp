@@ -58571,8 +58571,8 @@ static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
       // FMSUBADD has no flags, so we use the flags from the FMUL (i.e. the
       // third operand) it was fused from, as it is the only operand which
       // still has FMF (see isCFMulFromFMSUBADD for the pattern).
-      SDValue Fmulc = DAG.getNode(X86ISD::VFCMULC, dl, CVT, MulOp0, MulOp1,
-                                  N2->getFlags());
+      SDValue Fmulc =
+          DAG.getNode(X86ISD::VFCMULC, dl, CVT, MulOp0, MulOp1, N2->getFlags());
       return DAG.getBitcast(VT, Fmulc);
     }
   }
