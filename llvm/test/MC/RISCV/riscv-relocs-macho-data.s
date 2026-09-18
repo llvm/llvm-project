@@ -66,7 +66,7 @@ _sub_add:
 ; CHECK-NEXT:                   00000014:  RISCV_RELOC_UNSIGNED _ref
 ; CHECK-NEXT:       16: 0000            <unknown>
 .word _ref - _elsewhere + 2
-; Same as before, but with a offset that requires more than 12 bits.
+; Same as before, but with an offset that requires more than 12 bits.
 ; Being data, the whole offset is stored in the 4 bytes at 18.
         .global _sub_add_big_offset
 _sub_add_big_offset:
