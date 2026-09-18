@@ -5900,6 +5900,11 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (VPI.getOpcode() != Instruction::Trunc)
         continue;
 
+      // Underlying Trunc is necessary to create VPWidenIntOrFpInductionRecipe.
+      auto *Trunc = cast_or_null<TruncInst>(VPI.getUnderlyingValue());
+      if (!Trunc)
+        continue;
+
       // A truncate that is not widened is left to the scalarization decisions
       // made earlier.
       if (vputils::onlyFirstLaneUsed(&VPI))
@@ -5927,10 +5932,6 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       };
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(
               IsNarrowingProfitable, Range))
-        continue;
-
-      auto *Trunc = cast_or_null<TruncInst>(VPI.getUnderlyingValue());
-      if (!Trunc)
         continue;
 
       // Wrap flags of the original induction do not hold in the truncated
