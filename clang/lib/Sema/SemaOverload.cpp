@@ -10980,7 +10980,7 @@ static bool sameFunctionParameterTypeLists(Sema &S, FunctionDecl *Fn1,
     if (Mem1->isInstance() && Mem2->isInstance() &&
         !S.getASTContext().hasSameType(
             Mem1->getFunctionObjectParameterReferenceType(),
-            Mem1->getFunctionObjectParameterReferenceType()))
+            Mem2->getFunctionObjectParameterReferenceType()))
       return false;
   }
   return true;

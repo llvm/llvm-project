@@ -55,6 +55,9 @@ public:
   static FileID getSentinel() { return get(-1); }
   unsigned getHashValue() const { return static_cast<unsigned>(ID); }
 
+  /// Returns the raw integer representation of this FileID.
+  int getOpaqueValue() const { return ID; }
+
 private:
   friend class ASTWriter;
   friend class ASTReader;
@@ -66,8 +69,6 @@ private:
     F.ID = V;
     return F;
   }
-
-  int getOpaqueValue() const { return ID; }
 };
 
 using FileIDAndOffset = std::pair<FileID, unsigned>;
