@@ -4710,6 +4710,20 @@ LogicalResult cir::TryOp::verify() {
             typeAttr))
       continue;
 
+    if (entryBlock.empty())
+      return emitOpError("catch handler region must not be empty");
+
+    // A terminate scope, which wraps the body of a function that cannot throw,
+    // is a catch-all handler that only terminates the program. The exception is
+    // caught by the runtime helper that cir.eh.terminate lowers to, so the
+    // handler region has no cir.begin_catch of its own.
+    if (mlir::isa<cir::EhTerminateOp>(entryBlock.front())) {
+      if (!mlir::isa<cir::CatchAllAttr>(typeAttr))
+        return emitOpError("'cir.eh.terminate' is only allowed in a catch-all "
+                           "handler region");
+      continue;
+    }
+
     // Nothing may run in a catch handler before cir.begin_catch, so it has to
     // be the handler region's first operation, with two exceptions.
     //
@@ -4724,9 +4738,6 @@ LogicalResult cir::TryOp::verify() {
     //
     // A cir.construct_catch_param may also precede cir.begin_catch, to
     // perform any pre-begin_catch initialization of the catch parameter.
-    if (entryBlock.empty())
-      return emitOpError("catch handler region must not be empty");
-
     mlir::Operation *firstOp = &entryBlock.front();
     if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
       mlir::Operation *next = firstOp->getNextNode();
