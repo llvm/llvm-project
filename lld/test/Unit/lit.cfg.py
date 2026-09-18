@@ -41,7 +41,3 @@ if sys.platform in ["win32", "cygwin"] and os.path.isdir(config.shlibdir):
 # Win32 may use %SYSTEMDRIVE% during file system shell operations, so propagate.
 if sys.platform == "win32" and "SYSTEMDRIVE" in os.environ:
     config.environment["SYSTEMDRIVE"] = os.environ["SYSTEMDRIVE"]
-
-# Expand the LLD source path so that unittests can use associated input files.
-# (see AsLibELF/ROCm.cpp test)
-config.environment["LLD_SRC_DIR"] = config.lld_src_dir
