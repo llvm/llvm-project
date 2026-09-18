@@ -1788,21 +1788,8 @@ static bool isDeviceDataImpl(mlir::Value var) {
   assert(defOp && "expected defining op for non-block-argument value");
 
   // Check for CUDA attributes on the defining operation.
-  if (auto dataAttr = cuf::getDataAttr(defOp)) {
-    cuf::DataAttribute attr = dataAttr.getValue();
-    if (cuf::isDeviceDataAttribute(attr)) {
-      // Managed/Unified establish device accessibility, not device
-      // residency: the data is reachable from the device but may not already
-      // reside on the device. Treating it as deviceptr skips the
-      // mapping/attach, so classify it as non-device data and let it be mapped
-      // instead. Device/Constant/Shared are genuinely device-resident and stay
-      // device data.
-      if (attr == cuf::DataAttribute::Managed ||
-          attr == cuf::DataAttribute::Unified)
-        return false;
-      return true;
-    }
-  }
+  if (cuf::hasDeviceDataAttr(defOp))
+    return true;
 
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
