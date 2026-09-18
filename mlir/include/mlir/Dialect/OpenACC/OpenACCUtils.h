@@ -100,6 +100,20 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 /// \return true if the value is device data, false otherwise
 bool isDeviceValue(mlir::Value val);
 
+/// Check if a value already lives on the device and requires no runtime mapping
+/// or attach.
+///
+/// This is stricter than isDeviceValue: isDeviceValue answers device
+/// accessibility, whereas residence requires a static guarantee that
+/// the storage already lives on the device so that mapping/attach can be
+/// skipped. Managed/unified storage MAY reside on the device at any, but that
+/// is not a guarantee the. It is therefore conservatively treated as not
+/// resident: it must still be mapped so the runtime can attach and, where
+/// needed, privatize it, and so must not be treated as `deviceptr`.
+/// \param val The value to check
+/// \return true if the value is device-resident data, false otherwise
+bool isDeviceResident(mlir::Value val);
+
 /// Check if a value use is valid in an OpenACC region.
 /// This is true if:
 /// - The value is produced by an ACC data entry operation

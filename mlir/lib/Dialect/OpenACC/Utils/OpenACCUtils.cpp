@@ -320,6 +320,39 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
   return false;
 }
 
+// Returns true if the defining op of `val` carries a CUDA data attribute of
+// managed or unified. This layer (mlir core OpenACC) cannot link the CUF
+// dialect, so the attribute is matched by name+mnemonic rather than via
+// cuf::getDataAttr. This should be replaced by a proper type-interface query
+// once the residence concept is expressed on the OpenACC interfaces.
+static bool hasManagedOrUnifiedDataAttr(mlir::Value val) {
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+  for (llvm::StringRef name : {"data_attr", "cuf.data_attr"}) {
+    if (mlir::Attribute a = defOp->getAttr(name)) {
+      std::string s;
+      llvm::raw_string_ostream os(s);
+      a.print(os);
+      llvm::StringRef sv(s);
+      if (sv.contains("managed") || sv.contains("unified"))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool mlir::acc::isDeviceResident(mlir::Value val) {
+  // Device-resident data is a subset of device-accessible data: it must be
+  // accessible, and it must not be managed/unified. Managed/unified storage may
+  // happen to reside on the device (pages migrate on demand), but that dynamic
+  // possibility is not a strong enough guarantee to bypass mapping/attach, so
+  // it is conservatively treated as non-resident.
+  if (!isDeviceValue(val))
+    return false;
+  return !hasManagedOrUnifiedDataAttr(val);
+}
+
 bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
   // Types that can be passed by value are legal.
   Type type = val.getType();

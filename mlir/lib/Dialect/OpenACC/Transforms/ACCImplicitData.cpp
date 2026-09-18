@@ -459,45 +459,20 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
-  if (acc::isDeviceValue(var)) {
-    // `deviceptr` asserts the value is already device-*resident*: no runtime
-    // mapping or attach is performed. CUDA managed/unified storage is device-
-    // *accessible* but not resident, so it must be mapped (so the runtime can
-    // attach and, where needed, privatize it) rather than treated as
-    // deviceptr. isDeviceValue answers accessibility, so refine it to
-    // residence here by excluding managed/unified.
-    //
-    // FIRST-PASS: this pass lives in mlir core and cannot link the CUF dialect,
-    // so the data attribute is matched by name+mnemonic instead of via
-    // cuf::getDataAttr. Replace with an acc::isDeviceResident interface query.
-    auto isManagedOrUnified = [](mlir::Value v) {
-      mlir::Operation *defOp = v.getDefiningOp();
-      if (!defOp)
-        return false;
-      for (llvm::StringRef name : {"data_attr", "cuf.data_attr"}) {
-        if (mlir::Attribute a = defOp->getAttr(name)) {
-          std::string s;
-          llvm::raw_string_ostream os(s);
-          a.print(os);
-          llvm::StringRef sv(s);
-          if (sv.contains("managed") || sv.contains("unified"))
-            return true;
-        }
-      }
-      return false;
-    };
-
-    if (!isManagedOrUnified(var)) {
-      // If the variable is device-resident data, use deviceptr clause.
-      LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
-                                 "device data\n");
-      return acc::DevicePtrOp::create(builder, loc, var,
-                                      /*structured=*/true, /*implicit=*/true,
-                                      accSupport.getVariableName(var));
-    }
-    LLVM_DEBUG(llvm::dbgs()
-               << "Not using deviceptr for managed/unified variable "
-                  "(device-accessible, not device-resident)\n");
+  // `deviceptr` asserts the value is already device-resident; no runtime
+  // mapping or attach is performed. CUDA managed/unified storage is device-
+  // accessible and may migrate onto the device, but that is not a strong enough
+  // guarantee of residence to skip mapping (the runtime still needs to attach
+  // and, where needed, privatize it), so it must not be treated as deviceptr.
+  // isDeviceResident refines isDeviceValue's accessibility answer to residence
+  // by conservatively excluding managed/unified.
+  if (acc::isDeviceResident(var)) {
+    // If the variable is device-resident data, use deviceptr clause.
+    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
+                               "device data\n");
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
   }
 
   Operation *op = nullptr;
