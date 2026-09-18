@@ -9124,6 +9124,26 @@ static bool validateBoundsAttrTypeForTypePosition(
   return true;
 }
 
+bool Sema::ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                                   SourceLocation AttrNameLoc, QualType &type,
+                                   unsigned pointerNestLevel,
+                                   BoundsAttributedType **BATy) {
+  BoundsAttrFlags Flags;
+  if (!validateBoundsAttrTypeForTypePosition(*this, type, AttrKind, AttrNameLoc,
+                                             SourceRange(AttrNameLoc),
+                                             pointerNestLevel, Flags))
+    return false;
+
+  // The argument hasn't been parsed yet, so build the type without it and hand
+  // the node back for completion. Because enclosing types refer to it by
+  // pointer, filling the argument in later leaves them untouched — no rebuild
+  // of the type chain and no TypeLoc re-emission.
+  auto *CATy = getASTContext().getIncompleteCountAttributedType(
+      type, Flags.CountInBytes, Flags.OrNull);
+  type = QualType(CATy, 0);
+  *BATy = CATy;
+  return true;
+}
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
