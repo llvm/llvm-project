@@ -198,6 +198,8 @@ TEST_F(TestTypeSystemFortran, TestTypeClassifications) {
 TEST_F(TestTypeSystemFortran, TestTypeNameGeneration) {
   CompilerType logical32 =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_boolean, 32, ConstString());
+  CompilerType logical64 =
+      m_ast->CreateBaseType(llvm::dwarf::DW_ATE_boolean, 64, ConstString());
   CompilerType int32 =
       m_ast->CreateBaseType(llvm::dwarf::DW_ATE_signed, 32, ConstString());
   CompilerType real32 =
@@ -206,6 +208,7 @@ TEST_F(TestTypeSystemFortran, TestTypeNameGeneration) {
       llvm::dwarf::DW_ATE_complex_float, 64, ConstString());
 
   EXPECT_STREQ(logical32.GetTypeName().GetCString(), "LOGICAL");
+  EXPECT_STREQ(logical64.GetTypeName().GetCString(), "LOGICAL");
   EXPECT_STREQ(int32.GetTypeName().GetCString(), "INTEGER");
   EXPECT_STREQ(real32.GetTypeName().GetCString(), "REAL");
   EXPECT_STREQ(complex64.GetTypeName().GetCString(), "COMPLEX");
