@@ -153,6 +153,12 @@ public:
 
   virtual bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
 
+  virtual std::optional<APInt> getNullPointerValue(unsigned AS) const {
+    if (DL.isNonIntegralAddressSpace(AS))
+      return std::nullopt;
+    return APInt::getZero(DL.getPointerSizeInBits(AS));
+  }
+
   virtual std::pair<KnownBits, KnownBits>
   computeKnownBitsAddrSpaceCast(unsigned ToAS, const Value &PtrOp) const {
     const Type *PtrTy = PtrOp.getType();
