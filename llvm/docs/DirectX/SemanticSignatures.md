@@ -204,7 +204,7 @@ Some semantic interpretations require additional handling:
 - `SV_ClipDistance` and `SV_CullDistance` are packed only with each other in
   dedicated rows. Together they may occupy at most eight components across at
   most two rows. The rows must be adjacent when a clip or cull element spans
-  multiple rows.
+  multiple rows. Otherwise, clip and cull rows do not need to be adjacent.
 - A multi-row tessellation factor is searched for only in the last column.
   Arbitrary values may fill the columns to its left, even when declared after
   the factor. A single-row tessellation factor is ordered and packed as a
