@@ -150,7 +150,7 @@ subroutine value_dummy_not_yet()
       integer, value :: x(4)
     end subroutine
   end interface
-  !ERROR: Named constant array element actual argument may not yet be associated with a VALUE dummy argument 'x=' array
+  !ERROR: not yet implemented: sequence association of a named constant array element with a VALUE dummy argument 'x=' array
   call byval3(gp(2))
   call byval4(gp)   ! whole array: accepted
   call byval3(v(2)) ! variable element: accepted (preexisting behavior)
