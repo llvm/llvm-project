@@ -20,12 +20,17 @@ typedef __attribute__((amdgpu_num_vgpr(64))) struct struct_num_vgpr_64 { // expe
   int x;
   float y;
 } struct_num_vgpr_64;
+typedef __attribute__((amdgpu_kernarg_preload(0, 0))) struct struct_kernarg_preload_0_0 { // expected-error {{'amdgpu_kernarg_preload' attribute only applies to kernel functions}}
+  int x;
+  float y;
+} struct_kernarg_preload_0_0;
 
 __attribute__((amdgpu_flat_work_group_size(32, 64))) void func_flat_work_group_size_32_64() {} // expected-error {{'amdgpu_flat_work_group_size' attribute only applies to kernel functions}}
 __attribute__((amdgpu_waves_per_eu(2))) void func_waves_per_eu_2() {} // expected-error {{'amdgpu_waves_per_eu' attribute only applies to kernel functions}}
 __attribute__((amdgpu_waves_per_eu(2, 4))) void func_waves_per_eu_2_4() {} // expected-error {{'amdgpu_waves_per_eu' attribute only applies to kernel functions}}
 __attribute__((amdgpu_num_sgpr(32))) void func_num_sgpr_32() {} // expected-error {{'amdgpu_num_sgpr' attribute only applies to kernel functions}}
 __attribute__((amdgpu_num_vgpr(64))) void func_num_vgpr_64() {} // expected-error {{'amdgpu_num_vgpr' attribute only applies to kernel functions}}
+__attribute__((amdgpu_kernarg_preload(0, 0))) void func_kernarg_preload_0_0(int x) {} // expected-error {{'amdgpu_kernarg_preload' attribute only applies to kernel functions}}
 
 __attribute__((amdgpu_flat_work_group_size("ABC", "ABC"))) kernel void kernel_flat_work_group_size_ABC_ABC() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires parameter 0 to be an integer constant}}
 __attribute__((amdgpu_flat_work_group_size(32, "ABC"))) kernel void kernel_flat_work_group_size_32_ABC() {} // expected-error {{'amdgpu_flat_work_group_size' attribute requires parameter 1 to be an integer constant}}
@@ -35,6 +40,9 @@ __attribute__((amdgpu_waves_per_eu(2, "ABC"))) kernel void kernel_waves_per_eu_2
 __attribute__((amdgpu_waves_per_eu("ABC", 4))) kernel void kernel_waves_per_eu_ABC_4() {} // expected-error {{'amdgpu_waves_per_eu' attribute requires parameter 0 to be an integer constant}}
 __attribute__((amdgpu_num_sgpr("ABC"))) kernel void kernel_num_sgpr_ABC() {} // expected-error {{'amdgpu_num_sgpr' attribute requires an integer constant}}
 __attribute__((amdgpu_num_vgpr("ABC"))) kernel void kernel_num_vgpr_ABC() {} // expected-error {{'amdgpu_num_vgpr' attribute requires an integer constant}}
+__attribute__((amdgpu_kernarg_preload("ABC", 0))) kernel void kernel_kernarg_preload_ABC(int x) {} // expected-error {{'amdgpu_kernarg_preload' attribute requires parameter 0 to be an integer constant}}
+extern constant int kernarg_preload_index;
+__attribute__((amdgpu_kernarg_preload(0, kernarg_preload_index))) kernel void kernel_kernarg_preload_non_constant(int x) {} // expected-error {{'amdgpu_kernarg_preload' attribute requires parameter 1 to be an integer constant}}
 
 __attribute__((amdgpu_flat_work_group_size(4294967296, 4294967296))) kernel void kernel_flat_work_group_size_L_L() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 __attribute__((amdgpu_flat_work_group_size(32, 4294967296))) kernel void kernel_flat_work_group_size_32_L() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
@@ -44,6 +52,7 @@ __attribute__((amdgpu_waves_per_eu(2, 4294967296))) kernel void kernel_waves_per
 __attribute__((amdgpu_waves_per_eu(4294967296, 4))) kernel void kernel_waves_per_eu_L_4() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 __attribute__((amdgpu_num_sgpr(4294967296))) kernel void kernel_num_sgpr_L() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 __attribute__((amdgpu_num_vgpr(4294967296))) kernel void kernel_num_vgpr_L() {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
+__attribute__((amdgpu_kernarg_preload(4294967296, 4294967296))) kernel void kernel_kernarg_preload_L(int x) {} // expected-error {{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
 
 __attribute__((amdgpu_flat_work_group_size(0, 64))) kernel void kernel_flat_work_group_size_0_64() {} // expected-error {{'amdgpu_flat_work_group_size' attribute argument is invalid: max must be 0 since min is 0}}
 __attribute__((amdgpu_waves_per_eu(0, 4))) kernel void kernel_waves_per_eu_0_4() {} // expected-error {{'amdgpu_waves_per_eu' attribute argument is invalid: max must be 0 since min is 0}}
@@ -58,6 +67,12 @@ __attribute__((amdgpu_waves_per_eu(2, 4, 8))) kernel void kernel_waves_per_eu_2_
 
 __attribute__((amdgpu_flat_work_group_size(0, 0))) kernel void kernel_flat_work_group_size_0_0() {}
 __attribute__((amdgpu_waves_per_eu(0))) kernel void kernel_waves_per_eu_0() {}
+__attribute__((amdgpu_kernarg_preload(0, 0))) kernel void kernel_kernarg_preload_0_0(int x) {}
+__attribute__((amdgpu_kernarg_preload(1, 2))) kernel void kernel_kernarg_preload_1_2(int x, int y, int z) {}
+__attribute__((amdgpu_kernarg_preload(2, 1))) kernel void kernel_kernarg_preload_bad_range(int x, int y, int z) {} // expected-error {{'amdgpu_kernarg_preload' attribute requires the first argument index to be no greater than the last argument index}}
+__attribute__((amdgpu_kernarg_preload(0, 1))) kernel void kernel_kernarg_preload_bad_index(int x) {} // expected-error {{'amdgpu_kernarg_preload' attribute argument index 1 is out of range for this function}}
+__attribute__((amdgpu_kernarg_preload(0))) kernel void kernel_kernarg_preload_too_few(int x) {} // expected-error {{'amdgpu_kernarg_preload' attribute requires exactly 2 arguments}}
+__attribute__((amdgpu_kernarg_preload(0, 0, 0))) kernel void kernel_kernarg_preload_too_many(int x) {} // expected-error {{'amdgpu_kernarg_preload' attribute requires exactly 2 arguments}}
 __attribute__((amdgpu_waves_per_eu(0, 0))) kernel void kernel_waves_per_eu_0_0() {}
 __attribute__((amdgpu_num_sgpr(0))) kernel void kernel_num_sgpr_0() {}
 __attribute__((amdgpu_num_vgpr(0))) kernel void kernel_num_vgpr_0() {}
@@ -67,3 +82,4 @@ kernel __attribute__((amdgpu_waves_per_eu(2))) void kernel_waves_per_eu_2() {}
 kernel __attribute__((amdgpu_waves_per_eu(2, 4))) void kernel_waves_per_eu_2_4() {}
 kernel __attribute__((amdgpu_num_sgpr(32))) void kernel_num_sgpr_32() {}
 kernel __attribute__((amdgpu_num_vgpr(64))) void kernel_num_vgpr_64() {}
+kernel __attribute__((amdgpu_kernarg_preload(0, 0))) void kernel_kernarg_preload_0_0_alt(int x) {}
