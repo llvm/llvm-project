@@ -11990,8 +11990,11 @@ def err_coop_matrix_useB : Error<"argument of cooperative matrix must be "
 def err_coop_matrix_useACC : Error<"argument of cooperative matrix must be "
                                    "CLK_COOPERATIVE_MATRIX_ACCUMULATOR">;
 
-def err_coop_matrix_element_type
+def err_mismatched_coop_matrix_element_type
     : Error<"inconsistent cooperative matrix element type">;
+
+def err_invalid_coop_matrix_element_type
+    : Error<"invalid cooperative matrix element type">;
 
 def err_coop_matrix_row_or_col_mismatch
     : Error<"mismatch of cooperative matrix row or column">;

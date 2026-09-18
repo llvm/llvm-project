@@ -3903,7 +3903,7 @@ def CoopMatrixType : TypeAttr {
   let Subjects = SubjectList<[TypedefName, Var, ParmVar, Field]>;
   let Args = [UnsignedArgument<"CoopMatScope">, UnsignedArgument<"NumRows">,
               UnsignedArgument<"NumColumns">, UnsignedArgument<"CoopMatUse">];
-  let Documentation = [Undocumented];
+  let Documentation = [CoopMatrixTypeDocs];
 }
 
 def Visibility : InheritableAttr {

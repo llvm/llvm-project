@@ -1384,6 +1384,53 @@ See the OpenCL documentation for some more complete examples.
   }];
 }
 
+def CoopMatrixTypeDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "coop_mat";
+  let Content = [{
+The `coop_mat` attribute declares an OpenCL cooperative matrix type. Cooperative
+matrix operations are distributed across a set of invocations, such as a
+subgroup, allowing the implementation to optimize matrix multiply operations.
+
+The attribute is applied to a scalar numerical component type and takes four
+arguments:
+
+```c
+__attribute__((coop_mat(scope, rows, columns, use)))
+```
+- scope specifies the memory scope of the cooperative matrix.
+  It must be one of the supported OpenCL memory scopes, such as CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP.
+- rows specifies the number of rows in the matrix. It must be a constant expression.
+- columns specifies the number of columns in the matrix. It must be a constant expression.
+- use specifies the operand role of the matrix in coop_mat_muladd. It must be one of:
+  CLK_COOPERATIVE_MATRIX_A
+  CLK_COOPERATIVE_MATRIX_B
+  CLK_COOPERATIVE_MATRIX_ACCUMULATOR
+
+The coop_mat attribute can be used to declare local variables, function parameters, and function return values. Cooperative matrix types must not be used as kernel arguments.
+
+```c
+float vmat1 __attribute__((coop_mat(
+    CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
+    8,
+    8,
+    CLK_COOPERATIVE_MATRIX_A)));
+
+typedef half chmat44 __attribute__((coop_mat(
+    CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP,
+    4,
+    4,
+    CLK_COOPERATIVE_MATRIX_B)));
+chmat44 vmat2;
+```
+The base component type must be a scalar numerical type.
+Implicit and explicit casts between cooperative matrix types are not generally permitted.
+Conversion between cooperative matrix types is allowed only when the types have identical scope, dimensions, and use parameters, and their component types are compatible according to the OpenCL C conversion rules.
+Cooperative matrix types are intended to be used with the cooperative matrix functions, including coop_mat_load, coop_mat_store, coop_matmul_add, and coop_mat_length.
+See the OpenCL documentation for some more complete examples.
+  }];
+}
+
 def DiagnoseIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

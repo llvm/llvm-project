@@ -17427,7 +17427,7 @@ ExprResult Sema::BuiltinCoopMatrixStore(CallExpr *TheCall,
     return ExprError();
   Expr *Arg0 = TheCall->getArg(0);
   Expr *Arg1 = TheCall->getArg(1);
-  if (CheckCoopMatrixLoadStorePtr(TheCall, 00))
+  if (CheckCoopMatrixLoadStorePtr(TheCall, 0))
     return ExprError();
   CheckCoopMatrixLoadStoreElementType(Arg1->getType(), Arg0->getType(),
                                       Arg0->getBeginLoc());
@@ -17462,7 +17462,7 @@ void Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
 
   if (MOutTy->getElementType().getUnqualifiedType() !=
       M2Ty->getElementType().getUnqualifiedType())
-    Diag(Loc, diag::err_coop_matrix_element_type);
+    Diag(Loc, diag::err_mismatched_coop_matrix_element_type);
 
   if (!areCoopMatrixTypesOfTheSameDimension(TheCall->getType(), MC->getType()))
     Diag(Loc, diag::err_coop_matrix_row_or_col_mismatch);
@@ -17491,7 +17491,7 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
 
   if (M0Ty->getElementType().getUnqualifiedType() !=
       M1Ty->getElementType().getUnqualifiedType()) {
-    Diag(ALoc, diag::err_coop_matrix_element_type);
+    Diag(ALoc, diag::err_mismatched_coop_matrix_element_type);
     return true;
   }
   return false;
@@ -17505,8 +17505,9 @@ ExprResult Sema::BuiltinCoopMatrixBinaryOp(CallExpr *TheCall,
   Expr *Arg0 = TheCall->getArg(0);
   Expr *Arg1 = TheCall->getArg(1);
 
-  CheckCoopMatrixTypes(Arg0->getType(), Arg0->getBeginLoc(), Arg1->getType(),
-                       Arg1->getBeginLoc());
+  if (CheckCoopMatrixTypes(Arg0->getType(), Arg0->getBeginLoc(),
+                           Arg1->getType(), Arg1->getBeginLoc()))
+    return ExprError();
 
   TheCall->setType(Arg0->getType());
 
@@ -17554,11 +17555,11 @@ ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
 
   if (M0Ty->getElementType().getUnqualifiedType() !=
       M1Ty->getElementType().getUnqualifiedType())
-    return ExprError(Diag(Loc0, diag::err_coop_matrix_element_type));
+    return ExprError(Diag(Loc0, diag::err_mismatched_coop_matrix_element_type));
 
   if (!isValidMatAMatCElementTypeCombination(M0Ty->getElementType(),
                                              M2Ty->getElementType()))
-    return ExprError(Diag(Loc1, diag::err_coop_matrix_element_type));
+    return ExprError(Diag(Loc1, diag::err_mismatched_coop_matrix_element_type));
 
   if (M0Ty->getNumRows() != M2Ty->getNumRows())
     return ExprError(Diag(Loc0, diag::err_coop_matrix_row_or_col_mismatch));

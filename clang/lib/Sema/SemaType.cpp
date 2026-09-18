@@ -2635,17 +2635,35 @@ QualType Sema::BuildCoopMatrixType(QualType ElementTy, Expr *ScopeExpr,
   }
   std::optional<llvm::APSInt> ValueScope =
       ScopeExpr->getIntegerConstantExpr(Context);
+  // Only the scope expression is invalid.
+  if (!ValueScope) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "coop_mat" << AANT_ArgumentIntegerConstant
+        << ScopeExpr->getSourceRange();
+    return QualType();
+  }
   unsigned Scope = static_cast<unsigned>(ValueScope->getZExtValue());
   std::optional<llvm::APSInt> ValueUse =
       UseExpr->getIntegerConstantExpr(Context);
+  // Only the use expression is invalid.
+  if (!ValueUse) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "coop_mat" << AANT_ArgumentIntegerConstant
+        << UseExpr->getSourceRange();
+    return QualType();
+  }
   unsigned Use = static_cast<unsigned>(ValueUse->getZExtValue());
 
   if (!CooperativeMatrixType::isScopeValid(Scope)) {
-    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << ColRange << "matrix scope";
+    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << Scope << "matrix scope";
     return QualType();
   }
   if (!CooperativeMatrixType::isUseValid(Use)) {
-    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << ColRange << "matrix use";
+    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << Use << "matrix use";
+    return QualType();
+  }
+  if (!CooperativeMatrixType::isValidElementType(ElementTy)) {
+    Diag(AttrLoc, diag::err_invalid_coop_matrix_element_type) << ElementTy;
     return QualType();
   }
   auto Result = Context.getCooperativeMatrixType(ElementTy, Scope, MatrixRows,
