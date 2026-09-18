@@ -473,7 +473,8 @@ class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   }];
 }
 
-def uimm20_lui : UImm20OperandMaybeSym {
+def uimm20_lui : UImm20OperandMaybeSym,
+                 ImmLeaf<XLenVT, [{ return isUInt<20>(Imm); }]> {
   let ParserMatchClass = UImmAsmOperand<20, "LUI">;
   let OperandType = "OPERAND_UIMM20_LUI";
 }
