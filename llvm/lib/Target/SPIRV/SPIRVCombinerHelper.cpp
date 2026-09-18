@@ -239,21 +239,17 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
 ///   (vXfN (g_fmul (vXfN X) (vXfN splat(180/pi)))) ->
 ///   (vXfN (g_intrinsic degrees (vXfN X)))
 /// where `fN` denotes a supported floating-point type.
-bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI,
+bool SPIRVCombinerHelper::matchDegrees(Register LHS, Register RHS,
                                        Register &MatchInfo) const {
-  Register NonConstReg;
   std::optional<FPValueAndVReg> ConstVal;
 
-  if (!mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GFMul(m_Reg(NonConstReg), m_GFCstOrSplat(ConstVal))) &&
-      !mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GFMul(m_GFCstOrSplat(ConstVal), m_Reg(NonConstReg))))
+  if (!mi_match(RHS, MRI, m_GFCstOrSplat(ConstVal)))
     return false;
 
   if (!ConstVal)
     return false;
 
-  MatchInfo = NonConstReg;
+  MatchInfo = LHS;
   APFloat Expected(180.0 / llvm::numbers::pi);
   bool LostInfo = false;
   Expected.convert(ConstVal->Value.getSemantics(), APFloat::rmNearestTiesToEven,

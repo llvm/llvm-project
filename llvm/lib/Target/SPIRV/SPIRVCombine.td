@@ -33,7 +33,7 @@ def degrees_matchdata : GIDefMatchData<"Register">;
 def degrees_lowering
     : GICombineRule<(defs root:$root, degrees_matchdata:$matchinfo),
                     (match (G_FMUL $dst, $lhs, $rhs):$root,
-                        [{ return Helper.matchDegrees(*${root}, ${matchinfo}); }]),
+                        [{ return Helper.matchDegrees(${lhs}.getReg(), ${rhs}.getReg(), ${matchinfo}); }]),
                     (apply [{ Helper.applyDegrees(*${root}, ${matchinfo}); }])>;
 
 def matrix_transpose_lowering
