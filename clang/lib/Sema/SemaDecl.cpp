@@ -14080,6 +14080,37 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
   }
 }
 
+// Return true if RHSExpr is a cooperative matrix builtin call.
+bool Sema::IsCoopMatrixBuiltin(Expr *RHSExpr) {
+  auto call = dyn_cast<CallExpr>(RHSExpr);
+  if (!call)
+    return false;
+  FunctionDecl *F = call->getDirectCallee();
+  if (!F)
+    return false;
+  DeclarationName MemberName = F->getDeclName();
+  IdentifierInfo *Fname = MemberName.getAsIdentifierInfo();
+  if (!Fname)
+    return false;
+  switch (F->getBuiltinID()) {
+  case Builtin::BIcoop_mat_load:
+  case Builtin::BIcoop_mat_store:
+  case Builtin::BIcoop_mat_mulAdd:
+  case Builtin::BIcoop_mat_binary_add:
+  case Builtin::BIcoop_mat_binary_sub:
+  case Builtin::BIcoop_mat_binary_mul:
+  case Builtin::BIcoop_mat_binary_div:
+  case Builtin::BIcoop_mat_scalar_mul:
+  case Builtin::BIcoop_mat_scalar_neg:
+  case Builtin::BIcoop_mat_init:
+    return true;
+  default:
+    return false;
+  }
+
+  return false;
+}
+
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   llvm::scope_exit ResetDeclForInitializer([this]() {
     if (!this->ExprEvalContexts.empty())
@@ -14598,6 +14629,19 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   if (LangOpts.OpenACC && !InitType.isNull())
     OpenACC().ActOnVariableInit(VDecl, InitType);
+
+  // Set return type of builtin call using type of LHS variable.
+  // This is done for builtin calls that return cooperative matrix.
+  if (getLangOpts().OpenCL && IsCoopMatrixBuiltin(Init)) {
+    if (!VDecl->getType()->isCooperativeMatrixType()) {
+      Diag(VDecl->getLocation(), diag::err_coop_matrix_assignment);
+      return;
+    }
+
+    auto call = dyn_cast<CallExpr>(Init);
+    assert(call);
+    call->setType(VDecl->getType());
+  }
 }
 
 void Sema::ActOnInitializerError(Decl *D) {
