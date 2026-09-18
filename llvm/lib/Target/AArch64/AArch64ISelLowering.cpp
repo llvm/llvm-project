@@ -16195,11 +16195,23 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                     DAG.getNode(AArch64ISD::NVCAST, DL, BSVT, V1)));
   }
 
-  if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8)) &&
+  if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8) ||
+       (NumElts == 4 && EltSize == 32)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
-    SDValue Rev = DAG.getNode(AArch64ISD::REV64, DL, VT, V1);
-    return DAG.getNode(AArch64ISD::EXT, DL, VT, Rev, Rev,
-                       DAG.getConstant(8, DL, MVT::i32));
+    // For sve128 we can use a REV full vector reverse.
+    if (Subtarget->isSVEorStreamingSVEAvailable() &&
+        Subtarget->getMaxSVEVectorSizeInBits() == 128) {
+      EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+      V1 = convertToScalableVector(DAG, ContainerVT, V1);
+      SDValue Rev = DAG.getNode(ISD::VECTOR_REVERSE, DL, ContainerVT, V1);
+      return convertFromScalableVector(DAG, VT, Rev);
+    }
+
+    if (EltSize != 32) {
+      SDValue Rev = DAG.getNode(AArch64ISD::REV64, DL, VT, V1);
+      return DAG.getNode(AArch64ISD::EXT, DL, VT, Rev, Rev,
+                         DAG.getConstant(8, DL, MVT::i32));
+    }
   }
 
   // Check for slide-with-zeros pattern before EXT (slide is also valid EXT)

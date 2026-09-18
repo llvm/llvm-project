@@ -40,8 +40,9 @@ define <2 x double> @testrev_v2f64(<2 x double> %x) {
 define <4 x i32> @testrev_v4i32_vscale1(<4 x i32> %x) vscale_range(1,1) {
 ; CHECK-LABEL: testrev_v4i32_vscale1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    rev z0.s, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x i32> %r
@@ -60,8 +61,9 @@ define <4 x i32> @testrev_v4i32(<4 x i32> %x) {
 define <4 x float> @testrev_v4f32_vscale1(<4 x float> %x) vscale_range(1,1) {
 ; CHECK-LABEL: testrev_v4f32_vscale1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    rev z0.s, z0.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = shufflevector <4 x float> %x, <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x float> %r
@@ -80,8 +82,9 @@ define <4 x float> @testrev_v4f32(<4 x float> %x) {
 define <8 x i16> @testrev_v8i16_vscale1(<8 x i16> %x) vscale_range(1,1) {
 ; CHECK-LABEL: testrev_v8i16_vscale1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    rev z0.h, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x i16> %r
@@ -100,8 +103,9 @@ define <8 x i16> @testrev_v8i16(<8 x i16> %x) {
 define <8 x half> @testrev_v8f16_vscale1(<8 x half> %x) vscale_range(1,1) {
 ; CHECK-LABEL: testrev_v8f16_vscale1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    rev z0.h, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = shufflevector <8 x half> %x, <8 x half> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x half> %r
@@ -120,8 +124,9 @@ define <8 x half> @testrev_v8f16(<8 x half> %x) {
 define <8 x bfloat> @testrev_v8bf16_vscale1(<8 x bfloat> %x) vscale_range(1,1) {
 ; CHECK-LABEL: testrev_v8bf16_vscale1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev64 v0.8h, v0.8h
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    rev z0.h, z0.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = shufflevector <8 x bfloat> %x, <8 x bfloat> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <8 x bfloat> %r
@@ -140,8 +145,9 @@ define <8 x bfloat> @testrev_v8bf16(<8 x bfloat> %x) {
 define <16 x i8> @testrev_v16i8_vscale1(<16 x i8> %x) vscale_range(1,1) {
 ; CHECK-LABEL: testrev_v16i8_vscale1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    rev z0.b, z0.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %r = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   ret <16 x i8> %r
