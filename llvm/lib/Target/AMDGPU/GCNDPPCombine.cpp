@@ -678,6 +678,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
+  const SIRegisterInfo *TRI = ST->getRegisterInfo();
   SmallVector<MachineOperand *, 16> Uses(
       llvm::make_pointer_range(MRI->use_nodbg_operands(DPPMovReg)));
 
@@ -692,8 +693,13 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     assert((TII->get(OrigOp).getSize() != 4 || !AMDGPU::isTrue16Inst(OrigOp)) &&
            "There should not be e32 True16 instructions pre-RA");
     if (OrigOp == AMDGPU::REG_SEQUENCE) {
+      // A different reg is a forwarded lane of a nested REG_SEQUENCE.
+      if (Use->getReg() != DPPMovReg) {
+        LLVM_DEBUG(dbgs() << "  failed: nested REG_SEQUENCE\n");
+        break;
+      }
+
       Register FwdReg = OrigMI.getOperand(0).getReg();
-      unsigned FwdSubReg = 0;
 
       if (execMayBeModifiedBeforeAnyUse(*MRI, FwdReg, OrigMI)) {
         LLVM_DEBUG(dbgs() << "  failed: EXEC mask should remain the same"
@@ -701,21 +707,27 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
         break;
       }
 
-      unsigned OpNo, E = OrigMI.getNumOperands();
-      for (OpNo = 1; OpNo < E; OpNo += 2) {
-        if (OrigMI.getOperand(OpNo).getReg() == DPPMovReg) {
-          FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
-          break;
-        }
+      // The DPP mov reg can appear in several operands, each with its own
+      // subreg index: REG_SEQUENCE inputs never overlap.
+      unsigned OpNo = OrigMI.getOperandNo(Use);
+      unsigned FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
+
+      // Marking the operand undef is unsound if another read consumes the lane.
+      LaneBitmask FwdLanes = TRI->getSubRegIndexLaneMask(FwdSubReg);
+      if (llvm::any_of(
+              MRI->use_nodbg_operands(FwdReg), [&](const MachineOperand &Op) {
+                return Op.getSubReg() != FwdSubReg &&
+                       (TRI->getSubRegIndexLaneMask(Op.getSubReg()) & FwdLanes)
+                           .any();
+              })) {
+        LLVM_DEBUG(dbgs() << "  failed: REG_SEQUENCE lane has other reads\n");
+        break;
       }
 
-      if (!FwdSubReg)
-        break;
-
-      for (auto &Op : MRI->use_nodbg_operands(FwdReg)) {
+      for (MachineOperand &Op : MRI->use_nodbg_operands(FwdReg))
         if (Op.getSubReg() == FwdSubReg)
           Uses.push_back(&Op);
-      }
+
       RegSeqWithOpNos[&OrigMI].push_back(OpNo);
       continue;
     }
