@@ -109,6 +109,11 @@ void mock::MockLiboffload::initDefault() {
           assignAs<ol_device_type_t>(PropValue, OL_DEVICE_TYPE_GPU);
           return OL_SUCCESS;
         }
+        case OL_DEVICE_INFO_DRIVER_ID: {
+          EXPECT_EQ(PropSize, sizeof(uint32_t));
+          assignAs<uint32_t>(PropValue, 0);
+          return OL_SUCCESS;
+        }
         default:
           ADD_FAILURE();
           return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
@@ -128,6 +133,10 @@ void mock::MockLiboffload::initDefault() {
         }
         case OL_DEVICE_INFO_TYPE: {
           *PropSizeRet = sizeof(ol_device_type_t);
+          return OL_SUCCESS;
+        }
+        case OL_DEVICE_INFO_DRIVER_ID: {
+          *PropSizeRet = sizeof(uint32_t);
           return OL_SUCCESS;
         }
         default:
@@ -182,9 +191,10 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olCreateProgram)
-      .WillByDefault([](ol_device_handle_t Device, const void *ProgData,
-                        size_t ProgDataSize,
+      .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
+                        const void *ProgData, size_t ProgDataSize,
                         ol_program_handle_t *Program) -> ol_result_t {
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
         EXPECT_GT(ProgDataSize, 0);
@@ -221,7 +231,7 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olCreateQueue)
       .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
                         ol_queue_handle_t *Queue) -> ol_result_t {
-        std::ignore = Context;
+        EXPECT_NE(Context, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Queue, nullptr);
         // Attach device as data to check what device queue belongs to if needed
@@ -304,10 +314,24 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(SrcDevice, nullptr);
         return OL_SUCCESS;
       });
+
+  ON_CALL(*this, olMemFill)
+      .WillByDefault([](ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+                        const void *PatternPtr,
+                        size_t FillSize) -> ol_result_t {
+        EXPECT_NE(Queue, nullptr);
+        EXPECT_NE(Ptr, nullptr);
+        EXPECT_GT(PatternSize, 0);
+        EXPECT_NE(PatternPtr, nullptr);
+        EXPECT_GT(FillSize, 0);
+        EXPECT_EQ(FillSize % PatternSize, 0);
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olMemPrefetch)
-      .WillByDefault([this](ol_queue_handle_t Queue, size_t Count,
-                            const void **Mems, const size_t *Sizes,
-                            ol_mem_migration_flags_t Flags) -> ol_result_t {
+      .WillByDefault([](ol_queue_handle_t Queue, size_t Count,
+                        const void **Mems, const size_t *Sizes,
+                        ol_mem_migration_flags_t Flags) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
         EXPECT_EQ(Count, 1);
         EXPECT_NE(Mems, nullptr);
@@ -317,6 +341,7 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_EQ(Flags, OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE);
         return OL_SUCCESS;
       });
+
   ON_CALL(*this, olGetMemInfo)
       .WillByDefault([this](const void *Ptr, ol_mem_info_t PropName,
                             size_t PropSize, void *PropValue) -> ol_result_t {
@@ -361,4 +386,39 @@ void mock::MockLiboffload::initDefault() {
     mock::releaseDummyHandle(Address);
     return OL_SUCCESS;
   });
+
+  ON_CALL(*this, olMemAllocAligned)
+      .WillByDefault([this](ol_device_handle_t Device,
+                            ol_alloc_type_t AllocType, size_t Size,
+                            size_t Alignment,
+                            void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Device, nullptr);
+        EXPECT_TRUE(AllocType == OL_ALLOC_TYPE_DEVICE ||
+                    AllocType == OL_ALLOC_TYPE_MANAGED);
+        EXPECT_GT(Size, 0);
+        EXPECT_GT(Alignment, 0);
+        if ((Alignment & (Alignment - 1)) != 0) {
+          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        }
+        EXPECT_NE(AllocationOut, nullptr);
+
+        *AllocationOut = mock::createDummyHandle<void *>();
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olMemAllocAlignedHost)
+      .WillByDefault([this](ol_device_handle_t Device, size_t Size,
+                            size_t Alignment,
+                            void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Device, nullptr);
+        EXPECT_GT(Size, 0);
+        EXPECT_GT(Alignment, 0);
+        if ((Alignment & (Alignment - 1)) != 0) {
+          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+        }
+        EXPECT_NE(AllocationOut, nullptr);
+
+        *AllocationOut = mock::createDummyHandle<void *>();
+        return OL_SUCCESS;
+      });
 }

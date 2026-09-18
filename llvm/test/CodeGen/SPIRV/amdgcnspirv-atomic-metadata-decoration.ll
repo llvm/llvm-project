@@ -14,8 +14,12 @@
 define spir_func void @foo(ptr addrspace(1) %p) {
 entry:
   %atomic.add = atomicrmw add ptr addrspace(1) %p, i32 1 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
+<<<<<<< HEAD
   %atomic.fadd = atomicrmw fadd ptr addrspace(1) %p, float 1.0 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   %atomic.xchg = atomicrmw xchg ptr addrspace(1) %p, i32 1 seq_cst, !amdgpu.no.fine.grained.memory !0
+=======
+  %atomic.fadd = atomicrmw fadd ptr addrspace(1) %p, float 1.0 seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !atomic.ignore.denormal.mode !0
+>>>>>>> origin/main
   ret void
 }
 

@@ -23,7 +23,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -893,7 +892,7 @@ unsigned getLoadStoreRegOpcode(unsigned Reg, const TargetRegisterClass *RC,
     if (M68k::XR16RegClass.hasSubClassEq(RC))
       return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     if (M68k::DR8RegClass.hasSubClassEq(RC))
-      return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
+      return load ? M68k::MOVM8mp_P : M68k::MOVM8pm_P;
     if (M68k::CCRCRegClass.hasSubClassEq(RC))
       return load ? M68k::MOVM16mp_P : M68k::MOVM16pm_P;
     llvm_unreachable("Unknown 2-byte regclass");

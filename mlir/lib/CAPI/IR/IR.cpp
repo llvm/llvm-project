@@ -1403,7 +1403,7 @@ MlirStringRef mlirIdentifierStr(MlirIdentifier ident) {
 //===----------------------------------------------------------------------===//
 
 MlirStringRef mlirSymbolTableGetSymbolAttributeName() {
-  return wrap(SymbolTable::getSymbolAttrName());
+  return wrap(llvm::StringRef("sym_name"));
 }
 
 MlirStringRef mlirSymbolTableGetDefaultVisibilityAttributeName() {
