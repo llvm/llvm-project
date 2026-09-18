@@ -115,10 +115,10 @@ def V1Write_1c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 1; }
 def V1Write_2c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 2; }
 def V1Write_3c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 3; }
 def V1Write_5c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 5; }
-def V1Write_12c5_1M0   : SchedWriteRes<[V1UnitM0]>  { let Latency = 12;
-                                                      let ReleaseAtCycles = [5]; }
-def V1Write_20c5_1M0   : SchedWriteRes<[V1UnitM0]>  { let Latency = 20;
-                                                      let ReleaseAtCycles = [5]; }
+def V1Write_12c12_1M0  : SchedWriteRes<[V1UnitM0]>  { let Latency = 12;
+                                                      let ReleaseAtCycles = [12]; }
+def V1Write_20c20_1M0  : SchedWriteRes<[V1UnitM0]>  { let Latency = 20;
+                                                      let ReleaseAtCycles = [20]; }
 def V1Write_2c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 2; }
 def V1Write_3c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 3; }
 def V1Write_4c_1V      : SchedWriteRes<[V1UnitV]>   { let Latency = 4; }
@@ -647,8 +647,8 @@ def : InstRW<[V1Write_1c_1I_1Flg], (instrs SETF8, SETF16, RMIF, CFINV)>;
 // -----------------------------------------------------------------------------
 
 // Divide
-def : SchedAlias<WriteID32, V1Write_12c5_1M0>;
-def : SchedAlias<WriteID64, V1Write_20c5_1M0>;
+def : SchedAlias<WriteID32, V1Write_12c12_1M0>;
+def : SchedAlias<WriteID64, V1Write_20c20_1M0>;
 
 def : SchedAlias<WriteIM32, V1Write_2c_1M>;
 def : SchedAlias<WriteIM64, V1Write_2c_1M>;
