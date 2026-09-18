@@ -8238,9 +8238,9 @@ createAlteredByCaptureMap(MapInfoData &mapData,
           newV = builder.CreateLoad(builder.getPtrTy(), newV);
 
         if (!offsetIdx.empty())
-          newV = builder.CreateInBoundsGEP(
-              isByteOffset ? builder.getInt8Ty() : mapData.BaseType[i], newV,
-              offsetIdx, "array_offset");
+          newV = builder.CreateInBoundsGEP(isByteOffset ? builder.getInt8Ty()
+                                                        : mapData.BaseType[i],
+                                           newV, offsetIdx, "array_offset");
         mapData.Pointers[i] = newV;
       } break;
       case omp::VariableCaptureKind::ByCopy: {
