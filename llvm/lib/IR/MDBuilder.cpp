@@ -210,12 +210,12 @@ MDNode *MDBuilder::createAnonymousAARoot(StringRef Name, MDNode *Extra) {
   return Root;
 }
 
-MDNode *MDBuilder::createAnonymousAliasScopeDomain(StringRef Name,
+MDNode *MDBuilder::createAnonymousAliasScopeDomain(StringRef Description,
                                                    bool DisjointScopes) {
   SmallVector<Metadata *, 3> Args = {
       nullptr, createConstant(ConstantInt::getBool(Context, DisjointScopes))};
-  if (!Name.empty())
-    Args.push_back(createString(Name));
+  if (!Description.empty())
+    Args.push_back(createString(Description));
   MDNode *Domain = MDNode::getDistinct(Context, Args);
 
   // Replace the reserved operand with the domain node itself, as is done for
