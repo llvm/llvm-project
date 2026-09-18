@@ -4898,27 +4898,18 @@ void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
 
 void Parser::CompleteLateParsedTypeAttributes(
     SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs) {
-  for (LateParsedTypeAttribute *LTA : LateTypeAttrs) {
-    // Read these out before parsing, which destroys the attribute. The type is
-    // null if construction rejected the attribute, in which case the diagnostic
-    // has already been emitted and there is nothing to complete.
+  for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
+    std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
+
     BoundsAttributedType *BATy = LTA->TypeToComplete;
-    // Rejected during construction (already diagnosed); the cached tokens are
-    // self-contained, so there is nothing to drain — just discard it.
-    if (!BATy) {
-      delete LTA;
+    if (!BATy)
       continue;
-    }
-    // The fields were
-    // attached in ParseStructDeclaration as each declarator was completed; more
-    // than one appears when several declarators share a
-    // declaration-specifier-position attribute.
-    SmallVector<Decl *, 2> Fields(LTA->Decls);
+
+    ArrayRef<Decl *> Fields = LTA->Decls;
 
     AttributeFactory AF;
     ParsedAttributes Attrs(AF);
     ParseLexedTypeAttribute(*LTA, Attrs);
-    delete LTA;
 
     // An unparseable argument leaves no attribute behind; already diagnosed.
     if (Attrs.empty())
@@ -4928,13 +4919,11 @@ void Parser::CompleteLateParsedTypeAttributes(
     Expr *Arg = Attrs[0].getArgAsExpr(0);
     assert(Arg);
 
-    // No field means the attribute never reached a field declarator (for
-    // instance the type was rejected during construction, which unwraps the
-    // node and leaves it unreferenced), so nothing is left to complete.
-    bool Valid = !Fields.empty();
+    bool Valid = true;
+    assert(!Fields.empty());
     for (Decl *FD : Fields)
-      Valid &= Actions.ActOnLateParsedTypeAttrArgument(
-          BATy, cast<FieldDecl>(FD), Arg);
+      Valid &= Actions.ActOnLateParsedTypeAttrArgument(BATy, cast<FieldDecl>(FD),
+                                                       Arg);
 
     if (Valid)
       Attrs[0].setUsedAsTypeAttr();
