@@ -34,6 +34,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
   sanitizer_range.cpp
+  sanitizer_report_receiver.cpp
   sanitizer_solaris.cpp
   sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
@@ -189,6 +190,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_range.h
   sanitizer_redefine_builtins.h
   sanitizer_report_decorator.h
+  sanitizer_report_receiver.h
   sanitizer_ring_buffer.h
   sanitizer_signal_interceptors.inc
   sanitizer_stack_store.h
