@@ -49,6 +49,8 @@ struct CoverageViewOptions {
   bool SkipFunctions;
   bool SkipBranches;
   bool BinaryCounters;
+  /// Ignore branches inside macro expansions when computing branch coverage.
+  bool IgnoreBranchesInMacros = false;
   OutputFormat Format;
   BranchOutputType ShowBranches;
   std::string ShowOutputDirectory;
