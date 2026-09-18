@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -verify=expected,immediate %s
 // RUN: %clang_cc1 -fsyntax-only -Wpointer-arith -fexperimental-late-parse-attributes %s -verify
 
 #define __counted_by(f)  __attribute__((counted_by(f)))
@@ -157,10 +157,13 @@ struct on_member_pointer_fn_ptr_ty_ty_pos {
   fn_ptr_ty __counted_by(count) fn_ptr;
 };
 
-// TODO: This should be forbidden but isn't due to counted_by being treated
-// as a declaration attribute.
+// Forbidden: the pointee is a function type. With
+// -fexperimental-late-parse-attributes it's still treated as a declaration
+// attribute on the outermost pointer until late parsing handles type
+// attributes.
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
   int count;
+  // immediate-error@+1{{'counted_by' cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
   void (* __counted_by(count) * fn_ptr)(void);
 };
 
@@ -180,10 +183,43 @@ struct on_member_pointer_struct_with_annotated_vla_ty_pos {
 };
 
 struct on_nested_pointer_inner {
-  // TODO: This should be disallowed because in the `-fbounds-safety` model
-  // `__counted_by` can only be nested when used in function parameters.
+  // Nested bounds attributes are not allowed. With
+  // -fexperimental-late-parse-attributes it's still treated as a declaration
+  // attribute on the outermost pointer until late parsing handles type
+  // attributes.
   int count;
+  // immediate-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
   struct size_known *__counted_by(count) *buf;
+};
+
+// In the declaration specifiers, the attribute applies to the top-level
+// pointer.
+struct on_pointer_decl_spec_pos {
+  int count;
+  __counted_by(count) struct size_known *buf;
+  const __counted_by(count) struct size_known *buf2;
+  // FIXME: After the type specifier, this should apply to the adjacent type,
+  // which isn't a pointer, and be rejected.
+  // See https://github.com/llvm/llvm-project/issues/241454.
+  struct size_known __counted_by(count) *buf3;
+  __counted_by(count) struct size_known *(buf4);
+};
+
+// The attribute only applies to fields.
+// expected-error@+1{{'counted_by' attribute only applies to non-static data members}}
+__counted_by(10) struct size_known *on_decl_spec_pos_fn(void);
+
+// The record and the count are checked before the field's type is built.
+union on_pointer_in_union {
+  int count;
+  // expected-error@+1{{'counted_by' cannot be applied to a union member}}
+  struct size_known *__counted_by(count) volatile buf;
+};
+
+struct on_pointer_non_int_count {
+  double count;
+  // expected-error@+1{{'counted_by' requires a non-boolean integer type argument}}
+  struct size_known *__counted_by(count) buf;
 };
 
 struct on_nested_pointer_outer {

@@ -45,8 +45,6 @@ struct on_pointer_anon_count {
 //==============================================================================
 // __counted_by on struct member pointer in type attribute position
 //==============================================================================
-// TODO: Correctly parse counted_by as a type attribute. Currently it is parsed
-// as a declaration attribute
 
 // CHECK-LABEL: RecordDecl {{.+}} struct on_member_pointer_complete_ty_ty_pos definition
 // CHECK-NEXT:  |-FieldDecl {{.+}} referenced count 'int'
@@ -54,30 +52,6 @@ struct on_pointer_anon_count {
 struct on_member_pointer_complete_ty_ty_pos {
   int count;
   struct size_known *__counted_by(count) buf;
-};
-
-// TODO: This should be forbidden but isn't due to counted_by being treated as a
-// declaration attribute. The attribute ends up on the outer most pointer
-// (allowed by sema) even though syntactically its supposed to be on the inner
-// pointer (would not allowed by sema due to pointee being a function type).
-// CHECK-LABEL: RecordDecl {{.+}} struct on_member_pointer_fn_ptr_ty_ty_pos_inner definition
-// CHECK-NEXT:  |-FieldDecl {{.+}} referenced count 'int'
-// CHECK-NEXT:  `-FieldDecl {{.+}} fn_ptr 'void (** __counted_by(count))(void)':'void (**)(void)'
-struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
-  int count;
-  void (* __counted_by(count) * fn_ptr)(void);
-};
-
-// FIXME: The generated AST here is wrong. The attribute should be on the inner
-// pointer.
-// CHECK-LABEL: RecordDecl {{.+}} struct on_nested_pointer_inner definition
-// CHECK-NEXT:  |-FieldDecl {{.+}} referenced count 'int'
-// CHECK-NEXT:  `-FieldDecl {{.+}} buf 'struct size_known ** __counted_by(count)':'struct size_known **'
-struct on_nested_pointer_inner {
-  int count;
-  // TODO: This should be disallowed because in the `-fbounds-safety` model
-  // `__counted_by` can only be nested when used in function parameters.
-  struct size_known *__counted_by(count) *buf;
 };
 
 // CHECK-LABEL: RecordDecl {{.+}} struct on_nested_pointer_outer definition
@@ -115,4 +89,28 @@ struct on_pointer_anon_count_ty_pos {
     int count;
   };
   struct size_known *__counted_by(count) buf;
+};
+
+//==============================================================================
+// __counted_by in declaration-specifier position applies to the top-level type
+//==============================================================================
+
+// CHECK-LABEL: RecordDecl {{.+}} struct on_pointer_decl_spec_pos definition
+// CHECK-NEXT: |-FieldDecl {{.+}} referenced count 'int'
+// CHECK-NEXT: |-FieldDecl {{.+}} buf 'struct size_known * __counted_by(count)':'struct size_known *'
+// CHECK-NEXT: |-FieldDecl {{.+}} buf2 'struct size_known * __counted_by(count)':'struct size_known *'
+// CHECK-NEXT: |-FieldDecl {{.+}} a 'struct size_known * __counted_by(count)':'struct size_known *'
+// CHECK-NEXT: |-FieldDecl {{.+}} b 'struct size_known * __counted_by(count)':'struct size_known *'
+// CHECK-NEXT: |-FieldDecl {{.+}} pp 'struct size_known ** __counted_by(count)':'struct size_known **'
+// CHECK-NEXT: `-FieldDecl {{.+}} par 'struct size_known * __counted_by(count)':'struct size_known *'
+struct on_pointer_decl_spec_pos {
+  int count;
+  __counted_by(count) struct size_known *buf;
+  // FIXME: After the type specifier, this should apply to the adjacent type,
+  // which isn't a pointer, and be rejected.
+  // See https://github.com/llvm/llvm-project/issues/241454.
+  struct size_known __counted_by(count) *buf2;
+  __counted_by(count) struct size_known *a, *b;
+  __counted_by(count) struct size_known **pp;
+  __counted_by(count) struct size_known *(par);
 };

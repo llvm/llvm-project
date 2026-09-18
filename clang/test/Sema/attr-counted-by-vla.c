@@ -106,6 +106,14 @@ struct not_a_c99_fam {
   struct bar *non_c99_fam[0] __counted_by(count); // expected-error {{'counted_by' on arrays only applies to C99 flexible array members}}
 };
 
+// A flexible array member that isn't the last field is rejected as such, not
+// by counted_by.
+struct fam_not_last {
+  int count;
+  struct bar *fam[] __counted_by(count); // expected-error {{flexible array member 'fam' with type}}
+  int x; // expected-note {{next field declaration is here}}
+};
+
 struct annotated_with_anon_struct {
   unsigned long flags;
   struct {
