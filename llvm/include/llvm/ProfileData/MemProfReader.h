@@ -13,6 +13,7 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFREADER_H_
 #define LLVM_PROFILEDATA_MEMPROFREADER_H_
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -128,8 +129,14 @@ public:
   static Expected<std::unique_ptr<RawMemProfReader>>
   create(const Twine &Path, StringRef ProfiledBinary, bool KeepName = false);
   static Expected<std::unique_ptr<RawMemProfReader>>
+  create(const Twine &Path, ArrayRef<StringRef> ProfiledBinaries,
+         bool KeepName = false);
+  static Expected<std::unique_ptr<RawMemProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer, StringRef ProfiledBinary,
          bool KeepName = false);
+  static Expected<std::unique_ptr<RawMemProfReader>>
+  create(std::unique_ptr<MemoryBuffer> Buffer,
+         ArrayRef<StringRef> ProfiledBinaries, bool KeepName = false);
 
   // Returns a list of build ids recorded in the segment information.
   static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
@@ -157,44 +164,62 @@ public:
   }
 
 private:
-  RawMemProfReader(object::OwningBinary<object::Binary> &&Bin, bool KeepName)
-      : Binary(std::move(Bin)), KeepSymbolName(KeepName) {}
+  struct ProfiledModule {
+    explicit ProfiledModule(object::OwningBinary<object::Binary> &&Bin)
+        : Binary(std::move(Bin)) {}
+
+    // Keep the binary and its backing buffer alive for the lifetime of the
+    // module symbolizer.
+    object::OwningBinary<object::Binary> Binary;
+    // Symbolizer created from this module's object file and DWARF context.
+    std::unique_ptr<symbolize::SymbolizableModule> Symbolizer;
+    // Build ID used to distinguish equal function names in different modules.
+    llvm::SmallVector<uint8_t, 20> BuildId;
+    // Preferred address of the executable segment in the ELF file.
+    uint64_t PreferredTextSegmentAddress = 0;
+    // Runtime address range of this module's executable segment, recovered
+    // from the raw profile by matching the build ID.
+    uint64_t ProfiledTextSegmentStart = 0;
+    uint64_t ProfiledTextSegmentEnd = 0;
+  };
+
+  explicit RawMemProfReader(bool KeepName) : KeepSymbolName(KeepName) {}
   // Initializes the RawMemProfReader with the contents in `DataBuffer`.
-  Error initialize(std::unique_ptr<MemoryBuffer> DataBuffer);
+  Error initialize(std::unique_ptr<MemoryBuffer> DataBuffer,
+                   ArrayRef<StringRef> ProfiledBinaries);
   // Read and parse the contents of the `DataBuffer` as a binary format profile.
   Error readRawProfile(std::unique_ptr<MemoryBuffer> DataBuffer);
-  // Initialize the segment mapping information for symbolization.
+  // Match each profiled module to its executable runtime segment using its
+  // build ID and initialize its runtime address range for symbolization.
   Error setupForSymbolization();
   // Symbolize and cache all the virtual addresses we encounter in the
   // callstacks from the raw profile. Also prune callstack frames which we can't
   // symbolize or those that belong to the runtime. For profile entries where
   // the entire callstack is pruned, we drop the entry from the profile.
   Error symbolizeAndFilterStackFrames(
-      std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer);
+      std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer =
+          nullptr);
   // Construct memprof records for each function and store it in the
   // `FunctionProfileData` map. A function may have allocation profile data or
   // callsite data or both.
   Error mapRawProfileToRecords();
 
-  object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
+  object::SectionedAddress getModuleOffset(uint64_t VirtualAddress,
+                                           const ProfiledModule &Module) const;
+  // Find the supplied profiled module whose runtime text range contains the PC.
+  ProfiledModule *findModule(uint64_t VirtualAddress) const;
 
   llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
   readMemInfoBlocks(const char *Ptr);
 
-  // The profiled binary.
-  object::OwningBinary<object::Binary> Binary;
+  // The binaries which contributed symbolizable frames to the raw profile,
+  // sorted by profiled text segment end address after initialization.
+  llvm::SmallVector<std::unique_ptr<ProfiledModule>, 4> ProfiledModules;
   // Version of raw memprof binary currently being read. Defaults to most up
   // to date version.
   uint64_t MemprofRawVersion = MEMPROF_RAW_VERSION;
-  // The preferred load address of the executable segment.
-  uint64_t PreferredTextSegmentAddress = 0;
-  // The base address of the text segment in the process during profiling.
-  uint64_t ProfiledTextSegmentStart = 0;
-  // The limit address of the text segment in the process during profiling.
-  uint64_t ProfiledTextSegmentEnd = 0;
-
-  // The memory mapped segment information for all executable segments in the
-  // profiled binary (filtered from the raw profile using the build id).
+  // Memory-mapped executable segment information recorded for all binaries in
+  // the profiled process.
   llvm::SmallVector<SegmentEntry, 2> SegmentInfo;
 
   // A map from callstack id (same as key in CallStackMap below) to the heap
