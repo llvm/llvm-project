@@ -33,26 +33,24 @@ extern uintptr_t __bss_size[];
 } // extern "C"
 
 namespace {
-[[gnu::aligned(4)]] void trap_handler() {
-  LIBC_NAMESPACE::exit(1);
-}
+[[gnu::aligned(4)]] void trap_handler() { LIBC_NAMESPACE::exit(1); }
 } // namespace
 
 namespace LIBC_NAMESPACE_DECL {
 
 [[noreturn]] void do_start() {
   // Set up trap handling.
-  __asm__ volatile("csrw mtvec, %0" :: "r"(&trap_handler));
+  __asm__ volatile("csrw mtvec, %0" ::"r"(&trap_handler));
 
 #ifdef __riscv_flen
   // Enable FPU by setting FS bits (14:13) to Initial (01) in mstatus.
-  __asm__ volatile("csrs mstatus, %0" :: "r"(1UL << 13) : "memory");
+  __asm__ volatile("csrs mstatus, %0" ::"r"(1UL << 13) : "memory");
   // Clear fcsr.
   __asm__ volatile("fscsr zero");
 #endif
 #ifdef __riscv_vector
   // Enable Vector unit by setting VS bits (10:9) to Initial (01) in mstatus.
-  __asm__ volatile("csrs mstatus, %0" :: "r"(1UL << 9) : "memory");
+  __asm__ volatile("csrs mstatus, %0" ::"r"(1UL << 9) : "memory");
 #endif
 
   LIBC_NAMESPACE::memcpy(__data_start, __data_source,
@@ -71,13 +69,12 @@ extern "C" {
 [[gnu::section(".text.init.enter"), gnu::naked]]
 void _start() {
   // Initialize global pointer if defined by linker.
-  // We use .option norelax to prevent the assembler from relaxing the lla instruction.
-  __asm__ volatile(
-      ".option push\n"
-      ".option norelax\n"
-      "lla gp, __global_pointer$\n"
-      ".option pop\n"
-  );
+  // We use .option norelax to prevent the assembler from relaxing the lla
+  // instruction.
+  __asm__ volatile(".option push\n"
+                   ".option norelax\n"
+                   "lla gp, __global_pointer$\n"
+                   ".option pop\n");
 
   // Initialize stack pointer.
   __asm__ volatile("lla sp, %0" : : "i"(&__stack));
