@@ -3690,9 +3690,10 @@ static void dumpInput(StringRef file) {
     dumpObject(O);
   else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
     parseInputMachO(UB);
-  else if (OffloadBinary *OB = dyn_cast<OffloadBinary>(&Binary))
+  else if (isa<OffloadBinary>(&Binary)) {
+    std::unique_ptr<MemoryBuffer> OB = OBinary.takeBinary().second;
     dumpOffloadSections(*OB);
-  else
+  } else
     reportError(errorCodeToError(object_error::invalid_file_type), file);
 }
 
