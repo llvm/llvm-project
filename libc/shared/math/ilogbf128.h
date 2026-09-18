@@ -5,13 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Shared declaration of the float128 ilogb function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_ILOGBF128_H
 #define LLVM_LIBC_SHARED_MATH_ILOGBF128_H
-
-#include "include/llvm-libc-types/float128.h"
-
-#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "shared/libc_common.h"
 #include "src/__support/math/ilogbf128.h"
@@ -23,7 +24,5 @@ using math::ilogbf128;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SHARED_MATH_ILOGBF128_H
