@@ -136,6 +136,7 @@ static cl::opt<bool> EnableJumpTableDebugInfo(
     "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
     cl::desc("Enable debug info generation for jump tables"));
 
+// FIXME: Remove in clang 26.
 static cl::opt<bool> ReorderCfiJumpTablesProfiles(
     "reorder-cfi-jump-tables-profiles", cl::init(true), cl::Hidden,
     cl::desc("Reorder CFI jump tables using profile information"));
