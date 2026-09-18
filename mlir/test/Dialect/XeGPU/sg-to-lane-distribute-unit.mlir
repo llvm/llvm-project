@@ -706,8 +706,7 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane() {
 
 // lane_data packs all 16 reduced elements of dim1 into a single lane and
 // lane_layout is 1 everywhere, so the reduction is lane-local and must lower to
-// a plain vector.reduction. Classifying it by result type would route it
-// through butterfly shuffles and count the data 16 times over.
+// a plain vector.reduction.
 // CHECK-LABEL: gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local
 // CHECK:         %[[F0:.*]] = vector.shape_cast %{{.*}} : vector<1x16x1xf32> to vector<16xf32>
 // CHECK:         %[[A0:.*]] = vector.extract %{{.*}}[0, 0] : f32 from vector<1x1xf32>
