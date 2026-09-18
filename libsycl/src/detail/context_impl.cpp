@@ -75,10 +75,10 @@ ContextImpl::getOrCreateKernel(const DeviceImageManager &DeviceImage,
     // used rather than emplace: the latter would build a program even when one
     // is already cached, only to destroy it again.
     try {
-      ProgramIt = ProgramsForImage
-                      .try_emplace(DeviceHandle, MOffloadContext, DeviceHandle,
-                                   DeviceImage)
-                      .first;
+      ProgramIt =
+          ProgramsForImage
+              .try_emplace(DeviceHandle, *this, DeviceHandle, DeviceImage)
+              .first;
     } catch (...) {
       // Do not leave an empty entry behind if program creation failed.
       if (ProgramsForImage.empty())
@@ -87,7 +87,7 @@ ContextImpl::getOrCreateKernel(const DeviceImageManager &DeviceImage,
     }
   }
 
-  return ProgramIt->second.getOrCreateKernel(KernelName);
+  return ProgramIt->second.getOrCreateKernel(KernelName, *this);
 }
 
 void ContextImpl::releaseProgramsForImage(

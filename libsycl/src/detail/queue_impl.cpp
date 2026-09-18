@@ -24,9 +24,10 @@ namespace detail {
 thread_local bool NestedCallsDetector = false;
 class NestedCallsTracker {
 public:
-  NestedCallsTracker() {
+  NestedCallsTracker(ContextImpl &QueueContext) {
     if (NestedCallsDetectorRef)
       throw sycl::exception(
+          createSyclObjFromImpl<context>(QueueContext),
           make_error_code(errc::invalid),
           "Calls to sycl::queue::submit cannot be nested. Command group "
           "function objects should use the sycl::handler API instead.");
@@ -52,9 +53,10 @@ QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &contextImpl,
   // liboffload guarantees OL_ERRC_INVALID_DEVICE when the device does not
   // belong to the context.
   if (isFailed(Err) && Err->Code == OL_ERRC_INVALID_DEVICE)
-    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::invalid),
                           "The device is not associated with the context.");
-  checkAndThrow(Err);
+  checkAndThrow(*MContext, Err);
 }
 
 QueueImpl::~QueueImpl() {
@@ -77,7 +79,10 @@ static ol_device_handle_t getHostOLDevice() {
   return HostDevice;
 }
 
-void QueueImpl::wait() { callAndThrow(olSyncQueue, MOffloadQueue); }
+void QueueImpl::wait() {
+  assert(MContext && "Context impl ptr can't be nullptr");
+  callAndThrow(*MContext, olSyncQueue, MOffloadQueue);
+}
 
 void QueueImpl::waitAndThrow() {
   wait();
@@ -87,7 +92,8 @@ void QueueImpl::waitAndThrow() {
 void QueueImpl::throwAsynchronous() { flushAsyncExceptions(); }
 
 static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
-                                     const PlatformImpl &QueuePlatform) {
+                                     const PlatformImpl &QueuePlatform,
+                                     ContextImpl &QueueContext) {
   // liboffload limitation to olWaitEvents. We can't do any extra handling for
   // cross context/platform events without host task support now.
   //   "The input events can be from any queue on any device provided by the
@@ -97,6 +103,7 @@ static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
                      return &Event->getPlatformImpl() == &QueuePlatform;
                    })) {
     throw sycl::exception(
+        createSyclObjFromImpl<context>(QueueContext),
         sycl::make_error_code(sycl::errc::feature_not_supported),
         "libsycl doesn't support cross-context/platform event dependencies "
         "yet.");
@@ -111,13 +118,15 @@ void QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
 void QueueImpl::setKernelLaunchParams(
     std::vector<EventImplPtr> &&Events,
     const ol_kernel_launch_size_args_t &Range) {
-  checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
+  assert(MContext && "Context impl ptr can't be nullptr");
+  checkEventsPlatformMatch(Events, MDevice.getPlatformImpl(), *MContext);
   MCurrentSubmitInfo.DepEvents = std::move(Events);
   MCurrentSubmitInfo.Range = Range;
 }
 
 void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                                  size_t ArgSize) {
+  assert(MContext && "Context impl ptr can't be nullptr");
   ol_symbol_handle_t Kernel =
       detail::ProgramAndKernelManager::getInstance().getOrCreateKernel(
           KernelInfo, MContext, MDevice);
@@ -135,7 +144,8 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
 
   if (isFailed(Result))
-    throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
@@ -144,13 +154,13 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
-static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
+static ol_device_handle_t getAllocDevice(ContextImpl &Context,
                                          const void *ptr) {
   // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
   [[maybe_unused]] ol_result_t Result =
-      callNoCheck(olGetMemInfo, Context, ptr, OL_MEM_INFO_DEVICE,
-                  sizeof(ol_device_handle_t), &Device);
+      callNoCheck(olGetMemInfo, Context.getOLHandleRef(), ptr,
+                  OL_MEM_INFO_DEVICE, sizeof(ol_device_handle_t), &Device);
   if (detail::isFailed(Result)) {
     // NOT_FOUND: the pointer isn't a liboffload allocation at all (plain host
     // malloc). INVALID_ARGUMENT: it's a liboffload host allocation, which has
@@ -159,7 +169,7 @@ static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
         Result->Code == OL_ERRC_INVALID_ARGUMENT) {
       return getHostOLDevice();
     }
-    checkAndThrow(Result);
+    checkAndThrow(Context, Result);
   }
 
   assert(Device);
@@ -169,37 +179,39 @@ static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
 std::shared_ptr<EventImpl>
 QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
-  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  assert(MContext && "Context impl ptr can't be nullptr");
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl(), *MContext);
   if (NumBytes == 0) {
     return submitWait(DepEvents);
   }
 
   if (!Dest || !Src) {
-    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
   }
 
-  ol_device_handle_t DestOLDevice =
-      getAllocDevice(MContext->getOLHandleRef(), Dest);
-  ol_device_handle_t SrcOLDevice =
-      getAllocDevice(MContext->getOLHandleRef(), Src);
+  ol_device_handle_t DestOLDevice = getAllocDevice(*MContext, Dest);
+  ol_device_handle_t SrcOLDevice = getAllocDevice(*MContext, Src);
 
   handleEventDependencies(DepEvents);
-  callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
-               NumBytes);
+  callAndThrow(*MContext, olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src,
+               SrcOLDevice, NumBytes);
   return createEvent();
 }
 
 EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
-  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  assert(MContext && "Context impl ptr can't be nullptr");
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl(), *MContext);
 
   if (NumBytes == 0) {
     handleEventDependencies(DepEvents);
     return createEvent();
   }
   if (!Ptr) {
-    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in prefetch operation");
   }
 
@@ -211,12 +223,14 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
       OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
 
   handleEventDependencies(DepEvents);
-  callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
+  callAndThrow(*MContext, olMemPrefetch, MOffloadQueue, Count, Mems, Sizes,
+               Flag);
 
   return createEvent();
 }
 
 void QueueImpl::handleEventDependencies(const std::vector<EventImplPtr> &Deps) {
+  assert(MContext && "Context impl ptr can't be nullptr");
   // TODO: liboffload supports only in-order queues and no cross context waiting
   // is available now that means that this code is excessive but correct. I
   // don't want to skip it and rely on default liboffload behaviour that is
@@ -225,24 +239,26 @@ void QueueImpl::handleEventDependencies(const std::vector<EventImplPtr> &Deps) {
   // context dependencies should be enabled and checked as well.
   if (!Deps.empty()) {
     auto EventHandles = getSyclObjHandles(Deps);
-    callAndThrow(olWaitEvents, MOffloadQueue, EventHandles.data(),
+    callAndThrow(*MContext, olWaitEvents, MOffloadQueue, EventHandles.data(),
                  EventHandles.size());
   }
 }
 
 EventImplPtr QueueImpl::createEvent(std::vector<EventImplPtr> &&Deps) {
+  assert(MContext && "Context impl ptr can't be nullptr");
   ol_event_handle_t NewEvent{};
   ol_event_flags_t Flags{};
-  callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
+  callAndThrow(*MContext, olCreateEvent, MOffloadQueue, Flags, &NewEvent);
   return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl(),
                                           std::move(Deps));
 }
 
 EventImplPtr QueueImpl::submitWithHandler(const TypelessCGF &CGF) {
+  assert(MContext && "Context impl ptr can't be nullptr");
   detail::HandlerImpl HandlerImplVal(*this);
   handler Handler(HandlerImplVal);
   {
-    NestedCallsTracker tracker;
+    NestedCallsTracker tracker(*MContext);
     CGF(Handler);
   }
 

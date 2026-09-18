@@ -157,7 +157,10 @@ public:
   ol_device_handle_t getHostOLDevice() { return HostDevice; }
 
 private:
+  /// Installs the default single gpu-device configuration.
   void initDefault();
+
+  friend class MockWrapper;
 
   std::unordered_map<ol_errc_t, ol_error_struct_t> Errors;
   ol_platform_handle_t DefaultPlatform{};
@@ -179,7 +182,13 @@ _LIB_EXPORT MockLiboffload &getMockLiboffload();
 class MockWrapper {
 public:
   MockWrapper() : Mock(getMockLiboffload()) {}
-  ~MockWrapper() { ::testing::Mock::VerifyAndClearExpectations(&Mock); }
+
+  // VerifyAndClear verifies all expectations and drops the default actions.
+  ~MockWrapper() {
+    EXPECT_TRUE(::testing::Mock::VerifyAndClear(&Mock));
+    Mock.initDefault();
+  }
+
   MockLiboffload &get() { return Mock; };
 
 private:

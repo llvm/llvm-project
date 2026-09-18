@@ -18,6 +18,8 @@
 #include <detail/platform_impl.hpp>
 #include <mock/helpers.hpp>
 
+#include <utility>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace unittests {
 
@@ -29,17 +31,15 @@ namespace unittests {
 // allows to call global state reset and platforms initialization methods to be
 // able to set expectations on devices enumeration calls in a proper way.
 struct UnittestsHelper {
-  UnittestsHelper() { detail::PlatformImpl::rediscoverIfEmpty = true; }
+  UnittestsHelper() {
+    detail::PlatformImpl::rediscoverIfEmpty = true;
+  }
 
-  ~UnittestsHelper() { resetPlatformState(); }
-
-private:
-  static void resetPlatformState() {
+  ~UnittestsHelper() {
     detail::getPlatformCache().clear();
     detail::getOffloadTopologies() = {};
   }
 
-public:
   mock::MockWrapper Mock;
 };
 

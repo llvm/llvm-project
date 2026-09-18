@@ -8,20 +8,20 @@
 
 #include <detail/device_image_wrapper.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-ProgramWrapper::ProgramWrapper(ol_context_handle_t Context,
-                               ol_device_handle_t Device,
+ProgramWrapper::ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
                                const DeviceImageManager &DevImage) {
-  assert(Context);
+  assert(Context.getOLHandleRef());
   assert(Device);
 
   llvm::StringRef Image = DevImage.getOffloadBinary().getImage();
-  callAndThrow(olCreateProgram, Context, Device, Image.data(), Image.size(),
-               &MProgram);
+  callAndThrow(Context, olCreateProgram, Context.getOLHandleRef(), Device,
+               Image.data(), Image.size(), &MProgram);
 }
 
 ProgramWrapper::~ProgramWrapper() {
@@ -31,14 +31,15 @@ ProgramWrapper::~ProgramWrapper() {
 }
 
 ol_symbol_handle_t
-ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
+ProgramWrapper::getOrCreateKernel(std::string_view KernelName,
+                                  ContextImpl &Context) {
   auto It = MKernels.find(KernelName);
   if (It != MKernels.end())
     return It->second;
 
   ol_symbol_handle_t Kernel{};
-  callAndThrow(olGetSymbol, MProgram, KernelName.data(), OL_SYMBOL_KIND_KERNEL,
-               &Kernel);
+  callAndThrow(Context, olGetSymbol, MProgram, KernelName.data(),
+               OL_SYMBOL_KIND_KERNEL, &Kernel);
   MKernels.emplace(KernelName, Kernel);
   return Kernel;
 }

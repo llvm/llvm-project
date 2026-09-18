@@ -6,15 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <common/unittests_helper.hpp>
 #include <mock/helpers.hpp>
 
 #include <sycl/__impl/device.hpp>
+#include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/queue.hpp>
 #include <sycl/__impl/usm_functions.hpp>
 
 #include <detail/device_impl.hpp>
 #include <detail/queue_impl.hpp>
 
+#include <array>
 #include <cstddef>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -186,6 +189,79 @@ TEST(USMFunctions, ZeroAlignmentSucceeds) {
   EXPECT_NE(Ptr3, nullptr);
   EXPECT_CALL(Mock.get(), olMemFree(_, Ptr3)).Times(1);
   free(Ptr3, Ctx);
+}
+
+TEST(USMFunctions, UnknownAllocationKindThrows) {
+  mock::MockWrapper Mock;
+  queue Q;
+  device Dev = Q.get_device();
+  context Ctx = Q.get_context();
+
+  EXPECT_CALL(Mock.get(), olMemAlloc(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemAllocHost(_, _, _, _)).Times(0);
+
+  try {
+    sycl::malloc(NumBytes, Dev, Ctx, usm::alloc::unknown);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Ctx);
+  }
+}
+
+namespace {
+
+// The default mock exposes a single device, so device enumeration has to be
+// mocked to get a context that doesn't contain a device.
+class USMTwoDevicesTest : public Test {
+protected:
+  void SetUp() override {
+    Platform = mock::createDummyHandle<ol_platform_handle_t>();
+    for (ol_device_handle_t &Device : Devices)
+      Device = mock::createDummyHandleWithData<ol_device_handle_t>(
+          reinterpret_cast<unsigned char *>(&Platform), sizeof(Platform));
+
+    EXPECT_CALL(Helper.Mock.get(), olIterateDevices(_, _))
+        .WillRepeatedly([this](ol_device_iterate_cb_t Callback,
+                               void *UserData) -> ol_result_t {
+          for (ol_device_handle_t Device : Devices)
+            std::ignore = Callback(Device, UserData);
+          return OL_SUCCESS;
+        });
+  }
+
+  void TearDown() override {
+    mock::releaseDummyHandles(Devices[0], Devices[1], Platform);
+  }
+
+  unittests::UnittestsHelper Helper;
+  ol_platform_handle_t Platform{};
+  std::array<ol_device_handle_t, 2> Devices{};
+};
+
+} // namespace
+
+TEST_F(USMTwoDevicesTest, DeviceNotInContextThrows) {
+  std::vector<platform> Platforms = platform::get_platforms();
+  ASSERT_EQ(Platforms.size(), 1u);
+
+  std::vector<device> PlatformDevices = Platforms[0].get_devices();
+  ASSERT_EQ(PlatformDevices.size(), 2u);
+
+  context Ctx(PlatformDevices[0]);
+
+  EXPECT_CALL(Helper.Mock.get(), olMemAlloc(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(Helper.Mock.get(), olMemAllocAligned(_, _, _, _, _, _)).Times(0);
+
+  try {
+    malloc_device(NumBytes, PlatformDevices[1], Ctx);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Ctx);
+  }
 }
 
 struct alignas(64) Over {

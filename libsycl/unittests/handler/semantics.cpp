@@ -30,6 +30,8 @@ TEST(Handler, MultipleActionsRejected) {
     Thrown = true;
     EXPECT_NE(std::string(E.what()).find("multiple actions"),
               std::string::npos);
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
   }
 
   EXPECT_TRUE(Thrown);
@@ -122,6 +124,8 @@ TEST(Queue, SubmitCannotBeNested) {
     Thrown = true;
     EXPECT_NE(std::string(E.what()).find("cannot be nested"),
               std::string::npos);
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
   }
 
   EXPECT_TRUE(Thrown);

@@ -28,6 +28,7 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
+class ContextImpl;
 class DeviceImageManager;
 
 /// A wrapper of liboffload program handle to manage its lifetime.
@@ -41,7 +42,7 @@ public:
   /// \param DevImage is the device image to use for program creation.
   /// \throw sycl::exception with sycl::errc::runtime when failed to create the
   /// program.
-  ProgramWrapper(ol_context_handle_t Context, ol_device_handle_t Device,
+  ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
                  const DeviceImageManager &DevImage);
 
   /// Releases the corresponding liboffload program handle by calling
@@ -65,10 +66,12 @@ public:
   /// for a program it does not belong to.
   ///
   /// \param KernelName the name of the kernel to look up.
+  /// \param Context is the context this program belongs to.
   /// \throw sycl::exception with sycl::errc::runtime when the symbol lookup
   /// fails.
   /// \return the liboffload symbol handle of the kernel.
-  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName);
+  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName,
+                                       ContextImpl &Context);
 
 private:
   ol_program_handle_t MProgram{};
