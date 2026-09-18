@@ -307,15 +307,6 @@ set(gpu_files
   nvptxintrin.h
   amdgpuintrin.h
   spirvintrin.h
-  __clang_gpu_builtin_vars.h
-  __clang_gpu_device_functions.h
-  __clang_gpu_intrinsics.h
-  __clang_gpu_runtime_wrapper.h
-  )
-
-set(gpu_hip_wrapper_files
-  hip_wrappers/hip/hip_runtime.h
-  hip_wrappers/hip/device_functions.h
   )
 
 set(windows_only_files
@@ -399,10 +390,26 @@ set(openmp_wrapper_files
   openmp_wrappers/new
 )
 
+set(llvm_offload_gpu_wrapper_files
+  llvm_offload_wrappers/gpu/device_functions.h
+  llvm_offload_wrappers/gpu/__clang_gpu_runtime_wrapper.h
+  llvm_offload_wrappers/gpu/__clang_gpu_builtin_vars.h
+  llvm_offload_wrappers/gpu/__clang_gpu_device_functions.h
+  llvm_offload_wrappers/gpu/__clang_gpu_intrinsics.h
+)
+
+set(llvm_offload_cuda_wrapper_files
+  llvm_offload_wrappers/cuda/cuda_runtime.h
+)
+
+set(llvm_offload_hip_wrapper_files
+  llvm_offload_wrappers/hip/hip_runtime.h
+)
+
 set(llvm_offload_wrapper_files
-  llvm_offload_wrappers/__llvm_offload.h
-  llvm_offload_wrappers/__llvm_offload_host.h
-  llvm_offload_wrappers/__llvm_offload_device.h
+  ${llvm_offload_gpu_wrapper_files}
+  ${llvm_offload_cuda_wrapper_files}
+  ${llvm_offload_hip_wrapper_files}
 )
 
 set(llvm_libc_wrapper_files
@@ -477,7 +484,7 @@ endfunction(clang_generate_header)
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
            ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
            ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
-           ${llvm_offload_wrapper_files} ${gpu_hip_wrapper_files})
+           ${llvm_offload_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
 
@@ -585,6 +592,7 @@ add_dependencies("clang-resource-headers"
                  "x86-resource-headers"
                  "opencl-resource-headers"
                  "openmp-resource-headers"
+                 "llvm-offload-resource-headers"
                  "llvm-libc-resource-headers"
                  "windows-resource-headers"
                  "utility-resource-headers")
@@ -596,7 +604,8 @@ add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_commo
 # Architecture/platform specific targets
 add_header_target("arm-resource-headers" "${arm_only_files};${arm_only_generated_files}")
 add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_only_generated_files}")
-add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files};${cuda_wrapper_utility_files}")
+add_header_target("cuda-resource-headers"
+  "${cuda_files};${cuda_wrapper_files};${cuda_wrapper_bits_files};${cuda_wrapper_utility_files}")
 add_header_target("hexagon-resource-headers" "${hexagon_files}")
 add_header_target("hip-resource-headers" "${hip_files}")
 add_header_target("loongarch-resource-headers" "${loongarch_files}")
@@ -608,7 +617,7 @@ add_header_target("systemz-resource-headers" "${systemz_files};${zos_wrapper_fil
 add_header_target("ve-resource-headers" "${ve_files}")
 add_header_target("webassembly-resource-headers" "${webassembly_files}")
 add_header_target("x86-resource-headers" "${x86_files}")
-add_header_target("gpu-resource-headers" "${gpu_files};${gpu_hip_wrapper_files}")
+add_header_target("gpu-resource-headers" "${gpu_files}")
 
 # Other header groupings
 add_header_target("hlsl-resource-headers" "${hlsl_files};${hlsl_generated_files}")
@@ -616,7 +625,7 @@ add_header_target("spirv-resource-headers" ${spirv_files})
 add_header_target("opencl-resource-headers" ${opencl_files})
 add_header_target("llvm-libc-resource-headers" ${llvm_libc_wrapper_files})
 add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
-add_header_target("llvm-offload-resource-headers" ${llvm_libc_wrapper_files})
+add_header_target("llvm-offload-resource-headers" ${llvm_offload_wrapper_files})
 add_header_target("windows-resource-headers" ${windows_only_files})
 add_header_target("utility-resource-headers" ${utility_files})
 
@@ -664,13 +673,18 @@ install(
   COMPONENT clang-resource-headers)
 
 install(
-  FILES ${llvm_offload_wrapper_files}
-  DESTINATION ${header_install_dir}/llvm_offload_wrappers
+  FILES ${llvm_offload_gpu_wrapper_files}
+  DESTINATION ${header_install_dir}/llvm_offload_wrappers/gpu
   COMPONENT clang-resource-headers)
 
 install(
-  FILES ${gpu_hip_wrapper_files}
-  DESTINATION ${header_install_dir}/hip_wrappers/hip
+  FILES ${llvm_offload_cuda_wrapper_files}
+  DESTINATION ${header_install_dir}/llvm_offload_wrappers/cuda
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${llvm_offload_hip_wrapper_files}
+  DESTINATION ${header_install_dir}/llvm_offload_wrappers/hip
   COMPONENT clang-resource-headers)
 
 install(
@@ -818,11 +832,9 @@ install(
   EXCLUDE_FROM_ALL
   COMPONENT gpu-resource-headers)
 
-install(
-  FILES ${gpu_hip_wrapper_files}
-  DESTINATION ${header_install_dir}/hip_wrappers/hip
-  EXCLUDE_FROM_ALL
-  COMPONENT gpu-resource-headers)
+if(NOT CLANG_ENABLE_HLSL)
+  set(EXCLUDE_HLSL EXCLUDE_FROM_ALL)
+endif()
 
 install(
   FILES ${hlsl_h}
@@ -858,10 +870,22 @@ install(
   COMPONENT openmp-resource-headers)
 
 install(
-  FILES ${llvm_offload_wrapper_files}
-  DESTINATION ${header_install_dir}/llvm_offload_wrappers
+  FILES ${llvm_offload_gpu_wrapper_files}
+  DESTINATION ${header_install_dir}/llvm_offload_wrappers/gpu
   EXCLUDE_FROM_ALL
-  COMPONENT openmp-resource-headers)
+  COMPONENT llvm-offload-resource-headers)
+
+install(
+  FILES ${llvm_offload_cuda_wrapper_files}
+  DESTINATION ${header_install_dir}/llvm_offload_wrappers/cuda
+  EXCLUDE_FROM_ALL
+  COMPONENT llvm-offload-resource-headers)
+
+install(
+  FILES ${llvm_offload_hip_wrapper_files}
+  DESTINATION ${header_install_dir}/llvm_offload_wrappers/hip
+  EXCLUDE_FROM_ALL
+  COMPONENT llvm-offload-resource-headers)
 
 install(
   FILES ${utility_files}
@@ -939,6 +963,9 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-openmp-resource-headers
                            DEPENDS openmp-resource-headers
                            COMPONENT openmp-resource-headers)
+  add_llvm_install_targets(install-llvm-offload-resource-headers
+                           DEPENDS llvm-offload-resource-headers
+                           COMPONENT llvm-offload-resource-headers)
   add_llvm_install_targets(install-windows-resource-headers
                            DEPENDS windows-resource-headers
                            COMPONENT windows-resource-headers)
