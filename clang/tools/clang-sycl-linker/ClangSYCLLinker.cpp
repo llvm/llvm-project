@@ -156,6 +156,13 @@ createTempFile(const ArgList &Args, const Twine &Prefix, StringRef Extension) {
   return TempFiles.back();
 }
 
+/// Registers an already fixed-named path for the same end-of-run cleanup
+/// createTempFile above provides, without its random suffix.
+static StringRef registerTempFile(std::string Path) {
+  TempFiles.emplace_back(Path);
+  return TempFiles.back();
+}
+
 static Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
                                          ArrayRef<StringRef> Paths) {
   if (DryRun)
@@ -1001,7 +1008,8 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
-      std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
+      StringRef AOTFile =
+          registerTempFile((Stem + "_" + Twine(I) + ".out").str());
       if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
         return Err;
       SplitModules[I].ModuleFilePath = AOTFile;
