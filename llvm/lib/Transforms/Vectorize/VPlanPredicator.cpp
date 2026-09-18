@@ -418,17 +418,14 @@ void VPPredicator::run() {
 
     VPValue *BlockMask = getBlockInMask(VPBB);
     // Mask all VPInstructions in the block.
-    for (VPRecipeBase &R : *VPBB) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI)
-        continue;
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
       if (BlockMask)
-        VPI->addMask(BlockMask);
+        VPI.addMask(BlockMask);
 
       // Drop the execution frequency of unmasked VPInstructions, as they
       // always execute.
-      if (!VPI->isMasked())
-        VPI->clearExecutionFrequency();
+      if (!VPI.isMasked())
+        VPI.clearExecutionFrequency();
     }
   }
 

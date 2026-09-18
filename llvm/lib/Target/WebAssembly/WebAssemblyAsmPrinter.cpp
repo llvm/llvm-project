@@ -224,7 +224,8 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     // coalesces features before isel, so use the TargetMachine's
     // module-wide subtarget to compute legal value types.
     auto &WasmTM = static_cast<const WebAssemblyTargetMachine &>(TM);
-    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl();
+    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl(
+        WasmTM.getTargetCPU(), WasmTM.getTargetFeatureString());
     const WebAssemblyTargetLowering &TLI = *ST->getTargetLowering();
     computeLegalValueVTs(TLI, GV->getParent()->getContext(),
                          GV->getDataLayout(), GlobalVT, VTs);
@@ -611,8 +612,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   // If we never compiled a single function, Subtarget is null.
   if (!Subtarget) {
     Subtarget = static_cast<WebAssemblyTargetMachine &>(TM).getSubtargetImpl(
-        std::string(TM.getTargetCPU()),
-        std::string(TM.getTargetFeatureString()));
+        TM.getTargetCPU(), TM.getTargetFeatureString());
   }
   for (const SubtargetFeatureKV &KV : Subtarget->getAllProcessorFeatures()) {
     EmitFeature(KV.key());

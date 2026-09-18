@@ -104,12 +104,13 @@ protected:
   }
 
   const ABIType *makeRecord(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeBits,
-                            llvm::Align Align,
+                            llvm::Align Align, llvm::Align UnadjustedAlign,
                             RecordFlags Flags = RecordFlags::CanPassInRegisters,
                             llvm::ArrayRef<FieldInfo> Bases = {},
                             llvm::ArrayRef<FieldInfo> VBases = {}) {
     return TB.getRecordType(Fields, llvm::TypeSize::getFixed(SizeBits), Align,
-                            StructPacking::Default, Bases, VBases, Flags);
+                            UnadjustedAlign, StructPacking::Default, Bases,
+                            VBases, Flags);
   }
 };
 
@@ -400,6 +401,49 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectWin64) {
   }
 }
 
+static void expectNaturalAlignIndirect(const ArgInfo &Info,
+                                       llvm::Align ExpectedAlign, bool ByVal) {
+  EXPECT_TRUE(Info.isIndirect());
+  EXPECT_EQ(Info.getIndirectAlign(), ExpectedAlign);
+  EXPECT_EQ(Info.getIndirectByVal(), ByVal);
+}
+
+static void expectHFADirectArg(const ArgInfo &Info, const ABIType *Base,
+                               uint64_t Members, llvm::MaybeAlign DirectAlign) {
+  EXPECT_TRUE(Info.isDirect());
+  const llvm::abi::ArrayType *AT =
+      llvm::dyn_cast<llvm::abi::ArrayType>(Info.getCoerceToType());
+  ASSERT_NE(AT, nullptr);
+  EXPECT_EQ(AT->getElementType(), Base);
+  EXPECT_EQ(AT->getNumElements(), Members);
+  EXPECT_EQ(Info.getDirectOffset(), 0u);
+  EXPECT_EQ(Info.getDirectAlign(), DirectAlign);
+}
+
+// Records that cannot be passed in registers (e.g. non-trivial C++ types) are
+// classified as Indirect with ByVal=false under all AArch64 ABI kinds.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentRecordCannotPassInRegisters) {
+  // A record without CanPassInRegisters is treated like a C++ type with a
+  // non-trivial copy constructor or destructor.
+  const ABIType *CannotPass = TB.getRecordType(
+      {llvm::abi::FieldInfo(I32)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), llvm::abi::StructPacking::Default,
+      /*BaseClasses=*/{},
+      /*VirtualBaseClasses=*/{}, llvm::abi::RecordFlags::IsCXXRecord);
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {CannotPass});
+    TI->computeInfo(*FI);
+    expectNaturalAlignIndirect(FI->getArgInfo(0).Info, llvm::Align(4),
+                               /*ByVal=*/false);
+  }
+}
+
 // Transparent unions are classified as their first field type.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
   using llvm::abi::FieldInfo;
@@ -409,7 +453,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
   // First field is i32; second field is ignored for classification.
   const ABIType *TUInt = TB.getUnionType(
       {FieldInfo(I32), FieldInfo(F32)}, llvm::TypeSize::getFixed(32),
-      llvm::Align(4), StructPacking::Default, RecordFlags::IsTransparent);
+      llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4),
+      StructPacking::Default, RecordFlags::IsTransparent);
 
   for (AArch64ABIKind Kind :
        {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
@@ -425,7 +470,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
   // First field is a promotable integer: DarwinPCS extends; others are Direct.
   const ABIType *TUChar = TB.getUnionType(
       {FieldInfo(I8), FieldInfo(U8)}, llvm::TypeSize::getFixed(8),
-      llvm::Align(1), StructPacking::Default, RecordFlags::IsTransparent);
+      llvm::Align(1), /*UnadjustedAlign=*/llvm::Align(1),
+      StructPacking::Default, RecordFlags::IsTransparent);
 
   {
     std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(
@@ -447,101 +493,85 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
   }
 }
 
-static void expectNaturalAlignIndirect(const ArgInfo &Info,
-                                       llvm::Align ExpectedAlign, bool ByVal) {
-  EXPECT_TRUE(Info.isIndirect());
-  EXPECT_EQ(Info.getIndirectAlign(), ExpectedAlign);
-  EXPECT_EQ(Info.getIndirectByVal(), ByVal);
-}
-
-// Records that cannot be passed in registers (e.g. non-trivial C++ types) are
-// classified as Indirect with ByVal=false under all AArch64 ABI kinds.
-TEST_F(AArch64TargetInfoTest, ClassifyArgumentRecordCannotPassInRegisters) {
-  // A record without CanPassInRegisters is treated like a C++ type with a
-  // non-trivial copy constructor or destructor.
-  const ABIType *CannotPass = TB.getRecordType(
-      {llvm::abi::FieldInfo(I32)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
-      llvm::abi::StructPacking::Default, /*BaseClasses=*/{},
-      /*VirtualBaseClasses=*/{}, llvm::abi::RecordFlags::IsCXXRecord);
-
-  for (AArch64ABIKind Kind :
-       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
-        AArch64ABIKind::AAPCSSoft}) {
-    std::unique_ptr<TargetInfo> TI =
-        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
-    std::unique_ptr<FunctionInfo> FI =
-        FunctionInfo::create(llvm::CallingConv::C, Void, {CannotPass});
-    TI->computeInfo(*FI);
-    expectNaturalAlignIndirect(FI->getArgInfo(0).Info, llvm::Align(4),
-                               /*ByVal=*/false);
-  }
-}
-
 // Homogeneous floating-point aggregates of at most four members are returned
-// directly under AAPCS and DarwinPCS.
+// directly under AAPCS, DarwinPCS, and Win64.
 TEST_F(AArch64TargetInfoTest, ClassifyReturnHFADirect) {
   RecordFlags CXXFlags = passableRecordFlags(/*IsCXX=*/true);
 
   const ABIType *HFA2f =
-      makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4));
+      makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
   const ABIType *HFA4d = makeRecord({FieldInfo(F64, 0), FieldInfo(F64, 64),
                                      FieldInfo(F64, 128), FieldInfo(F64, 192)},
-                                    256, llvm::Align(8));
+                                    256, llvm::Align(8),
+                                    /*UnadjustedAlign=*/llvm::Align(8));
   const ABIType *HFA3arr =
       makeRecord({FieldInfo(TB.getArrayType(F32, 3, /*SizeInBits=*/96), 0)}, 96,
-                 llvm::Align(4));
+                 llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4));
   const ABIType *HFA2h =
-      makeRecord({FieldInfo(F16, 0), FieldInfo(F16, 16)}, 32, llvm::Align(2));
+      makeRecord({FieldInfo(F16, 0), FieldInfo(F16, 16)}, 32, llvm::Align(2),
+                 /*UnadjustedAlign=*/llvm::Align(2));
   const ABIType *HFANested =
-      makeRecord({FieldInfo(HFA2f, 0), FieldInfo(F32, 64)}, 96, llvm::Align(4));
+      makeRecord({FieldInfo(HFA2f, 0), FieldInfo(F32, 64)}, 96, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
   const ABIType *HFAZeroBF =
       makeRecord({FieldInfo(I32, 0, /*IsBitField=*/true, /*BitFieldWidth=*/0),
                   FieldInfo(F32, 0), FieldInfo(F32, 32)},
-                 64, llvm::Align(4));
+                 64, llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4));
   const ABIType *HFAUnion = TB.getUnionType(
       {FieldInfo(F32, 0),
        FieldInfo(TB.getArrayType(F32, 3, /*SizeInBits=*/96), 0)},
-      llvm::TypeSize::getFixed(96), llvm::Align(4), StructPacking::Default,
+      llvm::TypeSize::getFixed(96), llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), StructPacking::Default,
       RecordFlags::CanPassInRegisters);
 
   // Short-vector aggregates (HVAs) follow the same rules.
-  const ABIType *HVA2x64 = makeRecord(
-      {FieldInfo(V2F32, 0), FieldInfo(V2F32, 64)}, 128, llvm::Align(8));
-  const ABIType *HVA2x128 = makeRecord(
-      {FieldInfo(V4F32, 0), FieldInfo(V4F32, 128)}, 256, llvm::Align(16));
+  const ABIType *HVA2x64 =
+      makeRecord({FieldInfo(V2F32, 0), FieldInfo(V2F32, 64)}, 128,
+                 llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *HVA2x128 =
+      makeRecord({FieldInfo(V4F32, 0), FieldInfo(V4F32, 128)}, 256,
+                 llvm::Align(16), /*UnadjustedAlign=*/llvm::Align(16));
 
   // 3 x float has 96 bits of payload; Clang's type size is 128, so it is an
   // HVA base like a 128-bit short vector.
   const ABIType *V3F32 =
       TB.getVectorType(F32, llvm::ElementCount::getFixed(3), llvm::Align(16));
   const ABIType *HVA3x32 =
-      makeRecord({FieldInfo(V3F32, 0)}, 128, llvm::Align(16));
+      makeRecord({FieldInfo(V3F32, 0)}, 128, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(16));
   const ABIType *HVA2xV3F32 = makeRecord(
-      {FieldInfo(V3F32, 0), FieldInfo(V3F32, 128)}, 256, llvm::Align(16));
+      {FieldInfo(V3F32, 0), FieldInfo(V3F32, 128)}, 256, llvm::Align(16),
+      /*UnadjustedAlign=*/llvm::Align(16));
 
   // A 2x2 float matrix is four homogeneous float members.
   const ABIType *HFAMatrix =
-      makeRecord({FieldInfo(Matrix, 0)}, 128, llvm::Align(4));
+      makeRecord({FieldInfo(Matrix, 0)}, 128, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
   const ABIType *M2x1 = TB.getArrayType(F32, /*NumElements=*/2,
                                         /*SizeInBits=*/64,
                                         /*IsMatrixType=*/true);
   const ABIType *HFAMatrix2 =
-      makeRecord({FieldInfo(M2x1, 0)}, 64, llvm::Align(4));
+      makeRecord({FieldInfo(M2x1, 0)}, 64, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
 
   // C++ records: empty bases are skipped and non-empty bases contribute
   // members.
-  const ABIType *EmptyRecord = makeRecord({}, 0, llvm::Align(1), CXXFlags);
+  const ABIType *EmptyRecord = makeRecord(
+      {}, 0, llvm::Align(1), /*UnadjustedAlign=*/llvm::Align(1), CXXFlags);
   const ABIType *HFAEmptyBase =
       makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
-                 CXXFlags, {FieldInfo(EmptyRecord, 0)});
+                 /*UnadjustedAlign=*/llvm::Align(4), CXXFlags,
+                 {FieldInfo(EmptyRecord, 0)});
   const ABIType *FloatBase =
-      makeRecord({FieldInfo(F32, 0)}, 32, llvm::Align(4), CXXFlags);
-  const ABIType *HFADerived =
-      makeRecord({FieldInfo(F32, 32)}, 64, llvm::Align(4), CXXFlags,
-                 {FieldInfo(FloatBase, 0)});
+      makeRecord({FieldInfo(F32, 0)}, 32, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4), CXXFlags);
+  const ABIType *HFADerived = makeRecord(
+      {FieldInfo(F32, 32)}, 64, llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), CXXFlags, {FieldInfo(FloatBase, 0)});
 
-  for (AArch64ABIKind Kind :
-       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS}) {
+  for (AArch64ABIKind Kind : {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS,
+                              AArch64ABIKind::Win64}) {
     std::unique_ptr<TargetInfo> TI =
         createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
     for (const ABIType *RetTy :
@@ -557,6 +587,106 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnHFADirect) {
   }
 }
 
+// Homogeneous floating-point and short-vector aggregates are passed as a
+// coerced array of the base type. AAPCS overrides stack alignment; DarwinPCS
+// and Win64 do not.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentHFADirect) {
+  RecordFlags CXXFlags = passableRecordFlags(/*IsCXX=*/true);
+
+  const ABIType *HFA2f =
+      makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *HFA4d = makeRecord({FieldInfo(F64, 0), FieldInfo(F64, 64),
+                                     FieldInfo(F64, 128), FieldInfo(F64, 192)},
+                                    256, llvm::Align(8),
+                                    /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *HFA3arr =
+      makeRecord({FieldInfo(TB.getArrayType(F32, 3, /*SizeInBits=*/96), 0)}, 96,
+                 llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *HFA2h =
+      makeRecord({FieldInfo(F16, 0), FieldInfo(F16, 16)}, 32, llvm::Align(2),
+                 /*UnadjustedAlign=*/llvm::Align(2));
+  const ABIType *HFANested =
+      makeRecord({FieldInfo(HFA2f, 0), FieldInfo(F32, 64)}, 96, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *HFAZeroBF =
+      makeRecord({FieldInfo(I32, 0, /*IsBitField=*/true, /*BitFieldWidth=*/0),
+                  FieldInfo(F32, 0), FieldInfo(F32, 32)},
+                 64, llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4));
+  const ABIType *HFAUnion = TB.getUnionType(
+      {FieldInfo(F32, 0),
+       FieldInfo(TB.getArrayType(F32, 3, /*SizeInBits=*/96), 0)},
+      llvm::TypeSize::getFixed(96), llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), StructPacking::Default,
+      RecordFlags::CanPassInRegisters);
+  const ABIType *HVA2x64 =
+      makeRecord({FieldInfo(V2F32, 0), FieldInfo(V2F32, 64)}, 128,
+                 llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8));
+  const ABIType *HVA2x128 =
+      makeRecord({FieldInfo(V4F32, 0), FieldInfo(V4F32, 128)}, 256,
+                 llvm::Align(16), /*UnadjustedAlign=*/llvm::Align(16));
+
+  const ABIType *EmptyRecord = makeRecord(
+      {}, 0, llvm::Align(1), /*UnadjustedAlign=*/llvm::Align(1), CXXFlags);
+  const ABIType *HFAEmptyBase =
+      makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4), CXXFlags,
+                 {FieldInfo(EmptyRecord, 0)});
+  const ABIType *FloatBase =
+      makeRecord({FieldInfo(F32, 0)}, 32, llvm::Align(4),
+                 /*UnadjustedAlign=*/llvm::Align(4), CXXFlags);
+  const ABIType *HFADerived = makeRecord(
+      {FieldInfo(F32, 32)}, 64, llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), CXXFlags, {FieldInfo(FloatBase, 0)});
+  FieldInfo VirtualFloatBase(FloatBase, 0);
+
+  struct HFACase {
+    const ABIType *Ty;
+    const ABIType *Base;
+    uint64_t Members;
+    llvm::Align AAPCSAlign;
+  };
+  const HFACase Cases[] = {
+      {ComplexFloat, F32, 2, llvm::Align(8)},
+      {HFA2f, F32, 2, llvm::Align(8)},
+      {HFA4d, F64, 4, llvm::Align(8)},
+      {HFA3arr, F32, 3, llvm::Align(8)},
+      {HFA2h, F16, 2, llvm::Align(8)},
+      {HFANested, F32, 3, llvm::Align(8)},
+      {HFAZeroBF, F32, 2, llvm::Align(8)},
+      {HFAUnion, F32, 3, llvm::Align(8)},
+      {HVA2x64, V2F32, 2, llvm::Align(8)},
+      {HVA2x128, V4F32, 2, llvm::Align(16)},
+      {HFAEmptyBase, F32, 2, llvm::Align(8)},
+      {HFADerived, F32, 2, llvm::Align(8)},
+  };
+
+  {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
+    for (const HFACase &C : Cases) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {C.Ty});
+      TI->computeInfo(*FI);
+      expectHFADirectArg(FI->getArgInfo(0).Info, C.Base, C.Members,
+                         C.AAPCSAlign);
+    }
+  }
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+    for (const HFACase &C : Cases) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {C.Ty});
+      TI->computeInfo(*FI);
+      expectHFADirectArg(FI->getArgInfo(0).Info, C.Base, C.Members,
+                         /*DirectAlign=*/std::nullopt);
+    }
+  }
+}
+
 // Records that cannot pass in registers are returned indirectly before HFA
 // classification.
 TEST_F(AArch64TargetInfoTest, ClassifyReturnCXXCannotPassInRegistersIndirect) {
@@ -565,7 +695,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnCXXCannotPassInRegistersIndirect) {
 
   const ABIType *NonPassableHFA =
       makeRecord({FieldInfo(F32, 0), FieldInfo(F32, 32)}, 64, llvm::Align(4),
-                 RecordFlags::IsCXXRecord);
+                 /*UnadjustedAlign=*/llvm::Align(4), RecordFlags::IsCXXRecord);
 
   // struct FloatBase { float f; };
   // struct VirtualDerived : virtual FloatBase {};
@@ -574,9 +704,11 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnCXXCannotPassInRegistersIndirect) {
   // otherwise supply a homogeneous float member. The vbase pointer at offset 0
   // places the FloatBase subobject at offset 8, giving sizeof == 16.
   const ABIType *FloatBase = makeRecord({FieldInfo(F32, 0)}, 32, llvm::Align(4),
+                                        /*UnadjustedAlign=*/llvm::Align(4),
                                         passableRecordFlags(/*IsCXX=*/true));
   const ABIType *VirtualDerived =
-      makeRecord({}, 128, llvm::Align(8), RecordFlags::IsCXXRecord,
+      makeRecord({}, 128, llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8),
+                 RecordFlags::IsCXXRecord,
                  /*Bases=*/{}, /*VBases=*/{FieldInfo(FloatBase, 64)});
 
   const struct {
@@ -592,6 +724,73 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnCXXCannotPassInRegistersIndirect) {
     TI->computeInfo(*FI);
     expectNaturalAlignIndirect(FI->getReturnInfo(), Case.ExpectedAlign,
                                /*ByVal=*/false);
+  }
+}
+
+// AAPCS HFA stack alignment uses unadjusted alignment. A record-level aligned
+// attribute raises getAlignment() but must not change the 8/16 stack cap.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentOveralignedHFAAlign) {
+  // Two doubles already occupy 16 bytes, so aligned(16) does not add padding
+  // and the type remains an HFA. Unadjusted alignment stays 8.
+  const ABIType *RecordAlignedHFA =
+      makeRecord({FieldInfo(F64, 0), FieldInfo(F64, 64)}, 128, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(8));
+
+  // Four doubles occupy 32 bytes, so aligned(32) also remains an HFA.
+  // Unadjusted alignment is still 8, so AAPCS must not cap up to 16.
+  const ABIType *RecordAligned32HFA =
+      makeRecord({FieldInfo(F64, 0), FieldInfo(F64, 64), FieldInfo(F64, 128),
+                  FieldInfo(F64, 192)},
+                 256, llvm::Align(32), /*UnadjustedAlign=*/llvm::Align(8));
+
+  // Field-driven alignment of 16 is visible in unadjusted alignment, so AAPCS
+  // uses the 16-byte cap.
+  const ABIType *FieldAlignedHFA =
+      makeRecord({FieldInfo(F64, 0), FieldInfo(F64, 64)}, 128, llvm::Align(16),
+                 /*UnadjustedAlign=*/llvm::Align(16));
+
+  // Field-driven alignment of 32 is capped at 16.
+  const ABIType *FieldAligned32HFA =
+      makeRecord({FieldInfo(F64, 0), FieldInfo(F64, 64), FieldInfo(F64, 128),
+                  FieldInfo(F64, 192)},
+                 256, llvm::Align(32), /*UnadjustedAlign=*/llvm::Align(32));
+
+  {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
+
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {RecordAlignedHFA});
+    TI->computeInfo(*FI);
+    expectHFADirectArg(FI->getArgInfo(0).Info, F64, 2, llvm::Align(8));
+
+    FI = FunctionInfo::create(llvm::CallingConv::C, Void, {RecordAligned32HFA});
+    TI->computeInfo(*FI);
+    expectHFADirectArg(FI->getArgInfo(0).Info, F64, 4, llvm::Align(8));
+
+    FI = FunctionInfo::create(llvm::CallingConv::C, Void, {FieldAlignedHFA});
+    TI->computeInfo(*FI);
+    expectHFADirectArg(FI->getArgInfo(0).Info, F64, 2, llvm::Align(16));
+
+    FI = FunctionInfo::create(llvm::CallingConv::C, Void, {FieldAligned32HFA});
+    TI->computeInfo(*FI);
+    expectHFADirectArg(FI->getArgInfo(0).Info, F64, 4, llvm::Align(16));
+  }
+
+  // DarwinPCS and Win64 coerce HFAs to an array but do not set DirectAlign,
+  // even when the record is overaligned.
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64}) {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
+    for (const ABIType *ArgTy : {RecordAlignedHFA, RecordAligned32HFA,
+                                 FieldAlignedHFA, FieldAligned32HFA}) {
+      std::unique_ptr<FunctionInfo> FI =
+          FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+      TI->computeInfo(*FI);
+      EXPECT_TRUE(FI->getArgInfo(0).Info.isDirect());
+      EXPECT_EQ(FI->getArgInfo(0).Info.getDirectAlign(), std::nullopt);
+    }
   }
 }
 

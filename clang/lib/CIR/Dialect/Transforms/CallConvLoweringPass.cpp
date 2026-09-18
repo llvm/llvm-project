@@ -414,9 +414,12 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // Mapped with no fields, an empty record reaches Ignore on its own.
         // The size still matters: past two eightbytes SysV says memory whatever
         // the content.
+        // TODO: AArch64 needs the unadjusted alignment. We'll need to add that
+        // to RecordLayoutAttr.
         if (recTy.isEmptyForABI())
           return tb.getRecordType(
-              /*Fields=*/{}, sizeBits, align, llvm::abi::StructPacking::Default,
+              /*Fields=*/{}, sizeBits, align, /*UnadjustedAlign=*/align,
+              llvm::abi::StructPacking::Default,
               /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
 
         SmallVector<llvm::abi::FieldInfo> fields;
@@ -493,6 +496,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                 mapCIRType(variantTy, typeMapper, dl, modOp)));
           }
           return tb.getUnionType(fields, sizeBits, align,
+                                 /*UnadjustedAlign=*/align,
                                  llvm::abi::StructPacking::Default, flags);
         }
 
@@ -527,7 +531,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         }
 
         return tb.getRecordType(
-            fields, sizeBits, align, llvm::abi::StructPacking::Default,
+            fields, sizeBits, align, /*UnadjustedAlign=*/align,
+            llvm::abi::StructPacking::Default,
             /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
