@@ -21,9 +21,10 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 context::context(const std::vector<device> &deviceList,
                  async_handler asyncHandler, const property_list &propList) {
-  auto deviceImpls = detail::getSyclObjImpls(deviceList);
+  std::vector<detail::DeviceImpl *> DeviceImpls =
+      detail::getSyclObjImpls(deviceList);
 
-  impl = detail::ContextImpl::create(std::move(deviceImpls), asyncHandler,
+  impl = detail::ContextImpl::create(std::move(DeviceImpls), asyncHandler,
                                      propList);
 }
 

@@ -10,14 +10,17 @@
 
 #include <detail/offload/offload_utils.hpp>
 
+#include <cassert>
+#include <tuple>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 ProgramWrapper::ProgramWrapper(ol_context_handle_t Context,
                                ol_device_handle_t Device,
                                const DeviceImageManager &DevImage) {
-  assert(Context);
-  assert(Device);
+  assert(Context && "Context handle can't be nullptr");
+  assert(Device && "Device handle can't be nullptr");
 
   llvm::StringRef Image = DevImage.getOffloadBinary().getImage();
   callAndThrow(olCreateProgram, Context, Device, Image.data(), Image.size(),
@@ -25,7 +28,7 @@ ProgramWrapper::ProgramWrapper(ol_context_handle_t Context,
 }
 
 ProgramWrapper::~ProgramWrapper() {
-  assert(MProgram);
+  assert(MProgram && "Program handle can't be nullptr");
   std::ignore = olDestroyProgram(MProgram);
   // TODO: define a way to report errors from dtors.
 }
@@ -37,6 +40,8 @@ ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
     return It->second;
 
   ol_symbol_handle_t Kernel{};
+  // Kernel names are views into the "symbols" blob of the device image, which
+  // stores them as packed null-terminated strings, so data() is a C string.
   callAndThrow(olGetSymbol, MProgram, KernelName.data(), OL_SYMBOL_KIND_KERNEL,
                &Kernel);
   MKernels.emplace(KernelName, Kernel);

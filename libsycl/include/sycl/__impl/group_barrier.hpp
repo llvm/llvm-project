@@ -42,7 +42,7 @@ inline constexpr bool is_group_v = is_group<std::decay_t<T>>::value;
 
 namespace detail {
 
-static constexpr __spirv::Scope getScope(memory_scope Scope) {
+inline constexpr __spirv::Scope getScope(memory_scope Scope) {
   switch (Scope) {
   case memory_scope::work_item:
     return __spirv::Scope::Invocation;
@@ -55,6 +55,9 @@ static constexpr __spirv::Scope getScope(memory_scope Scope) {
   case memory_scope::system:
     return __spirv::Scope::CrossDevice;
   }
+  // A memory_scope value outside of the enumeration falls back to the widest
+  // scope instead of running off the end of the function.
+  return __spirv::Scope::CrossDevice;
 }
 
 template <typename Group> struct group_scope {};
@@ -73,9 +76,9 @@ template <> struct group_scope<::sycl::sub_group> {
 /// point.
 template <typename Group>
 std::enable_if_t<is_group_v<Group>>
-group_barrier(Group /*G*/, memory_scope FenceScope = Group::fence_scope) {
+group_barrier(Group /*g*/, memory_scope fence_scope = Group::fence_scope) {
   __spirv_ControlBarrier(detail::group_scope<Group>::value,
-                         detail::getScope(FenceScope),
+                         detail::getScope(fence_scope),
                          __spirv::MemorySemanticsMask::SequentiallyConsistent |
                              __spirv::MemorySemanticsMask::SubgroupMemory |
                              __spirv::MemorySemanticsMask::WorkgroupMemory);

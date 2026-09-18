@@ -9,13 +9,16 @@
 #include <detail/context_impl.hpp>
 #include <detail/platform_impl.hpp>
 
+#include <cassert>
+#include <tuple>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
 ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
                          const async_handler &AsyncHandler,
-                         const property_list &PropList, Private)
+                         const property_list &PropList, PrivateTag)
     : MAsyncHandler(AsyncHandler), MDevices(std::move(DeviceList)) {
   // TODO: Remove this when property_list is implemented
   std::ignore = PropList;
@@ -53,9 +56,9 @@ PlatformImpl &ContextImpl::getPlatformImpl() const {
 }
 
 void ContextImpl::iterateDevices(
-    const std::function<void(DeviceImpl *)> &callback) const {
+    const std::function<void(DeviceImpl *)> &Callback) const {
   for (DeviceImpl *Device : MDevices)
-    callback(Device);
+    Callback(Device);
 }
 
 backend ContextImpl::getBackend() const { return MDevices[0]->getBackend(); }

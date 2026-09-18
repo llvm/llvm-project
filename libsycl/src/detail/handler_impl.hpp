@@ -33,7 +33,7 @@ class QueueImpl;
 
 /// Stores the deferred command group state for a sycl::handler submission.
 struct HandlerImpl {
-  HandlerImpl(QueueImpl &Queue) : MQueue(Queue) {}
+  explicit HandlerImpl(QueueImpl &Queue) : MQueue(Queue) {}
 
   HandlerImpl(const HandlerImpl &) = delete;
   HandlerImpl(HandlerImpl &&) = delete;

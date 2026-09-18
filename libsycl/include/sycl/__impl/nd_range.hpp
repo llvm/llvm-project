@@ -19,14 +19,23 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+template <int Dimensions = 1> class nd_range;
+
 namespace detail {
 struct UnifiedRangeView;
+
+/// Constructs an nd_range carrying an offset without going through the
+/// deprecated public constructor.
+template <int Dimensions>
+nd_range<Dimensions> makeNdRange(const range<Dimensions> &GlobalSize,
+                                 const range<Dimensions> &LocalSize,
+                                 const id<Dimensions> &Offset) noexcept;
 } // namespace detail
 
 // SYCL 2020 4.9.1.2. nd_range class.
 /// nd_range<int Dimensions> defines the iteration domain of both the
 /// work-groups and the overall dispatch.
-template <int Dimensions = 1> class nd_range {
+template <int Dimensions /* = 1*/> class nd_range {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
                 "nd_range can only be 1-, 2-, or 3-dimensional.");
 
@@ -54,7 +63,7 @@ public:
            id<Dimensions> offset) noexcept
       : MGlobalSize(globalSize), MLocalSize(localSize), MOffset(offset) {}
 
-  nd_range(range<Dimensions> globalSize, range<Dimensions> localSize)
+  nd_range(range<Dimensions> globalSize, range<Dimensions> localSize) noexcept
       : MGlobalSize(globalSize), MLocalSize(localSize),
         MOffset(id<Dimensions>()) {}
 
@@ -82,7 +91,25 @@ protected:
   id<Dimensions> MOffset;
 
   friend struct detail::UnifiedRangeView;
+
+  friend nd_range<Dimensions>
+  detail::makeNdRange<Dimensions>(const range<Dimensions> &,
+                                  const range<Dimensions> &,
+                                  const id<Dimensions> &) noexcept;
 };
+
+namespace detail {
+
+template <int Dimensions>
+nd_range<Dimensions> makeNdRange(const range<Dimensions> &GlobalSize,
+                                 const range<Dimensions> &LocalSize,
+                                 const id<Dimensions> &Offset) noexcept {
+  nd_range<Dimensions> Result(GlobalSize, LocalSize);
+  Result.MOffset = Offset;
+  return Result;
+}
+
+} // namespace detail
 
 _LIBSYCL_END_NAMESPACE_SYCL
 

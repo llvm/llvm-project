@@ -19,6 +19,7 @@
 #include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/event.hpp>
+#include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/handler.hpp>
 #include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/property_list.hpp>
@@ -29,7 +30,13 @@
 #include <sycl/__impl/detail/kernel_submission.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
-#include <sycl/__impl/exception.hpp>
+
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -60,7 +67,6 @@ private:
 public:
   static constexpr bool value = type::value;
 };
-} // namespace detail
 
 class TypelessCGF {
 public:
@@ -94,6 +100,8 @@ private:
   using InvokerTy = void (*)(const void *, handler &);
   const InvokerTy InvokerF;
 };
+
+} // namespace detail
 
 // SYCL 2020 4.6.5. Queue class.
 class _LIBSYCL_EXPORT queue : private detail::KernelSubmissionBase<queue> {
@@ -451,12 +459,31 @@ public:
                                        std::forward<Rest>(rest)...);
   }
 
+  /// Defines and invokes a SYCL kernel function as a lambda expression or a
+  /// named function object type, for the specified nd_range.
+  ///
+  /// \param executionRange specifies the global and local work space of the
+  /// kernel.
+  /// \param rest acts as if it was "const KernelType &KernelFunc".
+  /// \throw sycl::exception with sycl::errc::nd_range if the global size is
+  /// not evenly divisible by the local size.
+  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange, Rest &&...rest) {
     return parallel_for<KernelName, Dims, Rest...>(
         executionRange, std::vector<event>{}, std::forward<Rest>(rest)...);
   }
 
+  /// Defines and invokes a SYCL kernel function as a lambda expression or a
+  /// named function object type, for the specified nd_range.
+  ///
+  /// \param executionRange specifies the global and local work space of the
+  /// kernel.
+  /// \param depEvent is an event that specifies the kernel dependency.
+  /// \param rest acts as if it was "const KernelType &KernelFunc".
+  /// \throw sycl::exception with sycl::errc::nd_range if the global size is
+  /// not evenly divisible by the local size.
+  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange, event depEvent,
                      Rest &&...rest) {
@@ -465,6 +492,17 @@ public:
                                                    std::forward<Rest>(rest)...);
   }
 
+  /// Defines and invokes a SYCL kernel function as a lambda expression or a
+  /// named function object type, for the specified nd_range.
+  ///
+  /// \param executionRange specifies the global and local work space of the
+  /// kernel.
+  /// \param depEvents is a vector of events that specifies the kernel
+  /// dependencies.
+  /// \param rest acts as if it was "const KernelType &KernelFunc".
+  /// \throw sycl::exception with sycl::errc::nd_range if the global size is
+  /// not evenly divisible by the local size.
+  // TODO: Rest will represent reduction types once it is supported.
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange,
                      const std::vector<event> &depEvents, Rest &&...rest) {
@@ -577,6 +615,8 @@ public:
 private:
   template <typename KernelName, int Dims, template <int> class Range,
             typename... Rest>
+  // The range is taken by value on purpose: detail::UnifiedRangeView keeps
+  // pointers into it and only binds to a non-const lvalue.
   event parallelForImpl(Range<Dims> numWorkItems,
                         const std::vector<event> &depEvents, Rest &&...rest) {
     setKernelLaunchParams(depEvents, numWorkItems);
@@ -603,7 +643,7 @@ private:
   /// \return an event representing last kernel invocation.
   event getLastEvent();
 
-  event submitWithHandler(const TypelessCGF &CGF);
+  event submitWithHandler(const detail::TypelessCGF &CGF);
 
   queue(const std::shared_ptr<detail::QueueImpl> &Impl) : impl(Impl) {}
   std::shared_ptr<detail::QueueImpl> impl;

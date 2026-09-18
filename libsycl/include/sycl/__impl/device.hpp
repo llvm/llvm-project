@@ -23,6 +23,10 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 
+#include <functional>
+#include <type_traits>
+#include <vector>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 class platform;

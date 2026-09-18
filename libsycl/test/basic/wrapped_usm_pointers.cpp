@@ -20,7 +20,7 @@ struct NonTrivial {
   int Addition;
   int *Data;
 
-  NonTrivial(int *D, int A) : Data(D), Addition(A) {}
+  NonTrivial(int *D, int A) : Addition(A), Data(D) {}
 };
 
 struct NonTrivialDerived : NonTrivial {

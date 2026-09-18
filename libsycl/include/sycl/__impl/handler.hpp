@@ -25,6 +25,7 @@
 #include <sycl/__impl/index_space_classes.hpp>
 
 #include <array>
+#include <cstddef>
 #include <cstring>
 #include <memory>
 #include <type_traits>
@@ -127,6 +128,8 @@ public:
 private:
   template <typename KernelName, int Dims, template <int> class Range,
             typename... Rest>
+  // The range is taken by value on purpose: detail::UnifiedRangeView keeps
+  // pointers into it and only binds to a non-const lvalue.
   void parallelForImpl(Range<Dims> numWorkItems, Rest &&...rest) {
     setKernelRange(numWorkItems);
 

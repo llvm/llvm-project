@@ -28,7 +28,7 @@ namespace detail {
 /// to map the image type onto the device target triple.
 
 /// SPIR-V with 64-bit pointers.
-static constexpr char DeviceBinaryTripleSPIRV64[] = "spirv64-unknown-unknown";
+inline constexpr char DeviceBinaryTripleSPIRV64[] = "spirv64-unknown-unknown";
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

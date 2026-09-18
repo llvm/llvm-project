@@ -16,12 +16,15 @@
 
 #include "llvm/Support/CommandLine.h"
 
+#include <cstdint>
+#include <cstdlib>
 #include <iostream>
+#include <string>
+#include <string_view>
 
 using namespace sycl;
-using namespace std::literals;
 
-inline std::string_view getBackendName(const backend &Backend) {
+static std::string_view getBackendName(backend Backend) {
   switch (Backend) {
   case backend::opencl:
     return "opencl";
@@ -36,9 +39,8 @@ inline std::string_view getBackendName(const backend &Backend) {
   return "";
 }
 
-std::string getDeviceTypeName(const device &Device) {
-  auto DeviceType = Device.get_info<info::device::device_type>();
-  switch (DeviceType) {
+static std::string_view getDeviceTypeName(const device &Device) {
+  switch (Device.get_info<info::device::device_type>()) {
   case info::device_type::cpu:
     return "cpu";
   case info::device_type::gpu:
@@ -47,9 +49,15 @@ std::string getDeviceTypeName(const device &Device) {
     return "host";
   case info::device_type::accelerator:
     return "accelerator";
-  default:
-    return "unknown";
+  case info::device_type::custom:
+    return "custom";
+  case info::device_type::automatic:
+    return "automatic";
+  case info::device_type::all:
+    return "all";
   }
+
+  return "unknown";
 }
 
 static void printDeviceInfo(const device &Device, bool Verbose,
@@ -75,12 +83,11 @@ static void
 printSelectorChoice(const detail::DeviceSelectorInvocableType &Selector,
                     const std::string &Prepend) {
   try {
-    const auto &Device = device(Selector);
-    std::string DeviceTypeName = getDeviceTypeName(Device);
-    auto Platform = Device.get_info<info::device::platform>();
-    auto PlatformName = Platform.get_info<info::platform::name>();
+    const device Device(Selector);
+    const platform Platform = Device.get_info<info::device::platform>();
     printDeviceInfo(Device, false /*Verbose*/,
-                    Prepend + DeviceTypeName + ", " + PlatformName);
+                    Prepend + std::string(getDeviceTypeName(Device)) + ", " +
+                        Platform.get_info<info::platform::name>());
   } catch (const sycl::exception &Exception) {
     std::string What = Exception.what();
     constexpr size_t MaxLength = 80;
@@ -125,7 +132,7 @@ int main(int argc, char **argv) {
 
     if (Verbose) {
       std::cout << "\nPlatforms: " << Platforms.size() << std::endl;
-      uint32_t PlatformNum = 0;
+      std::uint32_t PlatformNum = 0;
       for (const auto &Platform : Platforms) {
         ++PlatformNum;
         auto PlatformVersion = Platform.get_info<info::platform::version>();
@@ -149,8 +156,8 @@ int main(int argc, char **argv) {
       printSelectorChoice(cpu_selector_v, "cpu_selector()          : ");
       printSelectorChoice(gpu_selector_v, "gpu_selector()          : ");
     }
-  } catch (sycl::exception &e) {
-    std::cerr << "SYCL Exception encountered: " << e.what() << std::endl
+  } catch (const sycl::exception &Exception) {
+    std::cerr << "SYCL Exception encountered: " << Exception.what() << std::endl
               << std::endl;
     return EXIT_FAILURE;
   }

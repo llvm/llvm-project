@@ -22,6 +22,7 @@
 #include <sycl/__impl/info/desc_base.hpp>
 #include <sycl/__impl/info/event.hpp>
 
+#include <functional>
 #include <memory>
 #include <vector>
 

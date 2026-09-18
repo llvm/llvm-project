@@ -12,37 +12,43 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___SPIRV_SPIRV_VARS
-#define _LIBSYCL___SPIRV_SPIRV_VARS
+#ifndef _LIBSYCL___SPIRV_SPIRV_VARS_HPP
+#define _LIBSYCL___SPIRV_SPIRV_VARS_HPP
 
 #include <cstddef>
 #include <cstdint>
 
 // SPIR-V built-in variables mapped to function call.
 
-__attribute__((const)) size_t __spirv_BuiltInGlobalInvocationId(int);
-__attribute__((const)) size_t __spirv_BuiltInGlobalSize(int);
-__attribute__((const)) size_t __spirv_BuiltInGlobalOffset(int);
-__attribute__((const)) size_t __spirv_BuiltInWorkgroupId(int);
-__attribute__((const)) size_t __spirv_BuiltInLocalInvocationId(int);
-__attribute__((const)) size_t __spirv_BuiltInWorkgroupSize(int);
-__attribute__((const)) size_t __spirv_BuiltInNumWorkgroups(int);
+__attribute__((const)) std::size_t __spirv_BuiltInGlobalInvocationId(int);
+__attribute__((const)) std::size_t __spirv_BuiltInGlobalSize(int);
+__attribute__((const)) std::size_t __spirv_BuiltInGlobalOffset(int);
+__attribute__((const)) std::size_t __spirv_BuiltInWorkgroupId(int);
+__attribute__((const)) std::size_t __spirv_BuiltInLocalInvocationId(int);
+__attribute__((const)) std::size_t __spirv_BuiltInWorkgroupSize(int);
+__attribute__((const)) std::size_t __spirv_BuiltInNumWorkgroups(int);
 
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupSize();
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupMaxSize();
-__attribute__((const)) uint32_t __spirv_BuiltInNumSubgroups();
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupId();
-__attribute__((const)) uint32_t __spirv_BuiltInSubgroupLocalInvocationId();
+__attribute__((const)) std::uint32_t __spirv_BuiltInSubgroupSize();
+__attribute__((const)) std::uint32_t __spirv_BuiltInSubgroupMaxSize();
+__attribute__((const)) std::uint32_t __spirv_BuiltInNumSubgroups();
+__attribute__((const)) std::uint32_t __spirv_BuiltInSubgroupId();
+__attribute__((const)) std::uint32_t __spirv_BuiltInSubgroupLocalInvocationId();
 
 namespace __spirv {
 
 // Helper function templates to initialize and get vector component from SPIR-V
 // built-in variables
 #define __SPIRV_DEFINE_INIT_AND_GET_HELPERS(POSTFIX)                           \
-  template <int ID> size_t get##POSTFIX();                                     \
-  template <> inline size_t get##POSTFIX<0>() { return __spirv_##POSTFIX(0); } \
-  template <> inline size_t get##POSTFIX<1>() { return __spirv_##POSTFIX(1); } \
-  template <> inline size_t get##POSTFIX<2>() { return __spirv_##POSTFIX(2); } \
+  template <int ID> std::size_t get##POSTFIX();                                \
+  template <> inline std::size_t get##POSTFIX<0>() {                           \
+    return __spirv_##POSTFIX(0);                                               \
+  }                                                                            \
+  template <> inline std::size_t get##POSTFIX<1>() {                           \
+    return __spirv_##POSTFIX(1);                                               \
+  }                                                                            \
+  template <> inline std::size_t get##POSTFIX<2>() {                           \
+    return __spirv_##POSTFIX(2);                                               \
+  }                                                                            \
                                                                                \
   template <int Dim, class DstT> struct InitSizesST##POSTFIX;                  \
                                                                                \
@@ -76,4 +82,4 @@ __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInNumWorkgroups)
 
 } // namespace __spirv
 
-#endif // _LIBSYCL___SPIRV_SPIRV_VARS
+#endif // _LIBSYCL___SPIRV_SPIRV_VARS_HPP

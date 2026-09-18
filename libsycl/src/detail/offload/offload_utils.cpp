@@ -100,11 +100,12 @@ ol_alloc_type_t getOlAllocType(usm::alloc USMKind) {
   case usm::alloc::shared:
     return OL_ALLOC_TYPE_MANAGED;
   case usm::alloc::unknown:
-    // usm::alloc::unknown can be returned to user from get_pointer_type but it
-    // can't be converted to a valid backend type.
-    throw exception(sycl::make_error_code(sycl::errc::runtime),
-                    "USM kind is not supported");
+    break;
   }
+  // usm::alloc::unknown can be returned to user from get_pointer_type but it
+  // can't be converted to a valid backend type.
+  throw exception(sycl::make_error_code(sycl::errc::runtime),
+                  "USM kind is not supported");
 }
 
 ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range) {
@@ -121,9 +122,12 @@ ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range) {
   uint32_t GroupSize[3] = {1, 1, 1};
   if (Range.MLocalSize) {
     for (size_t I = 0; I < Range.MDims; ++I) {
-      assert(Range.MLocalSize[I] <= std::numeric_limits<uint32_t>::max() &&
-             Range.MLocalSize[I] != 0);
-      GroupSize[I] = static_cast<uint32_t>(Range.MLocalSize[I]);
+      assert(Range.MLocalSize[I] <= std::numeric_limits<uint32_t>::max());
+      // An empty nd_range passes checkNDRangeAndThrow() with a zero local
+      // range. Keep the group size at 1 in that case, so that the group count
+      // below is zero instead of dividing by zero.
+      if (Range.MLocalSize[I] != 0)
+        GroupSize[I] = static_cast<uint32_t>(Range.MLocalSize[I]);
     }
   }
 
@@ -139,16 +143,23 @@ ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range) {
     std::swap(GroupSize[0], GroupSize[Range.MDims - 1]);
   }
 
-  ol_kernel_launch_size_args_t olRange = {};
-  olRange.Dimensions = Range.MDims;
-  olRange.NumGroups.x = GlobalSize[0] / GroupSize[0];
-  olRange.NumGroups.y = GlobalSize[1] / GroupSize[1];
-  olRange.NumGroups.z = GlobalSize[2] / GroupSize[2];
-  olRange.GroupSize.x = GroupSize[0];
-  olRange.GroupSize.y = GroupSize[1];
-  olRange.GroupSize.z = GroupSize[2];
-  olRange.DynSharedMemory = 0;
-  return olRange;
+  // nd_range submissions are validated by checkNDRangeAndThrow(), and plain
+  // range submissions have a group size of 1, so the division below is exact.
+  assert(GlobalSize[0] % GroupSize[0] == 0 &&
+         GlobalSize[1] % GroupSize[1] == 0 &&
+         GlobalSize[2] % GroupSize[2] == 0 &&
+         "Global size must be evenly divisible by group size.");
+
+  ol_kernel_launch_size_args_t OLRange = {};
+  OLRange.Dimensions = Range.MDims;
+  OLRange.NumGroups.x = GlobalSize[0] / GroupSize[0];
+  OLRange.NumGroups.y = GlobalSize[1] / GroupSize[1];
+  OLRange.NumGroups.z = GlobalSize[2] / GroupSize[2];
+  OLRange.GroupSize.x = GroupSize[0];
+  OLRange.GroupSize.y = GroupSize[1];
+  OLRange.GroupSize.z = GroupSize[2];
+  OLRange.DynSharedMemory = 0;
+  return OLRange;
 }
 
 } // namespace detail

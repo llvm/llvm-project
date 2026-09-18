@@ -23,6 +23,8 @@
 
 #include <OffloadAPI.h>
 
+#include <cassert>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
@@ -90,35 +92,39 @@ public:
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type getInfo() const {
     using namespace info::device;
-    using Map = info_ol_mapping<ol_device_info_t>;
+    using Map = InfoOLMapping<ol_device_info_t>;
 
-    constexpr ol_device_info_t olInfo = map_info_desc<Param, ol_device_info_t>(
+    constexpr ol_device_info_t OLInfo = mapInfoDesc<Param, ol_device_info_t>(
         Map::M<device_type>{OL_DEVICE_INFO_TYPE},
         Map::M<name>{OL_DEVICE_INFO_NAME},
         Map::M<vendor>{OL_DEVICE_INFO_VENDOR},
         Map::M<driver_version>{OL_DEVICE_INFO_DRIVER_VERSION});
 
     size_t ExpectedSize = 0;
-    callAndThrow(olGetDeviceInfoSize, MOffloadDevice, olInfo, &ExpectedSize);
+    callAndThrow(olGetDeviceInfoSize, MOffloadDevice, OLInfo, &ExpectedSize);
 
     if constexpr (std::is_same_v<typename Param::return_type, std::string>) {
+      assert(ExpectedSize > 0 && "String info descriptor size must account for "
+                                 "the null terminator");
       std::string Result;
       // liboffload counts null terminator in the size while std::string
       // doesn't.
       Result.resize(ExpectedSize - 1);
-      callAndThrow(olGetDeviceInfo, MOffloadDevice, olInfo, ExpectedSize,
+      callAndThrow(olGetDeviceInfo, MOffloadDevice, OLInfo, ExpectedSize,
                    Result.data());
       return Result;
-    } else if constexpr (olInfo == OL_DEVICE_INFO_TYPE) {
+    } else if constexpr (OLInfo == OL_DEVICE_INFO_TYPE) {
       assert((sizeof(typename Param::return_type) == ExpectedSize) &&
              "Size of info descriptor reported by backend doesn't match with "
              "expected.");
-      ol_device_type_t olType{};
-      callAndThrow(olGetDeviceInfo, MOffloadDevice, olInfo, sizeof(olType),
-                   &olType);
-      return convertDeviceTypeToSYCL(olType);
-    } else
-      static_assert(false && "Info descriptor is not properly supported");
+      ol_device_type_t OLType{};
+      callAndThrow(olGetDeviceInfo, MOffloadDevice, OLInfo, sizeof(OLType),
+                   &OLType);
+      return convertDeviceTypeToSYCL(OLType);
+    } else {
+      static_assert(AlwaysFalse<Param>,
+                    "Info descriptor is not properly supported");
+    }
   }
 
   /// \return the corresponding liboffload device handle.

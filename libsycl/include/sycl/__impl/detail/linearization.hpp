@@ -24,8 +24,8 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 template <int Dimensions>
-inline std::size_t linearize_id(const id<Dimensions> &Index,
-                                const range<Dimensions> &Extent) noexcept {
+inline std::size_t linearizeId(const id<Dimensions> &Index,
+                               const range<Dimensions> &Extent) noexcept {
   if constexpr (Dimensions == 1) {
     return Index[0];
   } else if constexpr (Dimensions == 2) {

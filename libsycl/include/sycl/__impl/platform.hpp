@@ -22,6 +22,7 @@
 #include <sycl/__impl/info/device_type.hpp>
 #include <sycl/__impl/info/platform.hpp>
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -68,10 +69,10 @@ public:
   /// If there are no devices that match given device
   /// type, resulting vector is empty.
   ///
-  /// \param DeviceType is a SYCL device type.
+  /// \param deviceType is a SYCL device type.
   /// \return a vector of SYCL devices matching given device type.
   std::vector<device>
-  get_devices(info::device_type DeviceType = info::device_type::all) const;
+  get_devices(info::device_type deviceType = info::device_type::all) const;
 
   /// Queries this SYCL platform for info.
   ///
@@ -89,11 +90,11 @@ public:
   /// Indicates if all of the SYCL devices on this platform have the
   /// given aspect.
   ///
-  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
+  /// \param asp is one of the values defined in SYCL 2020 Section 4.6.4.5.
   ///
   /// \return true if all of the SYCL devices on this platform have the
   /// given aspect.
-  bool has(aspect Aspect) const;
+  bool has(aspect asp) const;
 
   /// Returns all SYCL platforms from all backends that are available in the
   /// system.

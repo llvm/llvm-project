@@ -19,6 +19,8 @@
 #include <sycl/__impl/detail/config.hpp>
 
 #include <functional>
+#include <type_traits>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -49,59 +51,59 @@ SelectDevice(const DeviceSelectorInvocableType &DeviceSelector);
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend based on an implementation-defined heuristic.
 ///
-/// \param Dev device to calculate the score for.
+/// \param dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
-_LIBSYCL_EXPORT int default_selector_v(const device &Dev);
+_LIBSYCL_EXPORT int default_selector_v(const device &dev);
 
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend for which the device type is info::device_type::gpu.
 ///
-/// \param Dev device to calculate the score for.
+/// \param dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
-_LIBSYCL_EXPORT int gpu_selector_v(const device &Dev);
+_LIBSYCL_EXPORT int gpu_selector_v(const device &dev);
 
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend for which the device type is info::device_type::cpu.
 ///
-/// \param Dev device to calculate the score for.
+/// \param dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
-_LIBSYCL_EXPORT int cpu_selector_v(const device &Dev);
+_LIBSYCL_EXPORT int cpu_selector_v(const device &dev);
 
 /// Standard device selector to select SYCL device from any supported SYCL
 /// backend for which the device type is info::device_type::accelerator.
 ///
-/// \param Dev device to calculate the score for.
+/// \param dev device to calculate the score for.
 /// \return score value for the provided device. Further device selection is
 /// based on score values.
-_LIBSYCL_EXPORT int accelerator_selector_v(const device &Dev);
+_LIBSYCL_EXPORT int accelerator_selector_v(const device &dev);
 
 /// Returns a selector object that selects a SYCL device from any supported SYCL
 /// backend which contains all the requested aspects.
 ///
-/// \param RequireList requested aspects,  i.e. for the specific device dev and
-/// each aspect devAspect from RequireList dev.has(devAspect) equals true.
-/// \param DenyList all the aspects that have to be avoided, i.e. for the
+/// \param aspectList requested aspects,  i.e. for the specific device dev and
+/// each aspect devAspect from aspectList dev.has(devAspect) equals true.
+/// \param denyList all the aspects that have to be avoided, i.e. for the
 /// specific device dev and each aspect devAspect from denyList
 /// dev.has(devAspect) equals false.
 /// \return a selector object
 _LIBSYCL_EXPORT detail::DeviceSelectorInvocableType
-aspect_selector(const std::vector<aspect> &RequireList,
-                const std::vector<aspect> &DenyList = {});
+aspect_selector(const std::vector<aspect> &aspectList,
+                const std::vector<aspect> &denyList = {});
 
 /// Returns a selector object that selects a SYCL device from any supported SYCL
 /// backend which contains all the requested aspects.
 ///
-/// \param AspectList requested aspects,  i.e. for the specific device dev and
-/// each aspect devAspect from AspectList dev.has(devAspect) equals true.
+/// \param aspectList requested aspects,  i.e. for the specific device dev and
+/// each aspect devAspect from aspectList dev.has(devAspect) equals true.
 /// \return a selector object
 template <typename... AspectListT>
-detail::DeviceSelectorInvocableType aspect_selector(AspectListT... AspectList) {
+detail::DeviceSelectorInvocableType aspect_selector(AspectListT... aspectList) {
   std::vector<aspect> RequireList;
-  RequireList.reserve(sizeof...(AspectList));
-  (RequireList.emplace_back(AspectList), ...);
+  RequireList.reserve(sizeof...(aspectList));
+  (RequireList.emplace_back(aspectList), ...);
 
   return aspect_selector(RequireList, {});
 }

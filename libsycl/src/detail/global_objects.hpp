@@ -20,6 +20,7 @@
 #include <sycl/__impl/exception.hpp>
 
 #include <array>
+#include <exception>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -38,7 +39,7 @@ template <typename T> using InstanceWithLock = std::pair<T, SpinLock>;
 ///
 /// This vector is populated only once at the first call of get_platforms().
 ///
-/// \returns std::array of all offload topologies.
+/// \return std::array of all offload topologies.
 std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
 getOffloadTopologies();
 
@@ -47,7 +48,7 @@ getOffloadTopologies();
 ///
 /// This vector is populated only once at the first call of get_platforms().
 ///
-/// \returns std::vector of implementation objects for all platforms.
+/// \return std::vector of implementation objects for all platforms.
 std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
 
 // This initializes a function-local variable whose destructor is invoked as

@@ -20,6 +20,8 @@
 
 #include <OffloadAPI.h>
 
+#include <cassert>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -43,6 +45,7 @@ public:
   /// Constructs a SYCL queue from a device using an asyncHandler and
   /// a propList.
   ///
+  /// \param contextImpl is a SYCL context the queue is associated with.
   /// \param deviceImpl is a SYCL device that is used to dispatch tasks
   /// submitted to the queue.
   /// \param asyncHandler is a SYCL asynchronous exception handler.
@@ -68,7 +71,7 @@ public:
   DeviceImpl &getDevice() { return MDevice; }
 
   /// \return true if and only if the queue is in order.
-  bool isInOrder() const { return MIsInorder; }
+  bool isInOrder() const { return MIsInOrder; }
 
   /// Waits for completion of all commands submitted to this queue.
   void wait();
@@ -150,12 +153,12 @@ public:
                         const std::vector<EventImplPtr> &DepEvents);
 
 private:
-  void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
+  void handleEventDependencies(const std::vector<EventImplPtr> &Deps);
   EventImplPtr createEvent(std::vector<EventImplPtr> &&Deps = {});
 
   // Queue features.
   ol_queue_handle_t MOffloadQueue = {};
-  const bool MIsInorder;
+  const bool MIsInOrder;
   const async_handler MAsyncHandler;
   const property_list MPropList;
   DeviceImpl &MDevice;

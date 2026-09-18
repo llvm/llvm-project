@@ -24,6 +24,10 @@
 
 #include <OffloadAPI.h>
 
+#include <string>
+#include <tuple>
+#include <utility>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
@@ -32,17 +36,19 @@ namespace detail {
 ///
 /// \param Error liboffload error code.
 ///
-/// \returns C-string representing the name of Error as specified in enum.
+/// \return C-string representing the name of Error as specified in enum.
 const char *stringifyErrorCode(ol_errc_t Error);
 
-/// Contructs C++-string with information about liboffload error.
+/// Constructs C++-string with information about liboffload error.
 ///
-/// \param Error liboffload result of calling API.
+/// \param Result liboffload result of calling API.
 ///
-/// \returns C++-string containing all available data of failure.
+/// \return C++-string containing all available data of failure.
 inline std::string formatCodeString(ol_result_t Result) {
+  // liboffload leaves Details unset for errors it has no message for.
+  const char *Details = Result->Details ? Result->Details : "";
   return std::to_string(Result->Code) + " (" +
-         std::string(stringifyErrorCode(Result->Code)) + ") " + Result->Details;
+         std::string(stringifyErrorCode(Result->Code)) + ") " + Details;
 }
 
 inline bool isFailed(const ol_result_t &Result) { return Result != OL_SUCCESS; }
@@ -53,13 +59,13 @@ inline bool isFailed(const ol_result_t &Result) { return Result != OL_SUCCESS; }
 /// To be called when specific handling is needed and explicitly done by
 /// developer before throwing exception.
 ///
-/// \param Error liboffload result of calling API.
+/// \param Result liboffload result of calling API.
 ///
-/// \throw sycl::runtime_exception if the call was not successful.
-template <sycl::errc errc = sycl::errc::runtime>
+/// \throw sycl::exception with ErrC if the call was not successful.
+template <sycl::errc ErrC = sycl::errc::runtime>
 void checkAndThrow(ol_result_t Result) {
   if (isFailed(Result)) {
-    throw sycl::exception(sycl::make_error_code(errc),
+    throw sycl::exception(sycl::make_error_code(ErrC),
                           detail::formatCodeString(Result));
   }
 }
@@ -71,7 +77,7 @@ void checkAndThrow(ol_result_t Result) {
 /// \param Function liboffload API function to be called.
 /// \param Args arguments to be passed to the liboffload API function.
 ///
-/// \returns liboffload error code returned by API call.
+/// \return liboffload error code returned by API call.
 template <typename FunctionType, typename... ArgsT>
 ol_result_t callNoCheck(FunctionType &Function, ArgsT &&...Args) {
   return Function(std::forward<ArgsT>(Args)...);
@@ -82,7 +88,8 @@ ol_result_t callNoCheck(FunctionType &Function, ArgsT &&...Args) {
 /// \param Function liboffload API function to be called.
 /// \param Args arguments to be passed to the liboffload API function.
 ///
-/// \throw sycl::runtime_exception if the call was not successful.
+/// \throw sycl::exception with sycl::errc::runtime if the call was not
+/// successful.
 template <typename FunctionType, typename... ArgsT>
 void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
   auto Err = callNoCheck(Function, std::forward<ArgsT>(Args)...);
@@ -93,51 +100,55 @@ void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
 ///
 /// \param Backend liboffload backend.
 ///
-/// \returns sycl::backend matching specified liboffload backend.
+/// \return sycl::backend matching specified liboffload backend.
 backend convertBackend(ol_platform_backend_t Backend);
 
 /// Converts SYCL device type to liboffload type.
 ///
 /// \param DeviceType SYCL device type.
 ///
-/// \returns ol_device_type_t matching specified SYCL device type.
+/// \return ol_device_type_t matching specified SYCL device type.
 ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
 
 /// Converts liboffload device type to SYCL type.
 ///
 /// \param DeviceType liboffload device type.
 ///
-/// \returns SYCL device type matching specified liboffload device type.
+/// \return SYCL device type matching specified liboffload device type.
 info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
 
 /// Converts a SYCL USM kind to a liboffload type.
 ///
 /// \param USMKind a SYCL USM kind.
 ///
-/// \returns ol_alloc_type_t matching the specified SYCL USM kind.
+/// \return ol_alloc_type_t matching the specified SYCL USM kind.
 ol_alloc_type_t getOlAllocType(usm::alloc USMKind);
+
+/// Helper for static assertions in the discarded branch of an if constexpr.
+template <typename> inline constexpr bool AlwaysFalse = false;
 
 /// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>.
 ///
 /// Typical usage:
 /// \code
-///   using Map = info_ol_mapping<ol_foo_info_t>;
-///   constexpr auto olInfo = map_info_desc<FromDesc, ol_foo_info_t>(
+///   using Map = InfoOLMapping<ol_foo_info_t>;
+///   constexpr auto OLInfo = mapInfoDesc<FromDesc, ol_foo_info_t>(
 ///                                            Map::M<DescVal0>{OL_FOO_INFO_VAL0},
 ///                                            Map::M<DescVal1>{OL_FOO_INFO_VAL1},
 ///                                          ...)
 /// \endcode
-template <typename To> struct info_ol_mapping {
+template <typename To> struct InfoOLMapping {
   template <typename From> struct M {
-    To value;
-    constexpr M(To value) : value(value) {}
+    To Value;
+    constexpr M(To Val) : Value(Val) {}
   };
 };
 template <typename From, typename To, typename... Ts>
-constexpr To map_info_desc(typename info_ol_mapping<To>::template M<Ts>... ms) {
-  return std::get<typename info_ol_mapping<To>::template M<From>>(
-             std::tuple{ms...})
-      .value;
+constexpr To
+mapInfoDesc(typename InfoOLMapping<To>::template M<Ts>... Mappings) {
+  return std::get<typename InfoOLMapping<To>::template M<From>>(
+             std::tuple{Mappings...})
+      .Value;
 }
 
 /// Converts a UnifiedRangeView into the liboffload
