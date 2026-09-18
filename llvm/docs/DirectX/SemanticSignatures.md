@@ -193,6 +193,8 @@ constraints are satisfied:
 - Within each row, elements are ordered by category: arbitrary values first,
   followed by system values, and then system-generated values. For example, a
   system value can never be packed to the left of an arbitrary value.
+  `ClipCull` and `TessFactor` follow these categories in the internal ordering,
+  with the additional placement rules described below.
 - A system value or system generated value cannot be placed in a dynamically
   indexed row. A dynamically indexed row is a row within the range covered by
   a multi-row element, where the row is selected using a dynamic index.
@@ -204,6 +206,9 @@ Some semantic interpretations require additional handling:
   most two rows. The rows must be adjacent when a clip or cull element spans
   multiple rows.
 - A multi-row tessellation factor is searched for only in the last column.
+  Arbitrary values may fill the columns to its left, even when declared after
+  the factor. A single-row tessellation factor is ordered and packed as a
+  system value instead.
 - Geometry shader output streams are packed independently.
 
 For example:
