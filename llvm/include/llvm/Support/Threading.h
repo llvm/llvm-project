@@ -205,6 +205,67 @@ using once_flag = std::once_flag;
     return hardware_concurrency();
   }
 
+  namespace detail {
+
+  struct CgroupFilePaths {
+    StringRef ProcSelfCgroup = "/proc/self/cgroup";
+    StringRef ProcSelfMountInfo = "/proc/self/mountinfo";
+    StringRef V2CpuMax = "/sys/fs/cgroup/cpu.max";
+    StringRef V1CpuQuota = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us";
+    StringRef V1CpuPeriod = "/sys/fs/cgroup/cpu/cpu.cfs_period_us";
+    StringRef V1CpuAcctQuota = "/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us";
+    StringRef V1CpuAcctPeriod = "/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us";
+  };
+
+  /// Return the tightest finite CPU quota visible in the process's cgroup
+  /// hierarchy, rounded up to a whole thread. This is exposed for testing.
+  LLVM_ABI std::optional<unsigned>
+  get_cgroup_cpu_count(const CgroupFilePaths &Paths = CgroupFilePaths());
+
+  } // namespace detail
+
+  /// Returns a thread strategy limited by the number of hardware threads and,
+  /// on Linux, by the process's cgroup CPU quota.
+  inline ThreadPoolStrategy available_concurrency() {
+    ThreadPoolStrategy S = hardware_concurrency();
+    if (std::optional<unsigned> Count = detail::get_cgroup_cpu_count()) {
+      S.ThreadsRequested = *Count;
+      S.Limit = true;
+    }
+    return S;
+  }
+
+  /// Like available_concurrency() above, but builds a strategy based on the
+  /// rules described for get_threadpool_strategy().
+  inline ThreadPoolStrategy available_concurrency(StringRef Num) {
+    std::optional<ThreadPoolStrategy> S =
+        get_threadpool_strategy(Num, available_concurrency());
+    if (S)
+      return *S;
+    return available_concurrency();
+  }
+
+  /// Returns a thread strategy limited by the number of physical cores and,
+  /// on Linux, by the process's cgroup CPU quota.
+  inline ThreadPoolStrategy heavyweight_available_concurrency() {
+    ThreadPoolStrategy S = heavyweight_hardware_concurrency();
+    if (std::optional<unsigned> Count = detail::get_cgroup_cpu_count()) {
+      S.ThreadsRequested = *Count;
+      S.Limit = true;
+    }
+    return S;
+  }
+
+  /// Like heavyweight_available_concurrency() above, but builds a strategy
+  /// based on the rules described for get_threadpool_strategy().
+  inline ThreadPoolStrategy heavyweight_available_concurrency(StringRef Num) {
+    std::optional<ThreadPoolStrategy> S =
+        get_threadpool_strategy(Num, heavyweight_available_concurrency());
+    if (S)
+      return *S;
+    return heavyweight_available_concurrency();
+  }
+
   /// Returns an optimal thread strategy to execute specified amount of tasks.
   /// This strategy should prevent us from creating too many threads if we
   /// occasionaly have an unexpectedly small amount of tasks.
