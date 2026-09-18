@@ -88,16 +88,30 @@ option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)
 
 # Derive the compile flags implied by the language-runtime options.
 set(ORC_RT_COMPILE_FLAGS)
-if(ORC_RT_ENABLE_RTTI)
-  list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
-else()
-  list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
-endif()
+if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  if(ORC_RT_ENABLE_RTTI)
+    list(APPEND ORC_RT_COMPILE_FLAGS /GR)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS /GR-)
+  endif()
 
-if(ORC_RT_ENABLE_EXCEPTIONS)
-  list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+  if(ORC_RT_ENABLE_EXCEPTIONS)
+    list(APPEND ORC_RT_COMPILE_FLAGS /EHsc)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS /EHs-c-)
+  endif()
 else()
-  list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+  if(ORC_RT_ENABLE_RTTI)
+    list(APPEND ORC_RT_COMPILE_FLAGS -frtti)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS -fno-rtti)
+  endif()
+
+  if(ORC_RT_ENABLE_EXCEPTIONS)
+    list(APPEND ORC_RT_COMPILE_FLAGS -fexceptions)
+  else()
+    list(APPEND ORC_RT_COMPILE_FLAGS -fno-exceptions)
+  endif()
 endif()
 
 # --- Logging ---
@@ -114,6 +128,16 @@ set(ORC_RT_LOG_BACKEND "none" CACHE STRING
   "ORC-RT logging backend: none, printf, os_log")
 set(orc_rt_log_backends none printf os_log)
 set_property(CACHE ORC_RT_LOG_BACKEND PROPERTY STRINGS ${orc_rt_log_backends})
+
+# enable project wide windows settings.
+# Mostly to avoid min and max conflicts
+if(WIN32)
+  add_compile_definitions(
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+  )
+endif()
+
 
 # Validate the level and derive its config.h macro symbol.
 if(NOT ORC_RT_LOG_LEVEL IN_LIST orc_rt_log_levels)
