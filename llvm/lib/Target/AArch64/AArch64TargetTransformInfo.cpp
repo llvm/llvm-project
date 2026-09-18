@@ -233,23 +233,99 @@ static bool isSMEABIRoutineCall(const CallInst &CI,
          SMEAttrs(F->getName(), TLI.getRuntimeLibcallsInfo()).isSMEABIRoutine();
 }
 
+/// Returns true if \p I is an intrinsic that may not be compatible with a
+/// different streaming mode (because it depends on vscale).
+static bool isPossiblyIncompatibleIntrinsic(const Instruction *I) {
+  if (I->isDebugOrPseudoInst())
+    return false;
+
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    default:
+      break;
+    case Intrinsic::vscale:
+    case Intrinsic::masked_gather:
+    case Intrinsic::masked_scatter:
+      return true;
+    }
+
+    StringRef Name = II->getCalledFunction()->getName();
+    if (Name.starts_with("llvm.aarch64.neon") ||
+        Name.starts_with("llvm.aarch64.sve") ||
+        Name.starts_with("llvm.aarch64.sme"))
+      return true;
+  }
+
+  return false;
+}
+
+/// Returns true if \p IA has "za" in its clobber list.
+static bool hasZAClobber(const InlineAsm *IA) {
+  for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
+    if (CI.Type != llvm::InlineAsm::ConstraintPrefix::isClobber)
+      continue;
+    if (any_of(CI.Codes, [](StringRef S) { return S == "{za}"; }))
+      return true;
+  }
+  return false;
+}
+
 /// Returns true if the function has explicit operations that can only be
 /// lowered using incompatible instructions for the selected mode. This also
 /// returns true if the function F may use or modify ZA state.
 static bool hasPossibleIncompatibleOps(const Function *F,
-                                       const AArch64TargetLowering &TLI) {
+                                       const AArch64TargetLowering &TLI,
+                                       bool ConsiderZA, bool ConsiderSM) {
+  assert((ConsiderZA || ConsiderSM) && "No SME state to consider");
+
+  bool HasVLDependentArgsOrRet =
+      F->getReturnType()->isScalableTy() ||
+      any_of(F->getFunctionType()->params(),
+             [](const Type *T) { return T->isScalableTy(); });
+
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
-      // Be conservative for now and assume that any call to inline asm or to
-      // intrinsics could could result in non-streaming ops (e.g. calls to
-      // @llvm.aarch64.* or @llvm.gather/scatter intrinsics). We can assume that
-      // all native LLVM instructions can be lowered to compatible instructions.
-      if (isa<CallInst>(I) && !I.isDebugOrPseudoInst() &&
-          (cast<CallInst>(I).isInlineAsm() || isa<IntrinsicInst>(I) ||
-           isSMEABIRoutineCall(cast<CallInst>(I), TLI)))
+      // Inlining operations on fixed-length vectors when the streaming
+      // mode does not match, is rejected because performance may be impacted.
+      // This decision should eventually be moved the cost-model.
+      if (ConsiderSM && (isa<FixedVectorType>(I.getType()) ||
+                         any_of(I.operand_values(), [](const Value *V) {
+                           return isa<FixedVectorType>(V->getType());
+                         })))
         return true;
+
+      // Inlining operations on scalable vectors is rejected because it is
+      // a vscale-dependent operation. The only exception is when the interface
+      // already has vscale-dependent arguments/return value, as the ACLE
+      // describes that in order for the program to have defined behaviour is
+      // for vscale to match in both modes.
+      if (ConsiderSM && !HasVLDependentArgsOrRet) {
+        if (I.getType()->isScalableTy() ||
+            any_of(
+                I.operand_values(),
+                [](const Value *V) { return V->getType()->isScalableTy(); }) ||
+            (isa<GetElementPtrInst>(I) &&
+             cast<GetElementPtrInst>(I).getSourceElementType()->isScalableTy()))
+          return true;
+      }
+
+      if (auto *CI = dyn_cast<CallInst>(&I)) {
+        // Inline asm must be rejected, unless we know that it contains no
+        // vscale dependent operations and does not use ZA.
+        if (CI->isInlineAsm() &&
+            (ConsiderSM || (ConsiderZA && hasZAClobber(cast<InlineAsm>(
+                                              CI->getCalledOperand())))))
+          return true;
+
+        if (isSMEABIRoutineCall(*CI, TLI))
+          return true;
+
+        if (ConsiderSM && isPossiblyIncompatibleIntrinsic(&I))
+          return true;
+      }
     }
   }
+
   return false;
 }
 
@@ -277,6 +353,47 @@ bool AArch64TTIImpl::isMultiversionedFunction(const Function &F) const {
   return F.hasFnAttribute("fmv-features");
 }
 
+/// The compiler must not inline when that may alter the behavior of the
+/// program. This is especially relevant around SME which implements different
+/// runtime modes and maintains external state through attributes.
+///
+/// The compiler must not inline when:
+//
+/// * The module is compiled with 'strict-fp' and the called function
+///   implements a different FP environment than the caller.
+///
+/// * The called function has operations that are incompatible in the mode
+///   of the caller, e.g.:
+///   * inlining non-streaming-only instructions into a streaming function.
+///   * inlining streaming-only instructions into a non-streaming function.
+///
+///   Inline asm blocks must be entered and exited in the [streaming] mode of
+///   the parent function. There is no language-level mechanism to inform the
+///   compiler that a particular inline asm block is streaming compatible, so
+///   the compiler must reject this as a candidate for inlining.
+///
+/// * The called function contains vscale-dependent operations but otherwise
+///   does not take/return VL-dependent arguments (see definition in the
+///   ACLE (Arm C/C++ Language Extensions)).
+///
+/// * The called function sets up new ZA/ZT state into a function that already
+///   has ZA or ZT state, as that is not valid as per the ACLE.
+///
+/// If the called function has an `alwaysinline` attribute and any of the above
+/// conditions is true, then an error should be reported.
+///
+/// The compiler should not inline when:
+//
+/// * The called function has fixed-length vectors and the caller is in
+///   streaming mode, as this may cause performance regressions. This should
+///   never result in an error to be reported.
+///
+/// * The called function sets up new ZA/ZT state into a function that has no
+///   ZA and no ZT state, as the compiler currently cannot transfer the
+///   attribute to the caller. It may also impact performance, but that should
+///   be covered by AArch64TTIImpl::getInlineCallPenalty().
+///
+/// FIXME: Add diagnostics for always_inline.
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMECallAttrs CallAttrs(*Caller, *Callee);
@@ -288,6 +405,9 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       CallAttrs.callee().hasStreamingInterfaceOrBody())
     return false;
 
+  if (CallAttrs.callee().isNewZA() || CallAttrs.callee().isNewZT0())
+    return false;
+
   // When inlining, we should consider the body of the function, not the
   // interface.
   if (CallAttrs.callee().hasStreamingBody()) {
@@ -295,15 +415,20 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     CallAttrs.callee().set(SMEAttrs::SM_Enabled, true);
   }
 
-  if (CallAttrs.callee().isNewZA() || CallAttrs.callee().isNewZT0())
+  bool ConsiderZA = CallAttrs.requiresLazySave() ||
+                    CallAttrs.requiresPreservingZT0() ||
+                    CallAttrs.requiresPreservingAllZAState();
+  bool ConsiderSM = CallAttrs.requiresSMChange();
+
+  // FP environment is interpreted differently between streaming mode and
+  // non-streaming mode, so are not inline-compatible.
+  // FIXME: Analyze whether the callee actually has any FP operations.
+  if (ConsiderSM && (Caller->isStrictFP() || Callee->isStrictFP()))
     return false;
 
-  if (CallAttrs.requiresLazySave() || CallAttrs.requiresSMChange() ||
-      CallAttrs.requiresPreservingZT0() ||
-      CallAttrs.requiresPreservingAllZAState()) {
-    if (hasPossibleIncompatibleOps(Callee, *getTLI()))
-      return false;
-  }
+  if ((ConsiderZA || ConsiderSM) &&
+      hasPossibleIncompatibleOps(Callee, *getTLI(), ConsiderZA, ConsiderSM))
+    return false;
 
   return BaseT::areInlineCompatible(Caller, Callee);
 }

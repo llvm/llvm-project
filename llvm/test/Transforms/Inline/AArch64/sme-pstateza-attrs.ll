@@ -19,7 +19,7 @@ define void @nonza_callee() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void asm sideeffect "; inlineasm", ""()
+  call void asm sideeffect "; inlineasm", "~{za}"()
   call void @inlined_body()
   ret void
 }
@@ -33,7 +33,7 @@ define void @shared_za_callee() "aarch64_inout_za" {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void asm sideeffect "; inlineasm", ""()
+  call void asm sideeffect "; inlineasm", "~{za}"()
   call void @inlined_body()
   ret void
 }
@@ -45,7 +45,7 @@ define void @new_za_callee() "aarch64_new_za" {
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
-  call void asm sideeffect "; inlineasm", ""()
+  call void asm sideeffect "; inlineasm", "~{za}"()
   call void @inlined_body()
   ret void
 }
@@ -57,7 +57,7 @@ define void @agnostic_za_callee() "aarch64_za_state_agnostic" {
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
-  call void asm sideeffect "; inlineasm", ""()
+  call void asm sideeffect "; inlineasm", "~{za}"()
   call void @inlined_body()
   ret void
 }
@@ -386,7 +386,7 @@ define void @nonzt0_callee() {
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
 ;
-  call void asm sideeffect "; inlineasm", ""()
+  call void asm sideeffect "; inlineasm", "~{za}"()
   call void @inlined_body()
   ret void
 }
