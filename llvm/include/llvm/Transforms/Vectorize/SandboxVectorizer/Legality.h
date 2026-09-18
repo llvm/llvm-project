@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -95,6 +96,7 @@ enum class ResultReason {
   DiffBBs,
   RepeatedInstrs,
   NotConsecutive,
+  AlignmentNotSupported,
   CantSchedule,
   Unimplemented,
   Infeasible,
@@ -137,6 +139,8 @@ struct ToStr {
       return "RepeatedInstrs";
     case ResultReason::NotConsecutive:
       return "NotConsecutive";
+    case ResultReason::AlignmentNotSupported:
+      return "AlignmentNotSupported";
     case ResultReason::CantSchedule:
       return "CantSchedule";
     case ResultReason::Unimplemented:
@@ -326,6 +330,7 @@ class LegalityAnalysis {
 
   ScalarEvolution &SE;
   const DataLayout &DL;
+  TargetTransformInfo &TTI;
   InstrMaps &IMaps;
 
   /// Finds how we can collect the values in \p Bndl from the vectorized or
@@ -335,8 +340,9 @@ class LegalityAnalysis {
 
 public:
   LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
-                   Context &Ctx, InstrMaps &IMaps, SchedDirection Dir)
-      : Sched(AA, Ctx, Dir), SE(SE), DL(DL), IMaps(IMaps) {}
+                   TargetTransformInfo &TTI, Context &Ctx, InstrMaps &IMaps,
+                   SchedDirection Dir)
+      : Sched(AA, Ctx, Dir), SE(SE), DL(DL), TTI(TTI), IMaps(IMaps) {}
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT &&...Args) {
@@ -359,6 +365,10 @@ public:
     SmallPtrSet<Value *, 8> Unique(llvm::from_range, Values);
     return Unique.size() == Values.size();
   }
+
+  /// \returns true if the alignment of the vector composed of \p Values has
+  /// alignment that is supported by the target.
+  bool isAlignmentSupported(ArrayRef<Value *> Values) const;
 
   /// Checks if it's legal to vectorize the instructions in \p Bndl.
   /// \Returns a LegalityResult object owned by LegalityAnalysis.

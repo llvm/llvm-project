@@ -2778,6 +2778,15 @@ inline unsigned getLoadStoreAddressSpace(const Instruction *I) {
   return cast<StoreInst>(I)->getPointerAddressSpace();
 }
 
+/// A helper function that returns the alignment of load or store instruction.
+inline Align getLoadStoreAlignment(const Value *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getAlign();
+  return cast<StoreInst>(I)->getAlign();
+}
+
 } // namespace llvm::sandboxir
 
 #endif // LLVM_SANDBOXIR_INSTRUCTION_H
