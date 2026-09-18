@@ -12425,7 +12425,7 @@ def err_omp_parent_cancel_region_ordered : Error<
 def err_omp_reduction_wrong_type : Error<"reduction type cannot be %select{qualified with 'const', 'volatile' or 'restrict'|a function|a reference|an array}0 type">;
 def err_omp_wrong_var_in_declare_reduction : Error<"only %select{'omp_priv' or 'omp_orig'|'omp_in' or 'omp_out'}0 variables are allowed in %select{initializer|combiner}0 expression">;
 def err_omp_unsupported_on_binding : Error<
-  "%select{reductions|conditional lastprivate|linear clause with parallel constructs}0 on structured bindings "
+  "%select{reductions|conditional lastprivate|linear clause with parallel constructs|capturing in a lambda}0 on structured bindings "
   "%plural{0:are|:is}0 not yet supported">;
 def err_omp_loop_var_is_structured_binding : Error<
   "structured binding %0 cannot be used as the loop control variable of an "

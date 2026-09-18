@@ -540,6 +540,16 @@ void test_linear_clause_parallel_for() {
   // Note: This also fails for regular variables (pre-existing Clang bug)
 }
 
+void test_capture_binding_in_lambda() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  [&] {
+    // expected-error@+2{{capturing in a lambda on structured bindings is not yet supported}}
+#pragma omp target map(tofrom: a)
+    { a++; }
+  }();
+}
+
 struct Triple { int x, y, z; };
 
 void test_bindings_only_orig_not_dereferenced() {
