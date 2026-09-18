@@ -16065,38 +16065,22 @@ private:
       return;
     }
 
-    // The memory layout of packed boolean vectors in big endian mode is
-    // complex.
-    //
-    // If the number of elements < 8, then the occupied bits are contained
-    // within a single byte, but they start from the most significant bit of
-    // that byte.
-    //
-    // Otherwise, the occupied bits span at least one byte. Compared to the
-    // layout in little endian, only the sequence of bytes containing occupied
-    // bits has its order reversed, but the bits within each byte are still
-    // counted from the least significant bit. So if there are fully padding
-    // bytes, they reside at the higher addresses in both endiannesses.
-
-    // Number of elements < 8. Single byte. Count from the MSB.
-    if (OccupiedSizeInBits < CharWidth) {
-      const uint64_t ByteEnd = StartBitOffset + CharWidth;
-      OccuppiedIntervals.push_back({ByteEnd - OccupiedSizeInBits, ByteEnd});
-      return;
-    }
-
+    // Only the sequence of bytes containing occupied bits has its order
+    // reversed, but the bits within each byte are still counted from the least
+    // significant bit. So if there are fully padding bytes, they reside at the
+    // higher addresses in both endiannesses.
     const uint64_t NumFullyOccupiedBytes = OccupiedSizeInBits / CharWidth;
     const uint64_t NumRemainingOccupiedBits = OccupiedSizeInBits % CharWidth;
 
     uint64_t Start = StartBitOffset;
-    // Partially occupied byte at the beginning. Count from the LSB.
+    // Partially occupied byte at the beginning
     if (NumRemainingOccupiedBits > 0) {
       const uint64_t ByteEnd = Start + CharWidth;
       OccuppiedIntervals.push_back({Start, Start + NumRemainingOccupiedBits});
       Start = ByteEnd;
     }
 
-    // The remaining fully occupied bytes form a contiguous interval.
+    // The remaining fully occupied bytes form a contiguous interval
     if (NumFullyOccupiedBytes > 0) {
       OccuppiedIntervals.push_back(
           {Start, Start + NumFullyOccupiedBytes * CharWidth});
