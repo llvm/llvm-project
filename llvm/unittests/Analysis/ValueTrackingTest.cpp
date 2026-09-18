@@ -1806,7 +1806,7 @@ TEST_F(ComputeKnownFPClassTest, FAdd) {
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(~fcSNan, std::nullopt, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FSub) {
@@ -1823,7 +1823,7 @@ TEST_F(ComputeKnownFPClassTest, FSub) {
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(~fcSNan, std::nullopt, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FMul) {
@@ -1837,8 +1837,8 @@ TEST_F(ComputeKnownFPClassTest, FMul) {
       "  ret float %A\n"
       "}\n");
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A2);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(~fcSNan, std::nullopt, A2);
+  expectKnownFPClass(~fcSNan, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
   expectKnownFPClass(fcPositive, false, A5);
 }
@@ -1857,11 +1857,11 @@ TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
       "}\n");
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
   expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(~fcSNan, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
   expectKnownFPClass(fcAllFlags, std::nullopt, A5);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A6);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A7);
+  expectKnownFPClass(~fcSNan, std::nullopt, A6);
+  expectKnownFPClass(~fcSNan, std::nullopt, A7);
 }
 
 TEST_F(ComputeKnownFPClassTest, MinimumNumSignBit) {
@@ -3195,6 +3195,27 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
   KnownBits Known = computeKnownBits(A, M->getDataLayout());
   EXPECT_EQ(0x7fff, Known.Zero);
   EXPECT_EQ(0, Known.One);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIFabs) {
+  // fptosi(fabs(x)) is never negative.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %fabs = call float @llvm.fabs.f32(float %a)\n"
+                "  %A = fptosi float %fabs to i32\n"
+                "  ret i32 %A\n"
+                "}\n"
+                "declare float @llvm.fabs.f32(float)\n");
+  expectKnownBits(/*Zero*/ 0x80000000u, /*One*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIUnknownSign) {
+  // Without any knowledge of the sign of the source, nothing is known about
+  // the sign of the result.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %A = fptosi float %a to i32\n"
+                "  ret i32 %A\n"
+                "}\n");
+  expectKnownBits(/*Zero*/ 0u, /*One*/ 0u);
 }
 
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
