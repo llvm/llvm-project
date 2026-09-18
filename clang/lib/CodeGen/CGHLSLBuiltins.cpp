@@ -68,8 +68,7 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
         ElementCount::getFixed(VecTy->getNumElements()), FZeroConst);
     auto *FCompInst = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
     CMP = CGF->Builder.CreateIntrinsic(
-        CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
-        {FCompInst});
+        CGF->Builder.getInt1Ty(), Intrinsic::vector_reduce_or, {FCompInst});
   } else {
     CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
   }
@@ -1069,13 +1068,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     LValue Stride = EmitLValue(E->getArg(1));
     return emitBufferStride(this, E->getArg(0), Stride);
   }
-  case Builtin::BI__builtin_hlsl_all: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        CGM.getHLSLRuntime().getAllIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
-        "hlsl.all");
-  }
   case Builtin::BI__builtin_hlsl_and: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
@@ -1085,13 +1077,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     return Builder.CreateOr(Op0, Op1, "hlsl.or");
-  }
-  case Builtin::BI__builtin_hlsl_any: {
-    Value *Op0 = EmitScalarExpr(E->getArg(0));
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        CGM.getHLSLRuntime().getAnyIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
-        "hlsl.any");
   }
   case Builtin::BI__builtin_hlsl_asdouble:
     return handleAsDoubleBuiltin(*this, E);

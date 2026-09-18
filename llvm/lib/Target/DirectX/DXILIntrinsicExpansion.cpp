@@ -220,8 +220,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log10:
   case Intrinsic::pow:
   case Intrinsic::powi:
-  case Intrinsic::dx_all:
-  case Intrinsic::dx_any:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
@@ -612,69 +610,6 @@ static Value *expandIsFPClass(CallInst *Orig) {
   default:
     reportFatalUsageError("Unsupported FPClassTest");
   }
-}
-
-static Value *expandAnyOrAllIntrinsicScalarized(CallInst *Orig,
-                                                Intrinsic::ID IntrinsicId) {
-  Value *X = Orig->getOperand(0);
-  IRBuilder<> Builder(Orig);
-  Type *Ty = X->getType();
-  Type *EltTy = Ty->getScalarType();
-
-  auto ApplyOp = [&Builder](Intrinsic::ID IntrinsicId, Value *Result,
-                            Value *Elt) {
-    if (IntrinsicId == Intrinsic::dx_any)
-      return Builder.CreateOr(Result, Elt);
-    assert(IntrinsicId == Intrinsic::dx_all);
-    return Builder.CreateAnd(Result, Elt);
-  };
-
-  Value *Result = nullptr;
-  if (!Ty->isVectorTy()) {
-    Result = EltTy->isFloatingPointTy()
-                 ? Builder.CreateFCmpUNE(X, ConstantFP::get(EltTy, 0))
-                 : Builder.CreateICmpNE(X, ConstantInt::get(EltTy, 0));
-  } else {
-    auto *XVec = dyn_cast<FixedVectorType>(Ty);
-    Value *Cond =
-        EltTy->isFloatingPointTy()
-            ? Builder.CreateFCmpUNE(
-                  X, ConstantVector::getSplat(
-                         ElementCount::getFixed(XVec->getNumElements()),
-                         ConstantFP::get(EltTy, 0)))
-            : Builder.CreateICmpNE(
-                  X, ConstantVector::getSplat(
-                         ElementCount::getFixed(XVec->getNumElements()),
-                         ConstantInt::get(EltTy, 0)));
-    Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
-    for (unsigned I = 1; I < XVec->getNumElements(); I++) {
-      Value *Elt = Builder.CreateExtractElement(Cond, I);
-      Result = ApplyOp(IntrinsicId, Result, Elt);
-    }
-  }
-  return Result;
-}
-
-// This version of Any/All starting with SM6.9 uses the vector_reduce_*
-// intrinsics
-//  when possible for better performance.
-static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
-                                      Intrinsic::ID IntrinsicId) {
-  Value *X = Orig->getArgOperand(0);
-  Type *Ty = X->getType();
-  Type *EltTy = Ty->getScalarType();
-  if (!Ty->isVectorTy() ||
-      Orig->getModule()->getTargetTriple().getOSVersion() < VersionTuple(6, 9))
-    return expandAnyOrAllIntrinsicScalarized(Orig, IntrinsicId);
-
-  IRBuilder<> Builder(Orig);
-  Value *Cond = EltTy->isFloatingPointTy()
-                    ? Builder.CreateFCmpUNE(X, Constant::getNullValue(Ty))
-                    : Builder.CreateICmpNE(X, Constant::getNullValue(Ty));
-  Intrinsic::ID ReductionId = IntrinsicId == Intrinsic::dx_any
-                                  ? Intrinsic::vector_reduce_or
-                                  : Intrinsic::vector_reduce_and;
-  return Builder.CreateIntrinsic(Builder.getInt1Ty(), ReductionId, {Cond});
 }
 
 static Value *expandLogIntrinsic(CallInst *Orig,
@@ -1355,10 +1290,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::pow:
   case Intrinsic::powi:
     Result = expandPowIntrinsic(Orig, IntrinsicId);
-    break;
-  case Intrinsic::dx_all:
-  case Intrinsic::dx_any:
-    Result = expandAnyOrAllIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
