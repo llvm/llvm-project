@@ -7645,12 +7645,12 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   if (IsFileScope)
     if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr)) {
       // An element with an immediate call or source_location is left for the
-      // use site; a rebuild in an immediate function context is too early, as
-      // its default arguments still carry the definition's location.
+      // use site, and for its rebuild too when the rebuilt default arguments
+      // could not be given the use-site location.
       bool DeferImmediate =
           isCheckingDefaultArgumentOrInitializer() ||
-          (InnermostDeclarationWithDelayedImmediateInvocations().has_value() &&
-           isImmediateFunctionContext());
+          (currentEvaluationContext().DelayedDefaultInitializationContext &&
+           !OutermostDeclarationWithDelayedImmediateInvocations());
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
         if (Init->isTypeDependent() || Init->isValueDependent()) {
