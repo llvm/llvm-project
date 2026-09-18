@@ -3701,7 +3701,8 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 
   if (ParsedAttrs.BranchProtection.empty()) {
     if (!ParsedAttrs.SignReturnAddrHardening.empty())
-      return Diag(LiteralLoc, diag::warn_attribute_harden_pac_ret_requires_pac_ret);
+      return Diag(LiteralLoc,
+                  diag::warn_attribute_harden_pac_ret_requires_pac_ret);
     return false;
   }
 
