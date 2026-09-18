@@ -80,12 +80,100 @@ class ItaniumMangleContextImpl : public ItaniumMangleContext {
 
   bool NeedsUniqueInternalLinkageNames = false;
 
+  /// The abi_tags of an inline namespace: the union of the tags on all of its
+  /// declarations. A namespace can be reopened thousands of times, so the
+  /// union is extended incrementally instead of rescanning all declarations
+  /// every time the namespace is mangled.
+  struct NamespaceAbiTags {
+    /// The most recent declaration that is already accounted for in Tags.
+    const NamespaceDecl *LastScanned = nullptr;
+    /// The distinct tags, each with the value of NamespaceTagsEpoch at which it
+    /// became part of the union.
+    SmallVector<std::pair<StringRef, unsigned>, 2> Tags;
+  };
+  llvm::DenseMap<const NamespaceDecl *, NamespaceAbiTags> NamespaceTags;
+
+  /// Incremented whenever a reopening adds a tag to an inline namespace whose
+  /// tags were already used for a mangled name.
+  unsigned NamespaceTagsEpoch = 0;
+
+  /// The number of inline namespaces that were asked for their tags. Used to
+  /// detect whether a mangling depends on the tags of an inline namespace.
+  unsigned NumInlineNamespaceTagQueries = 0;
+
+  /// The value of NamespaceTagsEpoch when a function or variable was first
+  /// mangled, see CXXNameMangler::ImplicitAbiTagsScope.
+  llvm::DenseMap<const NamedDecl *, unsigned> ImplicitAbiTagsEpochs;
+
 public:
   explicit ItaniumMangleContextImpl(
       ASTContext &Context, DiagnosticsEngine &Diags,
       DiscriminatorOverrideTy DiscriminatorOverride, bool IsAux = false)
       : ItaniumMangleContext(Context, Diags, IsAux),
         DiscriminatorOverride(DiscriminatorOverride) {}
+
+  /// Appends the union of the abi_tags on all declarations of \p NS to
+  /// \p Tags, leaving out the tags that were added by a reopening after
+  /// NamespaceTagsEpoch had the value \p AsOfEpoch.
+  void addNamespaceAbiTags(const NamespaceDecl *NS, unsigned AsOfEpoch,
+                           SmallVectorImpl<StringRef> &Tags) {
+    // The attribute is only accepted on inline namespaces.
+    if (!NS->isInline())
+      return;
+    ++NumInlineNamespaceTagQueries;
+    // Note that this can deserialize declarations, so do it before taking a
+    // reference into the map.
+    const NamespaceDecl *MostRecent = NS->getMostRecentDecl();
+    NamespaceAbiTags &Entry = NamespaceTags[NS->getFirstDecl()];
+    if (Entry.LastScanned != MostRecent) {
+      // Only look at the declarations added since the last query. If the last
+      // scanned declaration is not found all declarations are visited again,
+      // which is fine because known tags are skipped.
+      bool IsRescan = Entry.LastScanned != nullptr;
+      bool StartedEpoch = false;
+      for (const NamespaceDecl *D = MostRecent; D && D != Entry.LastScanned;
+           D = D->getPreviousDecl()) {
+        for (const auto *AbiTag : D->specific_attrs<AbiTagAttr>()) {
+          for (StringRef Tag : AbiTag->tags()) {
+            if (llvm::is_contained(llvm::make_first_range(Entry.Tags), Tag))
+              continue;
+            // A tag found by a later query was added after the tags of the
+            // namespace were already used.
+            if (IsRescan && !StartedEpoch) {
+              ++NamespaceTagsEpoch;
+              StartedEpoch = true;
+            }
+            Entry.Tags.push_back({Tag, IsRescan ? NamespaceTagsEpoch : 0});
+          }
+        }
+      }
+      Entry.LastScanned = MostRecent;
+    }
+    for (const auto &[Tag, Epoch] : Entry.Tags)
+      if (Epoch <= AsOfEpoch)
+        Tags.push_back(Tag);
+  }
+
+  unsigned getNamespaceTagsEpoch() const { return NamespaceTagsEpoch; }
+
+  unsigned getNumInlineNamespaceTagQueries() const {
+    return NumInlineNamespaceTagQueries;
+  }
+
+  /// Returns the value NamespaceTagsEpoch had when \p D was first mangled, if
+  /// that mangling depended on the tags of an inline namespace.
+  std::optional<unsigned> lookupImplicitAbiTagsEpoch(const NamedDecl *D) const {
+    auto It =
+        ImplicitAbiTagsEpochs.find(cast<NamedDecl>(D->getCanonicalDecl()));
+    if (It == ImplicitAbiTagsEpochs.end())
+      return std::nullopt;
+    return It->second;
+  }
+
+  void recordImplicitAbiTagsEpoch(const NamedDecl *D, unsigned Epoch) {
+    ImplicitAbiTagsEpochs.try_emplace(cast<NamedDecl>(D->getCanonicalDecl()),
+                                      Epoch);
+  }
 
   /// @name Mangler Entry Points
   /// @{
@@ -229,6 +317,11 @@ class CXXNameMangler {
   /// Also it is required to avoid infinite recursion in some cases.
   bool DisableDerivedAbiTags = false;
 
+  /// Only the abi_tags that inline namespaces had when
+  /// ItaniumMangleContextImpl::NamespaceTagsEpoch had this value are used, see
+  /// ImplicitAbiTagsScope.
+  unsigned NamespaceTagsAsOf = ~0U;
+
   /// The "structor" is the top-level declaration being mangled, if
   /// that's not a template specialization; otherwise it's the pattern
   /// for that specialization.
@@ -297,7 +390,8 @@ class CXXNameMangler {
     ~AbiTagState() { pop(); }
 
     void write(raw_ostream &Out, const NamedDecl *ND,
-               ArrayRef<StringRef> AdditionalAbiTags) {
+               ArrayRef<StringRef> AdditionalAbiTags,
+               ItaniumMangleContextImpl &Context, unsigned NamespaceTagsAsOf) {
       ND = cast<NamedDecl>(ND->getCanonicalDecl());
       if (!isa<FunctionDecl>(ND) && !isa<VarDecl>(ND)) {
         assert(
@@ -314,9 +408,7 @@ class CXXNameMangler {
             // GCC has a single entity per namespace and every reopening adds
             // its abi_tags to that entity, so the tags of a namespace are the
             // union of the tags on all of its declarations.
-            for (const NamespaceDecl *Redecl : NS->redecls())
-              for (const auto *AbiTag : Redecl->specific_attrs<AbiTagAttr>())
-                llvm::append_range(UsedAbiTags, AbiTag->tags());
+            Context.addNamespaceAbiTags(NS, NamespaceTagsAsOf, UsedAbiTags);
           }
           // Don't emit abi tags for namespaces.
           return;
@@ -388,6 +480,51 @@ class CXXNameMangler {
   AbiTagState *AbiTags = nullptr;
   AbiTagState AbiTagsRoot;
 
+  /// GCC computes the implicit abi_tags of a function or variable once and
+  /// records them on the declaration. The tags of an inline namespace can grow
+  /// when it is reopened, but every name that embeds the encoding of the
+  /// declaration (e.g. the RTTI of a local class) has to stay the same. So
+  /// remember which tags the namespaces had when the declaration was first
+  /// mangled and only use these while its encoding is mangled. Apart from the
+  /// tags of the namespaces the implicit tags are computed as usual, as they
+  /// also depend on the substitutions that are available.
+  class ImplicitAbiTagsScope {
+    CXXNameMangler &Mangler;
+    /// The declaration to record, if it was not mangled before.
+    const NamedDecl *ToRecord = nullptr;
+    unsigned SavedAsOf;
+    unsigned SavedNumQueries = 0;
+
+  public:
+    ImplicitAbiTagsScope(CXXNameMangler &Mangler, const NamedDecl *D)
+        : Mangler(Mangler), SavedAsOf(Mangler.NamespaceTagsAsOf) {
+      // A mangler that only collects tags uses the state of its creator.
+      if (Mangler.DisableDerivedAbiTags)
+        return;
+      ItaniumMangleContextImpl &Context = Mangler.Context;
+      if (std::optional<unsigned> Epoch =
+              Context.lookupImplicitAbiTagsEpoch(D)) {
+        Mangler.NamespaceTagsAsOf = std::min(SavedAsOf, *Epoch);
+        return;
+      }
+      ToRecord = D;
+      SavedNumQueries = Context.getNumInlineNamespaceTagQueries();
+    }
+
+    ImplicitAbiTagsScope(const ImplicitAbiTagsScope &) = delete;
+    ImplicitAbiTagsScope &operator=(const ImplicitAbiTagsScope &) = delete;
+
+    ~ImplicitAbiTagsScope() {
+      ItaniumMangleContextImpl &Context = Mangler.Context;
+      // Nothing can change later if no inline namespace was involved.
+      if (ToRecord &&
+          SavedNumQueries != Context.getNumInlineNamespaceTagQueries())
+        Context.recordImplicitAbiTagsEpoch(
+            ToRecord, std::min(SavedAsOf, Context.getNamespaceTagsEpoch()));
+      Mangler.NamespaceTagsAsOf = SavedAsOf;
+    }
+  };
+
   llvm::DenseMap<uintptr_t, unsigned> Substitutions;
   llvm::DenseMap<StringRef, unsigned> ModuleSubstitutions;
 
@@ -429,7 +566,8 @@ public:
         NullOut(false), Structor(nullptr), AbiTagsRoot(AbiTags) {}
   CXXNameMangler(CXXNameMangler &Outer, raw_ostream &Out_)
       : Context(Outer.Context), Out(Out_),
-        NormalizeIntegers(Outer.NormalizeIntegers), Structor(Outer.Structor),
+        NormalizeIntegers(Outer.NormalizeIntegers),
+        NamespaceTagsAsOf(Outer.NamespaceTagsAsOf), Structor(Outer.Structor),
         StructorType(Outer.StructorType), SeqID(Outer.SeqID),
         FunctionTypeDepth(Outer.FunctionTypeDepth), AbiTagsRoot(AbiTags),
         Substitutions(Outer.Substitutions),
@@ -825,7 +963,8 @@ void CXXNameMangler::writeAbiTags(const NamedDecl *ND,
   assert(AbiTags && "require AbiTagState");
   AbiTags->write(Out, ND,
                  DisableDerivedAbiTags ? ArrayRef<StringRef>{}
-                                       : AdditionalAbiTags);
+                                       : AdditionalAbiTags,
+                 Context, NamespaceTagsAsOf);
 }
 
 void CXXNameMangler::mangleSourceNameWithAbiTags(
@@ -860,6 +999,9 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
     mangleName(GD);
     return;
   }
+
+  // The tags of inline namespaces are fixed the first time FD is mangled.
+  ImplicitAbiTagsScope ImplicitTagsScope(*this, FD);
 
   AbiTagList ReturnTypeAbiTags = makeFunctionReturnTypeTags(FD);
   if (ReturnTypeAbiTags.empty()) {
@@ -1033,6 +1175,9 @@ static TemplateName asTemplateName(GlobalDecl GD) {
 void CXXNameMangler::mangleName(GlobalDecl GD) {
   const NamedDecl *ND = cast<NamedDecl>(GD.getDecl());
   if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
+    // The tags of inline namespaces are fixed the first time VD is mangled.
+    ImplicitAbiTagsScope ImplicitTagsScope(*this, VD);
+
     // Variables should have implicit tags from its type.
     AbiTagList VariableTypeAbiTags = makeVariableTypeTags(VD);
     if (VariableTypeAbiTags.empty()) {
