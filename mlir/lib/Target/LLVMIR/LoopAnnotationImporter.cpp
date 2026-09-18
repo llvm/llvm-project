@@ -24,7 +24,7 @@ struct LoopMetadataConversion {
       const llvm::MDNode *node, Location loc,
       LoopAnnotationImporter &loopAnnotationImporter,
       llvm::SmallPtrSetImpl<const llvm::MDNode *> &activeNodes,
-      InputKind inputKind = InputKind::LoopID)
+      InputKind inputKind)
       : node(node), loc(loc), loopAnnotationImporter(loopAnnotationImporter),
         ctx(loc->getContext()), activeNodes(activeNodes), inputKind(inputKind) {
   }
@@ -492,7 +492,9 @@ LoopAnnotationImporter::translateLoopAnnotation(const llvm::MDNode *node,
 
   llvm::SmallPtrSet<const llvm::MDNode *, 4> activeNodes;
   LoopAnnotationAttr attr =
-      LoopMetadataConversion(node, loc, *this, activeNodes).convert();
+      LoopMetadataConversion(node, loc, *this, activeNodes,
+                             LoopMetadataConversion::InputKind::LoopID)
+          .convert();
 
   mapLoopMetadata(node, attr);
   return attr;
