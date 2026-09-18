@@ -1158,14 +1158,6 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_numeric_storage_size", {}, DefaultInt},
 };
 
-// Extensions that are not SIMPLE: they have side
-// effects, or their result varies with external state (clock, RNG, file,
-// process/user/group identity). See docs/Extensions.md.
-static const llvm::StringSet<> notSimpleExtensionFunctions{"chdir", "dsecnds",
-    "etime", "fseek", "ftell", "getcwd", "getgid", "getpid", "getuid", "hostnm",
-    "irand", "malloc", "putenv", "rand", "rename", "rtc", "secnds", "second",
-    "system", "time", "timef", "unlink"};
-
 // TODO: Non-standard intrinsic functions
 //  SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
@@ -2900,8 +2892,13 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   } else {
     if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */) {
       attrs.set(characteristics::Procedure::Attr::Pure);
-      // F2023 16.1: standard intrinsic functions are SIMPLE. The extensions in
-      // notSimpleExtensionFunctions are excluded because they are not SIMPLE.
+      // F2023 16.1: standard intrinsic functions are SIMPLE. Extensions that
+      // are not SIMPLE: they have side effects, or their result varies with
+      // external state. See docs/Extensions.md.
+      static const llvm::StringSet<> notSimpleExtensionFunctions{"chdir",
+          "dsecnds", "etime", "fseek", "ftell", "getcwd", "getgid", "getpid",
+          "getuid", "hostnm", "irand", "malloc", "putenv", "rand", "rename",
+          "rtc", "secnds", "second", "system", "time", "timef", "unlink"};
       if (!notSimpleExtensionFunctions.contains(name)) {
         attrs.set(characteristics::Procedure::Attr::Simple);
       }
@@ -3179,6 +3176,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::NullPointer);
   attrs.set(characteristics::Procedure::Attr::Pure);
+  attrs.set(characteristics::Procedure::Attr::Simple);
   arguments.clear();
   return SpecificCall{
       SpecificIntrinsic{"null"s,
