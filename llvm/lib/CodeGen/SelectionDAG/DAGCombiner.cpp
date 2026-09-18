@@ -15627,6 +15627,65 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
+// fold (zext (truncate (extload x))) -> (zext (zextload x)) when the truncate
+// only discards the load's extension bits.
+//
+// At heart this retypes the load: EXTLOAD becomes ZEXTLOAD, keeping the same
+// value type, and the zext of the truncate is then redundant. It is the one
+// extension kind for which that is both needed and allowed:
+//  - ZEXTLOAD already has its extension bits known zero, so the known-bits
+//    (zext (truncate x)) fold above collapses that case and this is never
+//    reached.
+//  - SEXTLOAD has *defined* sign bits, so zeroing them would miscompile.
+//  - EXTLOAD has undefined extension bits, which computeKnownBits cannot
+//    report as zero (they only become zero by performing this rewrite), so
+//    no amount of analysis reaches this case; the node has to change.
+//
+// Defining undefined bits refines every existing user, which is what makes it
+// valid for a load with several users, unlike tryToFoldExtOfExtload, which
+// widens the load itself and so needs a single use, and unlike
+// reduceLoadWidth, which bails out on multiple uses.
+static SDValue tryToFoldZExtOfTruncOfExtLoad(SelectionDAG &DAG,
+                                             DAGCombiner &Combiner,
+                                             const TargetLowering &TLI, EVT VT,
+                                             bool LegalOperations, SDNode *N,
+                                             SDValue N0) {
+  if (VT.isVector())
+    return SDValue();
+
+  auto *Load = dyn_cast<LoadSDNode>(N0.getOperand(0));
+  if (!Load || !ISD::isEXTLoad(Load) || !ISD::isUNINDEXEDLoad(Load))
+    return SDValue();
+
+  EVT MemVT = Load->getMemoryVT();
+  if (!MemVT.bitsLE(N0.getValueType()))
+    return SDValue();
+
+  // Same condition as tryToFoldExtOfExtload above: only a simple load can be
+  // retyped without first proving the result legal. A volatile or atomic load
+  // is not excluded, since the access itself is unchanged and only the
+  // in-register extension differs.
+  if ((LegalOperations || !Load->isSimple()) &&
+      !TLI.isLoadLegal(Load->getValueType(0), MemVT, Load->getAlign(),
+                       Load->getAddressSpace(), ISD::ZEXTLOAD, false))
+    return SDValue();
+
+  SDValue ZExtLoad =
+      DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(Load), Load->getValueType(0),
+                     Load->getChain(), Load->getBasePtr(), MemVT,
+                     Load->getMemOperand());
+  // Replace N before retyping the load. getExtLoad may have returned an
+  // existing zextload of the same address, in which case replacing the load
+  // CSEs the truncate, and N along with it, into pre-existing nodes and
+  // deletes N.
+  SDValue Res = DAG.getZExtOrTrunc(ZExtLoad, SDLoc(N), VT);
+  // The truncate dies with N, and its low bits are the low bits of Res.
+  DAG.transferDbgValues(N0, Res);
+  Combiner.CombineTo(N, Res);
+  Combiner.CombineTo(Load, ZExtLoad, ZExtLoad.getValue(1));
+  return SDValue(N, 0); // Return N so it doesn't get rechecked!
+}
+
 // fold ([s|z]ext (load x)) -> ([s|z]ext (truncate ([s|z]extload x)))
 // Only generate vector extloads when 1) they're legal, and 2) they are
 // deemed desirable by the target. NonNegZExt can be set to true if a zero
@@ -16374,6 +16433,10 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       }
       return SDValue(N, 0); // Return N so it doesn't get rechecked!
     }
+
+    if (SDValue ZExt = tryToFoldZExtOfTruncOfExtLoad(DAG, *this, TLI, VT,
+                                                  LegalOperations, N, N0))
+      return ZExt;
 
     EVT SrcVT = N0.getOperand(0).getValueType();
     EVT MinVT = N0.getValueType();
