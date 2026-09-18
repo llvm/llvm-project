@@ -855,13 +855,14 @@ public:
   uint16_t SectionIdOfExceptionHandler = 0;
   FrameProcedureOptions Flags = FrameProcedureOptions::None;
 
-  FrameProcedureOptions getFlags() const {
-    return Flags & ~FrameProcedureOptions::EncodedPointersMask;
-  }
+  static constexpr FrameProcedureOptions NonFlagsMask{
+      static_cast<uint32_t>(FrameProcedureOptions::EncodedPointersMask) |
+      static_cast<uint32_t>(FrameProcedureOptions::CoroutineKindMask)};
+
+  FrameProcedureOptions getFlags() const { return Flags & ~NonFlagsMask; }
 
   void setFlags(FrameProcedureOptions O) {
-    Flags = (Flags & FrameProcedureOptions::EncodedPointersMask) |
-            (O & ~FrameProcedureOptions::EncodedPointersMask);
+    Flags = (Flags & NonFlagsMask) | (O & ~NonFlagsMask);
   }
 
   void setEncodedLocalFramePtrReg(EncodedFramePtrReg R) {
