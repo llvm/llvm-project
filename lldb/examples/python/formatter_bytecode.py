@@ -139,6 +139,9 @@ define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
 define_selector(0x24, "clone")
+define_selector(0x25, "get_pointee_type")
+define_selector(0x26, "get_byte_size")
+define_selector(0x27, "create_child_at_offset")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -732,6 +735,18 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 new_name = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Clone(new_name))
+            elif sel == sel_get_pointee_type:
+                sbtype = data.pop()
+                data.append(sbtype.GetPointeeType())
+            elif sel == sel_get_byte_size:
+                sbtype = data.pop()
+                data.append(sbtype.GetByteSize())
+            elif sel == sel_create_child_at_offset:
+                sbtype = data.pop()
+                offset = data.pop()
+                name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.CreateChildAtOffset(name, offset, sbtype))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -755,12 +770,15 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 _BUILTINS = {
     "Cast": "@cast",
     "Clone": "@clone",
+    "CreateChildAtOffset": "@create_child_at_offset",
+    "GetByteSize": "@get_byte_size",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
     "GetIndexOfChildWithName": "@get_child_index",
     "GetNonSyntheticValue": "@get_non_synthetic_value",
     "GetNumChildren": "@get_num_children",
     "GetParent": "@get_parent",
+    "GetPointeeType": "@get_pointee_type",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
