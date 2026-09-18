@@ -83,7 +83,7 @@ When linking a binary, you can either manually link in the [XRay Runtime
 Library](#xray-runtime-library) or use `clang` to link it in automatically with the
 `-fxray-instrument` flag. Alternatively, you can statically link-in the XRay
 runtime library from compiler-rt -- those archive files will take the name of
-{title-reference}`libclang_rt.xray-{arch}` where {title-reference}`{arch}` is the mnemonic supported by clang
+`libclang_rt.xray-{arch}` where `{arch}` is the mnemonic supported by clang
 (x86_64, arm7, etc.).
 
 ### LLVM Function Attribute
@@ -294,8 +294,8 @@ supports the following subcommands:
 - `convert`: Converts an XRay log file from one format to another. We can
   convert from binary XRay traces (both basic and FDR mode) to YAML,
   [flame-graph](https://github.com/brendangregg/FlameGraph) friendly text
-  formats, as well as {title-reference}`Chrome Trace Viewer (catapult)
-  <https://github.com/catapult-project/catapult>` formats.
+  formats, as well as [Chrome Trace Viewer (catapult)](https://github.com/catapult-project/catapult)
+  formats.
 - `graph`: Generates a DOT graph of the function call relationships between
   functions found in an XRay trace.
 - `stack`: Reconstructs function call stacks from a timeline of function

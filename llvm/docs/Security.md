@@ -26,7 +26,7 @@ We aim to acknowledge your report within two business days since you first reach
 
 The members of the group represent a wide cross-section of the community, and
 meet the criteria for inclusion below. The list is in the format
-{title-reference}`* ${full_name} (${affiliation}) [${github_username}]`. If a github
+`* ${full_name} (${affiliation}) [${github_username}]`. If a github
 username for an individual isn't available, the brackets will be empty.
 
 - Abhay Kanhere (Apple) [@AbhayKanhere]

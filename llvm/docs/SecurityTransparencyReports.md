@@ -108,52 +108,52 @@ that were received earlier, but were disclosed in 2023.
 
 9 of these were judged to be security issues:
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=36 reports the presence of
-  .git folder in https://llvm.org/.git. Redirect:
-  https://issuetracker.google.com/issues/42410029 archive:
-  https://github.com/llvm/llvm-project/issues/131841
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=36> reports the presence of
+  .git folder in <https://llvm.org/.git>. Redirect:
+  <https://issuetracker.google.com/issues/42410029> archive:
+  <https://github.com/llvm/llvm-project/issues/131841>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=66 reports the presence of a
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=66> reports the presence of a
   GitHub Personal Access token in a DockerHub imaage. Redirect
-  https://issuetracker.google.com/issues/42410060 archive:
-  https://github.com/llvm/llvm-project/issues/131846
+  <https://issuetracker.google.com/issues/42410060> archive:
+  <https://github.com/llvm/llvm-project/issues/131846>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=42 reports a potential gap
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=42> reports a potential gap
   in the Armv8.1-m BTI protection, involving a combination of large switch statements
-  and __builtin_unreachable() in the default case. Redirect:
-  https://issuetracker.google.com/issues/42410035 archive:
-  https://github.com/llvm/llvm-project/issues/131848
+  and `__builtin_unreachable()` in the default case. Redirect:
+  <https://issuetracker.google.com/issues/42410035> archive:
+  <https://github.com/llvm/llvm-project/issues/131848>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=43 reports a dependency
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=43> reports a dependency
   on an old version of xml2js with a CVE filed against it. Redirect:
-  https://issuetracker.google.com/issues/42410036 archive:
-  https://github.com/llvm/llvm-project/issues/131849
+  <https://issuetracker.google.com/issues/42410036> archive:
+  <https://github.com/llvm/llvm-project/issues/131849>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=45 reports a number of
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=45> reports a number of
   dependencies that have had vulnerabilities reported against them. Redirect:
-  https://issuetracker.google.com/issues/42410038 archive:
-  https://github.com/llvm/llvm-project/issues/131851
+  <https://issuetracker.google.com/issues/42410038> archive:
+  <https://github.com/llvm/llvm-project/issues/131851>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=46 is related to
-  issue 43. Redirect https://issuetracker.google.com/issues/42410039 archive:
-  https://github.com/llvm/llvm-project/issues/131852
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=46> is related to
+  issue 43. Redirect <https://issuetracker.google.com/issues/42410039> archive:
+  <https://github.com/llvm/llvm-project/issues/131852>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=48 reports a buffer overflow in
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=48> reports a buffer overflow in
   std::format from -fexperimental-library. Redirect:
-  https://issuetracker.google.com/issues/42410041 archive:
-  https://github.com/llvm/llvm-project/issues/131856
+  <https://issuetracker.google.com/issues/42410041> archive:
+  <https://github.com/llvm/llvm-project/issues/131856>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=54 reports a memory leak in
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=54> reports a memory leak in
   basic_string move assignment when built with libc++ versions <=6.0 and run against
   newer libc++ shared/dylibs. Redirect:
-  https://issuetracker.google.com/issues/42410047 archive:
-  https://github.com/llvm/llvm-project/issues/131857
+  <https://issuetracker.google.com/issues/42410047> archive:
+  <https://github.com/llvm/llvm-project/issues/131857>
 
-- https://bugs.chromium.org/p/llvm/issues/detail?id=56 reports an out
+- <https://bugs.chromium.org/p/llvm/issues/detail?id=56> reports an out
   of bounds buffer store introduced by LLVM backends, that regressed
   due to a procedural oversight. Redirect
-  https://issuetracker.google.com/issues/42410049 archive:
-  https://github.com/llvm/llvm-project/issues/131858
+  <https://issuetracker.google.com/issues/42410049> archive:
+  <https://github.com/llvm/llvm-project/issues/131858>
 
 No dedicated LLVM releases were made for any of the above issues.
 

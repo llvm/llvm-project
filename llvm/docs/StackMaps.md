@@ -44,10 +44,10 @@ releases is not guaranteed.
 
 The stack map functionality described in this document is separate
 from the functionality described in
-{ref}`stack-map`. *GCFunctionMetadata* provides the location of
-pointers into a collected heap captured by the *GCRoot* intrinsic,
+{ref}`stack-map`. `GCFunctionMetadata` provides the location of
+pointers into a collected heap captured by the `GCRoot` intrinsic,
 which can also be considered a "stack map". Unlike the stack maps
-defined above, the *GCFunctionMetadata* stack map interface does not
+defined above, the `GCFunctionMetadata` stack map interface does not
 provide a way to associate live register values of arbitrary type with
 an instruction address, nor does it specify a format for the resulting
 stack map. The stack maps described here could potentially provide

@@ -295,7 +295,7 @@ wide range of records conveniently and compactly.
 : The keyword `code` is an alias for `string` which may be used to
   indicate string values that are code.
 
-`bits<`*n*`>`
+`bits<n>`
 
 : The `bits` type is a fixed-sized integer of arbitrary length *n* that
   is treated as separate bits. These bits can be accessed individually.
@@ -426,7 +426,7 @@ A question mark represents an uninitialized value.
 ```
 
 This value represents a sequence of bits, which can be used to initialize a
-`bits<`*n*`>` field (note the braces). When doing so, the values
+`bits<n>` field (note the braces). When doing so, the values
 must represent a total of *n* bits.
 
 ```{eval-rst}
@@ -551,7 +551,7 @@ arguments, producing a value for that bang operator. The `!cond` operator
 takes a list of pairs of arguments separated by colons. See [Appendix A:
 Bang Operators](#appendix-a-bang-operators) for a description of each bang operator.
 
-The *Type* is only accepted for certain bang operators, and must not be
+The `Type` is only accepted for certain bang operators, and must not be
 `code`.
 
 ### Suffixed values
@@ -590,8 +590,8 @@ primary value. Here are the possible suffixes for some primary *value*.
   *value*`[i,m...n,j,ls]`
 
   : Each element may be an expression (variables, bang operators).
-    The type of *m* and *n* should be *int*.
-    The type of *i*, *j*, and *ls* should be either *int* or *list\<int>*.
+    The type of `m` and `n` should be `int`.
+    The type of `i`, `j`, and `ls` should be either `int` or `list<int>`.
 
 *value*`.`*field*
 
@@ -1346,7 +1346,7 @@ The identifier on the left of the `=` is defined to be a type name
 whose actual type is given by the type expression on the right of the `=`.
 
 Currently, only primitive types and type aliases are supported to be the source
-type and *deftype* statements can only appear at the top level.
+type and `deftype` statements can only appear at the top level.
 
 ### `defvar` --- define a variable
 
@@ -1417,7 +1417,7 @@ A `dump` statement prints the input string to standard error
 output. It is intended for debugging purposes.
 
 - At top level, the message is printed immediately.
-- Within a record/class/multiclass, *dump* gets evaluated at each
+- Within a record/class/multiclass, `dump` gets evaluated at each
   instantiation point of the containing record.
 
 ```{eval-rst}
@@ -1426,7 +1426,7 @@ output. It is intended for debugging purposes.
 ```
 
 The {token}`Value` is an arbitrary string expression.
-For example, it can be used in combination with *!repr* to investigate
+For example, it can be used in combination with `!repr` to investigate
 the values passed to a multiclass:
 
 ```text
@@ -1522,7 +1522,9 @@ built.
 
 The syntax of a `dag` instance is:
 
-> `(` *operator* *argument1*`,` *argument2*`,` ... `)`
+```text
+(operator argument1, argument2, ...)
+```
 
 The operator must be present and must be a record. There can be zero or more
 arguments, separated by commas. The operator and arguments can have three
@@ -2070,10 +2072,10 @@ and non-0 as true.
   For example:
 
   - `!range(4)` is equivalent to `!range(0, 4, 1)` and the result is
-    *[0, 1, 2, 3]*.
+    `[0, 1, 2, 3]`.
   - `!range(1, 4)` is equivalent to `!range(1, 4, 1)` and the result is
-    *[1, 2, 3]*.
-  - The result of `!range(0, 4, 2)` is *[0, 2]*.
+    `[1, 2, 3]`.
+  - The result of `!range(0, 4, 2)` is `[0, 2]`.
   - The results of `!range(0, 4, -1)` and `!range(4, 0, 1)` are empty.
 
 `!range(`*list*`)`

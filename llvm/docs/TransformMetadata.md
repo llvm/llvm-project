@@ -390,7 +390,7 @@ if (rtc) {
 ```
 
 The runtime condition (`rtc`) checks that the array `A` and the
-element {title-reference}`B[0]` do not alias.
+element `B[0]` do not alias.
 
 Currently, this transformation does not support followup-attributes.
 
