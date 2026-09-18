@@ -410,6 +410,63 @@ static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
                           IndexC->getValue().zextOrTrunc(64));
 }
 
+/// Fold a variable extract from a vector of pointers that all point into the
+/// same object at a constant stride
+static Value *
+foldExtractOfStridedPointerVector(ExtractElementInst &EI,
+                                  InstCombiner::BuilderTy &Builder,
+                                  const DataLayout &DL) {
+  auto *VecTy = dyn_cast<FixedVectorType>(EI.getVectorOperandType());
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (NumElts < 2)
+    return nullptr;
+
+  // Every lane must resolve to the same base pointer plus a constant byte
+  // offset. findScalarElement returns poison for a lane the vector never
+  // defines; that poison is its own base, so a vector mixing defined and
+  // undefined lanes fails the base comparison below.
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(VecTy->getElementType());
+  Value *Base = nullptr;
+  SmallVector<APInt> Offsets;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Value *Elt = findScalarElement(EI.getVectorOperand(), I);
+    if (!Elt)
+      return nullptr;
+    APInt Offset(IdxWidth, 0);
+    Value *EltBase = Elt->stripAndAccumulateConstantOffsets(
+        DL, Offset, /*AllowNonInbounds=*/true);
+    if (I == 0)
+      Base = EltBase;
+    else if (Base != EltBase)
+      return nullptr;
+    Offsets.push_back(Offset);
+  }
+
+  // Stripping walks through addrspacecasts, so the base may live in a
+  // different address space than the pointer the extract produces.
+  if (Base->getType() != VecTy->getElementType())
+    return nullptr;
+
+  // The offsets must form an arithmetic sequence.
+  APInt Stride = Offsets[1] - Offsets[0];
+  for (unsigned I = 1; I != NumElts; ++I)
+    if (Offsets[I] - Offsets[0] != Stride * I)
+      return nullptr;
+
+  // Index off the common base, not off element 0: an element may be poison in
+  // a lane the extract never selects. The base is an operand of every element
+  // and the new GEP has no flags, so the result is never more poisonous.
+  Type *IdxTy = DL.getIndexType(VecTy->getElementType());
+  Value *Idx = Builder.CreateZExtOrTrunc(EI.getIndexOperand(), IdxTy);
+  Value *ByteOff =
+      Builder.CreateAdd(Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride)),
+                        ConstantInt::get(IdxTy, Offsets[0]));
+  return Builder.CreateGEP(Builder.getInt8Ty(), Base, ByteOff);
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
@@ -430,6 +487,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         isa<Constant>(EI.getIndexOperand()))
       if (Instruction *R = FoldOpIntoSelect(EI, SI))
         return R;
+
+  // Fold a variable index into a table of pointers into one object into
+  // address arithmetic
+  if (!isa<ConstantInt>(Index))
+    if (Value *V = foldExtractOfStridedPointerVector(EI, Builder, DL))
+      return replaceInstUsesWith(EI, V);
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
