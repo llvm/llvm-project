@@ -635,6 +635,10 @@ TEST(UniquingSetTest, Basic) {
   KeyedPair B(2, 1);
   Set.insert(&B, Token);
 
+  KeyedPair ADup(1, 2);
+  EXPECT_EQ(&A, Set.getOrInsert(&ADup));
+  EXPECT_EQ(2u, Set.size());
+
   std::vector<KeyedPair *> Visited;
   for (KeyedPair &N : Set)
     Visited.push_back(&N);
@@ -647,10 +651,19 @@ TEST(UniquingSetTest, Basic) {
 
   EXPECT_TRUE(Set.erase(&A));
   EXPECT_FALSE(Set.erase(&A));
-  KeyedPair NeverInserted(3, 4);
-  EXPECT_FALSE(Set.erase(&NeverInserted));
+  KeyedPair C(3, 4);
+  EXPECT_FALSE(Set.erase(&C));
   EXPECT_EQ(1u, Set.size());
   EXPECT_EQ(nullptr, Set.lookup({1, 2}, Token));
+
+  // getOrInsert inserts an absent node and hands back the one in the set.
+  EXPECT_EQ(&C, Set.getOrInsert(&C));
+  EXPECT_EQ(2u, Set.size());
+  EXPECT_EQ(&C, Set.lookup({3, 4}, Token));
+  EXPECT_FALSE(bool(Token));
+  KeyedPair CDup(3, 4);
+  EXPECT_EQ(&C, Set.getOrInsert(&CDup));
+  EXPECT_EQ(2u, Set.size());
 }
 
 // Every key hashes to NotAHash, which must be remapped so that erase() does not
@@ -708,17 +721,21 @@ struct VectorNode : FoldingSetNode {
   explicit VectorNode(ArrayRef<unsigned> E) : Elts(E) {}
 };
 
+unsigned ShapeMismatches;
+
 struct VectorNodeInfo {
   using KeyTy = ArrayRef<unsigned>;
   static KeyTy getKey(const VectorNode &N) { return N.Elts; }
+  // Hashing only the first element makes keys of differing length collide.
   static unsigned getHashValue(const KeyTy &Key) {
-    unsigned H = 0;
-    for (unsigned E : Key)
-      H = detail::combineHashValue(H, DenseMapInfo<unsigned>::getHashValue(E));
-    return H;
+    return Key.empty() ? 1 : DenseMapInfo<unsigned>::getHashValue(Key[0]);
   }
   // Compare against the node's storage rather than building a key from it.
   static bool isEqual(const KeyTy &Key, const VectorNode &N) {
+    if (Key.size() != N.Elts.size()) {
+      ++ShapeMismatches;
+      return false;
+    }
     return Key == KeyTy(N.Elts);
   }
 };
@@ -746,6 +763,19 @@ TEST(UniquingSetTest, StandaloneInfoAliasingKeyAcrossGrowth) {
   SmallVector<unsigned, 4> Again = {1, 2, 3};
   FoldingSetInsertToken Unused;
   EXPECT_EQ(&Late, Set.lookup(Again, Unused));
+
+  // {1, 2} and {1, 2, 3} are the only keys starting with 1, so both collide
+  // with this one and isEqual must reject both on length alone.
+  SmallVector<unsigned, 4> Longer = {1, 2, 3, 4};
+  ShapeMismatches = 0;
+  EXPECT_EQ(nullptr, Set.lookup(Longer, Unused));
+  EXPECT_EQ(2u, ShapeMismatches);
+
+  // getOrInsert derives the key through Info::getKey, which lookup never calls.
+  VectorNode Dup(Lookup);
+  EXPECT_EQ(&Late, Set.getOrInsert(&Dup));
+  EXPECT_EQ(201u, Set.size());
+
   EXPECT_TRUE(Set.erase(&Late));
   EXPECT_EQ(nullptr, Set.lookup(Again, Unused));
 }

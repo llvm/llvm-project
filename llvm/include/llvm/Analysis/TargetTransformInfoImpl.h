@@ -205,8 +205,6 @@ public:
 
   virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
 
-  virtual bool isSingleThreaded() const { return false; }
-
   virtual std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const {
     return std::make_pair(nullptr, -1);
@@ -651,7 +649,6 @@ public:
 
   virtual unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
-  virtual std::optional<unsigned> getMaxVScale() const { return std::nullopt; }
   virtual std::optional<unsigned> getVScaleForTuning() const {
     return std::nullopt;
   }

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c23 %s
 // RUN: %clang_cc1 -verify=pedantic -std=c11 -pedantic %s
-// RUN: %clang_cc1 -verify=compat -std=c23 -Wpre-c23-compat %s
+// RUN: %clang_cc1 -verify=compat -std=c23 -Wpre-c23-compat-pedantic %s
 
 // expected-no-diagnostics
 

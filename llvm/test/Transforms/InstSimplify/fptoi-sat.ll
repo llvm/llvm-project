@@ -141,7 +141,7 @@ define i32 @fptosi_f64_to_i32_nan1() {
 ; CHECK-LABEL: @fptosi_f64_to_i32_nan1(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptosi.sat.i32.f64(double 0x7ff8000000000000)
+  %r = call i32 @llvm.fptosi.sat.i32.f64(double +qnan)
   ret i32 %r
 }
 
@@ -157,7 +157,7 @@ define i32 @fptosi_f64_to_i32_nan3() {
 ; CHECK-LABEL: @fptosi_f64_to_i32_nan3(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptosi.sat.i32.f64(double 0xfff8000000000000)
+  %r = call i32 @llvm.fptosi.sat.i32.f64(double -qnan)
   ret i32 %r
 }
 
@@ -283,7 +283,7 @@ define i32 @fptoui_f64_to_i32_nan1() {
 ; CHECK-LABEL: @fptoui_f64_to_i32_nan1(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptoui.sat.i32.f64(double 0x7ff8000000000000)
+  %r = call i32 @llvm.fptoui.sat.i32.f64(double +qnan)
   ret i32 %r
 }
 
@@ -299,7 +299,7 @@ define i32 @fptoui_f64_to_i32_nan3() {
 ; CHECK-LABEL: @fptoui_f64_to_i32_nan3(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptoui.sat.i32.f64(double 0xfff8000000000000)
+  %r = call i32 @llvm.fptoui.sat.i32.f64(double -qnan)
   ret i32 %r
 }
 
@@ -441,7 +441,7 @@ define i32 @fptosi_f32_to_i32_nan1() {
 ; CHECK-LABEL: @fptosi_f32_to_i32_nan1(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptosi.sat.i32.f32(float 0x7ff8000000000000)
+  %r = call i32 @llvm.fptosi.sat.i32.f32(float +qnan)
   ret i32 %r
 }
 
@@ -457,7 +457,7 @@ define i32 @fptosi_f32_to_i32_nan3() {
 ; CHECK-LABEL: @fptosi_f32_to_i32_nan3(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptosi.sat.i32.f32(float 0xfff8000000000000)
+  %r = call i32 @llvm.fptosi.sat.i32.f32(float -qnan)
   ret i32 %r
 }
 
@@ -575,7 +575,7 @@ define i32 @fptoui_f32_to_i32_nan1() {
 ; CHECK-LABEL: @fptoui_f32_to_i32_nan1(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptoui.sat.i32.f32(float 0x7ff8000000000000)
+  %r = call i32 @llvm.fptoui.sat.i32.f32(float +qnan)
   ret i32 %r
 }
 
@@ -591,7 +591,7 @@ define i32 @fptoui_f32_to_i32_nan3() {
 ; CHECK-LABEL: @fptoui_f32_to_i32_nan3(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %r = call i32 @llvm.fptoui.sat.i32.f32(float 0xfff8000000000000)
+  %r = call i32 @llvm.fptoui.sat.i32.f32(float -qnan)
   ret i32 %r
 }
 

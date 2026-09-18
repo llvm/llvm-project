@@ -614,8 +614,6 @@ public:
 
   LLVM_ABI unsigned getAssumedAddrSpace(const Value *V) const;
 
-  LLVM_ABI bool isSingleThreaded() const;
-
   LLVM_ABI std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const;
 
@@ -1366,10 +1364,6 @@ public:
   /// \return The width of the smallest vector register type.
   LLVM_ABI unsigned getMinVectorRegisterBitWidth() const;
 
-  /// \return The maximum value of vscale if the target specifies an
-  ///  architectural maximum vector length, and std::nullopt otherwise.
-  LLVM_ABI std::optional<unsigned> getMaxVScale() const;
-
   /// \return the value of vscale to tune the cost model for.
   LLVM_ABI std::optional<unsigned> getVScaleForTuning() const;
 
@@ -1757,9 +1751,9 @@ public:
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind) const;
 
-  LLVM_ABI InstructionCost getMinMaxReductionCost(
-      Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF = FastMathFlags(),
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  LLVM_ABI InstructionCost
+  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+                         TTI::TargetCostKind CostKind) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of an Add/Sub reduction with multiply and

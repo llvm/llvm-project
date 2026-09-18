@@ -55,6 +55,7 @@
 ; CHECK-NEXT:   DXIL Post Optimization Validation
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
+; CHECK-NEXT:   DXIL Debug Info
 
 ; CHECK-ASM-NEXT: DXIL Pretty Printer
 
