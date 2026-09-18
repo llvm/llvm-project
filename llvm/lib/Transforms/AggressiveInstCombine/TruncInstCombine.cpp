@@ -176,10 +176,7 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
           Worklist.push_back(Op);
       break;
     }
-    default:
-      // TODO: Can handle more cases here:
-      // 1. sdiv, srem
-      // ...
+    case Instruction::Call: {
       if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::umin:
@@ -195,6 +192,13 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       } else {
         return false;
       }
+      break;
+    }
+    default:
+      // TODO: Can handle more cases here:
+      // 1. sdiv, srem
+      // ...
+      return false;
     }
   }
   return true;
