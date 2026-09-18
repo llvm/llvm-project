@@ -678,7 +678,7 @@ public:
             lv.isVolatileQualified(), /*fetch_first=*/true);
         mlir::Value oldVal = rmw->getResult(0);
         // Prefix returns new value; postfix returns old value.
-        return isPre ? emitIncOrDec(e, oldVal) : oldVal;
+        return isPre ? emitIntIncOrDec(e, oldVal) : oldVal;
       }
 
       // Special case for atomic increment/decrement on floats.
