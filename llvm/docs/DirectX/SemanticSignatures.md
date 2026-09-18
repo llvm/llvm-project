@@ -190,8 +190,9 @@ constraints are satisfied:
 - When native 16-bit types are enabled, every element in a row must have the
   same component width. Without native 16-bit types, min-precision values
   occupy 32-bit components.
-- Components are ordered from arbitrary values, to system values, to system
-  generated values.
+- Within each row, elements are ordered by category: arbitrary values first,
+  followed by system values, and then system-generated values. For example, a
+  system value can never be packed to the left of an arbitrary value.
 - A system value or system generated value cannot be placed in a dynamically
   indexed row. A dynamically indexed row is a row within the range covered by
   a multi-row element, where the row is selected using a dynamic index.
