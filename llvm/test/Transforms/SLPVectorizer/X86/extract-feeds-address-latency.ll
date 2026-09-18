@@ -35,22 +35,24 @@ define void @circular_index_update(ptr noalias %state, ptr noalias %seed, i32 %s
 ; AVX512-LABEL: @circular_index_update(
 ; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    [[I_PTR:%.*]] = getelementptr inbounds i32, ptr [[STATE:%.*]], i64 0
+; AVX512-NEXT:    [[J_PTR:%.*]] = getelementptr inbounds i32, ptr [[STATE]], i64 1
+; AVX512-NEXT:    [[I1:%.*]] = load i32, ptr [[I_PTR]], align 4
+; AVX512-NEXT:    [[J:%.*]] = load i32, ptr [[J_PTR]], align 4
 ; AVX512-NEXT:    [[I_MINUS_1:%.*]] = add i32 [[I:%.*]], -1
-; AVX512-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[I_PTR]], align 4
-; AVX512-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[TMP0]], zeroinitializer
-; AVX512-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP0]], splat (i32 -1)
-; AVX512-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[I_MINUS_1]], i64 0
-; AVX512-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
-; AVX512-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[TMP4]], <2 x i32> [[TMP2]]
-; AVX512-NEXT:    [[I_NEXT:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
+; AVX512-NEXT:    [[I_IS_ZERO:%.*]] = icmp eq i32 [[I1]], 0
+; AVX512-NEXT:    [[I_MINUS_2:%.*]] = add i32 [[I1]], -1
+; AVX512-NEXT:    [[I_NEXT:%.*]] = select i1 [[I_IS_ZERO]], i32 [[I_MINUS_1]], i32 [[I_MINUS_2]]
 ; AVX512-NEXT:    [[I_NEXT_Z:%.*]] = zext i32 [[I_NEXT]] to i64
 ; AVX512-NEXT:    [[SEED_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[SEED:%.*]], i64 [[I_NEXT_Z]]
 ; AVX512-NEXT:    [[SEED_I:%.*]] = load i32, ptr [[SEED_I_PTR]], align 4
-; AVX512-NEXT:    [[J_NEXT:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
+; AVX512-NEXT:    store i32 [[I_NEXT]], ptr [[I_PTR]], align 4
+; AVX512-NEXT:    [[J_IS_ZERO:%.*]] = icmp eq i32 [[J]], 0
+; AVX512-NEXT:    [[J_MINUS_1:%.*]] = add i32 [[J]], -1
+; AVX512-NEXT:    [[J_NEXT:%.*]] = select i1 [[J_IS_ZERO]], i32 [[I_MINUS_1]], i32 [[J_MINUS_1]]
 ; AVX512-NEXT:    [[J_NEXT_Z:%.*]] = zext i32 [[J_NEXT]] to i64
 ; AVX512-NEXT:    [[SEED_J_PTR:%.*]] = getelementptr inbounds i32, ptr [[SEED]], i64 [[J_NEXT_Z]]
 ; AVX512-NEXT:    [[SEED_J:%.*]] = load i32, ptr [[SEED_J_PTR]], align 4
-; AVX512-NEXT:    store <2 x i32> [[TMP5]], ptr [[I_PTR]], align 4
+; AVX512-NEXT:    store i32 [[J_NEXT]], ptr [[J_PTR]], align 4
 ; AVX512-NEXT:    [[DIFF:%.*]] = sub i32 [[SEED_I]], [[SEED_J]]
 ; AVX512-NEXT:    store i32 [[DIFF]], ptr [[SEED_I_PTR]], align 4
 ; AVX512-NEXT:    ret void
