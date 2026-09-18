@@ -20,3 +20,7 @@ _Atomic(struct ErrorS) error2; // expected-error {{_Atomic cannot be applied to 
 _Atomic(int[10]) error3; // expected-error {{_Atomic cannot be applied to array type}}
 _Atomic(const int) error4; // expected-error {{_Atomic cannot be applied to qualified type}}
 _Atomic(_Atomic(int)) error5; // expected-error {{_Atomic cannot be applied to atomic type}}
+
+void test_cast_to_atomic(void) {
+  _Static_assert(_Generic((_Atomic int)12, _Atomic int: 1, int: 0) == 0, "cast to atomic drops _Atomic");
+}
