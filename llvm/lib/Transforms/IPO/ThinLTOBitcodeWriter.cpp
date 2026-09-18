@@ -414,13 +414,15 @@ void splitAndWriteThinLTOBitcode(
   promoteInternals(*MergedM, M, ModuleId, {});
   promoteInternals(M, *MergedM, ModuleId, CfiFunctions);
 
+  // FIXME: Try to re-use PSI from the original module here.
+  ProfileSummaryInfo PSI(M);
+
   lowertypetests::createCfiMetadata(*MergedM, M, CfiFunctions.getArrayRef(),
-                                    BFIGetter);
+                                    PSI, BFIGetter);
 
   simplifyExternals(*MergedM);
 
-  // FIXME: Try to re-use BSI and PFI from the original module here.
-  ProfileSummaryInfo PSI(M);
+  // FIXME: Try to re-use BSI from the original module here.
   ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, &PSI);
 
   // Mark the merged module as requiring full LTO. We still want an index for

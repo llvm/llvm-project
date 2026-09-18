@@ -31,6 +31,10 @@ void lookupAndApply(unique_function<void(Error)> OnApplied, LookupKind K,
 
   auto &ES = SearchOrder.front().first->getExecutionSession();
 
+  // Build one Mangler for the whole group, so name-mangling prepare functions
+  // don't each construct their own.
+  Mangler Mangle(ES.getTargetTriple());
+
   // Collect the symbols to look up. Each prepare function hands back the
   // applicator that will act on the result; the prepare functions themselves
   // are not needed beyond this point.
@@ -38,7 +42,7 @@ void lookupAndApply(unique_function<void(Error)> OnApplied, LookupKind K,
   std::vector<LookupApplyFn> Applies;
   Applies.reserve(PrepareFns.size());
   for (const auto &PF : PrepareFns)
-    Applies.push_back(PF(Symbols, ES));
+    Applies.push_back(PF(Symbols, ES, Mangle));
 
   // PrepareFns are independent, so two of them may legitimately ask for the
   // same symbol. ExecutionSession::lookup requires a duplicate-free set, and
