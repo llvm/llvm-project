@@ -553,8 +553,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();
-    assert(!elemTy->isConstantMatrixType() && "not implemented");
-
     mlir::Type pointeeType = convertType(elemTy);
 
     resultType =
@@ -699,6 +697,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
+  if (astContext.getLangOpts().HLSL && qualType->isConstantMatrixType()) {
+    cgm.errorNYI("convertTypeForMem: HLSL & ConstantMatrixType");
+    return {};
+  }
+
   mlir::Type convertedType = convertType(qualType);
 
   assert(!forBitField && "Bit fields NYI");
