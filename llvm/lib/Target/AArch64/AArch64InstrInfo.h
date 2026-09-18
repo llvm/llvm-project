@@ -52,6 +52,7 @@ enum AArch64MachineCombinerPattern : unsigned {
   MULSUBX_OP2,
   MULADDXI_OP1,
   MULSUBXI_OP1,
+  MULADDXX,
   // NEON integers vectors
   MULADDv8i8_OP1,
   MULADDv8i8_OP2,

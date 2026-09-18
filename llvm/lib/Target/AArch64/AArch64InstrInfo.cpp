@@ -7531,6 +7531,7 @@ static bool isCombineInstrCandidate64(unsigned Opc) {
   switch (Opc) {
   case AArch64::ADDXrr:
   case AArch64::ADDXri:
+  case AArch64::ADDXrx:
   case AArch64::SUBXrr:
   case AArch64::ADDSXrr:
   case AArch64::ADDSXri:
@@ -7776,6 +7777,24 @@ static bool getMaddPatterns(MachineInstr &Root,
     }
   };
 
+  auto setShfExtFound = [&](int Opcode, unsigned ZeroReg, unsigned Pattern) {
+    int64_t ExtImm = Root.getOperand(3).getImm();
+    if (AArch64_AM::getArithShiftValue(ExtImm) != 0 ||
+        AArch64_AM::getArithExtendType(ExtImm) != AArch64_AM::SXTW ||
+        !canCombineWithMUL(MBB, Root.getOperand(1), Opcode, ZeroReg) ||
+        !canCombine(MBB, Root.getOperand(2), AArch64::SBFMWri))
+      return;
+
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    MachineInstr *SBFM = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
+    // Bail out if imms < immr.
+    if (SBFM->getOperand(3).getImm() < SBFM->getOperand(2).getImm())
+      return;
+
+    Patterns.push_back(Pattern);
+    Found = true;
+  };
+
   auto setVFound = [&](int Opcode, int Operand, unsigned Pattern) {
     if (canCombine(MBB, Root.getOperand(Operand), Opcode)) {
       Patterns.push_back(Pattern);
@@ -7817,6 +7836,9 @@ static bool getMaddPatterns(MachineInstr &Root,
     break;
   case AArch64::SUBXri:
     setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBXI_OP1);
+    break;
+  case AArch64::ADDXrx:
+    setShfExtFound(AArch64::MADDXrrr, AArch64::XZR, MCP::MULADDXX);
     break;
   case AArch64::ADDv8i8:
     setVFound(AArch64::MULv8i8, 1, MCP::MULADDv8i8_OP1);
@@ -8826,6 +8848,80 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   return MUL;
 }
 
+/// MUL I=A,B,0
+/// SBFMW J=Wn,C,D
+/// ADDXrx R,I,J
+/// ==>
+/// SBFMX J=Xn,C,D
+/// MADD R,A,B,J
+static void genMaddSbfmx(MachineFunction &MF, MachineRegisterInfo &MRI,
+                         const TargetInstrInfo *TII, MachineInstr &Root,
+                         SmallVectorImpl<MachineInstr *> &InsInstrs,
+                         SmallVectorImpl<MachineInstr *> &DelInstrs,
+                         unsigned MaddOpc,
+                         DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  const TargetRegisterClass *RC = &AArch64::GPR64RegClass;
+  const TargetRegisterClass *RC32 = &AArch64::GPR32RegClass;
+  MachineInstr *MUL = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  Register ResultReg = Root.getOperand(0).getReg();
+  Register SrcReg0 = MUL->getOperand(1).getReg();
+  bool Src0IsKill = MUL->getOperand(1).isKill();
+  Register SrcReg1 = MUL->getOperand(2).getReg();
+  bool Src1IsKill = MUL->getOperand(2).isKill();
+  MachineInstr *MISBFMW = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
+  Register NarrowReg = MISBFMW->getOperand(1).getReg();
+  bool NarrowIsKill = MISBFMW->getOperand(1).isKill();
+
+  if (ResultReg.isVirtual())
+    MRI.constrainRegClass(ResultReg, RC);
+  if (SrcReg0.isVirtual())
+    MRI.constrainRegClass(SrcReg0, RC);
+  if (SrcReg1.isVirtual())
+    MRI.constrainRegClass(SrcReg1, RC);
+  if (NarrowReg.isVirtual())
+    MRI.constrainRegClass(NarrowReg, RC32);
+
+  Register UndefReg = MRI.createVirtualRegister(RC);
+  MachineInstrBuilder MIB1 = BuildMI(
+      MF, MIMetadata(*MISBFMW), TII->get(TargetOpcode::IMPLICIT_DEF), UndefReg);
+  InstrIdxForVirtReg.insert(std::make_pair(UndefReg, InsInstrs.size()));
+  InsInstrs.push_back(MIB1);
+
+  Register WideReg = MRI.createVirtualRegister(RC);
+  MachineInstrBuilder MIB2 =
+      BuildMI(MF, MIMetadata(*MISBFMW), TII->get(TargetOpcode::INSERT_SUBREG),
+              WideReg)
+          .addReg(UndefReg, getKillRegState(true))
+          .addReg(NarrowReg, getKillRegState(NarrowIsKill))
+          .addImm(AArch64::sub_32);
+  InstrIdxForVirtReg.insert(std::make_pair(WideReg, InsInstrs.size()));
+  InsInstrs.push_back(MIB2);
+
+  Register ExtReg = MRI.createVirtualRegister(RC);
+  MachineInstrBuilder MIB3 =
+      BuildMI(MF, MIMetadata(*MISBFMW), TII->get(AArch64::SBFMXri), ExtReg)
+          .addReg(WideReg, getKillRegState(true))
+          .addImm(MISBFMW->getOperand(2).getImm())
+          .addImm(MISBFMW->getOperand(3).getImm());
+  InstrIdxForVirtReg.insert(std::make_pair(ExtReg, InsInstrs.size()));
+  InsInstrs.push_back(MIB3);
+
+  uint32_t Flags = Root.getFlags() & MUL->getFlags() &
+                   (MachineInstr::NoSWrap | MachineInstr::NoUWrap);
+
+  MachineInstrBuilder MIB4 =
+      BuildMI(MF, MIMetadata(Root), TII->get(MaddOpc), ResultReg)
+          .addReg(SrcReg0, getKillRegState(Src0IsKill))
+          .addReg(SrcReg1, getKillRegState(Src1IsKill))
+          .addReg(ExtReg, getKillRegState(true))
+          .setMIFlags(Flags);
+
+  InsInstrs.push_back(MIB4);
+  DelInstrs.push_back(MISBFMW);
+  DelInstrs.push_back(MUL);
+  DelInstrs.push_back(&Root);
+}
+
 static MachineInstr *
 genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
                const TargetInstrInfo *TII, MachineInstr &Root,
@@ -9303,6 +9399,11 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
+  case AArch64MachineCombinerPattern::MULADDXX:
+    Opc = AArch64::MADDXrrr;
+    genMaddSbfmx(MF, MRI, TII, Root, InsInstrs, DelInstrs, Opc,
+                 InstrIdxForVirtReg);
+    return;
   case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
