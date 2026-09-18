@@ -1,20 +1,25 @@
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck %s
 
-; TODO: Check that cfi.functions metadata encodes hotness.
+; Check that cfi.functions metadata encodes hotness in bits 2-3 of
+; the linkage operand:
+; - Hot functions (Attribute::Hot or PSI.isFunctionHotInCallGraph) -> Hot (3)
+; - Cold functions (Attribute::Cold or PSI.isFunctionColdInCallGraph) -> Cold (1)
+; - Normal functions -> Other (2)
+; - Unprofiled functions or declarations -> Unknown (0)
 
 ; CHECK: !"f_nocount", i8 0,
-; CHECK: !"f_entry_count", i8 0,
-; CHECK: !"f_cfg_hot", i8 0,
-; CHECK: !"f_zero", i8 0,
-; CHECK: !"f_one", i8 0,
-; CHECK: !"f_hot_attr", i8 0,
-; CHECK: !"f_cold_attr", i8 0,
-; CHECK: !"f_non_canonical_hot", i8 1,
-; CHECK: !"f_non_canonical_cold", i8 1,
-; CHECK: !"f_non_canonical_nocount", i8 1,
-; CHECK: !"f_other", i8 0,
-; CHECK: !"f_non_canonical_other", i8 1,
+; CHECK: !"f_entry_count", i8 12
+; CHECK: !"f_cfg_hot", i8 12
+; CHECK: !"f_zero", i8 4
+; CHECK: !"f_one", i8 4
+; CHECK: !"f_hot_attr", i8 12
+; CHECK: !"f_cold_attr", i8 4
+; CHECK: !"f_non_canonical_hot", i8 13
+; CHECK: !"f_non_canonical_cold", i8 5
+; CHECK: !"f_non_canonical_nocount", i8 1
+; CHECK: !"f_other", i8 8
+; CHECK: !"f_non_canonical_other", i8 9
 ; CHECK: !"f_decl", i8 1,
 ; CHECK: !"f_weak_decl", i8 2,
 

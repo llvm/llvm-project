@@ -947,6 +947,7 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
   if (!data_dir_exception.vmaddr)
     return {};
 
+  // TODO: decode ARM64 .pdata/.xdata so optimized frameless code unwinds.
   if (m_coff_header.machine != llvm::COFF::IMAGE_FILE_MACHINE_AMD64)
     return {};
 
