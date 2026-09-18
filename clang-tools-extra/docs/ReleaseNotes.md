@@ -210,6 +210,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed false positives when the pointee is written through a pointer
     assignment, such as `*(p = q) = 0`.
 
+  - No longer diagnoses variables declared with `decltype(auto)`, where the
+    suggested `const` does not compile.
+
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
