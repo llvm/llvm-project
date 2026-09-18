@@ -1955,7 +1955,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_permlane_idx_gen}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});
 
-  addRulesForIOpcs({amdgcn_perm}, Standard)
+  addRulesForIOpcs({amdgcn_lerp, amdgcn_msad_u8, amdgcn_perm, amdgcn_sad_hi_u8,
+                    amdgcn_sad_u16, amdgcn_sad_u8},
+                   Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
