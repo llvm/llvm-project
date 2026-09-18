@@ -335,10 +335,12 @@ Metadata *BitcodeReaderMetadataList::resolveTypeArray(Metadata *MaybeTuple) {
   return MDTuple::get(Context, Ops);
 }
 
-/// Rebuild \p Old with \p Ops, keeping its identity: a self reference has to
-/// point at the replacement, and a distinct node must not be uniqued.
-static MDNode *rebuildAliasScopeNode(MDNode *Old,
-                                     SmallVectorImpl<Metadata *> &Ops) {
+/// Rebuild the alias scope or domain \p Old with \p Ops, keeping its identity:
+/// a self reference has to point at the replacement, and a distinct node must
+/// not be uniqued. The first operand of both a scope and a domain is its name,
+/// which is either a string or a self reference.
+static MDNode *rebuildScopeOrDomainNode(MDNode *Old,
+                                        SmallVectorImpl<Metadata *> &Ops) {
   LLVMContext &Context = Old->getContext();
   if (Ops[0] != Old)
     return Old->isDistinct() ? MDNode::getDistinct(Context, Ops)
@@ -359,7 +361,8 @@ static MDNode *upgradeAliasScopeDomain(MDNode *Domain,
       (HadDescription && mdconst::hasa<ConstantInt>(Domain->getOperand(1))))
     return Domain;
 
-  if (MDNode *Upgrade = Upgraded.lookup(Domain))
+  MDNode *&Upgrade = Upgraded[Domain];
+  if (Upgrade)
     return Upgrade;
 
   LLVMContext &Context = Domain->getContext();
@@ -369,8 +372,7 @@ static MDNode *upgradeAliasScopeDomain(MDNode *Domain,
   if (HadDescription)
     Ops.push_back(Domain->getOperand(1));
 
-  MDNode *Upgrade = rebuildAliasScopeNode(Domain, Ops);
-  Upgraded[Domain] = Upgrade;
+  Upgrade = rebuildScopeOrDomainNode(Domain, Ops);
   return Upgrade;
 }
 
@@ -379,11 +381,7 @@ static MDNode *upgradeAliasScope(MDNode *Scope,
   if (MDNode *Upgrade = Upgraded.lookup(Scope))
     return Upgrade;
 
-  auto *Domain = Scope->getNumOperands() >= 2
-                     ? dyn_cast_or_null<MDNode>(Scope->getOperand(1))
-                     : nullptr;
-  if (!Domain)
-    return Scope;
+  auto *Domain = cast<MDNode>(Scope->getOperand(1));
 
   MDNode *UpgradedDomain = upgradeAliasScopeDomain(Domain, Upgraded);
   if (UpgradedDomain == Domain)
@@ -391,7 +389,7 @@ static MDNode *upgradeAliasScope(MDNode *Scope,
 
   SmallVector<Metadata *, 3> Ops(Scope->op_begin(), Scope->op_end());
   Ops[1] = UpgradedDomain;
-  MDNode *Upgrade = rebuildAliasScopeNode(Scope, Ops);
+  MDNode *Upgrade = rebuildScopeOrDomainNode(Scope, Ops);
   Upgraded[Scope] = Upgrade;
   return Upgrade;
 }

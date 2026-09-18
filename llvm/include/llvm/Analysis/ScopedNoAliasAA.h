@@ -60,9 +60,9 @@ public:
   LLVM_ABI static bool mayAliasInScopes(const MDNode *Scopes,
                                         const MDNode *NoAlias);
 
-  /// Return false if two accesses in the scope lists \p Scopes1 and \p Scopes2
-  /// are kept apart by the implicit noalias sets of a domain with disjoint
-  /// scopes.
+  /// Return false if two accesses with scope lists \p Scopes1 and \p Scopes2
+  /// are kept apart because they use different scopes of a disjoint-scope
+  /// domain.
   LLVM_ABI static bool mayAliasInDisjointDomains(const MDNode *Scopes1,
                                                  const MDNode *Scopes2);
 };

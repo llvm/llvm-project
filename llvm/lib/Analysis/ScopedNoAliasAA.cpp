@@ -218,7 +218,7 @@ bool ScopedNoAliasAAResult::mayAliasInDisjointDomains(const MDNode *Scopes1,
   SmallPtrSet<const MDNode *, 16> Domains;
   collectScopedDomains(Scopes1, Domains, /*DisjointOnly=*/true);
 
-  // The accesses don't alias if, for some domain, both accesses use at lesat
+  // The accesses don't alias if, for some domain, both accesses use at least
   // one of its scopes and have no scopes in that domain in common.
   for (const MDNode *Domain : Domains) {
     SmallPtrSet<const MDNode *, 16> Nodes2;
