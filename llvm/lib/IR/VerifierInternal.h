@@ -230,10 +230,10 @@ bool isAMDGPUCallBrIntrinsic(Intrinsic::ID ID);
 
 //==============================================================================
 
-// NVPTX-specific verification functions
+// NVVM-specific verification functions
 
-void verifyNVPTXIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
-                              CallBase &Call);
+void verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
+                             CallBase &Call);
 
 //==============================================================================
 
