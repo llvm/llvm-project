@@ -33,10 +33,22 @@ constexpr static long getMajor(long Ver) { return (Ver / 10000) % 100; }
 constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
 
+// For A0, print gfx1250-strict to match rocminfo
+std::string strictHelper(long GFXVersion, long ASICRevision) {
+  if (GFXVersion == GFX1250_VERSION && ASICRevision == 0)
+    return "-strict";
+  return "";
+}
+
 // Exposed for testing
 int printGPUsByKFD(StringRef NodePath) {
-  // <Node, GFXVersion, ASIC revision>
-  SmallVector<std::tuple<long, long, long>> Devices;
+  struct KFDNode {
+    long Node;
+    long GFXVersion;
+    long ASICRevision;
+  };
+
+  SmallVector<KFDNode> Devices;
   std::error_code EC;
   sys::fs::directory_iterator Begin(NodePath, EC), End;
 
@@ -64,13 +76,15 @@ int printGPUsByKFD(StringRef NodePath) {
     uint64_t Capability = 0;
     for (line_iterator Lines(**BufferOrErr, false); !Lines.is_at_end();
          ++Lines) {
-      // Split by ' ' to differentiate capability and capability2
-      auto [Key, Value] = StringRef(*Lines).split(' ');
-      if (Key == "gfx_target_version") {
-        if (Value.trim().consumeInteger(10, GFXVersion))
+      StringRef Line(*Lines);
+      if (Line.consume_front("gfx_target_version")) {
+        if (Line.drop_while([](char C) { return std::isspace(C); })
+                .consumeInteger(10, GFXVersion))
           return 1;
-      } else if (Key == "capability") {
-        if (Value.trim().consumeInteger(10, Capability))
+        // ' ' is necessary to differentiate capability and capability2
+      } else if (Line.consume_front("capability ")) {
+        if (Line.drop_while([](char C) { return std::isspace(C); })
+                .consumeInteger(10, Capability))
           return 1;
       }
     }
@@ -80,19 +94,15 @@ int printGPUsByKFD(StringRef NodePath) {
       continue;
     // ASIC revision is bits 25:22 in capability
     long ASICRevision = (Capability >> 22) & 0xf;
-    Devices.emplace_back(Node, GFXVersion, ASICRevision);
+    Devices.push_back({Node, GFXVersion, ASICRevision});
   }
 
   // Sort the devices by their node to make sure it prints in order.
-  llvm::sort(Devices,
-             [](auto &L, auto &R) { return std::get<0>(L) < std::get<0>(R); });
+  llvm::sort(Devices, [](auto &L, auto &R) { return L.Node < R.Node; });
   for (const auto &[Node, GFXVersion, ASICRevision] : Devices) {
     outs() << "gfx" << getMajor(GFXVersion) << getMinor(GFXVersion)
-           << format_hex_no_prefix(getStep(GFXVersion), 1);
-    // For A0, print gfx1250-strict to match rocminfo
-    if (GFXVersion == GFX1250_VERSION && ASICRevision == 0)
-      outs() << "-strict";
-    outs() << '\n';
+           << format_hex_no_prefix(getStep(GFXVersion), 1)
+           << strictHelper(GFXVersion, ASICRevision) << '\n';
   }
 
   return 0;
