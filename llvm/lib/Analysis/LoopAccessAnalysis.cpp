@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -610,7 +611,8 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   return true;
 }
 
-SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
+SmallVector<RuntimePointerCheck, 4>
+RuntimePointerChecking::generateChecksForGroups() {
   SmallVector<RuntimePointerCheck, 4> Checks;
 
   for (unsigned I = 0; I < CheckingGroups.size(); ++I) {
@@ -627,11 +629,10 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
   return Checks;
 }
 
-void RuntimePointerChecking::generateChecks(
-    MemoryDepChecker::DepCandidates &DepCands) {
+void RuntimePointerChecking::generateChecks() {
   assert(Checks.empty() && "Checks is not empty");
-  groupChecks(DepCands);
-  Checks = generateChecks();
+  groupChecks();
+  Checks = generateChecksForGroups();
 }
 
 bool RuntimePointerChecking::needsChecking(
@@ -692,20 +693,42 @@ bool RuntimeCheckingPtrGroup::addPointer(unsigned Index, const SCEV *Start,
   return true;
 }
 
-void RuntimePointerChecking::groupChecks(
-    MemoryDepChecker::DepCandidates &DepCands) {
-  // We build the groups from dependency candidates equivalence classes
-  // because:
-  //    - We know that pointers in the same equivalence class share
-  //      the same underlying object and therefore there is a chance
-  //      that we can compare pointers
-  //    - We wouldn't be able to merge two pointers for which we need
-  //      to emit a memcheck. The classes in DepCands are already
-  //      conveniently built such that no two pointers in the same
-  //      class need checking against each other.
+/// Test whether the difference between two SCEV expressions is trivial.
+///
+/// Recognizes only SCEVs in the form of, either:
+/// - X vs X
+/// - C1 + X vs X
+/// - X vs C2 + X
+/// - C1 + X vs C2 + X
+static const SCEV *stripConstant(const SCEV *S) {
+  auto *AddExpr = dyn_cast<SCEVAddExpr>(S);
+  if (!AddExpr || AddExpr->getNumOperands() != 2)
+    return S;
+
+  if (isa<SCEVConstant>(AddExpr->getOperand(0)))
+    return AddExpr->getOperand(1);
+  if (isa<SCEVConstant>(AddExpr->getOperand(1)))
+    return AddExpr->getOperand(0);
+
+  return S;
+}
+
+void RuntimePointerChecking::groupChecks() {
+  // We build partitions of pointers based on DependencySetId and AliasSetId
+  // for which no runtime check is required, where DependencySetId identifies
+  // a dependence candidate equivalence class within an alias set. But it is
+  // not unique, hence AliasSetId is also required.
+  //
+  // Then group the pointers independently into groups within each partition,
+  // where pointers in the same partition do not require runtime checking
+  // against each other, based on their relative distance from the min/max
+  // bounds.
+  //
+  // Building the partitions directly from PointerInfo also ensures that each
+  // pointer index is processed exactly once, and in the order they appear.
 
   // We use the following (greedy) algorithm to construct the groups
-  // For every pointer in the equivalence class:
+  // For every pointer in the partition:
   //   For each existing group:
   //   - if the difference between this pointer and the min/max bounds
   //     of the group is a constant, then make the pointer part of the
@@ -736,74 +759,81 @@ void RuntimePointerChecking::groupChecks(
 
   unsigned TotalComparisons = 0;
 
-  DenseMap<Value *, SmallVector<unsigned>> PositionMap;
-  for (unsigned Index = 0; Index < Pointers.size(); ++Index)
-    PositionMap[Pointers[Index].PointerValue].push_back(Index);
-
-  // We need to keep track of what pointers we've already seen so we
-  // don't process them twice.
-  SmallSet<unsigned, 2> Seen;
-
-  // Go through all equivalence classes, get the "pointer check groups"
-  // and add them to the overall solution. We use the order in which accesses
-  // appear in 'Pointers' to enforce determinism.
+  // Create buckets of pointers by (DependencySetId, AliasSetId), this allows
+  // us to avoid:
+  // - Walking the DepCands to retrieve indices
+  // - Keeping the Value* to Index pointer map
+  // - Checking what pointers have already been processed
+  //
+  // We can do that because createChecksForAccesses already assigns
+  // DependencySetId and AliasSetId to each PointerInfo.
+  using DepAliasKey = std::pair<unsigned, unsigned>;
+  MapVector<DepAliasKey, SmallVector<unsigned, 4>> DepAliasPartitions;
   for (unsigned I = 0; I < Pointers.size(); ++I) {
-    // We've seen this pointer before, and therefore already processed
-    // its equivalence class.
-    if (Seen.contains(I))
-      continue;
+    const PointerInfo &P = Pointers[I];
+    DepAliasPartitions[{P.DependencySetId, P.AliasSetId}].push_back(I);
+  }
 
-    MemoryDepChecker::MemAccessInfo Access(Pointers[I].PointerValue,
-                                           Pointers[I].IsWritePtr);
-
-    // If there is no entry in the dependency partition, there are no potential
-    // accesses to merge; simply add a new pointer checking group.
-    if (!DepCands.contains(Access)) {
-      CheckingGroups.push_back(RuntimeCheckingPtrGroup(I, *this));
-      continue;
-    }
-
+  // Go through all dependency buckets, get the "pointer check groups"
+  // and add them to the overall solution. DepAliasPartitions keeps the order
+  // in which accesses appear in 'Pointers', the iteration order is
+  // deterministic.
+  for (auto &Entry : DepAliasPartitions) {
     SmallVector<RuntimeCheckingPtrGroup, 2> Groups;
 
-    // Because DepCands is constructed by visiting accesses in the order in
-    // which they appear in alias sets (which is deterministic) and the
-    // iteration order within an equivalence class member is only dependent on
-    // the order in which unions and insertions are performed on the
-    // equivalence class, the iteration order is deterministic.
-    for (auto M : DepCands.members(Access)) {
-      auto PointerI = PositionMap.find(M.getPointer());
-      // If we can't find the pointer in PositionMap that means we can't
-      // generate a memcheck for it.
-      if (PointerI == PositionMap.end())
-        continue;
-      for (unsigned Pointer : PointerI->second) {
-        bool Merged = false;
-        // Mark this pointer as seen.
-        Seen.insert(Pointer);
+    // Each group is mapped to a pair of base SCEVs (stripped of constants),
+    // if stripping is not possible they are kept as is. This is to add
+    // a fast path for finding a group for a pointer, when pointer's
+    // and group's base are the same.
+    using GroupKey = std::pair<const SCEV *, const SCEV *>;
+    DenseMap<GroupKey, unsigned> KeyToGroups;
 
-        // Go through all the existing sets and see if we can find one
-        // which can include this pointer.
-        for (RuntimeCheckingPtrGroup &Group : Groups) {
-          // Don't perform more than a certain amount of comparisons.
-          // This should limit the cost of grouping the pointers to something
-          // reasonable.  If we do end up hitting this threshold, the algorithm
-          // will create separate groups for all remaining pointers.
-          if (TotalComparisons > MemoryCheckMergeThreshold)
-            break;
+    for (unsigned Pointer : Entry.second) {
+      bool Merged = false;
 
-          TotalComparisons++;
+      // Check if we can "canonicalize" the SCEV representation, to use
+      // the fast path (map lookup) of finding a group for a pointer.
+      GroupKey PtrStripped = {stripConstant(Pointers[Pointer].Start),
+                              stripConstant(Pointers[Pointer].End)};
 
-          if (Group.addPointer(Pointer, *this)) {
-            Merged = true;
-            break;
-          }
+      // If after stripping a constant, we can find a group with the same
+      // base we immediately add pointer to this group and skip the greedy
+      // path and comparison counting.
+      if (auto It = KeyToGroups.find(PtrStripped); It != KeyToGroups.end()) {
+        if (Groups[It->second].addPointer(Pointer, *this))
+          continue;
+
+        // The cached association was not usable, don't let it cause
+        // future pointers to be dropped.
+        KeyToGroups.erase(It);
+      }
+
+      // Greedy fallback:
+      // Go through all the existing sets and see if we can find one
+      // which can include this pointer.
+      for (unsigned I = 0; I < Groups.size(); ++I) {
+        // Don't perform more than a certain amount of comparisons.
+        // This should limit the cost of grouping the pointers to something
+        // reasonable.  If we do end up hitting this threshold, the algorithm
+        // will create separate groups for all remaining pointers.
+        if (TotalComparisons > MemoryCheckMergeThreshold)
+          break;
+
+        ++TotalComparisons;
+        if (Groups[I].addPointer(Pointer, *this)) {
+          KeyToGroups.try_emplace(PtrStripped, I);
+          Merged = true;
+          break;
         }
+      }
 
-        if (!Merged)
-          // We couldn't add this pointer to any existing set or the threshold
-          // for the number of comparisons has been reached. Create a new group
-          // to hold the current pointer.
-          Groups.emplace_back(Pointer, *this);
+      if (!Merged) {
+        // We couldn't add this pointer to any existing set or the threshold
+        // for the number of comparisons has been reached. Create a new group
+        // to hold the current pointer.
+        unsigned GroupIdx = Groups.size();
+        Groups.emplace_back(Pointer, *this);
+        KeyToGroups.try_emplace(PtrStripped, GroupIdx);
       }
     }
 
@@ -1609,7 +1639,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   }
 
   if (MayNeedRTCheck && (CanDoRT || AllowPartial))
-    RtCheck.generateChecks(DepCands);
+    RtCheck.generateChecks();
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");
