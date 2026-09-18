@@ -9,6 +9,12 @@
 // RUN: fir-opt --cuda-heap-alloc-promotion --stack-arrays %s | FileCheck %s --check-prefix=KEEP
 // RUN: fir-opt --cuda-heap-alloc-promotion --allocation-placement %s | FileCheck %s --check-prefix=KEEP
 
+// The stack is device accessible here, so -fstack-arrays can keep the automatic
+// arrays on it.
+// RUN: fir-opt --cuda-heap-alloc-promotion=stack-arrays=true %s | FileCheck %s --check-prefix=STACK
+// STACK-NOT: fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name
+// STACK-NOT: fir.allocmem !fir.char
+
 // Under fir.cuda_heap_alloc = "unified", named automatic arrays move to the
 // heap and are marked. Only marked allocations use malloc_unified: memory the
 // Fortran runtime allocated must keep being released by libc free.

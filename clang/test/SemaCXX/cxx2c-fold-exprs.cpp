@@ -692,3 +692,29 @@ void g() {
 }
 
 }
+
+namespace GH198052 {
+
+template <class T, class U>
+concept is_same = __is_same(T, U);
+
+constexpr int NumberOfTrueInstances(auto... booleans)
+  requires (is_same<bool, decltype(booleans)> && ...)
+{
+  bool the_booleans[] = {booleans...};
+  int nrvo = 0;
+  for (bool a_boolean : the_booleans) {
+    if (a_boolean) nrvo += 1;
+  }
+  return nrvo;
+}
+
+constexpr bool a = true;
+constexpr bool b = false;
+constexpr bool c = true;
+constexpr bool d = false;
+constexpr int count = NumberOfTrueInstances(a, b, c, d);
+static_assert(count == 2);
+
+}
+

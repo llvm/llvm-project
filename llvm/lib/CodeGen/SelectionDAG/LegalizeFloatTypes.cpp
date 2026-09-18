@@ -694,6 +694,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   EVT OpsVT[2] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
+  CallOptions.setIsSigned();
   std::pair<SDValue, SDValue> Tmp =
       TLI.makeLibCall(DAG, LCImpl, NVT, Ops, CallOptions, SDLoc(N), Chain);
   if (IsStrict)
@@ -913,9 +914,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
       ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
   SDValue NewL;
   if (L->getExtensionType() == ISD::NON_EXTLOAD) {
-    NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), NVT, dl,
+    // If softening widens the integer representation (e.g. x86_fp80 -> i96),
+    // load the original memory width and extend to the softened type.
+    EVT MemVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+    NewL = DAG.getLoad(L->getAddressingMode(), ISD::EXTLOAD, NVT, dl,
                        L->getChain(), L->getBasePtr(), L->getOffset(),
-                       L->getPointerInfo(), NVT, L->getBaseAlign(), MMOFlags,
+                       L->getPointerInfo(), MemVT, L->getBaseAlign(), MMOFlags,
                        L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
@@ -1348,8 +1352,12 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
   else
     Val = GetSoftenedFloat(Val);
 
-  return DAG.getStore(ST->getChain(), dl, Val, ST->getBasePtr(),
-                      ST->getMemOperand());
+  // If softening widens the integer representation (e.g. x86_fp80 -> i96),
+  // truncate the value before storing to preserve the original memory width.
+  EVT MemVT =
+      EVT::getIntegerVT(*DAG.getContext(), ST->getMemoryVT().getSizeInBits());
+  return DAG.getTruncStore(ST->getChain(), dl, Val, ST->getBasePtr(), MemVT,
+                           ST->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo) {
@@ -2986,6 +2994,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::BUILD_VECTOR:
     Res = SoftPromoteHalfOp_BUILD_VECTOR(N);
     break;
+  case ISD::INSERT_VECTOR_ELT:
+    Res = SoftPromoteHalfOp_INSERT_VECTOR_ELT(N, OpNo);
+    break;
   case ISD::FAKE_USE:
     Res = SoftPromoteHalfOp_FAKE_USE(N, OpNo);
     break;
@@ -3060,6 +3071,16 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N) {
   EVT IVT = VT.changeVectorElementTypeToInteger();
   SDValue Res = DAG.getBuildVector(IVT, dl, Ops);
   return DAG.getBitcast(VT, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_INSERT_VECTOR_ELT(SDNode *N,
+                                                              unsigned OpNo) {
+  assert(OpNo == 1 && "Only Operand 1 must need promotion here");
+  SDValue Vec = BitConvertVectorToIntegerVector(N->getOperand(0));
+  SDValue Elt = GetSoftPromotedHalf(N->getOperand(OpNo));
+  SDValue Res = DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N),
+                            Vec.getValueType(), Vec, Elt, N->getOperand(2));
+  return DAG.getBitcast(N->getValueType(0), Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo) {

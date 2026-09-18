@@ -13,6 +13,7 @@
 
 #include "CIRGenCall.h"
 #include "CIRGenCXXABI.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -26,9 +27,11 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-CIRGenFunctionInfo *CIRGenFunctionInfo::create(
-    FunctionType::ExtInfo info, bool isInstanceMethod, CanQualType resultType,
-    llvm::ArrayRef<CanQualType> argTypes, RequiredArgs required) {
+CIRGenFunctionInfo *
+CIRGenFunctionInfo::create(cir::CallingConv cirCC, FunctionType::ExtInfo info,
+                           bool isInstanceMethod, CanQualType resultType,
+                           llvm::ArrayRef<CanQualType> argTypes,
+                           RequiredArgs required) {
   // The first slot allocated for arg type slot is for the return value.
   void *buffer = operator new(
       totalSizeToAlloc<CanQualType>(argTypes.size() + 1));
@@ -37,6 +40,8 @@ CIRGenFunctionInfo *CIRGenFunctionInfo::create(
 
   CIRGenFunctionInfo *fi = new (buffer) CIRGenFunctionInfo();
 
+  fi->callingConvention = llvm::to_underlying(cirCC);
+  fi->astCallingConvention = info.getCC();
   fi->noReturn = info.getNoReturn();
   fi->instanceMethod = isInstanceMethod;
 
@@ -100,7 +105,7 @@ void CIRGenFunction::emitAggregateStore(mlir::Value value, Address dest) {
   // scope as the value, don't make assumptions about current insertion point.
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(value.getDefiningOp());
-  builder.createStore(*currSrcLoc, value, dest);
+  builder.createStore(getLoc(*currSrcLoc), value, dest);
 }
 
 static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
@@ -319,7 +324,7 @@ void CIRGenModule::constructAttributeList(
     llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
     mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
     cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
-  assert(!cir::MissingFeatures::opCallCallConv());
+  callingConv = info.getCallingConvention();
   sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {
@@ -429,8 +434,12 @@ void CIRGenModule::constructAttributeList(
       }
     }
 
-    // TODO(cir): Quite a few CUDA and OpenCL attributes are added here, like
-    // uniform-work-group-size.
+    // TODO(cir): Quite a few CUDA and OpenCL attributes are added here.
+
+    // -cl-uniform-work-group-size / -foffload-uniform-block: work groups are
+    // uniform (global work-size is a multiple of work-group size).
+    if (langOpts.OffloadUniformBlock)
+      addUnitAttr(cir::CIRDialect::getUniformWorkGroupSizeAttrName());
 
     if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
         targetDecl->hasAttr<CUDAGlobalAttr>()) {
@@ -1047,6 +1056,17 @@ CIRGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
                                 FunctionType::ExtInfo(), RequiredArgs::All);
 }
 
+/// Set calling convention for CUDA/HIP kernel.
+static void setCUDAKernelCallingConvention(CanQualType &funcTy,
+                                           CIRGenModule &cgm,
+                                           const FunctionDecl *fd) {
+  if (fd->hasAttr<CUDAGlobalAttr>()) {
+    const FunctionType *ft = funcTy->getAs<FunctionType>();
+    cgm.getTargetCIRGenInfo().setCUDAKernelCallingConvention(ft);
+    funcTy = ft->getCanonicalTypeUnqualified();
+  }
+}
+
 /// Arrange the argument and result information for a declaration or definition
 /// of the given C++ non-static member function. The member function must be an
 /// ordinary function, i.e. not a constructor or destructor.
@@ -1055,9 +1075,9 @@ CIRGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *md) {
   assert(!isa<CXXConstructorDecl>(md) && "wrong method for constructors!");
   assert(!isa<CXXDestructorDecl>(md) && "wrong method for destructors!");
 
-  auto prototype =
-      md->getType()->getCanonicalTypeUnqualified().getAs<FunctionProtoType>();
-  assert(!cir::MissingFeatures::cudaSupport());
+  CanQualType funcTy = md->getType()->getCanonicalTypeUnqualified();
+  setCUDAKernelCallingConvention(funcTy, cgm, md);
+  auto prototype = funcTy.getAs<FunctionProtoType>();
 
   // Mirrors classic CodeGen's check at CGCall.cpp.  C++23 explicit-object
   // member functions (P0847R7, `void f(this Self&&)`) do not receive an
@@ -1107,8 +1127,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   CanQualType funcTy = fd->getType()->getCanonicalTypeUnqualified();
 
   assert(isa<FunctionType>(funcTy));
-  // TODO: setCUDAKernelCallingConvention
-  assert(!cir::MissingFeatures::cudaSupport());
+  setCUDAKernelCallingConvention(funcTy, cgm, fd);
 
   // When declaring a function without a prototype, always use a non-variadic
   // type.
@@ -1192,13 +1211,31 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                bool isMustTail, mlir::Location loc) {
+                                bool isMustTail, SourceRange clangLoc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
+  mlir::Location loc = getLoc(clangLoc);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
   const Decl *targetDecl = callee.getAbstractInfo().getCalleeDecl().getDecl();
+
+  if (const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(targetDecl)) {
+    // We can only guarantee that a function is called from the correct
+    // context/function based on the appropriate target attributes,
+    // so only check in the case where we have both always_inline and target
+    // since otherwise we could be making a conditional call after a check for
+    // the proper cpu features (and it won't cause code generation issues due to
+    // function based code generation).
+    if ((targetDecl->hasAttr<AlwaysInlineAttr>() &&
+         (targetDecl->hasAttr<TargetAttr>() ||
+          (curFuncDecl && curFuncDecl->hasAttr<TargetAttr>()))) ||
+        (curFuncDecl && curFuncDecl->hasAttr<FlattenAttr>() &&
+         (curFuncDecl->hasAttr<TargetAttr>() ||
+          targetDecl->hasAttr<TargetAttr>())))
+      checkTargetFeatures(clangLoc.getBegin(), fd);
+  }
+
   const FunctionDecl *callerDecl = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
   const FunctionDecl *calleeDecl = dyn_cast_or_null<FunctionDecl>(targetDecl);
 
@@ -1394,14 +1431,20 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       return getUndefRValue(retTy);
     }
 
-    // Musttail is required to return immediately. Classic codegen does some
-    // work here to go through the exception handling scopes to put them before
-    // the call (it seems?) since musttail must be the last op before the
-    // return.  For now, skip this so we an do it later.
-    if (ehStack.stable_begin() != prologueCleanupDepth) {
-      cgm.errorNYI(mustTailCall->getBeginLoc(),
-                   "musttail call that skips cleanups");
-      return getUndefRValue(retTy);
+    // Musttail is required to return immediately, so no cleanup can run
+    // between the call and the return. Cleanups that the return makes
+    // unnecessary are simply skipped. Anything else cannot be expressed.
+    assert(!cir::MissingFeatures::dynamicExceptionSpec());
+    assert(!cir::MissingFeatures::fakeUseCleanup());
+    for (EHScopeStack::iterator it = ehStack.begin(),
+                                end = ehStack.find(prologueCleanupDepth);
+         it != end; ++it) {
+      auto *cleanupScope = dyn_cast<EHCleanupScope>(&*it);
+      if (!cleanupScope ||
+          !cleanupScope->getCleanup()->isRedundantBeforeReturn()) {
+        cgm.errorUnsupported(mustTailCall, "tail call skipping over cleanups");
+        return getUndefRValue(retTy);
+      }
     }
 
     theCall->setAttr(cir::CIRDialect::getMustTailAttrName(),
@@ -1434,7 +1477,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     mlir::ResultRange results = theCall->getOpResults();
     assert(results.size() <= 1 && "multiple returns from a call");
 
-    SourceLocRAIIObject loc{*this, callLoc};
+    SourceLocRAIIObject loc{*this, clangLoc};
     emitAggregateStore(results[0], destPtr);
     return RValue::getAggregate(destPtr);
   }

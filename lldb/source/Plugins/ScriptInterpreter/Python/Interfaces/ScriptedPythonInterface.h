@@ -733,6 +733,10 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::StepType arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ValueObjectSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -937,6 +941,11 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
     python::PythonObject &p, Status &error);
 
 template <>
+lldb::ThreadPlanSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadPlanSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
 std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error);
@@ -949,6 +958,11 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 template <>
 lldb::DescriptionLevel
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::StepType
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StepType>(
     python::PythonObject &p, Status &error);
 
 template <>

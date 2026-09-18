@@ -8,6 +8,11 @@
 
 #include "FMinimumNumTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/fminimum_numf128.h"
+
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 LIST_FMINIMUM_NUM_TESTS(float128, LIBC_NAMESPACE::fminimum_numf128)
