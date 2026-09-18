@@ -7,7 +7,6 @@
 
 #include "AArch64SelectionDAGInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -64,9 +63,7 @@ protected:
     DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
     if (!DAG)
       report_fatal_error("DAG?");
-    OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-              MMI, nullptr);
+    DAG->init(*MF, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {

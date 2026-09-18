@@ -12,10 +12,6 @@ myst:
 {#extra-clang-tools-release-releasenotestitle}
 # Extra Clang Tools {{env.config.release}} {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') }}
 
-```{contents}
-:depth: 3
-:local: true
-```
 
 Written by the [LLVM Team](https://llvm.org/)
 
@@ -81,19 +77,40 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Hover
 
+- The type a `decltype` resolves to is now also shown for composite types,
+  e.g. `decltype(x)&` is displayed as `int&`. Qualifiers applied to a
+  `decltype` are no longer dropped, so `const decltype(x)` is displayed as
+  `const int` rather than `int`.
+
 #### Code completion
+
+- Parameters declared with a `decltype` are now displayed as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`.
 
 #### Code actions
 
 - clangd now applies clang-tidy fix-it post-processing before exposing fixes.
 
+- The `Extract to function` tweak is now offered for selections consisting of
+  a single expression-statement (e.g. a lone function call or an overloaded
+  operator call such as `stream << 42;`), which it previously refused to
+  extract.
+
 #### Signature help
+
+- Parameters declared with a `decltype` are now displayed as the type the
+  `decltype` resolves to, as for code completion.
 
 #### Cross-references
 
 #### Objective-C
 
 #### Miscellaneous
+
+- Fixed `clangd-indexer --format=yaml` emitting invalid YAML when indexing
+  C++20 concepts.
+  ([#206875](https://github.com/llvm/llvm-project/issues/206875))
 
 ### Improvements to clang-doc
 
@@ -215,11 +232,20 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  fixing a crash when checking a const-qualified method declared with the
+  `lifetimebound` attribute.
+
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
   the {option}`AllowReferencedInitialValues` to support the
   `INT09-C-EX1` exception, allowing enumerators initialized by referencing
   another enumerator in the same enum (e.g., `last = first`).
+
+- Improved {doc}`readability-function-cognitive-complexity
+  <clang-tidy/checks/readability/function-cognitive-complexity>` check by fixing
+  a crash when checking a function declared with the `alias` attribute.
 
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
@@ -251,6 +277,10 @@ infrastructure are described first, followed by tool-specific sections.
   `std::nothrow_t`, iterator tags, lock tags, etc.) that are used
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
+
+- Improved {doc}`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
+  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
 
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
