@@ -26,19 +26,20 @@ define void @interleave4_consecutive_splats(<4 x i16> %src, ptr %dst0, ptr %dst1
 define void @interleave3_consecutive_splats_nonzero(<8 x i16> %src, ptr %dst0, ptr %dst1) {
 ; CHECK-LABEL: interleave3_consecutive_splats_nonzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI1_2
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_2]
-; CHECK-NEXT:    adrp x8, .LCPI1_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI1_1]
-; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
-; CHECK-NEXT:    tbl v2.16b, { v0.16b }, v2.16b
-; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
-; CHECK-NEXT:    stp q1, q2, [x0]
-; CHECK-NEXT:    str q0, [x0, #32]
-; CHECK-NEXT:    stp q1, q2, [x1]
-; CHECK-NEXT:    str q0, [x1, #32]
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    dup v1.8h, v0.h[2]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    dup v2.8h, v0.h[3]
+; CHECK-NEXT:    dup v3.8h, v0.h[4]
+; CHECK-NEXT:    st3 { v1.8h, v2.8h, v3.8h }, [x8]
+; CHECK-NEXT:    ldp q0, q1, [sp]
+; CHECK-NEXT:    ldr q2, [sp, #32]
+; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    str q2, [x0, #32]
+; CHECK-NEXT:    stp q0, q1, [x1]
+; CHECK-NEXT:    str q2, [x1, #32]
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   %splat2 = shufflevector <8 x i16> %src, <8 x i16> poison, <8 x i32> splat (i32 2)
   %splat3 = shufflevector <8 x i16> %src, <8 x i16> poison, <8 x i32> splat (i32 3)

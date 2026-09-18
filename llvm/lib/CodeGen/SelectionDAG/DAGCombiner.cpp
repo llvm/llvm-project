@@ -27846,24 +27846,29 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
   // of S.
   if (VT.isFixedLengthVector() && Op0.getOpcode() == ISD::VECTOR_SHUFFLE) {
     unsigned Factor = N->getNumOperands();
-    unsigned NumElts = VT.getVectorNumElements();
-    int FirstIndex;
-    SDValue Source = DAG.getSplatSourceVector(Op0, FirstIndex);
-    if (Source && llvm::all_of(llvm::enumerate(N->op_values()), [&](auto Item) {
-          int SplatIndex;
-          return DAG.getSplatSourceVector(Item.value(), SplatIndex) == Source &&
-                 SplatIndex == FirstIndex + static_cast<int>(Item.index());
-        })) {
-      SmallVector<SDValue, 4> Results;
-      for (unsigned Result = 0; Result != Factor; ++Result) {
-        SmallVector<int, 16> Mask;
-        for (unsigned I = 0; I != NumElts; ++I)
-          Mask.push_back(FirstIndex + (Result * NumElts + I) % Factor);
+    // Non-power-of-two interleaves may be better lowered as structured stores.
+    if (isPowerOf2_32(Factor)) {
+      unsigned NumElts = VT.getVectorNumElements();
+      int FirstIndex;
+      SDValue Source = DAG.getSplatSourceVector(Op0, FirstIndex);
+      if (Source &&
+          llvm::all_of(llvm::enumerate(N->op_values()), [&](auto Item) {
+            int SplatIndex;
+            return DAG.getSplatSourceVector(Item.value(), SplatIndex) ==
+                       Source &&
+                   SplatIndex == FirstIndex + static_cast<int>(Item.index());
+          })) {
+        SmallVector<SDValue, 4> Results;
+        for (unsigned Result = 0; Result != Factor; ++Result) {
+          SmallVector<int, 16> Mask;
+          for (unsigned I = 0; I != NumElts; ++I)
+            Mask.push_back(FirstIndex + (Result * NumElts + I) % Factor);
 
-        Results.push_back(
-            DAG.getVectorShuffle(VT, SDLoc(N), Source, DAG.getUNDEF(VT), Mask));
+          Results.push_back(DAG.getVectorShuffle(VT, SDLoc(N), Source,
+                                                 DAG.getPOISON(VT), Mask));
+        }
+        return CombineTo(N, &Results);
       }
-      return CombineTo(N, &Results);
     }
   }
 
