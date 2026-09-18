@@ -1,8 +1,3 @@
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-endif()
-
-
 add_entrypoint_object(
   opendir
   SRCS
@@ -69,8 +64,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  scandir
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.scandir
+	scandir
+	SRCS
+	  scandir.cpp
+	HDRS
+	  scandir.h
+	DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.common
+		libc.src.__support.File.dir
+		libc.src.__support.File.platform_dir
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+		libc.include.dirent
 )
