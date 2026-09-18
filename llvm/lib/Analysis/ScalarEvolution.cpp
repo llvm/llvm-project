@@ -9357,8 +9357,8 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
   // valid, hence they give us 2 constraints on the maximum iterations. There
   // are many cases where signed interpretation of the compare is better than
   // unsigned one, and vice versa. Hence, we re-use existing analysis to
-  // compute both signed and unsigned interpretations and choose the tighter
-  // (better) constraint on loop exit policy.
+  // compute both signed and unsigned interpretations. A tighter signed bound
+  // need not replace the unsigned exact count, which may be cheaper to expand.
   if (Pred.hasSameSign() && ICmpInst::isUnsigned(Pred)) {
     ExitLimit SignedEL =
         computeExitLimitFromICmp(L, ICmpInst::getSignedPredicate(Pred), LHS,
@@ -9387,8 +9387,18 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       PreferSigned = SignedEL.Predicates.empty();
     else
       PreferSigned = HasTighterConstantMax(SignedEL, EL);
-    if (PreferSigned)
-      EL = SignedEL;
+    if (PreferSigned) {
+      if (EL.hasFullInfo() && SignedEL.hasFullInfo() && EL.Predicates.empty() &&
+          SignedEL.Predicates.empty()) {
+        // Keep the unsigned exact and symbolic counts while tightening the
+        // constant bound. Neither result requires additional predicates.
+        // MaxOrZero referred to the old bound and must not be carried over.
+        EL = ExitLimit(EL.ExactNotTaken, SignedEL.ConstantMaxNotTaken,
+                       EL.SymbolicMaxNotTaken, /*MaxOrZero=*/false);
+      } else {
+        EL = SignedEL;
+      }
+    }
   }
 
   if (EL.hasAnyInfo())
