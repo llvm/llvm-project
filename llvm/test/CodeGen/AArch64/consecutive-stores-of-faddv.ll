@@ -32,9 +32,10 @@ define void @consecutive_stores_quadruple(ptr %dest0, <vscale x 4 x float> %vec0
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    faddv s2, p0, z2.s
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    faddv s3, p0, z3.s
-; CHECK-NEXT:    mov v2.s[1], v3.s[0]
-; CHECK-NEXT:    stp d0, d2, [x0]
+; CHECK-NEXT:    faddv s1, p0, z3.s
+; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %dest1 = getelementptr inbounds i8, ptr %dest0, i64 4
   %dest2 = getelementptr inbounds i8, ptr %dest1, i64 4

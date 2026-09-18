@@ -47,10 +47,11 @@ define void @foo() {
 ; LA64-NEXT:    ld.d $a3, $a3, %got_pc_lo12(g_813)
 ; LA64-NEXT:    st.w $zero, $a1, 0
 ; LA64-NEXT:    st.w $a2, $a3, 0
-; LA64-NEXT:    xvrepli.b $xr0, 0
-; LA64-NEXT:    xvst $xr0, $a0, 0
+; LA64-NEXT:    st.d $zero, $a0, 16
 ; LA64-NEXT:    vrepli.b $vr0, 0
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    vst $vr0, $a0, 32
+; LA64-NEXT:    st.d $zero, $a0, 24
 ; LA64-NEXT:    st.w $zero, $a0, 20
 ; LA64-NEXT:    ret
 entry:

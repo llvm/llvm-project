@@ -487,30 +487,27 @@ define void @test_not_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ;
 ; X64-AVX1-LABEL: test_not_i512:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovaps (%rsi), %xmm1
-; X64-AVX1-NEXT:    vmovaps 32(%rsi), %xmm2
-; X64-AVX1-NEXT:    vinsertf128 $1, 48(%rsi), %ymm2, %ymm2
-; X64-AVX1-NEXT:    vinsertf128 $1, 16(%rsi), %ymm1, %ymm1
-; X64-AVX1-NEXT:    vmovaps 16(%rdi), %xmm3
-; X64-AVX1-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; X64-AVX1-NEXT:    vcmptrueps %ymm4, %ymm4, %ymm4
-; X64-AVX1-NEXT:    vxorps %ymm4, %ymm1, %ymm1
-; X64-AVX1-NEXT:    vxorps %ymm4, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vmovaps (%rsi), %xmm0
+; X64-AVX1-NEXT:    vmovaps 32(%rsi), %xmm1
+; X64-AVX1-NEXT:    vinsertf128 $1, 16(%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vinsertf128 $1, 48(%rsi), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; X64-AVX1-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; X64-AVX1-NEXT:    negl %edx
 ; X64-AVX1-NEXT:    vmovd %edx, %xmm4
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[0,0,0,0]
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; X64-AVX1-NEXT:    vblendvps %xmm4, 48(%rdi), %xmm5, %xmm5
-; X64-AVX1-NEXT:    vmovaps 32(%rdi), %xmm6
-; X64-AVX1-NEXT:    vmovaps %xmm5, 48(%rcx)
-; X64-AVX1-NEXT:    vblendvps %xmm4, %xmm6, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vmovaps %xmm2, 32(%rcx)
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX1-NEXT:    vblendvps %xmm4, %xmm3, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vmovaps %xmm2, 16(%rcx)
-; X64-AVX1-NEXT:    vblendvps %xmm4, %xmm0, %xmm1, %xmm0
+; X64-AVX1-NEXT:    vblendvps %xmm4, 16(%rdi), %xmm3, %xmm3
+; X64-AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vblendvps %xmm4, 32(%rdi), %xmm1, %xmm2
+; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; X64-AVX1-NEXT:    vblendvps %xmm4, 48(%rdi), %xmm1, %xmm1
+; X64-AVX1-NEXT:    vblendvps %xmm4, (%rdi), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vmovaps %xmm0, (%rcx)
+; X64-AVX1-NEXT:    vmovaps %xmm1, 48(%rcx)
+; X64-AVX1-NEXT:    vmovaps %xmm2, 32(%rcx)
+; X64-AVX1-NEXT:    vmovaps %xmm3, 16(%rcx)
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;

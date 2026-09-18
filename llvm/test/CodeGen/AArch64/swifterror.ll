@@ -1163,13 +1163,13 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-APPLE-ARM64_32-NEXT:    mov w8, #10 ; =0xa
 ; CHECK-APPLE-ARM64_32-NEXT:    mov w9, #11 ; =0xb
 ; CHECK-APPLE-ARM64_32-NEXT:    stp w9, w8, [sp, #20]
-; CHECK-APPLE-ARM64_32-NEXT:    mov w10, #12 ; =0xc
-; CHECK-APPLE-ARM64_32-NEXT:    str w10, [sp, #16]
+; CHECK-APPLE-ARM64_32-NEXT:    mov w8, #12 ; =0xc
+; CHECK-APPLE-ARM64_32-NEXT:    str w8, [sp, #16]
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x21, xzr
-; CHECK-APPLE-ARM64_32-NEXT:    mov x9, #11 ; =0xb
-; CHECK-APPLE-ARM64_32-NEXT:    movk x9, #12, lsl #32
-; CHECK-APPLE-ARM64_32-NEXT:    stur x9, [sp, #4]
-; CHECK-APPLE-ARM64_32-NEXT:    str w8, [sp]
+; CHECK-APPLE-ARM64_32-NEXT:    str w8, [sp, #8]
+; CHECK-APPLE-ARM64_32-NEXT:    mov x8, #10 ; =0xa
+; CHECK-APPLE-ARM64_32-NEXT:    movk x8, #11, lsl #32
+; CHECK-APPLE-ARM64_32-NEXT:    str x8, [sp]
 ; CHECK-APPLE-ARM64_32-NEXT:    bl _foo_vararg
 ; CHECK-APPLE-ARM64_32-NEXT:    mov x0, x21
 ; CHECK-APPLE-ARM64_32-NEXT:    cbnz w0, LBB8_2

@@ -734,7 +734,7 @@ public:
   /// false when implicit use of vector registers is disabled.
   virtual bool shouldDeferStoreMerging(EVT MemVT, unsigned NumStores,
                                        bool AllowVectors) const {
-    return false;
+    return true;
   }
 
   /// Returns if it's reasonable to merge stores to MemVT size.

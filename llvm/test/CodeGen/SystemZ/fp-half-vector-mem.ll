@@ -70,30 +70,14 @@ define void @fun0(ptr %Src, ptr %Dst) {
 define void @fun1(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: fun1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lgh %r0, 4(%r2)
-; CHECK-NEXT:    lgh %r1, 6(%r2)
-; CHECK-NEXT:    l %r2, 0(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    ldgr %f0, %r0
-; CHECK-NEXT:    sllg %r0, %r1, 48
-; CHECK-NEXT:    ldgr %f1, %r0
-; CHECK-NEXT:    st %r2, 0(%r3)
-; CHECK-NEXT:    lgdr %r0, %f1
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 6(%r3)
-; CHECK-NEXT:    lgdr %r0, %f0
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 4(%r3)
+; CHECK-NEXT:    lg %r0, 0(%r2)
+; CHECK-NEXT:    stg %r0, 0(%r3)
 ; CHECK-NEXT:    br %r14
 ;
 ; VECTOR-LABEL: fun1:
 ; VECTOR:       # %bb.0:
-; VECTOR-NEXT:    l %r0, 0(%r2)
-; VECTOR-NEXT:    vlreph %v0, 4(%r2)
-; VECTOR-NEXT:    vlreph %v1, 6(%r2)
-; VECTOR-NEXT:    vsteh %v1, 6(%r3), 0
-; VECTOR-NEXT:    vsteh %v0, 4(%r3), 0
-; VECTOR-NEXT:    st %r0, 0(%r3)
+; VECTOR-NEXT:    lg %r0, 0(%r2)
+; VECTOR-NEXT:    stg %r0, 0(%r3)
 ; VECTOR-NEXT:    br %r14
   %L = load <4 x half>, ptr %Src
   store <4 x half> %L, ptr %Dst

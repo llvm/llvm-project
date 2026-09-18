@@ -49,26 +49,9 @@ entry:
 define void @takeAndStore_char_8(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore_char_8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
-; CHECK-NEXT:    .cfi_offset %r13, -56
-; CHECK-NEXT:    .cfi_offset %r14, -48
-; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    lh %r0, 0(%r2)
-; CHECK-NEXT:    lb %r1, 2(%r2)
-; CHECK-NEXT:    lb %r3, 3(%r2)
-; CHECK-NEXT:    lb %r4, 7(%r2)
-; CHECK-NEXT:    lgrl %r5, global_char_8@GOT
-; CHECK-NEXT:    lb %r14, 6(%r2)
-; CHECK-NEXT:    lb %r13, 5(%r2)
-; CHECK-NEXT:    lb %r2, 4(%r2)
-; CHECK-NEXT:    stc %r4, 7(%r5)
-; CHECK-NEXT:    stc %r14, 6(%r5)
-; CHECK-NEXT:    stc %r13, 5(%r5)
-; CHECK-NEXT:    stc %r2, 4(%r5)
-; CHECK-NEXT:    stc %r3, 3(%r5)
-; CHECK-NEXT:    stc %r1, 2(%r5)
-; CHECK-NEXT:    sth %r0, 0(%r5)
-; CHECK-NEXT:    lmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    lg %r0, 0(%r2)
+; CHECK-NEXT:    lgrl %r1, global_char_8@GOT
+; CHECK-NEXT:    stg %r0, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <8 x i8>, ptr %0, align 8
@@ -126,13 +109,9 @@ entry:
 define void @takeAndStore_short_8(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore_short_8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lh %r0, 6(%r2)
+; CHECK-NEXT:    lg %r0, 0(%r2)
 ; CHECK-NEXT:    lgrl %r1, global_short_8@GOT
-; CHECK-NEXT:    lh %r3, 4(%r2)
-; CHECK-NEXT:    l %r2, 0(%r2)
-; CHECK-NEXT:    sth %r0, 6(%r1)
-; CHECK-NEXT:    sth %r3, 4(%r1)
-; CHECK-NEXT:    st %r2, 0(%r1)
+; CHECK-NEXT:    stg %r0, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <4 x i16>, ptr %0, align 8
@@ -143,26 +122,11 @@ entry:
 define void @takeAndStore_short_16(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore_short_16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
-; CHECK-NEXT:    .cfi_offset %r13, -56
-; CHECK-NEXT:    .cfi_offset %r14, -48
-; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    l %r0, 0(%r2)
-; CHECK-NEXT:    lh %r1, 4(%r2)
-; CHECK-NEXT:    lh %r3, 6(%r2)
-; CHECK-NEXT:    lh %r4, 14(%r2)
-; CHECK-NEXT:    lgrl %r5, global_short_16@GOT
-; CHECK-NEXT:    lh %r14, 12(%r2)
-; CHECK-NEXT:    lh %r13, 10(%r2)
-; CHECK-NEXT:    lh %r2, 8(%r2)
-; CHECK-NEXT:    sth %r4, 14(%r5)
-; CHECK-NEXT:    sth %r14, 12(%r5)
-; CHECK-NEXT:    sth %r13, 10(%r5)
-; CHECK-NEXT:    sth %r2, 8(%r5)
-; CHECK-NEXT:    sth %r3, 6(%r5)
-; CHECK-NEXT:    sth %r1, 4(%r5)
-; CHECK-NEXT:    st %r0, 0(%r5)
-; CHECK-NEXT:    lmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    lg %r0, 8(%r2)
+; CHECK-NEXT:    lgrl %r1, global_short_16@GOT
+; CHECK-NEXT:    lg %r2, 0(%r2)
+; CHECK-NEXT:    stg %r0, 8(%r1)
+; CHECK-NEXT:    stg %r2, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <8 x i16>, ptr %0, align 16
@@ -199,12 +163,10 @@ entry:
 define void @takeAndStore_int_16(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore_int_16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    l %r0, 12(%r2)
+; CHECK-NEXT:    lg %r0, 8(%r2)
 ; CHECK-NEXT:    lgrl %r1, global_int_16@GOT
-; CHECK-NEXT:    l %r3, 8(%r2)
 ; CHECK-NEXT:    lg %r2, 0(%r2)
-; CHECK-NEXT:    st %r0, 12(%r1)
-; CHECK-NEXT:    st %r3, 8(%r1)
+; CHECK-NEXT:    stg %r0, 8(%r1)
 ; CHECK-NEXT:    stg %r2, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -216,26 +178,15 @@ entry:
 define void @takeAndStore_int_32(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore_int_32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stmg %r13, %r15, 104(%r15)
-; CHECK-NEXT:    .cfi_offset %r13, -56
-; CHECK-NEXT:    .cfi_offset %r14, -48
-; CHECK-NEXT:    .cfi_offset %r15, -40
-; CHECK-NEXT:    l %r0, 8(%r2)
-; CHECK-NEXT:    l %r1, 12(%r2)
-; CHECK-NEXT:    l %r3, 16(%r2)
-; CHECK-NEXT:    l %r4, 28(%r2)
-; CHECK-NEXT:    lgrl %r5, global_int_32@GOT
-; CHECK-NEXT:    l %r14, 24(%r2)
-; CHECK-NEXT:    l %r13, 20(%r2)
+; CHECK-NEXT:    lg %r0, 24(%r2)
+; CHECK-NEXT:    lgrl %r1, global_int_32@GOT
+; CHECK-NEXT:    lg %r3, 16(%r2)
+; CHECK-NEXT:    lg %r4, 8(%r2)
 ; CHECK-NEXT:    lg %r2, 0(%r2)
-; CHECK-NEXT:    st %r4, 28(%r5)
-; CHECK-NEXT:    st %r14, 24(%r5)
-; CHECK-NEXT:    st %r13, 20(%r5)
-; CHECK-NEXT:    st %r3, 16(%r5)
-; CHECK-NEXT:    st %r1, 12(%r5)
-; CHECK-NEXT:    st %r0, 8(%r5)
-; CHECK-NEXT:    stg %r2, 0(%r5)
-; CHECK-NEXT:    lmg %r13, %r15, 104(%r15)
+; CHECK-NEXT:    stg %r0, 24(%r1)
+; CHECK-NEXT:    stg %r3, 16(%r1)
+; CHECK-NEXT:    stg %r4, 8(%r1)
+; CHECK-NEXT:    stg %r2, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <8 x i32>, ptr %0, align 32
@@ -325,21 +276,9 @@ entry:
 define void @takeAndStore__Float16_8(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore__Float16_8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lgh %r0, 4(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    lgh %r1, 6(%r2)
-; CHECK-NEXT:    l %r2, 0(%r2)
-; CHECK-NEXT:    lgrl %r3, global__Float16_8@GOT
-; CHECK-NEXT:    ldgr %f0, %r0
-; CHECK-NEXT:    sllg %r0, %r1, 48
-; CHECK-NEXT:    ldgr %f1, %r0
-; CHECK-NEXT:    st %r2, 0(%r3)
-; CHECK-NEXT:    lgdr %r0, %f1
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 6(%r3)
-; CHECK-NEXT:    lgdr %r0, %f0
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 4(%r3)
+; CHECK-NEXT:    lg %r0, 0(%r2)
+; CHECK-NEXT:    lgrl %r1, global__Float16_8@GOT
+; CHECK-NEXT:    stg %r0, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <4 x half>, ptr %0, align 8
@@ -350,45 +289,11 @@ entry:
 define void @takeAndStore__Float16_16(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore__Float16_16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lgh %r0, 4(%r2)
-; CHECK-NEXT:    lgh %r1, 6(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    ldgr %f0, %r0
-; CHECK-NEXT:    lgh %r0, 8(%r2)
-; CHECK-NEXT:    sllg %r1, %r1, 48
-; CHECK-NEXT:    ldgr %f1, %r1
-; CHECK-NEXT:    lgh %r1, 10(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
-; CHECK-NEXT:    lgh %r3, 12(%r2)
-; CHECK-NEXT:    ldgr %f2, %r0
-; CHECK-NEXT:    sllg %r0, %r1, 48
-; CHECK-NEXT:    ldgr %f3, %r0
-; CHECK-NEXT:    sllg %r0, %r3, 48
-; CHECK-NEXT:    lgh %r3, 14(%r2)
-; CHECK-NEXT:    l %r2, 0(%r2)
+; CHECK-NEXT:    lg %r0, 8(%r2)
 ; CHECK-NEXT:    lgrl %r1, global__Float16_16@GOT
-; CHECK-NEXT:    ldgr %f4, %r0
-; CHECK-NEXT:    sllg %r0, %r3, 48
-; CHECK-NEXT:    ldgr %f5, %r0
-; CHECK-NEXT:    st %r2, 0(%r1)
-; CHECK-NEXT:    lgdr %r0, %f5
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 14(%r1)
-; CHECK-NEXT:    lgdr %r0, %f4
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 12(%r1)
-; CHECK-NEXT:    lgdr %r0, %f3
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 10(%r1)
-; CHECK-NEXT:    lgdr %r0, %f2
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 8(%r1)
-; CHECK-NEXT:    lgdr %r0, %f1
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 6(%r1)
-; CHECK-NEXT:    lgdr %r0, %f0
-; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    sth %r0, 4(%r1)
+; CHECK-NEXT:    lg %r2, 0(%r2)
+; CHECK-NEXT:    stg %r0, 8(%r1)
+; CHECK-NEXT:    stg %r2, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <8 x half>, ptr %0, align 16
@@ -444,13 +349,11 @@ entry:
 define void @takeAndStore_float_16(ptr noundef readonly captures(none) dead_on_return %0) {
 ; CHECK-LABEL: takeAndStore_float_16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    le %f0, 12(%r2)
+; CHECK-NEXT:    lg %r0, 8(%r2)
 ; CHECK-NEXT:    lgrl %r1, global_float_16@GOT
-; CHECK-NEXT:    le %f1, 8(%r2)
-; CHECK-NEXT:    lg %r0, 0(%r2)
-; CHECK-NEXT:    ste %f0, 12(%r1)
-; CHECK-NEXT:    ste %f1, 8(%r1)
-; CHECK-NEXT:    stg %r0, 0(%r1)
+; CHECK-NEXT:    lg %r2, 0(%r2)
+; CHECK-NEXT:    stg %r0, 8(%r1)
+; CHECK-NEXT:    stg %r2, 0(%r1)
 ; CHECK-NEXT:    br %r14
 entry:
   %x = load <4 x float>, ptr %0, align 16

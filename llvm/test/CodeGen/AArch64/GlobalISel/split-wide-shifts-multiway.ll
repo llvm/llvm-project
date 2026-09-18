@@ -1086,26 +1086,23 @@ entry:
 define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; SDAG-LABEL: test_shl_i1024:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    sub sp, sp, #352
+; SDAG-NEXT:    sub sp, sp, #336
 ; SDAG-NEXT:    stp x28, x27, [sp, #256] ; 16-byte Folded Spill
 ; SDAG-NEXT:    stp x26, x25, [sp, #272] ; 16-byte Folded Spill
 ; SDAG-NEXT:    stp x24, x23, [sp, #288] ; 16-byte Folded Spill
 ; SDAG-NEXT:    stp x22, x21, [sp, #304] ; 16-byte Folded Spill
 ; SDAG-NEXT:    stp x20, x19, [sp, #320] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x29, x30, [sp, #336] ; 16-byte Folded Spill
-; SDAG-NEXT:    .cfi_def_cfa_offset 352
-; SDAG-NEXT:    .cfi_offset w30, -8
-; SDAG-NEXT:    .cfi_offset w29, -16
-; SDAG-NEXT:    .cfi_offset w19, -24
-; SDAG-NEXT:    .cfi_offset w20, -32
-; SDAG-NEXT:    .cfi_offset w21, -40
-; SDAG-NEXT:    .cfi_offset w22, -48
-; SDAG-NEXT:    .cfi_offset w23, -56
-; SDAG-NEXT:    .cfi_offset w24, -64
-; SDAG-NEXT:    .cfi_offset w25, -72
-; SDAG-NEXT:    .cfi_offset w26, -80
-; SDAG-NEXT:    .cfi_offset w27, -88
-; SDAG-NEXT:    .cfi_offset w28, -96
+; SDAG-NEXT:    .cfi_def_cfa_offset 336
+; SDAG-NEXT:    .cfi_offset w19, -8
+; SDAG-NEXT:    .cfi_offset w20, -16
+; SDAG-NEXT:    .cfi_offset w21, -24
+; SDAG-NEXT:    .cfi_offset w22, -32
+; SDAG-NEXT:    .cfi_offset w23, -40
+; SDAG-NEXT:    .cfi_offset w24, -48
+; SDAG-NEXT:    .cfi_offset w25, -56
+; SDAG-NEXT:    .cfi_offset w26, -64
+; SDAG-NEXT:    .cfi_offset w27, -72
+; SDAG-NEXT:    .cfi_offset w28, -80
 ; SDAG-NEXT:    ldp x8, x9, [x1, #112]
 ; SDAG-NEXT:    movi.2d v0, #0000000000000000
 ; SDAG-NEXT:    ldp q1, q2, [x1]
@@ -1113,108 +1110,108 @@ define void @test_shl_i1024(ptr %result, ptr %input, i32 %shift) {
 ; SDAG-NEXT:    ldp q3, q4, [x1, #32]
 ; SDAG-NEXT:    add x10, x10, #128
 ; SDAG-NEXT:    ldp q5, q6, [x1, #64]
-; SDAG-NEXT:    mvn w4, w2
 ; SDAG-NEXT:    ldr q7, [x1, #96]
 ; SDAG-NEXT:    stp x8, x9, [sp, #240]
 ; SDAG-NEXT:    mov w8, w2
+; SDAG-NEXT:    mvn w1, w2
 ; SDAG-NEXT:    lsr x9, x8, #3
 ; SDAG-NEXT:    stp q0, q0, [sp]
+; SDAG-NEXT:    and x13, x8, #0x3f
 ; SDAG-NEXT:    stp q0, q0, [sp, #32]
-; SDAG-NEXT:    ldp x29, x30, [sp, #336] ; 16-byte Folded Reload
+; SDAG-NEXT:    eor x13, x13, #0x3f
 ; SDAG-NEXT:    and x9, x9, #0x78
 ; SDAG-NEXT:    stp q0, q0, [sp, #64]
 ; SDAG-NEXT:    stp q0, q0, [sp, #96]
-; SDAG-NEXT:    sub x1, x10, x9
-; SDAG-NEXT:    and x10, x8, #0x3f
+; SDAG-NEXT:    sub x10, x10, x9
 ; SDAG-NEXT:    stp q2, q3, [sp, #144]
-; SDAG-NEXT:    eor x10, x10, #0x3f
 ; SDAG-NEXT:    stp q4, q5, [sp, #176]
 ; SDAG-NEXT:    stp q6, q7, [sp, #208]
 ; SDAG-NEXT:    str q1, [sp, #128]
-; SDAG-NEXT:    ldp x6, x19, [x1, #64]
-; SDAG-NEXT:    ldr x26, [x1, #96]
-; SDAG-NEXT:    ldp x22, x23, [x1, #80]
-; SDAG-NEXT:    ldp x27, x24, [x1, #104]
-; SDAG-NEXT:    lsr x20, x6, #1
-; SDAG-NEXT:    lsr x21, x19, #1
-; SDAG-NEXT:    lsl x19, x19, x8
-; SDAG-NEXT:    ldp x9, x13, [x1]
-; SDAG-NEXT:    lsl x25, x22, x8
-; SDAG-NEXT:    lsr x20, x20, x10
-; SDAG-NEXT:    ldp x11, x14, [x1, #16]
-; SDAG-NEXT:    ldp x12, x15, [x1, #32]
-; SDAG-NEXT:    lsr x21, x21, x4
-; SDAG-NEXT:    ldp x17, x2, [x1, #48]
-; SDAG-NEXT:    orr x19, x19, x20
-; SDAG-NEXT:    ldr x1, [x1, #120]
-; SDAG-NEXT:    lsr x20, x24, #1
-; SDAG-NEXT:    lsr x16, x13, #1
-; SDAG-NEXT:    lsr x3, x14, #1
-; SDAG-NEXT:    lsr x5, x15, #1
-; SDAG-NEXT:    orr x21, x25, x21
-; SDAG-NEXT:    lsr x7, x2, #1
-; SDAG-NEXT:    lsr x25, x23, #1
-; SDAG-NEXT:    lsr x28, x27, #1
-; SDAG-NEXT:    lsl x1, x1, x8
-; SDAG-NEXT:    lsr x20, x20, x10
-; SDAG-NEXT:    lsr x16, x16, x4
-; SDAG-NEXT:    lsr x3, x3, x4
-; SDAG-NEXT:    lsr x5, x5, x4
-; SDAG-NEXT:    lsr x7, x7, x4
-; SDAG-NEXT:    lsr x22, x22, #1
-; SDAG-NEXT:    lsr x25, x25, x4
-; SDAG-NEXT:    lsr x4, x28, x4
-; SDAG-NEXT:    orr x1, x1, x20
-; SDAG-NEXT:    lsl x20, x23, x8
-; SDAG-NEXT:    lsl x23, x24, x8
-; SDAG-NEXT:    lsr x28, x26, #1
-; SDAG-NEXT:    lsr x22, x22, x10
-; SDAG-NEXT:    lsl x24, x27, x8
-; SDAG-NEXT:    orr x4, x23, x4
-; SDAG-NEXT:    lsl x6, x6, x8
-; SDAG-NEXT:    lsl x2, x2, x8
-; SDAG-NEXT:    lsr x27, x28, x10
-; SDAG-NEXT:    stp x4, x1, [x0, #112]
-; SDAG-NEXT:    lsl x1, x26, x8
-; SDAG-NEXT:    orr x20, x20, x22
-; SDAG-NEXT:    lsr x4, x9, #1
-; SDAG-NEXT:    lsl x13, x13, x8
-; SDAG-NEXT:    orr x22, x24, x27
-; SDAG-NEXT:    orr x1, x1, x25
-; SDAG-NEXT:    stp x21, x20, [x0, #80]
-; SDAG-NEXT:    lsr x20, x17, #1
-; SDAG-NEXT:    stp x1, x22, [x0, #96]
-; SDAG-NEXT:    lsr x1, x11, #1
-; SDAG-NEXT:    lsr x21, x12, #1
-; SDAG-NEXT:    lsl x14, x14, x8
-; SDAG-NEXT:    lsl x15, x15, x8
-; SDAG-NEXT:    lsr x20, x20, x10
+; SDAG-NEXT:    ldp x5, x4, [x10]
+; SDAG-NEXT:    ldr x19, [x10, #104]
+; SDAG-NEXT:    ldp x23, x7, [x10, #24]
+; SDAG-NEXT:    ldr x24, [x10, #16]
+; SDAG-NEXT:    ldp x6, x17, [x10, #40]
+; SDAG-NEXT:    lsr x21, x5, #1
+; SDAG-NEXT:    ldp x12, x9, [x10, #56]
+; SDAG-NEXT:    lsr x25, x7, #1
+; SDAG-NEXT:    ldp x11, x16, [x10, #72]
+; SDAG-NEXT:    ldp x2, x20, [x10, #88]
+; SDAG-NEXT:    lsr x22, x4, #1
+; SDAG-NEXT:    lsl x4, x4, x8
+; SDAG-NEXT:    lsr x21, x21, x13
+; SDAG-NEXT:    lsl x27, x6, x8
+; SDAG-NEXT:    lsr x25, x25, x13
+; SDAG-NEXT:    lsr x14, x12, #1
+; SDAG-NEXT:    lsr x15, x11, #1
+; SDAG-NEXT:    lsr x3, x2, #1
+; SDAG-NEXT:    lsr x22, x22, x1
+; SDAG-NEXT:    lsl x26, x24, x8
+; SDAG-NEXT:    orr x4, x4, x21
+; SDAG-NEXT:    lsr x21, x23, #1
+; SDAG-NEXT:    orr x25, x27, x25
+; SDAG-NEXT:    lsr x27, x19, #1
+; SDAG-NEXT:    lsr x6, x6, #1
+; SDAG-NEXT:    lsr x14, x14, x1
+; SDAG-NEXT:    lsr x15, x15, x1
+; SDAG-NEXT:    lsr x3, x3, x1
+; SDAG-NEXT:    orr x22, x26, x22
+; SDAG-NEXT:    lsr x26, x17, #1
+; SDAG-NEXT:    lsr x21, x21, x1
+; SDAG-NEXT:    lsr x27, x27, x1
+; SDAG-NEXT:    lsr x1, x6, x1
 ; SDAG-NEXT:    lsl x17, x17, x8
-; SDAG-NEXT:    orr x6, x6, x7
-; SDAG-NEXT:    lsr x7, x21, x10
+; SDAG-NEXT:    lsl x7, x7, x8
 ; SDAG-NEXT:    lsl x12, x12, x8
-; SDAG-NEXT:    lsr x1, x1, x10
+; SDAG-NEXT:    lsr x26, x26, x13
+; SDAG-NEXT:    lsl x5, x5, x8
+; SDAG-NEXT:    orr x17, x17, x1
+; SDAG-NEXT:    ldp x10, x1, [x10, #112]
+; SDAG-NEXT:    orr x6, x7, x21
+; SDAG-NEXT:    lsr x7, x24, #1
+; SDAG-NEXT:    orr x12, x12, x26
+; SDAG-NEXT:    stp x17, x12, [x0, #48]
+; SDAG-NEXT:    lsl x17, x19, x8
+; SDAG-NEXT:    lsl x19, x23, x8
+; SDAG-NEXT:    lsr x7, x7, x13
+; SDAG-NEXT:    lsr x21, x10, #1
+; SDAG-NEXT:    lsl x10, x10, x8
+; SDAG-NEXT:    lsl x1, x1, x8
+; SDAG-NEXT:    lsr x12, x16, #1
+; SDAG-NEXT:    str x5, [x0]
+; SDAG-NEXT:    orr x7, x19, x7
+; SDAG-NEXT:    lsr x19, x21, x13
+; SDAG-NEXT:    orr x10, x10, x27
+; SDAG-NEXT:    lsr x5, x9, #1
+; SDAG-NEXT:    stp x6, x25, [x0, #32]
+; SDAG-NEXT:    lsr x6, x20, #1
+; SDAG-NEXT:    orr x1, x1, x19
+; SDAG-NEXT:    lsl x2, x2, x8
+; SDAG-NEXT:    lsr x12, x12, x13
+; SDAG-NEXT:    stp x10, x1, [x0, #112]
+; SDAG-NEXT:    lsl x10, x16, x8
 ; SDAG-NEXT:    lsl x11, x11, x8
-; SDAG-NEXT:    lsr x10, x4, x10
-; SDAG-NEXT:    stp x6, x19, [x0, #64]
-; SDAG-NEXT:    orr x2, x2, x20
+; SDAG-NEXT:    stp x22, x7, [x0, #16]
+; SDAG-NEXT:    lsl x7, x20, x8
 ; SDAG-NEXT:    lsl x8, x9, x8
-; SDAG-NEXT:    orr x17, x17, x5
+; SDAG-NEXT:    str x4, [x0, #8]
+; SDAG-NEXT:    lsr x4, x6, x13
+; SDAG-NEXT:    orr x9, x10, x15
+; SDAG-NEXT:    lsr x10, x5, x13
+; SDAG-NEXT:    orr x12, x2, x12
+; SDAG-NEXT:    orr x16, x7, x3
 ; SDAG-NEXT:    ldp x20, x19, [sp, #320] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x15, x15, x7
+; SDAG-NEXT:    orr x17, x17, x4
 ; SDAG-NEXT:    ldp x22, x21, [sp, #304] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x12, x12, x3
+; SDAG-NEXT:    stp x9, x12, [x0, #80]
 ; SDAG-NEXT:    ldp x24, x23, [sp, #288] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x14, x14, x1
+; SDAG-NEXT:    orr x8, x8, x14
 ; SDAG-NEXT:    ldp x26, x25, [sp, #272] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x11, x11, x16
+; SDAG-NEXT:    orr x9, x11, x10
 ; SDAG-NEXT:    ldp x28, x27, [sp, #256] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x9, x13, x10
-; SDAG-NEXT:    stp x17, x2, [x0, #48]
-; SDAG-NEXT:    stp x12, x15, [x0, #32]
-; SDAG-NEXT:    stp x11, x14, [x0, #16]
-; SDAG-NEXT:    stp x8, x9, [x0]
-; SDAG-NEXT:    add sp, sp, #352
+; SDAG-NEXT:    stp x16, x17, [x0, #96]
+; SDAG-NEXT:    stp x8, x9, [x0, #64]
+; SDAG-NEXT:    add sp, sp, #336
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_shl_i1024:
@@ -2366,130 +2363,123 @@ entry:
 define void @test_lshr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; SDAG-LABEL: test_lshr_i1024:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    sub sp, sp, #336
-; SDAG-NEXT:    stp x28, x27, [sp, #256] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x26, x25, [sp, #272] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x24, x23, [sp, #288] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x22, x21, [sp, #304] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x20, x19, [sp, #320] ; 16-byte Folded Spill
-; SDAG-NEXT:    .cfi_def_cfa_offset 336
+; SDAG-NEXT:    sub sp, sp, #304
+; SDAG-NEXT:    stp x24, x23, [sp, #256] ; 16-byte Folded Spill
+; SDAG-NEXT:    stp x22, x21, [sp, #272] ; 16-byte Folded Spill
+; SDAG-NEXT:    stp x20, x19, [sp, #288] ; 16-byte Folded Spill
+; SDAG-NEXT:    .cfi_def_cfa_offset 304
 ; SDAG-NEXT:    .cfi_offset w19, -8
 ; SDAG-NEXT:    .cfi_offset w20, -16
 ; SDAG-NEXT:    .cfi_offset w21, -24
 ; SDAG-NEXT:    .cfi_offset w22, -32
 ; SDAG-NEXT:    .cfi_offset w23, -40
 ; SDAG-NEXT:    .cfi_offset w24, -48
-; SDAG-NEXT:    .cfi_offset w25, -56
-; SDAG-NEXT:    .cfi_offset w26, -64
-; SDAG-NEXT:    .cfi_offset w27, -72
-; SDAG-NEXT:    .cfi_offset w28, -80
 ; SDAG-NEXT:    ldp x8, x9, [x1, #112]
 ; SDAG-NEXT:    movi.2d v0, #0000000000000000
 ; SDAG-NEXT:    ldp q1, q2, [x1]
 ; SDAG-NEXT:    mov x10, sp
 ; SDAG-NEXT:    ldp q3, q4, [x1, #32]
-; SDAG-NEXT:    ldr q7, [x1, #96]
+; SDAG-NEXT:    mvn w12, w2
 ; SDAG-NEXT:    ldp q5, q6, [x1, #64]
-; SDAG-NEXT:    mvn w1, w2
+; SDAG-NEXT:    ldr q7, [x1, #96]
 ; SDAG-NEXT:    stp x8, x9, [sp, #112]
 ; SDAG-NEXT:    mov w8, w2
 ; SDAG-NEXT:    lsr x9, x8, #3
 ; SDAG-NEXT:    stp q2, q3, [sp, #16]
-; SDAG-NEXT:    and x14, x8, #0x3f
 ; SDAG-NEXT:    stp q4, q5, [sp, #48]
-; SDAG-NEXT:    eor x15, x14, #0x3f
 ; SDAG-NEXT:    and x9, x9, #0x78
 ; SDAG-NEXT:    stp q6, q7, [sp, #80]
 ; SDAG-NEXT:    stp q0, q0, [sp, #128]
-; SDAG-NEXT:    add x10, x10, x9
+; SDAG-NEXT:    add x9, x10, x9
+; SDAG-NEXT:    and x10, x8, #0x3f
 ; SDAG-NEXT:    stp q0, q0, [sp, #160]
+; SDAG-NEXT:    eor x10, x10, #0x3f
 ; SDAG-NEXT:    stp q0, q0, [sp, #192]
 ; SDAG-NEXT:    stp q0, q0, [sp, #224]
 ; SDAG-NEXT:    str q1, [sp]
-; SDAG-NEXT:    ldp x11, x9, [x10, #16]
-; SDAG-NEXT:    ldr x16, [x10, #32]
-; SDAG-NEXT:    ldp x12, x13, [x10, #40]
-; SDAG-NEXT:    ldr x3, [x10, #56]
-; SDAG-NEXT:    ldp x4, x6, [x10, #64]
-; SDAG-NEXT:    lsl x2, x16, #1
-; SDAG-NEXT:    lsl x17, x11, #1
-; SDAG-NEXT:    ldp x24, x26, [x10, #112]
-; SDAG-NEXT:    lsl x5, x13, #1
-; SDAG-NEXT:    lsr x13, x13, x8
-; SDAG-NEXT:    lsr x11, x11, x8
-; SDAG-NEXT:    lsl x14, x17, x1
-; SDAG-NEXT:    lsl x7, x6, #1
-; SDAG-NEXT:    lsl x17, x2, x1
-; SDAG-NEXT:    lsl x2, x5, x1
-; SDAG-NEXT:    ldp x5, x22, [x10, #80]
-; SDAG-NEXT:    lsr x19, x4, x8
-; SDAG-NEXT:    lsl x7, x7, x15
-; SDAG-NEXT:    lsl x21, x4, #1
-; SDAG-NEXT:    lsr x6, x6, x8
-; SDAG-NEXT:    lsl x27, x24, #1
-; SDAG-NEXT:    lsr x24, x24, x8
-; SDAG-NEXT:    lsl x23, x5, #1
-; SDAG-NEXT:    orr x4, x7, x19
-; SDAG-NEXT:    lsr x25, x22, x8
-; SDAG-NEXT:    ldp x20, x7, [x10, #96]
-; SDAG-NEXT:    lsl x21, x21, x1
-; SDAG-NEXT:    lsl x23, x23, x1
-; SDAG-NEXT:    lsl x22, x22, #1
-; SDAG-NEXT:    lsr x5, x5, x8
-; SDAG-NEXT:    lsr x16, x16, x8
-; SDAG-NEXT:    lsl x19, x20, #1
-; SDAG-NEXT:    orr x6, x6, x23
-; SDAG-NEXT:    lsl x23, x7, #1
+; SDAG-NEXT:    ldp x13, x15, [x9, #112]
+; SDAG-NEXT:    ldr x17, [x9, #16]
+; SDAG-NEXT:    ldp x2, x1, [x9, #24]
+; SDAG-NEXT:    ldr x20, [x9, #56]
+; SDAG-NEXT:    ldp x3, x5, [x9, #40]
+; SDAG-NEXT:    lsr x22, x17, x8
+; SDAG-NEXT:    lsl x11, x15, #1
+; SDAG-NEXT:    lsr x14, x13, x8
+; SDAG-NEXT:    lsl x17, x17, #1
+; SDAG-NEXT:    lsl x7, x2, #1
+; SDAG-NEXT:    lsl x4, x1, #1
+; SDAG-NEXT:    lsr x1, x1, x8
+; SDAG-NEXT:    lsl x11, x11, x10
+; SDAG-NEXT:    lsl x21, x5, #1
+; SDAG-NEXT:    lsr x23, x3, x8
+; SDAG-NEXT:    lsl x7, x7, x10
+; SDAG-NEXT:    lsl x3, x3, #1
+; SDAG-NEXT:    lsl x4, x4, x12
+; SDAG-NEXT:    orr x11, x11, x14
+; SDAG-NEXT:    ldp x6, x14, [x9, #64]
+; SDAG-NEXT:    lsl x21, x21, x12
+; SDAG-NEXT:    orr x7, x7, x22
+; SDAG-NEXT:    lsl x3, x3, x10
+; SDAG-NEXT:    ldp x19, x16, [x9, #80]
+; SDAG-NEXT:    lsr x2, x2, x8
+; SDAG-NEXT:    orr x21, x23, x21
+; SDAG-NEXT:    lsl x22, x6, #1
+; SDAG-NEXT:    lsl x23, x20, #1
 ; SDAG-NEXT:    lsr x20, x20, x8
-; SDAG-NEXT:    lsr x7, x7, x8
-; SDAG-NEXT:    lsl x22, x22, x15
-; SDAG-NEXT:    lsl x19, x19, x1
-; SDAG-NEXT:    lsl x1, x27, x1
-; SDAG-NEXT:    lsl x23, x23, x15
-; SDAG-NEXT:    orr x5, x22, x5
-; SDAG-NEXT:    ldp x28, x27, [sp, #256] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x19, x25, x19
-; SDAG-NEXT:    lsl x25, x26, #1
-; SDAG-NEXT:    orr x20, x23, x20
-; SDAG-NEXT:    orr x1, x7, x1
-; SDAG-NEXT:    ldp x23, x10, [x10]
-; SDAG-NEXT:    stp x20, x1, [x0, #96]
-; SDAG-NEXT:    lsl x20, x3, #1
-; SDAG-NEXT:    lsl x25, x25, x15
-; SDAG-NEXT:    lsr x26, x26, x8
-; SDAG-NEXT:    stp x5, x19, [x0, #80]
-; SDAG-NEXT:    lsr x3, x3, x8
-; SDAG-NEXT:    lsl x19, x20, x15
-; SDAG-NEXT:    orr x7, x25, x24
-; SDAG-NEXT:    lsl x1, x9, #1
-; SDAG-NEXT:    stp x7, x26, [x0, #112]
-; SDAG-NEXT:    lsl x7, x10, #1
-; SDAG-NEXT:    orr x3, x3, x21
-; SDAG-NEXT:    orr x13, x19, x13
-; SDAG-NEXT:    lsl x5, x12, #1
+; SDAG-NEXT:    orr x1, x3, x1
+; SDAG-NEXT:    lsr x3, x5, x8
+; SDAG-NEXT:    lsl x22, x22, x12
+; SDAG-NEXT:    lsl x5, x23, x10
+; SDAG-NEXT:    lsr x15, x15, x8
+; SDAG-NEXT:    lsl x17, x17, x12
+; SDAG-NEXT:    orr x2, x2, x4
+; SDAG-NEXT:    lsl x4, x19, #1
+; SDAG-NEXT:    orr x20, x20, x22
+; SDAG-NEXT:    ldp x22, x23, [x9, #96]
+; SDAG-NEXT:    orr x3, x5, x3
+; SDAG-NEXT:    ldp x9, x5, [x9]
+; SDAG-NEXT:    stp x1, x21, [x0, #32]
+; SDAG-NEXT:    lsl x13, x13, #1
+; SDAG-NEXT:    lsl x4, x4, x12
+; SDAG-NEXT:    str x15, [x0, #120]
+; SDAG-NEXT:    lsl x15, x22, #1
+; SDAG-NEXT:    lsl x21, x23, #1
+; SDAG-NEXT:    lsl x1, x5, #1
 ; SDAG-NEXT:    lsr x9, x9, x8
-; SDAG-NEXT:    stp x13, x3, [x0, #48]
-; SDAG-NEXT:    lsl x13, x1, x15
-; SDAG-NEXT:    lsr x23, x23, x8
-; SDAG-NEXT:    lsr x12, x12, x8
-; SDAG-NEXT:    lsr x8, x10, x8
-; SDAG-NEXT:    lsl x10, x7, x15
-; SDAG-NEXT:    stp x4, x6, [x0, #64]
-; SDAG-NEXT:    lsl x4, x5, x15
-; SDAG-NEXT:    orr x9, x9, x17
-; SDAG-NEXT:    orr x11, x13, x11
-; SDAG-NEXT:    ldp x20, x19, [sp, #320] ; 16-byte Folded Reload
-; SDAG-NEXT:    stp x11, x9, [x0, #16]
-; SDAG-NEXT:    orr x9, x10, x23
-; SDAG-NEXT:    orr x12, x12, x2
-; SDAG-NEXT:    ldp x22, x21, [sp, #304] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x16, x4, x16
-; SDAG-NEXT:    ldp x24, x23, [sp, #288] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x8, x8, x14
-; SDAG-NEXT:    ldp x26, x25, [sp, #272] ; 16-byte Folded Reload
-; SDAG-NEXT:    stp x16, x12, [x0, #32]
-; SDAG-NEXT:    stp x9, x8, [x0]
-; SDAG-NEXT:    add sp, sp, #336
+; SDAG-NEXT:    lsr x5, x5, x8
+; SDAG-NEXT:    stp x3, x20, [x0, #48]
+; SDAG-NEXT:    lsl x20, x16, #1
+; SDAG-NEXT:    lsl x3, x14, #1
+; SDAG-NEXT:    lsl x1, x1, x10
+; SDAG-NEXT:    orr x17, x5, x17
+; SDAG-NEXT:    lsl x15, x15, x12
+; SDAG-NEXT:    lsr x19, x19, x8
+; SDAG-NEXT:    stp x7, x2, [x0, #16]
+; SDAG-NEXT:    lsr x7, x22, x8
+; SDAG-NEXT:    orr x9, x1, x9
+; SDAG-NEXT:    lsl x1, x21, x10
+; SDAG-NEXT:    lsr x6, x6, x8
+; SDAG-NEXT:    stp x9, x17, [x0]
+; SDAG-NEXT:    lsl x9, x13, x12
+; SDAG-NEXT:    lsr x12, x23, x8
+; SDAG-NEXT:    lsl x13, x20, x10
+; SDAG-NEXT:    str x11, [x0, #112]
+; SDAG-NEXT:    lsr x11, x16, x8
+; SDAG-NEXT:    lsl x10, x3, x10
+; SDAG-NEXT:    lsr x8, x14, x8
+; SDAG-NEXT:    orr x17, x1, x7
+; SDAG-NEXT:    orr x9, x12, x9
+; SDAG-NEXT:    orr x12, x13, x19
+; SDAG-NEXT:    ldp x20, x19, [sp, #288] ; 16-byte Folded Reload
+; SDAG-NEXT:    stp x17, x9, [x0, #96]
+; SDAG-NEXT:    ldp x22, x21, [sp, #272] ; 16-byte Folded Reload
+; SDAG-NEXT:    orr x9, x11, x15
+; SDAG-NEXT:    ldp x24, x23, [sp, #256] ; 16-byte Folded Reload
+; SDAG-NEXT:    orr x10, x10, x6
+; SDAG-NEXT:    orr x8, x8, x4
+; SDAG-NEXT:    stp x12, x9, [x0, #80]
+; SDAG-NEXT:    stp x10, x8, [x0, #64]
+; SDAG-NEXT:    add sp, sp, #304
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_lshr_i1024:
@@ -3603,134 +3593,127 @@ entry:
 define void @test_ashr_i1024(ptr %result, ptr %input, i32 %shift) {
 ; SDAG-LABEL: test_ashr_i1024:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    sub sp, sp, #336
-; SDAG-NEXT:    stp x28, x27, [sp, #256] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x26, x25, [sp, #272] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x24, x23, [sp, #288] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x22, x21, [sp, #304] ; 16-byte Folded Spill
-; SDAG-NEXT:    stp x20, x19, [sp, #320] ; 16-byte Folded Spill
-; SDAG-NEXT:    .cfi_def_cfa_offset 336
+; SDAG-NEXT:    sub sp, sp, #304
+; SDAG-NEXT:    stp x24, x23, [sp, #256] ; 16-byte Folded Spill
+; SDAG-NEXT:    stp x22, x21, [sp, #272] ; 16-byte Folded Spill
+; SDAG-NEXT:    stp x20, x19, [sp, #288] ; 16-byte Folded Spill
+; SDAG-NEXT:    .cfi_def_cfa_offset 304
 ; SDAG-NEXT:    .cfi_offset w19, -8
 ; SDAG-NEXT:    .cfi_offset w20, -16
 ; SDAG-NEXT:    .cfi_offset w21, -24
 ; SDAG-NEXT:    .cfi_offset w22, -32
 ; SDAG-NEXT:    .cfi_offset w23, -40
 ; SDAG-NEXT:    .cfi_offset w24, -48
-; SDAG-NEXT:    .cfi_offset w25, -56
-; SDAG-NEXT:    .cfi_offset w26, -64
-; SDAG-NEXT:    .cfi_offset w27, -72
-; SDAG-NEXT:    .cfi_offset w28, -80
 ; SDAG-NEXT:    ldp x8, x9, [x1, #112]
 ; SDAG-NEXT:    mov x11, sp
 ; SDAG-NEXT:    ldp q0, q1, [x1]
-; SDAG-NEXT:    ldr q6, [x1, #96]
+; SDAG-NEXT:    mvn w12, w2
 ; SDAG-NEXT:    ldp q2, q3, [x1, #32]
+; SDAG-NEXT:    ldr q6, [x1, #96]
 ; SDAG-NEXT:    ldp q4, q5, [x1, #64]
-; SDAG-NEXT:    mvn w1, w2
+; SDAG-NEXT:    asr x10, x9, #63
 ; SDAG-NEXT:    stp x8, x9, [sp, #112]
 ; SDAG-NEXT:    mov w8, w2
-; SDAG-NEXT:    asr x9, x9, #63
-; SDAG-NEXT:    lsr x10, x8, #3
+; SDAG-NEXT:    lsr x9, x8, #3
 ; SDAG-NEXT:    stp q1, q2, [sp, #16]
-; SDAG-NEXT:    and x14, x8, #0x3f
 ; SDAG-NEXT:    stp q3, q4, [sp, #48]
-; SDAG-NEXT:    eor x15, x14, #0x3f
-; SDAG-NEXT:    and x10, x10, #0x78
+; SDAG-NEXT:    and x9, x9, #0x78
 ; SDAG-NEXT:    stp q5, q6, [sp, #80]
 ; SDAG-NEXT:    str q0, [sp]
-; SDAG-NEXT:    add x10, x11, x10
-; SDAG-NEXT:    stp x9, x9, [sp, #240]
-; SDAG-NEXT:    stp x9, x9, [sp, #224]
-; SDAG-NEXT:    stp x9, x9, [sp, #208]
-; SDAG-NEXT:    stp x9, x9, [sp, #192]
-; SDAG-NEXT:    stp x9, x9, [sp, #176]
-; SDAG-NEXT:    stp x9, x9, [sp, #160]
-; SDAG-NEXT:    stp x9, x9, [sp, #144]
-; SDAG-NEXT:    stp x9, x9, [sp, #128]
-; SDAG-NEXT:    ldp x11, x9, [x10, #16]
-; SDAG-NEXT:    ldr x16, [x10, #32]
-; SDAG-NEXT:    ldp x12, x13, [x10, #40]
-; SDAG-NEXT:    ldr x3, [x10, #56]
-; SDAG-NEXT:    ldp x4, x6, [x10, #64]
-; SDAG-NEXT:    lsl x2, x16, #1
-; SDAG-NEXT:    lsl x17, x11, #1
-; SDAG-NEXT:    ldp x24, x26, [x10, #112]
-; SDAG-NEXT:    lsl x5, x13, #1
-; SDAG-NEXT:    lsr x13, x13, x8
-; SDAG-NEXT:    lsr x11, x11, x8
-; SDAG-NEXT:    lsl x14, x17, x1
-; SDAG-NEXT:    lsl x7, x6, #1
-; SDAG-NEXT:    lsl x17, x2, x1
-; SDAG-NEXT:    lsl x2, x5, x1
-; SDAG-NEXT:    ldp x5, x22, [x10, #80]
-; SDAG-NEXT:    lsr x19, x4, x8
-; SDAG-NEXT:    lsl x7, x7, x15
-; SDAG-NEXT:    lsl x21, x4, #1
-; SDAG-NEXT:    lsr x6, x6, x8
-; SDAG-NEXT:    lsl x27, x24, #1
-; SDAG-NEXT:    lsr x24, x24, x8
-; SDAG-NEXT:    lsl x23, x5, #1
-; SDAG-NEXT:    orr x4, x7, x19
-; SDAG-NEXT:    lsr x25, x22, x8
-; SDAG-NEXT:    ldp x20, x7, [x10, #96]
-; SDAG-NEXT:    lsl x21, x21, x1
-; SDAG-NEXT:    lsl x23, x23, x1
-; SDAG-NEXT:    lsl x22, x22, #1
+; SDAG-NEXT:    add x9, x11, x9
+; SDAG-NEXT:    and x11, x8, #0x3f
+; SDAG-NEXT:    stp x10, x10, [sp, #240]
+; SDAG-NEXT:    eor x11, x11, #0x3f
+; SDAG-NEXT:    stp x10, x10, [sp, #224]
+; SDAG-NEXT:    stp x10, x10, [sp, #208]
+; SDAG-NEXT:    stp x10, x10, [sp, #192]
+; SDAG-NEXT:    stp x10, x10, [sp, #176]
+; SDAG-NEXT:    stp x10, x10, [sp, #160]
+; SDAG-NEXT:    stp x10, x10, [sp, #144]
+; SDAG-NEXT:    stp x10, x10, [sp, #128]
+; SDAG-NEXT:    ldp x14, x1, [x9, #112]
+; SDAG-NEXT:    ldr x2, [x9, #16]
+; SDAG-NEXT:    ldp x5, x4, [x9, #24]
+; SDAG-NEXT:    ldr x20, [x9, #56]
+; SDAG-NEXT:    ldp x16, x10, [x9, #64]
+; SDAG-NEXT:    lsr x22, x2, x8
+; SDAG-NEXT:    lsl x17, x1, #1
+; SDAG-NEXT:    lsr x3, x14, x8
+; SDAG-NEXT:    lsl x2, x2, #1
+; SDAG-NEXT:    lsl x19, x5, #1
+; SDAG-NEXT:    lsl x7, x4, #1
+; SDAG-NEXT:    lsr x4, x4, x8
+; SDAG-NEXT:    lsl x17, x17, x11
+; SDAG-NEXT:    ldp x15, x13, [x9, #80]
+; SDAG-NEXT:    lsl x19, x19, x11
+; SDAG-NEXT:    lsl x7, x7, x12
 ; SDAG-NEXT:    lsr x5, x5, x8
+; SDAG-NEXT:    orr x17, x17, x3
+; SDAG-NEXT:    ldp x3, x6, [x9, #40]
+; SDAG-NEXT:    orr x19, x19, x22
+; SDAG-NEXT:    lsl x22, x16, #1
+; SDAG-NEXT:    asr x1, x1, x8
+; SDAG-NEXT:    lsl x2, x2, x12
+; SDAG-NEXT:    orr x5, x5, x7
+; SDAG-NEXT:    lsl x7, x15, #1
+; SDAG-NEXT:    lsl x21, x6, #1
+; SDAG-NEXT:    lsr x23, x3, x8
+; SDAG-NEXT:    lsl x3, x3, #1
+; SDAG-NEXT:    lsl x22, x22, x12
+; SDAG-NEXT:    lsl x14, x14, #1
+; SDAG-NEXT:    lsl x7, x7, x12
+; SDAG-NEXT:    lsl x21, x21, x12
+; SDAG-NEXT:    lsl x3, x3, x11
 ; SDAG-NEXT:    lsr x16, x16, x8
-; SDAG-NEXT:    lsl x19, x20, #1
-; SDAG-NEXT:    orr x6, x6, x23
-; SDAG-NEXT:    lsl x23, x7, #1
+; SDAG-NEXT:    lsr x15, x15, x8
+; SDAG-NEXT:    orr x21, x23, x21
+; SDAG-NEXT:    lsl x23, x20, #1
 ; SDAG-NEXT:    lsr x20, x20, x8
-; SDAG-NEXT:    lsr x7, x7, x8
-; SDAG-NEXT:    lsl x22, x22, x15
-; SDAG-NEXT:    lsl x19, x19, x1
-; SDAG-NEXT:    lsl x1, x27, x1
-; SDAG-NEXT:    lsl x23, x23, x15
-; SDAG-NEXT:    orr x5, x22, x5
-; SDAG-NEXT:    ldp x28, x27, [sp, #256] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x19, x25, x19
-; SDAG-NEXT:    lsl x25, x26, #1
-; SDAG-NEXT:    orr x20, x23, x20
-; SDAG-NEXT:    orr x1, x7, x1
-; SDAG-NEXT:    ldp x23, x10, [x10]
-; SDAG-NEXT:    stp x20, x1, [x0, #96]
-; SDAG-NEXT:    lsl x20, x3, #1
-; SDAG-NEXT:    lsl x25, x25, x15
-; SDAG-NEXT:    asr x26, x26, x8
-; SDAG-NEXT:    stp x5, x19, [x0, #80]
-; SDAG-NEXT:    lsr x3, x3, x8
-; SDAG-NEXT:    lsl x19, x20, x15
-; SDAG-NEXT:    orr x7, x25, x24
-; SDAG-NEXT:    lsl x1, x9, #1
-; SDAG-NEXT:    stp x7, x26, [x0, #112]
-; SDAG-NEXT:    lsl x7, x10, #1
-; SDAG-NEXT:    orr x3, x3, x21
-; SDAG-NEXT:    orr x13, x19, x13
-; SDAG-NEXT:    lsl x5, x12, #1
+; SDAG-NEXT:    orr x3, x3, x4
+; SDAG-NEXT:    lsr x4, x6, x8
+; SDAG-NEXT:    lsl x6, x23, x11
+; SDAG-NEXT:    orr x20, x20, x22
+; SDAG-NEXT:    ldp x22, x23, [x9, #96]
+; SDAG-NEXT:    orr x4, x6, x4
+; SDAG-NEXT:    ldp x9, x6, [x9]
+; SDAG-NEXT:    stp x3, x21, [x0, #32]
+; SDAG-NEXT:    str x1, [x0, #120]
+; SDAG-NEXT:    lsl x1, x22, #1
+; SDAG-NEXT:    lsl x21, x23, #1
+; SDAG-NEXT:    lsl x3, x6, #1
 ; SDAG-NEXT:    lsr x9, x9, x8
-; SDAG-NEXT:    stp x13, x3, [x0, #48]
-; SDAG-NEXT:    lsl x13, x1, x15
-; SDAG-NEXT:    lsr x23, x23, x8
-; SDAG-NEXT:    lsr x12, x12, x8
+; SDAG-NEXT:    lsr x6, x6, x8
+; SDAG-NEXT:    stp x4, x20, [x0, #48]
+; SDAG-NEXT:    lsl x4, x10, #1
+; SDAG-NEXT:    lsl x20, x13, #1
+; SDAG-NEXT:    lsl x3, x3, x11
+; SDAG-NEXT:    orr x2, x6, x2
+; SDAG-NEXT:    lsl x1, x1, x12
+; SDAG-NEXT:    stp x19, x5, [x0, #16]
+; SDAG-NEXT:    lsr x19, x22, x8
+; SDAG-NEXT:    lsr x13, x13, x8
+; SDAG-NEXT:    orr x9, x3, x9
+; SDAG-NEXT:    lsl x3, x21, x11
+; SDAG-NEXT:    stp x9, x2, [x0]
+; SDAG-NEXT:    lsl x9, x14, x12
+; SDAG-NEXT:    lsr x12, x23, x8
+; SDAG-NEXT:    lsl x14, x20, x11
+; SDAG-NEXT:    lsl x11, x4, x11
 ; SDAG-NEXT:    lsr x8, x10, x8
-; SDAG-NEXT:    lsl x10, x7, x15
-; SDAG-NEXT:    stp x4, x6, [x0, #64]
-; SDAG-NEXT:    lsl x4, x5, x15
-; SDAG-NEXT:    orr x9, x9, x17
-; SDAG-NEXT:    orr x11, x13, x11
-; SDAG-NEXT:    ldp x20, x19, [sp, #320] ; 16-byte Folded Reload
-; SDAG-NEXT:    stp x11, x9, [x0, #16]
-; SDAG-NEXT:    orr x9, x10, x23
-; SDAG-NEXT:    orr x12, x12, x2
-; SDAG-NEXT:    ldp x22, x21, [sp, #304] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x16, x4, x16
-; SDAG-NEXT:    ldp x24, x23, [sp, #288] ; 16-byte Folded Reload
-; SDAG-NEXT:    orr x8, x8, x14
-; SDAG-NEXT:    ldp x26, x25, [sp, #272] ; 16-byte Folded Reload
-; SDAG-NEXT:    stp x16, x12, [x0, #32]
-; SDAG-NEXT:    stp x9, x8, [x0]
-; SDAG-NEXT:    add sp, sp, #336
+; SDAG-NEXT:    orr x2, x3, x19
+; SDAG-NEXT:    orr x9, x12, x9
+; SDAG-NEXT:    ldp x20, x19, [sp, #288] ; 16-byte Folded Reload
+; SDAG-NEXT:    orr x12, x14, x15
+; SDAG-NEXT:    ldp x22, x21, [sp, #272] ; 16-byte Folded Reload
+; SDAG-NEXT:    stp x9, x17, [x0, #104]
+; SDAG-NEXT:    ldp x24, x23, [sp, #256] ; 16-byte Folded Reload
+; SDAG-NEXT:    orr x9, x13, x1
+; SDAG-NEXT:    orr x10, x11, x16
+; SDAG-NEXT:    orr x8, x8, x7
+; SDAG-NEXT:    stp x9, x2, [x0, #88]
+; SDAG-NEXT:    str x10, [x0, #64]
+; SDAG-NEXT:    stp x8, x12, [x0, #72]
+; SDAG-NEXT:    add sp, sp, #304
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_ashr_i1024:
@@ -4904,14 +4887,12 @@ entry:
 define void @test_shl_i512_const_zero(ptr %result, ptr %input) {
 ; SDAG-LABEL: test_shl_i512_const_zero:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    ldp x9, x8, [x1, #48]
-; SDAG-NEXT:    ldr q0, [x1]
-; SDAG-NEXT:    ldp x11, x10, [x1, #16]
-; SDAG-NEXT:    ldp x13, x12, [x1, #32]
+; SDAG-NEXT:    ldp x8, x9, [x1, #48]
+; SDAG-NEXT:    ldr q2, [x1, #32]
+; SDAG-NEXT:    ldp q0, q1, [x1]
+; SDAG-NEXT:    stp x8, x9, [x0, #48]
+; SDAG-NEXT:    stp q1, q2, [x0, #16]
 ; SDAG-NEXT:    str q0, [x0]
-; SDAG-NEXT:    stp x9, x8, [x0, #48]
-; SDAG-NEXT:    stp x11, x10, [x0, #16]
-; SDAG-NEXT:    stp x13, x12, [x0, #32]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_shl_i512_const_zero:
@@ -4935,14 +4916,12 @@ entry:
 define void @test_lshr_i512_const_zero(ptr %result, ptr %input) {
 ; SDAG-LABEL: test_lshr_i512_const_zero:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    ldp x9, x8, [x1, #48]
-; SDAG-NEXT:    ldr q0, [x1]
-; SDAG-NEXT:    ldp x11, x10, [x1, #16]
-; SDAG-NEXT:    ldp x13, x12, [x1, #32]
+; SDAG-NEXT:    ldp x8, x9, [x1, #48]
+; SDAG-NEXT:    ldr q2, [x1, #32]
+; SDAG-NEXT:    ldp q0, q1, [x1]
+; SDAG-NEXT:    stp x8, x9, [x0, #48]
+; SDAG-NEXT:    stp q1, q2, [x0, #16]
 ; SDAG-NEXT:    str q0, [x0]
-; SDAG-NEXT:    stp x9, x8, [x0, #48]
-; SDAG-NEXT:    stp x11, x10, [x0, #16]
-; SDAG-NEXT:    stp x13, x12, [x0, #32]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_lshr_i512_const_zero:
@@ -4966,14 +4945,12 @@ entry:
 define void @test_ashr_i512_const_zero(ptr %result, ptr %input) {
 ; SDAG-LABEL: test_ashr_i512_const_zero:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    ldp x9, x8, [x1, #48]
-; SDAG-NEXT:    ldr q0, [x1]
-; SDAG-NEXT:    ldp x11, x10, [x1, #16]
-; SDAG-NEXT:    ldp x13, x12, [x1, #32]
+; SDAG-NEXT:    ldp x8, x9, [x1, #48]
+; SDAG-NEXT:    ldr q2, [x1, #32]
+; SDAG-NEXT:    ldp q0, q1, [x1]
+; SDAG-NEXT:    stp x8, x9, [x0, #48]
+; SDAG-NEXT:    stp q1, q2, [x0, #16]
 ; SDAG-NEXT:    str q0, [x0]
-; SDAG-NEXT:    stp x9, x8, [x0, #48]
-; SDAG-NEXT:    stp x11, x10, [x0, #16]
-; SDAG-NEXT:    stp x13, x12, [x0, #32]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_ashr_i512_const_zero:
@@ -5137,14 +5114,13 @@ entry:
 define void @test_shl_i512_const_64(ptr %result, ptr %input) {
 ; SDAG-LABEL: test_shl_i512_const_64:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    ldp x10, x8, [x1, #40]
-; SDAG-NEXT:    ldr q0, [x1]
-; SDAG-NEXT:    ldp x12, x9, [x1, #24]
-; SDAG-NEXT:    ldr x11, [x1, #16]
+; SDAG-NEXT:    ldp q0, q1, [x1]
+; SDAG-NEXT:    ldr x8, [x1, #48]
+; SDAG-NEXT:    ldr q2, [x1, #32]
 ; SDAG-NEXT:    str xzr, [x0]
-; SDAG-NEXT:    stp x10, x8, [x0, #48]
-; SDAG-NEXT:    stp x12, x9, [x0, #32]
-; SDAG-NEXT:    str x11, [x0, #24]
+; SDAG-NEXT:    str x8, [x0, #56]
+; SDAG-NEXT:    stur q2, [x0, #40]
+; SDAG-NEXT:    stur q1, [x0, #24]
 ; SDAG-NEXT:    stur q0, [x0, #8]
 ; SDAG-NEXT:    ret
 ;
@@ -5169,14 +5145,14 @@ entry:
 define void @test_lshr_i512_const_64(ptr %result, ptr %input) {
 ; SDAG-LABEL: test_lshr_i512_const_64:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    ldp x11, x8, [x1, #48]
-; SDAG-NEXT:    ldur q0, [x1, #8]
-; SDAG-NEXT:    ldp x10, x9, [x1, #24]
-; SDAG-NEXT:    ldr x12, [x1, #40]
-; SDAG-NEXT:    str q0, [x0]
+; SDAG-NEXT:    ldp x13, x8, [x1, #48]
+; SDAG-NEXT:    ldr x14, [x1, #40]
+; SDAG-NEXT:    ldp x10, x9, [x1, #8]
+; SDAG-NEXT:    ldp x12, x11, [x1, #24]
 ; SDAG-NEXT:    stp x8, xzr, [x0, #48]
-; SDAG-NEXT:    stp x12, x11, [x0, #32]
-; SDAG-NEXT:    stp x10, x9, [x0, #16]
+; SDAG-NEXT:    stp x14, x13, [x0, #32]
+; SDAG-NEXT:    stp x12, x11, [x0, #16]
+; SDAG-NEXT:    stp x10, x9, [x0]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_lshr_i512_const_64:
@@ -5200,15 +5176,15 @@ entry:
 define void @test_ashr_i512_const_64(ptr %result, ptr %input) {
 ; SDAG-LABEL: test_ashr_i512_const_64:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    ldp x8, x9, [x1, #40]
-; SDAG-NEXT:    ldr x12, [x1, #56]
-; SDAG-NEXT:    ldp x11, x10, [x1, #24]
-; SDAG-NEXT:    ldur q0, [x1, #8]
-; SDAG-NEXT:    stp x8, x9, [x0, #32]
-; SDAG-NEXT:    asr x8, x12, #63
-; SDAG-NEXT:    stp x11, x10, [x0, #16]
-; SDAG-NEXT:    str q0, [x0]
-; SDAG-NEXT:    stp x12, x8, [x0, #48]
+; SDAG-NEXT:    ldp x9, x8, [x1, #40]
+; SDAG-NEXT:    ldr x14, [x1, #56]
+; SDAG-NEXT:    ldp x11, x10, [x1, #8]
+; SDAG-NEXT:    ldp x13, x12, [x1, #24]
+; SDAG-NEXT:    stp x9, x8, [x0, #32]
+; SDAG-NEXT:    asr x8, x14, #63
+; SDAG-NEXT:    stp x11, x10, [x0]
+; SDAG-NEXT:    stp x13, x12, [x0, #16]
+; SDAG-NEXT:    stp x14, x8, [x0, #48]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_ashr_i512_const_64:

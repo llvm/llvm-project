@@ -18,10 +18,9 @@ define void @foo() {
 ; CHECK-VEC-NEXT:    .cfi_offset %r15, -40
 ; CHECK-VEC-NEXT:    aghi %r15, -192
 ; CHECK-VEC-NEXT:    .cfi_def_cfa_offset 352
+; CHECK-VEC-NEXT:    vrepib %v0, 12
 ; CHECK-VEC-NEXT:    larl %r1, .LCPI0_0
-; CHECK-VEC-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-VEC-NEXT:    larl %r1, .LCPI0_1
-; CHECK-VEC-NEXT:    vst %v0, 176(%r15), 3
+; CHECK-VEC-NEXT:    vsteg %v0, 184(%r15), 0
 ; CHECK-VEC-NEXT:    vl %v0, 0(%r1), 3
 ; CHECK-VEC-NEXT:    vrepib %v24, 1
 ; CHECK-VEC-NEXT:    vrepib %v26, 2
@@ -31,6 +30,8 @@ define void @foo() {
 ; CHECK-VEC-NEXT:    vrepib %v27, 6
 ; CHECK-VEC-NEXT:    vrepib %v29, 7
 ; CHECK-VEC-NEXT:    vrepib %v31, 8
+; CHECK-VEC-NEXT:    llihf %r0, 185273099
+; CHECK-VEC-NEXT:    stg %r0, 176(%r15)
 ; CHECK-VEC-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-VEC-NEXT:    brasl %r14, bar@PLT
 ; CHECK-VEC-NEXT:    lmg %r14, %r15, 304(%r15)
@@ -43,10 +44,9 @@ define void @foo() {
 ; CHECK-STACK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-STACK-NEXT:    aghi %r15, -192
 ; CHECK-STACK-NEXT:    .cfi_def_cfa_offset 352
+; CHECK-STACK-NEXT:    vrepib %v0, 12
 ; CHECK-STACK-NEXT:    larl %r1, .LCPI0_0
-; CHECK-STACK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-STACK-NEXT:    larl %r1, .LCPI0_1
-; CHECK-STACK-NEXT:    vst %v0, 176(%r15), 3
+; CHECK-STACK-NEXT:    vsteg %v0, 184(%r15), 0
 ; CHECK-STACK-NEXT:    vl %v0, 0(%r1), 3
 ; CHECK-STACK-NEXT:    vrepib %v24, 1
 ; CHECK-STACK-NEXT:    vrepib %v26, 2
@@ -56,6 +56,8 @@ define void @foo() {
 ; CHECK-STACK-NEXT:    vrepib %v27, 6
 ; CHECK-STACK-NEXT:    vrepib %v29, 7
 ; CHECK-STACK-NEXT:    vrepib %v31, 8
+; CHECK-STACK-NEXT:    llihf %r0, 185273099
+; CHECK-STACK-NEXT:    stg %r0, 176(%r15)
 ; CHECK-STACK-NEXT:    vst %v0, 160(%r15), 3
 ; CHECK-STACK-NEXT:    brasl %r14, bar@PLT
 ; CHECK-STACK-NEXT:    lmg %r14, %r15, 304(%r15)

@@ -28,9 +28,8 @@ entry:
 ; CHECK:         sub     sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-DAG:     stp     xzr, xzr, [sp]
-; CHECK-DAG:     mov     x0, xzr
-; CHECK-DAG:     mov     x1, xzr
+; CHECK-NEXT:    stp     xzr, xzr, [sp]
+; CHECK-NEXT:    ldp     x0, x1, [sp]
 ; CHECK:         .seh_startepilogue
 ; CHECK-NEXT:    add     sp, sp, #16
 

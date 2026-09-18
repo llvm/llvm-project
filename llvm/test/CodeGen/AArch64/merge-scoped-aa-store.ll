@@ -43,7 +43,12 @@ define void @blam1(ptr %g0, ptr %g1) {
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY $x0
   ; MIR-NEXT:   [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load (s64) from %ir.g0, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   STRDui killed [[LDRDui]], [[COPY]], 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope !9, !noalias !10)
+  ; MIR-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LDRDui]], %subreg.dsub
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]].ssub
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[COPY2]]
+  ; MIR-NEXT:   STRSui killed [[COPY3]], [[COPY]], 0 :: (store (s32) into %ir.tmp41, !alias.scope !3, !noalias !0)
+  ; MIR-NEXT:   [[ADDXri:%[0-9]+]]:gpr64sp = nuw ADDXri [[COPY]], 4, 0
+  ; MIR-NEXT:   ST1i32 [[SUBREG_TO_REG]], 1, killed [[ADDXri]] :: (store (s32) into %ir.tmp7, !alias.scope !5, !noalias !7)
   ; MIR-NEXT:   RET_ReallyLR
   %tmp4 = getelementptr inbounds <3 x float>, ptr %g1, i64 0, i64 0
   %tmp5 = load <3 x float>, ptr %g0, align 4, !alias.scope !0, !noalias !1
