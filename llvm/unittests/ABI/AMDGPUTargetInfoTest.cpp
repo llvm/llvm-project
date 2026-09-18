@@ -53,7 +53,7 @@ protected:
         F32(TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4))),
         Void(TB.getVoidType()),
         Empty(TB.getRecordType({}, llvm::TypeSize::getFixed(8), llvm::Align(1),
-                               StructPacking::Default, {}, {},
+                               llvm::Align(1), StructPacking::Default, {}, {},
                                RecordFlags::CanPassInRegisters)) {}
 
   std::unique_ptr<TargetInfo> target() const {
@@ -80,8 +80,8 @@ protected:
   const ABIType *recordOf(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeInBits,
                           llvm::Align Alignment) {
     return TB.getRecordType(Fields, llvm::TypeSize::getFixed(SizeInBits),
-                            Alignment, StructPacking::Default, {}, {},
-                            RecordFlags::CanPassInRegisters);
+                            Alignment, Alignment, StructPacking::Default, {},
+                            {}, RecordFlags::CanPassInRegisters);
   }
 
   /// The argument classification the target computes for a single parameter
@@ -263,7 +263,7 @@ TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordIsIndirectPrivate) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *CannotPass = TB.getRecordType(
       {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
-      StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
+      llvm::Align(4), StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
   expectIndirect(classifyArg(CannotPass, FI, TI), llvm::Align(4),
                  /*ByVal=*/false, llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
@@ -359,7 +359,7 @@ TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordReturnIsIndirect) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *CannotPass = TB.getRecordType(
       {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
-      StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
+      llvm::Align(4), StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
   const ArgInfo &Info = classifyRet(CannotPass, FI, TI);
   ASSERT_TRUE(Info.isIndirect());
   EXPECT_FALSE(Info.getIndirectByVal());
