@@ -108,6 +108,12 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+// Off for now: this changes allocation across a good fraction of the tests.
+static cl::opt<bool> CompactSlotIndexes(
+    "greedy-compact-slot-indexes", cl::Hidden, cl::init(false),
+    cl::desc("Drop SlotIndexes entries for erased instructions before "
+             "allocating, so live range sizes reflect real code distance"));
+
 // This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
@@ -2957,8 +2963,19 @@ bool RAGreedy::run(MachineFunction &mf) {
     return false;
 
   // Renumber to get accurate and consistent results from
-  // SlotIndexes::getApproxInstrDistance.
-  Indexes->packIndexes();
+  // SlotIndexes::getApproxInstrDistance. Reclaiming the index space of erased
+  // instructions matters as much: they skew some live range sizes more than
+  // others, which reorders the priority queue below.
+  if (CompactSlotIndexes) {
+    // Every analysis holding a SlotIndex across allocation must be listed here.
+    SmallVector<SlotIndex, 0> Referenced;
+    LIS->appendReferencedIndexes(Referenced);
+    LSS->appendReferencedIndexes(Referenced);
+    DebugVars->appendReferencedIndexes(Referenced);
+    Indexes->compactIndexes(Referenced);
+  } else {
+    Indexes->packIndexes();
+  }
 
   initializeCSRCost();
 
