@@ -559,9 +559,16 @@ static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
   Value *Op1 = BO->getOperand(1);
   auto Opcode = static_cast<Instruction::BinaryOps>(BO->getOpcode());
 
-  // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
-  if (Opcode == Instruction::Sub)
-    return !Signed && Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
+  if (Opcode == Instruction::Sub) {
+    // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
+    if (!Signed)
+      return Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
+
+    // Op0 - Op1 does not wrap signed if 0 <=s Op1 <=s Op0.
+    if (Info.isKnownNonNegative(Op1) &&
+        Info.doesHold(CmpInst::ICMP_SGE, Op0, Op1))
+      return true;
+  }
 
   if (!Signed && BO->hasNoSignedWrap() &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
@@ -1389,9 +1396,11 @@ static bool canStrengthenFlags(Instruction *I) {
 
   switch (BO->getOpcode()) {
   case Instruction::Sub:
-    // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
-    // canonicalized to Add.
-    return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // A - B does not wrap unsigned if A >=u B, and does not wrap signed if
+    // 0 <=s B <=s A. With a constant B, bounds on A can refine both flags.
+    return true;
   case Instruction::Add:
   case Instruction::Mul:
   case Instruction::Shl:

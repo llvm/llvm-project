@@ -27,8 +27,7 @@ struct olMemFillTest : OffloadQueueTest {
     }
 
     void *Alloc;
-    ASSERT_SUCCESS(
-        olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
     PatternTy Pattern = PatternVal;
     ASSERT_SUCCESS(olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
@@ -44,7 +43,7 @@ struct olMemFillTest : OffloadQueueTest {
       ASSERT_EQ(AllocPtr[i], Pattern);
     }
 
-    olMemFree(Context, Alloc);
+    olMemFree(Alloc);
   }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemFillTest);
@@ -79,8 +78,7 @@ TEST_P(olMemFillTest, Success32Enqueue) {
 TEST_P(olMemFillTest, SuccessLarge) {
   constexpr size_t Size = 1024;
   void *Alloc;
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct PatternT {
     uint64_t A;
@@ -98,7 +96,7 @@ TEST_P(olMemFillTest, SuccessLarge) {
     ASSERT_EQ(AllocPtr[i].B, UINT64_MAX);
   }
 
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeEnqueue) {
@@ -107,8 +105,7 @@ TEST_P(olMemFillTest, SuccessLargeEnqueue) {
   ManuallyTriggeredTask Manual;
   ASSERT_SUCCESS(Manual.enqueue(Queue));
 
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct PatternT {
     uint64_t A;
@@ -127,14 +124,13 @@ TEST_P(olMemFillTest, SuccessLargeEnqueue) {
     ASSERT_EQ(AllocPtr[i].B, UINT64_MAX);
   }
 
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAligned) {
   constexpr size_t Size = 17 * 64;
   void *Alloc;
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct __attribute__((packed)) PatternT {
     uint64_t A;
@@ -154,7 +150,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAligned) {
     ASSERT_EQ(AllocPtr[i].C, 255);
   }
 
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
@@ -163,8 +159,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
   ManuallyTriggeredTask Manual;
   ASSERT_SUCCESS(Manual.enqueue(Queue));
 
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   struct __attribute__((packed)) PatternT {
     uint64_t A;
@@ -185,35 +180,33 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
     ASSERT_EQ(AllocPtr[i].C, 255);
   }
 
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, InvalidSizeNotMultipleOfPatternSize) {
   constexpr size_t Size = 1025;
   void *Alloc;
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   uint16_t Pattern = 0x4242;
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
 
   olSyncQueue(Queue);
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, InvalidPatternSizeLargerThanFillSize) {
   constexpr size_t Size = 4;
   void *Alloc;
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   uint64_t Pattern = 0x4242424242424242;
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
 
   olSyncQueue(Queue);
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 // Even though L0, CUDA and HSA do not support non-power-of-two patterns,
@@ -226,8 +219,7 @@ static constexpr std::array<unsigned char, 3> FallbackPattern = {0x11, 0x22,
 TEST_P(olMemFillTest, SuccessNonPow2PatternManaged) {
   constexpr size_t Size = FallbackPattern.size() * 1000;
   void *Alloc;
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
 
   ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
                            FallbackPattern.data(), Size));
@@ -237,14 +229,13 @@ TEST_P(olMemFillTest, SuccessNonPow2PatternManaged) {
   for (size_t I = 0; I < Size; I++)
     ASSERT_EQ(AllocPtr[I], FallbackPattern[I % FallbackPattern.size()]);
 
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessNonPow2PatternDevice) {
   constexpr size_t Size = FallbackPattern.size() * 1000;
   void *Alloc;
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
 
   ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
                            FallbackPattern.data(), Size));
@@ -256,14 +247,13 @@ TEST_P(olMemFillTest, SuccessNonPow2PatternDevice) {
   for (size_t I = 0; I < Size; I++)
     ASSERT_EQ(HostBuf[I], FallbackPattern[I % FallbackPattern.size()]);
 
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessNonPow2PatternDeviceSmall) {
   constexpr size_t Size = FallbackPattern.size() * 2;
   void *Alloc;
-  ASSERT_SUCCESS(
-      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
 
   ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
                            FallbackPattern.data(), Size));
@@ -275,5 +265,5 @@ TEST_P(olMemFillTest, SuccessNonPow2PatternDeviceSmall) {
   for (size_t I = 0; I < Size; I++)
     ASSERT_EQ(HostBuf[I], FallbackPattern[I % FallbackPattern.size()]);
 
-  olMemFree(Context, Alloc);
+  olMemFree(Alloc);
 }

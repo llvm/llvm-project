@@ -1376,6 +1376,20 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 
   Value *Cond, *True = nullptr, *False = nullptr;
 
+  // If V is a select whose condition is implied by Cond, resolve it to the
+  // appropriate arm for this value of Cond.
+  auto simplifySelectWithImpliedCond = [&](Value *V, Value *Cond,
+                                           bool CondIsTrue) -> Value * {
+    auto *InnerSI = dyn_cast<SelectInst>(V);
+    if (!InnerSI || Cond->getType() != InnerSI->getCondition()->getType())
+      return V;
+
+    if (std::optional<bool> Implied =
+            isImpliedCondition(Cond, InnerSI->getCondition(), DL, CondIsTrue))
+      return InnerSI->getOperand(*Implied ? 1 : 2);
+    return V;
+  };
+
   // Special-case for add/negate combination. Replace the zero in the negation
   // with the trailing add operand:
   // (Cond ? TVal : -N) + Z --> Cond ? True : (Z - N)
@@ -1396,53 +1410,34 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     return nullptr;
   };
 
-  if (LHSIsSelect && RHSIsSelect) {
-    if (A == D) {
-      // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
-      Cond = A;
-      True = simplifyBinOp(Opcode, B, E, FMF, Q);
-      False = simplifyBinOp(Opcode, C, F, FMF, Q);
+  if (LHSIsSelect && RHSIsSelect && A == D) {
+    // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
+    Cond = A;
+    True = simplifyBinOp(Opcode, B, E, FMF, Q);
+    False = simplifyBinOp(Opcode, C, F, FMF, Q);
 
-      if (LHS->hasOneUse() && RHS->hasOneUse()) {
-        if (False && !True)
-          True = Builder.CreateBinOp(Opcode, B, E);
-        else if (True && !False)
-          False = Builder.CreateBinOp(Opcode, C, F);
-      }
-    } else if (A->getType() == D->getType() && LHS->hasOneUse()) {
-      // (A ? B : C) op (D ? E : F) ->
-      // A ? (B op (D ? E : F)) : (C op (D ? E : F))
-      // only if D can be implied by A
-      Cond = A;
-      Value *TrueRHS = RHS, *FalseRHS = RHS;
-      bool SimplifiedRHS = false;
-      if (std::optional<bool> Implied = isImpliedCondition(A, D, DL, true)) {
-        TrueRHS = *Implied ? E : F;
-        SimplifiedRHS = true;
-      }
-      if (std::optional<bool> Implied = isImpliedCondition(A, D, DL, false)) {
-        FalseRHS = *Implied ? E : F;
-        SimplifiedRHS = true;
-      }
-      if (SimplifiedRHS) {
-        True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
-        False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
-        if (Value *NewSel = foldAddNegate(B, C, RHS))
-          return NewSel;
-      }
+    if (LHS->hasOneUse() && RHS->hasOneUse()) {
+      if (False && !True)
+        True = Builder.CreateBinOp(Opcode, B, E);
+      else if (True && !False)
+        False = Builder.CreateBinOp(Opcode, C, F);
     }
   } else if (LHSIsSelect && LHS->hasOneUse()) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
-    True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
-    False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
+    Value *TrueRHS = simplifySelectWithImpliedCond(RHS, Cond, true);
+    Value *FalseRHS = simplifySelectWithImpliedCond(RHS, Cond, false);
+    True = simplifyBinOp(Opcode, B, TrueRHS, FMF, Q);
+    False = simplifyBinOp(Opcode, C, FalseRHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
-    True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
-    False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
+    Value *TrueLHS = simplifySelectWithImpliedCond(LHS, Cond, true);
+    Value *FalseLHS = simplifySelectWithImpliedCond(LHS, Cond, false);
+    True = simplifyBinOp(Opcode, TrueLHS, E, FMF, Q);
+    False = simplifyBinOp(Opcode, FalseLHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
       return NewSel;
   }
