@@ -902,13 +902,21 @@ public:
     return decodeFramePtrReg(getEncodedParamFramePtrReg(), CPU);
   }
 
+  static constexpr uint32_t CoroutineKindMask =
+      static_cast<uint32_t>(FrameProcedureOptions::CoroutineKindMask);
+  static constexpr unsigned CoroutineKindShift =
+      countr_zero_constexpr(CoroutineKindMask);
+
   CoroutineKind getCoroutineKind() const {
-    return CoroutineKind((uint32_t(Flags) >> 25U) & 7U);
+    return CoroutineKind((static_cast<uint32_t>(Flags) & CoroutineKindMask) >>
+                         CoroutineKindShift);
   }
 
   void setCoroutineKind(CoroutineKind K) {
-    FrameProcedureOptions CoroFlags{(static_cast<uint32_t>(K) & 7U) << 25U};
-    Flags = (Flags & ~FrameProcedureOptions::CoroutineKindMask) | CoroFlags;
+    uint32_t Encoded =
+        (static_cast<uint32_t>(K) << CoroutineKindShift) & CoroutineKindMask;
+    Flags = static_cast<FrameProcedureOptions>(
+        (static_cast<uint32_t>(Flags) & ~CoroutineKindMask) | Encoded);
   }
 
   uint32_t RecordOffset = 0;
