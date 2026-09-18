@@ -33,20 +33,15 @@ struct LRStartEndInfo {
   size_t Pos = 0;
 };
 
-// This is the maximum number of interfererring ranges. That's the number of
-// distinct AllocationOrder values, which comes from MCRegisterClass::RegsSize.
-// For X86, that's 32.
-// TODO: find a way to get this, statically, in a programmatic way.
-static const int64_t MaxInterferences = 32;
-
 // Logically, we can think of the feature set given to the evaluator as a 2D
 // matrix. The rows are the features (see next). The columns correspond to the
 // interferences. We treat the candidate virt reg as an 'interference', too, as
 // its feature set is the same as that of the interferring ranges. So we'll have
-// MaxInterferences + 1 columns and by convention, we will use the last column
-// for the virt reg seeking allocation.
-static const int64_t CandidateVirtRegPos = MaxInterferences;
-static const int64_t NumberOfInterferences = CandidateVirtRegPos + 1;
+// one column per allocation order slot, plus one, and by convention, we will
+// use the last column for the virt reg seeking allocation.
+// The advisor computes the column count per target. Changing this constant
+// requires regenerating the precompiled test models.
+static const int64_t CompiledModelNumColumns = 33;
 
 // The number of instructions that a specific live range might have is variable,
 // but we're passing in a single matrix of instructions and tensorflow saved
@@ -64,7 +59,7 @@ static const int ModelMaxSupportedInstructionCount = 300;
 static const std::vector<int64_t> InstructionsShape{
     1, ModelMaxSupportedInstructionCount};
 static const std::vector<int64_t> InstructionsMappingShape{
-    1, NumberOfInterferences, ModelMaxSupportedInstructionCount};
+    1, CompiledModelNumColumns, ModelMaxSupportedInstructionCount};
 
 // When extracting mappings between MBBs and individual instructions, we create
 // a vector of MBB frequencies, currently of size 100, which was a value
