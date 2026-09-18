@@ -285,7 +285,6 @@ protected:
     static const int kWidth64[] = {64};
     static const int kWidth32[] = {32};
     static const int kWidth16[] = {16};
-    static const int kWidthAtLeast32[] = {32, 64};
     static const int kWidth8[] = {8};
 
     static const int32_t kCount1[] = {1};
