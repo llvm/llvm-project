@@ -277,7 +277,7 @@ public:
     // uses the same input/result type.
     unsigned MaxIter = 2;
 
-    if (Ty->isHalfTy() || Ty->isBFloatTy()) {
+    if (Ty->is16bitFPTy()) {
       // Use the wider type and less iterations.
       ComputeTy = B.getFloatTy();
       MaxIter = 1;
