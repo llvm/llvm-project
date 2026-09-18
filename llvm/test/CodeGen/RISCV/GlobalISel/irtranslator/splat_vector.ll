@@ -500,14 +500,14 @@ define <vscale x 8 x i64> @splat_zero_nxv8i64() {
 define <vscale x 1 x half> @splat_zero_nxv1half() {
   ; RV32-LABEL: name: splat_zero_nxv1half
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: splat_zero_nxv1half
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 1 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
@@ -517,14 +517,14 @@ define <vscale x 1 x half> @splat_zero_nxv1half() {
 define <vscale x 2 x half> @splat_zero_nxv2half() {
   ; RV32-LABEL: name: splat_zero_nxv2half
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: splat_zero_nxv2half
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 2 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
@@ -534,14 +534,14 @@ define <vscale x 2 x half> @splat_zero_nxv2half() {
 define <vscale x 4 x half> @splat_zero_nxv4half() {
   ; RV32-LABEL: name: splat_zero_nxv4half
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV32-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8
   ;
   ; RV64-LABEL: name: splat_zero_nxv4half
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV64-NEXT:   $v8 = COPY [[SPLAT_VECTOR]](<vscale x 4 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8
@@ -551,14 +551,14 @@ define <vscale x 4 x half> @splat_zero_nxv4half() {
 define <vscale x 8 x half> @splat_zero_nxv8half() {
   ; RV32-LABEL: name: splat_zero_nxv8half
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV32-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m2
   ;
   ; RV64-LABEL: name: splat_zero_nxv8half
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV64-NEXT:   $v8m2 = COPY [[SPLAT_VECTOR]](<vscale x 8 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m2
@@ -568,14 +568,14 @@ define <vscale x 8 x half> @splat_zero_nxv8half() {
 define <vscale x 16 x half> @splat_zero_nxv16half() {
   ; RV32-LABEL: name: splat_zero_nxv16half
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV32-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m4
   ;
   ; RV64-LABEL: name: splat_zero_nxv16half
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV64-NEXT:   $v8m4 = COPY [[SPLAT_VECTOR]](<vscale x 16 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m4
@@ -585,14 +585,14 @@ define <vscale x 16 x half> @splat_zero_nxv16half() {
 define <vscale x 32 x half> @splat_zero_nxv32half() {
   ; RV32-LABEL: name: splat_zero_nxv32half
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV32-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 32 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV32-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 32 x s16>)
   ; RV32-NEXT:   PseudoRET implicit $v8m8
   ;
   ; RV64-LABEL: name: splat_zero_nxv32half
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+  ; RV64-NEXT:   [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0.000000e+00
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 32 x s16>) = G_SPLAT_VECTOR [[C]](s16)
   ; RV64-NEXT:   $v8m8 = COPY [[SPLAT_VECTOR]](<vscale x 32 x s16>)
   ; RV64-NEXT:   PseudoRET implicit $v8m8

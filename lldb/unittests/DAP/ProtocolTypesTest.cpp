@@ -10,6 +10,7 @@
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
@@ -160,6 +161,20 @@ TEST(ProtocolTypesTest, SourceBreakpoint) {
   EXPECT_EQ(source_breakpoint.logMessage,
             deserialized_source_breakpoint->logMessage);
   EXPECT_EQ(source_breakpoint.mode, deserialized_source_breakpoint->mode);
+}
+
+TEST(ProtocolTypesTest, SourceBreakpointOptionalLogMessage) {
+  for (StringRef json :
+       {R"({"line": 0})", R"({"line": 0, "logMessage": ""})"}) {
+    Expected<SourceBreakpoint> source_breakpoint =
+        parse<SourceBreakpoint>(json);
+    ASSERT_THAT_EXPECTED(source_breakpoint, Succeeded());
+    EXPECT_EQ(source_breakpoint->line, 0u);
+    EXPECT_TRUE(source_breakpoint->logMessage.empty());
+  }
+
+  EXPECT_THAT_EXPECTED(
+      parse<SourceBreakpoint>(R"({"line": 0, "logMessage": null})"), Failed());
 }
 
 TEST(ProtocolTypesTest, FunctionBreakpoint) {
@@ -759,6 +774,17 @@ TEST(ProtocolTypesTest, StepInTarget) {
   EXPECT_EQ(target.column, deserialized_target->column);
   EXPECT_EQ(target.endLine, deserialized_target->endLine);
   EXPECT_EQ(target.endColumn, deserialized_target->endColumn);
+
+  target.endLine = LLDB_INVALID_LINE_NUMBER;
+  target.endColumn = LLDB_INVALID_COLUMN_NUMBER;
+
+  EXPECT_EQ(R"({
+  "column": 320,
+  "id": 230,
+  "label": "the_function_name",
+  "line": 2
+})",
+            PrettyPrint(target));
 }
 
 TEST(ProtocolTypesTest, ReadMemoryArguments) {
@@ -1254,6 +1280,24 @@ TEST(ProtocolTypesTest, StackFrame) {
     "canRestart": true,
     "instructionPointerReference": "0x3039",
     "presentationHint": "subtle"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+
+  frame.id = 3;
+  frame.canRestart = false;
+  frame.instructionPointerReference = LLDB_INVALID_ADDRESS;
+  frame.presentationHint = StackFrame::ePresentationHintNone;
+  frame.moduleId = "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F";
+  frame.compileUnitId = 7;
+  expected_frame = parse(R"({
+    "id": 3,
+    "name": "foo",
+    "line": 0,
+    "column": 0,
+    "moduleId": "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F",
+    "compileUnitId": 7
   })");
 
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());

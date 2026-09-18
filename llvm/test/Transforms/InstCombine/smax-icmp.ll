@@ -844,5 +844,15 @@ entry:
   ret i1 %cmp
 }
 
+define i32 @select_signed_min_smax(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_signed_min_smax(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.smax.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_smin = icmp eq i32 %pos, -2147483648
+  %clamped = call i32 @llvm.smax.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_smin, i32 %len, i32 %clamped
+  ret i32 %out
+}
 
 declare i32 @llvm.smax.i32(i32, i32)

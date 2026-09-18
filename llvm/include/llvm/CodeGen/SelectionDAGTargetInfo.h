@@ -30,7 +30,7 @@ class SelectionDAG;
 /// Targets can subclass this to parameterize the
 /// SelectionDAG lowering and instruction selection process.
 ///
-class SelectionDAGTargetInfo {
+class LLVM_ABI SelectionDAGTargetInfo {
 public:
   explicit SelectionDAGTargetInfo() = default;
   SelectionDAGTargetInfo(const SelectionDAGTargetInfo &) = delete;
@@ -76,8 +76,8 @@ public:
   virtual SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                           SDValue Chain, SDValue Op1,
                                           SDValue Op2, SDValue Op3,
-                                          Align Alignment, bool isVolatile,
-                                          bool AlwaysInline,
+                                          Align DstAlign, Align SrcAlign,
+                                          bool isVolatile, bool AlwaysInline,
                                           MachinePointerInfo DstPtrInfo,
                                           MachinePointerInfo SrcPtrInfo) const {
     return SDValue();
@@ -91,7 +91,7 @@ public:
   /// lowering strategy should be used.
   virtual SDValue EmitTargetCodeForMemmove(
       SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Op1,
-      SDValue Op2, SDValue Op3, Align Alignment, bool isVolatile,
+      SDValue Op2, SDValue Op3, Align DstAlign, Align SrcAlign, bool isVolatile,
       MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
     return SDValue();
   }
@@ -208,7 +208,7 @@ public:
 
 /// Proxy class that targets should inherit from if they wish to use
 /// the generated node descriptions.
-class SelectionDAGGenTargetInfo : public SelectionDAGTargetInfo {
+class LLVM_ABI SelectionDAGGenTargetInfo : public SelectionDAGTargetInfo {
 protected:
   const SDNodeInfo &GenNodeInfo;
 

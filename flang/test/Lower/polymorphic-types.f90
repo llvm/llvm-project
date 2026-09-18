@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Tests the different possible type involving polymorphic entities.
 
@@ -56,7 +56,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_typesPpolymorphic_allocatable_intentout(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
-! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DECL]]#0 : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 ! ------------------------------------------------------------------------------
@@ -104,7 +105,8 @@ contains
 
 ! CHECK-LABEL: func.func @_QMpolymorphic_typesPunlimited_polymorphic_allocatable_intentout(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<none>>>
-! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DECL]]#0 : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocatePolymorphic(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 ! ------------------------------------------------------------------------------
@@ -120,7 +122,8 @@ contains
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[MEM]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[MEM]]
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
 ! CHECK: return %[[LOAD]] : !fir.class<!fir.heap<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
 
   function ret_polymorphic_pointer() result(ret)
@@ -132,7 +135,8 @@ contains
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[MEM]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[MEM]]
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>>
 ! CHECK: return %[[LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMpolymorphic_typesTp1{a:i32,b:i32}>>>
 
 ! ------------------------------------------------------------------------------
@@ -148,7 +152,8 @@ contains
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<none>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.heap<none>>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[MEM]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[MEM]]
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK: return %[[LOAD]] : !fir.class<!fir.heap<none>>
 
   function ret_unlimited_polymorphic_pointer() result(ret)
@@ -160,7 +165,8 @@ contains
 ! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<none>
 ! CHECK: %[[BOX:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>
 ! CHECK: fir.store %[[BOX]] to %[[MEM]] : !fir.ref<!fir.class<!fir.ptr<none>>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[MEM]] : !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[MEM]]
+! CHECK: %[[LOAD:.*]] = fir.load %[[DECL]]#0 : !fir.ref<!fir.class<!fir.ptr<none>>>
 ! CHECK: return %[[LOAD]] : !fir.class<!fir.ptr<none>>
 
 ! ------------------------------------------------------------------------------

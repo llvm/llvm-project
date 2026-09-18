@@ -42,8 +42,8 @@ class TypeFinder {
 public:
   TypeFinder() = default;
 
-  void run(const Module &M, bool onlyNamed);
-  void clear();
+  LLVM_ABI void run(const Module &M, bool onlyNamed);
+  LLVM_ABI void clear();
 
   using iterator = std::vector<StructType*>::iterator;
   using const_iterator = std::vector<StructType*>::const_iterator;

@@ -69,43 +69,126 @@ bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
           (hasObjCLifetime() && !Other.hasObjCLifetime()));
 }
 
+// The memory region designated by a SYCL or OpenCL address space. Address
+// spaces that are neither SYCL nor OpenCL map to Unknown.
+enum class MemoryRegion {
+  Global,
+  Local,
+  Private,
+  Generic,
+  Constant,
+  GlobalDevice,
+  GlobalHost,
+  Unknown,
+};
+
+static MemoryRegion getMemoryRegion(LangAS AS) {
+  switch (AS) {
+  case LangAS::sycl_global:
+  case LangAS::opencl_global:
+    return MemoryRegion::Global;
+  case LangAS::sycl_local:
+  case LangAS::opencl_local:
+    return MemoryRegion::Local;
+  case LangAS::sycl_private:
+  case LangAS::opencl_private:
+    return MemoryRegion::Private;
+  case LangAS::sycl_generic:
+  case LangAS::opencl_generic:
+    return MemoryRegion::Generic;
+  case LangAS::sycl_constant:
+  case LangAS::opencl_constant:
+    return MemoryRegion::Constant;
+  case LangAS::sycl_global_device:
+  case LangAS::opencl_global_device:
+    return MemoryRegion::GlobalDevice;
+  case LangAS::sycl_global_host:
+  case LangAS::opencl_global_host:
+    return MemoryRegion::GlobalHost;
+  default:
+    return MemoryRegion::Unknown;
+  }
+}
+
+// When targeting the OpenCL execution environment, the SYCL and OpenCL address
+// spaces are aligned:
+//  - corresponding address spaces (e.g. sycl_global and opencl_global, or
+//    sycl_generic and opencl_generic) are equivalent, and
+//  - the generic address space is a superset of every other SYCL and OpenCL
+//    address space except constant.
+static bool isConvertibleOpenCLSYCLAddressSpace(LangAS To, LangAS From) {
+  MemoryRegion ToRegion = getMemoryRegion(To);
+  MemoryRegion FromRegion = getMemoryRegion(From);
+  if (ToRegion == MemoryRegion::Unknown || FromRegion == MemoryRegion::Unknown)
+    return false;
+
+  if (ToRegion == FromRegion)
+    return true;
+
+  return ToRegion == MemoryRegion::Generic &&
+         FromRegion != MemoryRegion::Constant;
+}
+
 bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
                                                 const ASTContext &Ctx) {
-  // In OpenCLC v2.0 s6.5.5: every address space except for __constant can be
-  // used as __generic.
-  return (A == LangAS::opencl_generic && B != LangAS::opencl_constant) ||
-         // We also define global_device and global_host address spaces,
-         // to distinguish global pointers allocated on host from pointers
-         // allocated on device, which are a subset of __global.
-         (A == LangAS::opencl_global && (B == LangAS::opencl_global_device ||
-                                         B == LangAS::opencl_global_host)) ||
-         (A == LangAS::sycl_global &&
-          (B == LangAS::sycl_global_device || B == LangAS::sycl_global_host)) ||
-         // Consider pointer size address spaces to be equivalent to default.
-         ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
-          (isPtrSizeAddressSpace(B) || B == LangAS::Default)) ||
-         // Default is a superset of SYCL address spaces.
-         (A == LangAS::Default &&
-          (B == LangAS::sycl_private || B == LangAS::sycl_local ||
-           B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
-           B == LangAS::sycl_global_host)) ||
-         // In HIP device compilation, any cuda address space is allowed
-         // to implicitly cast into the default address space.
-         (A == LangAS::Default &&
-          (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
-           B == LangAS::cuda_shared)) ||
-         // In HLSL, the this pointer for member functions points to the default
-         // address space. This causes a problem if the structure is in
-         // a different address space. We want to allow casting from these
-         // address spaces to default to work around this problem.
-         (A == LangAS::Default && B == LangAS::hlsl_private) ||
-         (A == LangAS::Default && B == LangAS::hlsl_device) ||
-         (A == LangAS::Default && B == LangAS::hlsl_input) ||
-         (A == LangAS::Default && B == LangAS::hlsl_output) ||
-         (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||
-         // Conversions from target specific address spaces may be legal
-         // depending on the target information.
-         Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
+
+  // In OpenCL C v2.0 s6.5.5: every address space except for __constant can be
+  // used as __generic. When targeting the OpenCL execution environment this is
+  // handled by isConvertibleOpenCLSYCLAddressSpace below.
+  if (Ctx.getLangOpts().OpenCL && A == LangAS::opencl_generic &&
+      B != LangAS::opencl_constant)
+    return true;
+
+  // __global is a superset of the global_device and global_host address
+  // spaces, which distinguish global pointers allocated on the host from those
+  // allocated on the device.
+  if (A == LangAS::opencl_global &&
+      (B == LangAS::opencl_global_device || B == LangAS::opencl_global_host))
+    return true;
+  if (A == LangAS::sycl_global &&
+      (B == LangAS::sycl_global_device || B == LangAS::sycl_global_host))
+    return true;
+
+  // Pointer size address spaces are equivalent to the default address space.
+  if ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
+      (isPtrSizeAddressSpace(B) || B == LangAS::Default))
+    return true;
+
+  // Default and sycl_generic are supersets of the SYCL address spaces.
+  if ((A == LangAS::Default || A == LangAS::sycl_generic) &&
+      (B == LangAS::sycl_private || B == LangAS::sycl_local ||
+       B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
+       B == LangAS::sycl_global_host))
+    return true;
+
+  // Default and sycl_generic are equivalent.
+  if ((A == LangAS::Default && B == LangAS::sycl_generic) ||
+      (B == LangAS::Default && A == LangAS::sycl_generic))
+    return true;
+
+  if (isConvertibleOpenCLSYCLAddressSpace(A, B))
+    return true;
+
+  // In HIP device compilation, any cuda address space is allowed to implicitly
+  // cast into the default address space.
+  if (A == LangAS::Default &&
+      (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
+       B == LangAS::cuda_shared || B == LangAS::amdgpu_barrier))
+    return true;
+
+  // In HLSL, the this pointer for member functions points to the default
+  // address space. This causes a problem if the structure is in a different
+  // address space. We want to allow casting from these address spaces to
+  // default to work around this problem.
+  if (A == LangAS::Default &&
+      (B == LangAS::hlsl_private || B == LangAS::hlsl_device ||
+       B == LangAS::hlsl_input || B == LangAS::hlsl_output ||
+       B == LangAS::hlsl_push_constant))
+    return true;
+
+  // Conversions from target specific address spaces may be legal depending on
+  // the target information.
+  return Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
 }
 
 const IdentifierInfo *QualType::getBaseTypeIdentifier() const {
@@ -628,6 +711,15 @@ SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type) {
   }
 
 done:
+  // An overflow behavior type can have a qualified underlying type. It is not
+  // sugar, so the loop above cannot desugar through it to reach the
+  // qualifiers; rebuild it with an unqualified underlying type instead.
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(split.Ty)) {
+    SplitQualType SplitOBT = OBT->getSplitUnqualifiedType();
+    quals.addConsistentQualifiers(SplitOBT.Quals);
+    return SplitQualType(SplitOBT.Ty, quals);
+  }
+
   return SplitQualType(lastTypeWithQuals, quals);
 }
 
@@ -1639,6 +1731,24 @@ struct SubstObjCTypeArgsVisitor
   }
 };
 
+struct StripNullabilityTypeVisitor
+    : public SimpleTransformVisitor<StripNullabilityTypeVisitor> {
+  using BaseType = SimpleTransformVisitor<StripNullabilityTypeVisitor>;
+
+  explicit StripNullabilityTypeVisitor(ASTContext &ctx) : BaseType(ctx) {}
+
+  QualType VisitAttributedType(const AttributedType *attrType) {
+    QualType type(attrType, 0);
+    if (AttributedType::stripOuterNullability(type)) {
+      while (AttributedType::stripOuterNullability(type)) {
+      }
+      return BaseType::recurse(type);
+    }
+
+    return BaseType::VisitAttributedType(attrType);
+  }
+};
+
 struct StripObjCKindOfTypeVisitor
     : public SimpleTransformVisitor<StripObjCKindOfTypeVisitor> {
   using BaseType = SimpleTransformVisitor<StripObjCKindOfTypeVisitor>;
@@ -1713,6 +1823,14 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
   // FIXME: Because ASTContext::getAttributedType() is non-const.
   auto &ctx = const_cast<ASTContext &>(constCtx);
   StripObjCKindOfTypeVisitor visitor(ctx);
+  return visitor.recurse(*this);
+}
+
+QualType QualType::stripNullability(const ASTContext &constCtx) const {
+  // FIXME: SimpleTransformVisitor currently takes a non-const ASTContext
+  // because some rebuild paths use non-const ASTContext factory APIs.
+  auto &ctx = const_cast<ASTContext &>(constCtx);
+  StripNullabilityTypeVisitor visitor(ctx);
   return visitor.recurse(*this);
 }
 
@@ -2102,6 +2220,10 @@ public:
   Type *VisitPackExpansionType(const PackExpansionType *T) {
     return Visit(T->getPattern());
   }
+
+  Type *VisitAtomicType(const AtomicType *T) {
+    return Visit(T->getValueType());
+  }
 };
 
 } // namespace
@@ -2310,8 +2432,22 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
-  else
-    return isSignedIntegerOrEnumerationType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isSignedIntegerOrEnumerationType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
+    switch (BT->getKind()) {
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  case BuiltinType::Id:                                                        \
+    return IsSigned;
+#include "clang/Basic/AArch64ACLETypes.def"
+    default:
+      break;
+    }
+  }
+
+  return isSignedIntegerOrEnumerationType();
 }
 
 /// isUnsignedIntegerType - Return true if this is an integer type that is
@@ -2774,6 +2910,10 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
+  if (Context.getLangOpts().HLSL &&
+      getTypePtr()->isHLSLStandardLayoutRecordOrArrayOf())
+    return true;
+
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
     return isCXX11PODType(Context);
@@ -2925,8 +3065,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType.hasAddressDiscriminatedPointerAuth())
     return false;
 
-  // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+  // As an extension, Clang treats vector and matrix types as Scalar types.
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() ||
+      CanonicalType->isMatrixType())
     return true;
 
   // Mfloat8 type is a special case as it not scalar, but is still trivially
@@ -3650,6 +3791,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case Id:                                                                     \
+    return Name;
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -3714,8 +3859,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "aarch64_sve_pcs";
   case CC_IntelOclBicc:
     return "intel_ocl_bicc";
-  case CC_SpirFunction:
-    return "spir_function";
   case CC_DeviceKernel:
     return "device_kernel";
   case CC_Swift:
@@ -3996,7 +4139,7 @@ bool FunctionProtoType::isTemplateVariadic() const {
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
-                                const ASTContext &Context, bool Canonical) {
+                                const ASTContext &Context) {
   // We have to be careful not to get ambiguous profile encodings.
   // Note that valid type pointers are never ambiguous with anything else.
   //
@@ -4035,7 +4178,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
+    // getFunctionTypeInternal compares noexcept expressions after the lookup,
+    // so the key only needs their canonical form.
+    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, /*Canonical=*/true);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
@@ -4065,7 +4210,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
   Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
-          getExtProtoInfo(), Ctx, isCanonicalUnqualified());
+          getExtProtoInfo(), Ctx);
 }
 
 TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
@@ -4088,10 +4233,21 @@ void TypeCoupledDeclRefInfo::setFromOpaqueValue(void *V) {
 }
 
 OverflowBehaviorType::OverflowBehaviorType(
-    QualType Canon, QualType Underlying,
+    const ASTContext &Context, QualType Canon, QualType Underlying,
     OverflowBehaviorType::OverflowBehaviorKind Kind)
     : Type(OverflowBehavior, Canon, Underlying->getDependence()),
-      UnderlyingType(Underlying), BehaviorKind(Kind) {}
+      UnderlyingType(Underlying), BehaviorKind(Kind), Context(Context) {}
+
+SplitQualType OverflowBehaviorType::getSplitUnqualifiedType() const {
+  SplitQualType SplitUnderlying = UnderlyingType.getSplitUnqualifiedType();
+  QualType UnqualUnderlyingTy(SplitUnderlying.Ty, 0);
+  if (UnqualUnderlyingTy == UnderlyingType)
+    return SplitQualType(this, Qualifiers());
+
+  QualType UnqualTy =
+      Context.getOverflowBehaviorType(BehaviorKind, UnqualUnderlyingTy);
+  return SplitQualType(UnqualTy.getTypePtr(), SplitUnderlying.Quals);
+}
 
 BoundsAttributedType::BoundsAttributedType(TypeClass TC, QualType Wrapped,
                                            QualType Canon)
@@ -4105,9 +4261,45 @@ CountAttributedType::CountAttributedType(
   CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
   CountAttributedTypeBits.CountInBytes = CountInBytes;
   CountAttributedTypeBits.OrNull = OrNull;
-  auto *DeclSlot = getTrailingObjects();
-  llvm::copy(CoupledDecls, DeclSlot);
-  Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
+  // `CoupledDecls` is already allocated by the caller (Create), so it
+  // can be retained by reference. This lets a type created by a late-parsed
+  // attribute start out with no decls and gain them later via `complete`,
+  // which a trailing-object array could not accommodate.
+  Decls = CoupledDecls;
+}
+
+/// Copy \p Decls into \p Ctx so a \c CountAttributedType can retain it by
+/// reference. The node owns this allocation rather than its callers, so both
+/// \c Create and \c complete route through here.
+static ArrayRef<TypeCoupledDeclRefInfo>
+allocateCoupledDecls(const ASTContext &Ctx,
+                     ArrayRef<TypeCoupledDeclRefInfo> Decls) {
+  if (Decls.empty())
+    return {};
+  auto *Slots = Ctx.Allocate<TypeCoupledDeclRefInfo>(Decls.size());
+  llvm::copy(Decls, Slots);
+  return ArrayRef(Slots, Decls.size());
+}
+
+CountAttributedType *
+CountAttributedType::Create(const ASTContext &Ctx, QualType Wrapped,
+                            QualType Canon, Expr *CountExpr, bool CountInBytes,
+                            bool OrNull,
+                            ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls) {
+  ArrayRef<TypeCoupledDeclRefInfo> Decls =
+      allocateCoupledDecls(Ctx, CoupledDecls);
+  return new (Ctx, alignof(CountAttributedType)) CountAttributedType(
+      Wrapped, Canon, CountExpr, CountInBytes, OrNull, Decls);
+}
+
+void CountAttributedType::complete(
+    const ASTContext &Ctx, Expr *E,
+    ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls) {
+  assert(!CountExpr && "count expression is already set");
+  assert(E && "completing with a null count expression");
+  CountExpr = E;
+  Decls = allocateCoupledDecls(Ctx, CoupledDecls);
+  CountAttributedTypeBits.NumCoupledDecls = Decls.size();
 }
 
 StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
@@ -4577,18 +4769,6 @@ SubstTemplateTypeParmType::getReplacedParameter() const {
       getReplacedTemplateParameter(getAssociatedDecl(), getIndex())));
 }
 
-void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
-                                        QualType Replacement,
-                                        const Decl *AssociatedDecl,
-                                        unsigned Index,
-                                        UnsignedOrNone PackIndex, bool Final) {
-  Replacement.Profile(ID);
-  ID.AddPointer(AssociatedDecl);
-  ID.AddInteger(Index);
-  ID.AddInteger(PackIndex.toInternalRepresentation());
-  ID.AddBoolean(Final);
-}
-
 SubstPackType::SubstPackType(TypeClass Derived, QualType Canon,
                              const TemplateArgument &ArgPack)
     : Type(Derived, Canon,
@@ -4806,22 +4986,6 @@ void ObjCObjectTypeImpl::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getBaseType(), getTypeArgsAsWritten(),
           llvm::ArrayRef(qual_begin(), getNumProtocols()),
           isKindOfTypeAsWritten());
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
-                                const ObjCTypeParamDecl *OTPDecl,
-                                QualType CanonicalType,
-                                ArrayRef<ObjCProtocolDecl *> protocols) {
-  ID.AddPointer(OTPDecl);
-  ID.AddPointer(CanonicalType.getAsOpaquePtr());
-  ID.AddInteger(protocols.size());
-  for (auto *proto : protocols)
-    ID.AddPointer(proto);
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getDecl(), getCanonicalTypeInternal(),
-          llvm::ArrayRef(qual_begin(), getNumProtocols()));
 }
 
 namespace {
@@ -5099,9 +5263,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(
         cast<OverflowBehaviorType>(T)->getUnderlyingType());
   case Type::HLSLAttributedResource:
-    return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
-                                      ->getContainedType()
-                                      ->getCanonicalTypeInternal());
+    return computeTypeLinkageInfo(
+        cast<HLSLAttributedResourceType>(T)->getWrappedType());
   case Type::HLSLInlineSpirv:
     return LinkageInfo::external();
   }
@@ -5237,6 +5400,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
@@ -5323,6 +5488,16 @@ NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   }
 
   return std::nullopt;
+}
+
+void AttributedType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                             Kind attrKind, QualType modified,
+                             QualType equivalent, const Attr *attr) {
+  ID.AddInteger(attrKind);
+  ID.AddPointer(modified.getAsOpaquePtr());
+  ID.AddPointer(equivalent.getAsOpaquePtr());
+  if (attr)
+    attr->Profile(ID, Ctx);
 }
 
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
@@ -5461,6 +5636,31 @@ bool Type::isCUDADeviceBuiltinTextureType() const {
   return false;
 }
 
+static bool isAMDGPUNamedBarrierTypeImpl(const Type *Ty, bool AllowWrappers) {
+  // This query does not care about qualifiers at all.
+  Ty = Ty->getUnqualifiedDesugaredType();
+
+  // Unwrap arrays.
+  while (isa<ArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(Ty))
+    return BT->getKind() == BuiltinType::AMDGPUNamedWorkgroupBarrier;
+  if (AllowWrappers) {
+    if (const auto *RT = dyn_cast<RecordType>(Ty))
+      return RT->getDecl()->hasAttr<AMDGPUNamedBarrierWrapperAttr>();
+  }
+  return false;
+}
+
+bool Type::isAMDGPUNamedBarrierType() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/false);
+}
+
+bool Type::isAMDGPUNamedBarrierTypeOrWrapper() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/true);
+}
+
 bool Type::hasSizedVLAType() const {
   if (!isVariablyModifiedType())
     return false;
@@ -5516,6 +5716,16 @@ bool Type::isHLSLIntangibleType() const {
   return RD->isHLSLIntangible();
 }
 
+bool Type::isHLSLStandardLayoutRecordOrArrayOf() const {
+  const Type *BaseTy = getBaseElementTypeUnsafe();
+  if (const auto *RD =
+          dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
+    if (!RD->isHLSLBuiltinRecord() && RD->isStandardLayout())
+      return true;
+  }
+  return false;
+}
+
 QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   switch (type.getObjCLifetime()) {
   case Qualifiers::OCL_None:
@@ -5543,6 +5753,41 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   }
 
   return DK_none;
+}
+
+static bool
+requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
+                           llvm::SmallPtrSetImpl<const Decl *> &Seen) {
+  if (const auto *Arr = Context.getAsArrayType(Ty))
+    Ty = Context.getBaseElementType(Arr);
+
+  if (const auto *AttrTy = Ty->getAs<AttributedType>())
+    Ty = AttrTy->getModifiedType();
+
+  assert(!Ty->isIncompleteType() &&
+         "Incomplete types cannot be evaluated for laundering");
+
+  const auto *Record = Ty->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+
+  // We've already checked this type, or are in the process of checking it.
+  if (!Seen.insert(Record).second)
+    return false;
+
+  if (Record->isDynamicClass())
+    return true;
+
+  for (FieldDecl *F : Record->fields()) {
+    if (requiresBuiltinLaunderImpl(Context, F->getType(), Seen))
+      return true;
+  }
+  return false;
+}
+
+bool QualType::requiresBuiltinLaunder(const ASTContext &Context) const {
+  llvm::SmallPtrSet<const Decl *, 16> Seen;
+  return requiresBuiltinLaunderImpl(Context, *this, Seen);
 }
 
 bool MemberPointerType::isSugared() const {
@@ -5609,20 +5854,18 @@ DeducedType::DeducedType(TypeClass TC, DeducedKind DK,
 }
 
 AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
-                   AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
+                   AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
     : DeducedType(Auto, DK, DeducedAsTypeOrCanon) {
   AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
-  assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
-  if (TypeConstraintConcept) {
-    auto Dep = TypeDependence::None;
-    if (const auto *TTP =
-            dyn_cast<TemplateTemplateParmDecl>(TypeConstraintConcept))
-      Dep = TypeDependence::DependentInstantiation |
-            (TTP->isParameterPack() ? TypeDependence::UnexpandedPack
-                                    : TypeDependence::None);
+  assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
+  if (!TypeConstraintConcept.isNull()) {
+    assert(TypeConstraintConcept.isConceptName() &&
+           "type-constraint does not name a concept");
+
+    auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 
     auto *ArgBuffer =
         const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
@@ -5639,11 +5882,11 @@ AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                        DeducedKind DK, QualType Deduced,
-                       AutoTypeKeyword Keyword, TemplateDecl *CD,
+                       AutoTypeKeyword Keyword, TemplateName CD,
                        ArrayRef<TemplateArgument> Arguments) {
   DeducedType::Profile(ID, DK, Deduced);
   ID.AddInteger(llvm::to_underlying(Keyword));
-  ID.AddPointer(CD);
+  CD.Profile(ID);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
 }
@@ -5874,6 +6117,41 @@ std::string FunctionEffectWithCondition::description() const {
   if (Cond.getCondition() != nullptr)
     Result += "(expr)";
   return Result;
+}
+
+TypeDependence
+HLSLAttributedResourceType::computeDependence(QualType Contained,
+                                              const Attributes &Attrs) {
+  TypeDependence Deps = TypeDependence::None;
+  if (!Contained.isNull())
+    Deps |= Contained->getDependence();
+  if (Attrs.SampleCountExpr)
+    Deps |= toTypeDependence(Attrs.SampleCountExpr->getDependence());
+  return Deps;
+}
+
+HLSLAttributedResourceType::HLSLAttributedResourceType(QualType Wrapped,
+                                                       QualType Contained,
+                                                       const Attributes &Attrs)
+    : Type(HLSLAttributedResource, QualType(),
+           computeDependence(Contained, Attrs)),
+      WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+void HLSLAttributedResourceType::Profile(llvm::FoldingSetNodeID &ID,
+                                         const ASTContext &Ctx,
+                                         QualType Wrapped, QualType Contained,
+                                         const Attributes &Attrs) {
+  ID.AddPointer(Wrapped.getAsOpaquePtr());
+  ID.AddPointer(Contained.getAsOpaquePtr());
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
+  ID.AddBoolean(Attrs.IsROV);
+  ID.AddBoolean(Attrs.RawBuffer);
+  ID.AddBoolean(Attrs.IsCounter);
+  ID.AddBoolean(Attrs.IsArray);
+  ID.AddBoolean(Attrs.SampleCountExpr != nullptr);
+  if (Attrs.SampleCountExpr)
+    Attrs.SampleCountExpr->Profile(ID, Ctx, /*Canonical=*/true);
 }
 
 const HLSLAttributedResourceType *

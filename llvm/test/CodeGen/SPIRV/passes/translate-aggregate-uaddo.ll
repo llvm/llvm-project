@@ -1,7 +1,7 @@
 ; This test shows how value attributes are being passed during different translation steps.
 ; See also test/CodeGen/SPIRV/optimizations/add-check-overflow.ll.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=prepare-functions 2>&1 | FileCheck %s  --check-prefix=CHECK-PREPARE
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-prepare-functions 2>&1 | FileCheck %s  --check-prefix=CHECK-PREPARE
 ; Intrinsics with aggregate return type are not substituted/removed.
 ; CHECK-PREPARE: @llvm.uadd.with.overflow.i32
 
@@ -14,9 +14,9 @@
 ; CHECK-IR: %math = extractvalue { i32, i1 } %[[R1]], 0
 ; CHECK-IR: %ov = extractvalue { i32, i1 } %[[R1]], 1
 ; Type/Name attributes of the value.
-; CHECK-IR: ![[#MD1]] = !{{[{]}}![[#MD2:]], !""{{[}]}}
+; CHECK-IR-DAG: ![[#MD1]] = !{{[{]}}![[#MD2:]], !""{{[}]}}
 ; Origin data type of the value.
-; CHECK-IR: ![[#MD2]] = !{{[{]}}{{[{]}} i32, i1 {{[}]}} poison{{[}]}}
+; CHECK-IR-DAG: ![[#MD2]] = !{{[{]}}{{[{]}} i32, i1 {{[}]}} poison{{[}]}}
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=irtranslator 2>&1 | FileCheck %s  --check-prefix=CHECK-GMIR
 ; Required info succeeded to get through IRTranslator.

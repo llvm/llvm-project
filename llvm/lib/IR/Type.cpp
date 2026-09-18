@@ -58,53 +58,39 @@ bool Type::isByteTy(unsigned BitWidth) const {
   return isByteTy() && cast<ByteType>(this)->getBitWidth() == BitWidth;
 }
 
-bool Type::isIntegerTy(unsigned Bitwidth) const {
-  return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
-}
-
-bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
-  if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->isScalableTy(Visited);
-  if (const auto *STy = dyn_cast<StructType>(this))
-    return STy->isScalableTy(Visited);
-  return getTypeID() == ScalableVectorTyID || isScalableTargetExtTy();
-}
-
 bool Type::isScalableTy() const {
-  SmallPtrSet<const Type *, 4> Visited;
-  return isScalableTy(Visited);
+  switch (getTypeID()) {
+  case ScalableVectorTyID:
+    return true;
+  case TargetExtTyID:
+    return isScalableTargetExtTy();
+  case ArrayTyID:
+    return cast<ArrayType>(this)->getElementType()->isScalableTy();
+  case StructTyID:
+    return cast<StructType>(this)->isScalableTy();
+  default:
+    return false;
+  }
 }
 
-bool Type::containsNonGlobalTargetExtType(
-    SmallPtrSetImpl<const Type *> &Visited) const {
+bool Type::containsNonGlobalTargetExtType() const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->containsNonGlobalTargetExtType(Visited);
+    return ATy->getElementType()->containsNonGlobalTargetExtType();
   if (const auto *STy = dyn_cast<StructType>(this))
-    return STy->containsNonGlobalTargetExtType(Visited);
+    return STy->containsNonGlobalTargetExtType();
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return !TT->hasProperty(TargetExtType::CanBeGlobal);
   return false;
 }
 
-bool Type::containsNonGlobalTargetExtType() const {
-  SmallPtrSet<const Type *, 4> Visited;
-  return containsNonGlobalTargetExtType(Visited);
-}
-
-bool Type::containsNonLocalTargetExtType(
-    SmallPtrSetImpl<const Type *> &Visited) const {
+bool Type::containsNonLocalTargetExtType() const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->containsNonLocalTargetExtType(Visited);
+    return ATy->getElementType()->containsNonLocalTargetExtType();
   if (const auto *STy = dyn_cast<StructType>(this))
-    return STy->containsNonLocalTargetExtType(Visited);
+    return STy->containsNonLocalTargetExtType();
   if (auto *TT = dyn_cast<TargetExtType>(this))
     return !TT->hasProperty(TargetExtType::CanBeLocal);
   return false;
-}
-
-bool Type::containsNonLocalTargetExtType() const {
-  SmallPtrSet<const Type *, 4> Visited;
-  return containsNonLocalTargetExtType(Visited);
 }
 
 const fltSemantics &Type::getFltSemantics() const {
@@ -127,24 +113,24 @@ bool Type::isScalableTargetExtTy() const {
 }
 
 Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
-  Type *Ty;
-  if (&S == &APFloat::IEEEhalf())
-    Ty = Type::getHalfTy(C);
-  else if (&S == &APFloat::BFloat())
-    Ty = Type::getBFloatTy(C);
-  else if (&S == &APFloat::IEEEsingle())
-    Ty = Type::getFloatTy(C);
-  else if (&S == &APFloat::IEEEdouble())
-    Ty = Type::getDoubleTy(C);
-  else if (&S == &APFloat::x87DoubleExtended())
-    Ty = Type::getX86_FP80Ty(C);
-  else if (&S == &APFloat::IEEEquad())
-    Ty = Type::getFP128Ty(C);
-  else {
-    assert(&S == &APFloat::PPCDoubleDouble() && "Unknown FP format");
-    Ty = Type::getPPC_FP128Ty(C);
+  switch (llvm::APFloat::SemanticsToEnum(S)) {
+  case llvm::APFloat::S_IEEEhalf:
+    return llvm::Type::getHalfTy(C);
+  case llvm::APFloat::S_BFloat:
+    return llvm::Type::getBFloatTy(C);
+  case llvm::APFloat::S_IEEEsingle:
+    return llvm::Type::getFloatTy(C);
+  case llvm::APFloat::S_IEEEdouble:
+    return llvm::Type::getDoubleTy(C);
+  case llvm::APFloat::S_IEEEquad:
+    return llvm::Type::getFP128Ty(C);
+  case llvm::APFloat::S_PPCDoubleDouble:
+    return llvm::Type::getPPC_FP128Ty(C);
+  case llvm::APFloat::S_x87DoubleExtended:
+    return llvm::Type::getX86_FP80Ty(C);
+  default:
+    llvm_unreachable("unhandled float format");
   }
-  return Ty;
 }
 
 bool Type::isRISCVVectorTupleTy() const {
@@ -266,17 +252,17 @@ bool Type::isFirstClassType() const {
   }
 }
 
-bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
+bool Type::isSizedDerivedType() const {
   if (auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType()->isSized(Visited);
+    return ATy->getElementType()->isSized();
 
   if (auto *VTy = dyn_cast<VectorType>(this))
-    return VTy->getElementType()->isSized(Visited);
+    return VTy->getElementType()->isSized();
 
   if (auto *TTy = dyn_cast<TargetExtType>(this))
-    return TTy->getLayoutType()->isSized(Visited);
+    return TTy->getLayoutType()->isSized();
 
-  return cast<StructType>(this)->isSized(Visited);
+  return cast<StructType>(this)->isSized();
 }
 
 //===----------------------------------------------------------------------===//
@@ -338,13 +324,11 @@ Type *Type::getByteFromIntType(Type *Ty) {
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(10)
-  return PointerType::get(C, 10);
+  return TargetExtType::get(C, "wasm.externref", {}, {});
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(20)
-  return PointerType::get(C, 20);
+  return TargetExtType::get(C, "wasm.funcref", {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -507,18 +491,15 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   return ST;
 }
 
-bool StructType::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
+bool StructType::isScalableTy() const {
   if ((getSubclassData() & SCDB_ContainsScalableVector) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsScalableVector) != 0)
     return false;
 
-  if (!Visited.insert(this).second)
-    return false;
-
   for (Type *Ty : elements()) {
-    if (Ty->isScalableTy(Visited)) {
+    if (Ty->isScalableTy()) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsScalableVector);
       return true;
@@ -534,19 +515,15 @@ bool StructType::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   return false;
 }
 
-bool StructType::containsNonGlobalTargetExtType(
-    SmallPtrSetImpl<const Type *> &Visited) const {
+bool StructType::containsNonGlobalTargetExtType() const {
   if ((getSubclassData() & SCDB_ContainsNonGlobalTargetExtType) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsNonGlobalTargetExtType) != 0)
     return false;
 
-  if (!Visited.insert(this).second)
-    return false;
-
   for (Type *Ty : elements()) {
-    if (Ty->containsNonGlobalTargetExtType(Visited)) {
+    if (Ty->containsNonGlobalTargetExtType()) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsNonGlobalTargetExtType);
       return true;
@@ -562,19 +539,15 @@ bool StructType::containsNonGlobalTargetExtType(
   return false;
 }
 
-bool StructType::containsNonLocalTargetExtType(
-    SmallPtrSetImpl<const Type *> &Visited) const {
+bool StructType::containsNonLocalTargetExtType() const {
   if ((getSubclassData() & SCDB_ContainsNonLocalTargetExtType) != 0)
     return true;
 
   if ((getSubclassData() & SCDB_NotContainsNonLocalTargetExtType) != 0)
     return false;
 
-  if (!Visited.insert(this).second)
-    return false;
-
   for (Type *Ty : elements()) {
-    if (Ty->containsNonLocalTargetExtType(Visited)) {
+    if (Ty->containsNonLocalTargetExtType()) {
       const_cast<StructType *>(this)->setSubclassData(
           getSubclassData() | SCDB_ContainsNonLocalTargetExtType);
       return true;
@@ -725,13 +698,10 @@ StructType *StructType::create(ArrayRef<Type*> Elements) {
   return create(Elements[0]->getContext(), Elements, StringRef());
 }
 
-bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
+bool StructType::isSized() const {
   if ((getSubclassData() & SCDB_IsSized) != 0)
     return true;
   if (isOpaque())
-    return false;
-
-  if (Visited && !Visited->insert(const_cast<StructType*>(this)).second)
     return false;
 
   // Okay, our struct is sized if all of the elements are, but if one of the
@@ -751,7 +721,7 @@ bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
     // types and is handled by the if-statement before this for-loop.
     if (Ty->isScalableTy())
       return false;
-    if (!Ty->isSized(Visited))
+    if (!Ty->isSized())
       return false;
   }
 
@@ -914,14 +884,6 @@ ScalableVectorType *ScalableVectorType::get(Type *ElementType,
 //                         PointerType Implementation
 //===----------------------------------------------------------------------===//
 
-PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
-  assert(EltTy && "Can't get a pointer to <null> type!");
-  assert(isValidElementType(EltTy) && "Invalid type for pointer element!");
-
-  // Automatically convert typed pointers to opaque pointers.
-  return get(EltTy->getContext(), AddressSpace);
-}
-
 PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = C.pImpl;
 
@@ -937,10 +899,6 @@ PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
 PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
     : Type(C, PointerTyID) {
   setSubclassData(AddrSpace);
-}
-
-PointerType *Type::getPointerTo(unsigned AddrSpace) const {
-  return PointerType::get(getContext(), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {
@@ -1030,6 +988,12 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
                              "should have no type parameters "
                              "and one integer parameter");
   }
+  if (TTy->Name == "amdgpu.stridemark" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() > 1)) {
+    return createStringError("target extension type amdgpu.stridemark "
+                             "should have no type parameters "
+                             "and at most one integer parameter");
+  }
 
   return TTy;
 }
@@ -1082,10 +1046,16 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(
         ArrayType::get(Type::getInt8Ty(C), Ty->getIntParameter(0)),
         TargetExtType::CanBeGlobal);
-  if (Name.starts_with("spirv."))
+  if (Name.starts_with("spirv.")) {
+    if (Name.ends_with("TypedPointerType"))
+      return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
+                            TargetExtType::CanBeGlobal,
+                            TargetExtType::CanBeLocal,
+                            TargetExtType::CanBeVectorElement);
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::HasZeroInit,
                           TargetExtType::CanBeGlobal,
                           TargetExtType::CanBeLocal);
+  }
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
@@ -1114,14 +1084,17 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
         TargetExtType::CanBeGlobal);
   if (Name.starts_with("dx."))
     return TargetTypeInfo(PointerType::get(C, 0), TargetExtType::CanBeGlobal,
-                          TargetExtType::CanBeLocal,
-                          TargetExtType::IsTokenLike);
+                          TargetExtType::CanBeLocal);
 
   // Opaque types in the AMDGPU name space.
+  // NOTE: If the size of the type is changed, it must be also updated in
+  // AMDGPUMemoryUtils.h !
   if (Name == "amdgcn.named.barrier") {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);
   }
+  if (Name == "amdgpu.stridemark")
+    return TargetTypeInfo(Type::getVoidTy(C), TargetExtType::IsTokenLike);
 
   // Type used to test vector element target extension property.
   // Can be removed once a public target extension type uses CanBeVectorElement.
@@ -1129,6 +1102,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
                           TargetExtType::CanBeVectorElement);
   }
+
+  // Opaque types in the WebAssembly name space.
+  if (Name == "wasm.funcref" || Name == "wasm.externref")
+    return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

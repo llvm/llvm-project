@@ -63,7 +63,8 @@ class SelectionDAG;
 class SMSchedule;
 class SwingSchedulerDAG;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class TargetSubtargetInfo;
@@ -163,6 +164,13 @@ public:
   virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
                                                  unsigned OpNum) const;
 
+  /// Return the register class to use for the register operand of an inline asm
+  /// memory operand with constraint \p C.
+  virtual const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const {
+    llvm_unreachable("target did not implement memory operand support");
+  }
+
   /// Returns true if MI is an instruction we are unable to reason about
   /// (like a call or something with unmodeled side effects).
   virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
@@ -191,9 +199,9 @@ public:
            (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
-  /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
-  /// of instruction rematerialization or sinking.
-  virtual bool isIgnorableUse(const MachineOperand &MO) const {
+  /// Given operand \p OpIdx of \p MI is a PhysReg use, return if it can be
+  /// ignored for the purpose of instruction rematerialization or sinking.
+  virtual bool isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
     return false;
   }
 
@@ -449,7 +457,7 @@ public:
   /// getInstSizeInBytes() should be verified.
   virtual InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const {
-    return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
   }
 
   /// Return true if the instruction is as cheap as a move instruction.
@@ -740,6 +748,19 @@ public:
                              SmallVectorImpl<MachineOperand> &Cond,
                              bool AllowModify = false) const {
     return true;
+  }
+
+  bool analyzeBranch(const MachineBasicBlock &MBB,
+                     const MachineBasicBlock *&TBB,
+                     const MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const {
+    MachineBasicBlock *TempTBB = nullptr, *TempFBB = nullptr;
+    bool NotUnderstandable = analyzeBranch(const_cast<MachineBasicBlock &>(MBB),
+                                           TempTBB, TempFBB, Cond,
+                                           /*AllowModify=*/false);
+    TBB = TempTBB;
+    FBB = TempFBB;
+    return NotUnderstandable;
   }
 
   /// Represents a predicate at the MachineFunction level.  The control flow a
@@ -1274,7 +1295,8 @@ public:
   /// store from / to any address, not just from a specific stack slot.
   MachineInstr *foldMemoryOperand(MachineInstr &MI, ArrayRef<unsigned> Ops,
                                   MachineInstr &LoadMI, MachineInstr *&CopyMI,
-                                  LiveIntervals *LIS = nullptr) const;
+                                  LiveIntervals *LIS = nullptr,
+                                  VirtRegMap *VRM = nullptr) const;
 
   /// This function defines the logic to lower COPY instruction to
   /// target specific instruction(s).
@@ -1467,8 +1489,8 @@ protected:
   virtual MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                         ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
-                        MachineInstr *&CopyMI,
-                        LiveIntervals *LIS = nullptr) const {
+                        MachineInstr *&CopyMI, LiveIntervals *LIS = nullptr,
+                        VirtRegMap *VRM = nullptr) const {
     return nullptr;
   }
 
@@ -1914,7 +1936,8 @@ public:
                                    SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
-  unsigned defaultDefLatency(const MCSchedModel &SchedModel,
+  unsigned defaultDefLatency(const TargetSubtargetInfo &STI,
+                             const MCSchedModel &SchedModel,
                              const MachineInstr &DefMI) const;
 
   /// Return true if this opcode has high latency to its result.
@@ -2254,8 +2277,9 @@ public:
   ///
   /// If an entire block is mappable, then its range is [MBB.begin(), MBB.end())
   ///
-  /// All instructions not present in an outlinable range are considered
-  /// illegal.
+  /// All non-debug instructions not present in an outlinable range are
+  /// considered illegal. Debug instructions are ignored wherever they appear,
+  /// so each gap between ranges must contain a non-debug instruction.
   virtual SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const {
@@ -2287,12 +2311,8 @@ public:
                                   MachineBasicBlock::iterator Iter,
                                   DebugLoc &DL,
                                   bool AllowSideEffects = true) const {
-#if 0
-    // FIXME: This should exist once all platforms that use stack protectors
-    // implements it.
     llvm_unreachable(
         "Target didn't implement TargetInstrInfo::buildClearRegister!");
-#endif
   }
 
   /// Return true if the function can safely be outlined from.
@@ -2419,16 +2439,6 @@ private:
 template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
   using RegInfo = DenseMapInfo<Register>;
   using SubRegInfo = DenseMapInfo<unsigned>;
-
-  static inline TargetInstrInfo::RegSubRegPair getEmptyKey() {
-    return TargetInstrInfo::RegSubRegPair(RegInfo::getEmptyKey(),
-                                          SubRegInfo::getEmptyKey());
-  }
-
-  static inline TargetInstrInfo::RegSubRegPair getTombstoneKey() {
-    return TargetInstrInfo::RegSubRegPair(RegInfo::getTombstoneKey(),
-                                          SubRegInfo::getTombstoneKey());
-  }
 
   /// Reuse getHashValue implementation from
   /// std::pair<unsigned, unsigned>.

@@ -9,8 +9,8 @@
 # In addition to being available via inclusion of the <iterator> header,
 # the function templates in [iterator.range] are available when any of the following
 # headers are included: <array>, <deque>, <flat_map>, <flat_set>, <forward_list>,
-# <list>, <map>, <regex>, <set>, <span>, <string>, <string_view>, <unordered_map>,
-# <unordered_set>, <vector>.
+# <list>, <map>, <optional>, <regex>, <set>, <span>, <stacktrace>, <string>,
+# <string_view>, <unordered_map>, <unordered_set>, <valarray>, <vector>.
 
 # UNSUPPORTED: c++03
 
@@ -21,7 +21,6 @@ import sys
 
 sys.path.append(sys.argv[1])
 from libcxx.header_information import (
-    lit_header_restrictions,
     lit_header_undeprecations,
     Header,
 )
@@ -37,23 +36,33 @@ headers = list(
             "forward_list",
             "list",
             "map",
+            "optional",
             "regex",
             "set",
             "span",
+            # "stacktrace", # unimplemented
             "string",
             "string_view",
             "unordered_map",
             "unordered_set",
+            "valarray",
             "vector",
         ],
     )
 )
 
+
+def get_standard_mode_threshold(header):
+    if header == "optional":
+        return "26"  # `optional` is a range only since C++26 via P3168R2.
+    else:
+        return "0"  # Other related components are ranges at first.
+
+
 for header in headers:
     print(
         f"""\
 //--- {header}.pass.cpp
-{lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
 #include <{header}>
@@ -80,6 +89,7 @@ struct Container {{
 }};
 
 int main(int, char**)  {{
+#if TEST_STD_VER >= {get_standard_mode_threshold(header)}
   {{
     Container c;
     const auto& cc = c;
@@ -173,6 +183,7 @@ int main(int, char**)  {{
     assert(std::ssize(cil) == 3);
 #endif
   }}
+#endif
 
   return 0;
 }}

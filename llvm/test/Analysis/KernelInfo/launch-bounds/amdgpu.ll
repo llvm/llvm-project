@@ -6,7 +6,7 @@
 ; RUN:     -disable-output %s 2>&1 | \
 ; RUN:   FileCheck -match-full-lines %s
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu9-amd-amdhsa"
 
 ; CHECK: remark: test.c:10:0: in artificial function 'all', omp_target_num_teams = 100
 ; CHECK: remark: test.c:10:0: in artificial function 'all', omp_target_thread_limit = 101

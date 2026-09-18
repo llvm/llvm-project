@@ -190,6 +190,7 @@ class AsanThread {
   AsanStats stats_;
   bool unwinding_;
   uptr extra_spill_area_;
+  void* altstack_base_ = nullptr;
 
   char start_data_[];
 };

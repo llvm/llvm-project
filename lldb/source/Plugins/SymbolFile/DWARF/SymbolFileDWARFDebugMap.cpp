@@ -450,6 +450,8 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
               "debug map object file \"%s\" containing debug info does not "
               "exist, debug info will not be loaded",
               comp_unit_info->oso_path.GetCString());
+          obj_file->GetModule()->ReportError(
+              "{0}", comp_unit_info->oso_load_error.AsCString());
           return nullptr;
         }
       }
@@ -1289,6 +1291,33 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter,
   });
 }
 
+lldb_private::ModuleSpecList
+SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
+  const uint32_t cu_count = GetNumCompileUnits();
+  lldb_private::ModuleSpecList spec_list;
+  for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {
+    const auto &info = m_compile_unit_infos[cu_idx];
+    if (info.so_file.GetPath().empty())
+      continue;
+
+    ModuleSpec spec;
+    FileSpec oso_file;
+    ConstString oso_object;
+    if (ObjectFile::SplitArchivePathWithObject(info.oso_path.GetStringRef(),
+                                               oso_file, oso_object,
+                                               /*must_exist=*/false)) {
+      spec.GetFileSpec() = oso_file;
+      spec.GetObjectName() = oso_object;
+    } else {
+      spec.GetFileSpec() = FileSpec(info.oso_path.GetStringRef());
+    }
+
+    spec.GetObjectModificationTime() = info.oso_mod_time;
+    spec_list.Append(spec);
+  }
+  return spec_list;
+}
+
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
     lldb_private::StructuredData::Dictionary &d, bool errors_only,
     bool load_all_debug_info) {
@@ -1613,6 +1642,18 @@ void SymbolFileDWARFDebugMap::GetCompileOptions(
     oso_dwarf.GetCompileOptions(args);
     return IterationAction::Continue;
   });
+}
+
+lldb::TypeSP
+SymbolFileDWARFDebugMap::GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+  lldb::TypeSP type;
+  ForEachSymbolFile("Looking up enclosing type for variable",
+                    [&](SymbolFileDWARF &oso_dwarf) {
+                      type = oso_dwarf.GetTypeEnclosingVariableUID(uid);
+                      return type ? IterationAction::Stop
+                                  : IterationAction::Continue;
+                    });
+  return type;
 }
 
 llvm::Expected<SymbolContext>

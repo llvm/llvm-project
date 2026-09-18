@@ -3,18 +3,6 @@
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" --verify-diagnostics %s
 
 
-// Test `fir.shape` conversion failure because the op has uses.
-
-func.func @shape_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
-  %c0 = arith.constant 1 : index
-  // expected-error@+1{{failed to legalize operation 'fir.shape'}}
-  %0 = fir.shape %c0, %c0 : (index, index) -> !fir.shape<2>
-  %1 = fir.array_coor %arg0(%0) %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
-  return
-}
-
-// -----
-
 // Test `fir.slice` conversion failure because the op has uses.
 
 func.func @slice_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
@@ -39,25 +27,50 @@ func.func @shift_not_dead(%arg0: !fir.box<!fir.array<?xf32>>, %i: index) {
 
 // -----
 
-// Test `fir.shape_shift` conversion failure because the op has uses.
+// The four fir.select* terminators are lowered to cf.* earlier in the
+// pipeline (--fir-select-ops-conversion for select/select_case/select_rank,
+// --fir-polymorphic-op for select_type). Any that reach FIR-to-LLVM hit a
+// defensive stub that emits a clear "should have already been converted"
+// diagnostic.
 
-func.func @shape_shift_not_dead(%arg0: !fir.ref<!fir.array<?x?xf32>>, %i: index, %j: index) {
-  %c0 = arith.constant 1 : index
-  // expected-error@+1{{failed to legalize operation 'fir.shape_shift'}}
-  %0 = fir.shape_shift %c0, %c0, %c0, %c0 : (index, index, index, index) -> !fir.shapeshift<2>
-  %1 = fir.array_coor %arg0(%0) %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<f32>
-  return
+func.func @select_should_have_been_converted(%arg: i32) -> i32 {
+  %0 = arith.constant 1 : i32
+  // expected-error@+2{{'fir.select' op should have already been converted}}
+  // expected-error@+1{{failed to legalize operation 'fir.select'}}
+  fir.select %arg : i32 [1, ^bb1(%0:i32), unit, ^bb1(%0:i32)]
+^bb1(%a: i32):
+  return %a : i32
 }
 
 // -----
 
-// Test `fir.select_type` conversion to llvm.
-// Should have been converted.
+func.func @select_case_should_have_been_converted(%arg: !fir.ref<i32>) -> i32 {
+  %v = fir.load %arg : !fir.ref<i32>
+  %c1 = arith.constant 1 : i32
+  // expected-error@+2{{'fir.select_case' op should have already been converted}}
+  // expected-error@+1{{failed to legalize operation 'fir.select_case'}}
+  fir.select_case %v : i32 [#fir.point, %c1, ^bb1, unit, ^bb1]
+^bb1:
+  return %v : i32
+}
 
-func.func @bar_select_type(%arg : !fir.class<!fir.type<derivedst{a:f32}>>) -> i32 {
+// -----
+
+func.func @select_rank_should_have_been_converted(%arg: i32) -> i32 {
+  %0 = arith.constant 1 : i32
+  // expected-error@+2{{'fir.select_rank' op should have already been converted}}
+  // expected-error@+1{{failed to legalize operation 'fir.select_rank'}}
+  fir.select_rank %arg : i32 [1, ^bb1(%0:i32), unit, ^bb1(%0:i32)]
+^bb1(%a: i32):
+  return %a : i32
+}
+
+// -----
+
+func.func @select_type_should_have_been_converted(%arg: !fir.class<!fir.type<derivedst{a:f32}>>) -> i32 {
   %0 = arith.constant 1 : i32
   %2 = arith.constant 3 : i32
-  // expected-error@+2{{fir.select_type should have already been converted}}
+  // expected-error@+2{{'fir.select_type' op should have already been converted}}
   // expected-error@+1{{failed to legalize operation 'fir.select_type'}}
   fir.select_type %arg : !fir.class<!fir.type<derivedst{a:f32}>> [
     #fir.type_is<!fir.int<4>>,^bb1(%0:i32),

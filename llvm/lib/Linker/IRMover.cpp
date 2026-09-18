@@ -1562,8 +1562,11 @@ Error IRLinker::run() {
 
   if (!IsPerformingImport && !SrcM->getModuleInlineAsm().empty()) {
     // Append the module inline asm string.
-    DstM.appendModuleInlineAsm(adjustInlineAsm(SrcM->getModuleInlineAsm(),
-                                               SrcTriple));
+    for (const Module::GlobalAsmFragment &Frag : SrcM->getModuleInlineAsm()) {
+      Module::GlobalAsmFragment NewFrag(Frag);
+      NewFrag.Asm = adjustInlineAsm(NewFrag.Asm, SrcTriple);
+      DstM.appendModuleInlineAsm(std::move(NewFrag));
+    }
   } else if (IsPerformingImport) {
     // Import any symver directives for symbols in DstM.
     ModuleSymbolTable::CollectAsmSymvers(*SrcM,
@@ -1573,7 +1576,7 @@ Error IRLinker::run() {
         S += Name;
         S += ", ";
         S += Alias;
-        DstM.appendModuleInlineAsm(S);
+        DstM.appendModuleInlineAsm(std::string(S));
       }
     });
   }
@@ -1613,14 +1616,6 @@ bool IRMover::StructTypeKeyInfo::KeyTy::operator!=(const KeyTy &That) const {
   return !this->operator==(That);
 }
 
-StructType *IRMover::StructTypeKeyInfo::getEmptyKey() {
-  return DenseMapInfo<StructType *>::getEmptyKey();
-}
-
-StructType *IRMover::StructTypeKeyInfo::getTombstoneKey() {
-  return DenseMapInfo<StructType *>::getTombstoneKey();
-}
-
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const KeyTy &Key) {
   return hash_combine(hash_combine_range(Key.ETypes), Key.IsPacked);
 }
@@ -1631,15 +1626,11 @@ unsigned IRMover::StructTypeKeyInfo::getHashValue(const StructType *ST) {
 
 bool IRMover::StructTypeKeyInfo::isEqual(const KeyTy &LHS,
                                          const StructType *RHS) {
-  if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-    return false;
   return LHS == KeyTy(RHS);
 }
 
 bool IRMover::StructTypeKeyInfo::isEqual(const StructType *LHS,
                                          const StructType *RHS) {
-  if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-    return LHS == RHS;
   return KeyTy(LHS) == KeyTy(RHS);
 }
 

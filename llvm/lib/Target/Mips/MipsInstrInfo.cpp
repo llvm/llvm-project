@@ -44,6 +44,12 @@ MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI,
     : MipsGenInstrInfo(STI, RI, Mips::ADJCALLSTACKDOWN, Mips::ADJCALLSTACKUP),
       Subtarget(STI), UncondBrOpc(UncondBr) {}
 
+const TargetRegisterClass *MipsInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.getABI().ArePtrs64bit() ? &Mips::GPR64RegClass
+                                           : &Mips::GPR32RegClass;
+}
+
 const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
   if (STI.inMips16Mode())
     return createMips16InstrInfo(STI);
@@ -708,12 +714,19 @@ bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
 unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
+    // Handle non-finalized bundle.
+    if (MI.isBundledWithSucc())
+      return MI.getDesc().getSize() + getInstBundleSize(MI);
+    if (MI.hasDelaySlot()) {
+      // instr + 1 nop
+      return MI.getDesc().getSize() + 4;
+    }
     return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM:
   case  TargetOpcode::INLINEASM_BR: {       // Inline Asm: Variable size.
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
   case TargetOpcode::BUNDLE:
     return getInstBundleSize(MI);

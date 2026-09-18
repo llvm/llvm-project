@@ -9,8 +9,10 @@
 #ifndef liblldb_NativeProcessELF_H_
 #define liblldb_NativeProcessELF_H_
 
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/AuxVector.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include <optional>
 
@@ -24,6 +26,7 @@ class NativeProcessELF : public NativeProcessProtocol {
 
 public:
   std::optional<uint64_t> GetAuxValue(enum AuxVector::EntryType type);
+  void DoStopIDBumped(uint32_t newBumpId) override;
 
 protected:
   template <typename T> struct ELFLinkMap {
@@ -50,6 +53,7 @@ protected:
 
   std::unique_ptr<AuxVector> m_aux_vector;
   std::optional<lldb::addr_t> m_shared_library_info_addr;
+  std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 };
 
 // Explicitly declare the two 32/64 bit templates that NativeProcessELF.cpp will

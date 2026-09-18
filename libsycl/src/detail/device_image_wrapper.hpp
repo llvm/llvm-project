@@ -17,10 +17,12 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
-#include <detail/device_binary_structures.hpp>
+#include <llvm/Object/OffloadBinary.h>
 
 #include <OffloadAPI.h>
 
+#include <memory>
+#include <string_view>
 #include <unordered_map>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -34,12 +36,13 @@ public:
   /// Constructs ProgramWrapper by creating a liboffload program with the
   /// provided arguments.
   ///
+  /// \param Context is the context to use for program creation.
   /// \param Device is the device to use for program creation.
-  /// \param DevImage is the device image (wrapped __sycl_tgt_device_image) to
-  /// use for program creation.
+  /// \param DevImage is the device image to use for program creation.
   /// \throw sycl::exception with sycl::errc::runtime when failed to create the
   /// program.
-  ProgramWrapper(ol_device_handle_t Device, DeviceImageManager &DevImage);
+  ProgramWrapper(ol_context_handle_t Context, ol_device_handle_t Device,
+                 const DeviceImageManager &DevImage);
 
   /// Releases the corresponding liboffload program handle by calling
   /// olDestroyProgram.
@@ -53,15 +56,35 @@ public:
   /// \return the corresponding liboffload program handle.
   ol_program_handle_t getOLHandle() { return MProgram; }
 
+  /// Returns the liboffload kernel symbol for the specified kernel, looking it
+  /// up in this program on first use.
+  ///
+  /// Symbols belong to the program they were retrieved from: liboffload has no
+  /// olDestroySymbol, so they are released together with this program. Caching
+  /// them here rather than per device keeps a symbol from ever being handed out
+  /// for a program it does not belong to.
+  ///
+  /// \param KernelName the name of the kernel to look up.
+  /// \throw sycl::exception with sycl::errc::runtime when the symbol lookup
+  /// fails.
+  /// \return the liboffload symbol handle of the kernel.
+  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName);
+
 private:
   ol_program_handle_t MProgram{};
+
+  // Kernel names are backed by the "symbols" string of the device image this
+  // program was created from, so entries stay valid only while that image is
+  // registered. ContextImpl::releaseProgramsForImage() destroys this program
+  // before the image goes away.
+  std::unordered_map<std::string_view, ol_symbol_handle_t> MKernels;
 };
 
-/// This class manages all work with device images: from data parsing to program
-/// creation.
+/// This class manages data parsing of device images.
 class DeviceImageManager {
 public:
-  DeviceImageManager(const __sycl_tgt_device_image &Bin) : MBin(&Bin) {}
+  DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
+      : MBin(std::move(Bin)) {}
   // Explicitly delete copy constructor/operator= to avoid unintentional copies.
   DeviceImageManager(const DeviceImageManager &) = delete;
   DeviceImageManager &operator=(const DeviceImageManager &) = delete;
@@ -71,30 +94,11 @@ public:
 
   ~DeviceImageManager() = default;
 
-  /// \return a reference to the corresponding raw __sycl_tgt_device_image
-  /// object.
-  const __sycl_tgt_device_image &getRawData() const { return *get(); }
-
-  /// \return the size of the corresponding device image data in bytes.
-  size_t getSize() const {
-    return static_cast<size_t>(MBin->ImageEnd - MBin->ImageStart);
-  }
-
-  /// Returns a liboffload program which is compatible with the specified
-  /// device. Searches among existing programs and creates a new one if no
-  /// compatible image is found.
-  /// \param DeviceHandle the liboffload handle of the device the program must
-  /// be compatible with.
-  /// \return the liboffload handle of the program compatible with the specified
-  /// device.
-  ol_program_handle_t getOrCreateProgram(ol_device_handle_t DeviceHandle);
+  /// \return a reference to the corresponding parsed OffloadBinary object.
+  const llvm::object::OffloadBinary &getOffloadBinary() const { return *MBin; }
 
 protected:
-  std::unordered_map<ol_device_handle_t, ProgramWrapper> MPrograms;
-
-  const __sycl_tgt_device_image *get() const { return MBin; }
-
-  __sycl_tgt_device_image const *MBin{};
+  std::unique_ptr<llvm::object::OffloadBinary> MBin;
 };
 
 } // namespace detail

@@ -557,8 +557,8 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   }
 
   // Parse the expression.
-  auto tree_or_error = dil::DILParser::Parse(
-      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic, mode);
+  auto tree_or_error = dil::DILParser::Parse(var_expr, std::move(*lex_or_err),
+                                             *this, use_dynamic, mode);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
     return ValueObjectConstResult::Create(nullptr, error.Clone());
@@ -566,8 +566,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
 
   // Evaluate the parsed expression.
   lldb::TargetSP target = this->CalculateTarget();
-  dil::Interpreter interpreter(target, var_expr, shared_from_this(),
-                               use_dynamic, options);
+  dil::Interpreter interpreter(target, var_expr, *this, use_dynamic, options);
 
   auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
   if (!valobj_or_error) {
@@ -637,9 +636,9 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     // Check for direct ivars access which helps us with implicit access to
     // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
-    llvm::StringRef instance_var_name = m_sc.GetInstanceVariableName();
-    if (!instance_var_name.empty()) {
-      var_sp = variable_list->FindVariable(ConstString(instance_var_name));
+    llvm::StringRef instance_name = m_sc.GetInstanceName();
+    if (!instance_name.empty()) {
+      var_sp = variable_list->FindVariable(ConstString(instance_name));
       if (var_sp) {
         separator_idx = 0;
         if (Type *var_type = var_sp->GetType())

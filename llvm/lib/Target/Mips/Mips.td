@@ -247,11 +247,15 @@ def MIPS64 : HwMode<[IsPTR64bit]>;
 //===----------------------------------------------------------------------===//
 
 include "MipsRegisterInfo.td"
-include "MipsSchedule.td"
 include "MipsInstrInfo.td"
 include "MipsCallingConv.td"
 include "MipsRegisterBanks.td"
 include "MipsCombine.td"
+
+foreach i = {1-31} in
+  def FeatureReserveGPR#i :
+      SubtargetFeature<"reserve-gpr"#i, "UserReservedGPR["#i#"]", "true",
+                       "Reserve MIPS GPR "#i>;
 
 // Avoid forward declaration issues.
 include "MipsScheduleI6400.td"

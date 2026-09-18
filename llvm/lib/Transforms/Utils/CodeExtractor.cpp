@@ -25,7 +25,6 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -67,7 +66,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
 
@@ -165,6 +163,12 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       continue;
     }
 
+    // llvm.experimental.deoptimize must return the enclosing function's return
+    // type. Extraction changes the outlined function signature, which can make
+    // the deoptimize call invalid.
+    if (BB.getTerminatingDeoptimizeCall())
+      return false;
+
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
       // musttail calls have several restrictions, generally enforcing matching
       // calling conventions between the caller parent and musttail callee.
@@ -248,7 +252,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 /// for specified target preserves original alignment
 static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
   switch (TargetTriple.getArch()) {
-  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::amdgpu:
   case Triple::ArchType::r600:
     return true;
   // TODO: Add other architectures for which we are certain that alignment
@@ -263,12 +267,13 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
-                             BasicBlock *AllocationBlock, std::string Suffix,
-                             bool ArgsInZeroAddressSpace,
+                             BasicBlock *AllocationBlock,
+                             ArrayRef<BasicBlock *> DeallocationBlocks,
+                             std::string Suffix, bool ArgsInZeroAddressSpace,
                              bool VoidReturnWithSingleOutput)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
-      AllowVarArgs(AllowVarArgs),
+      DeallocationBlocks(DeallocationBlocks), AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
       VoidReturnWithSingleOutput(VoidReturnWithSingleOutput) {}
@@ -443,6 +448,30 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
   return CommonExitBlock;
+}
+
+Instruction *CodeExtractor::allocateVar(IRBuilder<>::InsertPoint AllocaIP,
+                                        DebugLoc, Type *VarType,
+                                        const Twine &Name,
+                                        AddrSpaceCastInst **CastedAlloc) {
+  // An alloca needs no debug location, so the one passed in goes unused here.
+  const DataLayout &DL = AllocaIP.getBlock()->getModule()->getDataLayout();
+  Instruction *Alloca = new AllocaInst(VarType, DL.getAllocaAddrSpace(),
+                                       nullptr, Name, AllocaIP.getPoint());
+
+  if (CastedAlloc && ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+    *CastedAlloc = new AddrSpaceCastInst(
+        Alloca, PointerType::get(AllocaIP.getBlock()->getContext(), 0),
+        Name + ".ascast");
+    (*CastedAlloc)->insertAfter(Alloca->getIterator());
+  }
+  return Alloca;
+}
+
+Instruction *CodeExtractor::deallocateVar(IRBuilder<>::InsertPoint, DebugLoc,
+                                          Value *, Type *) {
+  // Default alloca instructions created by allocateVar are released implicitly.
+  return nullptr;
 }
 
 // Find the pair of life time markers for address 'Addr' that are either
@@ -685,6 +714,9 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
     }
   }
 
+  // Reset stale state from any prior call in HotColdSplitting; the CFG may
+  // have changed since.
+  FuncRetVal = nullptr;
   if (!VoidReturnWithSingleOutput && !AggregateArgs && Outputs.size() == 1 &&
       getCommonExitBlock(Blocks)) {
     FuncRetVal = Outputs[0];
@@ -958,6 +990,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoFree:
       case Attribute::NoImplicitFloat:
       case Attribute::NoInline:
+      case Attribute::NoIPA:
       case Attribute::NoOutline:
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
@@ -1027,6 +1060,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::Range:
       case Attribute::Initializes:
       case Attribute::NoExt:
+      case Attribute::NoFreeObj:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1067,8 +1101,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (BFI) {
     auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count.has_value())
-      newFunction->setEntryCount(
-          ProfileCount(*Count, Function::PCT_Real)); // FIXME
+      newFunction->setEntryCount(*Count);
   }
 
   return newFunction;
@@ -1287,9 +1320,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
                         &NewFunc.getEntryBlock());
       return;
     }
-    DIB.insertDbgValueIntrinsic(
-        NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-        NewFunc.getEntryBlock().getTerminator()->getIterator());
+    DIB.insertDbgValue(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+                       NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
     SmallVector<DbgVariableRecord *, 1> DPUsers;
@@ -1834,7 +1866,6 @@ CallInst *CodeExtractor::emitReplacerCall(
     std::vector<Value *> &Reloads) {
   LLVMContext &Context = oldFunction->getContext();
   Module *M = oldFunction->getParent();
-  const DataLayout &DL = M->getDataLayout();
 
   // This takes place of the original loop
   BasicBlock *codeReplacer =
@@ -1844,6 +1875,13 @@ CallInst *CodeExtractor::emitReplacerCall(
            "AllocationBlock is not in the same function");
   BasicBlock *AllocaBlock =
       AllocationBlock ? AllocationBlock : &oldFunction->getEntryBlock();
+
+  // If the original function has debug info, the terminator of the entry block
+  // of the extracted function contains the first debug location of the
+  // extracted function, set in extractCodeRegion.
+  DebugLoc DL;
+  if (oldFunction->getSubprogram())
+    DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc();
 
   // Update the entry count of the function.
   if (BFI)
@@ -1865,25 +1903,24 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (StructValues.contains(output))
       continue;
 
-    AllocaInst *alloca = new AllocaInst(
-        output->getType(), DL.getAllocaAddrSpace(), nullptr,
-        output->getName() + ".loc", AllocaBlock->getFirstInsertionPt());
-    params.push_back(alloca);
-    ReloadOutputs.push_back(alloca);
+    Value *OutAlloc =
+        allocateVar(IRBuilder<>::InsertPoint(
+                        AllocaBlock, AllocaBlock->getFirstInsertionPt()),
+                    DL, output->getType(), output->getName() + ".loc");
+    params.push_back(OutAlloc);
+    ReloadOutputs.push_back(OutAlloc);
   }
 
-  AllocaInst *Struct = nullptr;
+  Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
-    Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                            "structArg", AllocaBlock->getFirstInsertionPt());
-    if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
-      auto *StructSpaceCast = new AddrSpaceCastInst(
-          Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct->getIterator());
+    AddrSpaceCastInst *StructSpaceCast = nullptr;
+    Struct = allocateVar(IRBuilder<>::InsertPoint(
+                             AllocaBlock, AllocaBlock->getFirstInsertionPt()),
+                         DL, StructArgTy, "structArg", &StructSpaceCast);
+    if (StructSpaceCast)
       params.push_back(StructSpaceCast);
-    } else {
+    else
       params.push_back(Struct);
-    }
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {
@@ -1921,13 +1958,9 @@ CallInst *CodeExtractor::emitReplacerCall(
   }
 
   // Add debug location to the new call, if the original function has debug
-  // info. In that case, the terminator of the entry block of the extracted
-  // function contains the first debug location of the extracted function,
-  // set in extractCodeRegion.
-  if (codeReplacer->getParent()->getSubprogram()) {
-    if (auto DL = newFunction->getEntryBlock().getTerminator()->getDebugLoc())
-      call->setDebugLoc(DL);
-  }
+  // info.
+  if (DL)
+    call->setDebugLoc(DL);
 
   // Reload the outputs passed in by reference, use the struct if output is in
   // the aggregate or reload from the scalar argument.
@@ -2026,6 +2059,28 @@ CallInst *CodeExtractor::emitReplacerCall(
   insertLifetimeMarkersSurroundingCall(oldFunction->getParent(), LifetimesStart,
                                        {}, call);
 
+  // Deallocate intermediate variables if they need explicit deallocation.
+  auto deallocVars = [&](BasicBlock *DeallocBlock,
+                         BasicBlock::iterator DeallocIP) {
+    int Index = 0;
+    for (Value *Output : outputs) {
+      if (!StructValues.contains(Output))
+        deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
+                      ReloadOutputs[Index++], Output->getType());
+    }
+
+    if (Struct)
+      deallocateVar(IRBuilder<>::InsertPoint(DeallocBlock, DeallocIP), DL,
+                    Struct, StructArgTy);
+  };
+
+  if (DeallocationBlocks.empty()) {
+    deallocVars(codeReplacer, codeReplacer->end());
+  } else {
+    for (BasicBlock *DeallocationBlock : DeallocationBlocks)
+      deallocVars(DeallocationBlock, DeallocationBlock->getFirstInsertionPt());
+  }
+
   return call;
 }
 
@@ -2080,11 +2135,9 @@ void CodeExtractor::insertReplacerCall(
   }
 
   if (FuncRetVal)
-    for (User *U : FuncRetVal->users()) {
-      Instruction *inst = cast<Instruction>(U);
-      if (inst->getParent()->getParent() == oldFunction)
-        inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
-    }
+    FuncRetVal->replaceUsesWithIf(ReplacerCall, [&](Use &U) {
+      return cast<Instruction>(U.getUser())->getFunction() == oldFunction;
+    });
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)

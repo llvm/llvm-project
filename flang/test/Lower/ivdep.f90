@@ -23,10 +23,6 @@ subroutine ivdep_test1
      !CHECK: %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> i64
      !CHECK: %[[VAL_12:.*]] = hlfir.designate %[[VAL_2:.*]]#0 (%[[VAL_11]])  : (!fir.ref<!fir.array<10xi32>>, i64)
      !CHECK: hlfir.assign %[[VAL_9]] to %[[VAL_12]] {access_groups = [#access_group]} : i32, !fir.ref<i32> 
-     !CHECK: %[[VAL_14:.*]] = fir.convert %[[C1:.*]] : (index) -> i32
-     !CHECK: %[[VAL_15:.*]] = fir.load %[[VAL_4]]#0 {accessGroups = [#access_group]}
-     !CHECK: %[[VAL_16:.*]] = arith.addi %[[VAL_15]], %[[VAL_14]] overflow<nsw> : i32
-     !CHECK: fir.result %[[VAL_16]] : i32 
   end do     
 end subroutine ivdep_test1
 
@@ -53,10 +49,6 @@ subroutine ivdep_test2
      !CHECK: %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (i32) -> i64
      !CHECK: %[[VAL_26:.*]] = hlfir.designate %[[VAL_2:.*]]#0 (%[[VAL_25]])  : (!fir.ref<!fir.array<10xi32>>, i64)
      !CHECK: hlfir.assign %[[VAL_23]] to %[[VAL_26]] {access_groups = [#access_group1]} : i32, !fir.ref<i32> 
-     !CHECK: %[[VAL_28:.*]] = fir.convert %[[C1:.*]] : (index) -> i32
-     !CHECK: %[[VAL_29:.*]] = fir.load %[[VAL_10]]#0 {accessGroups = [#access_group1]}
-     !CHECK: %[[VAL_30:.*]] = arith.addi %[[VAL_29]], %[[VAL_28]] overflow<nsw> : i32
-     !CHECK: fir.result %[[VAL_30]] : i32
   end do
 end subroutine ivdep_test2
 
@@ -84,10 +76,6 @@ subroutine ivdep_test3
      !CHECK: %[[VAL_26:.*]] = hlfir.designate %[[VAL_2:.*]]#0 (%[[VAL_25]])  : (!fir.ref<!fir.array<10xi32>>, i64)
      !CHECK: hlfir.assign %[[VAL_23]] to %[[VAL_26]] {access_groups = [#access_group2]} : i32, !fir.ref<i32>
      !CHECK: fir.call @_QFivdep_test3Pfoo() fastmath<contract> {accessGroups = [#access_group2]}
-     !CHECK: %[[VAL_28:.*]] = fir.convert %[[C1:.*]] : (index) -> i32
-     !CHECK: %[[VAL_29:.*]] = fir.load %[[VAL_10]]#0 {accessGroups = [#access_group2]}
-     !CHECK: %[[VAL_30:.*]] = arith.addi %[[VAL_29]], %[[VAL_28]] overflow<nsw> : i32
-     !CHECK: fir.result %[[VAL_30]] : i32 
   end do
   contains
     subroutine foo()

@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
 
 ; Tests that the LDS lowering pass handles indirect references to LDS GVs; i.e.
 ; that it lowers to accesses into the generated LDS struct if these references

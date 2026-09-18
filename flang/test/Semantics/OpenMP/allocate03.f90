@@ -15,11 +15,11 @@ use omp_lib
   real, dimension (:,:), allocatable :: darray
   integer :: a, b
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the ALLOCATE directive
+  !ERROR: A structure component cannot appear on the ALLOCATE directive
   !$omp allocate(my_var%array)
   continue
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the ALLOCATE directive
+  !ERROR: A structure component cannot appear on the ALLOCATE directive
   !$omp allocate(darray, my_var%array) allocator(omp_default_mem_alloc)
     allocate ( darray(a, b) )
 

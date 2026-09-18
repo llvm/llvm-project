@@ -52,19 +52,20 @@ protected:
 
   void SetUp() override {
     std::string Error;
-    Triple TargetTriple("amdgcn--amdpal");
+    Triple TargetTriple("amdgpu10.10--amdpal");
     const Target *T = TargetRegistry::lookupTarget(TargetTriple, Error);
     if (!T)
       GTEST_SKIP();
 
     TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        TargetTriple, "gfx1010", "", Options, std::nullopt));
+    TM = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt));
     if (!TM)
       GTEST_SKIP();
 
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
+    M->setTargetTriple(TargetTriple);
     M->setDataLayout(TM->createDataLayout());
 
     legacy::PassManager PM;

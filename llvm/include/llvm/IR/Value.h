@@ -77,11 +77,11 @@ class Value {
   unsigned char HasValueHandle : 1; // Has a ValueHandle pointing to this?
 
 protected:
-  /// Hold subclass data that can be dropped.
+  /// Hold arbitary subclass data.
   ///
-  /// This member is similar to SubclassData, however it is for holding
-  /// information which may be used to aid optimization, but which may be
-  /// cleared to zero without affecting conservative interpretation.
+  /// This member is similar to SubclassData, however it is often used for
+  /// holding information which may be used to aid optimization, but which may
+  /// be cleared to zero without affecting conservative interpretation.
   unsigned char SubclassOptionalData : 7;
 
 private:
@@ -116,8 +116,11 @@ protected:
 
 private:
   Type *VTy;
+
+protected:
   Use *UseList = nullptr;
 
+private:
   friend class ValueAsMetadata; // Allow access to IsUsedByMD.
   friend class ValueHandleBase; // Allow access to HasValueHandle.
 
@@ -165,11 +168,13 @@ private:
     }
   };
 
+protected:
   template <typename UserTy> // UserTy == 'User' or 'const User'
   class user_iterator_impl {
     use_iterator_impl<Use> UI;
     explicit user_iterator_impl(Use *U) : UI(U) {}
     friend class Value;
+    friend class Instruction;
 
   public:
     using iterator_category = std::forward_iterator_tag;
@@ -198,9 +203,7 @@ private:
     }
 
     // Retrieve a pointer to the current User.
-    UserTy *operator*() const {
-      return UI->getUser();
-    }
+    UserTy *operator*() const { return cast<UserTy>(UI->getUser()); }
 
     UserTy *operator->() const { return operator*(); }
 
@@ -211,7 +214,6 @@ private:
     Use &getUse() const { return *UI; }
   };
 
-protected:
   LLVM_ABI Value(Type *Ty, unsigned scid);
 
   /// Value's destructor should be virtual by design, but that would require
@@ -551,16 +553,6 @@ public:
     return SubclassOptionalData;
   }
 
-  /// Clear the optional flags contained in this value.
-  void clearSubclassOptionalData() {
-    SubclassOptionalData = 0;
-  }
-
-  /// Check the optional flags for equality.
-  bool hasSameSubclassOptionalData(const Value *V) const {
-    return SubclassOptionalData == V->SubclassOptionalData;
-  }
-
   /// Return true if there is a value handle associated with this value.
   bool hasValueHandle() const { return HasValueHandle; }
 
@@ -774,12 +766,13 @@ public:
   /// If CanBeNull is set by this function the pointer can either be null or be
   /// dereferenceable up to the returned number of bytes.
   ///
-  /// IF CanBeFreed is true, the pointer is known to be dereferenceable at
-  /// point of definition only.  Caller must prove that allocation is not
-  /// deallocated between point of definition and use.
+  /// If CanBeFreed is non-null, it will be populated with information on
+  /// whether the pointer might be freed, i.e. is only known dereferenceable
+  /// at the point of definition. By passing null the caller indicates that it
+  /// does not care.
   LLVM_ABI uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
                                                    bool &CanBeNull,
-                                                   bool &CanBeFreed) const;
+                                                   bool *CanBeFreed) const;
 
   /// Returns an alignment of the pointer value.
   ///

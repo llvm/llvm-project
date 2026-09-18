@@ -11,7 +11,7 @@ define i1 @func(i32 %v1, i32 %v2) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    mull {{[0-9]+}}(%esp)
-; CHECK-NEXT:    jno .LBB0_1
+; CHECK-NEXT:    jae .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %carry
 ; CHECK-NEXT:    pushl $no
 ; CHECK-NEXT:    calll printf@PLT

@@ -1092,10 +1092,11 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
         return false;
     }
 
-  // Match the loads and check they are simple.
-  Value *Search, *Needle;
-  if (!match(LoadSearch, m_Load(m_Value(Search))) ||
-      !match(LoadNeedle, m_Load(m_Value(Needle))) ||
+  // Match the loads and check they are simple. The loads come from two PHIs,
+  // each with two incoming values.
+  PHINode *PSearch, *PNeedle;
+  if (!match(LoadSearch, m_Load(m_Phi(PSearch))) ||
+      !match(LoadNeedle, m_Load(m_Phi(PNeedle))) ||
       !cast<LoadInst>(LoadSearch)->isSimple() ||
       !cast<LoadInst>(LoadNeedle)->isSimple())
     return false;
@@ -1117,10 +1118,7 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
   if (TTI->getIntrinsicInstrCost(Attrs, TTI::TCK_SizeAndLatency) > 4)
     return false;
 
-  // The loads come from two PHIs, each with two incoming values.
-  PHINode *PSearch = dyn_cast<PHINode>(Search);
-  PHINode *PNeedle = dyn_cast<PHINode>(Needle);
-  if (!PSearch || PSearch->getNumIncomingValues() != 2 || !PNeedle ||
+  if (PSearch->getNumIncomingValues() != 2 ||
       PNeedle->getNumIncomingValues() != 2)
     return false;
 

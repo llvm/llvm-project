@@ -17,7 +17,7 @@ contains
   end subroutine
 end
 
-! CHECK-LABEL: fir.global linkonce @_QFNt.list constant : !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>> {
+! CHECK-LABEL: fir.global linkonce @_QFNt.list {alignment = 64 : i64} constant : !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>> {
 ! CHECK: %[[CB_ADDR:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<56xi8>>
 ! CHECK: %[[CB_CAST:.*]] = fir.convert %[[CB_ADDR]] : (!fir.ref<!fir.array<56xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK: %[[OFFSET:.*]] = arith.constant 8 : index

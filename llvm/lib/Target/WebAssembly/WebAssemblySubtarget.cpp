@@ -40,34 +40,18 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   ParseSubtargetFeatures(CPU, /*TuneCPU*/ CPU, FS);
 
-  FeatureBitset Bits = getFeatureBits();
-
-  // bulk-memory implies bulk-memory-opt
-  if (HasBulkMemory) {
-    HasBulkMemoryOpt = true;
-    Bits.set(WebAssembly::FeatureBulkMemoryOpt);
+  // WASIP3 uses cooperative multithreading, which implies using libcall
+  // thread context.
+  if (TargetTriple.getOS() == Triple::WASIp3) {
+    HasCooperativeMultithreading = true;
+    HasLibcallThreadContext = true;
   }
-
-  // gc implies reference-types
-  if (HasGC) {
-    HasReferenceTypes = true;
-  }
-
-  // reference-types implies call-indirect-overlong
-  if (HasReferenceTypes) {
-    HasCallIndirectOverlong = true;
-    Bits.set(WebAssembly::FeatureCallIndirectOverlong);
-  }
-
-  // In case we changed any bits, update `MCSubtargetInfo`'s `FeatureBitset`.
-  setFeatureBits(Bits);
 
   return *this;
 }
 
-WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
-                                           const std::string &CPU,
-                                           const std::string &FS,
+WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT, StringRef CPU,
+                                           StringRef FS,
                                            const TargetMachine &TM)
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),

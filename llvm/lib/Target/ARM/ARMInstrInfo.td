@@ -605,6 +605,13 @@ def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 let HasOneUse = 1 in
 def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (any_fmul node:$lhs, node:$rhs)>;
 
+// A single-use 'fmul' node carrying the contract flag.
+let HasOneUse = 1 in
+def fmul_su_contract : PatFrag<(ops node:$lhs, node:$rhs),
+                               (any_fmul node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
 // An 'fadd' node which checks for single non-hazardous use.
 def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
@@ -613,6 +620,18 @@ def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs
 // An 'fsub' node which checks for single non-hazardous use.
 def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
+}]>;
+
+// Contracted variants used to form the fused (single-rounded) VFMA / VFMS,
+// selected when the add/sub carries the contract flag.
+def fadd_mlx_contract : PatFrag<(ops node:$lhs, node:$rhs),
+                                (any_fadd node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract() && hasNoVMLxHazardUse(N);
+}]>;
+
+def fsub_mlx_contract : PatFrag<(ops node:$lhs, node:$rhs),
+                                (any_fsub node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract() && hasNoVMLxHazardUse(N);
 }]>;
 
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
@@ -2354,6 +2373,7 @@ def HINT : AI<(outs), (ins imm0_239:$imm), MiscFrm, NoItinerary,
   let DecoderMethod = "DecodeHINTInstruction";
 }
 
+// Architectural ARM-mode NOP is a HINT from ARMv6K; plain ARMv6 uses MOV (see MOV nop alias).
 def : InstAlias<"nop$p", (HINT 0, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"yield$p", (HINT 1, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"wfe$p", (HINT 2, pred:$p)>, Requires<[IsARM, HasV6K]>;
@@ -5144,8 +5164,12 @@ def : ARMPat<(ARMcmpZ GPR:$src, (ineg GPR:$rhs)),
              (CMNrr GPR:$src, GPR:$rhs)>;
 def : ARMPat<(ARMcmpZ GPR:$src, (ineg so_reg_imm:$rhs)),
              (CMNrsi GPR:$src, so_reg_imm:$rhs)>;
+def : ARMPat<(ARMcmpZ (ineg GPR:$Rn), so_reg_imm:$ShiftedRm),
+             (CMNrsi GPR:$Rn, so_reg_imm:$ShiftedRm)>;
 def : ARMPat<(ARMcmpZ GPRnopc:$src, (ineg so_reg_reg:$rhs)),
              (CMNrsr GPRnopc:$src, so_reg_reg:$rhs)>;
+def : ARMPat<(ARMcmpZ (ineg GPRnopc:$Rn), so_reg_reg:$ShiftedRm),
+             (CMNrsr GPRnopc:$Rn, so_reg_reg:$ShiftedRm)>;
 
 // Note that TST/TEQ don't set all the same flags that CMP does!
 defm TST  : AI1_cmp_irs<0b1000, "tst",
@@ -6036,7 +6060,7 @@ def MSRbanked : ABI<0b0001, (outs), (ins banked_reg:$banked, GPRnopc:$Rn),
 def win__chkstk : SDNode<"ARMISD::WIN__CHKSTK", SDTNone,
                       [SDNPHasChain, SDNPSideEffect]>;
 
-let usesCustomInserter = 1, Uses = [R4], Defs = [R4, SP], hasNoSchedulingInfo = 1 in
+let usesCustomInserter = 1, Uses = [R4], Defs = [R4, R12, LR, SP, CPSR], hasNoSchedulingInfo = 1 in
   def WIN__CHKSTK : PseudoInst<(outs), (ins), NoItinerary, [(win__chkstk)]>;
 
 // Windows' divide by zero check
@@ -6108,9 +6132,9 @@ let Defs =
                                 Requires<[IsARM, NoVFP]>;
 }
 
-// This gets lowered to an instruction sequence of 16 bytes
+// This gets lowered to an instruction sequence of 16 or 20 bytes
 // FIXME: Non-IOS version(s)
-let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, Size = 16,
+let isBarrier = 1, hasSideEffects = 1, isTerminator = 1,
     Defs = [ R7, LR, SP ] in {
 def Int_eh_sjlj_longjmp : PseudoInst<(outs), (ins GPR:$src, GPR:$scratch),
                              NoItinerary,
@@ -6223,6 +6247,17 @@ def : ARMPat<(ARMWrapperJT tjumptable:$dst),
              (LEApcrelJT tjumptable:$dst)>;
 
 // TODO: add,sub,and, 3-instr forms?
+
+
+// Exception Handling
+def ARMLocalRecover : SDNode<"ISD::LOCAL_RECOVER",
+                             SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                  SDTCisInt<1>]>>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (MOVi32imm mcsym:$sym)>,
+            Requires<[IsARM, UseMovt]>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (LDRLIT_ga_abs mcsym:$sym)>,
+            Requires<[IsARM, DontUseMovt]>;
+
 
 // Tail calls. These patterns also apply to Thumb mode.
 // Regular indirect tail call
@@ -6580,9 +6615,9 @@ def RORr : ARMAsmPseudo<"ror${s}${p} $Rd, $Rn, $Rm",
 def : ARMInstAlias<"neg${s}${p} $Rd, $Rm",
                    (RSBri GPR:$Rd, GPR:$Rm, 0, pred:$p, cc_out:$s)>;
 
-// Pre-v6, 'mov r0, r0' was used as a NOP encoding.
+// Pre-ARMv6K (including ARMv6), 'mov r0, r0' is the NOP encoding in ARM state.
 def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, (cc_out zero_reg)), 0>,
-         Requires<[IsARM, NoV6]>;
+         Requires<[IsARM, NoV6K]>;
 
 // MUL/UMLAL/SMLAL/UMULL/SMULL are available on all arches, but
 // the instruction definitions need difference constraints pre-v6.
@@ -6728,4 +6763,10 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   let isTerminator = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
+// C++ Exception / SEH Pseudo Instructions
+let isTerminator = 1, isReturn = 1, isBarrier = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+  def CLEANUPRET : PseudoInst<(outs), (ins), NoItinerary, [(cleanupret bb)]>, Sched<[]>;
+  def CATCHRET : PseudoInst<(outs), (ins arm_br_target:$dst, arm_br_target:$src), NoItinerary, [(catchret bb:$dst, bb:$src)]>, Sched<[]>;
 }

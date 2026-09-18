@@ -79,7 +79,9 @@ protected:
   public:
     Segment() : name() {}
 
-    lldb_private::ConstString name;
+    // Segment name is 16 characters long. An extra byte is added to guarantee
+    // nul termination in case all 16 bytes are used.
+    char name[17];
     lldb::addr_t vmaddr = LLDB_INVALID_ADDRESS;
     lldb::addr_t vmsize = 0;
     lldb::addr_t fileoff = 0;
@@ -90,7 +92,8 @@ protected:
     uint32_t flags = 0;
 
     bool operator==(const Segment &rhs) const {
-      return name == rhs.name && vmaddr == rhs.vmaddr && vmsize == rhs.vmsize;
+      return llvm::StringRef(name) == llvm::StringRef(rhs.name) &&
+             vmaddr == rhs.vmaddr && vmsize == rhs.vmsize;
     }
 
     void PutToLog(lldb_private::Log *log, lldb::addr_t slide) const;
@@ -121,6 +124,12 @@ protected:
         llvm::Triple::EnvironmentType::UnknownEnvironment;
     /// LC_VERSION_MIN_... SDK.
     std::string min_version_os_sdk;
+    /// When we need to read a binary's mach header and load commands
+    /// out of memory, this specifies how much to read to get
+    /// everything in one read packet, if known.  Increase the
+    /// default 512 bytes to 8192 which is enough to include most
+    /// mach header + load commands.
+    uint32_t mh_and_load_cmd_size = 8192;
 
     ImageInfo() = default;
 
@@ -137,6 +146,7 @@ protected:
       os_type = llvm::Triple::OSType::UnknownOS;
       os_env = llvm::Triple::EnvironmentType::UnknownEnvironment;
       min_version_os_sdk.clear();
+      mh_and_load_cmd_size = 8192;
     }
 
     bool operator==(const ImageInfo &rhs) const {
@@ -144,7 +154,8 @@ protected:
              file_spec == rhs.file_spec && uuid == rhs.uuid &&
              memcmp(&header, &rhs.header, sizeof(header)) == 0 &&
              segments == rhs.segments && os_type == rhs.os_type &&
-             os_env == rhs.os_env;
+             os_env == rhs.os_env &&
+             mh_and_load_cmd_size == rhs.mh_and_load_cmd_size;
     }
 
     bool UUIDValid() const { return uuid.IsValid(); }
@@ -160,8 +171,6 @@ protected:
     }
 
     lldb_private::ArchSpec GetArchitecture() const;
-
-    const Segment *FindSegment(lldb_private::ConstString name) const;
 
     void PutToLog(lldb_private::Log *log) const;
 

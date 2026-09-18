@@ -8,7 +8,9 @@
 
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Error.h"
@@ -24,13 +26,14 @@ void ModuleCacheEntries::flush() {
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   for (auto &[Path, Entry] : Map) {
     if (Entry->State == ModuleCacheEntry::S_Written) {
+      assert(Entry->WrittenBuffer && "Wrote PCM with no contents");
       // Note: We could propagate Entry->ModTime to the on-disk file, but
       // implicitly-built modules (unlike explicitly-built modules) don't use
       // that metadata to refer to imports, rendering this unnecessary.
       off_t Size;
       time_t ModTime;
       // Best-effort: ignore errors (e.g. read-only cache directory).
-      (void)writeImpl(Path, Entry->Buffer->getMemBufferRef(), Size, ModTime);
+      (void)writeImpl(Path, *Entry->WrittenBuffer, Size, ModTime);
     }
   }
 }
@@ -108,7 +111,8 @@ class InProcessModuleCache : public ModuleCache {
   }
 
 public:
-  InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
+  InProcessModuleCache(ModuleCacheEntries &Entries, AtomicLineLogger &Logger)
+      : ModuleCache(Logger), Entries(Entries), InMemory(Logger) {}
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
     auto &Entry = getOrCreateEntry(Filename);
@@ -118,6 +122,7 @@ public:
   std::time_t getModuleTimestamp(StringRef Filename) override {
     auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
+    Logger.log() << "timestamp_read: " << Filename;
     return Timestamp.load();
   }
 
@@ -125,6 +130,7 @@ public:
     // Note: This essentially replaces FS contention with mutex contention.
     auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
+    Logger.log() << "timestamp_write: " << Filename;
     Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
   }
 
@@ -144,24 +150,27 @@ public:
                         off_t &Size, time_t &ModTime) override {
     ModuleCacheEntry &Entry = getOrCreateEntry(Path);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    Logger.log() << "pcm_write: " << Path;
     if (Entry.State == ModuleCacheEntry::S_Written) {
-      assert(Entry.Buffer && *Entry.Buffer == Buffer &&
+      assert(Entry.WrittenBuffer && "Wrote PCM with no contents");
+      assert(Entry.WrittenBuffer->getBuffer() == Buffer.getBuffer() &&
              "Wrote the same PCM with different contents");
-      Size = Entry.Buffer->getBufferSize();
+      Size = Entry.WrittenBuffer->getBufferSize();
       ModTime = Entry.ModTime;
       return {};
     }
-    Entry.Buffer =
+    Entry.WrittenBuffer =
         llvm::MemoryBuffer::getMemBufferCopy(Buffer.getBuffer(), Path);
     Entry.ModTime = llvm::sys::toTimeT(std::chrono::system_clock::now());
     Entry.State = ModuleCacheEntry::S_Written;
-    Size = Entry.Buffer->getBufferSize();
+    Size = Entry.WrittenBuffer->getBufferSize();
     ModTime = Entry.ModTime;
     return {};
   }
 
   Expected<std::unique_ptr<llvm::MemoryBuffer>>
   read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    Logger.log() << "pcm_read_disk: " << FileName;
     ModuleCacheEntry &Entry = getOrCreateEntry(FileName);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
     if (Entry.State == ModuleCacheEntry::S_Unknown) {
@@ -172,18 +181,24 @@ public:
       auto ReadBuffer = readImpl(FileName, ReadSize, ReadModTime);
       if (!ReadBuffer)
         return ReadBuffer.takeError();
-      Entry.Buffer = std::move(*ReadBuffer);
+      Entry.ReadBuffer = std::move(*ReadBuffer);
       Entry.ModTime = ReadModTime;
       Entry.State = ModuleCacheEntry::S_Read;
     }
-    Size = Entry.Buffer->getBufferSize();
+    // The written buffer takes precedence over any read buffer.
+    llvm::MemoryBuffer *Buffer = Entry.WrittenBuffer ? Entry.WrittenBuffer.get()
+                                                     : Entry.ReadBuffer.get();
+    Size = Buffer->getBufferSize();
     ModTime = Entry.ModTime;
-    return llvm::MemoryBuffer::getMemBuffer(*Entry.Buffer);
+    // Note: Creates a reference to ReadBuffer or WrittenBuffer.
+    return llvm::MemoryBuffer::getMemBuffer(*Buffer,
+                                            /*RequiresNullTerminator=*/false);
   }
 };
 } // namespace
 
 std::shared_ptr<ModuleCache>
-dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries) {
-  return std::make_shared<InProcessModuleCache>(Entries);
+dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries,
+                                       AtomicLineLogger &Logger) {
+  return std::make_shared<InProcessModuleCache>(Entries, Logger);
 }

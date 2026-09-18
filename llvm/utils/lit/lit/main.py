@@ -40,10 +40,12 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
+        pass_env=opts.pass_env,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
         update_tests=opts.update_tests,
+        maxIndividualTestTime=opts.maxIndividualTestTime,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
@@ -68,18 +70,6 @@ def main(builtin_params={}):
         print(" ".join(sorted(features)))
         sys.exit(0)
 
-    # Command line overrides configuration for maxIndividualTestTime.
-    if opts.maxIndividualTestTime is not None:  # `not None` is important (default: 0)
-        if opts.maxIndividualTestTime != lit_config.maxIndividualTestTime:
-            lit_config.note(
-                (
-                    "The test suite configuration requested an individual"
-                    " test timeout of {0} seconds but a timeout of {1} seconds was"
-                    " requested on the command line. Forcing timeout to be {1}"
-                    " seconds."
-                ).format(lit_config.maxIndividualTestTime, opts.maxIndividualTestTime)
-            )
-            lit_config.maxIndividualTestTime = opts.maxIndividualTestTime
 
     determine_order(discovered_tests, opts.order)
 
@@ -122,22 +112,25 @@ def main(builtin_params={}):
     selected_tests = selected_tests[: opts.max_tests]
 
     mark_xfail(discovered_tests, opts)
+    mark_unsupported(discovered_tests, opts)
 
     mark_excluded(discovered_tests, selected_tests)
 
     start = time.time()
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
+    if opts.rerunFailedSerially is not None:
+        rerun_failed_serially(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
     if not opts.skip_test_time_recording:
         record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
-        selected_tests, discovered_tests
+        selected_tests, discovered_tests, opts
     )
 
     if opts.time_tests:
-        print_histogram(discovered_tests)
+        print_histogram(discovered_tests, opts.time_tests)
 
     print_results(discovered_tests, elapsed, opts)
 
@@ -248,6 +241,18 @@ def mark_xfail(selected_tests, opts):
             t.exclude_xfail = True
 
 
+def mark_unsupported(selected_tests, opts):
+    for t in selected_tests:
+        test_file = os.sep.join(t.path_in_suite)
+        test_full_name = t.getFullName()
+        if test_file in opts.unsupported or test_full_name in opts.unsupported:
+            # Add a special feature that's always present to mark as unsupported.
+            t.config.available_features.add("lit-unsupported-marker")
+            t.unsupported.append("lit-unsupported-marker")
+        if test_file in opts.unsupported_not or test_full_name in opts.unsupported_not:
+            t.unsupported_not = True
+
+
 def mark_excluded(discovered_tests, selected_tests):
     excluded_tests = set(discovered_tests) - set(selected_tests)
     result = lit.Test.Result(lit.Test.EXCLUDED)
@@ -255,8 +260,8 @@ def mark_excluded(discovered_tests, selected_tests):
         t.setResult(result)
 
 
-def run_tests(tests, lit_config, opts, discovered_tests):
-    workers = min(len(tests), opts.workers)
+def run_tests(tests, lit_config, opts, discovered_tests, workers=None):
+    workers = min(len(tests), opts.workers if workers is None else workers)
     display = lit.display.create_display(opts, tests, discovered_tests, workers)
 
     run = lit.run.Run(
@@ -276,10 +281,39 @@ def run_tests(tests, lit_config, opts, discovered_tests):
         error = "warning: reached maximum number of test failures"
     except lit.run.TimeoutError:
         error = "warning: reached timeout"
+    except lit.run.WorkerCrashError as e:
+        lit_config.error(f"a worker process crashed: {e}")
 
     display.clear(interrupted)
     if error:
         sys.stderr.write("%s, skipping remaining tests\n" % error)
+
+
+def rerun_failed_serially(tests, lit_config, opts, discovered_tests):
+    """Run the tests whose failure output matches, a second time, with a
+    single worker.
+
+    Tests that pass the second time are reported as flaky, which keeps them
+    out of the failure count and the exit status.
+    """
+    matching = opts.rerunFailedSerially
+    failed = [
+        t for t in tests if t.isFailure() and matching.search(t.result.output or "")
+    ]
+    if not failed:
+        return
+
+    lit_config.note("rerunning %d failed test(s) with a single worker" % len(failed))
+    previous_results = [t.resetResult() for t in failed]
+
+    run_tests(failed, lit_config, opts, discovered_tests, workers=1)
+
+    for test, previous in zip(failed, previous_results):
+        if test.result.code is lit.Test.SKIPPED:
+            # The rerun was cut short, e.g. by --max-failures or a timeout.
+            test.resetResult(previous)
+        elif test.result.code is lit.Test.PASS:
+            test.result.code = lit.Test.FLAKYPASS
 
 
 def execute_in_tmp_dir(run, lit_config):
@@ -313,12 +347,12 @@ def execute_in_tmp_dir(run, lit_config):
                 )
 
 
-def print_histogram(tests):
+def print_histogram(tests, slowest_limit):
     test_times = [
         (t.getFullName(), t.result.elapsed) for t in tests if t.result.elapsed
     ]
     if test_times:
-        lit.util.printHistogram(test_times, title="Tests")
+        lit.util.printHistogram(test_times, slowest_limit, title="Tests")
 
 
 def print_results(tests, elapsed, opts):

@@ -190,6 +190,12 @@ public:
 /// FIXME: Perhaps we should change the name of LateParsedDeclaration to
 /// LateParsedTokens.
 struct LateParsedAttribute : public LateParsedDeclaration {
+
+  enum class Kind {
+    Declaration,
+    Type,
+  };
+
   Parser *Self;
   CachedTokens Toks;
   IdentifierInfo &AttrName;
@@ -197,13 +203,49 @@ struct LateParsedAttribute : public LateParsedDeclaration {
   SourceLocation AttrNameLoc;
   SmallVector<Decl *, 2> Decls;
 
+private:
+  Kind K;
+
+protected:
+  explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
+                               SourceLocation Loc, Kind K)
+      : Self(P), AttrName(Name), AttrNameLoc(Loc), K(K) {}
+
+public:
   explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
                                SourceLocation Loc)
-      : Self(P), AttrName(Name), AttrNameLoc(Loc) {}
+      : LateParsedAttribute(P, Name, Loc, Kind::Declaration) {}
 
   void ParseLexedAttributes() override;
 
   void addDecl(Decl *D) { Decls.push_back(D); }
+
+  Kind getKind() const { return K; }
+
+  static bool classof(const LateParsedAttribute *LA) { return true; }
+};
+
+/// A late-parsed attribute that will be applied as a type attribute.
+/// Unlike LateParsedAttribute (which applies to declarations via
+/// ActOnFinishDelayedAttribute), this stores cached tokens that are
+/// parsed during type construction when the placeholder LateParsedAttrType
+/// is replaced with a concrete type (e.g., CountAttributedType).
+struct LateParsedTypeAttribute : public LateParsedAttribute {
+
+  explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
+                                   SourceLocation Loc)
+      : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
+
+  void ParseLexedAttributes() override;
+
+  /// Parse this late-parsed type attribute and store results in OutAttrs.
+  /// This method can be called from Sema during type transformation to
+  /// parse the cached tokens and produce the final attribute.
+  void ParseInto(ParsedAttributes &OutAttrs);
+
+  static bool classof(const LateParsedAttribute *LA) {
+    return LA->getKind() == Kind::Type;
+  }
 };
 
 /// Parser - This implements a parser for the C family of languages.  After
@@ -619,6 +661,7 @@ private:
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
+  IdentifierInfo *Ident_except;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -627,7 +670,7 @@ private:
   /// function call.
   bool CalledSignatureHelp = false;
 
-  IdentifierInfo *getSEHExceptKeyword();
+  bool isTokenSEHExcept();
 
   /// Whether to skip parsing of function bodies.
   ///
@@ -1165,6 +1208,7 @@ private:
 
 private:
   friend struct LateParsedAttribute;
+  friend struct LateParsedTypeAttribute;
 
   struct ParsingClass;
 
@@ -1334,15 +1378,17 @@ private:
 
   /// Parse all attributes in LAs, and attach them to Decl D.
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
-                               bool EnterScope, bool OnDefinition);
+                               bool EnterScope, bool OnDefinition,
+                               ParsedAttributes *OutAttrs = nullptr);
 
   /// Finish parsing an attribute for which parsing was delayed.
   /// This will be called at the end of parsing a class declaration
   /// for each LateParsedAttribute. We consume the saved tokens and
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
-  void ParseLexedAttribute(LateParsedAttribute &LA, bool EnterScope,
-                           bool OnDefinition);
+  void ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
+                           bool OnDefinition,
+                           ParsedAttributes *OutAttrs = nullptr);
 
   /// ParseLexedMethodDeclarations - We finished parsing the member
   /// specification of a top (non-nested) C++ class. Now go over the
@@ -1475,16 +1521,19 @@ private:
                                 const char *&PrevSpec, unsigned &DiagID,
                                 bool &isInvalid);
 
-  void ParseLexedCAttributeList(LateParsedAttrList &LA, bool EnterScope,
-                                ParsedAttributes *OutAttrs = nullptr);
+  void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
+                               ParsedAttributes &OutAttrs);
 
-  /// Finish parsing an attribute for which parsing was delayed.
-  /// This will be called at the end of parsing a class declaration
-  /// for each LateParsedAttribute. We consume the saved tokens and
-  /// create an attribute with the arguments filled in. We add this
-  /// to the Attribute list for the decl.
-  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
-                            ParsedAttributes *OutAttrs = nullptr);
+  /// Parse cached tokens for a late-parsed attribute and return the parsed
+  /// attributes. Shared implementation used by both ParseLexedAttribute and
+  /// ParseLexedTypeAttribute.
+  ParsedAttributes ParseLexedAttributeTokens(LateParsedAttribute &LPA);
+
+  /// Helper function to move LateParsedTypeAttribute pointers from one list
+  /// to another. Filters type attributes from \p From and appends them to \p
+  /// To.
+  static void TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
+                                         LateParsedAttrList &From);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
@@ -1685,13 +1734,13 @@ private:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_template_param:
     case DeclSpecContext::DSC_new:
+    case DeclSpecContext::DSC_conv_operator:
       return ImplicitTypenameContext::Yes;
 
     case DeclSpecContext::DSC_normal:
     case DeclSpecContext::DSC_objc_method_result:
     case DeclSpecContext::DSC_condition:
     case DeclSpecContext::DSC_template_arg:
-    case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_association:
       return ImplicitTypenameContext::No;
     }
@@ -1704,6 +1753,7 @@ private:
     SourceLocation ColonLoc;
     ExprResult RangeExpr;
     SmallVector<MaterializeTemporaryExpr *, 8> LifetimeExtendTemps;
+    CXXExpansionStmtDecl *ExpansionStmt = nullptr;
     bool ParsedForRangeDecl() { return !ColonLoc.isInvalid(); }
   };
   struct ForRangeInfo : ForRangeInit {
@@ -2943,6 +2993,7 @@ private:
                                      bool MayBeFollowedByDirectInit);
 
   /// Parse a requires-clause as part of a function declaration.
+  void ParseTrailingRequiresClauseWithScope(Declarator &D);
   void ParseTrailingRequiresClause(Declarator &D);
 
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,
@@ -2953,6 +3004,13 @@ private:
   void AnnotateExistingIndexedTypeNamePack(ParsedType T,
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc);
+
+  TemplateNameKind isPackIndexingTemplateName(UnqualifiedId &Name,
+                                              TemplateTy &Template);
+
+  bool AnnotatePackIndexingTemplateName(CXXScopeSpec &SS, UnqualifiedId &Name,
+                                        TemplateTy Template,
+                                        TemplateNameKind TNK);
 
   /// Return true if the next token should be treated as a [[]] attribute,
   /// or as a keyword that behaves like one.  The former is only true if
@@ -4182,7 +4240,8 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
-                           bool FailImmediatelyOnInvalidExpr = false);
+                           bool FailImmediatelyOnInvalidExpr = false,
+                           bool ParsingExpansionStmtInitList = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -4947,7 +5006,7 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ if/switch/while/for condition expression.
 
-  /// ParseCXXCondition - if/switch/while condition expression.
+  /// ParseCondition - if/switch/while condition expression.
   ///
   /// \verbatim
   ///       condition:
@@ -4977,16 +5036,10 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
-  /// \param EnterForConditionScope If true, enter a continue/break scope at the
-  /// appropriate moment for a 'for' loop.
-  ///
   /// \returns The parsed condition.
-  Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
-                                          SourceLocation Loc,
-                                          Sema::ConditionKind CK,
-                                          bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr,
-                                          bool EnterForConditionScope = false);
+  Sema::ConditionResult ParseCondition(StmtResult *InitStmt, SourceLocation Loc,
+                                       Sema::ConditionKind CK, bool MissingOK,
+                                       ForRangeInfo *FRI = nullptr);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -5273,6 +5326,16 @@ private:
   /// \endverbatim
   ///
   ExprResult ParseBraceInitializer();
+
+  /// ParseExpansionInitList - Called when the initializer of an expansion
+  /// statement starts with an open brace.
+  ///
+  /// \verbatim
+  ///       expansion-init-list: [C++26 [stmt.expand]]
+  ///          '{' expression-list ','[opt] '}'
+  ///          '{' '}'
+  /// \endverbatim
+  ExprResult ParseExpansionInitList();
 
   struct DesignatorCompletionInfo {
     SmallVectorImpl<Expr *> &InitExprs;
@@ -5648,7 +5711,8 @@ private:
     LateParsedObjCMethodContainer LateParsedObjCMethods;
 
     ObjCImplParsingDataRAII(Parser &parser, Decl *D)
-        : P(parser), Dcl(D), HasCFunction(false) {
+        : P(parser), Dcl(D), HasCFunction(false),
+          PrevParsedObjCImpl(parser.CurParsedObjCImpl) {
       P.CurParsedObjCImpl = this;
       Finished = false;
     }
@@ -5658,6 +5722,12 @@ private:
     bool isFinished() const { return Finished; }
 
   private:
+    /// The \@implementation that was still open when this one started; made
+    /// current again once this one finishes. Only invalid code has one: an
+    /// \@implementation that starts while a previous \@implementation is
+    /// still open (e.g. through an intervening namespace). For valid code
+    /// this is always null.
+    ObjCImplParsingDataRAII *PrevParsedObjCImpl;
     bool Finished;
   };
   ObjCImplParsingDataRAII *CurParsedObjCImpl;
@@ -6943,6 +7013,12 @@ private:
   /// Parses the 'interop' parts of the 'append_args' and 'init' clauses.
   bool ParseOMPInteropInfo(OMPInteropInfo &InteropInfo, OpenMPClauseKind Kind);
 
+  /// Parses 'fr(<foreign-runtime-id>)'.
+  ExprResult ParseOMPInteropFrSelector();
+
+  /// Parses 'attr(<string-literal>[, ...])', appending to \p Attrs.
+  bool ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs);
+
   /// Parses clause with an interop variable of kind \a Kind.
   ///
   /// \verbatim
@@ -7491,7 +7567,11 @@ public:
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
-                               LabelDecl *PrecedingLabel);
+                               LabelDecl *PrecedingLabel,
+                               CXXExpansionStmtDecl *ESD = nullptr);
+
+  void ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
+                                          ParsingDeclSpec *VarDeclSpec);
 
   /// ParseGotoStatement
   /// \verbatim
@@ -7547,6 +7627,23 @@ public:
   ///         unlabeled-statement
   /// \endverbatim
   StmtResult ParseDeferStatement(SourceLocation *TrailingElseLoc);
+
+  /// ParseExpansionStatement - Parse a C++26 expansion
+  /// statement ('template for').
+  ///
+  /// \verbatim
+  ///     expansion-statement:
+  ///       'template' 'for' '(' init-statement[opt]
+  ///           for-range-declaration ':' expansion-initializer ')'
+  ///           compound-statement
+  ///
+  ///     expansion-initializer:
+  ///       expression
+  ///       expansion-init-list
+  /// \endverbatim
+  StmtResult ParseExpansionStatement(SourceLocation *TrailingElseLoc,
+                                     LabelDecl *PrecedingLabel,
+                                     SourceLocation TemplateLoc);
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
@@ -7648,6 +7745,17 @@ public:
   /// \endverbatim
   ///
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
+
+  /// ParseFunctionBody - Parse the body of a function definition. The
+  /// '= default' and '= delete' forms are handled by the caller.
+  ///
+  /// \verbatim
+  ///       function-body:
+  ///         ctor-initializer[opt] compound-statement
+  ///         function-try-block
+  /// \endverbatim
+  ///
+  Decl *ParseFunctionBody(Decl *D, ParseScope &BodyScope);
 
   /// When in code-completion, skip parsing of the function/method body
   /// unless the body contains the code-completion point.

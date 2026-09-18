@@ -89,6 +89,19 @@ void uses_templ() {
   TemplVirt<long> l;
 }
 
+namespace GH195110 {
+// Check that no warning is emitted on a template instantiation.
+template <class> struct basic_streambuf {
+  __attribute__((__exclude_from_explicit_instantiation__)) virtual void
+  overflow();
+
+  virtual ~basic_streambuf() {}
+};
+extern template class basic_streambuf<char>;
+
+basic_streambuf<char> b;
+}
+
 //--- module-weak-vtable.cpp
 // expected-no-diagnostics
 export module m;

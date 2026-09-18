@@ -19,24 +19,24 @@ void loop(int n) {
 // CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
 // CHECK-NEXT:    br i1 [[CMP]], label %[[SIMD_IF_THEN:.*]], label %[[SIMD_IF_END:.*]]
 // CHECK:       [[SIMD_IF_THEN]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @j, align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @j, align 4, !tbaa [[INT_TBAA6:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[J]]) #[[ATTR2:[0-9]+]]
-// CHECK-NEXT:    store ptr [[J]], ptr @u, align 8, !tbaa [[INTPTR_TBAA6:![0-9]+]], !llvm.access.group [[ACC_GRP9:![0-9]+]]
+// CHECK-NEXT:    store ptr [[J]], ptr @u, align 8, !tbaa [[INTPTR_TBAA7:![0-9]+]], !llvm.access.group [[ACC_GRP10:![0-9]+]]
 // CHECK-NEXT:    [[INC_LE:%.*]] = add i32 [[TMP0]], [[N]]
-// CHECK-NEXT:    store i32 [[INC_LE]], ptr [[J]], align 4, !tbaa [[INT_TBAA2]]
-// CHECK-NEXT:    store i32 [[INC_LE]], ptr @j, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store i32 [[INC_LE]], ptr [[J]], align 4, !tbaa [[INT_TBAA6]]
+// CHECK-NEXT:    store i32 [[INC_LE]], ptr @j, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[J]]) #[[ATTR2]]
 // CHECK-NEXT:    br label %[[SIMD_IF_END]]
 // CHECK:       [[SIMD_IF_END]]:
 // CHECK-NEXT:    ret void
 //
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[INTPTR_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK: [[META7]] = !{!"p1 int", [[META8:![0-9]+]], i64 0}
-// CHECK: [[META8]] = !{!"any pointer", [[META4]], i64 0}
-// CHECK: [[ACC_GRP9]] = distinct !{}
+// CHECK: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[INTPTR_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+// CHECK: [[META8]] = !{!"p1 int", [[META9:![0-9]+]], i64 0}
+// CHECK: [[META9]] = !{!"any pointer", [[META4]], i64 0}
+// CHECK: [[ACC_GRP10]] = distinct !{}
 //.

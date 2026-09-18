@@ -279,36 +279,36 @@ define void @f16() {
 ; CHECK-NEON-LABEL: 'f16'
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %1 = fdiv half undef, undef
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %2 = frem half undef, undef
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv half undef, 0xH4000
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %4 = frem half undef, 0xH4000
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv half undef, 2.000000e+00
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %4 = frem half undef, 2.000000e+00
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-MVE-LABEL: 'f16'
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %1 = fdiv half undef, undef
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %2 = frem half undef, undef
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %3 = fdiv half undef, 0xH4000
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %4 = frem half undef, 0xH4000
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %3 = fdiv half undef, 2.000000e+00
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 1 for: %4 = frem half undef, 2.000000e+00
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'f16'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %1 = fdiv half undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %2 = frem half undef, undef
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %3 = fdiv half undef, 0xH4000
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %4 = frem half undef, 0xH4000
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %3 = fdiv half undef, 2.000000e+00
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: %4 = frem half undef, 2.000000e+00
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'f16'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %1 = fdiv half undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %2 = frem half undef, undef
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %3 = fdiv half undef, 0xH4000
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %4 = frem half undef, 0xH4000
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %3 = fdiv half undef, 2.000000e+00
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: %4 = frem half undef, 2.000000e+00
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8R-LABEL: 'f16'
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %1 = fdiv half undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %2 = frem half undef, undef
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv half undef, 0xH4000
-; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %4 = frem half undef, 0xH4000
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv half undef, 2.000000e+00
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %4 = frem half undef, 2.000000e+00
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = fdiv half undef, undef
@@ -1491,48 +1491,48 @@ define void @vi64_2() {
 
 define void @vf16_2() {
 ; CHECK-NEON-LABEL: 'vf16_2'
-; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %1 = fdiv <2 x half> undef, splat (half 0xH4000)
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = frem <2 x half> undef, splat (half 0xH4000)
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv <4 x half> undef, splat (half 0xH4000)
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %4 = frem <4 x half> undef, splat (half 0xH4000)
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %5 = fdiv <8 x half> undef, splat (half 0xH4000)
-; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %6 = frem <8 x half> undef, splat (half 0xH4000)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of 4 for: %1 = fdiv <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = frem <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %4 = frem <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %5 = fdiv <8 x half> undef, splat (half 2.000000e+00)
+; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %6 = frem <8 x half> undef, splat (half 2.000000e+00)
 ; CHECK-NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-MVE-LABEL: 'vf16_2'
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 4 for: %1 = fdiv <2 x half> undef, splat (half 0xH4000)
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 4 for: %2 = frem <2 x half> undef, splat (half 0xH4000)
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 8 for: %3 = fdiv <4 x half> undef, splat (half 0xH4000)
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 8 for: %4 = frem <4 x half> undef, splat (half 0xH4000)
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 16 for: %5 = fdiv <8 x half> undef, splat (half 0xH4000)
-; CHECK-MVE-NEXT:  Cost Model: Found costs of 16 for: %6 = frem <8 x half> undef, splat (half 0xH4000)
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 4 for: %1 = fdiv <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 4 for: %2 = frem <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 8 for: %3 = fdiv <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 8 for: %4 = frem <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 16 for: %5 = fdiv <8 x half> undef, splat (half 2.000000e+00)
+; CHECK-MVE-NEXT:  Cost Model: Found costs of 16 for: %6 = frem <8 x half> undef, splat (half 2.000000e+00)
 ; CHECK-MVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'vf16_2'
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 2 for: %1 = fdiv <2 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 2 for: %2 = frem <2 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 4 for: %3 = fdiv <4 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 4 for: %4 = frem <4 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %5 = fdiv <8 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %6 = frem <8 x half> undef, splat (half 0xH4000)
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 2 for: %1 = fdiv <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 2 for: %2 = frem <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 4 for: %3 = fdiv <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 4 for: %4 = frem <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %5 = fdiv <8 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 8 for: %6 = frem <8 x half> undef, splat (half 2.000000e+00)
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'vf16_2'
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 2 for: %1 = fdiv <2 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 2 for: %2 = frem <2 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 4 for: %3 = fdiv <4 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 4 for: %4 = frem <4 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %5 = fdiv <8 x half> undef, splat (half 0xH4000)
-; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %6 = frem <8 x half> undef, splat (half 0xH4000)
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 2 for: %1 = fdiv <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 2 for: %2 = frem <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 4 for: %3 = fdiv <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 4 for: %4 = frem <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %5 = fdiv <8 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 8 for: %6 = frem <8 x half> undef, splat (half 2.000000e+00)
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; CHECK-V8R-LABEL: 'vf16_2'
-; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %1 = fdiv <2 x half> undef, splat (half 0xH4000)
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = frem <2 x half> undef, splat (half 0xH4000)
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv <4 x half> undef, splat (half 0xH4000)
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %4 = frem <4 x half> undef, splat (half 0xH4000)
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %5 = fdiv <8 x half> undef, splat (half 0xH4000)
-; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %6 = frem <8 x half> undef, splat (half 0xH4000)
+; CHECK-V8R-NEXT:  Cost Model: Found costs of 4 for: %1 = fdiv <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %2 = frem <2 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:4 SizeLat:4 for: %3 = fdiv <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %4 = frem <4 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %5 = fdiv <8 x half> undef, splat (half 2.000000e+00)
+; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:4 Lat:4 SizeLat:4 for: %6 = frem <8 x half> undef, splat (half 2.000000e+00)
 ; CHECK-V8R-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %1 = fdiv <2 x half> undef, <half 2., half 2.>

@@ -109,19 +109,8 @@ void perf2boltMode(int argc, char **argv) {
       argc, argv,
       "perf2bolt - BOLT data aggregator\n"
       "\nEXAMPLE: perf2bolt -p=perf.data executable -o data.fdata\n");
-  if (opts::PerfData.empty()) {
-    errs() << ToolName << ": expected -perfdata=<filename> option.\n";
-    exit(1);
-  }
   if (!opts::InputDataFilename.empty()) {
     errs() << ToolName << ": unknown -data option.\n";
-    exit(1);
-  }
-  if (!sys::fs::exists(opts::PerfData))
-    report_error(opts::PerfData, errc::no_such_file_or_directory);
-  if (!DataAggregator::checkPerfDataMagic(opts::PerfData)) {
-    errs() << ToolName << ": '" << opts::PerfData
-           << "': expected valid perf.data file.\n";
     exit(1);
   }
   if (opts::OutputFilename.empty()) {
@@ -245,23 +234,16 @@ int main(int argc, char **argv) {
       }
 
       if (!opts::PerfData.empty()) {
-        if (!opts::AggregateOnly) {
-          errs() << ToolName
-                 << ": WARNING: reading perf data directly is unsupported, "
-                    "please use "
-                    "-aggregate-only or perf2bolt.\n!!! Proceed on your own "
-                    "risk. !!!\n";
-        }
-        if (Error E = RI.setProfile(opts::PerfData))
-          report_error(opts::PerfData, std::move(E));
+        for (StringRef Filename : opts::PerfData)
+          if (Error E = RI.setProfile(Filename))
+            report_error(Filename, std::move(E));
+      } else if (opts::AggregateOnly) {
+        errs() << ToolName << ": missing required -perfdata option.\n";
+        exit(1);
       }
       if (!opts::InputDataFilename.empty()) {
         if (Error E = RI.setProfile(opts::InputDataFilename))
           report_error(opts::InputDataFilename, std::move(E));
-      }
-      if (opts::AggregateOnly && opts::PerfData.empty()) {
-        errs() << ToolName << ": missing required -perfdata option.\n";
-        exit(1);
       }
 
       if (Error E = RI.run())

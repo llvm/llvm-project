@@ -178,9 +178,6 @@ private:
                          MachineBasicBlock *&MBB,
                          const yaml::StringValue &Source);
 
-  bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                            const yaml::StringValue &Source);
-
   /// Return a MIR diagnostic converted from an MI string diagnostic.
   SMDiagnostic diagFromMIStringDiag(const SMDiagnostic &Error,
                                     SMRange SourceRange);
@@ -804,6 +801,46 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
     RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
   }
 
+  // Stash any VirtRegMap state on MRI.
+  // VirtRegMap::init() will use that information to get pre-populated
+  // on the first analysis run.
+  for (const auto &VReg : YamlMF.VirtualRegisters) {
+    if (VReg.SplitFrom.Value.empty() && VReg.AssignedPhys.Value.empty())
+      continue;
+
+    auto It = PFS.VRegInfos.find(VReg.ID.Value);
+    if (It == PFS.VRegInfos.end())
+      continue;
+    Register ChildReg = It->second->VReg;
+
+    MachineRegisterInfo::PendingVirtRegMapEntry Pending;
+    Pending.VReg = ChildReg;
+
+    if (!VReg.SplitFrom.Value.empty()) {
+      VRegInfo *Parent = nullptr;
+      if (parseVirtualRegisterReference(PFS, Parent, VReg.SplitFrom.Value,
+                                        Error))
+        return error(Error, VReg.SplitFrom.SourceRange);
+      if (Parent->VReg == ChildReg)
+        return error(VReg.SplitFrom.SourceRange.Start,
+                     Twine("'split-from' references the same vreg as 'id' (%") +
+                         Twine(VReg.ID.Value) + ")");
+      Pending.SplitFrom = Parent->VReg;
+    }
+    if (!VReg.AssignedPhys.Value.empty()) {
+      Register Phys;
+      if (parseRegisterReference(PFS, Phys, VReg.AssignedPhys.Value, Error))
+        return error(Error, VReg.AssignedPhys.SourceRange);
+      if (!Phys.isPhysical())
+        return error(
+            VReg.AssignedPhys.SourceRange.Start,
+            Twine("'assigned-phys' must be a physical register, got '") +
+                VReg.AssignedPhys.Value + "'");
+      Pending.AssignedPhys = Phys.asMCReg();
+    }
+    RegInfo.addPendingVirtRegMapEntry(Pending);
+  }
+
   return false;
 }
 
@@ -1186,26 +1223,31 @@ bool MIRParserImpl::parseMBBReference(PerFunctionMIParsingState &PFS,
   return false;
 }
 
-bool MIRParserImpl::parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                                         const yaml::StringValue &Source) {
-  SMDiagnostic Error;
-  if (llvm::parseMachineMetadata(PFS, Source.Value, Source.SourceRange, Error))
-    return error(Error, Source.SourceRange);
-  return false;
-}
-
 bool MIRParserImpl::parseMachineMetadataNodes(
     PerFunctionMIParsingState &PFS, MachineFunction &MF,
     const yaml::MachineFunction &YMF) {
-  for (const auto &MDS : YMF.MachineMetadataNodes) {
-    if (parseMachineMetadata(PFS, MDS))
+  SmallVector<StringRef> Definitions;
+  for (const auto &MDS : YMF.MachineMetadataNodes)
+    Definitions.push_back(MDS.Value);
+
+  SlotMapping Slots = PFS.IRSlots;
+  SMDiagnostic Error;
+  unsigned ErrorDefinitionIndex = 0;
+  if (parseMetadataDefinitions(Definitions, Error,
+                               *MF.getFunction().getParent(), Slots,
+                               ErrorDefinitionIndex)) {
+    const yaml::StringValue &Source =
+        YMF.MachineMetadataNodes[ErrorDefinitionIndex];
+    if (StringRef(Source.Value).contains('\n')) {
+      reportDiagnostic(diagFromBlockStringDiag(Error, Source.SourceRange));
       return true;
+    }
+    return error(Error, Source.SourceRange);
   }
-  // Report missing definitions from forward referenced nodes.
-  if (!PFS.MachineForwardRefMDNodes.empty())
-    return error(PFS.MachineForwardRefMDNodes.begin()->second.second,
-                 "use of undefined metadata '!" +
-                     Twine(PFS.MachineForwardRefMDNodes.begin()->first) + "'");
+
+  for (auto &[ID, MD] : Slots.MetadataNodes)
+    if (PFS.IRSlots.MetadataNodes.find(ID) == PFS.IRSlots.MetadataNodes.end())
+      PFS.MachineMetadataNodes.try_emplace(ID, MD);
   return false;
 }
 

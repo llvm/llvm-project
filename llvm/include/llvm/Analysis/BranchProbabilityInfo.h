@@ -27,8 +27,7 @@
 namespace llvm {
 
 class Function;
-class Loop;
-class LoopInfo;
+class CycleInfo;
 class raw_ostream;
 class DominatorTree;
 class PostDominatorTree;
@@ -110,11 +109,11 @@ class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() = default;
 
-  BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
+  BranchProbabilityInfo(const Function &F, const CycleInfo &CI,
                         const TargetLibraryInfo *TLI = nullptr,
                         DominatorTree *DT = nullptr,
                         PostDominatorTree *PDT = nullptr) {
-    calculate(F, LI, TLI, DT, PDT);
+    calculate(F, CI, TLI, DT, PDT);
   }
 
   LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &PA,
@@ -157,9 +156,8 @@ public:
   /// This allows a pass to explicitly set edge probabilities for a block. It
   /// can be used when updating the CFG to update the branch probability
   /// information.
-  LLVM_ABI void
-  setEdgeProbability(const BasicBlock *Src,
-                     const SmallVectorImpl<BranchProbability> &Probs);
+  LLVM_ABI void setEdgeProbability(const BasicBlock *Src,
+                                   ArrayRef<BranchProbability> Probs);
 
   /// Copy outgoing edge probabilities from \p Src to \p Dst.
   ///
@@ -175,7 +173,7 @@ public:
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
-  LLVM_ABI void calculate(const Function &F, const LoopInfo &LI,
+  LLVM_ABI void calculate(const Function &F, const CycleInfo &CI,
                           const TargetLibraryInfo *TLI, DominatorTree *DT,
                           PostDominatorTree *PDT);
 
@@ -213,15 +211,13 @@ public:
 
 /// Printer pass for the \c BranchProbabilityAnalysis results.
 class BranchProbabilityPrinterPass
-    : public PassInfoMixin<BranchProbabilityPrinterPass> {
+    : public RequiredPassInfoMixin<BranchProbabilityPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.

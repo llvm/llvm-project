@@ -1,5 +1,4 @@
-libclc_configure_source_list(OPENCL_AMDGCN_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}
+libclc_add_sources(${LIBCLC_OPENCL_TARGET} FILES
   async/wait_group_events.cl
   printf/__printf_alloc.cl
 )

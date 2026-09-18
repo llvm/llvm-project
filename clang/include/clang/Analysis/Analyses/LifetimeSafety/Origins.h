@@ -158,7 +158,29 @@ public:
 
   unsigned getNumOrigins() const { return NextOriginID.Value; }
 
-  bool hasOrigins(QualType QT) const;
+  /// Determines whether a type can carry lifetime origins.
+  ///
+  /// \param QT The type to check.
+  /// \param IntrinsicOnly If true, only consider types that can intrinsically
+  ///        carry origins. If false, also include types that are tracked due to
+  ///        context-sensitive annotations (e.g., return types of
+  ///        [[clang::lifetimebound]] functions).
+  ///
+  /// Intrinsic origin types:
+  ///   - Pointer types (int*, void*)
+  ///   - Reference types (int&, const T&)
+  ///   - gsl::Pointer annotated types (std::string_view)
+  ///   - Lambdas capturing pointer-like objects
+  ///   - Standard callable wrappers (std::function)
+  ///
+  /// TODO: Expand this list with other origin types such as: user-defined
+  /// structs with pointer-like fields.
+  ///
+  /// Contextual origin types (excluded when IntrinsicOnly=true):
+  ///   - Types appearing as return values of functions with
+  ///     [[clang::lifetimebound]] parameters, stored in
+  ///     LifetimeAnnotatedOriginTypes during function body analysis.
+  bool hasOrigins(QualType QT, bool IntrinsicOnly = false) const;
   bool hasOrigins(const Expr *E) const;
 
   void dump(OriginID OID, llvm::raw_ostream &OS) const;

@@ -1,0 +1,47 @@
+## DIEs cloned into the artificial type unit must still produce .debug_names
+## entries when they carry enough information to be addressable on their own
+## (e.g. via DW_AT_const_value).
+##
+## Inputs are shared with odr-static-member-decl.test:
+##   struct S { const static int x = 42; int y; };
+##   a.cpp uses S; b.cpp also defines `const int S::x;` out-of-class.
+
+# RUN: dsymutil --linker=parallel -accelerator=Dwarf -f -o %t.parallel.out \
+# RUN:   -oso-prepend-path=%p/../../Inputs -y %s
+# RUN: llvm-dwarfdump --debug-names %t.parallel.out | \
+# RUN:   FileCheck %s --check-prefix=PARALLEL
+
+# RUN: dsymutil --linker=classic -accelerator=Dwarf -f -o %t.classic.out \
+# RUN:   -oso-prepend-path=%p/../../Inputs -y %s
+# RUN: llvm-dwarfdump --debug-names %t.classic.out | \
+# RUN:   FileCheck %s --check-prefix=CLASSIC
+
+---
+triple: 'x86_64-apple-darwin'
+objects:
+  - filename: 'odr-static-member-decl/a.o'
+    timestamp: 0
+    symbols:
+      - { sym: __Z4useAP1S, objAddr: 0x0, binAddr: 0x100000000, size: 0x20 }
+  - filename: 'odr-static-member-decl/b.o'
+    timestamp: 0
+    symbols:
+      - { sym: __Z4useBP1S, objAddr: 0x0, binAddr: 0x100000100, size: 0x20 }
+      - { sym: __ZN1S1xE,   objAddr: 0x14, binAddr: 0x100000200, size: 0x4 }
+...
+
+## Both regular-CU and type-unit emissions for "x" must appear.
+# PARALLEL:      String: {{.*}} "x"
+# PARALLEL-NEXT: Entry
+# PARALLEL:        Tag: DW_TAG_variable
+# PARALLEL-NOT:    DW_IDX_compile_unit: 0x00
+# PARALLEL:      Entry
+# PARALLEL:        Tag: DW_TAG_variable
+# PARALLEL:        DW_IDX_compile_unit: 0x00
+
+## Classic regression check; layout differs but coverage matches.
+# CLASSIC:      String: {{.*}} "x"
+# CLASSIC-NEXT: Entry
+# CLASSIC:        Tag: DW_TAG_variable
+# CLASSIC:      Entry
+# CLASSIC:        Tag: DW_TAG_variable

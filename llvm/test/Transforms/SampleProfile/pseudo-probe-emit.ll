@@ -101,26 +101,26 @@ entry:
 ; CHECK-IL: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 455082015)
 
 ; Check the generation of .pseudo_probe_desc section
-; CHECK-ASM-ELF: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
+; CHECK-ASM-ELF: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH:]]
 ; CHECK-ASM-ELF-NEXT: .byte  3
 ; CHECK-ASM-ELF-NEXT: .ascii	"foo"
-; CHECK-ASM-ELF-NEXT: .section  .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2,comdat
+; CHECK-ASM-ELF-NEXT: .section  .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2.{{[0-9a-f]+}},comdat
 ; CHECK-ASM-ELF-NEXT: .quad [[#GUID2]]
 ; CHECK-ASM-ELF-NEXT: .quad [[#HASH2:]]
 ; CHECK-ASM-ELF-NEXT: .byte 4
 ; CHECK-ASM-ELF-NEXT: .ascii	"foo2"
-; CHECK-ASM-COFF: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo:
+; CHECK-ASM-COFF: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH:]]
 ; CHECK-ASM-COFF-NEXT: .byte	3
 ; CHECK-ASM-COFF-NEXT: .ascii	"foo"
-; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2
-; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2:
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",same_contents,.pseudo_probe_desc_foo2.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .globl .pseudo_probe_desc_foo2.{{[0-9a-f]+}}
+; CHECK-ASM-COFF-NEXT: .pseudo_probe_desc_foo2.{{[0-9a-f]+}}:
 ; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
 ; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]
 ; CHECK-ASM-COFF-NEXT: .byte	4
@@ -141,15 +141,15 @@ entry:
 ; CHECK-SEC-ELF-NEXT:     [    8]   .text.foo3
 ; CHECK-SEC-ELF-NEXT:     [   21]   .pseudo_probe
 ; CHECK-SEC-ELF-EMPTY:
-; CHECK-SEC-ELF-NEXT:  COMDAT group section [   10] `.group' [.pseudo_probe_desc_foo] contains 1 sections:
+; CHECK-SEC-ELF-NEXT:  COMDAT group section [   10] `.group' [.pseudo_probe_desc_foo.{{[0-9a-f]+}}] contains 1 sections:
 ; CHECK-SEC-ELF-NEXT:     [Index]    Name
 ; CHECK-SEC-ELF-NEXT:     [   11]   .pseudo_probe_desc
 ; CHECK-SEC-ELF-EMPTY:
-; CHECK-SEC-ELF-NEXT:  COMDAT group section [   12] `.group' [.pseudo_probe_desc_foo2] contains 1 sections:
+; CHECK-SEC-ELF-NEXT:  COMDAT group section [   12] `.group' [.pseudo_probe_desc_foo2.{{[0-9a-f]+}}] contains 1 sections:
 ; CHECK-SEC-ELF-NEXT:     [Index]    Name
 ; CHECK-SEC-ELF-NEXT:     [   13]   .pseudo_probe_desc
 ; CHECK-SEC-ELF-EMPTY:
-; CHECK-SEC-ELF-NEXT:  COMDAT group section [   14] `.group' [.pseudo_probe_desc_foo3] contains 1 sections:
+; CHECK-SEC-ELF-NEXT:  COMDAT group section [   14] `.group' [.pseudo_probe_desc_foo3.{{[0-9a-f]+}}] contains 1 sections:
 ; CHECK-SEC-ELF-NEXT:     [Index]    Name
 ; CHECK-SEC-ELF-NEXT:     [   15]   .pseudo_probe_desc
 
@@ -223,15 +223,15 @@ entry:
 ; CHECK-SEC-COFF:           Name: foo3
 ; CHECK-SEC-COFF:           Section: .text (6)
 ; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo.{{[0-9a-f]+}}
 ; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (7)
 ; CHECK-SEC-COFF:           StorageClass: Static
 ; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo2
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo2.{{[0-9a-f]+}}
 ; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (8)
 ; CHECK-SEC-COFF:           StorageClass: Static
 ; CHECK-SEC-COFF:         }
-; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo3
+; CHECK-SEC-COFF:           Name: .pseudo_probe_desc_foo3.{{[0-9a-f]+}}
 ; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (9)
 ; CHECK-SEC-COFF:           StorageClass: Static
 ; CHECK-SEC-COFF:         }

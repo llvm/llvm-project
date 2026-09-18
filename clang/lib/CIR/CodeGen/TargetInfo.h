@@ -37,6 +37,20 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
+/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is a
+/// zero-width bit-field or an (array of) empty record(s).  An unnamed
+/// bit-field wider than zero bits is not empty: it is storage the classifier
+/// reads like a named bit-field's.  C++ record fields are never empty unless
+/// marked [[no_unique_address]], and that exception applies only to records,
+/// not arrays of records.
+bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
+
+/// isEmptyRecordForABI - Return true if a structure contains only empty base
+/// classes and fields.  Note that a structure with a flexible array member is
+/// not considered empty, and neither is a polymorphic class, whose vtable
+/// pointer is neither a base nor a field.
+bool isEmptyRecordForABI(const ASTContext &context, QualType t);
+
 class CIRGenFunction;
 
 class TargetCIRGenInfo {
@@ -50,6 +64,9 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
+  /// Returns true if the target supports math library calls.
+  virtual bool supportsLibCall() const { return true; }
+
   /// Get target favored AST address space of a global variable for languages
   /// other than OpenCL and CUDA.
   /// If \p d is nullptr, returns the default target favored address space
@@ -61,6 +78,14 @@ public:
   virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
     return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
                                           cir::LangAddressSpace::Default);
+  }
+
+  virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
+    return nullptr;
+  }
+
+  virtual mlir::Type getCUDADeviceBuiltinTextureDeviceType() const {
+    return nullptr;
   }
 
   /// Determine whether a call to an unprototyped functions under
@@ -107,6 +132,24 @@ public:
   /// right thing when calling a function with no know signature.
   virtual bool isNoProtoCallVariadic(const FunctionNoProtoType *fnType) const;
 
+  /// Returns true if inlining the function call would produce incorrect code
+  /// for the current target and should be ignored (even with the always_inline
+  /// or flatten attributes).
+  ///
+  /// Note: This probably should be handled in LLVM. However, the LLVM
+  /// `alwaysinline` attribute currently means the inliner will ignore
+  /// mismatched attributes (which sometimes can generate invalid code). So,
+  /// this hook allows targets to avoid adding the LLVM `alwaysinline` attribute
+  /// based on C/C++ attributes or other target-specific reasons.
+  ///
+  /// See previous discussion here:
+  /// https://discourse.llvm.org/t/rfc-avoid-inlining-alwaysinline-functions-when-they-cannot-be-inlined/79528
+  virtual bool
+  wouldInliningViolateFunctionCallABI(const FunctionDecl *Caller,
+                                      const FunctionDecl *Callee) const {
+    return false;
+  }
+
   /// Provides a convenient hook to handle extra target-specific attributes
   /// for the given global.
   /// In OG, the function receives an llvm::GlobalValue. However, functions
@@ -120,6 +163,12 @@ public:
                                         mlir::Type ty) const {
     return false;
   }
+
+  /// Returns the calling convention used for device kernels on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const;
+
+  virtual void
+  setCUDAKernelCallingConvention(const clang::FunctionType *&ft) const {}
 
   /// Corrects the MLIR type for a given constraint and "usual"
   /// type.
@@ -146,7 +195,13 @@ void setAMDGPUTargetFunctionAttributes(const clang::Decl *decl,
 
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
 
+std::unique_ptr<TargetCIRGenInfo>
+createAArch64TargetCIRGenInfo(CIRGenTypes &cgt);
+
 std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
+
+std::unique_ptr<TargetCIRGenInfo>
+createCommonSPIRTargetCIRGenInfo(CIRGenTypes &cgt);
 
 } // namespace clang::CIRGen
 

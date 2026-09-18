@@ -12,25 +12,26 @@ on:
 jobs:
   build-package:
     name: Build Package
-    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-26]
+    runs-on: ${{ matrix.os }}
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
       - name: Build Binaries
         run: |
           mkdir build
           cd build
-          cmake -GNinja \
-            -DCMAKE_BUILD_TYPE=Release \
-            ../llvm
+          cmake -GNinja -DCMAKE_BUILD_TYPE=Release ../llvm
           ninja split-file FileCheck
       - name: Build Package
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-build
+          pip3 install --break-system-packages build==1.4.2
           cd ./llvm/utils/llvm-testing-tools
           mkdir ./src/llvm_testing_tools/binaries
           cp ../../../build/bin/FileCheck ./src/llvm_testing_tools/binaries/FileCheck
@@ -39,5 +40,5 @@ jobs:
       - name: Upload Packages
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: packages
+          name: packages-${{ matrix.os }}
           path: ./llvm/utils/llvm-testing-tools/dist/*

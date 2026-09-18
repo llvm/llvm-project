@@ -342,7 +342,7 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   DependentsVector UmbrellaDependents;
 
   // Recursively do submodules.
-  for (auto *Submodule : Mod.submodules())
+  for (Module *Submodule : Mod.submodules())
     collectModuleHeaders(*Submodule);
 
   if (std::optional<clang::Module::Header> UmbrellaHeader =

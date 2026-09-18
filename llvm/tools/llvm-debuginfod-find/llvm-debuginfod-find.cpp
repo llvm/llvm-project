@@ -23,8 +23,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/LLVMDriver.h"
 
 using namespace llvm;
 
@@ -152,10 +152,11 @@ int llvm_debuginfod_find_main(int argc, char **argv,
 
 // Find a debug file in local build ID directories and via debuginfod.
 std::string fetchDebugInfo(object::BuildIDRef BuildID) {
-  if (std::optional<std::string> Path =
-          DebuginfodFetcher(DebugFileDirectory).fetch(BuildID))
+  Expected<std::string> Path =
+      DebuginfodFetcher(DebugFileDirectory).fetch(BuildID);
+  if (Path)
     return *Path;
-  errs() << "Build ID " << llvm::toHex(BuildID, /*Lowercase=*/true)
-         << " could not be found.\n";
+  errs() << "Build ID " << llvm::toHex(BuildID, /*Lowercase=*/true) << ": "
+         << toString(Path.takeError()) << "\n";
   exit(1);
 }

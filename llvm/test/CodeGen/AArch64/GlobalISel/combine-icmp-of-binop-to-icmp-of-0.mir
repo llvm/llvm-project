@@ -21,18 +21,18 @@ body:             |
     ; CHECK-LABEL: name: add_scalar_eq
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_ADD %x, %y
-    %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_ADD %x, %y
+    %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -44,19 +44,19 @@ body:             |
     ; CHECK-LABEL: name: add_vector_eq
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_ADD %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_ADD %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -68,18 +68,18 @@ body:             |
     ; CHECK-LABEL: name: add_scalar_eq_commuted_in_op
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_ADD %y, %x
-    %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_ADD %y, %x
+    %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -91,19 +91,19 @@ body:             |
     ; CHECK-LABEL: name: add_vector_eq_commuted_in_op
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_ADD %y, %x
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_ADD %y, %x
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -115,18 +115,18 @@ body:             |
     ; CHECK-LABEL: name: add_scalar_eq_commuted_in_cmp
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_ADD %x, %y
-    %cmp:_(s1) = G_ICMP intpred(eq), %x(s32), %op
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_ADD %x, %y
+    %cmp:_(i1) = G_ICMP intpred(eq), %x(i32), %op
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -138,19 +138,19 @@ body:             |
     ; CHECK-LABEL: name: add_vector_eq_commuted_in_cmp
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_ADD %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %x(<4 x s32>), %op
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_ADD %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %x(<4 x i32>), %op
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -162,18 +162,18 @@ body:             |
     ; CHECK-LABEL: name: xor_scalar_eq
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_XOR %x, %y
-    %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_XOR %x, %y
+    %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -185,19 +185,19 @@ body:             |
     ; CHECK-LABEL: name: xor_vector_eq
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_XOR %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_XOR %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -209,18 +209,18 @@ body:             |
     ; CHECK-LABEL: name: xor_scalar_eq_commuted_in_op
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_XOR %y, %x
-    %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_XOR %y, %x
+    %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -232,19 +232,19 @@ body:             |
     ; CHECK-LABEL: name: xor_vector_eq_commuted_in_op
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_XOR %y, %x
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_XOR %y, %x
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -256,18 +256,18 @@ body:             |
     ; CHECK-LABEL: name: xor_scalar_eq_commuted_in_cmp
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_XOR %x, %y
-    %cmp:_(s1) = G_ICMP intpred(eq), %x(s32), %op
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_XOR %x, %y
+    %cmp:_(i1) = G_ICMP intpred(eq), %x(i32), %op
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -279,19 +279,19 @@ body:             |
     ; CHECK-LABEL: name: xor_vector_eq_commuted_in_cmp
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_XOR %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %x(<4 x s32>), %op
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_XOR %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %x(<4 x i32>), %op
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -303,18 +303,18 @@ body:             |
     ; CHECK-LABEL: name: sub_scalar_eq
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_SUB %x, %y
-    %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_SUB %x, %y
+    %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -326,19 +326,19 @@ body:             |
     ; CHECK-LABEL: name: sub_vector_eq
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_SUB %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_SUB %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -350,18 +350,18 @@ body:             |
     ; CHECK-LABEL: name: sub_scalar_eq_commuted_in_cmp
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_SUB %x, %y
-    %cmp:_(s1) = G_ICMP intpred(eq), %x(s32), %op
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_SUB %x, %y
+    %cmp:_(i1) = G_ICMP intpred(eq), %x(i32), %op
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -373,19 +373,19 @@ body:             |
     ; CHECK-LABEL: name: sub_vector_eq_commuted_in_cmp
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_SUB %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %x(<4 x s32>), %op
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_SUB %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %x(<4 x i32>), %op
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -397,18 +397,18 @@ body:             |
     ; CHECK-LABEL: name: add_scalar_ne
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_ADD %x, %y
-    %cmp:_(s1) = G_ICMP intpred(ne), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_ADD %x, %y
+    %cmp:_(i1) = G_ICMP intpred(ne), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -420,19 +420,19 @@ body:             |
     ; CHECK-LABEL: name: add_vector_ne
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_ADD %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_ADD %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -444,18 +444,18 @@ body:             |
     ; CHECK-LABEL: name: add_scalar_ne_commuted_in_op
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_ADD %y, %x
-    %cmp:_(s1) = G_ICMP intpred(ne), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_ADD %y, %x
+    %cmp:_(i1) = G_ICMP intpred(ne), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -467,19 +467,19 @@ body:             |
     ; CHECK-LABEL: name: add_vector_ne_commuted_in_op
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_ADD %y, %x
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_ADD %y, %x
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -491,18 +491,18 @@ body:             |
     ; CHECK-LABEL: name: add_scalar_ne_commuted_in_cmp
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_ADD %x, %y
-    %cmp:_(s1) = G_ICMP intpred(ne), %x(s32), %op
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_ADD %x, %y
+    %cmp:_(i1) = G_ICMP intpred(ne), %x(i32), %op
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -514,19 +514,19 @@ body:             |
     ; CHECK-LABEL: name: add_vector_ne_commuted_in_cmp
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_ADD %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %x(<4 x s32>), %op
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_ADD %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %x(<4 x i32>), %op
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -538,18 +538,18 @@ body:             |
     ; CHECK-LABEL: name: xor_scalar_ne
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_XOR %x, %y
-    %cmp:_(s1) = G_ICMP intpred(ne), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_XOR %x, %y
+    %cmp:_(i1) = G_ICMP intpred(ne), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -561,19 +561,19 @@ body:             |
     ; CHECK-LABEL: name: xor_vector_ne
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_XOR %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_XOR %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -585,18 +585,18 @@ body:             |
     ; CHECK-LABEL: name: xor_scalar_ne_commuted_in_op
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_XOR %y, %x
-    %cmp:_(s1) = G_ICMP intpred(ne), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_XOR %y, %x
+    %cmp:_(i1) = G_ICMP intpred(ne), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -608,19 +608,19 @@ body:             |
     ; CHECK-LABEL: name: xor_vector_ne_commuted_in_op
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_XOR %y, %x
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_XOR %y, %x
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -632,18 +632,18 @@ body:             |
     ; CHECK-LABEL: name: xor_scalar_ne_commuted_in_cmp
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_XOR %x, %y
-    %cmp:_(s1) = G_ICMP intpred(ne), %x(s32), %op
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_XOR %x, %y
+    %cmp:_(i1) = G_ICMP intpred(ne), %x(i32), %op
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -655,19 +655,19 @@ body:             |
     ; CHECK-LABEL: name: xor_vector_ne_commuted_in_cmp
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_XOR %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %x(<4 x s32>), %op
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_XOR %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %x(<4 x i32>), %op
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -679,18 +679,18 @@ body:             |
     ; CHECK-LABEL: name: sub_scalar_ne
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_SUB %x, %y
-    %cmp:_(s1) = G_ICMP intpred(ne), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_SUB %x, %y
+    %cmp:_(i1) = G_ICMP intpred(ne), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -702,19 +702,19 @@ body:             |
     ; CHECK-LABEL: name: sub_vector_ne
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_SUB %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_SUB %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -726,18 +726,18 @@ body:             |
     ; CHECK-LABEL: name: sub_scalar_ne_commuted_in_cmp
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(ne), %y(s32), [[C]]
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(ne), %y(i32), [[C]]
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_SUB %x, %y
-    %cmp:_(s1) = G_ICMP intpred(ne), %x(s32), %op
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_SUB %x, %y
+    %cmp:_(i1) = G_ICMP intpred(ne), %x(i32), %op
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -749,19 +749,19 @@ body:             |
     ; CHECK-LABEL: name: sub_vector_ne_commuted_in_cmp
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %y(<4 x s32>), [[BUILD_VECTOR]]
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32), [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %y(<4 x i32>), [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_SUB %x, %y
-    %cmp:_(<4 x s1>) = G_ICMP intpred(ne), %x(<4 x s32>), %op
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_SUB %x, %y
+    %cmp:_(<4 x i1>) = G_ICMP intpred(ne), %x(<4 x i32>), %op
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -773,19 +773,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_sub_scalar_eq_commuted_in_op
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %op:_(s32) = G_SUB %y, %x
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %x
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: %op:_(i32) = G_SUB %y, %x
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %x
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_SUB %y, %x
-    %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_SUB %y, %x
+    %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -797,19 +797,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_sub_vector_eq_commuted_in_op
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: %op:_(<4 x s32>) = G_SUB %y, %x
-    ; CHECK-NEXT: %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %op(<4 x s32>), %x
-    ; CHECK-NEXT: %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    ; CHECK-NEXT: $d0 = COPY %ext(<4 x s16>)
+    ; CHECK-NEXT: %x:_(<4 x i32>) = COPY $q0
+    ; CHECK-NEXT: %y:_(<4 x i32>) = COPY $q1
+    ; CHECK-NEXT: %op:_(<4 x i32>) = G_SUB %y, %x
+    ; CHECK-NEXT: %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %op(<4 x i32>), %x
+    ; CHECK-NEXT: %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    ; CHECK-NEXT: $d0 = COPY %ext(<4 x i16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %x:_(<4 x s32>) = COPY $q0
-    %y:_(<4 x s32>) = COPY $q1
-    %op:_(<4 x s32>) = G_SUB %y, %x
-    %cmp:_(<4 x s1>) = G_ICMP intpred(eq), %op(<4 x s32>), %x
-    %ext:_(<4 x s16>) = G_ANYEXT %cmp(<4 x s1>)
-    $d0 = COPY %ext(<4 x s16>)
+    %x:_(<4 x i32>) = COPY $q0
+    %y:_(<4 x i32>) = COPY $q1
+    %op:_(<4 x i32>) = G_SUB %y, %x
+    %cmp:_(<4 x i1>) = G_ICMP intpred(eq), %op(<4 x i32>), %x
+    %ext:_(<4 x i16>) = G_ANYEXT %cmp(<4 x i1>)
+    $d0 = COPY %ext(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -821,19 +821,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_not_equality
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %op:_(s32) = G_ADD %x, %y
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(slt), %op(s32), %x
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: %op:_(i32) = G_ADD %x, %y
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(slt), %op(i32), %x
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %op:_(s32) = G_ADD %x, %y
-    %cmp:_(s1) = G_ICMP intpred(slt), %op(s32), %x
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %op:_(i32) = G_ADD %x, %y
+    %cmp:_(i1) = G_ICMP intpred(slt), %op(i32), %x
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -845,19 +845,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_unique_operands
     ; CHECK: liveins: $w0, $w1, $w2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %x:_(s32) = COPY $w0
-    ; CHECK-NEXT: %y:_(s32) = COPY $w1
-    ; CHECK-NEXT: %z:_(s32) = COPY $w2
-    ; CHECK-NEXT: %op:_(s32) = G_ADD %x, %y
-    ; CHECK-NEXT: %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %z
-    ; CHECK-NEXT: %ext:_(s32) = G_ZEXT %cmp(s1)
-    ; CHECK-NEXT: $w0 = COPY %ext(s32)
+    ; CHECK-NEXT: %x:_(i32) = COPY $w0
+    ; CHECK-NEXT: %y:_(i32) = COPY $w1
+    ; CHECK-NEXT: %z:_(i32) = COPY $w2
+    ; CHECK-NEXT: %op:_(i32) = G_ADD %x, %y
+    ; CHECK-NEXT: %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %z
+    ; CHECK-NEXT: %ext:_(i32) = G_ZEXT %cmp(i1)
+    ; CHECK-NEXT: $w0 = COPY %ext(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %x:_(s32) = COPY $w0
-    %y:_(s32) = COPY $w1
-    %z:_(s32) = COPY $w2
-    %op:_(s32) = G_ADD %x, %y
-    %cmp:_(s1) = G_ICMP intpred(eq), %op(s32), %z
-    %ext:_(s32) = G_ZEXT %cmp(s1)
-    $w0 = COPY %ext(s32)
+    %x:_(i32) = COPY $w0
+    %y:_(i32) = COPY $w1
+    %z:_(i32) = COPY $w2
+    %op:_(i32) = G_ADD %x, %y
+    %cmp:_(i1) = G_ICMP intpred(eq), %op(i32), %z
+    %ext:_(i32) = G_ZEXT %cmp(i1)
+    $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0

@@ -103,3 +103,95 @@ float32x4_t test_vsqrtq_f32(float32x4_t a) {
 float64x2_t test_vsqrtq_f64(float64x2_t a) {
   return vsqrtq_f64(a);
 }
+
+// UNCONSTRAINED-LABEL: define dso_local <4 x half> @test_vcvt_f16_f32(
+// UNCONSTRAINED-SAME: <4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
+// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = fptrunc <4 x float> [[TMP2]] to <4 x half>
+// UNCONSTRAINED-NEXT:    ret <4 x half> [[TMP3]]
+//
+// CONSTRAINED-LABEL: define dso_local <4 x half> @test_vcvt_f16_f32(
+// CONSTRAINED-SAME: <4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
+// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// CONSTRAINED-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    ret <4 x half> [[TMP3]]
+//
+float16x4_t test_vcvt_f16_f32(float32x4_t a) {
+  return vcvt_f16_f32(a);
+}
+
+// UNCONSTRAINED-LABEL: define dso_local <8 x half> @test_vcvt_high_f16_f32(
+// UNCONSTRAINED-SAME: <4 x half> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #[[ATTR0]] {
+// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[B]] to <4 x i32>
+// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = fptrunc <4 x float> [[TMP2]] to <4 x half>
+// UNCONSTRAINED-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// UNCONSTRAINED-NEXT:    ret <8 x half> [[SHUFFLE_I]]
+//
+// CONSTRAINED-LABEL: define dso_local <8 x half> @test_vcvt_high_f16_f32(
+// CONSTRAINED-SAME: <4 x half> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #[[ATTR0]] {
+// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[B]] to <4 x i32>
+// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// CONSTRAINED-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f32(<4 x float> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CONSTRAINED-NEXT:    ret <8 x half> [[SHUFFLE_I]]
+//
+float16x8_t test_vcvt_high_f16_f32(float16x4_t a, float32x4_t b) {
+  return vcvt_high_f16_f32(a, b);
+}
+
+// UNCONSTRAINED-LABEL: define dso_local <4 x float> @test_vcvt_f32_f16(
+// UNCONSTRAINED-SAME: <4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
+// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
+// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
+// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = fpext <4 x half> [[TMP2]] to <4 x float>
+// UNCONSTRAINED-NEXT:    ret <4 x float> [[TMP3]]
+//
+// CONSTRAINED-LABEL: define dso_local <4 x float> @test_vcvt_f32_f16(
+// CONSTRAINED-SAME: <4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
+// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
+// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
+// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// CONSTRAINED-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> [[TMP2]], metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    ret <4 x float> [[TMP3]]
+//
+float32x4_t test_vcvt_f32_f16(float16x4_t a) {
+  return vcvt_f32_f16(a);
+}
+
+// UNCONSTRAINED-LABEL: define dso_local <4 x float> @test_vcvt_high_f32_f16(
+// UNCONSTRAINED-SAME: <8 x half> noundef [[A:%.*]]) #[[ATTR0]] {
+// UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// UNCONSTRAINED-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[SHUFFLE_I]] to <4 x i16>
+// UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
+// UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = fpext <4 x half> [[TMP2]] to <4 x float>
+// UNCONSTRAINED-NEXT:    ret <4 x float> [[TMP3]]
+//
+// CONSTRAINED-LABEL: define dso_local <4 x float> @test_vcvt_high_f32_f16(
+// CONSTRAINED-SAME: <8 x half> noundef [[A:%.*]]) #[[ATTR0]] {
+// CONSTRAINED-NEXT:  [[ENTRY:.*:]]
+// CONSTRAINED-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[SHUFFLE_I]] to <4 x i16>
+// CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
+// CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// CONSTRAINED-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.experimental.constrained.fpext.v4f32.v4f16(<4 x half> [[TMP2]], metadata !"fpexcept.strict") #[[ATTR2]]
+// CONSTRAINED-NEXT:    ret <4 x float> [[TMP3]]
+//
+float32x4_t test_vcvt_high_f32_f16(float16x8_t a) {
+  return vcvt_high_f32_f16(a);
+}

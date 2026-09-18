@@ -355,3 +355,132 @@ as part of migrating to GitHub's “security advisory”-based reporting:
    GHSA-82m9-xvw3-rvpv
 2. “Test that a non-admin can create an advisory (no vulnerability).” |br|
    GHSA-34gr-6c7h-cc93
+
+2025
+----
+
+Introduction
+^^^^^^^^^^^^
+
+2025 was the first year all reports were submitted using Github. We report on
+the issues the group received in 2025, or on issues that were received
+earlier, but were disclosed in 2025.
+
+We group the issues into the following categories:
+
+1. Security issues fixed under a coordinated disclosure process (2 issues)
+2. Supply chain security related issues and project services-related issues
+   (2 issues)
+3. Issues deemed to not require coordinated action before disclosing publicly
+   (11 issues)
+4. Invalid issues (5 issues)
+
+In 2025, we received 2 invalid issues that we believe that have been created
+automatically and 1 issue appeared to be created using generative AI. That
+issue was considered to be invalid.
+
+Security issues fixed under a coordinated disclosure process
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section lists the reported issues where we ended up implementing fixes
+under a coordinated disclosure process. The security advisories for those
+issues can be found at
+https://github.com/llvm/llvm-security-repo/security/advisories/.
+
+1. “CMSE secure state may leak from stack to floating-point registers” |br|
+   Details are available at
+   `GHSA-wh65-j229-6wfp <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-wh65-j229-6wfp>`_
+2. “Binary executable injection vulnerability in clang-linker-wrapper.exe” |br|
+   Details are available at
+   `GHSA-hrx2-grgx-9vhg <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-hrx2-grgx-9vhg>`_
+
+Supply chain security related issues and project services-related issues
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. “Critical Supply Chain Vulnerability in RockstarGames/llvm-project
+   (CVE-2025-30066)” |br|
+   Details are available at
+   `GHSA-3fq9-qcq4-8jjr <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-3fq9-qcq4-8jjr>`_ |br|
+   The issue had already been fixed with commit
+   `6616acd80cd91 <https://github.com/llvm/llvm-project/commit/6616acd80cd91a0075e3cd481bb9a6d82fd4ea9e>`_.
+2. “CVE-2022-25883 and CVE-2022-3517 with respect to
+   llvm-project/mlir/utils/vscode/package-lock.json” |br|
+   Details are available at
+   `GHSA-g72r-487m-m6hh <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-g72r-487m-m6hh>`_ |br|
+   Packages have been updated with
+   `PR 144479 <https://github.com/llvm/llvm-project/pull/144479>`_.
+
+Issues deemed to not require coordinated action before disclosing publicly
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1. “Coroutine Frame-Oriented Programming: A new exploitation method using C++ coroutines” |br|
+   Details are available at
+   `GHSA-v8pv-j8f5-qqcg <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-v8pv-j8f5-qqcg>`_ |br|
+   The researchers shared a new exploitation method that leverages the
+   implementation of C++ routines. Their
+   `paper <https://www.usenix.org/conference/usenixsecurity25/presentation/bajo>`_
+   describing the technique has been published and is available publicly.
+2. “Security Bug in String Assign Function (libc++)” |br|
+   Details are available at
+   `GHSA-m967-6j3p-jrwc <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-m967-6j3p-jrwc>`_ |br|
+   There has been an agreement that the proof of concept had undefined
+   behavior which makes it out of scope according to
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+3. “\[clangd\] heap-use-after-free in clangd when generating diagnostics” |br|
+   Details are available at
+   `GHSA-5426-9r4h-7whf <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-5426-9r4h-7whf>`_ |br|
+   It has been agreed this report fell out of scope because it was caused by
+   untrusted inputs, as described in
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+4. “A compiler optimization bug may cause signed integer overflow detection
+   be bypassed” |br|
+   Details are available at
+   `GHSA-w6jm-h8j9-q33r <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-w6jm-h8j9-q33r>`_ |br|
+   There has been an agreement that the PoC had undefined behavior which makes
+   it out of scope according to
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+5. “libomp: Crash (OOB Write / ASan BUS Error) involving omp\_init\_lock under
+   high concurrency” |br|
+   Details are available at
+   `GHSA-cfhc-jxq2-97mf <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-cfhc-jxq2-97mf>`_ |br|
+   The group agreed to close this as not a security issue because the code
+   was written without taking into consideration the expectations from the
+   OpenMP specification.
+6. “\[MLIR\] head-use-after-free in mlir-lsp-server on completion request” |br|
+   Details are available at
+   `GHSA-8j9r-qc4r-q9fh <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-8j9r-qc4r-q9fh>`_ |br|
+   This report fell out of scope because it was caused by untrusted inputs,
+   as described in
+   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+7. “\[clangd/clang\] heap-buffer-overflow in clang/lib/Sema/SemaExprCXX.cpp:9144” |br|
+   Details are available at
+   `GHSA-qq8q-r524-8vw9 <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-qq8q-r524-8vw9>`_ |br|
+   This issue and the following 3 were concluded to be outside of the
+   `LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+8. “\[clangd\] heap-buffer-overflow in clang/lib/Sema/SemaExprCXX.cpp:8876” |br|
+   Details are available at
+   `GHSA-3xm9-vccr-fxx5 <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-3xm9-vccr-fxx5>`_
+9. “\[clangd/clang\] heap-use-after-free at clang/Sema/Ownership.h:81” |br|
+   Details are available at
+   `GHSA-qj36-2p7g-83gv <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-qj36-2p7g-83gv>`_
+10. “Clang 20.1.0 Compiler Internal Error (Crash) during AST Parsing of C++23” |br|
+    Details are available at
+    `GHSA-p2g2-89wf-7gcm <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-p2g2-89wf-7gcm>`_
+11. “Compiler-induced non-constant-time code” |br|
+    Details are available at
+    `GHSA-627p-g235-23pm <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-627p-g235-23pm>`_ |br|
+    The reporters shared a pre-print article evaluating non-constant-time
+    code generated by Clang. We all agreed this did not need coordinated
+    disclosure because Clang offers no guarantees of constant-time code.
+
+Invalid issues
+^^^^^^^^^^^^^^
+
+The LLVM security group received 5 issues which were created accidentally or
+were not related to the LLVM project. The subject lines for these were:
+
+1. “llvm-Bug”
+2. “Potential Negative Number Used as Index”
+3. “I was recently hacked... maybe you folks might know the dev?”
+4. “ASP.NETconfiguration: Creating Debug Binary in ``[![Labelling new pull requests](https://github.com/llvm/llvm-project/actions/workflows/new-prs.yml/badge.svg?event=create)](https://github.com/llvm/llvm-project/actions/workflows``”
+5. “ASP.NETconfiguration: Creating Debug Binary in ``[![Labelling new pull requests](https://github.com/llvm/llvm-project/actions/workflows/new-prs.yml/badge.svg?event=create)](https://github.com/llvm/llvm-project/actions/workflows``”

@@ -9,11 +9,12 @@
 #ifndef MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES_H
 #define MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES_H
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 
@@ -28,6 +29,9 @@ class OpenACCSupport;
 #define GEN_PASS_DECL
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h.inc"
 
+/// Holds information for which integers represent a device type in the runtime.
+using TypesForDevice = llvm::SmallSetVector<int64_t, 3>;
+
 //===----------------------------------------------------------------------===//
 // ACCSpecializeForDevice patterns
 //===----------------------------------------------------------------------===//
@@ -36,7 +40,10 @@ class OpenACCSupport;
 /// In specialized device code (such as specialized acc routine), many ACC
 /// operations do not make sense because they are host-side constructs. This
 /// function adds patterns to remove or transform them.
-void populateACCSpecializeForDevicePatterns(RewritePatternSet &patterns);
+/// `theDeviceTypes` hold the device types for which `acc_on_device` should
+/// return true.
+void populateACCSpecializeForDevicePatterns(
+    RewritePatternSet &patterns, const TypesForDevice &theDeviceTypes);
 
 //===----------------------------------------------------------------------===//
 // ACCSpecializeForHost patterns

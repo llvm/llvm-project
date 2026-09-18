@@ -15,6 +15,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 using namespace TargetOpcode;
 using namespace LegalizeActions;
 using namespace LegalityPredicates;
@@ -127,6 +129,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
        G_FTANH, G_FATAN, G_FATAN2, G_FPOW,  G_FEXP,    G_FEXP2, G_FEXP10,
        G_FLOG,  G_FLOG2, G_FLOG10, G_FPOWI, G_FSINCOS, G_FCEIL, G_FFLOOR})
       .libcall();
+
+  getActionDefinitionsBuilder(G_FNEG)
+      .legalFor(UseX87 && !HasSSE1, {s32})
+      .legalFor(UseX87 && !HasSSE2, {s64})
+      .legalFor(UseX87, {s80})
+      .lower();
 
   getActionDefinitionsBuilder(G_FSQRT)
       .legalFor(HasSSE1 || UseX87, {s32})
@@ -294,7 +302,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarSameSizeAs(0, 1);
 
   // count trailing zeros
-  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_POISON)
       .legalFor({{s16, s16}, {s32, s32}})
       .legalFor(Is64Bit, {{s64, s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
@@ -308,6 +316,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   // pointer handling
@@ -329,7 +338,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min*/ 32)
       .clampScalar(1, s32, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_FRAME_INDEX, G_GLOBAL_VALUE}).legalFor({p0});
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
+
+  getActionDefinitionsBuilder(G_GLOBAL_VALUE).customFor({p0});
 
   // load/store: add more corner cases
   for (unsigned Op : {G_LOAD, G_STORE}) {
@@ -392,6 +403,12 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     // TODO - SSE41/AVX2/AVX512F/AVX512BW vector extensions
   }
 
+  for (unsigned Op : {G_FPEXTLOAD, G_FPTRUNCSTORE}) {
+    auto &Action = getActionDefinitionsBuilder(Op);
+    Action.legalForTypesWithMemDesc(
+        UseX87, {{s80, p0, s32, 1}, {s80, p0, s64, 1}, {s64, p0, s32, 1}});
+  }
+
   // sext, zext, and anyext
   getActionDefinitionsBuilder(G_ANYEXT)
       .legalFor({s8, s16, s32, s128})
@@ -410,6 +427,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/8)
       .clampScalar(1, s8, sMaxScalar)
       .scalarize(0);
+
+  getActionDefinitionsBuilder(G_TRUNC).legalForCartesianProduct(
+      {s1, s8, s16, s32, s64}, {s8, s16, s32, s64, s128});
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -446,12 +466,14 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(HasSSE2, {{s64, s32}})
       .legalFor(HasAVX, {{v4s64, v4s32}})
       .legalFor(HasAVX512, {{v8s64, v8s32}})
+      .lowerFor(UseX87, {{s64, s32}, {s80, s32}, {s80, s64}})
       .libcall();
 
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(HasSSE2, {{s32, s64}})
       .legalFor(HasAVX, {{v4s32, v4s64}})
-      .legalFor(HasAVX512, {{v8s32, v8s64}});
+      .legalFor(HasAVX512, {{v8s32, v8s64}})
+      .lowerFor(UseX87, {{s32, s64}, {s32, s80}, {s64, s80}});
 
   getActionDefinitionsBuilder(G_SITOFP)
       .legalFor(HasSSE1, {{s32, s32}})
@@ -531,7 +553,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
                (HasSSE2 && typeInSet(0, {v2s64, v8s16, v16s8})(Query)) ||
                (HasAVX && typeInSet(0, {v4s64, v8s32, v16s16, v32s8})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v8s64, v16s32, v32s16, v64s8}));
+               (HasAVX512 &&
+                typeInSet(0, {v8s64, v16s32, v32s16, v64s8})(Query));
       })
       .clampNumElements(0, v16s8, s8MaxVector)
       .clampNumElements(0, v8s16, s16MaxVector)
@@ -599,7 +622,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .minScalar(0, LLT::scalar(32))
       .libcall();
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+  getActionDefinitionsBuilder(G_INVOKE_REGION_START).alwaysLegal();
+
   verify(*STI.getInstrInfo());
 }
 
@@ -627,6 +654,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeGETROUNDING(MI, MRI, Helper);
   case TargetOpcode::G_SET_ROUNDING:
     return legalizeSETROUNDING(MI, MRI, Helper);
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return legalizeGLOBAL_VALUE(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -902,12 +931,12 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
       MIRBuilder.buildAnd(s16, CWD16, MIRBuilder.buildConstant(s16, 0xf3ff));
 
   // Check if Src is a constant
-  auto *SrcDef = MRI.getVRegDef(Src);
   Register RMBits;
   Register MXCSRRMBits;
 
-  if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-    uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
+  APInt SrcCst;
+  if (mi_match(Src, MRI, m_ICst(SrcCst))) {
+    uint64_t RM = SrcCst.getZExtValue();
     int FieldVal = X86::getRoundingModeX86(RM);
 
     if (FieldVal == X86::rmInvalid) {
@@ -994,6 +1023,33 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
   }
 
   MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeGLOBAL_VALUE(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            LegalizerHelper &Helper) const {
+  const GlobalValue *GV = MI.getOperand(1).getGlobal();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  unsigned GVOpFlags = Subtarget.classifyGlobalReference(GV);
+
+  // For stub references (GOT/PLT), we need G_WRAPPER_RIP + load
+  if (isGlobalStubReference(GVOpFlags)) {
+    MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+    MachineFunction &MF = MIRBuilder.getMF();
+
+    Register StubAddr = MRI.createGenericVirtualRegister(DstTy);
+    MIRBuilder.buildInstr(X86::G_WRAPPER_RIP)
+        .addDef(StubAddr)
+        .addGlobalAddress(GV);
+
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad, DstTy,
+        Align(DstTy.getSizeInBytes()));
+    MIRBuilder.buildLoad(Dst, StubAddr, *MMO);
+    MI.eraseFromParent();
+  }
   return true;
 }
 

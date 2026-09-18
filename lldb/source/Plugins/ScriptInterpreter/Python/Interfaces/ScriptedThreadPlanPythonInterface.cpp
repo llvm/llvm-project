@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/PluginManager.h"
-#include "lldb/Utility/Log.h"
-#include "lldb/lldb-enumerations.h"
-
-// clang-format off
-// LLDB Python header must be included first
 #include "../lldb-python.h"
-//clang-format on
+
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Target/ThreadPlan.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -29,9 +29,10 @@ ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedThreadPlanPythonInterface::CreatePluginObject(
-    const llvm::StringRef class_name, lldb::ThreadPlanSP thread_plan_sp,
-    const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+    const ScriptedMetadata &scripted_metadata,
+    lldb::ThreadPlanSP thread_plan_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      thread_plan_sp, args_sp);
 }
 
@@ -87,8 +88,19 @@ lldb::StateType ScriptedThreadPlanPythonInterface::GetRunState() {
                                                     error))
     return lldb::eStateStepping;
 
-  return static_cast<lldb::StateType>(obj->GetUnsignedIntegerValue(
-      static_cast<uint32_t>(lldb::eStateStepping)));
+  // A thread plan's run state can formally be eStateSuspended, but that state
+  // is decided by the thread plan negotiation, not by the plan itself.  So a
+  // scripted plan's contract is only running or stepping: a bool.
+  if (StructuredData::Boolean *should_step = obj->GetAsBoolean())
+    return should_step->GetValue() ? lldb::eStateStepping : lldb::eStateRunning;
+
+  if (Log *log = GetLog(LLDBLog::Script)) {
+    StreamString reply;
+    obj->Dump(reply, /*pretty_print=*/false);
+    LLDB_LOG(log, "should_step returned {0}, not a bool; stepping.",
+             reply.GetData());
+  }
+  return lldb::eStateStepping;
 }
 
 llvm::Error
@@ -110,7 +122,8 @@ void ScriptedThreadPlanPythonInterface::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
       llvm::StringRef("Alter thread stepping logic and stop reason"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedThreadPlan,
+      eScriptLanguagePython, {ci_usages, api_usages});
 }
 
 void ScriptedThreadPlanPythonInterface::Terminate() {

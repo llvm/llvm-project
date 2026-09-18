@@ -162,7 +162,8 @@ _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_removePi2S(private __CLC_FLOATN *hi,
 _CLC_DEF _CLC_OVERLOAD __CLC_INTN
 __clc_argReductionSmallS(private __CLC_FLOATN *r, __CLC_FLOATN x) {
   __CLC_FLOATN fnpi2 = __clc_removePi2S(r, x);
-  return __CLC_CONVERT_INTN(fnpi2) & 0x3;
+  return __clc_select(__CLC_CONVERT_INTN(fnpi2) & 0x3, (__CLC_INTN)0,
+                      __CLC_CONVERT_UINTN(__clc_isnan(fnpi2)));
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_INTN

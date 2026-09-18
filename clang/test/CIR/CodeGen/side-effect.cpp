@@ -8,7 +8,7 @@ extern "C" {
 
 // FIXME: We should figure out how to better print this on functions in the
 // future.
-// CIR: cir.func{{.*}}@pure_func() -> !s32i side_effect(pure) attributes {nothrow} {
+// CIR: cir.func{{.*}}@pure_func() -> !s32i side_effect(pure) attributes {{{.*}}nothrow} {
 // LLVM: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(read)
 // LLVM: define{{.*}} @pure_func() #{{.*}} {
 // OGCG: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(read)
@@ -16,7 +16,7 @@ extern "C" {
 __attribute__((pure))
 int pure_func() { return 2;}
 
-// CIR: cir.func{{.*}}@const_func() -> !s32i side_effect(const) attributes {nothrow} {
+// CIR: cir.func{{.*}}@const_func() -> !s32i side_effect(const) attributes {{{.*}}nothrow} {
 // LLVM: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(none)
 // LLVM: define{{.*}} @const_func() #{{.*}} {
 // OGCG: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(none)

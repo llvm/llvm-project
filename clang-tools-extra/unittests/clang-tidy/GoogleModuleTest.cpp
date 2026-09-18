@@ -1,9 +1,12 @@
 #include "ClangTidyTest.h"
-#include "google/ExplicitConstructorCheck.h"
 #include "google/GlobalNamesInHeadersCheck.h"
+#include "misc/ExplicitConstructorCheck.h"
 #include "gtest/gtest.h"
 
 using namespace clang::tidy::google;
+using namespace clang::tidy::misc;
+// TODO: Deprecate this test file in favor of typical lit-tests to avoid
+// cross-module dependencies.
 
 namespace clang {
 namespace tidy {
@@ -16,8 +19,7 @@ TEST(ExplicitConstructorCheckTest, SingleArgumentConstructorsOnly) {
   EXPECT_NO_CHANGES(ExplicitConstructorCheck, "class C { C(C&&); };");
   EXPECT_NO_CHANGES(ExplicitConstructorCheck,
                     "class C { C(const C&) = delete; };");
-  EXPECT_NO_CHANGES(ExplicitConstructorCheck,
-                    "class C { C(int) = delete; };");
+  EXPECT_NO_CHANGES(ExplicitConstructorCheck, "class C { C(int) = delete; };");
 }
 
 TEST(ExplicitConstructorCheckTest, Basic) {

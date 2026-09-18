@@ -88,6 +88,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -129,13 +130,11 @@ LLVM_ABI extern const bool PrintDAGs;
 
 class AAResults;
 class LiveIntervals;
-class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
 class MachineLoopInfo;
 class RegisterClassInfo;
 class SchedDFSResult;
-class ScheduleHazardRecognizer;
 class TargetInstrInfo;
 class TargetPassConfig;
 class TargetRegisterInfo;
@@ -145,13 +144,12 @@ class TargetRegisterInfo;
 struct LLVM_ABI MachineSchedContext {
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  const MachineDominatorTree *MDT = nullptr;
   const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
 
-  RegisterClassInfo *RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   MachineSchedContext();
   MachineSchedContext &operator=(const MachineSchedContext &other) = delete;
@@ -876,7 +874,7 @@ public:
   ReadyQueue Available;
   ReadyQueue Pending;
 
-  ScheduleHazardRecognizer *HazardRec = nullptr;
+  std::unique_ptr<ScheduleHazardRecognizer> HazardRec;
 
 private:
   /// True if the pending Q should be checked/updated before scheduling another
@@ -1440,29 +1438,18 @@ ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
   // data and pass it to later mutations. Have a single mutation that gathers
   // the interesting nodes in one pass.
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
-
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
   return DAG;
 }
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 template <typename Strategy = PostGenericScheduler>
 ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
-  ScheduleDAGMI *DAG = new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
-                                         /*RemoveKillFlags=*/true);
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-  return DAG;
+  return new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
+                           /*RemoveKillFlags=*/true);
 }
 
-class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
+class MachineSchedulerPass
+    : public OptionalPassInfoMixin<MachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::MachineSchedulerImpl> Impl;
@@ -1477,7 +1464,7 @@ public:
 };
 
 class PostMachineSchedulerPass
-    : public PassInfoMixin<PostMachineSchedulerPass> {
+    : public OptionalPassInfoMixin<PostMachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an
   // analysis.
   std::unique_ptr<impl_detail::PostMachineSchedulerImpl> Impl;

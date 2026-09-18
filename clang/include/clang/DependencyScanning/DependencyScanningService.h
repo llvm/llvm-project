@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -27,22 +28,6 @@ enum class ScanningMode {
   /// with special kind of lexing after scanning header and source files to get
   /// the minimum necessary preprocessor directives for evaluating includes.
   DependencyDirectivesScan,
-};
-
-/// The format that is output by the dependency scanner.
-enum class ScanningOutputFormat {
-  /// This is the Makefile compatible dep format. This will include all of the
-  /// deps necessary for an implicit modules build, but won't include any
-  /// intermodule dependency information.
-  Make,
-
-  /// This outputs the full clang module dependency graph suitable for use for
-  /// explicitly building modules.
-  Full,
-
-  /// This outputs the dependency graph for standard c++ modules in P1689R5
-  /// format.
-  P1689,
 };
 
 #define DSS_LAST_BITMASK_ENUM(Id)                                              \
@@ -76,6 +61,12 @@ enum class ScanningOptimizations {
 
 #undef DSS_LAST_BITMASK_ENUM
 
+bool shouldCacheNegativeStatsDefault();
+
+/// \return true if failed stats for files with this name should be cached,
+///         false otherwise.
+bool shouldCacheNegativeStatsForPath(StringRef Path);
+
 /// The configuration knobs for the dependency scanning service.
 struct DependencyScanningServiceOptions {
   DependencyScanningServiceOptions();
@@ -87,12 +78,14 @@ struct DependencyScanningServiceOptions {
       MakeVFS; // = [] { return llvm::vfs::createPhysicalFileSystem(); }
   /// Whether to use optimized dependency directive scan or full preprocessing.
   ScanningMode Mode = ScanningMode::DependencyDirectivesScan;
-  /// What output format are we expected to produce.
-  ScanningOutputFormat Format = ScanningOutputFormat::Full;
   /// How to optimize resulting explicit module command lines.
   ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
+  /// Whether the scanner should emit warnings.
+  bool EmitWarnings = true;
   /// Whether to make reported file paths absolute.
   bool ReportAbsolutePaths = true;
+  /// Whether to report modules visible from modules that are imported directly.
+  bool ReportVisibleModules = false;
   /// Whether the resulting command lines should load explicit PCMs eagerly.
   bool EagerLoadModules = false;
   /// Whether to trace VFS accesses during the scan.
@@ -104,6 +97,11 @@ struct DependencyScanningServiceOptions {
   /// Whether to automatically flush the module cache from memory to disk at the
   /// end of the service lifetime.
   bool FlushModuleCache = true;
+  /// Whether the caching VFS should cache missing filesystem entries.
+  bool CacheNegativeStats = shouldCacheNegativeStatsDefault();
+  /// The path to a log file, which logs timing of actions performed by
+  /// the dependency scanner.
+  std::string LogPath;
 };
 
 /// The dependency scanning service contains shared configuration and state that
@@ -111,7 +109,7 @@ struct DependencyScanningServiceOptions {
 class DependencyScanningService {
 public:
   explicit DependencyScanningService(DependencyScanningServiceOptions Opts)
-      : Opts(std::move(Opts)) {}
+      : Opts(std::move(Opts)), Logger(this->Opts.LogPath) {}
 
   ~DependencyScanningService() {
     if (Opts.FlushModuleCache)
@@ -126,6 +124,8 @@ public:
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
 
+  AtomicLineLogger &getLogger() { return Logger; }
+
 private:
   /// The options customizing dependency scanning behavior.
   DependencyScanningServiceOptions Opts;
@@ -133,6 +133,8 @@ private:
   DependencyScanningFilesystemSharedCache SharedCache;
   /// The global module cache entries.
   ModuleCacheEntries ModCacheEntries;
+  /// The logger of dependency scanning actions.
+  AtomicLineLogger Logger;
 };
 
 } // end namespace dependencies

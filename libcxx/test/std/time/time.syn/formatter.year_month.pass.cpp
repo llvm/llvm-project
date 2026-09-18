@@ -126,40 +126,12 @@ static void test_valid_values() {
         std::chrono::year_month{std::chrono::year{2004}, std::chrono::May});
 
   // Use the global locale (fr_FR)
-  check(SV(
-#if defined(__APPLE__)
-            "%b='jan'\t"
-#else
-            "%b='janv.'\t"
-#endif
-            "%B='janvier'\t"
-            "%C='19'\t"
-#if defined(__APPLE__)
-            "%h='jan'\t"
-#else
-            "%h='janv.'\t"
-#endif
-            "%y='70'\t"
-            "%Y='1970'\t"
-            "%EC='19'\t"
-            "%Ey='70'\t"
-            "%EY='1970'\t"
-            "%Oy='70'\t"
-            "\n"),
+  check(SV("%b='janv.'\t%B='janvier'\t%C='19'\t%h='janv.'\t%y='70'\t%Y='1970'\t%EC='19'\t%Ey='70'\t%EY='1970'\t%Oy='70'"
+           "\t\n"),
         lfmt,
         std::chrono::year_month{std::chrono::year{1970}, std::chrono::January});
 
-  check(SV("%b='mai'\t"
-           "%B='mai'\t"
-           "%C='20'\t"
-           "%h='mai'\t"
-           "%y='04'\t"
-           "%Y='2004'\t"
-           "%EC='20'\t"
-           "%Ey='04'\t"
-           "%EY='2004'\t"
-           "%Oy='04'\t"
-           "\n"),
+  check(SV("%b='mai'\t%B='mai'\t%C='20'\t%h='mai'\t%y='04'\t%Y='2004'\t%EC='20'\t%Ey='04'\t%EY='2004'\t%Oy='04'\t\n"),
         lfmt,
         std::chrono::year_month{std::chrono::year{2004}, std::chrono::May});
 
@@ -170,8 +142,6 @@ static void test_valid_values() {
             "%b='1'\t"
 #elif defined(_AIX)      // defined(_WIN32)
             "%b='1月'\t"
-#elif defined(__APPLE__) // defined(_WIN32)
-            "%b=' 1'\t"
 #else                    // defined(_WIN32)
             "%b=' 1月'\t"
 #endif                   // defined(_WIN32)
@@ -181,8 +151,6 @@ static void test_valid_values() {
             "%h='1'\t"
 #elif defined(_AIX)      // defined(_WIN32)
             "%h='1月'\t"
-#elif defined(__APPLE__) // defined(_WIN32)
-            "%h=' 1'\t"
 #else                    // defined(_WIN32)
             "%h=' 1月'\t"
 #endif                   // defined(_WIN32)
@@ -210,8 +178,6 @@ static void test_valid_values() {
             "%b='5'\t"
 #elif defined(_AIX)      // defined(_WIN32)
             "%b='5月'\t"
-#elif defined(__APPLE__) // defined(_WIN32)
-            "%b=' 5'\t"
 #else                    // defined(_WIN32)
             "%b=' 5月'\t"
 #endif                   // defined(_WIN32)
@@ -221,8 +187,6 @@ static void test_valid_values() {
             "%h='5'\t"
 #elif defined(_AIX)      // defined(_WIN32)
             "%h='5月'\t"
-#elif defined(__APPLE__) // defined(_WIN32)
-            "%h=' 5'\t"
 #else                    // defined(_WIN32)
             "%h=' 5月'\t"
 #endif                   // defined(_WIN32)

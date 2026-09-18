@@ -104,6 +104,9 @@ bool tryToFindPtrOrigin(
         }
       }
 
+      if (isSafePtrType(call->getType()))
+        return callback(E, true);
+
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
@@ -112,6 +115,10 @@ bool tryToFindPtrOrigin(
             if (StopAtFirstRefCountedObj) {
               return callback(E, true);
             }
+            continue;
+          }
+          if (isGetterOfUniquePtr(decl)) {
+            E = memberCall->getImplicitObjectArgument();
             continue;
           }
         }
@@ -239,10 +246,19 @@ bool tryToFindPtrOrigin(
 
 bool isASafeCallArg(const Expr *E) {
   assert(E);
+  auto IsCheckedLocalVarOrParam = [](const VarDecl *Decl) {
+    auto Ty = Decl->getType();
+    const CXXRecordDecl *CXXRD = Ty->getAsCXXRecordDecl();
+    if (!CXXRD)
+      CXXRD = Ty->getPointeeCXXRecordDecl();
+    if (CXXRD && isWeakPtr(CXXRD))
+      return false;
+    return Decl->isLocalVarDeclOrParm();
+  };
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
     auto *FoundDecl = Ref->getFoundDecl();
     if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
-      if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+      if (IsCheckedLocalVarOrParam(D))
         return true;
       if (auto *ImplicitP = dyn_cast<ImplicitParamDecl>(D)) {
         auto Kind = ImplicitP->getParameterKind();
@@ -253,9 +269,10 @@ bool isASafeCallArg(const Expr *E) {
           return true;
       }
     } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
-      VarDecl *VD = BD->getHoldingVar();
-      if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))
-        return true;
+      if (VarDecl *VD = BD->getHoldingVar()) {
+        if (IsCheckedLocalVarOrParam(VD))
+          return true;
+      }
     }
   }
   if (isa<CXXTemporaryObjectExpr>(E))
@@ -369,6 +386,20 @@ bool isAllocInit(const Expr *E, const Expr **InnerExpr) {
     }
   }
   return false;
+}
+
+ObjCInterfaceDecl *getObjCDeclFromObjCPtr(const Type *TypePtr) {
+  auto *PointeeType = TypePtr->getPointeeType().getTypePtrOrNull();
+  if (!PointeeType)
+    return nullptr;
+  auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
+  if (!Desugared)
+    return nullptr;
+  if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
+    return ObjCType->getDecl();
+  if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
+    return ObjCType->getInterface();
+  return nullptr;
 }
 
 class EnsureFunctionVisitor

@@ -16,7 +16,7 @@ subroutine simple_linear
         y = x + 2
     end do
     !$omp end do
-    !CHECK: } {linear_var_types = [i32]}
+    !CHECK: }
 end subroutine
 
 subroutine linear_step
@@ -32,7 +32,7 @@ subroutine linear_step
         y = x + 2
     end do
     !$omp end do
-    !CHECK: } {linear_var_types = [i32]}
+    !CHECK: }
 end subroutine
 
 subroutine do_simd_linear
@@ -41,14 +41,15 @@ subroutine do_simd_linear
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %{{.*}} = arith.constant 1 : i32
 !CHECK: %[[IV_STEP:.*]] = arith.constant 1 : i32
-!CHECK: omp.wsloop {
-!OPENMP52: omp.simd linear(val(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32), val(%[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32)) private({{.*}}) {
-!OPENMP45: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32, %[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32) private({{.*}}) {
+!OPENMP52: omp.wsloop linear(val(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32)) linear_var_types([i32]) {
+!OPENMP45: omp.wsloop linear(%[[X]]#0 : !fir.ref<i32> = %[[CONST]] : i32) linear_var_types([i32]) {
+!OPENMP52: omp.simd linear(val(%[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32)) linear_var_types([i32]) {
+!OPENMP45: omp.simd linear(%[[I]]#0 : !fir.ref<i32> = %[[IV_STEP]] : i32) linear_var_types([i32]) {
     integer :: x
     !$omp do simd linear(x:1)
     do i = 1, 10
     end do
     !$omp end do simd
-!CHECK: } {linear_var_types = [i32, i32], omp.composite}
+!CHECK: } {omp.composite}
 !CHECK: } {omp.composite}
 end subroutine do_simd_linear

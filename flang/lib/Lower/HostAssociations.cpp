@@ -22,8 +22,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Semantics/tools.h"
-#include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-host-assoc"
@@ -74,11 +72,8 @@ static void bindCapturedSymbol(const Fortran::semantics::Symbol &sym,
                                fir::ExtendedValue val,
                                Fortran::lower::AbstractConverter &converter,
                                Fortran::lower::SymMap &symMap) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    Fortran::lower::genDeclareSymbol(converter, symMap, sym, val,
-                                     fir::FortranVariableFlagsEnum::host_assoc);
-  else
-    symMap.addSymbol(sym, val);
+  Fortran::lower::genDeclareSymbol(converter, symMap, sym, val,
+                                   fir::FortranVariableFlagsEnum::host_assoc);
 }
 
 namespace {

@@ -74,6 +74,7 @@
 using namespace llvm;
 
 extern cl::opt<bool> EmitJalrReloc;
+extern cl::opt<bool> NoZeroDivCheck;
 
 namespace {
 
@@ -285,6 +286,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
   llvm_unreachable("should not be called");
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "MipsGenCallingConv.inc"
 
 CCAssignFn *MipsFastISel::CCAssignFnForCall(CallingConv::ID CC) const {
@@ -336,8 +338,7 @@ Register MipsFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   assert(TLI.getValueType(DL, AI->getType(), true) == MVT::i32 &&
          "Alloca should always return a pointer.");
 
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg = createResultReg(&Mips::GPR32RegClass);
@@ -527,8 +528,7 @@ bool MipsFastISel::computeAddress(const Value *Obj, Address &Addr) {
   }
   case Instruction::Alloca: {
     const AllocaInst *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
@@ -1954,8 +1954,8 @@ bool MipsFastISel::selectDivRem(const Instruction *I, unsigned ISDOpcode) {
     return false;
 
   emitInst(DivOpc).addReg(Src0Reg).addReg(Src1Reg);
-  if (!isa<ConstantInt>(I->getOperand(1)) ||
-      dyn_cast<ConstantInt>(I->getOperand(1))->isZero()) {
+  if (!NoZeroDivCheck && (!isa<ConstantInt>(I->getOperand(1)) ||
+                          dyn_cast<ConstantInt>(I->getOperand(1))->isZero())) {
     emitInst(Mips::TEQ).addReg(Src1Reg).addReg(Mips::ZERO).addImm(7);
   }
 

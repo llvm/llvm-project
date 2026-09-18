@@ -30,6 +30,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -51,10 +52,6 @@ class IndexedInstrProfReader;
 namespace object {
 class BuildIDFetcher;
 } // namespace object
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 namespace coverage {
 
@@ -1525,23 +1522,7 @@ template <class IntPtrT> struct CovMapTraits<CovMapVersion::Version1, IntPtrT> {
 } // end namespace coverage
 
 /// Provide DenseMapInfo for CounterExpression
-template<> struct DenseMapInfo<coverage::CounterExpression> {
-  static inline coverage::CounterExpression getEmptyKey() {
-    using namespace coverage;
-
-    return CounterExpression(CounterExpression::ExprKind::Subtract,
-                             Counter::getCounter(~0U),
-                             Counter::getCounter(~0U));
-  }
-
-  static inline coverage::CounterExpression getTombstoneKey() {
-    using namespace coverage;
-
-    return CounterExpression(CounterExpression::ExprKind::Add,
-                             Counter::getCounter(~0U),
-                             Counter::getCounter(~0U));
-  }
-
+template <> struct DenseMapInfo<coverage::CounterExpression> {
   static unsigned getHashValue(const coverage::CounterExpression &V) {
     return static_cast<unsigned>(
         hash_combine(V.Kind, V.LHS.getKind(), V.LHS.getCounterID(),

@@ -20,23 +20,9 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         """Build, launch and stop at the breakpoint in bar(). Returns (target, thread)."""
         self.build()
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, "Target should be valid")
-
-        bkpt = target.BreakpointCreateBySourceRegex(
-            "break here", lldb.SBFileSpec(self.source)
+        target, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec(self.source)
         )
-        self.assertTrue(bkpt.IsValid(), "Breakpoint should be valid")
-        self.assertEqual(bkpt.GetNumLocations(), 1, "Should have 1 breakpoint location")
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Process should be valid")
-        self.assertEqual(
-            process.GetState(), lldb.eStateStopped, "Process should be stopped"
-        )
-
-        thread = process.GetSelectedThread()
-        self.assertTrue(thread.IsValid(), "Thread should be valid")
 
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIn("bar", frame0.GetFunctionName(), "Should be stopped in bar()")
@@ -46,8 +32,6 @@ class FrameProviderCircularDependencyTestCase(TestBase):
 
         return target, thread
 
-    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_circular_dependency_with_function_replacement(self):
         """
         Test the circular dependency fix with a provider that replaces function names.
@@ -115,7 +99,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         )
 
         # Verify we can call methods on all frames (no circular dependency!).
-        for i in range(new_frame_count):
+        for i in range(min(new_frame_count, 3)):
             frame = thread.GetFrameAtIndex(i)
             self.assertIsNotNone(frame, f"Frame {i} should exist")
             # These calls should not trigger circular dependency.
@@ -165,7 +149,8 @@ class FrameProviderCircularDependencyTestCase(TestBase):
                 frame.GetFunctionName(), f"Frame {i} should have function name"
             )
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
+    @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr24778")
+    @skipIf(bugnumber="https://github.com/llvm/llvm-project/pull/208992")
     def test_circular_dependency_evaluate_expression_in_get_frame(self):
         """
         Test that calling EvaluateExpression in get_frame_at_index doesn't

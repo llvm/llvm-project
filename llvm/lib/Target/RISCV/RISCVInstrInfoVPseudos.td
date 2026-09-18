@@ -1384,9 +1384,9 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let IncludeInInversePseudoTable = 0;
 }
 
-class VPseudoTernaryMaskPolicy<VReg RetClass,
-                               RegisterClass Op1Class,
-                               DAGOperand Op2Class> :
+class VPseudoReductionMaskPolicy<VReg RetClass,
+                                 VReg Op1Class,
+                                 DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
@@ -1401,9 +1401,9 @@ class VPseudoTernaryMaskPolicy<VReg RetClass,
   let IncludeInInversePseudoTable = 0;
 }
 
-class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
-                                           RegisterClass Op1Class,
-                                           DAGOperand Op2Class> :
+class VPseudoReductionMaskPolicyRoundingMode<VReg RetClass,
+                                             VReg Op1Class,
+                                             DAGOperand Op2Class> :
       RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
                         Op1Class:$rs2, Op2Class:$rs1,
@@ -1898,15 +1898,23 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar HasConstraint = !ne(dataEEW, idxEEW);
-          defvar TypeConstraints = 
+          // When the data EEW is smaller than the index EEW, the destination
+          // may overlap the index operand as long as the overlap is in the
+          // lowest-numbered part of the index register group. If the index
+          // EMUL is no larger than 1 then both operands are a single register,
+          // so any overlap is necessarily the lowest-numbered part and no
+          // constraint is needed.
+          defvar EarlyClobber = !if(!lt(dataEEW, idxEEW),
+                                    !gt(idxEMULOctuple, 8),
+                                    !ne(dataEEW, idxEEW));
+          defvar TypeConstraints =
             !if(!eq(dataEEW, idxEEW), 1, !if(!gt(dataEEW, idxEEW), !if(!ge(idxEMULOctuple, 8), 3, 1), 2));
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
-              VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint, TypeConstraints>,
+              VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, EarlyClobber, TypeConstraints>,
               VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
-              VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint, TypeConstraints>,
+              VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, EarlyClobber, TypeConstraints>,
               RISCVMaskedPseudo<MaskIdx=3>,
               VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
           }
@@ -2222,10 +2230,11 @@ multiclass VPseudoBinaryV_VX_RM<LMULInfo m, string Constraint = ""> {
   defm "_VX" : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, GPR, m, Constraint>;
 }
 
-multiclass VPseudoVSLD1_VX<string Constraint = ""> {
+multiclass VPseudoVSLD1_VX<bit slidesUp = false, string Constraint = ""> {
+  defvar WriteSlide1X = !if(slidesUp, "WriteVISlide1Up", "WriteVISlide1Down");
   foreach m = MxList in {
     defm "_VX" : VPseudoBinary<m.vrclass, m.vrclass, GPR, m, Constraint>,
-                 SchedBinary<"WriteVISlide1X", "ReadVISlideV", "ReadVISlideX",
+                 SchedBinary<WriteSlide1X, "ReadVISlideV", "ReadVISlideX",
                              m.MX, forcePassthruRead=true>;
   }
 }
@@ -2241,12 +2250,13 @@ multiclass VPseudoBinaryV_VF_RM<LMULInfo m, FPR_Info f, int sew> {
                                                UsesVXRM=0>;
 }
 
-multiclass VPseudoVSLD1_VF<string Constraint = ""> {
+multiclass VPseudoVSLD1_VF<bit slidesUp = false, string Constraint = ""> {
+  defvar WriteSlide1F = !if(slidesUp, "WriteVFSlide1Up", "WriteVFSlide1Down");
   foreach f = FPList in {
     foreach m = f.MxList in {
       defm "_V" #f.FX
           : VPseudoBinary<m.vrclass, m.vrclass, f.fprclass, m, Constraint>,
-            SchedBinary<"WriteVFSlide1F", "ReadVFSlideV", "ReadVFSlideF", m.MX,
+            SchedBinary<WriteSlide1F, "ReadVFSlideV", "ReadVFSlideF", m.MX,
                       forcePassthruRead=true>;
     }
   }
@@ -3149,32 +3159,31 @@ multiclass VPseudoVNSHT_WV_WX_WI {
   }
 }
 
-multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
-                                          RegisterClass Op1Class,
+multiclass VPseudoReductionWithTailPolicy<VReg RetClass,
+                                          VReg Op1Class,
                                           DAGOperand Op2Class,
                                           LMULInfo MInfo,
                                           int sew> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class>;
-    def "_" # mx # "_E" # sew # "_MASK" : VPseudoTernaryMaskPolicy<RetClass, Op1Class, Op2Class>,
+    def "_" # mx # "_E" # sew # "_MASK" : VPseudoReductionMaskPolicy<RetClass, Op1Class, Op2Class>,
                                           RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
 
-multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
-                                                    RegisterClass Op1Class,
-                                                    DAGOperand Op2Class,
-                                                    LMULInfo MInfo,
-                                                    int sew> {
+multiclass VPseudoReductionWithTailPolicyRoundingMode<VReg RetClass,
+                                                      VReg Op1Class,
+                                                      DAGOperand Op2Class,
+                                                      LMULInfo MInfo,
+                                                      int sew> {
   let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     def "_" # mx # "_E" # sew
         : VPseudoTernaryNoMaskWithPolicyRoundingMode<RetClass, Op1Class,
                                                      Op2Class>;
     def "_" # mx # "_E" # sew # "_MASK"
-        : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
-                                               Op2Class>,
+        : VPseudoReductionMaskPolicyRoundingMode<RetClass, Op1Class, Op2Class>,
           RISCVMaskedPseudo<MaskIdx=3>;
   }
 }
@@ -3318,13 +3327,14 @@ multiclass VPseudoVMAC_VV_VF_AAXA_RM {
 
 multiclass VPseudoVSLD_VX_VI<bit slidesUp = false, string Constraint = ""> {
   defvar WriteSlideX = !if(slidesUp, "WriteVSlideUpX", "WriteVSlideDownX");
+  defvar WriteSlideI = !if(slidesUp, "WriteVSlideUpI", "WriteVSlideDownI");
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoVSLDV_VX<m, Constraint>,
               SchedTernary<WriteSlideX, "ReadVISlideV", "ReadVISlideV",
                            "ReadVISlideX", mx>;
     defm "" : VPseudoVSLDV_VI<m, Constraint>,
-              SchedBinary<"WriteVSlideI", "ReadVISlideV", "ReadVISlideV", mx>;
+              SchedBinary<WriteSlideI, "ReadVISlideV", "ReadVISlideV", mx>;
   }
 }
 
@@ -3443,7 +3453,7 @@ multiclass VPseudoVRED_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIRedV_From", "ReadVIRedV", mx, e>;
     }
   }
@@ -3453,7 +3463,7 @@ multiclass VPseudoVREDMINMAX_VS {
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIRedMinMaxV_From", "ReadVIRedV", mx, e>;
     }
   }
@@ -3463,7 +3473,7 @@ multiclass VPseudoVWRED_VS {
   foreach m = MxListWRed in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isWidening=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVIWRedV_From", "ReadVIWRedV", mx, e>;
     }
   }
@@ -3474,7 +3484,7 @@ multiclass VPseudoVFRED_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFRedV_From", "ReadVFRedV", mx, e>;
     }
@@ -3485,7 +3495,7 @@ multiclass VPseudoVFREDMINMAX_VS {
   foreach m = MxListF in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+      defm _VS : VPseudoReductionWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVFRedMinMaxV_From", "ReadVFRedV", mx, e>;
     }
   }
@@ -3495,7 +3505,7 @@ multiclass VPseudoVFREDO_VS_RM {
   foreach m = MxListF in {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
-      defm _VS : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+      defm _VS : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                           V_M1.vrclass, m, e>,
                  SchedReduction<"WriteVFRedOV_From", "ReadVFRedOV", mx, e>;
     }
@@ -3507,7 +3517,7 @@ multiclass VPseudoVFWRED_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFWRedV_From", "ReadVFWRedV", mx, e>;
     }
@@ -3519,7 +3529,7 @@ multiclass VPseudoVFWREDO_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+          : VPseudoReductionWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFWRedOV_From", "ReadVFWRedV", mx, e>;
     }
@@ -6070,6 +6080,11 @@ foreach lmul = MxList in {
   }
 }
 
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [VL, VTYPE] in
+def PseudoClearVR : Pseudo<(outs VR:$vd), (ins), []>,
+                    PseudoInstExpansion<(VMV_V_I VR:$vd, 0)>;
+
 //===----------------------------------------------------------------------===//
 // 6. Configuration-Setting Instructions
 //===----------------------------------------------------------------------===//
@@ -6747,13 +6762,13 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 let Predicates = [HasVInstructions] in {
   defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI</*slidesUp=*/true, "@earlyclobber $rd">;
   defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI</*slidesUp=*/false>;
-  defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"@earlyclobber $rd">;
-  defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
+  defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX</*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX</*slidesUp=*/false>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT in {
-  defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF<"@earlyclobber $rd">;
-  defm PseudoVFSLIDE1DOWN : VPseudoVSLD1_VF;
+  defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF</*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVFSLIDE1DOWN : VPseudoVSLD1_VF</*slidesUp=*/false>;
 } // Predicates = [HasVInstructionsAnyF], AltFmtType = IS_NOT_ALTFMT
 
 //===----------------------------------------------------------------------===//

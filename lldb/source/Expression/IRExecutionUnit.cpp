@@ -50,8 +50,8 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
                                  const lldb::TargetSP &target_sp,
                                  const SymbolContext &sym_ctx,
                                  std::vector<std::string> &cpu_features)
-    : IRMemoryMap(target_sp), m_context_up(context_up.release()),
-      m_module_up(module_up.release()), m_module(m_module_up.get()),
+    : IRMemoryMap(target_sp), m_context_up(std::move(context_up)),
+      m_module_up(std::move(module_up)), m_module(m_module_up.get()),
       m_cpu_features(cpu_features), m_name(name), m_sym_ctx(sym_ctx),
       m_did_jit(false), m_function_load_addr(LLDB_INVALID_ADDRESS),
       m_function_end_load_addr(LLDB_INVALID_ADDRESS),
@@ -670,7 +670,8 @@ public:
 
       // First try the symbol.
       if (candidate_sc.symbol) {
-        load_address = candidate_sc.symbol->ResolveCallableAddress(m_target);
+        load_address = candidate_sc.symbol->ResolveCallableAddress(
+            m_target, candidate_sc.module_sp);
         if (load_address == LLDB_INVALID_ADDRESS) {
           Address addr = candidate_sc.symbol->GetAddress();
           load_address = m_target.GetProcessSP()
@@ -777,6 +778,14 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   non_local_images.Remove(sc.module_sp);
   for (size_t i = 0; i < m_preferred_modules.GetSize(); ++i)
     non_local_images.Remove(m_preferred_modules.GetModuleAtIndex(i));
+
+  // Drop modules the platform considers off-limits to unconstrained symbol
+  // searches.
+  for (size_t i = non_local_images.GetSize(); i > 0; --i) {
+    lldb::ModuleSP module_sp = non_local_images.GetModuleAtIndex(i - 1);
+    if (target->ModuleIsExcludedForUnconstrainedSearches(module_sp))
+      non_local_images.Remove(module_sp);
+  }
 
   LoadAddressResolver resolver(*target, symbol_was_missing_weak);
 
@@ -1020,7 +1029,7 @@ IRExecutionUnit::MemoryManager::GetSymbolAddressAndPresence(
     const std::string &Name, bool &missing_weak) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  ConstString name_cs(Name.c_str());
+  ConstString name_cs(Name);
 
   lldb::addr_t ret = m_parent.FindSymbol(name_cs, missing_weak);
 
@@ -1220,15 +1229,14 @@ void IRExecutionUnit::PopulateSectionList(
     lldb_private::SectionList &section_list) {
   for (AllocationRecord &record : m_records) {
     if (record.m_size > 0) {
-      lldb::SectionSP section_sp(new lldb_private::Section(
-          obj_file->GetModule(), obj_file, record.m_section_id,
-          ConstString(record.m_name), record.m_sect_type,
-          record.m_process_address, record.m_size,
+      lldb::SectionSP section_sp = std::make_shared<Section>(
+          obj_file->GetModule(), obj_file, record.m_section_id, record.m_name,
+          record.m_sect_type, record.m_process_address, record.m_size,
           record.m_host_address, // file_offset (which is the host address for
                                  // the data)
           record.m_size,         // file_size
           0,
-          record.m_permissions)); // flags
+          record.m_permissions); // flags
       section_list.AddSection(section_sp);
     }
   }

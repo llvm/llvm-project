@@ -8,11 +8,14 @@
 #ifndef LLVM_CLANG_DRIVER_SANITIZERARGS_H
 #define LLVM_CLANG_DRIVER_SANITIZERARGS_H
 
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -47,6 +50,7 @@ class SanitizerArgs {
   bool CfiICallNormalizeIntegers = false;
   bool CfiCanonicalJumpTables = false;
   bool KcfiArity = false;
+  std::optional<std::string> KcfiHash;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
   bool StableABI = false;
@@ -85,7 +89,9 @@ class SanitizerArgs {
 public:
   /// Parses the sanitizer arguments from an argument list.
   SanitizerArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                bool DiagnoseErrors = true);
+                bool DiagnoseErrors = true, bool DiagnoseBoundArchErrors = true,
+                BoundArch BA = {},
+                Action::OffloadKind DeviceOffloadKind = Action::OFK_None);
 
   bool needsSharedRt() const { return SharedRuntime; }
   bool needsStableAbi() const { return StableABI; }

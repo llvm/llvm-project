@@ -189,6 +189,11 @@ public:
   /// always be able to get register info as well (through this method).
   const AArch64RegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &AArch64::GPR64spRegClass;
+  }
+
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
@@ -355,12 +360,16 @@ public:
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                         const DebugLoc &DL, MCRegister DestReg,
-                        MCRegister SrcReg, bool KillSrc, unsigned Opcode,
+                        MCRegister SrcReg, bool KillSrc,
                         llvm::ArrayRef<unsigned> Indices) const;
   void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                        const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                        bool KillSrc, unsigned Opcode, unsigned ZeroReg,
                        llvm::ArrayRef<unsigned> Indices) const;
+  void copyPhysRegImpl(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                       const DebugLoc &DL, Register DestReg, Register SrcReg,
+                       bool KillSrc, bool RenamableDest = false,
+                       bool RenamableSrc = false) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
@@ -413,6 +422,14 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  /// Inserts the compare instruction needed to un-fuse a fused conditional
+  /// branch instruction and returns the condition code of the original fused
+  /// branch.
+  AArch64CC::CondCode insertCmpForCondBr(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MI,
+                                         const DebugLoc &DL,
+                                         ArrayRef<MachineOperand> Cond) const;
 
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
@@ -582,6 +599,9 @@ public:
   /// Insert a `PAUTH_EPILOGUE` pseudo before the first terminator in \p MBB to
   /// authenticate the return address. Adds an implicit def of X16 when the
   /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
+  /// instructions. If the epilogue has callee-popped argument stack to restore,
+  /// it additionally implicit defines X15 and X17 to cover clobbered registers
+  /// for the required sequence on subtargets both with and without PAuthLR
   /// instructions.
   void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
 

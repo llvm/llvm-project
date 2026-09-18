@@ -293,6 +293,10 @@ static uptr ThreadDescriptorSizeFallback() {
 #    if defined(__powerpc64__)
   return 1776;  // from glibc.ppc64le 2.20-8.fc21
 #    endif
+
+#    if defined(__alpha__)
+  return 1824;  // from glibc 2.43
+#    endif
 }
 #  endif  // SANITIZER_GLIBC && !SANITIZER_GO
 

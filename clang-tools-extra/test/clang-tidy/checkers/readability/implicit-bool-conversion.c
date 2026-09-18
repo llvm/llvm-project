@@ -78,6 +78,22 @@ void implicitConversionFromBoolInComplexBoolExpressions() {
   double doubleFloating = (boolean && (anotherBoolean || boolean)) * 0.3;
 }
 
+typedef bool BoolAlias;
+
+void ignoreImplicitConversionFromBoolInConditionalOperatorCondition() {
+  bool boolean = true;
+  BoolAlias alias = false;
+  int intFromCondition = boolean ? 1 : 0;
+  int intFromParenthesizedCondition = ((boolean)) ? 1 : 0;
+  int intFromAliasCondition = alias ? 1 : 0;
+  int intFromExplicitCastCondition = (int)boolean ? 1 : 0;
+
+  bool anotherBoolean = false;
+  int intFromBranch = boolean ? anotherBoolean : 0;
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: implicit conversion 'bool' -> 'int'
+  // CHECK-FIXES: int intFromBranch = boolean ? (int)anotherBoolean : 0;
+}
+
 void implicitConversionFromBoolLiterals() {
   functionTakingInt(true);
   // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: implicit conversion 'bool' -> 'int'

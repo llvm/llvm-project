@@ -4,21 +4,15 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-from lldbsuite.test import configuration
+from lldbsuite.test.lldbarm64e import Arm64eTestBase
 
 
-class TestPtrAuth(TestBase):
+class TestPtrAuth(Arm64eTestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
 
-    def build_arm64e(self):
-        self.build(
-            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
-        )
-
-    @skipUnlessArm64eSupported
     def test(self):
-        self.build_arm64e()
+        self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
             self, "// break in main", lldb.SBFileSpec("main.c")
         )

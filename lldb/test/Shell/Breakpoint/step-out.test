@@ -1,0 +1,13 @@
+# REQUIRES: system-freebsd
+
+# RUN: cp %p/Inputs/break_stepout.c %t.c
+# RUN: %clang_host -O0 -g -o %t %t.c
+# RUN: rm %t.c
+# RUN: %lldb -b -o "br set -n vfprintf" -o run -o "thread step-out" -o "thread step-out" %t 2>&1 | FileCheck %s
+
+## Check if we step-out twice sucessfully
+
+CHECK: stop reason = step out
+CHECK-NEXT: printf
+CHECK: stop reason = step out
+CHECK-NEXT: main

@@ -30,6 +30,7 @@
 #include <variant>
 
 namespace llvm {
+
 namespace orc {
 
 class LLJITBuilderState;
@@ -220,6 +221,12 @@ public:
     return *DylibMgr;
   }
 
+  /// Returns a reference to the JITLinkMemoryManager for this instance.
+  jitlink::JITLinkMemoryManager &getMemoryManager() {
+    assert(MemMgr && "No MemMgr set");
+    return *MemMgr;
+  }
+
   /// Returns a reference to the ObjLinkingLayer
   ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
@@ -241,6 +248,9 @@ public:
   }
 
 protected:
+  static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES);
+
   static Expected<std::unique_ptr<ObjectLayer>>
   createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
                            jitlink::JITLinkMemoryManager &MemMgr);
@@ -251,9 +261,10 @@ protected:
   /// Create an LLJIT instance with a single compile thread.
   LLJIT(LLJITBuilderState &S, Error &Err);
 
-  Error applyDataLayout(Module &M);
+  Error applyTargetConfig(Module &M);
 
   std::unique_ptr<ExecutionSession> ES;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
   std::unique_ptr<PlatformSupport> PS;
   std::unique_ptr<DylibManager> DylibMgr;
 
@@ -275,7 +286,7 @@ protected:
 
 /// An extended version of LLJIT that supports lazy function-at-a-time
 /// compilation of LLVM IR.
-class LLLazyJIT : public LLJIT {
+class LLVM_ABI LLLazyJIT : public LLJIT {
   template <typename, typename, typename> friend class LLJITBuilderSetters;
 
 public:
@@ -285,11 +296,13 @@ public:
     IPLayer->setPartitionFunction(std::move(Partition));
   }
 
+  ~LLLazyJIT();
+
   /// Returns a reference to the on-demand layer.
   CompileOnDemandLayer &getCompileOnDemandLayer() { return *CODLayer; }
 
   /// Add a module to be lazily compiled to JITDylib JD.
-  LLVM_ABI Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
+  Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
 
   /// Add a module to be lazily compiled to the main JITDylib.
   Error addLazyIRModule(ThreadSafeModule M) {
@@ -308,6 +321,10 @@ private:
 
 class LLJITBuilderState {
 public:
+  using MemoryManagerCreator =
+      std::function<Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>(
+          ExecutionSession &)>;
+
   using ObjectLinkingLayerCreator =
       std::function<Expected<std::unique_ptr<ObjectLayer>>(
           ExecutionSession &, jitlink::JITLinkMemoryManager &)>;
@@ -329,6 +346,7 @@ public:
   std::optional<DataLayout> DL;
   bool LinkProcessSymbolsByDefault = true;
   ProcessSymbolsJITDylibSetupFunction SetupProcessSymbolsJITDylib;
+  MemoryManagerCreator CreateMemoryManager;
   ObjectLinkingLayerCreator CreateObjectLinkingLayer;
   CompileFunctionCreator CreateCompileFunction;
   unique_function<Error(LLJIT &)> PrePlatformSetup;
@@ -396,6 +414,14 @@ public:
   /// in the default link order.
   SetterImpl &setLinkProcessSymbolsByDefault(bool LinkProcessSymbolsByDefault) {
     impl().LinkProcessSymbolsByDefault = LinkProcessSymbolsByDefault;
+    return impl();
+  }
+
+  /// Set a memory manager creation function. If not provided then the
+  /// ExecutorProcessControl's createDefaultMemoryManager method will be used.
+  SetterImpl &setMemoryManagerCreator(
+      LLJITBuilderState::MemoryManagerCreator CreateMemoryManager) {
+    impl().CreateMemoryManager = std::move(CreateMemoryManager);
     return impl();
   }
 

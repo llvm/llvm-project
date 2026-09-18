@@ -6,7 +6,12 @@ Create a temp resource file and embed it into the dSYM bundle.
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
 RUN: echo "# test resource" > %t.dir/test.py
-RUN: dsymutil -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN: dsymutil --linker classic -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN:   --embed-resource %t.dir/test.py=Python/test.py \
+RUN:   -o %t.dir/basic.macho.x86_64.dSYM
+RUN: diff %t.dir/test.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Python/test.py
+RUN: rm -rf %t.dir/basic.macho.x86_64.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
 RUN:   --embed-resource %t.dir/test.py=Python/test.py \
 RUN:   -o %t.dir/basic.macho.x86_64.dSYM
 RUN: diff %t.dir/test.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Python/test.py
@@ -15,7 +20,14 @@ Verify multiple --embed-resource options.
 
 RUN: rm -rf %t.dir/basic.macho.x86_64.dSYM
 RUN: echo "second" > %t.dir/second.txt
-RUN: dsymutil -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN: dsymutil --linker classic -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN:   --embed-resource %t.dir/test.py=Python/test.py \
+RUN:   --embed-resource %t.dir/second.txt=Scripts/second.txt \
+RUN:   -o %t.dir/basic.macho.x86_64.dSYM
+RUN: diff %t.dir/test.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Python/test.py
+RUN: diff %t.dir/second.txt %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Scripts/second.txt
+RUN: rm -rf %t.dir/basic.macho.x86_64.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
 RUN:   --embed-resource %t.dir/test.py=Python/test.py \
 RUN:   --embed-resource %t.dir/second.txt=Scripts/second.txt \
 RUN:   -o %t.dir/basic.macho.x86_64.dSYM
@@ -25,7 +37,12 @@ RUN: diff %t.dir/second.txt %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Sc
 Verify verbose output.
 
 RUN: rm -rf %t.dir/basic.macho.x86_64.dSYM
-RUN: dsymutil -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN: dsymutil --linker classic -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN:   --embed-resource %t.dir/test.py=Python/test.py \
+RUN:   --verbose -o %t.dir/basic.macho.x86_64.dSYM 2>&1 \
+RUN:   | FileCheck --check-prefix=VERBOSE %s
+RUN: rm -rf %t.dir/basic.macho.x86_64.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
 RUN:   --embed-resource %t.dir/test.py=Python/test.py \
 RUN:   --verbose -o %t.dir/basic.macho.x86_64.dSYM 2>&1 \
 RUN:   | FileCheck --check-prefix=VERBOSE %s
@@ -34,7 +51,11 @@ VERBOSE: embed resource {{.*}}test.py -> {{.*}}Resources{{.}}Python{{.}}test.py
 
 Verify error on missing source file.
 
-RUN: not dsymutil -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN: not dsymutil --linker classic -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN:   --embed-resource %t.dir/nonexistent.py=Python/foo.py \
+RUN:   -o %t.dir/basic.macho.x86_64.dSYM 2>&1 \
+RUN:   | FileCheck --check-prefix=MISSING %s
+RUN: not dsymutil --linker parallel -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
 RUN:   --embed-resource %t.dir/nonexistent.py=Python/foo.py \
 RUN:   -o %t.dir/basic.macho.x86_64.dSYM 2>&1 \
 RUN:   | FileCheck --check-prefix=MISSING %s
@@ -48,7 +69,14 @@ RUN: mkdir -p %t.dir/pydir/sub
 RUN: echo "file_a" > %t.dir/pydir/a.py
 RUN: echo "file_b" > %t.dir/pydir/b.py
 RUN: echo "file_sub" > %t.dir/pydir/sub/c.py
-RUN: dsymutil -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN: dsymutil --linker classic -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
+RUN:   --embed-resource %t.dir/pydir=Python \
+RUN:   -o %t.dir/basic.macho.x86_64.dSYM
+RUN: diff %t.dir/pydir/a.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Python/a.py
+RUN: diff %t.dir/pydir/b.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Python/b.py
+RUN: diff %t.dir/pydir/sub/c.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Python/sub/c.py
+RUN: rm -rf %t.dir/basic.macho.x86_64.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path=%p %p/Inputs/basic.macho.x86_64 \
 RUN:   --embed-resource %t.dir/pydir=Python \
 RUN:   -o %t.dir/basic.macho.x86_64.dSYM
 RUN: diff %t.dir/pydir/a.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resources/Python/a.py
@@ -57,11 +85,14 @@ RUN: diff %t.dir/pydir/sub/c.py %t.dir/basic.macho.x86_64.dSYM/Contents/Resource
 
 Verify error cases.
 
-RUN: not dsymutil --embed-resource noequals file1 2>&1 | FileCheck --check-prefix=BADEMBED %s
+RUN: not dsymutil --linker classic --embed-resource noequals file1 2>&1 | FileCheck --check-prefix=BADEMBED %s
+RUN: not dsymutil --linker parallel --embed-resource noequals file1 2>&1 | FileCheck --check-prefix=BADEMBED %s
 BADEMBED: error: invalid --embed-resource argument 'noequals': expected <src-path>=<dst-path>
 
-RUN: not dsymutil --embed-resource /tmp/a.py=../../etc/passwd file1 2>&1 | FileCheck --check-prefix=ESCAPE %s
+RUN: not dsymutil --linker classic --embed-resource /tmp/a.py=../../etc/passwd file1 2>&1 | FileCheck --check-prefix=ESCAPE %s
+RUN: not dsymutil --linker parallel --embed-resource /tmp/a.py=../../etc/passwd file1 2>&1 | FileCheck --check-prefix=ESCAPE %s
 ESCAPE: error: invalid --embed-resource destination '../../etc/passwd': must be a relative path within the bundle
 
-RUN: not dsymutil --embed-resource /tmp/a.py=%/t/absolute file1 2>&1 | FileCheck --check-prefix=ABSOLUTE %s
+RUN: not dsymutil --linker classic --embed-resource /tmp/a.py=%/t/absolute file1 2>&1 | FileCheck --check-prefix=ABSOLUTE %s
+RUN: not dsymutil --linker parallel --embed-resource /tmp/a.py=%/t/absolute file1 2>&1 | FileCheck --check-prefix=ABSOLUTE %s
 ABSOLUTE: error: invalid --embed-resource destination '{{.*}}absolute': must be a relative path within the bundle

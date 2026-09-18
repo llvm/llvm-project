@@ -655,12 +655,12 @@ LLVM_ABI std::error_code is_other(const Twine &path, bool &result);
 LLVM_ABI std::error_code status(const Twine &path, file_status &result,
                                 bool follow = true);
 
-/// A version for when a file descriptor is already available.
-LLVM_ABI std::error_code status(int FD, file_status &Result);
+/// A version for when a file handle is already available.
+LLVM_ABI std::error_code status(file_t F, file_status &Result);
 
 #ifdef _WIN32
 /// A version for when a file descriptor is already available.
-LLVM_ABI std::error_code status(file_t FD, file_status &Result);
+LLVM_ABI std::error_code status(int FD, file_status &Result);
 #endif
 
 /// Get file creation mode mask of the process.
@@ -726,6 +726,24 @@ setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 inline std::error_code setLastAccessAndModificationTime(int FD,
                                                         TimePoint<> Time) {
   return setLastAccessAndModificationTime(FD, Time, Time);
+}
+
+/// Set the file modification and access time, by path.
+///
+/// Works for both regular files and directories on all supported platforms.
+///
+/// @returns errc::success if the file times were successfully set, otherwise a
+///          platform-specific error_code or errc::function_not_supported on
+///          platforms where the functionality isn't available.
+LLVM_ABI std::error_code
+setLastAccessAndModificationTime(const Twine &Path, TimePoint<> AccessTime,
+                                 TimePoint<> ModificationTime);
+
+/// Simpler version that sets both file modification and access time to the same
+/// time.
+inline std::error_code setLastAccessAndModificationTime(const Twine &Path,
+                                                        TimePoint<> Time) {
+  return setLastAccessAndModificationTime(Path, Time, Time);
 }
 
 /// Is status available?
@@ -799,6 +817,16 @@ enum OpenFlags : unsigned {
   /// Force files Atime to be updated on access. Only makes a difference on
   /// Windows.
   OF_UpdateAtime = 32,
+
+  /// Open the file with sufficient access to update its metadata. Only makes
+  /// a difference on Windows, where it adds FILE_WRITE_ATTRIBUTES to the
+  /// access mask.
+  OF_UpdateAttributes = 64,
+
+  /// Allow opening a directory. Only makes a difference on Windows, where it
+  /// adds FILE_FLAG_BACKUP_SEMANTICS to the open flags so a handle to a
+  /// directory can be obtained.
+  OF_OpenDirectory = 128,
 };
 
 /// Create a potentially unique file name but does not create it.
@@ -1333,6 +1361,7 @@ private:
   LLVM_ABI void unmapImpl();
   LLVM_ABI void dontNeedImpl();
   LLVM_ABI void willNeedImpl();
+  LLVM_ABI void randomAccessImpl();
 
   LLVM_ABI std::error_code init(sys::fs::file_t FD, uint64_t Offset,
                                 mapmode Mode, const char *Name);
@@ -1366,6 +1395,7 @@ public:
   }
   void dontNeed() { dontNeedImpl(); }
   void willNeed() { willNeedImpl(); }
+  void randomAccess() { randomAccessImpl(); }
 
   LLVM_ABI size_t size() const;
   LLVM_ABI char *data() const;

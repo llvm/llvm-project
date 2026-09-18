@@ -15,8 +15,11 @@
 #include "Utils/WasmAddressSpaces.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssembly.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 using namespace llvm;
@@ -24,9 +27,16 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-ref-type-mem2local"
 
 namespace {
-class WebAssemblyRefTypeMem2Local final
-    : public FunctionPass,
-      public InstVisitor<WebAssemblyRefTypeMem2Local> {
+class WebAssemblyRefTypeMem2LocalImpl
+    : public InstVisitor<WebAssemblyRefTypeMem2LocalImpl> {
+  bool Changed = false;
+
+public:
+  void visitAllocaInst(AllocaInst &AI);
+  bool runOnFunction(Function &F);
+};
+
+class WebAssemblyRefTypeMem2LocalLegacy final : public FunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Reference Types Memory to Local";
   }
@@ -37,26 +47,23 @@ class WebAssemblyRefTypeMem2Local final
   }
 
   bool runOnFunction(Function &F) override;
-  bool Changed = false;
 
 public:
   static char ID;
-  WebAssemblyRefTypeMem2Local() : FunctionPass(ID) {}
-
-  void visitAllocaInst(AllocaInst &AI);
+  WebAssemblyRefTypeMem2LocalLegacy() : FunctionPass(ID) {}
 };
 } // End anonymous namespace
 
-char WebAssemblyRefTypeMem2Local::ID = 0;
-INITIALIZE_PASS(WebAssemblyRefTypeMem2Local, DEBUG_TYPE,
+char WebAssemblyRefTypeMem2LocalLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyRefTypeMem2LocalLegacy, DEBUG_TYPE,
                 "Assign reference type allocas to local address space", true,
                 false)
 
-FunctionPass *llvm::createWebAssemblyRefTypeMem2Local() {
-  return new WebAssemblyRefTypeMem2Local();
+FunctionPass *llvm::createWebAssemblyRefTypeMem2LocalLegacyPass() {
+  return new WebAssemblyRefTypeMem2LocalLegacy();
 }
 
-void WebAssemblyRefTypeMem2Local::visitAllocaInst(AllocaInst &AI) {
+void WebAssemblyRefTypeMem2LocalImpl::visitAllocaInst(AllocaInst &AI) {
   if (WebAssembly::isWebAssemblyReferenceType(AI.getAllocatedType())) {
     Changed = true;
     IRBuilder<> IRB(AI.getContext());
@@ -64,6 +71,8 @@ void WebAssemblyRefTypeMem2Local::visitAllocaInst(AllocaInst &AI) {
     auto *NewAI = IRB.CreateAlloca(AI.getAllocatedType(),
                                    WebAssembly::WASM_ADDRESS_SPACE_VAR, nullptr,
                                    AI.getName() + ".var");
+    // Preserve the original alloca's alignment.
+    NewAI->setAlignment(AI.getAlign());
 
     // The below is basically equivalent to AI.replaceAllUsesWith(NewAI), but we
     // cannot use it because it requires the old and new types be the same,
@@ -81,7 +90,7 @@ void WebAssemblyRefTypeMem2Local::visitAllocaInst(AllocaInst &AI) {
   }
 }
 
-bool WebAssemblyRefTypeMem2Local::runOnFunction(Function &F) {
+bool WebAssemblyRefTypeMem2LocalImpl::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "********** WebAssembly RefType Mem2Local **********\n"
                        "********** Function: "
                     << F.getName() << '\n');
@@ -91,4 +100,18 @@ bool WebAssemblyRefTypeMem2Local::runOnFunction(Function &F) {
           .contains("+reference-types"))
     visit(F);
   return Changed;
+}
+
+bool WebAssemblyRefTypeMem2LocalLegacy::runOnFunction(Function &F) {
+  WebAssemblyRefTypeMem2LocalImpl Impl;
+  return Impl.runOnFunction(F);
+}
+
+PreservedAnalyses
+WebAssemblyRefTypeMem2LocalPass::run(Function &F,
+                                     FunctionAnalysisManager &FAM) {
+  WebAssemblyRefTypeMem2LocalImpl Impl;
+  return Impl.runOnFunction(F)
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

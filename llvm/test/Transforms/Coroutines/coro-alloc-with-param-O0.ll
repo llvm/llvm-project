@@ -63,7 +63,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f_copy.resume(
+; CHECK-LABEL: define internal void @f_copy.resume(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_RESUME:.*:]]
 ; CHECK-NEXT:    [[THIS_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
@@ -74,7 +74,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f_copy.destroy(
+; CHECK-LABEL: define internal void @f_copy.destroy(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_DESTROY:.*:]]
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @llvm.coro.free(token poison, ptr [[HDL]])
@@ -82,7 +82,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal fastcc void @f_copy.cleanup(
+; CHECK-LABEL: define internal void @f_copy.cleanup(
 ; CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(32) [[HDL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY_CLEANUP:.*:]]
 ; CHECK-NEXT:    call void @free(ptr null)

@@ -11,11 +11,10 @@
 
 #define __CPU_SETSIZE 1024
 #define __NCPUBITS (8 * sizeof(unsigned long))
+typedef unsigned long __cpu_set_mask_t;
 
 typedef struct {
-  // If a processor with more than 1024 CPUs is to be supported in future,
-  // we need to adjust the size of this array.
-  unsigned long __mask[128 / sizeof(unsigned long)];
+  __cpu_set_mask_t __mask[__CPU_SETSIZE / __NCPUBITS];
 } cpu_set_t;
 
 #endif // LLVM_LIBC_TYPES_CPU_SET_T_H

@@ -32,6 +32,8 @@ namespace SDPatternMatch {
 /// a certain context. For instance, `m_SpecificOpc(ISD::ADD)` matches plain ADD
 /// nodes in normal circumstances, but matches VP_ADD nodes under a custom
 /// VPMatchContext. This design is meant to facilitate code / pattern reusing.
+/// TODO: Remove now that we don't need to match over VP nodes.
+
 class BasicMatchContext {
   const SelectionDAG *DAG;
   const TargetLowering *TLI;
@@ -616,6 +618,13 @@ m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
 
 template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_SpliceRight(const T0_P &V1, const T1_P &V2, const T2_P &Offset) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VECTOR_SPLICE_RIGHT, V1, V2,
+                                            Offset);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
 m_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(Opc, Op0, Op1, Op2);
 }
@@ -821,6 +830,18 @@ inline BinaryOpc_match<LHS, RHS, true> m_Add(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
+inline auto m_NUWAdd(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::ADD, L, R,
+                                         SDNodeFlags::NoUnsignedWrap);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NSWAdd(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::ADD, L, R,
+                                         SDNodeFlags::NoSignedWrap);
+}
+
+template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Sub(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SUB, L, R);
 }
@@ -849,6 +870,16 @@ inline BinaryOpc_match<LHS, RHS, true> m_DisjointOr(const LHS &L,
 template <typename LHS, typename RHS>
 inline auto m_AddLike(const LHS &L, const RHS &R) {
   return m_AnyOf(m_Add(L, R), m_DisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NSWAddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_NSWAdd(L, R), m_DisjointOr(L, R));
+}
+
+template <typename LHS, typename RHS>
+inline auto m_NUWAddLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
 template <typename LHS, typename RHS>
@@ -1156,8 +1187,9 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::TRUNCATE, Op);
 }
 
-template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
-  return UnaryOpc_match<Opnd>(ISD::ABS, Op);
+template <typename Opnd> inline auto m_Abs(const Opnd &Op) {
+  return m_AnyOf(UnaryOpc_match<Opnd>(ISD::ABS, Op),
+                 UnaryOpc_match<Opnd>(ISD::ABS_MIN_POISON, Op));
 }
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_FAbs(const Opnd &Op) {
@@ -1220,6 +1252,11 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_FNeg(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::FNEG, Op);
+}
+
+template <typename Opnd>
+inline UnaryOpc_match<Opnd> m_VectorReverse(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::VECTOR_REVERSE, Op);
 }
 
 // === Constants ===
@@ -1353,6 +1390,17 @@ inline SpecificFP_match m_SpecificFP(APFloat V) { return SpecificFP_match(V); }
 inline SpecificFP_match m_SpecificFP(double V) {
   return SpecificFP_match(APFloat(V));
 }
+
+struct AnyZeroFP_match {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(N))
+      return C->isZero();
+    return false;
+  }
+};
+
+/// Match a floating-point +0.0 or -0.0 constant or splat.
+inline AnyZeroFP_match m_AnyZeroFP() { return AnyZeroFP_match(); }
 
 struct Negative_match {
   template <typename MatchContext>

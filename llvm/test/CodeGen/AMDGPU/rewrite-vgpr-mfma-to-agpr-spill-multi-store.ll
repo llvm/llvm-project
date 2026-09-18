@@ -1,7 +1,5 @@
-; FIXME: the following line is added to cleanup bots, will be removed in weeks.
-; RUN: rm -f %S/rewrite-vgpr-mfma-to-agpr-spill-multi-store.s
 ; REQUIRES: asserts
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -O3 \
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -O3 \
 ; RUN:   -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs \
 ; RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
 ; RUN:   -debug-only=amdgpu-rewrite-agpr-copy-mfma -filetype=null %s 2>&1 | FileCheck %s
@@ -52,7 +50,7 @@ do.body:
   %0 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <16 x float> %v1, i32 0, i32 0, i32 0)
   %v2 = insertelement <16 x float> zeroinitializer, float %c_block_tile.sroa.961.0, i64 13
   %v3 = insertelement <16 x float> %v2, float %c_block_tile.sroa.994.0, i64 14
-  %v4 = insertelement <16 x float> %v3, float 0x7FF8000000000000, i64 0
+  %v4 = insertelement <16 x float> %v3, float +qnan, i64 0
   %1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <16 x float> %v4, i32 0, i32 0, i32 0)
   %v5 = insertelement <16 x float> zeroinitializer, float %c_block_tile.sroa.1588.0, i64 0
   %v6 = insertelement <16 x float> zeroinitializer, float %c_block_tile.sroa.1687.0, i64 3

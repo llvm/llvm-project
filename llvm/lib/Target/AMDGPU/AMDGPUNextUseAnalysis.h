@@ -364,14 +364,13 @@ protected:
 };
 
 class AMDGPUNextUseAnalysisPrinterPass
-    : public PassInfoMixin<AMDGPUNextUseAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<AMDGPUNextUseAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit AMDGPUNextUseAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

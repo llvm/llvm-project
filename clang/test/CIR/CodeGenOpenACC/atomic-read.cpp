@@ -2,9 +2,9 @@
 
 void use(int x, unsigned int y, float f) {
   // CHECK: cir.func{{.*}}(%[[X_ARG:.*]]: !s32i{{.*}}, %[[Y_ARG:.*]]: !u32i{{.*}}, %[[F_ARG:.*]]: !cir.float{{.*}}){{.*}}{
-  // CHECK-NEXT: %[[X_ALLOC:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-  // CHECK-NEXT: %[[Y_ALLOC:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["y", init]
-  // CHECK-NEXT: %[[F_ALLOC:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f", init]
+  // CHECK-NEXT: %[[X_ALLOC:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[Y_ALLOC:.*]] = cir.alloca "y" {{.*}} init : !cir.ptr<!u32i>
+  // CHECK-NEXT: %[[F_ALLOC:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.float>
   // CHECK-NEXT: cir.store %[[X_ARG]], %[[X_ALLOC]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[Y_ARG]], %[[Y_ALLOC]] : !u32i, !cir.ptr<!u32i>
   // CHECK-NEXT: cir.store %[[F_ARG]], %[[F_ALLOC]] : !cir.float, !cir.ptr<!cir.float>

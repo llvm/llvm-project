@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVMACHINEFUNCTIONINFO_H
 
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -65,6 +66,14 @@ private:
   uint64_t RVVPadding = 0;
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
+
+  /// Incoming indirect argument pointers saved as virtual registers, keyed by
+  /// formal parameter index. Used for musttail forwarding of indirect args.
+  /// Virtual registers (not SDValues) are used because the SelectionDAG is
+  /// cleared between basic blocks, and musttail calls may be in non-entry
+  /// blocks.
+  DenseMap<unsigned, Register> IncomingIndirectArgs;
+
   /// Is there any vector argument or return?
   bool IsVectorCall = false;
 
@@ -144,6 +153,15 @@ public:
 
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
+
+  void setIncomingIndirectArg(unsigned ArgIndex, Register Reg) {
+    IncomingIndirectArgs[ArgIndex] = Reg;
+  }
+  Register getIncomingIndirectArg(unsigned ArgIndex) const {
+    auto It = IncomingIndirectArgs.find(ArgIndex);
+    assert(It != IncomingIndirectArgs.end() && "No incoming indirect arg");
+    return It->second;
+  }
 
   enum class PushPopKind { None = 0, StdExtZcmp, VendorXqccmp };
 

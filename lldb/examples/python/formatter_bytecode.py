@@ -61,6 +61,7 @@ define_opcode(0x20, None, "lit_uint")
 define_opcode(0x21, None, "lit_int")
 define_opcode(0x22, None, "lit_string")
 define_opcode(0x23, None, "lit_selector")
+define_opcode(0x24, None, "lit_integer")
 
 define_opcode(0x2A, "as_int", "as_int")
 define_opcode(0x2B, "as_uint", "as_uint")
@@ -128,6 +129,7 @@ define_selector(0x11, "get_child_at_index")
 define_selector(0x12, "get_child_with_name")
 define_selector(0x13, "get_child_index")
 define_selector(0x15, "get_type")
+define_selector(0x14, "get_parent")
 define_selector(0x16, "get_template_argument_type")
 define_selector(0x17, "cast")
 define_selector(0x18, "get_synthetic_value")
@@ -136,6 +138,7 @@ define_selector(0x20, "get_value")
 define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
 define_selector(0x23, "get_value_as_address")
+define_selector(0x24, "clone")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -334,7 +337,7 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
-                #if swift(>=6.3)
+                #if swift(>=6.3) && !objectFormat(Wasm)
                 #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else
@@ -396,7 +399,9 @@ def assemble_tokens(tokens: list[str]) -> bytes:
                 emit(op_lit_uint)
                 emit(int(tok[:-1]))  # FIXME
             else:
-                emit(op_lit_int)
+                # With the introduction of op_lit_integer, op_lit_int is no
+                # longer emitted by the assembler.
+                emit(op_lit_integer)
                 emit(int(tok))  # FIXME
         elif tok[0] == "@":
             emit(op_lit_selector)
@@ -470,6 +475,9 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
             asm += str(b)  # FIXME uleb
             asm += "u"
         elif b == op_lit_int:
+            b = next_byte()
+            asm += str(b)
+        elif b == op_lit_integer:
             b = next_byte()
             asm += str(b)
         elif b == op_lit_selector:
@@ -615,6 +623,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
         elif b == op_lit_int:
             b = next_byte()  # FIXME uleb
             data.append(int(b))
+        elif b == op_lit_integer:
+            b = next_byte()  # FIXME sleb
+            data.append(int(b))
         elif b == op_lit_selector:
             b = next_byte()
             data.append(b)
@@ -694,6 +705,9 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 data.append(valobj.GetIndexOfChildWithName(name))
             elif sel == sel_get_type:
                 data.append(data.pop().GetType())
+            elif sel == sel_get_parent:
+                valobj = data.pop()
+                data.append(valobj.GetParent())
             elif sel == sel_get_template_argument_type:
                 n = data.pop()
                 valobj = data.pop()
@@ -714,6 +728,10 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
                 sbtype = data.pop()
                 valobj = data.pop()
                 data.append(valobj.Cast(sbtype))
+            elif sel == sel_clone:
+                new_name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.Clone(new_name))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -736,12 +754,20 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
 
 _BUILTINS = {
     "Cast": "@cast",
+    "Clone": "@clone",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
+    "GetIndexOfChildWithName": "@get_child_index",
+    "GetNonSyntheticValue": "@get_non_synthetic_value",
+    "GetNumChildren": "@get_num_children",
+    "GetParent": "@get_parent",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
     "GetType": "@get_type",
+    "GetValue": "@get_value",
+    "GetValueAsAddress": "@get_value_as_address",
+    "GetValueAsSigned": "@get_value_as_signed",
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
@@ -1049,13 +1075,13 @@ class Compiler(ast.NodeVisitor):
                 "unsupported attribute access (only self.attr is supported)", node
             )
         pick_idx = self._attr_index(node.attr, node)
-        self._output(f"{pick_idx}u pick")  # "# self.{node.attr}"
+        self._output(f"{pick_idx} pick")  # "# self.{node.attr}"
 
     def visit_Name(self, node: ast.Name) -> None:
         idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
-        self._output(f"{idx}u pick")  # "# {node.id}"
+        self._output(f"{idx} pick")  # "# {node.id}"
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
@@ -1234,7 +1260,7 @@ if __name__ == "__main__":
         def test_assemble(self):
             self.assertEqual(assemble("1u dup").hex(), "200101")
             self.assertEqual(assemble('"1u dup"').hex(), "2206317520647570")
-            self.assertEqual(assemble("16 < { dup } if").hex(), "21105210010111")
+            self.assertEqual(assemble("16 < { dup } if").hex(), "24105210010111")
             self.assertEqual(assemble('{ { " } " } }').hex(), "100710052203207d20")
 
             def roundtrip(asm):

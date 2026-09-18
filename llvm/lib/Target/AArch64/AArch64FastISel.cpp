@@ -538,6 +538,8 @@ Register AArch64FastISel::fastMaterializeConstant(const Constant *C) {
   // arm64_32 has 32-bit pointers held in 64-bit registers. Because of that,
   // 'null' pointers need to have a somewhat special treatment.
   if (isa<ConstantPointerNull>(C)) {
+    if (C->getType()->isVectorTy())
+      return Register();
     assert(VT == MVT::i64 && "Expected 64-bit pointers");
     return materializeInt(ConstantInt::get(Type::getInt64Ty(*Context), 0), VT);
   }
@@ -674,8 +676,7 @@ bool AArch64FastISel::computeAddress(const Value *Obj, Address &Addr, Type *Ty)
   }
   case Instruction::Alloca: {
     const AllocaInst *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       Addr.setKind(Address::FrameIndexBase);
       Addr.setFI(SI->second);
@@ -2482,6 +2483,11 @@ bool AArch64FastISel::selectBranch(const Instruction *I) {
     return false;
 
   // i1 conditions come as i32 values, test the lowest bit with tb(n)z.
+  // However, that's not allowed with SLH.
+  if (FuncInfo.MF->getFunction().hasFnAttribute(
+          Attribute::SpeculativeLoadHardening))
+    return false;
+
   unsigned Opcode = AArch64::TBNZW;
   if (FuncInfo.MBB->isLayoutSuccessor(TBB)) {
     std::swap(TBB, FBB);

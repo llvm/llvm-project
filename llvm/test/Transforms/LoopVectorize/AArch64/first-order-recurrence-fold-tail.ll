@@ -21,8 +21,7 @@ define i32 @test_phi_iterator_invalidation(ptr %A, ptr noalias %B) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[TMP27]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i16> poison, i16 [[TMP4]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]

@@ -192,6 +192,82 @@ void LoongArchInstrInfo::loadRegFromStackSlot(
       .addMemOperand(MMO);
 }
 
+Register LoongArchInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                                 int &FrameIndex) const {
+  TypeSize Dummy = TypeSize::getZero();
+  return isLoadFromStackSlot(MI, FrameIndex, Dummy);
+}
+
+Register LoongArchInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                                 int &FrameIndex,
+                                                 TypeSize &MemBytes) const {
+  switch (MI.getOpcode()) {
+  default:
+    return Register();
+  case LoongArch::LD_W:
+  case LoongArch::FLD_S:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case LoongArch::LD_D:
+  case LoongArch::FLD_D:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case LoongArch::VLD:
+    MemBytes = TypeSize::getFixed(16);
+    break;
+  case LoongArch::XVLD:
+    MemBytes = TypeSize::getFixed(32);
+    break;
+  }
+
+  if ((MI.getOperand(1).isFI()) &&  // is a stack slot
+      (MI.getOperand(2).isImm()) && // the imm is zero
+      (MI.getOperand(2).getImm() == 0)) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+
+  return Register();
+}
+
+Register LoongArchInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                                int &FrameIndex) const {
+  TypeSize Dummy = TypeSize::getZero();
+  return isStoreToStackSlot(MI, FrameIndex, Dummy);
+}
+
+Register LoongArchInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                                int &FrameIndex,
+                                                TypeSize &MemBytes) const {
+  switch (MI.getOpcode()) {
+  default:
+    return Register();
+  case LoongArch::ST_W:
+  case LoongArch::FST_S:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case LoongArch::ST_D:
+  case LoongArch::FST_D:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case LoongArch::VST:
+    MemBytes = TypeSize::getFixed(16);
+    break;
+  case LoongArch::XVST:
+    MemBytes = TypeSize::getFixed(32);
+    break;
+  }
+
+  if ((MI.getOperand(1).isFI()) &&  // is a stack slot
+      (MI.getOperand(2).isImm()) && // the imm is zero
+      (MI.getOperand(2).getImm() == 0)) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
+  }
+
+  return Register();
+}
+
 void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI,
                                 const DebugLoc &DL, Register DstReg,
@@ -243,8 +319,8 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::INLINEASM ||
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction *MF = MI.getParent()->getParent();
-    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
-    return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
+    return getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
   }
 
   unsigned NumBytes = 0;
@@ -267,11 +343,8 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     const MachineFunction *MF = MI.getParent()->getParent();
     const Function &F = MF->getFunction();
     if (F.hasFnAttribute("patchable-function-entry")) {
-      unsigned Num;
-      if (F.getFnAttribute("patchable-function-entry")
-              .getValueAsString()
-              .getAsInteger(10, Num))
-        return 0;
+      unsigned Num =
+          F.getFnAttributeAsParsedInteger("patchable-function-entry");
       return Num * 4;
     }
     [[fallthrough]];

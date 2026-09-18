@@ -14,7 +14,7 @@ target triple = "hexagon"
 
 ; CHECK-LABEL: @test1
 ; CHECK: vector.body:
-; CHECK: icmp ule <64 x i32> %vec.ind
+; CHECK: icmp ule <64 x i32>
 ; CHECK-NOT: load <{{.*}} x i32>
 
 

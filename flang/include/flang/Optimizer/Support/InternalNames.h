@@ -12,7 +12,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
-#include <optional>
 
 namespace fir {
 
@@ -158,7 +157,9 @@ struct NameUniquer {
 
   /// True if \p uniquedName denotes module-scope data (variable, named
   /// constant, or common block), as opposed to procedures, types, or other
-  /// symbols that may still carry a module prefix in the mangling.
+  /// symbols that may still carry a module prefix in the mangling. This
+  /// excludes symbols nested in a procedure according to the mangled prefix
+  /// (including \c SAVE locals in module procedures).
   static bool isModuleScopeDataUniquedName(llvm::StringRef uniquedName);
 
   /// Given a mangled derived type name, get the name of the related derived
@@ -193,6 +194,12 @@ struct NameUniquer {
   /// Returns true if the passed name denotes a special symbol (e.g. global
   /// symbol generated for derived type description).
   static bool isSpecialSymbol(llvm::StringRef name);
+
+  /// Returns true if the passed name denotes a compiler generated name.
+  /// If \p excludeStringLiterals is true, string literals are excluded from the
+  /// check.
+  static bool isCompilerGenerated(llvm::StringRef name,
+                                  bool excludeStringLiterals = true);
 
 private:
   static std::string intAsString(std::int64_t i);
