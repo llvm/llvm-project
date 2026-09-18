@@ -134,3 +134,24 @@ contains
     mysum = x(1) + x(2) + x(3) + x(4) + y
   end function
 end subroutine
+
+subroutine value_dummy_not_yet()
+  ! An array VALUE dummy needs a temporary covering the whole storage
+  ! sequence, which lowering does not create yet (llvm-project#224636):
+  ! the named-constant element form stays rejected for now, while whole
+  ! named-constant arrays and variable elements are unaffected.
+  use m
+  integer :: v(4)
+  interface
+    subroutine byval3(x)
+      integer, value :: x(3)
+    end subroutine
+    subroutine byval4(x)
+      integer, value :: x(4)
+    end subroutine
+  end interface
+  !ERROR: Named constant array element actual argument may not yet be associated with a VALUE dummy argument 'x=' array
+  call byval3(gp(2))
+  call byval4(gp)   ! whole array: accepted
+  call byval3(v(2)) ! variable element: accepted (preexisting behavior)
+end subroutine

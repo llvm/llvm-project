@@ -681,6 +681,19 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "Polymorphic scalar may not be associated with a %s array"_err_en_US,
               dummyName);
         }
+        if (actualIsArrayElement &&
+            dummy.attrs.test(characteristics::DummyDataObject::Attr::Value) &&
+            evaluate::IsNamedConstantDesignator(actual)) {
+          // TODO(llvm-project#224636): lowering does not yet create a
+          // temporary covering the whole storage sequence for an array
+          // VALUE dummy argument, so the element sequence association
+          // that retaining the named constant designator enables would
+          // be miscompiled. Keep rejecting it until that is fixed.
+          basicError = true;
+          messages.Say(
+              "Named constant array element actual argument may not yet be associated with a VALUE %s array"_err_en_US,
+              dummyName);
+        }
         bool isOkBecauseContiguous{
             context.IsEnabled(
                 common::LanguageFeature::ContiguousOkForSeqAssociation) &&
