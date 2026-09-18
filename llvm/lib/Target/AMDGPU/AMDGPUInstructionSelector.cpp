@@ -2186,10 +2186,7 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     } else {
       VDataOut = MI.getOperand(0).getReg();
       VDataTy = MRI->getType(VDataOut);
-      NumVDataDwords = DMaskLanes;
-
-      if (IsD16 && !STI.hasUnpackedD16VMem())
-        NumVDataDwords = (DMaskLanes + 1) / 2;
+      NumVDataDwords = divideCeil(VDataTy.getSizeInBits(), 32);
     }
   }
 
@@ -2239,9 +2236,6 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
     LLVM_DEBUG(dbgs() << "Trying to use NSA on non-NSA target\n");
     return false;
   }
-
-  if (IsTexFail)
-    ++NumVDataDwords;
 
   int Opcode = -1;
   if (IsGFX13Plus) {
