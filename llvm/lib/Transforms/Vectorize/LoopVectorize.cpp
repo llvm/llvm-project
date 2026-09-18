@@ -3084,19 +3084,21 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // enough to accurately determine if vectorization is beneficial.
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
     unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
-    unsigned NumOfInstructions = 0;
-    for (BasicBlock *BB : TheLoop->blocks())
-      NumOfInstructions += BB->size();
     if (TC.getFixedValue() - MaxVFForTC <= 1 && MaxVFForTC / EffectiveIC > 1 &&
         MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
-        !Config.OptForSize &&
-        NumOfInstructions > LowTripCountLoopBodySizeLimit) {
-      unsigned VF = MaxVFForTC / EffectiveIC;
-      LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
-                        << " with at most 1 scalar iteration remaining.\n");
-      MaxFactors.FixedVF = ElementCount::getFixed(VF);
-      MaxFactors.ScalableVF = ElementCount::getScalable(0);
-      return MaxFactors;
+        !Config.OptForSize) {
+      unsigned NumOfInstructions = llvm::sum_of(
+          llvm::map_range(TheLoop->blocks(),
+                          [](BasicBlock *BB) { return BB->size(); }),
+          unsigned(0));
+      if (NumOfInstructions > LowTripCountLoopBodySizeLimit) {
+        unsigned VF = MaxVFForTC / EffectiveIC;
+        LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
+                          << " with at most 1 scalar iteration remaining.\n");
+        MaxFactors.FixedVF = ElementCount::getFixed(VF);
+        MaxFactors.ScalableVF = ElementCount::getScalable(0);
+        return MaxFactors;
+      }
     }
 
     reportVectorizationFailure(
@@ -5653,13 +5655,6 @@ LoopVectorizationPlanner::computeBestVF() {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
                                P->vectorFactors().end());
 
-    SmallVector<VPRegisterUsage, 8> RUs;
-    bool ConsiderRegPressure = any_of(VFs, [this](ElementCount VF) {
-      return Config.shouldConsiderRegPressureForVF(VF);
-    });
-    if (ConsiderRegPressure)
-      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
-
     // For loops where the Trip Count is below the TailFoldingThreshold, only
     // consider the largest VF to result in at most one vector iteration, and at
     // most one scalar iteration.
@@ -5669,6 +5664,13 @@ LoopVectorizationPlanner::computeBestVF() {
         ExactTC.getFixedValue() <= TTI.getMinTripCountTailFoldingThreshold()) {
       VFs = VFs.take_back(1);
     }
+
+    SmallVector<VPRegisterUsage, 8> RUs;
+    bool ConsiderRegPressure = any_of(VFs, [this](ElementCount VF) {
+      return Config.shouldConsiderRegPressureForVF(VF);
+    });
+    if (ConsiderRegPressure)
+      RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
 
     for (unsigned I = 0; I < VFs.size(); I++) {
       ElementCount VF = VFs[I];
