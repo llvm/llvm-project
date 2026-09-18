@@ -1385,18 +1385,17 @@ static bool isSignatureValid(FunctionType *FTy,
       return false;
   }
 
-  if (NumMissingTrailingParams) {
-    // Default arguments are materialized as ConstantInt values, requiring one
-    // concrete integer descriptor per omitted parameter.
-    if (Infos.size() != NumMissingTrailingParams ||
-        llvm::any_of(Infos, [](Intrinsic::IITDescriptor D) {
-          return D.Kind != Intrinsic::IITDescriptor::Integer;
-        })) {
-      OS << "intrinsic has unresolved trailing argument types!";
-      return false;
-    }
-    Infos = {};
+  // Default arguments are materialized as ConstantInt values, requiring one
+  // concrete integer descriptor per omitted parameter.
+  if (NumMissingTrailingParams &&
+      (Infos.size() != NumMissingTrailingParams ||
+       llvm::any_of(Infos, [](Intrinsic::IITDescriptor D) {
+         return D.Kind != Intrinsic::IITDescriptor::Integer;
+       }))) {
+    OS << "cannot omit trailing parameters that are overloaded or non-integer";
+    return false;
   }
+  Infos = Infos.drop_front(NumMissingTrailingParams);
 
   if (!Infos.empty()) {
     OS << "intrinsic has too few arguments!";
