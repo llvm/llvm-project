@@ -26,18 +26,27 @@ namespace __math {
 
 // exp
 
-inline _LIBCPP_HIDE_FROM_ABI float exp(float __x) _NOEXCEPT { return __builtin_expf(__x); }
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI float exp(float __x) _NOEXCEPT {
+  return __builtin_expf(__x);
+}
 
 template <class = int>
-_LIBCPP_HIDE_FROM_ABI double exp(double __x) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI double exp(double __x) _NOEXCEPT {
   return __builtin_exp(__x);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI long double exp(long double __x) _NOEXCEPT { return __builtin_expl(__x); }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI double exp(_A1 __x) _NOEXCEPT {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI double exp(_A1 __x) _NOEXCEPT {
   return __builtin_exp((double)__x);
+}
+
+// This is a template so that it doesn't conflict with the C library's non-template expf(float) when both are visible
+// in the same scope, e.g. after `using namespace std;` or `using std::expf;` at global scope.
+template <class = int>
+_LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI float expf(float __x) _NOEXCEPT {
+  return __builtin_expf(__x);
 }
 
 // frexp
