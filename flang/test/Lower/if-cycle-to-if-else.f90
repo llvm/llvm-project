@@ -51,6 +51,98 @@ subroutine cycle_in_else(n, v)
   end do
 end subroutine cycle_in_else
 
+! Two IF/CYCLEs in the same DO, both with statements ahead of the CYCLE, so
+! both are reshaped and the second nests inside the first's ELSE branch.
+
+subroutine two_cycles_both_leading(n, v)
+  integer :: n, i, v(n)
+
+  ! CHECK-LABEL: Subroutine two_cycles_both_leading
+  ! CHECK: <<DoConstruct>>
+  ! CHECK-NOT: DoConstruct!
+  ! CHECK: IfThenStmt{{.*}}: if(i == 1) then
+  ! CHECK: AssignmentStmt: v(i) = 0
+  ! CHECK: ElseStmt
+  ! CHECK: AssignmentStmt: v(i) = 1
+  ! CHECK: IfThenStmt{{.*}}: if(i == 2) then
+  ! CHECK: AssignmentStmt: v(i) = 3
+  ! CHECK: ElseStmt
+  ! CHECK: AssignmentStmt: v(i) = 2
+  ! CHECK: <<End DoConstruct>>
+  ! CHECK-NOT: CycleStmt
+  do i = 1, n
+     if (i == 1) then
+        v(i) = 0
+        cycle
+     end if
+     v(i) = 1
+     if (i == 2) then
+        v(i) = 3
+        cycle
+     end if
+     v(i) = 2
+  end do
+end subroutine two_cycles_both_leading
+
+! The reshaped construct is itself moved: the second IF is reshaped first, then
+! the first IF is negated and splices the result into the loop body.
+
+subroutine bare_then_leading(n, v)
+  integer :: n, i, v(n)
+
+  ! CHECK-LABEL: Subroutine bare_then_leading
+  ! CHECK: <<DoConstruct>>
+  ! CHECK-NOT: DoConstruct!
+  ! CHECK: IfThenStmt [negate]{{.*}}: if(i == 1) then
+  ! CHECK: AssignmentStmt: v(i) = 1
+  ! CHECK: IfThenStmt{{.*}}: if(i == 2) then
+  ! CHECK: AssignmentStmt: v(i) = 3
+  ! CHECK: ElseStmt
+  ! CHECK: AssignmentStmt: v(i) = 2
+  ! CHECK: <<End DoConstruct>>
+  ! CHECK-NOT: CycleStmt
+  do i = 1, n
+     if (i == 1) then
+        cycle
+     end if
+     v(i) = 1
+     if (i == 2) then
+        v(i) = 3
+        cycle
+     end if
+     v(i) = 2
+  end do
+end subroutine bare_then_leading
+
+! Nothing follows the second construct, so there is no ELSE branch to move and
+! its CYCLE is left alone. The DO stays structured: the branch goes to the
+! EndDoStmt and skips nothing.
+
+subroutine two_cycles_trailing(n, v)
+  integer :: n, i, v(n)
+
+  ! CHECK-LABEL: Subroutine two_cycles_trailing
+  ! CHECK: <<DoConstruct>>
+  ! CHECK-NOT: DoConstruct!
+  ! CHECK: IfThenStmt{{.*}}: if(i == 1) then
+  ! CHECK: AssignmentStmt: v(i) = 0
+  ! CHECK: ElseStmt
+  ! CHECK: AssignmentStmt: v(i) = 1
+  ! CHECK: IfThenStmt{{.*}}: if(i == 2) then
+  ! CHECK: CycleStmt
+  ! CHECK: <<End DoConstruct>>
+  do i = 1, n
+     if (i == 1) then
+        v(i) = 0
+        cycle
+     end if
+     v(i) = 1
+     if (i == 2) then
+        cycle
+     end if
+  end do
+end subroutine two_cycles_trailing
+
 ! A CYCLE naming an outer construct is left alone.
 
 subroutine named_outer_cycle(n, v)
