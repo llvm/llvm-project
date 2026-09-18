@@ -159,6 +159,9 @@ static bool canCoPack(const SignatureRow &Row,
   if (Row.InterpMode != dxbc::PSV::InterpolationMode::Undefined &&
       Row.InterpMode != Placement.InterpMode)
     return false;
+  // Do not append an earlier semantic category after a later one in a row.
+  // Indexed tess factors are reserved in the last column, so arbitrary values
+  // may still fill the columns to their left without violating that ordering.
   if (Row.OccupiedColumns &&
       Placement.Interpretation < Row.RightmostInterpretation &&
       !(Placement.Interpretation == SemanticInterpretation::Arbitrary &&
