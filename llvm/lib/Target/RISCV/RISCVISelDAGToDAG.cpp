@@ -18,7 +18,6 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -127,6 +126,81 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
           RISCVISD::VMSET_VL, DL, VT.changeVectorElementType(MVT::i1), VLMAX);
       Result = CurDAG->getNode(RISCVISD::FP_EXTEND_VL, DL, VT, N->getOperand(0),
                                TrueMask, VLMAX);
+      break;
+    }
+    case ISD::ADD: {
+      // Turn (add X, C) into (sub X, -C) when a constant node holding -C
+      // already exists in the DAG, so both share one materialization. Do this
+      // before selection, while both are still ConstantSDNodes: by selection
+      // time -C may already have been selected into instructions.
+      //
+      // ADD is commutative, but getNode canonicalizes constants to the RHS, so
+      // the constant is always operand 1.
+      auto *N1C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+      if (!N1C)
+        break;
+      MVT VT = N->getSimpleValueType(0);
+      if (VT != Subtarget->getXLenVT())
+        break;
+      int64_t Imm = N1C->getSExtValue();
+      // Only worthwhile for wide constants: values that fit in 32 bits take at
+      // most two instructions to materialize, matching the threshold used by
+      // selectNegImm. Skip INT64_MIN too, whose negation is itself.
+      if (isInt<32>(Imm) || Imm == INT64_MIN)
+        break;
+      // A constant is anchored if it has a user other than an ADD, i.e. it is
+      // materialized regardless of this fold. N1C is the (unique) node for Imm,
+      // so the positive side needs no search.
+      auto IsAnchored = [](const SDNode *C) {
+        return any_of(C->users(), [](const SDNode *U) {
+          return U->getOpcode() != ISD::ADD;
+        });
+      };
+      // If Imm is materialized anyway, keep the ADD so it reuses Imm; an ADD is
+      // also more compressible than a SUB. This also lets us skip the search
+      // for -Imm below.
+      if (IsAnchored(N1C))
+        break;
+      // Find the (unique) constant node for -Imm, if any.
+      const SDNode *NegC = nullptr;
+      for (const SDNode &Node : CurDAG->allnodes()) {
+        auto *C = dyn_cast<ConstantSDNode>(&Node);
+        if (C && C->getSimpleValueType(0) == VT && C->getSExtValue() == -Imm) {
+          NegC = &Node;
+          break;
+        }
+      }
+      // Reuse is only free if -Imm is already in the DAG.
+      if (!NegC)
+        break;
+      // dyn_cast<ConstantSDNode> also matches TargetConstant, which is encoded
+      // into the instruction rather than materialized, so reusing it would not
+      // remove a materialization. No TargetConstant is this wide (the largest
+      // are intrinsic IDs, which fit in 32 bits), so assert it is a Constant.
+      assert(NegC->getOpcode() == ISD::Constant &&
+             "Unexpected wide TargetConstant");
+      // Pick which of Imm/-Imm should be the surviving constant, so exactly
+      // one of the pair is materialized and any ADDs of the other reuse it:
+      //  - if -Imm is materialized anyway, reuse it (rewrite to SUB);
+      //  - else keep the cheaper constant, breaking ties towards the positive
+      //    value so both ADDs of a C/-C pair agree on the survivor.
+      bool Rewrite;
+      if (IsAnchored(NegC)) {
+        Rewrite = true;
+      } else {
+        int PosCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                                 /*CompressionCost=*/true);
+        int NegCost =
+            RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
+                                       /*CompressionCost=*/true);
+        Rewrite = NegCost != PosCost ? NegCost < PosCost : Imm < 0;
+      }
+      if (!Rewrite)
+        break;
+      SDLoc DL(N);
+      // getConstant uniques onto the existing -C node, so it is shared.
+      Result = CurDAG->getNode(ISD::SUB, DL, VT, N->getOperand(0),
+                               CurDAG->getConstant(-Imm, DL, VT));
       break;
     }
     }
@@ -2073,6 +2147,44 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::MQWACC:
+  case RISCVISD::MQRWACC:
+  case RISCVISD::WMACC:
+  case RISCVISD::WMACCU:
+  case RISCVISD::WMACCSU: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+
+    SDValue Op0 = buildGPRPair(CurDAG, DL, MVT::Untyped, Node->getOperand(0),
+                               Node->getOperand(1));
+    unsigned Opc;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case RISCVISD::MQWACC:
+      Opc = RISCV::MQWACC;
+      break;
+    case RISCVISD::MQRWACC:
+      Opc = RISCV::MQRWACC;
+      break;
+    case RISCVISD::WMACC:
+      Opc = RISCV::WMACC;
+      break;
+    case RISCVISD::WMACCU:
+      Opc = RISCV::WMACCU;
+      break;
+    case RISCVISD::WMACCSU:
+      Opc = RISCV::WMACCSU;
+      break;
+    }
+    MachineSDNode *New = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, Op0, Node->getOperand(2), Node->getOperand(3));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case RISCVISD::ADDD:
     // Try to match WMACC pattern: ADDD where one operand pair comes from a
     // widening multiply.
@@ -3597,10 +3709,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// compressible) standard load/store instructions.
 bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
                                            SDValue &Offset) {
-
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
-
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
 
@@ -3720,9 +3828,10 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     assert(!isInt<12>(CVal) && "simm12 not already handled?");
 
-    // Handle immediates in the range [-4096,-2049] or [2017, 4065]. We can save
+    // Handle immediates in the range [-4096,-2049] or [2017, 4063]. We can save
     // one instruction by folding adjustment (-2048 or 2016) into the address.
-    if ((-2049 >= CVal && CVal >= -4096) || (4065 >= CVal && CVal >= 2017)) {
+    // The upper bound keeps CVal - 2016 within simm12 ([−2048, 2047]).
+    if ((-2049 >= CVal && CVal >= -4096) || (4063 >= CVal && CVal >= 2017)) {
       int64_t Adj = CVal < 0 ? -2048 : 2016;
       int64_t AdjustedOffset = CVal - Adj;
       Base =
@@ -3756,17 +3865,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
 /// Return true if this a load/store that we have a RegRegScale instruction for.
 static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
                                      const RISCVSubtarget &Subtarget) {
-  if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE)
+  unsigned UserOpc = User->getOpcode();
+  if (UserOpc != ISD::LOAD && UserOpc != ISD::STORE)
     return false;
   EVT VT = cast<MemSDNode>(User)->getMemoryVT();
-  if (!(VT.isScalarInteger() &&
-        (Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls())) &&
+  // Zilx only provides indexed loads, so it must not enable reg+reg-scale
+  // address folding for stores. XTheadMemIdx and Xqcisls have scaled stores.
+  bool HasScalarIntegerMemIdx =
+      Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls() ||
+      (Subtarget.hasStdExtZilx() && UserOpc == ISD::LOAD);
+  if (!(VT.isScalarInteger() && HasScalarIntegerMemIdx) &&
       !((VT == MVT::f32 || VT == MVT::f64) &&
         Subtarget.hasVendorXTHeadFMemIdx()))
     return false;
   // Don't allow stores of the value. It must be used as the address.
-  if (User->getOpcode() == ISD::STORE &&
-      cast<StoreSDNode>(User)->getValue() == Add)
+  if (UserOpc == ISD::STORE && cast<StoreSDNode>(User)->getValue() == Add)
     return false;
 
   return true;
@@ -3809,7 +3922,7 @@ static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
-                                              unsigned MaxShiftAmount,
+                                              ArrayRef<unsigned> Amounts,
                                               SDValue &Base, SDValue &Index,
                                               SDValue &Scale) {
   if (Addr.getOpcode() != ISD::ADD)
@@ -3818,14 +3931,14 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
   SDValue RHS = Addr.getOperand(1);
 
   EVT VT = Addr.getSimpleValueType();
-  auto SelectShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
-                                              SDValue &Shift) {
+  auto SelectShl = [this, VT, Amounts](SDValue N, SDValue &Index,
+                                       SDValue &Shift) {
     if (N.getOpcode() != ISD::SHL || !isa<ConstantSDNode>(N.getOperand(1)))
       return false;
 
     // Only match shifts by a value in range [0, MaxShiftAmount].
     unsigned ShiftAmt = N.getConstantOperandVal(1);
-    if (ShiftAmt > MaxShiftAmount)
+    if (!llvm::is_contained(Amounts, ShiftAmt))
       return false;
 
     Index = N.getOperand(0);
@@ -3885,6 +3998,10 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
   if (!isWorthFoldingIntoRegRegScale(*Subtarget, Addr))
     return false;
 
+  // Bail out if 0 is not in candidate shift amounts.
+  if (!llvm::is_contained(Amounts, 0))
+    return false;
+
   Base = LHS;
   Index = RHS;
   Scale = CurDAG->getTargetConstant(0, SDLoc(Addr), VT);
@@ -3892,11 +4009,11 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegZextRegScale(SDValue Addr,
-                                                  unsigned MaxShiftAmount,
+                                                  ArrayRef<unsigned> Amounts,
                                                   unsigned Bits, SDValue &Base,
                                                   SDValue &Index,
                                                   SDValue &Scale) {
-  if (!SelectAddrRegRegScale(Addr, MaxShiftAmount, Base, Index, Scale))
+  if (!SelectAddrRegRegScale(Addr, Amounts, Base, Index, Scale))
     return false;
 
   if (Index.getOpcode() == ISD::AND) {
@@ -4001,12 +4118,15 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
 /// \p ExpectedCCVal indicates the condition code to attempt to match (e.g.
 /// ISD::SETNE).
 bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
-                                    SDValue &Val) {
+                                    SDValue &Val, bool OneUse) {
   assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
          "Unexpected condition code!");
 
   // We're looking for a setcc.
   if (N->getOpcode() != ISD::SETCC)
+    return false;
+
+  if (OneUse && !N->hasOneUse())
     return false;
 
   // Must be an equality comparison.
@@ -5094,10 +5214,14 @@ bool RISCVDAGToDAGISel::doPeepholeNoRegPassThru() {
 
 // This pass converts a legalized DAG into a RISCV-specific DAG, ready
 // for instruction scheduling.
-FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
-                                       CodeGenOptLevel OptLevel) {
+FunctionPass *llvm::createRISCVISelDagLegacyPass(RISCVTargetMachine &TM,
+                                                 CodeGenOptLevel OptLevel) {
   return new RISCVDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+RISCVISelDAGToDAGPass::RISCVISelDAGToDAGPass(RISCVTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<RISCVDAGToDAGISel>(TM, OptLevel)) {}
 
 char RISCVDAGToDAGISelLegacy::ID = 0;
 

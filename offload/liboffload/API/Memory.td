@@ -191,7 +191,7 @@ def olMemcpy : Function {
     let desc = "Enqueue a memcpy operation.";
     let details = [
         "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform.",
-        "If a queue is specified, at least one device must be a non-host device",
+        "If both pointers are on the host and a queue is specified, the memcpy is ordered with other work in the queue.",
         "If a queue is not specified, the memcpy happens synchronously"
     ];
     let params = [
@@ -208,7 +208,7 @@ def olMemcpy : Function {
 def olMemFill : Function {
   let desc = "Fill memory with copies of the given pattern";
   let details = [
-    "Filling with patterns of a different size than 1, 2 or 4 bytes may be less performant",
+    "Filling with patterns of a different size than 1, 2 or 4 bytes may be less performant and may synchronize the queue",
     "The destination pointer and queue must be associated with the same device",
     "The fill size must be a multiple of the pattern size",
   ];

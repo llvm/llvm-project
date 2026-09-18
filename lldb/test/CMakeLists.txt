@@ -128,6 +128,10 @@ if(TARGET lldb-dap)
   add_lldb_test_dependency(lldb-dap)
 endif()
 
+if(TARGET lldb-mcp)
+  add_lldb_test_dependency(lldb-mcp)
+endif()
+
 if(TARGET liblldb)
   add_lldb_test_dependency(liblldb)
 endif()
@@ -150,10 +154,6 @@ endif()
 if(TARGET darwin-mte-launcher)
   add_lldb_test_dependency(darwin-mte-launcher)
   set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
-endif()
-
-if (LLDB_CAN_USE_LLDB_RPC_SERVER)
-  add_lldb_test_dependency(lldb-rpc-generate-sources)
 endif()
 
 # Add dependencies that are not exported targets when building standalone.
@@ -300,7 +300,6 @@ llvm_canonicalize_cmake_booleans(
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS
-  LLDB_BUILD_LLDBRPC
   LLDB_USE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.

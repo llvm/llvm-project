@@ -38,17 +38,6 @@ void test() {
 // CIR:   cir.return %[[RET_LOAD]] : !s32i
 // CIR: }
 
-// CIR: cir.func no_inline comdat linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> (!s32i{{.*}})
-// CIR:   %[[INLINE_THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_inline_operator>>
-// CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
-// CIR:   cir.store %[[INLINE_THIS_ARG]], %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>
-// CIR:   %[[INLINE_THIS_LOAD:.+]] = cir.load %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_inline_operator>>, !cir.ptr<!rec_inline_operator>
-// CIR:   %[[CONST_987:.+]] = cir.const #cir.int<987> : !s32i
-// CIR:   cir.store %[[CONST_987]], %[[INLINE_RETVAL]] : !s32i, !cir.ptr<!s32i>
-// CIR:   %[[INLINE_RET_LOAD:.+]] = cir.load %[[INLINE_RETVAL]] : !cir.ptr<!s32i>, !s32i
-// CIR:   cir.return %[[INLINE_RET_LOAD]] : !s32i
-// CIR: }
-
 // CIR: cir.func {{.*}} @_Z4testv()
 // CIR:   %[[X_ALLOCA:.+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[I_ALLOCA:.+]] = cir.alloca "i" {{.*}}
@@ -62,9 +51,20 @@ void test() {
 // CIR:   cir.return
 // CIR: }
 
+// CIR: cir.func no_inline comdat linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> (!s32i{{.*}})
+// CIR:   %[[INLINE_THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_inline_operator>>
+// CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   cir.store %[[INLINE_THIS_ARG]], %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>
+// CIR:   %[[INLINE_THIS_LOAD:.+]] = cir.load %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_inline_operator>>, !cir.ptr<!rec_inline_operator>
+// CIR:   %[[CONST_987:.+]] = cir.const #cir.int<987> : !s32i
+// CIR:   cir.store %[[CONST_987]], %[[INLINE_RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[INLINE_RET_LOAD:.+]] = cir.load %[[INLINE_RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.return %[[INLINE_RET_LOAD]] : !s32i
+// CIR: }
+
 // LLVM: define dso_local noundef i32 @_ZN20out_of_line_operatorcviEv(ptr {{.*}} %[[PARAM0:.+]])
-// LLVM:   %[[THIS_ALLOCA:.+]] = alloca ptr, i64 1
-// LLVM:   %[[RETVAL:.+]] = alloca i32, i64 1
+// LLVM:   %[[THIS_ALLOCA:.+]] = alloca ptr, 
+// LLVM:   %[[RETVAL:.+]] = alloca i32, 
 // LLVM:   store ptr %[[PARAM0]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS_LOAD:.+]] = load ptr, ptr %[[THIS_ALLOCA]]
 // LLVM:   store i32 123, ptr %[[RETVAL]]
@@ -72,26 +72,26 @@ void test() {
 // LLVM:   ret i32 %[[RET_LOAD]]
 // LLVM: }
 
-// LLVM: define linkonce_odr noundef i32 @_ZNK15inline_operatorcviEv(ptr {{.*}} %[[INLINE_PARAM0:.+]])
-// LLVM:   %[[INLINE_THIS_ALLOCA:.+]] = alloca ptr, i64 1
-// LLVM:   %[[INLINE_RETVAL:.+]] = alloca i32, i64 1
-// LLVM:   store ptr %[[INLINE_PARAM0]], ptr %[[INLINE_THIS_ALLOCA]]
-// LLVM:   %[[INLINE_THIS_LOAD:.+]] = load ptr, ptr %[[INLINE_THIS_ALLOCA]]
-// LLVM:   store i32 987, ptr %[[INLINE_RETVAL]]
-// LLVM:   %[[INLINE_RET_LOAD:.+]] = load i32, ptr %[[INLINE_RETVAL]]
-// LLVM:   ret i32 %[[INLINE_RET_LOAD]]
-// LLVM: }
-
 // LLVM: define {{.*}} void @_Z4testv()
-// LLVM:   %[[X_ALLOCA:.+]] = alloca i32, i64 1
-// LLVM:   %[[I_ALLOCA:.+]] = alloca {{.*}}, i64 1
-// LLVM:   %[[O_ALLOCA:.+]] = alloca {{.*}}, i64 1
+// LLVM:   %[[X_ALLOCA:.+]] = alloca i32, 
+// LLVM:   %[[I_ALLOCA:.+]] = alloca {{.*}}, 
+// LLVM:   %[[O_ALLOCA:.+]] = alloca {{.*}}, 
 // LLVM:   store i32 42, ptr %[[X_ALLOCA]]
 // LLVM:   %[[INLINE_CALL:.+]] = call noundef i32 @_ZNK15inline_operatorcviEv(ptr {{.*}} %[[I_ALLOCA]])
 // LLVM:   store i32 %[[INLINE_CALL]], ptr %[[X_ALLOCA]]
 // LLVM:   %[[OUTLINE_CALL:.+]] = call noundef i32 @_ZN20out_of_line_operatorcviEv(ptr {{.*}} %[[O_ALLOCA]])
 // LLVM:   store i32 %[[OUTLINE_CALL]], ptr %[[X_ALLOCA]]
 // LLVM:   ret void
+// LLVM: }
+
+// LLVM: define linkonce_odr noundef i32 @_ZNK15inline_operatorcviEv(ptr {{.*}} %[[INLINE_PARAM0:.+]])
+// LLVM:   %[[INLINE_THIS_ALLOCA:.+]] = alloca ptr, 
+// LLVM:   %[[INLINE_RETVAL:.+]] = alloca i32, 
+// LLVM:   store ptr %[[INLINE_PARAM0]], ptr %[[INLINE_THIS_ALLOCA]]
+// LLVM:   %[[INLINE_THIS_LOAD:.+]] = load ptr, ptr %[[INLINE_THIS_ALLOCA]]
+// LLVM:   store i32 987, ptr %[[INLINE_RETVAL]]
+// LLVM:   %[[INLINE_RET_LOAD:.+]] = load i32, ptr %[[INLINE_RETVAL]]
+// LLVM:   ret i32 %[[INLINE_RET_LOAD]]
 // LLVM: }
 
 // OGCG: define dso_local noundef i32 @_ZN20out_of_line_operatorcviEv(ptr {{.*}} %[[THIS_PARAM:.+]])

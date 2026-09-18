@@ -105,20 +105,34 @@ T tmain(T argc, T *argv) {
   const T clen = 5;
 // CHECK: T clen = 5;
 #pragma omp threadprivate(g)
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp target parallel for simd schedule(dynamic) default(none) linear(a) allocate(a)
-  // CHECK: #pragma omp target parallel for simd schedule(dynamic) default(none) linear(a) allocate(a)
+#else
+#pragma omp target parallel for simd schedule(dynamic) default(none) linear(a)
+#endif
+  // OMP45: #pragma omp target parallel for simd schedule(dynamic) default(none) linear(a)
+  // OMP50: #pragma omp target parallel for simd schedule(dynamic) default(none) linear(a) allocate(a)
+  // OMP51: #pragma omp target parallel for simd schedule(dynamic) default(none) linear(a) allocate(a)
+  // OMP52: #pragma omp target parallel for simd schedule(dynamic) default(none) linear(a) allocate(a)
   for (T i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (T i = 0; i < 2; ++i)
 // CHECK-NEXT: a = 2;
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp target parallel for simd allocate(d) private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h)
+#else
+#pragma omp target parallel for simd private(argc, b), firstprivate(c, d), lastprivate(d, f) collapse(N) schedule(static, N) ordered if (parallel :argc) num_threads(N) default(shared) shared(e) reduction(+ : h)
+#endif
   for (int i = 0; i < 2; ++i)
     for (int j = 0; j < 2; ++j)
       for (int j = 0; j < 2; ++j)
         for (int j = 0; j < 2; ++j)
           for (int j = 0; j < 2; ++j)
             foo();
-  // CHECK-NEXT: #pragma omp target parallel for simd allocate(d) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
+  // OMP45-NEXT: #pragma omp target parallel for simd private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
+  // OMP50-NEXT: #pragma omp target parallel for simd allocate(d) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
+  // OMP51-NEXT: #pragma omp target parallel for simd allocate(d) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
+  // OMP52-NEXT: #pragma omp target parallel for simd allocate(d) private(argc,b) firstprivate(c,d) lastprivate(d,f) collapse(N) schedule(static, N) ordered if(parallel: argc) num_threads(N) default(shared) shared(e) reduction(+: h)
   // CHECK-NEXT: for (int i = 0; i < 2; ++i)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)
   // CHECK-NEXT: for (int j = 0; j < 2; ++j)

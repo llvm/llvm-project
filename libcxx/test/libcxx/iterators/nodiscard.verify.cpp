@@ -22,8 +22,8 @@
 void test() {
   int cArr[] = {94, 82, 49};
   std::vector<int> cont;
-  const std::vector<int> cCont;
 #if TEST_STD_VER >= 11
+  const std::vector<int> cCont;
   std::initializer_list<int> il;
 #endif
 #if !defined(TEST_HAS_NO_LOCALIZATION)

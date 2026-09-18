@@ -33,7 +33,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   static const LangASMap AMDGPUAddrSpaceMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
-  unsigned GPUFeatures;
   unsigned WavefrontSize;
 
   /// Whether to use cumode or WGP mode. True for cumode. False for WGP mode.
@@ -55,7 +54,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   /// Has fast fma f32
   bool hasFastFMAF() const {
     return getTriple().isAMDGCN() &&
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
+           llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+               llvm::AMDGPU::FEAT_FAST_FMAF);
   }
 
   /// Has fast fma f64
@@ -63,12 +63,14 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   bool hasFMAF() const {
     return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::R600_FEATURE_FMA);
+           llvm::AMDGPU::getFeatureBitsetR600(GPUKind).test(
+               llvm::AMDGPU::R600_FEAT_FMAF);
   }
 
   bool hasFullRateDenormalsF32() const {
     return getTriple().isAMDGCN() &&
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+           llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+               llvm::AMDGPU::FEAT_FAST_DENORMAL_F32);
   }
 
   bool hasLDEXPF() const { return getTriple().isAMDGCN(); }
@@ -267,8 +269,11 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    if (getTriple().isAMDGCN())
-      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(), Name);
+    if (getTriple().isAMDGCN()) {
+      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
+                                                Name) &&
+             !llvm::AMDGPU::isPseudoTarget(Name);
+    }
     return llvm::AMDGPU::parseArchR600(Name) != llvm::AMDGPU::GK_NONE;
   }
 
@@ -277,13 +282,11 @@ public:
   bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
-      GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
-      // Reject a CPU whose subarch is incompatible with the triple's subarch.
       return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
-                                                GPUKind);
+                                                GPUKind) &&
+             !llvm::AMDGPU::isPseudoTarget(GPUKind);
     }
     GPUKind = llvm::AMDGPU::parseArchR600(Name);
-    GPUFeatures = llvm::AMDGPU::getArchAttrR600(GPUKind);
     return GPUKind != llvm::AMDGPU::GK_NONE;
   }
 

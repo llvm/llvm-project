@@ -1,7 +1,8 @@
-// Check various edge cases for truncf/extf ops involving f32 and f4e2m1 types.
+// Check various edge cases for truncf/extf ops involving f32 and the f4E2M1FN,
+// f8E4M3FN and f8E5M2 types.
 
 // RUN: mlir-opt %s --convert-func-to-llvm \
-// RUN:             --arith-expand="include-f4e2m1=true" \
+// RUN:             --arith-expand="include-f4e2m1=true include-f8e4m3fn=true include-f8e5m2=true" \
 // RUN:             --convert-arith-to-llvm --convert-vector-to-llvm \
 // RUN:             --reconcile-unrealized-casts | \
 // RUN:   mlir-runner -e entry --entry-point-result=void \
@@ -20,6 +21,39 @@ func.func @check_truncf(%in : f32) -> () {
   %trunc = arith.truncf %in : f32 to f4E2M1FN
   %bitcast = arith.bitcast %trunc : f4E2M1FN to i4
   %res = arith.extui %bitcast : i4 to i64
+  vector.print %res : i64
+  return
+}
+
+func.func @check_extf_f8E4M3FN(%in : f8E4M3FN) -> () {
+  %res = arith.extf %in : f8E4M3FN to f32
+  vector.print %res : f32
+  return
+}
+
+// F8E4M3FN has no infinity; the maximum representable magnitude is 448 and
+// 0x7f/0xff are the only NaN encodings, so overflow (and infinity/NaN inputs)
+// map to NaN rather than saturating.
+func.func @check_truncf_f8E4M3FN(%in : f32) -> () {
+  %trunc = arith.truncf %in : f32 to f8E4M3FN
+  %bitcast = arith.bitcast %trunc : f8E4M3FN to i8
+  %res = arith.extui %bitcast : i8 to i64
+  vector.print %res : i64
+  return
+}
+
+func.func @check_extf_f8E5M2(%in : f8E5M2) -> () {
+  %res = arith.extf %in : f8E5M2 to f32
+  vector.print %res : f32
+  return
+}
+
+// F8E5M2 is IEEE-like with infinities (0x7c/0xfc) and NaNs, so an overflowing
+// magnitude rounds to infinity rather than saturating or becoming NaN.
+func.func @check_truncf_f8E5M2(%in : f32) -> () {
+  %trunc = arith.truncf %in : f32 to f8E5M2
+  %bitcast = arith.bitcast %trunc : f8E5M2 to i8
+  %res = arith.extui %bitcast : i8 to i64
   vector.print %res : i64
   return
 }
@@ -136,5 +170,153 @@ func.func @entry() {
   // CHECK: -3
   %mustRoundF4 = arith.truncf %mustRound : f32 to f4E2M1FN
   func.call @check_extf(%mustRoundF4) : (f4E2M1FN) -> ()
+
+  // F8E4M3FN checks. See the OCP FP8 (E4M3) spec for the representation.
+  %e4m3Round = arith.constant 1.1 : f32
+  %e4m3Max = arith.constant 448.0 : f32
+  %e4m3Tie = arith.constant 464.0 : f32
+  %e4m3Ovf = arith.constant 465.0 : f32
+  %e4m3Min = arith.constant -448.0 : f32
+  %qnan = arith.constant 0x7fc00000 : f32
+
+  // CHECK: 0
+  func.call @check_truncf_f8E4M3FN(%zero) : (f32) -> ()
+  // CHECK: 48
+  func.call @check_truncf_f8E4M3FN(%half) : (f32) -> ()
+  // CHECK: 56
+  func.call @check_truncf_f8E4M3FN(%one) : (f32) -> ()
+  // CHECK: 60
+  func.call @check_truncf_f8E4M3FN(%oneAndAHalf) : (f32) -> ()
+  // CHECK: 64
+  func.call @check_truncf_f8E4M3FN(%two) : (f32) -> ()
+  // CHECK: 68
+  func.call @check_truncf_f8E4M3FN(%three) : (f32) -> ()
+  // CHECK: 72
+  func.call @check_truncf_f8E4M3FN(%four) : (f32) -> ()
+  // CHECK: 57
+  func.call @check_truncf_f8E4M3FN(%e4m3Round) : (f32) -> ()
+  // CHECK: 126
+  func.call @check_truncf_f8E4M3FN(%e4m3Max) : (f32) -> ()
+  // A magnitude exactly halfway between the max (448) and the NaN slot rounds
+  // to even, i.e. to the finite max.
+  // CHECK: 126
+  func.call @check_truncf_f8E4M3FN(%e4m3Tie) : (f32) -> ()
+  // Just past the tie, the value overflows and maps to NaN (0x7f).
+  // CHECK: 127
+  func.call @check_truncf_f8E4M3FN(%e4m3Ovf) : (f32) -> ()
+  // CHECK: 127
+  func.call @check_truncf_f8E4M3FN(%higherThanMax) : (f32) -> ()
+  // CHECK: 176
+  func.call @check_truncf_f8E4M3FN(%minHalf) : (f32) -> ()
+  // CHECK: 184
+  func.call @check_truncf_f8E4M3FN(%minOne) : (f32) -> ()
+  // CHECK: 200
+  func.call @check_truncf_f8E4M3FN(%minFour) : (f32) -> ()
+  // CHECK: 254
+  func.call @check_truncf_f8E4M3FN(%e4m3Min) : (f32) -> ()
+  // CHECK: 127
+  func.call @check_truncf_f8E4M3FN(%lowerThanMin) : (f32) -> ()
+  // CHECK: 127
+  func.call @check_truncf_f8E4M3FN(%qnan) : (f32) -> ()
+
+  // CHECK: 0.5
+  %halfE4m3 = arith.truncf %half : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%halfE4m3) : (f8E4M3FN) -> ()
+  // CHECK: 1
+  %oneE4m3 = arith.truncf %one : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%oneE4m3) : (f8E4M3FN) -> ()
+  // CHECK: 1.5
+  %oneAndAHalfE4m3 = arith.truncf %oneAndAHalf : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%oneAndAHalfE4m3) : (f8E4M3FN) -> ()
+  // CHECK: 1.125
+  %roundE4m3 = arith.truncf %e4m3Round : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%roundE4m3) : (f8E4M3FN) -> ()
+  // CHECK: 448
+  %maxE4m3 = arith.truncf %e4m3Max : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%maxE4m3) : (f8E4M3FN) -> ()
+  // CHECK: 448
+  %tieE4m3 = arith.truncf %e4m3Tie : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%tieE4m3) : (f8E4M3FN) -> ()
+  // CHECK: nan
+  %ovfE4m3 = arith.truncf %e4m3Ovf : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%ovfE4m3) : (f8E4M3FN) -> ()
+  // CHECK: nan
+  %higherE4m3 = arith.truncf %higherThanMax : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%higherE4m3) : (f8E4M3FN) -> ()
+  // CHECK: -4
+  %minFourE4m3 = arith.truncf %minFour : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%minFourE4m3) : (f8E4M3FN) -> ()
+  // CHECK: nan
+  %lowerE4m3 = arith.truncf %lowerThanMin : f32 to f8E4M3FN
+  func.call @check_extf_f8E4M3FN(%lowerE4m3) : (f8E4M3FN) -> ()
+
+  // F8E5M2 checks. See the OCP FP8 (E5M2) spec for the representation.
+  %e5m2Round = arith.constant 1.2 : f32
+  %e5m2Max = arith.constant 57344.0 : f32
+  %e5m2Min = arith.constant -57344.0 : f32
+  %inf = arith.constant 0x7f800000 : f32
+
+  // CHECK: 0
+  func.call @check_truncf_f8E5M2(%zero) : (f32) -> ()
+  // CHECK: 56
+  func.call @check_truncf_f8E5M2(%half) : (f32) -> ()
+  // CHECK: 60
+  func.call @check_truncf_f8E5M2(%one) : (f32) -> ()
+  // CHECK: 61
+  func.call @check_truncf_f8E5M2(%e5m2Round) : (f32) -> ()
+  // CHECK: 62
+  func.call @check_truncf_f8E5M2(%oneAndAHalf) : (f32) -> ()
+  // CHECK: 64
+  func.call @check_truncf_f8E5M2(%two) : (f32) -> ()
+  // CHECK: 68
+  func.call @check_truncf_f8E5M2(%four) : (f32) -> ()
+  // CHECK: 123
+  func.call @check_truncf_f8E5M2(%e5m2Max) : (f32) -> ()
+  // Overflow rounds to positive infinity (0x7c) since F8E5M2 has infinities.
+  // CHECK: 124
+  func.call @check_truncf_f8E5M2(%higherThanMax) : (f32) -> ()
+  // CHECK: 184
+  func.call @check_truncf_f8E5M2(%minHalf) : (f32) -> ()
+  // CHECK: 188
+  func.call @check_truncf_f8E5M2(%minOne) : (f32) -> ()
+  // CHECK: 196
+  func.call @check_truncf_f8E5M2(%minFour) : (f32) -> ()
+  // CHECK: 251
+  func.call @check_truncf_f8E5M2(%e5m2Min) : (f32) -> ()
+  // Negative overflow rounds to negative infinity (0xfc).
+  // CHECK: 252
+  func.call @check_truncf_f8E5M2(%lowerThanMin) : (f32) -> ()
+  // CHECK: 124
+  func.call @check_truncf_f8E5M2(%inf) : (f32) -> ()
+  // CHECK: 126
+  func.call @check_truncf_f8E5M2(%qnan) : (f32) -> ()
+
+  // CHECK: 0.5
+  %halfE5m2 = arith.truncf %half : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%halfE5m2) : (f8E5M2) -> ()
+  // CHECK: 1
+  %oneE5m2 = arith.truncf %one : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%oneE5m2) : (f8E5M2) -> ()
+  // CHECK: 1.25
+  %roundE5m2 = arith.truncf %e5m2Round : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%roundE5m2) : (f8E5M2) -> ()
+  // CHECK: 1.5
+  %oneAndAHalfE5m2 = arith.truncf %oneAndAHalf : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%oneAndAHalfE5m2) : (f8E5M2) -> ()
+  // CHECK: 2
+  %twoE5m2 = arith.truncf %two : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%twoE5m2) : (f8E5M2) -> ()
+  // CHECK: 57344
+  %maxE5m2 = arith.truncf %e5m2Max : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%maxE5m2) : (f8E5M2) -> ()
+  // CHECK: inf
+  %higherE5m2 = arith.truncf %higherThanMax : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%higherE5m2) : (f8E5M2) -> ()
+  // CHECK: -4
+  %minFourE5m2 = arith.truncf %minFour : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%minFourE5m2) : (f8E5M2) -> ()
+  // CHECK: -inf
+  %lowerE5m2 = arith.truncf %lowerThanMin : f32 to f8E5M2
+  func.call @check_extf_f8E5M2(%lowerE5m2) : (f8E5M2) -> ()
   return
 }

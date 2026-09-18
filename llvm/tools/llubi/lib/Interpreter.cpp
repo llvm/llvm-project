@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <limits>
+#include <list>
 
 namespace llvm::ubi {
 
@@ -1518,7 +1519,9 @@ public:
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_fmaximum:
-    case Intrinsic::vector_reduce_fminimum: {
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum: {
       const auto DenormMode = getCurrentDenormalMode(RetTy);
       const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
                             IID == Intrinsic::vector_reduce_fmul;
@@ -1558,6 +1561,12 @@ public:
           break;
         case Intrinsic::vector_reduce_fminimum:
           *Res = minimum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fmaximumnum:
+          *Res = maximumnum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fminimumnum:
+          *Res = minimumnum(*Res, Op);
           break;
         default:
           llvm_unreachable("Unexpected intrinsic ID");
@@ -1747,10 +1756,12 @@ public:
       if (!isUIntN(RetBW, Vec.size()))
         return AnyValue::poison();
 
-      uint64_t Count = 0;
-      for (const AnyValue &V : Vec) {
+      for (const AnyValue &V : Vec)
         if (V.isPoison())
           return AnyValue::poison();
+
+      uint64_t Count = 0;
+      for (const AnyValue &V : Vec) {
         if (!V.asInteger().isZero())
           break;
         ++Count;
@@ -1895,10 +1906,9 @@ public:
 
   AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
                        ArrayRef<AnyValue> CalleeArgs) {
-    LibFunc LF;
+    LibFunc LF = CurrentFrame->TLI.getLibFunc(*ResolvedCallee);
     // Respect nobuiltin attributes on call site.
-    if (CB.isNoBuiltin() ||
-        !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+    if (CB.isNoBuiltin() || LF == NotLibFunc) {
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
       return AnyValue();
@@ -2466,6 +2476,7 @@ public:
   void visitIntToFPInst(Instruction &I, bool IsSigned) {
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
@@ -2481,7 +2492,8 @@ public:
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
                            Ctx.getCurrentRoundingMode());
 
-      return AnyValue(Res);
+      // We need IsInput=true here because the nsz flag applies to the output.
+      return handleFMFFlags(Res, FMF, /*IsInput=*/true);
     });
   }
 
@@ -2626,7 +2638,7 @@ public:
   }
 
   void visitAllocaInst(AllocaInst &AI) {
-    uint64_t AllocSize = Ctx.getEffectiveTypeAllocSize(AI.getAllocatedType());
+    uint64_t AllocSize = Ctx.getEffectiveTypeSize(AI.getAllocationBaseSize(DL));
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {
@@ -2674,11 +2686,12 @@ public:
   }
 
   void visitPtrToInt(PtrToIntInst &I) {
-    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [this, BitWidth](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
       Ctx.exposeProvenance(V.asPointer().provenance());
-      return V.asPointer().address();
+      return V.asPointer().address().zextOrTrunc(BitWidth);
     });
   }
 

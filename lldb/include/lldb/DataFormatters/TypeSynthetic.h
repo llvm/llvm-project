@@ -53,7 +53,7 @@ public:
   /// subscripting behavior - for example a sparse array, disable automatic
   /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   /// This function is assumed to always succeed and if it fails, the front-end
@@ -121,7 +121,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   lldb::ChildCacheState Update() override {
@@ -477,8 +477,7 @@ public:
 
   private:
     std::string m_python_class;
-    StructuredData::ObjectSP m_wrapper_sp;
-    ScriptInterpreter *m_interpreter;
+    lldb::ScriptedSyntheticChildrenInterfaceSP m_interface_sp;
 
     FrontEnd(const FrontEnd &) = delete;
     const FrontEnd &operator=(const FrontEnd &) = delete;

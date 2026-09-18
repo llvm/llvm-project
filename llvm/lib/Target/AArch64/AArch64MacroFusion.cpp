@@ -150,21 +150,24 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-// True unless the pair provably writes different physical registers. Pre-RA
-// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
-// reg).
+// True unless the pair provably writes non overlapping physical registers.
+// Pre-RA the dests are still virtual, and post-RA it requires a genuine WAW,
+// that is overlapping dest regs. Overlapping includes sub and super register
+// relations, e.g. W0 and X0, which matches the register unit based dependency
+// model of the scheduling DAG.
 static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
-                                 const MachineInstr &SecondMI) {
+                                 const MachineInstr &SecondMI,
+                                 const TargetRegisterInfo *TRI) {
   Register DestFirst = FirstMI.getOperand(0).getReg();
   Register DestSecond = SecondMI.getOperand(0).getReg();
   if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
     return true;
-  return DestFirst == DestSecond;
+  return TRI->regsOverlap(DestFirst, DestSecond);
 }
 
 /// AES crypto encoding or decoding.
-static bool isAESPair(const MachineInstr *FirstMI,
-                      const MachineInstr &SecondMI) {
+static bool isAESPair(const MachineInstr *FirstMI, const MachineInstr &SecondMI,
+                      const TargetRegisterInfo *TRI) {
   // Assume the 1st instr to be a wildcard if it is unspecified.
   unsigned SecondOpcode = SecondMI.getOpcode();
   switch (SecondOpcode) {
@@ -176,7 +179,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESErr)
       return false;
     return SecondOpcode == AArch64::AESMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI);
+           mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
@@ -185,7 +188,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESDrr)
       return false;
     return SecondOpcode == AArch64::AESIMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI);
+           mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
   }
 
   return false;
@@ -220,33 +223,6 @@ static bool isAdrpAddPair(const MachineInstr *FirstMI,
   if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::ADRP) &&
       SecondMI.getOpcode() == AArch64::ADDXri)
     return true;
-  return false;
-}
-
-/// Literal generation.
-static bool isLiteralsPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
-  // Assume the 1st instr to be a wildcard if it is unspecified.
-  // 32 bit immediate.
-  if ((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZWi) &&
-      (SecondMI.getOpcode() == AArch64::MOVKWi &&
-       SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Lower half of 64 bit immediate.
-  if((FirstMI == nullptr || FirstMI->getOpcode() == AArch64::MOVZXi) &&
-     (SecondMI.getOpcode() == AArch64::MOVKXi &&
-      SecondMI.getOperand(3).getImm() == 16))
-    return true;
-
-  // Upper half of 64 bit immediate.
-  if ((FirstMI == nullptr ||
-       (FirstMI->getOpcode() == AArch64::MOVKXi &&
-        FirstMI->getOperand(3).getImm() == 32)) &&
-      (SecondMI.getOpcode() == AArch64::MOVKXi &&
-       SecondMI.getOperand(3).getImm() == 48))
-    return true;
-
   return false;
 }
 
@@ -652,7 +628,8 @@ static bool isFMinFMax(unsigned Opcode) {
 
 // FMIN + FMAX.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
-                           const MachineInstr &SecondMI) {
+                           const MachineInstr &SecondMI,
+                           const TargetRegisterInfo *TRI) {
   if (!isFMinFMax(SecondMI.getOpcode()))
     return false;
 
@@ -663,7 +640,7 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
   if (!isFMinFMax(FirstMI->getOpcode()))
     return false;
 
-  return mayHaveWAWDependency(*FirstMI, SecondMI);
+  return mayHaveWAWDependency(*FirstMI, SecondMI, TRI);
 }
 
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
@@ -672,11 +649,25 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep) {
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
+  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
   // All checking functions assume that the 1st instr is a wildcard if it is
   // unspecified.
+
+  // FuseAppleSMECompute does not require a specific dependency kind
+  if (ST.hasFuseAppleSMECompute() &&
+      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
+    ++NumFusedAppleSMECompute;
+    return true;
+  }
+
+  // All the other fusions require RAW dependency
+  if (isNonDataDep(Dep))
+    return false;
+
   if (ST.hasCmpBccFusion() || ST.hasArithmeticBccFusion()) {
     bool CmpOnly = !ST.hasArithmeticBccFusion();
     if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly)) {
@@ -688,7 +679,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedArithmeticCbz;
     return true;
   }
-  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI)) {
+  if (ST.hasFuseAES() && isAESPair(FirstMI, SecondMI, TRI)) {
     ++NumFusedAES;
     return true;
   }
@@ -700,7 +691,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAdrpAdd;
     return true;
   }
-  if (ST.hasFuseLiterals() && isLiteralsPair(FirstMI, SecondMI)) {
+  if (ST.hasFuseLiterals() && ST.fusesMOVImmPair(FirstMI, SecondMI)) {
     ++NumFusedLiterals;
     return true;
   }
@@ -729,13 +720,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
     ++NumFusedAddSub2RegAndConstOne;
     return true;
   }
-  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
-  if (ST.hasFuseAppleSMECompute() &&
-      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
-    ++NumFusedAppleSMECompute;
-    return true;
-  }
-  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI)) {
+  if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI, TRI)) {
     ++NumFusedFMinFMax;
     return true;
   }

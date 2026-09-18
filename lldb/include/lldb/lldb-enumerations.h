@@ -152,6 +152,17 @@ enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 /// Execution directions
 enum RunDirection { eRunForward, eRunReverse };
 
+// Thread Step Types
+enum StepType {
+  eStepTypeNone = 0,
+  eStepTypeTrace,     ///< Single step one instruction.
+  eStepTypeTraceOver, ///< Single step one instruction, stepping over.
+  eStepTypeInto,      ///< Single step into a specified context.
+  eStepTypeOver,      ///< Single step over a specified context.
+  eStepTypeOut,       ///< Single step out a specified context.
+  eStepTypeScripted   ///< A step type implemented by the script interpreter.
+};
+
 /// Byte ordering definitions.
 enum ByteOrder {
   eByteOrderInvalid = 0,
@@ -270,7 +281,9 @@ enum ScriptedExtension {
   eScriptedExtensionScriptedStackFrameRecognizer,
   eScriptedExtensionScriptedCommand,
   eScriptedExtensionParsedCommand,
-  kLastScriptedExtension = eScriptedExtensionParsedCommand
+  eScriptedExtensionScriptedStringSummary,
+  eScriptedExtensionScriptedSyntheticChildren,
+  kLastScriptedExtension = eScriptedExtensionScriptedSyntheticChildren
 };
 
 /// Register numbering types.
@@ -659,6 +672,7 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = 0x0002,
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
+  /// DEPRECATED:  use eInstrumentationRuntimeTypeAddressSanitizer.
   eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
   eInstrumentationRuntimeTypeBoundsSafety = 0x0006,
   eNumInstrumentationRuntimeTypes
@@ -925,6 +939,7 @@ enum SectionType {
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
   eSectionTypeWasmName,
+  eSectionTypeWasmGlobal,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){

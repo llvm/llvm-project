@@ -39,6 +39,14 @@ def OL_APIEXPORT : Macro {
   let alt_value = "";
 }
 
+def OL_NODISCARD : Macro {
+  let desc = "Marks a function whose result should not be discarded";
+  let condition = "(defined(__cplusplus) && __cplusplus >= 201703L) || "
+                  "(defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)";
+  let value = "[[nodiscard]]";
+  let alt_value = "";
+}
+
 def ol_platform_handle_t : Handle {
   let desc = "Handle of a platform instance";
 }
@@ -69,6 +77,7 @@ def ol_symbol_handle_t : Handle {
 
 def ol_errc_t : Enum {
   let desc = "Defines Return/Error codes";
+  let nodiscard = 1;
   let etors =[
     Etor<"SUCCESS", "success">,
 

@@ -87,13 +87,13 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
 // CHECK-PREDICATOR-EMPTY:
-// CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestPostRAOnlyFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestPreRAOnlyFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
+// CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestPostRAOnlyFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestPreRAOnlyFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
+// CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &, const SDep *);
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  } // namespace llvm
 // CHECK-PREDICATOR-EMPTY:
@@ -111,16 +111,18 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = FirstMI;
-// CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
+// CHECK-PREDICATOR-NEXT:      if (!(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
-// CHECK-PREDICATOR-NEXT:      if (MI->getOperand(0).getReg() != Test::X0)
+// CHECK-PREDICATOR-NEXT:      if (!(MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    if (SecondMI.getMF()->getProperties().hasNoVRegs())
@@ -135,13 +137,15 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
 // CHECK-PREDICATOR-NEXT:          ( MI->getOpcode() == Test::Inst1 )
-// CHECK-PREDICATOR-NEXT:          && MI->getOperand(0).getReg() == Test::X0
+// CHECK-PREDICATOR-NEXT:          && (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0)
 // CHECK-PREDICATOR-NEXT:        ))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
@@ -189,7 +193,9 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    if (!FirstMI->getOperand(0).getReg().isVirtual()) {
 // CHECK-PREDICATOR-NEXT:      if (FirstMI->getOperand(0).getReg() != FirstMI->getOperand(1).getReg()) {
@@ -213,13 +219,15 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
 // CHECK-PREDICATOR-NEXT:          ( MI->getOpcode() == Test::Inst1 )
-// CHECK-PREDICATOR-NEXT:          && MI->getOperand(0).getReg() == Test::X0
+// CHECK-PREDICATOR-NEXT:          && (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0)
 // CHECK-PREDICATOR-NEXT:        ))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
@@ -254,7 +262,9 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    if (!SecondMI.getMF()->getProperties().hasNoVRegs())
 // CHECK-PREDICATOR-NEXT:      return false;
@@ -291,7 +301,9 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    if (SecondMI.getMF()->getProperties().hasNoVRegs())
 // CHECK-PREDICATOR-NEXT:      return false;
@@ -329,13 +341,15 @@ def TestPostRAOnlyFusion: SimpleFusion<"test-postra-only", "HasTestPostRAOnlyFus
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
-// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI, const SDep *Dep) {
+// CHECK-PREDICATOR-NEXT:    if (isNonDataDep(Dep))
+// CHECK-PREDICATOR-NEXT:      return false;
 // CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} const MachineInstr *MI = &SecondMI;
 // CHECK-PREDICATOR-NEXT:      if (!(
 // CHECK-PREDICATOR-NEXT:          ( MI->getOpcode() == Test::Inst2 )
-// CHECK-PREDICATOR-NEXT:          && MI->getOperand(0).getReg() == Test::X0
+// CHECK-PREDICATOR-NEXT:          && (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == Test::X0)
 // CHECK-PREDICATOR-NEXT:        ))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }

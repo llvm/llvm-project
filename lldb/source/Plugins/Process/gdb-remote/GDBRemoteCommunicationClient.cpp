@@ -15,6 +15,7 @@
 #include <optional>
 #include <sstream>
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/SafeMachO.h"
@@ -42,6 +43,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TargetParser/Triple.h"
 
 #if HAVE_LIBCOMPRESSION
 #include <compression.h>
@@ -231,6 +233,12 @@ bool GDBRemoteCommunicationClient::GetAcceleratorPluginsSupported() {
   return m_supports_accelerator_plugins == eLazyBoolYes;
 }
 
+bool GDBRemoteCommunicationClient::GetWasmInstanceSupported() {
+  if (m_supports_wasm_instance == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_wasm_instance == eLazyBoolYes;
+}
+
 llvm::Expected<std::vector<AcceleratorActions>>
 GDBRemoteCommunicationClient::GetAcceleratorInitializeActions() {
   // Get the initial actions (e.g. breakpoints to set) requested by any
@@ -384,6 +392,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_attach_or_wait_reply = eLazyBoolCalculate;
     m_avoid_g_packets = eLazyBoolCalculate;
     m_supports_multiprocess = eLazyBoolCalculate;
+    m_supports_address_spaces = false;
     m_supports_qSaveCore = eLazyBoolCalculate;
     m_supports_qXfer_auxv_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_read = eLazyBoolCalculate;
@@ -429,6 +438,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_supports_jModulesInfo = true;
     m_supports_multi_mem_read = eLazyBoolCalculate;
     m_supports_multi_breakpoint = eLazyBoolCalculate;
+    m_supports_wasm_instance = eLazyBoolCalculate;
   }
 
   // These flags should be reset when we first connect to a GDB server and when
@@ -451,6 +461,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_QPassSignals = eLazyBoolNo;
   m_supports_memory_tagging = eLazyBoolNo;
   m_supports_qSaveCore = eLazyBoolNo;
+  m_supports_address_spaces = false;
   m_uses_native_signals = eLazyBoolNo;
   m_x_packet_state.reset();
   m_supports_reverse_continue = eLazyBoolNo;
@@ -458,6 +469,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_multi_mem_read = eLazyBoolNo;
   m_supports_multi_breakpoint = eLazyBoolNo;
   m_supports_accelerator_plugins = eLazyBoolNo;
+  m_supports_wasm_instance = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -511,6 +523,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_memory_tagging = eLazyBoolYes;
       else if (x == "qSaveCore+")
         m_supports_qSaveCore = eLazyBoolYes;
+      else if (x == "address-spaces+")
+        m_supports_address_spaces = true;
       else if (x == "native-signals+")
         m_uses_native_signals = eLazyBoolYes;
       else if (x == "binary-upload+")
@@ -525,6 +539,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_multi_breakpoint = eLazyBoolYes;
       else if (x == "accelerator-plugins+")
         m_supports_accelerator_plugins = eLazyBoolYes;
+      else if (x == "qWasmInstance+")
+        m_supports_wasm_instance = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -1158,6 +1174,34 @@ GDBRemoteCommunicationClient::GetProcessStandaloneBinaries() {
   if (m_qProcessInfo_is_valid == eLazyBoolCalculate)
     GetCurrentProcessInfo();
   return m_binary_addresses;
+}
+
+std::vector<AddressSpaceInfo> GDBRemoteCommunicationClient::GetAddressSpaces() {
+  if (!m_supports_address_spaces)
+    return {};
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse("jAddressSpacesInfo", response) !=
+      PacketResult::Success)
+    return {};
+
+  if (response.IsUnsupportedResponse() || response.IsErrorResponse()) {
+    m_supports_address_spaces = false;
+    return {};
+  }
+
+  llvm::Expected<std::vector<AddressSpaceInfo>> info =
+      llvm::json::parse<std::vector<AddressSpaceInfo>>(response.Peek(),
+                                                       "AddressSpaceInfo");
+  if (info)
+    return std::move(*info);
+
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOG_ERROR(log, info.takeError(),
+                 "malformed jAddressSpacesInfo response '{1}': {0}",
+                 response.GetStringRef());
+  return {};
 }
 
 bool GDBRemoteCommunicationClient::GetGDBServerVersion() {
@@ -4279,6 +4323,19 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                   case eSymbolTypeCompiler:
                   case eSymbolTypeInstrumentation:
                   case eSymbolTypeTrampoline:
+                    if (sc.module_sp->GetArchitecture()
+                            .GetTriple()
+                            .getObjectFormat() !=
+                        llvm::Triple::ObjectFormatType::MachO) {
+                      // GDB does return symbols even when they are of unknown
+                      // type, following this behavior on non Mach-O
+                      // architectures.
+                      symbol_load_addr =
+                          sc.symbol->GetLoadAddress(&process->GetTarget());
+                      if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
+                        symbol_load_addr = sc.symbol->GetRawValue();
+                      }
+                    }
                     break;
 
                   case eSymbolTypeCode:
