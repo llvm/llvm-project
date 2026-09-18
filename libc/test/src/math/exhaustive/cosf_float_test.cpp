@@ -17,7 +17,7 @@ float cosf_fast(float x) {
       /*IS_SIN*/ false>(x);
 }
 
-using LlvmLibcCosfExhaustiveTest =
+using LlvmLibcCosfFloatExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Cos, cosf_fast,
                                       3>;
 
@@ -25,7 +25,7 @@ using LlvmLibcCosfExhaustiveTest =
 static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-TEST_F(LlvmLibcCosfExhaustiveTest, PostiveRange) {
+TEST_F(LlvmLibcCosfFloatExhaustiveTest, PostiveRange) {
   std::cout << "-- Testing for FE_TONEAREST in range [0x" << std::hex
             << POS_START << ", 0x" << POS_STOP << ") --" << std::dec
             << std::endl;
@@ -36,7 +36,7 @@ TEST_F(LlvmLibcCosfExhaustiveTest, PostiveRange) {
 static constexpr uint32_t NEG_START = 0x8000'0000U;
 static constexpr uint32_t NEG_STOP = 0xff80'0000U;
 
-TEST_F(LlvmLibcCosfExhaustiveTest, NegativeRange) {
+TEST_F(LlvmLibcCosfFloatExhaustiveTest, NegativeRange) {
   std::cout << "-- Testing for FE_TONEAREST in range [0x" << std::hex
             << NEG_START << ", 0x" << NEG_STOP << ") --" << std::dec
             << std::endl;

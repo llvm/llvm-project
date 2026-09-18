@@ -10,4 +10,4 @@
 
 #include "src/math/getpayloadf16.h"
 
-LIST_GETPAYLOAD_TESTS(float16, LIBC_NAMESPACE::getpayloadf16)
+LIST_GETPAYLOAD_TESTS(Getpayloadf16, float16, LIBC_NAMESPACE::getpayloadf16)
