@@ -30,14 +30,10 @@ class WatchpointConditionAPITestCase(TestBase):
         """Test watchpoint condition API."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
-        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line, exe_name=self.exe_name
         )
 
-        # We should be stopped due to the breakpoint.  Get frame #0.
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         # Watch 'global' for write.

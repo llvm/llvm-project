@@ -43,7 +43,7 @@ class CppValueCastTestCase(TestBase):
 
     def do_sbvalue_cast(self, exe_name):
         """Test SBValue::Cast(SBType) API for C++ types."""
-        target, process, _, breakpoint = lldbutil.run_to_line_breakpoint(
+        target, process, thread, breakpoint = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line, exe_name=exe_name
         )
 
@@ -57,9 +57,6 @@ class CppValueCastTestCase(TestBase):
         error = lldb.SBError()
 
         # First stop is for DerivedA instance.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(threads), 1)
-        thread = threads[0]
         frame0 = thread.GetFrameAtIndex(0)
 
         tellerA = frame0.FindVariable("teller", lldb.eNoDynamicValues)

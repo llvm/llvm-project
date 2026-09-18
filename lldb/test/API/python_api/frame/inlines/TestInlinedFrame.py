@@ -24,12 +24,9 @@ class InlinedFrameAPITestCase(TestBase):
     def test_stop_at_outer_inline(self):
         """Exercise SBFrame.IsInlined() and SBFrame.GetFunctionName()."""
         self.build()
-        target, process, _, _ = lldbutil.run_to_name_breakpoint(
+        _, process, thread, _ = lldbutil.run_to_name_breakpoint(
             self, "inner_inline", bkpt_module="a.out"
         )
-
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         stack_traces1 = lldbutil.print_stacktraces(process, string_buffer=True)
         if self.TraceOn():
@@ -44,9 +41,6 @@ class InlinedFrameAPITestCase(TestBase):
         #
         #     outer_inline (argc);
         #
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
-
         frame0 = thread.GetFrameAtIndex(0)
         if frame0.IsInlined():
             filename = frame0.GetLineEntry().GetFileSpec().GetFilename()

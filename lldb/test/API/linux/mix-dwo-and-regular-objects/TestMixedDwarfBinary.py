@@ -15,11 +15,11 @@ class TestMixedDwarfBinary(TestBase):
         with/whithout -gsplit-dwarf correspondingly."""
 
         self.build()
-        _, self.process, _, _ = lldbutil.run_to_name_breakpoint(
+        _, _, thread, _ = lldbutil.run_to_name_breakpoint(
             self, "g", bkpt_module="a.out"
         )
 
-        frame = self.process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         x = frame.FindVariable("x")
         self.assertTrue(x.IsValid(), "x is not valid")
         y = frame.FindVariable("y")
