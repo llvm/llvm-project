@@ -21,7 +21,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint:latest@sha256:1b62569840b08f7c966a20effdba36845b9890dc5661a8ed6f271b0f003e398f'
+      image: 'ghcr.io/llvm/ci-ubuntu-26.04-lint:latest@sha256:f323567151f2e8983bbce3d4447d78a74623a475256651ac8c52fa43552a903d'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}

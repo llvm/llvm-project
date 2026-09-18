@@ -1153,7 +1153,9 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       Change |= Ty != OpTy;
     }
     if (Change) {
-      Type *NewTy = StructType::create(Tys, "", OrigStructTy->isPacked());
+      Type *NewTy = StructType::create(
+          Tys, OrigStructTy->isLiteral() ? "" : OrigStructTy->getName(),
+          OrigStructTy->isPacked());
       GR->addDeducedCompositeType(U, NewTy);
       return NewTy;
     }

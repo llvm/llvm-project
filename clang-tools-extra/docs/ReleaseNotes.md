@@ -176,6 +176,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
 
+- Fixed a crash in {doc}`bugprone-misplaced-pointer-arithmetic-in-alloc
+  <clang-tidy/checks/bugprone/misplaced-pointer-arithmetic-in-alloc>` when
+  pointer arithmetic is applied to a non-array `new` expression whose
+  constructor has no arguments.
+
 - Fixed a crash in {doc}`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
   the pointer points to an incomplete (forward-declared) type.
@@ -277,6 +282,16 @@ infrastructure are described first, followed by tool-specific sections.
   `std::nothrow_t`, iterator tags, lock tags, etc.) that are used
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
+
+- Improved {doc}`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check by fixing false
+  positives on pointers passed to atomic builtins, whose operands may be
+  written to, such as the `expected` parameter of
+  `atomic_compare_exchange_strong()`.
+
+- Improved {doc}`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
+  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
 
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
