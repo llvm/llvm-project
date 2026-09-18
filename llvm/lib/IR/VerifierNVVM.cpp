@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains NVPTX-specific IR verification logic. These checks are
+/// This file contains NVVM-specific IR verification logic. These checks are
 /// always compiled and linked as part of LLVMCore.
 ///
 //===----------------------------------------------------------------------===//
@@ -116,8 +116,8 @@ static void verifySPDecompress(VerifierSupport &VS, CallBase &Call) {
         "invalid llvm.nvvm.spdecompress layout", &Call);
 }
 
-void llvm::verifyNVPTXIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
-                                    CallBase &Call) {
+void llvm::verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
+                                   CallBase &Call) {
   switch (ID) {
   default:
     return;
