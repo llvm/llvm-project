@@ -86,7 +86,7 @@ public:
     }
 
     const FieldDecl *Field = nullptr;
-    const Stmt *OffendingStmt = nullptr;
+    const Stmt *OffendingInit = nullptr;
     bool IsCtor = false;
     bool IsDtor = false;
     if (auto *Ctor = dyn_cast<CXXConstructorDecl>(FD)) {
@@ -94,9 +94,9 @@ public:
       Field = TFA.fieldWithNonTrivialCtor(Ctor->getParent());
       if (!Field) {
         for (auto *CtorInit : Ctor->inits()) {
-          if (!TFA.isTrivial(CtorInit->getInit(), &OffendingStmt)) {
-            if (!OffendingStmt)
-              OffendingStmt = CtorInit->getInit();
+          auto *Init = CtorInit->getInit();
+          if (!TFA.isTrivial(Init)) {
+            OffendingInit = Init;
             break;
           }
         }
@@ -106,8 +106,7 @@ public:
       Field = TFA.fieldWithNonTrivialDtor(Dtor->getParent());
     }
 
-    if (!ParamDecl && !Field && !OffendingStmt &&
-        TFA.isTrivial(Body, &OffendingStmt))
+    if (!ParamDecl && !Field && !OffendingInit && TFA.isTrivial(Body))
       return;
 
     SmallString<100> Buf;
@@ -130,29 +129,74 @@ public:
       Os << "contains ";
     SourceLocation SrcLocToReport;
     SourceRange Range;
+    NonTrivialityReason Reason;
     if (ParamDecl) {
       Os << "a parameter ";
       printQuotedName(Os, ParamDecl);
       Os << " which could destruct an object.";
       SrcLocToReport = FD->getBeginLoc();
       Range = ParamDecl->getSourceRange();
-    } else if (Field) {
+    } else if (Field && !OffendingInit) {
       Os << "a member variable ";
       printQuotedName(Os, Field);
       Os << " that could destruct an object.";
       SrcLocToReport = FD->getBeginLoc();
       Range = Field->getSourceRange();
     } else {
+      Reason = TrivialFunctionAnalysis::computeReason(
+          OffendingInit ? OffendingInit : Body);
       Os << "code that could destruct an object.";
-      SrcLocToReport = OffendingStmt->getBeginLoc();
-      Range = OffendingStmt->getSourceRange();
+      const Stmt *Offender = Reason.OffendingStmt;
+      SrcLocToReport = Offender ? Offender->getBeginLoc() : FD->getBeginLoc();
+      Range = Offender ? Offender->getSourceRange() : FD->getSourceRange();
     }
 
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(Range);
     Report->setDeclWithIssue(FD);
+    addRootCauseNote(*Report, Reason);
     BR->emitReport(std::move(Report));
+  }
+
+  static const FunctionDecl *getDirectCallee(const Stmt *S) {
+    if (const auto *CE = dyn_cast_or_null<CallExpr>(S))
+      return CE->getDirectCallee();
+    if (const auto *CE = dyn_cast_or_null<CXXConstructExpr>(S))
+      return CE->getConstructor();
+    return nullptr;
+  }
+
+  // The offending statement is often just the nearest call to a function that
+  // is itself unsafe several levels down. Point at the function at the bottom
+  // of that chain, since that is where the fix belongs.
+  void addRootCauseNote(BasicBugReport &Report,
+                        const NonTrivialityReason &Reason) const {
+    const FunctionDecl *RootCause = Reason.RootCause;
+    // Implicit special members have nothing worth pointing at.
+    if (!RootCause || !RootCause->getLocation().isValid())
+      return;
+
+    // Nothing to add when the offending statement is the call to the root
+    // cause; the primary diagnostic already points right at it.
+    const FunctionDecl *Callee = getDirectCallee(Reason.OffendingStmt);
+    if (Callee && Callee->getCanonicalDecl() == RootCause->getCanonicalDecl())
+      return;
+
+    SmallString<100> Buf;
+    llvm::raw_svector_ostream Os(Buf);
+    printQuotedName(Os, RootCause);
+    if (RootCause->doesThisDeclarationHaveABody()) {
+      Os << " could destruct an object.";
+    } else {
+      Os << " has no visible definition here, so it is assumed to destruct an "
+            "object. Annotate it with "
+            "[[clang::annotate_type(\"webkit.nodelete\")]] if it does not.";
+    }
+
+    PathDiagnosticLocation Loc(RootCause->getLocation(),
+                               BR->getSourceManager());
+    Report.addNote(Os.str(), Loc, RootCause->getSourceRange());
   }
 };
 
