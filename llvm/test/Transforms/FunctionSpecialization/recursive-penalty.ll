@@ -6,7 +6,7 @@
 ; Make sure the number of specializations created are not
 ; linear to the number of iterations (funcspec-max-iters).
 
-; CHECK: FnSpecialization: Created 4 specializations in module
+; CHECK: FnSpecialization: Created 6 specializations in module
 
 @Global = internal constant i32 1, align 4
 
