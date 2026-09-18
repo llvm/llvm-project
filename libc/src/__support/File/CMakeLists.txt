@@ -42,10 +42,13 @@ add_object_library(
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
+		libc.src.__support.CPP.vector
     libc.src.__support.threads.mutex
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.src.__support.alloc_checker
+    libc.src.stdlib.qsort_util
+		libc.src.string.memory_utils.inline_memcpy
     libc.hdr.errno_macros
     libc.hdr.types.struct_dirent
 )
