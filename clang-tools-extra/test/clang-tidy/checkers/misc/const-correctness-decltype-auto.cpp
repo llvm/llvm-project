@@ -19,9 +19,11 @@ void decltype_auto_is_ignored() {
   decltype(auto) value = i;
   decltype(auto) ref = get_ref();
   decltype(auto) ptr = get_ptr();
+  decltype(auto) (paren) = 42;
   sink(value);
   sink(ref);
   sink(*ptr);
+  sink(paren);
 }
 
 template <typename T>

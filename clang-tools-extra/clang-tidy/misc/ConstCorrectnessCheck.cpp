@@ -144,7 +144,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
       hasType(hasCanonicalType(referenceType(pointee(functionType()))));
 
   // 'const' cannot be combined with 'decltype(auto)'.
-  const auto DecltypeAutoType = hasType(autoType(isDecltypeAuto()));
+  const auto DecltypeAutoType =
+      hasType(ignoringParens(autoType(isDecltypeAuto())));
 
   const auto CommonExcludeTypes =
       anyOf(ConstType, ConstReference, RValueReference, TemplateType,
