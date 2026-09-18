@@ -20,6 +20,18 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
+add_header_library(
+  worst_case_test
+  HDRS
+    worst_case_test.h
+  COMPILE_OPTIONS
+    "-DLIBC_MATH_EXHAUSTIVE_TEST_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\""
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+)
+
 add_fp_unittest(
   sqrtf_test
   NO_RUN_POSTBUILD
@@ -68,6 +80,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sin_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    sin_test.cpp
+  DEPENDS
+    .worst_case_test
+    libc.src.math.sin
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   sinf_float_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -109,6 +137,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.cosf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  cos_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    cos_test.cpp
+  DEPENDS
+    .worst_case_test
+    libc.src.math.cos
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
