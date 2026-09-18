@@ -16,7 +16,7 @@ define void @countdown_with_offset(i32 %remaining.start) {
 ; INDVARS:         %offset.next = add nuw i32 %offset, 128
 ;
 ; SCEV-LABEL: Determining loop execution counts for: @countdown_with_offset
-; SCEV-NEXT:  Loop %loop: backedge-taken count is ((127 + (-1 * (128 smin %remaining.start)) + %remaining.start) /u 128)
+; SCEV-NEXT:  Loop %loop: backedge-taken count is ((127 + (-1 * (128 umin %remaining.start))<nsw> + %remaining.start) /u 128)
 ; SCEV-NEXT:  Loop %loop: constant max backedge-taken count is i32 16777215
 entry:
   br label %loop
