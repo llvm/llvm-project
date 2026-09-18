@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
@@ -57,7 +58,7 @@ void printErrorAndExit(Twine ErrMsg) {
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "[test-jitloadergdb] filedescs=<infd>,<outfd> [args...]\n"
+         << "[test-jitloadergdb] fd=<sockfd> [args...]\n"
          << "  llvm-jitlink-executor " << DebugOption
          << "[test-jitloadergdb] listen=<host>:<port> [args...]\n";
   exit(1);
@@ -79,6 +80,7 @@ int openListener(std::string Host, std::string PortStr) {
     errs() << "Error setting up bind address: " << gai_strerror(EC) << "\n";
     exit(1);
   }
+  auto FreeAI = scope_exit([&]() { freeaddrinfo(AI); });
 
   // Create a socket from first addrinfo structure returned by getaddrinfo.
   int SockFD;
@@ -136,8 +138,7 @@ int main(int argc, char *argv[]) {
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   unsigned FirstProgramArg = 1;
-  int InFD = 0;
-  int OutFD = 0;
+  int FD = 0;
 
   if (argc < 2)
     printErrorAndExit("insufficient arguments");
@@ -162,13 +163,9 @@ int main(int argc, char *argv[]) {
 
   StringRef SpecifierType, Specifier;
   std::tie(SpecifierType, Specifier) = NextArg.split('=');
-  if (SpecifierType == "filedescs") {
-    StringRef FD1Str, FD2Str;
-    std::tie(FD1Str, FD2Str) = Specifier.split(',');
-    if (FD1Str.getAsInteger(10, InFD))
-      printErrorAndExit(FD1Str + " is not a valid file descriptor");
-    if (FD2Str.getAsInteger(10, OutFD))
-      printErrorAndExit(FD2Str + " is not a valid file descriptor");
+  if (SpecifierType == "fd") {
+    if (Specifier.getAsInteger(10, FD))
+      printErrorAndExit(Specifier + " is not a valid file descriptor");
   } else if (SpecifierType == "listen") {
     StringRef Host, PortStr;
     std::tie(Host, PortStr) = Specifier.split(':');
@@ -177,7 +174,7 @@ int main(int argc, char *argv[]) {
     if (PortStr.getAsInteger(10, Port))
       printErrorAndExit("port number '" + PortStr + "' is not a valid integer");
 
-    InFD = OutFD = openListener(Host.str(), PortStr.str());
+    FD = openListener(Host.str(), PortStr.str());
   } else
     printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
 
@@ -201,7 +198,7 @@ int main(int argc, char *argv[]) {
                     rt_bootstrap::ExecutorSharedMemoryMapperService>());
             return Error::success();
           },
-          InFD, OutFD));
+          FD, FD));
 
   ExitOnErr(Server->waitForDisconnect());
 

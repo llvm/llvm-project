@@ -219,20 +219,25 @@ struct MissingFeatures {
   static bool hipModuleCtor() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
+  static bool deadOnReturnAttr() { return false; }
+  static bool noaliasOnByvalAttr() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
   static bool dtorCleanups() { return false; }
+  static bool dynamicExceptionSpec() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
+  static bool lifetimeMarkersBypass() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+  static bool fakeUseCleanup() { return false; }
   static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
@@ -247,7 +252,6 @@ struct MissingFeatures {
   static bool generateDebugInfo() { return false; }
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIntLowering() { return false; }
-  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -303,7 +307,6 @@ struct MissingFeatures {
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
   static bool vlas() { return false; }
-  static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
   static bool weakRefReference() { return false; }
@@ -319,7 +322,6 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool fixedPointType() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

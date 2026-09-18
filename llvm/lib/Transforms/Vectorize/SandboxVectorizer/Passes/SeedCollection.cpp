@@ -26,7 +26,7 @@ static cl::opt<bool>
 
 #define LoadSeedsDef "loads"
 #define StoreSeedsDef "stores"
-cl::opt<std::string> CollectSeeds(
+static cl::opt<std::string> CollectSeeds(
     "sbvec-collect-seeds", cl::init(StoreSeedsDef), cl::Hidden,
     cl::desc("Collect these seeds. Use empty for none or a comma-separated "
              "list of '" StoreSeedsDef "' and '" LoadSeedsDef "'."));
@@ -60,11 +60,14 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
                      AllowDiffTypes);
     for (auto &SeedRange : {SC.getStoreSeeds(), SC.getLoadSeeds()}) {
       for (SeedBundle &Seeds : SeedRange) {
+        if (Seeds.allUsed())
+          continue;
+        unsigned FirstUnusedIdx = Seeds.getFirstUnusedElementIdx();
         unsigned ElmBits =
             Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
-                                  Seeds[Seeds.getFirstUnusedElementIdx()])),
+                                  Seeds[FirstUnusedIdx])),
                               DL);
-        unsigned AS = getLoadStoreAddressSpace(Seeds[0]);
+        unsigned AS = getLoadStoreAddressSpace(Seeds[FirstUnusedIdx]);
         unsigned VecRegBits = OverrideVecRegBits != 0
                                   ? OverrideVecRegBits
                                   : A.getTTI().getLoadStoreVecRegBitWidth(AS);

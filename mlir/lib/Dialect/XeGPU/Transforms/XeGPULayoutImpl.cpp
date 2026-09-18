@@ -70,6 +70,13 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   return out;
 }
 
+void xegpu::dropInstDataOnInherentAttrs(Operation *op) {
+  op->getName().walkInherentAttrs(op, [](StringRef, Attribute &attr) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr))
+      attr = dist.dropInstData();
+  });
+}
+
 // Sets the layout on a TensorDesc value by updating its type to include
 // the given layout, if the type does not already have a layout attached.
 static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
@@ -273,6 +280,20 @@ LogicalResult xegpu::propagateYieldOperandsToRegionResults(
       // Assign the yield operand's layout to the region op result it feeds.
       if (auto result = dyn_cast<OpResult>(successorInput))
         xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+      // Restrict the input IR: a successor argument that is not tied to an init
+      // operand (scf.while's "after" arguments) must be fed by a pass-through,
+      // because nothing else identifies which value the region carries. Its
+      // layout is then that of the forwarded argument's init operand.
+      if (auto arg = dyn_cast<BlockArgument>(successorInput)) {
+        auto loop =
+            dyn_cast<LoopLikeOpInterface>(arg.getOwner()->getParentOp());
+        bool tiedToInit = loop && loop.getTiedLoopInit(arg);
+        if (!tiedToInit && !isa<BlockArgument>(successorOperand->get()))
+          return terminator->emitError(
+              "unsupported region structure: the successor argument it feeds "
+              "is not tied to an init operand, so its value must be passed "
+              "through from predecessor region argument.");
+      }
     }
   }
   return success();
@@ -377,8 +398,8 @@ template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
-    owner->removeAttr(name);
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name))
+    owner->removeDiscardableAttr(name);
 }
 
 // Explicit instantiation for OpResult
@@ -393,19 +414,19 @@ void xegpu::removeLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
     // Remove all attributes of DistributeLayoutAttr type
     SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : nestOp->getAttrs()) {
+    for (auto namedAttr : nestOp->getDiscardableAttrDictionary().getValue()) {
       if (isa<DistributeLayoutAttr>(namedAttr.getValue()))
         attrsToRemove.push_back(namedAttr.getName());
     }
     for (auto attrName : attrsToRemove)
-      nestOp->removeAttr(attrName);
+      nestOp->removeDiscardableAttr(attrName);
   });
 }
 
 void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
     SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : nestOp->getDiscardableAttrs()) {
+    for (auto namedAttr : nestOp->getDiscardableAttrDictionary().getValue()) {
       if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
         attrsToRemove.push_back(namedAttr.getName());
     }
@@ -1002,17 +1023,6 @@ xegpu::DistributeLayoutAttr xegpu::inferResultLayoutFromSourceForNonAnchorOp(
   return nullptr;
 }
 
-/// Infers the layout attribute for mask and offset operand for Chunked load
-/// and store, given the anchor layout attribute for the value being load/store.
-xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
-    xegpu::DistributeLayoutAttr payloadLayout, int chunkSize) {
-  auto rank = payloadLayout.getRank();
-  if (chunkSize > 1)
-    return payloadLayout.dropDims(
-        llvm::to_vector(llvm::seq<int64_t>(rank - 1, rank)));
-  return payloadLayout;
-}
-
 //===----------------------------------------------------------------------===//
 // Layout derivation helpers: factorize sgCount into
 // sg_layout candidates, then
@@ -1146,6 +1156,10 @@ static std::optional<SmallVector<int64_t>> get2DBlockIOInstDataLayout(
       xegpu::getLargestDivisor(static_cast<int>(dataShape.back()), bWidths);
   int instHeight =
       xegpu::getLargestDivisor(static_cast<int>(dataShape[rank - 2]), bHeights);
+  // No supported hardware block size divides the data dim (e.g. innermost dim
+  // of 1 vs. minimum block width 16): not realizable as a 2D-block instruction.
+  if (instWidth < 0 || instHeight < 0)
+    return std::nullopt;
   instData.back() = instWidth;
   instData[rank - 2] = instHeight;
 
@@ -1655,9 +1669,12 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   auto instData =
       get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
+  // Shape not realizable as a 2D-block instruction; let the caller report it.
+  if (!instData)
+    return nullptr;
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(instData && isValidLaneLayout(*instData, laneLayout, laneData) &&
+    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
            "Expected the store layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        laneData);
@@ -1708,9 +1725,12 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   auto instData =
       get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction);
+  // Shape not realizable as a 2D-block instruction; let the caller report it.
+  if (!instData)
+    return nullptr;
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    assert(instData && isValidLaneLayout(*instData, laneLayout, laneData) &&
+    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
            "Expected the prefetch layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        laneData);
@@ -1817,10 +1837,10 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     // scale is smaller than block load
     auto instData = get2DBlockIOInstDataLayout(
         dataShape, elemTy, uArchInstruction, hasTransform, hasTranspose);
-    // assert instData is valid against consumer layout since
-    // transform/transpose attribute are derived from consumer layout
-    assert(instData &&
-           isValidLaneLayout(*instData, laneLayout, consumerLaneData) &&
+    // Shape not realizable as a 2D-block instruction; let the caller report it.
+    if (!instData)
+      return nullptr;
+    assert(isValidLaneLayout(*instData, laneLayout, consumerLaneData) &&
            "Expected the load layout to satisfy uArch block constraints");
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        consumerLaneData, consumerOrderAttr);
@@ -1839,13 +1859,19 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 ///
 /// For Subgroup layout, uses the consumer layout directly.
 ///
-/// For InstData layout, takes consumer's inst_data as-is. lane_layout and
-/// lane_data are taken from the consumer when present; otherwise the helper
-/// derives the standard scatter-style default (subgroupSize lanes on the
-/// innermost dim, per-lane vector capped by maxChunkSize).
+/// For InstData layout, takes consumer's inst_data as-is; lane_layout and
+/// lane_data are taken from the consumer.
 ///
-/// For Lane layout, lane_layout/lane_data are taken from the consumer when
-/// present; otherwise derived from the same default.
+/// For Lane layout, lane_layout/lane_data are taken from the consumer.
+///
+/// A consumer layout that carries lane_layout and lane_data is required.
+/// `maxChunkSize` is not read yet: the consumer's lane_data already fixes the
+/// per-lane chunk.
+///
+/// TODO: derive lane_layout/lane_data here when the consumer has none, capped
+/// by `maxChunkSize`, the way `setupGenericStoreAnchorLayout` does via
+/// `computeScatterIOLaneLayoutAndData`. That path is missing today, so the
+/// assert below stands in for it.
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
@@ -1889,6 +1915,8 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   ArrayRef<int64_t> resShape = resVecTy.getShape();
   auto context = resVecTy.getContext();
 
+  // The per-lane chunk is bounded by what the offsets prove contiguous
+  // (`contigChunkSize`) and by what one lane can access in one instruction.
   const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadGatherInstruction>(
       uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize =
@@ -1969,6 +1997,8 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   auto context = srcVecTy.getContext();
 
+  // The per-lane chunk is bounded by what the offsets prove contiguous
+  // (`contigChunkSize`) and by what one lane can access in one instruction.
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstruction>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
@@ -2842,6 +2872,51 @@ xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
   return nullptr;
 }
 
+// For a loop terminator operand (scf.for's scf.yield, scf.while's
+// scf.condition), returns the layout of the region iter_arg it forwards into,
+// which is the authoritative loop-carried layout, or nullptr when that position
+// was never assigned a layout.
+static xegpu::DistributeLayoutAttr getLoopCarriedLayoutForYieldOperand(
+    RegionBranchTerminatorOpInterface terminator, OpOperand &operand) {
+  auto branch = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branch)
+    return nullptr;
+  RegionBranchSuccessorMapping mapping;
+  branch.getSuccessorOperandInputMapping(mapping,
+                                         RegionBranchPoint(terminator));
+  auto it = mapping.find(&operand);
+  if (it == mapping.end())
+    return nullptr;
+  xegpu::DistributeLayoutAttr iterArgLayout;
+  for (auto arg : llvm::make_isa_range<BlockArgument>(it->second)) {
+    xegpu::DistributeLayoutAttr layout = xegpu::getDistributeLayoutAttr(arg);
+    assert((!iterArgLayout || !layout || iterArgLayout.isEqualTo(layout)) &&
+           "region inputs fed by one terminator operand disagree on layout");
+    if (!iterArgLayout)
+      iterArgLayout = layout;
+  }
+  return iterArgLayout;
+}
+
+// For the terminator of a region op that carries nothing back into its regions
+// (scf.if), returns the layout of the parent result the operand feeds.
+static xegpu::DistributeLayoutAttr getParentResultLayoutForYieldOperand(
+    RegionBranchTerminatorOpInterface terminator, OpOperand &operand) {
+  auto branch = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branch)
+    return nullptr;
+  RegionBranchSuccessorMapping mapping;
+  branch.getSuccessorOperandInputMapping(mapping,
+                                         RegionBranchPoint(terminator));
+  auto it = mapping.find(&operand);
+  if (it == mapping.end())
+    return nullptr;
+  for (Value input : it->second)
+    if (auto result = dyn_cast<OpResult>(input))
+      return xegpu::getDistributeLayoutAttr(result);
+  return nullptr;
+}
+
 /// Returns the layout required on `operand`: anchor ops report their declared
 /// per-operand layout directly; non-anchor ops back-derive it from their result
 /// layout via inferSourceLayoutFromResultForNonAnchorOp.
@@ -2852,6 +2927,22 @@ xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   // ResolveLayoutConflicts compares producer-vs-declared
   if (isa<xegpu::AnchorLayoutInterface>(op))
     return xegpu::getDistributeLayoutAttr(operand);
+  // Region ops with forwarded operands (scf.for's and scf.while's inits) carry
+  // the required operand layout as the layout_operand_N that
+  // propagateRegionArgsToInits back-propagated from the region argument. Do not
+  // re-derive it from that argument here: conflict resolution inserts
+  // convert_layout ops as it walks, rewriting the argument's uses, so what
+  // those uses require depends on how far the walk has progressed.
+  if (isa<RegionBranchOpInterface>(op))
+    return xegpu::getDistributeLayoutAttr(operand);
+  // A region terminator requires the layout of the successor input its operand
+  // feeds: the region iter_arg for a loop, and the parent result for a region
+  // op with no loop-carried values (scf.if).
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
+    if (isa<LoopLikeOpInterface>(op->getParentOp()))
+      return getLoopCarriedLayoutForYieldOperand(terminator, operand);
+    return getParentResultLayoutForYieldOperand(terminator, operand);
+  }
   // For non-anchor ops, derive the operand layout from the op's result
   // layout via op-specific semantics.
   xegpu::DistributeLayoutAttr resLayout;

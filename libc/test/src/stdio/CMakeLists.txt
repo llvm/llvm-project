@@ -143,6 +143,37 @@ add_libc_test(
 )
 
 add_libc_test(
+  fmemopen_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fmemopen_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.hdr.stdio_macros
+    libc.hdr.types.off_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.stdio.clearerr
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fflush
+    libc.src.stdio.fgetc
+    libc.src.stdio.fmemopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftell
+    libc.src.stdio.fwrite
+    libc.src.stdio.setvbuf
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.MemoryMatcher
+)
+
+add_libc_test(
   fopencookie_test
   SUITE
     libc_stdio_unittests
@@ -150,6 +181,7 @@ add_libc_test(
     fopencookie_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.hdr.types.off_t
     libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.stdio.clearerr
@@ -162,8 +194,7 @@ add_libc_test(
     libc.src.stdio.fseek
     libc.src.stdio.fwrite
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcMemoryHelpers
+    libc.test.UnitTest.MemoryMatcher
 )
 
 if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
@@ -387,8 +418,7 @@ add_libc_test(
     sscanf_test.cpp
   DEPENDS
     libc.src.stdio.sscanf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
   COMPILE_OPTIONS
     ${sscanf_test_copts}
 )
@@ -401,8 +431,7 @@ add_libc_test(
     vsscanf_test.cpp
   DEPENDS
     libc.src.stdio.vsscanf
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
   COMPILE_OPTIONS
     ${sscanf_test_copts}
 )

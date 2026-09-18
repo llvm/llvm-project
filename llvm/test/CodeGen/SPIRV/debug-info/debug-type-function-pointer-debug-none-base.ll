@@ -1,6 +1,5 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
-; TODO(#109287): spirv-val coverage remains disabled for DebugTypePointer with
-; DebugInfoNone as the base type.
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - -filetype=obj | spirv-val %}
 ;
 ; Pointer parameter with null baseType should lower to DebugTypePointer using
 ; DebugInfoNone as Base Type, and still be consumed by DebugTypeFunction.

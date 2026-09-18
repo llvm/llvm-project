@@ -679,8 +679,11 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
                          OldSM =
                              cast<CXXMethodDecl>(Old)->getSpecialMemberKind();
     if (NewSM != OldSM) {
-      ParmVarDecl *NewParam = New->getParamDecl(New->getMinRequiredArguments());
-      assert(NewParam->hasDefaultArg());
+      auto It = llvm::find_if(New->parameters(), [](const ParmVarDecl *P) {
+        return P->hasDefaultArg();
+      });
+      assert(It != New->param_end());
+      ParmVarDecl *NewParam = *It;
       Diag(NewParam->getLocation(), diag::err_default_arg_makes_ctor_special)
           << NewParam->getDefaultArgRange() << NewSM;
       Diag(Old->getLocation(), diag::note_previous_declaration);
@@ -748,9 +751,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
 }
 
 void Sema::DiagPlaceholderVariableDefinition(SourceLocation Loc) {
-  Diag(Loc, getLangOpts().CPlusPlus26
-                ? diag::warn_cxx23_placeholder_var_definition
-                : diag::ext_placeholder_var_definition);
+  DiagCompat(Loc, diag_compat::placeholder_var_definition);
 }
 
 NamedDecl *
@@ -4158,8 +4159,13 @@ namespace {
     }
 
     llvm::SmallPtrSet<QualType, 4> UninitializedBaseClasses;
-    for (const auto &I : RD->bases())
+    for (const auto &I : RD->bases()) {
+      // Virtual bases are initialized from the most derived class, so an
+      // abstract base class constructor can assume it to be initialized.
+      if (I.isVirtual() && RD->isAbstract())
+        continue;
       UninitializedBaseClasses.insert(I.getType().getCanonicalType());
+    }
 
     if (UninitializedFields.empty() && UninitializedBaseClasses.empty())
       return;
@@ -4234,6 +4240,12 @@ ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
                                                     SourceLocation InitLoc) {
   InitializedEntity Entity =
       InitializedEntity::InitializeMemberFromDefaultMemberInitializer(FD);
+  return ConvertMemberDefaultInitExpression(FD, Entity, InitExpr, InitLoc);
+}
+
+ExprResult Sema::ConvertMemberDefaultInitExpression(
+    FieldDecl *FD, const InitializedEntity &Entity, Expr *InitExpr,
+    SourceLocation InitLoc) {
   InitializationKind Kind =
       FD->getInClassInitStyle() == ICIS_ListInit
           ? InitializationKind::CreateDirectList(InitExpr->getBeginLoc(),
@@ -5334,7 +5346,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
 
   if (Field->hasInClassInitializer() && !Info.isImplicitCopyOrMove()) {
     ExprResult DIE =
-        SemaRef.BuildCXXDefaultInitExpr(Info.Ctor->getLocation(), Field);
+        SemaRef.BuildCXXCtorDefaultInitExpr(Info.Ctor->getLocation(), Field);
     if (DIE.isInvalid())
       return true;
 
@@ -8197,6 +8209,8 @@ protected:
       //   Unnamed bit-fields are not members ...
       if (Field->isUnnamedBitField())
         continue;
+      if (Field->isInvalidDecl())
+        continue;
       // Recursively expand anonymous structs.
       if (Field->isAnonymousStructOrUnion()) {
         if (visitSubobjects(Results, Field->getType()->getAsCXXRecordDecl(),
@@ -9410,8 +9424,8 @@ ComputeDefaultedComparisonExceptionSpec(Sema &S, SourceLocation Loc,
 
   // The common case is that we just defined the comparison function. In that
   // case, just look at whether the body can throw.
-  if (FD->hasBody()) {
-    ExceptSpec.CalledStmt(FD->getBody());
+  if (Stmt *FunctionBody = FD->getBody()) {
+    ExceptSpec.CalledStmt(FunctionBody);
   } else {
     // Otherwise, build a body so we can check it. This should ideally only
     // happen when we're not actually marking the function referenced. (This is
@@ -11613,11 +11627,9 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
     R = Context.getFunctionType(ConvType, {}, Proto->getExtProtoInfo());
 
   // C++0x explicit conversion operators.
-  if (DS.hasExplicitSpecifier() && !getLangOpts().CPlusPlus20)
-    Diag(DS.getExplicitSpecLoc(),
-         getLangOpts().CPlusPlus11
-             ? diag::warn_cxx98_compat_explicit_conversion_functions
-             : diag::ext_explicit_conversion_functions)
+  if (DS.hasExplicitSpecifier())
+    DiagCompat(DS.getExplicitSpecLoc(),
+               diag_compat::explicit_conversion_functions)
         << SourceRange(DS.getExplicitSpecRange());
 }
 
@@ -13669,10 +13681,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
       // A using-declaration shall not name a scoped enumerator.
       // C++20 p1099 permits enumerators.
       if (EC && R && ED->isScoped())
-        Diag(SS.getBeginLoc(),
-             getLangOpts().CPlusPlus20
-                 ? diag::warn_cxx17_compat_using_decl_scoped_enumerator
-                 : diag::ext_using_decl_scoped_enumerator)
+        DiagCompat(SS.getBeginLoc(), diag_compat::using_decl_scoped_enumerator)
             << SS.getRange();
 
       // We want to consider the scope of the enumerator
@@ -14121,7 +14130,7 @@ bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
       // FIXME: We should have a single context note pointing at Loc, and
       // this location should be MD->getLocation() instead, since that's
       // the location where we actually use the default init expression.
-      E = S.BuildCXXDefaultInitExpr(Loc, FD).get();
+      E = S.BuildCXXCtorDefaultInitExpr(Loc, FD).get();
     if (E)
       ExceptSpec.CalledExpr(E);
   } else if (auto *RD = S.Context.getBaseElementType(FD->getType())
@@ -17014,10 +17023,7 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(FnDecl)) {
     if (MethodDecl->isStatic()) {
       if (Op == OO_Call || Op == OO_Subscript)
-        Diag(FnDecl->getLocation(),
-             (LangOpts.CPlusPlus23
-                  ? diag::warn_cxx20_compat_operator_overload_static
-                  : diag::ext_operator_overload_static))
+        DiagCompat(FnDecl->getLocation(), diag_compat::operator_overload_static)
             << FnDecl;
       else
         return Diag(FnDecl->getLocation(), diag::err_operator_overload_static)
@@ -17833,6 +17839,8 @@ static bool UsefulToPrintExpr(const Expr *E) {
 }
 
 void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
+  // FIXME: Should we also ignore explicit casts?
+  E = E->IgnoreParenImpCasts();
   if (const auto *Op = dyn_cast<BinaryOperator>(E);
       Op && Op->getOpcode() != BO_LOr) {
     const Expr *LHS = Op->getLHS()->IgnoreParenImpCasts();
@@ -17867,6 +17875,8 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
           << DiagSides[0].ValueString << Op->getOpcodeStr()
           << DiagSides[1].ValueString << Op->getSourceRange();
     }
+  } else if (const auto *RE = dyn_cast<RequiresExpr>(E)) {
+    DiagnoseUnsatisfiedRequiresExpr(RE);
   } else {
     DiagnoseTypeTraitDetails(E);
   }
@@ -18957,9 +18967,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   // 'operator<=>' when parsing the '<=>' token.
   if (DefKind.isComparison() &&
       DefKind.asComparison() != DefaultedComparisonKind::ThreeWay) {
-    Diag(DefaultLoc, getLangOpts().CPlusPlus20
-                         ? diag::warn_cxx17_compat_defaulted_comparison
-                         : diag::ext_defaulted_comparison);
+    DiagCompat(DefaultLoc, diag_compat::defaulted_comparison);
   }
 
   FD->setDefaulted();
