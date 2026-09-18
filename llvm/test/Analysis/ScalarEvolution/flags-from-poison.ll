@@ -971,7 +971,7 @@ define void @test-add-div(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    %j = add nsw i32 %i, %offset
 ; CHECK-NEXT:    --> {%offset,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %offset + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %q = sdiv i32 %numIterations, %j
-; CHECK-NEXT:    --> %q U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (%numIterations /s {%offset,+,1}<nsw><%loop>) U: full-set S: full-set Exits: (%numIterations /s (-1 + %offset + %numIterations)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-div
@@ -1004,7 +1004,7 @@ define void @test-add-div2(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    %j = add nsw i32 %i, %offset
 ; CHECK-NEXT:    --> {%offset,+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %offset + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %q = sdiv i32 %j, %numIterations
-; CHECK-NEXT:    --> %q U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> ({%offset,+,1}<nw><%loop> /s %numIterations) U: full-set S: full-set Exits: ((-1 + %offset + %numIterations) /s %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %numIterations LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test-add-div2

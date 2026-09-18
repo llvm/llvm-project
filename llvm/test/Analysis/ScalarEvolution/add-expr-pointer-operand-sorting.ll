@@ -34,9 +34,9 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:    %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, ptrtoint (ptr @b to i64)
 ; CHECK-NEXT:    --> ((-1 * (ptrtoaddr ptr @b to i64)) + (ptrtoaddr ptr %load1 to i64)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 4
-; CHECK-NEXT:    --> %sub.ptr.div U: [-2305843009213693952,2305843009213693952) S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> (((-1 * (ptrtoaddr ptr @b to i64)) + (ptrtoaddr ptr %load1 to i64)) /s 4) U: [-2305843009213693952,2305843009213693952) S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [1 x i8], ptr %arrayidx, i64 0, i64 %sub.ptr.div
-; CHECK-NEXT:    --> ({((sext i32 %base to i64) + %e),+,1}<nw><%for.cond> + %sub.ptr.div) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> ((((-1 * (ptrtoaddr ptr @b to i64)) + (ptrtoaddr ptr %load1 to i64)) /s 4) + {((sext i32 %base to i64) + %e),+,1}<nw><%for.cond>) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %load2 = load i8, ptr %arrayidx1, align 1
 ; CHECK-NEXT:    --> %load2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %conv = sext i8 %load2 to i32
