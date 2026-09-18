@@ -18,6 +18,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APFloatPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -114,11 +115,14 @@ public:
 class BasicValueFactory {
   using APSIntSetTy =
       llvm::FoldingSet<llvm::FoldingSetNodeWrapper<llvm::APSInt>>;
+  using APFloatSetTy =
+      llvm::FoldingSet<llvm::FoldingSetNodeWrapper<llvm::APFloat>>;
 
   ASTContext &Ctx;
   llvm::BumpPtrAllocator& BPAlloc;
 
   APSIntSetTy APSIntSet;
+  APFloatSetTy APFloatSet;
   void *PersistentSVals = nullptr;
   void *PersistentSValPairs = nullptr;
 
@@ -144,6 +148,8 @@ public:
   APSIntPtr getValue(const llvm::APSInt &X);
   APSIntPtr getValue(const llvm::APInt &X, bool isUnsigned);
   APSIntPtr getValue(uint64_t X, QualType T);
+
+  APFloatPtr getFloatValue(const llvm::APFloat &X);
 
   /// Returns the type of the APSInt used to store values of the given QualType.
   APSIntType getAPSIntType(QualType T) const {

@@ -6073,6 +6073,9 @@ LLVM_DUMP_METHOD void APFloat::dump() const {
 #endif
 
 void APFloat::Profile(FoldingSetNodeID &NID) const {
+  // Bit pattern alone does not uniquely identify a floating-point value;
+  // need semantics as well.
+  NID.AddInteger(SemanticsToEnum(getSemantics()));
   NID.Add(bitcastToAPInt());
 }
 
