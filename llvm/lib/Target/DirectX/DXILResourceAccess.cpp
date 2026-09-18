@@ -800,7 +800,8 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
       Intrinsic::ID IID = II->getIntrinsicID();
 
-      if (IID == Intrinsic::dx_resource_getpointer)
+      if (IID == Intrinsic::dx_resource_getpointer ||
+          IID == Intrinsic::dx_resource_getbasepointer)
         Worklist.push_back(II->getArgOperand(/*Handle=*/0));
 
       if (llvm::is_contained(HandleIntrins, IID))
@@ -880,12 +881,17 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       return {nullptr, II->getArgOperand(/*Index=*/3), nullptr};
     }
 
-    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+    Intrinsic::ID IID = II->getIntrinsicID();
+    if (IID == Intrinsic::dx_resource_getpointer ||
+        IID == Intrinsic::dx_resource_getbasepointer) {
       auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
       auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
       assert(!AccessIdx.hasGetPtrIdx() &&
              "Encountered multiple dx.resource.getpointers in ptr chain?");
-      AccessIdx.GetPtrIdx = II->getArgOperand(1);
+      IRBuilder<> Builder(II);
+      AccessIdx.GetPtrIdx = ConstantInt::get(Builder.getInt32Ty(), 0);
+      if (IID == Intrinsic::dx_resource_getpointer)
+        AccessIdx.GetPtrIdx = II->getArgOperand(1);
 
       DeadInsts.insert(II);
       return AccessIdx;
