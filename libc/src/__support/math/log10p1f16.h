@@ -103,12 +103,20 @@ LIBC_INLINE float16 log10p1f16(float16 x) {
       if (auto r = LOG10P1F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
         return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-
+      constexpr float MIN_NORMAL = 0x1.0p-14f;
+      constexpr float midpoint = 0x1.ffcp-15f;
       float xf = x;
-      return fputil::cast<float16>(
-          xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
-                                0x1.2875bcp-3f, -0x1.c2946ep-4f,
-                                0x1.69da2p-4f));
+      float result = (xf * fputil::polyeval(xf, 0x1.bcb7b2p-2f, -0x1.bcb4cp-3f,
+                                            0x1.2875bcp-3f, -0x1.c2946ep-4f,
+                                            0x1.69da2p-4f));
+
+      float result_abs = result > 0 ? result : -result;
+      // [min-ulp/2,min) -> min
+      if (result_abs < MIN_NORMAL && result_abs >= midpoint &&
+          (fputil::fenv_is_round_to_nearest() || fputil::fenv_is_round_up())) {
+        result = (result > 0) ? MIN_NORMAL : -MIN_NORMAL;
+      }
+      return fputil::cast<float16>(result);
     }
   }
 
