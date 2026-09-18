@@ -69,6 +69,86 @@ void test5(void) {
   a.b = 100;
 }
 
+// GH223923: Do not diagnose conversions in unselected operands of constant
+// conditional expressions.
+#define BASE64_INIT_1(v, ch_62, ch_63) \
+  [v] = (v) >= 'A' && (v) <= 'Z' ? (v) - 'A' \
+      : (v) >= 'a' && (v) <= 'z' ? (v) - 'a' + 26 \
+      : (v) >= '0' && (v) <= '9' ? (v) - '0' + 52 \
+      : (v) == (ch_62) ? 62 : (v) == (ch_63) ? 63 : -1
+
+#define BASE64_INIT_2(v, ...) \
+  BASE64_INIT_1(v, __VA_ARGS__), BASE64_INIT_1((v) + 1, __VA_ARGS__)
+#define BASE64_INIT_4(v, ...) \
+  BASE64_INIT_2(v, __VA_ARGS__), BASE64_INIT_2((v) + 2, __VA_ARGS__)
+#define BASE64_INIT_8(v, ...) \
+  BASE64_INIT_4(v, __VA_ARGS__), BASE64_INIT_4((v) + 4, __VA_ARGS__)
+#define BASE64_INIT_16(v, ...) \
+  BASE64_INIT_8(v, __VA_ARGS__), BASE64_INIT_8((v) + 8, __VA_ARGS__)
+#define BASE64_INIT_32(v, ...) \
+  BASE64_INIT_16(v, __VA_ARGS__), BASE64_INIT_16((v) + 16, __VA_ARGS__)
+
+#define BASE64_REV_INIT(ch_62, ch_63) { \
+  [0 ... 0x1f] = -1, \
+  BASE64_INIT_32(0x20, ch_62, ch_63), \
+  BASE64_INIT_32(0x40, ch_62, ch_63), \
+  BASE64_INIT_32(0x60, ch_62, ch_63), \
+  [0x80 ... 0xff] = -1 \
+}
+
+enum base64_variant {
+  BASE64_STD,
+  BASE64_URLSAFE,
+  BASE64_IMAP,
+};
+
+static const signed char base64_rev_maps[][256] __attribute__((unused)) = {
+  [BASE64_STD] = BASE64_REV_INIT('+', '/'),
+  [BASE64_URLSAFE] = BASE64_REV_INIT('-', '_'),
+  [BASE64_IMAP] = BASE64_REV_INIT('+', ',')
+};
+
+#undef BASE64_REV_INIT
+#undef BASE64_INIT_32
+#undef BASE64_INIT_16
+#undef BASE64_INIT_8
+#undef BASE64_INIT_4
+#undef BASE64_INIT_2
+#undef BASE64_INIT_1
+
+static const signed char signed_char_array_live[] __attribute__((unused)) = {
+  1 ? 128 : -1 // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+};
+
+void GH223923(int condition) {
+  signed char signed_char_dead = 0 ? 128 : -1;
+  signed char signed_char_live = 1 ? 128 : -1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+  signed char signed_char_maybe = condition ? 128 : -1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+
+  short short_dead = 0 ? 32768 : 1;
+  short short_live = 1 ? 32768 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'short' changes value from 32768 to -32768}}
+
+  int int_dead = 0 ? 2147483648LL : 1;
+  int int_live = 1 ? 2147483648LL : 1;
+  // expected-warning@-1 {{implicit conversion from 'long long' to 'int' changes value from 2147483648 to -2147483648}}
+
+  signed char truncation_dead = 0 ? 256 : 1;
+  signed char truncation_live = 1 ? 256 : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 256 to 0}}
+
+  signed char sink;
+  int assignment_dead = 0 ? (sink = 128) : 1;
+  int assignment_live = 1 ? (sink = 128) : 1;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+
+  signed char binary_dead = 1 ?: 128;
+  signed char binary_live = 0 ?: 128;
+  // expected-warning@-1 {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+}
+
 void test6(void) {
   // Test that unreachable code doesn't trigger the truncation warning.
   unsigned char x = 0 ? 65535 : 1; // no-warning
