@@ -1343,6 +1343,11 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsClipCullOverflow) {
   // Clip and cull distances may use at most eight components, shared between
   // them, so nine components cannot be packed.
 
+  // struct VSOut {
+  //   float3 Clip0 : SV_ClipDistance0;
+  //   float3 Cull0 : SV_CullDistance0;
+  //   float3 Clip1 : SV_ClipDistance1;
+  // };
   TestConfig Config(
       Triple::EnvironmentType::Vertex, IOType::Out,
       /*UseNative16BitTypes=*/false,
@@ -1368,6 +1373,11 @@ TEST_F(HLSLSemanticSignaturePackingTest,
   // These clip and cull distances fit in eight components, but they cannot be
   // split across the two registers available to them.
 
+  // struct VSOut {
+  //   float3 Clip0 : SV_ClipDistance0;
+  //   float3 Cull0 : SV_CullDistance0;
+  //   float2 Clip1 : SV_ClipDistance1;
+  // };
   TestConfig Config(
       Triple::EnvironmentType::Vertex, IOType::Out,
       /*UseNative16BitTypes=*/false,
