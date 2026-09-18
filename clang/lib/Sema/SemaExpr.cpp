@@ -19640,10 +19640,7 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
           return false;
         }
         if (Diagnose && S.getLangOpts().CPlusPlus) {
-          S.Diag(Loc, S.LangOpts.CPlusPlus20
-                          ? diag::warn_cxx17_compat_capture_binding
-                          : diag::ext_capture_binding)
-              << Var;
+          S.DiagCompat(Loc, diag_compat::capture_binding) << Var;
           S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
         }
         return true;

@@ -416,8 +416,10 @@ LValue CodeGenFunction::EmitOMPSharedLValue(const Expr *E) {
     }
     if (const auto *OrigBD = dyn_cast<BindingDecl>(OrigDRE->getDecl())) {
       OrigBD = cast<BindingDecl>(OrigBD->getCanonicalDecl());
-      bool IsCaptured = CapturedStmtInfo != nullptr ||
-                        (isa_and_nonnull<BlockDecl>(CurCodeDecl));
+      const auto *DD = cast<VarDecl>(OrigBD->getDecomposedDecl());
+      bool IsCaptured = LambdaCaptureFields.lookup(OrigBD) ||
+                        (CapturedStmtInfo && CapturedStmtInfo->lookup(DD)) ||
+                        isa_and_nonnull<BlockDecl>(CurCodeDecl);
       DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(OrigBD),
                       IsCaptured, OrigDRE->getType(), VK_LValue,
                       OrigDRE->getExprLoc());

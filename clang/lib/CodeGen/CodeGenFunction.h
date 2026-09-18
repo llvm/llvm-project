@@ -1163,11 +1163,6 @@ public:
                     Address TempAddr) {
       LocalVD = cast<ValueDecl>(LocalVD->getCanonicalDecl());
 
-      // For BindingDecls, also store in OMPPrivatizedBindings for remapped
-      // lookup.
-      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD))
-        CGF.OMPPrivatizedBindings.insert_or_assign(BD, TempAddr);
-
       // Only save it once.
       if (SavedLocals.count(LocalVD))
         return false;
@@ -1186,6 +1181,8 @@ public:
         CGF.Builder.CreateStore(TempAddr.emitRawPointer(CGF), Temp);
         TempAddr = Temp;
       }
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD))
+        CGF.OMPPrivatizedBindings.insert_or_assign(BD, TempAddr);
       SavedTempAddresses.try_emplace(LocalVD, TempAddr);
 
       return true;
