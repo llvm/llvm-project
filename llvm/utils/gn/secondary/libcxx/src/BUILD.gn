@@ -87,9 +87,6 @@ config("cxx_config") {
       "_CRT_STDIO_ISO_WIDE_SPECIFIERS",
     ]
   }
-  if (!libcxx_enable_new_delete_definitions) {
-    defines += [ "_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS" ]
-  }
   if (libcxx_enable_exceptions) {
     if (current_os == "win") {
       cflags_cc += [ "/EHsc" ]
