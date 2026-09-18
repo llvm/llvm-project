@@ -561,7 +561,7 @@ def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
     ```
     matrix-type ::= !cir.matrix<row x colum x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | pointer-type
+    element-type ::= float-type | integer-type | bool-type
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized matrices are not
