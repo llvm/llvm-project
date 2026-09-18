@@ -613,9 +613,6 @@ struct CBufferRowIntrin {
 };
 } // namespace
 
-static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
-                                  IRBuilder<> &Builder);
-
 static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
                               dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
@@ -654,7 +651,6 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
         DL, Builder, LastGEP->getPointerOperand(), hlsl::CBufferRowSizeInBytes);
     CurrentRow = Builder.CreateAdd(GEPOffset, CurrentRow);
 
-    // todo look here
     APInt ConstantOffset(DL.getIndexTypeSizeInBits(LastGEP->getType()), 0);
     if (LastGEP->accumulateConstantOffset(DL, ConstantOffset)) {
       APInt Remainder(DL.getIndexTypeSizeInBits(LastGEP->getType()),
@@ -670,17 +666,9 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
       // because arrays and structs are always row aligned, and accesses to
       // vector elements will show up as a load of the vector followed by an
       // extractelement.
-      Value *RowOffset = *LastGEP->idx_begin();
-      if (LastGEP->getSourceElementType()->isIntegerTy(8)) {
-        Value *ByteOffset =
-            accumulateGEPOffset(cast<GetElementPtrInst>(LastGEP), Builder);
-        RowOffset = Builder.CreateExactUDiv(
-            ByteOffset, ConstantInt::get(Builder.getInt32Ty(),
-                                         hlsl::CBufferRowSizeInBytes));
-      }
       CurrentRow = cast<ConstantInt>(CurrentRow)->isZero()
-                       ? RowOffset
-                       : Builder.CreateAdd(CurrentRow, RowOffset);
+                       ? *LastGEP->idx_begin()
+                       : Builder.CreateAdd(CurrentRow, *LastGEP->idx_begin());
       CurrentIndex = 0;
     }
   }
@@ -779,6 +767,16 @@ static Instruction *getHandleOperand(Instruction *AI) {
       return dyn_cast<Instruction>(II->getArgOperand(0));
 
   return nullptr;
+}
+
+static Instruction *getHandleRoot(Instruction *I) {
+  while (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    auto *PointerI = dyn_cast<Instruction>(GEP->getPointerOperand());
+    if (!PointerI)
+      break;
+    I = PointerI;
+  }
+  return I;
 }
 
 static const std::array<Intrinsic::ID, 2> HandleIntrins = {
@@ -1060,7 +1058,6 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
     if (AccessIdx.hasOffsetIdx())
       Result =
           Builder.CreateGEP(Builder.getInt8Ty(), GetPtr, AccessIdx.OffsetIdx);
-    // todo is this gep right?
     Ptr->replaceAllUsesWith(Result);
   } else {
     assert(Ptr->getType()->isTargetExtTy() && !AccessIdx.hasGetPtrIdx() &&
@@ -1104,7 +1101,8 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           continue;
         }
 
-        replaceHandleWithIndices(HandleOp, Handles[0], DeadInsts, VisitedPhis);
+        replaceHandleWithIndices(getHandleRoot(HandleOp), Handles[0], DeadInsts,
+                                 VisitedPhis);
       }
     }
   }
