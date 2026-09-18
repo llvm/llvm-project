@@ -109,6 +109,10 @@ contains
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+  When the annotated loop encloses other loops, flang also fully unrolls the
+  inner loops so the loop vectorizer, which only handles innermost loops, can
+  vectorize the annotated loop. Inner loops are only unrolled when they have
+  constant trip counts and the nest stays within an internal size budget.
 * `!dir$ simd` works the same as `vector always` above, but provides an alternative
   spelling and support for projects which would have used the classic-flang frontend
   previously.
@@ -120,7 +124,8 @@ contains
   vectorization, though it can choose to use fixed length vectorization or not
   at all. `<num>` means that the compiler should consider using this specific
   vectorization factor, which should be an integer literal. This directive
-  currently has the same limitations as `!dir$ vector always`.
+  currently has the same limitations and inner-loop unrolling behavior as
+  `!dir$ vector always`.
 * `!dir$ unroll [n]` specifies that the compiler ought to unroll the immediately
   following loop `n` times. When `n` is `0` or `1`, the loop should not be unrolled
   at all. When `n` is `2` or greater, the loop should be unrolled exactly `n`
