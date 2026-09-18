@@ -986,7 +986,13 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
   // Code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     StringRef Stem = sys::path::filename(OutputFile).rsplit('.').first;
-    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+    SmallString<64> Prefix;
+    (Stem + "_" + Twine(I)).toVector(Prefix);
+    auto CodeGenFileOrErr =
+        createTempFile(Args, Prefix, OutputFileNameExt.drop_front());
+    if (!CodeGenFileOrErr)
+      return CodeGenFileOrErr.takeError();
+    StringRef CodeGenFile = *CodeGenFileOrErr;
 
     if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath,
                                Result.TargetTriple, Args, CodeGenFile, C))
@@ -994,14 +1000,17 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
 
     if (!SPIRVDumpDir.empty() && !DryRun) {
       SmallString<128> DumpFile(SPIRVDumpDir);
-      sys::path::append(DumpFile, sys::path::filename(CodeGenFile));
+      sys::path::append(DumpFile, Twine(Prefix) + OutputFileNameExt);
       if (std::error_code EC = sys::fs::copy_file(CodeGenFile, DumpFile))
         return createFileError(DumpFile, EC);
     }
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
-      std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
+      auto AOTFileOrErr = createTempFile(Args, Prefix, "out");
+      if (!AOTFileOrErr)
+        return AOTFileOrErr.takeError();
+      StringRef AOTFile = *AOTFileOrErr;
       if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
         return Err;
       SplitModules[I].ModuleFilePath = AOTFile;
