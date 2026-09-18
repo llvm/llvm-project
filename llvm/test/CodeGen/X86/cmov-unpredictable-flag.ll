@@ -14,7 +14,7 @@ define i32 @simplified_eflags(ptr %p, i32 %x, i32 %y) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   LOCK_INC32m [[COPY2]], 1, $noreg, 0, $noreg, implicit-def $eflags :: (load store seq_cst (s32) on %ir.p)
-  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = CMOV32rr [[COPY]], [[COPY1]], 14, implicit $eflags
+  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = unpredictable CMOV32rr [[COPY]], [[COPY1]], 14, implicit $eflags
   ; CHECK-NEXT:   $eax = COPY [[CMOV32rr]]
   ; CHECK-NEXT:   RET 0, $eax
   %old = atomicrmw add ptr %p, i32 1 seq_cst
