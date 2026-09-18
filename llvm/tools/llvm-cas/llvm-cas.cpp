@@ -36,7 +36,6 @@ enum ID {
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_CODE
 
 class LLVMCASOptTable : public opt::OptTable {
 public:

@@ -29812,6 +29812,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       SmallVector<Value *> Ops(ActualVF, nullptr);
       unsigned Idx = 0;
       SmallPtrSet<const Value *, 8> Taken;
+      bool DependentSkipped = false;
       for (Value *V : VL.drop_front(I)) {
         // Check that a previous iteration of this loop did not delete the
         // Value.
@@ -29822,8 +29823,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         // already taken one, is left for the next window.
         if (StandaloneSeeds && Inst &&
             any_of(Inst->operand_values(),
-                   [&](const Value *Op) { return Taken.contains(Op); }))
+                   [&](const Value *Op) { return Taken.contains(Op); })) {
+          DependentSkipped = true;
           continue;
+        }
         Ops[Idx] = V;
         if (StandaloneSeeds)
           Taken.insert(V);
@@ -29831,9 +29834,13 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         if (Idx == ActualVF)
           break;
       }
-      // Not enough vectorizable instructions - exit.
-      if (Idx != ActualVF)
-        break;
+      // Not enough vectorizable instructions - exit. A skipped dependent seed
+      // may start the next window, so the scan must not stop because of it.
+      if (Idx != ActualVF) {
+        if (!DependentSkipped)
+          break;
+        continue;
+      }
 
       // The identical lanes compute the very same value, so the vector node
       // only duplicates it, and the window, rejected by another attempt in the
@@ -32994,8 +33001,11 @@ private:
       for (const ReductionVectorPart &P : VectorValuesAndScales)
         if (P.Negated == Negated)
           CreateVecOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
-    CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
-                   /*ReducedInTree=*/false, VecResNegated);
+    // All parts may be reduced in the tree already, leaving no vector value
+    // to reduce.
+    if (VecRes)
+      CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
+                     /*ReducedInTree=*/false, VecResNegated);
 
     return {ReducedSubTree, ResNegated};
   }

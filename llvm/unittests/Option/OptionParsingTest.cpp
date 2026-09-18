@@ -30,7 +30,6 @@ enum ID {
 
 #define OPTTABLE_VALUES_CODE
 #include "Opts.inc"
-#undef OPTTABLE_VALUES_CODE
 
 enum OptionFlags {
   OptFlag1 = (1 << 4),
@@ -45,7 +44,6 @@ enum OptionVisibility {
 
 #define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_CODE
 
 namespace {
 class TestOptTable : public OptTable {

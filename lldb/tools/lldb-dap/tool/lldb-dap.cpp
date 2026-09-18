@@ -112,7 +112,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_CODE
 class LLDBDAPOptTable : public llvm::opt::OptTable {
 public:
   LLDBDAPOptTable() : llvm::opt::OptTable(OptionTables, true) {}

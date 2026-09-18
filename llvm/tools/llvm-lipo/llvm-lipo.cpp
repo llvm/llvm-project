@@ -24,9 +24,9 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Triple.h"
@@ -73,7 +73,6 @@ namespace lipo {
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "LipoOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace lipo
 
 class LipoOptTable : public opt::OptTable {

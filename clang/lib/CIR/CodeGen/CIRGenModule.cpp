@@ -3380,6 +3380,29 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   }
 
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
+
+  std::optional<uint64_t> explicitAlignment;
+  if (unsigned alignment =
+          decl->getMaxAlignment() / getASTContext().getCharWidth())
+    explicitAlignment = alignment;
+  else if (langOpts.FunctionAlignment)
+    explicitAlignment = 1ull << langOpts.FunctionAlignment;
+
+  if (explicitAlignment) {
+    f.setAlignment(*explicitAlignment);
+    f.setPreferredAlignment(*explicitAlignment);
+  } else if (langOpts.PreferredFunctionAlignment) {
+    f.setPreferredAlignment(langOpts.PreferredFunctionAlignment);
+  }
+
+  // Some C++ ABIs require 2-byte alignment for member functions, in order to
+  // reserve a bit for differentiating between virtual and non-virtual member
+  // functions. If the current target's C++ ABI requires this and this is a
+  // member function, set its alignment accordingly.
+  if (getTarget().getCXXABI().areMemberFunctionsAligned()) {
+    if (isa<CXXMethodDecl>(decl) && f.getAlignment().value_or(1) < 2)
+      f.setAlignment(std::max(2ul, f.getAlignment().value_or(1)));
+  }
 }
 
 // Maps an AST address space to the OpenCL logical address space kind recorded

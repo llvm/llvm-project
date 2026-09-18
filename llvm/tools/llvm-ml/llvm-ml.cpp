@@ -31,10 +31,10 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -61,7 +61,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_CODE
 
 class MLOptTable : public opt::OptTable {
 public:

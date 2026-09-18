@@ -23,10 +23,10 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -59,7 +59,6 @@ enum ID {
 namespace rc_opt {
 #define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_CODE
 } // namespace rc_opt
 
 class RcOptTable : public opt::OptTable {
@@ -77,7 +76,6 @@ enum Windres_ID {
 namespace windres_opt {
 #define OPTTABLE_CODE
 #include "WindresOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace windres_opt
 
 class WindresOptTable : public opt::OptTable {

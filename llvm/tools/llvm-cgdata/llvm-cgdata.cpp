@@ -21,7 +21,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -54,7 +54,6 @@ enum ID {
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_CODE
 
 class CGDataOptTable : public opt::OptTable {
 public:

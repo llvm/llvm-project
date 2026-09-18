@@ -64,10 +64,10 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -116,7 +116,6 @@ private:
 namespace objdump_opt {
 #define OPTTABLE_CODE
 #include "ObjdumpOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace objdump_opt
 
 class ObjdumpOptTable : public CommonOptTable {
@@ -137,7 +136,6 @@ enum OtoolOptID {
 namespace otool {
 #define OPTTABLE_CODE
 #include "OtoolOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace otool
 
 class OtoolOptTable : public CommonOptTable {

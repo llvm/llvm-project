@@ -33,7 +33,6 @@ enum ID {
 };
 #define OPTTABLE_CODE
 #include "SubCommandOpts.inc"
-#undef OPTTABLE_CODE
 
 class TestOptSubCommandTable : public OptTable {
 public:

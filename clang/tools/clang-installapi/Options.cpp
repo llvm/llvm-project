@@ -32,7 +32,6 @@ namespace installapi {
 
 #define OPTTABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef OPTTABLE_CODE
 
 namespace {
 

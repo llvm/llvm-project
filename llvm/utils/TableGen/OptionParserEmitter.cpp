@@ -338,6 +338,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "// String table\n\n";
   OS << "#if defined(OPTTABLE_STR_TABLE_CODE) || defined(OPTTABLE_CODE)\n";
   Table.EmitStringTableDef(OS, "OptionStrTable");
+  OS << "#undef OPTTABLE_STR_TABLE_CODE\n";
   OS << "#endif // OPTTABLE_STR_TABLE_CODE || OPTTABLE_CODE\n\n";
 
   OS << "/////////\n";
@@ -495,6 +496,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "    OptionHelpTextVariantsTable, "
      << (SubCommands.empty() ? "{}" : "OptionSubCommands")
      << ", OptionSubCommandIDsTable};\n";
+  OS << "#undef OPTTABLE_CODE\n";
   OS << "#endif // OPTTABLE_CODE\n\n";
 
   // Dump ValuesCode.
@@ -522,7 +524,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "  case OPT_" << getOptionName(*R) << ": return " << getOptionName(*R)
        << "_Values;\n";
   OS << "  }\n  return {};\n}\n";
-  OS << "#endif\n";
+  OS << "#undef OPTTABLE_VALUES_CODE\n";
+  OS << "#endif // OPTTABLE_VALUES_CODE\n";
 
   OS << "/////////\n";
   OS << "// Groups\n\n";

@@ -21,7 +21,6 @@ enum ID {
 };
 #define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_CODE
 
 class HelloSubOptTable : public OptTable {
 public:

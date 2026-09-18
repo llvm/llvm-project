@@ -15,11 +15,9 @@ using namespace llvm::opt;
 
 #define OPTTABLE_VALUES_CODE
 #include "clang/Options/Options.inc"
-#undef OPTTABLE_VALUES_CODE
 
 #define OPTTABLE_CODE
 #include "clang/Options/Options.inc"
-#undef OPTTABLE_CODE
 
 namespace {
 

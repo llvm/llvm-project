@@ -100,7 +100,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "SYCLLinkOpts.inc"
-#undef OPTTABLE_CODE
 
 class LinkerOptTable : public opt::OptTable {
 public:

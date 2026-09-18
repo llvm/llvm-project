@@ -304,7 +304,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "LLGSOptions.inc"
-#undef OPTTABLE_CODE
 
 class LLGSOptTable : public opt::OptTable {
 public:

@@ -42,7 +42,6 @@ enum {
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_CODE
 
 class DllOptTable : public opt::OptTable {
 public:

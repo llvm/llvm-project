@@ -60,7 +60,6 @@ enum {
 
 #define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_CODE
 
 namespace {
 class MinGWOptTable : public opt::OptTable {

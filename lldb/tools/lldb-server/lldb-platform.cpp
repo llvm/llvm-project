@@ -70,7 +70,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "PlatformOptions.inc"
-#undef OPTTABLE_CODE
 
 class PlatformOptTable : public opt::OptTable {
 public:

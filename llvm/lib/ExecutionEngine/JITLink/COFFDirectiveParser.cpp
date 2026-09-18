@@ -21,7 +21,6 @@ using namespace jitlink;
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "COFFOptions.inc"
-#undef OPTTABLE_CODE
 
 class COFFOptTable : public opt::OptTable {
 public:

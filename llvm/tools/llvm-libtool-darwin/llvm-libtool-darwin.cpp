@@ -23,7 +23,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -50,7 +50,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_CODE
 
 class LibtoolDarwinOptTable : public opt::OptTable {
 public:

@@ -113,7 +113,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "NVLinkOpts.inc"
-#undef OPTTABLE_CODE
 
 class WrapperOptTable : public opt::OptTable {
 public:

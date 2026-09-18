@@ -81,7 +81,6 @@ enum ID {
 
 #define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_CODE
 
 class LLDBOptTable : public opt::OptTable {
 public:

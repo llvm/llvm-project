@@ -36,7 +36,6 @@ enum ID {
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_CODE
 
 class TLICheckerOptTable : public opt::OptTable {
 public:

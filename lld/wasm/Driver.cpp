@@ -147,7 +147,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
 
 #define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_CODE
 
 namespace {
 class WasmOptTable : public opt::OptTable {

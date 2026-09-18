@@ -42,7 +42,6 @@ enum ID {
 using namespace llvm::opt;
 #define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_CODE
 
 class DwarfutilOptTable : public opt::OptTable {
 public:

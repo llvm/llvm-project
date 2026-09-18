@@ -42,7 +42,6 @@ enum ObjcopyID {
 namespace objcopy_opt {
 #define OPTTABLE_CODE
 #include "ObjcopyOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace objcopy_opt
 
 class ObjcopyOptTable : public opt::OptTable {
@@ -64,7 +63,6 @@ enum InstallNameToolID {
 namespace install_name_tool {
 #define OPTTABLE_CODE
 #include "InstallNameToolOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace install_name_tool
 
 class InstallNameToolOptTable : public opt::OptTable {
@@ -83,7 +81,6 @@ enum BitcodeStripID {
 namespace bitcode_strip {
 #define OPTTABLE_CODE
 #include "BitcodeStripOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace bitcode_strip
 
 class BitcodeStripOptTable : public opt::OptTable {
@@ -101,7 +98,6 @@ enum StripID {
 namespace strip {
 #define OPTTABLE_CODE
 #include "StripOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace strip
 
 class StripOptTable : public opt::OptTable {
@@ -122,7 +118,6 @@ enum ExtractBundleEntryID {
 namespace extract_bundle_entry {
 #define OPTTABLE_CODE
 #include "ExtractBundleEntryOpts.inc"
-#undef OPTTABLE_CODE
 } // namespace extract_bundle_entry
 
 class ExtractBundleEntryOptTable : public opt::OptTable {
