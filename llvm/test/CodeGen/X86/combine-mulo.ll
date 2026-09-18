@@ -127,3 +127,29 @@ define { <4 x i32>, <4 x i1> } @combine_vec_smul_nsw(<4 x i32> %a, <4 x i32> %b)
   %x = call { <4 x i32>, <4 x i1> } @llvm.smul.with.overflow.v4i32(<4 x i32> %aa, <4 x i32> %bb)
   ret { <4 x i32>, <4 x i1> } %x
 }
+
+; Opaque constants (as created by constant hoisting) should not be folded.
+define { i64, i1 } @combine_smul_constant_opaque() {
+; CHECK-LABEL: combine_smul_constant_opaque:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $1311768467463790320, %rax # imm = 0x123456789ABCDEF0
+; CHECK-NEXT:    leaq (%rax,%rax,2), %rax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %c = bitcast i64 1311768467463790320 to i64
+  %x = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 %c, i64 3)
+  ret { i64, i1 } %x
+}
+
+define { i64, i1 } @combine_umul_constant_opaque() {
+; CHECK-LABEL: combine_umul_constant_opaque:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $1311768467463790320, %rcx # imm = 0x123456789ABCDEF0
+; CHECK-NEXT:    movl $3, %eax
+; CHECK-NEXT:    imulq %rcx, %rax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %c = bitcast i64 1311768467463790320 to i64
+  %x = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 3, i64 %c)
+  ret { i64, i1 } %x
+}

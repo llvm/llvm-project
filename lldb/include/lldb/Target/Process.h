@@ -3661,6 +3661,10 @@ protected:
   void RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                          uint8_t *buf) const;
 
+  /// Cache memory, restoring the original bytes under any breakpoint.
+  void AddCacheData(lldb::addr_t addr,
+                    const lldb::WritableDataBufferSP &data_buffer_sp);
+
   void SynchronouslyNotifyStateChanged(lldb::StateType state);
 
   void SetPublicState(lldb::StateType new_state, bool restarted);
