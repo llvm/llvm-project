@@ -27,9 +27,7 @@ endif()
 set(malloc_deps)
 if(NOT LIBC_CONF_SCANF_DISABLE_ALLOCATION)
   list(APPEND malloc_deps
-    libc.hdr.func.malloc
-    libc.hdr.func.realloc
-    libc.hdr.func.free
+    libc.include.stdlib
   )
 endif()
 

@@ -10,9 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_STRING_CONVERTER_H
 
 #ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
-#include "hdr/func/free.h"
-#include "hdr/func/malloc.h"
-#include "hdr/func/realloc.h"
+#include <stdlib.h>
 #endif
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
