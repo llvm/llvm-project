@@ -43,6 +43,11 @@ public:
     return cir::CallingConv::SpirKernel;
   }
 
+  bool supportsLibCall() const override {
+    const llvm::Triple &triple = getABIInfo().cgt.getCGModule().getTriple();
+    return !(triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD);
+  }
+
   void setCUDAKernelCallingConvention(const FunctionType *&ft) const override {
     // Convert HIP kernels to SPIR-V kernels.
     if (getABIInfo().cgt.getASTContext().getLangOpts().HIP)
