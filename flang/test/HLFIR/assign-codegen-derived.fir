@@ -76,3 +76,18 @@ func.func @test_volatile_both(%a: !fir.ref<!t_vol, volatile>, %b: !fir.ref<!t_vo
 // CHECK-VOL-LABEL: func.func @test_volatile_both(
 // CHECK-VOL-NOT:   fir.convert
 // CHECK-VOL:       fir.copy %{{.*}} to %{{.*}} no_overlap : !fir.ref<!fir.type<vol_t{i:i32}>, volatile>, !fir.ref<!fir.type<vol_t{i:i32}>, volatile>
+
+
+// Non-SEQUENCE derived type self-assignment: lhs == rhs so alias analysis
+// returns MustAlias.  noOverlap requires isTemporaryLHS OR NoAlias; neither
+// holds here, so fir.copy is emitted WITHOUT no_overlap (lowers to memmove).
+// disjoint is still true for non-SEQUENCE types so we take the fir.copy fast
+// path rather than the _FortranAAssign runtime path.
+func.func @test_simple_self_assign(%a: !fir.ref<!t_simple>) {
+  hlfir.assign %a to %a : !fir.ref<!t_simple>, !fir.ref<!t_simple>
+  return
+}
+// CHECK-LABEL: func.func @test_simple_self_assign(
+// CHECK-NOT:   fir.coordinate_of
+// CHECK:       fir.copy %{{.*}} to %{{.*}} : !fir.ref<!fir.type<simple{i:i32}>>, !fir.ref<!fir.type<simple{i:i32}>>
+// CHECK-NOT:   no_overlap
