@@ -323,13 +323,13 @@ public:
   using LiveRegSet = DenseMap<unsigned, LaneBitmask>;
 
 protected:
-  const LiveIntervals &LIS;
+  LiveIntervals &LIS;
   LiveRegSet LiveRegs;
   GCNRegPressure CurPressure, MaxPressure;
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNRPTracker(LiveIntervals &LIS_) : LIS(LIS_) {}
 
   /// Resets tracker before or \p After the provided \p MI, which can be a debug
   /// instruction.
@@ -370,7 +370,7 @@ getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNUpwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 
@@ -408,7 +408,7 @@ class GCNDownwardRPTracker : public GCNRPTracker {
   MachineBasicBlock::const_iterator MBBEnd;
 
 public:
-  GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNDownwardRPTracker(LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
   using GCNRPTracker::reset;
 
