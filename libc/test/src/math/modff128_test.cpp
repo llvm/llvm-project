@@ -7,21 +7,17 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of the remquof128 function.
+/// Exhaustive tests for the modff128 function.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/math/remquof128.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/math/remquof128.h"
+#include "ModfTest.h"
 
-namespace LIBC_NAMESPACE_DECL {
+#include "src/__support/FPUtil/float128.h"
+#include "src/math/modff128.h"
 
-using LIBC_NAMESPACE::fputil::Float128;
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LLVM_LIBC_FUNCTION(float128, remquof128, (float128 x, float128 y, int *exp)) {
-  return cpp::bit_cast<float128>(math::remquof128(
-      cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y), exp));
-}
-
-} // namespace LIBC_NAMESPACE_DECL
+LIST_MODF_TESTS(float128, LIBC_NAMESPACE::modff128)
