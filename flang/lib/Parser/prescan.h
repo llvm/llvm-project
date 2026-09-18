@@ -64,7 +64,7 @@ public:
     encoding_ = code;
     return *this;
   }
-  Prescanner &set_fixedFormColumnLimit(int limit) {
+  Prescanner &set_fixedFormColumnLimit(std::optional<int> limit) {
     fixedFormColumnLimit_ = limit;
     return *this;
   }
@@ -208,6 +208,9 @@ private:
             std::strcmp(directiveSentinel_, "$omx") == 0 ||
             std::strcmp(directiveSentinel_, "$ompx") == 0);
   }
+  bool IsPastFixedFormColumnLimit(int column) const {
+    return fixedFormColumnLimit_ && column > *fixedFormColumnLimit_;
+  }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
   }
@@ -280,7 +283,7 @@ private:
   bool isNestedInIncludeDirective_{false};
   bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
-  int fixedFormColumnLimit_{72};
+  std::optional<int> fixedFormColumnLimit_{72};
   Encoding encoding_{Encoding::UTF_8};
   int parenthesisNesting_{0};
   int prescannerNesting_{0};
