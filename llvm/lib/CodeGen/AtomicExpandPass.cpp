@@ -253,6 +253,7 @@ static unsigned getMinAtomicAlignmentSupported(const TargetLowering *TLI,
                                                const DataLayout &DL, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   unsigned ElementSize = getAtomicOpElementSize(DL, I);
+  // The hook has accepted I->getAlign(), which may exceed ElementSize.
   if (ElementSize != Size &&
       TLI->isAtomicAlignmentSupported(I->getAlign(), Size, ElementSize,
                                       I->getPointerAddressSpace()))
