@@ -744,7 +744,7 @@ private:
   /// Determines whether users of rematerialization candidate \p CandIdx are
   /// compatible with the stage's rematerialization constraints/limitations.
   /// Registers in \p MarkedRegs have already been deemed rematerializable by
-  /// the stage.s
+  /// the stage.
   bool candidateHasValidUsers(RegisterIdx CandIdx,
                               const SmallSet<Register, 4> &MarkedRegs) const;
 

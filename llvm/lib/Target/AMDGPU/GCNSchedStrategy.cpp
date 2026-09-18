@@ -3025,36 +3025,19 @@ bool PreRARematStage::setObjective() {
 
 bool PreRARematStage::candidateHasValidUsers(
     RegisterIdx CandIdx, const SmallSet<Register, 4> &MarkedRegs) const {
-  const SIRegisterInfo &TRI = *ST.getRegisterInfo();
-  const RegisterBankInfo &RBI = *ST.getRegBankInfo();
-
   const Rematerializer::Reg &CandReg = Remater.getReg(CandIdx);
   SlotIndex RefIdx =
       DAG.LIS->getInstructionIndex(*CandReg.getLastDef()).getRegSlot(true);
-  const MachineBasicBlock *DefMBB =
-      DAG.Regions[CandReg.DefRegion].first->getParent();
 
   for (const auto &[UseRegion, Users] : CandReg.Uses) {
-    // A convergent user (e.g., V_READLANE*) of a vector register may observe
-    // lanes of the definition that are active in the definition's region but
-    // inactive at the user's region. Rematerialization could therefore change
-    // what the user reads, which is invalid. EXEC doesn't change within a block
-    // so a rematerialization across regions belonging to the same block is
-    // safe.
-    Register DefReg = CandReg.getDefReg();
-    const bool ConvergentUserForbidden =
-        !TRI.isUniformReg(DAG.MRI, RBI, DefReg) &&
-        DefMBB != DAG.Regions[UseRegion].first->getParent();
-
-    // Users cannot be rematerializable or, conditionally, convergent.
+    // Users cannot themselves be rematerializable.
     if (llvm::any_of(Users, [&](const MachineInstr *UserMI) {
           assert(UserMI->getNumOperands() > 0 &&
                  "user must have at least one operand");
-          const MachineOperand &UseMO = UserMI->getOperand(0);
-          if (!UseMO.isReg())
-            return false;
-          return MarkedRegs.contains(UseMO.getReg()) ||
-                 (ConvergentUserForbidden && UserMI->isConvergent());
+          // A user is rematerializable if its first register operand (its
+          // register def) was marked already.
+          const MachineOperand &DefMO = UserMI->getOperand(0);
+          return DefMO.isReg() && MarkedRegs.contains(DefMO.getReg());
         }))
       return false;
 
@@ -3141,7 +3124,7 @@ void PreRARematStage::ScoredRemat::init(const FreqInfo &Freq,
   }
   RPSave.inc(DefReg, LaneBitmask::getNone(), Reg.Mask, DAG.MRI);
 
-  // Estimate the difference in instruction execution frequency that will
+  // Estimate the difference in instruction execution frequency that will be
   // induced by the rematerialization. A rematerialization from the least
   // frequent region to the most frequent region should yield the greatest
   // frequency penalty (most negative frequency difference). When the register
