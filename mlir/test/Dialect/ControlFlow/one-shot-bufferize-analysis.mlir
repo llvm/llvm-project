@@ -853,3 +853,83 @@ func.func @switch_write_pass_result(%flag: i32) -> tensor<5xf32> {
   func.return %r : tensor<5xf32>
 }
 
+// -----
+
+// Nested diamond in execute_region, called from an outer CFG loop. Dest is
+// defined outside the loop, so the insert is out-of-place.
+// CHECK-LABEL: func @nested_diamond_in_outer_cfg_loop(
+func.func @nested_diamond_in_outer_cfg_loop(%f: f32) -> tensor<5xf32> {
+  %empty = tensor.empty() : tensor<5xf32>
+  %t = linalg.fill ins(%f : f32) outs(%empty : tensor<5xf32>) -> tensor<5xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  cf.br ^loop(%c0 : index)
+^loop(%i: index):
+  %take_read = arith.cmpi eq, %i, %c1 : index
+  %r = scf.execute_region -> tensor<5xf32> {
+    cf.cond_br %take_read, ^read, ^write
+  ^read:
+    %e = tensor.extract %t[%c0] : tensor<5xf32>
+    "test.qux"(%e) : (f32) -> ()
+    cf.br ^join(%t : tensor<5xf32>)
+  ^write:
+    %val = "test.bar"() : () -> f32
+// CHECK: tensor.insert
+// CHECK-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
+    %inserted = tensor.insert %val into %t[%c0] : tensor<5xf32>
+    cf.br ^join(%inserted : tensor<5xf32>)
+  ^join(%out: tensor<5xf32>):
+    scf.yield %out : tensor<5xf32>
+  }
+  %next = arith.addi %i, %c1 : index
+  %again = arith.cmpi ult, %next, %c2 : index
+  cf.cond_br %again, ^loop(%next : index), ^exit(%r : tensor<5xf32>)
+^exit(%result: tensor<5xf32>):
+  func.return %result : tensor<5xf32>
+}
+
+// -----
+
+// Same outer CFG loop, but read and write are in separate execute_region ops.
+// Insert is still out-of-place.
+// CHECK-LABEL: func @two_execute_regions_in_outer_cfg_loop(
+func.func @two_execute_regions_in_outer_cfg_loop(%f: f32) -> tensor<5xf32> {
+  %empty = tensor.empty() : tensor<5xf32>
+  %t = linalg.fill ins(%f : f32) outs(%empty : tensor<5xf32>) -> tensor<5xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  cf.br ^loop(%c0 : index)
+^loop(%i: index):
+  %take_read = arith.cmpi eq, %i, %c1 : index
+  scf.execute_region {
+    cf.cond_br %take_read, ^do_read, ^skip_read
+  ^do_read:
+    %e = tensor.extract %t[%c0] : tensor<5xf32>
+    "test.qux"(%e) : (f32) -> ()
+    cf.br ^join_read
+  ^skip_read:
+    cf.br ^join_read
+  ^join_read:
+    scf.yield
+  }
+  %r = scf.execute_region -> tensor<5xf32> {
+    cf.cond_br %take_read, ^skip_write, ^do_write
+  ^do_write:
+    %val = "test.bar"() : () -> f32
+// CHECK: tensor.insert
+// CHECK-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
+    %inserted = tensor.insert %val into %t[%c0] : tensor<5xf32>
+    cf.br ^join_write(%inserted : tensor<5xf32>)
+  ^skip_write:
+    cf.br ^join_write(%t : tensor<5xf32>)
+  ^join_write(%w: tensor<5xf32>):
+    scf.yield %w : tensor<5xf32>
+  }
+  %next = arith.addi %i, %c1 : index
+  %again = arith.cmpi ult, %next, %c2 : index
+  cf.cond_br %again, ^loop(%next : index), ^exit(%r : tensor<5xf32>)
+^exit(%result: tensor<5xf32>):
+  func.return %result : tensor<5xf32>
+}
