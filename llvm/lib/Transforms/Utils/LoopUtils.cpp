@@ -2093,6 +2093,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
       llvm::any_of(RewritePhiSet, [](const RewritePhi &Phi) {
         return std::holds_alternative<OperandExitValueList>(Phi.ValueToExpand);
       });
+  // FIXME: SCEV-based rewrites can also expose an existing progress bug in
+  // predicateLoopExits().
   bool LoopCanBeDel =
       canLoopBeDeleted(L, RewritePhiSet) &&
       (!HasOperandExitValues || loopDeletionPreservesProgress(L, SE, LI));
