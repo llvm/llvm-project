@@ -6167,7 +6167,7 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
   // fold operation with constant operands.
   // TODO: Move this to FoldConstantArithmetic when it supports nodes with
   // multiple results.
-  if (N0C && N1C) {
+  if (N0C && N1C && !N0C->isOpaque() && !N1C->isOpaque()) {
     bool Overflow;
     APInt Result =
         IsSigned ? N0C->getAPIntValue().smul_ov(N1C->getAPIntValue(), Overflow)
