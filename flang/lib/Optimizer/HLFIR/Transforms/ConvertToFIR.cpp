@@ -15,7 +15,6 @@
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
-#include "flang/Optimizer/Builder/Runtime/Transformational.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -23,11 +22,6 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/Support/AllocationPolicy.h"
-#include "flang/Optimizer/Support/DataLayout.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
 
@@ -234,115 +228,61 @@ public:
 
 class CopyInOpConversion : public mlir::OpRewritePattern<hlfir::CopyInOp> {
 public:
-  CopyInOpConversion(mlir::MLIRContext *ctx,
-                     const fir::AllocationPolicy &policy,
-                     const fir::AllocationSizeContext &sizeContext)
-      : OpRewritePattern{ctx}, policy{policy}, sizeContext{sizeContext} {}
+  explicit CopyInOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
   struct CopyInResult {
     mlir::Value addr;
     mlir::Value wasCopied;
-    bool mustFree;
   };
 
-  CopyInResult genNonOptionalCopyIn(mlir::Location loc,
-                                    fir::FirOpBuilder &builder,
-                                    hlfir::CopyInOp copyInOp) const {
+  static CopyInResult genNonOptionalCopyIn(mlir::Location loc,
+                                           fir::FirOpBuilder &builder,
+                                           hlfir::CopyInOp copyInOp) {
     mlir::Value inputVariable = copyInOp.getVar();
     mlir::Type resultAddrType = copyInOp.getCopiedIn().getType();
     mlir::Value isContiguous =
         fir::runtime::genIsContiguous(builder, loc, inputVariable);
-    mlir::Value wasCopied = builder.genNot(loc, isContiguous);
-    const bool isAssumedRank =
-        mlir::cast<fir::BaseBoxType>(resultAddrType).isAssumedRank();
-    if (isAssumedRank || fir::isPolymorphicType(inputVariable.getType())) {
-      mlir::Value tempBox = copyInOp.getTempBox();
-      mlir::Value addr =
-          builder
-              .genIfOp(loc, {resultAddrType}, isContiguous,
-                       /*withElseRegion=*/true)
-              .genThen(
-                  [&] { fir::ResultOp::create(builder, loc, inputVariable); })
-              .genElse([&] {
-                fir::runtime::genCopyInAssign(builder, loc, tempBox,
-                                              inputVariable);
-                mlir::Value copy = fir::LoadOp::create(builder, loc, tempBox);
-                if (isAssumedRank)
-                  copy = fir::ReboxAssumedRankOp::create(
-                      builder, loc, resultAddrType, copy,
-                      fir::LowerBoundModifierAttribute::Preserve);
-                else
-                  copy = fir::ReboxOp::create(
-                      builder, loc, resultAddrType, copy,
-                      /*shape=*/mlir::Value{}, /*slice=*/mlir::Value{});
-                fir::ResultOp::create(builder, loc, copy);
-              })
-              .getResults()[0];
-      return {addr, wasCopied, /*mustFree=*/true};
-    }
-
-    hlfir::Entity inputEntity{inputVariable};
-    inputEntity =
-        hlfir::derefPointersAndAllocatables(loc, builder, inputEntity);
-    mlir::Type sequenceType = inputEntity.getElementOrSequenceType();
-    mlir::Value shape = hlfir::genShape(loc, builder, inputEntity);
-    llvm::SmallVector<mlir::Value> extents =
-        hlfir::getIndexExtents(loc, builder, shape);
-    llvm::SmallVector<mlir::Value> typeParams;
-    hlfir::genLengthParameters(loc, builder, inputEntity, typeParams);
-    const bool useStack =
-        fir::shouldUseStackForCopyin(loc, sequenceType, policy, sizeContext);
-
     mlir::Value addr =
         builder
             .genIfOp(loc, {resultAddrType}, isContiguous,
                      /*withElseRegion=*/true)
             .genThen(
-                [&] { fir::ResultOp::create(builder, loc, inputVariable); })
+                [&]() { fir::ResultOp::create(builder, loc, inputVariable); })
             .genElse([&] {
-              llvm::StringRef tmpName{".tmp.copy_in"};
-              mlir::Value allocation =
-                  useStack
-                      ? builder.createTemporary(loc, sequenceType, tmpName,
-                                                extents, typeParams)
-                      : builder.createHeapTemporary(loc, sequenceType, tmpName,
-                                                    extents, typeParams);
-              mlir::Value declared = fir::FirOpBuilder::genTempDeclareOp(
-                  builder, loc, allocation, tmpName, shape, typeParams,
-                  fir::FortranVariableFlagsAttr{});
-
-              bool useDynamicType =
-                  fir::isBoxedRecordType(inputVariable.getType());
-              mlir::Type tempBoxType = fir::wrapInClassOrBoxType(
-                  sequenceType, /*isPolymorphic=*/useDynamicType);
-              mlir::Value tempBox = builder.createBox(
-                  loc, tempBoxType, declared, shape, /*slice=*/nullptr,
-                  typeParams, useDynamicType ? inputVariable : nullptr);
-              fir::runtime::genShallowCopy(builder, loc, tempBox, inputVariable,
-                                           /*resultIsAllocated=*/true);
-              mlir::Value copy = fir::ReboxOp::create(
-                  builder, loc, resultAddrType, tempBox,
-                  /*shape=*/mlir::Value{}, /*slice=*/mlir::Value{});
-              fir::StoreOp::create(builder, loc, copy, copyInOp.getTempBox());
+              // Create temporary on the heap. Note that the runtime is used and
+              // that is desired: since the data copy happens under a runtime
+              // check (for IsContiguous) the copy loops can hardly provide any
+              // value to optimizations, instead, the optimizer just wastes
+              // compilation time on these loops.
+              mlir::Value temp = copyInOp.getTempBox();
+              fir::runtime::genCopyInAssign(builder, loc, temp, inputVariable);
+              mlir::Value copy = fir::LoadOp::create(builder, loc, temp);
+              // Get rid of allocatable flag in the fir.box.
+              if (mlir::cast<fir::BaseBoxType>(resultAddrType).isAssumedRank())
+                copy = fir::ReboxAssumedRankOp::create(
+                    builder, loc, resultAddrType, copy,
+                    fir::LowerBoundModifierAttribute::Preserve);
+              else
+                copy = fir::ReboxOp::create(builder, loc, resultAddrType, copy,
+                                            /*shape=*/mlir::Value{},
+                                            /*slice=*/mlir::Value{});
               fir::ResultOp::create(builder, loc, copy);
             })
             .getResults()[0];
-
-    return {addr, wasCopied, /*mustFree=*/!useStack};
+    return {addr, builder.genNot(loc, isContiguous)};
   }
 
-  CopyInResult genOptionalCopyIn(mlir::Location loc, fir::FirOpBuilder &builder,
-                                 hlfir::CopyInOp copyInOp) const {
+  static CopyInResult genOptionalCopyIn(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        hlfir::CopyInOp copyInOp) {
     mlir::Type resultAddrType = copyInOp.getCopiedIn().getType();
     mlir::Value isPresent = copyInOp.getVarIsPresent();
-    bool mustFree = false;
     auto res =
         builder
             .genIfOp(loc, {resultAddrType, builder.getI1Type()}, isPresent,
                      /*withElseRegion=*/true)
             .genThen([&]() {
               CopyInResult res = genNonOptionalCopyIn(loc, builder, copyInOp);
-              mustFree = res.mustFree;
               fir::ResultOp::create(builder, loc,
                                     mlir::ValueRange{res.addr, res.wasCopied});
             })
@@ -353,7 +293,7 @@ public:
                                     mlir::ValueRange{absent, isPresent});
             })
             .getResults();
-    return {res[0], res[1], mustFree};
+    return {res[0], res[1]};
   }
 
   llvm::LogicalResult
@@ -364,18 +304,9 @@ public:
     CopyInResult result = copyInOp.getVarIsPresent()
                               ? genOptionalCopyIn(loc, builder, copyInOp)
                               : genNonOptionalCopyIn(loc, builder, copyInOp);
-    // Heap temps are only created when a copy is made. Keep mustFree false
-    // on the stack path (constant) and equal to wasCopied on the heap path
-    // so copy-out can free on mustFree alone.
-    mlir::Value mustFree =
-        result.mustFree ? result.wasCopied : builder.createBool(loc, false);
-    rewriter.replaceOp(copyInOp, {result.addr, result.wasCopied, mustFree});
+    rewriter.replaceOp(copyInOp, {result.addr, result.wasCopied});
     return mlir::success();
   }
-
-private:
-  fir::AllocationPolicy policy;
-  const fir::AllocationSizeContext &sizeContext;
 };
 
 class CopyOutOpConversion : public mlir::OpRewritePattern<hlfir::CopyOutOp> {
@@ -389,22 +320,29 @@ public:
     mlir::Location loc = copyOutOp.getLoc();
     fir::FirOpBuilder builder(rewriter, copyOutOp.getOperation());
 
-    if (mlir::Value var = copyOutOp.getVar())
-      builder.genIfThen(loc, copyOutOp.getWasCopied())
-          .genThen([&] {
-            fir::runtime::genCopyOutAssignDirect(builder, loc, var,
-                                                 copyOutOp.getTemp());
-          })
-          .end();
-    builder.genIfThen(loc, copyOutOp.getMustFree())
-        .genThen([&] {
-          mlir::Value temp =
-              fir::LoadOp::create(builder, loc, copyOutOp.getTemp());
-          mlir::Value tempAddr = fir::BoxAddrOp::create(builder, loc, temp);
-          mlir::Value heapAddr = fir::ConvertOp::create(
-              builder, loc, fir::HeapType::get(builder.getIntegerType(8)),
-              tempAddr);
-          fir::FreeMemOp::create(builder, loc, heapAddr);
+    builder.genIfThen(loc, copyOutOp.getWasCopied())
+        .genThen([&]() {
+          mlir::Value temp = copyOutOp.getTemp();
+          mlir::Value varMutableBox;
+          // Generate CopyOutAssign runtime call.
+          if (mlir::Value var = copyOutOp.getVar()) {
+            // Set the variable descriptor pointer in order to copy data from
+            // the temporary to the actualArg. Note that in case the actual
+            // argument is ALLOCATABLE/POINTER the CopyOutAssign()
+            // implementation should not engage its reallocation, because the
+            // temporary is rank, shape and type compatible with it. Moreover,
+            // CopyOutAssign() guarantees that there will be no finalization for
+            // the LHS even if it is of a derived type with finalization.
+            varMutableBox = builder.createTemporary(loc, var.getType());
+            fir::StoreOp::create(builder, loc, var, varMutableBox);
+          } else {
+            // Even when there is no need to copy back the data (e.g., the dummy
+            // argument was intent(in), CopyOutAssign is called to
+            // destroy/deallocate the temporary.
+            varMutableBox = fir::ZeroOp::create(builder, loc, temp.getType());
+          }
+          fir::runtime::genCopyOutAssign(builder, loc, varMutableBox,
+                                         copyOutOp.getTemp());
         })
         .end();
     rewriter.eraseOp(copyOutOp);
@@ -913,13 +851,8 @@ public:
     // generate the signatures in a thread safe way.
     auto module = this->getOperation();
     auto *context = &getContext();
-    fir::AllocationPolicy allocationPolicy = fir::getAllocationPolicy(module);
-    fir::AllocationSizeContext allocationSizeContext =
-        fir::getAllocationSizeContext(module);
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<CopyInOpConversion>(context, allocationPolicy,
-                                        allocationSizeContext);
-    patterns.insert<AssignOpConversion, CopyOutOpConversion,
+    patterns.insert<AssignOpConversion, CopyInOpConversion, CopyOutOpConversion,
                     DeclareOpConversion, DesignateOpConversion,
                     GetExtentOpConversion, NoReassocOpConversion,
                     NullOpConversion, ParentComponentOpConversion>(context);

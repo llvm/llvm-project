@@ -368,7 +368,7 @@ RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
 RT_OFFLOAD_API_GROUP_END
 
 // The ShallowCopyModifiedSuffix family is deliberately outside the offload
-// API group: its only caller is CopyOutAssignDirect, which is host-only, and
+// API group: its only caller is CopyOutAssign, which is host-only, and
 // instantiating it for the device would only add dead device code.
 // Compares one element bitwise. As in the ShallowCopy* helpers above, the
 // compile-time element size lets the compiler inline the comparison.

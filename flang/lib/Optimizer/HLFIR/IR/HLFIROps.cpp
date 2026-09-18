@@ -1949,10 +1949,9 @@ llvm::LogicalResult hlfir::DestroyOp::verify() {
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value temp_box, mlir::Value var_is_present) {
-  return build(builder, odsState,
-               {var.getType(), builder.getI1Type(), builder.getI1Type()}, var,
-               temp_box, var_is_present);
+                            mlir::Value tempBox, mlir::Value var_is_present) {
+  return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
+               tempBox, var_is_present);
 }
 
 //===----------------------------------------------------------------------===//

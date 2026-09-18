@@ -21,19 +21,14 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_ALLOCATIONPOLICY_H
 #define FORTRAN_OPTIMIZER_SUPPORT_ALLOCATIONPOLICY_H
 
-#include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "flang/Optimizer/Support/DataLayout.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <optional>
 
 namespace mlir {
-class Location;
 class ModuleOp;
 class Operation;
-class Type;
 } // namespace mlir
 
 namespace fir {
@@ -85,22 +80,6 @@ struct PendingAllocationInfo {
   /// The constant size of the allocation in bytes, if it can be determined.
   std::optional<std::int64_t> byteSize;
 };
-
-/// Module-level information needed to compute constant allocation sizes.
-struct AllocationSizeContext {
-  std::optional<mlir::DataLayout> dataLayout;
-  std::optional<fir::KindMapping> kindMap;
-};
-
-/// Gather the module-level information needed to compute allocation sizes.
-AllocationSizeContext getAllocationSizeContext(mlir::Operation *op);
-
-/// Return true if a copy-in buffer should be allocated on the stack. Unlike
-/// general array allocation placement, copy-in buffers with dynamic size are
-/// kept on the heap even under -fstack-arrays.
-bool shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
-                             const AllocationPolicy &policy,
-                             const AllocationSizeContext &sizeContext);
 
 /// Facts about a single existing array allocation used to decide its placement.
 struct AllocationInfo : PendingAllocationInfo {

@@ -1101,15 +1101,12 @@ namespace {
 struct CallCleanUp {
   struct CopyIn {
     void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-      hlfir::CopyOutOp::create(builder, loc, tempBox, wasCopied, mustFree,
-                               copyBackVar);
+      hlfir::CopyOutOp::create(builder, loc, tempBox, wasCopied, copyBackVar);
     }
-    // Address of the descriptor holding the temp if a temp was created.
+    // address of the descriptor holding the temp if a temp was created.
     mlir::Value tempBox;
     // Boolean indicating if a copy was made or not.
     mlir::Value wasCopied;
-    // Boolean indicating if the temporary storage must be freed.
-    mlir::Value mustFree;
     // copyBackVar may be null if copy back is not needed.
     mlir::Value copyBackVar;
   };
@@ -1149,9 +1146,9 @@ struct CallCleanUp {
 /// clean-ups to be done after the call.
 struct PreparedDummyArgument {
   void pushCopyInCleanUp(mlir::Value tempBox, mlir::Value wasCopied,
-                         mlir::Value mustFree, mlir::Value copyBackVar) {
-    cleanups.emplace_back(CallCleanUp{
-        CallCleanUp::CopyIn{tempBox, wasCopied, mustFree, copyBackVar}});
+                         mlir::Value copyBackVar) {
+    cleanups.emplace_back(
+        CallCleanUp{CallCleanUp::CopyIn{tempBox, wasCopied, copyBackVar}});
   }
   void pushExprAssociateCleanUp(mlir::Value tempVar, mlir::Value wasCopied) {
     cleanups.emplace_back(
@@ -1191,7 +1188,6 @@ struct ConditionallyPreparedDummy {
       if (const auto *copyInCleanUp =
               std::get_if<CallCleanUp::CopyIn>(&c.cleanUp)) {
         thenResultValues.push_back(copyInCleanUp->wasCopied);
-        thenResultValues.push_back(copyInCleanUp->mustFree);
         if (copyInCleanUp->copyBackVar)
           thenResultValues.push_back(copyInCleanUp->copyBackVar);
       } else {
@@ -1248,8 +1244,7 @@ struct ConditionallyPreparedDummy {
         // tempBox is an hlfir.copy_in argument created outside of the
         // fir.if region. It needs not to be threaded as a fir.if result.
         preparedDummy.pushCopyInCleanUp(copyInCleanUp->tempBox,
-                                        ifOp.getResults()[1],
-                                        ifOp.getResults()[2], copyBackVar);
+                                        ifOp.getResults()[1], copyBackVar);
       } else {
         preparedDummy.pushExprAssociateCleanUp(ifOp.getResults()[1],
                                                ifOp.getResults()[2]);
@@ -1460,13 +1455,16 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   auto genCopyIn = [&](hlfir::Entity var, bool doCopyOut) -> hlfir::Entity {
     auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType());
     assert(baseBoxTy && "expect non simply contiguous variables to be boxes");
-    mlir::Value tempBox = builder.createTemporary(loc, var.getType());
+    // Create allocatable descriptor for the potential temporary.
+    mlir::Type tempBoxType = baseBoxTy.getBoxTypeWithNewAttr(
+        fir::BaseBoxType::Attribute::Allocatable);
+    mlir::Value tempBox = builder.createTemporary(loc, tempBoxType);
     auto copyIn = hlfir::CopyInOp::create(builder, loc, var, tempBox,
                                           /*var_is_present=*/mlir::Value{});
     // Register the copy-out after the call.
-    preparedDummy.pushCopyInCleanUp(
-        copyIn.getTempBox(), copyIn.getWasCopied(), copyIn.getMustFree(),
-        doCopyOut ? copyIn.getVar() : mlir::Value{});
+    preparedDummy.pushCopyInCleanUp(copyIn.getTempBox(), copyIn.getWasCopied(),
+                                    doCopyOut ? copyIn.getVar()
+                                              : mlir::Value{});
     return hlfir::Entity{copyIn.getCopiedIn()};
   };
 
