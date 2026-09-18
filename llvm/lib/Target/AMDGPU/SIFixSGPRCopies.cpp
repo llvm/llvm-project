@@ -458,6 +458,7 @@ getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
 // SGPR. A VGPR cannot be processed since we cannot guarantee vector
 // executioon.
 static bool hoistAndMergeSGPRInits(unsigned Reg,
+                                   ArrayRef<MachineInstr *> RegMaskInstrs,
                                    const MachineRegisterInfo &MRI,
                                    const TargetRegisterInfo *TRI,
                                    MachineDominatorTree &MDT,
@@ -488,6 +489,12 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
     else
       Clobbers.push_back(&MI);
   }
+
+  // A regmask clobbers Reg instead of explicitly defining it, so these are not
+  // on the def list of Reg.
+  for (MachineInstr *MI : RegMaskInstrs)
+    if (MI->modifiesRegister(Reg, TRI))
+      Clobbers.push_back(MI);
 
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
@@ -609,7 +616,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
       const unsigned Threshold = 50;
       // Search until B or Threshold for a place to insert the initialization.
       for (unsigned I = 0; R != B && I < Threshold; ++R, ++I)
-        if (R->readsRegister(Reg, TRI) || R->definesRegister(Reg, TRI) ||
+        if (R->readsRegister(Reg, TRI) || R->modifiesRegister(Reg, TRI) ||
             TII->isSchedulingBoundary(*R, MBB, *MBB->getParent()))
           break;
 
@@ -637,11 +644,18 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
   // Instructions to re-legalize after changing register classes
   SmallVector<MachineInstr *, 8> Relegalize;
+  SmallVector<MachineInstr *, 4> RegMaskInstrs;
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
+
+      // Regmask operands clobber registers without an explicit def, so record
+      // their instructions for hoistAndMergeSGPRInits.
+      if (llvm::any_of(MI.operands(),
+                       [](const MachineOperand &MO) { return MO.isRegMask(); }))
+        RegMaskInstrs.push_back(&MI);
 
       switch (MI.getOpcode()) {
       default:
@@ -811,7 +825,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
     TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
 
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
-    hoistAndMergeSGPRInits(AMDGPU::M0, *MRI, TRI, *MDT, TII);
+    hoistAndMergeSGPRInits(AMDGPU::M0, RegMaskInstrs, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();
   V2SCopies.clear();
