@@ -8,7 +8,7 @@ define i8 @umin_straight(i8 %a) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 -1)
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
-  %ext = zext i8 %a to i32;
+  %ext = zext i8 %a to i32
   %min = call i32 @llvm.umin.i32(i32 %ext, i32 255)
   %ret = trunc i32 %min to i8
   ret i8 %ret
@@ -16,10 +16,10 @@ define i8 @umin_straight(i8 %a) {
 
 define i8 @umax_straight(i8 %a) {
 ; CHECK-LABEL: @umax_straight(
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    ret i8 [[MIN]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    ret i8 [[MAX]]
 ;
-  %ext = zext i8 %a to i32;
+  %ext = zext i8 %a to i32
   %max = call i32 @llvm.umax.i32(i32 %ext, i32 10)
   %ret = trunc i32 %max to i8
   ret i8 %ret
@@ -31,7 +31,7 @@ define i8 @clamp_straight(i8 %a) {
 ; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 10, i8 [[MIN]])
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
-  %ext = zext i8 %a to i32;
+  %ext = zext i8 %a to i32
   %min = call i32 @llvm.umin.i32(i32 255, i32 %ext)
   %max = call i32 @llvm.umax.i32(i32 10, i32 %min)
   %ret = trunc i32 %max to i8
@@ -44,13 +44,15 @@ define i8 @clamp_straight(i8 %a) {
 ; (The "smallest legal type" check is not umin/umax specific)
 define i8 @clamp_straight_larger_than_trunc(i8 %a) {
 ; CHECK-LABEL: @clamp_straight_larger_than_trunc(
-; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.umin.i8(i8 -1, i8 [[A:%.*]])
-; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 10, i8 [[MIN]])
-; CHECK-NEXT:    ret i8 [[MAX]]
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A:%.*]] to i16
+; CHECK-NEXT:    [[MIN:%.*]] = call i16 @llvm.umin.i16(i16 255, i16 [[EXT]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i16 @llvm.umax.i16(i16 1024, i16 [[MIN]])
+; CHECK-NEXT:    [[RET:%.*]] = trunc i16 [[MAX]] to i8
+; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %ext = zext i8 %a to i32;
+  %ext = zext i8 %a to i32
   %min = call i32 @llvm.umin.i32(i32 255, i32 %ext)
-  %max = call i32 @llvm.umax.i32(i32 10, i32 %min)
+  %max = call i32 @llvm.umax.i32(i32 1024, i32 %min)
   %ret = trunc i32 %max to i8
   ret i8 %ret
 }
@@ -60,15 +62,15 @@ define i8 @umin_loop(ptr %src) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[R:%.*]] = phi i8 [ -1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ -1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IDX_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = call i8 @llvm.umin.i8(i8 [[R]], i8 [[LOAD]])
+; CHECK-NEXT:    [[IV_NEXT]] = call i8 @llvm.umin.i8(i8 [[IV]], i8 [[LOAD]])
 ; CHECK-NEXT:    [[IDX_NEXT]] = add i64 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IDX_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[IV]]
 ;
 entry:
   br label %loop

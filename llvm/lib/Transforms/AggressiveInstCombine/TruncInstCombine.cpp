@@ -335,8 +335,7 @@ Type *TruncInstCombine::getBestTruncatedType() {
         return nullptr;
       if (I->getOpcode() == Instruction::LShr) {
         KnownBits KnownLHS = computeKnownBits(I->getOperand(0));
-        MinBitWidth =
-            std::max(MinBitWidth, KnownLHS.getMaxValue().getActiveBits());
+        MinBitWidth = std::max(MinBitWidth, KnownLHS.countMaxActiveBits());
       }
       if (I->getOpcode() == Instruction::AShr) {
         unsigned NumSignBits = ComputeNumSignBits(I->getOperand(0));
@@ -350,8 +349,7 @@ Type *TruncInstCombine::getBestTruncatedType() {
       unsigned MinBitWidth = 0;
       for (const auto &Op : I->operands()) {
         KnownBits Known = computeKnownBits(Op);
-        MinBitWidth =
-            std::max(Known.getMaxValue().getActiveBits(), MinBitWidth);
+        MinBitWidth = std::max(Known.countMaxActiveBits(), MinBitWidth);
         if (MinBitWidth >= OrigBitWidth)
           return nullptr;
       }
