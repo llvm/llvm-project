@@ -249,10 +249,10 @@ end subroutine
 ! CHECK: cf.cond_br
 
 ! Test that `acc serial loop collapse(N)` whose body has an early-exit
-! (here, `if (cond) then ... cycle ... end if`) lowers cleanly. The
-! corresponding acc.loop must privatize all N induction variables, carry
-! both `collapse = [N]` and `unstructured` attributes, and emit the
-! iteration mechanics for all N levels as explicit cf inside the body.
+! (here, `if (cond) then ... cycle ... end if`) lowers cleanly. The IF-guarded
+! CYCLE is restructured into an IF/ELSE by the PFT, so the loop stays
+! structured: acc.loop privatizes all N induction variables and carries their
+! bounds in control(...), with the body's conditional as a fir.if.
 subroutine test_unstructured_collapse_cycle(a)
   integer :: i, j, jdiag
   real(8) :: a(:,:)
@@ -275,19 +275,14 @@ end subroutine
 ! Both induction variables (j and i) are privatized:
 ! CHECK: %[[PRIVJ:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
 ! CHECK: %[[PRIVI:.*]] = acc.private varPtr(%{{.*}} : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
-! No control(...) on acc.loop — bounds are not on the op:
-! CHECK: acc.loop combined(serial) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) {
-! Outer loop trip-count test (j) emitted as cf:
-! CHECK: arith.cmpi sgt
-! CHECK: cf.cond_br
-! Inner loop trip-count test (i) emitted as cf:
-! CHECK: arith.cmpi sgt
-! CHECK: cf.cond_br
-! The if/cycle is a structured cf branch in the body:
+! Both sets of bounds are carried in control(...):
+! CHECK: acc.loop combined(serial) private(%[[PRIVJ]], %[[PRIVI]] : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+! The if/cycle became an if/else, so the body's conditional is a fir.if:
 ! CHECK: arith.cmpi eq
-! CHECK: cf.cond_br
+! CHECK: fir.if
 ! CHECK: acc.yield
-! CHECK: }
+! End-of-line anchor: an `unstructured` attribute would follow `seq`.
+! CHECK: } inclusiveUpperbound({{.*}}) collapse([2]) collapseDeviceType([#acc.device_type<none>]) seq{{ *$}}
 
 ! `acc serial loop collapse(N)` with STOP in body: wrap-in-execute-region hides
 ! the unstructured if/stop and the three collapsed iterators lower as a single
@@ -334,9 +329,11 @@ subroutine test_unstructured_collapse_loop_only(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_unstructured_collapse_loop_only
-! Standalone acc.loop (no `combined(...)`):
-! CHECK: acc.loop private(%{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) {
-! CHECK: } collapse([2]) collapseDeviceType([#acc.device_type<none>]) independent unstructured
+! Standalone acc.loop (no `combined(...)`). The if/cycle is restructured into
+! an if/else, so the loop is structured and carries its bounds:
+! CHECK: acc.loop private(%{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+! End-of-line anchor: an `unstructured` attribute would follow `independent`.
+! CHECK: } inclusiveUpperbound({{.*}}) collapse([2]) collapseDeviceType([#acc.device_type<none>]) independent{{ *$}}
 
 ! Standalone `acc loop seq` with STOP: wrap-in-execute-region hides the
 ! if/stop and the DO lowers as structured acc.loop control(...) (no
