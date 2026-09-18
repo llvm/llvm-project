@@ -1,17 +1,24 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.5-vulkan-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-vulkan-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute --spirv-ext=+SPV_EXT_long_vector %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute --spirv-ext=+SPV_EXT_long_vector %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; Test WaveReadLaneFirst lowering for scalar, vector, and matrix types.
 
 ; CHECK: Capability Shader
 ; CHECK: Capability GroupNonUniformBallot
+; CHECK: Capability LongVectorEXT
+; CHECK: Extension "SPV_EXT_long_vector"
 
 ; CHECK-DAG: %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#f32:]] = OpTypeFloat 32
-; CHECK-DAG: %[[#v2_float:]] = OpTypeVector %[[#f32]] 2
 ; CHECK-DAG: %[[#v4_float:]] = OpTypeVector %[[#f32]] 4
 ; CHECK-DAG: %[[#bool:]] = OpTypeBool
 ; CHECK-DAG: %[[#scope:]] = OpConstant %[[#uint]] 3
+; CHECK-DAG: %[[#size5:]] = OpConstant %[[#uint]] 5
+; CHECK-DAG: %[[#v5_float:]] = OpTypeVectorIdEXT %[[#f32]] %[[#size5]]
+; CHECK-DAG: %[[#size6:]] = OpConstant %[[#uint]] 6
+; CHECK-DAG: %[[#v6_float:]] = OpTypeVectorIdEXT %[[#f32]] %[[#size6]]
+; CHECK-DAG: %[[#size12:]] = OpConstant %[[#uint]] 12
+; CHECK-DAG: %[[#v12_float:]] = OpTypeVectorIdEXT %[[#f32]] %[[#size12]]
 
 @wide_f32_5 = internal addrspace(10) global [5 x float] zeroinitializer
 @wide_f32_6 = internal addrspace(10) global [6 x float] zeroinitializer
@@ -58,8 +65,7 @@ entry:
 define void @test_floatv5() {
 entry:
   %expr = load <5 x float>, ptr addrspace(10) @wide_f32_5
-; CHECK: OpGroupNonUniformBroadcastFirst %[[#v4_float]] %[[#scope]]
-; CHECK: OpGroupNonUniformBroadcastFirst %[[#f32]] %[[#scope]]
+; CHECK: OpGroupNonUniformBroadcastFirst %[[#v5_float]] %[[#scope]]
   %result = call <5 x float> @llvm.spv.wave.readlane.first.v5f32(
       <5 x float> %expr)
   store <5 x float> %result, ptr addrspace(10) @wide_f32_5
@@ -70,8 +76,7 @@ entry:
 define void @test_float2x3() {
 entry:
   %expr = load <6 x float>, ptr addrspace(10) @wide_f32_6
-; CHECK: OpGroupNonUniformBroadcastFirst %[[#v4_float]] %[[#scope]]
-; CHECK: OpGroupNonUniformBroadcastFirst %[[#v2_float]] %[[#scope]]
+; CHECK: OpGroupNonUniformBroadcastFirst %[[#v6_float]] %[[#scope]]
   %result = call <6 x float> @llvm.spv.wave.readlane.first.v6f32(
       <6 x float> %expr)
   store <6 x float> %result, ptr addrspace(10) @wide_f32_6
@@ -82,7 +87,7 @@ entry:
 define void @test_float3x4() {
 entry:
   %expr = load <12 x float>, ptr addrspace(10) @wide_f32_12
-; CHECK-COUNT-3: OpGroupNonUniformBroadcastFirst %[[#v4_float]] %[[#scope]]
+; CHECK: OpGroupNonUniformBroadcastFirst %[[#v12_float]] %[[#scope]]
   %result = call <12 x float> @llvm.spv.wave.readlane.first.v12f32(
       <12 x float> %expr)
   store <12 x float> %result, ptr addrspace(10) @wide_f32_12
