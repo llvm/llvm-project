@@ -13471,11 +13471,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return getCouldNotCompute();
 
     if (!loopIsFiniteByAssumption(L)) {
-      // If we cannot prove the loop is finite but predicates are allowed,
-      // we can add a predicate that the stride is positive. This ensures
-      // the loop makes forward progress and the BTC formula is correct.
-      // The predicate will be emitted as a runtime check by the consumer
-      // (e.g., the loop vectorizer), guarding the optimized loop version.
+      // If the loop may be infinite, add a predicate ensuring Stride is positive, to guarantee forward progress.
       if (!AllowPredicates || !isLoopInvariant(Stride, L))
         return getCouldNotCompute();
 
