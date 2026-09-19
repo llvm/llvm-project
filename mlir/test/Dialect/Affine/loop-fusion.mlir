@@ -1579,6 +1579,11 @@ func.func @producer_consumer_with_outmost_user(%arg0 : f16) {
 // -----
 
 // CHECK-LABEL: func @vector_transfer_read
+// CHECK:      affine.for
+// CHECK-NEXT:   affine.store
+// CHECK-NEXT: }
+// CHECK-NEXT: affine.for
+// CHECK-NEXT:   vector.transfer_read
 func.func @vector_transfer_read(%arg0: memref<4xf32>) {
   %c0 = arith.constant 0.0 : f32
 
