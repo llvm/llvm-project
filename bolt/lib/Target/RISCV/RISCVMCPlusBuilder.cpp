@@ -175,6 +175,7 @@ public:
     case RISCV::PseudoCALL:
     case RISCV::PseudoCALLReg:
     case RISCV::PseudoTAIL:
+    case RISCV::PseudoJump:
       return false;
     }
   }
@@ -321,6 +322,15 @@ public:
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(RISCV::X0));
     Inst.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
+  }
+
+  void createLongBranch(MCInst &Inst, const MCSymbol *Target,
+                        MCPhysReg ScratchReg, MCContext *Ctx) const override {
+    Inst = MCInstBuilder(RISCV::PseudoJump)
+               .addReg(ScratchReg)
+               .addExpr(MCSpecifierExpr::create(
+                   MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT,
+                   *Ctx));
   }
 
   StringRef getTrapFillValue() const override {
@@ -487,6 +497,7 @@ public:
       return true;
     case RISCV::AUIPC:
     case RISCV::JAL:
+    case RISCV::PseudoJump:
     case RISCV::C_BEQZ:
     case RISCV::C_BNEZ:
       OpNum = 1;
