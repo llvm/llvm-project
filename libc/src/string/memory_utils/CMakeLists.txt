@@ -10,6 +10,7 @@ add_header_library(
     arm/common.h
     arm/inline_memcpy.h
     arm/inline_memset.h
+    arm/inline_memcmp.h
     generic/aligned_access.h
     generic/byte_per_byte.h
     inline_bcmp.h
@@ -44,6 +45,7 @@ add_header_library(
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
