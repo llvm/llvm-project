@@ -9043,6 +9043,110 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+static CountAttributedType::BoundsAttrKind getCountAttrKind(bool CountInBytes,
+                                                            bool OrNull) {
+  if (CountInBytes)
+    return OrNull ? CountAttributedType::SizedByOrNull
+                  : CountAttributedType::SizedBy;
+  return OrNull ? CountAttributedType::CountedByOrNull
+                : CountAttributedType::CountedBy;
+}
+
+/// Calculate the pointer nesting level for counted_by attribute validation.
+/// Counts the number of pointer/array/function declarator chunks before the
+/// specified chunk index.
+///
+/// For example, given \c "int * __counted_by(n) *pp" the declarator chunks
+/// are (outermost first): [0]=Pointer(\c int **), [1]=Pointer(\c int *).
+/// When processing the inner pointer at \p chunkIndex=1, one Pointer chunk
+/// precedes it, so the function returns 1.
+///
+/// \param state The type processing state
+/// \param chunkIndex The index of the current declarator chunk
+/// \return The number of pointer/array/function chunks before chunkIndex
+static unsigned getPointerNestLevel(TypeProcessingState &state,
+                                    unsigned chunkIndex) {
+  unsigned pointerNestLevel = 0;
+  const auto &stateDeclarator = state.getDeclarator();
+  assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
+  // DeclChunks are ordered identifier out. Index 0 is the outer most type
+  // object. Find outer pointer, array or function.
+  for (unsigned i = 0; i < chunkIndex; ++i) {
+    auto TypeObject = stateDeclarator.getTypeObject(i);
+    switch (TypeObject.Kind) {
+    case DeclaratorChunk::Function:
+    case DeclaratorChunk::Array:
+    case DeclaratorChunk::Pointer:
+      pointerNestLevel++;
+      break;
+    default:
+      break;
+    }
+  }
+  return pointerNestLevel;
+}
+
+/// The single "is this type valid for a counted_by-family attribute in type
+/// position" leaf, shared by the eager path (HandleCountedByAttrOnType) and the
+/// late-parsed path (Sema::ActOnLateParsedTypeAttr).
+///
+/// Delegates the type-shape checks to Sema::ValidateBoundsAttrTypeShape so
+/// there is exactly one copy of those diagnostics, and adds the nested-pointer
+/// rejection that only applies in type position.
+///
+/// \p Flags is set from \p AttrKind and returned to the caller for building the
+/// type.
+static bool validateBoundsAttrTypeForTypePosition(
+    Sema &S, QualType Ty, ParsedAttr::Kind AttrKind, SourceLocation AttrLoc,
+    SourceRange AttrRange, unsigned PointerNestLevel,
+    Sema::BoundsAttrFlags &Flags) {
+  Flags = Sema::getBoundsAttrFlags(AttrKind);
+
+  // ValidateBoundsAttrTypeShape may rewrite Flags.CountInBytes: for
+  // `void *__counted_by(n)` it warns "treated as 'sized_by'" and sets
+  // CountInBytes so the -fbounds-safety path builds a SizedBy node. The
+  // pre-existing non-BoundsSafety field path discards that rewrite and builds a
+  // CountedBy node, so absorb it in a scratch copy to keep this
+  // diagnostics-only.
+  //
+  // FIXME: Reconcile with the -fbounds-safety path, which honors the rewrite.
+  Sema::BoundsAttrFlags Scratch = Flags;
+  if (!S.ValidateBoundsAttrTypeShape(Ty, AttrLoc, AttrRange, Scratch))
+    return false;
+
+  // A counted_by-family attribute has to end up at the outermost level of the
+  // declared type; a nested one would be buried where the bounds cannot be
+  // maintained.
+  if (PointerNestLevel > 0) {
+    S.Diag(AttrLoc, diag::err_counted_by_on_nested_pointer)
+        << Sema::getBoundsAttrKind(Flags);
+    return false;
+  }
+
+  return true;
+}
+
+bool Sema::ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                                   SourceLocation AttrNameLoc, QualType &type,
+                                   unsigned pointerNestLevel,
+                                   BoundsAttributedType **BATy) {
+  BoundsAttrFlags Flags;
+  if (!validateBoundsAttrTypeForTypePosition(*this, type, AttrKind, AttrNameLoc,
+                                             SourceRange(AttrNameLoc),
+                                             pointerNestLevel, Flags))
+    return false;
+
+  // The argument hasn't been parsed yet, so build the type without it and hand
+  // the node back for completion. Because enclosing types refer to it by
+  // pointer, filling the argument in later leaves them untouched — no rebuild
+  // of the type chain and no TypeLoc re-emission.
+  auto *CATy = getASTContext().getIncompleteCountAttributedType(
+      type, Flags.CountInBytes, Flags.OrNull);
+  type = QualType(CATy, 0);
+  *BATy = CATy;
+  return true;
+}
+
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,

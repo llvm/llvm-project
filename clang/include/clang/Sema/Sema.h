@@ -1354,6 +1354,27 @@ public:
     OpaqueParser = P;
   }
 
+  /// Callback to the parser to interact with late-parsed type attributes. This
+  /// allows Sema to call back into Parser without including Parser.h.
+  ///
+  /// Processes a single late-parsed type attribute: validates the attribute
+  /// kind/type and wraps \p type in a CountAttributedType whose count is not
+  /// yet known, if appropriate. Returns false if the attribute is invalid.
+  typedef bool ProcessLateParsedTypeAttrCB(LateParsedAttribute *LA,
+                                           QualType &type,
+                                           unsigned pointerNestLevel);
+  ProcessLateParsedTypeAttrCB *ProcessLateParsedTypeAttrCallback = nullptr;
+
+  /// Called from the Parser's ProcessLateParsedTypeAttrCallback to validate a
+  /// counted_by-family attribute type and, if valid, wrap \p type in a
+  /// CountAttributedType whose count expression is not yet known. Returns false
+  /// if the attribute should be dropped, otherwise sets \p BATy to the node the
+  /// caller must complete once the argument is parseable.
+  bool ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                               SourceLocation AttrNameLoc, QualType &type,
+                               unsigned pointerNestLevel,
+                               BoundsAttributedType **BATy);
+
   /// Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>
       ParseTypeFromStringCallback;
@@ -2493,6 +2514,30 @@ public:
   /// Implementations are in SemaBoundsSafety.cpp
   ///@{
 public:
+  struct BoundsAttrFlags {
+    bool CountInBytes = false;
+    bool OrNull = false;
+    bool IsEndedBy = false;
+  };
+  static BoundsAttrFlags getBoundsAttrFlags(AttributeCommonInfo::Kind K);
+  static BoundsAttributedType::BoundsAttrKind
+  getBoundsAttrKind(const BoundsAttrFlags &);
+
+  /// Validates that a type is eligible for an "externally counted" bounds
+  /// attribute (counted_by/sized_by and their _or_null variants).
+  ///
+  /// \p Flags selects the attribute variant. \returns true if the type is
+  /// valid, false on error (diagnostics emitted). For `void *__counted_by(n)`
+  /// it warns that the count is treated as a byte size and sets
+  /// \p Flags.CountInBytes; callers that want to preserve a counted_by node
+  /// pass a scratch copy (see validateBoundsAttrTypeForTypePosition).
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags,
+                                   StringRef AttrSpelling = {},
+                                   bool AllowRedecl = false,
+                                   Expr *AttrArg = nullptr);
+
   /// Check if applying the specified attribute variant from the "counted by"
   /// family of attributes to FieldDecl \p FD is semantically valid. If
   /// semantically invalid diagnostics will be emitted explaining the problems.
