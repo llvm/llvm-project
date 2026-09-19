@@ -20,24 +20,321 @@ constexpr T foo(T a) {
   return a;
 }
 
+namespace GH73232 {
+namespace ex1 {
+template <typename T>
+constexpr void g(T);
+
+constexpr int f() {
+  g(0);
+  return 0;
+}
+
+template <typename T>
+constexpr void g(T) {}
+
+constexpr auto z = f();
+}
+
+namespace ex2 {
+template <typename> constexpr static void fromType();
+
+void registerConverter() { fromType<int>(); }
+template <typename> struct QMetaTypeId  {};
+template <typename T> constexpr void fromType() {
+  (void)QMetaTypeId<T>{};
+}
+template <> struct QMetaTypeId<int> {};
+} // namespace ex2
+
+namespace ex3 {
+
+#if __cplusplus > 202302L
+struct A {
+    consteval A(int i) {
+        chk(i);
+    }
+    constexpr void chk(auto) {}
+};
+A a{1};
+
+#endif
+
+}
+
+} // namespace GH73232
+
+
+namespace GH156255 {
+
+class X
+{
+public:
+    constexpr int f( int x ) const
+    {
+        return g( x );
+    }
+
+private:
+
+    template<class T>
+    constexpr T g( T x ) const
+    {
+        return x;
+    }
+};
+
+// check that g is instantiated here.
+constexpr int x = X().f( 1 );
+}
+
 #if __cplusplus > 202002L
+
+namespace instantiation_context_lookup {
+
+static constexpr int i = 42;
+static constexpr int v = 8;
+
+
+constexpr int f(auto);
+
+constexpr int g(int v = 42) {
+    static constexpr int i = 1;
+    return f(1);
+    return 0;
+}
+
+constexpr int f(auto) {
+    return i + v;
+}
+
+static_assert(g() == 50);
+
+}
+
+namespace GH35052 {
+
+template <typename F>
+constexpr int func(F f) {
+    if constexpr (f(1UL)) {
+        return 1;
+    }
+    return 0;
+}
+
+int test() {
+    auto predicate = [](auto v) constexpr -> bool  { return v == 1; };
+    return func(predicate); // check that "predicate" is instantiated.
+}
+
+
+}  // namespace GH35052
+
+namespace GH100897 {
+
+template <typename>
+constexpr auto foo() noexcept {
+    constexpr auto extract_size = []<typename argument_t>() constexpr -> int {
+        return 1;
+    };
+
+    constexpr int result = extract_size.template operator()<int>();
+    return result;
+}
+
+void test() { foo<void>(); } // check that the lambda gets instantiated.
+
+}  // namespace GH100897
+
+namespace from_constexpr_initializer {
+template <typename _CharT>
+struct basic_string {
+  constexpr void _M_construct();
+
+  constexpr basic_string() {
+    _M_construct();
+  }
+
+};
+
+basic_string<char *> a;
+
+template <typename _CharT>
+constexpr void basic_string<_CharT>::_M_construct(){}
+
+constexpr basic_string<char*> z{};
+}  // namespace from_constexpr_initializer
+
+namespace from_usable_in_constant_expr_initializer {
+template <typename T>
+constexpr int f();
+
+consteval int g() { return f<int>(); }
+
+template <typename T>
+constexpr int f() {
+  return 11;
+}  // namespace from_usable_in_constant_expr_initializer
+
+const int a = g();
+static_assert(a == 11);
+}
+
+namespace from_constinit_initializer {
+template <typename T>
+constexpr int f();
+
+consteval int g() { return f<int>(); }
+
+template <typename T>
+constexpr int f() {
+  return 11;
+}
+
+constinit int a = g();
+}  // namespace from_constinit_initializer
+
+namespace from_imm_invocation_in_immediate_escalating_fn {
+template <int V> constexpr int f();
+consteval int g() { return f<0>(); }
+template <int V> constexpr int f() { return V; }
+
+int h() { return [] { return g(); }(); }
+}  // namespace from_imm_invocation_in_immediate_escalating_fn
+
+namespace from_imm_invocation_in_non_escalating_fn {
+template <int V> constexpr int f();
+consteval int g() { return f<0>(); }
+template <int V> constexpr int f() { return V; }
+
+int h() { return g(); }
+}  // namespace from_imm_invocation_in_non_escalating_fn
+
+namespace from_template_argument {
+template <int V> constexpr int f();
+consteval int g() { return f<0>(); }
+template <int V> constexpr int f() { return V; }
+
+template <int V> consteval int h() { return V; }
+int i() { return h<g()>(); }
+}  // namespace from_template_argument
+
+namespace from_constexpr_if {
+template <int V> constexpr int f();
+consteval int g() { return f<0>(); }
+template <int V> constexpr int f() { return V; }
+
+int h() {
+  if constexpr (g())
+    return 1;
+  else
+    return 2;
+}
+}  // namespace from_constexpr_if
+
+namespace from_static_assertion {
+template <int V> constexpr int f();
+consteval int g() { return f<0>(); }
+template <int V> constexpr int f() { return V; }
+
+static_assert(g() == 0);
+}  // namespace from_static_assertion
+
+namespace from_static_assert_message {
+struct Msg {
+  consteval const char *data() { return "hello"; }
+  consteval unsigned size() { return 5; }
+};
+
+template <int V> constexpr Msg f();
+consteval Msg g() { return f<0>(); }
+template <int V> constexpr Msg f() { return Msg{}; }
+
+static_assert(true, g());
+}  // namespace from_static_assert_message
+
+namespace from_constexpr_destructor {
+template <int V> constexpr int f() noexcept;
+struct S { constexpr ~S() { (void) f<0>(); } };
+template <int V> constexpr int f() noexcept { return V; }
+
+void h() { constexpr S s; }
+}  // namespace from_constexpr_destructor
+
+namespace with_friend {
+template<class T> struct vector {
+  constexpr int f(const T& t = T()) const;  // #1
+};
+
+class A {
+  friend constexpr int vector<A>::f(const A&) const;  // #2
+  static constexpr int v = 2;
+};
+
+consteval int g(const vector<A> &v) { return v.f(); }
+
+template <class T>
+constexpr int vector<T>::f(const T &t) const { return T().v; }
+
+constexpr vector<A> v;
+static_assert(g(v) == 2, "");
+}  // namespace with_friend
+
+namespace non_constexpr_var {
+template <typename T>
+constexpr int f();
+
+constexpr int g() { return f<int>(); }
+
+template <typename T>
+constexpr int f() {
+  if consteval { return 11; }
+  else { return 22; }
+}
+
+const int k = g();
+static_assert(k == 11);
+}  // namespace non_constexpr_var
+
+namespace imm_escalation_can_instantiate {
+// Function template initially without definition.
+template <typename T>
+constexpr int *f();
+
+// Consteval function that uses 'f<int>', but calls aren't constant.
+consteval int *g() { return f<int>(); }
+
+// Late definition of 'f': Instantiate must happen during evaluation.
+template <typename T>
+constexpr int *f() {
+  return new int;  // expected-note {{heap allocation performed here}}
+}
+
+// Immediate-escalating function; escalates due to non-constant call to 'g'.
+template <typename>
+constexpr int *h() {
+  return g();  // expected-note {{not a constant expression}}
+}
+
+// Demonstrate that 'h<int>' is an immediate function. The diagnostics imply
+// that 'f<int>' is instantiated during evaluation.
+void t2() {
+  (void) h<int>();
+  // expected-error@-1 {{call to immediate function}}
+  // expected-note@-2 {{heap-allocated object is not a constant expression}}
+}
+}  // namespace imm_escalation_can_instantiate
 
 namespace GH115118 {
 
 struct foo {
-    // expected-note@-1 2{{while}}
     foo(const foo&) = default;
     foo(auto)
         requires([]<int = 0>() -> bool { return true; }())
-        // expected-error@-1 {{non-constant expression}}
-        // expected-note@-2 {{undefined function}} \
-        // expected-note@-2 {{declared}}
     {}
 };
 
-// FIXME: This will be fixed by https://github.com/llvm/llvm-project/pull/205557
 struct bar {
-    // expected-note@-1 {{while}}
     foo x; // check that the lambda gets instantiated.
 };
 

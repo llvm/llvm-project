@@ -31,6 +31,7 @@ class CharUnits;
 class Expr;
 class CallExpr;
 class CXXRecordDecl;
+class FunctionDecl;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -115,5 +116,8 @@ const Expr *ignorePointerCastsAndParens(const Expr *E);
 
 bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
 bool isReadByLvalueToRvalueConversion(QualType T);
+
+/// Whether we can instantiate FD during constant evaluation
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 
 #endif
