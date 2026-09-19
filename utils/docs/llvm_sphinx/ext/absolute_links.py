@@ -5,16 +5,18 @@
 from __future__ import annotations
 
 import io
+import posixpath
 import sys
 import tempfile
 from pathlib import Path
-from typing import Collection, Dict, Sequence
+from typing import Collection, Dict, Iterator, Sequence
 from urllib.parse import unquote, urlsplit
 
 from llvm_sphinx.help import venv_help
 
 try:
     from docutils import nodes
+    from markdown_it import MarkdownIt
     from sphinx.application import Sphinx
     from sphinx.util import logging
 except ImportError as err:
@@ -28,12 +30,95 @@ logger = logging.getLogger("llvm_sphinx.ext.absolute_links")
 
 def setup(app: Sphinx) -> Dict[str, object]:
     app.add_config_value("llvm_sphinx_doc_url_prefixes", (), "env", [list, tuple])
+    app.connect("source-read", check_markdown_doc_links)
     app.connect("doctree-read", check_absolute_doc_links)
     return {
         "version": __version__,
         "parallel_read_safe": True,
         "parallel_write_safe": True,
     }
+
+
+def _markdown_links(source: str) -> Iterator[tuple[str, int | None]]:
+    """Yield link destinations and approximate source lines from Markdown."""
+    for token in MarkdownIt("commonmark").parse(source):
+        if not token.children:
+            continue
+        line = token.map[0] + 1 if token.map else None
+        for child in token.children:
+            if child.type != "link_open":
+                continue
+            destination = child.attrGet("href")
+            if destination:
+                yield destination, line
+
+
+def _docname_from_relative_html_link(
+    uri: str, from_docname: str, found_docs: Collection[str]
+) -> str | None:
+    """Map a relative generated-HTML link to a Sphinx document name."""
+    parsed = urlsplit(uri)
+    if parsed.scheme or parsed.netloc:
+        return None
+    path = unquote(parsed.path)
+    if not path.endswith(".html"):
+        return None
+
+    target = path[: -len(".html")]
+    if target.startswith("/"):
+        docname = target.lstrip("/")
+    else:
+        docname = posixpath.normpath(
+            posixpath.join(posixpath.dirname(from_docname), target)
+        )
+    return docname if docname in found_docs else None
+
+
+def check_markdown_doc_links(app: Sphinx, docname: str, source: list[str]) -> None:
+    """Diagnose nonportable Markdown links to Sphinx documents."""
+    if not app.config.llvm_sphinx_doc_url_prefixes:
+        return
+    if Path(app.env.doc2path(docname)).suffix != ".md":
+        return
+
+    for uri, line in _markdown_links(source[0]):
+        location = (docname, line)
+        if uri.startswith("project:"):
+            destination = uri[len("project:") :]
+            if destination.startswith("#"):
+                advice = "use a Sphinx 'ref' role for an explicit label"
+            else:
+                advice = f"use the relative source path {destination!r} instead"
+            logger.warning(
+                "Markdown link uses the nonportable 'project:' scheme; %s: %s",
+                advice,
+                uri,
+                location=location,
+                type="llvm_sphinx",
+                subtype="nonportable-doc-link",
+            )
+            continue
+
+        target_docname = _docname_from_relative_html_link(
+            uri, docname, app.env.found_docs
+        )
+        if target_docname is None:
+            continue
+        source_suffix = Path(app.env.doc2path(target_docname)).suffix
+        parsed = urlsplit(uri)
+        suggested = unquote(parsed.path)[: -len(".html")] + source_suffix
+        if parsed.fragment:
+            suggested += "#" + unquote(parsed.fragment)
+        logger.warning(
+            "Markdown link points to generated HTML for document %r; "
+            "use the relative source path %r instead: %s",
+            target_docname,
+            suggested,
+            uri,
+            location=location,
+            type="llvm_sphinx",
+            subtype="nonportable-doc-link",
+        )
 
 
 def _url_prefix_parts(prefix: str) -> tuple[str, str] | None:
@@ -107,7 +192,7 @@ def check_absolute_doc_links(app: Sphinx, doctree: nodes.document) -> None:
             continue
         logger.warning(
             "absolute URL points to document %r in this Sphinx project; "
-            "use an internal 'doc' or 'ref' role instead: %s",
+            "use a relative source link or an internal 'ref' role instead: %s",
             docname,
             uri,
             location=node,
@@ -151,4 +236,20 @@ def run_tests() -> None:
         if url not in warnings:
             raise AssertionError(f"expected a warning for {url}")
     if warnings.count("absolute URL points to document") != len(expected_urls):
+        raise AssertionError(f"unexpected Sphinx warnings:\n{warnings}")
+    expected_nonportable_links = (
+        "project:target.md",
+        "project:target.md#target-section",
+        "target.html",
+        "target.html#target-section",
+        "project:target.md#target-document",
+        "target.html#target-document",
+    )
+    for link in expected_nonportable_links:
+        if link not in warnings:
+            raise AssertionError(f"expected a warning for {link}")
+    nonportable_count = warnings.count(
+        "Markdown link uses the nonportable 'project:' scheme"
+    ) + warnings.count("Markdown link points to generated HTML")
+    if nonportable_count != len(expected_nonportable_links):
         raise AssertionError(f"unexpected Sphinx warnings:\n{warnings}")
