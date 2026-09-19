@@ -35,9 +35,7 @@ struct MyObject : public std::rcu_obj_base<MyObject> {
   inline static int instance_count = 0;
   MyObject() : data_(std::to_string(instance_count++) + " instance very very very long string") {}
 
-  ~MyObject() {
-    std::println(std::cout, "MyObject {} destructor called", data_);
-  }
+  ~MyObject() { std::println(std::cout, "MyObject {} destructor called", data_); }
 };
 
 std::atomic<MyObject*> global_obj = nullptr;
@@ -52,8 +50,9 @@ int main(int, char**) {
       auto obj = global_obj.load();
       log(start, "t1: reading: " + (obj ? obj->data_ : "nullptr"));
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      log(start, "t1: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
-                         (obj ? obj->data_ : "nullptr"));
+      log(start,
+          "t1: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
+              (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t1: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
@@ -69,8 +68,9 @@ int main(int, char**) {
       auto obj = global_obj.load();
       log(start, "t2: reading: " + (obj ? obj->data_ : "nullptr"));
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      log(start, "t2: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
-                         (obj ? obj->data_ : "nullptr"));
+      log(start,
+          "t2: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
+              (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t2: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
@@ -86,8 +86,9 @@ int main(int, char**) {
       auto obj = global_obj.load();
       log(start, "t3: reading: " + (obj ? obj->data_ : "nullptr"));
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      log(start, "t3: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
-                         (obj ? obj->data_ : "nullptr"));
+      log(start,
+          "t3: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
+              (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t3: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
@@ -102,8 +103,9 @@ int main(int, char**) {
       auto obj = global_obj.load();
       log(start, "t4: reading: " + (obj ? obj->data_ : "nullptr"));
       std::this_thread::sleep_for(std::chrono::seconds(1));
-      log(start, "t4: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
-                         (obj ? obj->data_ : "nullptr"));
+      log(start,
+          "t4: leaving rcu read-side critical section " + std::to_string(i) + " with object " +
+              (obj ? obj->data_ : "nullptr"));
       dom.unlock();
       log(start, "t4: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
@@ -146,5 +148,5 @@ int main(int, char**) {
   t3.join();
   t4.join();
 
-  return 1;
+  return 0;
 }

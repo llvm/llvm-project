@@ -38,7 +38,7 @@ int main(int, char**) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
       log(start, "t1: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
-       log(start, "t1: printing all reader states");
+      log(start, "t1: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
     }
   });
@@ -53,7 +53,7 @@ int main(int, char**) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
       log(start, "t2: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
-       log(start, "t2: printing all reader states");
+      log(start, "t2: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
     }
   });
@@ -68,7 +68,7 @@ int main(int, char**) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
       log(start, "t3: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
-       log(start, "t3: printing all reader states");
+      log(start, "t3: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
     }
   });
@@ -82,7 +82,7 @@ int main(int, char**) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
       log(start, "t4: leaving rcu read-side critical section " + std::to_string(i));
       dom.unlock();
-       log(start, "t4: printing all reader states");
+      log(start, "t4: printing all reader states");
       dom.__debug_print_all_reader_states_in_hex();
     }
   });
@@ -98,16 +98,14 @@ int main(int, char**) {
   });  */
 
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  for (int i = 0; i < loop_num+5; ++i) {
-
-  log(start, "t0: printing all reader states before synchronize");
-  std::rcu_default_domain().__debug_print_all_reader_states_in_hex();
-  log(start, "t0: calling rcu_synchronize" + std::to_string(i));
-  std::rcu_synchronize();
-  log(start, "t0: rcu_synchronize returned" + std::to_string(i));
+  for (int i = 0; i < loop_num + 5; ++i) {
+    log(start, "t0: printing all reader states before synchronize");
+    std::rcu_default_domain().__debug_print_all_reader_states_in_hex();
+    log(start, "t0: calling rcu_synchronize" + std::to_string(i));
+    std::rcu_synchronize();
+    log(start, "t0: rcu_synchronize returned" + std::to_string(i));
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
-
 
   t1.join();
   t2.join();
