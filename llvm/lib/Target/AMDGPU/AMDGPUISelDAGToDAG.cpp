@@ -2047,7 +2047,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent()) {
-      if (COffsetVal > 0) {
+      if (COffsetVal != 0) {
         SDLoc SL(N);
         // saddr + large_offset -> saddr +
         //                         (voffset = large_offset & ~MaxOffset) +
@@ -2062,10 +2062,12 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
                                             : isUInt<32>(RemainderOffset)) {
           SDNode *VMov = CurDAG->getMachineNode(
               AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
-              CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
+              CurDAG->getTargetConstant(Lo_32(RemainderOffset), SDLoc(),
+                                        MVT::i32));
           VOffset = SDValue(VMov, 0);
           SAddr = LHS;
-          Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i32);
+          Offset = CurDAG->getSignedTargetConstant(SplitImmOffset, SDLoc(),
+                                                   MVT::i32);
           return true;
         }
       }
