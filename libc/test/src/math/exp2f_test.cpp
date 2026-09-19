@@ -58,11 +58,12 @@ TEST_F(LlvmLibcExp2fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExp2fTest, TrickyInputs) {
-  constexpr int N = 12;
+  constexpr int N = 13;
   constexpr uint32_t INPUTS[N] = {
       0x3b429d37U, /*0x1.853a6ep-9f*/
       0x3c02a9adU, /*0x1.05535ap-7f*/
       0x3ca66e26U, /*0x1.4cdc4cp-6f*/
+      0x3dd92c7aU, /*0x1.b258f4p-4f*/
       0x3d92a282U, /*0x1.254504p-4f*/
       0x42fa0001U, /*0x1.f40002p+6f*/
       0x42ffffffU, /*0x1.fffffep+6f*/
