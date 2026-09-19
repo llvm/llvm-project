@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
@@ -81,86 +82,19 @@ private:
                                  std::vector<std::vector<unsigned>> &InstIdxs,
                                  std::vector<unsigned> &InstOpsUsed,
                                  bool PassSubtarget) const;
+
+  // Emit a flat function-pointer table covering all opcodes.  Each unique
+  // operand-printing sequence in the overflow set becomes one printPattern_N
+  // static helper; instructions sharing a sequence share the same helper.
+  // The table is indexed directly by getOpcode(), so dispatch is a single
+  // unconditional indirect call with no switch or branch.
+  void EmitOpcodePatternTable(raw_ostream &O, StringRef TargetName,
+                              StringRef ClassName, bool PassSubtarget);
+  void EmitOpcodePatternDispatch(raw_ostream &O, StringRef TargetName,
+                                 bool PassSubtarget);
 };
 
 } // end anonymous namespace
-
-static void
-PrintCases(std::vector<std::pair<std::string, AsmWriterOperand>> &OpsToPrint,
-           raw_ostream &O, bool PassSubtarget) {
-  O << "    case " << OpsToPrint.back().first << ":";
-  AsmWriterOperand TheOp = OpsToPrint.back().second;
-  OpsToPrint.pop_back();
-
-  // Check to see if any other operands are identical in this list, and if so,
-  // emit a case label for them.
-  for (unsigned i = OpsToPrint.size(); i != 0; --i)
-    if (OpsToPrint[i - 1].second == TheOp) {
-      O << "\n    case " << OpsToPrint[i - 1].first << ":";
-      OpsToPrint.erase(OpsToPrint.begin() + i - 1);
-    }
-
-  // Finally, emit the code.
-  O << "\n      " << TheOp.getCode(PassSubtarget);
-  O << "\n      break;\n";
-}
-
-/// EmitInstructions - Emit the last instruction in the vector and any other
-/// instructions that are suitably similar to it.
-static void EmitInstructions(std::vector<AsmWriterInst> &Insts, raw_ostream &O,
-                             bool PassSubtarget) {
-  AsmWriterInst FirstInst = Insts.back();
-  Insts.pop_back();
-
-  std::vector<AsmWriterInst> SimilarInsts;
-  unsigned DifferingOperand = ~0;
-  for (unsigned i = Insts.size(); i != 0; --i) {
-    unsigned DiffOp = Insts[i - 1].MatchesAllButOneOp(FirstInst);
-    if (DiffOp != ~1U) {
-      if (DifferingOperand == ~0U) // First match!
-        DifferingOperand = DiffOp;
-
-      // If this differs in the same operand as the rest of the instructions in
-      // this class, move it to the SimilarInsts list.
-      if (DifferingOperand == DiffOp || DiffOp == ~0U) {
-        SimilarInsts.push_back(Insts[i - 1]);
-        Insts.erase(Insts.begin() + i - 1);
-      }
-    }
-  }
-
-  O << "  case " << FirstInst.CGI->Namespace << "::" << FirstInst.CGI->getName()
-    << ":\n";
-  for (const AsmWriterInst &AWI : SimilarInsts)
-    O << "  case " << AWI.CGI->Namespace << "::" << AWI.CGI->getName() << ":\n";
-  for (unsigned i = 0, e = FirstInst.Operands.size(); i != e; ++i) {
-    if (i != DifferingOperand) {
-      // If the operand is the same for all instructions, just print it.
-      O << "    " << FirstInst.Operands[i].getCode(PassSubtarget);
-    } else {
-      // If this is the operand that varies between all of the instructions,
-      // emit a switch for just this operand now.
-      O << "    switch (MI->getOpcode()) {\n";
-      O << "    default: llvm_unreachable(\"Unexpected opcode.\");\n";
-      std::vector<std::pair<std::string, AsmWriterOperand>> OpsToPrint;
-      OpsToPrint.emplace_back(FirstInst.CGI->Namespace.str() +
-                                  "::" + FirstInst.CGI->getName().str(),
-                              FirstInst.Operands[i]);
-
-      for (const AsmWriterInst &AWI : SimilarInsts) {
-        OpsToPrint.emplace_back(AWI.CGI->Namespace.str() +
-                                    "::" + AWI.CGI->getName().str(),
-                                AWI.Operands[i]);
-      }
-      std::reverse(OpsToPrint.begin(), OpsToPrint.end());
-      while (!OpsToPrint.empty())
-        PrintCases(OpsToPrint, O, PassSubtarget);
-      O << "    }";
-    }
-    O << "\n";
-  }
-  O << "    break;\n";
-}
 
 void AsmWriterEmitter::FindUniqueOperandCommands(
     std::vector<std::string> &UniqueOperandCommands,
@@ -490,6 +424,18 @@ void AsmWriterEmitter::EmitPrintInstruction(
   StringRef ClassName = AsmWriter->getValueAsString("AsmWriterClassName");
   bool PassSubtarget = AsmWriter->getValueAsInt("PassSubtarget");
 
+  // Emit static printPattern_N helpers and the function-pointer table before
+  // printInstruction() opens.  The table covers every opcode; overflow
+  // instructions dispatch to a deduplicated pattern helper, non-overflow
+  // instructions dispatch to a no-op stub.  Indirect calls through a const
+  // function-pointer table cannot be inlined, so printInstruction() stays small
+  // regardless of instruction-set size.
+  bool HasOverflow = llvm::any_of(Instructions, [](const AsmWriterInst &AWI) {
+    return !AWI.Operands.empty();
+  });
+  if (HasOverflow)
+    EmitOpcodePatternTable(O, Target.getName(), ClassName, PassSubtarget);
+
   // This function has some huge switch statements that causing excessive
   // compile time in LLVM profile instrumenation build. This print function
   // usually is not frequently called in compilation. Here we disable the
@@ -554,29 +500,106 @@ void AsmWriterEmitter::EmitPrintInstruction(
     BitsLeft -= NumBits;
   }
 
-  // Okay, delete instructions with no operand info left.
-  llvm::erase_if(Instructions,
-                 [](AsmWriterInst &Inst) { return Inst.Operands.empty(); });
-
-  // Because this is a vector, we want to emit from the end.  Reverse all of the
-  // elements in the vector.
-  std::reverse(Instructions.begin(), Instructions.end());
-
-  // Now that we've emitted all of the operand info that fit into 64 bits, emit
-  // information for those instructions that are left.  This is a less dense
-  // encoding, but we expect the main 64-bit table to handle the majority of
-  // instructions.
-  if (!Instructions.empty()) {
-    // Find the opcode # of inline asm.
-    O << "  switch (MI->getOpcode()) {\n";
-    O << "  default: llvm_unreachable(\"Unexpected opcode.\");\n";
-    while (!Instructions.empty())
-      EmitInstructions(Instructions, O, PassSubtarget);
-
-    O << "  }\n";
-  }
+  // Emit the overflow-operand dispatch: a single unconditional indirect call
+  // through the function-pointer table built above.
+  if (HasOverflow)
+    EmitOpcodePatternDispatch(O, Target.getName(), PassSubtarget);
 
   O << "}\n";
+}
+
+void AsmWriterEmitter::EmitOpcodePatternTable(raw_ostream &O,
+                                              StringRef TargetName,
+                                              StringRef ClassName,
+                                              bool PassSubtarget) {
+  // Collect instructions with overflow operands (not yet handled by the
+  // table-driven bit-encoding path).
+  std::vector<AsmWriterInst> OpcodeInsts;
+  for (const AsmWriterInst &AWI : Instructions)
+    if (!AWI.Operands.empty())
+      OpcodeInsts.push_back(AWI);
+
+  assert(!OpcodeInsts.empty() && "caller should have checked HasOverflow");
+
+  // Serialize each instruction's complete operand sequence into a string key.
+  // Instructions with identical keys share one printPattern_N function.
+  // getCode() with Receiver="P->" turns member calls like printOperand(...)
+  // into P->printOperand(...), which is correct for a static free function.
+  using PatternBody = std::vector<std::string>;
+  std::map<PatternBody, unsigned> PatternMap;
+  SmallVector<PatternBody, 64> Patterns;
+
+  // Table: index by CGIIndex, value = pattern index (~0U for non-overflow).
+  std::vector<unsigned> OpcodeToPattern(NumberedInstructions.size(), ~0U);
+
+  for (const AsmWriterInst &AWI : OpcodeInsts) {
+    PatternBody Body;
+    for (const AsmWriterOperand &Op : AWI.Operands)
+      Body.push_back(Op.getCode(PassSubtarget, "P->"));
+    auto [It, Inserted] = PatternMap.emplace(Body, Patterns.size());
+    if (Inserted)
+      Patterns.push_back(Body);
+    OpcodeToPattern[AWI.CGIIndex] = It->second;
+  }
+
+  std::string FullClassName = (TargetName + ClassName).str();
+  std::string PtrTableName = (TargetName + "InstPrinters").str();
+  std::string ParamList = "    " + FullClassName +
+                          " *, const MCInst *,\n"
+                          "    uint64_t," +
+                          (PassSubtarget ? " const MCSubtargetInfo &," : "") +
+                          " raw_ostream &";
+
+  // printPattern_None: no-op for instructions fully handled by table-driven
+  // path.
+  O << "static void printPattern_None(\n" << ParamList << ") {}\n\n";
+
+  // One printPattern_N per unique operand sequence.
+  for (unsigned PIdx = 0, E = Patterns.size(); PIdx < E; ++PIdx) {
+    O << "static void printPattern_" << PIdx << "(\n"
+      << "    " << FullClassName << " *P, const MCInst *MI,\n"
+      << "    uint64_t Address,";
+    if (PassSubtarget)
+      O << " const MCSubtargetInfo &STI,";
+    O << " raw_ostream &O) {\n";
+    for (const std::string &Line : Patterns[PIdx])
+      O << "  " << Line << "\n";
+    O << "}\n\n";
+  }
+
+  // Function-pointer table indexed by opcode, covering the full opcode range.
+  // Non-overflow opcodes → printPattern_None.
+  // Overflow opcodes     → their deduplicated printPattern_N.
+  O << "static void (*const " << PtrTableName << "[])(\n"
+    << ParamList << ") = {\n";
+  for (unsigned i = 0, E = NumberedInstructions.size(); i < E; ++i) {
+    unsigned PIdx = OpcodeToPattern[i];
+    if (PIdx == ~0U)
+      O << "  &printPattern_None";
+    else
+      O << "  &printPattern_" << PIdx;
+    if (i + 1 < E)
+      O << ",";
+    O << "\t// " << NumberedInstructions[i]->getName() << "\n";
+  }
+  O << "};\n\n";
+
+  LLVM_DEBUG(dbgs() << "[AsmWriter] " << TargetName << ": "
+                    << OpcodeInsts.size() << " overflow instructions -> "
+                    << Patterns.size() << " unique patterns\n");
+}
+
+void AsmWriterEmitter::EmitOpcodePatternDispatch(raw_ostream &O,
+                                                 StringRef TargetName,
+                                                 bool PassSubtarget) {
+  // Single unconditional indirect call; no switch, no branch.
+  // The compiler cannot inline through a const function pointer, so
+  // printInstruction() itself stays small regardless of instruction-set size.
+  std::string PtrTableName = (TargetName + "InstPrinters").str();
+  O << "  " << PtrTableName << "[MI->getOpcode()](this, MI, Address, ";
+  if (PassSubtarget)
+    O << "STI, ";
+  O << "O);\n";
 }
 
 static void
