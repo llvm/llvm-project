@@ -152,6 +152,24 @@ int test_make6() {
   make6<2, 2>::type y;
 }
 
+namespace GH202744 {
+template <typename Y>
+using matrix_5_5 = Y __attribute__((matrix_type(5, 5))); // expected-error{{invalid matrix element type 'matrix_5_5<float>'}}
+
+template <typename T>
+struct make7 {
+  typedef T __attribute__((matrix_type(3, 3))) type; // expected-error{{invalid matrix element type 's'}}
+};
+
+void CastDoubleMatrixToIntCStyle() {
+  matrix_5_5<float> f;
+  make7<int>::type m;
+  matrix_5_5<matrix_5_5<float>> d; // expected-note{{in instantiation of template type alias 'matrix_5_5' requested here}}
+  i = (matrix_5_5<int>)d; // expected-error{{use of undeclared identifier 'i'}}
+  make7<s> x; // expected-note{{in instantiation of}}
+}
+} // namespace GH202744
+
 namespace Deduction {
 template <typename T>
 struct X0;

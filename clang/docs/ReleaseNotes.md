@@ -665,6 +665,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when an invalid statement appeared in a ``switch``
   statement nested inside a C++26 expansion statement. (#GH210575)
 
+- Fixed an assertion when a ``matrix_type`` with constant dimensions and a
+  dependent element type was instantiated with an invalid element type.
+  (#GH202744)
+
 - Fixed friend declarations sometimes making non-visible default arguments
   incorrectly visible to default argument redefinition checks across modules.
 
