@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <utility>
 
 namespace orc_rt {
 
@@ -46,6 +47,16 @@ protected:
     Result,
     Call,
     LastOpcode = Call
+  };
+
+  /// The kind of result a result message carries, sent in its tag field.
+  ///
+  /// On-the-wire values, shared with LLVM's SimpleRemoteEPCResultKind: do not
+  /// renumber or reorder.
+  enum class ResultKind : uint64_t {
+    Value,
+    OutOfBandError,
+    LastResultKind = OutOfBandError
   };
 
   /// The name of Op, for logging.
@@ -75,6 +86,19 @@ protected:
   /// valid -- comes back as an error describing itself. Both outcomes end the
   /// session, so both are reported the same way.
   static Error decodeHangup(WrapperFunctionBuffer Payload);
+
+  /// Encodes ResultBytes as the kind and payload of a result message.
+  ///
+  /// Ordinary values yield ResultKind::Value, and the payload passes through
+  /// unmodified. Out-of-band error values yield ResultKind::OutOfBandError, and
+  /// the out-of-band error message is re-encoded as an SPSString.
+  static std::pair<ResultKind, WrapperFunctionBuffer>
+  encodeResult(WrapperFunctionBuffer ResultBytes);
+
+  /// Decodes a result message produced by encodeResult, returning the result to
+  /// complete the pending call with.
+  static WrapperFunctionBuffer decodeResult(ResultKind Kind,
+                                            WrapperFunctionBuffer Payload);
 
   /// Registers OnComplete and returns the sequence number to send its call
   /// under.
@@ -121,9 +145,11 @@ protected:
   virtual OnControllerCallReturn takePendingCall(uint64_t SeqNo) = 0;
 
 private:
-  /// Completes the pending call SeqNo with ResultBytes. Fails if no such call
-  /// is outstanding, which means the peer answered a call that was never made.
-  Error handleResult(uint64_t SeqNo, WrapperFunctionBuffer ResultBytes);
+  /// Completes the pending call SeqNo with the result carried by Kind and
+  /// ResultBytes. Fails if no such call is outstanding, which means the peer
+  /// answered a call that was never made.
+  Error handleResult(uint64_t SeqNo, ResultKind Kind,
+                     WrapperFunctionBuffer ResultBytes);
 
   // Guarded by the transport's lock. See the class comment.
   uint64_t NextSeqNo = 1;

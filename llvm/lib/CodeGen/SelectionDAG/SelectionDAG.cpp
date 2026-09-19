@@ -5455,12 +5455,15 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return Tmp;
   }
   case ISD::INSERT_SUBVECTOR: {
-    if (VT.isScalableVector())
-      break;
-    // Demand any elements from the subvector and the remainder from the src its
-    // inserted into.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
+    if (VT.isScalableVector()) {
+      Tmp = ComputeNumSignBits(Sub, Depth + 1);
+      Tmp = std::min(Tmp, ComputeNumSignBits(Src, Depth + 1));
+      return Tmp;
+    }
+    // Demand any elements from the subvector and the remainder from the src its
+    // inserted into.
     uint64_t Idx = Op.getConstantOperandVal(2);
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
     APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
@@ -7121,6 +7124,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
+  case ISD::PARITY:
   case ISD::CTLS:
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:
@@ -7696,6 +7700,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                            C->isOpaque());
       case ISD::CTPOP:
         return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::PARITY:
+        return getConstant(Val.popcount() & 1, DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLZ:
       case ISD::CTLZ_ZERO_POISON:
