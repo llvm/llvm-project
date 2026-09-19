@@ -12,63 +12,76 @@
 
 #include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 #include <__stacktrace/stacktrace_entry.h>
+#include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cstring>
+#include <mutex>
+#include <string_view>
+#include <tuple>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct _Image;
-struct _Images;
-
 struct _Image {
   uintptr_t loaded_at_{};
   uintptr_t slide_{};
-  char name_[__stacktrace::_Entry::__max_file_len]{0};
+  string_view name_{}; // into the owning `_Images::names_` arena; see below
   bool is_main_prog_{};
 
-  bool operator<(_Image const& __rhs) const {
-    if (loaded_at_ < __rhs.loaded_at_) {
-      return true;
-    }
-    if (loaded_at_ > __rhs.loaded_at_) {
-      return false;
-    }
-    return strcmp(name_, __rhs.name_) < 0;
-  }
-  operator bool() const { return name_[0]; }
+  operator bool() const { return !name_.empty(); }
+
+  bool operator<(_Image const& __rhs) const { return tuple{loaded_at_, name_} < tuple{__rhs.loaded_at_, __rhs.name_}; }
 };
 
-/**
- * Contains an array `images_`, which will include `prog_image` objects (see above)
- * collected in an OS-dependent way.  After construction these images will be sorted
- * according to their load address; there will also be two sentinels with dummy
- * addresses (0x0000... and 0xFFFF...) to simplify search functions.
- *
- * After construction, images_ and count_ look like:
- *  [0]             [1]             [2]             [3]       ...     [count_ - 1]
- *  (sentinel)      foo.exe         libc++so.1      libc.so.6         (sentinel)
- *  0x000000000000  0x000100000000  0x633b00000000  0x7c5500000000    0xffffffffffff
- */
-struct _Images {
-  constexpr static size_t k_max_images = 256;
-  std::array<_Image, k_max_images + 2> images_{}; // includes space for the L/R sentinels
-  unsigned count_{};                              // image count, including sentinels
+// Bump-allocating arena for image names.  These names are not permitted on caller's heap,
+// and must survive after `stacktrace::current` returns, so allocate
+struct _Names {
+  constexpr static size_t k_bytes = 32 << 10;
+  char names_[k_bytes]{};
+  size_t used_{};
 
-  /** An OS-specific constructor is defined. */
-  _Images();
+  static _Names instance_;
+
+  // Copies `__name` into the shared arena and returns a view of the copy.
+  // Best-effort; can return a truncated or empty view if out of space.
+  string_view intern(const char* __name) {
+    if (!__name) {
+      return {};
+    }
+    size_t __len = std::min(strlen(__name), k_bytes - used_);
+    char* __dst  = names_ + used_;
+    memcpy(__dst, __name, __len);
+    used_ += __len;
+    return {__dst, __len};
+  }
+};
+
+// Contains _Image objects in sorted order, according to `_Image::operator<`.
+struct _Images {
+  // Includes two dummy low/high "sentinel" entries in addition to this max number of images
+  constexpr static size_t k_max_images = 256;
+  std::array<_Image, k_max_images + 2> images_{}; // includes left/right sentinels
+  unsigned count_{};                              // image count, including sentinels
+  std::mutex mutex_{};
+
+  static _Images instance_;
+
+  _Images() {
+    images_[count_++] = {0uz, 0};  // sentinel at low end
+    images_[count_++] = {~0uz, 0}; // sentinel at high end
+  }
+
+  // OS-specific: enumerate program images in this process's space
+  void refresh();
 
   _Image& operator[](size_t __index) { return images_[__index]; }
 
-  /** Image representing the main program, or nullptr if we couldn't find it */
+  // Image representing the main program, or nullptr if we couldn't find it
   _Image* main_prog_image() {
     for (size_t __i = 1; __i < count_ - 1; __i++) {
       auto& __image = images_[__i];
@@ -79,27 +92,13 @@ struct _Images {
     return nullptr;
   }
 
-  /** Search the sorted images array for one containing this address. */
-  void find(size_t* __index, uintptr_t __addr) {
-    // `index` slides left/right as we search through images.
-    // It's (probably) likely several consecutive entries are from the same image, so
-    // each iteration's `find` uses the same starting point, making it (probably) constant-time.
-    // XXX Is this more efficient in practice than e.g. `std::set` and `upper_bound`?
-    if (*__index < 1) {
-      *__index = 1;
-    }
-    if (*__index > count_ - 1) {
-      *__index = count_ - 1;
-    }
-    while (images_[*__index]) {
-      if (__addr < images_[*__index].loaded_at_) {
-        --*__index;
-      } else if (__addr >= images_[*__index + 1].loaded_at_) {
-        ++*__index;
-      } else {
-        break;
-      }
-    }
+  // Search the sorted images array for one containing this address.
+  size_t find(uintptr_t __addr) const {
+    auto __end = images_.begin() + count_;
+    auto __it  = std::upper_bound(images_.begin(), __end, __addr, [](uintptr_t __a, _Image const& __img) {
+      return __a < __img.loaded_at_;
+    });
+    return size_t(__it - images_.begin()) - 1;
   }
 };
 

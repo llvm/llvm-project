@@ -42,6 +42,7 @@ set(LIBCXX_SOURCES
   stacktrace/aix_impl.cpp
   stacktrace/default_impl.cpp
   stacktrace/entry.cpp
+  stacktrace/images.cpp
   stacktrace/images.h
   stacktrace/macos_impl.cpp
   stacktrace/trace.cpp

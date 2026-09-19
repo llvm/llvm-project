@@ -8,52 +8,69 @@
 
 #if defined(__APPLE__)
 
-#  include <__config>
-#  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <algorithm>
 #  include <cstdlib>
+#  include <mutex>
 
+#  include <dlfcn.h>
 #  include <mach-o/dyld.h>
 #  include <mach-o/loader.h>
 
-#  include "stacktrace/images.h"
+#  include "images.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace __stacktrace {
 
-_Images::_Images() {
-  images_[count_++] = {0uz, 0};  // sentinel at low end
-  images_[count_++] = {~0uz, 0}; // sentinel at high end
-  auto dyld_count   = _dyld_image_count();
-  for (unsigned i = 0; i < dyld_count && count_ < k_max_images; i++) {
-    auto& image         = images_[count_++];
-    image.slide_        = uintptr_t(_dyld_get_image_vmaddr_slide(i));
-    image.loaded_at_    = uintptr_t(_dyld_get_image_header(i));
-    image.is_main_prog_ = (i == 0);
-    strncpy(image.name_, _dyld_get_image_name(i), sizeof(image.name_));
+namespace {
+
+// The callback we pass to dyld.  This synchronously receives each image at registration time,
+// and asynchronously for each image loaded after initial registration.
+void add_image(const struct mach_header* mh, intptr_t vmaddr_slide) {
+  auto& imgs = _Images::instance_;
+  std::lock_guard<std::mutex> __lock(imgs.mutex_);
+  if (imgs.count_ == _Images::k_max_images) {
+    return;
   }
-  std::sort(images_.begin(), images_.begin() + count_);
+  auto loaded_at = uintptr_t(mh);
+
+  auto __end = imgs.images_.begin() + imgs.count_;
+  auto __it  = std::lower_bound(imgs.images_.begin(), __end, loaded_at, [](_Image const& __img, uintptr_t __addr) {
+    return __img.loaded_at_ < __addr;
+  });
+  if (__it != __end && __it->loaded_at_ == loaded_at) {
+    return;
+  }
+
+  auto is_first       = (imgs.count_ == 0);
+  auto& image         = imgs.images_.at(imgs.count_++);
+  image.loaded_at_    = loaded_at;
+  image.slide_        = uintptr_t(vmaddr_slide);
+  image.is_main_prog_ = is_first;
+  Dl_info __dl_info{};
+  if (dladdr(mh, &__dl_info) && __dl_info.dli_fname) {
+    image.name_ = _Names::instance_.intern(__dl_info.dli_fname);
+  }
+  std::sort(imgs.images_.begin(), imgs.images_.begin() + imgs.count_);
 }
 
-void _Trace::__populate_images() {
-  _Images images;
-  size_t i = 0;
-  for (auto& entry : __entry_iters_()) {
-    images.find(&i, entry.__addr_);
-    if (auto& image = images[i]) {
-      entry.__image_ = &image;
-      // While we're in this loop, get the executable's path, and tentatively use this for source file.
-      entry.__file_ = image.name_;
-    }
-  }
+// Deferred to first use rather than done at library load, so a program that never calls
+// std::stacktrace::current() never pays for walking the already-loaded image list. Must be
+// called before `_Images::mutex()` is held: registration synchronously invokes `add_image`,
+// which takes that same lock itself.
+void ensure_registered() {
+  static std::once_flag __once;
+  std::call_once(__once, [] { _dyld_register_func_for_add_image(add_image); });
 }
+
+} // namespace
+
+void _Images::refresh() { ensure_registered(); }
 
 } // namespace __stacktrace
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
-_LIBCPP_END_NAMESPACE_STD
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS _LIBCPP_END_NAMESPACE_STD
 
 #endif

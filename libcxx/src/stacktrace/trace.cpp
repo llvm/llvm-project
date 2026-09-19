@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__config>
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
 #include <stacktrace>

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__config>
 #include <__functional/hash.h>
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
@@ -17,7 +16,7 @@
 #  include <sstream>
 #endif //_LIBCPP_HAS_LOCALIZATION
 
-#include "stacktrace/images.h"
+#include "images.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
