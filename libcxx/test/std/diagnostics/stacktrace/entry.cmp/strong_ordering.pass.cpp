@@ -23,6 +23,7 @@ namespace std {
 #include <cassert>
 #include <cstdint>
 #include <stacktrace>
+
 #include "test_macros.h"
 
 namespace {

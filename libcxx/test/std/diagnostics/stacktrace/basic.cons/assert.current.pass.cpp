@@ -30,7 +30,6 @@
 #include <cstdint>
 #include <stacktrace>
 
-#include "__config"
 #include "check_assertion.h"
 
 int main(int, char**) {

@@ -17,6 +17,7 @@
 #include <cassert>
 #include <iterator>
 #include <stacktrace>
+
 #include "test_macros.h"
 
 // Call chain is: main -> c -> b -> a -> stacktrace::current
