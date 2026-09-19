@@ -8153,6 +8153,20 @@ private:
 
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
 
+  /// Validate \p LA as a late-parsed type attribute and, if valid, wrap \p type
+  /// in a \c CountAttributedType whose count expression is not yet known,
+  /// recording the node on \p LA so it can be completed later.
+  ///
+  /// \p LA is downcast to \c LateParsedTypeAttribute; if the cast fails the
+  /// attribute is not applicable here and the function returns \c true to skip.
+  /// \p pointerNestLevel is the number of pointer/array/function declarator
+  /// chunks that precede the current chunk (see \c getPointerNestLevel).
+  /// Returns \c true on success and \c false if the attribute is invalid for
+  /// \p type.
+  static bool ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
+                                                QualType &type,
+                                                unsigned pointerNestLevel);
+
   /// We've parsed something that could plausibly be intended to be a template
   /// name (\p LHS) followed by a '<' token, and the following code can't
   /// possibly be an expression. Determine if this is likely to be a template-id
