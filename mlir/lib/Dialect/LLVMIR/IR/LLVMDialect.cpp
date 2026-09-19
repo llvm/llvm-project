@@ -697,7 +697,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ArrayRef<GEPArg> indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   SmallVector<int32_t> rawConstantIndices;
   SmallVector<Value> dynamicIndices;
@@ -710,16 +710,17 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.getOrAddProperties<Properties>().noWrapFlags = noWrapFlags;
   result.getOrAddProperties<Properties>().elem_type =
       TypeAttr::get(elementType);
+  result.getOrAddProperties<Properties>().inrange = inrange;
   result.addOperands(basePtr);
   result.addOperands(dynamicIndices);
 }
 
 void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
                   Type elementType, Value basePtr, ValueRange indices,
-                  GEPNoWrapFlags noWrapFlags,
+                  GEPNoWrapFlags noWrapFlags, ConstantRangeAttr inrange,
                   ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultType, elementType, basePtr,
-        SmallVector<GEPArg>(indices), noWrapFlags, attributes);
+        SmallVector<GEPArg>(indices), noWrapFlags, inrange, attributes);
 }
 
 ParseResult mlir::LLVM::parseGEPIndices(
@@ -820,6 +821,11 @@ LogicalResult LLVM::GEPOp::verify() {
 
   if (getNoWrapFlags() == GEPNoWrapFlags::inboundsFlag)
     return emitOpError("'inbounds_flag' cannot be used directly.");
+
+  if (auto inrange = getInrangeAttr()) {
+    if (inrange.getLower().sge(inrange.getUpper()))
+      return emitOpError("expected 'inrange' end to be larger than start");
+  }
 
   return verifyStructIndices(getElemType(), getIndices(),
                              [&] { return emitOpError(); });
@@ -4048,6 +4054,10 @@ Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
 OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
   GEPIndicesAdaptor<ArrayRef<Attribute>> indices(getRawConstantIndicesAttr(),
                                                  adaptor.getDynamicIndices());
+
+  // Avoid losing inrange information.
+  if (getInrangeAttr())
+    return {};
 
   // gep %x:T, 0 -> %x
   if (getBase().getType() == getType() && indices.size() == 1)

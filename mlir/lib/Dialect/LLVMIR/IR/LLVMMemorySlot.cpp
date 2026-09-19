@@ -695,7 +695,9 @@ bool LLVM::GEPOp::canUsesBeRemoved(
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
   // GEP can be removed as long as it is a no-op and its users can be removed.
-  if (!hasAllZeroIndices(*this))
+  // `inrange` is defined relative to the GEP result, so a zero-index GEP is
+  // not a no-op when that would drop the qualifier.
+  if (getInrangeAttr() || !hasAllZeroIndices(*this))
     return false;
   return forwardToUsers(*this, newBlockingUses);
 }
@@ -909,7 +911,8 @@ DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
   auto byteType = IntegerType::get(builder.getContext(), 8);
   auto newPtr = builder.createOrFold<LLVM::GEPOp>(
       getLoc(), getResult().getType(), byteType, newSlot.ptr,
-      ArrayRef<GEPArg>(accessInfo->subslotOffset), getNoWrapFlags());
+      ArrayRef<GEPArg>(accessInfo->subslotOffset), getNoWrapFlags(),
+      getInrangeAttr());
   getResult().replaceAllUsesWith(newPtr);
   return DeletionKind::Delete;
 }

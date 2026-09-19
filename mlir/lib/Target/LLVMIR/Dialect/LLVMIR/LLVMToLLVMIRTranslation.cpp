@@ -19,6 +19,8 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
@@ -231,6 +233,58 @@ convertNamedMetadataOp(NamedMetadataOp op,
     }
     namedMD->addOperand(mdNode);
   }
+  return success();
+}
+
+/// Translate `llvm.getelementptr`. `inrange` is only representable on LLVM
+/// constant GEP expressions.
+static LogicalResult convertGEPOp(GEPOp op, llvm::IRBuilderBase &builder,
+                                  LLVM::ModuleTranslation &moduleTranslation) {
+  SmallVector<llvm::Value *> indices;
+  indices.reserve(op.getRawConstantIndices().size());
+  for (PointerUnion<IntegerAttr, Value> valueOrAttr : op.getIndices()) {
+    if (Value value = dyn_cast_if_present<Value>(valueOrAttr))
+      indices.push_back(moduleTranslation.lookupValue(value));
+    else
+      indices.push_back(
+          builder.getInt32(cast<IntegerAttr>(valueOrAttr).getInt()));
+  }
+
+  llvm::Type *elementType = moduleTranslation.convertType(op.getElemType());
+  llvm::GEPNoWrapFlags nwFlags =
+      llvm::GEPNoWrapFlags::fromRaw(static_cast<unsigned>(op.getNoWrapFlags()));
+  llvm::Value *base = moduleTranslation.lookupValue(op.getBase());
+  llvm::Value *res;
+  if (ConstantRangeAttr inrangeAttr = op.getInrangeAttr()) {
+    auto *baseConst = dyn_cast<llvm::Constant>(base);
+    if (!baseConst || !llvm::all_of(indices, [](llvm::Value *value) {
+          return isa<llvm::Constant>(value);
+        }))
+      return op.emitError("'inrange' requires the base and indices to "
+                          "translate to LLVM constants");
+
+    unsigned indexBitWidth = moduleTranslation.getLLVMModule()
+                                 ->getDataLayout()
+                                 .getIndexTypeSizeInBits(base->getType());
+    llvm::APInt lower = inrangeAttr.getLower().sextOrTrunc(indexBitWidth);
+    llvm::APInt upper = inrangeAttr.getUpper().sextOrTrunc(indexBitWidth);
+    // The dialect verifier checks the range at the attribute bitwidth.
+    // Recheck after converting to the pointer index type.
+    if (lower.sge(upper))
+      return op.emitError("expected 'inrange' end to be larger than start "
+                          "after conversion to the pointer index type");
+
+    SmallVector<llvm::Constant *> constIndices;
+    constIndices.reserve(indices.size());
+    for (llvm::Value *value : indices)
+      constIndices.push_back(cast<llvm::Constant>(value));
+    res = llvm::ConstantExpr::getGetElementPtr(
+        elementType, baseConst, constIndices, nwFlags,
+        llvm::ConstantRange::getNonEmpty(std::move(lower), std::move(upper)));
+  } else {
+    res = builder.CreateGEP(elementType, base, indices, "", nwFlags);
+  }
+  moduleTranslation.mapValue(op.getRes()) = res;
   return success();
 }
 
