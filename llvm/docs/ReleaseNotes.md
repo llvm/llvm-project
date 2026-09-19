@@ -181,6 +181,13 @@ Makes programs 10x faster by doing Special New Thing.
   GNU-vs-EABI distinction is now derived entirely from the target triple's
   environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
 
+* Replaced `TargetOptions::EnableMachineFunctionSplitter` with
+  `TargetOptions::FunctionSplitting`, and the `-split-machine-functions` and
+  `-enable-split-machine-functions` flags with
+  `-function-splitting={none,bbsections,all}`. Use `-function-splitting=all`
+  for the previous behavior. Clang's `-fsplit-machine-functions` is
+  unchanged.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)

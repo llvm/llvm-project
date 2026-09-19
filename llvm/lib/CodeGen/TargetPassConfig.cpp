@@ -347,7 +347,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
       toBoolOrDefault(Opts.debugify_check_and_strip_all_safe);
   Opt.DisableRAFSProfileLoader = Opts.disable_ra_fsprofile_loader;
   Opt.DisableCFIFixup = Opts.disable_cfi_fixup;
-  Opt.EnableMachineFunctionSplitter = Opts.enable_split_machine_functions;
   return Opt;
 }
 
@@ -1090,8 +1089,10 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      Opts.enable_split_machine_functions || Opts.split_static_data ||
+  const bool SplitFunctions =
+      TM->Options.FunctionSplitting == FunctionSplittingMode::All;
+
+  if (SplitFunctions || Opts.split_static_data ||
       TM->Options.EnableStaticDataPartitioning) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
@@ -1114,8 +1115,7 @@ void TargetPassConfig::addMachinePasses() {
   // feature takes precedence. This means functions eligible for
   // basic-block-sections optimizations (`=all`, or `=list=` with function
   // included in the list profile) will get that optimization instead.
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      Opts.enable_split_machine_functions)
+  if (SplitFunctions)
     addPass(createMachineFunctionSplitterPass());
 
   if (Opts.split_static_data || TM->Options.EnableStaticDataPartitioning) {
