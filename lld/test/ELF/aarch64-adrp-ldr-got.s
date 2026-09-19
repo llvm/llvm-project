@@ -32,10 +32,17 @@
 
 # RUN: ld.lld %t/a.o -T %t/within-adr-range.t -o %t/a
 # RUN: llvm-objdump --no-show-raw-insn -d %t/a | FileCheck --check-prefix=ADR %s
+# RUN: llvm-readelf -x .got %t/a | FileCheck --check-prefix=GOT-RELAX %s
 
 ## Symbol 'x' is nonpreemptible, the relaxation should be applied.
 # ADR:        nop
 # ADR-NEXT:   adr    x1
+
+## Symbol 'x' does not have a GOT entry when relaxed.
+# GOT-RELAX:      Hex dump of section '.got':
+# GOT-RELAX-NEXT: 0x{{[0-9a-f]+}} 04100000 00000000 08100000 00000000
+# GOT-RELAX-NEXT: 0x{{[0-9a-f]+}} 0c100000 00000000 10100000 00000000
+# GOT-RELAX-NOT:  00100000
 
 ## Symbol 'x' is nonpreemptible, but --no-relax surpresses relaxations.
 # RUN: ld.lld %t/a.o -T %t/out-of-adr-range.t --no-relax -o %t/no-relax
@@ -49,6 +56,25 @@
 # RUN: ld.lld %t/a.o -T %t/out-of-range.t -o %t/out-of-range
 # RUN: llvm-objdump --no-show-raw-insn -d %t/out-of-range | \
 # RUN:   FileCheck --check-prefix=X1-NO-RELAX %s
+# RUN: llvm-readelf -x .got %t/out-of-range | FileCheck --check-prefix=GOT-NO-RELAX %s
+
+## Symbol 'x' has a GOT entry restored by relaxOnce when out of range.
+# GOT-NO-RELAX:      Hex dump of section '.got':
+# GOT-NO-RELAX-NEXT: 0x{{[0-9a-f]+}} 04100000 00000000 08100000 00000000
+# GOT-NO-RELAX-NEXT: 0x{{[0-9a-f]+}} 0c100000 00000000 10100000 00000000
+# GOT-NO-RELAX-NEXT: 0x{{[0-9a-f]+}} 00100000 00000000
+
+## Symbol 'x' has upper bits set (e.g. HWASAN tag), relaxOnce restores the GOT entry
+## even when output section VA is small.
+# RUN: ld.lld %t/a.o -T %t/within-adr-range.t --defsym=x=0x4b00000000001000 -o %t/tagged
+# RUN: llvm-objdump --no-show-raw-insn -d %t/tagged | \
+# RUN:   FileCheck --check-prefix=X1-NO-RELAX %s
+# RUN: llvm-readelf -x .got %t/tagged | FileCheck --check-prefix=GOT-TAGGED %s
+
+# GOT-TAGGED:      Hex dump of section '.got':
+# GOT-TAGGED-NEXT: 0x{{[0-9a-f]+}} 04100000 00000000 08100000 00000000
+# GOT-TAGGED-NEXT: 0x{{[0-9a-f]+}} 0c100000 00000000 10100000 00000000
+# GOT-TAGGED-NEXT: 0x{{[0-9a-f]+}} 00100000 0000004b
 
 ## Relocations do not appear in pairs, no relaxations should be applied for
 ## that symbol. We can still relax other symbols.
@@ -117,6 +143,7 @@ SECTIONS {
 
 #--- a.s
 .rodata
+.globl x
 .hidden x
 x:
 .word 10
@@ -148,6 +175,7 @@ _start:
 
 #--- unpaired.s
 .text
+.globl x
 .hidden x
 x:
   nop
@@ -166,6 +194,7 @@ L:
 
 #--- lone-ldr.s
 .text
+.globl x
 .hidden x
 x:
   nop
@@ -175,6 +204,7 @@ _start:
 
 #--- all-or-nothing.s
 .rodata
+.globl x
 .hidden x
 x:
 .word 10
