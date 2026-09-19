@@ -6844,6 +6844,9 @@ SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
   if (NonAffectingRedirectAdjustments.empty())
     return SourceLocation();
 
+  if (Loc.isMacroID())
+    return SourceLocation();
+
   SourceLocation::UIntTy Offset = Loc.getOffset();
   if (PP->getSourceManager().isLoadedOffset(Offset))
     return SourceLocation();
@@ -6869,7 +6872,7 @@ SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
     return Loc;
   // Redirect locations in omitted files before adjusting local offsets.
   // getAdjustment() is also used for values that are not source locations.
-  if (ControlBlockWritten && !Loc.isMacroID())
+  if (ControlBlockWritten)
     if (SourceLocation Redirected = getRedirectedLocation(Loc);
         Redirected.isValid())
       return Redirected;
