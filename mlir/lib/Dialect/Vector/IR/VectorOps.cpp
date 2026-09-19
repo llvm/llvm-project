@@ -4386,6 +4386,15 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!vLHS)
     return parser.emitError(parser.getNameLoc(),
                             "expected vector type for operand #1");
+  // The result type is built below from dimension 0 of the operands, which a
+  // 0-d vector does not have. Only that case has to be caught here; a higher
+  // rank still reaches the verifier, which rejects it with the same wording.
+  if (vLHS.getRank() == 0)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected 1-d vector for operand #1");
+  if (vRHS && vRHS.getRank() == 0)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected 1-d vector for operand #2");
 
   VectorType resType;
   if (vRHS) {
@@ -5404,8 +5413,16 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 
   int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
+  // Largest index at which a full vector still fits. Computed as a subtraction
+  // rather than adding to the index, which could overflow. The subtraction is
+  // safe only because of the `isDynamicDim` early return above: `sourceSize`
+  // is a real static extent here, never `ShapedType::kDynamic`, which is
+  // `INT64_MIN` and would make this signed overflow.
+  int64_t maxStart = sourceSize - vectorSize;
 
-  return cstOp.value() + vectorSize <= sourceSize;
+  // `in_bounds` guarantees that the transfer stays within the source *including
+  // its starting point*, so a negative index is not in bounds.
+  return *cstOp >= 0 && *cstOp <= maxStart;
 }
 
 template <typename TransferOp>

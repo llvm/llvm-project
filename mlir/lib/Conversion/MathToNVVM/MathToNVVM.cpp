@@ -8,7 +8,7 @@
 
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/Math/IR/Math.h"

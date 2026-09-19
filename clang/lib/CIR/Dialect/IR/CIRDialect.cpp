@@ -111,6 +111,85 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                  mlir::cast<mlir::TypedAttr>(value));
 }
 
+static bool isOpenCLVersionAttrName(StringRef attrName) {
+  return attrName == CIRDialect::getOpenCLVersionAttrName() ||
+         attrName == CIRDialect::getOpenCLCXXVersionAttrName();
+}
+
+static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
+                                                      NamedAttribute attr) {
+  StringRef attrName = attr.getName().getValue();
+  if (isa<ModuleOp>(op))
+    return success();
+
+  return op->emitError() << attrName
+                         << " attribute must be attached to a module";
+}
+
+static bool areOpenCLVersionsCompatible(cir::OpenCLVersionAttr openCLVersion,
+                                        cir::OpenCLVersionAttr cxxVersion) {
+  return (openCLVersion.getMajor() == 2 && openCLVersion.getMinor() == 0 &&
+          cxxVersion.getMajor() == 1 && cxxVersion.getMinor() == 0) ||
+         (openCLVersion.getMajor() == 3 && openCLVersion.getMinor() == 0 &&
+          cxxVersion.getMajor() == 2021 && cxxVersion.getMinor() == 0);
+}
+
+static LogicalResult verifyOpenCLCXXVersion(ModuleOp module,
+                                            cir::OpenCLVersionAttr cxxVersion) {
+  Attribute openCLAttr =
+      module->getAttr(CIRDialect::getOpenCLVersionAttrName());
+  if (!openCLAttr)
+    return module.emitError()
+           << "module attribute '" << CIRDialect::getOpenCLCXXVersionAttrName()
+           << "' requires the companion attribute '"
+           << CIRDialect::getOpenCLVersionAttrName() << "'";
+
+  auto openCLVersion = dyn_cast<cir::OpenCLVersionAttr>(openCLAttr);
+  if (!openCLVersion)
+    return success();
+
+  if (!areOpenCLVersionsCompatible(openCLVersion, cxxVersion))
+    return module.emitError("incompatible OpenCL and C++ for OpenCL versions");
+
+  return success();
+}
+
+static LogicalResult verifyOpenCLVersionAttr(Operation *op,
+                                             NamedAttribute attr) {
+  if (failed(verifyOpenCLVersionAttrPlacement(op, attr)))
+    return failure();
+
+  StringRef attrName = attr.getName().getValue();
+  auto version = dyn_cast<cir::OpenCLVersionAttr>(attr.getValue());
+  if (!version) {
+    return op->emitError() << "expected " << attrName
+                           << " to be #cir.cl.version";
+  }
+
+  if (attrName == CIRDialect::getOpenCLCXXVersionAttrName())
+    return verifyOpenCLCXXVersion(cast<ModuleOp>(op), version);
+
+  return success();
+}
+
+LogicalResult cir::CIRDialect::verifyRegionArgAttribute(
+    Operation *op, unsigned /*regionIndex*/, unsigned /*argIndex*/,
+    NamedAttribute attr) {
+  if (!isOpenCLVersionAttrName(attr.getName().getValue()))
+    return success();
+
+  return verifyOpenCLVersionAttrPlacement(op, attr);
+}
+
+LogicalResult cir::CIRDialect::verifyRegionResultAttribute(
+    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    NamedAttribute attr) {
+  if (!isOpenCLVersionAttrName(attr.getName().getValue()))
+    return success();
+
+  return verifyOpenCLVersionAttrPlacement(op, attr);
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect attribute verification
 //===----------------------------------------------------------------------===//
@@ -172,7 +251,11 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
 LogicalResult
 cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                           mlir::NamedAttribute attr) {
-  if (attr.getName() == getOffloadContainerAttrName()) {
+  llvm::StringRef attrName = attr.getName().getValue();
+  if (isOpenCLVersionAttrName(attrName))
+    return verifyOpenCLVersionAttr(op, attr);
+
+  if (attrName == getOffloadContainerAttrName()) {
     if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
       return op->emitOpError() << "expects '" << getOffloadContainerAttrName()
                                << "' to be a unit attribute";
@@ -182,8 +265,7 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
   // The container verifier owns the structural contract between a container
   // and the modules it holds. All this can add is that the kind attribute
   // never lands on something that is not a module.
-  if (attr.getName() == getOffloadKindAttrName() &&
-      !mlir::isa<mlir::ModuleOp>(op))
+  if (attrName == getOffloadKindAttrName() && !mlir::isa<mlir::ModuleOp>(op))
     return op->emitOpError() << "expects '" << getOffloadKindAttrName()
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
@@ -1771,6 +1853,46 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 // CleanupScopeOp
 //===----------------------------------------------------------------------===//
 
+static bool isRedundantBeforeReturn(mlir::Region &cleanupRegion) {
+  for (mlir::Block &block : cleanupRegion) {
+    for (mlir::Operation &op : block) {
+      if (isa<cir::YieldOp, cir::LifetimeEndOp, cir::StackRestoreOp>(op))
+        continue;
+      // The stack restore reloads the pointer saved before the VLA.
+      auto loadOp = dyn_cast<cir::LoadOp>(op);
+      if (loadOp && loadOp.getResult().hasOneUse() &&
+          isa<cir::StackRestoreOp>(*loadOp.getResult().getUsers().begin()))
+        continue;
+      return false;
+    }
+  }
+  return true;
+}
+
+LogicalResult cir::CleanupScopeOp::verify() {
+  // If the cleanup contains a musttail call, it must be a cleanup that can be
+  // skipped on return (such as a lifetime end or a stack restore). Other
+  // cleanups must never contain musttail calls.
+  cir::CallOp mustTailCall;
+  getBodyRegion().walk([&](cir::CallOp callOp) {
+    if (!callOp.getMusttail())
+      return WalkResult::advance();
+    mustTailCall = callOp;
+    return WalkResult::interrupt();
+  });
+  if (!mustTailCall)
+    return success();
+
+  if (isRedundantBeforeReturn(getCleanupRegion()))
+    return success();
+
+  InFlightDiagnostic diag =
+      emitOpError("cleanup is not redundant before a return, so it cannot be "
+                  "skipped by a musttail call");
+  diag.attachNote(mustTailCall.getLoc()) << "musttail call is here";
+  return diag;
+}
+
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
@@ -2171,6 +2293,14 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
+  // CIRGen emits 'static_local_guard' and 'static_local_info' together and
+  // they are only meaningful together: the guard drives lowering, which reads
+  // the info. Require both or neither so malformed .cir can carry neither a
+  // guard without info nor a dangling info nothing will read.
+  if (getStaticLocalGuard().has_value() != getStaticLocalInfo().has_value())
+    return emitOpError("'static_local_guard' and 'static_local_info' must be "
+                       "present together");
+
   if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
       return emitOpError("cannot have both static local and tls references");
@@ -2515,6 +2645,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
+  mlir::StringAttr alignmentNameAttr = getAlignmentAttrName(state.name);
+  mlir::StringAttr preferredAlignmentNameAttr =
+      getPreferredAlignmentAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
   mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
@@ -2539,6 +2672,33 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
     state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
+
+  auto parseAlignmentBody = [&](int64_t &value) {
+    if (parser.parseLParen().failed() || parser.parseInteger(value).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+
+    if (value <= 0)
+      return static_cast<LogicalResult>(parser.emitError(
+          loc, "function alignment must be a positive integer"));
+
+    return success();
+  };
+
+  if (parser.parseOptionalKeyword(alignmentNameAttr).succeeded()) {
+    int64_t value;
+    if (parseAlignmentBody(value).failed())
+      return failure();
+    state.addAttribute(alignmentNameAttr, builder.getI64IntegerAttr(value));
+  }
+
+  if (parser.parseOptionalKeyword(preferredAlignmentNameAttr).succeeded()) {
+    int64_t value;
+    if (parseAlignmentBody(value).failed())
+      return failure();
+    state.addAttribute(preferredAlignmentNameAttr,
+                       builder.getI64IntegerAttr(value));
+  }
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -2850,6 +3010,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getComdat())
     p << " comdat";
+
+  if (getAlignment())
+    p << " alignment(" << *getAlignment() << ')';
+
+  if (getPreferredAlignment())
+    p << " preferred_alignment(" << *getPreferredAlignment() << ')';
 
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
     p << ' ' << stringifyGlobalLinkageKind(getLinkage());
@@ -3425,6 +3591,26 @@ LogicalResult cir::CopyOp::verify() {
       !mlir::isa<cir::RecordType>(getType().getPointee()))
     return emitError()
            << "skip_tail_padding is only valid for record pointee types";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// PtrMaskOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::PtrMaskOp::verify() {
+  mlir::DataLayout layout = mlir::DataLayout::closest(*this);
+  std::optional<uint64_t> indexWidth =
+      layout.getTypeIndexBitwidth(getPtr().getType());
+  if (!indexWidth)
+    return emitOpError() << "pointer has no index width";
+
+  uint64_t maskWidth = getMask().getType().getWidth();
+  if (maskWidth != *indexWidth)
+    return emitOpError() << "mask width " << maskWidth
+                         << " must equal the pointer index width "
+                         << *indexWidth;
 
   return mlir::success();
 }
@@ -4501,6 +4687,22 @@ LogicalResult cir::TryOp::verify() {
     return emitOpError(
         "number of handler regions and handler types must match");
 
+  // A filter handler and an unexpected handler together implement a dynamic
+  // exception specification. The filter try operation wraps the whole function
+  // body and exists only to check the specification, so the two must appear
+  // together and must stand alone. A catch-all in the same list would make the
+  // filter unreachable, and the filter handler already provides the
+  // continue-unwinding path that an unwind handler would supply.
+  if (llvm::any_of(handlerTypes, [](mlir::Attribute typeAttr) {
+        return mlir::isa<cir::EhFilterAttr, cir::EhUnexpectedAttr>(typeAttr);
+      })) {
+    if (handlerTypes.size() != 2 ||
+        !mlir::isa<cir::EhFilterAttr>(handlerTypes[0]) ||
+        !mlir::isa<cir::EhUnexpectedAttr>(handlerTypes[1]))
+      return emitOpError("a filter handler must be followed by an unexpected "
+                         "handler, and the two must be the only handlers");
+  }
+
   for (const auto &[typeAttr, handlerRegion] :
        llvm::zip(handlerTypes, handlerRegions)) {
     // Verify that handler regions have a !cir.eh_token block argument.
@@ -4510,9 +4712,25 @@ LogicalResult cir::TryOp::verify() {
       return emitOpError(
           "handler region must have a single '!cir.eh_token' argument");
 
-    // The unwind region does not require a cir.begin_catch.
-    if (mlir::isa<cir::UnwindAttr>(typeAttr))
+    // The unwind, filter and unexpected regions do not require a
+    // cir.begin_catch. None of them catches the exception.
+    if (mlir::isa<cir::UnwindAttr, cir::EhFilterAttr, cir::EhUnexpectedAttr>(
+            typeAttr))
       continue;
+
+    if (entryBlock.empty())
+      return emitOpError("catch handler region must not be empty");
+
+    // A terminate scope, which wraps the body of a function that cannot throw,
+    // is a catch-all handler that only terminates the program. The exception is
+    // caught by the runtime helper that cir.eh.terminate lowers to, so the
+    // handler region has no cir.begin_catch of its own.
+    if (mlir::isa<cir::EhTerminateOp>(entryBlock.front())) {
+      if (!mlir::isa<cir::CatchAllAttr>(typeAttr))
+        return emitOpError("'cir.eh.terminate' is only allowed in a catch-all "
+                           "handler region");
+      continue;
+    }
 
     // Nothing may run in a catch handler before cir.begin_catch, so it has to
     // be the handler region's first operation, with two exceptions.
@@ -4528,9 +4746,6 @@ LogicalResult cir::TryOp::verify() {
     //
     // A cir.construct_catch_param may also precede cir.begin_catch, to
     // perform any pre-begin_catch initialization of the catch parameter.
-    if (entryBlock.empty())
-      return emitOpError("catch handler region must not be empty");
-
     mlir::Operation *firstOp = &entryBlock.front();
     if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
       mlir::Operation *next = firstOp->getNextNode();
@@ -4573,6 +4788,14 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
       printer << "catch all ";
     } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
       printer << "unwind ";
+    } else if (auto filterAttr = mlir::dyn_cast<cir::EhFilterAttr>(typeAttr)) {
+      printer << "filter [";
+      llvm::interleaveComma(
+          filterAttr.getPermittedTypes(), printer,
+          [&](mlir::Attribute sym) { printer.printAttribute(sym); });
+      printer << "] ";
+    } else if (mlir::isa<cir::EhUnexpectedAttr>(typeAttr)) {
+      printer << "unexpected ";
     } else {
       printer << "catch [type ";
       printer.printAttribute(typeAttr);
@@ -4666,6 +4889,45 @@ static mlir::ParseResult parseTryHandlerRegions(
       return parser.emitError(parser.getCurrentLocation(),
                               "expected `]` after RTTI info attribute");
 
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  // A filter handler carries the type info symbols permitted by the enclosing
+  // function's dynamic exception specification. TryOp::verify enforces that it
+  // is paired with an unexpected handler and that the two stand alone.
+  if (parser.parseOptionalKeyword("filter").succeeded()) {
+    mlir::SMLoc filterLoc = parser.getCurrentLocation();
+    llvm::SmallVector<mlir::Attribute, 4> permittedTypes;
+    auto parsePermittedType = [&]() -> mlir::ParseResult {
+      mlir::SMLoc typeLoc = parser.getCurrentLocation();
+      mlir::Attribute rtti;
+      if (parser.parseAttribute(rtti).failed())
+        return mlir::failure();
+      if (!mlir::isa<cir::GlobalViewAttr>(rtti))
+        return parser.emitError(typeLoc, "expected a type info symbol naming a "
+                                         "permitted exception type");
+      permittedTypes.push_back(rtti);
+      return mlir::success();
+    };
+    if (parser
+            .parseCommaSeparatedList(mlir::OpAsmParser::Delimiter::Square,
+                                     parsePermittedType)
+            .failed())
+      return mlir::failure();
+
+    auto filterAttr = cir::EhFilterAttr::getChecked(
+        [&]() { return parser.emitError(filterLoc); }, parser.getContext(),
+        parser.getBuilder().getArrayAttr(permittedTypes));
+    if (!filterAttr)
+      return mlir::failure();
+    catcherAttrs.push_back(filterAttr);
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  if (parser.parseOptionalKeyword("unexpected").succeeded()) {
+    catcherAttrs.push_back(cir::EhUnexpectedAttr::get(parser.getContext()));
     if (parseCheckedCatcherRegion().failed())
       return mlir::failure();
   }
@@ -4797,6 +5059,31 @@ LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
 // EhDispatchOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::EhDispatchOp::verify() {
+  mlir::ArrayAttr handlerTypes = getCatchTypesAttr();
+  if (!handlerTypes)
+    return success();
+
+  bool hasFilter = false;
+  for (mlir::Attribute typeAttr : handlerTypes) {
+    if (!mlir::isa<cir::EhFilterAttr>(typeAttr))
+      continue;
+    if (hasFilter)
+      return emitOpError("can't have more than one 'filter' handler");
+    hasFilter = true;
+  }
+
+  // Unlike the other handlers, a filter does not take the place of the default
+  // destination. Its destination is taken when the exception is not permitted
+  // by the specification, and the default 'unwind' destination is taken when
+  // it is. A catch-all default would leave the filter unreachable.
+  if (hasFilter && getDefaultIsCatchAll())
+    return emitOpError(
+        "'filter' handler requires an 'unwind' default destination");
+
+  return success();
+}
+
 static ParseResult
 parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
                             SmallVectorImpl<Block *> &catchDestinations,
@@ -4845,6 +5132,47 @@ parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
 
       if (parser.parseSuccessor(defaultDestination).failed())
         return failure();
+      return success();
+    }
+
+    // A filter handler carries the type info symbols permitted by the
+    // enclosing function's dynamic exception specification. Its destination is
+    // taken when the exception is *not* one of those types.
+    if (succeeded(parser.parseOptionalKeyword("filter"))) {
+      SMLoc filterLoc = parser.getCurrentLocation();
+      SmallVector<Attribute, 4> permittedTypes;
+      auto parsePermittedType = [&]() -> ParseResult {
+        mlir::SMLoc typeLoc = parser.getCurrentLocation();
+        mlir::Attribute rtti;
+        if (parser.parseAttribute(rtti).failed())
+          return failure();
+        if (!mlir::isa<cir::GlobalViewAttr>(rtti))
+          return parser.emitError(typeLoc,
+                                  "expected a type info symbol naming a "
+                                  "permitted exception type");
+        permittedTypes.push_back(rtti);
+        return success();
+      };
+      if (parser
+              .parseCommaSeparatedList(OpAsmParser::Delimiter::Paren,
+                                       parsePermittedType)
+              .failed())
+        return failure();
+
+      auto filterAttr = cir::EhFilterAttr::getChecked(
+          [&]() { return parser.emitError(filterLoc); }, parser.getContext(),
+          parser.getBuilder().getArrayAttr(permittedTypes));
+      if (!filterAttr)
+        return failure();
+      handlerTypes.push_back(filterAttr);
+
+      if (parser.parseColon().failed())
+        return failure();
+
+      Block *dest;
+      if (parser.parseSuccessor(dest).failed())
+        return failure();
+      catchDestinations.push_back(dest);
       return success();
     }
 
@@ -4910,8 +5238,16 @@ static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
     llvm::interleave(
         llvm::zip(catchTypes, catchDestinations),
         [&](auto i) {
-          p << "  catch(";
-          p.printAttribute(std::get<0>(i));
+          mlir::Attribute typeAttr = std::get<0>(i);
+          if (auto filterAttr = mlir::dyn_cast<cir::EhFilterAttr>(typeAttr)) {
+            p << "  filter(";
+            llvm::interleaveComma(
+                filterAttr.getPermittedTypes(), p,
+                [&](mlir::Attribute sym) { p.printAttribute(sym); });
+          } else {
+            p << "  catch(";
+            p.printAttribute(typeAttr);
+          }
           p << ") : ";
           p.printSuccessor(std::get<1>(i));
         },
