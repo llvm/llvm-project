@@ -580,6 +580,7 @@ add_math_entrypoint_object(sinpif)
 add_math_entrypoint_object(sinpif16)
 
 add_math_entrypoint_object(sinh)
+add_math_entrypoint_object(sinhbf16)
 add_math_entrypoint_object(sinhf)
 add_math_entrypoint_object(sinhf16)
 

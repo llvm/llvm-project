@@ -5371,6 +5371,19 @@ add_header_library(
 )
 
 add_header_library(
+  sinhbf16
+  HDRS
+    sinhbf16.h
+  DEPENDS
+    .sinhfcoshf_utils
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   sinhf
   HDRS
     sinhf.h
