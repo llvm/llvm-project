@@ -1360,7 +1360,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(0, F32, F32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPOWI).clampScalar(0, F32, F32).lower();
+  getActionDefinitionsBuilder(G_FPOWI)
+      .clampScalar(0, F32, F32)
+      .scalarize(0)
+      .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
