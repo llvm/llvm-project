@@ -547,6 +547,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
+- Fixed an assertion failure when a fixed point type was used in arithmetic with a `_BitInt` or overflow behavior type; the combination is now diagnosed as invalid operands. (#GH191701)
 
 #### Bug Fixes to Compiler Builtins
 
