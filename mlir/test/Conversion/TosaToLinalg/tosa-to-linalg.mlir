@@ -1,9 +1,13 @@
 // RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" %s -verify-diagnostics -o -| FileCheck %s --check-prefix=NAMED
 
 // CHECK: #[[$MAP0:.*]] = affine_map<() -> ()>
 
 // CHECK-LABEL: @test_abs_scalar
 // CHECK-SAME: ([[ARG0:%[0-9a-zA-Z_]*]]
+
+// NAMED-LABEL: @test_abs_scalar
+// NAMED-SAME: ([[ARG0:%[0-9a-zA-Z_]*]]
 func.func @test_abs_scalar(%arg0: tensor<f32>) -> tensor<f32> {
   // CHECK: [[INIT:%.+]] = tensor.empty() : tensor<f32>
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = []} ins([[ARG0]] : tensor<f32>) outs([[INIT]] : tensor<f32>) {
@@ -11,6 +15,8 @@ func.func @test_abs_scalar(%arg0: tensor<f32>) -> tensor<f32> {
   // CHECK:   [[ELEMENT:%.*]] = math.absf [[ARG1]] : f32
   // CHECK:   linalg.yield [[ELEMENT]] : f32
   // CHECK: } -> tensor<f32>
+  // NAMED: linalg.elementwise <abs>
+  // NAMED-SAME: ins([[ARG0]]
   %0 = tosa.abs %arg0 : (tensor<f32>) -> tensor<f32>
 
   // CHECK: return [[GENERIC]] : tensor<f32>
@@ -84,6 +90,8 @@ func.func @test_abs_1d_dynamic(%arg0: tensor<?xf32>) -> tensor<?xf32> {
 // CHECK-LABEL: @test_add_0d
 // CHECK-SAME: [[ARG0:%[0-9a-zA-Z_]*]]:
 // CHECK-SAME: [[ARG1:%[0-9a-zA-Z_]*]]:
+// NAMED-LABEL: @test_add_0d
+// NAMED: linalg.elementwise <add>
 func.func @test_add_0d(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
 
   // CHECK: [[EMPTY:%.+]] = tensor.empty() : tensor<f32>
@@ -103,6 +111,8 @@ func.func @test_add_0d(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
 
 // CHECK: #[[$MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1) -> (0, d1)>
+// NAMED: #[[$MAP0:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// NAMED: #[[$MAP1:.+]] = affine_map<(d0, d1) -> (0, d1)>
 
 // CHECK-LABEL:   func.func @test_add_2d_broadcast(
 // CHECK-SAME:                                     %[[ARG0:.*]]: tensor<2x1xf32>,
@@ -115,6 +125,9 @@ func.func @test_add_0d(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
 // CHECK:           } -> tensor<2x1xf32>
 // CHECK:           return %[[RESULT]] : tensor<2x1xf32>
 // CHECK:         }
+// NAMED-LABEL: func.func @test_add_2d_broadcast
+// NAMED: linalg.elementwise <add>
+// NAMED-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP0]]]
 func.func @test_add_2d_broadcast(%arg0: tensor<2x1xf32>, %arg1: tensor<1x1xf32>) -> tensor<2x1xf32> {
   // tosa element-wise operators now require operands of equal ranks
   %0 = tosa.add %arg0, %arg1 : (tensor<2x1xf32>, tensor<1x1xf32>) -> tensor<2x1xf32>
@@ -211,9 +224,14 @@ func.func @test_add_1d_broadcast_dynamic_to_static(%arg0: tensor<5xf32>, %arg1: 
 
 // CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
+// NAMED: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
+// NAMED: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: @test_add_1d_broadcast_static_to_dynamic
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME: %[[ARG1:[0-9a-zA-Z_]*]]:
+// NAMED-LABEL: @test_add_1d_broadcast_static_to_dynamic
+// NAMED: linalg.elementwise <add>
+// NAMED-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]]
 func.func @test_add_1d_broadcast_static_to_dynamic(%arg0: tensor<1xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
 
   // CHECK: %[[CONST0:.*]] = arith.constant 0 : index
@@ -234,9 +252,14 @@ func.func @test_add_1d_broadcast_static_to_dynamic(%arg0: tensor<1xf32>, %arg1: 
 
 // CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
+// NAMED: #[[$MAP0:.+]] = affine_map<(d0) -> (0)>
+// NAMED: #[[$MAP1:.+]] = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: @test_add_1d_broadcast_static_to_static
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME: %[[ARG1:[0-9a-zA-Z_]*]]:
+// NAMED-LABEL: @test_add_1d_broadcast_static_to_static
+// NAMED: linalg.elementwise <add>
+// NAMED-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]]
 func.func @test_add_1d_broadcast_static_to_static(%arg0: tensor<1xf32>, %arg1: tensor<3xf32>) -> tensor<3xf32> {
 
   // CHECK: %[[VAL_0:.*]] = tensor.empty() : tensor<3xf32>
@@ -257,6 +280,8 @@ func.func @test_add_1d_broadcast_static_to_static(%arg0: tensor<1xf32>, %arg1: t
 // CHECK-LABEL: @test_add_1d_matching_no_broadcast
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME: %[[ARG1:[0-9a-zA-Z_]*]]:
+// NAMED-LABEL: @test_add_1d_matching_no_broadcast
+// NAMED: linalg.elementwise <add>
 func.func @test_add_1d_matching_no_broadcast(%arg0: tensor<1xf32>, %arg1: tensor<1xf32>) -> tensor<1xf32> {
 
   // CHECK: %[[VAL_0:.*]] = tensor.empty() : tensor<1xf32>
@@ -277,6 +302,8 @@ func.func @test_add_1d_matching_no_broadcast(%arg0: tensor<1xf32>, %arg1: tensor
 // CHECK-LABEL: @test_add_1d_matching_static
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME: %[[ARG1:[0-9a-zA-Z_]*]]:
+// NAMED-LABEL: @test_add_1d_matching_static
+// NAMED: linalg.elementwise <add>
 func.func @test_add_1d_matching_static(%arg0: tensor<3xf32>, %arg1: tensor<3xf32>) -> tensor<3xf32> {
 
   // CHECK: %[[VAL_0:.*]] = tensor.empty() : tensor<3xf32>
@@ -453,6 +480,26 @@ func.func @test_select_2d_one_dynamic(%arg0: tensor<2x?xi1>, %arg1: tensor<2x?xf
 // -----
 
 // CHECK-LABEL: @test_simple_f32
+// NAMED-LABEL: @test_simple_f32
+// NAMED: linalg.elementwise <tanh>
+// NAMED: linalg.elementwise <abs>
+// NAMED: linalg.elementwise <add>
+// NAMED: linalg.elementwise <sub>
+// NAMED: linalg.elementwise <mul>
+// NAMED: linalg.elementwise <negf>
+// NAMED: linalg.elementwise <powf>
+// NAMED: linalg.elementwise <rsqrt>
+// NAMED: linalg.elementwise <log>
+// NAMED: linalg.elementwise <exp>
+// NAMED: linalg.elementwise <select>
+// NAMED: linalg.elementwise <max_signed>
+// NAMED: linalg.elementwise <min_signed>
+// NAMED: linalg.elementwise <ceil>
+// NAMED: linalg.elementwise <floor>
+// NAMED: linalg.elementwise <reciprocal>
+// NAMED: linalg.elementwise <erf>
+// NAMED: linalg.elementwise <sin>
+// NAMED: linalg.elementwise <cos>
 func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: linalg.generic
   // CHECK: tanh
@@ -639,6 +686,13 @@ func.func @test_simple_ui8(%arg0: tensor<1xui8>) -> () {
 // -----
 
 // CHECK-LABEL: @test_simple_i32
+// NAMED-LABEL: @test_simple_i32
+// NAMED: linalg.elementwise <add>
+// NAMED: linalg.elementwise <sub>
+// NAMED: linalg.elementwise <div>
+// NAMED: linalg.elementwise <select>
+// NAMED: linalg.elementwise <max_signed>
+// NAMED: linalg.elementwise <min_signed>
 func.func @test_simple_i32(%arg0: tensor<1xi32>, %unsigned: tensor<1xui32>, %unsigned64: tensor<1xui64>) -> () {
   // CHECK: linalg.generic
   // CHECK: arith.addi
@@ -1532,18 +1586,6 @@ func.func @rescaleUnnecessaryDoubleRound(%arg0 : tensor<2xi8>) -> (tensor<2xi8>)
   // CHECK: tosa.apply_scale
   // CHECK-SAME:  {rounding_mode = SINGLE_ROUND}
   %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = DOUBLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
-  return %0 : tensor<2xi8>
-}
-
-// -----
-
-func.func @unsupportedRescaleInexactRound(%arg0 : tensor<2xi8>) -> (tensor<2xi8>) {
-  %multiplier = "tosa.const"() {values = dense<19689> : tensor<1xi32> } : () -> tensor<1xi32>
-  %shift = "tosa.const"() {values = dense<33> : tensor<1xi8> } : () -> tensor<1xi8>
-  %input_zp = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1xi8>
-  %output_zp = "tosa.const"() {values = dense<0> : tensor<1xi8>} : () -> tensor<1xi8>
-  // expected-error@+1 {{failed to legalize operation 'tosa.rescale'}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = true, rounding_mode = INEXACT_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<2xi8>, tensor<1xi32>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2xi8>
   return %0 : tensor<2xi8>
 }
 
@@ -2464,6 +2506,8 @@ func.func @reduce_max_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
 // -----
 
 // CHECK-LABEL: @minimum_nan_propagate
+// NAMED-LABEL: @minimum_nan_propagate
+// NAMED: linalg.elementwise <min_signed>
 func.func @minimum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
   // CHECK: linalg.generic
   // CHECK: arith.minimumf
@@ -2477,6 +2521,8 @@ func.func @minimum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
 // -----
 
 // CHECK-LABEL: @maximum_nan_propagate
+// NAMED-LABEL: @maximum_nan_propagate
+// NAMED: linalg.elementwise <max_signed>
 func.func @maximum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> () {
   // CHECK: linalg.generic
   // CHECK: arith.maximumf
@@ -2490,6 +2536,8 @@ func.func @maximum_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>)
 // -----
 
 // CHECK-LABEL: @minimum_nan_ignore_int
+// NAMED-LABEL: @minimum_nan_ignore_int
+// NAMED: linalg.elementwise <min_signed>
 func.func @minimum_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
   // CHECK: linalg.generic
   // CHECK: arith.minsi
@@ -2503,6 +2551,8 @@ func.func @minimum_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) 
 // -----
 
 // CHECK-LABEL: @maximum_nan_ignore_int
+// NAMED-LABEL: @maximum_nan_ignore_int
+// NAMED: linalg.elementwise <max_signed>
 func.func @maximum_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
   // CHECK: linalg.generic
   // CHECK: arith.maxsi

@@ -18,14 +18,160 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 
+#include <optional>
 #include <type_traits>
 
 using namespace mlir;
 using namespace mlir::tosa;
+
+// Number of leading data operands the op forwards to linalg.elementwise,
+// matching its unary/binary/ternary arity group. Trailing metadata operands
+// (e.g. MulOp's shift, NegateOp's zero points) are excluded.
+static unsigned getArity(Operation *op) {
+  return llvm::TypeSwitch<Operation *, unsigned>(op)
+      .Case<tosa::AbsOp, tosa::CeilOp, tosa::FloorOp, tosa::ExpOp, tosa::LogOp,
+            tosa::RsqrtOp, tosa::SinOp, tosa::CosOp, tosa::TanhOp, tosa::ErfOp,
+            tosa::ReciprocalOp, tosa::NegateOp>([](Operation *) { return 1u; })
+      .Case<tosa::AddOp, tosa::SubOp, tosa::IntDivOp, tosa::MulOp, tosa::PowOp,
+            tosa::MaximumOp, tosa::MinimumOp>([](Operation *) { return 2u; })
+      .Case<tosa::SelectOp>([](Operation *) { return 3u; })
+      .Default([](Operation *op) { return op->getNumOperands(); });
+}
+
+// Return the linalg.elementwise kind that is semantically equivalent to the
+// given TOSA elementwise op for the provided element type, or std::nullopt if
+// the op has no direct linalg.elementwise counterpart. Only ops whose TOSA
+// lowering maps to a single linalg.elementwise function are handled; the more
+// involved lowerings (e.g. quantized negate, mul with shift, casts) are left to
+// the generic TosaToLinalg conversion.
+static std::optional<linalg::ElementwiseKind>
+getElementwiseKind(Operation *op, Type elementTy) {
+  using linalg::ElementwiseKind;
+  const bool isFloat = isa<FloatType>(elementTy);
+  const bool isSignlessInt =
+      elementTy.isSignlessInteger() && !elementTy.isInteger(1);
+
+  // Unary ops. linalg.elementwise only defines these on floating point types.
+  if (isFloat) {
+    if (isa<tosa::AbsOp>(op))
+      return ElementwiseKind::abs;
+    if (isa<tosa::CeilOp>(op))
+      return ElementwiseKind::ceil;
+    if (isa<tosa::FloorOp>(op))
+      return ElementwiseKind::floor;
+    if (isa<tosa::ExpOp>(op))
+      return ElementwiseKind::exp;
+    if (isa<tosa::LogOp>(op))
+      return ElementwiseKind::log;
+    if (isa<tosa::RsqrtOp>(op))
+      return ElementwiseKind::rsqrt;
+    if (isa<tosa::SinOp>(op))
+      return ElementwiseKind::sin;
+    if (isa<tosa::CosOp>(op))
+      return ElementwiseKind::cos;
+    if (isa<tosa::TanhOp>(op))
+      return ElementwiseKind::tanh;
+    if (isa<tosa::ErfOp>(op))
+      return ElementwiseKind::erf;
+    if (isa<tosa::ReciprocalOp>(op))
+      return ElementwiseKind::reciprocal;
+    if (isa<tosa::PowOp>(op))
+      return ElementwiseKind::powf;
+  }
+
+  // Binary ops defined on both floating point and (non-boolean) integers.
+  if (isFloat || isSignlessInt) {
+    if (isa<tosa::AddOp>(op))
+      return ElementwiseKind::add;
+    if (isa<tosa::SubOp>(op))
+      return ElementwiseKind::sub;
+  }
+
+  // Signed integer division.
+  if (isSignlessInt && isa<tosa::IntDivOp>(op))
+    return ElementwiseKind::div;
+
+  // Multiply maps to a plain elementwise multiply only when no rescaling shift
+  // is requested (the shift must be a constant zero) and the inputs already
+  // share the result element type. The shifted/rescaled integer variant is left
+  // to the generic conversion.
+  if (auto mulOp = dyn_cast<tosa::MulOp>(op)) {
+    DenseElementsAttr shiftAttr;
+    const bool zeroShift =
+        matchPattern(mulOp.getShift(), m_Constant(&shiftAttr)) &&
+        shiftAttr.getValues<APInt>()[0].isZero();
+    const bool matchingTypes =
+        cast<ShapedType>(mulOp.getInput1().getType()).getElementType() ==
+            elementTy &&
+        cast<ShapedType>(mulOp.getInput2().getType()).getElementType() ==
+            elementTy;
+    if ((isFloat || isSignlessInt) && zeroShift && matchingTypes)
+      return ElementwiseKind::mul;
+  }
+
+  // Negate maps to floating-point negation only when the zero points are zero.
+  // The quantized integer variant is left to the generic conversion.
+  if (auto negateOp = dyn_cast<tosa::NegateOp>(op)) {
+    if (isFloat) {
+      FailureOr<int64_t> inZp = negateOp.getInput1ZeroPoint();
+      FailureOr<int64_t> outZp = negateOp.getOutputZeroPoint();
+      if (succeeded(inZp) && succeeded(outZp) && *inZp == 0 && *outZp == 0)
+        return ElementwiseKind::negf;
+    }
+  }
+
+  // Maximum/minimum. The NaN "IGNORE" mode requires an additional compare and
+  // select that linalg.elementwise cannot express, so only the default
+  // "PROPAGATE" mode is handled for floating point types.
+  auto nanModeIsPropagate = [](auto tosaOp) {
+    return tosaOp.getNanMode() == NanPropagationMode::PROPAGATE;
+  };
+  if (isFloat || isSignlessInt) {
+    if (auto maxOp = dyn_cast<tosa::MaximumOp>(op)) {
+      if (!isFloat || nanModeIsPropagate(maxOp))
+        return ElementwiseKind::max_signed;
+    }
+    if (auto minOp = dyn_cast<tosa::MinimumOp>(op)) {
+      if (!isFloat || nanModeIsPropagate(minOp))
+        return ElementwiseKind::min_signed;
+    }
+  }
+
+  // Select (ternary) is valid for any element type.
+  if (isa<tosa::SelectOp>(op))
+    return ElementwiseKind::select;
+
+  return std::nullopt;
+}
+
+bool mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
+  if (op->getNumResults() != 1)
+    return false;
+
+  auto resultTy = dyn_cast<ShapedType>(op->getResult(0).getType());
+  if (!resultTy || !resultTy.hasRank())
+    return false;
+
+  if (!getElementwiseKind(op, resultTy.getElementType()))
+    return false;
+
+  // linalg.elementwise broadcasts operands through their indexing maps, so
+  // operands only need to be ranked shaped types (tensors or memrefs, possibly
+  // dynamic); their rank need not match the result's.
+  const unsigned numInputs = getArity(op);
+  for (unsigned i = 0; i < numInputs; ++i) {
+    auto operandTy = dyn_cast<ShapedType>(op->getOperand(i).getType());
+    if (!operandTy || !operandTy.hasRank())
+      return false;
+  }
+  return true;
+}
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
                             TypedAttr padAttr, OpBuilder &rewriter) {
@@ -603,6 +749,84 @@ public:
   }
 };
 
+// Lower TOSA elementwise ops that have a direct linalg.elementwise named op
+// counterpart. Unlike linalg.generic, linalg.elementwise dispatches on a single
+// function kind and infers the body, so the conversion is a handful of checks
+// (kind, ranks, static shapes) followed by construction of the indexing maps
+// and the named op.
+template <typename TosaOp>
+class ElementwiseConverter : public OpConversionPattern<TosaOp> {
+public:
+  using OpConversionPattern<TosaOp>::OpConversionPattern;
+  using typename OpConversionPattern<TosaOp>::OpAdaptor;
+
+  LogicalResult
+  matchAndRewrite(TosaOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Operation *operation = op;
+    if (!isConvertibleToLinalgElementwise(operation))
+      return rewriter.notifyMatchFailure(
+          op, "op has no linalg.elementwise counterpart");
+
+    Location loc = op.getLoc();
+    auto resultTy = cast<RankedTensorType>(op.getType());
+    const int64_t rank = resultTy.getRank();
+
+    std::optional<linalg::ElementwiseKind> kind =
+        getElementwiseKind(operation, resultTy.getElementType());
+
+    // Trailing metadata operands (e.g. MulOp's shift, NegateOp's zero points)
+    // are not forwarded to linalg.elementwise.
+    ValueRange inputs = adaptor.getOperands().take_front(getArity(operation));
+
+    // Build one indexing map per input, broadcasting static size-1 dimensions,
+    // followed by the identity map for the output.
+    SmallVector<AffineMap> indexingMaps;
+    for (Value operand : inputs) {
+      ArrayRef<int64_t> shape = cast<ShapedType>(operand.getType()).getShape();
+      SmallVector<AffineExpr> exprs;
+      for (const auto &dim : llvm::enumerate(shape)) {
+        bool requiresBroadcast =
+            dim.value() == 1 && resultTy.getDimSize(dim.index()) != 1;
+        exprs.push_back(requiresBroadcast
+                            ? rewriter.getAffineConstantExpr(0)
+                            : rewriter.getAffineDimExpr(dim.index()));
+      }
+      indexingMaps.push_back(AffineMap::get(rank, /*symbolCount=*/0, exprs,
+                                            rewriter.getContext()));
+    }
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
+
+    // Compute the output sizes, taking each dynamic result dimension from the
+    // first input that is not broadcast (statically 1) along that dimension.
+    SmallVector<OpFoldResult> sizes;
+    for (int64_t i = 0; i < rank; ++i) {
+      if (!resultTy.isDynamicDim(i)) {
+        sizes.push_back(rewriter.getIndexAttr(resultTy.getDimSize(i)));
+        continue;
+      }
+      Value dimSource = inputs.front();
+      for (Value operand : inputs) {
+        auto operandTy = cast<ShapedType>(operand.getType());
+        if (operandTy.getRank() == rank && operandTy.getDimSize(i) != 1) {
+          dimSource = operand;
+          break;
+        }
+      }
+      sizes.push_back(
+          tensor::DimOp::create(rewriter, loc, dimSource, i).getResult());
+    }
+
+    Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, sizes,
+                                                resultTy.getElementType());
+
+    rewriter.replaceOpWithNewOp<linalg::ElementwiseOp>(
+        op, inputs, ValueRange{emptyTensor}, *kind,
+        rewriter.getAffineMapArrayAttr(indexingMaps));
+    return success();
+  }
+};
+
 class MatMulConverter : public OpConversionPattern<tosa::MatMulOp> {
 public:
   using OpConversionPattern<tosa::MatMulOp>::OpConversionPattern;
@@ -1136,6 +1360,29 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       MatMulConverter,
       AvgPool2dConverter,
       TransposeConverter
+  >(patterns->getContext());
+
+  patterns->add<
+      ElementwiseConverter<tosa::AbsOp>,
+      ElementwiseConverter<tosa::CeilOp>,
+      ElementwiseConverter<tosa::FloorOp>,
+      ElementwiseConverter<tosa::ExpOp>,
+      ElementwiseConverter<tosa::LogOp>,
+      ElementwiseConverter<tosa::RsqrtOp>,
+      ElementwiseConverter<tosa::SinOp>,
+      ElementwiseConverter<tosa::CosOp>,
+      ElementwiseConverter<tosa::TanhOp>,
+      ElementwiseConverter<tosa::ErfOp>,
+      ElementwiseConverter<tosa::ReciprocalOp>,
+      ElementwiseConverter<tosa::PowOp>,
+      ElementwiseConverter<tosa::AddOp>,
+      ElementwiseConverter<tosa::SubOp>,
+      ElementwiseConverter<tosa::IntDivOp>,
+      ElementwiseConverter<tosa::MulOp>,
+      ElementwiseConverter<tosa::NegateOp>,
+      ElementwiseConverter<tosa::MaximumOp>,
+      ElementwiseConverter<tosa::MinimumOp>,
+      ElementwiseConverter<tosa::SelectOp>
   >(patterns->getContext());
 
   patterns->add<
