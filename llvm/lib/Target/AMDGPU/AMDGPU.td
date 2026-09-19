@@ -3277,6 +3277,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
   FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
+  FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
   FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
   FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,
