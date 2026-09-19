@@ -2057,6 +2057,10 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
+def FeatureNoVectorIndexLoadOverlap : SubtargetFeature<"no-vector-index-load-overlap",
+    "AllowVectorIndexLoadOverlap", "false",
+    "Disable overlapping source and destination for vector index loads">;
+
 //===----------------------------------------------------------------------===//
 // Tuning features
 //===----------------------------------------------------------------------===//

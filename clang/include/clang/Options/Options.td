@@ -5855,6 +5855,10 @@ def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
   HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
 def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
   HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
+def mvector_index_load_overlap : Flag<["-"], "mvector-index-load-overlap">, Group<m_Group>,
+  HelpText<"Allow vector index load to have overlapping source and destination register groups (RISC-V only)">;
+def mno_vector_index_load_overlap : Flag<["-"], "mno-vector-index-load-overlap">, Group<m_Group>,
+  HelpText<"Force vector index load to have non-overlapping source and destination register groups (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
