@@ -645,6 +645,7 @@ defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_A
 defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
 defm PoisonFreezeKHR : CapabilityOperand<5156, 0, 0, [SPV_KHR_poison_freeze], []>;
 defm UntypedPointersKHR : CapabilityOperand<4473, 0, 0, [SPV_KHR_untyped_pointers], []>;
+defm UntypedVariableLengthArrayINTEL : CapabilityOperand<6243, 0, 0, [SPV_INTEL_variable_length_array], [VariableLengthArrayINTEL, UntypedPointersKHR]>;
 defm LongVectorEXT : CapabilityOperand<5425, 0, 0, [SPV_EXT_long_vector], []>;
 
 //===----------------------------------------------------------------------===//
