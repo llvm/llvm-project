@@ -14,6 +14,7 @@
 #include <__memory/unique_ptr.h> // for default_delete
 #include <__rcu/rcu_domain.h>
 #include <__type_traits/is_assignable.h>
+#include <__type_traits/is_base_of.h>
 #include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
 
