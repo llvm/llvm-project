@@ -1,0 +1,174 @@
+## Check how yaml2obj produces the PGO Analysis Map in a .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s
+
+## Case 1: Specify Entries with PGO analysis and post link data.
+# CHECK:        Number: 1
+# CHECK-NEXT:   Name: .llvm_bb_addr_map
+# CHECK:        RawDataSize: 0x23
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 02872000 00000000 0000010B 010203E8
+# CHECK-NEXT:     0010: 07E80764 020CEEDD BBF70E28 0D91A2C4
+# CHECK-NEXT:     0020: 880100
+# CHECK-NEXT:   )
+
+## Case 2: Not including a field which is enabled in feature doesn't emit value.
+# CHECK:        Number: 2
+# CHECK-NEXT:   Name: .llvm_bb_addr_map
+# CHECK:        RawDataSize: 0xF
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 02012000 00000000 0000020D 010203
+# CHECK-NEXT:   )
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+
+## Test the following cases:
+
+## 1) We can produce a .llvm_bb_addr_map section from a description with Entries
+##    and PGO Analysis and Post Link data.
+  - Name: .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 2
+        Feature: 0x87
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            11
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+        PGOBBEntries:
+          - BBFreq:          1000
+            PostLinkBBFreq:  100
+            Successors:
+              - ID:               12
+                BrProb:           0xeeeeeeee
+                PostLinkBrFreq:   40
+              - ID:               13
+                BrProb:           0x11111111
+
+## 2) According to feature we have FuncEntryCount but none is provided in yaml.
+  - Name: .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 2
+        Feature: 0x1
+        BBRanges:
+          - BaseAddress:   0x0000000000000020
+            NumBlocks: 2
+            BBEntries:
+             - ID:            13
+               AddressOffset: 0x00000001
+               Size:          0x00000002
+               Metadata:      0x00000003
+symbols: []
+...
+
+## An invalid feature warns and skips the entry: only the version and feature
+## bytes are emitted, even when BBRanges/PGOAnalyses follow.
+# RUN: yaml2obj --docnum=2 %s -o %t2 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=INVALID-FEATURE-DATA
+# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0x100
+# INVALID-FEATURE-DATA:      Name: .llvm_bb_addr_map
+# INVALID-FEATURE-DATA:      RawDataSize: 0x3
+# INVALID-FEATURE-DATA:      SectionData (
+# INVALID-FEATURE-DATA-NEXT:   0000: 050001
+# INVALID-FEATURE-DATA-NEXT: )
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 5
+##  Specify unsupported feature
+        Feature: 0x100
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            1
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
+    PGOAnalyses:
+      - FuncEntryCount: 100
+        PGOBBEntries:
+          - BBFreq: 100
+symbols: []
+...
+
+## PGOAnalyses without Entries is meaningless.
+# RUN: yaml2obj --docnum=3 %s -o %t3 2>&1 | FileCheck %s --check-prefix=NO-ENTRIES
+# RUN: llvm-readobj --sections --section-data %t3 | FileCheck %s --check-prefix=NO-ENTRIES-DATA
+
+# NO-ENTRIES: warning: PGOAnalyses should not exist in .llvm_bb_addr_map when Entries does not exist
+
+# NO-ENTRIES-DATA:      Name: .llvm_bb_addr_map
+# NO-ENTRIES-DATA:      RawDataSize: 0x0
+# NO-ENTRIES-DATA-NEXT: PointerToRawData: 0x0
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+symbols: []
+...
+
+## A PGOAnalyses length mismatch warns, drops the PGO data, and keeps Entries.
+# RUN: yaml2obj --docnum=4 %s -o %t4 2>&1 | FileCheck %s --check-prefix=MISMATCH
+# RUN: llvm-readobj --sections --section-data %t4 | FileCheck %s --check-prefix=MISMATCH-DATA
+# RUN: yaml2obj --docnum=5 %s -o %t5 2>&1 | FileCheck %s --check-prefix=MISMATCH
+
+# MISMATCH: warning: PGOAnalyses must be the same length as Entries in .llvm_bb_addr_map
+
+# MISMATCH-DATA:        Name: .llvm_bb_addr_map
+# MISMATCH-DATA:        RawDataSize: 0xF
+# MISMATCH-DATA:        SectionData (
+# MISMATCH-DATA-NEXT:     0000: 03002000 00000000 0000010B 010203
+# MISMATCH-DATA-NEXT:   )
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries:
+      - Version: 3
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            11
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+      - FuncEntryCount: 2000
+symbols: []
+...
+
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name: .llvm_bb_addr_map
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Entries: []
+    PGOAnalyses:
+      - FuncEntryCount: 1000
+symbols: []
+...
