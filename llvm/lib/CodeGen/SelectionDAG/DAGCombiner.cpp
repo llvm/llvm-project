@@ -20867,6 +20867,11 @@ static SDValue eliminateFPCastPair(SDNode *N) {
     // widen must have the nnan and ninf flags to indicate that we don't need to
     // care about that. We are also removing a rounding step, and that requires
     // both the narrow and widen to allow contraction.
+    //
+    // For FP_EXTEND/FP_ROUND pairs, it is only safe to fold when FP_ROUND
+    // preserves the value (when the TRUNC flag == 1).
+    if (NarrowingOp == ISD::FP_ROUND && N0.getConstantOperandVal(1) == 0)
+      return SDValue();
     if (WidenFlags.hasNoNaNs() && WidenFlags.hasNoInfs() &&
         NarrowFlags.hasAllowContract() && WidenFlags.hasAllowContract()) {
       return N0.getOperand(0);
