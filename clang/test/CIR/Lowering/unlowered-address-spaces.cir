@@ -3,7 +3,552 @@
 !s32i = !cir.int<s, 32>
 
 module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @language_address_space(%arg0: !cir.ptr<!s32i, lang_address_space(offload_global)>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func private @language_address_space_return() -> !cir.ptr<!s32i, lang_address_space(offload_global)>
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @nested_language_address_space(%arg0: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_local)>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @function_and_array_language_address_space(
+      %arg0: !cir.ptr<!cir.func<(!cir.ptr<!cir.array<!cir.ptr<!s32i, lang_address_space(offload_constant)> x 4>>)>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+// Keep walking after the recursive member to find the language address space.
+!rec_Node = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>, data !cir.ptr<!s32i, lang_address_space(offload_global)>}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @recursive_struct_language_address_space(%arg0: !cir.ptr<!rec_Node>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_U = !cir.union<"U" {data !s32i, data !cir.ptr<!s32i, lang_address_space(offload_global)>}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @union_language_address_space(%arg0: !cir.ptr<!rec_U>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Foo = !cir.struct<"Foo" {data !s32i}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @data_member_language_address_space(
+      %arg0: !cir.ptr<!cir.data_member<!cir.ptr<!s32i, lang_address_space(offload_global)> in !rec_Foo>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Foo = !cir.struct<"Foo" {data !s32i}>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @method_language_address_space(
+      %arg0: !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!s32i, lang_address_space(offload_global)>)> in !rec_Foo>>) {
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
   // expected-error @below {{cannot lower a global with a language address space}}
   // expected-error @below {{failed to legalize operation 'cir.global'}}
   cir.global external lang_address_space(offload_global) @global = #cir.int<1> : !s32i
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!langptr = !cir.ptr<!cir.void, lang_address_space(offload_global)>
+!rec_U = !cir.union<"U" {data !s64i, data !langptr}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // The union's integer storage converts, but its active initializer does not.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @union_active_initializer_language_address_space = #cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // Unlike direct cir.func lowering, a global view can request FuncType
+  // conversion before its referenced function is lowered.
+  cir.global external @function_pointer = #cir.global_view<@global_view_callee> : !cir.ptr<!cir.void>
+
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func private @global_view_callee() -> !cir.ptr<!s32i, lang_address_space(offload_global)>
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!langptr = !cir.ptr<!s32i, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Keep the view before its target so the initializer is lowered first.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @view = #cir.global_view<@target, [0 : i32]> : !cir.ptr<!cir.void>
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+!ptrarray = !cir.array<!ptr x 1>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the view before its target, including through enclosing attributes.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @view = #cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !ptrarray
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+!record = !cir.struct<{data !ptr}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the view before its target, including through enclosing attributes.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @view = #cir.const_record<{#cir.global_view<@target, [0 : i32]> : !ptr}> : !record
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+!record = !cir.struct<{data !ptr}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the view before its target, including through enclosing attributes.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @view = #cir.typeinfo<{#cir.global_view<@target, [0 : i32]> : !ptr}> : !record
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+!ptrarray = !cir.array<!ptr x 1>
+!vtable = !cir.struct<{data !ptrarray}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the view before its target, including through enclosing attributes.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @view = #cir.vtable<{#cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !ptrarray}> : !vtable
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // Keep the function before the global so get_global is lowered first.
+  cir.func @get_global_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.get_global'}}
+    %0 = cir.get_global @global : !cir.ptr<!s32i, lang_address_space(offload_global)>
+    %1 = cir.load %0 : !cir.ptr<!s32i, lang_address_space(offload_global)>, !s32i
+    cir.return
+  }
+
+  cir.global external lang_address_space(offload_global) @global = #cir.int<1> : !s32i
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  cir.func @alloca_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.alloca'}}
+    %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i, lang_address_space(offload_private)>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  cir.func @null_constant_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.ptr<null> : !cir.ptr<!s32i, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the view before its target, including through enclosing attributes.
+  cir.func @constant_global_view_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.global_view<@target, [0 : i32]> : !ptr
+    cir.return
+  }
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the view before its target, including through enclosing attributes.
+  cir.func @constant_array_global_view_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !cir.array<!ptr x 1>
+    cir.return
+  }
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the view before its target, including through enclosing attributes.
+  cir.func @constant_record_global_view_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_record<{#cir.global_view<@target, [0 : i32]> : !ptr}> : !cir.struct<{data !ptr}>
+    cir.return
+  }
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!langptr = !cir.ptr<!cir.void, lang_address_space(offload_global)>
+!rec_U = !cir.union<"U" {data !s64i, data !langptr}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @constant_union_active_initializer_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U
+    cir.return
+  }
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!langptr = !cir.ptr<!cir.void, lang_address_space(offload_global)>
+!rec_U = !cir.union<"U" {data !s64i, data !langptr}>
+!rec_Outer = !cir.union<"Outer" {data !s64i, data !rec_U}>
+!rec_S = !cir.struct<"S" {data !rec_Outer}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Propagate adjustment failure through both the enclosing union and struct.
+  cir.func @constant_nested_union_initializer_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U}> : !rec_Outer}> : !rec_S
+    cir.return
+  }
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!langptr = !cir.ptr<!cir.void, lang_address_space(offload_global)>
+!rec_U = !cir.union<"U" {data !s64i, data !langptr}>
+!array = !cir.array<!rec_U x 1>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @constant_union_array_initializer_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_array<[#cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U]> : !array
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  cir.func @int_to_ptr_language_address_space(%arg0: !s32i) {
+    // expected-error @below {{failed to legalize operation 'cir.cast'}}
+    %0 = cir.cast int_to_ptr %arg0 : !s32i -> !cir.ptr<!s32i, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  cir.func @address_space_cast_language_address_space(%arg0: !cir.ptr<!s32i>) {
+    // expected-error @below {{failed to legalize operation 'cir.cast'}}
+    %0 = cir.cast address_space %arg0 : !cir.ptr<!s32i> -> !cir.ptr<!s32i, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Base = !cir.struct<"Base" {data !s32i}>
+!rec_Derived = !cir.struct<"Derived" {data !rec_Base}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // The operand remains convertible; only the result needs rejection.
+  cir.func @base_class_addr_language_address_space(%derived: !cir.ptr<!rec_Derived>) {
+    // expected-error @below {{failed to legalize operation 'cir.base_class_addr'}}
+    %base = cir.base_class_addr %derived : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base, lang_address_space(offload_private)>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_Base = !cir.struct<"Base" {data !s32i}>
+!rec_Derived = !cir.struct<"Derived" {data !cir.ptr<!s32i, lang_address_space(offload_global)>, data !rec_Base}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @derived_class_addr_language_address_space() {
+    %base = cir.alloca "base" align(4) : !cir.ptr<!rec_Base>
+    // expected-error @below {{failed to legalize operation 'cir.derived_class_addr'}}
+    %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> nonnull [4] -> !cir.ptr<!rec_Derived>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @get_struct_member_language_address_space(%record: !cir.ptr<!rec_S>) {
+    // expected-error @below {{failed to legalize operation 'cir.get_member'}}
+    %member = cir.get_member %record[0] {name = "member"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i, lang_address_space(offload_private)>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_U = !cir.union<"U" {data !s32i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @get_union_member_language_address_space(%record: !cir.ptr<!rec_U>) {
+    // expected-error @below {{failed to legalize operation 'cir.get_member'}}
+    %member = cir.get_member %record[0] {name = "member"} : !cir.ptr<!rec_U> -> !cir.ptr<!s32i, lang_address_space(offload_private)>
+    cir.return
+  }
+}
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @complex_real_ptr_language_address_space(%ptr: !cir.ptr<!cir.complex<!cir.double>>) {
+    // expected-error @below {{failed to legalize operation 'cir.complex.real_ptr'}}
+    %real = cir.complex.real_ptr %ptr : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double, lang_address_space(offload_private)>
+    cir.return
+  }
+}
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @complex_imag_ptr_language_address_space(%ptr: !cir.ptr<!cir.complex<!cir.double>>) {
+    // expected-error @below {{failed to legalize operation 'cir.complex.imag_ptr'}}
+    %imag = cir.complex.imag_ptr %ptr : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double, lang_address_space(offload_private)>
+    cir.return
+  }
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the address point before its referenced global.
+  cir.func @vtable_symbol_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.vtable.address_point'}}
+    %0 = cir.vtable.address_point(@target, address_point = <index = 0, offset = 0>) : !cir.vptr
+    cir.return
+  }
+
+  cir.global "private" external @target : !cir.struct<{data !array}>
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!langptr = !cir.ptr<!s32i, lang_address_space(offload_global)>
+!fn = !cir.func<() -> !langptr>
+!fnptr = !cir.ptr<!fn>
+!fnptrptr = !cir.ptr<!fnptr>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @virtual_fn_addr_language_address_space(%vptr: !cir.vptr) {
+    // expected-error @below {{failed to legalize operation 'cir.vtable.get_virtual_fn_addr'}}
+    %0 = cir.vtable.get_virtual_fn_addr %vptr[0] : !cir.vptr -> !fnptrptr
+    cir.return
+  }
+}
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @vtt_address_point_language_address_space(
+      %vtt: !cir.ptr<!cir.ptr<!cir.void>>) {
+    // expected-error @below {{failed to legalize operation 'cir.vtt.address_point'}}
+    %0 = cir.vtt.address_point %vtt : !cir.ptr<!cir.ptr<!cir.void>>, offset = 1 -> !cir.ptr<!cir.ptr<!cir.void>, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the address point before its referenced global.
+  cir.func @vtt_symbol_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.vtt.address_point'}}
+    %0 = cir.vtt.address_point @target, offset = 0 -> !cir.ptr<!ptr>
+    cir.return
+  }
+
+  cir.global "private" external @target : !array
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @frame_address_language_address_space() {
+    %level = cir.const #cir.int<0> : !u32i
+    // expected-error @below {{failed to legalize operation 'cir.frame_address'}}
+    %0 = cir.frame_address(%level) : !cir.ptr<!u8i, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @address_of_return_address_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.address_of_return_address'}}
+    %0 = cir.address_of_return_address : !cir.ptr<!u8i, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @stacksave_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.stacksave'}}
+    %0 = cir.stacksave : !cir.ptr<!u8i, lang_address_space(offload_global)>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @inline_asm_language_address_space() {
+    // expected-error @below {{failed to legalize operation 'cir.asm'}}
+    %0 = cir.asm(x86_att,
+      out = [],
+      in = [],
+      in_out = [],
+      {"" "=r"}) -> !cir.ptr<!s32i, lang_address_space(offload_global)>
+    cir.return
+  }
 }
