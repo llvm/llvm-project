@@ -11837,6 +11837,10 @@ MVT LoongArchTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   if (VT == MVT::f16 && Subtarget.hasBasicF())
     return MVT::f32;
 
+  // Use f32 to pass bf16.
+  if (VT == MVT::bf16 && Subtarget.hasBasicF())
+    return MVT::f32;
+
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
@@ -11844,6 +11848,10 @@ unsigned LoongArchTargetLowering::getNumRegistersForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT) const {
   // Use f32 to pass f16.
   if (VT == MVT::f16 && Subtarget.hasBasicF())
+    return 1;
+
+  // Use f32 to pass bf16.
+  if (VT == MVT::bf16 && Subtarget.hasBasicF())
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);

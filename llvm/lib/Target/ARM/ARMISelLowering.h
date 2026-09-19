@@ -504,6 +504,7 @@ class VectorType;
         Value *Accumulator = nullptr) const override;
 
     bool useFPRegsForHalfType() const override { return true; }
+    bool useFPRegsForBFloat16Type() const override { return true; }
 
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>

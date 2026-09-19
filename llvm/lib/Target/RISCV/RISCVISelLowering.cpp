@@ -2961,6 +2961,13 @@ MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
       !Subtarget.hasStdExtZfhminOrZhinxmin())
     return MVT::f32;
 
+  // Use f32 to pass bf16 if it is legal and Zfbfmin/XAndesBFHCvt is not
+  // enabled. We might still end up using a GPR but that will be decided based
+  // on ABI.
+  if (VT == MVT::bf16 && Subtarget.hasStdExtFOrZfinx() &&
+      !Subtarget.hasStdExtZfbfmin() && !Subtarget.hasVendorXAndesBFHCvt())
+    return MVT::f32;
+
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
@@ -2982,6 +2989,13 @@ unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context
   // We might still end up using a GPR but that will be decided based on ABI.
   if (VT == MVT::f16 && Subtarget.hasStdExtFOrZfinx() &&
       !Subtarget.hasStdExtZfhminOrZhinxmin())
+    return 1;
+
+  // Use f32 to pass bf16 if it is legal and Zfbfmin/XAndesBFHCvt is not
+  // enabled. We might still end up using a GPR but that will be decided based
+  // on ABI.
+  if (VT == MVT::bf16 && Subtarget.hasStdExtFOrZfinx() &&
+      !Subtarget.hasStdExtZfbfmin() && !Subtarget.hasVendorXAndesBFHCvt())
     return 1;
 
   return TargetLowering::getNumRegistersForCallingConv(Context, CC, VT);
