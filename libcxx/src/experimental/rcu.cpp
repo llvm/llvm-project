@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__config>
+
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Watomic-alignment")
 #include <atomic>
+_LIBCPP_DIAGNOSTIC_POP
+
 #include <cstdint>
-#include <memory>
 #include <mutex>
 #include <rcu>
 
