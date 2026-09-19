@@ -8,6 +8,38 @@
 
 // cxx98-no-diagnostics
 
+namespace cwg2900 { // cwg2900: 24
+#if __cplusplus >= 201703L
+// [temp.deduct.type] Example 13.
+template <int &> struct E;
+template <auto x> void f(E<x> *); // #cwg2900-f-E
+int v;
+void g(E<v> *bp) {
+  f(bp);
+  // since-cxx11-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx11-note@#cwg2900-f-E {{candidate template ignored: substitution failure: non-type template argument is not a constant expression}}
+}
+
+template <const int &> struct F;
+template <decltype(auto) x> void f(F<x> *);
+int i;
+void g(F<i> *ap) {
+  f(ap); // OK, deduces x as a constant template parameter of type const int &
+}
+
+template <decltype(auto) q> struct G;
+template <auto x> long *f(G<x> *);            // #1
+template <decltype(auto) x> short *f(G<x> *); // #2
+const int j = 0;
+short *g(G<(j)> *ap) { // OK, q has type const int &
+  return f(ap);        // OK, only #2 matches
+}
+long *g(G<j> *ap) { // OK, q has type int
+  return f(ap);     // OK, #1 is more specialized
+}
+#endif
+} // namespace cwg2900
+
 namespace cwg2913 { // cwg2913: 20
 
 #if __cplusplus >= 202002L
