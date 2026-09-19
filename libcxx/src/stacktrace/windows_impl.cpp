@@ -260,12 +260,6 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
     --max_depth;
   }
 
-  DWORD need_bytes = 0;
-  HMODULE module_handles[1024]{};
-  if (!EnumProcessModules(proc, module_handles, sizeof(module_handles), LPDWORD(&need_bytes))) {
-    return;
-  }
-
   // https://learn.microsoft.com/en-us/cpp/build/reference/h-restrict-length-of-external-names
   constexpr static size_t __max_sym_len = 2047;
 
