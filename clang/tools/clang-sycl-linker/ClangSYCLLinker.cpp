@@ -640,7 +640,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
 
   // Set data layout if needed.
   if (M->getDataLayout().isDefault())
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
   // Open output file for writing.
   int FD = -1;
