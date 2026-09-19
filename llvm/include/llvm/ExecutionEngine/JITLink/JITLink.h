@@ -1313,10 +1313,9 @@ public:
                             orc::ExecutorAddr Address,
                             orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                             bool IsLive) {
-    assert((S == Scope::Local || llvm::none_of(AbsoluteSymbols,
-                                               [&](const Symbol *Sym) {
-                                                 return Sym->getName() == Name;
-                                               })) &&
+    assert((S == Scope::Local ||
+            AbsoluteSymbolNames.insert(orc::NonOwningSymbolStringPtr(Name))
+                .second) &&
            "Duplicate absolute symbol");
     auto &Sym = Symbol::constructAbsolute(Allocator, createAddressable(Address),
                                           std::move(Name), Size, L, S, IsLive);
@@ -1353,10 +1352,9 @@ public:
                            orc::SymbolStringPtr Name,
                            orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                            bool IsCallable, bool IsLive) {
-    assert((S == Scope::Local || llvm::none_of(defined_symbols(),
-                                               [&](const Symbol *Sym) {
-                                                 return Sym->getName() == Name;
-                                               })) &&
+    assert((S == Scope::Local ||
+            DefinedSymbolNames.insert(orc::NonOwningSymbolStringPtr(Name))
+                .second) &&
            "Duplicate defined symbol");
     auto &Sym =
         Symbol::constructNamedDef(Allocator, Content, Offset, std::move(Name),
@@ -1621,6 +1619,9 @@ public:
     assert(AbsoluteSymbols.count(&Sym) &&
            "Symbol is not in the absolute symbols set");
     AbsoluteSymbols.erase(&Sym);
+#ifndef NDEBUG
+    forgetSymbolName(AbsoluteSymbolNames, Sym);
+#endif
     Addressable &Base = *Sym.Base;
     assert(llvm::none_of(external_symbols(),
                          [&](Symbol *AS) { return AS->Base == &Base; }) &&
@@ -1632,6 +1633,9 @@ public:
   /// Removes defined symbols. Does not remove the underlying block.
   void removeDefinedSymbol(Symbol &Sym) {
     assert(Sym.isDefined() && "Sym is not a defined symbol");
+#ifndef NDEBUG
+    forgetSymbolName(DefinedSymbolNames, Sym);
+#endif
     Sym.getSection().removeSymbol(Sym);
     destroySymbol(Sym);
   }
@@ -1654,6 +1658,10 @@ public:
     assert(Sections.count(Sec.getName()) && "Section not found");
     assert(Sections.find(Sec.getName())->second.get() == &Sec &&
            "Section map entry invalid");
+#ifndef NDEBUG
+    for (Symbol *Sym : Sec.symbols())
+      forgetSymbolName(DefinedSymbolNames, *Sym);
+#endif
     Sections.erase(Sec.getName());
   }
 
@@ -1683,6 +1691,25 @@ private:
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolMap ExternalSymbols;
   AbsoluteSymbolSet AbsoluteSymbols;
+#ifndef NDEBUG
+  // Names of the non-local symbols that have been added to this graph. These
+  // are used to detect duplicate definitions, and are only maintained in
+  // assertions-enabled builds (where the duplicate-definition checks are
+  // active). Interning guarantees that equal names are represented by equal
+  // SymbolStringPtrs, so looking a name up here is O(1), whereas scanning the
+  // graph's symbols for each newly added symbol is quadratic in the number of
+  // symbols in the graph.
+  DenseSet<orc::NonOwningSymbolStringPtr> AbsoluteSymbolNames;
+  DenseSet<orc::NonOwningSymbolStringPtr> DefinedSymbolNames;
+
+  // Stop tracking the name of a symbol that is about to leave the graph, so
+  // that the entry does not outlive the symbol's pooled name.
+  static void forgetSymbolName(DenseSet<orc::NonOwningSymbolStringPtr> &Names,
+                               const Symbol &Sym) {
+    if (Sym.hasName() && Sym.getScope() != Scope::Local)
+      Names.erase(orc::NonOwningSymbolStringPtr(Sym.getName()));
+  }
+#endif
   orc::shared::AllocActions AAs;
 };
 
