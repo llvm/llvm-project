@@ -48,8 +48,12 @@ public:
   InterpState(const State &Parent, Program &P, InterpStack &Stk,
               FrameAllocator &FrameAlloc, Context &Ctx,
               SourceMapper *M = nullptr);
+
   InterpState(const State &Parent, Program &P, InterpStack &Stk,
-              FrameAllocator &FrameAlloc, Context &Ctx, const Function *Func);
+              FrameAllocator &FA, Context &Ctx, const Function *Func);
+
+  InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+              FrameAllocator &FA, Context &Ctx, SourceMapper *M);
 
   ~InterpState();
 
