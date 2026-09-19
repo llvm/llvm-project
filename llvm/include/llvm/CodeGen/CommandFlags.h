@@ -91,6 +91,8 @@ LLVM_ABI bool getXCOFFTracebackTable();
 
 LLVM_ABI std::string getBBSections();
 
+LLVM_ABI llvm::FunctionSplittingMode getFunctionSplitting();
+
 LLVM_ABI unsigned getTLSSize();
 
 LLVM_ABI bool getEmulatedTLS();
@@ -116,8 +118,6 @@ LLVM_ABI bool getEnableAddrsig();
 LLVM_ABI bool getEnableCallGraphSection();
 
 LLVM_ABI bool getEmitCallSiteInfo();
-
-LLVM_ABI bool getEnableMachineFunctionSplitter();
 
 LLVM_ABI bool getEnableStaticDataPartitioning();
 
