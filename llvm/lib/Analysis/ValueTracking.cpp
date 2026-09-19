@@ -798,7 +798,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
     // instructions from CtxIter to the end of CtxBB (instructions before
     // CtxIter were checked above). Otherwise, check the entire block.
-    auto StartIt = (CurBB == CtxBB) ? CtxIter : CurBB->begin();
+    auto Start = (CurBB == CtxBB) ? CtxIter : CurBB->begin();
     if (!hasNoFreeInRange(Start, CurBB->end(), NumChecked))
       return false;
     // If we reached CtxBB via a backedge, do not re-expand its predecessors
