@@ -720,7 +720,7 @@ Generates system build files.
   including a hand-written lexer, parser, AST, as well as code generation
   support using LLVM- both static (ahead of time) and various approaches to
   Just In Time (JIT) compilation.
-  {doc}`Kaleidoscope Tutorial for complete beginner <tutorial/MyFirstLanguageFrontend/index>`.
+  [Kaleidoscope Tutorial for complete beginner](tutorial/MyFirstLanguageFrontend/index.md).
 
 - BuildingAJIT: Examples of the [BuildingAJIT tutorial] that shows how LLVM’s
   ORC JIT APIs interact with other parts of LLVM. It also teaches how to

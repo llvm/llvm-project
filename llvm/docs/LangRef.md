@@ -2743,7 +2743,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
 
 `speculative_load_hardening`
 :   This attribute indicates that
-    {doc}`Speculative Load Hardening <SpeculativeLoadHardening>`
+    [Speculative Load Hardening](SpeculativeLoadHardening.md)
     should be enabled for the function body.
 
     Speculative Load Hardening is a best-effort mitigation against
