@@ -349,12 +349,6 @@ void OpenBSD::AddClangSystemIncludeArgs(
                           concat(D.SysRoot, "/usr/include"));
 }
 
-void OpenBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                    llvm::opt::ArgStringList &CC1Args) const {
-  addSystemInclude(DriverArgs, CC1Args,
-                   concat(getDriver().SysRoot, "/usr/include/c++/v1"));
-}
-
 void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
   bool Profiling = Args.hasArg(options::OPT_pg);
