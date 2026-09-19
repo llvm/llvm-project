@@ -150,22 +150,18 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   if (S.getNumCatchStmts())
     Cont = CGF.getJumpDestInCurrentScope("eh.cont");
 
-  bool useFunclets = EHPersonality::get(CGF).usesFuncletPads();
   bool IsWasm = EHPersonality::get(CGF).isWasmPersonality();
   bool IsMSVC = EHPersonality::get(CGF).isMSVCPersonality();
 
   CodeGenFunction::FinallyInfo FinallyInfo;
   if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
-    if (!useFunclets) {
+    if (!IsMSVC) {
       // The finally statement is executed as a cleanup for the normal and
       // exceptional control flow out of a try-catch block. This is all
       // implemented in FinallyInfo. Here we enter a new EHCatchScope.
       FinallyInfo.enter(CGF, Finally->getFinallyBody(), beginCatchFn,
                         endCatchFn, exceptionRethrowFn);
-    } else if (IsWasm) {
-      CGF.ErrorUnsupported(Finally,
-                           "@finally is not implemented for WebAssembly");
-    } else if (IsMSVC) {
+    } else {
       CodeGenFunction HelperCGF(CGM, /*suppressNewContext=*/true);
       if (!CGF.CurSEHParent)
         CGF.CurSEHParent = cast<NamedDecl>(CGF.CurFuncDecl);
@@ -224,6 +220,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   }
 
   // We save the old funclet pad here before we traverse each catch handler.
+  llvm::Instruction *SavedFuncletPad = CGF.CurrentFuncletPad;
   SaveAndRestore RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
   llvm::BasicBlock *WasmCatchStartBlock = nullptr;
   llvm::CatchPadInst *CPI = nullptr;
@@ -312,8 +309,10 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   CGF.Builder.restoreIP(SavedIP);
 
   // Pop out of the finally.
-  if (!useFunclets && S.getFinallyStmt())
+  if (!IsMSVC && S.getFinallyStmt()) {
+    CGF.CurrentFuncletPad = SavedFuncletPad;
     FinallyInfo.exit(CGF);
+  }
 
   if (Cont.isValid())
     CGF.EmitBlock(Cont.getBlock());
