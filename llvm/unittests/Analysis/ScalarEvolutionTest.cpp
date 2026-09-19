@@ -24,6 +24,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -2658,5 +2659,157 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
         "only nuw or nsw allowed");
 #endif
   });
+}
+
+// Check disjoint-or collection without modifying the IR, including on failure.
+class ScalarEvolutionCanReuseInstructionTest : public ScalarEvolutionsTest {
+protected:
+  /// Run canReuseInstruction() on \p Name in \p Assembly, collecting disjoint
+  /// ors if \p AllowDisjointOrs. Verify that the IR is unchanged and pass the
+  /// results to \p Check.
+  void
+  runQuery(StringRef Assembly, StringRef Name, bool AllowDisjointOrs,
+           function_ref<void(Function &F, bool CanReuse,
+                             ArrayRef<Instruction *> DropPoisonGeneratingInsts,
+                             ArrayRef<BinaryOperator *> ReplaceDisjointOrs)>
+               Check) {
+    LLVMContext C;
+    SMDiagnostic Err;
+    std::unique_ptr<Module> M = parseAssemblyString(Assembly, Err, C);
+    ASSERT_TRUE(M) << "Bad assembly: " << Err.getMessage();
+    ASSERT_FALSE(verifyModule(*M, &errs()));
+
+    std::string Before;
+    raw_string_ostream(Before) << *M;
+
+    runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+      Instruction &I = *getInstructionByName(F, Name);
+      SmallVector<Instruction *> DropPoisonGeneratingInsts;
+      SmallVector<BinaryOperator *, 2> ReplaceDisjointOrs;
+      bool CanReuse = SE.canReuseInstruction(
+          SE.getSCEV(&I), &I, DropPoisonGeneratingInsts,
+          AllowDisjointOrs ? &ReplaceDisjointOrs : nullptr);
+
+      std::string After;
+      raw_string_ostream(After) << *F.getParent();
+      EXPECT_EQ(Before, After) << "the query must not mutate the IR";
+
+      Check(F, CanReuse, DropPoisonGeneratingInsts, ReplaceDisjointOrs);
+    });
+  }
+};
+
+// Reject disjoint ors by default: dropping the flag does not preserve the SCEV.
+TEST_F(ScalarEvolutionCanReuseInstructionTest, DisjointOrRefusedByDefault) {
+  const char *Assembly = R"(
+    define i64 @test(i64 %a, i64 %b) {
+      %or = or disjoint i64 %a, %b
+      ret i64 %or
+    }
+  )";
+  runQuery(Assembly, "or", /*AllowDisjointOrs=*/false,
+           [](Function &, bool CanReuse, ArrayRef<Instruction *> Drop,
+              ArrayRef<BinaryOperator *> Ors) {
+             EXPECT_FALSE(CanReuse);
+             EXPECT_TRUE(Ors.empty());
+           });
+}
+
+// Opting in makes the candidate reusable and reports the or for replacement.
+TEST_F(ScalarEvolutionCanReuseInstructionTest, DisjointOrRootCollected) {
+  const char *Assembly = R"(
+    define i64 @test(i64 %a, i64 %b) {
+      %or = or disjoint i64 %a, %b
+      ret i64 %or
+    }
+  )";
+  runQuery(Assembly, "or", /*AllowDisjointOrs=*/true,
+           [](Function &F, bool CanReuse, ArrayRef<Instruction *> Drop,
+              ArrayRef<BinaryOperator *> Ors) {
+             EXPECT_TRUE(CanReuse);
+             EXPECT_TRUE(Drop.empty());
+             ASSERT_EQ(Ors.size(), 1u);
+             EXPECT_EQ(Ors[0], getInstructionByName(F, "or"));
+           });
+}
+
+// Also collect disjoint ors in the candidate's operand graph.
+TEST_F(ScalarEvolutionCanReuseInstructionTest, DisjointOrOperandCollected) {
+  const char *Assembly = R"(
+    define i64 @test(i64 %a, i64 %b) {
+      %or = or disjoint i64 %a, %b
+      %shl = shl i64 %or, 2
+      ret i64 %shl
+    }
+  )";
+  runQuery(Assembly, "shl", /*AllowDisjointOrs=*/false,
+           [](Function &, bool CanReuse, ArrayRef<Instruction *> Drop,
+              ArrayRef<BinaryOperator *> Ors) { EXPECT_FALSE(CanReuse); });
+  runQuery(Assembly, "shl", /*AllowDisjointOrs=*/true,
+           [](Function &F, bool CanReuse, ArrayRef<Instruction *> Drop,
+              ArrayRef<BinaryOperator *> Ors) {
+             EXPECT_TRUE(CanReuse);
+             ASSERT_EQ(Ors.size(), 1u);
+             EXPECT_EQ(Ors[0], getInstructionByName(F, "or"));
+           });
+}
+
+// Collect all disjoint ors, including dependent ones.
+TEST_F(ScalarEvolutionCanReuseInstructionTest, DependentDisjointOrsCollected) {
+  const char *Assembly = R"(
+    define i64 @test(i64 %a, i64 %b, i64 %c) {
+      %or1 = or disjoint i64 %a, %b
+      %or2 = or disjoint i64 %or1, %c
+      ret i64 %or2
+    }
+  )";
+  runQuery(Assembly, "or2", /*AllowDisjointOrs=*/true,
+           [](Function &F, bool CanReuse, ArrayRef<Instruction *> Drop,
+              ArrayRef<BinaryOperator *> Ors) {
+             EXPECT_TRUE(CanReuse);
+             EXPECT_THAT(Ors, testing::UnorderedElementsAre(
+                                  getInstructionByName(F, "or1"),
+                                  getInstructionByName(F, "or2")));
+           });
+}
+
+// Collect annotation drops and replacements together, without also reporting
+// replaced ors for annotation dropping.
+TEST_F(ScalarEvolutionCanReuseInstructionTest, DropAnnotationsAndReplaceOr) {
+  const char *Assembly = R"(
+    define i64 @test(i32 %x, i64 %b) {
+      %z = zext nneg i32 %x to i64
+      %or = or disjoint i64 %z, %b
+      ret i64 %or
+    }
+  )";
+  runQuery(
+      Assembly, "or", /*AllowDisjointOrs=*/true,
+      [](Function &F, bool CanReuse, ArrayRef<Instruction *> Drop,
+         ArrayRef<BinaryOperator *> Ors) {
+        EXPECT_TRUE(CanReuse);
+        EXPECT_THAT(Drop, testing::ElementsAre(getInstructionByName(F, "z")));
+        EXPECT_THAT(Ors, testing::ElementsAre(getInstructionByName(F, "or")));
+      });
+}
+
+// Collect the root or before rejecting an operand. SCEV folds out %a, but it
+// can still make the or poison. Failure must leave the IR unchanged.
+TEST_F(ScalarEvolutionCanReuseInstructionTest, RefusedAfterCollectingOr) {
+  const char *Assembly = R"(
+    define i64 @test(i64 %a, i64 %b) {
+      %zero = sub i64 %a, %a
+      %or = or disjoint i64 %zero, %b
+      ret i64 %or
+    }
+  )";
+  runQuery(Assembly, "or", /*AllowDisjointOrs=*/true,
+           [](Function &F, bool CanReuse, ArrayRef<Instruction *> Drop,
+              ArrayRef<BinaryOperator *> Ors) {
+             EXPECT_FALSE(CanReuse);
+             // Ensure this failure leaves partial results to discard.
+             EXPECT_THAT(Ors,
+                         testing::ElementsAre(getInstructionByName(F, "or")));
+           });
 }
 }  // end namespace llvm

@@ -1633,9 +1633,20 @@ public:
   /// Check whether it is poison-safe to represent the expression S using the
   /// instruction I. If such a replacement is performed, the poison flags of
   /// instructions in DropPoisonGeneratingInsts must be dropped.
+  ///
+  /// SCEV models disjoint ors as adds, so dropping the disjoint flag alone is
+  /// not sufficient for reuse. If \p ReplaceDisjointOrs is non-null, collect
+  /// these ors for the caller to replace with adds before reusing I; otherwise
+  /// reject them. This replacement is valid because overlapping operands make
+  /// a disjoint or poison. A disjointness proof may depend on annotations that
+  /// reuse drops and cannot be used instead.
+  ///
+  /// Both vectors may contain partial results on failure. The caller must
+  /// discard these without modifying the IR.
   LLVM_ABI bool canReuseInstruction(
       const SCEV *S, Instruction *I,
-      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
+      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts,
+      SmallVectorImpl<BinaryOperator *> *ReplaceDisjointOrs = nullptr);
 
   class FoldID {
     SCEVUse Op;
