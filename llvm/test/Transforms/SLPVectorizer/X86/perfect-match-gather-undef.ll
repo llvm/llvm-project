@@ -9,54 +9,48 @@ define i8 @test(i1 %a4, i1 %tobool.not, i8 %sel18.sroa.0.0.peel, ptr %g4) {
 ; CHECK-LABEL: define i8 @test(
 ; CHECK-SAME: i1 [[A4:%.*]], i1 [[TOBOOL_NOT:%.*]], i8 [[SEL18_SROA_0_0_PEEL:%.*]], ptr [[G4:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SEL18_SROA_6_0_COPYLOAD_PEEL:%.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @g20, i64 1), align 1
-; CHECK-NEXT:    [[SEL18_SROA_0_0_COPYLOAD_PEEL:%.*]] = load i8, ptr @g20, align 1
-; CHECK-NEXT:    [[SEL18_SROA_0_0_COPYLOAD27:%.*]] = select i1 [[A4]], i8 [[SEL18_SROA_0_0_COPYLOAD_PEEL]], i8 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[A4]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i8> <i8 poison, i8 undef>, i8 [[SEL18_SROA_6_0_COPYLOAD_PEEL]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> <i8 0, i8 poison>, i8 [[SEL18_SROA_0_0_PEEL]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x i8> [[TMP12]], <2 x i8> [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr @g20, align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i1> poison, i1 [[A4]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i1> [[TMP1]], <3 x i1> poison, <3 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i8> [[TMP0]], <2 x i8> poison, <3 x i32> <i32 0, i32 poison, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x i8> [[TMP3]], <3 x i8> <i8 poison, i8 undef, i8 poison>, <3 x i32> <i32 0, i32 4, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x i8> <i8 0, i8 poison, i8 0>, i8 [[SEL18_SROA_0_0_PEEL]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = select <3 x i1> [[TMP2]], <3 x i8> [[TMP4]], <3 x i8> [[TMP5]]
 ; CHECK-NEXT:    br label %[[LBL_ENTRY:.*]]
 ; CHECK:       [[LBL_ENTRY]]:
-; CHECK-NEXT:    [[SEL18_SROA_0_0_COPYLOAD1836:%.*]] = phi i8 [ [[SEL18_SROA_0_0_COPYLOAD27]], %[[ENTRY]] ], [ 0, %[[LBL_SW35:.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i8> [ [[TMP4]], %[[ENTRY]] ], [ zeroinitializer, %[[LBL_SW35]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i8> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP16:%.*]], %[[LBL_SW35]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i8> <i8 poison, i8 0, i8 0, i8 poison>, i8 [[SEL18_SROA_0_0_COPYLOAD1836]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i8> [[TMP6]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i8> [[TMP7]], <4 x i8> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <3 x i8> [ [[TMP6]], %[[ENTRY]] ], [ zeroinitializer, %[[LBL_SW35:.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i8> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP16:%.*]], %[[LBL_SW35]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i8> [[TMP8]], <2 x i8> poison, <3 x i32> <i32 0, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <3 x i8> <i8 0, i8 0, i8 poison>, <3 x i8> [[TMP9]], <3 x i32> <i32 0, i32 1, i32 4>
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[IF_END3:.*]], label %[[LBL_SW43:.*]]
 ; CHECK:       [[IF_END3]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i8> [ [[TMP24:%.*]], %[[LBL_BR73:.*]] ], [ [[TMP5]], %[[LBL_ENTRY]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i8> [ [[TMP25:%.*]], %[[LBL_BR73]] ], [ [[TMP9]], %[[LBL_ENTRY]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <3 x i8> [ [[TMP23:%.*]], %[[LBL_BR73:.*]] ], [ [[TMP7]], %[[LBL_ENTRY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <3 x i8> [ [[TMP24:%.*]], %[[LBL_BR73]] ], [ [[TMP10]], %[[LBL_ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[IF_END6:.*]], label %[[LBL_SW35]]
 ; CHECK:       [[IF_END6]]:
-; CHECK-NEXT:    [[SEL18_SROA_6_1:%.*]] = extractelement <4 x i8> [[TMP11]], i64 3
+; CHECK-NEXT:    [[SEL18_SROA_6_1:%.*]] = extractelement <3 x i8> [[TMP12]], i64 2
 ; CHECK-NEXT:    store i8 [[SEL18_SROA_6_1]], ptr [[G4]], align 1
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i8> <i8 0, i8 poison, i8 poison, i8 poison>, <4 x i8> [[TMP11]], <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i8> [[TMP10]], <2 x i8> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i8> [[TMP13]], <4 x i8> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <3 x i8> [[TMP11]], <3 x i8> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <5 x i8> <i8 0, i8 0, i8 poison, i8 poison, i8 poison>, <5 x i8> [[TMP14]], <5 x i32> <i32 0, i32 1, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    br label %[[LBL_BR73]]
 ; CHECK:       [[LBL_SW35]]:
-; CHECK-NEXT:    [[TMP16]] = shufflevector <4 x i8> [[TMP11]], <4 x i8> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP16]] = shufflevector <3 x i8> [[TMP12]], <3 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    br i1 [[A4]], label %[[LBL_ENTRY]], label %[[IF_END12:.*]]
 ; CHECK:       [[IF_END12]]:
-; CHECK-NEXT:    [[V19_1:%.*]] = extractelement <2 x i8> [[TMP10]], i64 1
+; CHECK-NEXT:    [[V19_1:%.*]] = extractelement <3 x i8> [[TMP11]], i64 1
 ; CHECK-NEXT:    ret i8 [[V19_1]]
 ; CHECK:       [[LBL_SW43]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i8> <i8 poison, i8 0, i8 poison, i8 0>, i8 [[SEL18_SROA_0_0_COPYLOAD1836]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i8> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <3 x i8> [[TMP7]], <3 x i8> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <5 x i8> <i8 poison, i8 poison, i8 0, i8 poison, i8 0>, <5 x i8> [[TMP18]], <5 x i32> <i32 7, i32 5, i32 2, i32 poison, i32 4>
 ; CHECK-NEXT:    br i1 [[A4]], label %[[LBL_BR73]], label %[[IF_END15:.*]]
 ; CHECK:       [[IF_END15]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i8> [[TMP6]], <2 x i8> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i8> <i8 0, i8 0, i8 poison, i8 0>, <4 x i8> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i8> [[TMP8]], <2 x i8> poison, <5 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <5 x i8> <i8 0, i8 0, i8 0, i8 poison, i8 0>, <5 x i8> [[TMP20]], <5 x i32> <i32 0, i32 1, i32 2, i32 5, i32 4>
 ; CHECK-NEXT:    br label %[[LBL_BR73]]
 ; CHECK:       [[LBL_BR73]]:
-; CHECK-NEXT:    [[SEL18_SROA_6_0_COPYLOAD1943:%.*]] = phi i8 [ [[TMP19]], %[[LBL_SW43]] ], [ 0, %[[IF_END6]] ], [ 0, %[[IF_END15]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = phi <4 x i8> [ [[TMP18]], %[[LBL_SW43]] ], [ [[TMP15]], %[[IF_END6]] ], [ [[TMP21]], %[[IF_END15]] ]
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x i8> [[TMP22]], <4 x i8> poison, <2 x i32> <i32 poison, i32 2>
-; CHECK-NEXT:    [[TMP24]] = insertelement <2 x i8> [[TMP23]], i8 [[SEL18_SROA_6_0_COPYLOAD1943]], i64 0
-; CHECK-NEXT:    [[TMP25]] = shufflevector <4 x i8> [[TMP22]], <4 x i8> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP22:%.*]] = phi <5 x i8> [ [[TMP19]], %[[LBL_SW43]] ], [ [[TMP15]], %[[IF_END6]] ], [ [[TMP21]], %[[IF_END15]] ]
+; CHECK-NEXT:    [[TMP23]] = shufflevector <5 x i8> [[TMP22]], <5 x i8> poison, <3 x i32> <i32 1, i32 3, i32 0>
+; CHECK-NEXT:    [[TMP24]] = shufflevector <5 x i8> [[TMP22]], <5 x i8> poison, <3 x i32> <i32 2, i32 4, i32 4>
 ; CHECK-NEXT:    br label %[[IF_END3]]
 ;
 entry:

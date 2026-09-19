@@ -25,13 +25,10 @@ define void @test(ptr noalias %0) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = load double, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd double [[TMP28]], [[TMP27]]
 ; CHECK-NEXT:    [[DOTNEG969:%.*]] = load double, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = load double, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = fadd double [[TMP26]], [[TMP24]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load double, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = load double, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = load double, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[TMP12]], align 8
@@ -40,6 +37,9 @@ define void @test(ptr noalias %0) {
 ; CHECK-NEXT:    [[TMP38:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP40:%.*]] = load double, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP33:%.*]] = load double, ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP23:%.*]] = load double, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul double [[TMP34]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP32:%.*]] = fsub double [[TMP29]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = fmul double [[TMP40]], [[TMP35]]

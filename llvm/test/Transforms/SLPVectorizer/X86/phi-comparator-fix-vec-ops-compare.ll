@@ -10,13 +10,13 @@ define void @test({ <2 x float>, float } %0, <2 x float> %1, i1 %2) {
 ; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    br label %[[BB9]]
 ; CHECK:       [[BB9]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi float [ 0.000000e+00, %[[BB8]] ], [ [[TMP5]], [[TMP3:%.*]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi float [ 0.000000e+00, %[[BB8]] ], [ [[TMP5]], [[TMP3:%.*]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x float> [ zeroinitializer, %[[BB8]] ], [ [[TMP1]], [[TMP3]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = fpext float [[TMP15]] to double
-; CHECK-NEXT:    [[TMP11:%.*]] = fpext <2 x float> [[TMP9]] to <2 x double>
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x double> [[TMP11]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = tail call i32 (ptr, ptr, ...) @fprintf(ptr null, ptr null, double [[TMP12]], double [[TMP14]], double 0.000000e+00)
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = fpext float [[TMP11]] to double
+; CHECK-NEXT:    [[TMP15:%.*]] = fpext <2 x float> [[TMP9]] to <2 x double>
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP15]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call i32 (ptr, ptr, ...) @fprintf(ptr null, ptr null, double [[TMP14]], double [[TMP12]], double 0.000000e+00)
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP15]], i64 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = tail call i32 (ptr, ptr, ...) @fprintf(ptr null, ptr null, double 0.000000e+00, double [[TMP16]], double 0.000000e+00)
 ; CHECK-NEXT:    ret void
 ;
