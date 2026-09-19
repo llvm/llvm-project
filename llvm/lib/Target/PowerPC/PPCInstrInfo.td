@@ -1612,6 +1612,10 @@ let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   }
 
   // bctar - Branch Conditional to TAR (ISA 2.07 / POWER8)
+  // Assembler/disassembler support only. These defs back the extended
+  // mnemonics (bltar, beqtarl cr1, ...) the same way BCCCTR backs bltctr.
+  // TAR is reserved for system software and is not modeled as a register,
+  // so there are no selection patterns and codegen never emits these.
   let Predicates = [IsISA2_07] in {
   let isBranch = 1, isIndirectBranch = 1 in {
     let isCodeGenOnly = 1 in {
