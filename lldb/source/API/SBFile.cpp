@@ -69,6 +69,16 @@ SBFile::SBFile(int fd, const char *mode, bool transfer_ownership) {
       std::make_shared<NativeFile>(fd, options.get(), transfer_ownership);
 }
 
+int SBFile::OpenFdFromHandle(intptr_t handle, int flags) {
+#if _WIN32
+  return _open_osfhandle(handle, flags);
+#else
+  (void)handle;
+  (void)flags;
+  return -1;
+#endif
+}
+
 SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
   LLDB_INSTRUMENT_VA(this, buf, num_bytes, bytes_read);
 
