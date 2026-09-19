@@ -374,7 +374,7 @@ TEST(InstSizes, MOPSMemoryPseudos) {
 static std::unique_ptr<TargetMachine> createLFITargetMachine() {
   Triple TT("aarch64_lfi--");
   std::string CPU("generic");
-  std::string FS("+pauth,+mops,+mte");
+  std::string FS("+pauth");
 
   LLVMInitializeAArch64TargetInfo();
   LLVMInitializeAArch64Target();
