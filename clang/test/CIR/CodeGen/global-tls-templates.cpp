@@ -120,12 +120,12 @@ thread_local T tls_templ = {get_i()};
 // Wrappers: Just opposite ordering, same check lines as LLVM.
 // FIXME: OGCG has these set as 'comdat'. However, CIR doesn't lower comdat to
 // LLVM, so it doesn't show up in the IR here.
-// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templI8CtorDtorE() {
+// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templI8CtorDtorE() comdat {
 // LLVM:   call void @_ZTH9tls_templI8CtorDtorE()
 // LLVM:   call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templI8CtorDtorE)
 // LLVM: }
 
-// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templIiE() {
+// LLVM-LABEL: define weak_odr hidden {{.*}}ptr @_ZTW9tls_templIiE() comdat {
 // LLVM:   call void @_ZTH9tls_templIiE()
 // LLVM:   call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@_Z9tls_templIiE)
 // LLVM: }

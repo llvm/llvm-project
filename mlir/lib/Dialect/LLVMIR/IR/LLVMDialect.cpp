@@ -565,8 +565,7 @@ ParseResult mlir::LLVM::parseSwitchOpCases(
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
-      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                  /*allowResultNumber=*/false) ||
+      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None) ||
           parser.parseColonTypeList(operandTypes) || parser.parseRParen())
         return failure();
     }
@@ -1161,8 +1160,10 @@ Operation::operand_range CallOp::getArgOperands() {
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                          getArgOperandsImpl(*this).size());
 }
 
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
@@ -1650,8 +1651,10 @@ Operation::operand_range InvokeOp::getArgOperands() {
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                          getArgOperandsImpl(*this).size());
 }
 
 LogicalResult InvokeOp::verify() {
@@ -1799,14 +1802,14 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.getBuilder(), result, argAttrs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 
+  result.addSuccessors({normalDest, unwindDest});
+  result.addOperands(normalOperands);
+  result.addOperands(unwindOperands);
+
   if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
                               opBundleOperandTypes,
                               getOpBundleSizesAttrName(result.name)))
     return failure();
-
-  result.addSuccessors({normalDest, unwindDest});
-  result.addOperands(normalOperands);
-  result.addOperands(unwindOperands);
 
   int32_t numOpBundleOperands = 0;
   for (const auto &operands : opBundleOperands)

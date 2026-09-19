@@ -2557,10 +2557,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v16bf16, Subtarget.hasAVX512() ? &X86::VR256XRegClass
                                                          : &X86::VR256RegClass);
     // We set the type action of bf16 to TypeSoftPromoteHalf, but we don't
-    // provide the method to promote BUILD_VECTOR and INSERT_VECTOR_ELT.
-    // Set the operation action Custom to do the customization later.
+    // provide the method to promote BUILD_VECTOR. Set the operation action
+    // Custom to do the customization later.
     setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
-    setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::bf16, Custom);
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setF16Action(VT, Expand);
       if (!Subtarget.hasBF16())
@@ -2571,7 +2570,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
@@ -2585,7 +2586,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
       setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
@@ -2621,14 +2624,21 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
     setOperationAction(ISD::FMA, MVT::bf16, Custom);
 
-    setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
-    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
-    SetFPMinMaxAction(MVT::v32bf16);
+    setOperationAction(ISD::FROUNDEVEN, MVT::bf16, Custom);
+
+    if (Subtarget.useAVX512Regs()) {
+      setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
+      setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+      SetFPMinMaxAction(MVT::v32bf16);
+
+      setOperationAction(ISD::FROUNDEVEN, MVT::v32bf16, Legal);
+    }
+
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setOperationAction(ISD::FADD, VT, Legal);
       setOperationAction(ISD::FSUB, VT, Legal);
@@ -2637,6 +2647,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
       setOperationAction(ISD::SETCC, VT, Custom);
+      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       SetFPMinMaxAction(VT);
     }
     for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
@@ -15750,9 +15761,10 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
   /// Attempts to find a sublane permute with the given size
   /// that gets all elements into their target lanes.
   ///
-  /// If successful, fills CrossLaneMask and InLaneMask and returns true.
-  /// If unsuccessful, returns false and may overwrite InLaneMask.
-  auto getSublanePermute = [&](int NumSublanes) -> SDValue {
+  /// Returns a decomposed shuffle, or an empty SDValue if none is found.
+  /// SameMask is set to true when the cross-lane mask reproduces Mask. Callers
+  /// must then stop trying smaller sublane sizes to avoid a legalization cycle.
+  auto getSublanePermute = [&](int NumSublanes, bool &SameMask) -> SDValue {
     int NumSublanesPerLane = NumSublanes / NumLanes;
     int NumEltsPerSublane = NumElts / NumSublanes;
 
@@ -15821,7 +15833,13 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
     // Avoid returning the same shuffle operation. For example,
     // t7: v16i16 = vector_shuffle<8,9,10,11,4,5,6,7,0,1,2,3,12,13,14,15> t5,
     //                             undef:v16i16
-    if (CrossLaneMask == Mask || InLaneMask == Mask)
+    if (CrossLaneMask == Mask) {
+      // Trying another sublane size could bring us back to this shuffle,
+      // causing an infinite loop during legalization.
+      SameMask = true;
+      return SDValue();
+    }
+    if (InLaneMask == Mask)
       return SDValue();
 
     SDValue CrossLane = DAG.getVectorShuffle(VT, DL, V1, V2, CrossLaneMask);
@@ -15829,24 +15847,22 @@ static SDValue lowerShuffleAsLanePermuteAndPermute(
                                 InLaneMask);
   };
 
-  // First attempt a solution with full lanes.
-  if (SDValue V = getSublanePermute(/*NumSublanes=*/NumLanes))
-    return V;
+  // Try 128-bit lanes first. If that fails, try 64-bit and then 32-bit
+  // sublanes, if supported.
+  int MaxSublaneScale = 1;
+  if (CanUseSublanes)
+    MaxSublaneScale = Subtarget.hasFastVariableCrossLaneShuffle() ? 4 : 2;
 
-  // The rest of the solutions use sublanes.
-  if (!CanUseSublanes)
-    return SDValue();
-
-  // Then attempt a solution with 64-bit sublanes (vpermq).
-  if (SDValue V = getSublanePermute(/*NumSublanes=*/NumLanes * 2))
-    return V;
-
-  // If that doesn't work and we have fast variable cross-lane shuffle,
-  // attempt 32-bit sublanes (vpermd).
-  if (!Subtarget.hasFastVariableCrossLaneShuffle())
-    return SDValue();
-
-  return getSublanePermute(/*NumSublanes=*/NumLanes * 4);
+  for (int SublaneScale = 1; SublaneScale <= MaxSublaneScale;
+       SublaneScale *= 2) {
+    bool SameMask = false;
+    if (SDValue V = getSublanePermute(
+            /*NumSublanes=*/NumLanes * SublaneScale, SameMask))
+      return V;
+    if (SameMask)
+      return SDValue();
+  }
+  return SDValue();
 }
 
 /// Helper to get compute inlane shuffle mask for a complete shuffle mask.
@@ -19348,14 +19364,6 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue N1 = Op.getOperand(1);
   SDValue N2 = Op.getOperand(2);
   auto *N2C = dyn_cast<ConstantSDNode>(N2);
-
-  if (EltVT == MVT::bf16) {
-    MVT IVT = VT.changeVectorElementTypeToInteger();
-    SDValue Res = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, IVT,
-                              DAG.getBitcast(IVT, N0),
-                              DAG.getBitcast(MVT::i16, N1), N2);
-    return DAG.getBitcast(VT, Res);
-  }
 
   if (!N2C) {
     // Variable insertion indices, usually we're better off spilling to stack,
@@ -24238,11 +24246,12 @@ SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
   // along with FMA, this could be a throughput win.
   // TODO: SQRT requires SSE2 to prevent the introduction of an illegal v4i32
   // after legalize types.
-  if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE1() && Reciprocal) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE2() && !Reciprocal) ||
-      (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
-      (VT == MVT::v16f32 && Subtarget.useAVX512Regs())) {
+  if (isTypeLegal(VT) &&
+      ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
+       (VT == MVT::v4f32 && Subtarget.hasSSE1() && Reciprocal) ||
+       (VT == MVT::v4f32 && Subtarget.hasSSE2() && !Reciprocal) ||
+       (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
+       (VT == MVT::v16f32 && Subtarget.useAVX512Regs()))) {
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 1;
 
@@ -24289,10 +24298,10 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
   // (3 steps = 12 insts). If an 'rcpsd' variant was added to the ISA
   // along with FMA, this could be a throughput win.
 
-  if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
-      (VT == MVT::v16f32 && Subtarget.useAVX512Regs())) {
+  if (isTypeLegal(VT) && ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
+                          (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+                          (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
+                          (VT == MVT::v16f32 && Subtarget.useAVX512Regs()))) {
     // Enable estimate codegen with 1 refinement step for vector division.
     // Scalar division estimates are disabled because they break too much
     // real-world code. These defaults are intended to match GCC behavior.
@@ -34963,12 +34972,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FMUL:
   case ISD::FSQRT:
   case ISD::FDIV:
-  case ISD::FMA: {
+  case ISD::FMA:
+  case ISD::FROUNDEVEN: {
     assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
-    // AVX10.2 has no scalar bf16 arithmetic instructions, and bf16 is a
-    // soft-promoted-half type, so scalar ops would otherwise be promoted to
-    // f32. Instead widen each operand to a v8bf16 vector, perform the legal
-    // packed operation, and extract the low element afterwards.
+    // AVX10.2 has no scalar bf16 arithmetic or round-to-integer instructions,
+    // and bf16 is a soft-promoted-half type, so scalar ops would otherwise be
+    // promoted to f32. Instead widen each operand to a v8bf16 vector, perform
+    // the legal packed operation, and extract the low element afterwards.
     SmallVector<SDValue, 3> VecOps;
     for (const SDValue &Op : N->ops()) {
       SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
@@ -58764,7 +58774,8 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
   unsigned Len = UndefElts.getBitWidth();
   for (unsigned I = 1; I != Len; ++I) {
     if (UndefElts[I]) {
-      if (!UndefElts.extractBits(Len - (I + 1), I + 1).isAllOnes())
+      if (I + 1 != Len &&
+          !UndefElts.extractBits(Len - (I + 1), I + 1).isAllOnes())
         return SDValue();
       break;
     }

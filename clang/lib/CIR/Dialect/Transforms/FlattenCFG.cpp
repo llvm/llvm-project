@@ -830,8 +830,9 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   rewriter.setInsertionPointToStart(&entryBlock);
   cir::IntType s32Type =
       cir::IntType::get(rewriter.getContext(), 32, /*isSigned=*/true);
-  cir::PointerType ptrToS32Type = cir::PointerType::get(s32Type);
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
+  cir::PointerType ptrToS32Type = cir::PointerType::get(
+      s32Type, dataLayout.getAllocaAddrSpace(rewriter.getContext()));
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
   auto allocaOp = cir::AllocaOp::create(
       rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
@@ -851,7 +852,10 @@ static void
 collectThrowingCalls(mlir::Region &region,
                      llvm::SmallVectorImpl<cir::CallOp> &callsToRewrite) {
   region.walk([&](cir::CallOp callOp) {
-    if (!callOp.getNothrow())
+    // A musttail call is never an invoke. LLVM has no musttail invoke, and
+    // the tail call replaces the frame the cleanup would have run in, so
+    // there is nothing left to unwind through.
+    if (!callOp.getNothrow() && !callOp.getMusttail())
       callsToRewrite.push_back(callOp);
   });
 }
@@ -960,6 +964,11 @@ public:
   // during flattening; they are simply inlined along with the rest of the
   // body region.
   //
+  // A musttail return is likewise not an exit. It leaves the function
+  // directly without running any cleanup, which is what the tail call means:
+  // the frame those cleanups would run in no longer exists. CIRGen only emits
+  // one when every cleanup it skips is redundant before a return.
+  //
   // This function assigns unique destination IDs to each exit, which are
   // used when multi-exit cleanup scopes are flattened.
   void collectExits(mlir::Region &cleanupBodyRegion,
@@ -983,13 +992,26 @@ public:
       return gotoOp && !gotoTargetsLabelInRegion(gotoOp, cleanupBodyRegion);
     };
 
+    // Helper to decide whether a return branches through the cleanup. The
+    // return that completes a musttail call does not. LLVM requires the two
+    // to stay adjacent, so it cannot be rewritten into a store and a branch
+    // to the cleanup. CIRGen emits the pair adjacently in the same block, and
+    // the predecessor is only ever a cir.call, never a cir.try_call, since a
+    // try_call terminates its block and so cannot be followed by a return.
+    auto isReturnThatExitsCleanup = [](mlir::Operation *op) {
+      if (!isa<cir::ReturnOp>(op))
+        return false;
+      auto callOp = dyn_cast_if_present<cir::CallOp>(op->getPrevNode());
+      return !callOp || !callOp.getMusttail();
+    };
+
     // Lambda to walk a loop and collect only returns and gotos.
     // Break and continue inside loops are handled by the loop itself.
     // Loops don't require special handling for nested switch or cleanup scopes
     // because break and continue never branch out of the loop.
     auto collectExitsInLoop = [&](mlir::Operation *loopOp) {
       loopOp->walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *nestedOp) {
-        if (isa<cir::ReturnOp>(nestedOp)) {
+        if (isReturnThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
         } else if (isGotoThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
@@ -1016,7 +1038,8 @@ public:
         } else if (isa<cir::LoopOpInterface>(nestedOp)) {
           collectExitsInLoop(nestedOp);
           return mlir::WalkResult::skip();
-        } else if (isa<cir::ReturnOp, cir::ContinueOp>(nestedOp)) {
+        } else if (isa<cir::ContinueOp>(nestedOp) ||
+                   isReturnThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
         } else if (isGotoThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
@@ -1038,7 +1061,7 @@ public:
         // the nested cleanup.
         if (!ignoreBreak && isa<cir::BreakOp>(op)) {
           exits.emplace_back(op, nextId++);
-        } else if (isa<cir::ContinueOp, cir::ReturnOp>(op)) {
+        } else if (isa<cir::ContinueOp>(op) || isReturnThatExitsCleanup(op)) {
           exits.emplace_back(op, nextId++);
         } else if (isGotoThatExitsCleanup(op)) {
           exits.emplace_back(op, nextId++);
@@ -1388,6 +1411,13 @@ public:
                         cleanupKind == cir::CleanupKind::All;
     bool isMultiExit = exits.size() > 1;
 
+    // If every exit from the body is a musttail return, nothing reaches the
+    // normal cleanup, so it is dropped rather than emitted as dead code. The
+    // EH path is still built. The only cleanup a musttail call may skip and
+    // still unwind through is a lifetime marker, which is pushed as an "all"
+    // cleanup, and the body can throw before reaching the tail call.
+    bool emitNormalCleanup = hasNormalCleanup && !exits.empty();
+
     // Get references to region blocks before inlining.
     mlir::Block *bodyEntry = &cleanupOp.getBodyRegion().front();
     mlir::Block *cleanupEntry = &cleanupOp.getCleanupRegion().front();
@@ -1406,7 +1436,7 @@ public:
     // function. This is only needed if the cleanup scope requires normal
     // cleanup.
     cir::AllocaOp destSlot;
-    if (isMultiExit && hasNormalCleanup) {
+    if (isMultiExit && emitNormalCleanup) {
       auto funcOp = cleanupOp->getParentOfType<cir::FuncOp>();
       if (!funcOp)
         return cleanupOp->emitError("cleanup scope not inside a function");
@@ -1452,7 +1482,7 @@ public:
     rewriter.inlineRegionBefore(cleanupOp.getBodyRegion(), normalInsertPt);
 
     // Inline the cleanup region for the normal cleanup path.
-    if (hasNormalCleanup)
+    if (emitNormalCleanup)
       rewriter.inlineRegionBefore(cleanupOp.getCleanupRegion(), normalInsertPt);
 
     // Branch from current block to body entry.
@@ -1461,7 +1491,7 @@ public:
 
     // Handle normal exits.
     mlir::LogicalResult result = mlir::success();
-    if (hasNormalCleanup) {
+    if (emitNormalCleanup) {
       // Create the exit/dispatch block (after cleanup, before continue).
       mlir::Block *exitBlock = rewriter.createBlock(normalInsertPt);
 
@@ -1545,7 +1575,7 @@ public:
         rewriter.replaceOpWithNewOp<cir::BrOp>(exitOp, cleanupEntry);
       }
     } else {
-      // EH-only cleanup: normal exits skip the cleanup entirely.
+      // No normal cleanup to run: normal exits skip the cleanup entirely.
       // Replace yield exits with branches to the continue block.
       for (CleanupExit &exit : exits) {
         if (isa<cir::YieldOp>(exit.exitOp)) {
@@ -1655,7 +1685,15 @@ public:
     int nextId = 0;
     collectExits(cleanupOp.getBodyRegion(), exits, nextId);
 
-    assert(!exits.empty() && "cleanup scope body has no exit");
+#ifndef NDEBUG
+    // A body with no exits at all only happens when every path out of it is a
+    // musttail return, which leaves the function without running the cleanup.
+    bool hasMustTailCall = false;
+    cleanupOp.getBodyRegion().walk(
+        [&](cir::CallOp callOp) { hasMustTailCall |= callOp.getMusttail(); });
+    assert((!exits.empty() || hasMustTailCall) &&
+           "cleanup scope body has no exit");
+#endif
 
     // Collect non-nothrow calls and throws that need to be converted to
     // try_call/try_throw. This is only needed for EH and All cleanup kinds,
@@ -1723,21 +1761,53 @@ public:
     mlir::Block *defaultDest = nullptr;
     bool defaultIsCatchAll = false;
 
-    for (auto [typeAttr, handlerBlock] :
-         llvm::zip(handlerTypes, catchHandlerBlocks)) {
-      if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = true;
-      } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = false;
-      } else {
-        // This is a typed catch handler (GlobalViewAttr with type info).
-        catchTypeAttrs.push_back(typeAttr);
-        catchDests.push_back(handlerBlock);
-      }
+    // A filter try operation has exactly two handlers. The unexpected region
+    // is the destination of the filter clause (taken when the exception is
+    // *not* permitted). The filter region is the unwind destination (taken
+    // when it is).
+    cir::EhFilterAttr filterAttr;
+    mlir::Block *filterUnwindDest = nullptr;
+    mlir::Block *filterClauseDest = nullptr;
+
+    for (auto zipped : llvm::zip(handlerTypes, catchHandlerBlocks)) {
+      mlir::Attribute typeAttr = std::get<0>(zipped);
+      mlir::Block *handlerBlock = std::get<1>(zipped);
+      llvm::TypeSwitch<mlir::Attribute>(typeAttr)
+          .Case<cir::CatchAllAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = true;
+          })
+          .Case<cir::UnwindAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = false;
+          })
+          .Case<cir::EhFilterAttr>([&](cir::EhFilterAttr ehFilter) {
+            assert(!filterAttr && "multiple filter handlers");
+            filterAttr = ehFilter;
+            filterUnwindDest = handlerBlock;
+          })
+          .Case<cir::EhUnexpectedAttr>([&](auto) {
+            assert(!filterClauseDest && "multiple unexpected handlers");
+            filterClauseDest = handlerBlock;
+          })
+          .Default([&](mlir::Attribute attr) {
+            // Typed catch handler (GlobalViewAttr with type info).
+            catchTypeAttrs.push_back(attr);
+            catchDests.push_back(handlerBlock);
+          });
+    }
+
+    if (filterAttr) {
+      assert(filterUnwindDest && filterClauseDest &&
+             "filter handler requires an unexpected handler");
+      assert(!defaultDest &&
+             "filter handler cannot share a dispatch with catch_all or unwind");
+      catchTypeAttrs.push_back(filterAttr);
+      catchDests.push_back(filterClauseDest);
+      defaultDest = filterUnwindDest;
+      defaultIsCatchAll = false;
     }
 
     assert(defaultDest && "dispatch must have a catch_all or unwind handler");
@@ -1823,12 +1893,12 @@ public:
     return handlerEntry;
   }
 
-  // Flatten an unwind handler region. The unwind region just contains a
-  // cir.resume that continues unwinding. We inline it and leave the resume
-  // in place. If this try op is nested inside an EH cleanup or another try op,
-  // the enclosing op will rewrite the resume as a branch to its cleanup or
-  // dispatch block when it is flattened. Otherwise, the resume will unwind to
-  // the caller.
+  // Flatten an unwind, filter, or unexpected handler region. These regions
+  // do not catch the exception. They resume, are unreachable, or call
+  // cir.eh.unexpected. We inline them and leave the terminator in place. If
+  // this try op is nested inside an EH cleanup or another try op, the
+  // enclosing op will rewrite a resume as a branch to its cleanup or dispatch
+  // block when it is flattened. Otherwise, a resume will unwind to the caller.
   mlir::Block *flattenUnwindHandler(mlir::Region &unwindRegion,
                                     mlir::Location loc,
                                     mlir::Block *insertBefore,
@@ -1918,7 +1988,8 @@ public:
     for (const auto &[idx, typeAttr] : llvm::enumerate(handlerTypes)) {
       mlir::Region &handlerRegion = handlerRegions[idx];
 
-      if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
+      if (mlir::isa<cir::UnwindAttr, cir::EhFilterAttr, cir::EhUnexpectedAttr>(
+              typeAttr)) {
         mlir::Block *unwindEntry =
             flattenUnwindHandler(handlerRegion, loc, continueBlock, rewriter);
         catchHandlerBlocks.push_back(unwindEntry);
