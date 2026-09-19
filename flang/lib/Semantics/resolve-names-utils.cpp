@@ -560,7 +560,11 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   }
   // For rank-1 bounds, emit N ShapeSpecs each wrapping a scalar
   // RankOneBoundElement that extracts element [dim] from the rank-1
-  // expression.  This makes all downstream consumers see scalar bounds.
+  // expression.  The wrapper is intentionally left unfolded: consumers that
+  // need a concrete per-dimension value fold their own copy (a constant base
+  // then collapses to a scalar, as if written dims(1),dims(2),...), while the
+  // stored, unfolded wrapper lets the mod-file writer round-trip the original
+  // whole-array bound.
   int numDims = static_cast<int>(result->numDims);
   if (numDims == 0) {
     // A zero-size bounds array declares a scalar (rank 0); leave arraySpec_

@@ -10,7 +10,7 @@
 
 subroutine s(n)
   integer, intent(in) :: n(3)
-  !SYMBOLS: a {{.*}}: ObjectEntity type: REAL(4) shape: 1_8:rank1BoundElement(__builtin_int(n,kind=8),dim=1),1_8:rank1BoundElement(__builtin_int(n,kind=8),dim=2),1_8:rank1BoundElement(__builtin_int(n,kind=8),dim=3)
+  !SYMBOLS: a {{.*}}: ObjectEntity type: REAL(4) shape: 1_8:__builtin_rank1_bound_element(__builtin_int(n,kind=8),dim=1),1_8:__builtin_rank1_bound_element(__builtin_int(n,kind=8),dim=2),1_8:__builtin_rank1_bound_element(__builtin_int(n,kind=8),dim=3)
   real :: a(n)
   a = 0.0
 end subroutine
@@ -21,6 +21,20 @@ subroutine s2
   !SYMBOLS: z size=4 {{.*}}: ObjectEntity type: INTEGER(4)
   integer, dimension(5) :: z(1 : [integer ::])
 end
+
+subroutine s3(x)
+  type t
+    integer :: c
+  end type
+  type(t), intent(in) :: x(2)
+  ! When a scalar component follows the array parent, the extracted element
+  ! subscript must land on the parent (x(2)%c) so the bound stays scalar and b
+  ! is rank one; subscripting the component (x%c(2)) would retain rank one and
+  ! make b rank two.
+  !SYMBOLS: b {{.*}}: ObjectEntity type: REAL(4) shape: 1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(x(2_8)%c,kind=8)),kind=4),kind=8)
+  real :: a(x%c), b(ubound(a, 2))
+  b = 0.0
+end subroutine
 
 ! -fdebug-unparse-with-symbols intentionally reproduces the original bound syntax 
 ! rather than the synthesized rank1BoundElement node; this confirms the construct 

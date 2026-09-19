@@ -1585,15 +1585,304 @@ Expr<TypeParamInquiry::Result> FoldOperation(
   return AsExpr(std::move(inquiry));
 }
 
+template <int KIND>
+static std::optional<Expr<Type<TypeCategory::Integer, KIND>>>
+ExtractRankOneElement(FoldingContext &context,
+    const Expr<Type<TypeCategory::Integer, KIND>> &base, int dim);
+
+// Subscripts `entity`, whose last part-ref is the rank>0 array, at element
+// [dim] (0-based) using its lower bound.
+static std::optional<DataRef> SubscriptArrayPartRef(
+    FoldingContext &context, NamedEntity &&entity, int dim) {
+  MaybeExtentExpr lb{GetLBOUND(context, entity, /*dim=*/0)};
+  if (!lb) {
+    return std::nullopt;
+  }
+  std::vector<Subscript> ss;
+  ss.emplace_back(Fold(context, std::move(*lb) + Expr<SubscriptInteger>{dim}));
+  return DataRef{ArrayRef{std::move(entity), std::move(ss)}};
+}
+
+// Builds the rank-0 DataRef for element [dim] (0-based) of a rank-1 designator
+// by subscripting its sole array part-ref (C919) at lbound+dim, leaving every
+// scalar part-ref -- including scalar-subscripted array parts anywhere in the
+// chain -- intact.  Handles whole arrays, array/scalar components, a single
+// triplet section (element l+dim*s), and arbitrary nesting such as
+// x(1)%c%d(3)%e -> x(1)%c(dim)%d(3)%e.  A vector subscript n(V) yields
+// n(element[dim] of V) when V itself reduces.  Null when the array part is a
+// coarray, or a vector subscript whose index expression cannot be reduced.
+static std::optional<DataRef> SubscriptRankOneElement(
+    FoldingContext &context, const DataRef &dr, int dim) {
+  return common::visit(
+      common::visitors{
+          [&](const SymbolRef &s) -> std::optional<DataRef> {
+            if (s->Rank() == 0) {
+              return std::nullopt;
+            }
+            return SubscriptArrayPartRef(context, NamedEntity{s.get()}, dim);
+          },
+          [&](const Component &c) -> std::optional<DataRef> {
+            if (c.GetLastSymbol().Rank() > 0) {
+              return SubscriptArrayPartRef(
+                  context, NamedEntity{Component{c}}, dim);
+            }
+            // Scalar component: the array part is in the base.
+            if (auto base{SubscriptRankOneElement(context, c.base(), dim)}) {
+              return DataRef{Component{std::move(*base), c.GetLastSymbol()}};
+            }
+            return std::nullopt;
+          },
+          [&](const ArrayRef &a) -> std::optional<DataRef> {
+            int nonScalar{0}, nonScalarDim{-1};
+            for (int j{0}; j < a.size(); ++j) {
+              if (std::holds_alternative<Triplet>(a.at(j).u) ||
+                  a.at(j).Rank() != 0) {
+                ++nonScalar;
+                nonScalarDim = j;
+              }
+            }
+            if (nonScalar > 1) {
+              return std::nullopt;
+            }
+            if (nonScalar == 1) {
+              // One rank-contributing subscript carries the whole rank (C919).
+              // A triplet l:u:s yields element l+dim*s; a vector subscript V
+              // yields the scalar n(element[dim] of V); scalars are kept.
+              std::vector<Subscript> ss;
+              for (int j{0}; j < a.size(); ++j) {
+                const Subscript &sub{a.at(j)};
+                if (j != nonScalarDim) {
+                  ss.emplace_back(sub);
+                } else if (const auto *trip{std::get_if<Triplet>(&sub.u)}) {
+                  std::optional<Expr<SubscriptInteger>> lower;
+                  if (const auto *lo{trip->GetLower()}) {
+                    lower = *lo;
+                  } else if (auto lb{GetLBOUND(context, a.base(), j)}) {
+                    lower = std::move(*lb);
+                  } else {
+                    return std::nullopt;
+                  }
+                  ss.emplace_back(Fold(context,
+                      std::move(*lower) +
+                          Expr<SubscriptInteger>{dim} * trip->stride()));
+                } else {
+                  const auto &vec{
+                      std::get<IndirectSubscriptIntegerExpr>(sub.u).value()};
+                  if (auto elem{ExtractRankOneElement(context, vec, dim)}) {
+                    ss.emplace_back(std::move(*elem));
+                  } else {
+                    return std::nullopt;
+                  }
+                }
+              }
+              return DataRef{ArrayRef{NamedEntity{a.base()}, std::move(ss)}};
+            }
+            // All-scalar subscripts: the rank comes from the base component's
+            // parent (ArrayRef::Rank).  Recurse through the base to the array
+            // part-ref, then rebuild these subscripts on the element.
+            const Component *comp{a.base().UnwrapComponent()};
+            if (!comp) {
+              return std::nullopt;
+            }
+            if (auto base{
+                    SubscriptRankOneElement(context, comp->base(), dim)}) {
+              std::vector<Subscript> ss;
+              for (int j{0}; j < a.size(); ++j) {
+                ss.emplace_back(a.at(j));
+              }
+              return DataRef{ArrayRef{NamedEntity{Component{std::move(*base),
+                                          comp->GetLastSymbol()}},
+                  std::move(ss)}};
+            }
+            return std::nullopt;
+          },
+          [&](const CoarrayRef &) -> std::optional<DataRef> {
+            return std::nullopt;
+          },
+      },
+      dr.u);
+}
+
+// Extract element [dim] (0-based, array-element order) from a rank-1 integer
+// array expression as a scalar, distributing the extraction through kind
+// conversions, elementwise integer operations, and elemental intrinsic calls,
+// and indexing array sections and array constructors (including implied-dos),
+// so the result is genuine Fortran that round-trips through module files.
+// Returns std::nullopt when a leaf cannot be reduced (e.g. a user function
+// reference), so the caller keeps the RankOneBoundElement unchanged.
+template <int KIND>
+static std::optional<Expr<Type<TypeCategory::Integer, KIND>>>
+ExtractRankOneElement(FoldingContext &context,
+    const Expr<Type<TypeCategory::Integer, KIND>> &base, int dim) {
+  using T = Type<TypeCategory::Integer, KIND>;
+  if (base.Rank() == 0) {
+    return base; // a scalar operand contributes itself to every element
+  }
+  return common::visit(
+      [&](const auto &y) -> std::optional<Expr<T>> {
+        using Ty = std::decay_t<decltype(y)>;
+        if constexpr (std::is_same_v<Ty, Constant<T>>) {
+          ConstantSubscripts at{y.lbounds()};
+          at[0] = y.lbounds()[0] + dim;
+          return Expr<T>{Constant<T>{y.At(at)}};
+        } else if constexpr (std::is_same_v<Ty, Designator<T>>) {
+          if (auto dr{ExtractDataRef(y)}) {
+            if (auto elem{SubscriptRankOneElement(context, *dr, dim)}) {
+              if (auto expr{AsGenericExpr(std::move(*elem))}) {
+                if (auto *ie{UnwrapExpr<Expr<SomeInteger>>(*expr)}) {
+                  return ConvertToType<T>(std::move(*ie));
+                }
+              }
+            }
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, ArrayConstructor<T>>) {
+          // Pull element [dim] straight out of the constructor's values
+          // instead of wrapping the whole constructor.
+          ConstantSubscript target{dim};
+          for (const auto &value : y) {
+            if (const auto *e{std::get_if<Expr<T>>(&value.u)}) {
+              if (e->Rank() != 0) {
+                return std::nullopt; // array-valued element: too complex
+              }
+              if (target == 0) {
+                return Expr<T>{*e};
+              }
+              --target;
+            } else {
+              const auto &ido{std::get<ImpliedDo<T>>(value.u)};
+              auto lower{
+                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.lower()}))};
+              auto upper{
+                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.upper()}))};
+              auto stride{
+                  ToInt64(Fold(context, Expr<SubscriptInteger>{ido.stride()}))};
+              if (!lower || !upper || !stride || *stride == 0) {
+                return std::nullopt;
+              }
+              // A scalar-per-value body contributes one element per iteration.
+              ConstantSubscript perTrip{0};
+              for (const auto &bv : ido.values()) {
+                const auto *be{std::get_if<Expr<T>>(&bv.u)};
+                if (!be || be->Rank() != 0) {
+                  return std::nullopt; // nested/array body: too complex
+                }
+                ++perTrip;
+              }
+              ConstantSubscript trips{(*upper - *lower + *stride) / *stride};
+              if (trips < 0) {
+                trips = 0;
+              }
+              if (ConstantSubscript total{trips * perTrip}; target < total) {
+                ConstantSubscript iVal{*lower + (target / perTrip) * *stride};
+                ConstantSubscript within{target % perTrip};
+                context.StartImpliedDo(ido.name(), iVal);
+                std::optional<Expr<T>> result;
+                ConstantSubscript k{0};
+                for (const auto &bv : ido.values()) {
+                  if (k++ == within) {
+                    result = Fold(context, Expr<T>{std::get<Expr<T>>(bv.u)});
+                    break;
+                  }
+                }
+                context.EndImpliedDo(ido.name());
+                return result;
+              } else {
+                target -= total;
+              }
+            }
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Parentheses<T>>) {
+          if (auto op{ExtractRankOneElement(context, y.left(), dim)}) {
+            return Expr<T>{Parentheses<T>{std::move(*op)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Negate<T>>) {
+          if (auto op{ExtractRankOneElement(context, y.left(), dim)}) {
+            return Expr<T>{Negate<T>{std::move(*op)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Add<T>> ||
+            std::is_same_v<Ty, Subtract<T>> ||
+            std::is_same_v<Ty, Multiply<T>> || std::is_same_v<Ty, Divide<T>>) {
+          auto l{ExtractRankOneElement(context, y.left(), dim)};
+          auto r{ExtractRankOneElement(context, y.right(), dim)};
+          if (l && r) {
+            return Expr<T>{Ty{std::move(*l), std::move(*r)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty, Extremum<T>>) {
+          auto l{ExtractRankOneElement(context, y.left(), dim)};
+          auto r{ExtractRankOneElement(context, y.right(), dim)};
+          if (l && r) {
+            return Expr<T>{
+                Extremum<T>{y.ordering, std::move(*l), std::move(*r)}};
+          }
+          return std::nullopt;
+        } else if constexpr (std::is_same_v<Ty,
+                                 Convert<T, TypeCategory::Integer>>) {
+          return common::visit(
+              [&](const auto &inner) -> std::optional<Expr<T>> {
+                if (auto op{ExtractRankOneElement(context, inner, dim)}) {
+                  return Expr<T>{Convert<T, TypeCategory::Integer>{
+                      Expr<SomeInteger>{std::move(*op)}}};
+                }
+                return std::nullopt;
+              },
+              y.left().u);
+        } else if constexpr (std::is_same_v<Ty, FunctionRef<T>>) {
+          // Elemental intrinsic f(array): element [dim] is f(array(dim)).
+          if (y.proc().GetSpecificIntrinsic() && y.IsElemental()) {
+            FunctionRef<T> reduced{y};
+            bool ok{true};
+            for (auto &arg : reduced.arguments()) {
+              if (!arg) {
+                continue; // absent optional argument
+              }
+              Expr<SomeType> *e{arg->UnwrapExpr()};
+              if (!e) {
+                ok = false;
+                break;
+              }
+              if (e->Rank() == 0) {
+                continue; // scalar argument contributes itself
+              }
+              auto *ie{std::get_if<Expr<SomeInteger>>(&e->u)};
+              if (!ie ||
+                  !common::visit(
+                      [&](auto &kx) {
+                        if (auto elem{
+                                ExtractRankOneElement(context, kx, dim)}) {
+                          kx = std::move(*elem);
+                          return true;
+                        }
+                        return false;
+                      },
+                      ie->u)) {
+                ok = false; // non-integer or irreducible array argument
+                break;
+              }
+            }
+            if (ok) {
+              return Expr<T>{std::move(reduced)};
+            }
+          }
+          return std::nullopt;
+        } else {
+          return std::nullopt; // user function, transformational intrinsic,
+                               // etc.
+        }
+      },
+      base.u);
+}
+
 Expr<RankOneBoundElement::Result> FoldOperation(
     FoldingContext &context, RankOneBoundElement &&x) {
   using ResultType = RankOneBoundElement::Result;
   auto folded{Fold(context, Expr<ResultType>{x.base()})};
-  if (auto *c{UnwrapConstantValue<ResultType>(folded)}) {
-    // Base is a constant array; extract the element at dimension_ (0-based).
-    ConstantSubscripts at{c->lbounds()};
-    at[0] = c->lbounds()[0] + x.dimension();
-    return Expr<ResultType>{Constant<ResultType>{c->At(at)}};
+  if (auto reduced{ExtractRankOneElement(context, folded, x.dimension())}) {
+    return Fold(context, std::move(*reduced));
   }
   return Expr<ResultType>{
       RankOneBoundElement{std::move(folded), x.dimension()}};
