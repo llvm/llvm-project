@@ -931,10 +931,13 @@ void __tsan_go_atomic64_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
 }
 
 #  if __TSAN_HAS_INT128
+// Go's buffer is 8-byte aligned; ALIGNED(8) relaxes the store alignment.
+ALIGNED(8) typedef a128 a128_u64;
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_load(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
-  a128 ret = AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a128**)a);
-  internal_memcpy(a + 8, &ret, sizeof(ret));
+  *(a128_u64*)(a + 8) =
+      AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a128**)a);
 }
 #  endif
 
