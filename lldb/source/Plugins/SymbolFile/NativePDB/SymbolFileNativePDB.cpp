@@ -34,6 +34,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
@@ -171,6 +172,34 @@ loadMatchingPDBFile(std::string exe_path, llvm::BumpPtrAllocator &allocator) {
     return nullptr;
 
   return pdb;
+}
+
+// Reads only the DBI stream header to answer isStripped(). Parsing the full
+// DBI stream (let alone PdbIndex::create, which also pulls in the type and
+// symbol-record streams) materializes most of a large PDB on the private
+// heap; abilities probing runs for every candidate module at attach/launch,
+// so it must stay O(header).
+static std::optional<bool> IsDbiStripped(llvm::pdb::PDBFile &pdb) {
+  using namespace llvm::pdb;
+  if (!pdb.hasPDBDbiStream())
+    return std::nullopt;
+  auto stream_or_err = pdb.safelyCreateIndexedStream(
+      static_cast<uint32_t>(SpecialStream::StreamDBI));
+  if (!stream_or_err) {
+    llvm::consumeError(stream_or_err.takeError());
+    return std::nullopt;
+  }
+  std::unique_ptr<llvm::msf::MappedBlockStream> stream =
+      std::move(*stream_or_err);
+  if (stream->getLength() < sizeof(DbiStreamHeader))
+    return std::nullopt;
+  llvm::BinaryStreamReader reader(*stream);
+  const DbiStreamHeader *header = nullptr;
+  if (auto ec = reader.readObject(header)) {
+    llvm::consumeError(std::move(ec));
+    return std::nullopt;
+  }
+  return (header->Flags & DbiFlags::FlagStrippedMask) != 0;
 }
 
 static bool IsFunctionPrologue(const CompilandIndexItem &cci,
@@ -383,7 +412,7 @@ uint32_t SymbolFileNativePDB::CalculateAbilities() {
   if (!m_objfile_sp)
     return 0;
 
-  if (!m_index) {
+  if (!m_pdb_file) {
     // Lazily load and match the PDB file, but only do this once.
     PDBFile *pdb_file;
     if (auto *pdb = llvm::dyn_cast<ObjectFilePDB>(m_objfile_sp.get())) {
@@ -402,26 +431,53 @@ uint32_t SymbolFileNativePDB::CalculateAbilities() {
         pdb_file->getFilePath(),
         m_objfile_sp->GetModule()->GetObjectFile()->GetFileSpec().GetPath());
 
-    auto expected_index = PdbIndex::create(pdb_file);
-    if (!expected_index) {
-      llvm::consumeError(expected_index.takeError());
-      return 0;
-    }
-    m_index = std::move(*expected_index);
+    m_pdb_file = pdb_file;
   }
-  if (!m_index)
-    return 0;
 
   // We don't especially have to be precise here.  We only distinguish between
-  // stripped and not stripped.
-  abilities = kAllAbilities;
+  // stripped and not stripped. Building the PdbIndex here would eagerly parse
+  // the type and symbol-record streams of every candidate module, so the
+  // stripped check reads just the DBI stream header instead — the index is
+  // built on demand in GetOrCreateIndex().
+  //
+  // PdbIndex::create requires the DBI/TPI/IPI streams; reject PDBs lacking
+  // them here so an unusable PDB does not win plugin selection only to fail
+  // when the index is materialized later.
+  if (!m_pdb_file->hasPDBTpiStream() || !m_pdb_file->hasPDBIpiStream())
+    return 0;
 
-  if (m_index->dbi().isStripped())
+  std::optional<bool> stripped = IsDbiStripped(*m_pdb_file);
+  if (!stripped)
+    return 0;
+
+  abilities = kAllAbilities;
+  if (*stripped)
     abilities &= ~(Blocks | LocalVariables);
   return abilities;
 }
 
+PdbIndex *SymbolFileNativePDB::GetOrCreateIndex() {
+  if (m_index)
+    return m_index.get();
+  if (!m_pdb_file)
+    return nullptr;
+
+  LLDB_LOG(GetLog(LLDBLog::Symbols), "Building PDB index for {0}",
+           m_objfile_sp->GetFileSpec().GetPath());
+
+  auto expected_index = PdbIndex::create(m_pdb_file);
+  if (!expected_index) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), expected_index.takeError(),
+                   "Failed to build PDB index: {0}");
+    return nullptr;
+  }
+  m_index = std::move(*expected_index);
+  return m_index.get();
+}
+
 void SymbolFileNativePDB::InitializeObject() {
+  if (!GetOrCreateIndex())
+    return;
   m_obj_load_address = m_objfile_sp->GetModule()
                            ->GetObjectFile()
                            ->GetBaseAddress()
@@ -441,6 +497,8 @@ void SymbolFileNativePDB::InitializeObject() {
 }
 
 uint32_t SymbolFileNativePDB::CalculateNumCompileUnits() {
+  if (!GetOrCreateIndex())
+    return 0;
   const DbiModuleList &modules = m_index->dbi().modules();
   uint32_t count = modules.getModuleCount();
   if (count == 0)
@@ -1268,6 +1326,11 @@ lldb::LanguageType SymbolFileNativePDB::ParseLanguage(CompileUnit &comp_unit) {
 }
 
 void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
+  // Symtab construction is reachable before InitializeObject (e.g. the
+  // on-demand wrapper serves pre-hydration lookups from the symtab), so the
+  // index must be materialized here as well.
+  if (!GetOrCreateIndex())
+    return;
   auto *section_list =
       m_objfile_sp->GetModule()->GetObjectFile()->GetSectionList();
   if (!section_list)
@@ -2826,7 +2889,11 @@ SymbolFileNativePDB::GetTypeSystemForLanguage(lldb::LanguageType language) {
 
 uint64_t SymbolFileNativePDB::GetDebugInfoSize(bool load_all_debug_info) {
   // PDB files are a separate file that contains all debug info.
-  return m_index->pdb().getFileSize();
+  // Reachable before the index is materialized (e.g. `statistics dump` with
+  // on-demand symbol loading), so use the PDB file directly.
+  if (!m_pdb_file)
+    return 0;
+  return m_pdb_file->getFileSize();
 }
 
 void SymbolFileNativePDB::BuildParentMap() {
