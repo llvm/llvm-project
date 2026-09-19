@@ -10,6 +10,28 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
+add_header_library(
+  exhaustive_test_static_rounding
+  HDRS
+    exhaustive_test_static_rounding.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  worst_case_test
+  HDRS
+    worst_case_test.h
+  COMPILE_OPTIONS
+    "-DLIBC_MATH_EXHAUSTIVE_TEST_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\""
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+)
+
 add_fp_unittest(
   sqrtf_test
   NO_RUN_POSTBUILD
@@ -58,6 +80,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sin_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    sin_test.cpp
+  DEPENDS
+    .worst_case_test
+    libc.src.math.sin
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   sinf_float_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -99,6 +137,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.cosf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  cos_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    cos_test.cpp
+  DEPENDS
+    .worst_case_test
+    libc.src.math.cos
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -210,6 +264,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.expf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  expf_static_rounding_test
+  NO_RUN_POSTBUILD
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    expf_static_rounding_test.cpp
+  DEPENDS
+    .exhaustive_test_static_rounding
+    libc.src.__support.math.expf
+    libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -796,6 +866,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  lgammaf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    lgammaf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.lgammaf
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread

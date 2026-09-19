@@ -673,10 +673,11 @@ void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
       *Subtarget);
 }
 
-static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
-                              char Mode, raw_ostream &O) {
+static bool printAsmMRegister(const X86AsmPrinter &P, const MachineInstr &MI,
+                              const MachineOperand &MO, char Mode,
+                              raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   if (!X86::GR8RegClass.contains(Reg) &&
       !X86::GR16RegClass.contains(Reg) &&
@@ -717,10 +718,10 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
   return false;
 }
 
-static bool printAsmVRegister(const MachineOperand &MO, char Mode,
-                              raw_ostream &O) {
+static bool printAsmVRegister(const MachineInstr &MI, const MachineOperand &MO,
+                              char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   unsigned Index;
   if (X86::VR128XRegClass.contains(Reg))
@@ -825,7 +826,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'q': // Print DImode register
     case 'V': // Print native register without '%'
       if (MO.isReg())
-        return printAsmMRegister(*this, MO, ExtraCode[0], O);
+        return printAsmMRegister(*this, *MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 
@@ -833,7 +834,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 't': // Print V8SFmode register
     case 'g': // Print V16SFmode register
       if (MO.isReg())
-        return printAsmVRegister(MO, ExtraCode[0], O);
+        return printAsmVRegister(*MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 

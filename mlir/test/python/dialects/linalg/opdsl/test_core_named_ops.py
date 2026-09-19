@@ -3,6 +3,5 @@
 # Just verify that at least one known op is generated.
 # CHECK: name: copy
 
-# verify some special cases: negf->NegFOp, powf->PowFOp
-# CHECK cpp_class_name: NegFOp
+# verify some special cases: powf->PowFOp
 # CHECK cpp_class_name: PowFOp

@@ -946,9 +946,9 @@ func.func @affine_load_store_alignment(%memref: memref<4xi32>) {
 
 // CHECK-LABEL: func @affine_vector_load_store_alignment
 func.func @affine_vector_load_store_alignment(%memref: memref<16xi32>) {
-  // CHECK: vector.load {{.*}} {alignment = 8 : i64}
+  // CHECK: vector.load {{.*}} alignment = 8
   %val = affine.vector_load %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
-  // CHECK: vector.store {{.*}} {alignment = 8 : i64}
+  // CHECK: vector.store {{.*}} alignment = 8
   affine.vector_store %val, %memref[0] { alignment = 8 } : memref<16xi32>, vector<4xi32>
   return
 }

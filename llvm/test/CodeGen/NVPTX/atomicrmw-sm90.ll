@@ -2447,79 +2447,17 @@ define double @fmaximum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double
 }
 
 define half @fadd_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
-; SM90-NOFTZ-DISALLOW-LABEL: fadd_acq_rel_half_global_cta(
-; SM90-NOFTZ-DISALLOW:       {
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b16 %rs<3>;
-; SM90-NOFTZ-DISALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-DISALLOW-EMPTY:
-; SM90-NOFTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_half_global_cta_param_0];
-; SM90-NOFTZ-DISALLOW-NEXT:    ld.param::func.b16 %rs1, [fadd_acq_rel_half_global_cta_param_1];
-; SM90-NOFTZ-DISALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
-; SM90-NOFTZ-DISALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs2;
-; SM90-NOFTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-NOFTZ-ALLOW-LABEL: fadd_acq_rel_half_global_cta(
-; SM90-NOFTZ-ALLOW:       {
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b16 %rs<3>;
-; SM90-NOFTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-NOFTZ-ALLOW-EMPTY:
-; SM90-NOFTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_half_global_cta_param_0];
-; SM90-NOFTZ-ALLOW-NEXT:    ld.param::func.b16 %rs1, [fadd_acq_rel_half_global_cta_param_1];
-; SM90-NOFTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
-; SM90-NOFTZ-ALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs2;
-; SM90-NOFTZ-ALLOW-NEXT:    ret;
-;
-; SM90-FTZ-DISALLOW-LABEL: fadd_acq_rel_half_global_cta(
-; SM90-FTZ-DISALLOW:       {
-; SM90-FTZ-DISALLOW-NEXT:    .reg .pred %p<2>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b16 %rs<4>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b32 %r<15>;
-; SM90-FTZ-DISALLOW-NEXT:    .reg .b64 %rd<3>;
-; SM90-FTZ-DISALLOW-EMPTY:
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b16 %rs1, [fadd_acq_rel_half_global_cta_param_1];
-; SM90-FTZ-DISALLOW-NEXT:    ld.param::func.b64 %rd2, [fadd_acq_rel_half_global_cta_param_0];
-; SM90-FTZ-DISALLOW-NEXT:    fence.release.cta;
-; SM90-FTZ-DISALLOW-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u64 %r4, %rd2;
-; SM90-FTZ-DISALLOW-NEXT:    and.b32 %r5, %r4, 3;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b32 %r1, %r5, 3;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r6, 65535;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b32 %r7, %r6, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    not.b32 %r2, %r7;
-; SM90-FTZ-DISALLOW-NEXT:    ld.relaxed.cta.global.b32 %r14, [%rd1];
-; SM90-FTZ-DISALLOW-NEXT:  $L__BB72_1: // %atomicrmw.start
-; SM90-FTZ-DISALLOW-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-FTZ-DISALLOW-NEXT:    shr.u32 %r8, %r14, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u16.u32 %rs2, %r8;
-; SM90-FTZ-DISALLOW-NEXT:    add.rn.ftz.f16 %rs3, %rs2, %rs1;
-; SM90-FTZ-DISALLOW-NEXT:    cvt.u32.u16 %r9, %rs3;
-; SM90-FTZ-DISALLOW-NEXT:    shl.b32 %r10, %r9, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    and.b32 %r11, %r14, %r2;
-; SM90-FTZ-DISALLOW-NEXT:    or.b32 %r12, %r11, %r10;
-; SM90-FTZ-DISALLOW-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r14, %r12;
-; SM90-FTZ-DISALLOW-NEXT:    setp.ne.b32 %p1, %r3, %r14;
-; SM90-FTZ-DISALLOW-NEXT:    mov.b32 %r14, %r3;
-; SM90-FTZ-DISALLOW-NEXT:    @%p1 bra $L__BB72_1;
-; SM90-FTZ-DISALLOW-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-FTZ-DISALLOW-NEXT:    shr.u32 %r13, %r3, %r1;
-; SM90-FTZ-DISALLOW-NEXT:    fence.acquire.cta;
-; SM90-FTZ-DISALLOW-NEXT:    st.param::func.b16 [func_retval0], %r13;
-; SM90-FTZ-DISALLOW-NEXT:    ret;
-;
-; SM90-FTZ-ALLOW-LABEL: fadd_acq_rel_half_global_cta(
-; SM90-FTZ-ALLOW:       {
-; SM90-FTZ-ALLOW-NEXT:    .reg .b16 %rs<3>;
-; SM90-FTZ-ALLOW-NEXT:    .reg .b64 %rd<2>;
-; SM90-FTZ-ALLOW-EMPTY:
-; SM90-FTZ-ALLOW-NEXT:  // %bb.0:
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_half_global_cta_param_0];
-; SM90-FTZ-ALLOW-NEXT:    ld.param::func.b16 %rs1, [fadd_acq_rel_half_global_cta_param_1];
-; SM90-FTZ-ALLOW-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
-; SM90-FTZ-ALLOW-NEXT:    st.param::func.b16 [func_retval0], %rs2;
-; SM90-FTZ-ALLOW-NEXT:    ret;
+; SM90-LABEL: fadd_acq_rel_half_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<3>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param::func.b64 %rd1, [fadd_acq_rel_half_global_cta_param_0];
+; SM90-NEXT:    ld.param::func.b16 %rs1, [fadd_acq_rel_half_global_cta_param_1];
+; SM90-NEXT:    atom.acq_rel.cta.global.add.noftz.f16 %rs2, [%rd1], %rs1;
+; SM90-NEXT:    st.param::func.b16 [func_retval0], %rs2;
+; SM90-NEXT:    ret;
         %retval = atomicrmw fadd ptr  addrspace(1) %addr, half %val syncscope("block") acq_rel
         ret half %retval
 }

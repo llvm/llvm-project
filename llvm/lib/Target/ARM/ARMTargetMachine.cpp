@@ -52,7 +52,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/IPO.h"
@@ -160,23 +159,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
-  // Default to triple-appropriate EABI
-  if (Options.EABIVersion == EABI::Default ||
-      Options.EABIVersion == EABI::Unknown) {
-    // musl is compatible with glibc with regard to EABI version
-    if ((TargetTriple.getEnvironment() == Triple::GNUEABI ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-         TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-         TargetTriple.getEnvironment() == Triple::MuslEABI ||
-         TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-         TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-        !(TargetTriple.isOSWindows() || TargetTriple.isOSDarwin()))
-      this->Options.EABIVersion = EABI::GNU;
-    else
-      this->Options.EABIVersion = EABI::EABI5;
-  }
-
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = true;
@@ -198,8 +180,8 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
   const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
-  bool FPRegsUnavailable = !ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only();
-  if (FPRegsUnavailable) {
+  if (!ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only() ||
+      ARMSTI->useSoftFloat()) {
     const StringRef FPRegsUnavailableMsg =
         ", but floating-point registers are unavailable";
     const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
@@ -221,8 +203,10 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
           const Function *Callee = CB->getCalledFunction();
           F.getContext().diagnose(DiagnosticInfoUnsupported(
               F,
-              (Callee ? Twine("call to '") + Callee->getName() + "'"
-                      : Twine("indirect call")) +
+              (Callee ? Twine("'") + F.getName() + "' calls '" +
+                            Callee->getName() + "', which"
+                      : Twine("'") + F.getName() +
+                            "' makes an indirect call that") +
                   " expects a hard-float calling convention" +
                   FPRegsUnavailableMsg,
               CB->getDebugLoc()));
@@ -245,6 +229,13 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
     return FloatABI::Hard;
   // Otherwise fall back to the ABI implied by the target triple.
   return M.getTargetTriple().getDefaultFloatABI();
+}
+
+ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
+  // Consistency of "target-abi" and -target-abi is validated elsewhere.
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return ARM::computeTargetABI(TargetTriple, MD->getString());
+  return TargetABI;
 }
 
 const ARMSubtarget *
@@ -279,14 +270,17 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     Key += "denormal-fp-math=" + DM.str();
 
   FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
-  // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
-  // registers, but no floating-point hardware (mve+nofp)
+  // It is legal to have FloatABI::Hard for targets with SIMD registers
+  // but no floating-point hardware (mve+nofp).
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+
+  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
+  Key += "+abi=" + std::to_string((int)ABI);
 
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       FloatABI, F.hasMinSize(), DM);
+                                       FloatABI, ABI, F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -399,10 +393,7 @@ std::unique_ptr<CSEConfigBase> ARMPassConfig::getCSEConfig() const {
 }
 
 void ARMPassConfig::addIRPasses() {
-  if (TM->Options.ThreadModel == ThreadModel::Single)
-    addPass(createLowerAtomicPass());
-  else
-    addPass(createAtomicExpandLegacyPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -499,12 +490,12 @@ bool ARMPassConfig::addLegalizeMachineIR() {
 }
 
 bool ARMPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
@@ -608,7 +599,7 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 }
 

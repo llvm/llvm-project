@@ -33,6 +33,7 @@ class MemoryLocation;
 class SCEV;
 class ScalarEvolution;
 class SCEVPredicate;
+class StoreInst;
 template <typename T> class SmallVectorImpl;
 class TargetLibraryInfo;
 
@@ -69,16 +70,15 @@ LLVM_ABI bool isDereferenceablePointer(const Value *V, const APInt &Size,
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If ScanFrom is specified this method performs context-sensitive analysis
-/// and returns true if it is safe to load immediately before ScanFrom.
+/// If SQ.CxtI is specified this method performs context-sensitive analysis
+/// and returns true if it is safe to load immediately before SQ.CxtI.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
-/// quick local scan of the basic block containing ScanFrom, to determine if
+/// quick local scan of the basic block containing SQ.CxtI, to determine if
 /// the address is already accessed.
-LLVM_ABI bool isSafeToLoadUnconditionally(
-    Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
-    Instruction *ScanFrom, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Align Alignment,
+                                          const APInt &Size,
+                                          const SimplifyQuery &SQ);
 
 /// Return true if we can prove that the given load (which is assumed to be
 /// within the specified loop) would access only dereferenceable memory, and
@@ -109,16 +109,14 @@ isReadOnlyLoop(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///
-/// If DT and ScanFrom are specified this method performs context-sensitive
-/// analysis and returns true if it is safe to load immediately before ScanFrom.
+/// If SQ.CxtI is specified this method performs context-sensitive analysis
+/// and returns true if it is safe to load immediately before SQ.CxtI.
 ///
 /// If it is not obviously safe to load from the specified pointer, we do a
-/// quick local scan of the basic block containing ScanFrom, to determine if
+/// quick local scan of the basic block containing SQ.CxtI, to determine if
 /// the address is already accessed.
-LLVM_ABI bool isSafeToLoadUnconditionally(
-    Value *V, Type *Ty, Align Alignment, const DataLayout &DL,
-    Instruction *ScanFrom, AssumptionCache *AC = nullptr,
-    const DominatorTree *DT = nullptr, const TargetLibraryInfo *TLI = nullptr);
+LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Type *Ty, Align Alignment,
+                                          const SimplifyQuery &SQ);
 
 /// Return true if speculation of the given load must be suppressed to avoid
 /// ordering or interfering with an active sanitizer.  If not suppressed,
@@ -167,6 +165,16 @@ LLVM_ABI Value *FindAvailableLoadedValue(
 LLVM_ABI Value *
 FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
                          unsigned MaxInstsToScan = DefMaxInstsToScan);
+
+/// Check whether \p SI, which may alias \p MemLoc, can be safely skipped.
+/// This is possible when \p SI does only MustAlias or NoAlias \p MemLoc (no
+/// partial overlap possible), and it stores the value \p MemLoc currently
+/// holds (loaded before the store and not modified in between).
+LLVM_ABI bool isStorePreservingMemoryLocation(const StoreInst *SI,
+                                              const MemoryLocation &MemLoc,
+                                              Align MemLocAlign,
+                                              BatchAAResults &AA,
+                                              unsigned ScanLimit);
 
 /// Scan backwards to see if we have the value of the given pointer available
 /// locally within a small number of instructions.
