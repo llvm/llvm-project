@@ -16,7 +16,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include <map>
+#include "llvm/MC/MCContext.h"
 
 namespace llvm {
 class CallBase;
@@ -28,9 +28,9 @@ private:
   /// references.
   SmallPtrSet<const MCSymbol *, 8> ImageHandleSymbols;
 
-  /// Stores a mapping from a unique call-site id to the call instruction that
-  /// needs an indirect-call prototype emitted.
-  std::map<unsigned, const CallBase *> CallPrototypes;
+  using CallProtoTy = std::pair<const CallBase *, MCSymbol *>;
+  /// Stores the call instructions that need an indirect-call prototype emitted.
+  std::vector<CallProtoTy> CallPrototypes;
 
 public:
   NVPTXMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
@@ -52,13 +52,13 @@ public:
     return ImageHandleSymbols.contains(Symbol);
   }
 
-  void addCallPrototype(unsigned Id, const CallBase *CB) {
-    CallPrototypes.try_emplace(Id, CB);
+  MCSymbol *addCallPrototype(const CallBase *CB, MachineFunction &MF) {
+    MCSymbol *Symbol = MF.getContext().createTempSymbol("prototype_");
+    CallPrototypes.push_back({CB, Symbol});
+    return Symbol;
   }
 
-  const std::map<unsigned, const CallBase *> &getCallPrototypes() const {
-    return CallPrototypes;
-  }
+  ArrayRef<CallProtoTy> getCallPrototypes() const { return CallPrototypes; }
 };
 }
 
