@@ -62,7 +62,25 @@ static bool is_kernel(Module *module) {
   ObjectFile *objfile = module->GetObjectFile();
   if (!objfile)
     return false;
-  if (objfile->GetType() != ObjectFile::eTypeExecutable)
+
+  ObjectFile::Type expected_type;
+  switch (module->GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+  case llvm::Triple::arm:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::riscv64:
+    expected_type = ObjectFile::eTypeExecutable;
+    break;
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    expected_type = ObjectFile::eTypeSharedLibrary;
+    break;
+  default:
+    return false;
+  }
+
+  if (objfile->GetType() != expected_type)
     return false;
   if (objfile->GetStrata() != ObjectFile::eStrataUnknown &&
       objfile->GetStrata() != ObjectFile::eStrataKernel)
@@ -74,26 +92,40 @@ static bool is_kernel(Module *module) {
 static bool is_kmod(Module *module) {
   if (!module)
     return false;
-  if (!module->GetObjectFile())
-    return false;
+
   ObjectFile *objfile = module->GetObjectFile();
-  if (objfile->GetType() != ObjectFile::eTypeObjectFile &&
-      objfile->GetType() != ObjectFile::eTypeSharedLibrary)
+  if (!objfile)
     return false;
 
-  return true;
+  switch (module->GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86_64:
+    return objfile->GetType() == ObjectFile::eTypeObjectFile;
+  case llvm::Triple::x86:
+  case llvm::Triple::arm:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::riscv64:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    return objfile->GetType() == ObjectFile::eTypeSharedLibrary;
+  default:
+    return false;
+  }
 }
 
 static bool is_reloc(Module *module) {
   if (!module)
     return false;
-  if (!module->GetObjectFile())
-    return false;
+
   ObjectFile *objfile = module->GetObjectFile();
-  if (objfile->GetType() != ObjectFile::eTypeObjectFile)
+  if (!objfile)
     return false;
 
-  return true;
+  switch (module->GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86_64:
+    return objfile->GetType() == ObjectFile::eTypeObjectFile;
+  default:
+    return false;
+  }
 }
 
 // Instantiate Function of the FreeBSD Kernel Dynamic Loader Plugin called when
@@ -203,8 +235,23 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
     return UUID();
   }
 
-  // Check header type
-  if (header.e_type != llvm::ELF::ET_EXEC)
+  uint16_t expected_type;
+  switch (header.e_machine) {
+  case llvm::ELF::EM_386:
+  case llvm::ELF::EM_X86_64:
+  case llvm::ELF::EM_ARM:
+  case llvm::ELF::EM_AARCH64:
+  case llvm::ELF::EM_RISCV:
+    expected_type = llvm::ELF::ET_EXEC;
+    break;
+  case llvm::ELF::EM_PPC64:
+    expected_type = llvm::ELF::ET_DYN;
+    break;
+  default:
+    return UUID();
+  }
+
+  if (header.e_type != expected_type)
     return UUID();
 
   llvm::Expected<ModuleSP> memory_module_sp_or_err =
