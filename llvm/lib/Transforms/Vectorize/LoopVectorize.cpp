@@ -3401,7 +3401,7 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
 /// otherwise CM_EpilogueAllowed.
 static EpilogueLowering getEpilogueTailLowering(
     const LoopVectorizationCostModel &MainCM, const Loop *L,
-    OptimizationRemarkEmitter *ORE, const LoopVectorizationLegality &LVL,
+    OptimizationRemarkEmitter *ORE, LoopVectorizationLegality &LVL,
     const LoopVectorizeHints &Hints, const TargetTransformInfo *TTI) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
@@ -6531,7 +6531,8 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
 }
 #endif
 
-VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &EnabledCM) {
+VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1(
+    LoopVectorizationCostModel &EnabledCM) {
   bool IsInnerLoop = OrigLoop->isInnermost();
 
   // Set up loop versioning for inner loops with memory runtime checks.
@@ -7689,11 +7690,6 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           "active.lane.mask.entry");
       cast<VPHeaderPHIRecipe>(&R)->setStartValue(EntryALM);
       continue;
-    } else if (isa<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-      auto *RecPhi = cast<VPFirstOrderRecurrencePHIRecipe>(&R);
-      VPInstruction *ResumeForEpi =
-          IRPhiToResumeForEpi.at(cast<PHINode>(RecPhi->getUnderlyingInstr()));
-      ResumeV = ResumeForEpi->getUnderlyingValue();
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
       PHINode *IndPhi = cast<VPWidenInductionRecipe>(&R)->getPHINode();
@@ -8282,7 +8278,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Destroy the cost model before executing any plan, so that code generation
   // cannot rely on cost-modeling decisions.
-  // LVP.clearCostModel();
+  LVP.clearCostModel();
 
   VPlan &BestPlan = *BestPlanPtr;
   // Consider vectorizing the epilogue too if it's profitable.
