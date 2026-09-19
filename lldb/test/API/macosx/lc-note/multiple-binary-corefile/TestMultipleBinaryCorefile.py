@@ -82,7 +82,7 @@ class TestMultipleBinaryCorefile(TestBase):
 
     @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfRemote
-    @requireDarwin
+    @requireDarwin()
     def test_corefile_binaries_dsymforuuid(self):
         self.initial_setup()
 
@@ -198,7 +198,7 @@ class TestMultipleBinaryCorefile(TestBase):
 
     @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfRemote
-    @requireDarwin
+    @requireDarwin()
     def test_corefile_binaries_serial_search(self):
         """The corefile's binaries are searched for in parallel by default.
         Searching for them one at a time has to give the same answer, in the
@@ -223,7 +223,7 @@ class TestMultipleBinaryCorefile(TestBase):
 
     @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfRemote
-    @requireDarwin
+    @requireDarwin()
     def test_corefile_binaries_preloaded(self):
         self.initial_setup()
 

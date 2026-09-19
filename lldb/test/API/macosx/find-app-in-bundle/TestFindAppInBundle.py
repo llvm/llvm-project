@@ -9,7 +9,7 @@ import lldbsuite.test.lldbplatformutil as lldbplatformutil
 from lldbsuite.test.lldbtest import *
 
 
-@decorators.requireDarwin
+@decorators.requireDarwin()
 class FindAppInMacOSAppBundle(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

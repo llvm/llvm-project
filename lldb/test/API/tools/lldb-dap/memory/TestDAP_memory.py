@@ -57,7 +57,7 @@ class TestDAP_memory(DAPTestCaseBase):
         self.assertIsNotNone(response.body.memoryReference)
 
     @skipIfWindows
-    @requireExpressionEvaluation
+    @requireExpressionEvaluation()
     def test_readMemory(self):
         """Tests the `readMemory` request."""
         session = self.build_and_create_session()
@@ -102,7 +102,7 @@ class TestDAP_memory(DAPTestCaseBase):
 
     # Flakey on 32-bit Arm Linux.
     @skipIf(oslist=["linux"], archs=["arm$"])
-    @requireExpressionEvaluation
+    @requireExpressionEvaluation()
     def test_writeMemory(self):
         """Tests the `writeMemory` request."""
         session = self.build_and_create_session()

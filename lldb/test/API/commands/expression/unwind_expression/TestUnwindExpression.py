@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@requireExpressionEvaluation
+@requireExpressionEvaluation()
 class UnwindFromExpressionTest(TestBase):
     main_spec = lldb.SBFileSpec("main.cpp", False)
 

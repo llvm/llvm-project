@@ -24,18 +24,18 @@ from lldbsuite.test.gdbclientutils import (
 class TestExpeditedRecentReads(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @requireDarwin
+    @requireDarwin()
     def test_heap_read_expedited_at_the_next_stop(self):
         """The second stop serves the heap buffer from the cache, no packet."""
         self.check_heap_reads(disable_memory_cache=False)
 
-    @requireDarwin
+    @requireDarwin()
     def test_heap_read_not_expedited_without_the_cache(self):
         """With the memory cache off the second stop reads the heap buffer from
         the stub, which confirms the test exercises the cache."""
         self.check_heap_reads(disable_memory_cache=True)
 
-    @requireDarwin
+    @requireDarwin()
     def test_stack_read_expedited_at_the_next_stop(self):
         """A stack array below the window frame 0 expedites is served from the
         cache at the next stop, which only the recent reads can supply."""

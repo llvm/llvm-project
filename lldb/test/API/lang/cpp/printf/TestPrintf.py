@@ -5,7 +5,7 @@ lldbinline.MakeInlineTest(
     __file__,
     globals(),
     [
-        decorators.requireExpressionEvaluation,
+        decorators.requireExpressionEvaluation(),
         decorators.expectedFailureAll(bugnumber="llvm.org/PR36715", oslist=["windows"]),
     ],
 )
