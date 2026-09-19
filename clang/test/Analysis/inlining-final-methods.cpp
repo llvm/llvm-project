@@ -94,7 +94,7 @@ void test(Child* childp) {
 
 namespace final_method_on_base_ptr_with_known_dyn_type {
 // A final method should also be inlined when it is called through a pointer
-// whose dynamic type is a child of the class where it was defined.
+// base pointer with a known dynamic type.
 struct Base : Msg {};
 
 struct Ctrl : Base {
