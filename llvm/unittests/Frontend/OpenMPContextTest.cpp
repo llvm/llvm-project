@@ -314,7 +314,498 @@ TEST_F(OpenMPContextTest, ApplicabilityAllTraits) {
 }
 
 TEST_F(OpenMPContextTest, ScoringSimple) {
-  // TODO: Add scoring tests (via getBestVariantMatchForContext).
+  OMPContext Parallel(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Parallel.addTrait(TraitProperty::construct_parallel_parallel);
+  OMPContext NoConstruct(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+
+  VariantMatchInfo MatchAny;
+  MatchAny.addTrait(TraitProperty::construct_target_target, "");
+  MatchAny.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchAny.addTrait(TraitProperty::implementation_extension_match_any, "");
+  EXPECT_TRUE(isVariantApplicableInContext(MatchAny, Parallel));
+  EXPECT_FALSE(isVariantApplicableInContext(MatchAny, NoConstruct));
+
+  VariantMatchInfo VendorLLVM;
+  VendorLLVM.addTrait(TraitProperty::implementation_vendor_llvm, "");
+  // The matching construct must raise the score, not just win a tie by order.
+  SmallVector<VariantMatchInfo, 2> MatchAnyCandidates{VendorLLVM, MatchAny};
+  EXPECT_EQ(getBestVariantMatchForContext(MatchAnyCandidates, Parallel), 1);
+
+  VariantMatchInfo MatchNone;
+  MatchNone.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchNone.addTrait(TraitProperty::implementation_extension_match_none, "");
+  EXPECT_TRUE(isVariantApplicableInContext(MatchNone, NoConstruct));
+  EXPECT_FALSE(isVariantApplicableInContext(MatchNone, Parallel));
+
+  VariantMatchInfo Empty;
+  SmallVector<VariantMatchInfo, 2> MatchNoneCandidates{MatchNone, Empty};
+  EXPECT_EQ(getBestVariantMatchForContext(MatchNoneCandidates, NoConstruct), 0);
+}
+
+TEST_F(OpenMPContextTest, ScoringMatchAnyConstructs) {
+  OMPContext TargetParallel(false, Triple("x86_64-unknown-linux"), Triple(),
+                            -1);
+  TargetParallel.addTrait(TraitProperty::construct_target_target);
+  TargetParallel.addTrait(TraitProperty::construct_parallel_parallel);
+
+  APInt Score(64, 2);
+  VariantMatchInfo Scored;
+  Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+
+  VariantMatchInfo MatchAny;
+  MatchAny.addTrait(TraitProperty::construct_target_target, "");
+  MatchAny.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchAny.addTrait(TraitProperty::implementation_extension_match_any, "");
+
+  // Both construct matches contribute: 1 + 1 + 2 for MATCH_ANY beats the
+  // explicitly scored candidate's 1 + 2. Retaining only either construct
+  // match would not select MATCH_ANY.
+  SmallVector<VariantMatchInfo, 2> Candidates{Scored, MatchAny};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, TargetParallel), 1);
+}
+
+TEST_F(OpenMPContextTest, ScoringMatchAnyWithoutMatchingConstructs) {
+  OMPContext NoConstruct(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+
+  VariantMatchInfo MatchAny;
+  MatchAny.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchAny.addTrait(TraitProperty::implementation_vendor_llvm, "");
+  MatchAny.addTrait(TraitProperty::implementation_extension_match_any, "");
+  EXPECT_TRUE(isVariantApplicableInContext(MatchAny, NoConstruct));
+
+  APInt Score(64, 1);
+  VariantMatchInfo Scored;
+  Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+
+  // The vendor match makes MATCH_ANY applicable, but the absent construct
+  // must not add to its score. The scored candidate wins by 2 to 1.
+  SmallVector<VariantMatchInfo, 2> Candidates{MatchAny, Scored};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, NoConstruct), 1);
+}
+
+TEST_F(OpenMPContextTest, ScoringUnknownProperty) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  VariantMatchInfo Unknown;
+  Unknown.addUnknownTrait(TraitSelector::implementation_vendor, "bogus_vendor");
+  EXPECT_FALSE(isVariantApplicableInContext(Unknown, Context));
+  Unknown.addTrait(TraitProperty::implementation_extension_match_none, "");
+  EXPECT_TRUE(isVariantApplicableInContext(Unknown, Context));
+
+  VariantMatchInfo UserTrue;
+  UserTrue.addTrait(TraitProperty::user_condition_true, "");
+  SmallVector<VariantMatchInfo, 2> Candidates{Unknown, UserTrue};
+  // An unscored vendor contributes zero, so lexical order breaks the tie.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+
+  APInt Score(64, 1);
+  Candidates[1].addTrait(TraitProperty::user_condition_true, "", &Score);
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+}
+
+TEST_F(OpenMPContextTest, ScoringUnknownDeviceProperties) {
+  const TraitSelector Selectors[] = {
+      TraitSelector::device_kind, TraitSelector::device_arch,
+      TraitSelector::target_device_kind, TraitSelector::target_device_arch};
+  for (unsigned Depth : {0u, 2u, 64u}) {
+    OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+    for (unsigned I = 0; I < Depth; ++I)
+      Context.addTrait(TraitProperty::construct_parallel_parallel);
+    for (unsigned I = 0; I < 4; ++I) {
+      SCOPED_TRACE(Depth);
+      SCOPED_TRACE(I);
+      VariantMatchInfo Unknown;
+      Unknown.addUnknownTrait(Selectors[I], "unknown");
+      EXPECT_FALSE(isVariantApplicableInContext(Unknown, Context));
+      Unknown.addTrait(TraitProperty::implementation_extension_match_any, "");
+      EXPECT_FALSE(isVariantApplicableInContext(Unknown, Context));
+      Unknown.addTrait(TraitProperty::user_condition_true, "");
+      EXPECT_TRUE(isVariantApplicableInContext(Unknown, Context));
+
+      APInt Weight = APInt::getOneBitSet(128, Depth + I % 2);
+      APInt Score = Weight - 1;
+      VariantMatchInfo Scored;
+      Scored.addTrait(TraitProperty::implementation_vendor_llvm, "", &Score);
+      SmallVector<VariantMatchInfo, 2> Candidates{Scored, Unknown};
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+      Candidates[0].addTrait(TraitProperty::implementation_vendor_llvm, "",
+                             &Weight);
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+
+      // match_none also retains the weight of an inactive selector.
+      Candidates[1] = VariantMatchInfo();
+      Candidates[1].addUnknownTrait(Selectors[I], "unknown");
+      Candidates[1].addTrait(TraitProperty::implementation_extension_match_none,
+                             "");
+      EXPECT_TRUE(isVariantApplicableInContext(Candidates[1], Context));
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+      Candidates[0].addTrait(TraitProperty::implementation_vendor_llvm, "",
+                             &Score);
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    }
+  }
+}
+
+TEST_F(OpenMPContextTest, ScoringUnknownSelectors) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt VendorScore(64, 10), ExtensionScore(64, 1), ConditionScore(64, 5);
+  for (bool Reverse : {false, true}) {
+    SCOPED_TRACE(Reverse);
+    VariantMatchInfo Unknown;
+    Unknown.addTrait(TraitProperty::implementation_extension_match_any, "",
+                     &ExtensionScore);
+    Unknown.addTrait(TraitProperty::user_condition_true, "", &ConditionScore);
+    Unknown.addUnknownTrait(TraitSelector::implementation_vendor, "vendor",
+                            &VendorScore);
+    Unknown.addUnknownTrait(TraitSelector::implementation_extension,
+                            "extension", &ExtensionScore);
+    if (Reverse)
+      std::swap(Unknown.UnknownTraits[0], Unknown.UnknownTraits[1]);
+
+    VariantMatchInfo Scored;
+    APInt Score(64, 15);
+    Scored.addTrait(TraitProperty::implementation_vendor_llvm, "", &Score);
+    SmallVector<VariantMatchInfo, 2> Candidates{Scored, Unknown};
+    // Each selector contributes once: 1 + 10 + 1 + 5 = 17.
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    Score = APInt(64, 16);
+    Candidates[0].addTrait(TraitProperty::implementation_vendor_llvm, "",
+                           &Score);
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  }
+}
+
+TEST_F(OpenMPContextTest, ScoringMultipleProperties) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  VariantMatchInfo Device;
+  Device.addTrait(TraitProperty::device_kind_cpu, "");
+  Device.addTrait(TraitProperty::device_kind_host, "");
+  APInt Score(64, 1);
+  VariantMatchInfo Scored;
+  Scored.addTrait(TraitProperty::implementation_vendor_llvm, "", &Score);
+  SmallVector<VariantMatchInfo, 2> Candidates{Scored, Device};
+  // KIND contributes one weight regardless of its number of properties.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+
+  Candidates[1].addTrait(TraitProperty::implementation_extension_match_any, "");
+  Candidates[1].addUnknownTrait(TraitSelector::device_kind, "unknown");
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, UnknownPropertySubsets) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  VariantMatchInfo First, Second;
+  First.addTrait(TraitProperty::implementation_extension_match_none, "");
+  First.addUnknownTrait(TraitSelector::implementation_vendor, "first");
+  Second.addTrait(TraitProperty::implementation_extension_match_none, "");
+  Second.addUnknownTrait(TraitSelector::implementation_vendor, "second");
+  Second.addUnknownTrait(TraitSelector::implementation_extension, "extension");
+  SmallVector<VariantMatchInfo, 2> Candidates{First, Second};
+  // Distinct unknown properties do not form a subset just because their
+  // selectors are the same. The scores tie, so the first candidate wins.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  Candidates[1].UnknownTraits[0].Name = "first";
+  // Now the first candidate is a strict subset of the second.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  APInt HighScore(64, 100);
+  First = VariantMatchInfo();
+  First.addTrait(TraitProperty::implementation_extension_match_none, "");
+  First.addUnknownTrait(TraitSelector::implementation_vendor, "same",
+                        &HighScore);
+  Second = VariantMatchInfo();
+  Second.addTrait(TraitProperty::implementation_extension_match_none, "");
+  Second.addUnknownTrait(TraitSelector::device_kind, "same");
+  Second.addUnknownTrait(TraitSelector::device_arch, "extra");
+  Candidates = {First, Second};
+  // The same property name under different selectors does not form a subset.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, StrictSubsetScoreIsZero) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt HighScore(64, 100), LowScore(64, 1);
+  VariantMatchInfo Subset, Superset;
+  Subset.addTrait(TraitProperty::implementation_vendor_llvm, "", &HighScore);
+  Superset.addTrait(TraitProperty::implementation_vendor_llvm, "", &LowScore);
+  Superset.addTrait(TraitProperty::user_condition_true, "");
+
+  // The strict subset's score is zero even though its raw score is higher.
+  SmallVector<VariantMatchInfo, 2> Candidates{Subset, Superset};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+  std::swap(Candidates[0], Candidates[1]);
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, IncompatibleSupersetDoesNotZeroScore) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt HighScore(64, 100), LowScore(64, 5);
+  VariantMatchInfo Subset, IncompatibleSuperset, Other;
+  Subset.addTrait(TraitProperty::implementation_vendor_llvm, "", &HighScore);
+  IncompatibleSuperset.addTrait(TraitProperty::implementation_vendor_llvm, "");
+  IncompatibleSuperset.addTrait(TraitProperty::user_condition_false, "false");
+  Other.addTrait(TraitProperty::user_condition_true, "true", &LowScore);
+
+  // Only compatible selectors participate in strict-subset zeroing.
+  SmallVector<VariantMatchInfo, 3> Candidates{Subset, IncompatibleSuperset,
+                                              Other};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, KindAnyDoesNotAffectSubsets) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt HighScore(64, 100), LowScore(64, 1);
+  VariantMatchInfo High, Low;
+  High.addTrait(TraitProperty::implementation_vendor_llvm, "", &HighScore);
+  Low.addTrait(TraitProperty::implementation_vendor_llvm, "", &LowScore);
+  Low.addTrait(TraitProperty::device_kind_any, "");
+
+  SmallVector<VariantMatchInfo, 2> Candidates{High, Low};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  std::swap(Candidates[0], Candidates[1]);
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  // Ignoring any must also work when it appears in the potential subset.
+  High.addTrait(TraitProperty::device_kind_any, "");
+  Low.RequiredTraits.reset(unsigned(TraitProperty::device_kind_any));
+  Low.addTrait(TraitProperty::device_kind_host, "");
+  Candidates = {High, Low};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+}
+
+TEST_F(OpenMPContextTest, DistinctUserConditionsAreNotSubsets) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt HighScore(64, 100);
+  VariantMatchInfo High, MoreTraits;
+  High.addTrait(TraitProperty::user_condition_true, "high", &HighScore);
+  MoreTraits.addTrait(TraitProperty::user_condition_true, "low");
+  MoreTraits.addTrait(TraitProperty::device_kind_host, "");
+
+  // The condition expressions are different properties. HIGH is not a strict
+  // subset of MORE_TRAITS and retains its explicit score.
+  SmallVector<VariantMatchInfo, 2> Candidates{MoreTraits, High};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+}
+
+TEST_F(OpenMPContextTest, RepeatedConstructStrictSubsetScoreIsZero) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  APInt HighScore(64, 100), LowScore(64, 1);
+  VariantMatchInfo Subset, Superset;
+  Subset.addTrait(TraitProperty::implementation_vendor_llvm, "", &HighScore);
+  Subset.addTrait(TraitProperty::construct_parallel_parallel, "");
+  Superset.addTrait(TraitProperty::implementation_vendor_llvm, "", &LowScore);
+  Superset.addTrait(TraitProperty::construct_parallel_parallel, "");
+  Superset.addTrait(TraitProperty::construct_parallel_parallel, "");
+
+  // Repeated constructs are retained only in the ordered vector, not the bit
+  // vector. They must still make the second selector a strict superset.
+  SmallVector<VariantMatchInfo, 2> Candidates{Subset, Superset};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+}
+
+TEST_F(OpenMPContextTest, DifferentConstructOrderIsNotSubset) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addTrait(TraitProperty::construct_for_for);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addTrait(TraitProperty::construct_for_for);
+  Context.addTrait(TraitProperty::construct_simd_simd);
+
+  APInt HighScore(64, 100), LowScore(64, 1);
+  VariantMatchInfo High, Low;
+  High.addTrait(TraitProperty::implementation_vendor_llvm, "", &HighScore);
+  High.addTrait(TraitProperty::construct_parallel_parallel, "");
+  High.addTrait(TraitProperty::construct_for_for, "");
+  Low.addTrait(TraitProperty::implementation_vendor_llvm, "", &LowScore);
+  Low.addTrait(TraitProperty::user_condition_true, "");
+  Low.addTrait(TraitProperty::construct_for_for, "");
+  Low.addTrait(TraitProperty::construct_parallel_parallel, "");
+  Low.addTrait(TraitProperty::construct_simd_simd, "");
+
+  // HIGH's construct sequence is not a subsequence of LOW's, despite each
+  // distinct construct property being present in LOW.
+  SmallVector<VariantMatchInfo, 2> Candidates{High, Low};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  std::swap(Candidates[0], Candidates[1]);
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+}
+
+TEST_F(OpenMPContextTest, DifferentISAPropertiesAreNotSubsets) {
+  struct ISAContext : OMPContext {
+    using OMPContext::OMPContext;
+    bool matchesISATrait(StringRef) const override { return true; }
+  };
+  ISAContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt HighScore(64, 100), LowScore(64, 1);
+  VariantMatchInfo High, Low;
+  High.addTrait(TraitProperty::implementation_vendor_llvm, "", &HighScore);
+  High.addTrait(TraitProperty::device_isa___ANY, "sse2");
+  High.addTrait(TraitProperty::target_device_isa___ANY, "avx");
+  Low.addTrait(TraitProperty::implementation_vendor_llvm, "", &LowScore);
+  Low.addTrait(TraitProperty::device_isa___ANY, "avx");
+  Low.addTrait(TraitProperty::target_device_isa___ANY, "sse2");
+  Low.addTrait(TraitProperty::user_condition_true, "");
+
+  SmallVector<VariantMatchInfo, 2> Candidates{High, Low};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  std::swap(Candidates[0], Candidates[1]);
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  // Once the ISA properties and their selectors are identical, HIGH is a
+  // strict subset of LOW.
+  Candidates[0].ISATraits[0].Name = "sse2";
+  Candidates[0].ISATraits[1].Name = "avx";
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, ScoringRepeatedConstructs) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+
+  APInt Score(64, 1);
+  VariantMatchInfo Scored;
+  Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+  VariantMatchInfo Parallel;
+  Parallel.addTrait(TraitProperty::construct_parallel_parallel, "");
+  SmallVector<VariantMatchInfo, 2> Candidates{Scored, Parallel};
+  // The inner PARALLEL scores 3, beating the explicit score's 2.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+  Candidates[1].addTrait(TraitProperty::implementation_extension_match_any, "");
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  // An incomplete match_any selector retains its forward partial match.
+  VariantMatchInfo Partial;
+  Partial.addTrait(TraitProperty::construct_target_target, "");
+  Partial.addTrait(TraitProperty::construct_parallel_parallel, "");
+  Partial.addTrait(TraitProperty::implementation_extension_match_any, "");
+  Candidates[1] = Partial;
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, ScoringHighestOrderedMatch) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addTrait(TraitProperty::construct_for_for);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addTrait(TraitProperty::construct_for_for);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+
+  APInt Score(64, 11);
+  VariantMatchInfo Scored;
+  Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+  VariantMatchInfo ParallelFor;
+  ParallelFor.addTrait(TraitProperty::construct_parallel_parallel, "");
+  ParallelFor.addTrait(TraitProperty::construct_for_for, "");
+  SmallVector<VariantMatchInfo, 2> Candidates{Scored, ParallelFor};
+  // Positions 3 and 4 score 1 + 4 + 8 = 13. The final PARALLEL cannot be
+  // chosen because it follows every FOR in the context.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+  Score = APInt(64, 12);
+  Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Score);
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, ScoringDeviceWeights) {
+  struct ISAContext : OMPContext {
+    using OMPContext::OMPContext;
+    bool matchesISATrait(StringRef) const override { return true; }
+  };
+  const TraitProperty Properties[] = {TraitProperty::device_kind_cpu,
+                                      TraitProperty::device_arch_arm,
+                                      TraitProperty::device_isa___ANY,
+                                      TraitProperty::target_device_kind_cpu,
+                                      TraitProperty::target_device_arch_arm,
+                                      TraitProperty::target_device_isa___ANY};
+  for (unsigned Depth : {0u, 1u, 2u, 63u, 64u, 65u}) {
+    ISAContext Context(false, Triple("arm-unknown-linux"), Triple(), -1);
+    for (unsigned I = 0; I < Depth; ++I)
+      Context.addTrait(TraitProperty::construct_parallel_parallel);
+    for (unsigned I = 0; I < 6; ++I) {
+      SCOPED_TRACE(Depth);
+      SCOPED_TRACE(I);
+      APInt Weight = APInt::getOneBitSet(128, Depth + I % 3);
+      APInt Score = Weight - 1;
+      VariantMatchInfo Scored, Device;
+      Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+      Device.addTrait(Properties[I], "test-isa");
+      SmallVector<VariantMatchInfo, 2> Candidates{Scored, Device};
+      // The device score is exactly 1 + 2^(context depth + trait offset).
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+      Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Weight);
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+    }
+  }
+}
+
+TEST_F(OpenMPContextTest, ScoringUnknownConstructs) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  Context.addUnknownConstruct();
+
+  APInt Score(64, 3);
+  VariantMatchInfo Scored, Device;
+  Scored.addTrait(TraitProperty::implementation_vendor_llvm, "", &Score);
+  Device.addTrait(TraitProperty::device_kind_cpu, "");
+  SmallVector<VariantMatchInfo, 2> Candidates{Scored, Device};
+  // Both enclosing constructs contribute to the device weight: 1 + 2^2.
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  OMPContext UnknownThenParallel(false, Triple("x86_64-unknown-linux"),
+                                 Triple(), -1);
+  UnknownThenParallel.addUnknownConstruct();
+  UnknownThenParallel.addTrait(TraitProperty::construct_parallel_parallel);
+  APInt LowerScore(64, 1);
+  VariantMatchInfo LowerScored, Parallel;
+  LowerScored.addTrait(TraitProperty::implementation_vendor_llvm, "",
+                       &LowerScore);
+  Parallel.addTrait(TraitProperty::construct_parallel_parallel, "");
+  // The unknown construct occupies position one, so PARALLEL scores 1 + 2.
+  EXPECT_TRUE(isVariantApplicableInContext(Parallel, UnknownThenParallel));
+  Candidates = {LowerScored, Parallel};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, UnknownThenParallel), 1);
+}
+
+TEST_F(OpenMPContextTest, ScoringWideTotals) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  for (unsigned Bits : {63u, 64u, 127u}) {
+    SCOPED_TRACE(Bits);
+    APInt Score = APInt::getLowBitsSet(Bits + 1, Bits);
+    VariantMatchInfo Large, Small;
+    Large.addTrait(TraitProperty::user_condition_true, "", &Score);
+    Large.addTrait(TraitProperty::implementation_vendor_llvm, "", &Score);
+    Large.addTrait(TraitProperty::construct_parallel_parallel, "");
+    APInt SmallScore(32, 20);
+    Small.addTrait(TraitProperty::user_condition_true, "", &SmallScore);
+    SmallVector<VariantMatchInfo, 2> Candidates{Large, Small};
+    // The sum is 2^(Bits + 1), not zero after fixed-width overflow.
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+    std::swap(Candidates[0], Candidates[1]);
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    // Overflow to a nonzero value must not silently reverse the ranking.
+    Candidates[1].addTrait(TraitProperty::device_kind_cpu, "");
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+  }
+}
+
+TEST_F(OpenMPContextTest, ScoringDeepConstructs) {
+  for (unsigned Depth : {63u, 64u, 65u}) {
+    SCOPED_TRACE(Depth);
+    OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+    for (unsigned I = 0; I < Depth; ++I)
+      Context.addTrait(TraitProperty::construct_parallel_parallel);
+    APInt Weight = APInt::getOneBitSet(128, Depth - 1);
+    APInt Score = Weight - 1;
+    VariantMatchInfo Scored, Parallel;
+    Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+    Parallel.addTrait(TraitProperty::construct_parallel_parallel, "");
+    SmallVector<VariantMatchInfo, 2> Candidates{Scored, Parallel};
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Weight);
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  }
 }
 
 } // namespace

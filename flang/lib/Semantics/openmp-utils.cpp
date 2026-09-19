@@ -2389,10 +2389,9 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
       vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
           name->v, scorePtr);
     } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
-      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+      // Unknown properties remain inactive, but their selectors still
+      // contribute to scoring under match_any or match_none.
+      vmi.addUnknownTrait(selector, name->v, scorePtr);
     }
   }
 }
@@ -2480,17 +2479,18 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
         continue;
       }
       if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
+        llvm::StringRef condition{prop.source.begin(), prop.source.size()};
         vmi.addTrait(set,
             *constValue ? llvm::omp::TraitProperty::user_condition_true
                         : llvm::omp::TraitProperty::user_condition_false,
-            "<condition>", scorePtr);
+            condition, scorePtr);
         continue;
       }
       if (!dynamicCond) {
         dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
       }
       vmi.addTrait(set, llvm::omp::TraitProperty::user_condition_unknown,
-          "<condition>", scorePtr);
+          llvm::StringRef{prop.source.begin(), prop.source.size()}, scorePtr);
     }
     return;
   }
@@ -2505,6 +2505,13 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
   // the selector itself implies the property.
   if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
     AppendConstructTraitsForDirective(*dir, vmi);
+  } else if (const auto *value{std::get_if<parser::OmpTraitSelectorName::Value>(
+                 &traitName.u)}) {
+    // SIMD is a predefined selector name because it can take clause
+    // properties, unlike the other construct selectors.
+    if (*value == parser::OmpTraitSelectorName::Value::Simd) {
+      AppendConstructTraitsForDirective(llvm::omp::Directive::OMPD_simd, vmi);
+    }
   }
 }
 
@@ -2600,8 +2607,11 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
           staticVMI.ScoreMap.erase(scoreIt);
         }
         staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
+        staticVMI.UserCondition = {};
         llvm::APInt *conditionScorePtr{
             conditionScore ? &*conditionScore : nullptr};
+        llvm::StringRef conditionSource{
+            dynamicCondition->source.begin(), dynamicCondition->source.size()};
 
         bool hasMatchAny{rawVMI.RequiredTraits.test(unsigned(matchAnyTrait))};
         bool hasMatchNone{rawVMI.RequiredTraits.test(unsigned(matchNoneTrait))};
@@ -2610,15 +2620,13 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         // Only match_any can remain applicable when the static traits do not
         // match, because a true runtime condition may satisfy the selector.
         if (!isStaticVMIApplicable) {
-          if (!hasMatchAny ||
-              staticVMI.RequiredTraits.test(
-                  unsigned(llvm::omp::TraitProperty::invalid))) {
+          if (!hasMatchAny) {
             continue;
           }
 
           llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
           conditionTrueVMI.addTrait(
-              llvm::omp::TraitProperty::user_condition_true, "<condition>",
+              llvm::omp::TraitProperty::user_condition_true, conditionSource,
               conditionScorePtr);
           if (!llvm::omp::isVariantApplicableInContext(
                   conditionTrueVMI, matchContext)) {
@@ -2631,31 +2639,24 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
               rankingVMI.addTrait(hasMatchNone
                       ? dynamicConditionTrait
                       : llvm::omp::TraitProperty::user_condition_true,
-                  "<condition>", conditionScorePtr);
+                  conditionSource, conditionScorePtr);
             };
 
         if (hasMatchAny && isStaticVMIApplicable) {
           // Represent both outcomes: a guarded candidate with the condition's
-          // score and an unguarded candidate with only the static traits. If
-          // the WHEN clause omits its directive, only add the unguarded
-          // candidate.
-          if (isExplicit) {
-            llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
-            addConditionTraitForRanking(conditionTrueVMI);
-            result.candidates.push_back({spec, std::move(conditionTrueVMI),
-                isExplicit, dynamicCondition});
-          }
+          // score and an unguarded candidate with only the static traits.
+          llvm::omp::VariantMatchInfo conditionTrueVMI{staticVMI};
+          addConditionTraitForRanking(conditionTrueVMI);
+          result.candidates.push_back({spec, std::move(conditionTrueVMI),
+              isExplicit, dynamicCondition});
           result.candidates.push_back({spec, std::move(staticVMI), isExplicit});
           continue;
         }
 
         llvm::omp::VariantMatchInfo rankingVMI{staticVMI};
-        // Preserve the existing lowering behavior for an omitted directive:
-        // do not let its runtime condition raise the implicit NOTHING rank.
-        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
-          rankingVMI = llvm::omp::VariantMatchInfo();
-        else if (isExplicit)
-          addConditionTraitForRanking(rankingVMI);
+        // Implicit NOTHING participates in scoring just like an explicit
+        // replacement; explicitness only breaks ties between equal scores.
+        addConditionTraitForRanking(rankingVMI);
         result.candidates.push_back({spec, std::move(rankingVMI), isExplicit,
             dynamicCondition, /*conditionShouldBeTrue=*/!hasMatchNone});
         continue;
@@ -2889,7 +2890,8 @@ bool MayVariantBeSelected(
   bool userTrue{required.test(unsigned(TP::user_condition_true))};
   bool userUnknown{required.test(unsigned(TP::user_condition_unknown))};
   bool userFalse{required.test(unsigned(TP::user_condition_false))};
-  bool invalid{required.test(unsigned(TP::invalid))};
+  bool invalid{
+      required.test(unsigned(TP::invalid)) || !vmi.UnknownTraits.empty()};
 
   // The target-only LLVM matcher below skips user and construct traits while
   // retaining the global match kind. Account for those skipped traits first;
@@ -2949,7 +2951,10 @@ OmpVariantMatchContext::OmpVariantMatchContext(bool isDeviceCompilation,
           std::move(targetOffloadTriple), /*DeviceNum=*/-1),
       features_(std::move(targetFeatures)) {
   for (llvm::omp::TraitProperty trait : constructTraits) {
-    addTrait(trait);
+    if (trait == llvm::omp::TraitProperty::invalid)
+      addUnknownConstruct();
+    else
+      addTrait(trait);
   }
 }
 

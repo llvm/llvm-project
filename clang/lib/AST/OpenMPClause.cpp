@@ -3302,8 +3302,29 @@ TargetOMPContext::TargetOMPContext(
       DiagUnknownTrait(std::move(DiagUnknownTrait)) {
   ASTCtx.getFunctionFeatureMap(FeatureMap, CurrentFunctionDecl);
 
-  for (llvm::omp::TraitProperty Property : ConstructTraits)
-    addTrait(Property);
+  // The construct context starts at and includes the innermost target:
+  //
+  //   Enclosing stack: parallel -> target -> teams -> parallel
+  //   Matching context:            target -> teams -> parallel
+  //
+  // Constructs outside that target must not participate in matching or
+  // increase scoring depth. With no target, retain the entire stack.
+  auto Target = llvm::find(llvm::reverse(ConstructTraits),
+                           llvm::omp::TraitProperty::construct_target_target);
+  if (Target != ConstructTraits.rend())
+    ConstructTraits = ConstructTraits.take_back(
+        std::distance(ConstructTraits.rbegin(), Target) + 1);
+
+  // Constructs without selector properties still occupy scoring positions.
+  // For example, parallel -> task has depth two, with task represented by
+  // an invalid placeholder. Record its position without activating invalid
+  // as a matchable trait.
+  for (llvm::omp::TraitProperty Property : ConstructTraits) {
+    if (Property == llvm::omp::TraitProperty::invalid)
+      addUnknownConstruct();
+    else
+      addTrait(Property);
+  }
 }
 
 bool TargetOMPContext::matchesISATrait(StringRef RawString) const {
