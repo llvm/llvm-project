@@ -2000,6 +2000,17 @@ libc_support_library(
     hdrs = ["src/__support/frac128.h"],
     deps = [
         ":__support_big_int",
+        ":__support_frac64",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_frac256",
+    hdrs = ["src/__support/frac256.h"],
+    deps = [
+        ":__support_big_int",
+        ":__support_frac128",
         ":__support_macros_config",
     ],
 )
@@ -10029,21 +10040,39 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_math_pow",
-    hdrs = ["src/__support/math/pow.h"],
+    hdrs = [
+        "src/__support/math/pow.h",
+        "src/__support/math/pow_accurate_128.h",
+        "src/__support/math/pow_accurate_256.h",
+        "src/__support/math/pow_fast.h",
+        "src/__support/math/pow_utils.h",
+    ],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_cpp_optional",
         ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
         ":__support_fputil_sqrt",
+        ":__support_frac128",
+        ":__support_frac256",
+        ":__support_frac64",
+        ":__support_integer_literals",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
+        ":__support_math_exp10",
+        ":__support_math_exp2",
         ":__support_math_exp_constants",
+        ":__support_uint128",
         ":hdr_errno_macros",
         ":hdr_fenv_macros",
     ],
