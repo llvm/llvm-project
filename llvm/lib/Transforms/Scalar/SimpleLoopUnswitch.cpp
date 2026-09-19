@@ -256,32 +256,39 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
   }
 }
 
+/// Return true if \p V is a PHI node in the header of \p L.
+static bool isLoopHeaderPHI(const Loop &L, const Value *V) {
+  const auto *PN = dyn_cast<PHINode>(V);
+  return PN && PN->getParent() == L.getHeader();
+}
+
+/// Return the value \p V holds on entry to \p L. For a header PHI that is its
+/// incoming value from the preheader; any other value is returned unchanged.
+static Value *getLoopEntryValue(const Loop &L, Value *V) {
+  if (!isLoopHeaderPHI(L, V))
+    return V;
+  return cast<PHINode>(V)->getIncomingValueForBlock(L.getLoopPreheader());
+}
+
 /// Check that all the LCSSA PHI nodes in \p ExitBB have trivial incoming values
 /// along the edge from \p ExitingBB, i.e. values that are still correct if the
 /// loop is not entered.
 ///
-/// Only loop invariant values are trivial by default. If \p UsedHeaderPHI is
-/// non-null, a PHI in the loop header counts as trivial too, and
-/// *UsedHeaderPHI is set to true when one is found.
+/// Only loop invariant values are trivial by default. If \p AllowHeaderPHIs is
+/// set, a PHI in the loop header counts as trivial too.
 static bool areLoopExitPHIsTrivial(const Loop &L, const BasicBlock &ExitingBB,
                                    const BasicBlock &ExitBB,
-                                   bool *UsedHeaderPHI = nullptr) {
+                                   bool AllowHeaderPHIs = false) {
   for (const Instruction &I : ExitBB) {
     auto *PN = dyn_cast<PHINode>(&I);
     if (!PN)
       // No more PHIs to check.
       return true;
 
-    const Value *V = PN->getIncomingValueForBlock(&ExitingBB);
-    if (L.isLoopInvariant(V))
-      continue;
-
-    if (!UsedHeaderPHI)
+    const Value *Incoming = PN->getIncomingValueForBlock(&ExitingBB);
+    if (!L.isLoopInvariant(Incoming) &&
+        !(AllowHeaderPHIs && isLoopHeaderPHI(L, Incoming)))
       return false;
-    const auto *HeaderPN = dyn_cast<PHINode>(V);
-    if (!HeaderPN || HeaderPN->getParent() != L.getHeader())
-      return false;
-    *UsedHeaderPHI = true;
   }
   llvm_unreachable("Basic blocks should never be empty!");
 }
@@ -407,7 +414,8 @@ static void buildPartialInvariantUnswitchConditionalBranch(
 /// PHI nodes in that block such that what were LCSSA PHI nodes become trivial
 /// PHI nodes from the old preheader that now contains the unswitched
 /// terminator.
-static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
+static void rewritePHINodesForUnswitchedExitBlock(const Loop &L,
+                                                  BasicBlock &UnswitchedBB,
                                                   BasicBlock &OldExitingBB,
                                                   BasicBlock &OldPH) {
   for (PHINode &PN : UnswitchedBB.phis()) {
@@ -418,6 +426,7 @@ static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
       assert(PN.getIncomingBlock(i) == &OldExitingBB &&
              "Found incoming block different from unique predecessor!");
       PN.setIncomingBlock(i, &OldPH);
+      PN.setIncomingValue(i, getLoopEntryValue(L, PN.getIncomingValue(i)));
     }
   }
 }
@@ -429,11 +438,9 @@ static void rewritePHINodesForUnswitchedExitBlock(BasicBlock &UnswitchedBB,
 /// LCSSA PHI nodes in it to remove the unswitched edge and introduces PHI
 /// nodes into the unswitched basic block to select between the value in the
 /// old preheader and the loop exit.
-static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
-                                                      BasicBlock &UnswitchedBB,
-                                                      BasicBlock &OldExitingBB,
-                                                      BasicBlock &OldPH,
-                                                      bool FullUnswitch) {
+static void rewritePHINodesForExitAndUnswitchedBlocks(
+    const Loop &L, BasicBlock &ExitBB, BasicBlock &UnswitchedBB,
+    BasicBlock &OldExitingBB, BasicBlock &OldPH, bool FullUnswitch) {
   assert(&ExitBB != &UnswitchedBB &&
          "Must have different loop exit and unswitched blocks!");
   BasicBlock::iterator InsertPt = UnswitchedBB.begin();
@@ -460,7 +467,7 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
         // No more edge from the old exiting block to the exit block.
         PN.removeIncomingValue(i);
 
-      NewPN->addIncoming(Incoming, &OldPH);
+      NewPN->addIncoming(getLoopEntryValue(L, Incoming), &OldPH);
     }
 
     // Now replace the old PHI with the new one and wire the old one in as an
@@ -661,11 +668,9 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
 
   // If the exit incomings aren't loop-invariant, the unswitch is still trivial
   // when branch dominates the latch and every non-invariant incoming is a
-  // header PHI. Those incomings are repaired after unswitching.
-  // Branch always dominates the latch as guaranteed by the caller.
-  bool TrivialFromHeader = false;
-  if (!ModifiedBranch &&
-      !areLoopExitPHIsTrivial(L, *ParentBB, *LoopExitBB, &TrivialFromHeader)) {
+  // header PHI.
+  if (!ModifiedBranch && !areLoopExitPHIsTrivial(L, *ParentBB, *LoopExitBB,
+                                                 /*AllowHeaderPHIs=*/true)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
   }
@@ -802,23 +807,10 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
 
   // Rewrite the relevant PHI nodes.
   if (UnswitchedBB == LoopExitBB)
-    rewritePHINodesForUnswitchedExitBlock(*UnswitchedBB, *ParentBB, *OldPH);
+    rewritePHINodesForUnswitchedExitBlock(L, *UnswitchedBB, *ParentBB, *OldPH);
   else
-    rewritePHINodesForExitAndUnswitchedBlocks(*LoopExitBB, *UnswitchedBB,
+    rewritePHINodesForExitAndUnswitchedBlocks(L, *LoopExitBB, *UnswitchedBB,
                                               *ParentBB, *OldPH, FullUnswitch);
-
-  // OldPH branches here without entering the loop, so a header PHI is still
-  // its entry value. Read it from NewPH, the preheader created by the split.
-  if (TrivialFromHeader) {
-    for (PHINode &PN : UnswitchedBB->phis())
-      for (unsigned Idx = 0, E = PN.getNumIncomingValues(); Idx != E; ++Idx) {
-        if (PN.getIncomingBlock(Idx) != OldPH)
-          continue;
-        auto *HeaderPN = dyn_cast<PHINode>(PN.getIncomingValue(Idx));
-        if (HeaderPN && HeaderPN->getParent() == L.getHeader())
-          PN.setIncomingValue(Idx, HeaderPN->getIncomingValueForBlock(NewPH));
-      }
-  }
 
   // The constant we can replace all of our invariants with inside the loop
   // body. If any of the invariants have a value other than this the loop won't
@@ -1016,11 +1008,12 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   if (DefaultExitBB) {
     if (pred_empty(DefaultExitBB)) {
       UnswitchedExitBBs.insert(DefaultExitBB);
-      rewritePHINodesForUnswitchedExitBlock(*DefaultExitBB, *ParentBB, *OldPH);
+      rewritePHINodesForUnswitchedExitBlock(L, *DefaultExitBB, *ParentBB,
+                                            *OldPH);
     } else {
       auto *SplitBB =
           SplitBlock(DefaultExitBB, DefaultExitBB->begin(), &DT, &LI, MSSAU);
-      rewritePHINodesForExitAndUnswitchedBlocks(*DefaultExitBB, *SplitBB,
+      rewritePHINodesForExitAndUnswitchedBlocks(L, *DefaultExitBB, *SplitBB,
                                                 *ParentBB, *OldPH,
                                                 /*FullUnswitch*/ true);
       DefaultExitBB = SplitExitBBMap[DefaultExitBB] = SplitBB;
@@ -1037,7 +1030,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (pred_empty(ExitBB)) {
       // Only rewrite once.
       if (UnswitchedExitBBs.insert(ExitBB).second)
-        rewritePHINodesForUnswitchedExitBlock(*ExitBB, *ParentBB, *OldPH);
+        rewritePHINodesForUnswitchedExitBlock(L, *ExitBB, *ParentBB, *OldPH);
       continue;
     }
 
@@ -1047,7 +1040,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (!SplitExitBB) {
       // If this is the first time we see this, do the split and remember it.
       SplitExitBB = SplitBlock(ExitBB, ExitBB->begin(), &DT, &LI, MSSAU);
-      rewritePHINodesForExitAndUnswitchedBlocks(*ExitBB, *SplitExitBB,
+      rewritePHINodesForExitAndUnswitchedBlocks(L, *ExitBB, *SplitExitBB,
                                                 *ParentBB, *OldPH,
                                                 /*FullUnswitch*/ true);
     }
