@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -81,6 +82,35 @@ static bool is_kmod(Module *module) {
       objfile->GetType() != ObjectFile::eTypeSharedLibrary)
     return false;
 
+  return true;
+}
+
+static bool set_debug_file(const ModuleSP &module,
+                           llvm::StringRef target_path) {
+  if (!module || module->GetSymbolFileFileSpec())
+    return false;
+
+  FileSpec local_file = module->GetFileSpec();
+
+  FileSpec target_file(target_path);
+  if (!target_file.IsAbsolute())
+    return false;
+
+  std::string local_path = local_file.GetPath();
+  std::string normalized_target_path = target_file.GetPath();
+  llvm::StringRef local_sysroot(local_path);
+  if (!local_sysroot.consume_back(normalized_target_path))
+    return false;
+
+  std::string debug_path = local_sysroot.str();
+  debug_path += "/usr/lib/debug";
+  debug_path += normalized_target_path;
+  debug_path += ".debug";
+  FileSpec debug_file(debug_path);
+  if (!FileSystem::Instance().Exists(debug_file))
+    return false;
+
+  module->SetSymbolFileFileSpec(debug_file);
   return true;
 }
 
@@ -378,6 +408,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
             "system.\n");
       }
     }
+
+    if (m_module_sp && !IsKernel())
+      set_debug_file(m_module_sp, GetPath());
 
     if (m_module_sp) {
       // If the file is not kernel or kmod, the target should be loaded once and

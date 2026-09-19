@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
+
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -20,6 +24,7 @@
 #include "llvm/Support/Error.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "ProcessFreeBSDKernelCore.h"
 #include "ThreadFreeBSDKernelCore.h"
 
@@ -62,6 +67,58 @@ public:
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
+}
+
+static bool SetKernelDebugFile(const ModuleSP &module) {
+  if (!module)
+    return false;
+
+  FileSpec object_file = module->GetFileSpec();
+  FileSystem::Instance().Resolve(object_file);
+
+  FileSpec symbol_file = module->GetSymbolFileFileSpec();
+  if (symbol_file)
+    FileSystem::Instance().Resolve(symbol_file);
+  if (symbol_file && symbol_file != object_file)
+    return false;
+
+  auto *elf = llvm::dyn_cast_or_null<ObjectFileELF>(module->GetObjectFile());
+  if (!elf)
+    return false;
+
+  // GetDebugLink() returns information collected while parsing section
+  // headers, which might not have happened when a PT_NOTE supplied the UUID.
+  (void)elf->GetSectionList();
+  std::optional<FileSpec> debug_link = elf->GetDebugLink();
+  if (!debug_link || debug_link->GetFilename().empty())
+    return false;
+
+  // The kernel's linker_files list may require symbols from kernel.debug to
+  // locate.  Infer an extracted filesystem's root from the local kernel path
+  // and load its FreeBSD-installed debug file before the dynamic loader runs.
+  std::string object_path = object_file.GetPath();
+  FileSpec sysroot = object_file;
+  while (sysroot.RemoveLastPathComponent()) {
+    std::string sysroot_path = sysroot.GetPath();
+    llvm::StringRef relative_path(object_path);
+    if (!relative_path.consume_front(sysroot_path))
+      continue;
+    relative_path = relative_path.ltrim("/\\");
+
+    FileSpec relative_file(relative_path);
+    FileSpec debug_file = sysroot;
+    debug_file.AppendPathComponent("usr/lib/debug");
+    if (!relative_file.GetDirectory().empty())
+      debug_file.AppendPathComponent(relative_file.GetDirectory());
+    debug_file.AppendPathComponent(debug_link->GetFilename());
+    if (!FileSystem::Instance().Exists(debug_file))
+      continue;
+
+    module->SetSymbolFileFileSpec(debug_file);
+    return true;
+  }
+
+  return false;
 }
 
 class CommandObjectProcessFreeBSDKernelCoreRefreshThreads
@@ -195,6 +252,8 @@ Status ProcessFreeBSDKernelCore::DoLoadCore() {
     return Status::FromErrorString(
         "ProcessFreeBSDKernelCore: no executable module set on target");
 
+  bool symbols_changed = SetKernelDebugFile(executable);
+
   char errbuf[_POSIX2_LINE_MAX];
   m_kvm = kvm_open2(executable->GetFileSpec().GetPath().c_str(),
                     GetCoreFile().GetPath().c_str(), O_RDWR, errbuf, nullptr);
@@ -209,6 +268,12 @@ Status ProcessFreeBSDKernelCore::DoLoadCore() {
   }
 
   SetKernelDisplacement();
+
+  if (symbols_changed) {
+    ModuleList modules;
+    modules.Append(executable);
+    GetTarget().SymbolsDidLoad(modules);
+  }
 
   return Status();
 }
