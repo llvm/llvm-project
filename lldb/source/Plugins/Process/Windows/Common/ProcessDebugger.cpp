@@ -14,6 +14,7 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostNativeProcessBase.h"
+#include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -32,6 +33,25 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+/// Entry point of the thread DebugBreakProcess() injects into a target, i.e.
+/// ntdll!DbgUiRemoteBreakin. ntdll is mapped at the same address in every
+/// process of a given architecture for the lifetime of a boot, so the address
+/// resolved here is also the address the inferior reports in its
+/// CREATE_THREAD_DEBUG_EVENT. Returns LLDB_INVALID_ADDRESS if the export
+/// cannot be resolved.
+static lldb::addr_t GetBreakInThreadStartAddress() {
+  static const lldb::addr_t g_address = []() -> lldb::addr_t {
+    HMODULE ntdll = ::GetModuleHandleW(L"ntdll.dll");
+    if (!ntdll)
+      return LLDB_INVALID_ADDRESS;
+    FARPROC break_in = ::GetProcAddress(ntdll, "DbgUiRemoteBreakin");
+    if (!break_in)
+      return LLDB_INVALID_ADDRESS;
+    return reinterpret_cast<lldb::addr_t>(reinterpret_cast<void *>(break_in));
+  }();
+  return g_address;
+}
 
 static void NormalizeWindowsPathSeparators(std::string &s) {
   for (char &c : s)
@@ -597,12 +617,36 @@ ProcessDebugger::OnDebugException(bool first_chance,
   return result;
 }
 
-void ProcessDebugger::OnCreateThread(const HostThread &thread) {
-  // Do nothing by default
+void ProcessDebugger::OnCreateThread(const HostThread &thread,
+                                     lldb::addr_t start_address) {
+  llvm::sys::ScopedLock lock(m_mutex);
+  if (!m_session_data)
+    return;
+
+  const lldb::addr_t break_in_start = GetBreakInThreadStartAddress();
+  if (break_in_start == LLDB_INVALID_ADDRESS || start_address != break_in_start)
+    return;
+
+  lldb::tid_t thread_id = thread.GetNativeThread().GetThreadId();
+  LLDB_LOG(GetLog(WindowsLog::Thread),
+           "thread {0} starts at ntdll!DbgUiRemoteBreakin, tracking it as a "
+           "break-in thread",
+           thread_id);
+  m_session_data->m_break_in_threads.insert(thread_id);
 }
 
 void ProcessDebugger::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
-  // Do nothing by default
+  llvm::sys::ScopedLock lock(m_mutex);
+  // Windows reuses thread IDs, so this has to be dropped as soon as the thread
+  // is gone or a later thread inheriting the ID would be mistaken for it.
+  if (m_session_data)
+    m_session_data->m_break_in_threads.erase(thread_id);
+}
+
+bool ProcessDebugger::IsBreakInThread(lldb::tid_t thread_id) {
+  llvm::sys::ScopedLock lock(m_mutex);
+  return m_session_data &&
+         m_session_data->m_break_in_threads.count(thread_id) > 0;
 }
 
 DllEventAction ProcessDebugger::OnLoadDll(const ModuleSpec &module_spec,
