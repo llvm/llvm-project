@@ -20462,6 +20462,13 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
           llvm::countl_zero(getSubtarget()->getAddressableLocalMemorySize()));
       break;
     }
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane: {
+      // Result is the data operand's value from some lane.
+      VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), Known, DemandedElts,
+                              Depth + 1);
+      break;
+    }
     }
     break;
   }
