@@ -118,6 +118,8 @@ static void
 emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
                                  mlir::Location loc);
 
+static mlir::omp::TargetOp findEnclosingTargetOp(fir::FirOpBuilder &builder);
+
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
 //===----------------------------------------------------------------------===//
@@ -3617,6 +3619,86 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
+/// Decide whether the conditional-lastprivate copy-back for a worksharing
+/// construct inside \p targetOp must be deferred until after the enclosing
+/// omp.parallel (or the construct itself when there is no enclosing parallel).
+///
+/// The copy-back is emitted inside the enclosing parallel (in an omp.single)
+/// when that is valid and useful: the value then becomes visible to code that
+/// follows the construct in the same parallel region.  It is deferred when:
+///   - the kernel is SPMD / spmd_no_loop: the omp.parallel must capture only
+///     the omp.loop_nest, so a nested omp.single would fail verification; and a
+///     combined construct has no code between the loop and the end of the
+///     parallel, so deferral is lossless; or
+///   - there is no enclosing parallel (e.g. a standalone `target do`, or
+///     sections directly in the target): a single device thread runs the
+///     copy-back directly after the construct, and there is no team for an
+///     omp.single to bind to.
+static bool shouldDeferCondLpCopyBack(mlir::omp::TargetOp targetOp,
+                                      fir::FirOpBuilder &builder) {
+  mlir::omp::TargetExecMode kernelMode = targetOp.getKernelType();
+  bool isSpmd = kernelMode == mlir::omp::TargetExecMode::spmd ||
+                kernelMode == mlir::omp::TargetExecMode::spmd_no_loop;
+  return isSpmd || !findEnclosingParallelOp(builder);
+}
+
+/// Host placement of the conditional-lastprivate reduction struct for a
+/// sections construct.  Create the struct alloca outside the parent parallel
+/// (if any).  In the orphaned case (no enclosing ParallelOp), use a
+/// module-scope global so that all threads share one reduction target.
+static void placeCondLpStructForHostSections(
+    lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType lpType, mlir::Value &lpAlloca,
+    const llvm::SetVector<const semantics::Symbol *> &condLpSyms) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::omp::ParallelOp enclosingParallel = findEnclosingParallelOp(builder);
+  bool isOrphaned = !enclosingParallel;
+
+  // Guard against nested parallelism in the orphaned case.
+  // Emit this BEFORE touching the global to avoid racing on it.
+  if (isOrphaned)
+    emitNestedParallelGuardForCondLp(converter, loc);
+
+  if (enclosingParallel) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPoint(enclosingParallel);
+    lpAlloca = builder.createTemporary(loc, lpType);
+    initConditionalLpStruct(converter, loc, lpType, lpAlloca, condLpSyms);
+  } else {
+    lpAlloca = getOrCreateConditionalLpGlobal(converter, loc, lpType);
+    // The global is shared across all threads. Use omp.single (which
+    // has an implicit barrier at exit) so that exactly one thread
+    // initialises and all threads wait before entering the construct.
+    mlir::omp::SingleOperands initSingleOps;
+    auto singleOp = mlir::omp::SingleOp::create(builder, loc, initSingleOps);
+    mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+    builder.setInsertionPointToStart(singleBlock);
+    initConditionalLpStruct(converter, loc, lpType, lpAlloca, condLpSyms);
+    mlir::omp::TerminatorOp::create(builder, loc);
+    builder.setInsertionPointAfter(singleOp);
+  }
+}
+
+/// Device (GPU offload) placement of the conditional-lastprivate reduction
+/// struct for a sections construct lexically inside an omp.target.  Uses a
+/// per-team/target alloca: place it before the enclosing omp.parallel so it is
+/// shared across the team's threads; with no enclosing parallel (sections
+/// directly in the target) place it at the current point in the target body.
+/// It is created after the mapped-variable declares so firstprivate seeding can
+/// read their addresses.
+static void placeCondLpStructForTargetSections(
+    lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType lpType, mlir::Value &lpAlloca,
+    const llvm::SetVector<const semantics::Symbol *> &condLpSyms) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  if (mlir::omp::ParallelOp enclosingParallel =
+          findEnclosingParallelOp(builder))
+    builder.setInsertionPoint(enclosingParallel);
+  lpAlloca = builder.createTemporary(loc, lpType);
+  initConditionalLpStruct(converter, loc, lpType, lpAlloca, condLpSyms);
+}
+
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3647,39 +3729,25 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   auto &condLpSyms = dsp.getConditionalLastprivateSymbols();
   fir::RecordType lpType;
   mlir::Value lpAlloca;
+  // For sections deferral reduces to "no enclosing parallel" (sections never
+  // form an SPMD kernel): the copy-back then runs directly on a single device
+  // thread with no omp.single wrapper.
+  bool deferCopyBack = false;
   if (!condLpSyms.empty()) {
     lpType = buildConditionalLpType(converter, condLpSyms, loc);
     mlir::omp::DeclareReductionOp declRedOp =
         buildConditionalLastPrivateReduction(converter, lpType, condLpSyms);
 
-    // Create the struct alloca outside the parent parallel (if any).
-    // In the orphaned case (no enclosing ParallelOp), use a
-    // module-scope global so that all threads share one reduction target.
-    auto enclosingParallel = findEnclosingParallelOp(builder);
-    bool isOrphaned = !enclosingParallel;
-
-    // Guard against nested parallelism in the orphaned case.
-    // Emit this BEFORE touching the global to avoid racing on it.
-    if (isOrphaned)
-      emitNestedParallelGuardForCondLp(converter, loc);
-
-    if (enclosingParallel) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPoint(enclosingParallel);
-      lpAlloca = builder.createTemporary(loc, lpType);
-      initConditionalLpStruct(converter, loc, lpType, lpAlloca, condLpSyms);
+    if (mlir::omp::TargetOp targetOp = findEnclosingTargetOp(builder)) {
+      placeCondLpStructForTargetSections(converter, loc, lpType, lpAlloca,
+                                         condLpSyms);
+      // With an enclosing parallel the copy-back is an omp.single inside it
+      // (visible to following code); otherwise a single device thread runs it
+      // right after the sections.
+      deferCopyBack = shouldDeferCondLpCopyBack(targetOp, builder);
     } else {
-      lpAlloca = getOrCreateConditionalLpGlobal(converter, loc, lpType);
-      // The global is shared across all threads. Use omp.single (which
-      // has an implicit barrier at exit) so that exactly one thread
-      // initialises and all threads wait before entering the construct.
-      mlir::omp::SingleOperands initSingleOps;
-      auto singleOp = mlir::omp::SingleOp::create(builder, loc, initSingleOps);
-      mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
-      builder.setInsertionPointToStart(singleBlock);
-      initConditionalLpStruct(converter, loc, lpType, lpAlloca, condLpSyms);
-      mlir::omp::TerminatorOp::create(builder, loc);
-      builder.setInsertionPointAfter(singleOp);
+      placeCondLpStructForHostSections(converter, loc, lpType, lpAlloca,
+                                       condLpSyms);
     }
 
     clauseOps.reductionVars.push_back(lpAlloca);
@@ -3856,24 +3924,36 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   dsp.processStep2(sectionsOp, false);
   // Emit barrier when nowait is present and conditional lastprivate reduction
   // results must be finalized before copy-back.
-  if (clauseOps.nowait && !condLpSyms.empty())
+  if (clauseOps.nowait && !condLpSyms.empty() && !deferCopyBack)
     mlir::omp::BarrierOp::create(builder, loc);
 
   // Copy-back: copy winning values from the shared reduction struct to the
-  // original variables.  When nowait is absent, the worksharing construct's
-  // implicit end-barrier guarantees all reductions are combined before we
-  // reach this point.  When nowait is present, the barrier above ensures
-  // the reduction is fully finalized before reading the struct.  Wrapped in
-  // omp.single so exactly one thread performs the stores, at the sections
-  // construct's barrier (the semantically correct finalization point) inside
-  // the enclosing parallel.  Because this copy-back adds a second
-  // immediately-nested construct to the parallel, the parallel is not marked
-  // omp.combined (see the combined-marking logic in genOMPDispatch).
+  // original variables.
   if (!condLpSyms.empty()) {
-    mlir::omp::SingleOperands singleClauseOps;
-    auto singleOp = mlir::omp::SingleOp::create(builder, loc, singleClauseOps);
-    mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
-    builder.setInsertionPointToStart(singleBlock);
+    mlir::OpBuilder::InsertionGuard guard(builder);
+
+    if (deferCopyBack) {
+      // Sections lexically directly inside the target (no enclosing parallel):
+      // insert the copy-back right after the sections, still inside the target
+      // body and after the reduction completes.  A single device thread runs
+      // it, so no omp.single is needed.
+      builder.setInsertionPointAfter(sectionsOp.getOperation());
+    } else {
+      // When nowait is absent, the worksharing construct's implicit end-barrier
+      // guarantees all reductions are combined before we reach this point.
+      // When nowait is present, the barrier above ensures the reduction is
+      // fully finalized before reading the struct.  Wrapped in omp.single so
+      // exactly one thread performs the stores, at the sections construct's
+      // barrier (the semantically correct finalization point) inside the
+      // enclosing parallel.  Because this copy-back adds a second
+      // immediately-nested construct to the parallel, the parallel is not
+      // marked omp.combined (see the combined-marking logic in genOMPDispatch).
+      mlir::omp::SingleOperands singleClauseOps;
+      auto singleOp =
+          mlir::omp::SingleOp::create(builder, loc, singleClauseOps);
+      mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+      builder.setInsertionPointToStart(singleBlock);
+    }
 
     for (auto &[origAddr, symName] : condLpOrigAddrs) {
       unsigned valFieldIdx = lpType.getFieldIndex(symName);
@@ -3886,7 +3966,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           llvm::SmallVector<fir::IntOrValue, 1>{valFIdx});
       mlir::Value val = fir::LoadOp::create(builder, loc, fieldAddr);
 
-      // Only copy back if some iteration actually assigned to this variable
+      // Only copy back if some section actually assigned to this variable
       // (index >= 0).  Otherwise the original must not be overwritten.
       unsigned idxFieldIdx = lpType.getFieldIndex("$" + symName);
       fir::IntOrValue idxFIdx =
@@ -3905,7 +3985,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       fir::StoreOp::create(builder, loc, val, origAddr);
       builder.setInsertionPointAfter(ifOp);
     }
-    mlir::omp::TerminatorOp::create(builder, loc);
+    // Close the omp.single region on the host path.
+    if (!deferCopyBack)
+      mlir::omp::TerminatorOp::create(builder, loc);
   }
 
   return sectionsOp;
@@ -4859,13 +4941,32 @@ static void initConditionalLpStruct(
   }
 }
 
+/// Whether the current insertion point is inside a function explicitly marked
+/// `declare target` -- i.e. code that may be compiled for the device.
+static bool isInsideDeclareTargetFunction(fir::FirOpBuilder &builder) {
+  for (auto *op = builder.getInsertionBlock()->getParentOp(); op;
+       op = op->getParentOp()) {
+    if (auto funcOp = llvm::dyn_cast<mlir::func::FuncOp>(op)) {
+      if (auto declTgt =
+              llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(*funcOp))
+        return static_cast<bool>(declTgt.getDeclareTarget());
+      return false;
+    }
+  }
+  return false;
+}
+
 /// Emit a runtime guard for orphaned conditional-lastprivate worksharing
 /// constructs.  The module-scope global used for the reduction struct is
 /// shared across all teams, so concurrent nested teams would race on it.
 /// Clang has a similar limitation for conditional lastprivate due to its
 /// use of a shared global variable.
 ///
-/// Emits:  if (omp_get_level() > 1) ERROR STOP "<message>"
+/// Emits:  if (omp_get_level() > 1) <abort>
+///
+/// If the enclosing function has `declare target`, the abort uses llvm.trap
+/// (device-compatible).  Otherwise it uses _FortranAStopStatementText to
+/// print a diagnostic message before aborting.
 static void
 emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
                                  mlir::Location loc) {
@@ -4873,14 +4974,19 @@ emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
   mlir::MLIRContext *ctx = builder.getContext();
   mlir::Type i32Ty = builder.getI32Type();
 
-  // Declare omp_get_level_() -> i32 if not already present.
+  // If the enclosing function has declare target the code may run on device,
+  // where _FortranAStopStatementText is unavailable.
+  bool mayRunOnDevice = isInsideDeclareTargetFunction(builder);
+
+  // Declare omp_get_level() -> i32 (C name, available on both host and
+  // device) if not already present.
   auto funcTy = mlir::FunctionType::get(ctx, {}, {i32Ty});
-  if (!builder.getNamedFunction("omp_get_level_"))
-    builder.createFunction(loc, "omp_get_level_", funcTy);
+  if (!builder.getNamedFunction("omp_get_level"))
+    builder.createFunction(loc, "omp_get_level", funcTy);
 
   mlir::Value level =
       fir::CallOp::create(builder, loc,
-                          builder.getNamedFunction("omp_get_level_"),
+                          builder.getNamedFunction("omp_get_level"),
                           mlir::ValueRange{})
           .getResult(0);
   mlir::Value one = builder.createIntegerConstant(loc, i32Ty, 1);
@@ -4891,43 +4997,52 @@ emitNestedParallelGuardForCondLp(lower::AbstractConverter &converter,
                                 /*withElse=*/false);
   builder.setInsertionPoint(ifOp.getThenRegion().front().getTerminator());
 
-  // Build a global string constant for the error message.
-  llvm::StringRef msg =
-      "orphaned worksharing construct with lastprivate(conditional:) "
-      "is not supported in nested parallelism";
-  std::string globalName = "_lp_cond_nested_msg";
-  size_t msgLen = msg.size();
-  auto charTy = fir::CharacterType::get(ctx, 1, msgLen);
-  if (!builder.getNamedGlobal(globalName)) {
-    fir::GlobalOp global = builder.createGlobal(
-        loc, charTy, globalName, builder.createInternalLinkage(),
-        /*value=*/mlir::Attribute{}, /*isConst=*/true);
-    mlir::Region &region = global.getRegion();
-    mlir::Block *block = builder.createBlock(&region);
-    builder.setInsertionPointToStart(block);
-    mlir::Value val = fir::StringLitOp::create(builder, loc, charTy, msg);
-    fir::HasValueOp::create(builder, loc, val);
-    builder.setInsertionPoint(ifOp.getThenRegion().front().getTerminator());
+  if (mayRunOnDevice) {
+    // llvm.trap -- device-compatible abort (no diagnostic message).
+    auto trapTy = mlir::FunctionType::get(ctx, {}, {});
+    if (!builder.getNamedFunction("llvm.trap"))
+      builder.createFunction(loc, "llvm.trap", trapTy);
+    fir::CallOp::create(builder, loc, builder.getNamedFunction("llvm.trap"),
+                        mlir::ValueRange{});
+  } else {
+    // Build a global string constant for the error message.
+    llvm::StringRef msg =
+        "orphaned worksharing construct with lastprivate(conditional:) "
+        "is not supported in nested parallelism";
+    std::string globalName = "_lp_cond_nested_msg";
+    size_t msgLen = msg.size();
+    auto charTy = fir::CharacterType::get(ctx, 1, msgLen);
+    if (!builder.getNamedGlobal(globalName)) {
+      fir::GlobalOp global = builder.createGlobal(
+          loc, charTy, globalName, builder.createInternalLinkage(),
+          /*value=*/mlir::Attribute{}, /*isConst=*/true);
+      mlir::Region &region = global.getRegion();
+      mlir::Block *block = builder.createBlock(&region);
+      builder.setInsertionPointToStart(block);
+      mlir::Value val = fir::StringLitOp::create(builder, loc, charTy, msg);
+      fir::HasValueOp::create(builder, loc, val);
+      builder.setInsertionPoint(ifOp.getThenRegion().front().getTerminator());
+    }
+
+    // Declare _FortranAStopStatementText if not already present.
+    mlir::Type i64Ty = builder.getI64Type();
+    mlir::Type i1Ty = builder.getI1Type();
+    mlir::Type ptrTy = builder.getRefType(builder.getIntegerType(8));
+    auto stopTy = mlir::FunctionType::get(ctx, {ptrTy, i64Ty, i1Ty, i1Ty}, {});
+    if (!builder.getNamedFunction("_FortranAStopStatementText"))
+      builder.createFunction(loc, "_FortranAStopStatementText", stopTy);
+
+    mlir::Value msgAddr =
+        fir::AddrOfOp::create(builder, loc, builder.getRefType(charTy),
+                              builder.getSymbolRefAttr(globalName));
+    mlir::Value msgPtr = builder.createConvert(loc, ptrTy, msgAddr);
+    mlir::Value len = builder.createIntegerConstant(loc, i64Ty, msgLen);
+    mlir::Value trueVal = builder.createIntegerConstant(loc, i1Ty, 1);
+    mlir::Value falseVal = builder.createIntegerConstant(loc, i1Ty, 0);
+    fir::CallOp::create(builder, loc,
+                        builder.getNamedFunction("_FortranAStopStatementText"),
+                        mlir::ValueRange{msgPtr, len, trueVal, falseVal});
   }
-
-  // Declare _FortranAStopStatementText if not already present.
-  mlir::Type i64Ty = builder.getI64Type();
-  mlir::Type i1Ty = builder.getI1Type();
-  mlir::Type ptrTy = builder.getRefType(builder.getIntegerType(8));
-  auto stopTy = mlir::FunctionType::get(ctx, {ptrTy, i64Ty, i1Ty, i1Ty}, {});
-  if (!builder.getNamedFunction("_FortranAStopStatementText"))
-    builder.createFunction(loc, "_FortranAStopStatementText", stopTy);
-
-  mlir::Value msgAddr =
-      fir::AddrOfOp::create(builder, loc, builder.getRefType(charTy),
-                            builder.getSymbolRefAttr(globalName));
-  mlir::Value msgPtr = builder.createConvert(loc, ptrTy, msgAddr);
-  mlir::Value len = builder.createIntegerConstant(loc, i64Ty, msgLen);
-  mlir::Value trueVal = builder.createIntegerConstant(loc, i1Ty, 1);
-  mlir::Value falseVal = builder.createIntegerConstant(loc, i1Ty, 0);
-  fir::CallOp::create(builder, loc,
-                      builder.getNamedFunction("_FortranAStopStatementText"),
-                      mlir::ValueRange{msgPtr, len, trueVal, falseVal});
 
   builder.setInsertionPointAfter(ifOp);
 }
@@ -4982,6 +5097,90 @@ getOrCreateConditionalLpGlobal(lower::AbstractConverter &converter,
                                global.getSymbol());
 }
 
+/// Return the innermost enclosing omp.target, or a null op if the current
+/// insertion point is not inside a target region (i.e. host lowering).
+static mlir::omp::TargetOp findEnclosingTargetOp(fir::FirOpBuilder &builder) {
+  for (auto *op = builder.getInsertionBlock()->getParentOp(); op;
+       op = op->getParentOp()) {
+    if (auto targetOp = mlir::dyn_cast<mlir::omp::TargetOp>(op))
+      return targetOp;
+  }
+  return {};
+}
+
+/// Return the innermost enclosing omp.teams, or a null op if there is none.
+static mlir::omp::TeamsOp findEnclosingTeamsOp(fir::FirOpBuilder &builder) {
+  for (auto *op = builder.getInsertionBlock()->getParentOp(); op;
+       op = op->getParentOp()) {
+    if (auto teamsOp = mlir::dyn_cast<mlir::omp::TeamsOp>(op))
+      return teamsOp;
+  }
+  return {};
+}
+
+/// Host placement of the conditional-lastprivate reduction struct for a
+/// worksharing loop.  Create the struct alloca OUTSIDE the parent omp.parallel
+/// (if any), so the reduction result persists after the parallel region ends.
+/// In the orphaned case (no enclosing ParallelOp), use a module-scope global
+/// so that all threads share one reduction target.
+static void placeConditionalLpStructOnHost(lower::AbstractConverter &converter,
+                                           mlir::Location loc,
+                                           fir::RecordType lpType,
+                                           mlir::Value &lpAlloca) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::omp::ParallelOp enclosingParallel = findEnclosingParallelOp(builder);
+  bool isOrphaned = !enclosingParallel;
+
+  // Guard against nested parallelism in the orphaned case.
+  // Emit this BEFORE touching the global to avoid racing on it.
+  if (isOrphaned)
+    emitNestedParallelGuardForCondLp(converter, loc);
+
+  if (enclosingParallel) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPoint(enclosingParallel);
+    lpAlloca = builder.createTemporary(loc, lpType);
+    // Index fields are initialised to -1 so the combiner's "sequentially
+    // last" comparison treats them as "no iteration has written yet"
+    // (any real canonical loop IV >= 0 beats -1).
+    initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
+  } else {
+    lpAlloca = getOrCreateConditionalLpGlobal(converter, loc, lpType);
+    // The global is shared across all threads. Use omp.single (which
+    // has an implicit barrier at exit) so that exactly one thread
+    // initialises and all threads wait before entering the construct.
+    mlir::omp::SingleOperands initSingleOps;
+    auto singleOp = mlir::omp::SingleOp::create(builder, loc, initSingleOps);
+    mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+    builder.setInsertionPointToStart(singleBlock);
+    initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
+    mlir::omp::TerminatorOp::create(builder, loc);
+    builder.setInsertionPointAfter(singleOp);
+  }
+}
+
+/// Device (GPU offload) placement of the conditional-lastprivate reduction
+/// struct for a worksharing loop nested inside an omp.target region.
+///
+/// Each team runs an independent wsloop reduction, so the struct is allocated
+/// at the start of the enclosing omp.teams body (or the omp.target body when
+/// there is no teams) to give every team its own reduction target rather than
+/// racing on a single shared alloca.  The copy-back is likewise deferred until
+/// after the parallel region (see genStandaloneDo).
+static void placeConditionalLpStructInTarget(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             fir::RecordType lpType,
+                                             mlir::omp::TargetOp targetOp,
+                                             mlir::Value &lpAlloca) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  if (mlir::omp::TeamsOp teamsOp = findEnclosingTeamsOp(builder))
+    builder.setInsertionPointToStart(&teamsOp.getRegion().front());
+  else
+    builder.setInsertionPointToStart(&targetOp.getRegion().front());
+  lpAlloca = builder.createTemporary(loc, lpType);
+  initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
+}
+
 static mlir::omp::WsloopOp genStandaloneDo(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
@@ -5009,6 +5208,7 @@ static mlir::omp::WsloopOp genStandaloneDo(
   auto &condLpSyms = dsp.getConditionalLastprivateSymbols();
   fir::RecordType lpType; // hoisted for post-loop rewrite pass
   mlir::Value lpAlloca;   // hoisted for post-reduction copy-back
+  bool deferCopyBack = false;
   if (!condLpSyms.empty()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     // lastprivate(conditional:) is correct under any schedule (including
@@ -5020,38 +5220,19 @@ static mlir::omp::WsloopOp genStandaloneDo(
     mlir::omp::DeclareReductionOp declRedOp =
         buildConditionalLastPrivateReduction(converter, lpType, condLpSyms);
 
-    // Create the struct alloca OUTSIDE the parent omp.parallel (if any),
-    // so the reduction result persists after the parallel region ends.
-    // In the orphaned case (no enclosing ParallelOp), use a
-    // module-scope global so that all threads share one reduction target.
-    auto enclosingParallel = findEnclosingParallelOp(builder);
-    bool isOrphaned = !enclosingParallel;
-
-    // Guard against nested parallelism in the orphaned case.
-    // Emit this BEFORE touching the global to avoid racing on it.
-    if (isOrphaned)
-      emitNestedParallelGuardForCondLp(converter, loc);
-
-    if (enclosingParallel) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPoint(enclosingParallel);
-      lpAlloca = builder.createTemporary(loc, lpType);
-      // Index fields are initialised to -1 so the combiner's "sequentially
-      // last" comparison treats them as "no iteration has written yet"
-      // (any real canonical loop IV >= 0 beats -1).
-      initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
+    // Place the reduction struct.  Keep the host and device (GPU offload)
+    // paths separate: on GPU the alloca must live inside the enclosing
+    // omp.target region, whereas the host placement is unchanged from the
+    // CPU-only lowering.
+    if (mlir::omp::TargetOp targetOp = findEnclosingTargetOp(builder)) {
+      placeConditionalLpStructInTarget(builder, loc, lpType, targetOp,
+                                       lpAlloca);
+      // A generic or bare kernel with an enclosing parallel copies back in an
+      // omp.single inside the parallel (visible to following code); SPMD
+      // kernels and the no-enclosing-parallel case defer (see helper).
+      deferCopyBack = shouldDeferCondLpCopyBack(targetOp, builder);
     } else {
-      lpAlloca = getOrCreateConditionalLpGlobal(converter, loc, lpType);
-      // The global is shared across all threads. Use omp.single (which
-      // has an implicit barrier at exit) so that exactly one thread
-      // initialises and all threads wait before entering the construct.
-      mlir::omp::SingleOperands initSingleOps;
-      auto singleOp = mlir::omp::SingleOp::create(builder, loc, initSingleOps);
-      mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
-      builder.setInsertionPointToStart(singleBlock);
-      initConditionalLpStructDefault(builder, loc, lpType, lpAlloca);
-      mlir::omp::TerminatorOp::create(builder, loc);
-      builder.setInsertionPointAfter(singleOp);
+      placeConditionalLpStructOnHost(converter, loc, lpType, lpAlloca);
     }
 
     // Append to wsloop clause operands.
@@ -5119,26 +5300,45 @@ static mlir::omp::WsloopOp genStandaloneDo(
 
   // Post-reduction copy-back.  When nowait is absent, the wsloop's implicit
   // end-barrier guarantees all reductions are combined.  When nowait is
-  // present, an explicit barrier is needed before reading the struct.
-  // Wrapped in omp.single so exactly one thread performs the stores, at the
-  // worksharing construct's barrier (the semantically correct finalization
-  // point) inside the enclosing parallel.  Because this copy-back adds a second
-  // immediately-nested construct to the parallel, the parallel is not marked
-  // omp.combined (see the combined-marking logic in genOMPDispatch).
+  // present, an explicit barrier is needed before reading the struct.  The
+  // deferCopyBack placement policy is documented on shouldDeferCondLpCopyBack.
   if (!condLpSyms.empty()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Insert right after the wsloop, still inside the parallel body.
-    builder.setInsertionPointAfter(wsloopOp);
+    if (deferCopyBack) {
+      // Inside a target region: insert the copy-back after the enclosing
+      // omp.parallel so all threads have finished the wsloop.  If there is no
+      // enclosing parallel (e.g. a standalone `target do`), insert right after
+      // the wsloop, which is still inside the target body and runs after the
+      // reduction completes.
+      mlir::Operation *op = wsloopOp->getParentOp();
+      while (op && !mlir::isa<mlir::omp::ParallelOp>(op))
+        op = op->getParentOp();
+      if (op)
+        builder.setInsertionPointAfter(op);
+      else
+        builder.setInsertionPointAfter(wsloopOp);
+    } else {
+      // Host, or a generic target kernel with an enclosing parallel: insert
+      // right after the wsloop, inside the parallel body.
+      builder.setInsertionPointAfter(wsloopOp);
 
-    if (wsloopClauseOps.nowait)
-      mlir::omp::BarrierOp::create(builder, loc);
+      if (wsloopClauseOps.nowait)
+        mlir::omp::BarrierOp::create(builder, loc);
 
-    mlir::omp::SingleOperands singleClauseOps;
-    auto singleOp = mlir::omp::SingleOp::create(builder, loc, singleClauseOps);
-    mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
-    builder.setInsertionPointToStart(singleBlock);
+      // Wrapped in omp.single so exactly one thread performs the stores, at
+      // the worksharing construct's barrier (the semantically correct
+      // finalization point) inside the enclosing parallel.  Because this
+      // copy-back adds a second immediately-nested construct to the parallel,
+      // the parallel is not marked omp.combined (see the combined-marking logic
+      // in genOMPDispatch).
+      mlir::omp::SingleOperands singleClauseOps;
+      auto singleOp =
+          mlir::omp::SingleOp::create(builder, loc, singleClauseOps);
+      mlir::Block *singleBlock = builder.createBlock(&singleOp.getRegion());
+      builder.setInsertionPointToStart(singleBlock);
+    }
 
     for (auto &[origAddr, symName] : condLpOrigAddrs) {
       unsigned valFieldIdx = lpType.getFieldIndex(symName);
@@ -5170,7 +5370,9 @@ static mlir::omp::WsloopOp genStandaloneDo(
       fir::StoreOp::create(builder, loc, val, origAddr);
       builder.setInsertionPointAfter(ifOp);
     }
-    mlir::omp::TerminatorOp::create(builder, loc);
+    // Close the omp.single region on the host path.
+    if (!deferCopyBack)
+      mlir::omp::TerminatorOp::create(builder, loc);
   }
 
   return wsloopOp;
@@ -6177,6 +6379,32 @@ getReductionType(lower::AbstractConverter &converter,
   return reductionType;
 }
 
+/// Return a loop bound/step as a statically-known constant.  On an SPMD target
+/// loop the value is a host_eval block argument of the enclosing omp.target
+/// rather than the original constant, so trace through it to the mapped
+/// operand.
+static std::optional<llvm::APInt>
+getConstantThroughHostEval(mlir::Value value) {
+  if (std::optional<llvm::APInt> cst = fir::getIntIfConstant(value))
+    return cst;
+  auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value);
+  if (!blockArg)
+    return std::nullopt;
+  auto targetOp =
+      mlir::dyn_cast<mlir::omp::TargetOp>(blockArg.getOwner()->getParentOp());
+  if (!targetOp)
+    return std::nullopt;
+  auto iface =
+      mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(targetOp.getOperation());
+  llvm::MutableArrayRef<mlir::BlockArgument> hostEvalArgs =
+      iface.getHostEvalBlockArgs();
+  mlir::OperandRange hostEvalVars = targetOp.getHostEvalVars();
+  for (auto [idx, arg] : llvm::enumerate(hostEvalArgs))
+    if (arg == value)
+      return fir::getIntIfConstant(hostEvalVars[idx]);
+  return std::nullopt;
+}
+
 /// Compute a flattened canonical (0-based, always ascending) iteration number
 /// from all loop IVs.  For a single loop, this is simply (IV - LB) / step.
 /// For collapsed loops with dimensions d0..dN, the flattened index is:
@@ -6185,6 +6413,12 @@ getReductionType(lower::AbstractConverter &converter,
 /// This yields a unique monotonic index regardless of loop direction,
 /// which is essential for the combiner's `sgt` comparison to correctly
 /// identify the sequentially last iteration.
+///
+/// In a target region the loop bounds may be host_eval block arguments that
+/// the verifier forbids in arithmetic ops.  In that case lowering only supports
+/// a single forward loop with a known non-negative lower bound and known
+/// positive step, so the raw loop IV is already a valid canonical index and is
+/// used directly; any other shape emits a TODO rather than a wrong result.
 static mlir::Value
 computeFlattenedCanonicalIV(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::omp::LoopNestOp loopNestOp) {
@@ -6193,6 +6427,53 @@ computeFlattenedCanonicalIV(fir::FirOpBuilder &builder, mlir::Location loc,
   auto ubs = loopNestOp.getLoopUpperBounds();
   auto steps = loopNestOp.getLoopSteps();
   unsigned numDims = lbs.size();
+
+  // On an SPMD target loop the bounds arrive as host_eval block args, which the
+  // verifier forbids in arithmetic ops.  The flattened canonical index cannot
+  // be computed without that arithmetic, so only a single forward-stepping loop
+  // is supported: its raw IV is already a monotonically increasing sequencing
+  // index.  A collapsed nest (which needs per-dimension trip counts) or a
+  // negative step (which needs direction normalisation) is not yet implemented
+  // on the device -- emit a TODO rather than a silently-wrong result.
+  auto isHostEvalArg = [](mlir::Value v) -> bool {
+    auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(v);
+    if (!blockArg)
+      return false;
+    auto *parentOp = blockArg.getOwner()->getParentOp();
+    return parentOp && mlir::isa<mlir::omp::TargetOp>(parentOp);
+  };
+  // Scan every dimension, not just dim 0: a collapsed nest may have constant
+  // bounds in the outer dimension but host_eval bounds in an inner one.  If any
+  // bound in any dimension is a host_eval block arg, the generic arithmetic
+  // path below would use it in an arith op, which the verifier forbids, so take
+  // the restricted host_eval path instead.
+  bool anyHostEval = false;
+  for (unsigned d = 0; d < numDims; ++d)
+    if (isHostEvalArg(lbs[d]) || isHostEvalArg(ubs[d]) ||
+        isHostEvalArg(steps[d])) {
+      anyHostEval = true;
+      break;
+    }
+  if (anyHostEval) {
+    if (numDims != 1)
+      TODO(loc, "lastprivate(conditional:) with collapse on a target region");
+    // The raw IV is used directly as the sequencing index.  The combiner uses
+    // -1 as the "no iteration has written" sentinel and the copy-back is
+    // guarded by index >= 0, so the raw IV must be non-negative and
+    // monotonically increasing.  That holds only when the lower bound is a
+    // known non-negative constant and the step is a known positive constant;
+    // otherwise emit a TODO rather than a silently-wrong result.
+    std::optional<llvm::APInt> step = getConstantThroughHostEval(steps[0]);
+    if (!step || !step->isStrictlyPositive())
+      TODO(loc, "lastprivate(conditional:) with a non-positive or non-constant "
+                "step on a target region");
+    std::optional<llvm::APInt> lb = getConstantThroughHostEval(lbs[0]);
+    if (!lb || lb->isNegative())
+      TODO(loc, "lastprivate(conditional:) with a negative or non-constant "
+                "lower bound on a target region");
+    mlir::Value iv = region.front().getArgument(0);
+    return fir::ConvertOp::create(builder, loc, builder.getI64Type(), iv);
+  }
 
   // Use i64 for the flattened index to avoid overflow.
   mlir::Type i64Ty = builder.getI64Type();
