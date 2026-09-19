@@ -3728,6 +3728,27 @@ AMDGPUInstructionSelector::matchExtendFromS32OrS32(Register Reg,
   return matchZeroExtendFromS32OrS32(Reg);
 }
 
+Register
+AMDGPUInstructionSelector::tryNarrowToI32(Register Reg, bool IsSigned,
+                                          MachineInstr &InsertPt) const {
+  if (Register Ext = matchExtendFromS32OrS32(Reg, IsSigned))
+    return Ext;
+
+  if (MRI->getType(Reg) != LLT::scalar(64))
+    return Register();
+
+  if (IsSigned ? VT->computeNumSignBits(Reg) <= 32
+               : VT->getKnownBits(Reg).countMinLeadingZeros() < 32)
+    return Register();
+
+  Register Low = MRI->createVirtualRegister(
+      isSGPR(Reg) ? &AMDGPU::SReg_32RegClass : &AMDGPU::VGPR_32RegClass);
+  BuildMI(*InsertPt.getParent(), InsertPt, InsertPt.getDebugLoc(),
+          TII.get(AMDGPU::COPY), Low)
+      .addReg(Reg, {}, AMDGPU::sub0);
+  return Low;
+}
+
 Register AMDGPUInstructionSelector::matchAnyExtendFromS32(Register Reg) const {
   Register AnyExtSrc;
   if (mi_match(Reg, *MRI, m_GAnyExt(m_Reg(AnyExtSrc))))
@@ -5908,7 +5929,7 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
         if (ScaleOffset)
           *ScaleOffset =
               selectScaleOffset(Root, OffsetReg, false /* IsSigned */);
-        OffsetReg = matchZeroExtendFromS32OrS32(OffsetReg);
+        OffsetReg = tryNarrowToI32(OffsetReg, /*IsSigned=*/false, *MI);
         if (OffsetReg) {
           Base = GEPI2.SgprParts[0];
           *SOffset = OffsetReg;
@@ -5957,7 +5978,7 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
     Register OffsetReg = GEPI.SgprParts[1];
     if (ScaleOffset)
       *ScaleOffset = selectScaleOffset(Root, OffsetReg, false /* IsSigned */);
-    OffsetReg = matchZeroExtendFromS32OrS32(OffsetReg);
+    OffsetReg = tryNarrowToI32(OffsetReg, /*IsSigned=*/false, *MI);
     if (OffsetReg) {
       Base = GEPI.SgprParts[0];
       *SOffset = OffsetReg;
@@ -6183,16 +6204,17 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
     // Look through the SGPR->VGPR copy.
     Register SAddr =
         getSrcRegIgnoringCopies(AddrDef->MI->getOperand(1).getReg(), *MRI);
+    Register PtrBaseOffset = AddrDef->MI->getOperand(2).getReg();
 
-    if (isSGPR(SAddr)) {
-      Register PtrBaseOffset = AddrDef->MI->getOperand(2).getReg();
-
+    // Don't push constants back out.
+    if (isSGPR(SAddr) && !getIConstantVRegVal(PtrBaseOffset, *MRI)) {
       // It's possible voffset is an SGPR here, but the copy to VGPR will be
       // inserted later.
       bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
                                            Subtarget->hasSignedGVSOffset());
-      if (Register VOffset = matchExtendFromS32OrS32(
-              PtrBaseOffset, Subtarget->hasSignedGVSOffset())) {
+      if (Register VOffset =
+              tryNarrowToI32(PtrBaseOffset, Subtarget->hasSignedGVSOffset(),
+                             *Root.getParent())) {
         if (NeedIOffset)
           return {{[=](MachineInstrBuilder &MIB) { // saddr
                      MIB.addReg(SAddr);
