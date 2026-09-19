@@ -48,6 +48,10 @@ AllowStridedPointerIVs("lv-strided-pointer-ivs", cl::init(false), cl::Hidden,
                        cl::desc("Enable recognition of non-constant strided "
                                 "pointer induction variables."));
 
+static cl::opt<bool> EnableCompressingPatterns(
+    "lv-compressing-patterns", cl::init(false), cl::Hidden,
+    cl::desc("Enable recognition of compressing patterns."));
+
 static cl::opt<bool>
     HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
                          cl::desc("Allow enabling loop hints to reorder "
@@ -463,6 +467,13 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
                             : SymbolicStrideMap();
+
+  // Check if the pointer is derived from a conditional induction PHI. If so,
+  // return a conservative stride (assuming the PHI is always updated).
+  if (std::optional<CompressedPtrInfo> PtrInfo = getCompressedPtrInfo(Ptr))
+    return getStrideFromAddRec(PtrInfo->PtrSCEV, TheLoop, AccessTy, Ptr, PSE)
+        .value_or(0);
+
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)
@@ -746,6 +757,36 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
   LLVM_DEBUG(dbgs() << "LV: Found an induction variable.\n");
 }
 
+bool LoopVectorizationLegality::addConditionalInduction(
+    PHINode *Phi, const ConditionalInductionDescriptor &CondID) {
+  for (User *U : Phi->users()) {
+    if (!TheLoop->contains(cast<Instruction>(U))) {
+      reportVectorizationFailure(
+          "Unsupported out-of-loop user of conditional induction phi",
+          "UnsupportedConditionalInductionUse", ORE, TheLoop);
+      return false;
+    }
+  }
+
+  ConditionalInductions[Phi] = CondID;
+  DenseMap<Value *, const SCEV *> CompressedPtrsForCondID;
+  if (!collectCompressedPtrs(CompressedPtrsForCondID, *TheLoop, CondID,
+                             *PSE.getSE())) {
+    reportVectorizationFailure(
+        "Unsupported user of conditional induction phi in loop",
+        "UnsupportedConditionalInductionUse", ORE, TheLoop);
+    return false;
+  }
+
+  for (auto [Ptr, PtrSCEV] : CompressedPtrsForCondID) {
+    auto *PtrAddRec = cast<SCEVAddRecExpr>(PtrSCEV);
+    assert(PtrAddRec->isAffine() && "Expected affine SCEVAddRecExpr");
+    CompressedPtrs[Ptr] = CompressedPtrInfo{Phi, PtrAddRec};
+  }
+
+  return true;
+}
+
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -903,6 +944,13 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       addInductionPhi(Phi, ID);
       Requirements->addExactFPMathInst(ID.getExactFPMathInst());
       return true;
+    }
+
+    ConditionalInductionDescriptor CondID;
+    if (EnableCompressingPatterns &&
+        ConditionalInductionDescriptor::isConditionalInductionPHI(
+            Phi, TheLoop, CondID, *PSE.getSE())) {
+      return addConditionalInduction(Phi, CondID);
     }
 
     if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
