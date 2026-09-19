@@ -495,7 +495,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
     ```
     vector-type ::= !cir.vector<size x element-type>
-    size ::= (decimal-literal | `[` decimal-literal `]`)
+    size ::= (decimal-literal)
     element-type ::= float-type | integer-type | pointer-type
     ```
 
@@ -541,6 +541,59 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// MatrixType
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+]> {
+  let summary = "CIR matrix type";
+  let description = [{
+    The `!cir.matrix` type represents a fixed-size 2-dimensional matrix.
+    It takes three parameters: the element type, the number of rows,
+    and columns.
+
+    Syntax:
+
+    ```
+    matrix-type ::= !cir.matrix<row x colum x element-type>
+    size ::= (decimal-literal | `[` decimal-literal `]`)
+    element-type ::= float-type | integer-type | bool-type
+    ```
+
+    The `element-type` must be a scalar CIR type. Zero-sized matrices are not
+    allowed. The `row` and `column` count must be a positive integer.
+
+    Examples:
+
+    ```
+    !cir.matrix<3 x 3 x !cir.int<u, 8>>
+    !cir.matrix<2 x 4 x !cir.float>
+    ```
+  }];
+
+  let parameters = (ins
+    CIR_MatrixElementType:$element_type,
+    "uint64_t":$row_num,
+    "uint64_t":$column_num
+  );
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "mlir::Type":$element_type, "uint64_t":$row_num, "uint64_t":$column_num
+    ), [{
+        return $_get(element_type.getContext(), element_type, row_num, column_num);
+    }]>,
+  ];
+
+  let assemblyFormat = [{
+    `<` $row_num `x` $column_num `x` $element_type `>`
+  }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
