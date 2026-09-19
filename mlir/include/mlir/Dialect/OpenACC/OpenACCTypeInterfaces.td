@@ -265,7 +265,23 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         Returns true if the pointer points to device data.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
+      /*methodName=*/"isDeviceAccessible",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to managed or unified storage. Such
+        storage is still device-accessible, but it may migrate on demand rather
+        than being statically resident on the device, so it must not be treated 
+        as already resident (it still needs mapping/attach). The default assumes 
+        storage is not managed/unified; types backed by such storage override this.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isManagedOrUnifiedData",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -547,7 +563,24 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         Returns true if the variable represents device data.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
+      /*methodName=*/"isDeviceAccessible",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the variable represents managed or unified storage. Such
+        storage is still device-accessible (`isDeviceAccessible` is also true), but it
+        may migrate on demand rather than being statically resident on the
+        device, so it must not be treated as already resident (it still needs
+        mapping/attach). The default assumes storage is not managed/unified;
+        types backed by such storage override this.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isManagedOrUnifiedData",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{

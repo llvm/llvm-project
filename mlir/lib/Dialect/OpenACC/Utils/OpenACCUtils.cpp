@@ -245,7 +245,7 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   // Device data is already resident on the device and does not need mapping.
   if (auto globalVar =
           mlir::dyn_cast<mlir::acc::GlobalVariableOpInterface>(definingOp))
-    if (globalVar.isDeviceData())
+    if (globalVar.isDeviceAccessible())
       return true;
 
   // Check if the defining op is a function
@@ -276,15 +276,15 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   return hasDeclare;
 }
 
-bool mlir::acc::isDeviceValue(mlir::Value val) {
+bool mlir::acc::isDeviceAccessibleValue(mlir::Value val) {
   // Check if the value is device data via type interfaces.
   // Device data is already resident on the device and does not need mapping.
   if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
-    if (mappableTy.isDeviceData(val))
+    if (mappableTy.isDeviceAccessible(val))
       return true;
 
   if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
-    if (pointerLikeTy.isDeviceData(val))
+    if (pointerLikeTy.isDeviceAccessible(val))
       return true;
 
   mlir::Operation *defOp = val.getDefiningOp();
@@ -305,7 +305,7 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
   if (auto partialAccess =
           dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
     if (mlir::Value base = partialAccess.getBaseEntity())
-      return isDeviceValue(base);
+      return isDeviceAccessibleValue(base);
   }
 
   // Handle address_of - check if the referenced global is device data.
@@ -314,43 +314,28 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
     auto symbol = addrOfIface.getSymbol();
     if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
             mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-      return global.isDeviceData();
+      return global.isDeviceAccessible();
   }
 
   return false;
 }
 
-// Returns true if the defining op of `val` carries a CUDA data attribute of
-// managed or unified. This layer (mlir core OpenACC) cannot link the CUF
-// dialect, so the attribute is matched by name+mnemonic rather than via
-// cuf::getDataAttr. This should be replaced by a proper type-interface query
-// once the residence concept is expressed on the OpenACC interfaces.
-static bool hasManagedOrUnifiedDataAttr(mlir::Value val) {
-  mlir::Operation *defOp = val.getDefiningOp();
-  if (!defOp)
-    return false;
-  for (llvm::StringRef name : {"data_attr", "cuf.data_attr"}) {
-    if (mlir::Attribute a = defOp->getAttr(name)) {
-      std::string s;
-      llvm::raw_string_ostream os(s);
-      a.print(os);
-      llvm::StringRef sv(s);
-      if (sv.contains("managed") || sv.contains("unified"))
-        return true;
-    }
-  }
-  return false;
-}
-
-bool mlir::acc::isDeviceResident(mlir::Value val) {
+bool mlir::acc::isDeviceResidentValue(mlir::Value val) {
   // Device-resident data is a subset of device-accessible data: it must be
-  // accessible, and it must not be managed/unified. Managed/unified storage may
-  // happen to reside on the device (pages migrate on demand), but that dynamic
-  // possibility is not a strong enough guarantee to bypass mapping/attach, so
-  // it is conservatively treated as non-resident.
-  if (!isDeviceValue(val))
-    return false;
-  return !hasManagedOrUnifiedDataAttr(val);
+  // accessible, and it must be statically guaranteed to already live on the
+  // device. Managed/unified storage may happen to reside on the device (pages
+  // migrate on demand), but that dynamic possibility is not a strong enough
+  // guarantee to bypass mapping/attach, so it is conservatively treated as
+  // non-resident.
+  if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
+    if (mappableTy.isManagedOrUnifiedData(val))
+      return false;
+
+  if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
+    if (pointerLikeTy.isManagedOrUnifiedData(val))
+      return false;
+
+  return isDeviceAccessibleValue(val);
 }
 
 bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
@@ -369,7 +354,7 @@ bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
     return true;
 
   // If this is device data, it is valid.
-  if (isDeviceValue(val))
+  if (isDeviceAccessibleValue(val))
     return true;
 
   // Arguments of an enclosing acc routine are already on the device.

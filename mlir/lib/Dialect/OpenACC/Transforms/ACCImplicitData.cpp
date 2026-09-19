@@ -294,7 +294,7 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
     return false;
 
   // Device data is a candidate - it will get a deviceptr clause.
-  if (acc::isDeviceValue(val))
+  if (acc::isDeviceAccessibleValue(val))
     return true;
 
   // If it is otherwise valid, skip it.
@@ -464,9 +464,9 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
   // accessible and may migrate onto the device, but that is not a strong enough
   // guarantee of residence to skip mapping (the runtime still needs to attach
   // and, where needed, privatize it), so it must not be treated as deviceptr.
-  // isDeviceResident refines isDeviceValue's accessibility answer to residence
+  // isDeviceResidentValue refines isDeviceAccessibleValue's accessibility answer to residence
   // by conservatively excluding managed/unified.
-  if (acc::isDeviceResident(var)) {
+  if (acc::isDeviceResidentValue(var)) {
     // If the variable is device-resident data, use deviceptr clause.
     LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
                                "device data\n");
