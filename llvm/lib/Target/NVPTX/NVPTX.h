@@ -62,7 +62,7 @@ FunctionPass *createNVPTXLowerUnreachableLegacyPass(bool TrapUnreachable,
 FunctionPass *createNVPTXLowerAggrCopiesLegacyPass();
 FunctionPass *createNVPTXMarkKernelPtrsGlobalPass();
 FunctionPass *createNVPTXTagInvariantLoadsPass();
-FunctionPass *createNVPTXIRPeepholePass();
+FunctionPass *createNVPTXCodeGenPreparePass();
 MachineFunctionPass *createNVPTXPeepholeLegacyPass();
 MachineFunctionPass *createNVPTXProxyRegErasureLegacyPass();
 MachineFunctionPass *createNVPTXForwardParamsLegacyPass();
@@ -90,7 +90,7 @@ void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 void initializeNVPTXPeepholeLegacyPassPass(PassRegistry &);
 void initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PassRegistry &);
 void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
-void initializeNVPTXIRPeepholePass(PassRegistry &);
+void initializeNVPTXCodeGenPreparePass(PassRegistry &);
 void initializeNVPTXPrologEpilogLegacyPassPass(PassRegistry &);
 
 // Module passes
@@ -159,7 +159,8 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-class NVPTXIRPeepholePass : public OptionalPassInfoMixin<NVPTXIRPeepholePass> {
+class NVPTXCodeGenPreparePass
+    : public OptionalPassInfoMixin<NVPTXCodeGenPreparePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
