@@ -73,6 +73,9 @@ EnableLDV("live-debug-variables", cl::init(true),
 
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
+STATISTIC(NumStaleIndexes, "Number of stale SlotIndexes repaired");
+STATISTIC(NumMergedIntervals,
+          "Number of debug value intervals merged while repairing indexes");
 
 char LiveDebugVariablesWrapperLegacy::ID = 0;
 
@@ -472,6 +475,9 @@ public:
   bool splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                      LiveIntervals &LIS);
 
+  /// Replace the stale indexes in locInts and trimmedDefs.
+  void canonicalizeIndexes(const SlotIndexes &SI);
+
   /// Rewrite virtual register locations according to the provided virtual
   /// register map. Record the stack slot offsets for the locations that
   /// were spilled.
@@ -519,6 +525,15 @@ public:
   /// Recreate DBG_LABEL instruction from data structures.
   void emitDebugLabel(LiveIntervals &LIS, const TargetInstrInfo &TII,
                       BlockSkipInstsMap &BBSkipInstsMap);
+
+  /// Replace loc if it is stale, and report whether it was.
+  bool canonicalizeIndex(const SlotIndexes &SI) {
+    bool WasStale = SI.isStaleIndex(loc);
+    loc = SI.canonicalizeIndex(loc);
+    assert(!SI.isStaleIndex(loc) &&
+           "Canonicalized label still refers to an erased instruction");
+    return WasStale;
+  }
 
   /// Return DebugLoc of this UserLabel.
   const DebugLoc &getDebugLoc() { return dl; }
@@ -664,6 +679,9 @@ public:
 
   /// Replace all references to OldReg with NewRegs.
   void splitRegister(Register OldReg, ArrayRef<Register> NewRegs);
+
+  /// Replace every stale index held by this analysis.
+  void canonicalizeIndexes(const SlotIndexes &SI);
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
@@ -1549,6 +1567,120 @@ splitRegister(Register OldReg, ArrayRef<Register> NewRegs, LiveIntervals &LIS) {
     PImpl->splitRegister(OldReg, NewRegs);
 }
 
+//===----------------------------------------------------------------------===//
+//                        Stale Index Canonicalization
+//===----------------------------------------------------------------------===//
+
+void UserValue::canonicalizeIndexes(const SlotIndexes &SI) {
+  unsigned NumStale = 0;
+  for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I)
+    NumStale += SI.isStaleIndex(I.start()) + SI.isStaleIndex(I.stop());
+  for (SlotIndex Idx : trimmedDefs)
+    NumStale += SI.isStaleIndex(Idx);
+  NumStaleIndexes += NumStale;
+
+  if (NumStale) {
+    // trimmedDefs is looked up by interval start. Remapping it here is safe:
+    // trimmed starts are block slots, so the Stop < Start case below cannot
+    // reach them, and a merge drops a start that then matches nothing.
+    if (!trimmedDefs.empty()) {
+      SmallVector<SlotIndex, 2> Defs(trimmedDefs.begin(), trimmedDefs.end());
+      trimmedDefs.clear();
+      for (SlotIndex Idx : Defs)
+        trimmedDefs.insert(SI.canonicalizeIndex(Idx));
+    }
+
+    // Rebuild rather than move the keys of the existing map: it has to stay
+    // ordered and non-empty at every step, which canonicalization does not
+    // respect.
+    struct CanonicalInterval {
+      SlotIndex Start;
+      SlotIndex Stop;
+      DbgVariableValue Value;
+    };
+    SmallVector<CanonicalInterval, 8> Intervals;
+
+    for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I) {
+      SlotIndex Start = SI.canonicalizeIndex(I.start());
+      SlotIndex Stop = SI.canonicalizeIndex(I.stop());
+
+      // A stale stop can land below a start that sat on the same instruction's
+      // dead slot. Both resolve to the same insert location.
+      if (Stop < Start)
+        Start = Stop;
+
+      if (!Intervals.empty()) {
+        CanonicalInterval &Prev = Intervals.back();
+        if (Start <= Prev.Start) {
+          // Both DBG_VALUEs would be emitted at the same position, where the
+          // later one overrides the earlier before it covers anything.
+          Prev.Stop = std::max(Prev.Stop, Stop);
+          Prev.Value = I.value();
+          ++NumMergedIntervals;
+          continue;
+        }
+        Prev.Stop = std::min(Prev.Stop, Start);
+      }
+      Intervals.push_back({Start, Stop, I.value()});
+    }
+
+    // The map cannot hold empty intervals. Use the smallest extent there is: a
+    // wider one would span more blocks, and emitDebugValues() emits a DBG_VALUE
+    // per block covered.
+    for (CanonicalInterval &Interval : Intervals) {
+      if (Interval.Stop > Interval.Start)
+        continue;
+      Interval.Stop = Interval.Start.getNextSlot();
+      assert(!SI.isStaleIndex(Interval.Stop) &&
+             "No room left for a canonicalized interval");
+    }
+
+    locInts.clear();
+    for (const CanonicalInterval &Interval : Intervals)
+      locInts.insert(Interval.Start, Interval.Stop, Interval.Value);
+  }
+
+#ifndef NDEBUG
+  for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I)
+    assert(!SI.isStaleIndex(I.start()) && !SI.isStaleIndex(I.stop()) &&
+           "Canonicalized interval still refers to an erased instruction");
+  for (SlotIndex Idx : trimmedDefs)
+    assert(!SI.isStaleIndex(Idx) &&
+           "Canonicalized trimmed def still refers to an erased instruction");
+#endif
+}
+
+void LiveDebugVariables::LDVImpl::canonicalizeIndexes(const SlotIndexes &SI) {
+  for (auto &userValue : userValues)
+    userValue->canonicalizeIndexes(SI);
+  for (auto &userLabel : userLabels)
+    NumStaleIndexes += userLabel->canonicalizeIndex(SI);
+
+  // emitDebugValues() walks forwards to the next live instruction, which is the
+  // same iterator as inserting after the preceding one, and stays inside
+  // InstrPos::MBB. Canonicalization is monotonic, so entries sharing a slot are
+  // still re-inserted as one batch.
+  for (InstrPos &Stashed : StashedDebugInstrs) {
+    NumStaleIndexes += SI.isStaleIndex(Stashed.Idx);
+    Stashed.Idx = SI.canonicalizeIndex(Stashed.Idx);
+    assert(!SI.isStaleIndex(Stashed.Idx) &&
+           "Canonicalized debug instr still refers to an erased instruction");
+  }
+
+  // PHI positions are block starts, which are boundaries. A block erased by
+  // removeMBBFromMaps() would make one look stale.
+  assert(all_of(PHIValToPos,
+                [&SI](const std::pair<const unsigned, PHIValPos> &P) {
+                  return !SI.isStaleIndex(P.second.SI);
+                }) &&
+         "PHI position refers to an erased instruction");
+}
+
+void LiveDebugVariables::canonicalizeIndexes(const SlotIndexes &SI) {
+  if (PImpl)
+    PImpl->canonicalizeIndexes(SI);
+}
+
 void UserValue::rewriteLocations(VirtRegMap &VRM, const MachineFunction &MF,
                                  const TargetInstrInfo &TII,
                                  const TargetRegisterInfo &TRI,
@@ -1852,6 +1984,9 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
   LLVM_DEBUG(dbgs() << "********** EMITTING LIVE DEBUG VARIABLES **********\n");
   if (!MF)
     return;
+
+  // Instructions may have been erased since the last allocator run.
+  canonicalizeIndexes(*LIS->getSlotIndexes());
 
   BlockSkipInstsMap BBSkipInstsMap;
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
