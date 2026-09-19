@@ -3216,38 +3216,20 @@ class CCRStructure(Structure):
         return self.results[key]
 
 
-class CodeCompletionResults(ClangObject):
-    def __init__(self, ptr: _Pointer[CCRStructure]):
-        assert isinstance(ptr, POINTER(CCRStructure)) and ptr
-        self.ptr = self._as_parameter_ = ptr
-
-    def from_param(self) -> _Pointer[CCRStructure]:
-        return self._as_parameter_
+class CodeCompletionResults(Structure):
+    _fields_ = [("results", POINTER(CodeCompletionResult)), ("numResults", c_uint)]
 
     def __del__(self) -> None:
-        conf.lib.clang_disposeCodeCompleteResults(self)
+        conf.lib.clang_disposeCodeCompleteResults(byref(self))
 
     def __len__(self) -> int:
-        return self.ptr.contents.numResults
+        return self.numResults
 
     def __getitem__(self, key: int) -> CodeCompletionResult:
         if len(self) <= key:
             raise IndexError
 
-        return self.ptr.contents.results[key]
-
-    @property
-    def results(self) -> CCRStructure:
-        warnings.warn(
-            "'CodeCompletionResults.results' will become an implementation detail "
-            "with changed behavior in a future release and should not be used directly. "
-            "Existing uses of 'CodeCompletionResults.results' should be changed "
-            "to directly use 'CodeCompletionResults': it nows supports '__len__' "
-            "and '__getitem__', so it can be used the same as "
-            "'CodeCompletionResults.results'.",
-            DeprecationWarning,
-        )
-        return self.ptr.contents
+        return self.results[key]
 
     @property
     def diagnostics(self) -> NoSliceSequence[Diagnostic]:
@@ -3256,10 +3238,12 @@ class CodeCompletionResults(ClangObject):
                 self.ccr = ccr
 
             def __len__(self) -> int:
-                return int(conf.lib.clang_codeCompleteGetNumDiagnostics(self.ccr))
+                return int(
+                    conf.lib.clang_codeCompleteGetNumDiagnostics(byref(self.ccr))
+                )
 
             def __getitem__(self, key: int) -> Diagnostic:
-                return conf.lib.clang_codeCompleteGetDiagnostic(self.ccr, key)  # type: ignore [no-any-return]
+                return conf.lib.clang_codeCompleteGetDiagnostic(byref(self.ccr), key)  # type: ignore [no-any-return]
 
         return DiagnosticsItr(self)
 
@@ -3697,7 +3681,7 @@ class TranslationUnit(ClangObject):
             options,
         )
         if ptr:
-            return CodeCompletionResults(ptr)
+            return ptr.contents
         return None
 
     def get_tokens(
@@ -4149,10 +4133,14 @@ FUNCTION_LIST: list[LibFunc] = [
     (
         "clang_codeCompleteAt",
         [TranslationUnit, c_interop_string, c_int, c_int, c_void_p, c_int, c_int],
-        POINTER(CCRStructure),
+        POINTER(CodeCompletionResults),
     ),
-    ("clang_codeCompleteGetDiagnostic", [CodeCompletionResults, c_int], Diagnostic),
-    ("clang_codeCompleteGetNumDiagnostics", [CodeCompletionResults], c_int),
+    (
+        "clang_codeCompleteGetDiagnostic",
+        [POINTER(CodeCompletionResults), c_int],
+        Diagnostic,
+    ),
+    ("clang_codeCompleteGetNumDiagnostics", [POINTER(CodeCompletionResults)], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
     ("clang_createTranslationUnit", [Index, c_interop_string], c_object_p),
     ("clang_CXRewriter_create", [TranslationUnit], c_object_p),
@@ -4180,7 +4168,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_EnumDecl_isScoped", [Cursor], c_uint),
     ("clang_defaultDiagnosticDisplayOptions", [], c_uint),
     ("clang_defaultSaveOptions", [TranslationUnit], c_uint),
-    ("clang_disposeCodeCompleteResults", [CodeCompletionResults]),
+    ("clang_disposeCodeCompleteResults", [POINTER(CodeCompletionResults)]),
     # ("clang_disposeCXTUResourceUsage",
     #  [CXTUResourceUsage]),
     ("clang_disposeDiagnostic", [Diagnostic]),
