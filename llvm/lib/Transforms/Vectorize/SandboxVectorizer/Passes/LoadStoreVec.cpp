@@ -27,7 +27,7 @@ namespace sandboxir {
 
 #define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
-std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl) {
+std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
   // Check if in the same BB.
   if (LegalityAnalysis::differentBlock(Bndl))
     return std::nullopt;
@@ -67,7 +67,7 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
-LoadInst *LoadStoreVec::createVectorLoad(ArrayRef<Instruction *> Loads) {
+LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   if (!VecUtils::areConsecutive<LoadInst, Instruction>(
           Loads, A->getScalarEvolution(), *DL))
     return nullptr;
@@ -82,7 +82,7 @@ LoadInst *LoadStoreVec::createVectorLoad(ArrayRef<Instruction *> Loads) {
   return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
 }
 
-Value *LoadStoreVec::createConstantVector(ArrayRef<Value *> Operands) {
+Value *LoadStoreVec::createConstantVector(BndlRef<Value *> Operands) {
   SmallVector<Constant *, 8> Constants;
   Constants.reserve(Operands.size());
   for (Value *Op : Operands) {
@@ -120,8 +120,7 @@ Value *LoadStoreVec::createConstantVector(ArrayRef<Value *> Operands) {
   return ConstantVector::get(Constants);
 }
 
-bool LoadStoreVec::vectorizeStores(ArrayRef<Instruction *> Stores,
-                                   Region &Rgn) {
+bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
   if (!VecUtils::areConsecutive<StoreInst, Instruction>(
           Stores, A->getScalarEvolution(), *DL))
     return false;
@@ -187,7 +186,7 @@ bool LoadStoreVec::vectorizeStores(ArrayRef<Instruction *> Stores,
   return acceptOrRevert();
 }
 
-LoadInst *LoadStoreVec::vectorizeLoads(ArrayRef<Instruction *> Loads,
+LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
                                        Region &Rgn) {
   if (!VecUtils::areConsecutive<LoadInst, Instruction>(
           Loads, A->getScalarEvolution(), *DL))

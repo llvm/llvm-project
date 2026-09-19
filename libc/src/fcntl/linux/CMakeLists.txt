@@ -12,6 +12,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fallocate
+  SRCS
+    fallocate.cpp
+  HDRS
+    ../fallocate.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fallocate
+    libc.hdr.types.off_t
+)
+
+add_entrypoint_object(
   fcntl
   SRCS
     fcntl.cpp

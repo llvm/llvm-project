@@ -545,7 +545,6 @@ set(files
   __locale_dir/collate.h
   __locale_dir/ctype.h
   __locale_dir/ctype_base.h
-  __locale_dir/get_c_locale.h
   __locale_dir/locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
@@ -558,6 +557,7 @@ set(files
   __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
+  __locale_dir/support/default/get_c_locale.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
@@ -712,6 +712,7 @@ set(files
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
+  __pstl/cpu_algos/uninitialized_algorithms.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
   __random/bernoulli_distribution.h

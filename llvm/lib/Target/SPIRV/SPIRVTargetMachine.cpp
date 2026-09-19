@@ -62,7 +62,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVEmitIntrinsicsLegacyPass(PR);
   initializeSPIRVPrepareFunctionsLegacyPass(PR);
   initializeSPIRVPrepareGlobalsLegacyPass(PR);
-  initializeSPIRVLegalizeImplicitBindingLegacyPass(PR);
+  initializeSPIRVLegalizeResourceBindingLegacyPass(PR);
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
   initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
 }
@@ -224,7 +224,7 @@ void SPIRVPassConfig::addISelPrepare() {
   }
   SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createStripConvergenceIntrinsicsPass());
-  addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVLegalizeResourceBindingPass());
   addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
   addPass(createSPIRVPushConstantAccessLegacyPass(&TM));

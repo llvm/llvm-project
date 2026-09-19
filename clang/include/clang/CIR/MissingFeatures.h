@@ -82,6 +82,7 @@ struct MissingFeatures {
   static bool opFuncReadOnly() { return false; }
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
+  static bool opFuncPreferredAlignment() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling
@@ -225,6 +226,7 @@ struct MissingFeatures {
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
   static bool dtorCleanups() { return false; }
+  static bool dynamicExceptionSpec() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
@@ -236,6 +238,7 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+  static bool fakeUseCleanup() { return false; }
   static bool isPPC_FP128Ty() { return false; }
 
   // Fast math.
