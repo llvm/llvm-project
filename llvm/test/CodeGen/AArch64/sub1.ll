@@ -5,7 +5,7 @@
 define i64 @sub1_disguised_constant(i64 %x) {
 ; CHECK-SD-LABEL: sub1_disguised_constant:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub w8, w0, #1
+; CHECK-SD-NEXT:    subs w8, w0, #1
 ; CHECK-SD-NEXT:    and w8, w0, w8
 ; CHECK-SD-NEXT:    and x0, x8, #0xffff
 ; CHECK-SD-NEXT:    ret

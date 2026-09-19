@@ -1123,15 +1123,15 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 ; CHECK-SD-NEXT:    fmov s1, w4
 ; CHECK-SD-NEXT:    ldr s2, [sp]
 ; CHECK-SD-NEXT:    fmov s3, w2
-; CHECK-SD-NEXT:    fmov s5, w0
+; CHECK-SD-NEXT:    fmov s4, w0
 ; CHECK-SD-NEXT:    add x8, sp, #8
 ; CHECK-SD-NEXT:    ldr s6, [sp, #16]
 ; CHECK-SD-NEXT:    ldr s7, [sp, #32]
 ; CHECK-SD-NEXT:    ldr s16, [sp, #48]
 ; CHECK-SD-NEXT:    ld1 { v2.s }[1], [x8]
-; CHECK-SD-NEXT:    movi v4.2s, #3, msl #8
+; CHECK-SD-NEXT:    movi v5.2s, #3, msl #8
 ; CHECK-SD-NEXT:    mov v1.s[1], w5
-; CHECK-SD-NEXT:    mov v5.s[1], w1
+; CHECK-SD-NEXT:    mov v4.s[1], w1
 ; CHECK-SD-NEXT:    mov v3.s[1], w3
 ; CHECK-SD-NEXT:    mov v0.s[1], w7
 ; CHECK-SD-NEXT:    add x8, sp, #24
@@ -1140,18 +1140,18 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 ; CHECK-SD-NEXT:    ld1 { v6.s }[1], [x8]
 ; CHECK-SD-NEXT:    ld1 { v7.s }[1], [x9]
 ; CHECK-SD-NEXT:    ld1 { v16.s }[1], [x10]
-; CHECK-SD-NEXT:    and v2.8b, v2.8b, v4.8b
-; CHECK-SD-NEXT:    and v17.8b, v1.8b, v4.8b
-; CHECK-SD-NEXT:    and v5.8b, v5.8b, v4.8b
-; CHECK-SD-NEXT:    and v3.8b, v3.8b, v4.8b
-; CHECK-SD-NEXT:    and v18.8b, v0.8b, v4.8b
-; CHECK-SD-NEXT:    and v6.8b, v6.8b, v4.8b
-; CHECK-SD-NEXT:    and v7.8b, v7.8b, v4.8b
-; CHECK-SD-NEXT:    and v16.8b, v16.8b, v4.8b
+; CHECK-SD-NEXT:    and v2.8b, v2.8b, v5.8b
+; CHECK-SD-NEXT:    and v17.8b, v1.8b, v5.8b
+; CHECK-SD-NEXT:    and v4.8b, v4.8b, v5.8b
+; CHECK-SD-NEXT:    and v3.8b, v3.8b, v5.8b
+; CHECK-SD-NEXT:    and v18.8b, v0.8b, v5.8b
+; CHECK-SD-NEXT:    and v6.8b, v6.8b, v5.8b
+; CHECK-SD-NEXT:    and v7.8b, v7.8b, v5.8b
+; CHECK-SD-NEXT:    and v16.8b, v16.8b, v5.8b
+; CHECK-SD-NEXT:    ushll v0.2d, v4.2s, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v3.2s, #0
 ; CHECK-SD-NEXT:    ushll v4.2d, v2.2s, #0
 ; CHECK-SD-NEXT:    ushll v2.2d, v17.2s, #0
-; CHECK-SD-NEXT:    ushll v0.2d, v5.2s, #0
-; CHECK-SD-NEXT:    ushll v1.2d, v3.2s, #0
 ; CHECK-SD-NEXT:    ushll v3.2d, v18.2s, #0
 ; CHECK-SD-NEXT:    ushll v5.2d, v6.2s, #0
 ; CHECK-SD-NEXT:    ushll v6.2d, v7.2s, #0
@@ -1162,13 +1162,13 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s16, w0
 ; CHECK-GI-NEXT:    fmov s17, w2
-; CHECK-GI-NEXT:    ldr s1, [sp]
+; CHECK-GI-NEXT:    ldr s0, [sp]
 ; CHECK-GI-NEXT:    fmov s18, w4
 ; CHECK-GI-NEXT:    fmov s19, w6
-; CHECK-GI-NEXT:    ldr s3, [sp, #8]
-; CHECK-GI-NEXT:    ldr s0, [sp, #16]
-; CHECK-GI-NEXT:    ldr s4, [sp, #24]
-; CHECK-GI-NEXT:    ldr s2, [sp, #32]
+; CHECK-GI-NEXT:    ldr s1, [sp, #8]
+; CHECK-GI-NEXT:    ldr s2, [sp, #16]
+; CHECK-GI-NEXT:    ldr s3, [sp, #24]
+; CHECK-GI-NEXT:    ldr s4, [sp, #32]
 ; CHECK-GI-NEXT:    ldr s5, [sp, #40]
 ; CHECK-GI-NEXT:    ldr s6, [sp, #48]
 ; CHECK-GI-NEXT:    ldr s7, [sp, #56]
@@ -1176,22 +1176,22 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 ; CHECK-GI-NEXT:    mov v17.s[1], w3
 ; CHECK-GI-NEXT:    mov v18.s[1], w5
 ; CHECK-GI-NEXT:    mov v19.s[1], w7
-; CHECK-GI-NEXT:    mov v1.s[1], v3.s[0]
-; CHECK-GI-NEXT:    mov v0.s[1], v4.s[0]
-; CHECK-GI-NEXT:    mov v2.s[1], v5.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], v3.s[0]
+; CHECK-GI-NEXT:    mov v4.s[1], v5.s[0]
 ; CHECK-GI-NEXT:    mov v6.s[1], v7.s[0]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI54_0
-; CHECK-GI-NEXT:    ushll v3.2d, v16.2s, #0
-; CHECK-GI-NEXT:    ushll v4.2d, v17.2s, #0
+; CHECK-GI-NEXT:    ushll v1.2d, v16.2s, #0
+; CHECK-GI-NEXT:    ushll v3.2d, v17.2s, #0
 ; CHECK-GI-NEXT:    ushll v5.2d, v18.2s, #0
 ; CHECK-GI-NEXT:    ushll v7.2d, v19.2s, #0
-; CHECK-GI-NEXT:    ushll v16.2d, v1.2s, #0
-; CHECK-GI-NEXT:    ushll v18.2d, v0.2s, #0
-; CHECK-GI-NEXT:    ushll v19.2d, v2.2s, #0
+; CHECK-GI-NEXT:    ushll v16.2d, v0.2s, #0
+; CHECK-GI-NEXT:    ushll v18.2d, v2.2s, #0
+; CHECK-GI-NEXT:    ushll v19.2d, v4.2s, #0
 ; CHECK-GI-NEXT:    ushll v20.2d, v6.2s, #0
 ; CHECK-GI-NEXT:    ldr q17, [x8, :lo12:.LCPI54_0]
-; CHECK-GI-NEXT:    and v0.16b, v3.16b, v17.16b
-; CHECK-GI-NEXT:    and v1.16b, v4.16b, v17.16b
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v17.16b
+; CHECK-GI-NEXT:    and v1.16b, v3.16b, v17.16b
 ; CHECK-GI-NEXT:    and v2.16b, v5.16b, v17.16b
 ; CHECK-GI-NEXT:    and v3.16b, v7.16b, v17.16b
 ; CHECK-GI-NEXT:    and v4.16b, v16.16b, v17.16b

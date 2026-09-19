@@ -686,44 +686,41 @@ define <8 x i64> @combine_vec_sdiv_by_pow2b_v8i64(<8 x i64> %x) {
 ; CHECK-GI-NEXT:    adrp x9, .LCPI23_0
 ; CHECK-GI-NEXT:    cmlt v7.2d, v0.2d, #0
 ; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI23_2]
-; CHECK-GI-NEXT:    adrp x8, .LCPI23_1
 ; CHECK-GI-NEXT:    ldr d5, [x9, :lo12:.LCPI23_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI23_1
 ; CHECK-GI-NEXT:    ldr q6, [x8, :lo12:.LCPI23_1]
-; CHECK-GI-NEXT:    cmlt v16.2d, v1.2d, #0
-; CHECK-GI-NEXT:    cmlt v17.2d, v2.2d, #0
+; CHECK-GI-NEXT:    cmlt v16.2d, v2.2d, #0
+; CHECK-GI-NEXT:    cmlt v17.2d, v1.2d, #0
 ; CHECK-GI-NEXT:    neg v4.2d, v4.2d
 ; CHECK-GI-NEXT:    ushll v5.4s, v5.4h, #0
-; CHECK-GI-NEXT:    cmlt v19.2d, v3.2d, #0
+; CHECK-GI-NEXT:    cmlt v18.2d, v3.2d, #0
 ; CHECK-GI-NEXT:    neg v6.2d, v6.2d
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_4
-; CHECK-GI-NEXT:    ldr q18, [x8, :lo12:.LCPI23_4]
+; CHECK-GI-NEXT:    ldr q19, [x8, :lo12:.LCPI23_4]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI23_3
 ; CHECK-GI-NEXT:    ushl v7.2d, v7.2d, v4.2d
-; CHECK-GI-NEXT:    ushll v20.2d, v5.2s, #0
-; CHECK-GI-NEXT:    ushl v4.2d, v17.2d, v4.2d
-; CHECK-GI-NEXT:    ushl v16.2d, v16.2d, v6.2d
-; CHECK-GI-NEXT:    ushll v17.2d, v5.2s, #0
-; CHECK-GI-NEXT:    ushl v6.2d, v19.2d, v6.2d
+; CHECK-GI-NEXT:    ushl v4.2d, v16.2d, v4.2d
+; CHECK-GI-NEXT:    ushll v16.2d, v5.2s, #0
+; CHECK-GI-NEXT:    ushl v17.2d, v17.2d, v6.2d
+; CHECK-GI-NEXT:    ushl v6.2d, v18.2d, v6.2d
 ; CHECK-GI-NEXT:    ushll2 v5.2d, v5.4s, #0
-; CHECK-GI-NEXT:    ldr q19, [x8, :lo12:.LCPI23_3]
-; CHECK-GI-NEXT:    neg v18.2d, v18.2d
+; CHECK-GI-NEXT:    ldr q18, [x8, :lo12:.LCPI23_3]
+; CHECK-GI-NEXT:    neg v19.2d, v19.2d
 ; CHECK-GI-NEXT:    add v7.2d, v0.2d, v7.2d
-; CHECK-GI-NEXT:    shl v20.2d, v20.2d, #63
+; CHECK-GI-NEXT:    shl v16.2d, v16.2d, #63
 ; CHECK-GI-NEXT:    add v4.2d, v2.2d, v4.2d
-; CHECK-GI-NEXT:    add v1.2d, v1.2d, v16.2d
-; CHECK-GI-NEXT:    shl v16.2d, v17.2d, #63
-; CHECK-GI-NEXT:    neg v17.2d, v19.2d
+; CHECK-GI-NEXT:    neg v18.2d, v18.2d
+; CHECK-GI-NEXT:    add v1.2d, v1.2d, v17.2d
 ; CHECK-GI-NEXT:    add v3.2d, v3.2d, v6.2d
 ; CHECK-GI-NEXT:    shl v5.2d, v5.2d, #63
-; CHECK-GI-NEXT:    sshl v6.2d, v7.2d, v18.2d
-; CHECK-GI-NEXT:    cmlt v7.2d, v20.2d, #0
-; CHECK-GI-NEXT:    sshl v4.2d, v4.2d, v18.2d
-; CHECK-GI-NEXT:    cmlt v16.2d, v16.2d, #0
-; CHECK-GI-NEXT:    sshl v1.2d, v1.2d, v17.2d
-; CHECK-GI-NEXT:    sshl v3.2d, v3.2d, v17.2d
+; CHECK-GI-NEXT:    sshl v6.2d, v7.2d, v19.2d
+; CHECK-GI-NEXT:    cmlt v7.2d, v16.2d, #0
+; CHECK-GI-NEXT:    sshl v4.2d, v4.2d, v19.2d
+; CHECK-GI-NEXT:    sshl v1.2d, v1.2d, v18.2d
+; CHECK-GI-NEXT:    sshl v3.2d, v3.2d, v18.2d
 ; CHECK-GI-NEXT:    cmlt v5.2d, v5.2d, #0
 ; CHECK-GI-NEXT:    bif v0.16b, v6.16b, v7.16b
-; CHECK-GI-NEXT:    bif v2.16b, v4.16b, v16.16b
+; CHECK-GI-NEXT:    bif v2.16b, v4.16b, v7.16b
 ; CHECK-GI-NEXT:    bic v1.16b, v1.16b, v5.16b
 ; CHECK-GI-NEXT:    bic v3.16b, v3.16b, v5.16b
 ; CHECK-GI-NEXT:    ret

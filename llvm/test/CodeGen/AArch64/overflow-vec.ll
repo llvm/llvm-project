@@ -3335,7 +3335,7 @@ define <3 x i64> @sadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x12, d3
 ; CHECK-GI-NEXT:    mov x8, v3.d[1]
 ; CHECK-GI-NEXT:    cmgt v7.2d, v17.2d, v4.2d
-; CHECK-GI-NEXT:    cmgt v2.2d, v2.2d, v16.2d
+; CHECK-GI-NEXT:    cmgt v6.2d, v2.2d, v16.2d
 ; CHECK-GI-NEXT:    fmov s3, w12
 ; CHECK-GI-NEXT:    fmov x13, d7
 ; CHECK-GI-NEXT:    mov x9, v7.d[1]
@@ -3343,7 +3343,7 @@ define <3 x i64> @sadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov s7, w13
 ; CHECK-GI-NEXT:    mov v3.h[2], v5.h[0]
 ; CHECK-GI-NEXT:    mov v7.h[1], w9
-; CHECK-GI-NEXT:    mov v7.h[2], v2.h[0]
+; CHECK-GI-NEXT:    mov v7.h[2], v6.h[0]
 ; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v7.8b
 ; CHECK-GI-NEXT:    zip1 v3.4h, v2.4h, v2.4h
 ; CHECK-GI-NEXT:    smov x8, v2.h[2]
@@ -3463,7 +3463,7 @@ define <3 x i64> @ssub_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    fmov x10, d2
 ; CHECK-GI-NEXT:    fmov x11, d5
 ; CHECK-GI-NEXT:    movi d6, #0000000000000000
-; CHECK-GI-NEXT:    cmgt v2.2d, v5.2d, v2.2d
+; CHECK-GI-NEXT:    cmgt v5.2d, v5.2d, v2.2d
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v16.d[1], v4.d[0]
@@ -3475,15 +3475,15 @@ define <3 x i64> @ssub_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-NEXT:    cmlt v7.2d, v4.2d, #0
 ; CHECK-GI-NEXT:    fmov x12, d3
 ; CHECK-GI-NEXT:    mov x8, v3.d[1]
-; CHECK-GI-NEXT:    cmgt v5.2d, v6.2d, v16.2d
+; CHECK-GI-NEXT:    cmgt v6.2d, v6.2d, v16.2d
 ; CHECK-GI-NEXT:    fmov x13, d7
 ; CHECK-GI-NEXT:    mov x9, v7.d[1]
 ; CHECK-GI-NEXT:    fmov s3, w12
 ; CHECK-GI-NEXT:    fmov s7, w13
 ; CHECK-GI-NEXT:    mov v3.h[1], w8
 ; CHECK-GI-NEXT:    mov v7.h[1], w9
-; CHECK-GI-NEXT:    mov v3.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v7.h[2], v5.h[0]
+; CHECK-GI-NEXT:    mov v3.h[2], v5.h[0]
+; CHECK-GI-NEXT:    mov v7.h[2], v6.h[0]
 ; CHECK-GI-NEXT:    eor v2.8b, v3.8b, v7.8b
 ; CHECK-GI-NEXT:    zip1 v3.4h, v2.4h, v2.4h
 ; CHECK-GI-NEXT:    smov x8, v2.h[2]

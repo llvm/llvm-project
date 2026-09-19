@@ -12,13 +12,13 @@ define i32 @ctz_nxv32i1(<vscale x 32 x i1> %a) #0 {
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ptrue p2.b
 ; SVE-NEXT:    rdvl x8, #1
-; SVE-NEXT:    mov w10, w8
+; SVE-NEXT:    mov x9, x8
 ; SVE-NEXT:    brkb p0.b, p2/z, p0.b
 ; SVE-NEXT:    brkb p1.b, p2/z, p1.b
-; SVE-NEXT:    cntp x9, p0, p0.b
-; SVE-NEXT:    incp x8, p1.b
-; SVE-NEXT:    cmp w9, w10
-; SVE-NEXT:    csel w0, w9, w8, ne
+; SVE-NEXT:    cntp x10, p0, p0.b
+; SVE-NEXT:    incp x9, p1.b
+; SVE-NEXT:    cmp w10, w8
+; SVE-NEXT:    csel w0, w10, w9, ne
 ; SVE-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_nxv32i1:

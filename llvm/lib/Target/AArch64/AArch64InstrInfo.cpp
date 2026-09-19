@@ -1772,9 +1772,13 @@ static bool UpdateOperandRegClass(MachineInstr &Instr) {
     if (Reg.isPhysical()) {
       if (!OpRegCstraints->contains(Reg))
         return false;
-    } else if (!OpRegCstraints->hasSubClassEq(MRI->getRegClass(Reg)) &&
-               !MRI->constrainRegClass(Reg, OpRegCstraints))
-      return false;
+    } else {
+      const TargetRegisterClass *NewRegClass =
+          Instr.getRegClassConstraintEffect(OpIdx, MRI->getRegClass(Reg), TII,
+                                            TRI);
+      if (!NewRegClass || !MRI->constrainRegClass(Reg, NewRegClass))
+        return false;
+    }
   }
 
   return true;
