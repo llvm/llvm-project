@@ -4922,8 +4922,8 @@ void Parser::CompleteLateParsedTypeAttributes(
     bool Valid = true;
     assert(!Fields.empty());
     for (Decl *FD : Fields)
-      Valid &= Actions.ActOnLateParsedTypeAttrArgument(BATy, cast<FieldDecl>(FD),
-                                                       Arg);
+      Valid &= Actions.ActOnLateParsedTypeAttrArgument(
+          BATy, cast<FieldDecl>(FD), Arg);
 
     if (Valid)
       Attrs[0].setUsedAsTypeAttr();
