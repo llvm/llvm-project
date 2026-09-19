@@ -404,9 +404,6 @@ void CIRGenModule::constructAttributeList(
     attrs.set(cir::CIRDialect::getSideEffectAttrName(),
               cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
 
-    // TODO(cir): Add noalias to returns for malloc-like functions
-    // (__attribute__((malloc)) / __declspec(restrict)).
-
     if (targetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !codeGenOpts.NullPointerIsValid)
       retAttrs.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
@@ -670,6 +667,15 @@ void CIRGenModule::constructFunctionReturnAttributes(
                          getNaturalPointeeTypeAlignment(retTy).getQuantity()));
     }
   }
+
+  // __attribute__((malloc)) / __declspec(restrict) -> noalias on the return
+  // value. Classic skips the attribute when a deallocator is specified
+  // (malloc(dealloc) / malloc(dealloc, N)).
+  if (const auto *restrictAttr =
+          targetDecl ? targetDecl->getAttr<RestrictAttr>() : nullptr;
+      restrictAttr && restrictAttr->getDeallocator() == nullptr)
+    retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
 }
 
 void CIRGenModule::constructFunctionArgumentAttributes(
