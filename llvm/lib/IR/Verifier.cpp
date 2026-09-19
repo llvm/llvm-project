@@ -417,8 +417,8 @@ private:
   void visitExtractElementInst(ExtractElementInst &EI);
   void visitInsertElementInst(InsertElementInst &EI);
   void visitShuffleVectorInst(ShuffleVectorInst &EI);
-  void visitBitInsertInst(BitInsertInst &EI);
-  void visitBitExtractInst(BitExtractInst &EI);
+  void visitBitInsertInst(BitInsertInst &BEI);
+  void visitBitExtractInst(BitExtractInst &BEI);
   void visitVAArgInst(VAArgInst &VAA) { visitInstruction(VAA); }
   void visitCallInst(CallInst &CI);
   void visitInvokeInst(InvokeInst &II);
