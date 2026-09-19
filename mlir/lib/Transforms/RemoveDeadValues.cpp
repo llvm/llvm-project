@@ -804,6 +804,9 @@ void RemoveDeadValues::runOnOperation() {
   RDVFinalCleanupList finalCleanupList;
 
   root->walk([&](Operation *op) {
+    // Do not erase the pass root or change its operands and results. In
+    // particular, the symbol user map cannot see callers outside the root, so
+    // changing a root function's signature would leave those calls invalid.
     if (op == root)
       return;
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
@@ -829,6 +832,8 @@ void RemoveDeadValues::runOnOperation() {
   if (!canonicalize)
     return;
 
+  // Process each root region separately. For operations in different root
+  // regions, the inferred common scope can contain the root itself.
   for (Region &region : root->getRegions()) {
     SmallVector<Operation *> opsToCanonicalize;
     region.walk([&](RegionBranchOpInterface regionBranchOp) {
@@ -840,7 +845,8 @@ void RemoveDeadValues::runOnOperation() {
       if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
         if (populatedPatterns.insert(*info).second)
           info->getCanonicalizationPatterns(owningPatterns, context);
-    // Keep greedy worklist expansion below the pass root.
+    // The greedy driver can add ancestors to its worklist. Set an explicit
+    // scope so that it cannot rewrite the root or operations outside the root.
     GreedyRewriteConfig config;
     config.setScope(&region);
     if (failed(applyOpPatternsGreedily(opsToCanonicalize,

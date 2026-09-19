@@ -729,10 +729,12 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
 
     // Try to replace the uses of each successor input one-by-one.
     bool changed = false;
+    const bool isIsolated = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
     for (Value value : inputToOperands.keys()) {
-      // Isolated entry arguments cannot capture values from above the op.
-      if (op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-          isa<BlockArgument>(value))
+      // Replacing an isolated entry argument with an outside operand would
+      // create an illegal capture, even if that operand dominates the op.
+      // Result replacements remain subject to the dominance check below.
+      if (isIsolated && isa<BlockArgument>(value))
         continue;
       // Nothing to do for successor inputs that are already dead.
       if (value.use_empty())

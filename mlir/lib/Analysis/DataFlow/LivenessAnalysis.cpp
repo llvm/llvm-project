@@ -49,7 +49,9 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult LivenessAnalysis::initialize(Operation *top) {
-  // Users outside the analysis root are not visited.
+  // Users outside the analysis root are not visited. Mark all root results live
+  // so that this missing information does not make their producers dead. For a
+  // region branch root, this keeps the yielded values and their producers live.
   for (Value result : top->getResults())
     setToExitState(getLatticeElement(result));
   return SparseBackwardDataFlowAnalysis<Liveness>::initialize(top);
