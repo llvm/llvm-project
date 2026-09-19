@@ -17,6 +17,7 @@
 
 #include <cassert>
 #include <dlfcn.h>
+#include <sstream>
 
 namespace orc_rt::sys {
 
@@ -41,37 +42,36 @@ std::optional<const char *> toDLSymName(const std::string &Name) {
 
 } // namespace
 
-void *globalLookupHandle() { return RTLD_DEFAULT; }
+Expected<DylibHandle> loadLibrary(const std::string &Path) {
+  assert(!Path.empty() && "hostOSLoadLibrary doesn't support empty paths");
 
-Expected<void *> loadLibrary(const std::string &Path) {
-  assert(!Path.empty() && "loadLibrary doesn't support empty paths");
-  void *H = dlopen(Path.c_str(), RTLD_LAZY | RTLD_LOCAL);
-  if (H == nullptr)
-    return make_error<StringError>((StringOutputStream()
-                                    << "error loading \"" << Path
-                                    << "\": " << dlerror())
-                                       .str());
+  void *Handle = dlopen(Path.c_str(), RTLD_LAZY | RTLD_LOCAL);
+  if (!Handle) {
+    std::ostringstream ErrMsg;
+    ErrMsg << "error loading \"" << Path << "\": " << dlerror();
+    return orc_rt::make_error<orc_rt::StringError>(ErrMsg.str());
+  }
 
-  return H;
+  return Handle;
 }
 
-Error unloadLibrary(void *Handle) {
+orc_rt::Error unloadLibrary(DylibHandle Handle) {
+  assert(Handle && "invalid library handle");
+
   if (dlclose(Handle) != 0)
-    return make_error<StringError>((StringOutputStream()
-                                    << "error unloading " << Handle << ": "
-                                    << dlerror())
-                                       .str());
-  return Error::success();
+    return orc_rt::make_error<orc_rt::StringError>(
+        (std::ostringstream()
+         << "error unloading " << Handle << ": " << dlerror())
+            .str());
+
+  return orc_rt::Error::success();
 }
 
-std::vector<std::optional<void *>>
-lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names) {
-  std::vector<std::optional<void *>> Result;
+SymbolLookupResult hostOSLookup(void *Handle,
+                                const std::vector<std::string> &Names) {
+  SymbolLookupResult Result;
   Result.reserve(Names.size());
-  // Reset dlerror so we can distinguish "dlsym returned null because the
-  // symbol is present at address 0" from "dlsym returned null because the
-  // symbol isn't in the library" via per-iteration dlerror() checks.
-  dlerror();
+
   for (const auto &Name : Names) {
     auto LookupName = toDLSymName(Name);
     if (!LookupName) {
@@ -86,7 +86,18 @@ lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names) {
     else
       Result.push_back(std::nullopt);
   }
+
   return Result;
 }
 
+SymbolLookupResult lookupLibrarySymbols(DylibHandle Handle,
+                                        const std::vector<std::string> &Names) {
+  assert(Handle && "invalid library handle");
+
+  return hostOSLookup(Handle, Names);
+}
+
+SymbolLookupResult lookupGlobalSymbols(const std::vector<std::string> &Names) {
+  return hostOSLookup(RTLD_DEFAULT, Names);
+}
 } // namespace orc_rt::sys
