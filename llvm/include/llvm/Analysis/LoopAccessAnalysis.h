@@ -57,7 +57,7 @@ struct VectorizerParams {
 
 /// Maps a pointer to its symbolic (non-constant) stride. Strides are loop
 /// invariant, which collectStridedAccess checks before inserting.
-using SymbolicStrideMap = DenseMap<Value *, const SCEVUnknown *>;
+using SymbolicStrideMap = MapVector<Value *, const SCEVUnknown *>;
 
 /// Checks memory dependences among accesses to the same underlying
 /// object to determine whether there vectorization is legal or not (and at

@@ -459,20 +459,57 @@ define i64 @for_and_ind_liveout_gep(ptr %dst, i64 %n) {
 ; THRESHOLD-LABEL: define i64 @for_and_ind_liveout_gep(
 ; THRESHOLD-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; THRESHOLD-NEXT:  [[ENTRY:.*]]:
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; THRESHOLD:       [[VECTOR_SCEVCHECK]]:
+; THRESHOLD-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -1
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], 65535
+; THRESHOLD-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; THRESHOLD:       [[VECTOR_PH]]:
+; THRESHOLD-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 3
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP3]]
+; THRESHOLD-NEXT:    [[TMP4:%.*]] = trunc i64 [[N_VEC]] to i16
 ; THRESHOLD-NEXT:    br label %[[LOOP:.*]]
 ; THRESHOLD:       [[LOOP]]:
-; THRESHOLD-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; THRESHOLD-NEXT:    [[NARROW:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
-; THRESHOLD-NEXT:    [[PREV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[EXT:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[VEC_IND1]], splat (i16 1)
+; THRESHOLD-NEXT:    [[TMP6]] = zext <4 x i16> [[TMP5]] to <4 x i64>
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP6]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP7]], i64 0
+; THRESHOLD-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP8]]
+; THRESHOLD-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP9]], align 8
+; THRESHOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; THRESHOLD-NEXT:    [[VEC_IND_NEXT2]] = add <4 x i16> [[VEC_IND1]], splat (i16 4)
+; THRESHOLD-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; THRESHOLD-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; THRESHOLD:       [[MIDDLE_BLOCK]]:
+; THRESHOLD-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
+; THRESHOLD-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
+; THRESHOLD-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; THRESHOLD:       [[SCALAR_PH]]:
+; THRESHOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i16 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD-NEXT:    br label %[[LOOP1:.*]]
+; THRESHOLD:       [[LOOP1]]:
+; THRESHOLD-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; THRESHOLD-NEXT:    [[NARROW:%.*]] = phi i16 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP1]] ]
+; THRESHOLD-NEXT:    [[PREV:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[EXT:%.*]], %[[LOOP1]] ]
 ; THRESHOLD-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; THRESHOLD-NEXT:    [[INC]] = add i16 [[NARROW]], 1
 ; THRESHOLD-NEXT:    [[EXT]] = zext i16 [[INC]] to i64
 ; THRESHOLD-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[PREV]]
 ; THRESHOLD-NEXT:    store i64 [[IV]], ptr [[GEP]], align 8
 ; THRESHOLD-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
 ; THRESHOLD:       [[EXIT]]:
-; THRESHOLD-NEXT:    [[RESULT:%.*]] = phi i64 [ [[EXT]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[RESULT:%.*]] = phi i64 [ [[EXT]], %[[LOOP1]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
 ; THRESHOLD-NEXT:    ret i64 [[RESULT]]
 ;
 entry:
@@ -577,7 +614,7 @@ define void @for_and_ind_trunc_sole_canonical_iv(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; THRESHOLD-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; THRESHOLD-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; THRESHOLD:       [[MIDDLE_BLOCK]]:
 ; THRESHOLD-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP7]], i64 3
 ; THRESHOLD-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
@@ -598,7 +635,7 @@ define void @for_and_ind_trunc_sole_canonical_iv(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    store i32 [[PREV_TRUNC]], ptr [[GEP]], align 4
 ; THRESHOLD-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; THRESHOLD-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
 ; THRESHOLD:       [[EXIT]]:
 ; THRESHOLD-NEXT:    ret void
 ;
@@ -698,7 +735,7 @@ define void @for_and_ind_trunc_another_canonical_iv(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; THRESHOLD-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; THRESHOLD-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; THRESHOLD:       [[MIDDLE_BLOCK]]:
 ; THRESHOLD-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP4]], i64 3
 ; THRESHOLD-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
@@ -719,7 +756,7 @@ define void @for_and_ind_trunc_another_canonical_iv(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    store i32 [[PREV_TRUNC]], ptr [[GEP]], align 4
 ; THRESHOLD-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; THRESHOLD-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP12:![0-9]+]]
 ; THRESHOLD:       [[EXIT]]:
 ; THRESHOLD-NEXT:    ret void
 ;
@@ -840,7 +877,7 @@ define void @for_and_ind_trunc_predicate_not_implied(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 12)
 ; THRESHOLD-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; THRESHOLD-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; THRESHOLD:       [[MIDDLE_BLOCK]]:
 ; THRESHOLD-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP5]], i64 3
 ; THRESHOLD-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
@@ -861,7 +898,7 @@ define void @for_and_ind_trunc_predicate_not_implied(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TRUNC]]
 ; THRESHOLD-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; THRESHOLD-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP12:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP14:![0-9]+]]
 ; THRESHOLD:       [[EXIT]]:
 ; THRESHOLD-NEXT:    ret void
 ;
@@ -1156,7 +1193,7 @@ define void @for_and_ind_optsize_prev_first(ptr %dst, i32 %n) optsize {
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT8]] = add nuw <4 x i32> [[VEC_IND1]], splat (i32 4)
 ; THRESHOLD-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; THRESHOLD-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; THRESHOLD:       [[MIDDLE_BLOCK]]:
 ; THRESHOLD-NEXT:    br label %[[EXIT:.*]]
 ; THRESHOLD:       [[EXIT]]:
@@ -1310,7 +1347,7 @@ define void @for_and_ind_optsize_prev_last(ptr %dst, i32 %n) optsize {
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT8]] = add nuw <4 x i32> [[VEC_IND1]], splat (i32 4)
 ; THRESHOLD-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; THRESHOLD-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; THRESHOLD:       [[MIDDLE_BLOCK]]:
 ; THRESHOLD-NEXT:    br label %[[EXIT:.*]]
 ; THRESHOLD:       [[EXIT]]:
@@ -1397,11 +1434,48 @@ define i64 @for_and_ind_widest_type_modeled_as_induction(ptr noalias %dst, ptr n
 ; THRESHOLD-LABEL: define i64 @for_and_ind_widest_type_modeled_as_induction(
 ; THRESHOLD-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i32 [[N:%.*]]) {
 ; THRESHOLD-NEXT:  [[ENTRY:.*]]:
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
+; THRESHOLD-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 4
+; THRESHOLD-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; THRESHOLD:       [[VECTOR_SCEVCHECK]]:
+; THRESHOLD-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = add nsw i32 [[SMAX]], -1
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[TMP1]], 65535
+; THRESHOLD-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; THRESHOLD:       [[VECTOR_PH]]:
+; THRESHOLD-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 3
+; THRESHOLD-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP3]]
+; THRESHOLD-NEXT:    [[TMP4:%.*]] = trunc i32 [[N_VEC]] to i16
 ; THRESHOLD-NEXT:    br label %[[LOOP:.*]]
 ; THRESHOLD:       [[LOOP]]:
-; THRESHOLD-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; THRESHOLD-NEXT:    [[NARROW:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
-; THRESHOLD-NEXT:    [[PREV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[EXT:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[VEC_IND]], splat (i16 1)
+; THRESHOLD-NEXT:    [[TMP6]] = zext <4 x i16> [[TMP5]] to <4 x i64>
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP6]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP7]], i64 0
+; THRESHOLD-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP8]]
+; THRESHOLD-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
+; THRESHOLD-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST]], i32 [[INDEX]]
+; THRESHOLD-NEXT:    store <4 x i64> [[WIDE_LOAD]], ptr [[TMP10]], align 8
+; THRESHOLD-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[VEC_IND]], splat (i16 4)
+; THRESHOLD-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; THRESHOLD-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
+; THRESHOLD:       [[MIDDLE_BLOCK]]:
+; THRESHOLD-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
+; THRESHOLD-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP0]], [[N_VEC]]
+; THRESHOLD-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; THRESHOLD:       [[SCALAR_PH]]:
+; THRESHOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i16 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD-NEXT:    br label %[[LOOP1:.*]]
+; THRESHOLD:       [[LOOP1]]:
+; THRESHOLD-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; THRESHOLD-NEXT:    [[NARROW:%.*]] = phi i16 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[LOOP1]] ]
+; THRESHOLD-NEXT:    [[PREV:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[EXT:%.*]], %[[LOOP1]] ]
 ; THRESHOLD-NEXT:    [[INC]] = add i16 [[NARROW]], 1
 ; THRESHOLD-NEXT:    [[EXT]] = zext i16 [[INC]] to i64
 ; THRESHOLD-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[PREV]]
@@ -1410,9 +1484,9 @@ define i64 @for_and_ind_widest_type_modeled_as_induction(ptr noalias %dst, ptr n
 ; THRESHOLD-NEXT:    store i64 [[L]], ptr [[GEP]], align 8
 ; THRESHOLD-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; THRESHOLD-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
-; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; THRESHOLD-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT]], !llvm.loop [[LOOP18:![0-9]+]]
 ; THRESHOLD:       [[EXIT]]:
-; THRESHOLD-NEXT:    [[RES:%.*]] = phi i64 [ [[EXT]], %[[LOOP]] ]
+; THRESHOLD-NEXT:    [[RES:%.*]] = phi i64 [ [[EXT]], %[[LOOP1]] ], [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ]
 ; THRESHOLD-NEXT:    ret i64 [[RES]]
 ;
 entry:
@@ -1617,7 +1691,7 @@ define i64 @for_and_ind_dead_in_body_live_out(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; THRESHOLD-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 12)
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; THRESHOLD-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; THRESHOLD:       [[MIDDLE_BLOCK]]:
 ; THRESHOLD-NEXT:    [[TMP5:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 3)
 ; THRESHOLD-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[TMP5]] to <4 x i64>
@@ -1640,7 +1714,7 @@ define i64 @for_and_ind_dead_in_body_live_out(ptr %dst, i64 %n) {
 ; THRESHOLD-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[J]]
 ; THRESHOLD-NEXT:    store i8 2, ptr [[GEP]], align 1
 ; THRESHOLD-NEXT:    [[DONE:%.*]] = icmp ult i64 [[J_NEXT]], [[N]]
-; THRESHOLD-NEXT:    br i1 [[DONE]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP16:![0-9]+]]
+; THRESHOLD-NEXT:    br i1 [[DONE]], label %[[LOOP]], label %[[EXIT_LOOPEXIT]], !llvm.loop [[LOOP20:![0-9]+]]
 ; THRESHOLD:       [[EXIT_LOOPEXIT]]:
 ; THRESHOLD-NEXT:    [[WIDE_LCSSA:%.*]] = phi i64 [ [[WIDE]], %[[LOOP]] ], [ [[VECTOR_RECUR_EXTRACT_FOR_PHI]], %[[MIDDLE_BLOCK]] ]
 ; THRESHOLD-NEXT:    br label %[[EXIT]]
