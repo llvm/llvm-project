@@ -52,10 +52,13 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SplitModuleByCategory.h"
+
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::opt;
@@ -169,8 +172,11 @@ static void printCommands(ArrayRef<StringRef> CmdArgs) {
 /// Execute the command \p ExecutablePath with the arguments \p Args.
 static Error executeCommands(StringRef ExecutablePath,
                              ArrayRef<StringRef> Args) {
-  if (Verbose || DryRun)
+  if (Verbose || DryRun) {
+    static std::mutex PrintMutex;
+    std::lock_guard<std::mutex> Lock(PrintMutex);
     printCommands(Args);
+  }
 
   if (DryRun)
     return Error::success();
@@ -912,6 +918,54 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
   });
 }
 
+/// AOT-compiles every JIT image in \p SplitModules concurrently and swaps each
+/// module's path to point at the compiled object.
+static Error aotCompileSplitModules(SmallVectorImpl<SplitModule> &SplitModules,
+                                    const ArgList &Args, StringRef OutputFile) {
+  // Each worker thread writes only its own index, so this is race-free.
+  SmallVector<std::string, 0> AOTFiles(SplitModules.size());
+  // std::optional, not Error: pre-filled Error::success() move-assigned
+  // from a worker thread would abort on the unchecked-value assert.
+  SmallVector<std::optional<Error>, 0> AOTErrors(SplitModules.size());
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    SmallString<64> Prefix;
+    (sys::path::filename(OutputFile).rsplit('.').first + "_" + Twine(I))
+        .toVector(Prefix);
+    Expected<StringRef> AOTFileOrErr = createTempFile(Args, Prefix, "out");
+    if (!AOTFileOrErr)
+      return AOTFileOrErr.takeError();
+    AOTFiles[I] = std::string(*AOTFileOrErr);
+  }
+  {
+    DefaultThreadPool AOTPool(llvm::heavyweight_hardware_concurrency());
+    for (size_t I = 0, E = SplitModules.size(); I != E; ++I)
+      AOTPool.async(
+          [&](size_t I) {
+            AOTErrors[I].emplace(runAOTCompile(SplitModules[I].ModuleFilePath,
+                                               AOTFiles[I], Args));
+          },
+          I);
+    AOTPool.wait();
+  }
+  // Every Error must be checked once, so visit all before returning
+  // instead of stopping at the first failure.
+  Error FirstErr = Error::success();
+  for (std::optional<Error> &Err : AOTErrors) {
+    if (!*Err)
+      continue;
+    if (FirstErr)
+      consumeError(std::move(*Err));
+    else
+      FirstErr = std::move(*Err);
+  }
+  if (FirstErr)
+    return FirstErr;
+
+  for (size_t I = 0, E = AOTFiles.size(); I != E; ++I)
+    SplitModules[I].ModuleFilePath = AOTFiles[I];
+  return Error::success();
+}
+
 /// Performs the following steps:
 /// 1. Link all input bitcode files together with library files.
 /// 2. Optionally split the linked module according to the requested
@@ -988,13 +1042,11 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     }
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
-    if (IsAOTCompileNeeded) {
-      std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
-      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
-        return Err;
-      SplitModules[I].ModuleFilePath = AOTFile;
-    }
   }
+
+  if (IsAOTCompileNeeded)
+    if (Error Err = aotCompileSplitModules(SplitModules, Args, OutputFile))
+      return Err;
 
   // Collect all images to be packed into a single OffloadBinary.
   SmallVector<OffloadingImage> Images;
