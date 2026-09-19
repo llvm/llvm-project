@@ -657,8 +657,6 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
 }
 
 bool can_execute(const Twine &Path) {
-  sandbox::violationIfEnabled();
-
   return !access(Path, AccessMode::Execute);
 }
 
