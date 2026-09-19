@@ -1,5 +1,7 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
+target datalayout = "p:64:64:64:64-p1:128:128:128:64"
+
 ; CHECK-LABEL: test_bitextract
 ; CHECK: bitextract i8, b32 %src, i32 24
 define i8 @test_bitextract(b32 %src) {
@@ -13,8 +15,6 @@ define b32 @test_bitinsert(b32 %base, i8 %val) {
   %result = bitinsert b32 %base, i8 %val, i32 3
   ret b32 %result
 }
-
-target datalayout = "p:64:64:64:64-p1:128:128:128:64"
 
 ; CHECK-LABEL: bitinsert_val_int
 ; CHECK: %r = bitinsert b64 %base, i32 %val, i32 0
