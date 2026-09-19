@@ -598,6 +598,8 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   /// Populated by resetLatticeValueFor(), cleared after resolving undefs.
   DenseSet<Value *> Invalidated;
 
+  SmallVector<BasicBlock *, 8> NewlyExecutableBlocks;
+
   /// MRVFunctionsTracked - Each function in TrackedMultipleRetVals is
   /// represented here for efficient lookup.
   SmallPtrSet<Function *, 16> MRVFunctionsTracked;
@@ -1054,6 +1056,7 @@ public:
       for (Function &F : M)
         ResolvedUndefs |= resolvedUndefsIn(F);
     }
+    NewlyExecutableBlocks.clear();
   }
 
   void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
@@ -1074,6 +1077,14 @@ public:
       for (Value *V : Invalidated)
         if (auto *I = dyn_cast<Instruction>(V))
           ResolvedUndefs |= resolvedUndef(*I);
+      // Invalidated does not cover blocks solve() has just opened.
+      while (!NewlyExecutableBlocks.empty()) {
+        BasicBlock *BB = NewlyExecutableBlocks.pop_back_val();
+        if (!BBExecutable.count(BB))
+          continue;
+        for (Instruction &I : *BB)
+          ResolvedUndefs |= resolvedUndef(I);
+      }
     }
     Invalidated.clear();
   }
@@ -1086,6 +1097,7 @@ bool SCCPInstVisitor::markBlockExecutable(BasicBlock *BB) {
     return false;
   LLVM_DEBUG(dbgs() << "Marking Block Executable: " << BB->getName() << '\n');
   BBWorkList.push_back(BB); // Add the block to the work list!
+  NewlyExecutableBlocks.push_back(BB);
   return true;
 }
 
