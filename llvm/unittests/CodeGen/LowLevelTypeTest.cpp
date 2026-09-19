@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -448,5 +449,31 @@ TEST(LowLevelTypeTest, IsScalableVector) {
   EXPECT_FALSE(LLT::fixed_vector(2, 32).isScalableVector());
   EXPECT_TRUE(LLT::scalable_vector(2, 32).isScalableVector());
   EXPECT_TRUE(LLT::scalable_vector(1, 32).isScalableVector());
+}
+
+TEST(LowLevelTypeTest, TypedFloatMatchesUntypedScalar) {
+  // Register types come from LLT::floatingPoint(), which degrades to
+  // ANY_SCALAR without extended LLTs, and an ANY_SCALAR LLT matches any scalar
+  // of the same size. Retyping a rule as LLT::float16() is therefore a no-op
+  // until the target opts in, and precise afterwards.
+  const bool SavedUseExtended = LLT::getUseExtended();
+
+  LLT::setUseExtended(false);
+  const LLT Untyped16 = LLT::scalar(16);
+  EXPECT_TRUE(Untyped16.isAnyScalar());
+  EXPECT_EQ(LLT::float16(), Untyped16);
+  EXPECT_EQ(LLT::bfloat16(), Untyped16);
+  EXPECT_EQ(LLT::integer(16), Untyped16);
+
+  LLT::setUseExtended(true);
+  EXPECT_TRUE(LLT::float16().isFloat(APFloatBase::S_IEEEhalf));
+  EXPECT_FALSE(LLT::bfloat16().isFloat(APFloatBase::S_IEEEhalf));
+  EXPECT_NE(LLT::float16(), LLT::bfloat16());
+  EXPECT_NE(LLT::float16(), LLT::integer(16));
+  EXPECT_EQ(LLT::scalar(16), LLT::float16());
+  EXPECT_EQ(LLT::scalar(16), LLT::bfloat16());
+  EXPECT_EQ(LLT::scalar(16), LLT::integer(16));
+
+  LLT::setUseExtended(SavedUseExtended);
 }
 }
