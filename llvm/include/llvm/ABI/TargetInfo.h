@@ -21,6 +21,9 @@
 #include <memory>
 
 namespace llvm {
+
+class DataLayout;
+
 namespace abi {
 
 enum RecordArgABI {
@@ -84,13 +87,16 @@ protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
   LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
   LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
-  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
-                                           bool ByVal = true) const;
+  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, bool ByVal = true,
+                                           unsigned AddrSpace = 0) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
   /// If Ty is a transparent union, return its first field type; otherwise
   /// return Ty unchanged.
   LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
+
+  /// Address space of the sret pointer for \p RT, a record returned in memory.
+  virtual unsigned getSRetAddrSpace(const RecordType *RT) const { return 0; }
 
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
@@ -161,6 +167,19 @@ struct AArch64ABIOptions {
 
 LLVM_ABI std::unique_ptr<TargetInfo>
 createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts);
+
+struct AMDGPUABIOptions {
+  /// Indirect kernel arguments are passed here.
+  unsigned ConstantAddrSpace = 0;
+  /// The language default address space.
+  unsigned GenericAddrSpace = 0;
+  /// False outside of device compilation, where no coercion applies.
+  bool CoerceKernelPointerArgs = false;
+};
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAMDGPUTargetInfo(TypeBuilder &TB, const DataLayout &DL,
+                       const AMDGPUABIOptions &Opts);
 
 } // namespace abi
 } // namespace llvm

@@ -39,6 +39,11 @@ public:
     /// Pass the argument indirectly via a hidden pointer with the specified
     /// alignment and address space.
     Indirect,
+    /// Like Indirect, but the object may be referenced elsewhere. Nothing
+    /// modifies it through another reference during the call, and the callee
+    /// must not modify it either, so a callee that cannot prove otherwise has
+    /// to copy it locally first.
+    IndirectAliased,
     /// Ignore the argument (treat as void). Useful for void and empty structs.
     Ignore,
   };
@@ -129,6 +134,16 @@ public:
     return AI;
   }
 
+  /// \p AddrSpace is the address space the object lives in.
+  static ArgInfo getIndirectAliased(Align Align, unsigned AddrSpace,
+                                    bool Realign = false) {
+    ArgInfo AI(IndirectAliased);
+    AI.Alignment = Align;
+    AI.IndirectAttr.AddrSpace = AddrSpace;
+    AI.IndirectRealign = Realign;
+    return AI;
+  }
+
   static ArgInfo getIgnore() { return ArgInfo(Ignore); }
 
   ArgInfo &setSignExt(bool SignExtend = true) {
@@ -155,6 +170,7 @@ public:
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
+  bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isIgnore() const { return TheKind == Ignore; }
   bool isExtend() const { return TheKind == Extend; }
 
@@ -169,14 +185,14 @@ public:
   }
 
   Align getIndirectAlign() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     assert(Alignment.has_value() &&
            "Indirect arguments must have an alignment");
     return *Alignment;
   }
 
   unsigned getIndirectAddrSpace() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectAttr.AddrSpace;
   }
 
@@ -186,7 +202,7 @@ public:
   }
 
   bool getIndirectRealign() const {
-    assert(isIndirect() && "Invalid Kind!");
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectRealign;
   }
 
