@@ -349,6 +349,9 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
   bool isLifetimeMarker = kind & LifetimeMarker;
   bool skipCleanupScope = false;
 
+  if (isLifetimeMarker)
+    isEHCleanup = false;
+
   cir::CleanupKind cleanupKind = cir::CleanupKind::All;
   if (isEHCleanup && cgf->getLangOpts().Exceptions) {
     cleanupKind =

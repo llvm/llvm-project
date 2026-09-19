@@ -1026,10 +1026,10 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     // per-iteration cleanup region. This scope is constructed after the
     // init-statement so the init-statement's cleanups are not captured.
     const VarDecl *condVar = s.getConditionVariable();
+    bool condVarNeedsDtor =
+        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
     bool needsCondCleanup =
-        condVar &&
-        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
-         shouldEmitLifetimeMarkersForAutoVar());
+        condVar && (condVarNeedsDtor || shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1065,9 +1065,14 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     };
 
     if (needsCondCleanup) {
-      cir::CleanupKind cleanupKind = getLangOpts().Exceptions
-                                         ? cir::CleanupKind::All
-                                         : cir::CleanupKind::Normal;
+      // Without a destructor the cleanup region holds nothing but
+      // cir.lifetime.end. A lifetime marker must not be the reason an unwind
+      // edge exists, and an EH kind here would make every call in the
+      // condition, body and step unwind to it.
+      cir::CleanupKind cleanupKind =
+          getLangOpts().Exceptions && condVarNeedsDtor
+              ? cir::CleanupKind::All
+              : cir::CleanupKind::Normal;
       forOp = builder.createFor(
           getLoc(s.getSourceRange()), condBuilder, bodyBuilder, stepBuilder,
           /*cleanupBuilder=*/
@@ -1158,10 +1163,10 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region.
     const VarDecl *condVar = s.getConditionVariable();
+    bool condVarNeedsDtor =
+        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
     bool needsCondCleanup =
-        condVar &&
-        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
-         shouldEmitLifetimeMarkersForAutoVar());
+        condVar && (condVarNeedsDtor || shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1185,9 +1190,14 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     };
 
     if (needsCondCleanup) {
-      cir::CleanupKind cleanupKind = getLangOpts().Exceptions
-                                         ? cir::CleanupKind::All
-                                         : cir::CleanupKind::Normal;
+      // Without a destructor the cleanup region holds nothing but
+      // cir.lifetime.end. A lifetime marker must not be the reason an unwind
+      // edge exists, and an EH kind here would make every call in the
+      // condition and body unwind to it.
+      cir::CleanupKind cleanupKind =
+          getLangOpts().Exceptions && condVarNeedsDtor
+              ? cir::CleanupKind::All
+              : cir::CleanupKind::Normal;
       whileOp = builder.createWhile(
           getLoc(s.getSourceRange()), condBuilder, bodyBuilder,
           /*cleanupBuilder=*/
