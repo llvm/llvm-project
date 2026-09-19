@@ -1028,13 +1028,13 @@ public:
 
   LinkGraph(std::string Name, std::shared_ptr<orc::SymbolStringPool> SSP,
             Triple TT, SubtargetFeatures Features,
-            GetEdgeKindNameFunction GetEdgeKindName)
+            GetEdgeKindNameFunction GetEdgeKindName,
+            std::optional<unsigned> PointerSize = std::nullopt)
       : Name(std::move(Name)), SSP(std::move(SSP)), TT(std::move(TT)),
         Features(std::move(Features)),
-        GetEdgeKindName(std::move(GetEdgeKindName)) {
-    assert(!(Triple::getArchPointerBitWidth(this->TT.getArch()) % 8) &&
-           "Arch bitwidth is not a multiple of 8");
-  }
+        PointerSize(PointerSize.value_or(
+            Triple::getArchPointerBitWidth(this->TT.getArch()) / 8)),
+        GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
   LinkGraph(const LinkGraph &) = delete;
   LinkGraph &operator=(const LinkGraph &) = delete;
@@ -1053,7 +1053,7 @@ public:
   const SubtargetFeatures &getFeatures() const { return Features; }
 
   /// Returns the pointer size for use in this graph.
-  unsigned getPointerSize() const { return TT.getArchPointerBitWidth() / 8; }
+  unsigned getPointerSize() const { return PointerSize; }
 
   /// Returns the endianness of content in this graph.
   llvm::endianness getEndianness() const {
@@ -1679,6 +1679,7 @@ private:
   std::shared_ptr<orc::SymbolStringPool> SSP;
   Triple TT;
   SubtargetFeatures Features;
+  unsigned PointerSize;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   DenseMap<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolMap ExternalSymbols;

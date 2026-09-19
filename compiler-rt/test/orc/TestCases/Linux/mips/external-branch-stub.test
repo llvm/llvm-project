@@ -1,0 +1,8 @@
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: %clang -O1 -fno-pic -mno-abicalls -fno-stack-protector -c -o %t/main.o %S/Inputs/external-branch-stub-main.c
+// RUN: %clang -O1 -fno-pic -mno-abicalls -fno-stack-protector -c -o %t/helper.o %S/Inputs/external-branch-stub-helper.c
+// RUN: %llvm_jitlink %t/main.o %t/helper.o
+
+// A cross-object non-PIC call uses R_MIPS_26 and requires a pointer-jump stub.
+// The stub must not assume that the executor's incoming $gp is the JIT graph's
+// _gp value.
