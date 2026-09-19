@@ -197,8 +197,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
     return QueueGroupInfoOrErr.takeError();
   QueueConfig = *QueueGroupInfoOrErr;
 
-  if (auto Err = MemAllocator.initDevicePools(*this, Options,
-                                              L0Context.getZeContext()))
+  if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
   L0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   reportDeviceInfo();

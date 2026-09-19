@@ -2293,6 +2293,14 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         "Cannot have a static-local global-op with a constructor or "
         "destructor, they require in-function initialization via LocalInitOp");
 
+  // CIRGen emits 'static_local_guard' and 'static_local_info' together and
+  // they are only meaningful together: the guard drives lowering, which reads
+  // the info. Require both or neither so malformed .cir can carry neither a
+  // guard without info nor a dangling info nothing will read.
+  if (getStaticLocalGuard().has_value() != getStaticLocalInfo().has_value())
+    return emitOpError("'static_local_guard' and 'static_local_info' must be "
+                       "present together");
+
   if (getTlsRefs()) {
     if (getStaticLocalGuard().has_value())
       return emitOpError("cannot have both static local and tls references");
@@ -4710,6 +4718,20 @@ LogicalResult cir::TryOp::verify() {
             typeAttr))
       continue;
 
+    if (entryBlock.empty())
+      return emitOpError("catch handler region must not be empty");
+
+    // A terminate scope, which wraps the body of a function that cannot throw,
+    // is a catch-all handler that only terminates the program. The exception is
+    // caught by the runtime helper that cir.eh.terminate lowers to, so the
+    // handler region has no cir.begin_catch of its own.
+    if (mlir::isa<cir::EhTerminateOp>(entryBlock.front())) {
+      if (!mlir::isa<cir::CatchAllAttr>(typeAttr))
+        return emitOpError("'cir.eh.terminate' is only allowed in a catch-all "
+                           "handler region");
+      continue;
+    }
+
     // Nothing may run in a catch handler before cir.begin_catch, so it has to
     // be the handler region's first operation, with two exceptions.
     //
@@ -4724,9 +4746,6 @@ LogicalResult cir::TryOp::verify() {
     //
     // A cir.construct_catch_param may also precede cir.begin_catch, to
     // perform any pre-begin_catch initialization of the catch parameter.
-    if (entryBlock.empty())
-      return emitOpError("catch handler region must not be empty");
-
     mlir::Operation *firstOp = &entryBlock.front();
     if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
       mlir::Operation *next = firstOp->getNextNode();

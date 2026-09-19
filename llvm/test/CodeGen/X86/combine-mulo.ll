@@ -144,9 +144,8 @@ define { i64, i1 } @combine_smul_constant_opaque() {
 define { i64, i1 } @combine_umul_constant_opaque() {
 ; CHECK-LABEL: combine_umul_constant_opaque:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $1311768467463790320, %rcx # imm = 0x123456789ABCDEF0
-; CHECK-NEXT:    movl $3, %eax
-; CHECK-NEXT:    imulq %rcx, %rax
+; CHECK-NEXT:    movabsq $1311768467463790320, %rax # imm = 0x123456789ABCDEF0
+; CHECK-NEXT:    leaq (%rax,%rax,2), %rax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %c = bitcast i64 1311768467463790320 to i64
