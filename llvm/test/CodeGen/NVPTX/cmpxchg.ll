@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --check-prefixes=SM70,CHECK
 ; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
 
-; TODO: these are seq_cst, but are compiled to relaxed..
+; TODO: these are system scope, but are compiled to gpu scope..
 
 
 ; CHECK-LABEL: relaxed_sys_i8
@@ -1344,9 +1344,11 @@ define i32 @acq_rel_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_sys_i32_param_0];
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    ld.param.b32 %r1, [acq_rel_sys_i32_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acq_rel_sys_i32_param_2];
 ; SM60-NEXT:    atom.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
 ;
@@ -1390,6 +1392,7 @@ define i32 @acquire_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM60-NEXT:    ld.param.b32 %r1, [acquire_sys_i32_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [acquire_sys_i32_param_2];
 ; SM60-NEXT:    atom.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
 ;
@@ -1430,6 +1433,7 @@ define i32 @release_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [release_sys_i32_param_0];
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    ld.param.b32 %r1, [release_sys_i32_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [release_sys_i32_param_2];
 ; SM60-NEXT:    atom.sys.cas.b32 %r3, [%rd1], %r1, %r2;
@@ -1477,6 +1481,7 @@ define i32 @seq_cst_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM60-NEXT:    ld.param.b32 %r1, [seq_cst_sys_i32_param_1];
 ; SM60-NEXT:    ld.param.b32 %r2, [seq_cst_sys_i32_param_2];
 ; SM60-NEXT:    atom.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM60-NEXT:    ret;
 ;
@@ -1563,6 +1568,7 @@ define i64 @acquire_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_sys_i64_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acquire_sys_i64_param_2];
 ; SM60-NEXT:    atom.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
 ;
@@ -1600,9 +1606,11 @@ define i64 @acq_rel_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [acq_rel_sys_i64_param_0];
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_sys_i64_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [acq_rel_sys_i64_param_2];
 ; SM60-NEXT:    atom.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
 ;
@@ -1640,6 +1648,7 @@ define i64 @release_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM60-EMPTY:
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b64 %rd1, [release_sys_i64_param_0];
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_sys_i64_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [release_sys_i64_param_2];
 ; SM60-NEXT:    atom.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
@@ -1684,6 +1693,7 @@ define i64 @seq_cst_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_sys_i64_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd3, [seq_cst_sys_i64_param_2];
 ; SM60-NEXT:    atom.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM60-NEXT:    membar.sys;
 ; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM60-NEXT:    ret;
 ;
