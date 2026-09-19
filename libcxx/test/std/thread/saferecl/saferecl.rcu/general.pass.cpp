@@ -114,5 +114,5 @@ int main(int, char**) {
   t3.join();
   t4.join();
 
-  return 1;
+  return 0;
 }
