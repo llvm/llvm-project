@@ -136,11 +136,11 @@ module ieee_arithmetic
     ieee_positive_denormal = ieee_positive_subnormal
 
   interface operator(==)
-    elemental logical function ieee_class_eq(x, y)
+    simple elemental logical function ieee_class_eq(x, y)
       import ieee_class_type
       type(ieee_class_type), intent(in) :: x, y
     end function ieee_class_eq
-    elemental logical function ieee_round_eq(x, y)
+    simple elemental logical function ieee_round_eq(x, y)
       import ieee_round_type
       type(ieee_round_type), intent(in) :: x, y
     end function ieee_round_eq
@@ -148,11 +148,11 @@ module ieee_arithmetic
   public :: operator(==)
 
   interface operator(/=)
-    elemental logical function ieee_class_ne(x, y)
+    simple elemental logical function ieee_class_ne(x, y)
       import ieee_class_type
       type(ieee_class_type), intent(in) :: x, y
     end function ieee_class_ne
-    elemental logical function ieee_round_ne(x, y)
+    simple elemental logical function ieee_round_ne(x, y)
       import ieee_round_type
       type(ieee_round_type), intent(in) :: x, y
     end function ieee_round_ne
