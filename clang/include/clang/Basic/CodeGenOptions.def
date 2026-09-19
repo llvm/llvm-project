@@ -207,7 +207,8 @@ CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1, Benign) ///< -fno-hip-fp32-correctl
 CODEGENOPT(DisableBlockSignatureString, 1, 0, Benign) ///< Set when -fdisable-block-signature-string is enabled.
 CODEGENOPT(HIPSaveKernelArgName, 1, 0, Benign) ///< Set when -fhip-kernel-arg-name is enabled.
 CODEGENOPT(UniqueInternalLinkageNames, 1, 0, Benign) ///< Internal Linkage symbols get unique names.
-CODEGENOPT(SplitMachineFunctions, 1, 0, Benign) ///< Split machine functions using profile information.
+ENUM_CODEGENOPT(FunctionSplitting, FunctionSplittingMode, 2,
+                FunctionSplittingMode::Default, Benign) ///< Late function splitting mode.
 CODEGENOPT(PartitionStaticDataSections, 1, 0, Benign) /// < Partition static data sections using profile information.
 CODEGENOPT(PPCUseFullRegisterNames, 1, 0, Benign) ///< Print full register names in assembly
 CODEGENOPT(X86RelaxRelocations, 1, 1, Benign) ///< -Wa,-mrelax-relocations={yes,no}

@@ -618,8 +618,14 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     }
   }
 
-  opts.SplitMachineFunctions =
-      args.hasArg(clang::options::OPT_fsplit_machine_functions);
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_fsplit_machine_functions_EQ))
+    opts.functionSplitting =
+        llvm::StringSwitch<llvm::FunctionSplittingMode>(a->getValue())
+            .Case("none", llvm::FunctionSplittingMode::None)
+            .Case("bbsections", llvm::FunctionSplittingMode::BBSectionsOnly)
+            .Case("all", llvm::FunctionSplittingMode::All)
+            .Default(llvm::FunctionSplittingMode::Default);
 
   opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
                                  clang::options::OPT_fno_verbose_asm, false);

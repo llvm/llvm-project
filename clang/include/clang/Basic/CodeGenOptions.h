@@ -78,6 +78,7 @@ public:
       llvm::AsanDetectStackUseAfterReturnMode;
   using AsanDtorKind = llvm::AsanDtorKind;
   using VectorLibrary = llvm::driver::VectorLibrary;
+  using FunctionSplittingMode = llvm::FunctionSplittingMode;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
   using WinX64EHUnwindMode = llvm::WinX64EHUnwindMode;
   using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;

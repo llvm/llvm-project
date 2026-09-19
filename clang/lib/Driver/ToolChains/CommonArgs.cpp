@@ -1301,9 +1301,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   // Pass an option to enable split machine functions.
-  if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
-                                options::OPT_fno_split_machine_functions)) {
-    if (A->getOption().matches(options::OPT_fsplit_machine_functions))
+  // TODO: Forward the mode itself (-plugin-opt=-function-splitting=<mode>)
+  // once the LTO plumbing for the new modes is in place. Until then only the
+  // legacy "split everywhere" behavior can be requested through LTO.
+  if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions_EQ)) {
+    if (StringRef(A->getValue()) == "all")
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
                                            "-split-machine-functions"));
   }
@@ -3090,17 +3092,18 @@ void tools::addSplitMachineFunctionsArgs(const Driver &D,
                                          const llvm::opt::ArgList &Args,
                                          llvm::opt::ArgStringList &CmdArgs,
                                          const llvm::Triple &Triple) {
-  if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
-                               options::OPT_fno_split_machine_functions)) {
-    if (!A->getOption().matches(options::OPT_fno_split_machine_functions)) {
-      // This codegen pass is only available on x86 and AArch64 ELF targets.
-      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
-        A->render(Args, CmdArgs);
-      else
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << Triple.getTriple();
-    }
+  Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions_EQ);
+  if (!A)
+    return;
+  // Disabling splitting is always supported, everything else is a codegen pass
+  // which is only available on x86 and AArch64 ELF targets.
+  if (StringRef(A->getValue()) != "none" &&
+      !((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getAsString(Args) << Triple.getTriple();
+    return;
   }
+  A->render(Args, CmdArgs);
 }
 
 void tools::addOpenMPDeviceRTL(const Driver &D,
