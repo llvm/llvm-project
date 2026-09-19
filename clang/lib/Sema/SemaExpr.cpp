@@ -7666,18 +7666,8 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           }
         }
 
-        // A glvalue element binds a reference member; store its address.
-        bool IsRef = Init->isGLValue();
         Expr::EvalResult Eval;
-        bool Evaluated =
-            IsRef ? Init->EvaluateAsLValue(Eval, Context,
-                                           /*InConstantContext=*/true)
-                  : Init->EvaluateAsRValue(Eval, Context,
-                                           /*InConstantContext=*/true);
-        Evaluated = Evaluated && !Eval.HasSideEffects && Eval.Val.hasValue();
-        // Not every constant initializer evaluates to a value, e.g. a union
-        // that is non-trivial to destroy; fall back to the structural rules.
-        if (!Evaluated && !Init->isConstantInitializer(Context, IsRef)) {
+        if (!Init->EvaluateAsConstantInitializer(Eval, Context)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
@@ -7685,12 +7675,8 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
         // Store the value so CodeGen does not re-evaluate the element outside
         // a constant context; an immediate invocation already is a
         // ConstantExpr.
-        if (isa<ConstantExpr>(Init))
-          continue;
-        if (Evaluated)
+        if (!isa<ConstantExpr>(Init))
           ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
-        else
-          ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
     }
 

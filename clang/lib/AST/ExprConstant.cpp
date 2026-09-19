@@ -22210,6 +22210,52 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
          CheckMemoryLeaks(Info);
 }
 
+bool Expr::EvaluateAsConstantInitializer(EvalResult &Result,
+                                         const ASTContext &Ctx) const {
+  assert(!isValueDependent() &&
+         "Expression evaluator can't be called on a dependent expression.");
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
+      Result.Val.hasValue())
+    return true;
+
+  ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantInitializer");
+  // Fold through undefined behavior, as isConstantInitializer allows.
+  EvalInfo Info(Ctx, Result, EvaluationMode::IgnoreSideEffects);
+  Info.InConstantContext = true;
+
+  if (Info.EnableNewConstInterp) {
+    auto &InterpCtx = Info.Ctx.getInterpContext();
+    // Keep a glvalue's address; do not destroy a prvalue's result object.
+    if (isGLValue() ? !InterpCtx.evaluate(Info, this, Result.Val,
+                                          ConstantExprKind::Normal)
+                    : !InterpCtx.evaluateAsRValue(Info, this, Result.Val))
+      return false;
+    return !Result.HasSideEffects &&
+           CheckConstantExpression(Info, getExprLoc(),
+                                   getStorageType(Ctx, this), Result.Val,
+                                   ConstantExprKind::Normal);
+  }
+
+  // Initialize a stand-in for the object in place, as EvaluateAsConstantExpr
+  // does, rather than a temporary whose destruction counts as a side effect.
+  MaterializeTemporaryExpr BaseMTE(getType(), const_cast<Expr *>(this), true);
+  APValue::LValueBase Base(&BaseMTE);
+  Info.setEvaluatingDecl(Base, Result.Val);
+
+  LValue LVal;
+  LVal.set(Base);
+  FullExpressionRAII Scope(Info);
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) || !Scope.destroy() ||
+      !Info.discardCleanups() || Result.HasSideEffects)
+    return false;
+
+  // A glvalue is checked as the reference it binds to.
+  return CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
+                                 Result.Val, ConstantExprKind::Normal) &&
+         CheckMemoryLeaks(Info);
+}
+
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
   // This function is only meaningful for records and arrays of records.

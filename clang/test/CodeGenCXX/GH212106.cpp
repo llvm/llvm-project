@@ -80,6 +80,12 @@ const std::type_info *const *tp = (const std::type_info *const[1]){&typeid(int)}
 
 // CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal constant [1 x ptr] [ptr @_ZTIi]
 
+// An element of non-literal type is initialized in place, like a variable.
+struct D { int a; ~D(); };
+const D *dp = (const D[1]){{5}};
+
+// CHECK-DAG: @.compoundliteral{{(\.[0-9]+)?}} = internal global [1 x %struct.D] [%struct.D { i32 5 }]
+
 // CHECK-LABEL: define internal void @__cxx_global_var_init()
 // CHECK: store ptr [[Z2CL]], ptr getelementptr inbounds{{.*}}(i8, ptr @z2, i64 8)
 
