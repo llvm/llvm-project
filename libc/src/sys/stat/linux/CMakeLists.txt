@@ -30,7 +30,6 @@ add_entrypoint_object(
   HDRS
     ../fchmodat.h
   DEPENDS
-    libc.hdr.errno_macros
     libc.hdr.types.mode_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.fchmodat
     libc.src.errno.errno
