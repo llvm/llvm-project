@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/OptTable.h"
-#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -228,37 +227,6 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
-static void emitHelpTextsForVariants(
-    raw_ostream &OS, const StringToOffsetTable &Table,
-    ArrayRef<std::pair<std::vector<std::string>, StringRef>>
-        HelpTextsForVariants) {
-  // OptTable must be constexpr so it uses std::arrays with these capacities.
-  const unsigned MaxVisibilityPerHelp = 2;
-  const unsigned MaxVisibilityHelp = 1;
-
-  assert(HelpTextsForVariants.size() <= MaxVisibilityHelp &&
-         "Too many help text variants to store in "
-         "OptTable::HelpTextsForVariants");
-
-  OS << ", (std::array<std::pair<std::array<unsigned, " << MaxVisibilityPerHelp
-     << ">, llvm::StringTable::Offset>, " << MaxVisibilityHelp << ">{{ ";
-
-  ListSeparator Sep;
-  for (const auto &[Visibilities, Help] : HelpTextsForVariants) {
-    assert(Visibilities.size() <= MaxVisibilityPerHelp &&
-           "Too many visibilities to store in an "
-           "OptTable::HelpTextsForVariants entry");
-    OS << Sep << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{"
-       << llvm::interleaved(Visibilities) << "}}, ";
-    writeStrTableOffset(OS, Table, Help);
-    OS << "}";
-  }
-  // Unused entries are value-initialized.
-  for (size_t I = HelpTextsForVariants.size(); I < MaxVisibilityHelp; ++I)
-    OS << Sep << "{}";
-  OS << " }})";
-}
-
 /// OptionParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
@@ -300,7 +268,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << SubCommandIDs[SubCommandKey];
     } else {
       // The option SubCommandIDsOffset (for default top level toolname is 0).
-      OS << " 0";
+      OS << '0';
     }
   };
 
@@ -335,22 +303,49 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     Table.GetOrAddStringOffset(getOptionalString(R, "MetaVarName"));
     Table.GetOrAddStringOffset(getOptionalString(R, "Values"));
     Table.GetOrAddStringOffset(getAliasArgsBlob(R));
-    for (const Record *VisibilityHelp :
-         R.getValueAsListOfDefs("HelpTextsForVariants"))
-      Table.GetOrAddStringOffset(VisibilityHelp->getValueAsString("Text"));
+    for (const Record *V : R.getValueAsListOfDefs("HelpTextsForVariants"))
+      Table.GetOrAddStringOffset(V->getValueAsString("Text"));
   }
+
+  // Flags and Visibility name enumerators of the including tool. An option
+  // inherits its group's.
+  auto GetMask = [](const Record &R, StringRef Field) {
+    std::string Mask;
+    raw_string_ostream MaskOS(Mask);
+    ListSeparator Sep(" | ");
+    for (const Init *I : *R.getValueAsListInit(Field))
+      MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
+      for (const Init *I : *DI->getDef()->getValueAsListInit(Field))
+        MaskOS << Sep << cast<DefInit>(I)->getDef()->getName();
+    return Mask.empty() ? std::string("0") : Mask;
+  };
+
+  // IDs are 1-based positions in the table, which lists groups first.
+  DenseMap<const Record *, unsigned> OptionID;
+  for (const Record &R : llvm::make_pointee_range(Groups))
+    OptionID.try_emplace(&R, OptionID.size() + 1);
+  for (const Record &R : llvm::make_pointee_range(Opts))
+    OptionID.try_emplace(&R, OptionID.size() + 1);
+  auto GetRefID = [&](const Record &R, StringRef Field) {
+    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit(Field)))
+      return OptionID.lookup(DI->getDef());
+    return 0u;
+  };
 
   // Dump string table.
   OS << "/////////\n";
   OS << "// String table\n\n";
-  OS << "#ifdef OPTTABLE_STR_TABLE_CODE\n";
+  OS << "#if defined(OPTTABLE_STR_TABLE_CODE) || defined(OPTTABLE_CODE)\n";
   Table.EmitStringTableDef(OS, "OptionStrTable");
-  OS << "#endif // OPTTABLE_STR_TABLE_CODE\n\n";
+  OS << "#undef OPTTABLE_STR_TABLE_CODE\n";
+  OS << "#endif // OPTTABLE_STR_TABLE_CODE || OPTTABLE_CODE\n\n";
+
+  OS << "/////////\n";
+  OS << "// Tables\n\n";
+  OS << "#ifdef OPTTABLE_CODE\n";
 
   // Dump prefixes.
-  OS << "/////////\n";
-  OS << "// Prefixes\n\n";
-  OS << "#ifdef OPTTABLE_PREFIXES_TABLE_CODE\n";
   OS << "static constexpr llvm::StringTable::Offset OptionPrefixesTable[] = "
         "{\n";
   {
@@ -373,13 +368,62 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       CurIndex += Prefix.size() + 1;
     }
   }
-  OS << "\n};\n";
-  OS << "#endif // OPTTABLE_PREFIXES_TABLE_CODE\n\n";
+  OS << "\n};\n\n";
+
+  // Dump prefixes union.
+  if (!PrefixesUnion.empty()) {
+    OS << "static constexpr llvm::StringTable::Offset OptionPrefixesUnion[] = "
+          "{\n";
+    llvm::ListSeparator Sep(", ");
+    for (auto Prefix : PrefixesUnion)
+      OS << Sep << "  " << *Table.GetStringOffset(Prefix) << " /* '" << Prefix
+         << "' */";
+    OS << "\n};\n\n";
+  }
+
+  // Dump help text variants. Each option's variants form a run ended by a zero
+  // row; offset 0 is the empty run.
+  OS << "static constexpr llvm::opt::OptTable::HelpTextVariant "
+        "OptionHelpTextVariantsTable[] = {\n";
+  DenseMap<const Record *, unsigned> HelpTextVariantsOffset;
+  unsigned NumVariantRows = 1;
+  OS << "  {0, 0},\n";
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    std::vector<const Record *> Variants =
+        R.getValueAsListOfDefs("HelpTextsForVariants");
+    if (Variants.empty())
+      continue;
+    HelpTextVariantsOffset[&R] = NumVariantRows;
+    NumVariantRows += Variants.size() + 1;
+    for (const Record *V : Variants) {
+      const ListInit *Vis = V->getValueAsListInit("Visibilities");
+      if (Vis->empty())
+        PrintFatalError(V->getLoc(), "HelpTextVariant needs a visibility");
+      OS << "  {";
+      ListSeparator Sep(" | ");
+      for (const Init *I : *Vis)
+        OS << Sep << I->getAsUnquotedString();
+      OS << ", ";
+      writeStrTableOffset(OS, Table, V->getValueAsString("Text"));
+      OS << "},\n";
+    }
+    OS << "  {0, 0},\n";
+  }
+  OS << "};\n\n";
+
+  // Dump subcommands.
+  if (!SubCommands.empty()) {
+    OS << "static constexpr llvm::opt::OptTable::SubCommand "
+          "OptionSubCommands[] = {\n";
+    for (const Record *SubCommand : SubCommands) {
+      OS << "  { \"" << SubCommand->getValueAsString("Name") << "\", ";
+      OS << "\"" << SubCommand->getValueAsString("HelpText") << "\", ";
+      OS << "\"" << SubCommand->getValueAsString("Usage") << "\" },\n";
+    }
+    OS << "};\n\n";
+  }
 
   // Dump subcommand IDs.
-  OS << "/////////";
-  OS << "// SubCommand IDs\n\n";
-  OS << "#ifdef OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE\n";
   OS << "static constexpr unsigned OptionSubCommandIDsTable[] = {\n";
   {
     // Ensure the first subcommand set is always empty.
@@ -407,25 +451,55 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       CurIndex += SubCommand.size() + 1;
     }
   }
-  OS << "\n};\n";
-  OS << "#endif // OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE\n\n";
+  OS << "\n};\n\n";
 
-  // Dump prefixes union.
-  OS << "/////////\n";
-  OS << "// Prefix Union\n\n";
-  OS << "#ifdef OPTTABLE_PREFIXES_UNION_CODE\n";
-  OS << "static constexpr llvm::StringTable::Offset OptionPrefixesUnion[] = "
-        "{\n";
-  {
-    llvm::ListSeparator Sep(", ");
-    for (auto Prefix : PrefixesUnion)
-      OS << Sep << "  " << *Table.GetStringOffset(Prefix) << " /* '" << Prefix
-         << "' */";
+  // Dump the option table in OptTable::Info field order.
+  OS << "static constexpr llvm::opt::OptTable::Info OptionInfoTable[] = {\n";
+  for (const Record &R : llvm::make_pointee_range(Groups)) {
+    OS << "  {";
+    writeStrTableOffset(OS, Table, R.getValueAsString("Name"),
+                        /*EmitComment=*/true);
+    OS << ", ";
+    writeStrTableOffset(OS, Table, getHelpText(R));
+    OS << ", 0, 0, 0, 0, 0, 0, " << GetRefID(R, "Group") << ", 0, 0, ";
+    PrintSubCommandIdsOffset(R);
+    OS << ", llvm::opt::Option::GroupClass, 0},\n";
   }
-  OS << "\n};\n";
-  OS << "#endif // OPTTABLE_PREFIXES_UNION_CODE\n\n";
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    OS << "  {";
+    writeStrTableOffset(OS, Table, getOptionPrefixedName(R),
+                        /*EmitComment=*/true);
+    OS << ", ";
+    writeStrTableOffset(OS, Table, getHelpText(R));
+    OS << ", ";
+    writeStrTableOffset(OS, Table, getOptionalString(R, "MetaVarName"));
+    OS << ", ";
+    writeStrTableOffset(OS, Table, getAliasArgsBlob(R));
+    OS << ", ";
+    writeStrTableOffset(OS, Table, getOptionalString(R, "Values"));
+    OS << ", " << GetMask(R, "Flags") << ", " << GetMask(R, "Visibility");
+    std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
+    OS << ", " << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())];
+    OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
+    OS << ", " << HelpTextVariantsOffset.lookup(&R) << ", ";
+    PrintSubCommandIdsOffset(R);
+    OS << ", llvm::opt::Option::"
+       << R.getValueAsDef("Kind")->getValueAsString("Name") << "Class, "
+       << R.getValueAsInt("NumArgs") << "},\n";
+  }
+  OS << "};\n\n";
 
-  // Dump groups.
+  OS << "static constexpr llvm::opt::OptTable::Tables OptionTables = {\n";
+  OS << "    OptionStrTable, OptionPrefixesTable, "
+     << (PrefixesUnion.empty() ? "{}" : "OptionPrefixesUnion")
+     << ", OptionInfoTable,\n";
+  OS << "    OptionHelpTextVariantsTable, "
+     << (SubCommands.empty() ? "{}" : "OptionSubCommands")
+     << ", OptionSubCommandIDsTable};\n";
+  OS << "#undef OPTTABLE_CODE\n";
+  OS << "#endif // OPTTABLE_CODE\n\n";
+
+  // Dump ValuesCode.
   OS << "/////////\n";
   OS << "// ValuesCode\n\n";
   OS << "#ifdef OPTTABLE_VALUES_CODE\n";
@@ -450,7 +524,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "  case OPT_" << getOptionName(*R) << ": return " << getOptionName(*R)
        << "_Values;\n";
   OS << "  }\n  return {};\n}\n";
-  OS << "#endif\n";
+  OS << "#undef OPTTABLE_VALUES_CODE\n";
+  OS << "#endif // OPTTABLE_VALUES_CODE\n";
 
   OS << "/////////\n";
   OS << "// Groups\n\n";
@@ -487,8 +562,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
 
-    // Not using Visibility specific text for group help.
-    emitHelpTextsForVariants(OS, Table, {});
+    // Groups have no help text variants.
+    OS << ", 0";
 
     // The option meta-variable name (unused).
     OS << ", 0";
@@ -523,15 +598,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
     // The containing option group (if any).
     OS << ", ";
-    const ListInit *GroupFlags = nullptr;
-    const ListInit *GroupVis = nullptr;
-    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group"))) {
-      GroupFlags = DI->getDef()->getValueAsListInit("Flags");
-      GroupVis = DI->getDef()->getValueAsListInit("Visibility");
+    if (const DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
       OS << getOptionName(*DI->getDef());
-    } else {
+    else
       OS << "INVALID";
-    }
 
     // The option alias (if any).
     OS << ", ";
@@ -545,33 +615,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     writeStrTableOffset(OS, Table, getAliasArgsBlob(R));
 
     // "Flags" for the option, such as HelpHidden and Render*
-    OS << ", ";
-    int NumFlags = 0;
-    const ListInit *LI = R.getValueAsListInit("Flags");
-    for (const Init *I : *LI)
-      OS << (NumFlags++ ? " | " : "") << cast<DefInit>(I)->getDef()->getName();
-    if (GroupFlags) {
-      for (const Init *I : *GroupFlags)
-        OS << (NumFlags++ ? " | " : "")
-           << cast<DefInit>(I)->getDef()->getName();
-    }
-    if (NumFlags == 0)
-      OS << '0';
+    OS << ", " << GetMask(R, "Flags");
 
     // Option visibility, for sharing options between drivers.
-    OS << ", ";
-    int NumVisFlags = 0;
-    LI = R.getValueAsListInit("Visibility");
-    for (const Init *I : *LI)
-      OS << (NumVisFlags++ ? " | " : "")
-         << cast<DefInit>(I)->getDef()->getName();
-    if (GroupVis) {
-      for (const Init *I : *GroupVis)
-        OS << (NumVisFlags++ ? " | " : "")
-           << cast<DefInit>(I)->getDef()->getName();
-    }
-    if (NumVisFlags == 0)
-      OS << '0';
+    OS << ", " << GetMask(R, "Visibility");
 
     // The option parameter field.
     OS << ", " << R.getValueAsInt("NumArgs");
@@ -580,21 +627,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
 
-    std::vector<std::pair<std::vector<std::string>, StringRef>>
-        HelpTextsForVariants;
-    for (const Record *VisibilityHelp :
-         R.getValueAsListOfDefs("HelpTextsForVariants")) {
-      ArrayRef<const Init *> Visibilities =
-          VisibilityHelp->getValueAsListInit("Visibilities")->getElements();
-
-      std::vector<std::string> VisibilityNames;
-      for (const Init *Visibility : Visibilities)
-        VisibilityNames.push_back(Visibility->getAsUnquotedString());
-
-      HelpTextsForVariants.emplace_back(
-          VisibilityNames, VisibilityHelp->getValueAsString("Text"));
-    }
-    emitHelpTextsForVariants(OS, Table, HelpTextsForVariants);
+    // The option help text variants.
+    OS << ", " << HelpTextVariantsOffset.lookup(&R);
 
     // The option meta-variable name.
     OS << ", ";
@@ -674,22 +708,6 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
         "std::size(SimpleEnumValueTables);\n";
 
   OS << "#endif // SIMPLE_ENUM_VALUE_TABLE\n";
-  OS << "\n";
-  OS << "/////////\n";
-  OS << "\n// SubCommands\n\n";
-  OS << "#ifdef OPTTABLE_SUBCOMMANDS_CODE\n";
-  OS << "static constexpr llvm::opt::OptTable::SubCommand OptionSubCommands[] "
-        "= "
-        "{\n";
-  for (const Record *SubCommand : SubCommands) {
-    OS << "  { \"" << SubCommand->getValueAsString("Name") << "\", ";
-    OS << "\"" << SubCommand->getValueAsString("HelpText") << "\", ";
-    OS << "\"" << SubCommand->getValueAsString("Usage") << "\" },\n";
-  }
-  OS << "};\n";
-  OS << "#endif // OPTTABLE_SUBCOMMANDS_CODE\n\n";
-
-  OS << "\n";
 }
 
 static TableGen::Emitter::Opt X("gen-opt-parser-defs", emitOptionParser,

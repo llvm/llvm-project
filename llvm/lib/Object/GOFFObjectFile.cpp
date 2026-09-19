@@ -16,6 +16,7 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #ifndef DEBUG_TYPE
@@ -896,7 +897,7 @@ uint64_t GOFFObjectFile::getRelocationType(DataRefImpl Rel) const {
 void GOFFObjectFile::getRelocationTypeName(
     DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
   uint64_t RelType = getRelocationType(Rel);
-  std::string HexStr = llvm::formatv("R_{0:x-8}", RelType).str();
+  std::string HexStr = formatv("R_{0:x-8}", RelType).str();
   Result.append(HexStr.begin(), HexStr.end());
 }
 

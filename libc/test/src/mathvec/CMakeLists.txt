@@ -420,25 +420,28 @@ add_fp_unittest(
     FMA_OPT
 )
 
-add_fp_unittest(
-  sinf_test
-  SUITE
-    libc-mathvec-unittests
-  SRCS
-    sinf_test.cpp
-  HDRS
-    ../math/sdcomp26094.h
-  DEPENDS
-    .unit_test_wrappers
-    libc.src.math.sinf
-    libc.src.mathvec.sinf
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.CPP.simd
-    libc.src.__support.macros.optimization
-  FLAGS
-    ROUND_OPT
-    FMA_OPT
-)
+if(NOT LIBC_CONF_MATH_OPTIMIZATIONS MATCHES
+   "LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT")
+  add_fp_unittest(
+    sinf_test
+    SUITE
+      libc-mathvec-unittests
+    SRCS
+      sinf_test.cpp
+    HDRS
+      ../math/sdcomp26094.h
+    DEPENDS
+      .unit_test_wrappers
+      libc.src.math.sinf
+      libc.src.mathvec.sinf
+      libc.src.__support.FPUtil.fp_bits
+      libc.src.__support.CPP.simd
+      libc.src.__support.macros.optimization
+    FLAGS
+      ROUND_OPT
+      FMA_OPT
+  )
+endif()
 
 add_fp_unittest(
   sinhf_test

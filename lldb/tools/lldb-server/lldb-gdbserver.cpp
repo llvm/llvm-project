@@ -302,24 +302,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "LLGSOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "LLGSOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "LLGSOptions.inc"
-#undef OPTION
-};
-
-class LLGSOptTable : public opt::GenericOptTable {
+class LLGSOptTable : public opt::OptTable {
 public:
-  LLGSOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LLGSOptTable() : opt::OptTable(OptionTables) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =
