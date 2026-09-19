@@ -6591,12 +6591,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, Legal, *CM, Builder);
 
-  // Scan the body of the loop in a topological order to visit each basic block
-  // after having visited its predecessor basic blocks.
-  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
-  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
-      HeaderVPBB);
-
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
                  Range.Start);
 
@@ -6610,50 +6604,45 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
-  // Now process all other blocks and instructions.
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    // Convert input VPInstructions to widened recipes.
-    for (VPRecipeBase &R : make_early_inc_range(
-             make_range(VPBB->getFirstNonPhi(), VPBB->end()))) {
-      // Skip recipes that do not need transforming or have already been
-      // transformed.
-      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
-              VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
-              VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
-              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
-          (Instruction::isCast(cast<VPInstruction>(R).getOpcode()) &&
-           vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
-        continue;
-      auto *VPI = cast<VPInstruction>(&R);
-      if (!VPI->getUnderlyingValue())
+  // Convert remaining VPInstructions to widen or replicate recipes.
+  // TODO: This legacy code should eventually be migrated to VPlan.
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(HeaderVPBB))) {
+    for (VPInstruction &VPI :
+         make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+      // We represent single-scalar casts directly as VPInstructions.
+      if (Instruction::isCast(VPI.getOpcode()) &&
+          vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
-      // TODO: Gradually replace uses of underlying instruction by analyses on
-      // VPlan. Migrate code relying on the underlying instruction from VPlan0
-      // to construct recipes below to not use the underlying instruction.
-      Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
-      Builder.setInsertPoint(VPI);
+      // We cannot handle VPInstructions without underlying values, as we would
+      // not be able to create a Replicate without it.
+      if (!VPI.getUnderlyingValue())
+        continue;
+
+      Builder.setInsertPoint(&VPI);
 
       VPRecipeBase *Recipe =
-          RecipeBuilder.tryToCreateWidenNonPhiRecipe(VPI, Range);
-      if (!Recipe)
-        Recipe =
-            RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
+          RecipeBuilder.tryToCreateWidenNonPhiRecipe(&VPI, Range);
 
-      if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
+      if (isa_and_nonnull<VPWidenIntOrFpInductionRecipe>(Recipe) &&
+          VPI.getOpcode() == Instruction::Trunc) {
         // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be
         // moved to the phi section in the header.
         Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       } else {
+        if (!Recipe)
+          Recipe = RecipeBuilder.handleReplication(&VPI, Range);
         Builder.insert(Recipe);
       }
       if (Recipe->getNumDefinedValues() == 1) {
-        VPI->replaceAllUsesWith(Recipe->getVPSingleValue());
+        VPI.replaceAllUsesWith(Recipe->getVPSingleValue());
       } else {
         assert(Recipe->getNumDefinedValues() == 0 &&
                "Unexpected multidef recipe");
       }
-      R.eraseFromParent();
+      VPI.eraseFromParent();
     }
   }
 
