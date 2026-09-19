@@ -593,6 +593,118 @@ void test_builtin_elementwise_trunc(float f, double d, vfloat4 vf4,
 }
 
 
+int test_builtin_elementwise_ctzg_scalar(int x) {
+  // CIR-LABEL: test_builtin_elementwise_ctzg_scalar
+  // CIR: cir.ctz %{{.*}} poison_zero : !s32i
+
+  // LLVM-LABEL: test_builtin_elementwise_ctzg_scalar
+  // LLVM: call i32 @llvm.cttz.i32(i32 %{{.*}}, i1 true)
+  return __builtin_elementwise_ctzg(x);
+}
+
+vint4 test_builtin_elementwise_ctzg_vector(vint4 x) {
+  // CIR-LABEL: test_builtin_elementwise_ctzg_vector
+  // CIR: cir.ctz %{{.*}} poison_zero : !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: test_builtin_elementwise_ctzg_vector
+  // LLVM: call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %{{.*}}, i1 true)
+  return __builtin_elementwise_ctzg(x);
+}
+
+int test_builtin_elementwise_ctzg_scalar_fallback(int x, int fallback) {
+  // CIR-LABEL: test_builtin_elementwise_ctzg_scalar_fallback
+  // CIR: %[[CTZ:.*]] = cir.ctz %[[ARG:.*]] poison_zero : !s32i
+  // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CIR: %[[ISZERO:.*]] = cir.cmp eq %[[ARG]], %[[ZERO]] : !s32i
+  // CIR: cir.select if %[[ISZERO]] then %{{.*}} else %[[CTZ]]
+
+  // LLVM-LABEL: test_builtin_elementwise_ctzg_scalar_fallback
+  // LLVM: %[[CTZ:.*]] = call i32 @llvm.cttz.i32(i32 %[[ARG:.*]], i1 true)
+  // LLVM: %[[ISZERO:.*]] = icmp eq i32 %[[ARG]], 0
+  // LLVM: select i1 %[[ISZERO]], i32 %{{.*}}, i32 %[[CTZ]]
+  return __builtin_elementwise_ctzg(x, fallback);
+}
+
+vint4 test_builtin_elementwise_ctzg_vector_fallback(vint4 x,
+                                                     vint4 fallback) {
+  // CIR-LABEL: test_builtin_elementwise_ctzg_vector_fallback
+  // CIR: %[[CTZ:.*]] = cir.ctz %[[ARG:.*]] poison_zero : !cir.vector<4 x !s32i>
+  // CIR: %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
+  // CIR: %[[ISZERO:.*]] = cir.vec.cmp(eq, %[[ARG]], %[[ZERO]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !cir.bool>
+  // CIR: cir.select if %[[ISZERO]] then %{{.*}} else %[[CTZ]]
+
+  // LLVM-LABEL: test_builtin_elementwise_ctzg_vector_fallback
+  // LLVM: %[[CTZ:.*]] = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %[[ARG:.*]], i1 true)
+  // LLVM: %[[ISZERO:.*]] = icmp eq <4 x i32> %[[ARG]], zeroinitializer
+  // LLVM: select <4 x i1> %[[ISZERO]], <4 x i32> %{{.*}}, <4 x i32> %[[CTZ]]
+  return __builtin_elementwise_ctzg(x, fallback);
+}
+
+_BitInt(31) test_builtin_elementwise_ctzg_bitint(_BitInt(31) x) {
+  // CIR-LABEL: test_builtin_elementwise_ctzg_bitint
+  // CIR: cir.ctz %{{.*}} poison_zero : !cir.int<s, 31, bitint>
+
+  // LLVM-LABEL: test_builtin_elementwise_ctzg_bitint
+  // LLVM: call i31 @llvm.cttz.i31(i31 %{{.*}}, i1 true)
+  return __builtin_elementwise_ctzg(x);
+}
+
+int test_builtin_elementwise_clzg_scalar(int x) {
+  // CIR-LABEL: test_builtin_elementwise_clzg_scalar
+  // CIR: cir.clz %{{.*}} poison_zero : !s32i
+
+  // LLVM-LABEL: test_builtin_elementwise_clzg_scalar
+  // LLVM: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 true)
+  return __builtin_elementwise_clzg(x);
+}
+
+vint4 test_builtin_elementwise_clzg_vector(vint4 x) {
+  // CIR-LABEL: test_builtin_elementwise_clzg_vector
+  // CIR: cir.clz %{{.*}} poison_zero : !cir.vector<4 x !s32i>
+
+  // LLVM-LABEL: test_builtin_elementwise_clzg_vector
+  // LLVM: call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %{{.*}}, i1 true)
+  return __builtin_elementwise_clzg(x);
+}
+
+int test_builtin_elementwise_clzg_scalar_fallback(int x, int fallback) {
+  // CIR-LABEL: test_builtin_elementwise_clzg_scalar_fallback
+  // CIR: %[[CLZ:.*]] = cir.clz %[[ARG:.*]] poison_zero : !s32i
+  // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CIR: %[[ISZERO:.*]] = cir.cmp eq %[[ARG]], %[[ZERO]] : !s32i
+  // CIR: cir.select if %[[ISZERO]] then %{{.*}} else %[[CLZ]]
+
+  // LLVM-LABEL: test_builtin_elementwise_clzg_scalar_fallback
+  // LLVM: %[[CLZ:.*]] = call i32 @llvm.ctlz.i32(i32 %[[ARG:.*]], i1 true)
+  // LLVM: %[[ISZERO:.*]] = icmp eq i32 %[[ARG]], 0
+  // LLVM: select i1 %[[ISZERO]], i32 %{{.*}}, i32 %[[CLZ]]
+  return __builtin_elementwise_clzg(x, fallback);
+}
+
+vint4 test_builtin_elementwise_clzg_vector_fallback(vint4 x,
+                                                     vint4 fallback) {
+  // CIR-LABEL: test_builtin_elementwise_clzg_vector_fallback
+  // CIR: %[[CLZ:.*]] = cir.clz %[[ARG:.*]] poison_zero : !cir.vector<4 x !s32i>
+  // CIR: %[[ZERO:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
+  // CIR: %[[ISZERO:.*]] = cir.vec.cmp(eq, %[[ARG]], %[[ZERO]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !cir.bool>
+  // CIR: cir.select if %[[ISZERO]] then %{{.*}} else %[[CLZ]]
+
+  // LLVM-LABEL: test_builtin_elementwise_clzg_vector_fallback
+  // LLVM: %[[CLZ:.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %[[ARG:.*]], i1 true)
+  // LLVM: %[[ISZERO:.*]] = icmp eq <4 x i32> %[[ARG]], zeroinitializer
+  // LLVM: select <4 x i1> %[[ISZERO]], <4 x i32> %{{.*}}, <4 x i32> %[[CLZ]]
+  return __builtin_elementwise_clzg(x, fallback);
+}
+
+_BitInt(31) test_builtin_elementwise_clzg_bitint(_BitInt(31) x) {
+  // CIR-LABEL: test_builtin_elementwise_clzg_bitint
+  // CIR: cir.clz %{{.*}} poison_zero : !cir.int<s, 31, bitint>
+
+  // LLVM-LABEL: test_builtin_elementwise_clzg_bitint
+  // LLVM: call i31 @llvm.ctlz.i31(i31 %{{.*}}, i1 true)
+  return __builtin_elementwise_clzg(x);
+}
+
 void test_builtin_elementwise_fshl(long long int i1, long long int i2,
                                    long long int i3, unsigned short us1,
                                    unsigned short us2, unsigned short us3,
