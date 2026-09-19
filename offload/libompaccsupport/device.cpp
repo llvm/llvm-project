@@ -198,7 +198,8 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
       IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
   if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
-                        AsyncInfo))
+                        AsyncInfo, /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
+                        /*Loc=*/nullptr, /*Name=*/"IndirectCallTable"))
     return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
                                      "failed to copy data");
   // The IndirectCallTable is on the stack, so we must synchronize to ensure
@@ -247,7 +248,9 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
 
   AsyncInfoTy AsyncInfo(*this);
   if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
-                 sizeof(DeviceEnvironment), AsyncInfo))
+                 sizeof(DeviceEnvironment), AsyncInfo, /*Entry=*/nullptr,
+                 /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                 /*Name=*/"DeviceEnvironment"))
     return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
                                      "failed to copy data");
 
@@ -279,10 +282,11 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
 // Submit data to device
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                              AsyncInfoTy &AsyncInfo, HostDataToTargetTy *Entry,
-                             MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+                             MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                             const ident_t *Loc, const char *Name) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/true,
-                              Entry, HDTTMapPtr);
+                              Entry, HDTTMapPtr, Loc, Name);
 
   /// RAII to establish tool anchors before and after data submit
   OMPT_IF_BUILT(
@@ -299,10 +303,11 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo,
                                HostDataToTargetTy *Entry,
-                               MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr) {
+                               MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
+                               const ident_t *Loc) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)
     MappingInfo.printCopyInfo(TgtPtrBegin, HstPtrBegin, Size, /*H2D=*/false,
-                              Entry, HDTTMapPtr);
+                              Entry, HDTTMapPtr, Loc);
 
   /// RAII to establish tool anchors before and after data retrieval
   OMPT_IF_BUILT(
