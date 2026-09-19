@@ -7,6 +7,26 @@ struct Msg {
   virtual unsigned cmd() const = 0;
 };
 
+namespace nonfinal_bifurcates {
+// When the method is non-final and the dynamic type is unclear, the analysis
+// should bifurcate, with one branch inlining the method and the other branch
+// doing a conservative evaluation (which represents that another overriding
+// method is called). (This is the baseline which is disabled in some cases.)
+struct Ctrl : Msg {
+  unsigned c;
+  unsigned cmd() const override { return c; }
+};
+
+void test(Ctrl* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
+  // expected-warning@-2 {{conj_$}}
+  clang_analyzer_eval(p->cmd() == p->cmd());
+  // expected-warning@-1 {{TRUE}}
+  // expected-warning@-2 {{FALSE}}
+}
+} // namespace nonfinal_bifurcates
+
 namespace gh222960 {
 // Ctrl::cmd() is final, the analyzer should not split off a "maybe dynamic
 // dispatch invokes a different overriding method" execution path, and only
@@ -129,23 +149,3 @@ void test(Child* childp) {
   // expected-warning@-1 {{TRUE}}
 }
 } // namespace nonfinal_method_on_ptr_with_dyn_type_final
-
-namespace nonfinal_bifurcates {
-// When the method is non-final and the dynamic type is unclear, the analysis
-// should bifurcate, with one branch inlining the method and the other branch
-// doing a conservative evaluation (which represents that another overriding
-// method is called).
-struct Ctrl : Msg {
-  unsigned c;
-  unsigned cmd() const override { return c; }
-};
-
-void test(Ctrl* p) {
-  clang_analyzer_dump(p->cmd());
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
-  // expected-warning@-2 {{conj_$}}
-  clang_analyzer_eval(p->cmd() == p->cmd());
-  // expected-warning@-1 {{TRUE}}
-  // expected-warning@-2 {{FALSE}}
-}
-} // namespace nonfinal_bifurcates
