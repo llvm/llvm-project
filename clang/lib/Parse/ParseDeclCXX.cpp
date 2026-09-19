@@ -1110,6 +1110,8 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   // make sure we have a token we can turn into an annotation token
   if (PP.isBacktrackEnabled()) {
     PP.RevertCachedTokens(1);
+    if (DS.getTypeSpecType() == TST_error)
+      EndLoc = PP.getLastCachedTokenLocation();
   } else
     PP.EnterToken(Tok, /*IsReinject*/ true);
 
