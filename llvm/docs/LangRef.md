@@ -11595,10 +11595,9 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 ```
 ##### Overview:
 
-The '`bitinsert`' instruction writes a contiguous range of bits from an
-integer, floating-point, pointer, or {ref}`byte type <t_byte>` value into a
-{ref}`byte type <t_byte>` value and returns the result as a value of the same
-byte type.
+The '`bitinsert`' instruction writes a contiguous range of bits from a
+value of type `ty` into a {ref}`byte type <t_byte>` value and returns
+the result as a value of the same byte type.
 
 ##### Arguments:
 
