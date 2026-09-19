@@ -86,6 +86,15 @@ static cl::list<std::string> OptDisablePasses(
     }),
     cl::desc("Optimization pass(es) to disable (comma-separated list)"));
 
+static cl::list<std::string> OptBisectFuncsList(
+    "opt-bisect-funcs", cl::value_desc("function names"), cl::CommaSeparated,
+    cl::cb<void, std::string>([](const std::string &FuncName) {
+      getOptBisector().setEnabledFunc(FuncName);
+    }),
+    cl::Hidden,
+    cl::desc("Only perform opt bisect for functions that are included in this "
+             "list and if empty, apply to all functions."));
+
 static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
                              bool Running) {
   StringRef Status = Running ? "" : "NOT ";
@@ -93,8 +102,8 @@ static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
          << " on " << TargetDesc << '\n';
 }
 
-bool OptBisect::shouldRunPass(StringRef PassName,
-                              StringRef IRDescription) const {
+bool OptBisect::shouldRunPass(StringRef PassName, StringRef IRDescription,
+                              StringRef FuncName) const {
   assert(isEnabled());
 
   int CurBisectNum = ++LastBisectNum;
@@ -108,6 +117,12 @@ bool OptBisect::shouldRunPass(StringRef PassName,
 
   // Also check if the pass is disabled via -opt-disable.
   ShouldRun = ShouldRun && !DisabledPasses.contains(PassName);
+
+  // If passed a function name, check if the function is enabled for bisection
+  // via opt-bisect-funcs
+  bool SkipGate = !FuncName.empty() && !OptBisectFuncNames.empty() &&
+                  !OptBisectFuncNames.contains(FuncName);
+  ShouldRun = ShouldRun && !SkipGate;
 
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
