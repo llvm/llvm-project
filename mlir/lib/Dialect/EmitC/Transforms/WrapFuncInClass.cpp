@@ -76,6 +76,8 @@ public:
 
   LogicalResult matchAndRewrite(FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
+    if (funcOp.isExternal())
+      return failure();
 
     std::string className = llvm::formatv(
         /*Validate=*/false, classNameFormat.c_str(), funcOp.getName());
