@@ -75,7 +75,8 @@ OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 
 OptTable::OptTable(const Tables &T, bool IgnoreCase)
     : StrTable(&T.StrTable), PrefixesTable(T.PrefixesTable),
-      OptionInfos(T.Infos), IgnoreCase(IgnoreCase), SubCommands(T.SubCommands),
+      OptionInfos(T.Infos), InfoExtrasTable(T.InfoExtras),
+      IgnoreCase(IgnoreCase), SubCommands(T.SubCommands),
       SubCommandIDsTable(T.SubCommandIDs),
       HelpTextVariantsTable(T.HelpTextVariants) {
   // Each prefix set in PrefixesTable starts with its size.
@@ -770,8 +771,7 @@ void OptTable::internalPrintHelp(
   auto DoesOptionBelongToSubcommand = [&](const Info &CandidateInfo) {
     // Retrieve the SubCommandIDs registered to the given current CandidateInfo
     // Option.
-    ArrayRef<unsigned> SubCommandIDs =
-        CandidateInfo.getSubCommandIDs(SubCommandIDsTable);
+    ArrayRef<unsigned> SubCommandIDs = getSubCommandIDs(CandidateInfo);
 
     // If no registered subcommands, then only global options are to be printed.
     // If no valid SubCommand (empty) in commandline then print the current
