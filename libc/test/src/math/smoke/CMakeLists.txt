@@ -3364,11 +3364,11 @@ add_fp_unittest(
   SUITE
     libc-math-smoke-tests
   SRCS
-    fminimum_numf16_test.cpp
+    fminimum_numbf16_test.cpp
   HDRS
-    FMaximumTest.h
+    FMinimumNumTest.h
   DEPENDS
-    libc.src.math.fminimum_numf16
+    libc.src.math.fminimum_numbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits

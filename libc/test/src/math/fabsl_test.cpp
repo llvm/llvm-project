@@ -10,4 +10,4 @@
 
 #include "src/math/fabsl.h"
 
-LIST_FABS_TESTS(long double, LIBC_NAMESPACE::fabsl)
+LIST_FABS_TESTS(Fabsl, long double, LIBC_NAMESPACE::fabsl)

@@ -55,6 +55,10 @@ enum OptionVisibility {
   MultiLineVis = (1 << 3),
 };
 
+#define OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
+
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
@@ -68,6 +72,7 @@ public:
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                         IgnoreCase) {
     setValuesCodeFn(getOptionValuesCode);
+    setHelpTextVariantsTable(OptionHelpTextVariantsTable);
   }
 };
 
@@ -77,6 +82,7 @@ public:
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                             OptionPrefixesUnion, IgnoreCase) {
     setValuesCodeFn(getOptionValuesCode);
+    setHelpTextVariantsTable(OptionHelpTextVariantsTable);
   }
 };
 }
@@ -567,6 +573,23 @@ TYPED_TEST(OptTableTest, UnknownGroupedShortOptions) {
   EXPECT_EQ("-z", Unknown[1]);
   EXPECT_EQ("-u", Unknown[2]);
   EXPECT_EQ("-z", Unknown[3]);
+}
+
+TYPED_TEST(OptTableTest, HelpTextForVariants) {
+  TypeParam T;
+  EXPECT_EQ("The xyzzy2 option", T.getOptionHelpText(OPT_Xyzzy2));
+  EXPECT_EQ("The xyzzy2 option",
+            T.getOptionHelpText(OPT_Xyzzy2, Visibility(SubtoolVis)));
+  EXPECT_EQ("The xyzzy3 option", T.getOptionHelpText(OPT_Xyzzy3));
+  EXPECT_EQ("The xyzzy3 option",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(DefaultVis)));
+  EXPECT_EQ("The xyzzy3 option for the subtool",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(SubtoolVis)));
+  EXPECT_EQ(
+      "The xyzzy3 option for the subtool",
+      T.getOptionHelpText(OPT_Xyzzy3, Visibility(DefaultVis | SubtoolVis)));
+  EXPECT_EQ("The xyzzy3 option for multiline",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(MultiLineVis)));
 }
 
 TYPED_TEST(OptTableTest, PrintMultilineHelpText) {
