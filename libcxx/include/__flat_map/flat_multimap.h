@@ -83,9 +83,9 @@ class flat_multimap {
   friend class flat_multimap;
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>,
-                "The stored elements key type must match the underlying key container's value_type.");
+                "The stored elements key type must match the underlying container's key value_type.");
   static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>,
-                "The stored elements mapped type must match the underlying mapped container's value_type.");
+                "The stored elements mapped type must match the underlying container's mapped value_type.");
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
   static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 

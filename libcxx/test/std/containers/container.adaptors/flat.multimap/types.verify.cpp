@@ -18,7 +18,7 @@
 #include <functional>
 #include <vector>
 
-void test_flat_multimap() {
+void test() {
   // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements key type must match the underlying container's key value_type.}}
   std::flat_multimap<double, int, std::less<double>, std::vector<char>> fmm1;
 

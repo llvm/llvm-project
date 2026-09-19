@@ -17,7 +17,7 @@
 #include <functional>
 #include <vector>
 
-void test_flat_multiset() {
+void test() {
   // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements key type must match the underlying container's key value_type.}}
   std::flat_multiset<double, std::less<double>, std::vector<int>> fms1;
 
