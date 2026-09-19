@@ -1772,6 +1772,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   WriteInputFiles(SourceMgr);
   Stream.ExitBlock();
+
+  // Import locations in the control block must remain local, so start
+  // rewriting only after it has been written.
+  ControlBlockWritten = true;
 }
 
 namespace  {
@@ -6196,9 +6200,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
   // Write the control block
   WriteControlBlock(*PP, isysroot);
-  // Import locations in the control block must remain local, so start rewriting
-  // only after it has been written.
-  ControlBlockWritten = true;
 
   // Write the remaining AST contents.
   Stream.FlushToWord();
