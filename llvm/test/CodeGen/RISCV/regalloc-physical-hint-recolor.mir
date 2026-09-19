@@ -1,0 +1,39 @@
+# RUN: llc -mtriple=riscv64 -mattr=+reserve-x9,+reserve-x11,+reserve-x12,+reserve-x13,+reserve-x14,+reserve-x15 -run-pass=greedy,virtregrewriter -regalloc-enable-priority-advisor=dummy -verify-machineinstrs -o - %s | FileCheck %s
+
+# Verify that the final broken-hint reconciliation can move virtual
+# interferences out of a physical hint and assign the complete hinted interval
+# to that register. This test does not depend on post-RA copy sinking.
+
+---
+name: direct_physical_hint_recolor
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gprc }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+body: |
+  bb.0:
+    liveins: $x10
+
+    %0:gpr = COPY $x10
+    %1:gprc = COPY $x10
+    %2:gpr = ADD %0, %0
+    %3:gpr = ADD %2, %0
+    %4:gpr = ADD %3, %1
+    $x10 = COPY %1
+    $x11 = COPY %4
+    PseudoRET implicit $x10, implicit $x11
+
+    ; CHECK-LABEL: name: direct_physical_hint_recolor
+    ; CHECK: bb.0:
+    ; CHECK-NEXT: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x17 = COPY $x10
+    ; CHECK-NEXT: renamable $x16 = ADD renamable $x17, renamable $x17
+    ; CHECK-NEXT: renamable $x16 = ADD killed renamable $x16, killed renamable $x17
+    ; CHECK-NEXT: renamable $x16 = ADD killed renamable $x16, renamable $x10
+    ; CHECK-NEXT: $x11 = COPY killed renamable $x16
+    ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
+...
