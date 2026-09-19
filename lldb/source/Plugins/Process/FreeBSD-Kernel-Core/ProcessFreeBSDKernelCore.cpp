@@ -18,7 +18,6 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/Error.h"
-#include "llvm/Support/SaveAndRestore.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
 #include "ProcessFreeBSDKernelCore.h"
@@ -135,7 +134,9 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
     char errbuf[_POSIX2_LINE_MAX];
-    kvm_t *kvm = OpenKVM(executable, *crash_file, O_RDONLY, errbuf);
+    kvm_t *kvm =
+        kvm_open2(executable->GetFileSpec().GetPath().c_str(),
+                  crash_file->GetPath().c_str(), O_RDONLY, errbuf, nullptr);
     if (kvm) {
       kvm_close(kvm);
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
@@ -195,9 +196,8 @@ Status ProcessFreeBSDKernelCore::DoLoadCore() {
         "ProcessFreeBSDKernelCore: no executable module set on target");
 
   char errbuf[_POSIX2_LINE_MAX];
-  const int flags =
-      GetGlobalPluginProperties().GetReadOnly() ? O_RDONLY : O_RDWR;
-  m_kvm = OpenKVM(executable, GetCoreFile(), flags, errbuf);
+  m_kvm = kvm_open2(executable->GetFileSpec().GetPath().c_str(),
+                    GetCoreFile().GetPath().c_str(), O_RDWR, errbuf, nullptr);
 
   if (!m_kvm) {
     LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
@@ -549,34 +549,6 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   ModuleSP mod_sp = GetTarget().GetExecutableModule();
   const Symbol *sym = mod_sp->FindFirstSymbolWithNameAndType(ConstString(name));
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
-}
-
-int ProcessFreeBSDKernelCore::ResolveKVMSymbol(const char *name,
-                                               kvaddr_t *value) {
-  if (!g_kvm_kernel_module)
-    return 1;
-
-  const Symbol *symbol =
-      g_kvm_kernel_module->FindFirstSymbolWithNameAndType(ConstString(name));
-  if (!symbol)
-    return 1;
-
-  lldb::addr_t address = symbol->GetFileAddress();
-  if (address == LLDB_INVALID_ADDRESS)
-    return 1;
-
-  *value = address;
-  return 0;
-}
-
-kvm_t *ProcessFreeBSDKernelCore::OpenKVM(const ModuleSP &kernel_module,
-                                         const FileSpec &core_file, int flags,
-                                         char *errbuf) {
-  llvm::SaveAndRestore resolver_module(g_kvm_kernel_module,
-                                       kernel_module.get());
-  return kvm_open2(kernel_module->GetFileSpec().GetPath().c_str(),
-                   core_file.GetPath().c_str(), flags, errbuf,
-                   ResolveKVMSymbol);
 }
 
 void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
