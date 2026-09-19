@@ -29,6 +29,23 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
                                      std::nullopt, CodeGenOptLevel::Default));
 }
 
+std::unique_ptr<TargetMachine> createLFITargetMachine() {
+  Triple TT("aarch64_lfi--");
+  std::string CPU("generic");
+  std::string FS("+pauth");
+
+  LLVMInitializeAArch64TargetInfo();
+  LLVMInitializeAArch64Target();
+  LLVMInitializeAArch64TargetMC();
+
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+
+  return std::unique_ptr<TargetMachine>(
+      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
+                                     std::nullopt, CodeGenOptLevel::Default));
+}
+
 std::pair<std::unique_ptr<AArch64Subtarget>, std::unique_ptr<AArch64InstrInfo>>
 createInstrInfo(TargetMachine *TM) {
   auto ST = std::make_unique<AArch64Subtarget>(
@@ -371,23 +388,6 @@ TEST(InstSizes, MOPSMemoryPseudos) {
             });
 }
 
-static std::unique_ptr<TargetMachine> createLFITargetMachine() {
-  Triple TT("aarch64_lfi--");
-  std::string CPU("generic");
-  std::string FS("+pauth");
-
-  LLVMInitializeAArch64TargetInfo();
-  LLVMInitializeAArch64Target();
-  LLVMInitializeAArch64TargetMC();
-
-  std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-
-  return std::unique_ptr<TargetMachine>(
-      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default));
-}
-
 TEST(InstSizes, LFIControlFlow) {
   std::unique_ptr<TargetMachine> TM = createLFITargetMachine();
   auto [ST, II] = createInstrInfo(TM.get());
@@ -404,10 +404,28 @@ TEST(InstSizes, LFIControlFlow) {
               EXPECT_EQ(12u, II.getInstSizeInBytes(*I)); // BLR (8 + 4)
             });
 
+  runChecks(TM.get(), II.get(), "", "  BRAA $x10, $x9\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(16u, II.getInstSizeInBytes(*I)); // BRAA (12 + 4)
+            });
+
   runChecks(TM.get(), II.get(), "", "  BLRAA $x10, $x9\n",
             [](AArch64InstrInfo &II, MachineFunction &MF) {
               auto I = MF.begin()->begin();
               EXPECT_EQ(16u, II.getInstSizeInBytes(*I)); // BLRAA (12 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "", "  RET undef $lr\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(8u, II.getInstSizeInBytes(*I)); // RET (4 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "", "  RETAA implicit $lr, implicit $sp\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I)); // RETAA (12)
             });
 
   runChecks(TM.get(), II.get(), "", "  B %bb.0\n",
