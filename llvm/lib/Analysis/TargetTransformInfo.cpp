@@ -1477,6 +1477,11 @@ bool TargetTransformInfo::preferSLPInstCountCheck() const {
   return TTIImpl->preferSLPInstCountCheck();
 }
 
+bool TargetTransformInfo::isNarrowFPReductionUnprofitable(
+    Type *ScalarTy, bool IsScalable) const {
+  return TTIImpl->isNarrowFPReductionUnprofitable(ScalarTy, IsScalable);
+}
+
 bool TargetTransformInfo::preferPredicatedReductionSelect() const {
   return TTIImpl->preferPredicatedReductionSelect();
 }

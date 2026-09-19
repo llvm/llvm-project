@@ -448,6 +448,9 @@ public:
 
   bool enableOrderedReductions() const override { return true; }
 
+  bool isNarrowFPReductionUnprofitable(Type *ScalarTy,
+                                       bool IsScalable) const override;
+
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
