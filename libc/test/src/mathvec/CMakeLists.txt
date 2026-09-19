@@ -241,7 +241,7 @@ add_fp_unittest(
     exp2f_test.cpp
   DEPENDS
     .unit_test_wrappers
-    libc.src.math.exp2f
+    libc.src.__support.math.exp2f_double_eval
     libc.src.mathvec.exp2f
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
@@ -275,7 +275,7 @@ add_fp_unittest(
     exp10f_test.cpp
   DEPENDS
     .unit_test_wrappers
-    libc.src.math.exp10f
+    libc.src.__support.math.exp10f_double_eval
     libc.src.mathvec.exp10f
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
@@ -309,7 +309,7 @@ add_fp_unittest(
     expf_test.cpp
   DEPENDS
     .unit_test_wrappers
-    libc.src.math.expf
+    libc.src.__support.math.expf_double_eval
     libc.src.mathvec.expf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
