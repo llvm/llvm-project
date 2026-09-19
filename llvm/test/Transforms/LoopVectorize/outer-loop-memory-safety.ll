@@ -1269,6 +1269,256 @@ exit:
   ret void
 }
 
+; The volatile load cannot be widened.
+define void @volatile_load(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: define void @volatile_load(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
+; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load volatile i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_IV_CMP:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[INNER_IV_CMP]], label %[[OUTER_LATCH]], label %[[INNER_BODY]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[A_VAL_LCSSA:%.*]] = phi i32 [ [[A_VAL]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OUTER_IV]]
+; CHECK-NEXT:    store i32 [[A_VAL_LCSSA]], ptr [[B_PTR]], align 4
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_CMP:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 4
+; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP36:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
+  %A.val = load volatile i32, ptr %A, align 4
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.iv.cmp = icmp eq i64 %inner.iv.next, 2
+  br i1 %inner.iv.cmp, label %outer.latch, label %inner.body
+
+outer.latch:
+  %B.ptr = getelementptr inbounds i32, ptr %B, i64 %outer.iv
+  store i32 %A.val, ptr %B.ptr, align 4
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.iv.cmp = icmp eq i64 %outer.iv.next, 4
+  br i1 %outer.iv.cmp, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+; The volatile store cannot be widened.
+define void @volatile_store(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: define void @volatile_store(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
+; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_IV_CMP:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[INNER_IV_CMP]], label %[[OUTER_LATCH]], label %[[INNER_BODY]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[A_VAL_LCSSA:%.*]] = phi i32 [ [[A_VAL]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OUTER_IV]]
+; CHECK-NEXT:    store volatile i32 [[A_VAL_LCSSA]], ptr [[B_PTR]], align 4
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_CMP:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 4
+; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP36]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
+  %A.val = load i32, ptr %A, align 4
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.iv.cmp = icmp eq i64 %inner.iv.next, 2
+  br i1 %inner.iv.cmp, label %outer.latch, label %inner.body
+
+outer.latch:
+  %B.ptr = getelementptr inbounds i32, ptr %B, i64 %outer.iv
+  store volatile i32 %A.val, ptr %B.ptr, align 4
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.iv.cmp = icmp eq i64 %outer.iv.next, 4
+  br i1 %outer.iv.cmp, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+; The unordered atomic load cannot be widened.
+define void @atomic_load_unordered(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: define void @atomic_load_unordered(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
+; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load atomic i32, ptr [[A]] unordered, align 4
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_IV_CMP:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[INNER_IV_CMP]], label %[[OUTER_LATCH]], label %[[INNER_BODY]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[A_VAL_LCSSA:%.*]] = phi i32 [ [[A_VAL]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OUTER_IV]]
+; CHECK-NEXT:    store i32 [[A_VAL_LCSSA]], ptr [[B_PTR]], align 4
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_CMP:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 4
+; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP36]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
+  %A.val = load atomic i32, ptr %A unordered, align 4
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.iv.cmp = icmp eq i64 %inner.iv.next, 2
+  br i1 %inner.iv.cmp, label %outer.latch, label %inner.body
+
+outer.latch:
+  %B.ptr = getelementptr inbounds i32, ptr %B, i64 %outer.iv
+  store i32 %A.val, ptr %B.ptr, align 4
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.iv.cmp = icmp eq i64 %outer.iv.next, 4
+  br i1 %outer.iv.cmp, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+; The monotonic atomic load cannot be widened.
+define void @atomic_load_monotonic(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: define void @atomic_load_monotonic(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
+; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load atomic i32, ptr [[A]] monotonic, align 4
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_IV_CMP:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[INNER_IV_CMP]], label %[[OUTER_LATCH]], label %[[INNER_BODY]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[A_VAL_LCSSA:%.*]] = phi i32 [ [[A_VAL]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OUTER_IV]]
+; CHECK-NEXT:    store i32 [[A_VAL_LCSSA]], ptr [[B_PTR]], align 4
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_CMP:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 4
+; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP36]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
+  %A.val = load atomic i32, ptr %A monotonic, align 4
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.iv.cmp = icmp eq i64 %inner.iv.next, 2
+  br i1 %inner.iv.cmp, label %outer.latch, label %inner.body
+
+outer.latch:
+  %B.ptr = getelementptr inbounds i32, ptr %B, i64 %outer.iv
+  store i32 %A.val, ptr %B.ptr, align 4
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.iv.cmp = icmp eq i64 %outer.iv.next, 4
+  br i1 %outer.iv.cmp, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+; The unordered atomic store cannot be widened.
+define void @atomic_store_unordered(ptr noalias %A, ptr noalias %B) {
+; CHECK-LABEL: define void @atomic_store_unordered(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_BODY:.*]]
+; CHECK:       [[INNER_BODY]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_IV_CMP:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 2
+; CHECK-NEXT:    br i1 [[INNER_IV_CMP]], label %[[OUTER_LATCH]], label %[[INNER_BODY]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[A_VAL_LCSSA:%.*]] = phi i32 [ [[A_VAL]], %[[INNER_BODY]] ]
+; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OUTER_IV]]
+; CHECK-NEXT:    store atomic i32 [[A_VAL_LCSSA]], ptr [[B_PTR]] unordered, align 4
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_CMP:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], 4
+; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP36]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
+  %A.val = load i32, ptr %A, align 4
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.iv.cmp = icmp eq i64 %inner.iv.next, 2
+  br i1 %inner.iv.cmp, label %outer.latch, label %inner.body
+
+outer.latch:
+  %B.ptr = getelementptr inbounds i32, ptr %B, i64 %outer.iv
+  store atomic i32 %A.val, ptr %B.ptr unordered, align 4
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.iv.cmp = icmp eq i64 %outer.iv.next, 4
+  br i1 %outer.iv.cmp, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 ; The nest copies between distinct objects using a memory intrinsic.
 define void @memcpy_in_nest(ptr noalias %A, ptr noalias %B, i64 %N, i64 %M) {
 ; CHECK-LABEL: define void @memcpy_in_nest(
@@ -1290,7 +1540,7 @@ define void @memcpy_in_nest(ptr noalias %A, ptr noalias %B, i64 %N, i64 %M) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[B_PTR]], ptr [[A_PTR]], i64 4, i1 false)
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[OUTER_IV_CMP:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP36:![0-9]+]]
+; CHECK-NEXT:    br i1 [[OUTER_IV_CMP]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP36]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
