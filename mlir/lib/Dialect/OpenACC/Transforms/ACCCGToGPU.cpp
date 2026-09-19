@@ -397,6 +397,19 @@ static bool isThreadXPrivatize(PrivatizeOp privatize) {
   return false;
 }
 
+/// True when \p block is nested inside an `scf.if`, i.e. only part of the
+/// workgroup reaches it, so a workgroup barrier there could deadlock.
+static bool isInsideConditional(Block *block) {
+  if (!block)
+    return false;
+  for (Operation *parent = block->getParentOp();
+       parent && !isa<gpu::LaunchOp, FunctionOpInterface>(parent);
+       parent = parent->getParentOp())
+    if (isa<scf::IfOp>(parent))
+      return true;
+  return false;
+}
+
 /// Emits a workgroup-wide GPU barrier.
 static void emitGPUBarrierWorkgroup(OpBuilder &builder, Location loc) {
   gpu::BarrierOp::create(builder, loc);
@@ -567,6 +580,10 @@ private:
   /// Whether a predicate region needs a barrier before stores that will be read
   /// by a later parallel loop over the same private memory.
   PrivateMemScope needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp);
+
+  /// Whether \p loopOp needs a barrier at the top of its body because a
+  /// gang-private slot it writes is reused by the next iteration.
+  bool needsInLoopReuseBarrier(Operation *loopOp);
 
   /// Emit `gpu.all_reduce` for a reduction partial.
   void createGPUAllReduceOp(Location loc, Value input, Value memref,
@@ -2244,6 +2261,63 @@ ACCCGToGPULowering::needsPreStoreReuseBarrier(acc::PredicateRegionOp interOp) {
   return storeScope;
 }
 
+bool ACCCGToGPULowering::needsInLoopReuseBarrier(Operation *loopOp) {
+  // A sequential scf.parallel is the remainder of a partitioned gang loop: the
+  // gang iterations this workgroup still runs as a grid stride. Its scalar
+  // stores stay predicated and already reconverge between iterations, so the
+  // reuse hole is the nested scf.for coming from `acc loop seq`.
+  if (scf::ParallelOp par = dyn_cast<scf::ParallelOp>(loopOp))
+    return false;
+
+  // The hazard needs a worker- or vector-level routine call in the body: every
+  // workgroup thread reaches such a call and the callee synchronizes
+  // internally, so threads leave it in no particular order and can then be
+  // running different iterations of this loop at the same time.
+  if (!hasThreadLevelRoutineCall)
+    return false;
+  bool callsThreadLevelRoutine = false;
+  loopOp->walk([&](CallOpInterface callOp) -> WalkResult {
+    if (mlir::acc::GPUParallelDimAttr parDim =
+            getAccRoutineCallParDim(callOp, defaultPolicy)) {
+      if (parDim.isThreadX() || parDim.isThreadY()) {
+        callsThreadLevelRoutine = true;
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+  if (!callsThreadLevelRoutine)
+    return false;
+
+  // Only gang-level privatizations are a single copy shared by the whole
+  // workgroup and reused by every iteration; worker- and thread-private copies
+  // cannot be clobbered by another thread.
+  bool storesGangPrivate = false;
+  loopOp->walk([&](memref::StoreOp storeOp) -> WalkResult {
+    if (getPrivateScopeForMemref(storeOp.getMemref()) != PrivateMemScope::Gang)
+      return WalkResult::advance();
+    storesGangPrivate = true;
+    return WalkResult::interrupt();
+  });
+  if (!storesGangPrivate)
+    return false;
+
+  // A barrier inside the body is only safe when the whole workgroup runs every
+  // iteration, so bail out under any thread-level worksharing loop, whose trip
+  // count varies per thread.
+  for (Operation *p = loopOp->getParentOp();
+       p && p != computeRegion.getOperation(); p = p->getParentOp()) {
+    scf::ParallelOp par = dyn_cast<scf::ParallelOp>(p);
+    if (!par)
+      continue;
+    if (mlir::acc::GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(par))
+      for (mlir::acc::GPUParallelDimAttr d : parDims.getArray())
+        if (d.isThreadX() || d.isThreadY())
+          return false;
+  }
+  return true;
+}
+
 void ACCCGToGPULowering::processPredicateRegion(
     acc::PredicateRegionOp interOp) {
   LLVM_DEBUG(llvm::dbgs() << "processing predicate region: ";
@@ -3068,6 +3142,14 @@ void ACCCGToGPULowering::processSeqLoop(LoopOp loopOp) {
   Block::BlockArgListType blockArgs = loopOp.getBody()->getArguments();
   assert(blockArgs.size() && "expected block arguments for loop");
   mapping.map(blockArgs, newLoop.getBody()->getArguments());
+
+  // A gang-private slot written here is one copy per workgroup, reused by every
+  // iteration, and a thread that has already started the next iteration would
+  // overwrite the value another thread has not read yet. Separate the
+  // iterations with a barrier at the top of the body.
+  if (needsInLoopReuseBarrier(loopOp.getOperation()) &&
+      !isInsideConditional(rewriter.getInsertionBlock()))
+    emitGPUBarrierWorkgroup(rewriter, loopOp->getLoc());
 
   for (auto &bodyOp : loopOp.getBody()->getOperations()) {
     if (preProcessedPrivateLocals.contains(&bodyOp))
