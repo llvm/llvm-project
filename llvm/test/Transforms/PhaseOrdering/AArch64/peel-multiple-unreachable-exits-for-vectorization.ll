@@ -82,7 +82,7 @@ define i64 @sum_2_at_with_int_conversion(ptr %A, ptr %B, i64 %N) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = tail call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[BIN_RDX24]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP7]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[LOOP_PREHEADER17]]
-; CHECK:       loop.preheader25:
+; CHECK:       loop.preheader29:
 ; CHECK-NEXT:    [[IV_PH:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SUM_PH:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -225,7 +225,7 @@ define i64 @sum_3_at_with_int_conversion(ptr %A, ptr %B, ptr %C, i64 %N) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = tail call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[BIN_RDX40]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP10]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[LOOP_PREHEADER31]]
-; CHECK:       loop.preheader41:
+; CHECK:       loop.preheader45:
 ; CHECK-NEXT:    [[IV_PH:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SUM_PH:%.*]] = phi i64 [ 0, [[LOOP_PREHEADER]] ], [ [[TMP24]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]

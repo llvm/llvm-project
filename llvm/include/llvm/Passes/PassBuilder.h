@@ -482,6 +482,16 @@ public:
     VectorizerStartEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimization passes that execute on a
+  /// function only if any loop within the function was successfully vectorized
+  /// (or interleaved).
+  void registerExtraVectorizerPassesEPCallback(
+      const std::function<void(FunctionPassManager &, OptimizationLevel)> &C) {
+    ExtraVectorizerPassesEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for a default optimizer pipeline extension
   /// point
   ///
@@ -684,6 +694,8 @@ public:
                                                  OptimizationLevel Level);
   LLVM_ABI void invokeVectorizerEndEPCallbacks(FunctionPassManager &FPM,
                                                OptimizationLevel Level);
+  LLVM_ABI void invokeExtraVectorizerPassesEPCallbacks(FunctionPassManager &FPM,
+                                                       OptimizationLevel Level);
   LLVM_ABI void invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
                                                 OptimizationLevel Level,
                                                 ThinOrFullLTOPhase Phase);
@@ -822,6 +834,8 @@ private:
       CGSCCOptimizerLateEPCallbacks;
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerStartEPCallbacks;
+  SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
+      ExtraVectorizerPassesEPCallbacks;
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerEndEPCallbacks;
   // Module callbacks
