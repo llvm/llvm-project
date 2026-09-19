@@ -1,4 +1,4 @@
-<!--===- docs/DoConcurrentMappingToOpenMP.md
+<!--===- docs/DoConcurrentConversionToOpenMP.md
 
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
@@ -14,15 +14,13 @@ local:
 ---
 ```
 
-This document seeks to describe the effort to parallelize `do concurrent` loops
-by mapping them to OpenMP worksharing constructs. The goals of this document
+This document describes the effort to parallelize `do concurrent` loops by
+mapping them to OpenMP worksharing constructs. The goals of this document
 are:
 * Describing how to instruct `flang` to map `DO CONCURRENT` loops to OpenMP
   constructs.
-* Tracking the current status of such mapping.
-* Describing the limitations of the current implementation.
+* Tracking the current status and limitations of such mapping.
 * Describing next steps.
-* Tracking the current upstreaming status (from the AMD ROCm fork).
 
 ## Usage
 
@@ -47,63 +45,85 @@ See `-fopenmp-targets` and `--offload-arch` for more info.
 
 ## Current status
 
-As of LLVM 22, flang adds more extensive support for parallelizing `do concurrent` loops
-on the CPU and the GPU. In particular, the local specifier, partial support for reduce,
-and automatic mapping of user-defined types are now supported.
+Since LLVM 22, flang has more extensive support for parallelizing `do concurrent`
+loops on the CPU and the GPU. In particular, the `local` specifier, partial
+support for `reduce`, and automatic mapping of user-defined types are supported.
 On the CPU, we validated the feature using [FIATS](https://github.com/BerkeleyLab/fiats)
-inference and training codes where `do concurrent` and OpenMP had very similar 
+inference and training codes where `do concurrent` and OpenMP had very similar
 acceleration results (for more information, see: [1]).
-On the GPU, we have basic support that is still in progress. We have offload tests for 
-1D and 2D saxpy. We also validated using codes that do not make extensive use of user-defined
-types and allocatables.
+On the GPU, we have basic support that is still in progress. We validated using
+codes that do not make extensive use of user-defined types and allocatables.
 
 [1] Automatically Parallelizing Batch Inference on Deep Neural Networks Using Fiats
 and Fortran 2023 “Do Concurrent” (https://link.springer.com/chapter/10.1007/978-3-032-07612-0_11)
 
-### Loop nest detection
+### Support summary
 
-On the `FIR` dialect level, the following loop:
+| Feature                                     | Host                | Device              |
+|---------------------------------------------|---------------------|---------------------|
+| Single-range loops                          | Supported           | Supported           |
+| Multi-range loops (mapped as collapsed)     | Supported           | Supported           |
+| `LOCAL` locality specifier                  | Supported           | Supported           |
+| `LOCAL_INIT` locality specifier             | Not supported       | Not supported       |
+| `REDUCE` locality specifier (Fortran 2023)  | Partial             | Partial             |
+| Nested `do concurrent` constructs           | Outermost loop only | Outermost loop only |
+| Derived types with allocatable components   | n/a                 | Supported           |
+| Non-rectangular loop nests                  | Not supported       | Not supported       |
+
+Notes on the above:
+* `LOCAL_INIT` is rejected with a "not yet implemented" error when the pass
+  encounters it.
+* All standard reduction operations are mapped: `+`, `*`, `.and.`, `.or.`,
+  `.eqv.`, `.neqv.`, `max`, `min`, `iand`, `ior`, and `ieor`. Support has so
+  far been exercised mostly with scalar reduction variables, hence "partial".
+* For nested `do concurrent` constructs, only the outermost construct is
+  parallelized; inner constructs are emitted as sequential loops (see below).
+* On the device, derived types with allocatable components are mapped through
+  implicitly-generated `omp.declare_mapper` ops, including nested derived
+  types. Derived types with pointer components are not handled yet.
+* Implicit mapping detection (for mapping to the target device) is still quite
+  limited and work to make it smarter is underway for both OpenMP in general
+  and `do concurrent` mapping.
+
+## Loop representation in FIR
+
+`do concurrent` constructs are modeled by two dedicated FIR operations:
+* `fir.do_concurrent`: a wrapper op whose region contains the allocations of
+  the iteration variables followed by the loop op itself.
+* `fir.do_concurrent.loop`: the loop op. It carries the bounds of **all**
+  iteration ranges of the construct as well as the construct's locality
+  specifiers (`local(...)` and `reduce(...)` operand groups).
+
+For example, the following loop:
 ```fortran
-  do concurrent(i=1:n, j=1:m, k=1:o)
-    a(i,j,k) = i + j + k
+  do concurrent(i=1:n, j=1:m)
+    a(i,j) = i * j
   end do
 ```
-is modelled as a nest of `fir.do_loop` ops such that an outer loop's region
-contains **only** the following:
-  1. The operations needed to assign/update the outer loop's induction variable.
-  1. The inner loop itself.
-
-So the MLIR structure for the above example looks similar to the following:
+is represented as:
 ```
-  fir.do_loop %i_idx = %34 to %36 step %c1 unordered {
-    %i_idx_2 = fir.convert %i_idx : (index) -> i32
-    fir.store %i_idx_2 to %i_iv#1 : !fir.ref<i32>
+fir.do_concurrent {
+  %i = fir.alloca i32 {bindc_name = "i"}
+  %i_decl:2 = hlfir.declare %i ...
+  %j = fir.alloca i32 {bindc_name = "j"}
+  %j_decl:2 = hlfir.declare %j ...
 
-    fir.do_loop %j_idx = %37 to %39 step %c1_3 unordered {
-      %j_idx_2 = fir.convert %j_idx : (index) -> i32
-      fir.store %j_idx_2 to %j_iv#1 : !fir.ref<i32>
-
-      fir.do_loop %k_idx = %40 to %42 step %c1_5 unordered {
-        %k_idx_2 = fir.convert %k_idx : (index) -> i32
-        fir.store %k_idx_2 to %k_iv#1 : !fir.ref<i32>
-
-        ... loop nest body goes here ...
-      }
-    }
+  fir.do_concurrent.loop (%i_iv, %j_iv) = (%i_lb, %j_lb) to (%i_ub, %j_ub) step (%i_st, %j_st) {
+    ... loop body goes here ...
   }
+}
 ```
-This applies to multi-range loops in general; they are represented in the IR as
-a nest of `fir.do_loop` ops with the above nesting structure.
 
-Therefore, the pass detects such "perfectly" nested loop ops to identify multi-range
-loops and map them as "collapsed" loops in OpenMP.
+Since a single `fir.do_concurrent.loop` op carries all the iteration ranges of
+a multi-range construct, the conversion pass maps such loops directly to
+"collapsed" OpenMP loops; there is no need to pattern-match nests of
+single-range loop ops.
 
-#### Further info regarding loop nest detection
+### Nested `do concurrent` constructs
 
-Loop nest detection is currently limited to the scenario described in the previous
-section. However, this is quite limited and can be extended in the future to cover
-more cases. At the moment, for the following loop nest, even though both loops are
-perfectly nested, only the outer loop is parallelized:
+Nested constructs are a different matter: given the following loop nest, even
+though both loops are separate `do concurrent` constructs, only the outer loop
+is parallelized:
 ```fortran
 do concurrent(i=1:n)
   do concurrent(j=1:m)
@@ -112,26 +132,16 @@ do concurrent(i=1:n)
 end do
 ```
 
-Similarly, for the following loop nest, even though the intervening statement `x = 41`
-does not have any memory effects that would affect parallelization, this nest is
-not parallelized either (only the outer loop is).
+The pass skips any construct nested inside another one it converts. The inner
+constructs are later lowered to sequential loops that run within each iteration
+of the parallelized outer loop. Combining such nests into a single collapsed
+OpenMP loop is possible future work (see the "Next steps" section).
 
-```fortran
-do concurrent(i=1:n)
-  x = 41
-  do concurrent(j=1:m)
-    a(i,j) = i * j
-  end do
-end do
-```
+See `flang/test/Transforms/DoConcurrent/not_perfectly_nested.f90` and
+`flang/test/Transforms/DoConcurrent/skip_all_nested_loops.f90` for examples
+of how nested constructs are handled.
 
-The above also has the consequence that the `j` variable will **not** be
-privatized in the OpenMP parallel/target region. In other words, it will be
-treated as if it was a `shared` variable. For more details about privatization,
-see the "Data environment" section below.
-
-See `flang/test/Transforms/DoConcurrent/loop_nest_test.f90` for more examples
-of what is and is not detected as a perfect loop nest.
+## Mapping examples
 
 ### Single-range loops
 
@@ -153,7 +163,6 @@ structure:
 
 omp.parallel {
   // Allocate private copy for `i`.
-  // TODO Use delayed privatization.
   %19 = fir.alloca i32 {bindc_name = "i"}
   %20:2 = hlfir.declare %19 {uniq_name = "_QFEi"} ...
 
@@ -170,19 +179,54 @@ omp.parallel {
       ...
       omp.yield
     }
+  }
+  omp.terminator
+} {omp.combined}
+```
+
+#### Mapping to `device`
+
+Mapping the same loop to the `device` generates the equivalent of an
+`omp target teams distribute parallel do` construct. Variables live into the
+loop are mapped into the target region with implicit `omp.map.info` ops and the
+loop bounds are evaluated on the host and passed to the region through the
+`host_eval` interface:
+
+```
+%i_map = omp.map.info var_ptr(%i_decl#1 ...) map_clauses(implicit, ...) ...
+%a_bounds = omp.map.bounds lower_bound(%c0) upper_bound(...) extent(...) ...
+%a_map = omp.map.info var_ptr(%a_decl#1 ...) map_clauses(implicit, tofrom)
+           capture(ByRef) bounds(%a_bounds) ...
+
+omp.target kernel_type(spmd)
+    host_eval(%lb_host -> %lb, %ub_host -> %ub, %step_host -> %step : ...)
+    map_entries(%i_map -> %i_arg, %a_map -> %a_arg, ...) {
+  %a_dev:2 = hlfir.declare %a_arg ...
+  omp.teams {
+    omp.parallel {
+      // Allocate private copy for `i`.
+      %25 = fir.alloca i32 {bindc_name = "i"}
+      %26:2 = hlfir.declare %25 {uniq_name = "_QFEi"} ...
+
+      omp.distribute {
+        omp.wsloop {
+          omp.loop_nest (%arg0) : index = (%lb) to (%ub) inclusive step (%step) {
+            ... loop body using the privatized `i` and the mapped `a` ...
+            omp.yield
+          }
+        }
+      }
+      omp.terminator
+    }
     omp.terminator
   }
   omp.terminator
 }
 ```
 
-#### Mapping to `device`
-
-<!-- TODO -->
-
 ### Multi-range loops
 
-The pass currently supports multi-range loops as well. Given the following
+The pass supports multi-range loops as well. Given the following
 example:
 
 ```fortran
@@ -191,12 +235,13 @@ example:
    end do
 ```
 
-The generated `omp.loop_nest` operation look like:
+The generated `omp.loop_nest` operation collapses both ranges into a single
+worksharing loop:
 
 ```
 omp.loop_nest (%arg0, %arg1)
     : index = (%17, %19) to (%18, %20)
-    inclusive step (%c1_2, %c1_4) {
+    inclusive step (%c1_2, %c1_4) collapse(2) {
   fir.store %arg0 to %private_i#1 : !fir.ref<i32>
   fir.store %arg1 to %private_j#1 : !fir.ref<i32>
   ...
@@ -209,131 +254,72 @@ variables: `i` and `j`. These are locally allocated inside the parallel/target
 OpenMP region similar to what the single-range example in previous section
 shows.
 
-### Data environment
+## Data environment
 
 By default, variables that are used inside a `do concurrent` loop nest are
 either treated as `shared` in case of mapping to `host`, or mapped into the
 `target` region using a `map` clause in case of mapping to `device`. The only
 exceptions to this are:
-  1. the loop's iteration variable(s) (IV) of **perfect** loop nests. In that
-     case, for each IV, we allocate a local copy as shown by the mapping
-     examples above.
+  1. the loop's iteration variable(s) (IV). For each IV, we allocate a local
+     copy as shown by the mapping examples above.
   1. any values that are from allocations outside the loop nest and used
      exclusively inside of it. In such cases, a local privatized
      copy is created in the OpenMP region to prevent multiple teams of threads
      from accessing and destroying the same memory block, which causes runtime
      issues. For an example of such cases, see
      `flang/test/Transforms/DoConcurrent/locally_destroyed_temp.f90`.
+  1. variables with locality specifiers, described below.
 
-Implicit mapping detection (for mapping to the target device) is still quite
-limited and work to make it smarter is underway for both OpenMP in general
-and `do concurrent` mapping.
+### Locality specifiers
 
-#### Non-perfectly-nested loops' IVs
+`LOCAL` specifiers are supported for both host and device mapping. On the FIR
+level, a `LOCAL` variable is modeled by a `fir.local` "localizer" op (which,
+similar to OpenMP's `omp.private` op, can carry `init` and `dealloc` regions)
+referenced from the `local(...)` operand group of the `fir.do_concurrent.loop`
+op. The conversion pass translates each localizer into an equivalent
+`omp.private` op and attaches the corresponding `private(...)` clause to the
+generated worksharing loop. For examples, see
+`flang/test/Transforms/DoConcurrent/locality_specifiers_simple.mlir` and
+`flang/test/Transforms/DoConcurrent/local_device.mlir`.
 
-For non-perfectly-nested loops, the IVs are still treated as `shared` or
-`map` entries as pointed out above. This **might not** be consistent with what
-the Fortran specification tells us. In particular, taking the following
-snippets from the spec (version 2023) into account:
+`LOCAL_INIT` specifiers are not supported yet; the pass emits a
+"not yet implemented" error when it encounters one.
 
-> § 3.35
-> ------
-> construct entity
-> entity whose identifier has the scope of a construct
+### Reductions
 
-> § 19.4
-> ------
->  A variable that appears as an index-name in a FORALL or DO CONCURRENT
->  construct [...] is a construct entity. A variable that has LOCAL or
->  LOCAL_INIT locality in a DO CONCURRENT construct is a construct entity.
-> [...]
-> The name of a variable that appears as an index-name in a DO CONCURRENT
-> construct, FORALL statement, or FORALL construct has a scope of the statement
-> or construct. A variable that has LOCAL or LOCAL_INIT locality in a DO
-> CONCURRENT construct has the scope of that construct.
+Fortran 2023 `REDUCE` specifiers are mapped to OpenMP reductions for both host
+and device. On the FIR level, a reduction is modeled by a
+`fir.declare_reduction` op referenced from the `reduce(...)` operand group of
+the `fir.do_concurrent.loop` op. The pass translates it into an equivalent
+`omp.declare_reduction` op and attaches `reduction(...)` clauses to the
+generated OpenMP ops: on the host, to the `omp.wsloop` op; on the device, to
+both the `omp.teams` and the `omp.wsloop` ops.
 
-From the above quotes, it seems there is an equivalence between the IV of a `do
-concurrent` loop and a variable with a `LOCAL` locality specifier (equivalent
-to OpenMP's `private` clause). Which means that we should probably
-localize/privatize a `do concurrent` loop's IV even if it is not perfectly
-nested in the nest we are parallelizing. For now, however, we **do not** do
-that as pointed out previously. In the near future, we propose a middle-ground
-solution (see the Next steps section for more details).
+When mapping to the device, reduction variables are mapped `tofrom` and
+captured by reference so that the reduced values are copied back to the host
+after the target region finishes.
 
-<!--
-More details about current status will be added along with relevant parts of the
-implementation in later upstreaming patches.
--->
+For examples, see the `reduce_*` tests in
+`flang/test/Transforms/DoConcurrent/`.
 
 ## Next steps
 
-This section describes some of the open questions/issues that are not tackled yet
-even in the downstream implementation.
+This section describes some of the open questions/issues that are not tackled
+yet.
 
-### Separate MLIR op for `do concurrent`
+### `LOCAL_INIT` locality specifiers
 
-At the moment, both increment and concurrent loops are represented by one MLIR
-op: `fir.do_loop`; where we differentiate concurrent loops with the `unordered`
-attribute. This is not ideal since the `fir.do_loop` op support only single
-iteration ranges. Consequently, to model multi-range `do concurrent` loops, flang
-emits a nest of `fir.do_loop` ops which we have to detect in the OpenMP conversion
-pass to handle multi-range loops. Instead, it would better to model multi-range
-concurrent loops using a separate op which the IR more representative of the input
-Fortran code and also easier to detect and transform.
+The `fir.local` op models `LOCAL_INIT` localizers with a `copy` region, but
+the conversion pass does not translate them to OpenMP firstprivate-like
+privatizers yet.
 
-### Delayed privatization
+### Combining nested `do concurrent` constructs
 
-So far, we emit the privatization logic for IVs inline in the parallel/target
-region. This is enough for our purposes right now since we don't
-localize/privatize any sophisticated types of variables yet. Once we have need
-for more advanced localization through `do concurrent`'s locality specifiers
-(see below), delayed privatization will enable us to have a much cleaner IR.
-Once delayed privatization's implementation upstream is supported for the
-required constructs by the pass, we will move to it rather than inlined/early
-privatization.
-
-### Locality specifiers for `do concurrent`
-
-Locality specifiers will enable the user to control the data environment of the
-loop nest in a more fine-grained way. Implementing these specifiers on the
-`FIR` dialect level is needed in order to support this in the
-`DoConcurrentConversionPass`.
-
-Such specifiers will also unlock a potential solution to the
-non-perfectly-nested loops' IVs issue described above. In particular, for a
-non-perfectly nested loop, one middle-ground proposal/solution would be to:
-* Emit the loop's IV as shared/mapped just like we do currently.
-* Emit a warning that the IV of the loop is emitted as shared/mapped.
-* Given support for `LOCAL`, we can recommend the user to explicitly
-  localize/privatize the loop's IV if they choose to.
-
-#### Sharing TableGen clause records from the OpenMP dialect
-
-At the moment, the FIR dialect does not have a way to model locality specifiers
-on the IR level. Instead, something similar to early/eager privatization in OpenMP
-is done for the locality specifiers in `fir.do_loop` ops. Having locality specifier
-modelled in a way similar to delayed privatization (i.e. the `omp.private` op) and
-reductions (i.e. the `omp.declare_reduction` op) can make mapping `do concurrent`
-to OpenMP (and other parallel programming models) much easier.
-
-Therefore, one way to approach this problem is to extract the TableGen records
-for relevant OpenMP clauses in a shared dialect for "data environment management"
-and use these shared records for OpenMP, `do concurrent`, and possibly OpenACC
-as well.
-
-#### Supporting reductions
-
-Similar to locality specifiers, mapping reductions from `do concurrent` to OpenMP
-is also still an open TODO. We can potentially extend the MLIR infrastructure
-proposed in the previous section to share reduction records among the different
-relevant dialects as well.
-
-### More advanced detection of loop nests
-
-As pointed out earlier, any intervening code between the headers of 2 nested
-`do concurrent` loops prevents us from detecting this as a loop nest. In some
-cases this is overly conservative. Therefore, a more flexible detection logic
-of loop nests needs to be implemented.
+As pointed out earlier, a `do concurrent` construct nested inside another one
+is not combined with its parent into a single collapsed OpenMP loop; only the
+outermost construct is parallelized. Detecting when such combining is legal
+(e.g. when there is no intervening code with side effects between the two
+constructs) and profitable still needs to be implemented.
 
 ### Data-dependence analysis
 
@@ -353,7 +339,15 @@ do concurrent(i=1:n)
 end do
 ```
 We defer this to the (hopefully) near future when we get the conversion in a
-good share for the samples/projects at hand.
+good shape for the samples/projects at hand.
+
+### Smarter implicit mapping to the device
+
+Implicit mapping of live-in values into the target region covers the common
+cases (scalars, arrays with compile-time or runtime shapes, allocatables, and
+derived types with allocatable components) but still has gaps; for example,
+derived types with pointer components are not handled yet. There is also no
+way for the user to control the mapping behavior of individual variables.
 
 ### Generalizing the pass to other parallel programming models
 
@@ -362,13 +356,18 @@ this in a more generalized direction and allow the pass to target other models;
 e.g. OpenACC. This goal should be kept in mind from the get-go even while only
 targeting OpenMP.
 
+## Tests
 
-## Upstreaming status
+The FIR-to-OpenMP conversion is tested in
+`flang/test/Transforms/DoConcurrent/`, which contains both host and device
+mapping tests.
 
-- [x] Command line options for `flang` and `bbc`.
-- [x] Conversion pass skeleton (no transormations happen yet).
-- [x] Status description and tracking document (this document).
-- [x] Loop nest detection to identify multi-range loops.
-- [ ] Basic host/CPU mapping support.
-- [ ] Basic device/GPU mapping support.
-- [ ] More advanced host and device support (expaned to multiple items as needed).
+In addition, the following end-to-end offloading tests execute
+device-mapped `do concurrent` loops on an actual target device:
+* `offload/test/offloading/fortran/do-concurrent-to-omp-saxpy.f90`
+* `offload/test/offloading/fortran/do-concurrent-to-omp-saxpy-2d.f90`
+* `offload/test/offloading/fortran/do-concurrent-to-omp-min-reduce.f90`
+* `offload/test/offloading/fortran/do-concurrent-to-omp-nested-derived-type.f90`
+
+The compiler flag itself is tested in
+`flang/test/Driver/do_concurrent_to_omp_cli.f90`.
