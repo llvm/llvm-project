@@ -2340,6 +2340,8 @@ math_test(name = "log10p1f16")
 
 math_test(name = "logf16")
 
+math_test(name = "lgammabf16")
+
 math_test(name = "lgammaf16")
 
 math_test(
