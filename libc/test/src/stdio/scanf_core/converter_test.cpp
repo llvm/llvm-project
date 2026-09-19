@@ -10,6 +10,10 @@
 #include "src/stdio/scanf_core/converter.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/string_reader.h"
+#ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
+#include <stdlib.h>
+#include "src/__support/CPP/scope.h"
+#endif
 
 #include "test/UnitTest/Test.h"
 
@@ -285,3 +289,44 @@ TEST(LlvmLibcScanfConverterTest, ScansetConv) {
   ASSERT_EQ(LIBC_NAMESPACE::cpp::string_view(result, 1),
             LIBC_NAMESPACE::cpp::string_view("g", 1));
 }
+
+#ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
+TEST(LlvmLibcScanfConverterTest, AllocationTest) {
+  const char *str = "abcdef";
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
+  char *result = nullptr;
+  LIBC_NAMESPACE::scanf_core::FormatSection conv;
+  conv.has_conv = true;
+  conv.flags = LIBC_NAMESPACE::scanf_core::ALLOCATE;
+  conv.conv_name = 's';
+  conv.output_ptr = &result;
+  ASSERT_EQ(LIBC_NAMESPACE::scanf_core::convert(&reader, conv),
+            static_cast<int>(LIBC_NAMESPACE::scanf_core::READ_OK));
+  LIBC_NAMESPACE::cpp::scope_exit free_mem([&] {
+    if (result)
+      free(result);
+  });
+  ASSERT_NE(result, nullptr);
+  EXPECT_STREQ(result, "abcdef");
+}
+
+TEST(LlvmLibcScanfConverterTest, FixedWidthTest) {
+  const char *str = "abcdef";
+  LIBC_NAMESPACE::scanf_core::StringReader reader(str, sizeof(str));
+  char *result = nullptr;
+  LIBC_NAMESPACE::scanf_core::FormatSection conv;
+  conv.has_conv = true;
+  conv.max_width = 5;
+  conv.flags = LIBC_NAMESPACE::scanf_core::ALLOCATE;
+  conv.output_ptr = &result;
+  conv.conv_name = 's';
+  ASSERT_EQ(LIBC_NAMESPACE::scanf_core::convert(&reader, conv),
+            static_cast<int>(LIBC_NAMESPACE::scanf_core::READ_OK));
+  LIBC_NAMESPACE::cpp::scope_exit free_mem([&] {
+    if (result)
+      free(result);
+  });
+  ASSERT_NE(result, nullptr);
+  EXPECT_STREQ(result, "abcde");
+}
+#endif

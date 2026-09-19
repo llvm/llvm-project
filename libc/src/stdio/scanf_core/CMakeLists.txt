@@ -4,6 +4,9 @@ endif()
 if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
   libc_add_definition(scanf_config_copts "LIBC_COPT_SCANF_DISABLE_INDEX_MODE")
 endif()
+if(LIBC_CONF_SCANF_DISABLE_ALLOCATION)
+  libc_add_definition(scanf_config_copts "LIBC_COPT_SCANF_DISABLE_ALLOCATION")
+endif()
 if(scanf_config_copts)
   list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
 endif()
@@ -18,6 +21,13 @@ if(LIBC_TARGET_OS_IS_GPU)
 elseif(LLVM_LIBC_FULL_BUILD)
   list(APPEND file_deps
     libc.src.__support.File.file
+  )
+endif()
+
+set(malloc_deps)
+if(NOT LIBC_CONF_SCANF_DISABLE_ALLOCATION)
+  list(APPEND malloc_deps
+    libc.include.stdlib
   )
 endif()
 
@@ -107,6 +117,7 @@ add_header_library(
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
     ${use_system_file}
+    ${malloc_deps}
 )
 
 # TODO: condense the file-related code as possible.
