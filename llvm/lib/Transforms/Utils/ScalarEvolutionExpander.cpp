@@ -532,7 +532,19 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
     Value *LHS = expand(URemLHS);
     Value *RHS = expand(URemRHS);
     return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
-                      /*IsSafeToHoist*/ false);
+                       /*IsSafeToHoist*/ false);
+  }
+
+  // -C + umax(C, X) --> usub.sat(X, C)
+  const SCEV *UMaxRHS = nullptr;
+  const SCEVConstant *C1, *C2;
+  if (match(S, m_scev_Add(m_SCEVConstant(C1),
+                          m_scev_UMax(m_SCEVConstant(C2), m_SCEV(UMaxRHS)))) &&
+      C1->getAPInt() == -C2->getAPInt()) {
+    Value *LHS = expand(UMaxRHS);
+    Value *RHS = C2->getValue();
+    return Builder.CreateIntrinsic(Intrinsic::usub_sat, {S->getType()},
+                                   {LHS, RHS});
   }
 
   // Collect all the add operands in a loop, along with their associated loops.
@@ -1654,6 +1666,19 @@ Value *SCEVExpander::FindValueInExprValueMap(
   return nullptr;
 }
 
+Value *SCEVExpander::findExistingExpansionAndDropPoisonFlags(
+    SCEVUse S, const Instruction *InsertPt) {
+  SmallVector<Instruction *> DropPoisonGeneratingInsts;
+  Value *V = FindValueInExprValueMap(S, InsertPt, DropPoisonGeneratingInsts);
+  if (!V)
+    return nullptr;
+  for (Instruction *I : DropPoisonGeneratingInsts) {
+    rememberFlags(I);
+    dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
+  }
+  return V;
+}
+
 // The expansion of SCEV will either reuse a previous Value in ExprValueMap,
 // or expand the SCEV literally. Specifically, if the expansion is in LSRMode,
 // and the SCEV contains any sub scAddRecExpr type SCEV, it will be expanded
@@ -1663,7 +1688,8 @@ Value *SCEVExpander::FindValueInExprValueMap(
 Value *SCEVExpander::expand(SCEVUse S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
-  BasicBlock::iterator InsertPt = Builder.GetInsertPoint();
+  BasicBlock::iterator OrigInsertPt = Builder.GetInsertPoint();
+  BasicBlock::iterator InsertPt = OrigInsertPt;
 
   // We can move insertion point only if there is no div or rem operations
   // otherwise we are risky to move it over the check for zero denominator.
@@ -1720,16 +1746,19 @@ Value *SCEVExpander::expand(SCEVUse S) {
   Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
 
   // Expand the expression into instructions.
-  SmallVector<Instruction *> DropPoisonGeneratingInsts;
-  Value *V = FindValueInExprValueMap(S, &*InsertPt, DropPoisonGeneratingInsts);
+  Value *V = findExistingExpansionAndDropPoisonFlags(S, &*InsertPt);
+  BasicBlock::iterator CacheAt = InsertPt;
+  if (!V && InsertPt != OrigInsertPt && PostIncLoops.empty()) {
+    // Hoisting the insertion point can move it above a value that already
+    // computes S. Such a value is still usable: it only has to dominate the
+    // point we were asked to expand at, which is where the result is used.
+    V = findExistingExpansionAndDropPoisonFlags(S, &*OrigInsertPt);
+    if (V)
+      CacheAt = OrigInsertPt;
+  }
   if (!V) {
     V = visit(S);
     V = fixupLCSSAFormFor(V);
-  } else {
-    for (Instruction *I : DropPoisonGeneratingInsts) {
-      rememberFlags(I);
-      dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
-    }
   }
   // Remember the expanded value for this SCEV at this location.
   //
@@ -1737,7 +1766,7 @@ Value *SCEVExpander::expand(SCEVUse S) {
   // the expression at this insertion point. If the mapped value happened to be
   // a postinc expansion, it could be reused by a non-postinc user, but only if
   // its insertion point was already at the head of the loop.
-  InsertedExpressions[std::make_pair(S, &*InsertPt)] = V;
+  InsertedExpressions[std::make_pair(S, &*CacheAt)] = V;
   return V;
 }
 
@@ -1762,13 +1791,14 @@ void SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(
   // See if we can re-infer from first principles any of the flags we just
   // dropped.
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
-    if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
-      auto *BO = cast<BinaryOperator>(I);
-      BO->setHasNoUnsignedWrap(
-          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-      BO->setHasNoSignedWrap(
-          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
-    }
+    if (SE.isSCEVable(OBO->getType()))
+      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+        auto *BO = cast<BinaryOperator>(I);
+        BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+        BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+      }
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
     auto *Src = NNI->getOperand(0);
     if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,

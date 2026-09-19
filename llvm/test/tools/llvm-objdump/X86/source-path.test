@@ -27,9 +27,13 @@
 ; LINE-NEXT: retq
 
 ; RUN: llvm-objdump --no-print-imm-hex -d --source %t.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o -DSEP=%{fs-sep}
 
-; SOURCE-MISSING: warning: '[[FILE]]': failed to find source {{[/\\]}}wrong{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
+;; The compilation directory is spelled with '/' but is joined to the file name
+;; with the preferred directory separator. On Windows, when
+;; LLVM_WINDOWS_PREFER_FORWARD_SLASH is not enabled, this means the path
+;; contains a mix of slash directions, which llvm-objdump then normalises.
+; SOURCE-MISSING: warning: '[[FILE]]': failed to find source [[SEP]]wrong[[SEP]]Inputs[[SEP]]source-interleave-x86_64.c
 
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong %/p %t.o | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE
@@ -77,7 +81,7 @@
 ; SOURCE-NEXT: retq
 
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wron %/p %t.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o -DSEP=%{fs-sep}
 
 ;; Two --source-dir trees both contain source-interleave-x86_64.c (same line
 ;; count; distinct in-line markers). The copy from the **earlier** flag must
@@ -106,9 +110,9 @@
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
 ; RUN:   --substitute-path /wrong /nowhere \
 ; RUN:   --substitute-path /wrong/Inputs %/p/Inputs %t.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING-SUBST -DFILE=%t.o
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING-SUBST -DFILE=%t.o -DSEP=%{fs-sep}
 
-; SOURCE-MISSING-SUBST: warning: '[[FILE]]': failed to find source {{[/\\]}}nowhere{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c
+; SOURCE-MISSING-SUBST: warning: '[[FILE]]': failed to find source [[SEP]]nowhere[[SEP]]Inputs[[SEP]]source-interleave-x86_64.c
 
 ;; First substitute rule is a no-match; second matching rule remaps the path.
 ; RUN: llvm-objdump --no-print-imm-hex -d --source \
@@ -123,11 +127,11 @@
 
 ;; Empty <to> without --source-dir: relative path is not resolved; warn once, no crash.
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong "" %t.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=SOURCE-EMPTY-TO -DFILE=%t.o \
+; RUN:   FileCheck %s --check-prefix=SOURCE-EMPTY-TO -DFILE=%t.o -DSEP=%{fs-sep} \
 ; RUN:     --implicit-check-not="foo()"
 
 ; SOURCE-EMPTY-TO: <foo>:
-; SOURCE-EMPTY-TO: warning: '[[FILE]]': failed to find source Inputs{{[/\\]}}source-interleave-x86_64.c
+; SOURCE-EMPTY-TO: warning: '[[FILE]]': failed to find source Inputs[[SEP]]source-interleave-x86_64.c
 ; SOURCE-EMPTY-TO: pushq
 
 ;; Empty <from> is rejected .
@@ -143,11 +147,46 @@
 ; RUN:   FileCheck %s --check-prefix=SOURCE
 ; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers \
 ; RUN:   --substitute-path /wrong/Inputs /Inputs --prefix %/p %t.o | \
-; RUN:   FileCheck %s --check-prefix=LINE-SUBST-PREFIX -DPREFIX=%/p
+; RUN:   FileCheck %s --check-prefix=LINE-SUBST-PREFIX -DPREFIX=%/p -DSEP=%{fs-sep}
 
+;; --prefix is prepended after normalization and keeps whatever spelling it was
+;; given, which is why [[PREFIX]] still reads with '/' while the part that came
+;; from the debug info uses the host separator.
 ; LINE-SUBST-PREFIX: <foo>:
 ; LINE-SUBST-PREFIX-NEXT: ; foo():
-; LINE-SUBST-PREFIX-NEXT: ; [[PREFIX]]{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c:2
+; LINE-SUBST-PREFIX-NEXT: ; [[PREFIX]][[SEP]]Inputs[[SEP]]source-interleave-x86_64.c:2
 ; LINE-SUBST-PREFIX-NEXT: pushq
-; LINE-SUBST-PREFIX: ; [[PREFIX]]{{[/\\]}}Inputs{{[/\\]}}source-interleave-x86_64.c:3
+; LINE-SUBST-PREFIX: ; [[PREFIX]][[SEP]]Inputs[[SEP]]source-interleave-x86_64.c:3
 ; LINE-SUBST-PREFIX-NEXT: movq
+
+;; Source paths recorded in objects may use either path separator. They are
+;; treated as strings here: --line-numbers reports them without accessing the
+;; named file.
+;;
+;; The compilation directory deliberately contains mixed separators. llc
+;; preserves it as spelled and appends the file name using the host separator,
+;; so the resulting path may also have mixed separators. The '\' is doubled
+;; for sed. llvm-objdump then normalizes the slash direction when printing.
+
+; RUN: sed -e 's,SRC_COMPDIR,dx12\\compute/no_rs,g' %p/Inputs/source-interleave.ll > %t-winpath.ll
+; RUN: llc -o %t-winpath.o -filetype=obj -mtriple=x86_64-pc-linux %t-winpath.ll
+; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers %t-winpath.o | \
+; RUN:   FileCheck %s --check-prefix=WINPATH-LINE -DSEP=%{fs-sep}
+
+; WINPATH-LINE: <foo>:
+; WINPATH-LINE-NEXT: ; foo():
+; WINPATH-LINE-NEXT: ; dx12[[SEP]]compute[[SEP]]no_rs[[SEP]]source-interleave-x86_64.c:2
+
+;; <from> may be spelled with either separator; both name the same directory.
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path 'dx12\compute\no_rs' %/p/Inputs %t-winpath.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path dx12/compute/no_rs %/p/Inputs %t-winpath.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+;; --source-dir finds the same file by its base name.
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source --source-dir %/p/Inputs \
+; RUN:   %t-winpath.o | FileCheck %s --check-prefix=SOURCE

@@ -160,32 +160,13 @@ void L0OptionsTy::processEnvironmentVars() {
   }
 
   // LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=<Fmt>.
-  // <Fmt> := sync | async | async_ordered
+  // <Fmt> := inorder | sync
+  // inorder: use level zero command queue in-order mode. This is the default.
   // sync: perform synchronization after each command.
-  // async: perform synchronization when it is required.
-  // async_ordered: same as "async", but command is ordered.
-  // This option is ignored unless IMM is fully enabled on compute and copy.
-  // On Intel PVC GPU, when used with immediate command lists over Level Zero
-  // backend, a target region may involve multiple command submissions to the
-  // L0 copy queue and compute queue. L0 events are used for each submission
-  // (data transfer of a single item or kernel execution). When "async" is
-  // specified, a) each data transfer to device is submitted with an event.
-  // b) The kernel is submitted next with a dependence on all the previous
-  // data transfer events. The kernel also has an event associated with it.
-  // c) The data transfer from device will be submitted with a dependence on
-  // the kernel event. d) Finally wait on the host for all the events
-  // associated with the data transfer from device.
-  // The env-var also affects any "target update" constructs as well.
-  // The env-var only affects the L0 copy/  compute commands issued from a
-  // single target construct execution, not across multiple invocations.
   const StringEnvar CommandModeVar("LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE");
   if (CommandModeVar.isPresent()) {
     if (match(CommandModeVar, "sync"))
       CommandMode = CommandModeTy::Sync;
-    else if (match(CommandModeVar, "async"))
-      CommandMode = CommandModeTy::Async;
-    else if (match(CommandModeVar, "async_ordered"))
-      CommandMode = CommandModeTy::AsyncOrdered;
     else if (match(CommandModeVar, "inorder"))
       CommandMode = CommandModeTy::InOrder;
     else

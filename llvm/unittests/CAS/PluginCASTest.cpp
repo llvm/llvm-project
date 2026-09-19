@@ -15,6 +15,8 @@
 #include "CASTestConfig.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -23,6 +25,45 @@
 using namespace llvm;
 using namespace llvm::cas;
 using namespace llvm::unittest::cas;
+
+// HWASan does not tag the globals of a dlopen'ed library with glibc, so the
+// plugin faults as soon as it touches one of its own globals.
+// FIXME: Re-enable once https://github.com/llvm/llvm-project/issues/57206 is
+// fixed.
+#if !LLVM_HWADDRESS_SANITIZER_BUILD
+
+extern const char *TestMainArgv0;
+static std::string TestStringArg1("castest-string-arg1");
+
+/// \returns the path of the libCASPluginTest dynamic library, which implements
+/// the CAS plugin API for testing purposes.
+static std::string getCASPluginPath() {
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &TestStringArg1);
+  llvm::SmallString<256> PathBuf(sys::path::parent_path(Executable));
+#if !defined(_WIN32) || defined(__MINGW32__)
+  sys::path::append(PathBuf, "libCASPluginTest" LLVM_PLUGIN_EXT);
+#else
+  sys::path::append(PathBuf, "CASPluginTest" LLVM_PLUGIN_EXT);
+#endif
+  return std::string(PathBuf);
+}
+
+static CASTestingEnv createPlugin(int I) {
+  unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
+  std::optional<
+      std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+      DBs;
+  EXPECT_THAT_ERROR(createPluginCASDatabases(getCASPluginPath(), Temp.path(),
+                                             /*PluginArgs=*/{})
+                        .moveInto(DBs),
+                    Succeeded());
+  if (!DBs)
+    return CASTestingEnv{nullptr, nullptr, std::move(Temp)};
+  return CASTestingEnv{std::move(DBs->first), std::move(DBs->second),
+                       std::move(Temp)};
+}
+INSTANTIATE_TEST_SUITE_P(PluginCAS, CASTest, ::testing::Values(createPlugin));
 
 TEST(PluginCASTest, isMaterialized) {
   unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
@@ -89,3 +130,5 @@ TEST(PluginCASTest, isMaterialized) {
     EXPECT_TRUE(IsMaterialized);
   }
 }
+
+#endif /* !LLVM_HWADDRESS_SANITIZER_BUILD */

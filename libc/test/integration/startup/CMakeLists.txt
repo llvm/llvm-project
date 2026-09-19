@@ -1,5 +1,5 @@
 # A rule to add startup system tests. When we have a complete startup system,
-# we should be able to use the add_libc_unittest rule or an extension of it.
+# we should be able to use the add_libc_test rule or an extension of it.
 # But, while the system is being developed,  we need to use a special rule like
 # this.
 function(add_startup_test target_name)

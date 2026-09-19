@@ -31,27 +31,26 @@ class CheckerContext {
   bool Changed;
   /// The tagged location, which is used to generate all new nodes.
   const ProgramPoint Location;
-  NodeBuilder &NB;
+  /// At the end of the checker evaluation, the analysis will continue from the
+  /// nodes in this set. When the checker adds a transition, freshly created
+  /// non-sink nodes are added to the `Frontier` and the node that was the
+  /// source of the transition is unconditionally removed from the `Frontier`
+  /// (it is superseded, even if the node creation fails or produces a sink).
+  /// At the beginning, the `Frontier` usually contains `Pred`.
+  ExplodedNodeSet &Frontier;
 
 public:
   /// If we are post visiting a call, this flag will be set if the
   /// call was inlined.  In all other cases it will be false.
   const bool wasInlined;
 
-  CheckerContext(NodeBuilder &builder,
-                 ExprEngine &eng,
-                 ExplodedNode *pred,
-                 const ProgramPoint &loc,
-                 bool wasInlined = false)
-    : Eng(eng),
-      Pred(pred),
-      Changed(false),
-      Location(loc),
-      NB(builder),
-      wasInlined(wasInlined) {
+  CheckerContext(ExprEngine &Eng, ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                 const ProgramPoint &Loc, bool WasInlined = false)
+      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc), Frontier(Dst),
+        wasInlined(WasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
-    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+    assert(Loc.getTag() && "The ProgramPoint associated with CheckerContext "
                            "must be tagged with the active checker.");
   }
 
@@ -77,14 +76,12 @@ public:
   /// Returns the previous node in the exploded graph, which includes
   /// the state of the program before the checker ran. Note, checkers should
   /// not retain the node in their state since the nodes might get invalidated.
-  ExplodedNode *getPredecessor() { return Pred; }
-  const ExplodedNode *getPredecessor() const { return Pred; }
+  ExplodedNode *getPredecessor() const { return Pred; }
   const ProgramPoint getLocation() const { return Location; }
   const ProgramStateRef &getState() const { return Pred->getState(); }
 
   /// Check if the checker changed the state of the execution; ex: added
   /// a new transition or a bug report.
-  bool isDifferent() { return Changed; }
   bool isDifferent() const { return Changed; }
 
   /// Returns the number of times the current block has been visited
@@ -223,7 +220,7 @@ public:
                const ProgramPointTag *Tag = nullptr) {
     if (!State)
       State = getState();
-    addTransition(State, generateSink(State, getPredecessor()));
+    generateSink(State, getPredecessor());
   }
 
   /// Generate a transition to a node that will be used to report
@@ -454,12 +451,13 @@ private:
     if (!P)
       P = Pred;
 
-    ExplodedNode *node;
-    if (MarkAsSink)
-      node = NB.generateSink(LocalLoc, State, P);
-    else
-      node = NB.generateNode(LocalLoc, State, P);
-    return node;
+    Frontier.erase(P);
+    ExplodedNode *N =
+        Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
+
+    Frontier.insert(N);
+
+    return N;
   }
 };
 

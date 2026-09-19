@@ -89,6 +89,10 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
       return false;
     if (isPtrConversion(Callee))
       return true;
+    if (auto *Method = dyn_cast<CXXMethodDecl>(Callee)) {
+      if (isGetterOfSafePtr(Method).value_or(false))
+        return true;
+    }
     unsigned ArgIndex = 0;
     unsigned ArgOffset = isa<CXXOperatorCallExpr>(CE);
     for (auto *Arg : CE->arguments()) {
@@ -368,45 +372,49 @@ public:
           if (Model->isSafeExpr(InitArgOrigin))
             return true;
 
-          if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
-            if (auto *MaybeGuardian =
-                    dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-              const auto *MaybeGuardianArgType =
-                  MaybeGuardian->getType().getTypePtr();
-              if (MaybeGuardianArgType) {
-                const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-                    MaybeGuardianArgType->getAsCXXRecordDecl();
-                if (MaybeGuardianArgCXXRecord) {
-                  if (MaybeGuardian->isLocalVarDecl() &&
-                      (Model->isSafePtr(MaybeGuardianArgCXXRecord) ||
-                       isRefcountedStringsHack(MaybeGuardian)) &&
-                      isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
-                    return true;
-                }
-              }
-
-              if (isa<ParmVarDecl>(MaybeGuardian)) {
-                if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue)) {
-                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(
-                          FD->getBody()))
-                    return true;
-                }
-                if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue)) {
-                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(
-                          MD->getBody()))
-                    return true;
-                }
-              }
-            }
-          }
+          if (hasGuardian(V, InitArgOrigin, DeclWithIssue))
+            return true;
 
           return false;
         });
   }
 
+  bool hasGuardian(const VarDecl *V, const Expr *InitArgOrigin,
+                   const Decl *DeclWithIssue) const {
+    auto *Ref = dyn_cast<DeclRefExpr>(InitArgOrigin);
+    if (!Ref)
+      return false;
+
+    auto *MaybeGuardian = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl());
+    if (!MaybeGuardian)
+      return false;
+
+    QualType GuardianType = MaybeGuardian->getType();
+    if (!GuardianType.isNull()) {
+      if (auto *Record = GuardianType->getAsCXXRecordDecl()) {
+        if (MaybeGuardian->isLocalVarDecl() &&
+            (Model->isSafePtr(Record) ||
+             isRefcountedStringsHack(MaybeGuardian)) &&
+            isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
+          return true;
+      }
+    }
+
+    if (isa<ParmVarDecl>(MaybeGuardian)) {
+      if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue))
+        return GuardianVisitor{MaybeGuardian}.TraverseStmt(FD->getBody());
+      if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue))
+        return GuardianVisitor{MaybeGuardian}.TraverseStmt(MD->getBody());
+    }
+
+    return false;
+  }
+
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
     if (isa<ImplicitParamDecl>(V))
+      return true;
+    if (V->isInitCapture())
       return true;
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
@@ -428,6 +436,7 @@ public:
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
       if (Value)
         Report->addRange(Value->getSourceRange());
+      Report->setDeclWithIssue(DeclWithIssue);
       BR->emitReport(std::move(Report));
     } else {
       if (V->hasLocalStorage())
