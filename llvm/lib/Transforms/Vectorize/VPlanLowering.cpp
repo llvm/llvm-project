@@ -45,12 +45,53 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   if (!LoopRegion)
     return;
 
-  auto *WideCanIV =
-      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
-  if (!WideCanIV)
+  VPWidenCanonicalIVRecipe *WideCanIV = nullptr;
+  VPIRValue *StartValue = nullptr;
+  // Find VPWidenCanonicalIVRecipe among the canonical IV's users,
+  // matching Case 1 where it's a direct user of canonicalIV:
+  // <x1> vector loop: {
+  //   vp<%4> = CANONICAL-IV
+  //
+  //   vector.body:
+  //     EMIT vp<%6> = WIDEN-CANONICAL-INDUCTION nuw vp<%4>
+  //     ..
+  // }
+  // or Case 2 (indirect use through an epilogue resume-value add):
+  // <x1> vector loop: {
+  //   vp<%5> = CANONICAL-IV
+  //
+  //   vec.epilog.vector.body:
+  //     EMIT vp<%7> = add vp<%5>, ir<%vec.epilog.resume.val>
+  //     EMIT vp<%8> = WIDEN-CANONICAL-INDUCTION nuw vp<%7>
+  //     ..
+  //}
+  auto *IV = LoopRegion->getCanonicalIV();
+  for (auto *User : IV->users()) {
+    if (isa<VPWidenCanonicalIVRecipe>(User)) {
+      WideCanIV = cast<VPWidenCanonicalIVRecipe>(User);
+      StartValue = Plan.getZero(WideCanIV->getScalarType());
+      break;
+    }
+    if (auto *UI = dyn_cast<VPInstruction>(User)) {
+      auto *It = find_if(UI->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+      if (It != UI->user_end()) {
+        WideCanIV = cast<VPWidenCanonicalIVRecipe>(*It);
+        if (!match(UI, m_c_Add(m_Specific(IV), m_VPIRValue(StartValue))) ||
+            !StartValue) {
+          assert(StartValue &&
+                 "WIDEN-CANONICAL-INDUCTION is only expected to be reached "
+                 "through the canonical IV directly, or through a single 'add "
+                 "CanonicalIV, StartValue' introduced for epilogue-loop resume "
+                 "values; found a different pattern here");
+          return;
+        }
+      }
+    }
+  }
+  if (!WideCanIV || !StartValue)
     return;
 
-  Type *CanIVTy = LoopRegion->getCanonicalIVType();
+  Type *CanIVTy = WideCanIV->getScalarType();
 
   // Replace the wide canonical IV with a scalar-iv-steps over the canonical
   // IV.
@@ -58,7 +99,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPBuilder Builder(WideCanIV);
     WideCanIV->replaceAllUsesWith(vputils::createScalarIVSteps(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-        nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
+        nullptr, StartValue, Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
         {static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false}));
     WideCanIV->eraseFromParent();
@@ -108,7 +149,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
       InductionDescriptor::getCanonicalIntInduction(CanIVTy, SE);
   VPValue *StepV = Plan.getConstantInt(CanIVTy, 1);
   auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
-      /*IV=*/nullptr, Plan.getZero(CanIVTy), StepV, &Plan.getVF(), ID,
+      /*IV=*/nullptr, StartValue, StepV, &Plan.getVF(), ID,
       WideCanIV->getNoWrapFlags(), WideCanIV->getDebugLoc());
   NewWideIV->insertBefore(&*Header->getFirstNonPhi());
   WideCanIV->replaceAllUsesWith(NewWideIV);
