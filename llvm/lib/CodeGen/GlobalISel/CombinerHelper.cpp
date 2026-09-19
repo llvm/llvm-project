@@ -3363,6 +3363,35 @@ bool CombinerHelper::matchRedundantAnd(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchKnownBitsToConstant(MachineInstr &MI,
+                                              APInt &MatchInfo) const {
+  if (!VT)
+    return false;
+
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+
+  // Scalars and fixed vectors. getKnownBits intersects all lanes, so a constant
+  // vector result is necessarily a splat-constant.
+  if (!Ty.isScalar() && !Ty.isFixedVector())
+    return false;
+
+  // Don't materialize a def that already has a class/bank constraint into a
+  // constant.
+  if (!MRI.getRegClassOrRegBank(Dst).isNull())
+    return false;
+
+  if (!isConstantLegalOrBeforeLegalizer(Ty))
+    return false;
+
+  KnownBits Known = VT->getKnownBits(Dst);
+  if (!Known.isConstant())
+    return false;
+
+  MatchInfo = Known.getConstant();
+  return true;
+}
+
 bool CombinerHelper::matchRedundantOr(MachineInstr &MI,
                                       Register &Replacement) const {
   // Given

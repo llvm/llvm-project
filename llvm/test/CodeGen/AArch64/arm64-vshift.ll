@@ -4658,8 +4658,7 @@ define <2 x i8> @shl_trunc_v2i64_v2i8(<2 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: shl_trunc_v2i64_v2i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #16
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    ret
   %b = shl <2 x i64> %a, <i64 16, i64 16>
   %c = trunc <2 x i64> %b to <2 x i8>

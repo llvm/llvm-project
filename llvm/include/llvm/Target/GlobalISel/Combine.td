@@ -1008,6 +1008,14 @@ def overlapping_and: GICombineRule <
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
 >;
 
+// Fold a fully-known result to its constant (SelectionDAG's SimplifyDemandedBits
+// "all bits known -> constant" shortcut).
+def known_bits_to_constant : GICombineRule<
+  (defs root:$root, apint_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND, G_OR, G_ZEXT, G_SEXT, G_TRUNC):$root,
+   [{ return Helper.matchKnownBitsToConstant(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${root}, ${matchinfo}); }])>;
+
 // Fold (x & y) -> x or (x & y) -> y when (x & y) is known to equal x or equal y.
 def redundant_and: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
@@ -2778,6 +2786,7 @@ def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
                                      combine_minmax_nan, expand_const_fpowi]>;
 
 def known_bits_simplifications : GICombineGroup<[
+  known_bits_to_constant,
   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
   redundant_zext_unmerge_sext_inreg, redundant_aext_unmerge_sext_inreg,
   redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
