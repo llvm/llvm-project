@@ -67,6 +67,29 @@ processCoordinateOp(mlir::OpBuilder &builder, fir::CoordinateOp coordOp,
   }
 }
 
+// Emit one NVVM register read for field `fieldIdx` of `dest` and store the
+// result there.  Used to expand a whole-record assignment such as
+// `idx = threadIdx` into three per-field register reads so the destination
+// receives actual GPU register values rather than a copy from the global.
+template <typename OpTy>
+static void emitFieldStore(mlir::OpBuilder &builder, mlir::Location loc,
+                           mlir::Value dest, unsigned fieldIdx,
+                           bool incrementByOne) {
+  mlir::Type i32Ty = builder.getI32Type();
+  mlir::Value gpuVal = OpTy::create(builder, loc, i32Ty);
+  if (incrementByOne) {
+    auto c1 = mlir::arith::ConstantOp::create(builder, loc, i32Ty,
+                                              builder.getI32IntegerAttr(1));
+    gpuVal = mlir::arith::AddIOp::create(builder, loc, gpuVal, c1);
+  }
+  fir::IntOrValue idx =
+      mlir::IntegerAttr::get(i32Ty, static_cast<int32_t>(fieldIdx));
+  mlir::Value fieldRef = fir::CoordinateOp::create(
+      builder, loc, fir::ReferenceType::get(i32Ty), dest,
+      llvm::SmallVector<fir::IntOrValue, 1>{idx});
+  fir::StoreOp::create(builder, loc, gpuVal, fieldRef);
+}
+
 template <typename OpTyX, typename OpTyY, typename OpTyZ>
 static void
 processDeclareOp(mlir::OpBuilder &builder, fir::DeclareOp declareOp,
@@ -74,18 +97,40 @@ processDeclareOp(mlir::OpBuilder &builder, fir::DeclareOp declareOp,
                  llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete,
                  llvm::SmallPtrSetImpl<mlir::Operation *> &memrefDefiningOps) {
   if (declareOp.getUniqName().str().compare(builtinVar) == 0) {
-    for (mlir::OpOperand &use : declareOp.getResult().getUses()) {
-      fir::CoordinateOp coordOp =
-          mlir::dyn_cast<fir::CoordinateOp>(use.getOwner());
-      processCoordinateOp<OpTyX>(builder, coordOp, field_x, incrementByOne,
-                                 opsToDelete);
-      processCoordinateOp<OpTyY>(builder, coordOp, field_y, incrementByOne,
-                                 opsToDelete);
-      processCoordinateOp<OpTyZ>(builder, coordOp, field_z, incrementByOne,
-                                 opsToDelete);
-      opsToDelete.push_back(coordOp);
+    // Snapshot uses before queuing deletions to avoid invalidating the
+    // iterator as ops are marked for removal.
+    llvm::SmallVector<mlir::Operation *> useOps;
+    for (mlir::OpOperand &use : declareOp.getResult().getUses())
+      useOps.push_back(use.getOwner());
+
+    bool allUsesHandled = true;
+    for (mlir::Operation *useOp : useOps) {
+      if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(useOp)) {
+        processCoordinateOp<OpTyX>(builder, coordOp, field_x, incrementByOne,
+                                   opsToDelete);
+        processCoordinateOp<OpTyY>(builder, coordOp, field_y, incrementByOne,
+                                   opsToDelete);
+        processCoordinateOp<OpTyZ>(builder, coordOp, field_z, incrementByOne,
+                                   opsToDelete);
+        opsToDelete.push_back(coordOp);
+      } else if (auto copyOp = mlir::dyn_cast<fir::CopyOp>(useOp)) {
+        // Whole-record assignment (e.g. `idx = threadIdx`): expand into three
+        // per-field NVVM reads so the destination receives GPU register values
+        // rather than a copy from the global backing variable.
+        mlir::Value dest = copyOp.getDestination();
+        mlir::Location loc = copyOp.getLoc();
+        builder.setInsertionPoint(copyOp);
+        emitFieldStore<OpTyX>(builder, loc, dest, field_x, incrementByOne);
+        emitFieldStore<OpTyY>(builder, loc, dest, field_y, incrementByOne);
+        emitFieldStore<OpTyZ>(builder, loc, dest, field_z, incrementByOne);
+        opsToDelete.push_back(copyOp);
+      } else {
+        // Other uses (e.g. fir.call): leave in place, keep the declare alive.
+        allUsesHandled = false;
+      }
     }
-    opsToDelete.push_back(declareOp.getOperation());
+    if (allUsesHandled)
+      opsToDelete.push_back(declareOp.getOperation());
     // The backing fir.address_of may be shared by several declares (e.g. after
     // CSE coalesces them when a device routine is inlined into a kernel).
     // Collect it de-duplicated and erase it only once all declares are gone.

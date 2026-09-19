@@ -491,3 +491,46 @@ func.func @_QPsub4(%arg0: !fir.ref<i32> {fir.bindc_name = "i", cuf.data_attr = #
 // LOC: arith.addi {{.*}} : i32 loc("sub4.cuf":3:3)
 // LOC: nvvm.read.ptx.sreg.ctaid.y : i32 loc("sub4.cuf":4:3)
 // LOC: arith.addi {{.*}} : i32 loc("sub4.cuf":4:3)
+
+// -----
+
+// A fir.copy use of a predefined-variable declare (e.g. from a whole-record
+// assignment like `idx = threadIdx`) must be expanded into per-field NVVM
+// register reads so the destination receives actual GPU register values rather
+// than a copy from the global backing storage.  Both the fir.copy and the
+// fir.declare are removed once all uses have been rewritten.
+func.func @_QPcopy_threadidx(%arg0: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>> {fir.bindc_name = "idx"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %0 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %1 = fir.declare %0 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %2 = fir.declare %arg0 {uniq_name = "_QFsub1Eidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  // Whole-record assignment: idx = threadIdx
+  fir.copy %1 to %2 no_overlap : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  // Component read: i = threadIdx%x (must still be rewritten)
+  %3 = fir.coordinate_of %1, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+  %4 = fir.load %3 : !fir.ref<i32>
+  %5 = fir.alloca i32
+  fir.store %4 to %5 : !fir.ref<i32>
+  return
+}
+
+// The fir.copy is replaced by three per-field NVVM reads into the destination;
+// the declare and the global backing variable are both removed.
+// CHECK-LABEL: func.func @_QPcopy_threadidx
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+// CHECK-NOT: fir.copy
+// Whole-record copy expanded: x field (field 0).
+// CHECK: %[[TIDX:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[ADDX:.*]] = arith.addi %[[TIDX]], %c1{{.*}} : i32
+// CHECK: fir.store %[[ADDX]] to %{{.*}} : !fir.ref<i32>
+// Whole-record copy expanded: y field (field 1).
+// CHECK: %[[TIDY:.*]] = nvvm.read.ptx.sreg.tid.y : i32
+// CHECK: %[[ADDY:.*]] = arith.addi %[[TIDY]], %c1{{.*}} : i32
+// CHECK: fir.store %[[ADDY]] to %{{.*}} : !fir.ref<i32>
+// Whole-record copy expanded: z field (field 2).
+// CHECK: %[[TIDZ:.*]] = nvvm.read.ptx.sreg.tid.z : i32
+// CHECK: %[[ADDZ:.*]] = arith.addi %[[TIDZ]], %c1{{.*}} : i32
+// CHECK: fir.store %[[ADDZ]] to %{{.*}} : !fir.ref<i32>
+// The subsequent component read (i = threadIdx%x) also becomes a register read.
+// CHECK: %[[TID2:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[ADD2:.*]] = arith.addi %[[TID2]], %c1{{.*}} : i32
+// CHECK: fir.store %[[ADD2]] to %{{.*}} : !fir.ref<i32>
