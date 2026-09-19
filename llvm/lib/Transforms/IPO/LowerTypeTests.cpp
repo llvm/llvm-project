@@ -2229,7 +2229,8 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
       Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
 
   unique_function<bool(uint64_t, uint64_t)> Less;
-  if (!IsGlobalSet && !FunctionSummaryHotness.empty()) {
+  if (!IsGlobalSet && !FunctionSummaryHotness.empty() &&
+      ReorderCfiJumpTablesProfiles) {
     // Estimated weight of each jump entry.
     std::vector<CfiFunctionHotness> GTMHotness;
     GTMHotness.reserve(Globals.size());
