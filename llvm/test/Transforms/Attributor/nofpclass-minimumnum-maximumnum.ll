@@ -205,9 +205,9 @@ define float @ret_minimumnum_daz_daz_nozero__nozero(float nofpclass(zero) %arg0,
 }
 
 define float @ret_minimumnum_dapz_dapz_nozero__nozero(float nofpclass(zero) %arg0, float nofpclass(zero) %arg1) #2 {
-; CHECK-LABEL: define float @ret_minimumnum_dapz_dapz_nozero__nozero
+; CHECK-LABEL: define nofpclass(nzero) float @ret_minimumnum_dapz_dapz_nozero__nozero
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]], float nofpclass(zero) [[ARG1:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minimumnum.f32(float nofpclass(zero) [[ARG0]], float nofpclass(zero) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero) float @llvm.minimumnum.f32(float nofpclass(zero) [[ARG0]], float nofpclass(zero) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minimumnum.f32(float %arg0, float %arg1)
@@ -265,9 +265,9 @@ define float @ret_minimumnum_daz_daz_nonzero__nonzero(float nofpclass(nzero) %ar
 }
 
 define float @ret_minimumnum_daz_daz_nonzero_nonsub__nonzero_nonsub(float nofpclass(nzero nsub) %arg0, float nofpclass(nzero nsub) %arg1) #1 {
-; CHECK-LABEL: define nofpclass(nsub) float @ret_minimumnum_daz_daz_nonzero_nonsub__nonzero_nonsub
+; CHECK-LABEL: define nofpclass(nzero nsub) float @ret_minimumnum_daz_daz_nonzero_nonsub__nonzero_nonsub
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[ARG0:%.*]], float nofpclass(nzero nsub) [[ARG1:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nsub) float @llvm.minimumnum.f32(float nofpclass(nzero nsub) [[ARG0]], float nofpclass(nzero nsub) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero nsub) float @llvm.minimumnum.f32(float nofpclass(nzero nsub) [[ARG0]], float nofpclass(nzero nsub) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minimumnum.f32(float %arg0, float %arg1)
@@ -295,9 +295,9 @@ define float @ret_minimumnum_dapz_dapz_nopzero_nopsub__nopzero_nopsub(float nofp
 }
 
 define float @ret_minimumnum_dapz_dapz_nonzero__nonzero(float nofpclass(nzero) %arg0, float nofpclass(nzero) %arg1) #2 {
-; CHECK-LABEL: define float @ret_minimumnum_dapz_dapz_nonzero__nonzero
+; CHECK-LABEL: define nofpclass(nzero) float @ret_minimumnum_dapz_dapz_nonzero__nonzero
 ; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]], float nofpclass(nzero) [[ARG1:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minimumnum.f32(float nofpclass(nzero) [[ARG0]], float nofpclass(nzero) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero) float @llvm.minimumnum.f32(float nofpclass(nzero) [[ARG0]], float nofpclass(nzero) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minimumnum.f32(float %arg0, float %arg1)
@@ -325,9 +325,9 @@ define float @ret_minimumnum_daz_ieee_nozero__nozero(float nofpclass(zero) %arg0
 }
 
 define float @ret_minimumnum_ieee_dapz_nozero__nozero(float nofpclass(zero) %arg0, float nofpclass(zero) %arg1) #6 {
-; CHECK-LABEL: define float @ret_minimumnum_ieee_dapz_nozero__nozero
+; CHECK-LABEL: define nofpclass(nzero) float @ret_minimumnum_ieee_dapz_nozero__nozero
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]], float nofpclass(zero) [[ARG1:%.*]]) #[[ATTR7:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minimumnum.f32(float nofpclass(zero) [[ARG0]], float nofpclass(zero) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero) float @llvm.minimumnum.f32(float nofpclass(zero) [[ARG0]], float nofpclass(zero) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minimumnum.f32(float %arg0, float %arg1)
@@ -335,9 +335,9 @@ define float @ret_minimumnum_ieee_dapz_nozero__nozero(float nofpclass(zero) %arg
 }
 
 define float @ret_minimumnum_dapz_ieee_nozero__nozero(float nofpclass(zero) %arg0, float nofpclass(zero) %arg1) #7 {
-; CHECK-LABEL: define float @ret_minimumnum_dapz_ieee_nozero__nozero
+; CHECK-LABEL: define nofpclass(nzero) float @ret_minimumnum_dapz_ieee_nozero__nozero
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]], float nofpclass(zero) [[ARG1:%.*]]) #[[ATTR8:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.minimumnum.f32(float nofpclass(zero) [[ARG0]], float nofpclass(zero) [[ARG1]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero) float @llvm.minimumnum.f32(float nofpclass(zero) [[ARG0]], float nofpclass(zero) [[ARG1]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minimumnum.f32(float %arg0, float %arg1)
@@ -796,9 +796,9 @@ define float @ret_maximumnum_negnormal_negsubnormal_both_lhs_rhs_mode_dynamic_dy
 }
 
 define float @ret_maximumnum_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %lhs, float nofpclass(nan inf zero psub pnorm) %rhs) #2 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_maximumnum_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz
+; CHECK-LABEL: define nofpclass(nan inf nzero psub pnorm) float @ret_maximumnum_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz
 ; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[LHS:%.*]], float nofpclass(nan inf zero psub pnorm) [[RHS:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf psub pnorm) float @llvm.maximumnum.f32(float nofpclass(nan inf zero psub pnorm) [[LHS]], float nofpclass(nan inf zero psub pnorm) [[RHS]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nzero psub pnorm) float @llvm.maximumnum.f32(float nofpclass(nan inf zero psub pnorm) [[LHS]], float nofpclass(nan inf zero psub pnorm) [[RHS]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.maximumnum.f32(float %lhs, float %rhs)
@@ -816,9 +816,9 @@ define float @ret_minimumnum_negnormal_negsubnormal_both_lhs_rhs_mode_dynamic_dy
 }
 
 define float @ret_minimumnum_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz(float nofpclass(nan inf zero psub pnorm) %lhs, float nofpclass(nan inf zero psub pnorm) %rhs) #2 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_minimumnum_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz
+; CHECK-LABEL: define nofpclass(nan inf nzero psub pnorm) float @ret_minimumnum_negnormal_negsubnormal_both_lhs_rhs_mode_ftpz_dapz
 ; CHECK-SAME: (float nofpclass(nan inf zero psub pnorm) [[LHS:%.*]], float nofpclass(nan inf zero psub pnorm) [[RHS:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf psub pnorm) float @llvm.minimumnum.f32(float nofpclass(nan inf zero psub pnorm) [[LHS]], float nofpclass(nan inf zero psub pnorm) [[RHS]]) #[[ATTR9]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf nzero psub pnorm) float @llvm.minimumnum.f32(float nofpclass(nan inf zero psub pnorm) [[LHS]], float nofpclass(nan inf zero psub pnorm) [[RHS]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.minimumnum.f32(float %lhs, float %rhs)

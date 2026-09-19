@@ -160,6 +160,12 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
+  LLVM_ABI static KnownFPClass applyInputDenormalMode(const KnownFPClass &Src,
+                                                      DenormalMode Mode);
+
+  LLVM_ABI static KnownFPClass applyOutputDenormalMode(const KnownFPClass &Src,
+                                                       DenormalMode Mode);
+
   KnownFPClass intersectWith(const KnownFPClass &RHS) const {
     return KnownFPClass(getKnownFPClasses() | RHS.getKnownFPClasses(),
                         getSignBit() == RHS.getSignBit() ? getSignBit()
@@ -441,12 +447,9 @@ struct KnownFPClass {
   // Propagate knowledge for operations whose result sign is the xor of the
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
-  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS,
-                        DenormalMode Mode) {
-    const bool LHSCannotHavePositiveInput =
-        LHS.isKnownNever(fcPositive) && LHS.isKnownNeverLogicalPosZero(Mode);
-    const bool RHSCannotHavePositiveInput =
-        RHS.isKnownNever(fcPositive) && RHS.isKnownNeverLogicalPosZero(Mode);
+  void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    const bool LHSCannotHavePositiveInput = LHS.isKnownNever(fcPositive);
+    const bool RHSCannotHavePositiveInput = RHS.isKnownNever(fcPositive);
     if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
         (LHSCannotHavePositiveInput && RHSCannotHavePositiveInput))
       knownNot(fcNegative);
@@ -454,8 +457,7 @@ struct KnownFPClass {
     if ((LHSCannotHavePositiveInput && RHS.isKnownNever(fcNegative)) ||
         (LHS.isKnownNever(fcNegative) && RHSCannotHavePositiveInput)) {
       knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
-      if (!Mode.outputsMayBePositiveZero())
-        knownNot(fcPosZero);
+      knownNot(fcPosZero);
     }
   }
 
