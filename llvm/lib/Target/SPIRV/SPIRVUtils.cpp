@@ -449,6 +449,8 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
+bool isAMDTarget(const Triple &T) { return T.getVendor() == Triple::AMD; }
+
 uint32_t getMemSemanticsWithStorageClass(const Triple &TT, uint32_t OrderSem,
                                          uint32_t StorageClassSem) {
   bool DropStorageClass =
