@@ -306,13 +306,14 @@ enum NodeType {
 
   /// Carry-using nodes for multiple precision addition and subtraction.
   /// These nodes take three operands: The first two are the normal lhs and
-  /// rhs to the add or sub, and the third is a boolean value that is 1 if and
-  /// only if there is an incoming carry/borrow. These nodes produce two
+  /// rhs to the add or sub, and the third is a boolean value that is true if
+  /// and only if there is an incoming carry/borrow. These nodes produce two
   /// results: the normal result of the add or sub, and a boolean value that is
-  /// 1 if and only if there is an outgoing carry/borrow.
+  /// true if and only if there is an outgoing carry/borrow. If the type of the
+  /// boolean is not i1 then the high bits conform to getBooleanContents.
   ///
   /// Care must be taken if these opcodes are lowered to hardware instructions
-  /// that use the inverse logic -- 0 if and only if there is an
+  /// that use the inverse logic -- false if and only if there is an
   /// incoming/outgoing carry/borrow.  In such cases, you must preserve the
   /// semantics of these opcodes by inverting the incoming carry/borrow, feeding
   /// it to the add/sub hardware instruction, and then inverting the outgoing
