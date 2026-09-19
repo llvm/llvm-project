@@ -202,21 +202,26 @@ Emits **all** remarks unconditionally.
 
 ### RemarkEmittingPolicyFinal
 
-Stores remarks until `finalize()` is called and emits only the **final** remark
-for each location. This is useful in multi-pass compilers where an early pass
-may report a failure, but a later pass succeeds. `finalize()` drains the stored
+Stores remarks until `finalize()` is called and emits only the **last** remark
+reported for each identity. This is useful in multi-pass compilers where several
+passes report on the same thing and only the final report should be shown. The
+identity is defined by `RemarkIdentity` in `Remarks.h`; arguments are never part
+of it. Root remarks are emitted in the order in which their identity was first
+reported, with linked remarks right after the remark that references them, so
+the output does not depend on hash order. `finalize()` drains the stored
 remarks. Calling it again emits only remarks reported since.
 
-**Example:** Only the successful remark is emitted:
+**Example:** Only the second remark is emitted, because both share an
+identity.
 
 ```c++
 auto opts = remark::RemarkOpts::name("Unroller").category("LoopUnroll");
 
-// First pass: reports failure
-remark::failed(loc, opts) << "Loop could not be unrolled";
+// First attempt.
+remark::passed(loc, opts) << "Loop unrolled by 2";
 
-// Later pass: reports success (this is the one emitted)
-remark::passed(loc, opts) << "Loop unrolled successfully";
+// A later pass revisits the same loop. This is the one emitted.
+remark::passed(loc, opts) << "Loop unrolled by 4";
 ```
 
 You can also implement custom policies by inheriting from the policy interface.

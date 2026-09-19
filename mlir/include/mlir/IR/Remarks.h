@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -357,6 +358,48 @@ inline Remark &operator<<(Remark &r, const Remark::Arg &kv) {
 }
 
 //===----------------------------------------------------------------------===//
+// RemarkIdentity
+//===----------------------------------------------------------------------===//
+
+/// The fields RemarkEmittingPolicyFinal compares to decide that two remarks
+/// describe the same thing: location, remark name, combined category name and
+/// remark kind. Arguments, function name and remark ID are not part of the
+/// identity, so a later remark with the same identity replaces an earlier one.
+struct RemarkIdentity {
+  Location loc;
+  std::string remarkName;
+  std::string combinedCategoryName;
+  RemarkKind kind;
+
+  explicit RemarkIdentity(const Remark &remark)
+      : loc(remark.getLocation()), remarkName(remark.getRemarkName()),
+        combinedCategoryName(remark.getCombinedCategoryName()),
+        kind(remark.getRemarkKind()) {}
+};
+
+} // namespace mlir::remark::detail
+
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::remark::detail::RemarkIdentity> {
+  using RemarkIdentity = mlir::remark::detail::RemarkIdentity;
+
+  static unsigned getHashValue(const RemarkIdentity &identity) {
+    return llvm::hash_combine(identity.loc, identity.remarkName,
+                              identity.combinedCategoryName, identity.kind);
+  }
+
+  static bool isEqual(const RemarkIdentity &lhs, const RemarkIdentity &rhs) {
+    return lhs.loc == rhs.loc && lhs.kind == rhs.kind &&
+           lhs.remarkName == rhs.remarkName &&
+           lhs.combinedCategoryName == rhs.combinedCategoryName;
+  }
+};
+} // namespace llvm
+
+namespace mlir::remark::detail {
+
+//===----------------------------------------------------------------------===//
 // Shorthand aliases for different kinds of remarks.
 //===----------------------------------------------------------------------===//
 
@@ -665,19 +708,21 @@ public:
   void finalize() override {}
 };
 
-/// Policy that emits only the last remark reported for each identity, see
-/// DenseMapInfo<Remark>. Remarks are stored until finalize().
+/// Policy that emits only the last remark reported for each RemarkIdentity.
+/// Remarks are stored until finalize(). A later remark with the same identity
+/// replaces the stored one in place, so root remarks are emitted in the order
+/// in which their identity was first reported.
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
-  /// Remarks reported since the last finalize().
-  llvm::DenseSet<detail::Remark> postponedRemarks;
+  /// Remarks reported since the last finalize(), keyed by identity and kept
+  /// in first-report order.
+  llvm::MapVector<detail::RemarkIdentity, detail::Remark> postponedRemarks;
 
 public:
   RemarkEmittingPolicyFinal();
 
   void reportRemark(const detail::Remark &remark) override {
-    postponedRemarks.erase(remark);
-    postponedRemarks.insert(remark);
+    postponedRemarks.insert_or_assign(detail::RemarkIdentity(remark), remark);
   }
 
   /// Emits and drains all stored remarks. Related remarks are printed right
@@ -761,41 +806,4 @@ LogicalResult enableOptimizationRemarks(
 
 } // namespace mlir::remark
 
-// DenseMapInfo specialization for Remark
-namespace llvm {
-template <>
-struct DenseMapInfo<mlir::remark::detail::Remark> {
-  static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
-
-  /// Helper to provide a static dummy context for sentinel keys.
-  static mlir::MLIRContext *getStaticDummyContext() {
-    static mlir::MLIRContext dummyContext;
-    return &dummyContext;
-  }
-
-  /// Create an empty remark
-  /// Compute the hash value of the remark
-  static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
-    return llvm::hash_combine(
-        remark.getLocation().getAsOpaquePointer(),
-        llvm::hash_value(remark.getRemarkName()),
-        llvm::hash_value(remark.getCombinedCategoryName()),
-        static_cast<unsigned>(remark.getRemarkKind()));
-  }
-
-  static bool isEqual(const mlir::remark::detail::Remark &lhs,
-                      const mlir::remark::detail::Remark &rhs) {
-    // Check for empty keys first.
-    if (lhs.getRemarkName() == kEmptyKey || rhs.getRemarkName() == kEmptyKey) {
-      return lhs.getRemarkName() == rhs.getRemarkName();
-    }
-
-    // For regular remarks, compare key identifying fields
-    return lhs.getLocation() == rhs.getLocation() &&
-           lhs.getRemarkName() == rhs.getRemarkName() &&
-           lhs.getCombinedCategoryName() == rhs.getCombinedCategoryName() &&
-           lhs.getRemarkKind() == rhs.getRemarkKind();
-  }
-};
-} // namespace llvm
 #endif // MLIR_IR_REMARKS_H
