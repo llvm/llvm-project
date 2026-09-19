@@ -28,12 +28,24 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include <cassert>
 
 using namespace llvm;
+
+static cl::opt<SPIRV::InstructionSet::InstructionSet>
+    NonSemanticDebugInfoVersion(
+        "spirv-nonsemantic-debug-info-version",
+        cl::desc("Select the NonSemantic.Shader.DebugInfo version to emit"),
+        cl::values(
+            clEnumValN(SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100,
+                       "100", "NonSemantic.Shader.DebugInfo.100"),
+            clEnumValN(SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_200,
+                       "200", "NonSemantic.Shader.DebugInfo.200")),
+        cl::init(SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100));
 
 namespace {
 
@@ -436,11 +448,11 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   // Add the extension to requirements so OpExtension is output.
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
 
-  // Add the NonSemantic.Shader.DebugInfo.100 entry to ExtInstSetMap so that
+  // Add the selected NonSemantic.Shader.DebugInfo set to ExtInstSetMap so that
   // outputOpExtInstImports() emits the OpExtInstImport instruction. Allocate a
   // fresh result ID for it now; the same ID is used in emitExtInst() operands.
-  if (!MAI.ExtInstSetMap.count(NSSet))
-    MAI.ExtInstSetMap[NSSet] = MAI.getNextIDRegister();
+  if (!MAI.ExtInstSetMap.count(NonSemanticDebugInfoVersion))
+    MAI.ExtInstSetMap[NonSemanticDebugInfoVersion] = MAI.getNextIDRegister();
 }
 
 void SPIRVNonSemanticDebugHandler::emitMCInst(MCInst &Inst) {
@@ -1253,7 +1265,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   // Check that prepareModuleOutput() registered the extended instruction set.
   // If the subtarget does not support the extension, neither strings nor ext
   // insts are emitted.
-  if (!MAI.getExtInstSetReg(NSSet).isValid())
+  if (!MAI.getExtInstSetReg(NonSemanticDebugInfoVersion).isValid())
     return;
 
   for (const CompileUnitInfo &Info : CompileUnits) {
@@ -1332,7 +1344,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugFunctionDefinition(
   assert(DebugFunctionReg.isValid() && OpFunctionReg.isValid() &&
          "DebugFunctionDefinition operands must be valid");
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NonSemanticDebugInfoVersion);
   emitExtInst(SPIRV::NonSemanticExtInst::DebugFunctionDefinition, VoidTypeReg,
               ExtInstSetReg, {DebugFunctionReg, OpFunctionReg}, MAI);
 }
@@ -1477,7 +1489,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugDeclare(const MachineInstr *MI) {
     return;
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NonSemanticDebugInfoVersion);
   emitExtInst(SPIRV::NonSemanticExtInst::DebugDeclare, VoidTypeReg,
               ExtInstSetReg, {*VarRegOpt, StorageReg, *ExprRegOpt}, MAI);
 }
@@ -1558,7 +1570,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugScopeForInstruction(
 
   SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NonSemanticDebugInfoVersion);
 
   const DILocation *CurDL = MI->getDebugLoc().get();
   if (!CurDL) {
@@ -1616,7 +1628,7 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
 
   SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NonSemanticDebugInfoVersion);
 
   const DILocation *DL = MI->getDebugLoc().get();
   if (!DL) {
@@ -1728,7 +1740,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 
   // Retrieve the ext inst set register allocated by prepareModuleOutput().
-  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NonSemanticDebugInfoVersion);
   if (!ExtInstSetReg.isValid()) {
     GlobalNSDIEnabled = false;
     return;
@@ -1755,10 +1767,11 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   // DebugSource+DebugCompilationUnit pairs. This keeps OpConstant instructions
   // grouped before the OpExtInst instructions.
 
-  // The Version operand of DebugCompilationUnit is the version of the
-  // NonSemantic.Shader.DebugInfo instruction set, which is 100 for
-  // "NonSemantic.Shader.DebugInfo.100" (NonSemanticShaderDebugInfo100Version).
-  MCRegister DebugInfoVersionReg = emitOpConstantI32(100, I32TypeReg, MAI);
+  // The Version operand of DebugCompilationUnit is the NonSemantic debug-info
+  // instruction-set version, matching the imported ext-inst set.
+  MCRegister DebugInfoVersionReg = emitOpConstantI32(
+      getNonSemanticDebugInfoVersion(NonSemanticDebugInfoVersion), I32TypeReg,
+      MAI);
   MCRegister DwarfVersionReg =
       emitOpConstantI32(static_cast<uint32_t>(DwarfVersion), I32TypeReg, MAI);
 

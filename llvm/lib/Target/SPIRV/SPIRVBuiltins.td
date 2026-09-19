@@ -28,6 +28,7 @@ def GLSL_std_450 : InstructionSet<1>;
 def SPV_AMD_shader_trinary_minmax : InstructionSet<2>;
 def NonSemantic_Shader_DebugInfo_100 : InstructionSet<3>;
 def NonSemantic_AuxData : InstructionSet<4>;
+def NonSemantic_Shader_DebugInfo_200 : InstructionSet<5>;
 
 // Define various builtin groups
 def BuiltinGroup : GenericEnum {
