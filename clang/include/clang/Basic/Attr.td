@@ -1179,6 +1179,10 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("visionos_app_extension", "xros_app_extension")
              .Case("anyAppleOS", "anyappleos")
              .Case("ShaderModel", "shadermodel")
+             .Case("iosmac", "maccatalyst")
+             .Case("iosmac_app_extension", "maccatalyst_app_extension")
+             .Case("iOSMac", "maccatalyst")
+             .Case("iOSMacApplicationExtension", "maccatalyst_app_extension")
              .Default(Platform);
 }
 static std::vector<llvm::StringRef> equivalentPlatformNames(llvm::StringRef Platform) {
