@@ -47,6 +47,11 @@ TEST(LlvmLibcFileModeTest, FirstCharacterMustBeAValidMode) {
   constexpr FileMode exclusive_create("x");
   EXPECT_FALSE(exclusive_create.is_valid());
   EXPECT_FALSE(exclusive_create.is_exclusive_create());
+
+  // close-on-exec set as first character => invalid
+  constexpr FileMode close_on_exec("e");
+  EXPECT_FALSE(close_on_exec.is_valid());
+  EXPECT_FALSE(close_on_exec.is_close_on_exec());
 }
 
 TEST(LlvmLibcFileModeTest, AllPossibleValidCombinations) {
@@ -59,6 +64,7 @@ TEST(LlvmLibcFileModeTest, AllPossibleValidCombinations) {
   EXPECT_TRUE(readonly.is_valid());
   EXPECT_TRUE(readonly.is_read());
   EXPECT_TRUE(readonly.read_allowed());
+  EXPECT_FALSE(readonly.is_close_on_exec());
 
   // b. Read and Update mode
   constexpr FileMode read_and_update("r+");
@@ -91,6 +97,7 @@ TEST(LlvmLibcFileModeTest, AllPossibleValidCombinations) {
   EXPECT_TRUE(writeonly.is_valid());
   EXPECT_TRUE(writeonly.is_write());
   EXPECT_TRUE(writeonly.write_allowed());
+  EXPECT_FALSE(writeonly.is_close_on_exec());
 
   // b. Write and Update mode
   constexpr FileMode write_and_update("w+");
@@ -157,6 +164,7 @@ TEST(LlvmLibcFileModeTest, AllPossibleValidCombinations) {
   EXPECT_TRUE(appendonly.is_valid());
   EXPECT_TRUE(appendonly.is_append());
   EXPECT_TRUE(appendonly.write_allowed());
+  EXPECT_FALSE(appendonly.is_close_on_exec());
 
   // b. Append and Update
   constexpr FileMode append_and_update("a+");
@@ -181,6 +189,45 @@ TEST(LlvmLibcFileModeTest, AllPossibleValidCombinations) {
   EXPECT_TRUE(append_update_binary.is_binary_format());
   EXPECT_TRUE(append_update_binary.write_allowed());
   EXPECT_TRUE(append_update_binary.read_allowed());
+
+  // 4. Close-on-exec: possible valid close-on-exec combinations
+
+  // a. Read Close-on-exec
+  constexpr FileMode read_close_on_exec("re");
+  EXPECT_TRUE(read_close_on_exec.is_valid());
+  EXPECT_TRUE(read_close_on_exec.is_read());
+  EXPECT_TRUE(read_close_on_exec.is_close_on_exec());
+  EXPECT_TRUE(read_close_on_exec.read_allowed());
+  EXPECT_FALSE(read_close_on_exec.write_allowed());
+  EXPECT_FALSE(read_close_on_exec.is_binary_format());
+  EXPECT_FALSE(read_close_on_exec.is_exclusive_create());
+
+  // b. Write Close-on-exec
+  constexpr FileMode write_close_on_exec("we");
+  EXPECT_TRUE(write_close_on_exec.is_valid());
+  EXPECT_TRUE(write_close_on_exec.is_write());
+  EXPECT_TRUE(write_close_on_exec.is_close_on_exec());
+  EXPECT_TRUE(write_close_on_exec.write_allowed());
+  EXPECT_FALSE(write_close_on_exec.read_allowed());
+
+  // c. Append Close-on-exec
+  constexpr FileMode append_close_on_exec("ae");
+  EXPECT_TRUE(append_close_on_exec.is_valid());
+  EXPECT_TRUE(append_close_on_exec.is_append());
+  EXPECT_TRUE(append_close_on_exec.is_close_on_exec());
+  EXPECT_TRUE(append_close_on_exec.write_allowed());
+  EXPECT_FALSE(append_close_on_exec.read_allowed());
+
+  // d. Write Close-on-exec Exclusive Update Binary
+  constexpr FileMode write_all_modifiers("wex+b");
+  EXPECT_TRUE(write_all_modifiers.is_valid());
+  EXPECT_TRUE(write_all_modifiers.is_write());
+  EXPECT_TRUE(write_all_modifiers.is_close_on_exec());
+  EXPECT_TRUE(write_all_modifiers.is_exclusive_create());
+  EXPECT_TRUE(write_all_modifiers.is_update());
+  EXPECT_TRUE(write_all_modifiers.is_binary_format());
+  EXPECT_TRUE(write_all_modifiers.read_allowed());
+  EXPECT_TRUE(write_all_modifiers.write_allowed());
 }
 
 TEST(LlvmLibcFileModeTest, InvalidCombinations) {
