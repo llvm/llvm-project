@@ -1,0 +1,206 @@
+# NOTE: Do not autogenerate
+#
+# A deep outer-IV operand chain. The epilogue operand classifier walks the
+# chain iteratively, so a chain of 300000 additions must not exhaust the
+# stack. split-file provides a generator, the K=3 module that generator must
+# reproduce, and a runner that sets the child stack to exactly 8 MiB before
+# exec'ing opt, so a recursion depth that outgrows that stack fails here
+# rather than depending on the host's stack limit. The generated shape is the
+# bound_context_nofact_trunc test case plus K dependent additions in the outer
+# header, where %c{K-1} feeds the epilogue's uitofp feeding the stored fmul, so
+# the chain reaches no address and no loop condition. The candidate stays
+# RuntimeBound. Because runtime versioning is disabled, the fission-enabled
+# and fission-disabled modules must match.
+#
+# REQUIRES: system-linux
+#
+# RUN: rm -rf %t && split-file %s %t
+# RUN: %python %t/generate-runtime-chain.py 3 > %t/k3.ll
+# RUN: diff -u %t/deep-k3.ll %t/k3.ll
+# RUN: %python %t/generate-runtime-chain.py 300000 > %t/k300000.ll
+# RUN: %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -disable-output %t/k3.ll
+# RUN: %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -disable-output %t/k300000.ll
+# For both K values, preparation walks all K rematerialized definitions and
+# classifies the plan as RuntimeBound. Runtime versioning is disabled, so the
+# candidate is rejected. The asserts-build discovery trace reports the exact
+# count at both K.
+# RUN: %python %t/bounded-stack.py opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission=false %t/k3.ll -o %t/k3.off.ll
+# RUN: %python %t/bounded-stack.py opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan %t/k3.ll -o %t/k3.on.ll 2> %t/k3.on.stderr
+# RUN: diff -u %t/k3.off.ll %t/k3.on.ll
+# RUN: FileCheck %s --check-prefix=K3 --input-file=%t/k3.on.stderr --implicit-check-not='loop-interchange:'
+# RUN: FileCheck %s --check-prefix=NO-MARKER --input-file=%t/k3.on.ll --implicit-check-not='.lver' --implicit-check-not='!alias.scope' --implicit-check-not='!noalias'
+# RUN: %python %t/bounded-stack.py opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission=false %t/k300000.ll -o %t/k300000.off.ll
+# RUN: %python %t/bounded-stack.py opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan %t/k300000.ll -o %t/k300000.on.ll 2> %t/k300000.on.stderr
+# RUN: diff -u %t/k300000.off.ll %t/k300000.on.ll
+# RUN: FileCheck %s --check-prefix=K300000 --input-file=%t/k300000.on.stderr --implicit-check-not='loop-interchange:'
+# RUN: FileCheck %s --check-prefix=NO-MARKER --input-file=%t/k300000.on.ll --implicit-check-not='.lver' --implicit-check-not='!alias.scope' --implicit-check-not='!noalias'
+# RUN: %if asserts %{ %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan -debug-only=loop-interchange -disable-output %t/k3.ll 2>&1 | FileCheck %s --check-prefix=K3-DEBUG %}
+# RUN: %if asserts %{ %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan -debug-only=loop-interchange -disable-output %t/k300000.ll 2>&1 | FileCheck %s --check-prefix=K300000-DEBUG %}
+#
+# K3-LABEL: loop-interchange: rejected function=deep_runtime_nofact{{ }}
+# K3-SAME:  outer=outer.header inner=inner.header reason=runtime outer-epilogue versioning is disabled{{$}}
+#
+# K300000-LABEL: loop-interchange: rejected function=deep_runtime_nofact{{ }}
+# K300000-SAME:  outer=outer.header inner=inner.header reason=runtime outer-epilogue versioning is disabled{{$}}
+#
+# For either value of K, the rejected candidate leaves the module without a
+# guard, fallback loop, versioning marker, or alias metadata.
+# NO-MARKER: {{^}}define void @deep_runtime_nofact({{.*$}}
+#
+# K3-DEBUG: loop-interchange: discovered a closed outer-loop epilogue in function 'deep_runtime_nofact' with 1 path block(s), 5 instruction(s), and 3 rematerialized loop-local definition(s).
+#
+# K300000-DEBUG: loop-interchange: discovered a closed outer-loop epilogue in function 'deep_runtime_nofact' with 1 path block(s), 5 instruction(s), and 300000 rematerialized loop-local definition(s).
+#
+#--- generate-runtime-chain.py
+#!/usr/bin/env python3
+import argparse
+
+
+def positive_int(value):
+    result = int(value)
+    if result < 1:
+        raise argparse.ArgumentTypeError("chain length must be positive")
+    return result
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("length", type=positive_int)
+args = parser.parse_args()
+
+print('target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"')
+print("""
+define void @deep_runtime_nofact(ptr noalias dereferenceable(128) %A, ptr noalias %R, i64 %n) {
+entry:
+  %m7 = and i64 %n, 7
+  %nn = add nuw nsw i64 %m7, 1
+  %nn32 = trunc i64 %nn to i32
+  %hi = icmp ne i32 %nn32, 12345
+  br i1 %hi, label %outer.ph, label %done
+outer.ph:
+  br label %outer.header
+outer.header:
+  %i = phi i64 [ 0, %outer.ph ], [ %i.next, %outer.latch ]
+  %chk.i = phi double [ 0.000000e+00, %outer.ph ], [ %chk.next, %outer.latch ]""")
+for index in range(args.length):
+    operand = "%i" if index == 0 else f"%c{index - 1}"
+    print(f"  %c{index} = add i64 {operand}, 1")
+print(f"""  %col = getelementptr inbounds [4 x double], ptr %A, i64 0, i64 %i
+  br label %inner.header
+inner.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.header ]
+  %chk.j = phi double [ %chk.i, %outer.header ], [ %chk.next.j, %inner.header ]
+  %idx = getelementptr inbounds [4 x double], ptr %col, i64 %j, i64 0
+  %v = load double, ptr %idx, align 8
+  %chk.next.j = fadd reassoc double %chk.j, %v
+  %j.next = add i64 %j, 1
+  %j.ec = icmp eq i64 %j.next, 4
+  br i1 %j.ec, label %epilogue, label %inner.header
+epilogue:
+  %chk.next = phi double [ %chk.next.j, %inner.header ]
+  %ddiag = getelementptr inbounds [4 x double], ptr %A, i64 %i, i64 %i
+  %dval = load double, ptr %ddiag, align 8
+  %deep.fp = uitofp i64 %c{args.length - 1} to double
+  %dnew = fmul double %dval, %deep.fp
+  store double %dnew, ptr %ddiag, align 8
+  br label %outer.latch
+outer.latch:
+  %i.next = add i64 %i, 1
+  %i.ec = icmp eq i64 %i.next, %nn
+  br i1 %i.ec, label %exit, label %outer.header
+exit:
+  %chk.res = phi double [ %chk.next, %outer.latch ]
+  store double %chk.res, ptr %R, align 8
+  br label %done
+done:
+  ret void
+}}""")
+#--- bounded-stack.py
+#!/usr/bin/env python3
+"""Exec a tool under an 8 MiB child stack with core dumps disabled.
+
+Both the soft and the hard stack limit are set, so nothing downstream can
+raise the limit back. Every step is confirmed by re-reading the limit, and any
+step that cannot be taken fails the run with a message instead of silently
+measuring a different stack.
+"""
+import os
+import resource
+import sys
+
+STACK_BYTES = 8 * 1024 * 1024
+
+
+def fail(message):
+    sys.stderr.write("bounded-stack: " + message + "\n")
+    sys.exit(2)
+
+
+def set_limit(which, name, limits):
+    try:
+        resource.setrlimit(which, limits)
+    except (ValueError, OSError) as error:
+        fail("cannot set %s to %s: %s" % (name, limits, error))
+    actual = resource.getrlimit(which)
+    if tuple(actual) != limits:
+        fail("%s reads back as %s, expected %s" % (name, tuple(actual), limits))
+
+
+if len(sys.argv) < 2:
+    fail("usage: bounded-stack.py TOOL [ARGUMENT ...]")
+
+set_limit(resource.RLIMIT_STACK, "RLIMIT_STACK", (STACK_BYTES, STACK_BYTES))
+set_limit(resource.RLIMIT_CORE, "RLIMIT_CORE", (0, 0))
+
+try:
+    os.execvp(sys.argv[1], sys.argv[1:])
+except OSError as error:
+    fail("cannot exec %s: %s" % (sys.argv[1], error))
+fail("exec of %s returned" % sys.argv[1])
+#--- deep-k3.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
+define void @deep_runtime_nofact(ptr noalias dereferenceable(128) %A, ptr noalias %R, i64 %n) {
+entry:
+  %m7 = and i64 %n, 7
+  %nn = add nuw nsw i64 %m7, 1
+  %nn32 = trunc i64 %nn to i32
+  %hi = icmp ne i32 %nn32, 12345
+  br i1 %hi, label %outer.ph, label %done
+outer.ph:
+  br label %outer.header
+outer.header:
+  %i = phi i64 [ 0, %outer.ph ], [ %i.next, %outer.latch ]
+  %chk.i = phi double [ 0.000000e+00, %outer.ph ], [ %chk.next, %outer.latch ]
+  %c0 = add i64 %i, 1
+  %c1 = add i64 %c0, 1
+  %c2 = add i64 %c1, 1
+  %col = getelementptr inbounds [4 x double], ptr %A, i64 0, i64 %i
+  br label %inner.header
+inner.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.header ]
+  %chk.j = phi double [ %chk.i, %outer.header ], [ %chk.next.j, %inner.header ]
+  %idx = getelementptr inbounds [4 x double], ptr %col, i64 %j, i64 0
+  %v = load double, ptr %idx, align 8
+  %chk.next.j = fadd reassoc double %chk.j, %v
+  %j.next = add i64 %j, 1
+  %j.ec = icmp eq i64 %j.next, 4
+  br i1 %j.ec, label %epilogue, label %inner.header
+epilogue:
+  %chk.next = phi double [ %chk.next.j, %inner.header ]
+  %ddiag = getelementptr inbounds [4 x double], ptr %A, i64 %i, i64 %i
+  %dval = load double, ptr %ddiag, align 8
+  %deep.fp = uitofp i64 %c2 to double
+  %dnew = fmul double %dval, %deep.fp
+  store double %dnew, ptr %ddiag, align 8
+  br label %outer.latch
+outer.latch:
+  %i.next = add i64 %i, 1
+  %i.ec = icmp eq i64 %i.next, %nn
+  br i1 %i.ec, label %exit, label %outer.header
+exit:
+  %chk.res = phi double [ %chk.next, %outer.latch ]
+  store double %chk.res, ptr %R, align 8
+  br label %done
+done:
+  ret void
+}
