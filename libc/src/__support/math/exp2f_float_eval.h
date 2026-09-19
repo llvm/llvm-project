@@ -29,7 +29,7 @@ namespace math {
 namespace float_eval {
 
 LIBC_INLINE float exp2f(float x) {
-  using FPBits = typename fputil::FPBits<float>;
+  using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
 
   uint32_t x_u = xbits.uintval();

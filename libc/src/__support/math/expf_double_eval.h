@@ -30,7 +30,7 @@ namespace math {
 namespace double_eval {
 
 LIBC_INLINE float expf(float x) {
-  using FPBits = typename fputil::FPBits<float>;
+  using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
 
   uint32_t x_u = xbits.uintval();

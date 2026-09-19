@@ -59,7 +59,7 @@ LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
 // Statically rounded, no except implementation of expf using integer-only
 // arithmetic.
 LIBC_INLINE float expf(float x, [[maybe_unused]] int rounding) {
-  using FPBits = typename fputil::FPBits<float>;
+  using FPBits = fputil::FPBits<float>;
   using FPBounds = LIBC_NAMESPACE::math::check::exp_internal::Bounds<float>;
   FPBits xbits(x);
 
