@@ -84,6 +84,7 @@ def IsRISCV64 : LibcallPredicate<[{TT.isRISCV64()}]>;
 def IsSPARC : LibcallPredicate<[{TT.isSPARC()}]>;
 def IsSPARC32 : LibcallPredicate<[{TT.isSPARC32()}]>;
 def IsSPARC64 : LibcallPredicate<[{TT.isSPARC64()}]>;
+def IsSuperH : LibcallPredicate<[{TT.isSuperH()}]>;
 def IsSPIRV : LibcallPredicate<[{TT.isSPIRV()}]>;
 
 def IsX86_32 : LibcallPredicate<[{TT.getArch() == Triple::x86}]>;
@@ -3383,6 +3384,30 @@ def SPARCSystemLibrary
        has___guard_local,
        DefaultSafeStackGlobals,
        AvailableIf<__stack_chk_guard, isNotOSLinuxAndNotOSOpenBSD>)
+>;
+
+//===----------------------------------------------------------------------===//
+// SuperH Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+defset list<RuntimeLibcallImpl> SuperHRuntimeLibcalls = {
+def __sh_divqi3 : RuntimeLibcallImpl<SDIV_I8>;
+def __sh_divhi3 : RuntimeLibcallImpl<SDIV_I16>;
+def __sh_divsi3 : RuntimeLibcallImpl<SDIV_I32>;
+def __sh_udivqi3 : RuntimeLibcallImpl<UDIV_I8>;
+def __sh_udivhi3 : RuntimeLibcallImpl<UDIV_I16>;
+def __sh_udivsi3 : RuntimeLibcallImpl<UDIV_I32>;
+}
+
+defvar SuperH_DivCalls = [
+  __divqi3, __divhi3, __divsi3, __udivqi3, __udivhi3, __udivsi3
+];
+
+def isSuperH : RuntimeLibcallAvailability<(all_of IsSuperH)>;
+def SuperHSystemLibrary 
+      : SystemRuntimeLibrary<isSuperH,
+                            (add (sub DefaultLibcallImpls32, SuperH_DivCalls),
+                            LibcallImpls<(add SuperHRuntimeLibcalls)>)
 >;
 
 //===----------------------------------------------------------------------===//
