@@ -58,6 +58,12 @@ void LoongArchAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
+  case TargetOpcode::STACKMAP:
+    LowerSTACKMAP(*MI);
+    return;
+  case TargetOpcode::PATCHPOINT:
+    LowerPATCHPOINT(*MI);
+    return;
   case TargetOpcode::STATEPOINT:
     LowerSTATEPOINT(*MI);
     return;
@@ -177,13 +183,89 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
+void LoongArchAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
+  unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
+
+  auto &Ctx = OutStreamer->getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer->emitLabel(MILabel);
+
+  SM.recordStackMap(*MILabel, MI);
+  assert(NumNOPBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
+
+  const MachineBasicBlock &MBB = *MI.getParent();
+  MachineBasicBlock::const_iterator MII(MI);
+  ++MII;
+  while (NumNOPBytes > 0) {
+    if (MII == MBB.end() || MII->isCall() ||
+        MII->getOpcode() == TargetOpcode::PATCHPOINT ||
+        MII->getOpcode() == TargetOpcode::STATEPOINT ||
+        MII->getOpcode() == TargetOpcode::STACKMAP)
+      break;
+    ++MII;
+    NumNOPBytes -= 4;
+  }
+
+  emitNops(NumNOPBytes / 4);
+}
+
+void LoongArchAsmPrinter::LowerPATCHPOINT(const MachineInstr &MI) {
+  auto &Ctx = OutStreamer->getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer->emitLabel(MILabel);
+  SM.recordPatchPoint(*MILabel, MI);
+
+  PatchPointOpers Opers(&MI);
+  unsigned EncodedBytes = 0;
+
+  const MachineOperand &CallTarget = Opers.getCallTarget();
+  switch (CallTarget.getType()) {
+  case MachineOperand::MO_Immediate: {
+    int64_t TargetImm = CallTarget.getImm();
+    if (TargetImm) {
+      EmitToStreamer(*OutStreamer,
+                     MCInstBuilder(LoongArch::BL)
+                         .addOperand(MCOperand::createImm(TargetImm)));
+      EncodedBytes = 4;
+    }
+    break;
+  }
+  case MachineOperand::MO_Register:
+    EmitToStreamer(*OutStreamer, MCInstBuilder(LoongArch::JIRL)
+                                     .addReg(LoongArch::R1)
+                                     .addReg(CallTarget.getReg())
+                                     .addImm(0));
+    EncodedBytes = 4;
+    break;
+  case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_MCSymbol:
+  case MachineOperand::MO_BlockAddress: {
+    MCOperand TargetOp;
+    lowerOperand(CallTarget, TargetOp);
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(LoongArch::BL).addOperand(TargetOp));
+    EncodedBytes = 4;
+    break;
+  }
+  default:
+    break;
+  }
+
+  unsigned NumBytes = Opers.getNumPatchBytes();
+  assert(NumBytes >= EncodedBytes &&
+         "Patchpoint can't request size less than the length of a call.");
+  assert((NumBytes - EncodedBytes) % 4 == 0 &&
+         "Invalid number of NOP bytes requested!");
+  emitNops((NumBytes - EncodedBytes) / 4);
+}
+
 void LoongArchAsmPrinter::LowerSTATEPOINT(const MachineInstr &MI) {
   StatepointOpers SOpers(&MI);
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
     assert(PatchBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
     emitNops(PatchBytes / 4);
   } else {
-    // Lower call target and choose correct opcode.
     const MachineOperand &CallTarget = SOpers.getCallTarget();
     MCOperand CallTargetMCOp;
     switch (CallTarget.getType()) {

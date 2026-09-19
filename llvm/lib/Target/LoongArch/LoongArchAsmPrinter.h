@@ -50,6 +50,8 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &OS) override;
 
+  void LowerSTACKMAP(const MachineInstr &MI);
+  void LowerPATCHPOINT(const MachineInstr &MI);
   void LowerSTATEPOINT(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
