@@ -87,6 +87,29 @@ void yaml::RISCVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<RISCVMachineFunctionInfo>::mapping(YamlIO, *this);
 }
 
+RISCVMachineFunctionInfo::ShadowStackKind
+RISCVMachineFunctionInfo::getShadowStackKind(const MachineFunction &MF) const {
+  // Prefer HW Shadow Stack
+  //
+  // We check Zimop instead of (Zimop || Zcmop) to determine whether HW shadow
+  // stack is available despite the fact that sspush/sspopchk both have a
+  // compressed form, because if only Zcmop is available, we would need to
+  // reserve X5 due to c.sspopchk only takes X5 and we currently do not support
+  // using X5 as the return address register.
+  //
+  // However, we can still aggressively use c.sspush x1 if zcmop is available.
+  if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZimop() &&
+      MF.getFunction().hasFnAttribute("hw-shadow-stack"))
+    return ShadowStackKind::Hardware;
+
+  // ShadowCallStack attribute is used for software shadow call stack
+  if (MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
+    return ShadowStackKind::Software;
+
+  // Otherwise, none
+  return ShadowStackKind::None;
+}
+
 RISCVMachineFunctionInfo::PushPopKind
 RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
   // We cannot use fixed locations for the callee saved spill slots if the
