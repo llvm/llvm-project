@@ -92,10 +92,13 @@ OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
 
   // Reshape of a constant can be replaced with a new constant, but only when
   // the result type has a static shape. DenseElementsAttr::reshape requires
-  // a static shape to preserve the element count invariant.
+  // a static shape to preserve the element count invariant. It also requires
+  // the same element type, which is not guaranteed: a constant may hold its
+  // values in the storage type of a quantized result type.
   if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
     auto resultType = cast<ShapedType>(reshapeOp.getResult().getType());
-    if (resultType.hasStaticShape())
+    if (resultType.hasStaticShape() &&
+        elements.getType().getElementType() == resultType.getElementType())
       return elements.reshape(resultType);
   }
 
