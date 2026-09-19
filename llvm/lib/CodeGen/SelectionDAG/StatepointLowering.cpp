@@ -811,8 +811,11 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
       CallNode->getNumOperands() - (CallHasIncomingGlue ? 4 : 3);
   Ops.push_back(DAG.getTargetConstant(NumCallRegArgs, getCurSDLoc(), MVT::i32));
 
-  // Add call target
-  SDValue CallTarget = SDValue(CallNode->getOperand(1).getNode(), 0);
+  // Add call target. Preserve the result index: the callee may be a non-zero
+  // result of a multi-result node (e.g. a field of a by-value struct argument,
+  // which is lowered to a merge_values node). Forcing result 0 here would
+  // silently substitute the struct's first field for the real callee.
+  SDValue CallTarget = CallNode->getOperand(1);
   Ops.push_back(CallTarget);
 
   // Add call arguments
