@@ -737,50 +737,84 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
-bool llvm::willNotFreeBetween(const Instruction *Assume,
-                              const Instruction *CtxI) {
-  // Helper to check if there are any calls in the range that may free memory.
-  unsigned NumChecked = 0;
-  auto hasNoFreeInRange = [&NumChecked](auto Range) {
-    for (const Instruction &I : Range) {
-      if (NumChecked++ > MaxInstrsToCheckForFree)
+static bool hasNoFreeInRange(BasicBlock::const_iterator Begin,
+                             BasicBlock::const_iterator End,
+                             unsigned &NumChecked) {
+  for (const Instruction &I : make_range(Begin, End)) {
+    if (NumChecked++ > MaxInstrsToCheckForFree)
+      return false;
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (!CB->hasFnAttr(Attribute::NoFree))
         return false;
-
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (!CB->hasFnAttr(Attribute::NoFree))
-          return false;
-      } else if (I.maySynchronize())
-        return false;
+    } else if (I.maySynchronize()) {
+      return false;
     }
-    return true;
-  };
+  }
+  return true;
+}
+
+bool llvm::willNotFreeBetween(const Instruction *Assume,
+                              const Instruction *CtxI,
+                              const DominatorTree *DT) {
 
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
+  unsigned NumChecked = 0;
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
+
   if (CtxBB == AssumeBB) {
-    // Same block case: check that Assume comes before CtxI.
     if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
-    return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
+    return hasNoFreeInRange(Assume->getIterator(), CtxIter, NumChecked);
   }
 
-  // Handle chain of single-predecessor blocks.
-  const BasicBlock *CurBB = CtxBB;
-  while (true) {
-    if (CurBB == AssumeBB)
-      return hasNoFreeInRange(
-          make_range(Assume->getIterator(), AssumeBB->end()));
+  if (DT && !DT->dominates(Assume, CtxI))
+    return false;
 
-    const BasicBlock *PredBB = CurBB->getSinglePredecessor();
-    if (!PredBB)
-      return false;
+  if (!hasNoFreeInRange(CtxBB->begin(), CtxIter, NumChecked))
+    return false;
+  if (pred_empty(CtxBB))
+    return false;
 
-    if (!hasNoFreeInRange(make_range(CurBB->begin(),
-                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
-      return false;
-    CurBB = PredBB;
+  SmallVector<const BasicBlock *, 16> Worklist;
+  SmallPtrSet<const BasicBlock *, 16> Visited;
+  // Enqueue all predecessors of CtxBB.
+  // Note: CtxBB is NOT pre-inserted to ensure that loop
+  // backedges returning to CtxBB are enqueued and checked correctly.
+  for (const BasicBlock *Pred : predecessors(CtxBB)) {
+    if (Visited.insert(Pred).second)
+      Worklist.push_back(Pred);
   }
+  while (!Worklist.empty()) {
+    const BasicBlock *CurBB = Worklist.pop_back_val();
+
+    if (CurBB == AssumeBB) {
+      if (!hasNoFreeInRange(Assume->getIterator(), AssumeBB->end(), NumChecked))
+        return false;
+      continue;
+    }
+
+    assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
+           "Blocks between Assume and CtxI must be dominated by AssumeBB");
+
+    if (pred_empty(CurBB))
+      return false;
+    // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
+    // instructions from CtxIter to the end of CtxBB (instructions before
+    // CtxIter were checked above). Otherwise, check the entire block.
+    auto Start = (CurBB == CtxBB) ? CtxIter : CurBB->begin();
+    if (!hasNoFreeInRange(Start, CurBB->end(), NumChecked))
+      return false;
+    // If we reached CtxBB via a backedge, do not re-expand its predecessors
+    // as they were already enqueued at initialization.
+    if (CurBB == CtxBB)
+      continue;
+    for (const BasicBlock *Pred : predecessors(CurBB)) {
+      if (Visited.insert(Pred).second)
+        Worklist.push_back(Pred);
+    }
+  }
+  return true;
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
