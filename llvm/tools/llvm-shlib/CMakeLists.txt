@@ -51,6 +51,10 @@ if(LLVM_BUILD_LLVM_DYLIB)
   endif()
 
   list(REMOVE_DUPLICATES LIB_NAMES)
+
+  # Link against the object libraries instead of static libraries.
+  list(TRANSFORM LIB_NAMES PREPEND "obj.")
+
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
   else()
