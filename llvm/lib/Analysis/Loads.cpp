@@ -24,8 +24,10 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
@@ -969,6 +971,22 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
     if (VarIndex && !VarIndex->getType()->isIntegerTy(BitWidth))
       return Expr;
 
+    APInt IndexScale(BitWidth, 1);
+    if (auto *BO = dyn_cast_or_null<BinaryOperator>(VarIndex)) {
+      Value *UnscaledIndex = nullptr;
+      const APInt *Constant;
+      if (match(BO, m_Mul(m_Value(UnscaledIndex), m_APInt(Constant)))) {
+        IndexScale *= *Constant;
+      } else if (match(BO, m_Shl(m_Value(UnscaledIndex), m_APInt(Constant))) &&
+                 Constant->ult(BitWidth)) {
+        IndexScale <<= *Constant;
+      } else {
+        break;
+      }
+
+      VarIndex = UnscaledIndex;
+    }
+
     // We have verified that we can fully handle this GEP, so we can update Expr
     // members past this point.
     Expr.BasePtr = GEP->getPointerOperand();
@@ -993,12 +1011,12 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
         continue;
       }
 
-      // FIXME: Also look through a mul/shl in the index.
       assert(Expr.Index == nullptr && "Shouldn't have index yet");
-      Expr.Index = Index;
+      Expr.Index = VarIndex;
       // Truncate if type size exceeds index space.
       Expr.Scale = APInt(BitWidth, GTI.getSequentialElementStride(DL),
-                         /*isSigned=*/false, /*implicitTrunc=*/true);
+                         /*isSigned=*/false, /*implicitTrunc=*/true) *
+                   IndexScale;
     }
   }
 
