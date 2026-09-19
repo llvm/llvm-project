@@ -144,12 +144,12 @@ TEST(DataEncoderTest, AppendCString) {
   // does contain a NULL in the referenced string.
   encoder.AppendCString(StringRef("\0", 1));
   ASSERT_EQ(encoder.GetData(), ArrayRef<uint8_t>({0x00, 0x00}));
-  // Append a string where the StringRef doesn't contain a NULL termination
-  // and verify the NULL terminate gets added
+  // Append a string where the StringRef doesn't contain a null termination
+  // and verify the null terminator gets added
   encoder.AppendCString(StringRef("hello"));
   ASSERT_EQ(encoder.GetData(),
             ArrayRef<uint8_t>({0x00, 0x00, 'h', 'e', 'l', 'l', 'o', 0x00}));
-  // Append a string where the StringRef does contain a NULL termination and
+  // Append a string where the StringRef does contain a null termination and
   // verify only one NULL is added
   encoder.AppendCString(StringRef("world", 6));
   ASSERT_EQ(encoder.GetData(),
