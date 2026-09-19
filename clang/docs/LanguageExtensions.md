@@ -1735,7 +1735,7 @@ mode.
 Use `__has_feature(modules)` to determine if Modules have been enabled.
 For example, compiling code with `-fmodules` enables the use of Modules.
 
-More information can be found {doc}`here <Modules>`.
+More information can be found [here](Modules.md).
 
 ## Language Extensions Back-ported to Previous Standards
 
