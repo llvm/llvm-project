@@ -56,8 +56,8 @@ struct alignas(128) MyObjectRWL {
   MyObjectRWL(std::atomic<size_t>& count)
       : data_(std::to_string(instance_count++) + " instance very very very long string"), destruction_count_(&count) {}
   ~MyObjectRWL() { destruction_count_->fetch_add(1, std::memory_order_relaxed); }
-MyObjectRWL(const MyObjectRWL&) = default;
-MyObjectRWL& operator=(const MyObjectRWL&) = default;
+  MyObjectRWL(const MyObjectRWL&)            = default;
+  MyObjectRWL& operator=(const MyObjectRWL&) = default;
 
   void doWork() {
     [[maybe_unused]] auto spin_for = [](std::chrono::microseconds us) {

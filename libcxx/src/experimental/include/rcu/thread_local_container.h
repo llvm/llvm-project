@@ -38,7 +38,9 @@ class thread_local_container {
     Tp instance_;
     function_ref<void(Tp&) noexcept> pre_dtor_callback_;
 
-    thread_entry( function_ref<void(Tp&) noexcept> cb) : instance_(), pre_dtor_callback_(cb) { register_instance(instance_); }
+    thread_entry(function_ref<void(Tp&) noexcept> cb) : instance_(), pre_dtor_callback_(cb) {
+      register_instance(instance_);
+    }
     thread_entry(const thread_entry&) = delete;
     thread_entry(thread_entry&&)      = delete;
 
