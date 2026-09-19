@@ -18,7 +18,7 @@
 #include <vector>
 
 void test() {
-  // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements key type must match the underlying container's key value_type.}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' key type must match the underlying container's key value_type.}}
   std::flat_set<double, std::less<double>, std::vector<int>> fs1;
 
   // expected-error-re@*:* {{static assertion failed{{.*}}vector<bool> is not a sequence container}}
