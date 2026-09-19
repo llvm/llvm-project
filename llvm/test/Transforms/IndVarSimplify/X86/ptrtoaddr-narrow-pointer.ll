@@ -13,12 +13,12 @@ define ptr addrspace(1) @exit_value_narrow_address(ptr addrspace(1) %start, ptr 
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp ult ptr addrspace(1) [[START]], [[END]]
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[END1]], [[START2]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[START]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[END1]], [[START2]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[START]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi ptr addrspace(1) [ [[START]], %[[ENTRY]] ], [ [[SCEVGEP]], %[[EXIT_LOOPEXIT]] ]
