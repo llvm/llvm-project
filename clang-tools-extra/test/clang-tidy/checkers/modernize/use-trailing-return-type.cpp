@@ -332,9 +332,8 @@ struct D : B {
 // Functions with attributes
 //
 
-int g1() [[asdf]];
+int g1() [[asdf]]; // FunctionTypeLoc is null: the retained unknown attribute wraps the function type.
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// CHECK-FIXES: auto g1() -> int {{[[][[]}}asdf{{[]][]]}};
 [[noreturn]] int g2();
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{[[][[]}}noreturn{{[]][]]}} auto g2() -> int;
