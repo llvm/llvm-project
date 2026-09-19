@@ -1456,9 +1456,12 @@ static constexpr MathOperation mathOperations[] = {
     {"nearbyint", RTNAME_STRING(NearbyintF128), FuncTypeReal16Real16,
      genLibF128Call},
     // llvm.lround behaves the same way as libm's lround.
-    {"nint", "llvm.lround.i64.f64", genFuncType<Ty::Integer<8>, Ty::Real<8>>,
+    // An INTEGER(8) result must use llvm.llround: llvm.lround lowers to a call
+    // to lround, which returns a C long and is therefore only 64 bits wide on
+    // LP64 targets. llround returns a long long and is 64 bits everywhere.
+    {"nint", "llvm.llround.i64.f64", genFuncType<Ty::Integer<8>, Ty::Real<8>>,
      genLibCall},
-    {"nint", "llvm.lround.i64.f32", genFuncType<Ty::Integer<8>, Ty::Real<4>>,
+    {"nint", "llvm.llround.i64.f32", genFuncType<Ty::Integer<8>, Ty::Real<4>>,
      genLibCall},
     {"nint", RTNAME_STRING(LlroundF128), FuncTypeInteger8Real16,
      genLibF128Call},
