@@ -4902,7 +4902,7 @@ void Parser::CompleteLateParsedTypeAttributes(
     std::unique_ptr<LateParsedTypeAttribute> LTA(RawLTA);
 
     BoundsAttributedType *BATy = LTA->TypeToComplete;
-    if (!BATy)
+    if (!BATy || Actions.isLateParsedBoundsTypeRejected(BATy))
       continue;
 
     ArrayRef<Decl *> Fields = LTA->Decls;

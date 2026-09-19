@@ -2514,6 +2514,21 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Late-parsed bounds types dropped while their declarator was built. The
+  /// attribute has already been diagnosed and its node is no longer part of
+  /// any type, so the completion pass must skip it rather than parse its
+  /// argument and complete it.
+  llvm::SmallPtrSet<const BoundsAttributedType *, 4>
+      RejectedLateParsedBoundsTypes;
+
+  void markLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) {
+    RejectedLateParsedBoundsTypes.insert(BATy);
+  }
+
+  bool isLateParsedBoundsTypeRejected(const BoundsAttributedType *BATy) const {
+    return RejectedLateParsedBoundsTypes.contains(BATy);
+  }
+
   /// Supply the parsed argument of a late-parsed bounds attribute to the type
   /// built for it by ActOnLateParsedTypeAttr, and run the checks that need the
   /// owning declaration. \p FD is the field the type belongs to. Returns false
