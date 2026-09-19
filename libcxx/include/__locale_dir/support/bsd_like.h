@@ -76,6 +76,52 @@ inline __locale_t __get_c_locale() {
 }
 
 //
+// ctype masks
+//
+
+struct __ctype_base {
+#ifdef __APPLE__
+  using mask = uint32_t;
+#elif defined(__FreeBSD__)
+  using mask = unsigned long;
+#elif defined(__NetBSD__)
+  using mask = unsigned short;
+#else
+#  error "BSD-like platforms have to update this list."
+#endif
+  static const mask space  = _CTYPE_S;
+  static const mask print  = _CTYPE_R;
+  static const mask cntrl  = _CTYPE_C;
+  static const mask upper  = _CTYPE_U;
+  static const mask lower  = _CTYPE_L;
+  static const mask alpha  = _CTYPE_A;
+  static const mask digit  = _CTYPE_D;
+  static const mask punct  = _CTYPE_P;
+  static const mask xdigit = _CTYPE_X;
+
+#if defined(__NetBSD__)
+  static const mask blank = _CTYPE_BL;
+  // NetBSD defines classes up to 0x2000
+  // see sys/ctype_bits.h, _CTYPE_Q
+  static const mask __regex_word = 0x8000;
+#else
+  static const mask blank        = _CTYPE_B;
+  static const mask __regex_word = 0x80;
+#endif
+};
+
+#ifdef _LIBCPP_BUILDING_LIBRARY
+inline const __ctype_base::mask* __classic_table() noexcept {
+#  if defined(__APPLE__) || defined(__FreeBSD__)
+  return _DefaultRuneLocale.__runetype;
+#  elif defined(__NetBSD__)
+  return _C_ctype_tab_ + 1;
+#  else
+#    error "BSD-like platforms have to update this list."
+#  endif
+}
+#endif
+//
 // Strtonum functions
 //
 inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
@@ -222,7 +268,5 @@ _LIBCPP_DIAGNOSTIC_POP
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
-
-#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_BSD_LIKE_H
