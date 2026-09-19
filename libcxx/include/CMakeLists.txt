@@ -1001,6 +1001,7 @@ set(files
   __vector/layout.h
   __vector/pmr.h
   __vector/swap.h
+  __vector/is_vector.h
   __vector/vector.h
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h

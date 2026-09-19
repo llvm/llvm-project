@@ -17,10 +17,15 @@
 #include <functional>
 #include <vector>
 
+#include "min_allocator.h"
+
 void test() {
   // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' key type must match the underlying key container's value_type.}}
   std::flat_multiset<double, std::less<double>, std::vector<int>> fms1;
 
-  // expected-error-re@*:* {{static assertion failed{{.*}}vector<bool> is not a sequence container}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}The underlying key container must not be std::vector<bool>, which is not a sequence container.}}
   std::flat_multiset<bool, std::less<bool>, std::vector<bool>> fms2;
+
+  // expected-error-re@*:* {{static assertion failed{{.*}}The underlying key container must not be std::vector<bool>, which is not a sequence container.}}
+  std::flat_multiset<bool, std::less<bool>, std::vector<bool, min_allocator<bool>>> fms3;
 }
