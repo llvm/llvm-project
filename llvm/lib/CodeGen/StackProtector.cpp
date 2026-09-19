@@ -55,6 +55,9 @@ using namespace llvm;
 #define DEBUG_TYPE "stack-protector"
 
 STATISTIC(NumFunProtected, "Number of functions protected");
+STATISTIC(NumFunLayoutOnly,
+          "Number of functions that have their layouts modified, but no "
+          "protector inserted");
 STATISTIC(NumAddrTaken, "Number of local variables that have their address"
                         " taken.");
 
@@ -87,6 +90,7 @@ void SSPLayoutInfo::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {
   if (Layout.empty())
     return;
 
+  bool HasLayout = false;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
     if (MFI.isDeadObjectIndex(I))
       continue;
@@ -100,7 +104,23 @@ void SSPLayoutInfo::copyToMachineFrameInfo(MachineFrameInfo &MFI) const {
       continue;
 
     MFI.setObjectSSPLayout(I, LI->second);
+    HasLayout = true;
   }
+
+  if (HasLayout && LayoutOnly)
+    MFI.setStackProtectorLayoutOnly();
+}
+
+/// Return true if F's stack objects should be laid out as if it had a stack
+/// protector, but without inserting one. Functions with funclets are not
+/// correctly supported, so are excluded.
+static bool isLayoutOnly(const Function &F) {
+  if (!F.hasFnAttribute("stack-protector-layout-only"))
+    return false;
+  if (F.hasPersonalityFn() &&
+      isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
+    return false;
+  return true;
 }
 
 SSPLayoutInfo SSPLayoutAnalysis::run(Function &F,
@@ -109,6 +129,7 @@ SSPLayoutInfo SSPLayoutAnalysis::run(Function &F,
   SSPLayoutInfo Info;
   Info.RequireStackProtector =
       SSPLayoutAnalysis::requiresStackProtector(&F, &Info.Layout);
+  Info.LayoutOnly = isLayoutOnly(F);
   Info.SSPBufferSize = F.getFnAttributeAsParsedInteger(
       "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
   return Info;
@@ -124,6 +145,11 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
 
   if (!Info.RequireStackProtector)
     return PreservedAnalyses::all();
+
+  if (Info.LayoutOnly) {
+    ++NumFunLayoutOnly;
+    return PreservedAnalyses::all();
+  }
 
   // TODO(etienneb): Functions with funclets are not correctly supported now.
   // Do nothing if this is funclet-based personality.
@@ -191,6 +217,7 @@ bool StackProtector::runOnFunction(Function &Fn) {
   if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
     DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
   TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  LayoutInfo.LayoutOnly = isLayoutOnly(Fn);
   LayoutInfo.HasPrologue = false;
   LayoutInfo.HasIRCheck = false;
 
@@ -198,6 +225,11 @@ bool StackProtector::runOnFunction(Function &Fn) {
       "stack-protector-buffer-size", SSPLayoutInfo::DefaultSSPBufferSize);
   if (!requiresStackProtector(F, &LayoutInfo.Layout))
     return false;
+
+  if (LayoutInfo.LayoutOnly) {
+    ++NumFunLayoutOnly;
+    return false;
+  }
 
   // TODO(etienneb): Functions with funclets are not correctly supported now.
   // Do nothing if this is funclet-based personality.

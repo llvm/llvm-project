@@ -957,6 +957,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasCalls(YamlMFI.HasCalls);
   if (YamlMFI.FramePointerPolicy != FramePointerKind::None)
     MFI.setFramePointerPolicy(YamlMFI.FramePointerPolicy);
+  MFI.setStackProtectorLayoutOnly(YamlMFI.StackProtectorLayoutOnly);
   if (YamlMFI.MaxCallFrameSize != ~0u)
     MFI.setMaxCallFrameSize(YamlMFI.MaxCallFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(YamlMFI.CVBytesOfCalleeSavedRegisters);
