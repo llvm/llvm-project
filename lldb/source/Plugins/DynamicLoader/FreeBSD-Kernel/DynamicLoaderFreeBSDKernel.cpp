@@ -13,6 +13,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -82,6 +83,63 @@ static bool is_kmod(Module *module) {
     return false;
 
   return true;
+}
+
+static bool set_debug_file(const ModuleSP &module,
+                           llvm::StringRef target_path) {
+  if (!module || module->GetSymbolFileFileSpec())
+    return false;
+
+  FileSpec local_file = module->GetFileSpec();
+  FileSystem::Instance().Resolve(local_file);
+  std::string local_path = local_file.GetPath();
+
+  // When linker_files records an absolute target path, remove that suffix
+  // from the resolved local object path to recover the root of an extracted
+  // filesystem.  For example, /dump/boot/kernel/foo.ko and
+  // /boot/kernel/foo.ko imply the separate debug file
+  // /dump/usr/lib/debug/boot/kernel/foo.ko.debug.
+  FileSpec target_file(target_path);
+  if (target_file.IsAbsolute()) {
+    std::string normalized_target_path = target_file.GetPath();
+    llvm::StringRef local_sysroot(local_path);
+    if (local_sysroot.consume_back(normalized_target_path)) {
+      std::string debug_path = local_sysroot.str();
+      debug_path += "/usr/lib/debug";
+      debug_path += normalized_target_path;
+      debug_path += ".debug";
+      FileSpec debug_file(debug_path);
+      if (FileSystem::Instance().Exists(debug_file)) {
+        module->SetSymbolFileFileSpec(debug_file);
+        return true;
+      }
+    }
+  }
+
+  // Some boot loaders record a relative or shortened linker_files pathname.
+  // In that case, try each ancestor of the resolved object as the extracted
+  // filesystem root and use the first matching usr/lib/debug tree.  This
+  // preserves the object's relative path without assuming /boot/kernel.
+  FileSpec sysroot = local_file;
+  while (sysroot.RemoveLastPathComponent()) {
+    llvm::StringRef relative_path(local_path);
+    if (!relative_path.consume_front(sysroot.GetPath()))
+      continue;
+    relative_path = relative_path.ltrim("/\\");
+
+    FileSpec debug_file = sysroot;
+    debug_file.AppendPathComponent("usr/lib/debug");
+    debug_file.AppendPathComponent(relative_path);
+    debug_file.SetFile(debug_file.GetPath() + ".debug",
+                       FileSpec::Style::native);
+    if (!FileSystem::Instance().Exists(debug_file))
+      continue;
+
+    module->SetSymbolFileFileSpec(debug_file);
+    return true;
+  }
+
+  return false;
 }
 
 static bool is_reloc(Module *module) {
@@ -378,6 +436,9 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
             "system.\n");
       }
     }
+
+    if (m_module_sp && !IsKernel())
+      set_debug_file(m_module_sp, GetPath());
 
     if (m_module_sp) {
       // If the file is not kernel or kmod, the target should be loaded once and
@@ -681,6 +742,16 @@ bool DynamicLoaderFreeBSDKernel::ReadAllKmods(
     kmod_info.SetName(kld_filename);
     kmod_info.SetLoadAddress(kld_load_addr);
     kmod_info.SetPath(kld_pathname);
+
+    if (kmod_info.GetName() == "kernel") {
+      Target &target = m_process->GetTarget();
+      ModuleSP kernel_module = target.GetExecutableModule();
+      if (set_debug_file(kernel_module, kld_pathname)) {
+        ModuleList kernel_module_list;
+        kernel_module_list.Append(kernel_module);
+        target.SymbolsDidLoad(kernel_module_list);
+      }
+    }
 
     llvm::Expected<lldb::addr_t> next_kld =
         m_process->ReadPointerFromMemory(current_kld + kld_off_next);
