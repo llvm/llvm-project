@@ -1251,6 +1251,11 @@ InstructionCost TargetTransformInfo::getMemoryOpCost(
   return Cost;
 }
 
+bool TargetTransformInfo::isMemmoveProfitable(
+    const std::optional<APInt> &PtrDiff) const {
+  return TTIImpl->isMemmoveProfitable(PtrDiff);
+}
+
 InstructionCost TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
