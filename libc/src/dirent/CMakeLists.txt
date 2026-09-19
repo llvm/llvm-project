@@ -72,9 +72,9 @@ add_entrypoint_object(
 	DEPENDS
     libc.hdr.types.struct_dirent
     libc.src.__support.common
-		libc.src.__support.File.dir
-		libc.src.__support.File.platform_dir
+    libc.src.__support.File.dir
+    libc.src.__support.File.platform_dir
     libc.src.__support.macros.config
     libc.src.errno.errno
-		libc.include.dirent
+    libc.include.dirent
 )

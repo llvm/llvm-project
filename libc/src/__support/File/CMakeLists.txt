@@ -33,13 +33,13 @@ add_object_library(
 )
 
 add_header_library(
-	scan_impl
-	HDRS
+  scan_impl
+  HDRS
     scan_impl.h
-	DEPENDS
-	  libc.src.__support.CPP.vector
-		libc.src.stdlib.qsort_util
-		libc.src.string.memory_utils.inline_memcpy
+  DEPENDS
+    libc.src.__support.CPP.vector
+    libc.src.stdlib.qsort_util
+    libc.src.string.memory_utils.inline_memcpy
     libc.hdr.types.struct_dirent
 )
 
@@ -50,7 +50,7 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
-	  .scan_impl
+    .scan_impl
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
