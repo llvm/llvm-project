@@ -496,7 +496,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | pointer-type
+    element-type ::= float-type | integer-type | bool-type
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized vectors are not
