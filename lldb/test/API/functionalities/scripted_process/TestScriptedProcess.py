@@ -333,6 +333,11 @@ class ScriptedProcesTestCase(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
+        self.runCmd(
+            "command script import "
+            + os.path.join(self.getSourceDir(), "addressable_bits_scripted_process.py")
+        )
+
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
         launch_info.SetScriptedProcessClassName(
