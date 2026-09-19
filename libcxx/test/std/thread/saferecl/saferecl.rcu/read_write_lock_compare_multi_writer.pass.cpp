@@ -166,5 +166,5 @@ int main(int, char**) {
   test_read_write_lock();
   std::println("Testing RCU:");
   test_rcu();
-  return 1;
+  return 0;
 }
