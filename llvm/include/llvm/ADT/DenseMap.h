@@ -88,6 +88,13 @@ template <typename KeyT, typename ValueT> struct DenseMapPair {
 } // end namespace detail
 
 namespace densemap::detail {
+// Relocating copy-constructs and runs no destructor, so it does not need
+// trivial assignment, which a std::pair value type lacks.
+template <typename BucketT>
+inline constexpr bool isRelocatableBucket =
+    std::is_trivially_copy_constructible_v<BucketT> &&
+    std::is_trivially_destructible_v<BucketT>;
+
 using UsedT = uint32_t;
 
 // Number of used words backing N buckets where N is zero or a power of two.
@@ -596,7 +603,7 @@ protected:
     const UsedT *OtherU = other.getUsed();
     std::memcpy(U, OtherU,
                 llvm::densemap::detail::usedWords(NumBuckets) * sizeof(UsedT));
-    if constexpr (std::is_trivially_copyable_v<BucketT>) {
+    if constexpr (densemap::detail::isRelocatableBucket<BucketT>) {
       memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
              NumBuckets * sizeof(BucketT));
     } else {
