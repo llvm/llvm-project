@@ -134,10 +134,10 @@ void if_body(int n) {
 // LLVM:       [[IF_END]]:
 // LLVM:         call void @_Z3usei
 
-// With exceptions enabled the scope cleanup runs on both the normal and the
-// exceptional edge, so the cleanup kind is "all" and lifetime.end is emitted in
-// the EH cleanup handler (the landing pad) as well as on the normal path. The
-// may_throw() call is what forces an unwind edge.
+// A lifetime marker is not a real cleanup, so even with exceptions enabled it
+// must never be the reason an unwind path exists. The cleanup kind stays
+// "normal" and may_throw() is a plain call, mirroring classic CodeGen, where
+// EHScopeStack::requiresLandingPad skips lifetime-marker cleanups.
 void may_throw();
 
 void eh_cleanup() {
@@ -151,19 +151,16 @@ void eh_cleanup() {
 // CIR-EH:         cir.lifetime.start %[[X]] : !cir.ptr<!s32i>
 // CIR-EH:         cir.cleanup.scope {
 // CIR-EH:           cir.call @_Z9may_throwv()
-// CIR-EH:         } cleanup all {
+// CIR-EH:         } cleanup normal {
 // CIR-EH:           cir.lifetime.end %[[X]] : !cir.ptr<!s32i>
 // CIR-EH:         }
 
-// LLVM-EH-LABEL: define{{.*}} void @_Z10eh_cleanupv()
+// The '{' right after the attribute group pins the absence of a personality
+// clause: the function needs no exception handling at all.
+// LLVM-EH-LABEL: define{{.*}} void @_Z10eh_cleanupv() #{{[0-9]+}} {
 // LLVM-EH:         %[[X:.*]] = alloca i32
 // LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[X]])
-// LLVM-EH:         invoke void @_Z9may_throwv()
-// The normal-path end marker.
-// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
-// The EH cleanup handler runs the same end marker on the unwind path.
-// LLVM-EH:         landingpad { ptr, i32 }
-// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call void @_Z9may_throwv()
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[X]])
 
 // A loop condition variable is destroyed and re-created on every iteration
@@ -188,19 +185,21 @@ void while_condvar() {
 // LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
 // LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
+// A loop's cleanup region spans the condition, the body and the step, so an EH
+// cleanup kind here would make every call in the loop unwind to it. A
+// marker-only region must therefore stay "normal".
 // CIR-EH-LABEL: cir.func{{.*}} @_Z13while_condvarv
 // CIR-EH:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s32i>
 // CIR-EH:         cir.while {
 // CIR-EH:           cir.lifetime.start %[[C]] : !cir.ptr<!s32i>
 // CIR-EH:         } do {
-// CIR-EH:         } cleanup all {
+// CIR-EH:         } cleanup normal {
 // CIR-EH:           cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
 
-// LLVM-EH-LABEL: define{{.*}} void @_Z13while_condvarv
+// LLVM-EH-LABEL: define{{.*}} void @_Z13while_condvarv() #{{[0-9]+}} {
 // LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
-// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
-// LLVM-EH:         landingpad { ptr, i32 }
-// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call noundef i32 @_Z6sourcev()
+// LLVM-EH:         call void @_Z3usei
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
 void for_condvar() {
@@ -227,14 +226,13 @@ void for_condvar() {
 // CIR-EH:           cir.lifetime.start %[[C]] : !cir.ptr<!s32i>
 // CIR-EH:         } body {
 // CIR-EH:         } step {
-// CIR-EH:         } cleanup all {
+// CIR-EH:         } cleanup normal {
 // CIR-EH:           cir.lifetime.end %[[C]] : !cir.ptr<!s32i>
 
-// LLVM-EH-LABEL: define{{.*}} void @_Z11for_condvarv
+// LLVM-EH-LABEL: define{{.*}} void @_Z11for_condvarv() #{{[0-9]+}} {
 // LLVM-EH:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
-// LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
-// LLVM-EH:         landingpad { ptr, i32 }
-// LLVM-EH-NEXT:      cleanup
+// LLVM-EH:         call noundef i32 @_Z6sourcev()
+// LLVM-EH:         call void @_Z3usei
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
 
 struct LoopCond {
@@ -243,7 +241,8 @@ struct LoopCond {
 };
 
 // A non-trivial condition variable runs its destructor before lifetime.end in
-// the loop cleanup region.
+// the loop cleanup region. That region is a real cleanup, so it keeps the "all"
+// kind and the marker rides along on the unwind path the destructor requires.
 void while_record_condvar() {
   while (LoopCond c{}) {}
 }
@@ -300,7 +299,7 @@ void catch_by_ref() {
 // CIR-EH:             } cleanup all {
 // CIR-EH:               cir.end_catch %[[CATCH_TOK]]
 // CIR-EH:             }
-// CIR-EH:           } cleanup all {
+// CIR-EH:           } cleanup normal {
 // CIR-EH-NEXT:        cir.lifetime.end %[[E]] : !cir.ptr<!cir.ptr<!rec_Ex>>
 
 // LLVM-EH-LABEL: define{{.*}} void @_Z12catch_by_refv()
@@ -330,7 +329,7 @@ void catch_by_value() {
 // CIR-EH-NEXT:        %[[CATCH_TOK:.*]], %{{.*}} = cir.begin_catch %[[TOK]]
 // CIR-EH:                 cir.call @_ZN4CopyD1Ev(%[[C]])
 // CIR-EH:               cir.end_catch %[[CATCH_TOK]]
-// CIR-EH:           } cleanup all {
+// CIR-EH:           } cleanup normal {
 // CIR-EH-NEXT:        cir.lifetime.end %[[C]] : !cir.ptr<!rec_Copy>
 
 // LLVM-EH-LABEL: define{{.*}} void @_Z14catch_by_valuev()
