@@ -129,7 +129,7 @@ define i1 @test_generalized(ptr %p) {
 ; CHECK-LABEL: define i1 @test_typeid1(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 24) to i64), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 48) to i64), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 3
 ; CHECK-NEXT:    ret i1 [[TMP4]]
@@ -147,7 +147,7 @@ define i1 @test_generalized(ptr %p) {
 ; CHECK-LABEL: define i1 @test_generalized(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 48) to i64), [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 16) to i64), [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 2
 ; CHECK-NEXT:    ret i1 [[TMP4]]
@@ -156,13 +156,13 @@ define i1 @test_generalized(ptr %p) {
 ; CHECK-LABEL: define private void @.cfi.jumptable(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] prefalign(8) !elf_section_properties [[META17:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_hot.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_cold.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_other.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_unknown.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_cold.cfi)
 ; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_unknown.cfi)
 ; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_other.cfi)
-; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @g_cold.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_cold.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_unknown.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_other.cfi)
+; CHECK-NEXT:    call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr @f_hot.cfi)
 ; CHECK-NEXT:    unreachable
 ;
 ;
