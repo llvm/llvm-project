@@ -434,6 +434,26 @@ func.func @batch_contract_fmf(%arg0: vector<2x2xf32>,
   return %0 : vector<2xf32>
 }
 
+// CHECK-LABEL: @negative_contract_to_dot_matvec_scalable
+//       CHECK: vector.contract
+func.func @negative_contract_to_dot_matvec_scalable(%arg0: vector<[2]x3xf32>,
+                        %arg1: vector<3xf32>,
+                        %arg2: vector<[2]xf32>) -> vector<[2]xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<[2]x3xf32>, vector<3xf32> into vector<[2]xf32>
+  return %0 : vector<[2]xf32>
+}
+
+// CHECK-LABEL: @negative_contract_to_dot_matmat_scalable
+//       CHECK: vector.contract
+func.func @negative_contract_to_dot_matmat_scalable(%lhs: vector<[2]x2xf32>,
+                        %rhs: vector<2x[2]xf32>,
+                        %init: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf32> {
+  %res = vector.contract #matmat_trait %lhs, %rhs, %init
+    : vector<[2]x2xf32>, vector<2x[2]xf32> into vector<[2]x[2]xf32>
+  return %res : vector<[2]x[2]xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
