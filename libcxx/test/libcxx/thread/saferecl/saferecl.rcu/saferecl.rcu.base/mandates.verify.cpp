@@ -26,8 +26,8 @@ struct C : std::rcu_obj_base<C, NonDefault> {};
 // expected-error-re@*:* {{static assertion failed {{.*}}std::is_default_constructible_v<NonDefault>}}
 
 struct NonMoveAssignable {
-  NonMoveAssignable()                                = default;
-  NonMoveAssignable(NonMoveAssignable&&)             = default;
+  NonMoveAssignable()                               = default;
+  NonMoveAssignable(NonMoveAssignable&&)            = default;
   NonMoveAssignable& operator=(NonMoveAssignable&&) = delete;
 };
 struct D : std::rcu_obj_base<D, NonMoveAssignable> {};
