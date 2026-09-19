@@ -1570,6 +1570,124 @@ Expr<TypeParamInquiry::Result> FoldOperation(
   return AsExpr(std::move(inquiry));
 }
 
+template <int KIND>
+static std::optional<Expr<Type<TypeCategory::Integer, KIND>>>
+ExtractRankOneElement(FoldingContext &context,
+    const Expr<Type<TypeCategory::Integer, KIND>> &base, int dim);
+
+// Subscripts `entity`, whose last part-ref is the rank>0 array, at element
+// [dim] (0-based) using its lower bound.
+static std::optional<DataRef> SubscriptArrayPartRef(
+    FoldingContext &context, NamedEntity &&entity, int dim) {
+  MaybeExtentExpr lb{GetLBOUND(context, entity, /*dim=*/0)};
+  if (!lb) {
+    return std::nullopt;
+  }
+  std::vector<Subscript> ss;
+  ss.emplace_back(Fold(context, std::move(*lb) + Expr<SubscriptInteger>{dim}));
+  return DataRef{ArrayRef{std::move(entity), std::move(ss)}};
+}
+
+// Builds the rank-0 DataRef for element [dim] (0-based) of a rank-1 designator
+// by subscripting its sole array part-ref (C919) at lbound+dim, leaving every
+// scalar part-ref -- including scalar-subscripted array parts anywhere in the
+// chain -- intact.  Handles whole arrays, array/scalar components, a single
+// triplet section (element l+dim*s), and arbitrary nesting such as
+// x(1)%c%d(3)%e -> x(1)%c(dim)%d(3)%e.  A vector subscript n(V) yields
+// n(element[dim] of V) when V itself reduces.  Null when the array part is a
+// coarray, or a vector subscript whose index expression cannot be reduced.
+static std::optional<DataRef> SubscriptRankOneElement(
+    FoldingContext &context, const DataRef &dr, int dim) {
+  return common::visit(
+      common::visitors{
+          [&](const SymbolRef &s) -> std::optional<DataRef> {
+            if (s->Rank() == 0) {
+              return std::nullopt;
+            }
+            return SubscriptArrayPartRef(context, NamedEntity{s.get()}, dim);
+          },
+          [&](const Component &c) -> std::optional<DataRef> {
+            if (c.GetLastSymbol().Rank() > 0) {
+              return SubscriptArrayPartRef(
+                  context, NamedEntity{Component{c}}, dim);
+            }
+            // Scalar component: the array part is in the base.
+            if (auto base{SubscriptRankOneElement(context, c.base(), dim)}) {
+              return DataRef{Component{std::move(*base), c.GetLastSymbol()}};
+            }
+            return std::nullopt;
+          },
+          [&](const ArrayRef &a) -> std::optional<DataRef> {
+            int nonScalar{0}, nonScalarDim{-1};
+            for (int j{0}; j < a.size(); ++j) {
+              if (std::holds_alternative<Triplet>(a.at(j).u) ||
+                  a.at(j).Rank() != 0) {
+                ++nonScalar;
+                nonScalarDim = j;
+              }
+            }
+            if (nonScalar > 1) {
+              return std::nullopt;
+            }
+            if (nonScalar == 1) {
+              // One rank-contributing subscript carries the whole rank (C919).
+              // A triplet l:u:s yields element l+dim*s; a vector subscript V
+              // yields the scalar n(element[dim] of V); scalars are kept.
+              std::vector<Subscript> ss;
+              for (int j{0}; j < a.size(); ++j) {
+                const Subscript &sub{a.at(j)};
+                if (j != nonScalarDim) {
+                  ss.emplace_back(sub);
+                } else if (const auto *trip{std::get_if<Triplet>(&sub.u)}) {
+                  std::optional<Expr<SubscriptInteger>> lower;
+                  if (const auto *lo{trip->GetLower()}) {
+                    lower = *lo;
+                  } else if (auto lb{GetLBOUND(context, a.base(), j)}) {
+                    lower = std::move(*lb);
+                  } else {
+                    return std::nullopt;
+                  }
+                  ss.emplace_back(Fold(context,
+                      std::move(*lower) +
+                          Expr<SubscriptInteger>{dim} * trip->stride()));
+                } else {
+                  const auto &vec{
+                      std::get<IndirectSubscriptIntegerExpr>(sub.u).value()};
+                  if (auto elem{ExtractRankOneElement(context, vec, dim)}) {
+                    ss.emplace_back(std::move(*elem));
+                  } else {
+                    return std::nullopt;
+                  }
+                }
+              }
+              return DataRef{ArrayRef{NamedEntity{a.base()}, std::move(ss)}};
+            }
+            // All-scalar subscripts: the rank comes from the base component's
+            // parent (ArrayRef::Rank).  Recurse through the base to the array
+            // part-ref, then rebuild these subscripts on the element.
+            const Component *comp{a.base().UnwrapComponent()};
+            if (!comp) {
+              return std::nullopt;
+            }
+            if (auto base{
+                    SubscriptRankOneElement(context, comp->base(), dim)}) {
+              std::vector<Subscript> ss;
+              for (int j{0}; j < a.size(); ++j) {
+                ss.emplace_back(a.at(j));
+              }
+              return DataRef{ArrayRef{NamedEntity{Component{std::move(*base),
+                                          comp->GetLastSymbol()}},
+                  std::move(ss)}};
+            }
+            return std::nullopt;
+          },
+          [&](const CoarrayRef &) -> std::optional<DataRef> {
+            return std::nullopt;
+          },
+      },
+      dr.u);
+}
+
 // Extract element [dim] (0-based, array-element order) from a rank-1 integer
 // array expression as a scalar, distributing the extraction through kind
 // conversions, elementwise integer operations, and elemental intrinsic calls,
@@ -1593,54 +1711,10 @@ ExtractRankOneElement(FoldingContext &context,
           at[0] = y.lbounds()[0] + dim;
           return Expr<T>{Constant<T>{y.At(at)}};
         } else if constexpr (std::is_same_v<Ty, Designator<T>>) {
-          if (auto named{ExtractNamedEntity(Expr<T>{y})}) {
-            // Whole array or component: element [dim] is base(lbound+dim).
-            if (MaybeExtentExpr lb{GetLBOUND(context, *named, /*dim=*/0)}) {
-              Expr<SubscriptInteger> at{
-                  Fold(context, std::move(*lb) + Expr<SubscriptInteger>{dim})};
-              std::vector<Subscript> ss;
-              ss.emplace_back(std::move(at));
-              ArrayRef ref{std::move(*named), std::move(ss)};
-              if (auto elem{AsGenericExpr(DataRef{std::move(ref)})}) {
-                if (auto *ie{UnwrapExpr<Expr<SomeInteger>>(*elem)}) {
-                  return ConvertToType<T>(std::move(*ie));
-                }
-              }
-            }
-          } else if (const auto *aref{std::get_if<ArrayRef>(&y.u)}) {
-            // Array section base(l:u:s): element [dim] is base(l+dim*s).
-            std::vector<Subscript> ss;
-            bool built{false}, ok{true};
-            for (int j{0}; ok && j < aref->size(); ++j) {
-              const Subscript &sub{aref->at(j)};
-              if (const auto *trip{std::get_if<Triplet>(&sub.u)}) {
-                if (built) { // only one rank-1 triplet is expected
-                  ok = false;
-                  break;
-                }
-                std::optional<Expr<SubscriptInteger>> lower;
-                if (const auto *lo{trip->GetLower()}) {
-                  lower = *lo;
-                } else if (auto lb{GetLBOUND(context, aref->base(), j)}) {
-                  lower = std::move(*lb);
-                } else {
-                  ok = false;
-                  break;
-                }
-                ss.emplace_back(Fold(context,
-                    std::move(*lower) +
-                        Expr<SubscriptInteger>{dim} * trip->stride()));
-                built = true;
-              } else if (sub.Rank() == 0) {
-                ss.emplace_back(sub);
-              } else {
-                ok = false; // vector subscript: not handled here
-              }
-            }
-            if (ok && built) {
-              ArrayRef ref{NamedEntity{aref->base()}, std::move(ss)};
-              if (auto elem{AsGenericExpr(DataRef{std::move(ref)})}) {
-                if (auto *ie{UnwrapExpr<Expr<SomeInteger>>(*elem)}) {
+          if (auto dr{ExtractDataRef(y)}) {
+            if (auto elem{SubscriptRankOneElement(context, *dr, dim)}) {
+              if (auto expr{AsGenericExpr(std::move(*elem))}) {
+                if (auto *ie{UnwrapExpr<Expr<SomeInteger>>(*expr)}) {
                   return ConvertToType<T>(std::move(*ie));
                 }
               }

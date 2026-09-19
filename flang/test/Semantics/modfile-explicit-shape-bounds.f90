@@ -157,6 +157,115 @@ end module
 !end
 !end
 
+! Scalar COMPONENT of an array parent base -> the element subscript lands on the
+! parent, reducing to x(2_8)%c (not the rank-retaining x%c(2_8))
+module mcompparent
+  type t
+    integer :: c
+  end type
+contains
+  subroutine s(x, a, b)
+    type(t), intent(in) :: x(2)
+    real :: a(x%c)
+    real :: b(ubound(a,2))
+    b(1) = 1.0
+    a(1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: mcompparent.mod
+!module mcompparent
+!type::t
+!integer(4)::c
+!end type
+!contains
+!subroutine s(x,a,b)
+!type(t),intent(in)::x(1_8:2_8)
+!real(4)::a(1_8:__builtin_int(x%c,kind=8))
+!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(x(2_8)%c,kind=8)),kind=4),kind=8))
+!end
+!end
+
+! Two part-refs, one scalar-subscripted so exactly one has nonzero rank (C919),
+! reduced from either side to x(3_8)%c(2_8). a2's array part is the component c,
+! so ubound(a2,2) subscripts it; a1's array part is the parent x, reached
+! through the component's all-scalar ArrayRef subscripts.
+module mcompboth
+  type t
+    integer :: c(2)
+  end type
+contains
+  subroutine s(x, a1, a2, b1, b2)
+    type(t), intent(in) :: x(3)
+    real :: a1(x%c(2))
+    real :: a2(x(3)%c)
+    real :: b1(ubound(a1,3))
+    real :: b2(ubound(a2,2))
+    b1(1) = 1.0
+    b2(1) = 1.0
+    a1(1,1,1) = b1(1)
+    a2(1,1) = b2(1)
+  end subroutine
+end module
+
+!Expect: mcompboth.mod
+!module mcompboth
+!type::t
+!integer(4)::c(1_8:2_8)
+!end type
+!contains
+!subroutine s(x,a1,a2,b1,b2)
+!type(t),intent(in)::x(1_8:3_8)
+!real(4)::a1(1_8:__builtin_int(x%c(2_8),kind=8))
+!real(4)::a2(1_8:__builtin_int(x(3_8)%c,kind=8))
+!real(4)::b1(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(x(3_8)%c(2_8),kind=8)),kind=4),kind=8))
+!real(4)::b2(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(x(3_8)%c(2_8),kind=8)),kind=4),kind=8))
+!end
+!end
+
+! Arbitrary DataRef nesting: the single array part-ref (unsubscripted c(3),
+! per C919 the only nonzero-rank part-ref) is subscripted at element [dim],
+! scalar components/subscripts above and below it are rebuilt, reducing
+! ubound(a,2) to x(1_8)%c(2_8)%d(3_8)%e.
+module mnested
+  type t3
+    integer :: e
+  end type
+  type t2
+    type(t3) :: d(4)
+  end type
+  type t1
+    type(t2) :: c(3)
+  end type
+contains
+  subroutine s(x, a, b)
+    type(t1), intent(in) :: x(2)
+    real :: a(x(1)%c%d(3)%e)
+    real :: b(ubound(a,2))
+    b(1) = 1.0
+    a(1,1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: mnested.mod
+!module mnested
+!type::t3
+!integer(4)::e
+!end type
+!type::t2
+!type(t3)::d(1_8:4_8)
+!end type
+!type::t1
+!type(t2)::c(1_8:3_8)
+!end type
+!contains
+!subroutine s(x,a,b)
+!type(t1),intent(in)::x(1_8:2_8)
+!real(4)::a(1_8:__builtin_int(x(1_8)%c%d(3_8)%e,kind=8))
+!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(x(1_8)%c(2_8)%d(3_8)%e,kind=8)),kind=4),kind=8))
+!end
+!end
+
 ! Named-constant/PARAMETER array base -> extent folds to a constant
 module mparam
   integer, parameter :: dims(2) = [5, 10]
@@ -264,6 +373,58 @@ end module
 !integer(4),intent(in)::n(1_8:4_8)
 !real(4)::a(1_8:__builtin_int(n(1_8:2_8:1_8),kind=8))
 !real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(n(2_8),kind=8)),kind=4),kind=8))
+!end
+!end
+
+! Vector-subscripted array base n(idx) -> element [dim] of n(idx) is
+! n(idx(dim)), so the vector subscript's own element reduction is substituted
+! back in, reducing to n(idx(2_8))
+module mvecsub
+contains
+  subroutine s(n, idx, a, b)
+    integer, intent(in) :: n(4)
+    integer, intent(in) :: idx(2)
+    real :: a(n(idx))
+    real :: b(ubound(a,2))
+    b(1) = 1.0
+    a(1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: mvecsub.mod
+!module mvecsub
+!contains
+!subroutine s(n,idx,a,b)
+!integer(4),intent(in)::n(1_8:4_8)
+!integer(4),intent(in)::idx(1_8:2_8)
+!real(4)::a(1_8:__builtin_int(n(__builtin_int(idx,kind=8)),kind=8))
+!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(n(__builtin_int(idx(2_8),kind=8)),kind=8)),kind=4),kind=8))
+!end
+!end
+
+! Vector subscript over an elementwise expression n(idx+1) -> the inner index
+! reduces through the full element reducer (idx+1 -> idx(2_8)+1_4), giving
+! n(idx(2_8)+1_4)
+module mvecsubexpr
+contains
+  subroutine s(n, idx, a, b)
+    integer, intent(in) :: n(4)
+    integer, intent(in) :: idx(2)
+    real :: a(n(idx + 1))
+    real :: b(ubound(a,2))
+    b(1) = 1.0
+    a(1,1) = b(1)
+  end subroutine
+end module
+
+!Expect: mvecsubexpr.mod
+!module mvecsubexpr
+!contains
+!subroutine s(n,idx,a,b)
+!integer(4),intent(in)::n(1_8:4_8)
+!integer(4),intent(in)::idx(1_8:2_8)
+!real(4)::a(1_8:__builtin_int(n(__builtin_int(idx+1_4,kind=8)),kind=8))
+!real(4)::b(1_8:__builtin_int(__builtin_int(max(0_8,__builtin_int(n(__builtin_int(idx(2_8)+1_4,kind=8)),kind=8)),kind=4),kind=8))
 !end
 !end
 
