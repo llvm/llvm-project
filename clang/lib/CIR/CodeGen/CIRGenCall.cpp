@@ -323,9 +323,8 @@ void CIRGenModule::constructAttributeList(
     CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
     llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
     mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
-    cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
+    bool attrOnCallSite, bool isThunk) {
   callingConv = info.getCallingConvention();
-  sideEffect = cir::SideEffect::All;
 
   auto addUnitAttr = [&](llvm::StringRef name) {
     attrs.set(name, mlir::UnitAttr::get(&getMLIRContext()));
@@ -391,18 +390,23 @@ void CIRGenModule::constructAttributeList(
 
     assert(!cir::MissingFeatures::opCallAttrs());
 
-    // 'const', 'pure' and 'noalias' attributed functions are also nounwind.
-    if (targetDecl->hasAttr<ConstAttr>()) {
-      // gcc specifies that 'const' functions have greater restrictions than
-      // 'pure' functions, so they also cannot have infinite loops.
-      sideEffect = cir::SideEffect::Const;
-    } else if (targetDecl->hasAttr<PureAttr>()) {
-      // gcc specifies that 'pure' functions cannot have infinite loops.
-      sideEffect = cir::SideEffect::Pure;
-    }
+    std::optional<cir::ModRefInfo> access;
+    if (targetDecl->hasAttr<ConstAttr>())
+      access = cir::ModRefInfo::NoModRef;
+    else if (targetDecl->hasAttr<PureAttr>())
+      access = cir::ModRefInfo::Ref;
 
-    attrs.set(cir::CIRDialect::getSideEffectAttrName(),
-              cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
+    if (access) {
+      // 'const' and 'pure' describe the callee as a whole, so every class of
+      // memory carries the same access.
+      attrs.set(cir::CIRDialect::getMemoryEffectsAttrName(),
+                cir::MemoryEffectsAttr::get(&getMLIRContext(), *access));
+      // 'const' and 'pure' attributed functions are also nounwind.
+      addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
+      // gcc specifies that 'const' and 'pure' functions cannot have infinite
+      // loops.
+      addUnitAttr(cir::CIRDialect::getWillReturnAttrName());
+    }
 
     // TODO(cir): Add noalias to returns for malloc-like functions
     // (__attribute__((malloc)) / __declspec(restrict)).
@@ -1341,9 +1345,8 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallCallConv());
   assert(!cir::MissingFeatures::opCallAttrs());
   cir::CallingConv callingConv;
-  cir::SideEffect sideEffect;
   cgm.constructAttributeList(funcName, funcInfo, callee.getAbstractInfo(),
-                             attrs, argAttrs, retAttrs, callingConv, sideEffect,
+                             attrs, argAttrs, retAttrs, callingConv,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
 
   auto resolvedFuncOpFromGlobal = [&](mlir::Operation *op) -> cir::FuncOp {
