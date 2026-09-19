@@ -6,9 +6,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-FAKE16 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu11.70 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-GISEL,GFX1170-GISEL-FAKE16 %s
-; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16,GFX12-TRUE16-IMM %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL,GFX12-GISEL-TRUE16,GFX12-TRUE16-IMM %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -mattr=-real-true16 < %s | FileCheck -check-prefix=GFX12-GISEL-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-FAKE16 %s
@@ -24,6 +24,20 @@ declare i32 @llvm.amdgcn.cvt.pk.bf8.f32(float, float, i32, i1)
 declare i32 @llvm.amdgcn.cvt.pk.fp8.f32(float, float, i32, i1)
 declare i32 @llvm.amdgcn.cvt.sr.bf8.f32(float, i32, i32, i32)
 declare i32 @llvm.amdgcn.cvt.sr.fp8.f32(float, i32, i32, i32)
+
+define <2 x float> @test_cvt_pk_f32_bf8_word0_imm() {
+; GFX12-TRUE16-IMM-LABEL: test_cvt_pk_f32_bf8_word0_imm:
+; GFX12-TRUE16-IMM:       v_cvt_pk_f32_bf8_e32 v[0:1], 0x5678
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.pk.f32.bf8(i32 305419896, i1 false)
+  ret <2 x float> %ret
+}
+
+define <2 x float> @test_cvt_pk_f32_fp8_word0_imm() {
+; GFX12-TRUE16-IMM-LABEL: test_cvt_pk_f32_fp8_word0_imm:
+; GFX12-TRUE16-IMM:       v_cvt_pk_f32_fp8_e32 v[0:1], 0x5678
+  %ret = tail call <2 x float> @llvm.amdgcn.cvt.pk.f32.fp8(i32 305419896, i1 false)
+  ret <2 x float> %ret
+}
 
 define float @test_cvt_f32_bf8_byte0(i32 %a) {
 ; GFX942-LABEL: test_cvt_f32_bf8_byte0:
