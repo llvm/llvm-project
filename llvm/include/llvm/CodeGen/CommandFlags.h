@@ -103,6 +103,8 @@ LLVM_ABI bool getXCOFFTracebackTable();
 
 LLVM_ABI std::string getBBSections();
 
+LLVM_ABI llvm::FunctionSplittingMode getFunctionSplitting();
+
 LLVM_ABI unsigned getTLSSize();
 
 LLVM_ABI bool getEmulatedTLS();

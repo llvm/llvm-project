@@ -65,6 +65,21 @@ enum class BasicBlockSection {
   None    // Do not use Basic Block Sections.
 };
 
+/// Late function splitting mode. Decides which functions are eligible to have
+/// their cold blocks moved into a separate section.
+enum class FunctionSplittingMode {
+  Default,        // Not specified: infer from the basic block sections and the
+                  // legacy machine function splitter options.
+  None,           // Hard off. Never create a cold section, even for functions
+                  // which have a basic block sections profile. Such functions
+                  // are still laid out using the profile, but are emitted as a
+                  // single contiguous section.
+  BBSectionsOnly, // Split only functions which have a basic block sections
+                  // profile.
+  All             // Split functions using the basic block sections profile
+                  // where it is available, and PGO/AutoFDO elsewhere.
+};
+
 /// Identify a debugger for "tuning" the debug info.
 ///
 /// The "debugger tuning" concept allows us to present a more intuitive
@@ -286,6 +301,9 @@ public:
 
   /// Emit basic blocks into separate sections.
   BasicBlockSection BBSections = BasicBlockSection::None;
+
+  /// Which functions are eligible for late function splitting.
+  FunctionSplittingMode FunctionSplitting = FunctionSplittingMode::Default;
 
   /// Memory Buffer that contains information on sampled basic blocks and used
   /// to selectively generate basic block sections.

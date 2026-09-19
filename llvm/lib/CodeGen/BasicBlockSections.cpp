@@ -96,6 +96,27 @@ cl::opt<std::string> llvm::BBSectionsColdTextPrefix(
     cl::desc("The text prefix to use for cold basic block clusters"),
     cl::init(".text.split."), cl::Hidden);
 
+/// Enable the machine function splitter pass. This is the legacy spelling of
+/// -function-splitting=all and is kept for backwards compatibility.
+cl::opt<bool> llvm::EnableMachineFunctionSplitter(
+    "enable-split-machine-functions", cl::Hidden,
+    cl::desc("Split out cold blocks from machine functions based on profile "
+             "information."));
+
+FunctionSplittingMode
+llvm::resolveFunctionSplittingMode(const TargetMachine &TM) {
+  // An explicitly requested mode always wins.
+  if (TM.Options.FunctionSplitting != FunctionSplittingMode::Default)
+    return TM.Options.FunctionSplitting;
+  // The legacy machine function splitter options request splitting everywhere.
+  if (TM.Options.EnableMachineFunctionSplitter || EnableMachineFunctionSplitter)
+    return FunctionSplittingMode::All;
+  // A basic block sections profile splits the functions it covers.
+  if (TM.getBBSectionsType() == BasicBlockSection::List)
+    return FunctionSplittingMode::BBSectionsOnly;
+  return FunctionSplittingMode::None;
+}
+
 static cl::opt<bool> BBSectionsDetectSourceDrift(
     "bbsections-detect-source-drift",
     cl::desc("This checks if there is a fdo instr. profile hash "
