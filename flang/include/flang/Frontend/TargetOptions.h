@@ -18,6 +18,7 @@
 #ifndef FORTRAN_FRONTEND_TARGETOPTIONS_H
 #define FORTRAN_FRONTEND_TARGETOPTIONS_H
 
+#include "llvm/Target/TargetOptions.h"
 #include <string>
 #include <vector>
 
@@ -51,8 +52,9 @@ public:
   /// Print verbose assembly
   bool asmVerbose = false;
 
-  /// Enable splitting of machine functions using profile information.
-  bool SplitMachineFunctions = false;
+  /// Late function splitting mode.
+  llvm::FunctionSplittingMode functionSplitting =
+      llvm::FunctionSplittingMode::BBSectionsOnly;
 
   /// Atomic control options
   bool atomicIgnoreDenormalMode = false;

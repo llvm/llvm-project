@@ -8,7 +8,7 @@
 ! RUN: %if arm-registered-target %{ not %flang -### --target=arm-unknown-linux -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-OPT %}
 ! RUN: %if arm-registered-target %{ %flang -### --target=arm-unknown-linux -fno-split-machine-functions %s 2>&1 | FileCheck %s --check-prefix=NO-SPLIT-MACHINE-FUNCTIONS %}
 
-! SPLIT-MACHINE-FUNCTIONS: "-fsplit-machine-functions"
-! NO-SPLIT-MACHINE-FUNCTIONS-NOT: "-fsplit-machine-functions"
+! SPLIT-MACHINE-FUNCTIONS: "-fsplit-machine-functions=all"
+! NO-SPLIT-MACHINE-FUNCTIONS-NOT: "-fsplit-machine-functions=all"
 ! UNSUPPORTED-OPT: error: unsupported option '-fsplit-machine-functions' for target
 
