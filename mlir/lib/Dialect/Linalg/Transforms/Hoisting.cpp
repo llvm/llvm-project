@@ -217,8 +217,15 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
                         << *transferRead.getOperation() << "\n");
-      auto loop = dyn_cast<LoopLikeOpInterface>(transferRead->getParentOp());
-      LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead->getParentOp()
+      // When masked, the transfer_read is hoisted as its enclosing
+      // `vector.mask` op, so that op is what must sit directly under the loop.
+      Operation *readOrMaskedRead = transferRead;
+      if (auto mask = dyn_cast<vector::MaskOp>(transferRead->getParentOp()))
+        if (mask.getMaskableOp() == transferRead.getOperation())
+          readOrMaskedRead = mask.getOperation();
+      auto loop =
+          dyn_cast<LoopLikeOpInterface>(readOrMaskedRead->getParentOp());
+      LLVM_DEBUG(DBGS() << "Parent op: " << *readOrMaskedRead->getParentOp()
                         << "\n");
       if (!isa_and_nonnull<scf::ForOp, affine::AffineForOp>(loop))
         return WalkResult::advance();
@@ -233,10 +240,12 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
                         << "\n");
 
       SetVector<Operation *> forwardSlice;
-      getForwardSlice(transferRead.getOperation(), &forwardSlice);
+      getForwardSlice(readOrMaskedRead, &forwardSlice);
 
       // Look for the last TransferWriteOp in the forwardSlice of
-      // `transferRead` that operates on the same memref.
+      // `transferRead` that operates on the same memref. When masked, the write
+      // is the transfer_write nested in its `vector.mask` region, reached as a
+      // user of the read value.
       vector::TransferWriteOp transferWrite;
       for (auto *sliceOp : llvm::reverse(forwardSlice)) {
         auto candidateWrite = dyn_cast<vector::TransferWriteOp>(sliceOp);
@@ -250,6 +259,16 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       for (auto operand : transferRead.getOperands())
         if (!loop.isDefinedOutsideOfLoop(operand))
           return WalkResult::advance();
+      // A masked read is hoisted together with the `vector.mask` op wrapping
+      // it, so that op's mask and passthru operands must be loop-invariant too.
+      auto readMask = dyn_cast<vector::MaskOp>(readOrMaskedRead);
+      if (readMask) {
+        if (!loop.isDefinedOutsideOfLoop(readMask.getMask()))
+          return WalkResult::advance();
+        if (readMask.getPassthru() &&
+            !loop.isDefinedOutsideOfLoop(readMask.getPassthru()))
+          return WalkResult::advance();
+      }
 
       // Only hoist transfer_read / transfer_write pairs and singleton
       // transfer_reads for now.
@@ -259,9 +278,22 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
         if (memref::hasNoAliasingAccessInScope(transferRead.getBase(), loop,
                                                /*excludedOps=*/{},
                                                /*readsAreSafe=*/true))
-          loop.moveOutOfLoop(transferRead);
+          loop.moveOutOfLoop(readOrMaskedRead);
         return WalkResult::advance();
       }
+
+      // The write is hoisted with its own `vector.mask` op, if any. A masked
+      // read must pair with a masked write carrying the same mask (and an
+      // unmasked read with an unmasked write).
+      Operation *writeOrMaskedWrite = transferWrite;
+      if (auto mask = dyn_cast<vector::MaskOp>(transferWrite->getParentOp()))
+        if (mask.getMaskableOp() == transferWrite.getOperation())
+          writeOrMaskedWrite = mask.getOperation();
+      auto writeMask = dyn_cast<vector::MaskOp>(writeOrMaskedWrite);
+      if (!!readMask != !!writeMask)
+        return WalkResult::advance();
+      if (readMask && readMask.getMask() != writeMask.getMask())
+        return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate: " << *transferWrite.getOperation()
                         << "\n");
@@ -330,8 +362,11 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Check 3.
       // TODO: may want to memoize this information for performance but it
       // likely gets invalidated often.
+      // The read must dominate the write. Compare `readOrMaskedRead` and
+      // `writeOrMaskedWrite`, not the inner transfers: when masked, those live
+      // in separate `vector.mask` regions, so neither dominates the other.
       DominanceInfo dom(loop);
-      if (!dom.properlyDominates(transferRead.getOperation(), transferWrite))
+      if (!dom.properlyDominates(readOrMaskedRead, writeOrMaskedWrite))
         return WalkResult::advance();
       for (auto &use : transferRead.getBase().getUses()) {
         if (!loop->isAncestor(use.getOwner()))
@@ -360,14 +395,15 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
         }
       }
 
-      // Hoist read before.
-      loop.moveOutOfLoop(transferRead);
+      // Hoist read before (with its mask op, if masked).
+      loop.moveOutOfLoop(readOrMaskedRead);
 
-      // Hoist write after.
-      transferWrite->moveAfter(loop);
+      // Hoist write after (with its mask op, if masked).
+      writeOrMaskedWrite->moveAfter(loop);
 
       // Rewrite `loop` with new yields by cloning and erase the original
-      // loop.
+      // loop. The carried value is `readOrMaskedRead`'s result (the masked read
+      // result when masked) and the yielded value is what the write stores.
       IRRewriter rewriter(transferRead.getContext());
       NewYieldValuesFn yieldFn = [&](OpBuilder &b, Location loc,
                                      ArrayRef<BlockArgument> newBBArgs) {
@@ -375,7 +411,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       };
 
       auto maybeNewLoop = loop.replaceWithAdditionalYields(
-          rewriter, transferRead.getVector(),
+          rewriter, readOrMaskedRead->getResult(0),
           /*replaceInitOperandUsesInLoop=*/true, yieldFn);
       if (failed(maybeNewLoop))
         return WalkResult::interrupt();
