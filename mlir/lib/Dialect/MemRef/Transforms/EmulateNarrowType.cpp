@@ -331,6 +331,8 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
     auto convertedElementType = convertedType.getElementType();
     auto oldElementType = op.getMemRefType().getElementType();
+    if (!oldElementType.isIntOrFloat() || !convertedElementType.isIntOrFloat())
+      return failure();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
     int dstBits = convertedElementType.getIntOrFloatBitWidth();
     if (dstBits % srcBits != 0) {
