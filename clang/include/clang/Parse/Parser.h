@@ -4240,8 +4240,7 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
-                           bool FailImmediatelyOnInvalidExpr = false,
-                           bool ParsingExpansionStmtInitList = false);
+                           bool FailImmediatelyOnInvalidExpr = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -5328,7 +5327,8 @@ private:
   ExprResult ParseBraceInitializer();
 
   /// ParseExpansionInitList - Called when the initializer of an expansion
-  /// statement starts with an open brace.
+  /// statement starts with an open brace. Each element of the list is a
+  /// full-expression of its own.
   ///
   /// \verbatim
   ///       expansion-init-list: [C++26 [stmt.expand]]
