@@ -10,10 +10,8 @@ define i8 @uadd_no_overflow_upper_bound(i8 %a) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[HI:%.*]] = icmp ule i8 [[A]], -101
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[HI]])
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[A]], i8 100)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = add nuw i8 [[A]], 100
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
 entry:
