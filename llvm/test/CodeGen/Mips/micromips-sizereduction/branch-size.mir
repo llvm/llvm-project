@@ -1,0 +1,46 @@
+# RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips \
+# RUN:   -run-pass=micromips-reduce-size,mips-branch-expansion -verify-machineinstrs %s -o - | FileCheck %s
+
+# Branch expansion sees the compressed MIR instruction sizes directly.
+# A register that prevents ADDu compression pushes the branch out of range.
+---
+name: compressed
+tracksRegLiveness: false
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    ; CHECK-LABEL: name: compressed
+    ; CHECK: BEQ_MM $a0, $zero, %bb.2
+    BEQ_MM $a0, $zero, %bb.2, implicit-def $at {
+      $zero = SLL $zero, 0
+    }
+  bb.1:
+    successors: %bb.2
+    INLINEASM &".space 65528", sideeffect attdialect
+    $v0 = ADDu $a0, $a1
+  bb.2:
+    PseudoReturn $ra {
+      $zero = SLL $zero, 0
+    }
+...
+---
+name: uncompressed
+tracksRegLiveness: false
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    ; CHECK-LABEL: name: uncompressed
+    ; CHECK: BNE_MM $a0, $zero,
+    ; CHECK: J %bb.
+    BEQ_MM $a0, $zero, %bb.2, implicit-def $at {
+      $zero = SLL $zero, 0
+    }
+  bb.1:
+    successors: %bb.2
+    INLINEASM &".space 65528", sideeffect attdialect
+    $t0 = ADDu $a0, $a1
+  bb.2:
+    PseudoReturn $ra {
+      $zero = SLL $zero, 0
+    }
+...

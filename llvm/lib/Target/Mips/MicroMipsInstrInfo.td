@@ -15,7 +15,31 @@ def addrimm12 : ComplexPattern<iPTR, 2, "selectIntAddr12MM", [frameindex]>;
 def addrimm16 : ComplexPattern<iPTR, 2, "selectIntAddr16MM", [frameindex]>;
 def addrimm4lsl2 : ComplexPattern<iPTR, 2, "selectIntAddrLSL2MM", [frameindex]>;
 
-def simm9_addiusp : Operand<i32> {
+class MicroMipsCompressImm<string Cond> : Operand<i32>,
+    ImmLeaf<i32, !strconcat("return ", Cond, ";")> {
+  let MCOperandPredicate = !strconcat([{
+    if (!MCOp.isImm())
+      return false;
+    int64_t Imm = MCOp.getImm();
+    return }], Cond, ";");
+}
+
+// LBU16 and SB16 share a memory operand; their compression patterns narrow
+// this union to the range accepted by each instruction.
+def mm_imm4 : MicroMipsCompressImm<"Imm >= -1 && Imm < 16">;
+def mm_lbu_imm4 : MicroMipsCompressImm<"Imm >= -1 && Imm < 15">;
+def mm_sb_imm4 : MicroMipsCompressImm<"isUInt<4>(Imm)">;
+def mm_imm4_lsl1 : MicroMipsCompressImm<"isShiftedUInt<4, 1>(Imm)">;
+def mm_imm5_lsl2 : MicroMipsCompressImm<"isShiftedUInt<5, 2>(Imm)">;
+def mm_imm6_lsl2 : MicroMipsCompressImm<"isShiftedUInt<6, 2>(Imm)"> {
+  let EncoderMethod = "getUImm6Lsl2Encoding";
+  let DecoderMethod = "DecodeUImmWithOffsetAndScale<6, 0, 4>";
+  let ParserMatchClass = ConstantUImm6Lsl2AsmOperandClass;
+}
+
+def simm9_addiusp : MicroMipsCompressImm<
+    "(Imm % 4 == 0) && ((Imm >= 8 && Imm <= 1028) || " #
+    "(Imm >= -1032 && Imm <= -12))"> {
   let EncoderMethod = "getSImm9AddiuspValue";
   let DecoderMethod = "DecodeSimm9SP";
 }
@@ -65,10 +89,12 @@ class mem_mm_4_generic : Operand<i32> {
 }
 
 def mem_mm_4 : mem_mm_4_generic {
+  let MIOperandInfo = (ops ptr_gpr16mm_rc, mm_imm4);
   let EncoderMethod = "getMemEncodingMMImm4";
 }
 
 def mem_mm_4_lsl1 : mem_mm_4_generic {
+  let MIOperandInfo = (ops ptr_gpr16mm_rc, mm_imm4_lsl1);
   let EncoderMethod = "getMemEncodingMMImm4Lsl1";
 }
 
@@ -92,7 +118,7 @@ def MicroMipsMemGPAsmOperand : AsmOperandClass {
 
 def mem_mm_sp_imm5_lsl2 : Operand<i32> {
   let PrintMethod = "printMemOperand";
-  let MIOperandInfo = (ops ptr_sp_rc:$base, simm5:$offset);
+  let MIOperandInfo = (ops ptr_sp_rc:$base, mm_imm5_lsl2:$offset);
   let OperandType = "OPERAND_MEMORY";
   let ParserMatchClass = MicroMipsMemSPAsmOperand;
   let EncoderMethod = "getMemEncodingMMSPImm5Lsl2";
@@ -378,7 +404,7 @@ class AddImmUS5<string opstr, RegisterOperand RO> :
 }
 
 class AddImmUR1SP<string opstr, RegisterOperand RO> :
-  MicroMipsInst16<(outs RO:$rd), (ins uimm6_lsl2:$imm),
+  MicroMipsInst16<(outs RO:$rd), (ins mm_imm6_lsl2:$imm),
                   !strconcat(opstr, "\t$rd, $imm"), [], FrmR>;
 
 class AddImmUSP<string opstr> :
@@ -1417,3 +1443,55 @@ def : MipsInstAlias<"mthgc0 $rt, $rs",
 def : MipsInstAlias<"sw $rt, $offset",
                     (SWSP_MM GPR32Opnd:$rt, mem_mm_sp_imm5_lsl2:$offset), 1>,
                     ISA_MICROMIPS;
+
+// microMIPS32r2-r5 instruction compression.
+let Predicates = [InMicroMips, HasMips32r2, NotMips32r6],
+    isCompressOnly = true in {
+  foreach Op = [ADDiu, ADDiu_MM] in
+    def : CompressPat<(Op GPRMM16Opnd:$dst, SP, mm_imm6_lsl2:$imm),
+                      (ADDIUR1SP_MM GPRMM16Opnd:$dst, mm_imm6_lsl2:$imm)>;
+  foreach Op = [LEA_ADDiu, LEA_ADDiu_MM] in
+    def : CompressPat<(Op GPRMM16Opnd:$dst, SPByHwMode, mm_imm6_lsl2:$imm),
+                      (ADDIUR1SP_MM GPRMM16Opnd:$dst, mm_imm6_lsl2:$imm)>;
+  foreach Op = [ADDiu, ADDiu_MM] in
+    def : CompressPat<(Op SP, SP, simm9_addiusp:$imm),
+                      (ADDIUSP_MM simm9_addiusp:$imm)>;
+  foreach Op = [ADDu, ADDu_MM] in
+    def : CompressPat<(Op GPRMM16Opnd:$dst, GPRMM16Opnd:$lhs, GPRMM16Opnd:$rhs),
+                      (ADDU16_MM GPRMM16Opnd:$dst, GPRMM16Opnd:$lhs,
+                                 GPRMM16Opnd:$rhs)>;
+  foreach Op = [SUBu, SUBu_MM] in
+    def : CompressPat<(Op GPRMM16Opnd:$dst, GPRMM16Opnd:$lhs, GPRMM16Opnd:$rhs),
+                      (SUBU16_MM GPRMM16Opnd:$dst, GPRMM16Opnd:$lhs,
+                                 GPRMM16Opnd:$rhs)>;
+  foreach Op = [XOR, XOR_MM] in {
+    def : CompressPat<(Op GPRMM16Opnd:$dst, GPRMM16Opnd:$src, GPRMM16Opnd:$dst),
+                      (XOR16_MM GPRMM16Opnd:$dst, GPRMM16Opnd:$src)>;
+    def : CompressPat<(Op GPRMM16Opnd:$dst, GPRMM16Opnd:$dst, GPRMM16Opnd:$src),
+                      (XOR16_MM GPRMM16Opnd:$dst, GPRMM16Opnd:$src)>;
+  }
+  foreach Op = [LBu, LBu_MM] in
+    def : CompressPat<(Op GPRMM16Opnd:$dst, ptr_gpr16mm_rc:$base, mm_lbu_imm4:$imm),
+                      (LBU16_MM GPRMM16Opnd:$dst, ptr_gpr16mm_rc:$base,
+                                mm_lbu_imm4:$imm)>;
+  foreach Op = [LHu, LHu_MM] in
+    def : CompressPat<(Op GPRMM16Opnd:$dst, ptr_gpr16mm_rc:$base, mm_imm4_lsl1:$imm),
+                      (LHU16_MM GPRMM16Opnd:$dst, ptr_gpr16mm_rc:$base,
+                                mm_imm4_lsl1:$imm)>;
+  foreach Op = [SB, SB_MM] in
+    def : CompressPat<(Op GPRMM16OpndZero:$src, ptr_gpr16mm_rc:$base,
+                           mm_sb_imm4:$imm),
+                      (SB16_MM GPRMM16OpndZero:$src, ptr_gpr16mm_rc:$base,
+                               mm_sb_imm4:$imm)>;
+  foreach Op = [SH, SH_MM] in
+    def : CompressPat<(Op GPRMM16OpndZero:$src, ptr_gpr16mm_rc:$base,
+                           mm_imm4_lsl1:$imm),
+                      (SH16_MM GPRMM16OpndZero:$src, ptr_gpr16mm_rc:$base,
+                               mm_imm4_lsl1:$imm)>;
+  foreach Op = [LW, LW_MM] in
+    def : CompressPat<(Op GPR32Opnd:$reg, SPByHwMode, mm_imm5_lsl2:$imm),
+                      (LWSP_MM GPR32Opnd:$reg, SPByHwMode, mm_imm5_lsl2:$imm)>;
+  foreach Op = [SW, SW_MM] in
+    def : CompressPat<(Op GPR32Opnd:$reg, SPByHwMode, mm_imm5_lsl2:$imm),
+                      (SWSP_MM GPR32Opnd:$reg, SPByHwMode, mm_imm5_lsl2:$imm)>;
+}

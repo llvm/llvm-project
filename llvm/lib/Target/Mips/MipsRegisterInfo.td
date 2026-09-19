@@ -772,6 +772,9 @@ def ptr_sp_rc : RegClassByHwMode<
   [MIPS32, MIPS64],
   [SP32, SP64]>;
 
+def SPByHwMode : RegisterByHwMode<ptr_sp_rc,
+    [MIPS32, MIPS64], [SP, SP_64]>;
+
 def ptr_gp_rc : RegClassByHwMode<
   [MIPS32, MIPS64],
   [GP32, GP64]>;
