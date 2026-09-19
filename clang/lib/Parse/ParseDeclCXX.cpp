@@ -4551,7 +4551,10 @@ bool Parser::ParseCXX11AttributeArgs(
                     ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
     // Eat the left paren, then skip to the ending right paren.
     ConsumeParen();
-    SkipUntil(tok::r_paren);
+    if (!SkipUntil(tok::r_paren, StopAtUnbalanced)) {
+      Diag(Tok, diag::ext_unbalanced_attribute_args);
+      SkipUntil(tok::r_paren, StopAtSemi);
+    }
     return false;
   }
 
