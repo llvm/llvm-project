@@ -10098,47 +10098,27 @@ bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
   // Only the counted_by family exists so far.
   auto *CATy = cast<CountAttributedType>(BATy);
 
-  // A nested counted_by (buried under a pointer or array) was diagnosed and
-  // dropped to its wrapped type while the declarator was built, orphaning this
-  // node -- it is no longer part of the field's type. getAs finds only a
-  // top-level (through-sugar) CountAttributedType, so when it can't find this
-  // node the node was dropped: skip it, leaving the field as-is. This matches
-  // the eager path, which drops the attribute for a nested counted_by.
-  if (FD->getType()->getAs<CountAttributedType>() != CATy)
-    return false;
-
-  // Rejected: complete the node in place with the raw argument and no coupled
-  // decls. The argument isn't a valid count reference, so there are none --
-  // and BuildTypeCoupledDecls would assert on a non-DeclRefExpr. Mark the field
-  // invalid; consumers bail on a non-DeclRefExpr count. Guarded so shared
-  // declarators (`IP __counted_by(n) a, b;`) only complete the node once.
   auto Reject = [&]() -> bool {
+    // Guarded so shared declarators (`IP __counted_by(n) a, b;`) only complete
+    // the node once.
     if (!CATy->getCountExpr())
       Context.completeCountAttributedType(CATy, Arg, {});
     FD->setInvalidDecl();
     return false;
   };
 
-  // A failed parse was already diagnosed; skip the checks (they would only add
-  // noise) and recover the node directly.
   if (Arg->containsErrors())
     return Reject();
 
-  // Rejected (diagnostic emitted by the check): a bad count expression, or a
-  // valid reference in an invalid position (union member, non-flexible array,
-  // cross-struct count).
   if (CheckCountedByAttrOnField(FD, Arg, CATy->isCountInBytes(),
                                 CATy->isOrNull()))
     return Reject();
 
-  // Valid: the argument is a simple declaration reference, so it's safe to
-  // derive the coupled decls. Several declarators can share one node when the
-  // attribute was written in declaration-specifier position
-  // (`IP __counted_by(n) a, b;`), so this runs once per field; completion is
-  // idempotent -- the first field supplies the count, the rest only need the
-  // decl-context check above.
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(Arg, Decls);
+  // Several declarators can share one node when the attribute was written in
+  // declaration-specifier position (`IP __counted_by(n) a, b;`), so this runs
+  // once per field
   if (!CATy->getCountExpr())
     Context.completeCountAttributedType(CATy, Arg, Decls);
 
