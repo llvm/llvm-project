@@ -34,6 +34,8 @@ int main(void) {
 // Device output is flushed after host output, so host prints are not checked.
 // The fatal case checks only the exit status: its message is lost when the trap
 // aborts before the buffered stdout is flushed.
+//
+// clang fills in the ident location from the AST, so it is present without -g
 
-// CHECK: user-directed warning: warning message.
-// CHECK: user-directed warning.
+// CHECK: {{.*}}error_directive.c:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning: warning message.
+// CHECK: {{.*}}error_directive.c:{{[0-9]+}}:{{[0-9]+}}: Encountered user-directed warning.

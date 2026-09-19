@@ -61,6 +61,46 @@ static FnPtrTy indirectCallLookup(FnPtrTy HstPtr) {
   return HstPtr;
 }
 
+/// Split the ";file;function;line;column;;" string carried by an ident into its
+/// filename and line/column. \p File is not NUL-terminated, so \p FileLen gives
+/// its length. Returns false only if the string is missing or malformed; calls
+/// with no debug location parse successfully as "unknown" at 0:0, which the
+/// host runtime also reports.
+static bool getSourceLocation(const IdentTy *Loc, const char *&File,
+                              int32_t &FileLen, int32_t &Line,
+                              int32_t &Column) {
+  if (!Loc || !Loc->psource || *Loc->psource != ';')
+    return false;
+
+  const char *P = Loc->psource + 1;
+
+  File = P;
+  while (*P && *P != ';')
+    ++P;
+  FileLen = static_cast<int32_t>(P - File);
+  if (*P != ';')
+    return false;
+  ++P;
+
+  // Skip the function name field; it is the mangled kernel name.
+  while (*P && *P != ';')
+    ++P;
+  if (*P != ';')
+    return false;
+  ++P;
+
+  for (Line = 0; *P >= '0' && *P <= '9'; ++P)
+    Line = Line * 10 + (*P - '0');
+  if (*P != ';')
+    return false;
+  ++P;
+
+  for (Column = 0; *P >= '0' && *P <= '9'; ++P)
+    Column = Column * 10 + (*P - '0');
+
+  return true;
+}
+
 /// The openmp client instance used to communicate with the server.
 [[gnu::visibility("protected"),
   gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
@@ -77,10 +117,19 @@ int32_t __kmpc_cancellationpoint(IdentTy *, int32_t, int32_t) { return 0; }
 
 int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) { return 0; }
 
-// TODO: Report the source location from Loc->psource like the host runtime.
-void __kmpc_error(IdentTy *, int32_t Severity, const char *Message) {
+void __kmpc_error(IdentTy *Loc, int32_t Severity, const char *Message) {
   const char *Kind = Severity == 1 ? "warning" : "error";
-  if (Message)
+  const char *File;
+  int32_t FileLen, Line, Column;
+  bool HasLoc = ompx::impl::getSourceLocation(Loc, File, FileLen, Line, Column);
+
+  if (HasLoc && Message)
+    ompx::printf("OMP: %.*s:%d:%d: Encountered user-directed %s: %s.\n",
+                 FileLen, File, Line, Column, Kind, Message);
+  else if (HasLoc)
+    ompx::printf("OMP: %.*s:%d:%d: Encountered user-directed %s.\n", FileLen,
+                 File, Line, Column, Kind);
+  else if (Message)
     ompx::printf("OMP: Encountered user-directed %s: %s.\n", Kind, Message);
   else
     ompx::printf("OMP: Encountered user-directed %s.\n", Kind);
