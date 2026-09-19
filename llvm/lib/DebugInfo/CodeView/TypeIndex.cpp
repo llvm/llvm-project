@@ -50,6 +50,8 @@ static const SimpleTypeEntry SimpleTypeNames[] = {
     {"unsigned __int64*", SimpleTypeKind::UInt64},
     {"__int128*", SimpleTypeKind::Int128},
     {"unsigned __int128*", SimpleTypeKind::UInt128},
+    {"__int128*", SimpleTypeKind::Int128Oct},
+    {"unsigned __int128*", SimpleTypeKind::UInt128Oct},
     {"__half*", SimpleTypeKind::Float16},
     {"float*", SimpleTypeKind::Float32},
     {"float*", SimpleTypeKind::Float32PartialPrecision},
