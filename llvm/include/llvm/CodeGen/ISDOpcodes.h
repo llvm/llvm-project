@@ -287,7 +287,7 @@ enum NodeType {
   /// Carry-setting nodes for multiple precision addition and subtraction.
   /// These nodes take two operands of the same value type, and produce two
   /// results.  The first result is the normal add or sub result, the second
-  /// result is the carry flag result.
+  /// result is the carry flag result as a glue.
   /// FIXME: These nodes are deprecated in favor of UADDO_CARRY and USUBO_CARRY.
   /// They are kept around for now to provide a smooth transition path
   /// toward the use of UADDO_CARRY/USUBO_CARRY and will eventually be removed.
@@ -296,11 +296,11 @@ enum NodeType {
 
   /// Carry-using nodes for multiple precision addition and subtraction. These
   /// nodes take three operands: The first two are the normal lhs and rhs to
-  /// the add or sub, and the third is the input carry flag.  These nodes
-  /// produce two results; the normal result of the add or sub, and the output
-  /// carry flag.  These nodes both read and write a carry flag to allow them
-  /// to them to be chained together for add and sub of arbitrarily large
-  /// values.
+  /// the add or sub, and the third is the input carry flag as a glue.  These
+  /// nodes produce two results; the normal result of the add or sub, and the
+  /// output carry flag as a glue.  These nodes both read and write a carry flag
+  /// to allow them to them to be chained together for add and sub of
+  /// arbitrarily large values.
   ADDE,
   SUBE,
 
