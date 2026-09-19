@@ -117,6 +117,17 @@ func.func @m16n8k32_int8(%arg0: vector<4x4xi8>, %arg1: vector<2x4xi8>, %arg2: ve
   return %d : vector<2x2xi32>
 }
 
+// CHECK-LABEL: @m16n8k32_uint8
+func.func @m16n8k32_uint8(%arg0: vector<4x4xui8>, %arg1: vector<2x4xui8>, %arg2: vector<2x2xi32>) -> vector<2x2xi32> {
+  // CHECK: [[d:%.+]] = nvvm.mma.sync
+  // CHECK-SAME: shape = <m = 16, n = 8, k = 32>
+  // CHECK-SAME: int_overflow = satfinite
+  // CHECK-SAME: multiplicand_a_ptx_type = u8
+  // CHECK-SAME: multiplicand_b_ptx_type = u8
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) mmaShape = [16, 8, 32] : (vector<4x4xui8>, vector<2x4xui8>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
+
 // CHECK-LABEL: @m16n8k32_i4
 func.func @m16n8k32_i4(%arg0: vector<2x8xi4>, %arg1: vector<1x8xi4>, %arg2: vector<2x2xi32>) -> vector<2x2xi32> {
   // CHECK: [[el:%.+]] = llvm.extractvalue %{{.*}}[{{.*}}] : !llvm.array<2 x vector<8xi4>>
@@ -133,6 +144,17 @@ func.func @m16n8k32_i4(%arg0: vector<2x8xi4>, %arg1: vector<1x8xi4>, %arg2: vect
   // CHECK-SAME: multiplicand_a_ptx_type = s4
   // CHECK-SAME: multiplicand_b_ptx_type = s4
   %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) mmaShape = [16, 8, 32] : (vector<2x8xi4>, vector<1x8xi4>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
+
+// CHECK-LABEL: @m16n8k32_ui4
+func.func @m16n8k32_ui4(%arg0: vector<2x8xui4>, %arg1: vector<1x8xui4>, %arg2: vector<2x2xi32>) -> vector<2x2xi32> {
+  // CHECK: [[d:%.+]] = nvvm.mma.sync
+  // CHECK-SAME: shape = <m = 16, n = 8, k = 32>
+  // CHECK-SAME: int_overflow = satfinite
+  // CHECK-SAME: multiplicand_a_ptx_type = u4
+  // CHECK-SAME: multiplicand_b_ptx_type = u4
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) mmaShape = [16, 8, 32] : (vector<2x8xui4>, vector<1x8xui4>, vector<2x2xi32>) -> vector<2x2xi32>
   return %d : vector<2x2xi32>
 }
 
@@ -489,6 +511,20 @@ func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
 
   %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) mmaShape = [16, 8, 64] :
     (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
+
+// CHECK-LABEL: func @mma_sp_sync_ui8_16864(
+func.func @mma_sp_sync_ui8_16864(%arg0: vector<4x4xui8>,
+                                 %arg1: vector<4x4xui8>,
+                                 %arg2: vector<2x2xi32>,
+                                 %arg3: vector<2xi16>) -> vector<2x2xi32> {
+
+  // CHECK: %[[d:.+]] = llvm.inline_asm has_side_effects asm_dialect = att
+  // CHECK-SAME: "mma.sp.sync.aligned.m16n8k64.row.col.satfinite.s32.u8.u8.s32 {$0,$1,$2,$3},{$4,$5,$6,$7},{$8,$9,$10,$11},{$12,$13,$14,$15},$16,0x0;"
+
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) mmaShape = [16, 8, 64] :
+    (vector<4x4xui8>, vector<4x4xui8>, vector<2x2xi32>) -> vector<2x2xi32>
   return %d : vector<2x2xi32>
 }
 
