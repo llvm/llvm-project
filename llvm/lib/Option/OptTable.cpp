@@ -74,7 +74,7 @@ struct OptNameLess {
 OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 
 OptTable::OptTable(const Tables &T, bool IgnoreCase)
-    : StrTable(&T.StrTable), PrefixesTable(T.PrefixesTable),
+    : StrTable(T.StrTable), PrefixesTable(T.PrefixesTable),
       OptionInfos(T.Infos), InfoExtrasTable(T.InfoExtras),
       IgnoreCase(IgnoreCase), SubCommands(T.SubCommands),
       SubCommandIDsTable(T.SubCommandIDs),
@@ -83,7 +83,7 @@ OptTable::OptTable(const Tables &T, bool IgnoreCase)
   for (unsigned I = 0, E = PrefixesTable.size(); I != E;) {
     unsigned Size = PrefixesTable[I++].value();
     for (unsigned J = 0; J != Size; ++J) {
-      StringRef Prefix = (*StrTable)[PrefixesTable[I++]];
+      StringRef Prefix = StrTable[PrefixesTable[I++]];
       if (is_contained(PrefixesUnion, Prefix))
         continue;
       PrefixesUnion.push_back(Prefix);
@@ -121,7 +121,7 @@ OptTable::OptTable(const Tables &T, bool IgnoreCase)
 
   // Check that options are in order.
   for (unsigned i = FirstSearchableIndex + 1, e = getNumOptions(); i != e; ++i){
-    if (!(OptNameLess(*StrTable, PrefixesTable)(getInfo(i), getInfo(i + 1)))) {
+    if (!(OptNameLess(StrTable, PrefixesTable)(getInfo(i), getInfo(i + 1)))) {
       getOption(i).dump();
       getOption(i + 1).dump();
       llvm_unreachable("Options are not in order!");
@@ -188,7 +188,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
   // Search all options and return possible values.
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (!optionMatches(*StrTable, PrefixesTable, In, Option))
+    if (!optionMatches(StrTable, PrefixesTable, In, Option))
       continue;
     StringRef Values = getOptionValues(In);
     if (Values.empty())
@@ -219,11 +219,11 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
     if (In.Flags & DisableFlags)
       continue;
 
-    StringRef Name = In.getName(*StrTable, PrefixesTable);
+    StringRef Name = In.getName(StrTable, PrefixesTable);
     for (auto PrefixOffset : In.getPrefixOffsets(PrefixesTable)) {
-      StringRef Prefix = (*StrTable)[PrefixOffset];
+      StringRef Prefix = StrTable[PrefixOffset];
       std::string S = (Twine(Prefix) + Name + "\t").str();
-      S += (*StrTable)[In.HelpTextOffset];
+      S += StrTable[In.HelpTextOffset];
       if (StringRef(S).starts_with(Cur) && S != std::string(Cur) + "\t")
         Ret.push_back(S);
     }
@@ -270,7 +270,7 @@ unsigned OptTable::internalFindNearest(
 
   for (const Info &CandidateInfo :
        ArrayRef<Info>(OptionInfos).drop_front(FirstSearchableIndex)) {
-    StringRef CandidateName = CandidateInfo.getName(*StrTable, PrefixesTable);
+    StringRef CandidateName = CandidateInfo.getName(StrTable, PrefixesTable);
 
     // We can eliminate some option prefix/name pairs as candidates right away:
     // * Ignore option candidates with empty names, such as "--", or names
@@ -305,7 +305,7 @@ unsigned OptTable::internalFindNearest(
     // "--help" over "-help".
     for (auto CandidatePrefixOffset :
          CandidateInfo.getPrefixOffsets(PrefixesTable)) {
-      StringRef CandidatePrefix = (*StrTable)[CandidatePrefixOffset];
+      StringRef CandidatePrefix = StrTable[CandidatePrefixOffset];
       // If Candidate and NormalizedName have more than 'BestDistance'
       // characters of difference, no need to compute the edit distance, it's
       // going to be greater than BestDistance. Don't bother computing Candidate
@@ -358,14 +358,14 @@ std::unique_ptr<Arg> OptTable::parseOneArgGrouped(InputArgList &Args,
   StringRef Name = Str.ltrim(PrefixChars);
   const Info *Start =
       std::lower_bound(OptionInfos.data() + FirstSearchableIndex, End, Name,
-                       OptNameLess(*StrTable, PrefixesTable));
+                       OptNameLess(StrTable, PrefixesTable));
   const Info *Fallback = nullptr;
   unsigned Prev = Index;
 
   // Search for the option which matches Str.
   for (; Start != End; ++Start) {
     unsigned ArgSize =
-        matchOption(*StrTable, PrefixesTable, Start, Str, IgnoreCase);
+        matchOption(StrTable, PrefixesTable, Start, Str, IgnoreCase);
     if (!ArgSize)
       continue;
 
@@ -448,7 +448,7 @@ std::unique_ptr<Arg> OptTable::internalParseOneArg(
 
   // Search for the first next option which could be a prefix.
   Start =
-      std::lower_bound(Start, End, Name, OptNameLess(*StrTable, PrefixesTable));
+      std::lower_bound(Start, End, Name, OptNameLess(StrTable, PrefixesTable));
 
   // Options are stored in sorted order, with '\0' at the end of the
   // alphabet. Since the only options which can accept a string must
@@ -463,7 +463,7 @@ std::unique_ptr<Arg> OptTable::internalParseOneArg(
     // Scan for first option which is a proper prefix.
     for (; Start != End; ++Start)
       if ((ArgSize =
-               matchOption(*StrTable, PrefixesTable, Start, Str, IgnoreCase)))
+               matchOption(StrTable, PrefixesTable, Start, Str, IgnoreCase)))
         break;
     if (Start == End)
       break;
@@ -819,7 +819,7 @@ void OptTable::internalPrintHelp(
             getHelpTextOffset(getInfo(Alias.getID()), VisibilityMask);
     }
 
-    if (StringRef HelpText = (*StrTable)[HelpTextOffset]; !HelpText.empty()) {
+    if (StringRef HelpText = StrTable[HelpTextOffset]; !HelpText.empty()) {
       StringRef HelpGroup = getOptionHelpGroup(*this, Id);
       const std::string &OptName = getOptionHelpName(*this, Id);
       GroupedOptionHelp[HelpGroup].push_back({OptName, HelpText});
