@@ -30,7 +30,7 @@
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <__cxx03/cwchar>
 #else
-#  include <__cxx03/__std_mbstate_t.h>
+#  include <wchar.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
