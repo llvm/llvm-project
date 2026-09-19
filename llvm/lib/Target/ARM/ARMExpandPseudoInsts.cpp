@@ -83,8 +83,8 @@ namespace {
                            MachineBasicBlock::iterator &MBBI);
     void CMSEClearGPRegs(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                         const SmallVectorImpl<unsigned> &ClearRegs,
-                         unsigned ClobberReg);
+                         const SmallVectorImpl<Register> &ClearRegs,
+                         Register ClobberReg);
     MachineBasicBlock &CMSEClearFPRegs(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI);
     MachineBasicBlock &CMSEClearFPRegsV8(MachineBasicBlock &MBB,
@@ -96,23 +96,23 @@ namespace {
     void CMSESaveClearFPRegs(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI, DebugLoc &DL,
                              const LivePhysRegs &LiveRegs,
-                             SmallVectorImpl<unsigned> &AvailableRegs);
+                             SmallVectorImpl<Register> &AvailableRegs);
     void CMSESaveClearFPRegsV8(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI, DebugLoc &DL,
                                const LivePhysRegs &LiveRegs,
-                               SmallVectorImpl<unsigned> &ScratchRegs);
+                               SmallVectorImpl<Register> &ScratchRegs);
     void CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI, DebugLoc &DL,
                                 const LivePhysRegs &LiveRegs);
     void CMSERestoreFPRegs(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-                           SmallVectorImpl<unsigned> &AvailableRegs);
+                           SmallVectorImpl<Register> &AvailableRegs);
     void CMSERestoreFPRegsV8(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-                             SmallVectorImpl<unsigned> &AvailableRegs);
+                             SmallVectorImpl<Register> &AvailableRegs);
     void CMSERestoreFPRegsV81(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-                              SmallVectorImpl<unsigned> &AvailableRegs);
+                              SmallVectorImpl<Register> &AvailableRegs);
     bool ExpandCMP_SWAP(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator MBBI, unsigned LdrexOp,
                         unsigned StrexOp, unsigned UxtOp,
@@ -522,7 +522,7 @@ static const NEONLdStTableEntry *LookupNEONLdSt(unsigned Opcode) {
 /// GetDSubRegs - Get 4 D subregisters of a Q, QQ, or QQQQ register,
 /// corresponding to the specified register spacing.  Not all of the results
 /// are necessarily valid, e.g., a Q register only has 2 D subregisters.
-static void GetDSubRegs(unsigned Reg, NEONRegSpacing RegSpc,
+static void GetDSubRegs(Register Reg, NEONRegSpacing RegSpc,
                         const TargetRegisterInfo *TRI, MCRegister &D0,
                         MCRegister &D1, MCRegister &D2, MCRegister &D3) {
   if (RegSpc == SingleSpc || RegSpc == SingleLowSpc) {
@@ -777,7 +777,7 @@ void ARMExpandPseudo::ExpandLaneOp(MachineBasicBlock::iterator &MBBI) {
   assert(Lane < RegElts && "out of range lane for VLD/VST-lane");
 
   MCRegister D0, D1, D2, D3;
-  unsigned DstReg = 0;
+  Register DstReg = 0;
   bool DstIsDead = false;
   if (TableEntry->IsLoad) {
     DstIsDead = MI.getOperand(OpIdx).isDead();
@@ -1171,8 +1171,8 @@ static const int CMSE_FP_SAVE_SIZE = 136;
 
 static void determineGPRegsToClear(const MachineInstr &MI,
                                    const std::initializer_list<unsigned> &Regs,
-                                   SmallVectorImpl<unsigned> &ClearRegs) {
-  SmallVector<unsigned, 4> OpRegs;
+                                   SmallVectorImpl<Register> &ClearRegs) {
+  SmallVector<Register, 4> OpRegs;
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg() || !Op.isUse())
       continue;
@@ -1186,21 +1186,21 @@ static void determineGPRegsToClear(const MachineInstr &MI,
 
 void ARMExpandPseudo::CMSEClearGPRegs(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    const DebugLoc &DL, const SmallVectorImpl<unsigned> &ClearRegs,
-    unsigned ClobberReg) {
+    const DebugLoc &DL, const SmallVectorImpl<Register> &ClearRegs,
+    Register ClobberReg) {
 
   if (STI->hasV8_1MMainlineOps()) {
     // Clear the registers using the CLRM instruction.
     MachineInstrBuilder CLRM =
         BuildMI(MBB, MBBI, DL, TII->get(ARM::t2CLRM)).add(predOps(ARMCC::AL));
-    for (unsigned R : ClearRegs)
+    for (Register R : ClearRegs)
       CLRM.addReg(R, RegState::Define);
     CLRM.addReg(ARM::APSR, RegState::Define);
     CLRM.addReg(ARM::CPSR, RegState::Define | RegState::Implicit);
   } else {
     // Clear the registers and flags by copying ClobberReg into them.
     // (Baseline can't do a high register clear in one instruction).
-    for (unsigned Reg : ClearRegs) {
+    for (Register Reg : ClearRegs) {
       if (Reg == ClobberReg)
         continue;
       BuildMI(MBB, MBBI, DL, TII->get(ARM::tMOVr), Reg)
@@ -1298,7 +1298,7 @@ ARMExpandPseudo::CMSEClearFPRegsV8(MachineBasicBlock &MBB,
       if (!Op.isReg())
         continue;
       Register Reg = Op.getReg();
-      if (Reg == ARM::NoRegister || Reg == ARM::LR)
+      if (!Reg.isValid() || Reg == ARM::LR)
         continue;
       assert(Reg.isPhysical() && "Unallocated register");
       ClearBB->addLiveIn(Reg);
@@ -1411,7 +1411,7 @@ ARMExpandPseudo::CMSEClearFPRegsV81(MachineBasicBlock &MBB,
 
 void ARMExpandPseudo::CMSESaveClearFPRegs(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-    const LivePhysRegs &LiveRegs, SmallVectorImpl<unsigned> &ScratchRegs) {
+    const LivePhysRegs &LiveRegs, SmallVectorImpl<Register> &ScratchRegs) {
   if (STI->hasV8_1MMainlineOps())
     CMSESaveClearFPRegsV81(MBB, MBBI, DL, LiveRegs);
   else if (STI->hasV8MMainlineOps())
@@ -1421,11 +1421,11 @@ void ARMExpandPseudo::CMSESaveClearFPRegs(
 // Save and clear FP registers if present
 void ARMExpandPseudo::CMSESaveClearFPRegsV8(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-    const LivePhysRegs &LiveRegs, SmallVectorImpl<unsigned> &ScratchRegs) {
+    const LivePhysRegs &LiveRegs, SmallVectorImpl<Register> &ScratchRegs) {
 
   // Store an available register for FPSCR clearing
   assert(!ScratchRegs.empty());
-  unsigned SpareReg = ScratchRegs.front();
+  Register SpareReg = ScratchRegs.front();
 
   // save space on stack for VLSTM
   BuildMI(MBB, MBBI, DL, TII->get(ARM::tSUBspi), ARM::SP)
@@ -1434,8 +1434,8 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
       .add(predOps(ARMCC::AL));
 
   // Use ScratchRegs to store the fp regs
-  std::vector<std::tuple<unsigned, unsigned, unsigned>> ClearedFPRegs;
-  std::vector<unsigned> NonclearedFPRegs;
+  std::vector<std::tuple<Register, Register, Register>> ClearedFPRegs;
+  std::vector<Register> NonclearedFPRegs;
   bool ReturnsFPReg = false;
   for (const MachineOperand &Op : MBBI->operands()) {
     if (Op.isReg() && Op.isUse()) {
@@ -1445,8 +1445,8 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
       assert(!ARM::QPRRegClass.contains(Reg));
       if (ARM::DPR_VFP2RegClass.contains(Reg)) {
         if (ScratchRegs.size() >= 2) {
-          unsigned SaveReg2 = ScratchRegs.pop_back_val();
-          unsigned SaveReg1 = ScratchRegs.pop_back_val();
+          Register SaveReg2 = ScratchRegs.pop_back_val();
+          Register SaveReg1 = ScratchRegs.pop_back_val();
           ClearedFPRegs.emplace_back(Reg, SaveReg1, SaveReg2);
 
           // Save the fp register to the normal registers
@@ -1460,8 +1460,8 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
         }
       } else if (ARM::SPRRegClass.contains(Reg)) {
         if (ScratchRegs.size() >= 1) {
-          unsigned SaveReg = ScratchRegs.pop_back_val();
-          ClearedFPRegs.emplace_back(Reg, SaveReg, 0);
+          Register SaveReg = ScratchRegs.pop_back_val();
+          ClearedFPRegs.emplace_back(Reg, SaveReg, Register());
 
           // Save the fp register to the normal registers
           BuildMI(MBB, MBBI, DL, TII->get(ARM::VMOVRS), SaveReg)
@@ -1534,7 +1534,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
 
   // Restore all arguments
   for (const auto &Regs : ClearedFPRegs) {
-    unsigned Reg, SaveReg1, SaveReg2;
+    Register Reg, SaveReg1, SaveReg2;
     std::tie(Reg, SaveReg1, SaveReg2) = Regs;
     if (ARM::DPR_VFP2RegClass.contains(Reg))
       BuildMI(MBB, MBBI, DL, TII->get(ARM::VMOVDRR), Reg)
@@ -1547,7 +1547,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
           .add(predOps(ARMCC::AL));
   }
 
-  for (unsigned Reg : NonclearedFPRegs) {
+  for (Register Reg : NonclearedFPRegs) {
     if (ARM::DPR_VFP2RegClass.contains(Reg)) {
       if (STI->isLittle()) {
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VLDRD), Reg)
@@ -1637,7 +1637,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTMSDB_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (unsigned Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
+    for (Register Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
       VPUSH.addReg(Reg);
 
     // Clear FP registers with a VSCCLRM.
@@ -1654,7 +1654,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV81(MachineBasicBlock &MBB,
 // Restore FP registers if present
 void ARMExpandPseudo::CMSERestoreFPRegs(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-    SmallVectorImpl<unsigned> &AvailableRegs) {
+    SmallVectorImpl<Register> &AvailableRegs) {
   if (STI->hasV8_1MMainlineOps())
     CMSERestoreFPRegsV81(MBB, MBBI, DL, AvailableRegs);
   else if (STI->hasV8MMainlineOps())
@@ -1663,16 +1663,16 @@ void ARMExpandPseudo::CMSERestoreFPRegs(
 
 void ARMExpandPseudo::CMSERestoreFPRegsV8(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-    SmallVectorImpl<unsigned> &AvailableRegs) {
+    SmallVectorImpl<Register> &AvailableRegs) {
 
   // Keep a scratch register for the mitigation sequence.
-  unsigned ScratchReg = ARM::NoRegister;
+  Register ScratchReg;
   if (STI->fixCMSE_CVE_2021_35465())
     ScratchReg = AvailableRegs.pop_back_val();
 
   // Use AvailableRegs to store the fp regs
-  std::vector<std::tuple<unsigned, unsigned, unsigned>> ClearedFPRegs;
-  std::vector<unsigned> NonclearedFPRegs;
+  std::vector<std::tuple<Register, Register, Register>> ClearedFPRegs;
+  std::vector<Register> NonclearedFPRegs;
   for (const MachineOperand &Op : MBBI->operands()) {
     if (Op.isReg() && Op.isDef()) {
       Register Reg = Op.getReg();
@@ -1681,8 +1681,8 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
       assert(!ARM::QPRRegClass.contains(Reg));
       if (ARM::DPR_VFP2RegClass.contains(Reg)) {
         if (AvailableRegs.size() >= 2) {
-          unsigned SaveReg2 = AvailableRegs.pop_back_val();
-          unsigned SaveReg1 = AvailableRegs.pop_back_val();
+          Register SaveReg2 = AvailableRegs.pop_back_val();
+          Register SaveReg1 = AvailableRegs.pop_back_val();
           ClearedFPRegs.emplace_back(Reg, SaveReg1, SaveReg2);
 
           // Save the fp register to the normal registers
@@ -1696,7 +1696,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
         }
       } else if (ARM::SPRRegClass.contains(Reg)) {
         if (AvailableRegs.size() >= 1) {
-          unsigned SaveReg = AvailableRegs.pop_back_val();
+          Register SaveReg = AvailableRegs.pop_back_val();
           ClearedFPRegs.emplace_back(Reg, SaveReg, 0);
 
           // Save the fp register to the normal registers
@@ -1716,7 +1716,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
     assert(STI->hasFPRegs() && "Subtarget needs fpregs");
 
   // Push FP regs that cannot be restored via normal registers on the stack
-  for (unsigned Reg : NonclearedFPRegs) {
+  for (Register Reg : NonclearedFPRegs) {
     if (ARM::DPR_VFP2RegClass.contains(Reg))
       BuildMI(MBB, MBBI, DL, TII->get(ARM::VSTRD))
           .addReg(Reg)
@@ -1774,7 +1774,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
 
   // Restore all FP registers via normal registers
   for (const auto &Regs : ClearedFPRegs) {
-    unsigned Reg, SaveReg1, SaveReg2;
+    Register Reg, SaveReg1, SaveReg2;
     std::tie(Reg, SaveReg1, SaveReg2) = Regs;
     if (ARM::DPR_VFP2RegClass.contains(Reg))
       BuildMI(MBB, MBBI, DL, TII->get(ARM::VMOVDRR), Reg)
@@ -1809,7 +1809,7 @@ static bool definesOrUsesFPReg(const MachineInstr &MI) {
 
 void ARMExpandPseudo::CMSERestoreFPRegsV81(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-    SmallVectorImpl<unsigned> &AvailableRegs) {
+    SmallVectorImpl<Register> & /*AvailableRegs*/) {
   if (!definesOrUsesFPReg(*MBBI)) {
     if (STI->fixCMSE_CVE_2021_35465()) {
       BuildMI(MBB, MBBI, DL, TII->get(ARM::VSCCLRMS))
@@ -1842,7 +1842,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
         BuildMI(MBB, MBBI, DL, TII->get(ARM::VLDMSIA_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (unsigned Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
+    for (Register Reg = ARM::S16; Reg <= ARM::S31; ++Reg)
       VPOP.addReg(Reg, RegState::Define);
   }
 }
@@ -2110,7 +2110,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
   if (Thumb1Only) { // push Lo and Hi regs separately
     MachineInstrBuilder PushMIB =
         BuildMI(MBB, MBBI, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
-    for (unsigned Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
+    for (Register Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
       PushMIB.addReg(
           Reg, getUndefRegState(Reg != JumpReg && !LiveRegs.contains(Reg)));
     }
@@ -2122,18 +2122,18 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
     // memory, and allow us to later pop them with a single instructions.
     // FIXME: Could also use any of r0-r3 that are free (including in the
     // first PUSH above).
-    for (unsigned LoReg = ARM::R7, HiReg = ARM::R11; LoReg >= ARM::R4;
+    for (Register LoReg = ARM::R7, HiReg = ARM::R11; LoReg >= ARM::R4;
          --LoReg) {
       if (JumpReg == LoReg)
         continue;
-      BuildMI(MBB, MBBI, DL, TII.get(ARM::tMOVr), LoReg)
+      BuildMI(MBB, MBBI, DL, TII.get(ARM::tMOVr), Register(LoReg))
           .addReg(HiReg, getUndefRegState(!LiveRegs.contains(HiReg)))
           .add(predOps(ARMCC::AL));
       --HiReg;
     }
     MachineInstrBuilder PushMIB2 =
         BuildMI(MBB, MBBI, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
-    for (unsigned Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
+    for (Register Reg = ARM::R4; Reg < ARM::R8; ++Reg) {
       if (Reg == JumpReg)
         continue;
       PushMIB2.addReg(Reg, RegState::Kill);
@@ -2156,7 +2156,7 @@ static void CMSEPushCalleeSaves(const TargetInstrInfo &TII,
         BuildMI(MBB, MBBI, DL, TII.get(ARM::t2STMDB_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (unsigned Reg = ARM::R4; Reg < ARM::R12; ++Reg) {
+    for (Register Reg = ARM::R4; Reg < ARM::R12; ++Reg) {
       PushMIB.addReg(
           Reg, getUndefRegState(Reg != JumpReg && !LiveRegs.contains(Reg)));
     }
@@ -2186,7 +2186,7 @@ static void CMSEPopCalleeSaves(const TargetInstrInfo &TII,
         BuildMI(MBB, MBBI, DL, TII.get(ARM::t2LDMIA_UPD), ARM::SP)
             .addReg(ARM::SP)
             .add(predOps(ARMCC::AL));
-    for (unsigned Reg = ARM::R4; Reg < ARM::R12; ++Reg)
+    for (Register Reg = ARM::R4; Reg < ARM::R12; ++Reg)
       PopMIB.addReg(Reg, RegState::Define);
   }
 }
@@ -2366,7 +2366,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       assert(llvm::all_of(MBBI->operands(), [](const MachineOperand &Op) {
         return !Op.isReg() || Op.getReg() != ARM::R12;
       }));
-      SmallVector<unsigned, 5> ClearRegs;
+      SmallVector<Register, 5> ClearRegs;
       determineGPRegsToClear(
           *MBBI, {ARM::R0, ARM::R1, ARM::R2, ARM::R3, ARM::R12}, ClearRegs);
       CMSEClearGPRegs(AfterBB, AfterBB.end(), MBBI->getDebugLoc(), ClearRegs,
@@ -2399,7 +2399,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       CMSEPushCalleeSaves(*TII, MBB, MBBI, JumpReg, LiveRegs,
                           AFI->isThumb1OnlyFunction());
 
-      SmallVector<unsigned, 16> ClearRegs;
+      SmallVector<Register, 16> ClearRegs;
       determineGPRegsToClear(*MBBI,
                              {ARM::R0, ARM::R1, ARM::R2, ARM::R3, ARM::R4,
                               ARM::R5, ARM::R6, ARM::R7, ARM::R8, ARM::R9,
@@ -2409,7 +2409,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       // Get the first cleared register as a scratch (to use later with tBIC).
       // We need to use the first so we can ensure it is a low register.
-      unsigned ScratchReg = ClearRegs.front();
+      Register ScratchReg = ClearRegs.front();
 
       // Clear LSB of JumpReg
       if (AFI->isThumb2Function()) {

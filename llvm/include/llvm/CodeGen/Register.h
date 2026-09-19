@@ -159,6 +159,18 @@ public:
     Reg += RHS;
     return *this;
   }
+
+  Register &operator--() {
+    assert(isValid());
+    --Reg;
+    return *this;
+  }
+
+  Register operator--(int) {
+    Register R(*this);
+    --(*this);
+    return R;
+  }
 };
 
 // Provide DenseMapInfo for Register

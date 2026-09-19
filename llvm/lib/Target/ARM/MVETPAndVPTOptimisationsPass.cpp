@@ -197,7 +197,7 @@ static void RevertWhileLoopSetup(MachineInstr *MI, const TargetInstrInfo *TII) {
   MIB.add(MI->getOperand(1));
   MIB.addImm(0);
   MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::NoRegister);
+  MIB.addReg(Register());
   MIB.addReg(ARM::CPSR, RegState::Define);
 
   // Attempt to find a t2WhileLoopStart and revert to a t2Bcc.
