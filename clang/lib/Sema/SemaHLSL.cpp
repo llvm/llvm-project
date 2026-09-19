@@ -4860,6 +4860,79 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                                getASTContext().UnsignedIntTy);
     break;
   }
+  case Builtin::BI__builtin_hlsl_pack_u8: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    const auto *VecTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VecTy) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* unsigned integer */ 3 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    QualType ElementTy = VecTy->getElementType();
+    if (!ElementTy->isUnsignedIntegerType() ||
+        SemaRef.Context.getTypeSize(ElementTy) == 64 ||
+        VecTy->getNumElements() != 4) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* unsigned integer */ 3 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    TheCall->setType(getASTContext().UInt8_4PackedTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_pack_clamp_u8: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    const auto *VecTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VecTy) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* signed integer */ 2 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    QualType ElementTy = VecTy->getElementType();
+    if (!ElementTy->isSignedIntegerType() ||
+        SemaRef.Context.getTypeSize(ElementTy) == 64 ||
+        VecTy->getNumElements() != 4) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* signed integer */ 2 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    TheCall->setType(getASTContext().UInt8_4PackedTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_pack_s8:
+  case Builtin::BI__builtin_hlsl_pack_clamp_s8: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    const auto *VecTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VecTy) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* signed integer */ 2 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    QualType ElementTy = VecTy->getElementType();
+    if (!ElementTy->isSignedIntegerType() ||
+        SemaRef.Context.getTypeSize(ElementTy) == 64 ||
+        VecTy->getNumElements() != 4) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 << /* vector of */ 4 << /* signed integer */ 2 << /* no fp */ 0
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+    TheCall->setType(getASTContext().Int8_4PackedTy);
+    break;
+  }
   }
   return false;
 }
@@ -5182,6 +5255,15 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
       return false;
   }
   return true;
+}
+
+bool SemaHLSL::CanPerformPackedToUintCast(Expr *Src, QualType DestTy) {
+  QualType SrcTy = Src->getType();
+  if (SrcTy->isHLSLBuiltinPackedType()) {
+    if (DestTy->isScalarType() || DestTy->isHLSLBuiltinPackedType())
+      return true;
+  }
+  return false;
 }
 
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {

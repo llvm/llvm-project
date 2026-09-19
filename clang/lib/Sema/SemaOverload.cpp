@@ -196,6 +196,7 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_Conversion,
       ICR_HLSL_Scalar_Widening,
       ICR_HLSL_Scalar_Widening,
+      ICR_HLSL_Dimension_Reduction,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
@@ -260,6 +261,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Non-decaying array conversion",
       "HLSL vector splat",
       "HLSL matrix splat",
+      "HLSL packed type conversion",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -2345,6 +2347,37 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
   return false;
 }
 
+static bool IsHLSLPackedTypeConversion(Sema &S, QualType FromType,
+                                       QualType ToType,
+                                       ImplicitConversionKind &ICK,
+                                       ImplicitConversionKind &DimensionICK,
+                                       Expr *From) {
+  if (!S.getLangOpts().HLSL || !FromType->isHLSLBuiltinPackedType())
+    return false;
+  if (S.Context.hasSameUnqualifiedType(FromType, ToType))
+    return false;
+
+  if (ToType->isHLSLBuiltinPackedType()) {
+    ICK = ICK_Integral_Conversion;
+    DimensionICK = ICK_Identity;
+    return true;
+  }
+
+  if (!ToType->isScalarType())
+    return false;
+
+  QualType UIntTy = S.Context.UnsignedIntTy;
+  DimensionICK = ICK_HLSL_Packed_Type_Conversion;
+
+  // Already converting to uint, don't need to do anything else
+  if (S.Context.hasSameUnqualifiedType(UIntTy, ToType))
+    return true;
+
+  // We can reuse IsVectorOrMatrixElementConversion to handle uint to
+  // float/integral/boolean conversion and promotion
+  return IsVectorOrMatrixElementConversion(S, UIntTy, ToType, ICK, From);
+}
+
 static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
                                 bool InOverloadResolution,
                                 StandardConversionSequence &SCS,
@@ -2609,6 +2642,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     FromType = ToType.getUnqualifiedType();
   } else if (IsMatrixConversion(S, FromType, ToType, SecondICK, DimensionICK,
                                 From, InOverloadResolution, CStyle)) {
+    SCS.Second = SecondICK;
+    SCS.Dimension = DimensionICK;
+    FromType = ToType.getUnqualifiedType();
+  } else if (IsHLSLPackedTypeConversion(S, FromType, ToType, SecondICK,
+                                        DimensionICK, From)) {
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
     FromType = ToType.getUnqualifiedType();
@@ -6497,6 +6535,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
   case ICK_HLSL_Array_RValue:
+  case ICK_HLSL_Packed_Type_Conversion:
     llvm_unreachable("found a first conversion kind in Second");
 
   case ICK_Function_Conversion:

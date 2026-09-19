@@ -1705,6 +1705,30 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                    ArrayRef<Value *>{Op0}, nullptr,
                                    "hlsl.ddy.fine");
   }
+  case Builtin::BI__builtin_hlsl_pack_u8: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getPackU8Intrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Builder.getInt32Ty(), ID,
+                                   {Op0}, nullptr, "hlsl.pack.u8");
+  }
+  case Builtin::BI__builtin_hlsl_pack_s8: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getPackS8Intrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Builder.getInt32Ty(), ID,
+                                   {Op0}, nullptr, "hlsl.pack.s8");
+  }
+  case Builtin::BI__builtin_hlsl_pack_clamp_u8: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getPackClampU8Intrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Builder.getInt32Ty(), ID,
+                                   {Op0}, nullptr, "hlsl.pack.clamp.u8");
+  }
+  case Builtin::BI__builtin_hlsl_pack_clamp_s8: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getPackClampS8Intrinsic();
+    return Builder.CreateIntrinsic(/*ReturnType=*/Builder.getInt32Ty(), ID,
+                                   {Op0}, nullptr, "hlsl.pack.clamp.s8");
+  }
   case Builtin::BI__builtin_get_spirv_spec_constant_bool:
   case Builtin::BI__builtin_get_spirv_spec_constant_short:
   case Builtin::BI__builtin_get_spirv_spec_constant_ushort:

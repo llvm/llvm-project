@@ -485,6 +485,8 @@ private:
                    MachineInstr &I) const;
   bool selectDerivativeInst(Register ResVReg, SPIRVTypeInst ResType,
                             MachineInstr &I, const unsigned DPdOpCode) const;
+  bool selectPackInst(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
+                      const bool Signed, const bool Clamp) const;
   // Utilities
   Register buildI32Constant(uint32_t Val, MachineInstr &I,
                             SPIRVTypeInst ResType = nullptr) const;
@@ -5254,6 +5256,51 @@ bool SPIRVInstructionSelector::selectDerivativeInst(
   return true;
 }
 
+bool SPIRVInstructionSelector::selectPackInst(Register ResVReg,
+                                              SPIRVTypeInst ResType,
+                                              MachineInstr &I,
+                                              const bool Signed,
+                                              const bool Clamp) const {
+  MachineIRBuilder MIRBuilder(I);
+  Register SrcReg = I.getOperand(2).getReg();
+  SPIRVTypeInst SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+
+  // pack_clamp_ instructions require SClamp before performing SConvert
+  // limits are determined by if the pack_clamp is signed or not
+  if (Clamp) {
+    const unsigned ElemWidth = GR.getScalarOrVectorBitWidth(SrcType);
+    APInt Lower =
+        Signed ? APInt(ElemWidth, -128, true) : APInt::getZero(ElemWidth);
+    APInt Upper =
+        Signed ? APInt(ElemWidth, 127, true) : APInt(ElemWidth, 255, true);
+    bool ZeroAsNull = !STI.isShader();
+    Register LowerLimit =
+        GR.getOrCreateConstVector(Lower, I, SrcType, TII, ZeroAsNull);
+    Register UpperLimit =
+        GR.getOrCreateConstVector(Upper, I, SrcType, TII, ZeroAsNull);
+
+    Register ClampedReg = MRI->createVirtualRegister(GR.getRegClass(SrcType));
+    // Regardless of if we are using pack_clamp_u8 or pack_clamp_s8 we want to
+    // generate a signed clamp
+    if (!selectExtInst(ClampedReg, SrcType, I, CL::s_clamp, GL::SClamp,
+                       /*setMIFlags=*/true, /*useMISrc=*/false,
+                       {SrcReg, LowerLimit, UpperLimit}))
+      return false;
+    SrcReg = ClampedReg;
+  }
+
+  // Narrow to an i8 vector, then bitcast. Convert sign doesn't matter here
+  SPIRVTypeInst I8Type = GR.getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  SPIRVTypeInst I8x4Type =
+      GR.getOrCreateSPIRVVectorType(I8Type, 4, MIRBuilder, true);
+  Register I8x4Reg = MRI->createVirtualRegister(GR.getRegClass(I8x4Type));
+  auto ConvertOpcode = Signed ? SPIRV::OpSConvert : SPIRV::OpUConvert;
+  if (!selectOpWithSrcs(I8x4Reg, I8x4Type, I, {SrcReg}, ConvertOpcode))
+    return false;
+
+  return selectOpWithSrcs(ResVReg, ResType, I, {I8x4Reg}, SPIRV::OpBitcast);
+}
+
 bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                SPIRVTypeInst ResType,
                                                MachineInstr &I) const {
@@ -5842,6 +5889,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
   }
+  case Intrinsic::spv_pack_u8:
+  case Intrinsic::spv_pack_s8:
+    // For non-clamp packs the sign is meaningless
+    return selectPackInst(ResVReg, ResType, I, false, false);
+  case Intrinsic::spv_pack_clamp_u8:
+    return selectPackInst(ResVReg, ResType, I, false, true);
+  case Intrinsic::spv_pack_clamp_s8:
+    return selectPackInst(ResVReg, ResType, I, true, true);
   default:
     return diagnoseUnsupported(I, "intrinsic selection not implemented.");
   }

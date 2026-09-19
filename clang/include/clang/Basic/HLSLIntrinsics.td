@@ -65,6 +65,8 @@ def IntTy    : HLSLType<"int">;
 def UIntTy   : HLSLType<"uint">;
 def Int64Ty  : HLSLType<"int64_t">;
 def UInt64Ty : HLSLType<"uint64_t">;
+def Int8PackedTy : HLSLType<"int8_t4_packed">;
+def UInt8PackedTy : HLSLType<"uint8_t4_packed">;
 
 //===----------------------------------------------------------------------===//
 // Element type groups
@@ -1921,4 +1923,40 @@ the specified wave.
   let IsConvergent = 1;
   let Availability = SM6_0;
   let VaryingMatDims = [];
+}
+
+def hlsl_pack_u8 : HLSLOneArgBuiltin<"pack_u8", "__builtin_hlsl_pack_u8"> {
+  let VaryingTypes = [UInt16Ty, UIntTy];
+  let VaryingScalar = 0;
+  let VaryingVecSizes = [4];
+  let VaryingMatDims = [];
+  let ReturnType = UInt8PackedTy;
+  let Availability = SM6_6;
+}
+
+def hlsl_pack_s8 : HLSLOneArgBuiltin<"pack_s8", "__builtin_hlsl_pack_s8"> {
+  let VaryingTypes = [Int16Ty, IntTy];
+  let VaryingScalar = 0;
+  let VaryingVecSizes = [4];
+  let VaryingMatDims = [];
+  let ReturnType = Int8PackedTy;
+  let Availability = SM6_6;
+}
+
+def hlsl_pack_clamp_u8 : HLSLOneArgBuiltin<"pack_clamp_u8", "__builtin_hlsl_pack_clamp_u8"> {
+  let VaryingTypes = [Int16Ty, IntTy];
+  let VaryingScalar = 0;
+  let VaryingVecSizes = [4];
+  let VaryingMatDims = [];
+  let ReturnType = UInt8PackedTy;
+  let Availability = SM6_6;
+}
+
+def hlsl_pack_clamp_s8 : HLSLOneArgBuiltin<"pack_clamp_s8", "__builtin_hlsl_pack_clamp_s8"> {
+  let VaryingTypes = [Int16Ty, IntTy];
+  let VaryingScalar = 0;
+  let VaryingVecSizes = [4];
+  let VaryingMatDims = [];
+  let ReturnType = Int8PackedTy;
+  let Availability = SM6_6;
 }
