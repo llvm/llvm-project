@@ -15,12 +15,17 @@ These nonportable internal links should warn:
 [project-target]: project:target.md#target-document
 [html-target]: target.html#target-document
 
+:::{note}
+[A project link in Markdown directive content](project:rest.rst)
+:::
+
 These links should not warn:
 
 - [another project](https://other.example.test/docs/target.html)
 - [a nonexistent document](https://example.test/docs/missing.html)
 - [a non-document page](https://example.test/docs/downloads/package.tar.xz)
 - [source document](target.md)
+- [reStructuredText source document](rest.rst)
 - [source heading](target.md#target-section)
 - [same-document heading](#markdown-absolute-link-tests)
 - [an HTML file that is not a document](static.html)
