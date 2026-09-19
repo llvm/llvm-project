@@ -18,6 +18,8 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -56,6 +58,10 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // Default FP mode for the current function.
   SIModeRegisterDefaults Mode;
 
+  // Over budget fragments per constant, counted before selection drops use
+  // edges. Keyed by value: the DAG recycles node memory.
+  DenseMap<const ConstantInt *, unsigned> SharedConstantUses;
+
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.
   bool fp16SrcZerosHighBits(unsigned Opc) const;
@@ -88,6 +94,17 @@ private:
   bool isInlineImmediate(const APFloat &Imm) const {
     return Subtarget->getInstrInfo()->isInlineConstant(Imm);
   }
+
+  // Conservative proxy for an SGPR read: uniform values can land in VGPRs too.
+  bool usesConstantBus(SDValue Op) const {
+    return !Op->isDivergent() && !isInlineImmediate(Op.getNode());
+  }
+
+  void matchLoadD16FromBuildVectors();
+  void computeSharedConstantUses();
+  bool fitsConstantBusLimit(ArrayRef<SDValue> Ops) const;
+  bool checkThreeOpFragConstantBus(const SDNode *N,
+                                   ArrayRef<SDValue> Ops) const;
 
   bool isVGPRImm(const SDNode *N) const;
   bool isUniformLoad(const SDNode *N) const;
