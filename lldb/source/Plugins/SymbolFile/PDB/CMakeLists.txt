@@ -6,6 +6,10 @@ lldb_tablegen(SymbolFilePDBPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE SymbolFilePDBProperties.td
   TARGET LLDBPluginSymbolFilePDBPropertiesEnumGen)
 
+lldb_tablegen(SymbolFilePDBEnums.inc -gen-lldb-option-enum-defs
+  SOURCE SymbolFilePDBEnums.td
+  TARGET LLDBPluginSymbolFilePDBEnumsGen)
+
 lldb_tablegen(SymbolFilePDBProperties.json -dump-json
   SOURCE SymbolFilePDBProperties.td
   TARGET LLDBPluginSymbolFilePDBPropertiesJsonGen)
@@ -31,4 +35,5 @@ add_lldb_library(lldbPluginSymbolFilePDB PLUGIN
 
 add_dependencies(lldbPluginSymbolFilePDB
   LLDBPluginSymbolFilePDBPropertiesGen
-  LLDBPluginSymbolFilePDBPropertiesEnumGen)
+  LLDBPluginSymbolFilePDBPropertiesEnumGen
+  LLDBPluginSymbolFilePDBEnumsGen)

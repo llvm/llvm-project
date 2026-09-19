@@ -6,6 +6,14 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
+lldb_tablegen(ProcessEnums.inc -gen-lldb-option-enum-defs
+  SOURCE ProcessEnums.td
+  TARGET LLDBProcessEnumsGen)
+
+lldb_tablegen(TargetEnums.inc -gen-lldb-option-enum-defs
+  SOURCE TargetEnums.td
+  TARGET LLDBTargetEnumsGen)
+
 lldb_tablegen(TargetProperties.json -dump-json
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesJsonGen)
@@ -108,4 +116,6 @@ add_lldb_library(lldbTarget
 
 add_dependencies(lldbTarget
   LLDBTargetPropertiesGen
-  LLDBTargetPropertiesEnumGen)
+  LLDBTargetPropertiesEnumGen
+  LLDBProcessEnumsGen
+  LLDBTargetEnumsGen)
