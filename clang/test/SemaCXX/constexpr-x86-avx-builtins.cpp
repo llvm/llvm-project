@@ -12,7 +12,7 @@ namespace Inexact {
 constexpr __m256d a = { 1.0000000000000002, 0.0, 0.0, 0.0 };
 constexpr __m128 r = _mm256_cvtpd_ps(a);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@avxintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@avxintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm256_cvtpd_ps({1.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00})'}}
 }
 }
