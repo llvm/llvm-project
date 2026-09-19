@@ -7348,6 +7348,19 @@ bool AMDGPUInstructionSelector::selectSGetBarrierState(
   return true;
 }
 
+/// Return the barrier ID for \p BarOp if it's statically known, mapping poison
+/// to 0 and making off the high bits.
+static std::optional<uint32_t>
+getConstantNamedBarrierNumber(const MachineOperand &BarOp,
+                              const MachineRegisterInfo &MRI) {
+  Register BarReg = BarOp.getReg();
+  if (std::optional<int64_t> BarValImm = getIConstantVRegSExtVal(BarReg, MRI))
+    return *BarValImm & 0x3F;
+  if (getOpcodeDef(AMDGPU::G_IMPLICIT_DEF, BarReg, MRI))
+    return 0;
+  return std::nullopt;
+}
+
 unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
   if (HasInlineConst) {
     switch (IntrID) {
@@ -7387,12 +7400,9 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
     std::optional<int64_t> CntImm =
         getIConstantVRegSExtVal(CntOp.getReg(), *MRI);
     if (CntImm && *CntImm == 0) {
-      std::optional<int64_t> BarValImm =
-          getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
-      if (BarValImm) {
-        uint32_t BarID = *BarValImm & 0x3F;
+      if (auto BarID = getConstantNamedBarrierNumber(BarOp, *MRI)) {
         BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
-            .addImm(BarID);
+            .addImm(*BarID);
         I.eraseFromParent();
         return true;
       }
@@ -7447,8 +7457,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   MachineOperand BarOp = IntrID == Intrinsic::amdgcn_s_get_named_barrier_state
                              ? I.getOperand(2)
                              : I.getOperand(1);
-  std::optional<int64_t> BarValImm =
-      getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
+  std::optional<uint32_t> BarValImm =
+      getConstantNamedBarrierNumber(BarOp, *MRI);
 
   if (!BarValImm) {
     // BarID = BarOp & 0x3F
@@ -7476,10 +7486,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
     MIB.addDef(DstReg);
   }
 
-  if (BarValImm) {
-    uint32_t BarId = *BarValImm & 0x3F;
-    MIB.addImm(BarId);
-  }
+  if (BarValImm)
+    MIB.addImm(*BarValImm);
 
   I.eraseFromParent();
   return true;
