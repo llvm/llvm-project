@@ -438,7 +438,7 @@ define amdgpu_kernel void @negative_wide_offset_across_block(ptr addrspace(1) %p
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %ze = zext i32 %id to i64
-  %z = mul i64 %w, %zee
+  %z = mul i64 %w, %ze
   store i64 %z, ptr addrspace(1) %q
   %c = icmp sgt i32 %n, 0
   br i1 %c, label %then, label %exit
