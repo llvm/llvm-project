@@ -8,7 +8,7 @@ entry:
 ; CHECK-NEXT:  [[FUNC_BEGIN:.L.*]]:
 ; CHECK-NEXT: .cfi_startproc
 ; CHECK:      .cfi_lsda 3, [[EXCEPTION_LABEL:.L[^ ]*]]
-; CHECK:      pushq %rbp
+; CHECK:      pushq %rax
 
 ; Unfortunately, hardcode the name of the label that begins the patchpoint:
 ; CHECK:      .Ltmp0:

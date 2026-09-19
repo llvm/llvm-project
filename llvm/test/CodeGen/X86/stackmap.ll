@@ -53,7 +53,7 @@
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _directFrameIdx
-; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 40
 ; CHECK-NEXT:   .quad 2
 ; CHECK-NEXT:   .quad _longid
 ; CHECK-NEXT:   .quad 8
@@ -353,12 +353,12 @@ entry:
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .short 17
 ;
-; Check that at least one is a spilled entry from RBP.
-; Location: Indirect RBP + ...
+; Check that at least one is a spilled entry from RSP.
+; Location: Indirect RSP + ...
 ; CHECK:        .byte 3
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
-; CHECK-NEXT:   .short 6
+; CHECK-NEXT:   .short 7
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long
 define void @spilledValue(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16) {
@@ -375,11 +375,11 @@ entry:
 ; CHECK-NEXT:   .short 1
 ;
 ; Check that the subregister operand is a 4-byte spill.
-; Location: Indirect, 4-byte, RBP + ...
+; Location: Indirect, 4-byte, RSP + ...
 ; CHECK:        .byte 3
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 4
-; CHECK-NEXT:   .short 6
+; CHECK-NEXT:   .short 7
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long
 define void @spillSubReg(i64 %arg, i1 %arg2) #0 {
@@ -470,11 +470,11 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .short 0
 ; 1 location
 ; CHECK-NEXT:   .short	1
-; Loc 0: Direct RBP - ofs
+; Loc 0: Direct RSP + ofs
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte	0
 ; CHECK-NEXT:   .short	8
-; CHECK-NEXT:   .short	6
+; CHECK-NEXT:   .short	7
 ; CHECK-NEXT:   .short	0
 ; CHECK-NEXT:   .long
 
@@ -483,18 +483,18 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .short	0
 ; 2 locations
 ; CHECK-NEXT:   .short	2
-; Loc 0: Direct RBP - ofs
+; Loc 0: Direct RSP + ofs
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte	0
 ; CHECK-NEXT:   .short	8
-; CHECK-NEXT:   .short	6
+; CHECK-NEXT:   .short	7
 ; CHECK-NEXT:   .short	0
 ; CHECK-NEXT:   .long
-; Loc 1: Direct RBP - ofs
+; Loc 1: Direct RSP + ofs
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
-; CHECK-NEXT:   .short	6
+; CHECK-NEXT:   .short	7
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long
 define void @directFrameIdx() {
@@ -536,13 +536,13 @@ entry:
 ; CHECK-NEXT:   .short 0
 ; 1 location
 ; CHECK-NEXT:   .short 1
-; Loc 0: Indirect fp - offset
+; Loc 0: Indirect sp + offset
 ; CHECK-NEXT:   .byte   3
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  4
-; CHECK-NEXT:   .short  6
+; CHECK-NEXT:   .short  7
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   -{{[0-9]+}}
+; CHECK-NEXT:   .long   4
 define void @clobberScratch(i32 %a) {
   tail call void asm sideeffect "nop", "~{ax},~{bx},~{cx},~{dx},~{bp},~{si},~{di},~{r8},~{r9},~{r10},~{r12},~{r13},~{r14},~{r15}"() nounwind
   tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64 16, i32 8, i32 %a)
@@ -602,16 +602,16 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
-; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  7
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   -{{.*}}
+; CHECK-NEXT:   .long   12
 ; Loc 4: double on stack
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
-; CHECK-NEXT:   .short  {{.*}}
+; CHECK-NEXT:   .short  7
 ; CHECK-NEXT:   .short  0
-; CHECK-NEXT:   .long   -{{.*}}
+; CHECK-NEXT:   .long   16
 define void @floats(float %f, double %g) {
   %ff = alloca float
   %gg = alloca double

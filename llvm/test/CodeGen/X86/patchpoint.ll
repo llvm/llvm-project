@@ -41,9 +41,9 @@ entry:
 ; as a leaf function.
 ;
 ; CHECK-LABEL: caller_meta_leaf
-; CHECK: subq $32, %rsp
+; CHECK: subq $24, %rsp
 ; CHECK: Ltmp
-; CHECK: addq $32, %rsp
+; CHECK: addq $24, %rsp
 ; CHECK: ret
 define void @caller_meta_leaf() {
 entry:

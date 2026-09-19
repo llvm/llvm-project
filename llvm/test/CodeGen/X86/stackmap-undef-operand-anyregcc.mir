@@ -30,11 +30,14 @@
 # CHECK-NEXT: .long	0
 # CHECK-NEXT: .p2align	3, 0x0
 # CHECK-NEXT: .short	0
-# CHECK-NEXT: .short	7
+# CHECK-NEXT: .short	8
 # CHECK-NEXT: .short	0
 # CHECK-NEXT: .byte	0
 # CHECK-NEXT: .byte	8
 # CHECK-NEXT: .short	3
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .short	6
 # CHECK-NEXT: .byte	0
 # CHECK-NEXT: .byte	8
 # CHECK-NEXT: .short	7
