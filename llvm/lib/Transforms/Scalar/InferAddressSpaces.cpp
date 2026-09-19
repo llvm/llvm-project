@@ -1463,7 +1463,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
 
   User *CurUser = U.getUser();
 
-  unsigned AddrSpace = V->getType()->getPointerAddressSpace();
+  unsigned AddrSpace = NewV->getType()->getPointerAddressSpace();
   if (replaceIfSimplePointerUse(*TTI, CurUser, AddrSpace, V, NewV))
     return;
 
