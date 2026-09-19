@@ -148,7 +148,8 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
   case AArch64::BLRAB:
   case AArch64::BLRABZ:
     // Authenticated branches/calls expand to 3 instructions (authenticate +
-    // guard + branch), plus up to 1 instruction for a flushed deferred LR guard.
+    // guard + branch), plus up to 1 instruction for a flushed deferred LR
+    // guard.
     return 16;
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
