@@ -20,6 +20,19 @@ library.
 The following environment variables can affect the behavior of
 Fortran programs during execution.
 
+Some of them also control runtime code that executes on an offload device
+(for example, `FLANG_RT_COPYOUT_MODIFIED_ONLY` affects copy-out performed
+in device code). The runtime reads the variables on the host at program
+startup, and — when Flang-RT is built with device offload support — CUDA
+Fortran program initialization mirrors the resulting settings into the
+device image, so such a variable has the same effect in device code as on
+the host. The command line and the host environment table (`argc`, `argv`,
+`envp`) are deliberately not mirrored: they are host memory and have no
+meaning on the device. An offload runtime that loads the device image
+through the CUDA driver API instead must mirror the settings itself when
+it loads the image; otherwise the device copy of the execution environment
+stays at its default values.
+
 ## `DEFAULT_UTF8=1`
 
 Set `DEFAULT_UTF8` to cause formatted external input to assume UTF-8
