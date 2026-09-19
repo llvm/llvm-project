@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <cassert>
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
 
@@ -74,26 +73,34 @@ struct OptNameLess {
 
 OptSpecifier::OptSpecifier(const Option *Opt) : ID(Opt->getID()) {}
 
-OptTable::OptTable(const StringTable &StrTable,
-                   ArrayRef<StringTable::Offset> PrefixesTable,
-                   ArrayRef<Info> OptionInfos, bool IgnoreCase,
-                   ArrayRef<SubCommand> SubCommands,
-                   ArrayRef<unsigned> SubCommandIDsTable)
-    : StrTable(&StrTable), PrefixesTable(PrefixesTable),
-      OptionInfos(OptionInfos), IgnoreCase(IgnoreCase),
-      SubCommands(SubCommands), SubCommandIDsTable(SubCommandIDsTable) {
-  // Explicitly zero initialize the error to work around a bug in array
-  // value-initialization on MinGW with gcc 4.3.5.
+OptTable::OptTable(const Tables &T, bool IgnoreCase)
+    : StrTable(&T.StrTable), PrefixesTable(T.PrefixesTable),
+      OptionInfos(T.Infos), IgnoreCase(IgnoreCase), SubCommands(T.SubCommands),
+      SubCommandIDsTable(T.SubCommandIDs),
+      HelpTextVariantsTable(T.HelpTextVariants) {
+  // Each prefix set in PrefixesTable starts with its size.
+  for (unsigned I = 0, E = PrefixesTable.size(); I != E;) {
+    unsigned Size = PrefixesTable[I++].value();
+    for (unsigned J = 0; J != Size; ++J) {
+      StringRef Prefix = (*StrTable)[PrefixesTable[I++]];
+      if (is_contained(PrefixesUnion, Prefix))
+        continue;
+      PrefixesUnion.push_back(Prefix);
+      for (char C : Prefix)
+        if (!is_contained(PrefixChars, C))
+          PrefixChars.push_back(C);
+    }
+  }
 
   // Find start of normal options.
   for (unsigned i = 0, e = getNumOptions(); i != e; ++i) {
     unsigned Kind = getInfo(i + 1).Kind;
     if (Kind == Option::InputClass) {
       assert(!InputOptionID && "Cannot have multiple input options!");
-      InputOptionID = getInfo(i + 1).ID;
+      InputOptionID = i + 1;
     } else if (Kind == Option::UnknownClass) {
       assert(!UnknownOptionID && "Cannot have multiple unknown options!");
-      UnknownOptionID = getInfo(i + 1).ID;
+      UnknownOptionID = i + 1;
     } else if (Kind != Option::GroupClass) {
       FirstSearchableIndex = i;
       break;
@@ -113,24 +120,13 @@ OptTable::OptTable(const StringTable &StrTable,
 
   // Check that options are in order.
   for (unsigned i = FirstSearchableIndex + 1, e = getNumOptions(); i != e; ++i){
-    if (!(OptNameLess(StrTable, PrefixesTable)(getInfo(i), getInfo(i + 1)))) {
+    if (!(OptNameLess(*StrTable, PrefixesTable)(getInfo(i), getInfo(i + 1)))) {
       getOption(i).dump();
       getOption(i + 1).dump();
       llvm_unreachable("Options are not in order!");
     }
   }
 #endif
-}
-
-void OptTable::buildPrefixChars() {
-  assert(PrefixChars.empty() && "rebuilding a non-empty prefix char");
-
-  // Build prefix chars.
-  for (StringRef Prefix : PrefixesUnion) {
-    for (char C : Prefix)
-      if (!is_contained(PrefixChars, C))
-        PrefixChars.push_back(C);
-  }
 }
 
 OptTable::~OptTable() = default;
@@ -837,20 +833,4 @@ void OptTable::internalPrintHelp(
   }
 
   OS.flush();
-}
-
-GenericOptTable::GenericOptTable(const StringTable &StrTable,
-                                 ArrayRef<StringTable::Offset> PrefixesTable,
-                                 ArrayRef<Info> OptionInfos, bool IgnoreCase,
-                                 ArrayRef<SubCommand> SubCommands,
-                                 ArrayRef<unsigned> SubCommandIDsTable)
-    : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
-               SubCommandIDsTable) {
-
-  std::set<StringRef> TmpPrefixesUnion;
-  for (auto const &Info : OptionInfos.drop_front(FirstSearchableIndex))
-    for (auto PrefixOffset : Info.getPrefixOffsets(PrefixesTable))
-      TmpPrefixesUnion.insert(StrTable[PrefixOffset]);
-  PrefixesUnion.append(TmpPrefixesUnion.begin(), TmpPrefixesUnion.end());
-  buildPrefixChars();
 }
