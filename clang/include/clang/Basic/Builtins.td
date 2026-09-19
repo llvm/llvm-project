@@ -4056,7 +4056,6 @@ def Copysign : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Fabs : FPMathTemplate, LibBuiltin<"math.h"> {
