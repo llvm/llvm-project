@@ -49,7 +49,8 @@ std::optional<mlir::Attribute> lowerConstRecordAttr(
 /// \p llvmType unchanged when no adjustment is needed. This is the single
 /// source of truth for the shape of a lowered record constant; the
 /// value-producing paths (the insertvalue visitor and lowerConstRecordAttr)
-/// conform to it.
+/// conform to it. Returns null if the input type or an initializer type cannot
+/// be lowered.
 mlir::Type adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                                    const mlir::TypeConverter &converter,
                                    const mlir::DataLayout &dataLayout);

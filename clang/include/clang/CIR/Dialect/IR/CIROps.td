@@ -3513,7 +3513,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
       cir::GlobalOp op, mlir::Attribute init,
       mlir::ConversionPatternRewriter &rewriter) const;
 
-    void setupRegionInitializedLLVMGlobalOp(
+    mlir::LogicalResult setupRegionInitializedLLVMGlobalOp(
         cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 
     llvm::SmallVector<mlir::NamedAttribute> lowerGlobalAttributes(
