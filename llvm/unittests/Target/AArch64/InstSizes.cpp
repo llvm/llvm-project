@@ -12,9 +12,8 @@
 using namespace llvm;
 
 namespace {
-std::unique_ptr<TargetMachine>
-createTargetMachine(StringRef TripleStr = "aarch64--") {
-  Triple TT(TripleStr);
+std::unique_ptr<TargetMachine> createTargetMachine() {
+  Triple TT("aarch64--");
   std::string CPU("generic");
   std::string FS("+pauth,+mops,+mte");
 
@@ -372,8 +371,25 @@ TEST(InstSizes, MOPSMemoryPseudos) {
             });
 }
 
+static std::unique_ptr<TargetMachine> createLFITargetMachine() {
+  Triple TT("aarch64_lfi--");
+  std::string CPU("generic");
+  std::string FS("+pauth,+mops,+mte");
+
+  LLVMInitializeAArch64TargetInfo();
+  LLVMInitializeAArch64Target();
+  LLVMInitializeAArch64TargetMC();
+
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+
+  return std::unique_ptr<TargetMachine>(
+      TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
+                                     std::nullopt, CodeGenOptLevel::Default));
+}
+
 TEST(InstSizes, LFIControlFlow) {
-  std::unique_ptr<TargetMachine> TM = createTargetMachine("aarch64_lfi--");
+  std::unique_ptr<TargetMachine> TM = createLFITargetMachine();
   auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "", "  BR $x0\n",
