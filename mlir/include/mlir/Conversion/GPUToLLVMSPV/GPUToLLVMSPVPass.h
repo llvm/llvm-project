@@ -21,8 +21,9 @@ class TypeConverter;
 #define GEN_PASS_DECL_CONVERTGPUOPSTOLLVMSPVOPS
 #include "mlir/Conversion/Passes.h.inc"
 
-void populateGpuToLLVMSPVConversionPatterns(const LLVMTypeConverter &converter,
-                                            RewritePatternSet &patterns);
+void populateGpuToLLVMSPVConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool encodeWorkgroupAttributionsAsArguments = true);
 
 /// Populates memory space attribute conversion rules for lowering
 /// gpu.address_space to integer values.
