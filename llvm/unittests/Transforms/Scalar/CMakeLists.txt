@@ -10,6 +10,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(ScalarTests
   LICMTest.cpp
+  LoopInterchangeTest.cpp
   LoopPassManagerTest.cpp
   )
 
