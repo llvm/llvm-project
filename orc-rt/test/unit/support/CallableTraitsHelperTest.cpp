@@ -21,8 +21,7 @@ using namespace orc_rt;
 static void freeVoidVoid() {}
 
 TEST(CallableTraitsHelperTest, FreeVoidVoid) {
-  (void)freeVoidVoid;
-  typedef CallableArgInfo<decltype(freeVoidVoid)> CAI;
+  using CAI = CallableArgInfo<decltype(freeVoidVoid)>;
   static_assert(std::is_void_v<CAI::return_type>);
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<>>);
 }
@@ -30,41 +29,40 @@ TEST(CallableTraitsHelperTest, FreeVoidVoid) {
 static int freeBinaryOp(int, float) { return 0; }
 
 TEST(CallableTraitsHelperTest, FreeBinaryOp) {
-  (void)freeBinaryOp;
-  typedef CallableArgInfo<decltype(freeBinaryOp)> CAI;
+  using CAI = CallableArgInfo<decltype(freeBinaryOp)>;
   static_assert(std::is_same_v<CAI::return_type, int>);
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<int, float>>);
 }
 
 TEST(CallableTraitsHelperTest, VoidVoidObj) {
   auto VoidVoid = []() {};
-  typedef CallableArgInfo<decltype(VoidVoid)> CAI;
+  using CAI = CallableArgInfo<decltype(VoidVoid)>;
   static_assert(std::is_void_v<CAI::return_type>);
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<>>);
 }
 
 TEST(CallableTraitsHelperTest, BinaryOpObj) {
   auto BinaryOp = [](int X, float Y) -> int { return X + Y; };
-  typedef CallableArgInfo<decltype(BinaryOp)> CAI;
+  using CAI = CallableArgInfo<decltype(BinaryOp)>;
   static_assert(std::is_same_v<CAI::return_type, int>);
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<int, float>>);
 }
 
 TEST(CallableTraitsHelperTest, PreservesLValueRef) {
   auto RefOp = [](int &) {};
-  typedef CallableArgInfo<decltype(RefOp)> CAI;
+  using CAI = CallableArgInfo<decltype(RefOp)>;
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<int &>>);
 }
 
 TEST(CallableTraitsHelperTest, PreservesLValueRefConstness) {
   auto RefOp = [](const int &) {};
-  typedef CallableArgInfo<decltype(RefOp)> CAI;
+  using CAI = CallableArgInfo<decltype(RefOp)>;
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<const int &>>);
 }
 
 TEST(CallableTraitsHelperTest, PreservesRValueRef) {
   auto RefOp = [](int &&) {};
-  typedef CallableArgInfo<decltype(RefOp)> CAI;
+  using CAI = CallableArgInfo<decltype(RefOp)>;
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<int &&>>);
 }
 
@@ -136,7 +134,7 @@ TEST(CallableTraitsHelperTest, AbominableFunctionTypeIsConst) {
 static void freeVoidVoidNoexcept() noexcept {}
 
 TEST(CallableTraitsHelperTest, FreeFunctionNoexcept) {
-  (void)freeVoidVoidNoexcept;
+  (void)freeVoidVoidNoexcept();
   static_assert(!CallableArgInfo<decltype(freeVoidVoid)>::is_noexcept);
   static_assert(CallableArgInfo<decltype(freeVoidVoidNoexcept)>::is_noexcept);
 }

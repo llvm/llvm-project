@@ -93,18 +93,16 @@ public:
                          OptionKind Kind = OptionKind::Value,
                          std::optional<char> ShortName = std::nullopt) {
     Val = DefaultVal;
-    Opts.push_back({.Name = std::string(Name),
-                    .ShortName = std::move(ShortName),
-                    .Desc = std::string(Desc),
-                    .Kind = Kind,
-                    .Default = [&Val, DV = DefaultVal]() { Val = DV; },
-                    .FromString = [&Val, OptName = std::string(Name)](
-                                      std::string_view S) -> Error {
+    Opts.push_back({std::string(Name), std::move(ShortName), std::string(Desc),
+                    Kind, [&Val, DV = DefaultVal]() { Val = DV; },
+                    [&Val, OptName = std::string(Name)](
+                        std::string_view S) -> orc_rt::Error {
                       if (auto V = detail::parseValue<T>(S)) {
                         Val = *V;
-                        return Error::success();
+                        return orc_rt::Error::success();
                       }
-                      return make_error<StringError>(
+
+                      return orc_rt::make_error<orc_rt::StringError>(
                           std::string("Invalid value for '") + OptName +
                           "': '" + std::string(S) + "'");
                     }});
