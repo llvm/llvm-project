@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-legalize-implicit-binding -mtriple=spirv1.6-vulkan1.3-library < %s | FileCheck %s
+; RUN: opt -S -passes=spirv-legalize-resource-binding -mtriple=spirv1.6-vulkan1.3-library < %s | FileCheck %s
 
 @.str.b = private unnamed_addr constant [2 x i8] c"b\00", align 1
 @.str.c = private unnamed_addr constant [2 x i8] c"c\00", align 1
