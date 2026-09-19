@@ -92,6 +92,26 @@ def SelectOpsConversion : Pass<"fir-select-ops-conversion", "::mlir::func::FuncO
       "mlir::cf::ControlFlowDialect", "fir::FIROpsDialect"];
 }
 
+def LiftSCFWhileToSCFFor : Pass<"lift-scf-while-to-scf-for",
+    "::mlir::func::FuncOp"> {
+  let summary = "Rewrite recognizable counted scf.while loops as scf.for";
+  let description = [{
+    Walks every scf.while operation in the function and, when the canonical
+    "trip-counter + induction variable" shape is recognized, rewrites the
+    loop as scf.for. Other loop-carried before-args are passed through as
+    iter_args. Loops that do not match the builtin heuristic (data-dependent
+    updates, used results, non-positive IV step, etc.) are left untouched
+    and a diagnostic is emitted to stderr.
+
+    The main use pattern today is to rebuild counted loops that upstream
+    `lift-cf-to-scf` had to leave as scf.while because it can only recover
+    do-while shape from an unstructured CFG.
+  }];
+
+  let dependentDialects = ["mlir::arith::ArithDialect",
+      "mlir::scf::SCFDialect"];
+}
+
 def FIRToSCFPass : Pass<"fir-to-scf"> {
   let summary = "Convert FIR structured control flow ops to SCF dialect.";
   let description = [{
