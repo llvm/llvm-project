@@ -4,6 +4,10 @@
 
 #include <cstdlib>
 #include <errno.h>
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 #include <mutex>
 #include <stdio.h>
 #include <string>
@@ -86,9 +90,15 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
   // Now switch the I/O over to a pipe, which will be handled by the
   // NativeFile class:
   int to_lldb_des[2];
+#ifdef _WIN32
+  int pipe_result = _pipe(to_lldb_des, 4096, _O_TEXT);
+  FILE *fh_lldb_in = _fdopen(to_lldb_des[0], "r");
+  FILE *fh_to_lldb = _fdopen(to_lldb_des[1], "w");
+#else
   int pipe_result = pipe(to_lldb_des);
   FILE *fh_lldb_in = fdopen(to_lldb_des[0], "r");
   FILE *fh_to_lldb = fdopen(to_lldb_des[1], "w");
+#endif
 
   // We need to reset the handle before destroying the debugger
   // or the same deadlock will stall exiting:
@@ -101,8 +111,13 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
     }
     ~Cleanup() {
       m_dbg.SetInputFileHandle(m_file, false);
+#ifdef _WIN32
+      _close(m_filedes[0]);
+      _close(m_filedes[1]);
+#else
       close(m_filedes[0]);
       close(m_filedes[1]);
+#endif
     }
 
   private:
