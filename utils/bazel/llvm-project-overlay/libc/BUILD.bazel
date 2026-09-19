@@ -1480,10 +1480,10 @@ libc_support_library(
 libc_support_library(
     name = "types_char8_t",
     hdrs = ["hdr/types/char8_t.h"],
-    deps = [
-        ":hdr_uchar_overlay",
-        ":llvm_libc_types_char8_t",
-    ],
+    deps = select({
+        ":full_build": [":llvm_libc_types_char8_t"],
+        "//conditions:default": [":hdr_uchar_overlay"],
+    }),
 )
 
 ############################### Support libraries ##############################
@@ -4376,6 +4376,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_threads_tcb",
         ":__support_threads_thread_attributes",
         ":hdr_stdint_proxy",
         ":types_struct_sched_param",
@@ -11786,13 +11787,6 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "canonicalize",
-    additional_deps = [
-        ":__support_math_canonicalize",
-    ],
-)
-
-libc_math_function(
     name = "bf16divf",
     additional_deps = [
         ":__support_math_bf16divf",
@@ -11807,9 +11801,23 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "canonicalize",
+    additional_deps = [
+        ":__support_math_canonicalize",
+    ],
+)
+
+libc_math_function(
     name = "canonicalizef",
     additional_deps = [
         ":__support_math_canonicalizef",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizebf16",
+    additional_deps = [
+        ":__support_math_canonicalizebf16",
     ],
 )
 
@@ -13385,6 +13393,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "getpayloadbf16",
+    additional_deps = [
+        ":__support_math_getpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "getpayloadf",
     additional_deps = [
         ":__support_math_getpayloadf",
@@ -14489,6 +14504,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "setpayloadbf16",
+    additional_deps = [
+        ":__support_math_setpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "setpayloadf",
     additional_deps = [
         ":__support_math_setpayloadf",
@@ -14520,6 +14542,13 @@ libc_math_function(
     name = "setpayloadsig",
     additional_deps = [
         ":__support_math_setpayloadsig",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigbf16",
+    additional_deps = [
+        ":__support_math_setpayloadsigbf16",
     ],
 )
 
@@ -15584,14 +15613,6 @@ libc_function(
 libc_support_library(
     name = "string_memory_utils",
     hdrs = [
-        "src/string/memory_utils/inline_bcmp.h",
-        "src/string/memory_utils/inline_bzero.h",
-        "src/string/memory_utils/inline_memcmp.h",
-        "src/string/memory_utils/inline_memcpy.h",
-        "src/string/memory_utils/inline_memmem.h",
-        "src/string/memory_utils/inline_memmove.h",
-        "src/string/memory_utils/inline_memset.h",
-        "src/string/memory_utils/inline_strcmp.h",
         "src/string/memory_utils/op_aarch64.h",
         "src/string/memory_utils/op_builtin.h",
         "src/string/memory_utils/op_generic.h",
@@ -15610,9 +15631,16 @@ libc_support_library(
         "src/string/memory_utils/arm/inline_memcpy.h",
         "src/string/memory_utils/arm/inline_memset.h",
         "src/string/memory_utils/generic/aligned_access.h",
-        "src/string/memory_utils/generic/builtin.h",
         "src/string/memory_utils/generic/byte_per_byte.h",
         "src/string/memory_utils/generic/inline_strlen.h",
+        "src/string/memory_utils/inline_bcmp.h",
+        "src/string/memory_utils/inline_bzero.h",
+        "src/string/memory_utils/inline_memcmp.h",
+        "src/string/memory_utils/inline_memcpy.h",
+        "src/string/memory_utils/inline_memmem.h",
+        "src/string/memory_utils/inline_memmove.h",
+        "src/string/memory_utils/inline_memset.h",
+        "src/string/memory_utils/inline_strcmp.h",
         "src/string/memory_utils/inline_strstr.h",
         "src/string/memory_utils/riscv/inline_bcmp.h",
         "src/string/memory_utils/riscv/inline_memcmp.h",
