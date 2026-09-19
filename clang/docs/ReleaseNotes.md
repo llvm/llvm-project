@@ -287,6 +287,9 @@ features cannot lower the translation-unit ABI level;
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
+- `-Wfortify-source` now diagnoses when `recv` or `recvfrom` is called with a
+  size argument larger than the destination buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
