@@ -2459,6 +2459,18 @@ public:
     return SourceLocationEncoding::decode(Raw);
   }
 
+  /// Read a source location offset from \p Record at \p Idx, returning it
+  /// together with a chain anchored at that offset + \p InitialDelta for delta
+  /// decoding the locations that follow.
+  static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+  ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                           SourceLocation::UIntTy InitialDelta);
+
+  /// Read an SLocEntry record's first field, returning it together with a
+  /// chain anchored at that entry.
+  static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+  ReadEntryOffset(const RecordDataImpl &Record);
+
   /// Read a source location from raw form.
   SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw) const {
     if (!MF.ModuleOffsetMap.empty())
@@ -2472,6 +2484,12 @@ public:
            "Run out source location space");
 
     return TranslateSourceLocation(*OwningModuleFile, Loc);
+  }
+
+  /// Read a source location from delta-encoded form.
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
+                                    SourceLocationEncoding::Chain &Chain) {
+    return ReadSourceLocation(MF, Chain.deltaDecode(Raw));
   }
 
   /// Translate a source location from another module file's source
