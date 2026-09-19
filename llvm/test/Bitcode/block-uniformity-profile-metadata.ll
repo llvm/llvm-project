@@ -11,11 +11,9 @@ uniform:
   ret void
 
 divergent:
-  br label %uniform, !block.uniformity.profile !1
-; CHECK: br label %uniform, !block.uniformity.profile !1
+  br label %uniform, !block.uniformity.profile !0
+; CHECK: br label %uniform, !block.uniformity.profile !0
 }
 
-; CHECK: !0 = !{i1 true}
-; CHECK: !1 = !{i1 false}
-!0 = !{i1 true}
-!1 = !{i1 false}
+; CHECK: !0 = !{}
+!0 = !{}
