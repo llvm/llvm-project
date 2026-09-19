@@ -1,12 +1,5 @@
-; RUN: llc < %s -mtriple=mipsel -mcpu=mips1 -relocation-model=static \
-; RUN:   | FileCheck %s -check-prefixes=ALL,MIPS1
-; RUN: llc < %s -mtriple=mipsel -mcpu=mips2 -relocation-model=static \
-; RUN:   | FileCheck %s -check-prefixes=ALL,MIPS2
-
-; MIPS-I has no load-use interlock, and that applies to loads into a
-; coprocessor register too: the instruction after an "lwc1" must not read the
-; loaded register. From MIPS-II on the hardware interlocks and no nop is
-; needed.
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips1 -relocation-model=static | FileCheck %s -check-prefixes=ALL,MIPS1
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips2 -relocation-model=static | FileCheck %s -check-prefixes=ALL,MIPS2
 
 @v = external global [4 x float]
 

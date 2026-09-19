@@ -688,9 +688,7 @@ bool MipsInstrInfo::HasLoadDelaySlot(const MachineInstr &MI) const {
   case Mips::LW:
   case Mips::LWR:
   case Mips::LWL:
-  // A load into a coprocessor register has the same delay. The other FPU
-  // loads cannot appear on MIPS-I: LDC1 is MIPS-II and LWXC1 is MIPS-IV /
-  // MIPS32R2.
+  // On MIPS-I, the only float load there is; the rest came with later ISAs.
   case Mips::LWC1:
     return true;
   default:

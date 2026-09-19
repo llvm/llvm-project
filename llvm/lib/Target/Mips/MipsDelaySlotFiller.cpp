@@ -1102,12 +1102,9 @@ bool MipsDelaySlotFiller::examinePred(MachineBasicBlock &Pred,
   return true;
 }
 
-/// Moving an instruction whose result is not available to the next instruction
-/// into a delay slot moves that unprotected shadow across the branch: the
-/// instruction executed next is the branch target or the fall-through, neither
-/// of which is adjacent to the candidate in the listing. Returns true if the
-/// hazard would be exposed on any path. \p IsSafe decides whether one
-/// particular instruction may execute in the shadow of \p Candidate.
+/// Returns true if putting the candidate in the delay slot could let the
+/// branch target, or the instruction after the slot, read its result too
+/// early, or if those cannot be determined.
 static bool delayExposesHazard(
     const BranchInformation &BranchInfo, const MachineInstr &Candidate,
     function_ref<bool(const MachineInstr &, const MachineInstr &)> IsSafe) {
@@ -1158,10 +1155,8 @@ bool MipsDelaySlotFiller::delayHasHazard(const MipsSubtarget &STI,
             return TII->SafeInLoadDelaySlot(InShadow, Cand);
           });
 
-    // MIPS-I to MIPS-III have the same problem for transfers out of the FPU.
-    // This mirrors the condition in
-    // MipsBranchExpansion::handleFPUDelaySlot(), which covers the
-    // straight-line case.
+    // MIPS-I through MIPS-III have the same problem when a value is moved
+    // out of the floating point unit:
     if (!STI.hasMips32() && !STI.hasMips4() && TII->HasFPUDelaySlot(Candidate))
       return delayExposesHazard(
           BranchInfo, Candidate,
