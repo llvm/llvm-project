@@ -132,6 +132,29 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
 
 // F'2023 15.5.2.12p1: "Sequence association only applies when the dummy
 // argument is an explicit-shape or assumed-size array."
+// Total size in bytes of a whole object for storage-sequence checks.
+// A named constant has no storage assignment (symbol.size() is zero), so
+// measure it from its type and constant extents instead.
+static std::optional<std::int64_t> ObjectTotalBytes(
+    const Symbol &symbol, evaluate::FoldingContext &foldingContext) {
+  if (std::size_t bytes{symbol.size()}) {
+    return static_cast<std::int64_t>(bytes);
+  }
+  if (const Symbol &ultimate{symbol.GetUltimate()}; IsNamedConstant(ultimate)) {
+    if (auto type{evaluate::DynamicType::From(ultimate)}) {
+      if (auto extents{
+              evaluate::GetConstantExtents(foldingContext, &ultimate)}) {
+        if (auto bytes{evaluate::ToInt64(evaluate::Fold(foldingContext,
+                type->MeasureSizeInBytes(
+                    foldingContext, evaluate::GetRank(*extents) > 0)))}) {
+          return *bytes * evaluate::GetSize(*extents);
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 static bool CanAssociateWithStorageSequence(
     const characteristics::DummyDataObject &dummy) {
   return !dummy.type.attrs().test(
@@ -186,14 +209,17 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                   foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
             auto dummyChars{*dummySize * *dummyLength};
             if (actualType.Rank() == 0 && !actualIsAssumedRank) {
-              evaluate::DesignatorFolder folder{
-                  context.foldingContext(), /*getLastComponent=*/true};
+              evaluate::DesignatorFolder folder{context.foldingContext(),
+                  /*getLastComponent=*/true, /*foldNamedConstants=*/true};
               if (auto actualOffset{folder.FoldDesignator(actual)}) {
                 std::int64_t actualChars{*actualLength};
+                auto totalBytes{
+                    ObjectTotalBytes(actualOffset->symbol(), foldingContext)};
                 if (IsAllocatableOrPointer(actualOffset->symbol())) {
-                  // don't use actualOffset->symbol().size()!
-                } else if (static_cast<std::size_t>(actualOffset->offset()) >=
-                        actualOffset->symbol().size() ||
+                  // don't use the symbol's size!
+                } else if (!totalBytes ||
+                    static_cast<std::int64_t>(actualOffset->offset()) >=
+                        *totalBytes ||
                     !evaluate::IsContiguous(
                         actualOffset->symbol(), foldingContext)
                         .value_or(false)) {
@@ -204,9 +230,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                         *actualLength;
                   }
                 } else {
-                  actualChars = (static_cast<std::int64_t>(
-                                     actualOffset->symbol().size()) -
-                                    actualOffset->offset()) /
+                  actualChars = (*totalBytes - actualOffset->offset()) /
                       actualType.type().kind();
                 }
                 if (actualChars < dummyChars) {
@@ -405,8 +429,17 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   } else if (dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
-    if (auto converted{evaluate::HollerithToBOZ(
-            foldingContext, actual, dummy.type.type())}) {
+    auto converted{
+        evaluate::HollerithToBOZ(foldingContext, actual, dummy.type.type())};
+    if (!converted && evaluate::IsNamedConstantDesignator(actual)) {
+      // The actual may be a designator of a named constant retained for
+      // storage association; the extension inspects constant values, so
+      // retry with its folded value.
+      auto copy{actual};
+      converted = evaluate::HollerithToBOZ(foldingContext,
+          evaluate::Fold(foldingContext, std::move(copy)), dummy.type.type());
+    }
+    if (converted) {
       foldingContext.Warn(common::LanguageFeature::HollerithOrCharacterAsBOZ,
           "passing Hollerith or character literal as if it were BOZ"_port_en_US);
       actual = *converted;
@@ -648,6 +681,19 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               "Polymorphic scalar may not be associated with a %s array"_err_en_US,
               dummyName);
         }
+        if (actualIsArrayElement &&
+            dummy.attrs.test(characteristics::DummyDataObject::Attr::Value) &&
+            evaluate::IsNamedConstantDesignator(actual)) {
+          // TODO(llvm-project#224636): lowering does not yet create a
+          // temporary covering the whole storage sequence for an array
+          // VALUE dummy argument, so the element sequence association
+          // that retaining the named constant designator enables would
+          // be miscompiled. Keep rejecting it until that is fixed.
+          basicError = true;
+          messages.Say(
+              "sequence association of a named constant array element with a VALUE %s array"_todo_en_US,
+              dummyName);
+        }
         bool isOkBecauseContiguous{
             context.IsEnabled(
                 common::LanguageFeature::ContiguousOkForSeqAssociation) &&
@@ -706,14 +752,17 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         } else if (actualRank == 0) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
-            evaluate::DesignatorFolder folder{
-                context.foldingContext(), /*getLastComponent=*/true};
+            evaluate::DesignatorFolder folder{context.foldingContext(),
+                /*getLastComponent=*/true, /*foldNamedConstants=*/true};
             if (auto actualOffset{folder.FoldDesignator(actual)}) {
               std::optional<std::int64_t> actualElements;
+              auto totalBytes{
+                  ObjectTotalBytes(actualOffset->symbol(), foldingContext)};
               if (IsAllocatableOrPointer(actualOffset->symbol())) {
-                // don't use actualOffset->symbol().size()!
-              } else if (static_cast<std::size_t>(actualOffset->offset()) >=
-                      actualOffset->symbol().size() ||
+                // don't use the symbol's size!
+              } else if (!totalBytes ||
+                  static_cast<std::int64_t>(actualOffset->offset()) >=
+                      *totalBytes ||
                   !evaluate::IsContiguous(
                       actualOffset->symbol(), foldingContext)
                       .value_or(false)) {
@@ -725,9 +774,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                             actualSymType->MeasureSizeInBytes(
                                 foldingContext, false)))};
                     actualSymTypeBytes && *actualSymTypeBytes > 0) {
-                  actualElements = (static_cast<std::int64_t>(
-                                        actualOffset->symbol().size()) -
-                                       actualOffset->offset()) /
+                  actualElements = (*totalBytes - actualOffset->offset()) /
                       *actualSymTypeBytes;
                 }
               }
@@ -2567,7 +2614,14 @@ bool CheckArgumentIsConstantExprInRange(
   // for the intrinsic's argument should have been check prior. This is just
   // a conversion so that we can read the constant value.
   auto scalarValue{evaluate::ToInt64(argExpr)};
-  CHECK(scalarValue.has_value());
+  if (!scalarValue) {
+    // A constant expression whose value is not statically known here (e.g.
+    // a designator that was not folded); diagnose rather than crash.
+    messages.Say(
+        "Actual argument #%d must be a constant integer expression"_err_en_US,
+        index + 1);
+    return false;
+  }
 
   if (*scalarValue < lowerBound || *scalarValue > upperBound) {
     messages.Say(

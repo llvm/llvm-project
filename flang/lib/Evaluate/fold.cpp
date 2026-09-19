@@ -9,6 +9,7 @@
 #include "flang/Evaluate/fold.h"
 #include "fold-implementation.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/initial-image.h"
 #include "flang/Evaluate/tools.h"
 
@@ -301,7 +302,11 @@ std::optional<Expr<SomeType>> FoldTransfer(
 // Fold a Consequent expression in place.
 static void FoldConsequent(
     FoldingContext &context, ActualArgument::ConditionalArg::Consequent &cons) {
-  if (cons) {
+  if (cons && !IsNamedConstantDesignator(cons->value())) {
+    // A retained named-constant designator keeps its designator form for
+    // storage association; see the corresponding skip in
+    // FoldOperation(FunctionRef).  Intrinsic references get their values
+    // through the folded copy made at intrinsic resolution.
     cons->value() = Fold(context, std::move(cons->value()));
   }
 }
