@@ -565,15 +565,13 @@ bool isSingleton(const NamedDecl *F) {
 // (non-recursive) visitor.
 class TrivialFunctionAnalysisVisitor
     : public ConstStmtVisitor<TrivialFunctionAnalysisVisitor, bool> {
+  using Base = ConstStmtVisitor<TrivialFunctionAnalysisVisitor, bool>;
 
   // Returns false if at least one child is non-trivial.
   bool VisitChildren(const Stmt *S) {
     for (const Stmt *Child : S->children()) {
-      if (Child && !Visit(Child)) {
-        if (OffendingStmt && !*OffendingStmt)
-          *OffendingStmt = Child;
+      if (Child && !Visit(Child))
         return false;
-      }
     }
 
     return true;
@@ -693,10 +691,28 @@ public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
   TrivialFunctionAnalysisVisitor(CacheTy &Cache,
-                                 const Stmt **OffendingStmt = nullptr)
-      : Cache(Cache), OffendingStmt(OffendingStmt) {}
+                                 NonTrivialityReason *Reason = nullptr)
+      : Cache(Cache), OffendingStmt(Reason ? &Reason->OffendingStmt : nullptr),
+        RootCause(Reason ? &Reason->RootCause : nullptr) {}
+
+  // Hides ConstStmtVisitor::Visit so that every recursive step in this class
+  // funnels through here. Recursion unwinds innermost-first, so the first
+  // statement recorded is the deepest one that failed -- the code actually
+  // responsible, rather than the enclosing statement that contains it.
+  // Implicit nodes have no location to point at, so they are passed over in
+  // favour of the nearest enclosing node that was actually written.
+  bool Visit(const Stmt *S) {
+    bool Result = Base::Visit(S);
+    if (!Result && OffendingStmt && !*OffendingStmt &&
+        S->getBeginLoc().isValid())
+      *OffendingStmt = S;
+    return Result;
+  }
 
   bool IsFunctionTrivial(const Decl *D) {
+    // Blame stays within the function being analyzed: a statement in a callee
+    // is not a useful location for the primary diagnostic. The root cause is
+    // tracked separately and does cross function boundaries.
     const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
     auto Result = WithCachedResult(D, [&]() {
       auto *FnDecl = dyn_cast<FunctionDecl>(D);
@@ -745,6 +761,12 @@ public:
       return Visit(Body);
     });
     OffendingStmt = SavedOffendingStmt;
+    // Unwinding innermost-first means the deepest callee in the chain claims
+    // the root cause, which is the one the user has to do something about.
+    if (!Result && RootCause && !*RootCause) {
+      if (const auto *FnDecl = dyn_cast<FunctionDecl>(D))
+        *RootCause = FnDecl;
+    }
     return Result;
   }
 
@@ -754,8 +776,10 @@ public:
   }
 
   bool IsStatementTrivial(const Stmt *S) {
+    // Skip the cache while diagnosing: a cache hit would report failure without
+    // recording which statement is to blame.
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end())
+    if (CacheIt != Cache.end() && !OffendingStmt)
       return CacheIt->second;
     bool Result = Visit(S);
     Cache[S] = Result;
@@ -1136,20 +1160,30 @@ private:
   CacheTy FieldDtorCache;
   CacheTy RecursiveFn;
   const Stmt **OffendingStmt;
+  const FunctionDecl **RootCause;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt **OffendingStmt) {
-  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
+    NonTrivialityReason *Reason) {
+  TrivialFunctionAnalysisVisitor V(Cache, Reason);
   return V.IsFunctionTrivial(D);
 }
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache,
-    const Stmt **OffendingStmt) {
-  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
+    NonTrivialityReason *Reason) {
+  TrivialFunctionAnalysisVisitor V(Cache, Reason);
   return V.IsStatementTrivial(S);
+}
+
+NonTrivialityReason
+TrivialFunctionAnalysis::explainNonTriviality(const Stmt *S) {
+  NonTrivialityReason Reason;
+  CacheTy Cache;
+  [[maybe_unused]] bool Trivial = isTrivialImpl(S, Cache, &Reason);
+  assert(!Trivial && "explainNonTriviality called on a trivial statement");
+  return Reason;
 }
 
 bool TrivialFunctionAnalysis::hasTrivialDtorImpl(const VarDecl *VD,
