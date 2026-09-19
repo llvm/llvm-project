@@ -14,22 +14,22 @@ define dso_local void @lots_args(i32 signext %x0, i32 signext %x1, <vscale x 16 
 ; CHECK-NEXT:    sub sp, sp, t0
 ; CHECK-NEXT:    ld t0, 8(s0)
 ; CHECK-NEXT:    ld t1, 0(s0)
-; CHECK-NEXT:    sw a0, -28(s0)
-; CHECK-NEXT:    sw a1, -32(s0)
+; CHECK-NEXT:    sw a0, -64(s0)
+; CHECK-NEXT:    sw a1, -60(s0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub a0, s0, a0
 ; CHECK-NEXT:    addi a0, a0, -64
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    sw a2, -36(s0)
-; CHECK-NEXT:    sw a3, -40(s0)
-; CHECK-NEXT:    sw a4, -44(s0)
-; CHECK-NEXT:    sw a5, -48(s0)
-; CHECK-NEXT:    sw a6, -52(s0)
-; CHECK-NEXT:    sw a7, -56(s0)
-; CHECK-NEXT:    sw t1, -60(s0)
-; CHECK-NEXT:    sw t0, -64(s0)
+; CHECK-NEXT:    sw a2, -56(s0)
+; CHECK-NEXT:    sw a3, -52(s0)
+; CHECK-NEXT:    sw a4, -48(s0)
+; CHECK-NEXT:    sw a5, -44(s0)
+; CHECK-NEXT:    sw a6, -40(s0)
+; CHECK-NEXT:    sw a7, -36(s0)
+; CHECK-NEXT:    sw t1, -32(s0)
+; CHECK-NEXT:    sw t0, -28(s0)
 ; CHECK-NEXT:    addi sp, s0, -64
 ; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
@@ -72,14 +72,14 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    sw zero, -36(s0)
+; CHECK-NEXT:    sw zero, -84(s0)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    addi a0, s0, -64
+; CHECK-NEXT:    addi a0, s0, -112
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    vsetivli a1, 4, e32, m8, ta, ma
-; CHECK-NEXT:    sd a1, -72(s0)
-; CHECK-NEXT:    ld a1, -72(s0)
+; CHECK-NEXT:    sd a1, -80(s0)
+; CHECK-NEXT:    ld a1, -80(s0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    csrr s1, vlenb
@@ -89,44 +89,44 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (s1)
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    sw a0, -76(s0)
-; CHECK-NEXT:    sw a0, -80(s0)
-; CHECK-NEXT:    sw a0, -84(s0)
-; CHECK-NEXT:    sw a0, -88(s0)
-; CHECK-NEXT:    sw a0, -92(s0)
-; CHECK-NEXT:    sw a0, -96(s0)
-; CHECK-NEXT:    sw a0, -100(s0)
-; CHECK-NEXT:    sw a0, -104(s0)
-; CHECK-NEXT:    sw a0, -108(s0)
-; CHECK-NEXT:    sw a0, -112(s0)
-; CHECK-NEXT:    lw a0, -76(s0)
-; CHECK-NEXT:    lw a1, -80(s0)
+; CHECK-NEXT:    sw a0, -72(s0)
+; CHECK-NEXT:    sw a0, -68(s0)
+; CHECK-NEXT:    sw a0, -64(s0)
+; CHECK-NEXT:    sw a0, -60(s0)
+; CHECK-NEXT:    sw a0, -56(s0)
+; CHECK-NEXT:    sw a0, -52(s0)
+; CHECK-NEXT:    sw a0, -48(s0)
+; CHECK-NEXT:    sw a0, -44(s0)
+; CHECK-NEXT:    sw a0, -40(s0)
+; CHECK-NEXT:    sw a0, -36(s0)
+; CHECK-NEXT:    lw a0, -72(s0)
+; CHECK-NEXT:    lw a1, -68(s0)
 ; CHECK-NEXT:    vle32.v v8, (s1)
-; CHECK-NEXT:    lw a2, -84(s0)
-; CHECK-NEXT:    lw a3, -88(s0)
-; CHECK-NEXT:    lw a4, -92(s0)
-; CHECK-NEXT:    lw a5, -96(s0)
-; CHECK-NEXT:    lw a6, -100(s0)
-; CHECK-NEXT:    lw a7, -104(s0)
-; CHECK-NEXT:    lw t0, -108(s0)
-; CHECK-NEXT:    lw t1, -112(s0)
+; CHECK-NEXT:    lw a2, -64(s0)
+; CHECK-NEXT:    lw a3, -60(s0)
+; CHECK-NEXT:    lw a4, -56(s0)
+; CHECK-NEXT:    lw a5, -52(s0)
+; CHECK-NEXT:    lw a6, -48(s0)
+; CHECK-NEXT:    lw a7, -44(s0)
+; CHECK-NEXT:    lw t0, -40(s0)
+; CHECK-NEXT:    lw t1, -36(s0)
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd t1, 8(sp)
 ; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call lots_args
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    lw a0, -76(s0)
-; CHECK-NEXT:    lw a1, -80(s0)
+; CHECK-NEXT:    lw a0, -72(s0)
+; CHECK-NEXT:    lw a1, -68(s0)
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (s1)
-; CHECK-NEXT:    lw a2, -84(s0)
-; CHECK-NEXT:    lw a3, -88(s0)
-; CHECK-NEXT:    lw a4, -92(s0)
-; CHECK-NEXT:    lw a5, -96(s0)
-; CHECK-NEXT:    lw a6, -100(s0)
-; CHECK-NEXT:    lw a7, -104(s0)
-; CHECK-NEXT:    lw t0, -108(s0)
-; CHECK-NEXT:    lw t1, -112(s0)
+; CHECK-NEXT:    lw a2, -64(s0)
+; CHECK-NEXT:    lw a3, -60(s0)
+; CHECK-NEXT:    lw a4, -56(s0)
+; CHECK-NEXT:    lw a5, -52(s0)
+; CHECK-NEXT:    lw a6, -48(s0)
+; CHECK-NEXT:    lw a7, -44(s0)
+; CHECK-NEXT:    lw t0, -40(s0)
+; CHECK-NEXT:    lw t1, -36(s0)
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd t1, 8(sp)
 ; CHECK-NEXT:    sd t0, 0(sp)

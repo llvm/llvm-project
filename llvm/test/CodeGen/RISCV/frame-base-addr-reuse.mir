@@ -1,18 +1,24 @@
 # REQUIRES: asserts
 #
-# RUN: llc -mtriple=riscv64 \
+# RUN: llc -mtriple=riscv64 -stack-symbol-ordering=0 \
 # RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup -o - %s \
 # RUN:   | FileCheck -check-prefix=RV64 %s
-# RUN: llc -mtriple=riscv64 \
+# RUN: llc -mtriple=riscv64 -stack-symbol-ordering=0 \
 # RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup \
 # RUN:   -run-pass=riscv-expand-pseudo-post-ra -o - %s \
 # RUN:   | FileCheck -check-prefix=RV64-EXPAND %s
-# RUN: llc -mtriple=riscv32 \
+# RUN: llc -mtriple=riscv32 -stack-symbol-ordering=0 \
 # RUN:   -run-pass=prolog-epilog -run-pass=machine-latecleanup -o - %s \
 # RUN:   | FileCheck -check-prefix=RV32 %s
 #
 # Test that identical large stack-frame base address materializations are
 # deduplicated by MachineLateInstrsCleanup via PseudoAddUpperImm.
+#
+# Stack symbol ordering is disabled so that the frame layout under test stays
+# fixed. This test covers PseudoAddUpperImm emission and CSE, not the frame
+# object placement policy: with the default density-based ordering the small
+# hot slots move next to SP, their offsets fold into the load/store immediate,
+# and no base address needs materializing at all.
 
 --- |
   define void @test_same_region() nounwind { ret void }
