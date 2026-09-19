@@ -348,6 +348,7 @@ else()
       libc.src.__support.math.ldexpf
       libc.src.__support.math.ldexpf128
       libc.src.__support.math.ldexpf16
+      libc.src.__support.math.lgammabf16
       libc.src.__support.math.lgammaf16
       libc.src.__support.math.llogbf
       libc.src.__support.math.llogbf128
