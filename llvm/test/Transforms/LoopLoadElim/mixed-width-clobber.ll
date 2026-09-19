@@ -8,15 +8,13 @@ define void @zero_distance_clobber(ptr noalias %A, ptr noalias %Out, i64 %N) {
 ; CHECK-LABEL: define void @zero_distance_clobber(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi i32 [ [[LOAD_INITIAL]], %[[ENTRY]] ], [ [[Z:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    store i8 7, ptr [[P]], align 1
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[Z]] = add i32 [[STORE_FORWARDED]], 1
+; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I_NEXT]]
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[P_NEXT]], align 4
@@ -52,10 +50,8 @@ define void @nonzero_distance_clobber(ptr noalias %A, ptr noalias %Out,
 ; CHECK-LABEL: define void @nonzero_distance_clobber(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[LOAD_INITIAL:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[STORE_FORWARDED:%.*]] = phi i32 [ [[LOAD_INITIAL]], %[[ENTRY]] ], [ 42, %[[LOOP]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
@@ -63,7 +59,7 @@ define void @nonzero_distance_clobber(ptr noalias %A, ptr noalias %Out,
 ; CHECK-NEXT:    store i32 42, ptr [[P_NEXT]], align 4
 ; CHECK-NEXT:    store i8 7, ptr [[P_NEXT]], align 1
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[Z:%.*]] = add i32 [[STORE_FORWARDED]], 1
+; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X]], 1
 ; CHECK-NEXT:    [[RESULT:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I]]
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[RESULT]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[I_NEXT]], [[N]]

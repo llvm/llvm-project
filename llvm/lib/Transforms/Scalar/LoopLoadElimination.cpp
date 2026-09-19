@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <cassert>
 #include <forward_list>
+#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -263,7 +264,87 @@ public:
       SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates,
       const std::forward_list<StoreToLoadForwardingCandidate>
           &PotentialClobbers) {
-    // TODO: Use potential clobbers to filter forwarding candidates.
+    auto GetStoreToLoadDistance =
+        [&](const StoreToLoadForwardingCandidate &Clobber)
+        -> std::optional<int64_t> {
+      Value *LoadPtr = Clobber.Load->getPointerOperand();
+      Value *StorePtr = Clobber.Store->getPointerOperand();
+      Type *LoadType = getLoadStoreType(Clobber.Load);
+      const DataLayout &DL = Clobber.Load->getDataLayout();
+
+      if (LoadPtr->getType()->getPointerAddressSpace() !=
+          StorePtr->getType()->getPointerAddressSpace())
+        return std::nullopt;
+
+      int64_t StrideLoad =
+          getPtrStride(PSE, LoadType, LoadPtr, L, *DT).value_or(0);
+      int64_t StrideStore =
+          getPtrStride(PSE, LoadType, StorePtr, L, *DT).value_or(0);
+      if (!StrideLoad || StrideLoad != StrideStore)
+        return std::nullopt;
+
+      auto *LoadPtrSCEV = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
+      auto *StorePtrSCEV = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(StorePtr));
+      if (!LoadPtrSCEV || !StorePtrSCEV)
+        return std::nullopt;
+
+      auto *ByteDistance = dyn_cast<SCEVConstant>(
+          PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
+      if (!ByteDistance || !ByteDistance->getAPInt().isSignedIntN(64))
+        return std::nullopt;
+
+      int64_t StrideInBytes =
+          static_cast<int64_t>(DL.getTypeAllocSize(LoadType)) * StrideLoad;
+      if (!StrideInBytes ||
+          ByteDistance->getAPInt().getSExtValue() % StrideInBytes != 0)
+        return std::nullopt;
+
+      return ByteDistance->getAPInt().getSExtValue() / StrideInBytes;
+    };
+
+    auto ClobbersForwardedValue =
+        [&](const StoreToLoadForwardingCandidate &Candidate,
+            const StoreToLoadForwardingCandidate &Clobber) {
+          std::optional<int64_t> Distance = GetStoreToLoadDistance(Clobber);
+          // If we can't determine the distance, we can't prove that the clobber
+          // doesn't overwrite the candidate's value.
+          if (!Distance)
+            return true;
+
+          // findStoreToLoadDependences normalizes backward dependencies to
+          // store-to-load order, so the distance cannot be negative.
+          if (*Distance < 0)
+            llvm_unreachable(
+                "Store-to-load dependence must not have negative distance");
+
+          // The candidate's dependence distance is 1.
+          //
+          // A distance-0 clobber occurs in the load's iteration.
+          // Candidate -> Clobber -> Load.
+          if (*Distance == 0)
+            return true;
+
+          // A clobber with distance greater than 1 occurs before the candidate
+          // store, which overwrites it. Clobber -> Candidate -> Load.
+          if (*Distance > 1)
+            return false;
+
+          // With distance 1, both stores occur in the candidate's source
+          // iteration. Candidate -> Clobber -> Load if Candidate.Store precedes
+          // Clobber.Store; otherwise, Clobber -> Candidate -> Load.
+          return getInstrIndex(Candidate.Store) < getInstrIndex(Clobber.Store);
+        };
+
+    llvm::erase_if(Candidates,
+                   [&](const StoreToLoadForwardingCandidate &Candidate) {
+                     for (const auto &Clobber : PotentialClobbers) {
+                       if (Clobber.Load != Candidate.Load)
+                         continue;
+                       if (ClobbersForwardedValue(Candidate, Clobber))
+                         return true;
+                     }
+                     return false;
+                   });
   }
 
   /// If a load has multiple candidates associated (i.e. different
