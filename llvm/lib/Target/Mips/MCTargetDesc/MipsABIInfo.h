@@ -21,7 +21,7 @@ class StringRef;
 
 class MipsABIInfo {
 public:
-  enum class ABI { Unknown, O32, N32, N64 };
+  enum class ABI { Unknown, O32, O64, N32, N64 };
 
 protected:
   ABI ThisABI;
@@ -31,14 +31,18 @@ public:
 
   static MipsABIInfo Unknown() { return MipsABIInfo(ABI::Unknown); }
   static MipsABIInfo O32() { return MipsABIInfo(ABI::O32); }
+  static MipsABIInfo O64() { return MipsABIInfo(ABI::O64); }
   static MipsABIInfo N32() { return MipsABIInfo(ABI::N32); }
   static MipsABIInfo N64() { return MipsABIInfo(ABI::N64); }
   static MipsABIInfo computeTargetABI(const Triple &TT, StringRef ABIName);
 
   bool IsKnown() const { return ThisABI != ABI::Unknown; }
   bool IsO32() const { return ThisABI == ABI::O32; }
+  bool IsO64() const { return ThisABI == ABI::O64; }
   bool IsN32() const { return ThisABI == ABI::N32; }
   bool IsN64() const { return ThisABI == ABI::N64; }
+  bool IsOABI() const { return ThisABI == ABI::O32 || ThisABI == ABI::O64; }
+  bool IsNABI() const { return ThisABI == ABI::N32 || ThisABI == ABI::N64; }
   ABI GetEnumValue() const { return ThisABI; }
 
   /// The registers to use for byval arguments.
@@ -69,8 +73,8 @@ public:
   unsigned GetPtrSubuOp() const;
   unsigned GetPtrAndOp() const;
   unsigned GetGPRMoveOp() const;
-  inline bool ArePtrs64bit() const { return IsN64(); }
-  inline bool AreGprs64bit() const { return IsN32() || IsN64(); }
+  inline bool ArePtrs64bit() const { return IsO64() || IsN64(); }
+  inline bool AreGprs64bit() const { return IsO64() || IsN32() || IsN64(); }
 
   unsigned GetEhDataReg(unsigned I) const;
 };

@@ -149,7 +149,7 @@ static std::string computeM68kDataLayout(const Triple &TT) {
 }
 
 namespace {
-enum class MipsABI { Unknown, O32, N32, N64 };
+enum class MipsABI { Unknown, O32, O64, N32, N64 };
 }
 
 // FIXME: This duplicates MipsABIInfo::computeTargetABI, but duplicating this is
@@ -159,6 +159,8 @@ enum class MipsABI { Unknown, O32, N32, N64 };
 static MipsABI getMipsABI(const Triple &TT, StringRef ABIName) {
   if (ABIName.starts_with("o32"))
     return MipsABI::O32;
+  if (ABIName.starts_with("o64"))
+    return MipsABI::O64;
   if (ABIName.starts_with("n32"))
     return MipsABI::N32;
   if (ABIName.starts_with("n64"))
@@ -182,7 +184,7 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
   else
     Ret += "E";
 
-  if (ABI == MipsABI::O32)
+  if (ABI == MipsABI::O32 || ABI == MipsABI::O64)
     Ret += "-m:m";
   else
     Ret += "-m:e";

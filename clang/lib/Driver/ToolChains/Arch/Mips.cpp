@@ -12,6 +12,7 @@
 #include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptSpecifier.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -104,6 +105,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
                   .Case("p5600", "o32")
                   .Case("i6400", "n64")
                   .Case("i6500", "n64")
+                  .Case("vr4300", "o64")
                   .Default("");
   }
 
@@ -116,6 +118,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     // Deduce CPU name from ABI name.
     CPUName = llvm::StringSwitch<const char *>(ABIName)
                   .Case("o32", DefMips32CPU)
+                  .Case("o64", DefMips64CPU)
                   .Cases({"n32", "n64"}, DefMips64CPU)
                   .Default("");
   }
@@ -129,6 +132,7 @@ std::string mips::getMipsABILibSuffix(const ArgList &Args,
   tools::mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
   return llvm::StringSwitch<std::string>(ABIName)
       .Case("o32", "")
+      .Case("o64", "o64")
       .Case("n32", "32")
       .Case("n64", "64");
 }

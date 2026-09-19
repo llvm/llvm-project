@@ -186,8 +186,15 @@ def FeatureCnMipsP : SubtargetFeature<"cnmipsp", "HasCnMipsP",
                                       "true", "Octeon+ cnMIPS Support",
                                       [FeatureCnMips]>;
 
+def FeatureFixR4300 : SubtargetFeature<"fix-r4300", "FixR4300", "true",
+                                       "Enable R4300 mulmul erratum fix">;
+
 def FeatureFixR5900 : SubtargetFeature<"fix-r5900", "FixR5900", "true",
                                        "Enable R5900 short loop erratum fix">;
+
+def FeatureR4300 : SubtargetFeature<"vr4300", "IsR4300", "true",
+                                    "R4300 (Nintendo 64 CPU-NUS) Support",
+                                    [FeatureMips64, FeatureFixR4300]>;
 
 def FeatureR5900 : SubtargetFeature<"r5900", "IsR5900", "true",
                                     "R5900 (PS2 Emotion Engine) Support",
@@ -228,9 +235,9 @@ def FeatureUseCompactBranches
 // Mips Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
 
-def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
+def IsPTR64bit    :   Predicate<"Subtarget->isABI_64Bit()">,
                       AssemblerPredicate<(all_of FeaturePTR64Bit)>;
-def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
+def IsPTR32bit    :   Predicate<"!Subtarget->isABI_64Bit()">,
                       AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
 def UseCompactBranches : Predicate<"Subtarget->useCompactBranches()">,
                          AssemblerPredicate<(all_of FeatureUseCompactBranches)>;
@@ -307,6 +314,7 @@ def : Proc<"mips64r5", [FeatureMips64r5]>;
 def : Proc<"mips64r6", [FeatureMips64r6]>;
 def : Proc<"octeon", [FeatureMips64r2, FeatureCnMips]>;
 def : Proc<"octeon+", [FeatureMips64r2, FeatureCnMips, FeatureCnMipsP]>;
+def : Proc<"vr4300", [FeatureR4300]>;
 def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
 def : Proc<"r5900", [FeatureR5900]>;
 def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
