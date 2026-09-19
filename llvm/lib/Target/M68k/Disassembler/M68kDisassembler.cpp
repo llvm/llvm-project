@@ -196,7 +196,8 @@ static MCDisassembler *createM68kDisassembler(const Target &T,
   return new M68kDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeM68kDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheM68kTarget(),
                                          createM68kDisassembler);
