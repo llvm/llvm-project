@@ -3401,6 +3401,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   VPValue *Combined = Exits[0].CondToExit;
   for (const EarlyExitInfo &Info : drop_begin(Exits))
     Combined = LatchBuilder.createLogicalOr(Combined, Info.CondToExit);
+  Combined = LatchBuilder.createFreeze(Combined);
 
   // Even though the logical or prevents posion propagation, we need to freeze
   // Combined to prevent poisoning the entire AnyOf result:
@@ -3408,9 +3409,10 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // Exits[0].CondToExit = [0,1,0,0]
   // Exits[1].CondToExit = [0,0,p,p]
   //            Combined = [0,1,p,p]
+  //    freeze(Combined) = [0,1,?,?]
   //               AnyOf = 1
-  VPValue *IsAnyExitTaken = LatchBuilder.createNaryOp(
-      VPInstruction::AnyOf, LatchBuilder.createFreeze(Combined));
+  VPValue *IsAnyExitTaken =
+      LatchBuilder.createNaryOp(VPInstruction::AnyOf, Combined);
 
   // Create a comparison for the latch exit condition and replace the
   // BranchOnCond with a BranchOnTwoConds. The original BranchOnCond's condition
