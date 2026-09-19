@@ -4207,8 +4207,8 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
 
   // If Val is a float, cast it to an integer of the same bitwidth
   // so DAG.getZExtOrTrunc can process it safely.
-  if (ValVT.isFloatingPoint()) {
-    ValVT = EVT::getIntegerVT(*DAG.getContext(), ValVT.getSizeInBits());
+  if (!ValVT.isInteger()) {
+    ValVT = ValVT.changeTypeToInteger();
     Val = DAG.getBitcast(ValVT, Val);
   }
 
@@ -4253,8 +4253,7 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   SDValue Result;
   if (!ResultVT.isInteger()) {
     // Drop into the integer domain to safely truncate the shifted bits
-    EVT IntResultVT =
-        EVT::getIntegerVT(*DAG.getContext(), ResultVT.getSizeInBits());
+    EVT IntResultVT = ResultVT.changeTypeToInteger();
     Result = DAG.getNode(ISD::TRUNCATE, dl, IntResultVT, Shifted);
     Result = DAG.getBitcast(ResultVT, Result);
   } else {
