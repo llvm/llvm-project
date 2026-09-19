@@ -288,6 +288,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_type_order`                                 | `202506L`       |
 | `__cpp_lib_variant`                                    | `202306L`       |
 | **C++29**                                              |                 |
+| `__cpp_lib_bitops`                                     | `202606L`       |
 | `__cpp_lib_expected`                                   | `202606L`       |
 | `__cpp_lib_map_lookup`                                 | *unimplemented* |
 | `__cpp_lib_mdspan_copy`                                | *unimplemented* |

@@ -1,5 +1,6 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s -check-prefixes=HONORINF,ALL
 ! RUN: %flang_fc1 -menable-no-infs -emit-hlfir %s -o - | FileCheck %s -check-prefixes=CHECK,ALL,%if flang-supports-f128-math %{F128%} %else %{F64%}
+! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero-divisor %s -o - | FileCheck %s -check-prefix=CHECK-MOD-ZERO
 
 ! ALL-LABEL: func @_QPmodulo_testr(
 ! ALL-SAME: %[[arg0:.*]]: !fir.ref<f64>{{.*}}, %[[arg1:.*]]: !fir.ref<f64>{{.*}}, %[[arg2:.*]]: !fir.ref<f64>{{.*}}) {
@@ -25,6 +26,7 @@ subroutine modulo_testr(r, a, p)
 end subroutine
 
 ! ALL-LABEL: func @_QPmodulo_testi(
+! CHECK-MOD-ZERO-LABEL: func @_QPmodulo_testi(
 ! ALL-SAME: %[[arg0:.*]]: !fir.ref<i64>{{.*}}, %[[arg1:.*]]: !fir.ref<i64>{{.*}}, %[[arg2:.*]]: !fir.ref<i64>{{.*}}) {
 subroutine modulo_testi(r, a, p)
   integer(8) :: r, a, p
@@ -33,6 +35,11 @@ subroutine modulo_testi(r, a, p)
   ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFmodulo_testiEr"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
   ! ALL-DAG: %[[a:.*]] = fir.load %[[a_decl]]#0 : !fir.ref<i64>
   ! ALL-DAG: %[[p:.*]] = fir.load %[[p_decl]]#0 : !fir.ref<i64>
+  ! CHECK-MOD-ZERO: arith.cmpi eq, %{{.*}}, %c0{{.*}} : i64
+  ! CHECK-MOD-ZERO: fir.if %{{.*}} {
+  ! CHECK-MOD-ZERO:   fir.call @_FortranAReportFatalUserError
+  ! CHECK-MOD-ZERO: }
+  ! CHECK-MOD-ZERO: arith.remsi
   ! ALL-DAG: %[[rem:.*]] = arith.remsi %[[a]], %[[p]] : i64
   ! ALL-DAG: %[[argXor:.*]] = arith.xori %[[a]], %[[p]] : i64
   ! ALL-DAG: %[[signDifferent:.*]] = arith.cmpi slt, %[[argXor]], %c0{{.*}} : i64

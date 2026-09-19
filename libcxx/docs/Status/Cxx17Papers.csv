@@ -42,7 +42,7 @@
 "[P0077R2](https://wg21.link/P0077R2)","`is_callable`, the missing INVOKE related trait","2016-02 (Jacksonville)","{{Complete}}","3.9","[#103638](https://github.com/llvm/llvm-project/issues/103638)",""
 "","","","","","",""
 "[P0032R3](https://wg21.link/P0032R3)","Homogeneous interface for variant, any and optional","2016-06 (Oulu)","{{Complete}}","4","[#103639](https://github.com/llvm/llvm-project/issues/103639)",""
-"[P0040R3](https://wg21.link/P0040R3)","Extending memory management tools","2016-06 (Oulu)","{{Partial}}","","[#103640](https://github.com/llvm/llvm-project/issues/103640)","The serial overloads have been available since v4, but the `ExecutionPolicy` overloads have not been implemented."
+"[P0040R3](https://wg21.link/P0040R3)","Extending memory management tools","2016-06 (Oulu)","{{Complete}}","24","[#103640](https://github.com/llvm/llvm-project/issues/103640)","The serial overloads have been available since v4."
 "[P0063R3](https://wg21.link/P0063R3)","C++17 should refer to C11 instead of C99","2016-06 (Oulu)","{{Complete}}","7","[#103642](https://github.com/llvm/llvm-project/issues/103642)",""
 "[P0067R3](https://wg21.link/P0067R3)","Elementary string conversions","2016-06 (Oulu)","{{NothingToDo}}","n/a","[#103643](https://github.com/llvm/llvm-project/issues/103643)","Resolved by [P0067R5](https://wg21.link/P0067R5)"
 "[P0083R3](https://wg21.link/P0083R3)","Splicing Maps and Sets","2016-06 (Oulu)","{{Complete}}","8","[#103645](https://github.com/llvm/llvm-project/issues/103645)",""

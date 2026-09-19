@@ -1377,7 +1377,10 @@ def process_file(
                 temp_file = target_path.with_name(
                     f".{target_path.name}.tmp_{os.getpid()}"
                 )
-                with open(temp_file, "w", encoding="utf-8") as f:
+                # newline="\n" disables the newline substitution a text-mode
+                # write does: format_cmake_content() emits "\n" endings and the
+                # file has to land on disk with those.
+                with open(temp_file, "w", encoding="utf-8", newline="\n") as f:
                     f.write(formatted)
                 os.replace(temp_file, target_path)
                 print(f"Formatted {filepath}")
@@ -1422,6 +1425,10 @@ def find_cmake_files(paths: list[str]) -> list[str]:
 
 def main() -> None:
     """Entry point: parses CLI arguments and drives file discovery, pre-scanning, and formatting."""
+    # Formatted output and diffs go to stdout verbatim, for the same reason
+    # process_file() writes files with newline="\n".
+    sys.stdout.reconfigure(newline="\n")
+
     parser = argparse.ArgumentParser(
         description="LLVM and LLVM-libc CMake Formatter Utility",
         formatter_class=argparse.RawDescriptionHelpFormatter,
