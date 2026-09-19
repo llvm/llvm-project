@@ -1977,6 +1977,21 @@ private:
   PyOpAttributeMap attributes;
 };
 
+class MLIR_PYTHON_API_EXPORTED PyDynamicOpDefinition {
+public:
+  PyDynamicOpDefinition(std::string_view opName,
+                        DefaultingPyMlirContext context)
+      : opDef(mlirDynamicOpDefinitionLookup(
+            MlirStringRef{opName.data(), opName.size()},
+            context.get()->get())) {}
+
+  void setGetCanonicalizationPatternsFn(const nanobind::callable &fn);
+  static void bind(nanobind::module_ &m);
+
+private:
+  MlirDynamicOpDefinition opDef;
+};
+
 class MLIR_PYTHON_API_EXPORTED PyDynamicOpTrait {
 public:
   static bool attach(const nanobind::object &opName,

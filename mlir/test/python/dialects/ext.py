@@ -3,6 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import arith
 from mlir.dialects.ext import *
+from mlir.passmanager import PassManager
 from mlir.rewrite import *
 from mlir import ir
 from typing import Any, Optional, Sequence, TypeVar, Union
@@ -1189,6 +1190,47 @@ def testExtDialectWithPublicInterfaces():
             recursively_speculatable_iface.getSpeculatability()
             == ir.Speculatability.RecursivelySpeculatable,
         )
+
+
+# CHECK: TEST: testExtDialectCanonicalizationPatterns
+@run
+def testExtDialectCanonicalizationPatterns():
+    class TestCanonicalization(Dialect, name="ext_canonicalization"):
+        pass
+
+    class CanonicalizeOp(TestCanonicalization.Operation, name="canonicalize"):
+        input: Operand[IntegerType[32]]
+        output: Result[IntegerType[32]] = infer_result()
+
+        @staticmethod
+        def get_canonicalization_patterns(patterns):
+            def replace_with_input(op, rewriter):
+                rewriter.replace_op(op, [op.input])
+
+            patterns.add(CanonicalizeOp, replace_with_input)
+
+    class SinkOp(TestCanonicalization.Operation, name="sink"):
+        input: Operand[IntegerType[32]]
+
+    with Context(), Location.unknown():
+        TestCanonicalization.load()
+
+        i32 = IntegerType.get_signless(32)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            one = arith.constant(i32, 1)
+            canonicalized = CanonicalizeOp(one)
+            SinkOp(canonicalized)
+
+        assert module.operation.verify()
+        PassManager.parse("builtin.module(canonicalize)").run(module.operation)
+
+        # CHECK: module {
+        # CHECK:   %[[ONE:.*]] = arith.constant 1 : i32
+        # CHECK-NOT: "ext_canonicalization.canonicalize"
+        # CHECK:   "ext_canonicalization.sink"(%[[ONE]]) : (i32) -> ()
+        # CHECK: }
+        print(module)
 
 
 # CHECK: TEST: testExtDialectWithPure
