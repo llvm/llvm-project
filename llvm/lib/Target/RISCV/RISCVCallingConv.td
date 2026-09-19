@@ -42,6 +42,11 @@ def CSR_ILP32D_LP64D_V
 // Needed for implementation of RISCVRegisterInfo::getNoPreservedMask()
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
+// preserve_none does not preserve any general purpose register, but the return
+// address and the frame pointer must still be saved by functions that clobber
+// them, just as in the standard calling conventions.
+def CSR_NoneRegs : CalleeSavedRegs<(add X1, X8)>;
+
 def CSR_IPRA : CalleeSavedRegs<(add X1)>;
 
 // Interrupt handler needs to save/restore all registers that are used,

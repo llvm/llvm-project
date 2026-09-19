@@ -245,6 +245,62 @@ static ArrayRef<MCPhysReg> getArgGPR32s(const RISCVABI::ABI ABI) {
   return ArrayRef(ArgIGPRs);
 }
 
+// Arguments and return values of a preserve_none function may be assigned to
+// any GPR except:
+// - X0, the hardwired zero,
+// - X1, the return address,
+// - X2, the stack pointer,
+// - X3, the global pointer,
+// - X4, the thread pointer,
+// - X6 and X7, which the backend uses as scratch registers at points where
+//   the arguments of the calling convention are still live: a direct tail
+//   call is expanded to AUIPC+JALR with X6 as the scratch register (X7 with
+//   Zicfilp/cf-protection-branch, see RISCVII::getTailExpandUseRegNo()), the
+//   inline stack probe clobbers X6 and X7 in the prologue, right before the
+//   incoming arguments are copied out of their registers, and the KCFI check
+//   clobbers them right before a call (see
+//   RISCVAsmPrinter::LowerKCFI_CHECK()).  Note that the tail call expansion
+//   happens while encoding, so no register allocator is involved and the
+//   conflict cannot be resolved by picking another register,
+// - X8, the frame pointer.
+//
+// No GPR is preserved by a preserve_none callee (see CSR_NoneRegs in
+// RISCVCallingConv.td), so all of them are caller-saved. Variadic functions
+// are passed using the standard convention instead (see
+// getAllocatableArgGPRs): the va_start/va_arg implementation assumes the
+// standard argument register layout.
+//
+// Non-volatile registers are used first, so that a function may call normal
+// functions without having to save and reload its arguments. The registers are
+// listed in the order in which they are assigned; X5 is assigned last as it is
+// the first choice for a scratch register in the frame lowering (which checks
+// that it is not live before using it, unlike X6 and X7 above).
+static const MCPhysReg PreserveNoneArgGPRs[] = {
+    RISCV::X9,  RISCV::X18, RISCV::X19, RISCV::X20, RISCV::X21, RISCV::X22,
+    RISCV::X23, RISCV::X24, RISCV::X25, RISCV::X26, RISCV::X27, RISCV::X10,
+    RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15, RISCV::X16,
+    RISCV::X17, RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31, RISCV::X5};
+
+/// Return the GPRs that may be used for arguments (and return values) in the
+/// current calling convention.
+static ArrayRef<MCPhysReg> getAllocatableArgGPRs(CCState &State,
+                                                 const RISCVSubtarget &STI) {
+  if (State.getCallingConv() == CallingConv::PreserveNone &&
+      !State.isVarArg())
+    return ArrayRef(PreserveNoneArgGPRs);
+  return RISCV::getArgGPRs(STI);
+}
+
+/// Return true if a preserve_none return value that ran out of registers has to
+/// fail its assignment instead of being passed on the stack.  The standard
+/// calling conventions reserve a stack area for return values, but there is no
+/// such area for preserve_none: a value that does not fit in a register must be
+/// returned indirectly instead, and the caller is responsible for passing the
+/// return slot (sret).
+static bool cannotReturnOnStack(CCState &State, bool IsRet) {
+  return IsRet && State.getCallingConv() == CallingConv::PreserveNone;
+}
+
 static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
   // The GPRs used for passing arguments in the FastCC, X5 and X6 might be used
   // for save-restore libcall, so we don't use them.
@@ -309,19 +365,22 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                 ISD::ArgFlagsTy ArgFlags1, unsigned ValNo2,
                                 MVT ValVT2, MVT LocVT2,
                                 ISD::ArgFlagsTy ArgFlags2,
-                                const RISCVSubtarget &Subtarget) {
+                                const RISCVSubtarget &Subtarget, bool IsRet) {
   unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   bool EABI = ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E;
 
-  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
+  ArrayRef<MCPhysReg> ArgGPRs = getAllocatableArgGPRs(State, Subtarget);
 
   if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
     // At least one half can be passed via register.
     State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
                                      VA1.getLocVT(), CCValAssign::Full));
   } else {
+    if (cannotReturnOnStack(State, IsRet))
+      return true;
+
     // Both halves must be passed on the stack, with proper alignment.
     // TODO: To be compatible with GCC's behaviors, we force them to have 4-byte
     // alignment. This behavior may be changed when RV32E/ILP32E is ratified.
@@ -435,8 +494,10 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // Any return value split in to more than two values can't be returned
   // directly. Vectors are returned via the available vector registers.
+  // preserve_none is the exception: each resulting value is returned in its
+  // own register.
   if ((!LocVT.isVector() || Subtarget.isPExtPackedType(LocVT)) && IsRet &&
-      ValNo > 1)
+      ValNo > 1 && State.getCallingConv() != CallingConv::PreserveNone)
     return true;
 
   // Double wide packed types require 2 GPRs so we can only return 1 of them.
@@ -503,7 +564,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
+  ArrayRef<MCPhysReg> ArgGPRs = getAllocatableArgGPRs(State, Subtarget);
 
   // Zdinx use GPR without a bitcast when possible.
   if (LocVT == MVT::f64 && XLen == 64 && Subtarget.hasStdExtZdinx()) {
@@ -606,7 +667,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     PendingLocs.clear();
     PendingArgFlags.clear();
     return CC_RISCVAssign2XLen(State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
-                               Subtarget);
+                               Subtarget, IsRet);
   }
 
   // Split arguments might be passed indirectly, so keep track of the pending
@@ -674,6 +735,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     assert(ArgFlags.isSplitEnd() && "Expected ArgFlags.isSplitEnd()");
     assert(PendingLocs.size() > 1 && "Unexpected PendingLocs.size()");
 
+    if (!Reg && cannotReturnOnStack(State, IsRet))
+      return true;
+
     for (auto &It : PendingLocs) {
       if (Reg)
         State.addLoc(CCValAssign::getReg(It.getValNo(), It.getValVT(), Reg,
@@ -698,6 +762,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     return false;
   }
+
+  if (cannotReturnOnStack(State, IsRet))
+    return true;
 
   State.addLoc(CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
   return false;
