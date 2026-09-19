@@ -469,6 +469,17 @@ Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
   return Error::success();
 }
 
+Error olIteratePlatforms_impl(ol_platform_iterate_cb_t Callback,
+                              void *UserData) {
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Callback(Platform.get(), UserData)) {
+      return Error::success();
+    }
+  }
+
+  return Error::success();
+}
+
 Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
