@@ -6014,38 +6014,6 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                   *VPI, Store->getDebugLoc());
 }
 
-VPWidenIntOrFpInductionRecipe *
-VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
-                                                VFRange &Range) {
-  auto *I = cast<TruncInst>(VPI->getUnderlyingInstr());
-  // Optimize the special case where the source is a constant integer
-  // induction variable. Notice that we can only optimize the 'trunc' case
-  // because (a) FP conversions lose precision, (b) sext/zext may wrap, and
-  // (c) other casts depend on pointer size.
-
-  // Determine whether \p K is a truncation based on an induction variable that
-  // can be optimized.
-  if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-          bind_front(&LoopVectorizationCostModel::isOptimizableIVTruncate, CM,
-                     I),
-          Range))
-    return nullptr;
-
-  auto *WidenIV = cast<VPWidenIntOrFpInductionRecipe>(
-      VPI->getOperand(0)->getDefiningRecipe());
-  PHINode *Phi = WidenIV->getPHINode();
-  VPValue *Start = WidenIV->getStartValue();
-  const InductionDescriptor &IndDesc = WidenIV->getInductionDescriptor();
-
-  // Wrap flags from the original induction do not apply to the truncated type,
-  // so do not propagate them.
-  VPIRFlags Flags = VPIRFlags::WrapFlagsTy(false, false);
-  VPValue *Step =
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
-  return new VPWidenIntOrFpInductionRecipe(
-      Phi, Start, Step, &Plan.getVF(), IndDesc, I, Flags, VPI->getDebugLoc());
-}
-
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
   assert((!isa<UncondBrInst, CondBrInst, PHINode, LoadInst, StoreInst>(I)) &&
          "Instruction should have been handled earlier");
@@ -6239,16 +6207,9 @@ VPRecipeBase *
 VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                               VFRange &Range) {
   assert(!R->isPhi() && "phis must be handled earlier");
-  // First, check for specific widening recipes that deal with optimizing
-  // truncates and memory operations.
   auto *VPI = cast<VPInstruction>(R);
   assert(VPI->getOpcode() != Instruction::Call &&
          "Call should have been handled by makeCallWideningDecisions");
-
-  VPRecipeBase *Recipe;
-  if (VPI->getOpcode() == Instruction::Trunc &&
-      (Recipe = tryToOptimizeInductionTruncate(VPI, Range)))
-    return Recipe;
 
   // All widen recipes below deal only with VF > 1.
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6610,6 +6571,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
+  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range,
+                 CostCtx, Legal->getPrimaryInduction());
+
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Convert input VPInstructions to widened recipes.
@@ -6628,10 +6592,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (!VPI->getUnderlyingValue())
         continue;
 
-      // TODO: Gradually replace uses of underlying instruction by analyses on
-      // VPlan. Migrate code relying on the underlying instruction from VPlan0
-      // to construct recipes below to not use the underlying instruction.
-      Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
       Builder.setInsertPoint(VPI);
 
       VPRecipeBase *Recipe =
@@ -6640,13 +6600,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
         Recipe =
             RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
 
-      if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
-        // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be
-        // moved to the phi section in the header.
-        Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-      } else {
-        Builder.insert(Recipe);
-      }
+      Builder.insert(Recipe);
       if (Recipe->getNumDefinedValues() == 1) {
         VPI->replaceAllUsesWith(Recipe->getVPSingleValue());
       } else {
