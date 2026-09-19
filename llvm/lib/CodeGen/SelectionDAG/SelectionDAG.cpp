@@ -7124,6 +7124,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
+  case ISD::PARITY:
   case ISD::CTLS:
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:
@@ -7699,6 +7700,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                            C->isOpaque());
       case ISD::CTPOP:
         return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::PARITY:
+        return getConstant(Val.popcount() & 1, DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLZ:
       case ISD::CTLZ_ZERO_POISON:
@@ -15151,7 +15155,8 @@ SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
     SDValue NegRHS = getNode(ISD::FNEG, DL, RHS.getValueType(), RHS);
     return getNode(Opc, DL, AccVT, Acc, LHS, NegRHS);
   }
-  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA) &&
+  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA ||
+          Opc == ISD::PARTIAL_REDUCE_SUMLA) &&
          "Unexpected opcode");
   SDValue NegAcc = getNegative(Acc, DL, AccVT);
   SDValue MLA = getNode(Opc, DL, AccVT, NegAcc, LHS, RHS);
