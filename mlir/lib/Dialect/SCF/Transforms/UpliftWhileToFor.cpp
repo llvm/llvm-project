@@ -241,11 +241,22 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
     one = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 1);
   }
 
+  // Not the last executed induction value: `scf.condition` forwards to the
+  // results only once the condition fails, so the escaping value is one step
+  // past anything the body saw, `lb + tripCount * step`, clamped at zero trips
+  // so an entry-false loop reports `lb`.
+  //
+  // Assumes a strictly positive `step`. The matcher does not check this, so a
+  // non-positive step breaks the ceil-div and also builds an `scf.for` that
+  // violates its own contract; pre-existing gap, not repairable here.
+  Value zero = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getZeroAttr(step.getType()));
+
   Value stepDec = arith::SubIOp::create(rewriter, loc, step, one);
   Value len = arith::SubIOp::create(rewriter, loc, ub, lb);
   len = arith::AddIOp::create(rewriter, loc, len, stepDec);
   len = arith::DivSIOp::create(rewriter, loc, len, step);
-  len = arith::SubIOp::create(rewriter, loc, len, one);
+  len = arith::MaxSIOp::create(rewriter, loc, len, zero);
   Value res = arith::MulIOp::create(rewriter, loc, len, step);
   res = arith::AddIOp::create(rewriter, loc, lb, res);
 
