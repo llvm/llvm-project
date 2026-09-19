@@ -63,6 +63,12 @@ functions:
     arguments:
       - type: const char *
       - type: mode_t
+  - name: mkfifoat
+    return_type: int
+    arguments:
+      - type: int
+      - type: const char *
+      - type: mode_t
   - name: stat
     return_type: int
     arguments:
