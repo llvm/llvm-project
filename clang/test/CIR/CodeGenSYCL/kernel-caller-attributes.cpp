@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-llvm -fno-finite-loops %s -o %t-nomp.ll
+// RUN: FileCheck --input-file=%t-nomp.ll %s -check-prefix=LLVM-NOMP
 
 // The SYCL kernel caller offload entry point receives the SYCL 2020 device
 // language attributes: it must not recurse (norecurse) and is guaranteed to
@@ -37,3 +39,9 @@ void test(int *p) {
 
 // OGCG: define spir_kernel void @_ZTS2KN({{.*}}) #[[KATTR:[0-9]+]]
 // OGCG: attributes #[[KATTR]] = {{[{].*}}mustprogress{{.*}}norecurse{{.*}}"sycl-module-id"="{{.*}}kernel-caller-attributes.cpp"
+
+// With -fno-finite-loops, checkIfFunctionMustProgress() is false, so the kernel
+// caller must not carry mustprogress; norecurse and sycl-module-id remain. The
+// exact attribute set (which omits mustprogress) is verified here.
+// LLVM-NOMP: define spir_kernel void @_ZTS2KN({{.*}}) #[[KATTR:[0-9]+]]
+// LLVM-NOMP: attributes #[[KATTR]] = { convergent noinline norecurse "sycl-module-id"="{{.*}}kernel-caller-attributes.cpp" }
