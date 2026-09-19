@@ -444,7 +444,7 @@ define i32 @decb_scalar_i32(i32 %a) {
 ; NO_SCALAR_INC-LABEL: decb_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cnth x8, all, mul #8
-; NO_SCALAR_INC-NEXT:    sub w0, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w0, w0, w8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: decb_scalar_i32:
@@ -472,7 +472,7 @@ define i32 @dech_scalar_i32(i32 %a) {
 ; NO_SCALAR_INC-LABEL: dech_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cnth x8
-; NO_SCALAR_INC-NEXT:    sub w0, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w0, w0, w8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: dech_scalar_i32:
@@ -500,7 +500,7 @@ define i32 @decw_scalar_i32(i32 %a) {
 ; NO_SCALAR_INC-LABEL: decw_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cntw x8
-; NO_SCALAR_INC-NEXT:    sub w0, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w0, w0, w8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: decw_scalar_i32:
@@ -528,7 +528,7 @@ define i32 @decd_scalar_i32(i32 %a) {
 ; NO_SCALAR_INC-LABEL: decd_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cntd x8
-; NO_SCALAR_INC-NEXT:    sub w0, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w0, w0, w8
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: decd_scalar_i32:
@@ -691,7 +691,7 @@ define void @decb_incb_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; NO_SCALAR_INC-LABEL: decb_incb_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    rdvl x8, #1
-; NO_SCALAR_INC-NEXT:    sub w9, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w9, w0, w8
 ; NO_SCALAR_INC-NEXT:    add w8, w1, w8
 ; NO_SCALAR_INC-NEXT:    str w9, [x2]
 ; NO_SCALAR_INC-NEXT:    str w8, [x3]
@@ -730,7 +730,7 @@ define void @dech_inch_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; NO_SCALAR_INC-LABEL: dech_inch_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cnth x8
-; NO_SCALAR_INC-NEXT:    sub w9, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w9, w0, w8
 ; NO_SCALAR_INC-NEXT:    add w8, w1, w8
 ; NO_SCALAR_INC-NEXT:    str w9, [x2]
 ; NO_SCALAR_INC-NEXT:    str w8, [x3]
@@ -769,7 +769,7 @@ define void @decw_incw_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; NO_SCALAR_INC-LABEL: decw_incw_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cntw x8
-; NO_SCALAR_INC-NEXT:    sub w9, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w9, w0, w8
 ; NO_SCALAR_INC-NEXT:    add w8, w1, w8
 ; NO_SCALAR_INC-NEXT:    str w9, [x2]
 ; NO_SCALAR_INC-NEXT:    str w8, [x3]
@@ -808,7 +808,7 @@ define void @decd_incb_scalar_i32(i32 %a, i32 %b, ptr %p, ptr %q) {
 ; NO_SCALAR_INC-LABEL: decd_incb_scalar_i32:
 ; NO_SCALAR_INC:       // %bb.0:
 ; NO_SCALAR_INC-NEXT:    cntd x8
-; NO_SCALAR_INC-NEXT:    sub w9, w0, w8
+; NO_SCALAR_INC-NEXT:    subs w9, w0, w8
 ; NO_SCALAR_INC-NEXT:    add w8, w1, w8
 ; NO_SCALAR_INC-NEXT:    str w9, [x2]
 ; NO_SCALAR_INC-NEXT:    str w8, [x3]

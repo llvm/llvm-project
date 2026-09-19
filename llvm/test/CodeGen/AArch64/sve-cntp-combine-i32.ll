@@ -229,7 +229,7 @@ define i64 @cntp_sub_all_active_nxv2i1_multiuse(i32 %x, i64 %y, <vscale x 2 x i1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    cntp x8, p1, p0.d
-; CHECK-NEXT:    sub w9, w8, w0
+; CHECK-NEXT:    subs w9, w8, w0
 ; CHECK-NEXT:    madd x0, x8, x1, x9
 ; CHECK-NEXT:    ret
   %2 = tail call i64 @llvm.aarch64.sve.cntp.nxv2i1(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> %pg)
@@ -297,7 +297,7 @@ define i64 @cntp_sub_same_active_nxv2i1_multiuse(i32 %x, i64 %y, <vscale x 2 x i
 ; CHECK-LABEL: cntp_sub_same_active_nxv2i1_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cntp x8, p0, p0.d
-; CHECK-NEXT:    sub w9, w8, w0
+; CHECK-NEXT:    subs w9, w8, w0
 ; CHECK-NEXT:    madd x0, x8, x1, x9
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.aarch64.sve.cntp.nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %pg)

@@ -888,6 +888,7 @@ define void @test_stnp_i32_register_offset_i65(ptr %ptr, i32 %v, i65 %offset) {
 define void @test_stnp_i64_register_offset_i8(ptr %ptr, i64 %v, i8 %offset) {
 ; CHECK-LE-LABEL: test_stnp_i64_register_offset_i8:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-LE-NEXT:    add x8, x0, w2, sxtb #3
 ; CHECK-LE-NEXT:    lsr x9, x1, #32
 ; CHECK-LE-NEXT:    stnp w1, w9, [x8]
@@ -907,6 +908,7 @@ define void @test_stnp_i64_register_offset_i8(ptr %ptr, i64 %v, i8 %offset) {
 define void @test_stnp_i64_register_offset_i16(ptr %ptr, i64 %v, i16 %offset) {
 ; CHECK-LE-LABEL: test_stnp_i64_register_offset_i16:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-LE-NEXT:    add x8, x0, w2, sxth #3
 ; CHECK-LE-NEXT:    lsr x9, x1, #32
 ; CHECK-LE-NEXT:    stnp w1, w9, [x8]
@@ -978,6 +980,7 @@ define void @test_stnp_i64_register_offset_i65(ptr %ptr, i64 %v, i65 %offset) {
 define void @test_stnp_i65_register_offset_i8(ptr %ptr, i65 %v, i8 %offset) {
 ; CHECK-LE-LABEL: test_stnp_i65_register_offset_i8:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-LE-NEXT:    lsr x8, x2, #32
 ; CHECK-LE-NEXT:    add x9, x0, w4, sxtb #3
 ; CHECK-LE-NEXT:    and w10, w3, #0x1
@@ -988,6 +991,7 @@ define void @test_stnp_i65_register_offset_i8(ptr %ptr, i65 %v, i8 %offset) {
 ; CHECK-BE-LABEL: test_stnp_i65_register_offset_i8:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    extr x8, x2, x3, #8
+; CHECK-BE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-BE-NEXT:    add x9, x0, w4, sxtb #3
 ; CHECK-BE-NEXT:    and x8, x8, #0x1ffffffffffffff
 ; CHECK-BE-NEXT:    strb w3, [x9, #8]
@@ -1001,6 +1005,7 @@ define void @test_stnp_i65_register_offset_i8(ptr %ptr, i65 %v, i8 %offset) {
 define void @test_stnp_i65_register_offset_i16(ptr %ptr, i65 %v, i16 %offset) {
 ; CHECK-LE-LABEL: test_stnp_i65_register_offset_i16:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-LE-NEXT:    lsr x8, x2, #32
 ; CHECK-LE-NEXT:    add x9, x0, w4, sxth #3
 ; CHECK-LE-NEXT:    and w10, w3, #0x1
@@ -1011,6 +1016,7 @@ define void @test_stnp_i65_register_offset_i16(ptr %ptr, i65 %v, i16 %offset) {
 ; CHECK-BE-LABEL: test_stnp_i65_register_offset_i16:
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    extr x8, x2, x3, #8
+; CHECK-BE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-BE-NEXT:    add x9, x0, w4, sxth #3
 ; CHECK-BE-NEXT:    and x8, x8, #0x1ffffffffffffff
 ; CHECK-BE-NEXT:    strb w3, [x9, #8]
@@ -1094,6 +1100,7 @@ define void @test_stnp_i65_register_offset_i65(ptr %ptr, i65 %v, i65 %offset) {
 define void @test_stnp_i128_register_offset_i8(ptr %ptr, i128 %v, i8 %offset) {
 ; CHECK-LE-LABEL: test_stnp_i128_register_offset_i8:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-LE-NEXT:    lsr x8, x3, #32
 ; CHECK-LE-NEXT:    add x9, x0, w4, sxtb #3
 ; CHECK-LE-NEXT:    lsr x10, x2, #32
@@ -1103,6 +1110,7 @@ define void @test_stnp_i128_register_offset_i8(ptr %ptr, i128 %v, i8 %offset) {
 ;
 ; CHECK-BE-LABEL: test_stnp_i128_register_offset_i8:
 ; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-BE-NEXT:    add x8, x0, w4, sxtb #3
 ; CHECK-BE-NEXT:    stp x2, x3, [x8]
 ; CHECK-BE-NEXT:    ret
@@ -1114,6 +1122,7 @@ define void @test_stnp_i128_register_offset_i8(ptr %ptr, i128 %v, i8 %offset) {
 define void @test_stnp_i128_register_offset_i16(ptr %ptr, i128 %v, i16 %offset) {
 ; CHECK-LE-LABEL: test_stnp_i128_register_offset_i16:
 ; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-LE-NEXT:    lsr x8, x3, #32
 ; CHECK-LE-NEXT:    add x9, x0, w4, sxth #3
 ; CHECK-LE-NEXT:    lsr x10, x2, #32
@@ -1123,6 +1132,7 @@ define void @test_stnp_i128_register_offset_i16(ptr %ptr, i128 %v, i16 %offset) 
 ;
 ; CHECK-BE-LABEL: test_stnp_i128_register_offset_i16:
 ; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-BE-NEXT:    add x8, x0, w4, sxth #3
 ; CHECK-BE-NEXT:    stp x2, x3, [x8]
 ; CHECK-BE-NEXT:    ret

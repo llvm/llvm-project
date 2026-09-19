@@ -1321,6 +1321,12 @@ public:
     return false;
   }
 
+  /// Return true if MachineCSE may propagate a subregister COPY
+  /// (`%a = COPY %b:subN`) into its users, leaving a subregister index on an
+  /// arbitrary operand. Off by default: target peephole and post-RA code has
+  /// to cope with operands it would otherwise only see as whole registers.
+  virtual bool shouldPropagateSubRegCopiesInCSE() const { return false; }
+
   /// Fix up the placeholder we may add in genAlternativeCodeSequence().
   virtual void
   finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,

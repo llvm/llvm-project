@@ -467,6 +467,7 @@ public:
   bool optimizeCondBranch(MachineInstr &MI) const override;
 
   CombinerObjective getCombinerObjective(unsigned Pattern) const override;
+  bool shouldPropagateSubRegCopiesInCSE() const override { return true; }
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
   /// \param Pattern - combiner pattern

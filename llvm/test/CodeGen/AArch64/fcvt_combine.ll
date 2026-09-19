@@ -1122,17 +1122,16 @@ define <8 x i16> @tests_v8i16_fadd(<8 x half> %f) {
 ; CHECK-NO16-GI-LABEL: tests_v8i16_fadd:
 ; CHECK-NO16-GI:       // %bb.0:
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    fadd v1.4s, v2.4s, v2.4s
-; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-NO16-GI-NEXT:    fadd v1.4s, v1.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fadd v0.4s, v0.4s, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NO16-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NO16-GI-NEXT:    ret
   %mul.i = fadd <8 x half> %f, %f
   %vcvt.i = fptosi <8 x half> %mul.i to <8 x i16>
@@ -1213,17 +1212,16 @@ define <8 x i16> @testu_v8i16_fadd(<8 x half> %f) {
 ; CHECK-NO16-GI-LABEL: testu_v8i16_fadd:
 ; CHECK-NO16-GI:       // %bb.0:
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl2 v2.4s, v0.8h
-; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fadd v0.4s, v1.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    fadd v1.4s, v2.4s, v2.4s
-; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-NO16-GI-NEXT:    fadd v1.4s, v1.4s, v1.4s
+; CHECK-NO16-GI-NEXT:    fadd v0.4s, v0.4s, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-GI-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NO16-GI-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NO16-GI-NEXT:    ret
   %mul.i = fadd <8 x half> %f, %f
   %vcvt.i = fptoui <8 x half> %mul.i to <8 x i16>
@@ -1310,9 +1308,8 @@ define <8 x i16> @tests_sat_v8i16_fadd(<8 x half> %f) {
 ; CHECK-NO16-GI-LABEL: tests_sat_v8i16_fadd:
 ; CHECK-NO16-GI:       // %bb.0:
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-GI-NEXT:    fadd v1.4s, v1.4s, v2.4s
+; CHECK-NO16-GI-NEXT:    fadd v1.4s, v1.4s, v1.4s
 ; CHECK-NO16-GI-NEXT:    fadd v0.4s, v0.4s, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
@@ -1403,9 +1400,8 @@ define <8 x i16> @testu_sat_v8i16_fadd(<8 x half> %f) {
 ; CHECK-NO16-GI-LABEL: testu_sat_v8i16_fadd:
 ; CHECK-NO16-GI:       // %bb.0:
 ; CHECK-NO16-GI-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-GI-NEXT:    fcvtl v2.4s, v0.4h
 ; CHECK-NO16-GI-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-GI-NEXT:    fadd v1.4s, v1.4s, v2.4s
+; CHECK-NO16-GI-NEXT:    fadd v1.4s, v1.4s, v1.4s
 ; CHECK-NO16-GI-NEXT:    fadd v0.4s, v0.4s, v0.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-NO16-GI-NEXT:    fcvtn v0.4h, v0.4s
