@@ -47,8 +47,24 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 
   VPWidenCanonicalIVRecipe *WideCanIV = nullptr;
   VPIRValue *StartValue = nullptr;
-  // VPWidenCanonicalIVRecipe is either a direct user of CanonicalIV or
-  // Add (CanonicalIV, resumeValue) (like the case for tail-folded epilogue).
+  // Find VPWidenCanonicalIVRecipe among the canonical IV's users,
+  // matching Case 1 where it's a direct user of canonicalIV:
+  // <x1> vector loop: {
+  //   vp<%4> = CANONICAL-IV
+  //
+  //   vector.body:
+  //     EMIT vp<%6> = WIDEN-CANONICAL-INDUCTION nuw vp<%4>
+  //     ..
+  // }
+  // or Case 2 (indirect use through an epilogue resume-value add):
+  // <x1> vector loop: {
+  //   vp<%5> = CANONICAL-IV
+  //
+  //   vec.epilog.vector.body:
+  //     EMIT vp<%7> = add vp<%5>, ir<%vec.epilog.resume.val>
+  //     EMIT vp<%8> = WIDEN-CANONICAL-INDUCTION nuw vp<%7>
+  //     ..
+  //}
   auto *IV = LoopRegion->getCanonicalIV();
   for (auto *User : IV->users()) {
     if (isa<VPWidenCanonicalIVRecipe>(User)) {
@@ -580,12 +596,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
-        VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-        if (!LoopRegion)
-          continue;
-        VPValue *CanIV = LoopRegion->getCanonicalIV();
-        if (!CanIV)
-          continue;
+        VPValue *CanIV = WideCanIV->getCanonicalIV();
         Type *CanIVTy = CanIV->getScalarType();
         VPValue *Step = WideCanIV->getStepValue();
         if (!Step) {
