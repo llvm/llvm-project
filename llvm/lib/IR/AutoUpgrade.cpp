@@ -1505,8 +1505,16 @@ static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   return true;
 }
 
+// Overloaded fadd/fmul intrinsic IDs, indexed by [`.ftz`][`.sat`].
+static constexpr Intrinsic::ID NVVMFAddIIDs[2][2] = {
+    {Intrinsic::nvvm_fadd, Intrinsic::nvvm_fadd_sat},
+    {Intrinsic::nvvm_fadd_ftz, Intrinsic::nvvm_fadd_ftz_sat}};
+static constexpr Intrinsic::ID NVVMFMulIIDs[2][2] = {
+    {Intrinsic::nvvm_fmul, Intrinsic::nvvm_fmul_sat},
+    {Intrinsic::nvvm_fmul_ftz, Intrinsic::nvvm_fmul_ftz_sat}};
+
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
-getNVVMFAddUpgrade(StringRef Name) {
+getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID IIDs[2][2]) {
   auto [Modifiers, Type] = Name.rsplit('.');
   if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
     return std::nullopt;
@@ -1521,16 +1529,13 @@ getNVVMFAddUpgrade(StringRef Name) {
   if (!RoundingMode)
     return std::nullopt;
 
-  Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
-                          .Case("", Intrinsic::nvvm_fadd)
-                          .Case(".ftz", Intrinsic::nvvm_fadd_ftz)
-                          .Case(".sat", Intrinsic::nvvm_fadd_sat)
-                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_ftz_sat)
-                          .Default(Intrinsic::not_intrinsic);
-  if (IID == Intrinsic::not_intrinsic)
+  StringRef Rest = Modifiers.drop_front(2);
+  const bool IsFTZ = Rest.consume_front(".ftz");
+  const bool IsSat = Rest.consume_front(".sat");
+  if (!Rest.empty())
     return std::nullopt;
 
-  return std::make_pair(IID, *RoundingMode);
+  return std::make_pair(IIDs[IsFTZ][IsSat], *RoundingMode);
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
@@ -2166,7 +2171,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         Expand = Name == "f" || Name == "ftz.f" || Name == "d";
       else if (Name.consume_front("add."))
         // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
-        Expand = getNVVMFAddUpgrade(Name).has_value();
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFAddIIDs).has_value();
+      else if (Name.consume_front("mul."))
+        // nvvm.mul.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+        Expand = getNVVMFPArithUpgrade(Name, NVVMFMulIIDs).has_value();
       else if (Name.consume_front("ex2.approx."))
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
@@ -3227,6 +3235,19 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
   }
 }
 
+static Value *upgradeNVVMFPArithCall(IRBuilder<> &Builder, CallBase *CI,
+                                     StringRef Name,
+                                     const Intrinsic::ID IIDs[2][2]) {
+  auto Upgrade = getNVVMFPArithUpgrade(Name, IIDs);
+  assert(Upgrade && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
+  auto [IID, RoundingMode] = *Upgrade;
+  Value *A = CI->getArgOperand(0);
+  return Builder.CreateIntrinsic(
+      A->getType(), IID,
+      {A, CI->getArgOperand(1),
+       Builder.getInt32(static_cast<int>(RoundingMode))});
+}
+
 static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
                                        Function *F, IRBuilder<> &Builder) {
   Value *Rep = nullptr;
@@ -3249,14 +3270,10 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
   } else if (Name.consume_front("add.")) {
     // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
-    auto FAdd = getNVVMFAddUpgrade(Name);
-    assert(FAdd && "unsupported nvvm.add.* intrinsic");
-    auto [IID, RoundingMode] = *FAdd;
-    Value *A = CI->getArgOperand(0);
-    Rep = Builder.CreateIntrinsic(
-        A->getType(), IID,
-        {A, CI->getArgOperand(1),
-         Builder.getInt32(static_cast<int>(RoundingMode))});
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFAddIIDs);
+  } else if (Name.consume_front("mul.")) {
+    // nvvm.mul.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+    Rep = upgradeNVVMFPArithCall(Builder, CI, Name, NVVMFMulIIDs);
   } else if (Name.consume_front("ex2.approx.")) {
     // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz

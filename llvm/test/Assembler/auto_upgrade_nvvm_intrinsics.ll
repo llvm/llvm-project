@@ -782,6 +782,30 @@ define void @nvvm_add(float %a, double %b, half %c, <2 x half> %d) {
   ret void
 }
 
+define void @nvvm_mul(float %a, double %b, half %c, <2 x half> %d) {
+; CHECK: call float @llvm.nvvm.fmul.f32(float %a, float %a, /* rnd=rn */ i32 1)
+; CHECK: call float @llvm.nvvm.fmul.ftz.f32(float %a, float %a, /* rnd=rz */ i32 0)
+; CHECK: call float @llvm.nvvm.fmul.f32(float %a, float %a, /* rnd=rm */ i32 3)
+; CHECK: call float @llvm.nvvm.fmul.ftz.f32(float %a, float %a, /* rnd=rp */ i32 2)
+; CHECK: call double @llvm.nvvm.fmul.f64(double %b, double %b, /* rnd=rn */ i32 1)
+; CHECK: call double @llvm.nvvm.fmul.f64(double %b, double %b, /* rnd=rz */ i32 0)
+; CHECK: call half @llvm.nvvm.fmul.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fmul.ftz.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fmul.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fmul.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+  %r1 = call float @llvm.nvvm.mul.rn.f(float %a, float %a)
+  %r2 = call float @llvm.nvvm.mul.rz.ftz.f(float %a, float %a)
+  %r3 = call float @llvm.nvvm.mul.rm.f(float %a, float %a)
+  %r4 = call float @llvm.nvvm.mul.rp.ftz.f(float %a, float %a)
+  %r5 = call double @llvm.nvvm.mul.rn.d(double %b, double %b)
+  %r6 = call double @llvm.nvvm.mul.rz.d(double %b, double %b)
+  %r7 = call half @llvm.nvvm.mul.rn.sat.f16(half %c, half %c)
+  %r8 = call half @llvm.nvvm.mul.rn.ftz.sat.f16(half %c, half %c)
+  %r9 = call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  %r10 = call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  ret void
+}
+
 declare void @llvm.nvvm.mbarrier.init(ptr, i32)
 declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3), i32)
 

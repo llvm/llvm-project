@@ -1700,13 +1700,13 @@ __device__ void nvvm_add_mul_f16_sat() {
   // CHECK: call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_add_rn_ftz_sat_v2f16(F16X2, F16X2_2);
 
-  // CHECK: call half @llvm.nvvm.mul.rn.sat.f16
+  // CHECK: call half @llvm.nvvm.fmul.sat.f16({{.*}}i32 1)
   __nvvm_mul_rn_sat_f16(F16, F16_2);
-  // CHECK: call half @llvm.nvvm.mul.rn.ftz.sat.f16
+  // CHECK: call half @llvm.nvvm.fmul.ftz.sat.f16({{.*}}i32 1)
   __nvvm_mul_rn_ftz_sat_f16(F16, F16_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fmul.sat.v2f16({{.*}}i32 1)
   __nvvm_mul_rn_sat_v2f16(F16X2, F16X2_2);
-  // CHECK: call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fmul.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_mul_rn_ftz_sat_v2f16(F16X2, F16X2_2);
   
   // CHECK: ret void

@@ -174,6 +174,8 @@ def hasSHFL : PredNot<PredAnd<[SM70, PTX64]>>;
 def allowFP16Math : SubtargetPredicate;
 def hasBF16Math : SubtargetPredicate;
 
+defvar BF16ArithPreds = [hasBF16Math, PTX78, SM90];
+
 def hasCLMAD : SubtargetPredicate;
 
 def hasTcgen05InstSupport : SubtargetPredicate;
@@ -285,6 +287,14 @@ def fpimm_pos_inf : FPImmLeaf<fAny, [{ return Imm.isPosInfinity(); }]>;
 def fpimm_0 : FPImmLeaf<fAny, [{ return Imm.isZero(); }]>;
 def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isOne(); }]>;
 def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isMinusOne(); }]>;
+
+class FPRndModeImm<string mode> : TImmLeaf<i32,
+  "return Imm == static_cast<int>(RoundingMode::" # mode # ");">;
+
+def fp_rnd_rn_imm : FPRndModeImm<"NearestTiesToEven">;
+def fp_rnd_rz_imm : FPRndModeImm<"TowardZero">;
+def fp_rnd_rm_imm : FPRndModeImm<"TowardNegative">;
+def fp_rnd_rp_imm : FPRndModeImm<"TowardPositive">;
 
 
 // Operands which can hold a Register or an Immediate.
