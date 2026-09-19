@@ -2920,8 +2920,12 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return this->discard(Base);
 
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
-    // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable.
+    // If the member is a VarDecl, this is a static variable.
+    // We need to try to lazily evaluate its initializer here since the
+    // variable might've been deserialized and not registered
+    // as a global variable yet.
+    if (VD->getInit() && !VD->getInit()->isValueDependent())
+      VD->evaluateValue();
     if (auto GlobalIndex = P.getGlobal(VD)) {
       if (!this->emitGetPtrGlobal(*GlobalIndex, E))
         return false;
