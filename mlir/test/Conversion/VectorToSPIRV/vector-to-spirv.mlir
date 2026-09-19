@@ -1312,3 +1312,33 @@ func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>
   %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return %0: vector<4xf32>
 }
+
+// -----
+
+// PhysicalStorageBuffer pointers get an Aligned memory operand, unlike StorageBuffer above.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader, PhysicalStorageBufferAddresses],
+      [SPV_KHR_physical_storage_buffer]>, #spirv.resource_limits<>>
+  } {
+
+// CHECK-LABEL: @vector_load_physical
+//       CHECK:   spirv.Load "PhysicalStorageBuffer" {{%.*}} ["Aligned", 16] : vector<4xf32>
+func.func @vector_load_physical(%arg0 : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>
+    {spirv.decoration = #spirv.decoration<Aliased>}) -> vector<4xf32> {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>, vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// CHECK-LABEL: @vector_store_physical
+//       CHECK:   spirv.Store "PhysicalStorageBuffer" {{%.*}}, {{%.*}} ["Aligned", 16] : vector<4xf32>
+func.func @vector_store_physical(%arg0 : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>
+    {spirv.decoration = #spirv.decoration<Aliased>}, %arg1 : vector<4xf32>) {
+  %idx = arith.constant 0 : index
+  vector.store %arg1, %arg0[%idx] : memref<4xf32, #spirv.storage_class<PhysicalStorageBuffer>>, vector<4xf32>
+  return
+}
+
+}
