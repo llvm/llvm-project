@@ -645,6 +645,12 @@ features cannot lower the translation-unit ABI level;
   by a using-declaration (e.g. `using Base::operator auto;`). Such a conversion
   function is now also diagnosed if it is deleted. (#GH189146)
 
+- Fixed an assertion failure when an array whose element type was still
+  incomplete when the array type was formed (for example, an array of a class
+  template specialization that is only instantiated later) turned out to be too
+  large once the element type was completed. Clang now diagnoses the oversized
+  array instead of asserting. (#GH213855)
+
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
   compilation step would result in the fix not being applied. (#GH160314)
