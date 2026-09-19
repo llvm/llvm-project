@@ -857,7 +857,7 @@ public:
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
-  /// Peek at a NULL terminated C string at \a offset.
+  /// Peek at a NUL terminated C string at \a offset.
   ///
   /// The terminator must lie within the bounds of this object's data, so the
   /// returned string never extends past the end of the data. Its data() is a

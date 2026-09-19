@@ -828,7 +828,7 @@ void CommunicationKDP::DumpPacket(Stream &s, const DataExtractor &packet) {
 
         case KDP_KERNELVERSION: {
           llvm::StringRef kernel_version = packet.PeekCStr(8).value_or("");
-          s.Printf(" (version = \"%s\")", kernel_version.data());
+          s.Format(" (version = \"{0}\")", kernel_version);
         } break;
 
         case KDP_MAXBYTES: {
