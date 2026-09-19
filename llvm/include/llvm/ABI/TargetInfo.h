@@ -127,6 +127,13 @@ protected:
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
+/// Create the SPIR-V target ABI info. \p KernelPassAggregatesIndirect requests
+/// that SPIR_KERNEL aggregate arguments be passed indirectly by value; callers
+/// (e.g. Clang) set it for device compilations (LangOptions::isTargetDevice()).
+LLVM_ABI std::unique_ptr<TargetInfo>
+createSPIRVTargetInfo(TypeBuilder &TB, const ABICompatInfo &Compat,
+                      bool KernelPassAggregatesIndirect);
+
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {
   None,
