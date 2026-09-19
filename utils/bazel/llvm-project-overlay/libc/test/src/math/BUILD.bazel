@@ -938,6 +938,8 @@ math_mpfr_test(name = "logf16")
 
 math_mpfr_test(name = "log2f16")
 
+math_mpfr_test(name = "log1pf16")
+
 math_mpfr_test(name = "log2p1f16")
 
 math_mpfr_test(name = "log10f16")
