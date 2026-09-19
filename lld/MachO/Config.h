@@ -141,6 +141,7 @@ struct Configuration {
   bool emitChainedFixups = false;
   bool noFixupChainsIgnored = false;
   uint16_t chainedFixupsPointerFormat = 0;
+  bool bindAtLoad = false;
   bool emitRelativeMethodLists = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOEmitIndexFiles;

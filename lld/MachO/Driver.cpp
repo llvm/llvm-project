@@ -2097,6 +2097,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
   config->chainedFixupsPointerFormat = getChainedFixupsPointerFormat();
+  config->bindAtLoad = args.hasArg(OPT_bind_at_load);
   config->emitInitOffsets =
       (config->emitChainedFixups && !config->noFixupChainsIgnored) ||
       args.hasArg(OPT_init_offsets);
