@@ -32,7 +32,7 @@ define float @f32_minimum(float %a, float %b) {
 ;
 ; VSX-LABEL: f32_minimum:
 ; VSX:       # %bb.0: # %entry
-; VSX-NEXT:    fcmpu 0, 1, 2
+; VSX-NEXT:    xscmpudp 0, 1, 2
 ; VSX-NEXT:    bc 12, 3, .LBB0_2
 ; VSX-NEXT:  # %bb.1: # %entry
 ; VSX-NEXT:    xsmindp 1, 1, 2
@@ -44,7 +44,7 @@ define float @f32_minimum(float %a, float %b) {
 ;
 ; AIX-LABEL: f32_minimum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    fcmpu 0, 1, 2
+; AIX-NEXT:    xscmpudp 0, 1, 2
 ; AIX-NEXT:    bc 12, 3, L..BB0_2
 ; AIX-NEXT:  # %bb.1: # %entry
 ; AIX-NEXT:    xsmindp 1, 1, 2
@@ -91,7 +91,7 @@ define float @f32_maximum(float %a, float %b) {
 ;
 ; VSX-LABEL: f32_maximum:
 ; VSX:       # %bb.0: # %entry
-; VSX-NEXT:    fcmpu 0, 1, 2
+; VSX-NEXT:    xscmpudp 0, 1, 2
 ; VSX-NEXT:    bc 12, 3, .LBB1_2
 ; VSX-NEXT:  # %bb.1: # %entry
 ; VSX-NEXT:    xsmaxdp 1, 1, 2
@@ -103,7 +103,7 @@ define float @f32_maximum(float %a, float %b) {
 ;
 ; AIX-LABEL: f32_maximum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    fcmpu 0, 1, 2
+; AIX-NEXT:    xscmpudp 0, 1, 2
 ; AIX-NEXT:    bc 12, 3, L..BB1_2
 ; AIX-NEXT:  # %bb.1: # %entry
 ; AIX-NEXT:    xsmaxdp 1, 1, 2
@@ -147,7 +147,7 @@ define double @f64_minimum(double %a, double %b) {
 ;
 ; VSX-LABEL: f64_minimum:
 ; VSX:       # %bb.0: # %entry
-; VSX-NEXT:    fcmpu 0, 1, 2
+; VSX-NEXT:    xscmpudp 0, 1, 2
 ; VSX-NEXT:    bc 12, 3, .LBB2_2
 ; VSX-NEXT:  # %bb.1: # %entry
 ; VSX-NEXT:    xsmindp 1, 1, 2
@@ -159,7 +159,7 @@ define double @f64_minimum(double %a, double %b) {
 ;
 ; AIX-LABEL: f64_minimum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    fcmpu 0, 1, 2
+; AIX-NEXT:    xscmpudp 0, 1, 2
 ; AIX-NEXT:    bc 12, 3, L..BB2_2
 ; AIX-NEXT:  # %bb.1: # %entry
 ; AIX-NEXT:    xsmindp 1, 1, 2
@@ -206,7 +206,7 @@ define double @f64_maximum(double %a, double %b) {
 ;
 ; VSX-LABEL: f64_maximum:
 ; VSX:       # %bb.0: # %entry
-; VSX-NEXT:    fcmpu 0, 1, 2
+; VSX-NEXT:    xscmpudp 0, 1, 2
 ; VSX-NEXT:    bc 12, 3, .LBB3_2
 ; VSX-NEXT:  # %bb.1: # %entry
 ; VSX-NEXT:    xsmaxdp 1, 1, 2
@@ -218,7 +218,7 @@ define double @f64_maximum(double %a, double %b) {
 ;
 ; AIX-LABEL: f64_maximum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    fcmpu 0, 1, 2
+; AIX-NEXT:    xscmpudp 0, 1, 2
 ; AIX-NEXT:    bc 12, 3, L..BB3_2
 ; AIX-NEXT:  # %bb.1: # %entry
 ; AIX-NEXT:    xsmaxdp 1, 1, 2
