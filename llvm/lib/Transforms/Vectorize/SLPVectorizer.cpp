@@ -31734,8 +31734,8 @@ public:
           ReductionCost = 0;
         else
           ReductionCost =
-              getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               GroupRdxFMF, V, DT, DL, TLI);
+              getReductionCost(TTI, VL, TrackedToOrig, Pos, SameValuesCounter,
+                               IsCmpSelMinMax, GroupRdxFMF, V, DT, DL, TLI);
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31860,14 +31860,25 @@ public:
               AnyMask = true;
             }
           }
-          if (AnyMask)
-            VectorizedRoot = Builder.CreateAnd(VectorizedRoot,
-                                               ConstantVector::get(MaskConsts));
-          VectorizedRoot =
-              Builder.CreateZExt(VectorizedRoot, getWidenedType(WideTy, VF));
-          if (AnyShift)
-            VectorizedRoot = Builder.CreateShl(
-                VectorizedRoot, ConstantVector::get(ShiftConsts));
+          if (Value *Bitmask = emitBoolBitmaskRdx(
+                  Builder, V, *TTI, DL, VectorizedRoot, VL, TrackedToOrig, Pos,
+                  MaskConsts, GroupRdxFMF)) {
+            VectorizedRoot = Bitmask;
+          } else {
+            if (AnyMask) {
+              VectorizedRoot = Builder.CreateAnd(
+                  VectorizedRoot, ConstantVector::get(MaskConsts));
+              ++NumVectorInstructions;
+            }
+            VectorizedRoot =
+                Builder.CreateZExt(VectorizedRoot, getWidenedType(WideTy, VF));
+            ++NumVectorInstructions;
+            if (AnyShift) {
+              VectorizedRoot = Builder.CreateShl(
+                  VectorizedRoot, ConstantVector::get(ShiftConsts));
+              ++NumVectorInstructions;
+            }
+          }
         }
 
         Type *ScalarTy = VL.front()->getType();
@@ -31883,7 +31894,8 @@ public:
              RedScalarTy != ScalarTy->getScalarType()
                  ? NarrowedLeafShifts.empty() && V.isSignedMinBitwidthRootNode()
                  : true,
-             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot(),
+             V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot() ||
+                 !VectorizedRoot->getType()->isVectorTy(),
              GroupNegated});
 
         // Count vectorized reduced values to exclude them from final reduction.
@@ -32292,9 +32304,9 @@ public:
           V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
       V.buildExternalUses(LocalExternallyUsedValues);
 
-      InstructionCost ReductionCost =
-          getReductionCost(TTI, VL, EmptySameValuesCounter,
-                           /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI);
+      InstructionCost ReductionCost = getReductionCost(
+          TTI, VL, /*TrackedToOrig=*/{}, /*Pos=*/0, EmptySameValuesCounter,
+          /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI);
       InstructionCost Cost =
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
@@ -32509,9 +32521,106 @@ private:
     return Rdx;
   }
 
+  /// The lane order of the zero tests by their bit position, shared between
+  /// the cost evaluation and the emission of the boolean bitmask reduction.
+  SmallVector<int> getBoolBitmaskPermMask(ArrayRef<Value *> VL,
+                                          ArrayRef<Value *> TrackedToOrig,
+                                          unsigned Pos,
+                                          const BoUpSLP &R) const {
+    // Narrowed leaves exist for unordered reductions only, where the tracked
+    // original values are always available.
+    assert(TrackedToOrig.size() >= Pos + VL.size() &&
+           "tracked original values must be available for all reduced values");
+    SmallVector<int> PermMask(VL.size(), PoisonMaskElem);
+    for (auto [Idx, Val] : enumerate(VL))
+      PermMask[NarrowedLeafShifts.at(TrackedToOrig[Pos + Idx]).Shift] =
+          R.findRootLaneForValue(Val);
+    return PermMask;
+  }
+
+  /// Emits the boolean bitmask form of the narrowed-leaf or-reduction (a
+  /// bitcast of the per-lane zero tests to an integer) if it covers the whole
+  /// reduction in a single vector part and is cheaper than the shift and
+  /// reduction sequence. Returns nullptr otherwise.
+  Value *emitBoolBitmaskRdx(IRBuilderBase &Builder, const BoUpSLP &R,
+                            const TargetTransformInfo &TTI,
+                            const DataLayout &DL, Value *VectorizedRoot,
+                            ArrayRef<Value *> VL,
+                            ArrayRef<Value *> TrackedToOrig, unsigned Pos,
+                            ArrayRef<Constant *> MaskConsts,
+                            FastMathFlags FMF) const {
+    Type *WideTy = ReductionRoot->getType();
+    auto *NarrowVecTy = dyn_cast<VectorType>(VectorizedRoot->getType());
+    if (!NarrowVecTy)
+      return nullptr;
+    Type *NarrowTy = NarrowVecTy->getScalarType();
+    unsigned VF = getNumElements(NarrowVecTy);
+    // Applies only when the whole reduction is a single vector part.
+    if (NarrowedLeafShifts.size() != VL.size() || VF != VL.size() ||
+        !VectorValuesAndScales.empty() ||
+        !R.getRootNode().ReuseShuffleIndices.empty())
+      return nullptr;
+    BoolBitmask Match = isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL);
+    if (Match == BoolBitmask::None)
+      return nullptr;
+    SmallVector<int> PermMask =
+        getBoolBitmaskPermMask(VL, TrackedToOrig, Pos, R);
+    // Emit the bitmask form only if it is cheaper than the shift and
+    // reduction sequence.
+    const TTI::TargetCostKind CostKind = R.getCostKind();
+    auto *WideVecTy = cast<VectorType>(getWidenedType(WideTy, VF));
+    const auto *CxtI = cast<Instruction>(ReductionRoot);
+    InstructionCost GenericCost =
+        TTI.getExtendedReductionCost(Instruction::Or, /*IsUnsigned=*/true,
+                                     WideTy, NarrowVecTy, FMF, CostKind);
+    if (any_of(NarrowedLeafShifts,
+               [](const auto &P) { return P.second.Shift != 0; }))
+      GenericCost += TTI.getArithmeticInstrCost(
+          Instruction::Shl, WideVecTy, CostKind,
+          {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+    if (any_of(NarrowedLeafShifts,
+               [](const auto &P) { return !P.second.Mask.isAllOnes(); }))
+      GenericCost += TTI.getArithmeticInstrCost(
+          Instruction::And, NarrowVecTy, CostKind,
+          {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+    if (getBoolBitmaskCost(TTI, Match == BoolBitmask::NeedMask, NarrowTy,
+                           WideTy, VF, PermMask, ReductionRoot,
+                           CostKind) >= GenericCost)
+      return nullptr;
+    Value *Vec = VectorizedRoot;
+    switch (Match) {
+    case BoolBitmask::NeedMask:
+      Vec = Builder.CreateAnd(Vec, ConstantVector::get(MaskConsts));
+      ++NumVectorInstructions;
+      break;
+    case BoolBitmask::NoMask:
+      break;
+    case BoolBitmask::None:
+      llvm_unreachable("unexpected bool bitmask state");
+    }
+    // Reorder the lanes by their bit position and pack the zero tests into an
+    // integer.
+    if (!ShuffleVectorInst::isIdentityMask(PermMask, VF)) {
+      Vec = Builder.CreateShuffleVector(Vec, PermMask);
+      ++NumVectorInstructions;
+    }
+    if (!NarrowTy->isIntegerTy(1)) {
+      Vec = Builder.CreateICmpNE(Vec, Constant::getNullValue(Vec->getType()));
+      ++NumVectorInstructions;
+    }
+    Vec = Builder.CreateBitCast(Vec, Builder.getIntNTy(VF));
+    ++NumVectorInstructions;
+    Vec = Builder.CreateIntCast(Vec, WideTy, /*isSigned=*/false);
+    ++NumVectorInstructions;
+    return Vec;
+  }
+
   /// Calculate the cost of a reduction.
   InstructionCost getReductionCost(
       TargetTransformInfo *TTI, ArrayRef<Value *> ReducedVals,
+      ArrayRef<Value *> TrackedToOrig, unsigned Pos,
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
       bool IsCmpSelMinMax, FastMathFlags FMF, const BoUpSLP &R,
       DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI) {
@@ -32636,14 +32745,38 @@ private:
           }
           for (Instruction *I : NarrowedChainInsts)
             VectorCost -= TTI->getInstructionCost(I, CostKind);
+          // Costed with the same operand info as in the emission to keep
+          // both comparisons in agreement.
+          const auto *CxtI = cast<Instruction>(ReductionRoot);
           if (any_of(NarrowedLeafShifts,
                      [](const auto &P) { return P.second.Shift != 0; }))
-            VectorCost += TTI->getArithmeticInstrCost(Instruction::Shl,
-                                                      WideVecTy, CostKind);
+            VectorCost += TTI->getArithmeticInstrCost(
+                Instruction::Shl, WideVecTy, CostKind,
+                {TTI::OK_AnyValue, TTI::OP_None},
+                {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
           if (any_of(NarrowedLeafShifts,
                      [](const auto &P) { return !P.second.Mask.isAllOnes(); }))
-            VectorCost += TTI->getArithmeticInstrCost(Instruction::And,
-                                                      NarrowVecTy, CostKind);
+            VectorCost += TTI->getArithmeticInstrCost(
+                Instruction::And, NarrowVecTy, CostKind,
+                {TTI::OK_AnyValue, TTI::OP_None},
+                {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+          // The boolean bitmask emission may be cheaper.
+          BoolBitmask Match =
+              NarrowedLeafShifts.size() == ReduxWidth &&
+                      R.getRootNode().getVectorFactor() == ReduxWidth &&
+                      R.getRootNode().ReuseShuffleIndices.empty()
+                  ? isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL)
+                  : BoolBitmask::None;
+          if (Match != BoolBitmask::None) {
+            SmallVector<int> PermMask =
+                getBoolBitmaskPermMask(ReducedVals, TrackedToOrig, Pos, R);
+            InstructionCost BitmaskCost = getBoolBitmaskCost(
+                *TTI, Match == BoolBitmask::NeedMask, ScalarTy, WideTy,
+                ReduxWidth, PermMask, ReductionRoot, CostKind);
+            for (Instruction *I : NarrowedChainInsts)
+              BitmaskCost -= TTI->getInstructionCost(I, CostKind);
+            VectorCost = std::min(VectorCost, BitmaskCost);
+          }
         } else if (DoesRequireReductionOp) {
           if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
