@@ -6643,17 +6643,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               diag::err_musttail_noexcept_mismatch);
         break;
       }
-      EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
-      // Fake uses can be safely emitted immediately prior to the tail call, so
-      // we choose to emit them just before the call here.
-      if (Cleanup && Cleanup->isFakeUse()) {
-        CGBuilderTy::InsertPointGuard IPG(Builder);
-        Builder.SetInsertPoint(CI);
-        Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
-      } else if (!(Cleanup &&
-                   Cleanup->getCleanup()->isRedundantBeforeReturn())) {
-        CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
+      if (auto *Cleanup = dyn_cast<EHCleanupScope>(&*it)) {
+        // Fake uses can be safely emitted immediately prior to the tail call,
+        // so we choose to emit them just before the call here.
+        if (Cleanup->isFakeUse()) {
+          CGBuilderTy::InsertPointGuard IPG(Builder);
+          Builder.SetInsertPoint(CI);
+          Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
+          continue;
+        }
+        if (Cleanup->isRedundantBeforeReturn())
+          continue;
       }
+      CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
     }
     if (CI->getType()->isVoidTy())
       Builder.CreateRetVoid();
