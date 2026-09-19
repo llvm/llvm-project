@@ -25,23 +25,23 @@
 
 namespace orc_rt::sys {
 
-/// Returns a handle that looks up symbols in every library loaded into the
-/// process.
-void *globalLookupHandle();
+using DylibHandle = void *;
+using SymbolLookupResult = std::vector<std::optional<void *>>;
 
 /// Load the library at the given path. Path must not be empty.
-Expected<void *> loadLibrary(const std::string &Path);
+Expected<DylibHandle> loadLibrary(const std::string &Path);
 
 /// Unload a library previously returned by loadLibrary.
-Error unloadLibrary(void *Handle);
+Error unloadLibrary(DylibHandle Handle);
 
 /// Look Names up in Handle, returning one result per name in order.
-///
-/// A result is nullopt if the name is not present in the library, and a
-/// (possibly null) address if it is: a symbol genuinely located at address zero
-/// is reported as null rather than as missing.
-std::vector<std::optional<void *>>
-lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names);
+SymbolLookupResult
+lookupLibrarySymbols(DylibHandle Handle,
+                     const std::vector<std::string> &Names);
+
+/// Look Names up across libraries loaded into the process.
+SymbolLookupResult
+lookupGlobalSymbols(const std::vector<std::string> &Names);
 
 } // namespace orc_rt::sys
 

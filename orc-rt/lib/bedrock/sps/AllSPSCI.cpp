@@ -27,7 +27,10 @@ Error addAll(SimpleSymbolTable &ST) {
                       addMemoryAccess,
                       addNativeDylibManager,
                       addSimpleNativeMemoryMap,
-                      addStandaloneMachOUnwindInfoRegistrar};
+                      #if defined(__APPLE__)
+                            addStandaloneMachOUnwindInfoRegistrar,
+                      #endif
+  };
 
   for (auto *Adder : Adders)
     if (auto Err = Adder(ST))

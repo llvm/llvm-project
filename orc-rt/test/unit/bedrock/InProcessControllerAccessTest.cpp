@@ -26,6 +26,11 @@ using namespace orc_rt;
 
 namespace {
 
+orc_rt_ControllerHandlerTag testHandlerTag() {
+  return reinterpret_cast<orc_rt_ControllerHandlerTag>(
+      std::uintptr_t{0xdeadbeef});
+}
+
 // A minimal stand-in for llvm::orc::InProcessEPC. Registers itself on the
 // Connection during OnConnect, exposes hooks for tests to drive cross-calls
 // in either direction, and tears the connection down on destruction.
@@ -192,8 +197,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
         if (const char *Msg = R.getOutOfBandError())
           CallErr = Msg;
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("x", 1));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("x", 1));
 
   ASSERT_TRUE(CallErr);
   EXPECT_EQ(*CallErr, "no controller attached");
@@ -220,8 +224,7 @@ TEST(InProcessControllerAccessTest, CallControllerSuccess) {
             << "Unexpected out-of-band error: " << R.getOutOfBandError();
         Result = std::string(R.data(), R.size());
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("hello", 5));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("hello", 5));
 
   ASSERT_TRUE(Result);
   EXPECT_EQ(*Result, "hello");
@@ -248,8 +251,7 @@ TEST(InProcessControllerAccessTest, CallControllerOutOfBandError) {
         if (const char *Msg = R.getOutOfBandError())
           ErrMsg = Msg;
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("payload", 7));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("payload", 7));
 
   ASSERT_TRUE(ErrMsg);
   EXPECT_EQ(*ErrMsg, "simulated failure");
@@ -274,8 +276,7 @@ TEST(InProcessControllerAccessTest, DisconnectDrainsPendingCalls) {
         if (const char *Msg = R.getOutOfBandError())
           ErrMsg = Msg;
       },
-      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
-      WrapperFunctionBuffer::copyFrom("payload", 7));
+      testHandlerTag(), WrapperFunctionBuffer::copyFrom("payload", 7));
 
   ASSERT_FALSE(ErrMsg) << "OnComplete fired prematurely";
 
@@ -342,6 +343,6 @@ TEST(InProcessControllerAccessTest, BootstrapValuesExposeSubtargetFeatures) {
                          "orc-rt.Executor.SubtargetFeatures")
                        Features = std::string(Bytes, Size);
                  });
-
+  ASSERT_TRUE(Features);
   EXPECT_EQ(*Features, S.processInfo().targetCPUFeatures());
 }
