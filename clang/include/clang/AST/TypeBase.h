@@ -3451,7 +3451,7 @@ class BoundsAttributedType : public Type, public llvm::FoldingSetNode {
   QualType WrappedTy;
 
 protected:
-  ArrayRef<TypeCoupledDeclRefInfo> Decls; // stored in trailing objects
+  ArrayRef<TypeCoupledDeclRefInfo> Decls; // allocated in the ASTContext
 
   BoundsAttributedType(TypeClass TC, QualType Wrapped, QualType Canon);
 
