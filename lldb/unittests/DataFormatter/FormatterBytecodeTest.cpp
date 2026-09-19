@@ -128,6 +128,16 @@ TEST_F(FormatterBytecodeTest, ConversionOps) {
   }
   {
     DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_null}, data));
+    ASSERT_FALSE(data.Pop<lldb::ValueObjectSP>());
+  }
+  {
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_lit_null, op_is_null}, data));
+    ASSERT_EQ(data.Pop<uint64_t>(), 1u);
+  }
+  {
+    DataStack data;
     ASSERT_TRUE(Interpret({op_lit_uint, 1u, op_as_int}, data));
     ASSERT_EQ(data.Pop<int64_t>(), 1);
   }
