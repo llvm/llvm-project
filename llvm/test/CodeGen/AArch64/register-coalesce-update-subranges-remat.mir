@@ -23,7 +23,7 @@ body:             |
     ; CHECK: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
     ; CHECK-NEXT: [[ADDXri1:%[0-9]+]]:gpr64common = nuw ADDXri [[ADDXri]], 64, 0
     ; CHECK-NEXT: undef [[MOVi32imm:%[0-9]+]].sub_32:gpr64 = MOVi32imm 64
-    ; CHECK-NEXT: undef [[MOVi32imm1:%[0-9]+]].sub_32:gpr64 = MOVi32imm 64
+    ; CHECK-NEXT: undef [[MOVi32imm1:%[0-9]+]].sub_32:gpr64 = lr-split MOVi32imm 64
     ; CHECK-NEXT: dead [[ADDXri1]]:gpr64common, dead early-clobber [[MOVi32imm1]]:gpr64 = MOPSMemorySetPseudo [[ADDXri1]], [[MOVi32imm1]], [[MOVi32imm]], implicit-def dead $nzcv
     ; CHECK-NEXT: RET_ReallyLR
     %1:gpr64sp = ADDXri %stack.0, 0, 0

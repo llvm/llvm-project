@@ -85,12 +85,12 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT: bb.2.for.cond14.preheader:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV32rm4:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.2, align 8)
+  ; CHECK-NEXT:   [[MOV32rm4:%[0-9]+]]:gr32 = lr-split MOV32rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.2, align 8)
   ; CHECK-NEXT:   CMP32rm [[MOV32rm4]], %fixed-stack.1, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %fixed-stack.1, align 16)
   ; CHECK-NEXT:   [[MOV32rm5:%[0-9]+]]:gr32 = MOV32rm %stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2)
   ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64_nosp = MOV64rm %stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %stack.3)
   ; CHECK-NEXT:   [[MOV64rm1:%[0-9]+]]:gr64 = MOV64rm %stack.11, 1, $noreg, 0, $noreg :: (load (s64) from %stack.11)
-  ; CHECK-NEXT:   [[MOV32rm6:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3, align 16)
+  ; CHECK-NEXT:   [[MOV32rm6:%[0-9]+]]:gr32 = lr-split MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3, align 16)
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr32 = lr-split COPY [[MOV32rm6]]
   ; CHECK-NEXT:   JCC_1 %bb.5, 13, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.3
@@ -141,7 +141,7 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   [[MOVSX64rr32_2:%[0-9]+]]:gr64_nosp = lr-split COPY [[COPY13]]
   ; CHECK-NEXT:   [[MOVSX64rr32_3:%[0-9]+]]:gr64_nosp = lr-split COPY [[COPY12]]
   ; CHECK-NEXT:   [[MOVSX64rm32_1:%[0-9]+]]:gr64 = lr-split COPY [[COPY11]]
-  ; CHECK-NEXT:   [[MOV32rm8:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3, align 16)
+  ; CHECK-NEXT:   [[MOV32rm8:%[0-9]+]]:gr32 = lr-split MOV32rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.3, align 16)
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr32 = lr-split COPY [[MOV32rm8]]
   ; CHECK-NEXT:   [[PTILEZEROV:%[0-9]+]]:tile = PTDPBSSDV [[COPY9]].sub_16bit, [[LEA64_32r1]].sub_16bit, [[COPY4]].sub_16bit, [[PTILEZEROV]], [[PTILELOADDV]], [[PTILELOADDV1]]
   ; CHECK-NEXT:   PTILESTOREDV [[COPY9]].sub_16bit, [[COPY7]].sub_16bit, [[MOV64rm3]], 1, [[MOVSX64rr32_2]], 0, $noreg, [[PTILEZEROV]]

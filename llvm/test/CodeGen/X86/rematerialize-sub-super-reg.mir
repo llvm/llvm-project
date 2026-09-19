@@ -24,7 +24,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $rax = MOV64ri32 -11, implicit-def $eax
+  ; CHECK-NEXT:   dead $rax = lr-split MOV64ri32 -11, implicit-def $eax
   ; CHECK-NEXT:   CMP64ri8 %t3, 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit killed $eflags
   ; CHECK-NEXT:   RET 0, $eax
@@ -78,7 +78,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $eax = MOV32ri -11, implicit-def $rax
+  ; CHECK-NEXT:   dead $eax = lr-split MOV32ri -11, implicit-def $rax
   ; CHECK-NEXT:   CMP64ri8 %t3, 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit killed $eflags
   ; CHECK-NEXT:   RET 0, $rax
@@ -132,7 +132,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $eax = MOV32ri -11, implicit-def $rax
+  ; CHECK-NEXT:   dead $eax = lr-split MOV32ri -11, implicit-def $rax
   ; CHECK-NEXT:   CMP64ri8 %t3, 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit killed $eflags
   ; CHECK-NEXT:   RET 0, $rax
@@ -171,10 +171,10 @@ name:  rematerialize_superregister_into_subregister_def_with_impdef_physreg
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: rematerialize_superregister_into_subregister_def_with_impdef_physreg
-    ; CHECK: dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
-    ; CHECK-NEXT: dead $edx = MOV32r0 implicit-def dead $eflags, implicit-def $rdx
+    ; CHECK: dead $esi = lr-split MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+    ; CHECK-NEXT: dead $edx = lr-split MOV32r0 implicit-def dead $eflags, implicit-def $rdx
     ; CHECK-NEXT: FAKE_USE implicit killed $rsi, implicit killed $rdx
-    ; CHECK-NEXT: dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def dead $rax, implicit-def $al
+    ; CHECK-NEXT: dead $eax = lr-split MOV32r0 implicit-def dead $eflags, implicit-def dead $rax, implicit-def $al
     ; CHECK-NEXT: FAKE_USE implicit killed $al
     ; CHECK-NEXT: $eax = MOV32r0 implicit-def dead $eflags
     ; CHECK-NEXT: RET 0, $eax

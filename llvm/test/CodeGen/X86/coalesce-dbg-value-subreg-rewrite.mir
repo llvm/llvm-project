@@ -47,5 +47,5 @@ body:             |
 # subregister index for physical register").
 #
 # CHECK:      bb.0.entry:
-# CHECK-NEXT:    $dx = MOV16ri 0
+# CHECK-NEXT:    $dx = lr-split MOV16ri 0
 # CHECK-NEXT:    DBG_VALUE $dl,

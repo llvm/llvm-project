@@ -11,24 +11,24 @@
 ; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB
 
 ; ARM-LABEL: name:            OUTLINED_FUNCTION_0
-; ARM: $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-; ARM-NEXT: $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-; ARM-NEXT: $r2 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
-; ARM-NEXT: $r3 = MOVi 4, 14 /* CC::al */, $noreg, $noreg
+; ARM: $r0 = lr-split MOVi 1, 14 /* CC::al */, $noreg, $noreg
+; ARM-NEXT: $r1 = lr-split MOVi 2, 14 /* CC::al */, $noreg, $noreg
+; ARM-NEXT: $r2 = lr-split MOVi 3, 14 /* CC::al */, $noreg, $noreg
+; ARM-NEXT: $r3 = lr-split MOVi 4, 14 /* CC::al */, $noreg, $noreg
 ; ARM-NEXT: TAILJMPd @z
 
 ; THUMB-LABEL: name:            OUTLINED_FUNCTION_0
-; THUMB: $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
-; THUMB-NEXT: $r1, dead $cpsr = tMOVi8 2, 14 /* CC::al */, $noreg
-; THUMB-NEXT: $r2, dead $cpsr = tMOVi8 3, 14 /* CC::al */, $noreg
-; THUMB-NEXT: $r3, dead $cpsr = tMOVi8 4, 14 /* CC::al */, $noreg
+; THUMB: $r0, dead $cpsr = lr-split tMOVi8 1, 14 /* CC::al */, $noreg
+; THUMB-NEXT: $r1, dead $cpsr = lr-split tMOVi8 2, 14 /* CC::al */, $noreg
+; THUMB-NEXT: $r2, dead $cpsr = lr-split tMOVi8 3, 14 /* CC::al */, $noreg
+; THUMB-NEXT: $r3, dead $cpsr = lr-split tMOVi8 4, 14 /* CC::al */, $noreg
 ; THUMB-NEXT: tTAILJMPdND @z, 14 /* CC::al */, $noreg
 
 ; MACHO-LABEL: name:            OUTLINED_FUNCTION_0
-; MACHO: $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
-; MACHO-NEXT: $r1, dead $cpsr = tMOVi8 2, 14 /* CC::al */, $noreg
-; MACHO-NEXT: $r2, dead $cpsr = tMOVi8 3, 14 /* CC::al */, $noreg
-; MACHO-NEXT: $r3, dead $cpsr = tMOVi8 4, 14 /* CC::al */, $noreg
+; MACHO: $r0, dead $cpsr = lr-split tMOVi8 1, 14 /* CC::al */, $noreg
+; MACHO-NEXT: $r1, dead $cpsr = lr-split tMOVi8 2, 14 /* CC::al */, $noreg
+; MACHO-NEXT: $r2, dead $cpsr = lr-split tMOVi8 3, 14 /* CC::al */, $noreg
+; MACHO-NEXT: $r3, dead $cpsr = lr-split tMOVi8 4, 14 /* CC::al */, $noreg
 ; MACHO-NEXT: tTAILJMPd @z, 14 /* CC::al */, $noreg
 
 ; THUMB1-NOT: OUTLINED_FUNCTION_0

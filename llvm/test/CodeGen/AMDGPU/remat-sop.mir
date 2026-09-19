@@ -11,7 +11,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_MOV_B32 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_MOV_B32 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_MOV_B32 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_MOV_B32 1
@@ -64,9 +64,9 @@ body:             |
     ; GCN: renamable $sgpr0 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    ; GCN-NEXT: renamable $sgpr1 = lr-split S_MOV_B32 renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr1 = S_MOV_B32 renamable $sgpr0
+    ; GCN-NEXT: renamable $sgpr1 = lr-split S_MOV_B32 renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
@@ -92,10 +92,10 @@ body:             |
     ; GCN-LABEL: name: test_no_remat_s_mov_b32_vreg_src_short_lr
     ; GCN: renamable $sgpr0 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr1 = S_MOV_B32 killed renamable $sgpr0
-    ; GCN-NEXT: renamable $sgpr0 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $sgpr0 = lr-split IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr0 = S_MOV_B32 killed renamable $sgpr0
     ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr0, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.1, addrspace 5)
-    ; GCN-NEXT: renamable $sgpr0 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $sgpr0 = lr-split IMPLICIT_DEF
     ; GCN-NEXT: renamable $sgpr0 = S_MOV_B32 killed renamable $sgpr0
     ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr0, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
@@ -123,7 +123,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_MOV_B64 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr2_sgpr3
-    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_MOV_B64 3
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = lr-split S_MOV_B64 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_ENDPGM 0
     %0:sgpr_64 = S_MOV_B64 1
@@ -144,7 +144,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_BREV_B32 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_BREV_B32 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_BREV_B32 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_BREV_B32 1
@@ -165,7 +165,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_BREV_B64 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr2_sgpr3
-    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_BREV_B64 3
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = lr-split S_BREV_B64 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_ENDPGM 0
     %0:sgpr_64 = S_BREV_B64 1
@@ -186,7 +186,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FF0_I32_B32 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FF0_I32_B32 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FF0_I32_B32 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FF0_I32_B32 1
@@ -207,7 +207,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FF1_I32_B32 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FF1_I32_B32 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FF1_I32_B32 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FF1_I32_B32 1
@@ -228,7 +228,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FF0_I32_B64 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FF0_I32_B64 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FF0_I32_B64 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FF0_I32_B64 1
@@ -249,7 +249,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FF1_I32_B64 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FF1_I32_B64 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FF1_I32_B64 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FF1_I32_B64 1
@@ -270,7 +270,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FLBIT_I32_B32 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FLBIT_I32_B32 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FLBIT_I32_B32 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FLBIT_I32_B32 1
@@ -291,7 +291,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FLBIT_I32_B64 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FLBIT_I32_B64 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FLBIT_I32_B64 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FLBIT_I32_B64 1
@@ -312,7 +312,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FLBIT_I32 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FLBIT_I32 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FLBIT_I32 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FLBIT_I32 1
@@ -333,7 +333,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_FLBIT_I32_I64 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_FLBIT_I32_I64 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_FLBIT_I32_I64 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_FLBIT_I32_I64 1
@@ -354,7 +354,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_SEXT_I32_I8 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_SEXT_I32_I8 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_SEXT_I32_I8 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_SEXT_I32_I8 1
@@ -375,7 +375,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_SEXT_I32_I16 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_SEXT_I32_I16 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_SEXT_I32_I16 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_SEXT_I32_I16 1
@@ -396,7 +396,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_BITREPLICATE_B64_B32 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr2_sgpr3
-    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_BITREPLICATE_B64_B32 3
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = lr-split S_BITREPLICATE_B64_B32 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_ENDPGM 0
     %0:sgpr_64 = S_BITREPLICATE_B64_B32 1
@@ -417,7 +417,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_BFM_B32 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_BFM_B32 3, 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_BFM_B32 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_BFM_B32 1, 1
@@ -438,7 +438,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_BFM_B64 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr2_sgpr3
-    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_BFM_B64 3, 3
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = lr-split S_BFM_B64 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_ENDPGM 0
     %0:sgpr_64 = S_BFM_B64 1, 1
@@ -459,7 +459,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_MUL_I32 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_MUL_I32 3, 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_MUL_I32 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_MUL_I32 1, 1
@@ -480,7 +480,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_MUL_HI_I32 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_MUL_HI_I32 3, 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_MUL_HI_I32 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_MUL_HI_I32 1, 1
@@ -501,7 +501,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_MUL_HI_U32 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_MUL_HI_U32 3, 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_MUL_HI_U32 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_MUL_HI_U32 1, 1
@@ -522,7 +522,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_PACK_LL_B32_B16 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_PACK_LL_B32_B16 3, 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_PACK_LL_B32_B16 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_PACK_LL_B32_B16 1, 1
@@ -543,7 +543,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_PACK_LH_B32_B16 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_PACK_LH_B32_B16 3, 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_PACK_LH_B32_B16 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_PACK_LH_B32_B16 1, 1
@@ -564,7 +564,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_PACK_HH_B32_B16 2, 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr1
-    ; GCN-NEXT: renamable $sgpr0 = S_PACK_HH_B32_B16 3, 3
+    ; GCN-NEXT: renamable $sgpr0 = lr-split S_PACK_HH_B32_B16 3, 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_PACK_HH_B32_B16 1, 1
@@ -587,7 +587,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_GETPC_B64_pseudo
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr2_sgpr3
-    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_GETPC_B64_pseudo
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = lr-split S_GETPC_B64_pseudo
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_ENDPGM 0
     %0:sgpr_64 = S_GETPC_B64_pseudo
@@ -614,7 +614,7 @@ body:             |
     ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr1, %stack.1, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.1, addrspace 5)
     ; GCN-NEXT: renamable $sgpr1 = COPY killed renamable $sgpr3
     ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr1, %stack.2, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.2, addrspace 5)
-    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_GETPC_B64_pseudo
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = lr-split S_GETPC_B64_pseudo
     ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr0, %stack.4, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.4, addrspace 5)
     ; GCN-NEXT: renamable $sgpr0 = COPY killed renamable $sgpr1
     ; GCN-NEXT: SI_SPILL_S32_SAVE killed renamable $sgpr0, %stack.5, implicit $exec, implicit $sp_reg :: (store (s32) into %stack.5, addrspace 5)
@@ -665,7 +665,7 @@ body:             |
     ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_MOV_B64_IMM_PSEUDO 2
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr2_sgpr3
-    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_MOV_B64_IMM_PSEUDO 3
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = lr-split S_MOV_B64_IMM_PSEUDO 3
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
     ; GCN-NEXT: S_ENDPGM 0
     %0:sgpr_64 = S_MOV_B64_IMM_PSEUDO 1

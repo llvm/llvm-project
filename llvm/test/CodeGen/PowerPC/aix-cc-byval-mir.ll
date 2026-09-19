@@ -76,9 +76,9 @@ define void @call_test_byval_2Byte() {
   ; 32BIT-NEXT:   renamable $r3 = LWZtoc @gS2, $r2 :: (load (s32) from got)
   ; 32BIT-NEXT:   renamable $r3 = LHZ 0, killed renamable $r3 :: (load (s16))
   ; 32BIT-NEXT:   renamable $r5 = RLWINM killed renamable $r3, 16, 0, 15
-  ; 32BIT-NEXT:   $r3 = LI 42
+  ; 32BIT-NEXT:   $r3 = lr-split LI 42
   ; 32BIT-NEXT:   $f2 = COPY renamable $f1
-  ; 32BIT-NEXT:   $r7 = LI 43
+  ; 32BIT-NEXT:   $r7 = lr-split LI 43
   ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_byval_2Byte>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r5, implicit killed $f2, implicit killed $r7, implicit $r2, implicit-def $r1, implicit-def dead $r3
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
@@ -91,9 +91,9 @@ define void @call_test_byval_2Byte() {
   ; 64BIT-NEXT:   renamable $x3 = LDtoc @gS2, $x2 :: (load (s64) from got)
   ; 64BIT-NEXT:   renamable $x3 = LHZ8 0, killed renamable $x3 :: (load (s16))
   ; 64BIT-NEXT:   renamable $x5 = RLDICR killed renamable $x3, 48, 15
-  ; 64BIT-NEXT:   $x3 = LI8 42
+  ; 64BIT-NEXT:   $x3 = lr-split LI8 42
   ; 64BIT-NEXT:   $f2 = COPY renamable $f1
-  ; 64BIT-NEXT:   $x7 = LI8 43
+  ; 64BIT-NEXT:   $x7 = lr-split LI8 43
   ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_byval_2Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x5, implicit killed $f2, implicit killed $x7, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
@@ -139,13 +139,13 @@ define void @call_test_byval_3Byte() {
   ; 32BIT-NEXT:   renamable $r4 = LHZ 0, killed renamable $r4 :: (load (s16))
   ; 32BIT-NEXT:   renamable $r10 = RLWINM killed renamable $r3, 8, 16, 23
   ; 32BIT-NEXT:   renamable $r10 = RLWIMI killed renamable $r10, killed renamable $r4, 16, 0, 15
-  ; 32BIT-NEXT:   $r3 = LI 1
-  ; 32BIT-NEXT:   $r4 = LI 2
-  ; 32BIT-NEXT:   $r5 = LI 3
-  ; 32BIT-NEXT:   $r6 = LI 4
-  ; 32BIT-NEXT:   $r7 = LI 5
-  ; 32BIT-NEXT:   $r8 = LI 6
-  ; 32BIT-NEXT:   $r9 = LI 7
+  ; 32BIT-NEXT:   $r3 = lr-split LI 1
+  ; 32BIT-NEXT:   $r4 = lr-split LI 2
+  ; 32BIT-NEXT:   $r5 = lr-split LI 3
+  ; 32BIT-NEXT:   $r6 = lr-split LI 4
+  ; 32BIT-NEXT:   $r7 = lr-split LI 5
+  ; 32BIT-NEXT:   $r8 = lr-split LI 6
+  ; 32BIT-NEXT:   $r9 = lr-split LI 7
   ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_byval_3Byte>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit killed $r5, implicit killed $r6, implicit killed $r7, implicit killed $r8, implicit killed $r9, implicit $r10, implicit $r2, implicit-def $r1, implicit-def dead $r3
   ; 32BIT-NEXT:   ADJCALLSTACKUP 60, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm
@@ -160,13 +160,13 @@ define void @call_test_byval_3Byte() {
   ; 64BIT-NEXT:   renamable $x4 = LHZ8 0, killed renamable $x4 :: (load (s16))
   ; 64BIT-NEXT:   renamable $x10 = RLDIC killed renamable $x3, 40, 16
   ; 64BIT-NEXT:   renamable $x10 = RLDIMI killed renamable $x10, killed renamable $x4, 48, 0
-  ; 64BIT-NEXT:   $x3 = LI8 1
-  ; 64BIT-NEXT:   $x4 = LI8 2
-  ; 64BIT-NEXT:   $x5 = LI8 3
-  ; 64BIT-NEXT:   $x6 = LI8 4
-  ; 64BIT-NEXT:   $x7 = LI8 5
-  ; 64BIT-NEXT:   $x8 = LI8 6
-  ; 64BIT-NEXT:   $x9 = LI8 7
+  ; 64BIT-NEXT:   $x3 = lr-split LI8 1
+  ; 64BIT-NEXT:   $x4 = lr-split LI8 2
+  ; 64BIT-NEXT:   $x5 = lr-split LI8 3
+  ; 64BIT-NEXT:   $x6 = lr-split LI8 4
+  ; 64BIT-NEXT:   $x7 = lr-split LI8 5
+  ; 64BIT-NEXT:   $x8 = lr-split LI8 6
+  ; 64BIT-NEXT:   $x9 = lr-split LI8 7
   ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_byval_3Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit killed $x5, implicit killed $x6, implicit killed $x7, implicit killed $x8, implicit killed $x9, implicit $x10, implicit $x2, implicit-def $r1, implicit-def dead $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 120, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm
@@ -559,7 +559,7 @@ define i32 @call_test_byval_homogeneous_float_struct() {
   ; 32BIT-NEXT:   ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   renamable $r5 = LWZ 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
   ; 32BIT-NEXT:   renamable $r4 = LWZ 4, %stack.0.s :: (load (s32) from %stack.0.s + 4)
-  ; 32BIT-NEXT:   $r3 = LI 0
+  ; 32BIT-NEXT:   $r3 = lr-split LI 0
   ; 32BIT-NEXT:   BL_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
   ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
@@ -572,7 +572,7 @@ define i32 @call_test_byval_homogeneous_float_struct() {
   ; 64BIT-NEXT:   ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   renamable $x3 = LWZ8 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
   ; 64BIT-NEXT:   renamable $x4 = RLDICR killed renamable $x3, 32, 31
-  ; 64BIT-NEXT:   $x3 = LI8 0
+  ; 64BIT-NEXT:   $x3 = lr-split LI8 0
   ; 64BIT-NEXT:   BL8_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
   ; 64BIT-NEXT:   ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3

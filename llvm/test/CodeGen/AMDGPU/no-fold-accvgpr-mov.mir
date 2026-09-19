@@ -84,7 +84,7 @@ body:             |
   ; COALESCE-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B64_]], implicit $exec
   ; COALESCE-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_]], implicit $exec
   ; COALESCE-NEXT:   undef [[AV_MOV_1:%[0-9]+]].sub1:areg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-  ; COALESCE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; COALESCE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = lr-split S_MOV_B32 0
   ; COALESCE-NEXT: {{  $}}
   ; COALESCE-NEXT: bb.1:
   ; COALESCE-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
@@ -138,7 +138,7 @@ body:             |
   ; GFX908-COALESCE-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_CSELECT_B64_]], implicit $exec
   ; GFX908-COALESCE-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_]], implicit $exec
   ; GFX908-COALESCE-NEXT:   undef [[AV_MOV_1:%[0-9]+]].sub1:areg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-  ; GFX908-COALESCE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GFX908-COALESCE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = lr-split S_MOV_B32 0
   ; GFX908-COALESCE-NEXT: {{  $}}
   ; GFX908-COALESCE-NEXT: bb.1:
   ; GFX908-COALESCE-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)

@@ -19,13 +19,13 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr64 = COPY $rcx
     ; CHECK-NEXT: MOV64mr %stack.0, 1, $noreg, 0, $noreg, [[COPY2]] :: (store (s64) into %stack.0)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK-NEXT: undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags
     ; CHECK-NEXT: dead [[COPY3:%[0-9]+]]:gr64 = CMOV64rr [[COPY3]], [[MOV32r0_]], 10, implicit undef $eflags
-    ; CHECK-NEXT: undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags
     ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64 = CMOV64rr [[MOV64rm]], [[MOV32r0_1]], 10, implicit undef $eflags
     ; CHECK-NEXT: dead [[COPY4:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK-NEXT: undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags
     ; CHECK-NEXT: [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[MOV64rm]], [[MOV32r0_2]], 10, implicit undef $eflags
     ; CHECK-NEXT: $rax = COPY [[CMOV64rr]]
     ; CHECK-NEXT: RET 0, $rax

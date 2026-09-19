@@ -174,5 +174,5 @@ body:             |
 #CHECK-NOT: %9:crbitrc = CRUNSET
 #CHECK: bb.2.while.body:
 #CHECK-NOT: %24:crbitrc = COPY %9
-#CHECK: %24:crbitrc = CRUNSET
+#CHECK: %24:crbitrc = lr-split CRUNSET
 #CHECK: B %bb.3

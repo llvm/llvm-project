@@ -52,14 +52,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55:0x000000000000FC00
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 56, 0 :: (dereferenceable invariant load (s256), align 8, addrspace 4)
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = lr-split S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 56, 0 :: (dereferenceable invariant load (s256), align 8, addrspace 4)
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55:0x000000000000FC00
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 56, 0 :: (dereferenceable invariant load (s256), align 8, addrspace 4)
+  ; CHECK-NEXT:   renamable $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11 = lr-split S_LOAD_DWORDX8_IMM renamable $sgpr38_sgpr39, 56, 0 :: (dereferenceable invariant load (s256), align 8, addrspace 4)
   ; CHECK-NEXT:   S_CMP_LG_U64 renamable $sgpr4_sgpr5, 0, implicit-def $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -83,7 +83,7 @@ body:             |
   ; CHECK-NEXT:   dead [[COPY:%[0-9]+]]:vgpr_32 = COPY killed renamable $sgpr53
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY killed renamable $sgpr36_sgpr37
-  ; CHECK-NEXT:   renamable $sgpr10_sgpr11 = IMPLICIT_DEF
+  ; CHECK-NEXT:   renamable $sgpr10_sgpr11 = lr-split IMPLICIT_DEF
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:

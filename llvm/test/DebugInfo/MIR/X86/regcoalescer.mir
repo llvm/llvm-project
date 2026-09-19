@@ -48,6 +48,6 @@ body:             |
 
 ...
 
-# CHECK: $eax = MOV32r0
+# CHECK: $eax = lr-split MOV32r0
 # CHECK-NEXT: DBG_VALUE $eax
 # CHECK-NEXT: DBG_VALUE $eax

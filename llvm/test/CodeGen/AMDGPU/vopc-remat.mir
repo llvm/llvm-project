@@ -26,7 +26,7 @@ body:             |
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr4_sgpr5
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr6_sgpr7, $exec, implicit-def $scc
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr4_sgpr5
-    ; GCN-NEXT: renamable $sgpr4_sgpr5 = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GCN-NEXT: renamable $sgpr4_sgpr5 = lr-split V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
     ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr4_sgpr5, implicit [[COPY]], implicit [[COPY1]]
     ; GCN-NEXT: S_ENDPGM 0
