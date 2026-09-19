@@ -63,49 +63,36 @@ public:
   }
 };
 
-struct alignas(2 * sizeof(void*)) rcu_atomic_list_view_entry {
-  __rcu_node* head_ = nullptr;
-  __rcu_node* tail_ = nullptr;
-};
-
 class rcu_atomic_list_view {
-  using entry = rcu_atomic_list_view_entry;
-
-  std::atomic<entry> entry_{};
+  std::atomic<__rcu_node*> head_{};
 
   friend class rcu_singly_list_view;
 
 public:
   void push_front(__rcu_node* node) noexcept {
-    auto expected_entry = entry_.load(std::memory_order_relaxed);
-    auto original_next  = node->__next_;
+    auto expected_head = head_.load(std::memory_order_relaxed);
     while (true) {
-      auto new_entry = [&] {
-        if (expected_entry.head_ == nullptr) {
-          return entry{node, node};
-        } else {
-          node->__next_ = expected_entry.head_;
-          return entry{node, expected_entry.tail_};
-        }
-      }();
-      if (entry_.compare_exchange_weak(
-              expected_entry, new_entry, std::memory_order_acq_rel, std::memory_order_relaxed)) {
-        break;
+      node->__next_ = expected_head;
+      if (expected_head == nullptr) {
+        node->__tail_if_atomic_head = node;
       } else {
-        node->__next_ = original_next;
+        node->__tail_if_atomic_head = expected_head->__tail_if_atomic_head;
+      }
+      if (head_.compare_exchange_weak(expected_head, node, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+        break;
       }
     }
   }
 };
 
 void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexcept {
-  if (other.entry_.load(std::memory_order_relaxed).head_ == nullptr) {
+  if (other.head_.load(std::memory_order_relaxed) == nullptr) {
     return;
   }
-  auto entry = other.entry_.exchange(rcu_atomic_list_view::entry{nullptr, nullptr}, std::memory_order_acq_rel);
+  auto head = other.head_.exchange(nullptr, std::memory_order_acq_rel);
   rcu_singly_list_view tmp;
-  tmp.head_ = entry.head_;
-  tmp.tail_ = entry.tail_;
+  tmp.head_ = head;
+  tmp.tail_ = head->__tail_if_atomic_head;
   this->splice_back(tmp);
 }
 

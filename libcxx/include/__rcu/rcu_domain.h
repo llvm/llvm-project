@@ -28,6 +28,7 @@ struct __rcu_node {
   using __cb_type        = void(__rcu_node*);
   __cb_type* __callback_ = [](__rcu_node*) {};
   __rcu_node* __next_    = nullptr;
+  __rcu_node* __tail_if_atomic_head = nullptr;
 };
 
 template <class _Tp, class _Deleter>
