@@ -1609,7 +1609,14 @@ APFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
       semantics->nanEncoding == fltNanEncoding::AllOnes)
     APInt::tcClearBit(significandParts(), 0);
 
-  return opInexact;
+  /* The overflow is still signaled.
+     IEEE 754-2019 7.4 raises it if the largest finite number is exceeded in
+     magnitude by what would have been the result, even if we rounded away from
+     infinity it does not make the overflow disappear.
+     Formats without a non-finite encoding are left alone.  */
+  if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+    return opInexact;
+  return static_cast<opStatus>(opOverflow | opInexact);
 }
 
 /* Returns TRUE if, when truncating the current number, with BIT the
@@ -5596,10 +5603,8 @@ APFloat::opStatus DoubleAPFloat::handleOverflow(roundingMode RM) {
   default:
     llvm_unreachable("Invalid rounding mode found");
   }
-  opStatus S = opInexact;
-  if (!getFirst().isFinite())
-    S = static_cast<opStatus>(S | opOverflow);
-  return S;
+
+  return static_cast<opStatus>(opInexact | opOverflow);
 }
 
 APFloat::opStatus DoubleAPFloat::convertFromUnsignedParts(
