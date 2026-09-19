@@ -216,6 +216,13 @@ TEST_F(FormatTestTableGen, ValueSuffix) {
                "}");
 }
 
+TEST_F(FormatTestTableGen, BitRanges) {
+  verifyFormat("def Ranges {\n"
+               "  let Inst{24-20} = rs2;\n"
+               "  let Inst{19-15, 11-7} = rs1;\n"
+               "}");
+}
+
 TEST_F(FormatTestTableGen, PasteOperator) {
   verifyFormat("def Paste#\"Operator\" { string Paste = \"Paste\"#operator; }");
 
