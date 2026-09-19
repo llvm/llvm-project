@@ -124,14 +124,18 @@ struct GpuAllReduceRewriter {
 
     // Use the first numSubgroups invocations to reduce the intermediate results
     // from workgroup memory. The final result is written to workgroup memory
-    // again.
+    // again, by the first lane only: the subgroup reduction leaves the result
+    // in the first lane and an undefined value in every other lane, so letting
+    // all of them store would make the outcome depend on which lane's store
+    // wins.
     Value zero = create<arith::ConstantIndexOp>(0);
     createPredicatedBlock(isValidSubgroup, [&] {
       Value index = create<arith::IndexCastOp>(indexType, invocationIdx);
       Value value = create<memref::LoadOp>(valueType, buffer, index);
       Value result =
           createSubgroupReduce(numSubgroups, laneId, value, accumFactory);
-      create<memref::StoreOp>(result, buffer, zero);
+      createPredicatedBlock(
+          isFirstLane, [&] { create<memref::StoreOp>(result, buffer, zero); });
     });
 
     // Synchronize workgroup and load result from workgroup memory.
