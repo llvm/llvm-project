@@ -1390,6 +1390,12 @@ IsolatedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   return getInputs();
 }
 
+void IsolatedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
 MutableOperandRange
 IsolatedRegionYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
   return getValuesMutable();

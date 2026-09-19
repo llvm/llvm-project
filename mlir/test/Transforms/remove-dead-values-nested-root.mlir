@@ -94,3 +94,16 @@ func.func @dead_carry(%lb: index, %ub: index, %step: index, %x: i32) -> i32 {
   }) : (index, index, index, i32) -> i32
   return %r : i32
 }
+
+// CHECK-LABEL: func.func @isolated_dead_input
+// CHECK-SAME: %[[X:.*]]: i32
+// CHECK: "test.isolated_region_branch"(%[[X]], %[[X]])
+// CHECK: ^bb0(%[[ARG:.*]]: i32, %{{.*}}: i32):
+// CHECK-NEXT: "test.isolated_region_yield"(%[[ARG]])
+func.func @isolated_dead_input(%x: i32) -> i32 {
+  %r = "test.isolated_region_branch"(%x, %x) ({
+  ^bb0(%arg: i32, %dead: i32):
+    "test.isolated_region_yield"(%arg) : (i32) -> ()
+  }) : (i32, i32) -> i32
+  return %r : i32
+}

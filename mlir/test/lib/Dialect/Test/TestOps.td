@@ -2835,6 +2835,7 @@ def IsolatedRegionBranchOp : TEST_Op<"isolated_region_branch", [
   let arguments = (ins Variadic<AnyType>:$inputs);
   let results = (outs Variadic<AnyType>:$outputs);
   let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let hasCanonicalizer = 1;
 }
 
 def IsolatedRegionYieldOp : TEST_Op<"isolated_region_yield", [

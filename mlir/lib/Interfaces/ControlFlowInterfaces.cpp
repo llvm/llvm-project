@@ -722,9 +722,6 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Compute the mapping of successor inputs to successor operands.
     auto regionBranchOp = cast<RegionBranchOpInterface>(op);
     RegionBranchInverseSuccessorMapping inputToOperands;
@@ -733,6 +730,10 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
     // Try to replace the uses of each successor input one-by-one.
     bool changed = false;
     for (Value value : inputToOperands.keys()) {
+      // Isolated entry arguments cannot capture values from above the op.
+      if (op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+          isa<BlockArgument>(value))
+        continue;
       // Nothing to do for successor inputs that are already dead.
       if (value.use_empty())
         continue;
@@ -845,9 +846,6 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Compute tied values: values that must come as a set. If you remove one,
     // you must remove all. If a successor op operand is forwarded to two
     // successor inputs %a and %b, both %a and %b are in the same set.
@@ -995,9 +993,6 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    assert(!op->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-           "isolated-from-above ops are not supported");
-
     // Collect all successor inputs and sort them. When dropping the uses of a
     // successor input, we'd like to also drop the uses of the same tied
     // successor inputs. Otherwise, a set of tied successor inputs may not
