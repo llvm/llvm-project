@@ -173,7 +173,7 @@ define void @noncanonical(ptr %p0, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: noncanonical:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d0, [x1]
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str s0, [x2]
 ; CHECK-NEXT:    ret
 entry:
