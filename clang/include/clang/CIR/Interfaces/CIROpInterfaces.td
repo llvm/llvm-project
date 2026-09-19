@@ -45,6 +45,12 @@ let cppNamespace = "::cir" in {
                       "bool", "getNothrow", (ins)>,
       InterfaceMethod<"Return the side effects of the call operation",
                       "cir::SideEffect", "getSideEffect", (ins)>,
+      InterfaceMethod<"Set the side effects of the call operation",
+                      "void", "setSideEffect",
+                      (ins "cir::SideEffect":$effect), [{}],
+                      /*defaultImplementation=*/[{
+                        $_op.setSideEffect(effect);
+                      }]>,
       InterfaceMethod<[{"Set the inline-kind of a call operation"}],
                       "void", "setInlineKind", 
                       (ins "std::optional<cir::InlineKind>":$kind), [{}], 

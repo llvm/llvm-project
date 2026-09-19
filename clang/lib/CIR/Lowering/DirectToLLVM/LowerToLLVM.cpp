@@ -430,45 +430,53 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
+/// Lower a CIR `side_effect` to an LLVM memory effect.  A null result means
+/// unknown effects, which is how `All` is represented.  The argmem values
+/// lower to ModRef because they do not say whether the slot is read or
+/// written.
+static mlir::LLVM::MemoryEffectsAttr
+buildMemoryEffects(mlir::MLIRContext *ctx, cir::SideEffect sideEffect) {
+  using mlir::LLVM::ModRefInfo;
+
+  ModRefInfo other;
+  ModRefInfo argMem;
+  switch (sideEffect) {
+  case cir::SideEffect::All:
+    return {};
+  case cir::SideEffect::Pure:
+    other = argMem = ModRefInfo::Ref;
+    break;
+  case cir::SideEffect::Const:
+    other = argMem = ModRefInfo::NoModRef;
+    break;
+  case cir::SideEffect::PureArgMem:
+    other = ModRefInfo::Ref;
+    argMem = ModRefInfo::ModRef;
+    break;
+  case cir::SideEffect::ConstArgMem:
+    other = ModRefInfo::NoModRef;
+    argMem = ModRefInfo::ModRef;
+    break;
+  }
+
+  return mlir::LLVM::MemoryEffectsAttr::get(ctx, /*other=*/other,
+                                            /*argMem=*/argMem,
+                                            /*inaccessibleMem=*/other,
+                                            /*errnoMem=*/other,
+                                            /*targetMem0=*/other,
+                                            /*targetMem1=*/other);
+}
+
 void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               cir::SideEffect sideEffect,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                               bool &noUnwind, bool &willReturn,
                               bool &noReturn) {
-  using mlir::LLVM::ModRefInfo;
+  memoryEffect = buildMemoryEffects(callOp->getContext(), sideEffect);
 
-  switch (sideEffect) {
-  case cir::SideEffect::All:
-    memoryEffect = {};
-    noUnwind = isNothrow;
-    willReturn = false;
-    break;
-
-  case cir::SideEffect::Pure:
-    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
-        callOp->getContext(), /*other=*/ModRefInfo::Ref,
-        /*argMem=*/ModRefInfo::Ref,
-        /*inaccessibleMem=*/ModRefInfo::Ref,
-        /*errnoMem=*/ModRefInfo::Ref,
-        /*targetMem0=*/ModRefInfo::Ref,
-        /*targetMem1=*/ModRefInfo::Ref);
-    noUnwind = true;
-    willReturn = true;
-    break;
-
-  case cir::SideEffect::Const:
-    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
-        callOp->getContext(), /*other=*/ModRefInfo::NoModRef,
-        /*argMem=*/ModRefInfo::NoModRef,
-        /*inaccessibleMem=*/ModRefInfo::NoModRef,
-        /*errnoMem=*/ModRefInfo::NoModRef,
-        /*targetMem0=*/ModRefInfo::NoModRef,
-        /*targetMem1=*/ModRefInfo::NoModRef);
-    noUnwind = true;
-    willReturn = true;
-    break;
-  }
-
+  bool hasKnownEffects = sideEffect != cir::SideEffect::All;
+  noUnwind = hasKnownEffects || isNothrow;
+  willReturn = hasKnownEffects;
   noReturn = callOp->hasAttr(CIRDialect::getNoReturnAttrName());
 }
 
@@ -2110,18 +2118,16 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
-/// The `llvm.byval`, `llvm.sret`, and `llvm.byref` argument attributes carry
-/// the pointee type as a TypeAttr.  After the CallConvLowering pass that type
-/// is still a CIR type; remap it to the lowered LLVM type so translation to
-/// LLVM IR does not encounter a CIR type in an attribute.  The pointee must
+/// `llvm.byval` and `llvm.sret` carry their pointee type as a TypeAttr, which
+/// arrives as a CIR type, so remap it to the lowered type.  The pointee must
 /// name the in-memory storage type, not the value type, since it sizes the
 /// byval copy and the sret slot: a _BitInt narrower than its padded storage
 /// integer would otherwise understate both.  Returns std::nullopt when a
 /// pointee has no memory representation, leaving the caller to emit the NYI
-/// error, and the input unchanged when there is nothing to convert.
-static std::optional<mlir::ArrayAttr> convertTypedArgAttrs(
-    mlir::ArrayAttr argAttrs, const mlir::TypeConverter &converter,
-    const mlir::DataLayout &dataLayout, mlir::MLIRContext *ctx) {
+/// error.
+static std::optional<mlir::ArrayAttr>
+lowerArgAttrs(mlir::ArrayAttr argAttrs, const mlir::TypeConverter &converter,
+              const mlir::DataLayout &dataLayout, mlir::MLIRContext *ctx) {
   if (!argAttrs)
     return argAttrs;
   bool changed = false;
@@ -2129,24 +2135,28 @@ static std::optional<mlir::ArrayAttr> convertTypedArgAttrs(
   loweredArgAttrs.reserve(argAttrs.size());
   for (mlir::Attribute a : argAttrs) {
     auto dict = cast<mlir::DictionaryAttr>(a);
-    SmallVector<mlir::NamedAttribute> entries(dict.begin(), dict.end());
-    for (mlir::NamedAttribute &entry : entries) {
+    SmallVector<mlir::NamedAttribute> entries;
+    entries.reserve(dict.size());
+    for (mlir::NamedAttribute entry : dict) {
       StringRef name = entry.getName().strref();
-      if (name != mlir::LLVM::LLVMDialect::getByValAttrName() &&
-          name != mlir::LLVM::LLVMDialect::getStructRetAttrName() &&
-          name != mlir::LLVM::LLVMDialect::getByRefAttrName())
-        continue;
-      auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue());
-      if (!typeAttr)
-        continue;
-      mlir::Type lowered =
-          convertTypeForMemory(converter, dataLayout, typeAttr.getValue());
-      if (!lowered)
-        return std::nullopt;
-      if (lowered != typeAttr.getValue()) {
-        entry.setValue(mlir::TypeAttr::get(lowered));
-        changed = true;
+      if (name == mlir::LLVM::LLVMDialect::getByValAttrName() ||
+          name == mlir::LLVM::LLVMDialect::getStructRetAttrName()) {
+        if (auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue())) {
+          mlir::Type lowered =
+              convertTypeForMemory(converter, dataLayout, typeAttr.getValue());
+          if (!lowered)
+            return std::nullopt;
+          if (lowered != typeAttr.getValue()) {
+            entry.setValue(mlir::TypeAttr::get(lowered));
+            changed = true;
+          }
+        }
       }
+      // MLIR routes attribute verification to the dialect named by the prefix,
+      // so no verifier is ever asked about a surviving `cir.` key.
+      assert(!name.starts_with("cir.") &&
+             "CIR argument attribute leaked into the LLVM dialect");
+      entries.push_back(entry);
     }
     loweredArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, entries));
   }
@@ -2171,12 +2181,12 @@ lowerCallAttributes(cir::CIRCallOpInterface op,
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     if (attr.getName() == CIRDialect::getArgAttrsAttrName()) {
       auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
-      std::optional<mlir::ArrayAttr> lowered = convertTypedArgAttrs(
-          argAttrs, converter, dataLayout, op->getContext());
+      std::optional<mlir::ArrayAttr> lowered =
+          lowerArgAttrs(argAttrs, converter, dataLayout, op->getContext());
       if (!lowered)
-        return op->emitError() << "NYI: lowering a byval/sret/byref call "
-                                  "argument whose pointee type has no "
-                                  "memory representation";
+        return op->emitError() << "NYI: lowering a byval/sret call argument "
+                                  "whose pointee type has no memory "
+                                  "representation";
       result.emplace_back(attr.getName(), *lowered);
       continue;
     }
@@ -2720,12 +2730,12 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     if (attr.getName() == func.getArgAttrsAttrName()) {
       auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
-      std::optional<mlir::ArrayAttr> lowered = convertTypedArgAttrs(
+      std::optional<mlir::ArrayAttr> lowered = lowerArgAttrs(
           argAttrs, *getTypeConverter(), dataLayout, getContext());
       if (!lowered)
-        return func.emitError() << "NYI: lowering a byval/sret/byref "
-                                   "argument whose pointee type has no "
-                                   "memory representation";
+        return func.emitError() << "NYI: lowering a byval/sret argument whose "
+                                   "pointee type has no memory "
+                                   "representation";
       result.emplace_back(attr.getName(), *lowered);
       continue;
     }
@@ -2817,35 +2827,12 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (std::optional<cir::SideEffect> sideEffectKind = op.getSideEffect()) {
-    switch (*sideEffectKind) {
-    case cir::SideEffect::All:
-      break;
-    case cir::SideEffect::Pure:
-      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
-          fn.getContext(),
-          /*other=*/mlir::LLVM::ModRefInfo::Ref,
-          /*argMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*errnoMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*targetMem0=*/mlir::LLVM::ModRefInfo::Ref,
-          /*targetMem1=*/mlir::LLVM::ModRefInfo::Ref));
-      fn.setNoUnwind(true);
-      fn.setWillReturn(true);
-      break;
-    case cir::SideEffect::Const:
-      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
-          fn.getContext(),
-          /*other=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*argMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef));
-      fn.setNoUnwind(true);
-      fn.setWillReturn(true);
-      break;
-    }
+  if (std::optional<cir::SideEffect> sideEffectKind = op.getSideEffect();
+      sideEffectKind && *sideEffectKind != cir::SideEffect::All) {
+    fn.setMemoryEffectsAttr(
+        buildMemoryEffects(fn.getContext(), *sideEffectKind));
+    fn.setNoUnwind(true);
+    fn.setWillReturn(true);
   }
 
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
