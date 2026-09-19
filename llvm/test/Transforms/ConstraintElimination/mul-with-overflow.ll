@@ -10,10 +10,8 @@ define i8 @umul_no_overflow_upper_bound(i8 %a) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[HI:%.*]] = icmp ule i8 [[A]], 25
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[HI]])
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[A]], i8 10)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = mul nuw i8 [[A]], 10
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
 entry:
@@ -58,10 +56,8 @@ define i8 @smul_no_overflow_both_bounds(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LO]])
 ; CHECK-NEXT:    [[HI:%.*]] = icmp sle i8 [[A]], 12
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[HI]])
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A]], i8 10)
-; CHECK-NEXT:    [[V:%.*]] = extractvalue { i8, i1 } [[S]], 0
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    call void @use(i1 [[O]])
+; CHECK-NEXT:    [[V:%.*]] = mul nsw i8 [[A]], 10
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
 entry:
