@@ -279,7 +279,7 @@ struct MemRefPointerLikeModel
     return {};
   }
 
-  bool isDeviceData(Type pointer, Value var) const {
+  bool isDeviceAccessible(Type pointer, Value var) const {
     auto memrefTy = cast<T>(pointer);
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
@@ -405,7 +405,7 @@ struct MemrefGlobalVariableModel
     return nullptr;
   }
 
-  bool isDeviceData(Operation *op) const {
+  bool isDeviceAccessible(Operation *op) const {
     auto globalOp = cast<memref::GlobalOp>(op);
     Attribute memSpace = globalOp.getType().getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);

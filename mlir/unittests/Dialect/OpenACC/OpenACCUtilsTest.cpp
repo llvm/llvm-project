@@ -1397,7 +1397,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesEmpty) {
 }
 
 //===----------------------------------------------------------------------===//
-// isDeviceValue Tests
+// isDeviceAccessibleValue Tests
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -1440,7 +1440,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefGlobalAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return true since memref has GPU global address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueMemrefWorkgroupAddressSpace) {
@@ -1456,7 +1456,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefWorkgroupAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return true since memref has GPU workgroup address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueMemrefPrivateAddressSpace) {
@@ -1472,7 +1472,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefPrivateAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return true since memref has GPU private address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueMemrefNoAddressSpace) {
@@ -1484,7 +1484,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueMemrefNoAddressSpace) {
   Value val = allocOp->getResult();
 
   // Should return false since memref has no GPU address space
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueNonMappableType) {
@@ -1494,7 +1494,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueNonMappableType) {
   Value val = constOp->getResult();
 
   // Should return false since i32 is not a MappableType or PointerLikeType
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithGPUAddressSpace) {
@@ -1525,7 +1525,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithGPUAddressSpace) {
   Value val = getGlobalOp->getResult();
 
   // Should return true since the global has GPU address space
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithoutGPUAddressSpace) {
@@ -1552,7 +1552,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithoutGPUAddressSpace) {
   Value val = getGlobalOp->getResult();
 
   // Should return false since the global has no GPU address space
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareDeviceptr) {
@@ -1562,7 +1562,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareDeviceptr) {
   Value val = memrefViewFromBlockArgWithDeclare(
       b, loc, &context, DataClause::acc_deviceptr, module.get(),
       "test_memref_view_declare_devptr");
-  EXPECT_TRUE(isDeviceValue(val));
+  EXPECT_TRUE(isDeviceAccessibleValue(val));
 }
 
 TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareNonDeviceptr) {
@@ -1572,7 +1572,7 @@ TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareNonDeviceptr) {
   Value val = memrefViewFromBlockArgWithDeclare(
       b, loc, &context, DataClause::acc_copyin, module.get(),
       "test_memref_view_declare_copyin");
-  EXPECT_FALSE(isDeviceValue(val));
+  EXPECT_FALSE(isDeviceAccessibleValue(val));
 }
 
 //===----------------------------------------------------------------------===//

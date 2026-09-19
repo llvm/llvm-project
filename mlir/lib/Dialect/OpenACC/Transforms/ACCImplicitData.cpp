@@ -216,6 +216,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include <string>
 #include <type_traits>
 
 namespace mlir {
@@ -292,7 +294,7 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
     return false;
 
   // Device data is a candidate - it will get a deviceptr clause.
-  if (acc::isDeviceValue(val))
+  if (acc::isDeviceAccessibleValue(val))
     return true;
 
   // If it is otherwise valid, skip it.
@@ -457,8 +459,15 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
-  if (acc::isDeviceValue(var)) {
-    // If the variable is device data, use deviceptr clause.
+  // `deviceptr` asserts the value is already device-resident; no runtime
+  // mapping or attach is performed. CUDA managed/unified storage is device-
+  // accessible and may migrate onto the device, but that is not a strong enough
+  // guarantee of residence to skip mapping (the runtime still needs to attach
+  // and, where needed, privatize it), so it must not be treated as deviceptr.
+  // isDeviceResidentValue refines isDeviceAccessibleValue's accessibility
+  // answer to residence by conservatively excluding managed/unified.
+  if (acc::isDeviceResidentValue(var)) {
+    // If the variable is device-resident data, use deviceptr clause.
     LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
                                "device data\n");
     return acc::DevicePtrOp::create(builder, loc, var,

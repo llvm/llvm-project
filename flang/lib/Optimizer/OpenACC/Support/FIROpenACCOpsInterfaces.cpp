@@ -131,7 +131,7 @@ mlir::Region *GlobalVariableModel::getInitRegion(mlir::Operation *op) const {
   return globalOp.hasInitializationBody() ? &globalOp.getRegion() : nullptr;
 }
 
-bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
+bool GlobalVariableModel::isDeviceAccessible(mlir::Operation *op) const {
   if (auto dataAttr = cuf::getDataAttr(op))
     return cuf::isDeviceDataAttribute(dataAttr.getValue());
   return false;
