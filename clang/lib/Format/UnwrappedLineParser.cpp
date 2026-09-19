@@ -2368,7 +2368,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::l_brace:
       break;
     case tok::l_paren:
-      parseParens(/*AmpAmpTokenType=*/TT_PointerOrReference);
+      parseParens(/*StarAndAmpTokenType=*/TT_PointerOrReference);
       break;
     case tok::l_square:
       parseSquare();
@@ -2667,9 +2667,10 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
 
 /// Parses a pair of parentheses (and everything between them).
 /// \param StarAndAmpTokenType If different than TT_Unknown sets this type for
-/// all (double) ampersands and stars. This applies for all nested scopes as
-/// well, this is disabled within a (potential) template argument <>, and thus
-/// also if we find only a <.
+/// all double ampersands, and, if it is TT_PointerOrReference, for all single
+/// ampersands and stars as well. This applies for all nested scopes as well,
+/// this is disabled within a (potential) template argument <>, and thus also if
+/// we find only a <.
 ///
 /// Returns whether there is a `=` token between the parentheses.
 bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
@@ -2821,6 +2822,10 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
       break;
     case tok::star:
     case tok::amp:
+      if (StarAndAmpTokenType == TT_PointerOrReference && ExcessLess == 0)
+        FormatTok->setFinalizedType(StarAndAmpTokenType);
+      nextToken();
+      break;
     case tok::ampamp:
       if (StarAndAmpTokenType != TT_Unknown && ExcessLess == 0)
         FormatTok->setFinalizedType(StarAndAmpTokenType);
@@ -3789,7 +3794,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
     case tok::l_paren:
       if (!TopLevelParensAllowed)
         return;
-      parseParens(/*AmpAmpTokenType=*/TT_BinaryOperator);
+      parseParens(/*StarAndAmpTokenType=*/TT_BinaryOperator);
       TopLevelParensAllowed = false;
       break;
 
