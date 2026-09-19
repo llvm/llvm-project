@@ -4028,9 +4028,10 @@ static SPIRVTypeInst getVulkanBufferType(const TargetExtType *ExtensionType,
                                          SPIRVGlobalRegistry *GR) {
   assert(ExtensionType->getNumTypeParameters() == 1 &&
          "Vulkan buffers have exactly one type for the type of the buffer.");
-  assert(ExtensionType->getNumIntParameters() == 2 &&
-         "Vulkan buffer have 2 integer parameters: storage class and is "
-         "writable.");
+  assert((ExtensionType->getNumIntParameters() == 2 ||
+          ExtensionType->getNumIntParameters() == 3) &&
+         "Vulkan buffers have storage class, writable, and optional byte "
+         "address parameters.");
 
   auto *T = ExtensionType->getTypeParameter(0);
   auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
