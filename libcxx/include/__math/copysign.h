@@ -24,16 +24,28 @@ namespace __math {
 
 // copysign
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI float copysign(float __x, float __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI float
+copysign(float __x, float __y) _NOEXCEPT {
   return ::__builtin_copysignf(__x, __y);
 }
 
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI long double copysign(long double __x, long double __y) _NOEXCEPT {
+// This is a template to avoid conflicting with the C library's non-template `copysign(double, double)` overload
+// when both are visible in the same scope (e.g. after `using std::__math::copysign;` at global scope in <math.h>,
+// where the C library's own declaration for `double` is already present).
+template <class = int>
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI double
+copysign(double __x, double __y) _NOEXCEPT {
+  return __builtin_copysign(__x, __y);
+}
+
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI long double
+copysign(long double __x, long double __y) _NOEXCEPT {
   return ::__builtin_copysignl(__x, __y);
 }
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> copysign(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2>
+copysign(_A1 __x, _A2 __y) _NOEXCEPT {
   return ::__builtin_copysign(__x, __y);
 }
 
