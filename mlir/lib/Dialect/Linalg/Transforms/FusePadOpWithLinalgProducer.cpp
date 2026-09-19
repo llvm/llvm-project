@@ -15,8 +15,65 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 
 using namespace mlir;
+
+/// Fill the padding in disjoint slabs. After filling both sides of a dimension,
+/// restrict it to the interior so subsequent slabs do not overlap.
+static Value fillPaddedBoundary(RewriterBase &rewriter, Location loc,
+                                Value dest, Value padValue,
+                                ArrayRef<int64_t> lowPad,
+                                ArrayRef<int64_t> sourceShape) {
+  ArrayRef<int64_t> paddedShape =
+      cast<RankedTensorType>(dest.getType()).getShape();
+  SmallVector<int64_t> offsets(paddedShape.size(), 0);
+  SmallVector<int64_t> sizes(paddedShape);
+  SmallVector<OpFoldResult> strides(paddedShape.size(),
+                                    rewriter.getIndexAttr(1));
+
+  auto fillSlab = [&](unsigned dim, int64_t offset, int64_t size) {
+    offsets[dim] = offset;
+    sizes[dim] = size;
+    if (llvm::is_contained(sizes, 0))
+      return;
+    auto sliceOffsets = getAsIndexOpFoldResult(rewriter.getContext(), offsets);
+    auto sliceSizes = getAsIndexOpFoldResult(rewriter.getContext(), sizes);
+    auto slice = tensor::ExtractSliceOp::create(
+        rewriter, loc, dest, sliceOffsets, sliceSizes, strides);
+    auto filled =
+        linalg::FillOp::create(rewriter, loc, padValue, slice.getResult());
+    dest =
+        tensor::InsertSliceOp::create(rewriter, loc, filled.getResult(0), dest,
+                                      sliceOffsets, sliceSizes, strides);
+  };
+
+  for (auto [dim, sourceSize] : llvm::enumerate(sourceShape)) {
+    int64_t highOffset = lowPad[dim] + sourceSize;
+    fillSlab(dim, 0, lowPad[dim]);
+    fillSlab(dim, highOffset, paddedShape[dim] - highOffset);
+    offsets[dim] = lowPad[dim];
+    sizes[dim] = sourceSize;
+  }
+  return dest;
+}
+
+static bool canLeaveInteriorUninitialized(linalg::GenericOp linalgOp,
+                                          OpOperand *initOperand,
+                                          tensor::PadOp padOp) {
+  if (!cast<RankedTensorType>(padOp.getSource().getType()).hasStaticShape() ||
+      !padOp.getResultType().hasStaticShape() ||
+      llvm::any_of(padOp.getStaticLow(), ShapedType::isDynamic))
+    return false;
+
+  if (linalgOp.payloadUsesValueFromOperand(initOperand))
+    return false;
+
+  // A projected permutation is not enough: it may drop a loop dimension, e.g.
+  // `(d0, d1) -> (d0)`, and if that dimension has zero extent the producer runs
+  // no iterations at all and leaves the interior uninitialized.
+  return linalgOp.getMatchingIndexingMap(initOperand).isPermutation();
+}
 
 namespace {
 
@@ -38,7 +95,10 @@ namespace {
 ///
 /// if the `linalg.generic` has all parallel iterator types.
 struct FusePadOp : OpRewritePattern<tensor::PadOp> {
-  using OpRewritePattern<tensor::PadOp>::OpRewritePattern;
+  FusePadOp(MLIRContext *context, bool fillBoundaryOnly,
+            PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::PadOp>(context, benefit),
+        fillBoundaryOnly(fillBoundaryOnly) {}
 
   LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override {
@@ -75,22 +135,30 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
     auto emptyTensor = tensor::EmptyOp::create(rewriter, loc, resultSizes,
                                                padResultType.getElementType());
 
-    // Fill the tensor with the pad value.
-    // TODO: There is an option to fill only the boundaries. For now just
-    // filling the whole tensor.
-    auto fillTensor = linalg::FillOp::create(rewriter, loc, padValue,
-                                             emptyTensor.getResult());
+    unsigned resultNumber = cast<OpResult>(source).getResultNumber();
+    auto sourceType = cast<RankedTensorType>(source.getType());
+
+    Value fillTensor;
+    if (fillBoundaryOnly &&
+        canLeaveInteriorUninitialized(
+            linalgOp, linalgOp.getDpsInitOperand(resultNumber), padOp)) {
+      fillTensor =
+          fillPaddedBoundary(rewriter, loc, emptyTensor.getResult(), padValue,
+                             padOp.getStaticLow(), sourceType.getShape());
+    } else {
+      fillTensor = linalg::FillOp::create(rewriter, loc, padValue,
+                                          emptyTensor.getResult())
+                       .getResult(0);
+    }
 
     // Construct a slice of the fill result that is to be replaced with the
     // result of the generic op. The low pad values are the offsets, the size of
     // the source is the size of the slice.
     // TODO: This insert/extract could be potentially made a utility method.
-    unsigned resultNumber = cast<OpResult>(source).getResultNumber();
     SmallVector<OpFoldResult> offsets = padOp.getMixedLowPad();
     SmallVector<OpFoldResult> sizes;
     sizes.reserve(offsets.size());
-    for (const auto &shape :
-         llvm::enumerate(cast<RankedTensorType>(source.getType()).getShape())) {
+    for (const auto &shape : llvm::enumerate(sourceType.getShape())) {
       if (ShapedType::isDynamic(shape.value())) {
         sizes.push_back(
             tensor::DimOp::create(rewriter, loc, source, shape.index())
@@ -100,8 +168,8 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
       }
     }
     SmallVector<OpFoldResult> strides(offsets.size(), rewriter.getIndexAttr(1));
-    auto slice = tensor::ExtractSliceOp::create(
-        rewriter, loc, fillTensor.getResult(0), offsets, sizes, strides);
+    auto slice = tensor::ExtractSliceOp::create(rewriter, loc, fillTensor,
+                                                offsets, sizes, strides);
 
     // Clone the generic op.
     auto clonedOp =
@@ -110,14 +178,17 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
 
     // Insert it back into the result of the fill.
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        padOp, clonedOp.getResult(resultNumber), fillTensor.getResult(0),
-        offsets, sizes, strides);
+        padOp, clonedOp.getResult(resultNumber), fillTensor, offsets, sizes,
+        strides);
     return success();
   }
+
+private:
+  bool fillBoundaryOnly;
 };
 } // namespace
 
 void mlir::linalg::populateFuseTensorPadWithProducerLinalgOpPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<FusePadOp>(patterns.getContext());
+    RewritePatternSet &patterns, bool fillBoundaryOnly) {
+  patterns.add<FusePadOp>(patterns.getContext(), fillBoundaryOnly);
 }
