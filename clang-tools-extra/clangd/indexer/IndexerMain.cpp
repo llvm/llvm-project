@@ -12,19 +12,27 @@
 
 #include "CompileCommands.h"
 #include "Compiler.h"
+#include "Config.h"
+#include "ConfigProvider.h"
 #include "index/IndexAction.h"
 #include "index/Merge.h"
 #include "index/Ref.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolCollector.h"
+#include "support/Context.h"
 #include "support/Logger.h"
+#include "support/ThreadsafeFS.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Signals.h"
+#include <memory>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -47,6 +55,47 @@ static llvm::cl::list<std::string> QueryDriverGlobs{
         "/usr/bin/**/clang-*,/path/to/repo/**/g++-*"),
     llvm::cl::CommaSeparated,
 };
+
+static llvm::cl::opt<bool> EnableConfig{
+    "enable-config",
+    llvm::cl::desc(config::Provider::EnableConfigFlagDesc),
+    llvm::cl::init(false),
+};
+
+std::function<Context(llvm::StringRef)>
+createConfiguredContextProvider(const config::Provider *Provider) {
+  if (!Provider)
+    return [](llvm::StringRef) { return Context::current().clone(); };
+
+  return [Provider](llvm::StringRef File) {
+    config::Params Params;
+    llvm::SmallString<256> PosixPath;
+    if (!File.empty()) {
+      assert(llvm::sys::path::is_absolute(File));
+      llvm::sys::path::native(File, PosixPath, llvm::sys::path::Style::posix);
+      Params.Path = PosixPath.str();
+    }
+
+    Config C = Provider->getConfig(Params, [](const llvm::SMDiagnostic &D) {
+      switch (D.getKind()) {
+      case llvm::SourceMgr::DK_Error:
+        elog("config error at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
+             D.getColumnNo(), D.getMessage());
+        break;
+      case llvm::SourceMgr::DK_Warning:
+        log("config warning at {0}:{1}:{2}: {3}", D.getFilename(),
+            D.getLineNo(), D.getColumnNo(), D.getMessage());
+        break;
+      case llvm::SourceMgr::DK_Note:
+      case llvm::SourceMgr::DK_Remark:
+        vlog("config note at {0}:{1}:{2}: {3}", D.getFilename(), D.getLineNo(),
+             D.getColumnNo(), D.getMessage());
+        break;
+      }
+    });
+    return Context::current().derive(Config::Key, std::move(C));
+  };
+}
 
 class IndexActionFactory : public tooling::FrontendActionFactory {
 public:
@@ -152,6 +201,16 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
+  clang::clangd::RealThreadsafeFS TFS;
+  std::vector<std::unique_ptr<clang::clangd::config::Provider>> ProviderStack;
+  if (clang::clangd::EnableConfig)
+    ProviderStack =
+        clang::clangd::config::Provider::createDefaultProviders(TFS);
+  auto ConfigProvider =
+      clang::clangd::config::Provider::combine(std::move(ProviderStack));
+  auto ContextProvider =
+      clang::clangd::createConfiguredContextProvider(ConfigProvider.get());
+
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;
   auto Mangler = std::make_shared<clang::clangd::CommandMangler>(
@@ -162,8 +221,22 @@ int main(int argc, const char **argv) {
   auto Err = Executor->get()->execute(
       std::make_unique<clang::clangd::IndexActionFactory>(Data),
       clang::tooling::ArgumentsAdjuster(
-          [Mangler = std::move(Mangler)](const std::vector<std::string> &Args,
-                                         llvm::StringRef File) {
+          [Mangler = std::move(Mangler),
+           ContextProvider = std::move(ContextProvider)](
+              const std::vector<std::string> &Args, llvm::StringRef File) {
+            // Issue: If File is relative, it's relative to the compile command's
+            // "directory", not our CWD, but ToolExecutor doesn't expose
+            // "directory" here, so make_absolute can resolve it wrong and
+            // miss the .clangd file. See indexer-clangd-config-relative-path.test.
+            llvm::SmallString<256> AbsFile(File);
+            llvm::sys::fs::make_absolute(AbsFile);
+            // Issue: WithCfg only lives for this ArgumentsAdjuster call, so it's
+            // visible to Mangler below but not to the parse that follows.
+            // That's harmless today since clangd-indexer doesn't consult
+            // config during the parse, but a real fix would need libTooling
+            // changes to keep the context alive for the whole invocation.
+            clang::clangd::WithContext WithCfg(ContextProvider(AbsFile));
+
             clang::tooling::CompileCommand Cmd;
             Cmd.CommandLine = Args;
             Mangler->operator()(Cmd, File);

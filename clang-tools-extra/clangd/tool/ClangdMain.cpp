@@ -66,7 +66,7 @@ namespace clangd {
 
 // Implemented in Check.cpp.
 bool check(const llvm::StringRef File, const ThreadsafeFS &TFS,
-           const ClangdLSPServer::Options &Opts);
+           ClangdLSPServer::Options &&Opts);
 
 namespace {
 
@@ -489,14 +489,7 @@ opt<bool> PrettyPrint{
 opt<bool> EnableConfig{
     "enable-config",
     cat(Misc),
-    desc(
-        "Read user and project configuration from YAML files.\n"
-        "Project config is from a .clangd file in the project directory.\n"
-        "User config is from clangd/config.yaml in the following directories:\n"
-        "\tWindows: %USERPROFILE%\\AppData\\Local\n"
-        "\tMac OS: ~/Library/Preferences/\n"
-        "\tOthers: $XDG_CONFIG_HOME, usually ~/.config\n"
-        "Configuration is documented at https://clangd.llvm.org/config.html"),
+    desc(config::Provider::EnableConfigFlagDesc),
     init(true),
 };
 
@@ -997,26 +990,10 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   RealThreadsafeFS TFS;
   std::vector<std::unique_ptr<config::Provider>> ProviderStack;
-  std::unique_ptr<config::Provider> Config;
-  if (EnableConfig) {
-    ProviderStack.push_back(
-        config::Provider::fromAncestorRelativeYAMLFiles(".clangd", TFS));
-    llvm::SmallString<256> UserConfig;
-    if (llvm::sys::path::user_config_directory(UserConfig)) {
-      llvm::sys::path::append(UserConfig, "clangd", "config.yaml");
-      vlog("User config file is {0}", UserConfig);
-      ProviderStack.push_back(config::Provider::fromYAMLFile(
-          UserConfig, /*Directory=*/"", TFS, /*Trusted=*/true));
-    } else {
-      elog("Couldn't determine user config file, not loading");
-    }
-  }
+  if (EnableConfig)
+    ProviderStack = config::Provider::createDefaultProviders(TFS);
   ProviderStack.push_back(std::make_unique<FlagsConfigProvider>());
-  std::vector<const config::Provider *> ProviderPointers;
-  for (const auto &P : ProviderStack)
-    ProviderPointers.push_back(P.get());
-  Config = config::Provider::combine(std::move(ProviderPointers));
-  Opts.ConfigProvider = Config.get();
+  Opts.ConfigProvider = config::Provider::combine(std::move(ProviderStack));
 
   // Create an empty clang-tidy option.
   TidyProvider ClangTidyOptProvider;
@@ -1055,7 +1032,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       return 1;
     }
     log("Entering check mode (no LSP server)");
-    return check(Path, TFS, Opts)
+    return check(Path, TFS, std::move(Opts))
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }
@@ -1092,7 +1069,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
                                                 std::move(*Mappings));
   }
 
-  ClangdLSPServer LSPServer(*TransportLayer, TFS, Opts);
+  ClangdLSPServer LSPServer(*TransportLayer, TFS, std::move(Opts));
   llvm::set_thread_name("clangd.main");
   int ExitCode = LSPServer.run()
                      ? 0
