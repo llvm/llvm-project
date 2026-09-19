@@ -28,6 +28,7 @@ string __future_error_category::message(int ev) const {
   switch (static_cast<future_errc>(ev)) {
   case future_errc(0): // For backwards compatibility with C++11 (LWG 2056)
   case future_errc::broken_promise:
+    
     return string("The associated promise has been destructed prior "
                   "to the associated state becoming ready.");
   case future_errc::future_already_retrieved:
@@ -144,8 +145,12 @@ promise<void>::promise() : __state_(new __assoc_sub_state) {}
 promise<void>::~promise() {
   if (__state_) {
 #if _LIBCPP_HAS_EXCEPTIONS
-    if (!__state_->__has_value() && __state_->use_count() > 1)
-      __state_->set_exception(make_exception_ptr(future_error(future_errc::broken_promise)));
+    if (!__state_->__has_value() && __state_->use_count() > 1) {
+      try {
+        __state_->set_exception(make_exception_ptr(future_error(future_errc::broken_promise)));
+      } catch (...) {
+      }
+    }
 #endif // _LIBCPP_HAS_EXCEPTIONS
     __state_->__release_shared();
   }
