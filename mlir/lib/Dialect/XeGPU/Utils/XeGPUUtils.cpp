@@ -752,6 +752,7 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
 
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
           elemTy, APFloat::getInf(floatTy.getFloatSemantics())));
@@ -759,6 +760,7 @@ Value xegpu::createReductionNeutralValue(OpBuilder &builder, Location loc,
 
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
     if (auto floatTy = dyn_cast<FloatType>(elemTy))
       return makeConst(builder.getFloatAttr(
           elemTy, APFloat::getInf(floatTy.getFloatSemantics(), true)));
