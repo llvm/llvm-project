@@ -31,6 +31,37 @@ TEST_F(AArch64GISelMITest, TestFPClassCstPosZero) {
   EXPECT_EQ(false, Known.getSignBit());
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassFreeze) {
+  StringRef MIRString = R"(
+    %neg0:_(s32) = G_FCONSTANT float -0.0
+    %fr_neg0:_(s32) = G_FREEZE %neg0
+    %copy_neg0:_(s32) = COPY %fr_neg0
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %fr_undef:_(s32) = G_FREEZE %undef
+    %copy_undef:_(s32) = COPY %fr_undef
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  GISelValueTracking Info(*MF);
+  auto classOf = [&](unsigned FromEnd) {
+    Register CopyReg = Copies[Copies.size() - FromEnd];
+    return Info.computeKnownFPClass(
+        MRI->getVRegDef(CopyReg)->getOperand(1).getReg());
+  };
+
+  // freeze of a noundef value carries the source class and sign through.
+  KnownFPClass Neg0 = classOf(2);
+  EXPECT_EQ(fcNegZero, Neg0.getKnownFPClasses());
+  EXPECT_EQ(true, Neg0.getSignBit());
+
+  // freeze of poison stays unknown.
+  KnownFPClass Undef = classOf(1);
+  EXPECT_EQ(fcAllFlags, Undef.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Undef.getSignBit());
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassCstNegZero) {
   StringRef MIRString = "  %3:_(s32) = G_FCONSTANT float -0.0\n"
                         "  %4:_(s32) = COPY %3\n";
