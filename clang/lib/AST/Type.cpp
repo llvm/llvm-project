@@ -3820,6 +3820,10 @@ QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
       (!getTypePtr()->isDependentType() && !getTypePtr()->isRecordType()))
     return getUnqualifiedType();
 
+  // A prvalue should not have an address space.
+  if (hasAddressSpace())
+    return Context.removeAddrSpaceQualType(*this);
+
   return *this;
 }
 
