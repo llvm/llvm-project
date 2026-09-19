@@ -293,6 +293,21 @@ void SlotIndexes::packIndexes() {
     Entry.setIndex(Index * SlotIndex::InstrDist);
 }
 
+unsigned SlotIndexes::getRealInstrSpan(SlotIndex A, SlotIndex B) const {
+  if (B <= A)
+    return 0;
+  unsigned Count = 0;
+  IndexList::const_iterator E = B.listEntry()->getIterator();
+  for (IndexList::const_iterator I = A.listEntry()->getIterator(); I != E;
+       ++I) {
+    // Indexes increase along the list, so A < B puts B ahead of A.
+    assert(I != indexList.end() && "B does not follow A in the index list");
+    if (I->getInstr())
+      ++Count;
+  }
+  return Count * SlotIndex::InstrDist;
+}
+
 void SlotIndexes::print(raw_ostream &OS) const {
   for (const IndexListEntry &ILE : indexList) {
     OS << ILE.getIndex() << ' ';

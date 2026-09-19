@@ -108,6 +108,13 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+// Off for now: this changes allocation across a good fraction of the tests.
+static cl::opt<bool> SizeInRealInstrs(
+    "greedy-size-in-real-instrs", cl::Hidden, cl::init(false),
+    cl::desc("Measure live range size in instructions that still exist rather "
+             "than in slot indexes, which also count instructions erased by "
+             "earlier passes"));
+
 // This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
@@ -436,8 +443,21 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
   CurQueue.push(std::make_pair(Ret, ~Reg.id()));
 }
 
+/// Size of \p LI in slot index units. Slot indexes also count instructions
+/// earlier passes erased, unevenly, so they inflate some ranges more than
+/// others and reorder the ranking below. Coarser than getSize(), so more ties
+/// fall to enqueue's vreg-number tie-break. Priority only; spill weights don't.
+static unsigned getRangeSize(const LiveInterval &LI, const SlotIndexes &SI) {
+  if (!SizeInRealInstrs)
+    return LI.getSize();
+  unsigned Size = 0;
+  for (const LiveRange::Segment &S : LI)
+    Size += SI.getRealInstrSpan(S.start, S.end);
+  return Size;
+}
+
 unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
-  const unsigned Size = LI.getSize();
+  const unsigned Size = getRangeSize(LI, *Indexes);
   const Register Reg = LI.reg();
   unsigned Prio;
   LiveRangeStage Stage = RA.getExtraInfo().getStage(LI);
