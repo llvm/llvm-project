@@ -20629,6 +20629,35 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
 
+  // fold (sint_to_fp x) -> (sint_to_fp (trunc x)) when the value of x is known
+  // to fit in a narrower type the target can convert from directly.
+  LLVMContext &Ctx = *DAG.getContext();
+  unsigned ScalarBits = OpVT.getScalarSizeInBits();
+  unsigned SignificantBits = DAG.ComputeMaxSignificantBits(N0);
+  for (unsigned Bits = bit_ceil(SignificantBits); Bits < ScalarBits;
+       Bits *= 2) {
+    EVT NarrowVT = OpVT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, Bits));
+
+    // Vector conversion the target has to unroll, or one it only supports by
+    // widening the operand back up, is not a win.
+    if (!hasOperation(ISD::SINT_TO_FP, NarrowVT) ||
+        !TLI.isTypeDesirableForOp(ISD::SINT_TO_FP, NarrowVT) ||
+        !TLI.isTruncateFree(N0, NarrowVT))
+      continue;
+
+    // Avoid creating an illegal vector type before type legalization.
+    if ((LegalTypes || OpVT.isVector()) && !TLI.isTypeLegal(NarrowVT))
+      continue;
+
+    // Avoid undoing target combines that widen vector integer to fp operands.
+    if (N0.getOpcode() == ISD::SIGN_EXTEND &&
+        NarrowVT == N0.getOperand(0).getValueType())
+      continue;
+
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0);
+    return DAG.getNode(ISD::SINT_TO_FP, DL, VT, Trunc);
+  }
+
   // fold (sint_to_fp (trunc nsw x)) -> (sint_to_fp x)
   if (N0.getOpcode() == ISD::TRUNCATE && N0->getFlags().hasNoSignedWrap() &&
       TLI.isTypeDesirableForOp(ISD::SINT_TO_FP,
