@@ -9,6 +9,7 @@ from clang.cindex import (
     TemplateArgumentKind,
     TranslationUnit,
     TypeKind,
+    UnaryOperator,
     conf,
 )
 
@@ -1002,6 +1003,68 @@ int d_noninline;
         for op, typ in operators.items():
             c = get_cursor(tu, op)
             assert c.binary_operator == typ
+
+    def test_unaryop(self):
+        tu = get_tu(
+            """
+            void prefix_func(void) {
+                int a = 0;
+                ++a;
+                --a;
+                *(&a);
+                +a;
+                -a;
+                !a;
+                ~a;
+                float _Complex b;
+                __real b;
+                __imag b;
+                __extension__ a;
+            }
+            void postfix_func(void) {
+                int a = 0;
+                a++;
+                a--;
+            }""",
+            lang="cpp",
+        )
+
+        operators = {
+            "prefix": {
+                "&": UnaryOperator.AddrOf,
+                "*": UnaryOperator.Deref,
+                "+": UnaryOperator.Plus,
+                "-": UnaryOperator.Minus,
+                "~": UnaryOperator.Not,
+                "!": UnaryOperator.LNot,
+                "++": UnaryOperator.PreInc,
+                "--": UnaryOperator.PreDec,
+                "__real": UnaryOperator.Real,
+                "__imag": UnaryOperator.Imag,
+                "__extension__": UnaryOperator.Extension,
+            },
+            "postfix": {
+                "++": UnaryOperator.PostInc,
+                "--": UnaryOperator.PostDec,
+            },
+        }
+
+        for operator_position, ops in operators.items():
+            root = get_cursor(tu, f"{operator_position}_func")
+            for spelling, operator in ops.items():
+                c = get_cursor(root, spelling)
+                assert c is not None and c.unary_operator == operator
+
+        for prefix in operators["prefix"].values():
+            assert not prefix.is_postfix()
+        for postfix in operators["postfix"].values():
+            assert postfix.is_postfix()
+
+        for operator in UnaryOperator:
+            if operator:
+                assert operator is not UnaryOperator.Invalid
+            else:
+                assert operator is UnaryOperator.Invalid
 
     def test_from_result_null(self):
         tu = get_tu("int a = 1+2;", lang="cpp")
