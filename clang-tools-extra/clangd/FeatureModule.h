@@ -112,6 +112,9 @@ public:
     /// are set up, but before clangd installs its include and macro collectors.
     /// Modules should only use this when their PPCallbacks must observe
     /// preamble events replayed during a main-file build.
+    /// Reusing a preamble skips the main file's initial preprocessing directives.
+    /// ReplayPreamble synthesizes callbacks for selected events from that region
+    /// and captures their recipients before beforeExecute() is called.
     virtual void beforePPCallbacks(CompilerInstance &CI) {}
 
     /// Called before every AST build, both for main file and preamble. The call
