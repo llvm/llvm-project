@@ -2568,30 +2568,34 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
       CPos = I;
   }
 
+  auto &Style0 = Styles[0];
+  const bool HasDefaultStyle = Style0.Language == FormatStyle::LK_None;
+
   // If Language is not found, use the default style if there is one. Otherwise,
   // use the C style for C++ .h files and for backward compatibility, the C++
   // style for .c files.
   if (LanguagePos < 0) {
-    if (Styles[0].Language == FormatStyle::LK_None) // Default style.
+    if (HasDefaultStyle) {
       LanguagePos = 0;
-    else if (IsDotHFile && Language == FormatStyle::LK_Cpp)
-      LanguagePos = CPos;
-    else if (!IsDotHFile && Language == FormatStyle::LK_C)
-      LanguagePos = CppPos;
-    if (LanguagePos < 0)
-      return make_error_code(ParseError::Unsuitable);
+      Style0.Language = Language;
+    } else {
+      if (IsDotHFile && Language == FormatStyle::LK_Cpp)
+        LanguagePos = CPos;
+      else if (!IsDotHFile && Language == FormatStyle::LK_C)
+        LanguagePos = CppPos;
+      if (LanguagePos < 0)
+        return make_error_code(ParseError::Unsuitable);
+      Language = Styles[LanguagePos].Language;
+    }
   }
 
   for (const auto &S : llvm::reverse(llvm::drop_begin(Styles)))
     Style->StyleSet.Add(S);
 
-  *Style = Styles[LanguagePos];
+  if (!HasDefaultStyle || LanguagePos == 0)
+    Style->StyleSet.Add(Style0);
 
-  if (LanguagePos == 0) {
-    if (Style->Language == FormatStyle::LK_None) // Default style.
-      Style->Language = Language;
-    Style->StyleSet.Add(*Style);
-  }
+  *Style = *Style->StyleSet.Get(Language);
 
   if (Style->InsertTrailingCommas != FormatStyle::TCS_None &&
       (Style->PackArguments.BinPack == FormatStyle::BPAS_BinPack ||
