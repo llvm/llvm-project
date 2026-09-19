@@ -955,6 +955,22 @@ __packed_ternary_builtin_mixed(pmhaccsu_i32x2, int32x2_t, int32x2_t, uint32x2_t,
 __packed_ternary_builtin_mixed(pmhraccsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, __builtin_riscv_pmhraccsu_i16x4)
 __packed_ternary_builtin_mixed(pmhraccsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmhraccsu_i32x2)
 
+/* Packed Multiply High Accumulate (32-bit) */
+__packed_ternary_builtin_mixed(pmhacc_b0_i16x2, int16x2_t, int16x2_t, int8x4_t, __builtin_riscv_pmhacc_b0_i16x2)
+__packed_ternary_builtin_mixed(pmhacc_b1_i16x2, int16x2_t, int16x2_t, int8x4_t, __builtin_riscv_pmhacc_b1_i16x2)
+__packed_ternary_builtin_mixed(pmhaccsu_b0_i16x2, int16x2_t, int16x2_t, uint8x4_t, __builtin_riscv_pmhaccsu_b0_i16x2)
+__packed_ternary_builtin_mixed(pmhaccsu_b1_i16x2, int16x2_t, int16x2_t, uint8x4_t, __builtin_riscv_pmhaccsu_b1_i16x2)
+
+/* Packed Multiply High Accumulate (64-bit) */
+__packed_ternary_builtin_mixed(pmhacc_b0_i16x4, int16x4_t, int16x4_t, int8x8_t, __builtin_riscv_pmhacc_b0_i16x4)
+__packed_ternary_builtin_mixed(pmhacc_b1_i16x4, int16x4_t, int16x4_t, int8x8_t, __builtin_riscv_pmhacc_b1_i16x4)
+__packed_ternary_builtin_mixed(pmhaccsu_b0_i16x4, int16x4_t, int16x4_t, uint8x8_t, __builtin_riscv_pmhaccsu_b0_i16x4)
+__packed_ternary_builtin_mixed(pmhaccsu_b1_i16x4, int16x4_t, int16x4_t, uint8x8_t, __builtin_riscv_pmhaccsu_b1_i16x4)
+__packed_ternary_builtin_mixed(pmhacc_h0_i32x2, int32x2_t, int32x2_t, int16x4_t, __builtin_riscv_pmhacc_h0_i32x2)
+__packed_ternary_builtin_mixed(pmhacc_h1_i32x2, int32x2_t, int32x2_t, int16x4_t, __builtin_riscv_pmhacc_h1_i32x2)
+__packed_ternary_builtin_mixed(pmhaccsu_h0_i32x2, int32x2_t, int32x2_t, uint16x4_t, __builtin_riscv_pmhaccsu_h0_i32x2)
+__packed_ternary_builtin_mixed(pmhaccsu_h1_i32x2, int32x2_t, int32x2_t, uint16x4_t, __builtin_riscv_pmhaccsu_h1_i32x2)
+
 /* Packed Multiplication with Horizontal Addition (32-bit) */
 __packed_binary_builtin_mixed(pm4add_i8x4, int32_t, int8x4_t, int8x4_t, __builtin_riscv_pm4add_i8x4)
 __packed_binary_builtin_mixed(pm2add_i16x2, int32_t, int16x2_t, int16x2_t, __builtin_riscv_pm2add_i16x2)
