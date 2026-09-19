@@ -532,32 +532,15 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
-/// Returns true if \p V is known to not wrap in signed or unsigned, depending
-/// on \p Signed.
-static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
-  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+/// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
+/// is known to not wrap in signed or unsigned, depending on \p Signed.
+static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+                          unsigned NoWrapFlags, const ConstraintInfo &Info,
+                          bool Signed) {
+  using OBO = OverflowingBinaryOperator;
+
+  if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
     return true;
-
-  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
-    if (Signed)
-      return Trunc->hasNoSignedWrap();
-    // A trunc nsw only truncates without unsigned wrap if its operand is
-    // non-negative.
-    return Trunc->hasNoUnsignedWrap() ||
-           (Trunc->hasNoSignedWrap() &&
-            Info.isKnownNonNegative(Trunc->getOperand(0)));
-  }
-
-  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
-  if (!BO)
-    return false;
-
-  if (Signed ? BO->hasNoSignedWrap() : BO->hasNoUnsignedWrap())
-    return true;
-
-  Value *Op0 = BO->getOperand(0);
-  Value *Op1 = BO->getOperand(1);
-  auto Opcode = static_cast<Instruction::BinaryOps>(BO->getOpcode());
 
   if (Opcode == Instruction::Sub) {
     // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
@@ -570,7 +553,7 @@ static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
       return true;
   }
 
-  if (!Signed && BO->hasNoSignedWrap() &&
+  if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
       Info.isKnownNonNegative(Op0))
     return true;
@@ -581,12 +564,35 @@ static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
   if (!C)
     return false;
 
-  using OBO = OverflowingBinaryOperator;
   return doesHoldInRange(Info, Op0,
                          ConstantRange::makeExactNoWrapRegion(
                              Opcode, C->getValue(),
                              Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
                          Signed);
+}
+
+/// Returns true if \p V is known to not wrap in signed or unsigned, depending
+/// on \p Signed.
+static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
+  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+    return true;
+
+  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Signed)
+      return Trunc->hasNoSignedWrap();
+
+    // A trunc nsw only truncates without unsigned wrap if its operand is
+    // non-negative.
+    return Trunc->hasNoUnsignedWrap() ||
+           (Trunc->hasNoSignedWrap() &&
+            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  }
+
+  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
+  return BO &&
+         isKnownNoWrap(static_cast<Instruction::BinaryOps>(BO->getOpcode()),
+                       BO->getOperand(0), BO->getOperand(1),
+                       BO->getNoWrapKind(), Info, Signed);
 }
 
 static Decomposition decomposeGEP(GEPOperator &GEP, const ConstraintInfo &Info,
