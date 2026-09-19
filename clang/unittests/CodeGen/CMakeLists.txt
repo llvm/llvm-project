@@ -1,5 +1,6 @@
 add_clang_unittest(ClangCodeGenTests
   BufferSourceTest.cpp
+  CGDebugInfoTest.cpp
   CodeGenExternalTest.cpp
   DemangleTrapReasonInDebugInfo.cpp
   TBAAMetadataTest.cpp

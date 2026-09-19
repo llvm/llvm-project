@@ -53,7 +53,7 @@ struct DeclaredConstexpr {
 template <class A, class B> struct Aliased {
   A first;
   B second;
-  constexpr Aliased(const A &a, const B &b) : first(a), second(b) {}
+  Aliased(const A &a, const B &b) : first(a), second(b) {}
 };
 union AliasedSlot {
   Aliased<const int, int> value;
@@ -64,6 +64,24 @@ union AliasedSlot {
 int ReadAliasedSlot() {
   TestAliasedSlot.mutable_value = Aliased<int, int>(1, 2);
   return TestAliasedSlot.value.first;
+}
+
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "ConstexprAliased<int, int>"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "ConstexprAliased<const int, int>"{{.*}}DIFlagTypePassByValue
+template <class A, class B> struct ConstexprAliased {
+  A first;
+  B second;
+  constexpr ConstexprAliased(const A &a, const B &b) : first(a), second(b) {}
+};
+union ConstexprAliasedSlot {
+  ConstexprAliased<const int, int> value;
+  ConstexprAliased<int, int> mutable_value;
+  ConstexprAliasedSlot() {}
+  ~ConstexprAliasedSlot() {}
+} TestConstexprAliasedSlot;
+int ReadConstexprAliasedSlot() {
+  TestConstexprAliasedSlot.mutable_value = ConstexprAliased<int, int>(1, 2);
+  return TestConstexprAliasedSlot.value.first;
 }
 
 // Defined out-of-line constexpr constructor should emit full debug info.
@@ -166,6 +184,28 @@ struct DelegatingConstexprOutOfLine {
 constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine()
     : DelegatingConstexprOutOfLine(42) {}
 constexpr DelegatingConstexprOutOfLine::DelegatingConstexprOutOfLine(int) {}
+
+// Test that all types and their bases/fields in a standard-layout union are
+// emitted with full debug info.
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "NestedBase"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "NestedField"{{.*}}DIFlagTypePassByValue
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "NestedOuter"{{.*}}DIFlagTypePassByValue
+struct NestedBase {
+  NestedBase();
+};
+struct NestedField {
+  int b;
+  NestedField();
+};
+struct NestedOuter : NestedBase {
+  NestedField f;
+  NestedOuter();
+};
+union NestedUnion {
+  NestedOuter out;
+  int raw;
+};
+void TestNestedUnion(NestedUnion) {}
 
 // Test for trivial constructor.
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "F"{{.*}}DIFlagTypePassByValue
