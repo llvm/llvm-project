@@ -18,6 +18,7 @@
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
+#include "sanitizer_common/sanitizer_report_receiver.h"
 
 namespace __asan {
 
@@ -92,11 +93,11 @@ struct ShadowAddressDescription {
   ShadowKind kind;
   u8 shadow_byte;
 
-  void Print() const;
+  void Print(ScopedSanitizerReport *srep) const;
 };
 
 bool GetShadowAddressInformation(uptr addr, ShadowAddressDescription *descr);
-bool DescribeAddressIfShadow(uptr addr);
+bool DescribeAddressIfShadow(ScopedSanitizerReport *srep, uptr addr);
 
 enum AccessType {
   kAccessTypeLeft,
@@ -117,18 +118,19 @@ struct ChunkAccess {
 
 struct HeapAddressDescription {
   uptr addr;
+  uptr access_size;
   uptr alloc_tid;
   uptr free_tid;
   u32 alloc_stack_id;
   u32 free_stack_id;
   ChunkAccess chunk_access;
 
-  void Print() const;
+  void Print(ScopedSanitizerReport *srep) const;
 };
 
 bool GetHeapAddressInformation(uptr addr, uptr access_size,
                                HeapAddressDescription *descr);
-bool DescribeAddressIfHeap(uptr addr, uptr access_size = 1);
+bool DescribeAddressIfHeap(ScopedSanitizerReport *srep, uptr addr, uptr access_size = 1);
 
 struct StackAddressDescription {
   uptr addr;
@@ -138,7 +140,7 @@ struct StackAddressDescription {
   uptr access_size;
   const char *frame_descr;
 
-  void Print() const;
+  void Print(ScopedSanitizerReport *srep) const;
 };
 
 bool GetStackAddressInformation(uptr addr, uptr access_size,
@@ -148,7 +150,7 @@ struct WildAddressDescription {
   uptr addr;
   uptr access_size;
 
-  void Print() const;
+  void Print(ScopedSanitizerReport *srep) const;
 };
 
 struct GlobalAddressDescription {
@@ -160,7 +162,7 @@ struct GlobalAddressDescription {
   uptr access_size;
   u8 size;
 
-  void Print(const char *bug_type = "") const;
+  void Print(ScopedSanitizerReport *srep, const char *bug_type = "") const;
 
   // Returns true when this descriptions points inside the same global variable
   // as other. Descriptions can have different address within the variable
@@ -169,7 +171,7 @@ struct GlobalAddressDescription {
 
 bool GetGlobalAddressInformation(uptr addr, uptr access_size,
                                  GlobalAddressDescription *descr);
-bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
+bool DescribeAddressIfGlobal(ScopedSanitizerReport *srep, uptr addr, uptr access_size, const char *bug_type);
 
 // General function to describe an address. Will try to describe the address as
 // a shadow, global (variable), stack, or heap address.
@@ -179,7 +181,8 @@ bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
 // addresses. Defaults to 1.
 // Each of the *AddressDescription functions has its own Print() member, which
 // may take access_size and bug_type parameters if needed.
-void PrintAddressDescription(uptr addr, uptr access_size = 1,
+void PrintAddressDescription(ScopedSanitizerReport *srep, uptr addr,
+                             uptr access_size = 1,
                              const char *bug_type = "");
 
 enum AddressKind {
@@ -228,20 +231,20 @@ class AddressDescription {
     }
     UNREACHABLE("AddressInformation kind is invalid");
   }
-  void Print(const char *bug_descr = nullptr) const {
+  void Print(ScopedSanitizerReport &srep, const char *bug_descr = nullptr) const {
     switch (data.kind) {
       case kAddressKindWild:
-        data.wild.Print();
+        data.wild.Print(&srep);
         return;
       case kAddressKindShadow:
-        return data.shadow.Print();
+        return data.shadow.Print(&srep);
       case kAddressKindHeap:
-        return data.heap.Print();
+        return data.heap.Print(&srep);
       case kAddressKindStack:
-        return data.stack.Print();
+        return data.stack.Print(&srep);
       case kAddressKindGlobal:
         // initialization-order-fiasco has a special Print()
-        return data.global.Print(bug_descr);
+        return data.global.Print(&srep, bug_descr);
     }
     UNREACHABLE("AddressInformation kind is invalid");
   }
