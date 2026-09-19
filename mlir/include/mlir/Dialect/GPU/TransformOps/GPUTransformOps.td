@@ -61,11 +61,18 @@ def ApplyGPUToROCDLConversionPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collects patterns that convert GPU dialect ops to ROCDL dialect ops. These
     patterns require an "LLVMTypeConverter".
+
+    `arch` names the target the way Clang does: a GPU name with optional
+    target-ID modifiers ("gfx942", "gfx942:xnack+", "gfx9-4-generic"), a triple
+    ("amdgpu9.42-amd-amdhsa"), or a full target ID
+    ("amdgpu9.0a-amd-amdhsa--gfx90a:sramecc+:xnack-").
+
+    `wavesize` pins the wavefront size on targets that run at either; omitting
+    it uses the architecture's own default.
   }];
-  let arguments = (ins StrAttr:$chipset);
-  let assemblyFormat = [{
-    `chipset` `=` $chipset attr-dict
-  }];
+  let arguments = (ins StrAttr:$arch,
+                       OptionalAttr<I32Attr>:$wavesize);
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -328,11 +335,15 @@ def ApplyGPUPromoteShuffleToAMDGPUPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collects patterns that are tryin to promote `gpu.shuffle`s to specialized
     AMDGPU intrinsics.
+
+    `arch` names the target the way Clang does: a GPU name with optional
+    target-ID modifiers ("gfx950", "gfx950:xnack+"), a triple
+    ("amdgpu9.50-amd-amdhsa"), or a full target ID. Omitting it collects only
+    the patterns that hold on every target.
   }];
-  let arguments = (ins OptionalAttr<StrAttr>:$chipset);
-  let assemblyFormat = [{
-    (`chipset` `=` $chipset^)? attr-dict
-  }];
+  let arguments = (ins OptionalAttr<StrAttr>:$arch);
+  let assemblyFormat = "prop-dict attr-dict";
+  let hasVerifier = 1;
 }
 
 
