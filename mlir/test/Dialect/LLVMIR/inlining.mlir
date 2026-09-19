@@ -794,3 +794,18 @@ llvm.func @caller_cf_br_terminator(%arg0 : i64) -> i64 {
   %0 = llvm.call @callee_cf_br_terminator(%arg0) : (i64) -> i64
   llvm.return %0 : i64
 }
+
+// -----
+// Skip callees with non-LLVM function exits.
+
+llvm.func @callee_vector_yield_terminator(%arg0 : vector<8xf32>) {
+  %0 = math.atanh %arg0 : vector<8xf32>
+  vector.yield %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: @caller_vector_yield_terminator
+llvm.func @caller_vector_yield_terminator(%arg0 : vector<8xf32>) {
+  // CHECK: llvm.call @callee_vector_yield_terminator
+  llvm.call @callee_vector_yield_terminator(%arg0) : (vector<8xf32>) -> ()
+  llvm.return
+}
