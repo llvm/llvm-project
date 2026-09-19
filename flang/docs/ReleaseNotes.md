@@ -154,6 +154,12 @@ page](https://llvm.org/releases/).
 ## Windows Support
 
 ## Fortran Language Changes in Flang
+- Standard intrinsic functions are now classified as `SIMPLE` per Fortran
+  2023 16.1(2). This may be a breaking change for code that defines its own
+  interface for an intrinsic (for example, to declare a procedure pointer
+  or dummy procedure) using `PURE` rather than `SIMPLE`, since the procedure
+  characteristics will no longer match. Such code will need to update the
+  hand-written interface to specify `SIMPLE`.
 
 ## Build System Changes
 
