@@ -11,6 +11,8 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include <memory>
 #include <string>
 
 namespace mlir {
@@ -66,7 +68,7 @@ public:
 
   OneShotAnalysisState(const OneShotAnalysisState &) = delete;
 
-  ~OneShotAnalysisState() override = default;
+  ~OneShotAnalysisState() override;
 
   static bool classof(const AnalysisState *base) {
     return base->getType() == TypeID::get<OneShotAnalysisState>();
@@ -130,6 +132,12 @@ public:
   /// Find the definitions of the given operand's value or
   /// retrieve them from the cache.
   const SetVector<Value> &findDefinitionsCached(OpOperand *opOperand);
+
+  /// Return true if `to` is reachable from `from` without crossing `barriers`.
+  /// Results are cached; the cache is cleared by `resetCache`.
+  bool
+  isReachableCached(Block *from, Block *to,
+                    const llvm::SmallPtrSetImpl<Block *> *barriers = nullptr);
 
   /// Return whether `uRead` and `uConflictingWrite` are non-conflicting
   /// subsets, with caching.
@@ -236,6 +244,11 @@ private:
 
   /// Cache definitions of tensor values.
   DenseMap<Value, SetVector<Value>> cachedDefinitions;
+
+  /// Cached CFG reachability. Defined out-of-line to keep BitVector out of
+  /// this header.
+  class CFGReachabilityCache;
+  std::unique_ptr<CFGReachabilityCache> cfgReachabilityCache;
 
   /// Cache results of areNonConflictingSubsets checks. The bool value is `true`
   /// if the operands are non-conflicting subsets, `false` if they are
