@@ -12,8 +12,9 @@
 using namespace llvm;
 
 namespace {
-std::unique_ptr<TargetMachine> createTargetMachine() {
-  Triple TT("aarch64--");
+std::unique_ptr<TargetMachine>
+createTargetMachine(StringRef TripleStr = "aarch64--") {
+  Triple TT(TripleStr);
   std::string CPU("generic");
   std::string FS("+pauth,+mops,+mte");
 
@@ -368,5 +369,50 @@ TEST(InstSizes, MOPSMemoryPseudos) {
               EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
               ++I;
               EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, LFIControlFlow) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine("aarch64_lfi--");
+  auto [ST, II] = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "", "  BR $x0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I)); // BR (8 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "", "  BLR $x0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I)); // BLR (8 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "", "  BLRAA $x10, $x9\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(16u, II.getInstSizeInBytes(*I)); // BLRAA (12 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "", "  B %bb.0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(8u, II.getInstSizeInBytes(*I)); // B (4 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "",
+            "  CBZX $x0, %bb.0\n"
+            "  B %bb.0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(8u, II.getInstSizeInBytes(*I)); // CBZX (4 + 4)
+            });
+
+  runChecks(TM.get(), II.get(), "",
+            "  BL @sizes, csr_aarch64_aapcs\n"
+            "  B %bb.0\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(8u, II.getInstSizeInBytes(*I)); // BL (4 + 4)
             });
 }
