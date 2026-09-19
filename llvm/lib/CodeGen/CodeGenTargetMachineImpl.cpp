@@ -127,8 +127,7 @@ addPassesToGenerateCode(CodeGenTargetMachineImpl &TM, PassManagerBase &PM,
   TargetLibraryInfoImpl TLII(TM.getTargetTriple(), Options.VecLib);
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(
-      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
-                                    Options.MCOptions.ABIName, Options.VecLib));
+      new RuntimeLibraryInfoWrapper(Options.MCOptions.ABIName, Options.VecLib));
 
   invokeGlobalTargetPassConfigCallbacks(TM, PM, PassConfig);
 

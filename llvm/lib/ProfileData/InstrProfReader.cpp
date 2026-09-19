@@ -455,7 +455,7 @@ Error TextInstrProfReader::readNextRecord(NamedInstrProfRecord &Record) {
     if (NumBitmapBytes != 0) {
       // Read each bitmap and fill our internal storage with the values.
       Record.BitmapBytes.reserve(NumBitmapBytes);
-      for (uint8_t I = 0; I < NumBitmapBytes; ++I) {
+      for (uint64_t I = 0; I < NumBitmapBytes; ++I) {
         if (Line.is_at_end())
           return error(instrprof_error::truncated);
         uint8_t BitmapByte;

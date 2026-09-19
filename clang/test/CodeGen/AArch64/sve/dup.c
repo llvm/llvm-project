@@ -209,6 +209,17 @@ svbool_t test_svdup_n_b64(bool op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_b64,)(op);
 }
 
+// ALL-LABEL: @test_svdup_n_bf16(
+svbfloat16_t test_svdup_n_bf16(bfloat16_t op) MODE_ATTR {
+// CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.bf16) -> !cir.vector<[8] x !cir.bf16>
+
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x bfloat> poison, bfloat [[OP:%.*]], i64 0
+// LLVM:    [[TMP0:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM:    ret <vscale x 8 x bfloat> [[TMP0]]
+  // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16'}}
+  return SVE_ACLE_FUNC(svdup, _n, _bf16, )(op);
+}
+
 //===------------------------------------------------------===//
 // 2. PREDICATED ZERO-ING SVDUP
 //===------------------------------------------------------===//
@@ -383,6 +394,17 @@ svfloat64_t test_svdup_n_f64_z(svbool_t pg, float64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f64_z,)(pg, op);
 }
 
+// ALL-LABEL: @test_svdup_n_bf16_z(
+svbfloat16_t test_svdup_n_bf16_z(svbool_t pg, bfloat16_t op) MODE_ATTR {
+// CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}} %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.bf16) -> !cir.vector<[8] x !cir.bf16>
+
+// LLVM:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// LLVM:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x i1> [[TMP0]], bfloat [[OP:%.*]])
+// LLVM:    ret <vscale x 8 x bfloat> [[TMP1]]
+  // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16_z'}}
+  return SVE_ACLE_FUNC(svdup, _n, _bf16_z, )(pg, op);
+}
+
 //===------------------------------------------------------===//
 // 3. PREDICATED MERGING-ING SVDUP (Op1)
 //===------------------------------------------------------===//
@@ -542,6 +564,17 @@ svfloat64_t test_svdup_n_f64_m(svfloat64_t inactive, svbool_t pg, float64_t op) 
 // LLVM:    [[TMP1:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> [[INACTIVE:%.*]], <vscale x 2 x i1> [[TMP0]], double [[OP:%.*]])
 // LLVM:    ret <vscale x 2 x double> [[TMP1]]
   return SVE_ACLE_FUNC(svdup,_n,_f64_m,)(inactive, pg, op);
+}
+
+// ALL-LABEL: @test_svdup_n_bf16_m(
+svbfloat16_t test_svdup_n_bf16_m(svbfloat16_t inactive, svbool_t pg, bfloat16_t op) MODE_ATTR {
+// CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}} %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.bf16) -> !cir.vector<[8] x !cir.bf16>
+
+// LLVM:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// LLVM:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> [[INACTIVE:%.*]], <vscale x 8 x i1> [[TMP0]], bfloat [[OP:%.*]])
+// LLVM:    ret <vscale x 8 x bfloat> [[TMP1]]
+  // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16_m'}}
+  return SVE_ACLE_FUNC(svdup, _n, _bf16_m, )(inactive, pg, op);
 }
 
 //===------------------------------------------------------===//
@@ -718,6 +751,17 @@ svfloat64_t test_svdup_n_f64_x(svbool_t pg, float64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f64_x,)(pg, op);
 }
 
+// ALL-LABEL: @test_svdup_n_bf16_x(
+svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) MODE_ATTR {
+// CIR:  cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}} %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.bf16) -> !cir.vector<[8] x !cir.bf16>
+
+// LLVM:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// LLVM:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> undef, <vscale x 8 x i1> [[TMP0]], bfloat [[OP:%.*]])
+// LLVM:    ret <vscale x 8 x bfloat> [[TMP1]]
+  // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16_x'}}
+  return SVE_ACLE_FUNC(svdup, _n, _bf16_x, )(pg, op);
+}
+
 //===------------------------------------------------------===//
 // 5. SVDUP_LANE
 //===------------------------------------------------------===//
@@ -873,4 +917,17 @@ svfloat64_t test_svdup_lane_f64(svfloat64_t data, uint64_t index) MODE_ATTR
 // LLVM:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.tbl.nxv2f64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // LLVM:    ret <vscale x 2 x double> [[TMP0]]
   return SVE_ACLE_FUNC(svdup_lane,_f64,,)(data, index);
+}
+
+// ALL-LABEL: @test_svdup_lane_bf16(
+svbfloat16_t test_svdup_lane_bf16(svbfloat16_t data, uint16_t index) MODE_ATTR
+{
+// CIR:  cir.call_llvm_intrinsic "aarch64.sve.tbl" %{{.*}} %{{.*}} : (!cir.vector<[8] x !cir.bf16>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !cir.bf16>
+
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX:%.*]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 8 x bfloat> [[TMP0]]
+  // expected-warning@+1 {{implicit declaration of function 'svdup_lane_bf16'}}
+  return SVE_ACLE_FUNC(svdup_lane,_bf16,,)(data, index);
 }
