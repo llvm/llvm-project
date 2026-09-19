@@ -425,12 +425,20 @@ Fortran::lower::genCallOpAndResult(
     if (!caller.callerAllocateResult())
       return {};
     mlir::Type type = caller.getResultStorageType();
-    if (mlir::isa<fir::SequenceType>(type))
-      caller.walkResultExtents(
-          [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
-            assert(!isAssumedSizeExtent && "result cannot be assumed-size");
-            extents.emplace_back(lowerSpecExpr(e));
-          });
+    if (mlir::isa<fir::SequenceType>(type)) {
+      // Rank-1 bound elements share one base; evaluate it once for all
+      // dimensions instead of re-evaluating a call-valued base per extent.
+      if (const Fortran::semantics::SubprogramDetails *ifaceDetails =
+              caller.getInterfaceDetails())
+        extents = Fortran::lower::lowerExplicitResultExtents(
+            converter, loc, ifaceDetails->result(), symMap, stmtCtx);
+      if (extents.empty())
+        caller.walkResultExtents(
+            [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
+              assert(!isAssumedSizeExtent && "result cannot be assumed-size");
+              extents.emplace_back(lowerSpecExpr(e));
+            });
+    }
     if (resultLengths.empty()) {
       caller.walkResultLengths(
           [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {

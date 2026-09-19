@@ -174,3 +174,38 @@ end module
 ! CHECK:  %[[UBELT:.*]] = hlfir.apply %[[UBBASE]], %{{.*}} : (!hlfir.expr<2xi64>, index) -> i64
 ! CHECK:  arith.maxsi %{{.*}}, %[[UBELT]]
 ! CHECK:  hlfir.declare {{.*}}Eb"
+
+! Caller side: a function whose result shape is a rank-1 base, res(mb(n)).  When
+! allocating the result at the call site, the shared base mb(n) is evaluated
+! once and each dimension's extent is extracted from it, rather than calling
+! mb(n) once per result dimension.
+module test_result_robe
+contains
+  pure function mb(n) result(r)
+    integer, intent(in) :: n
+    integer :: r(3)
+    r = [n, n + 1, n + 2]
+  end function
+  function f(n) result(res)
+    integer, intent(in) :: n
+    real :: res(mb(n))
+    res = 0.0
+  end function
+  subroutine test_result_robe_caller(n, y)
+    integer, intent(in) :: n
+    real, allocatable :: y(:,:,:)
+    y = f(n)
+  end subroutine
+end module
+! CHECK-LABEL: func.func @_QMtest_result_robePtest_result_robe_caller(
+! CHECK:  hlfir.eval_in_mem shape %{{.*}} -> !hlfir.expr<3xi32> {
+! CHECK:    fir.call @_QMtest_result_robePmb(
+! CHECK:  }
+! CHECK:  %[[CONV:.*]] = hlfir.elemental %{{.*}} -> !hlfir.expr<?xi64>
+! CHECK:  hlfir.apply %[[CONV]], %{{.*}} : (!hlfir.expr<?xi64>, index) -> i64
+! CHECK-NOT:  fir.call @_QMtest_result_robePmb(
+! CHECK:  hlfir.apply %[[CONV]], %{{.*}} : (!hlfir.expr<?xi64>, index) -> i64
+! CHECK:  hlfir.apply %[[CONV]], %{{.*}} : (!hlfir.expr<?xi64>, index) -> i64
+! CHECK:  fir.shape %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shape<3>
+! CHECK:  fir.call @_QMtest_result_robePf(
+

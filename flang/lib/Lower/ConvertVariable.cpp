@@ -2001,6 +2001,35 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
   assert(result.empty() || result.size() == box.dynamicBound().size());
 }
 
+llvm::SmallVector<mlir::Value> Fortran::lower::lowerExplicitResultExtents(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &result, Fortran::lower::SymMap &symMap,
+    Fortran::lower::StatementContext &stmtCtx) {
+  Fortran::lower::BoxAnalyzer box;
+  box.analyze(result);
+  llvm::SmallVector<mlir::Value> extents;
+  if (!box.isArray() || box.isStaticArray())
+    return extents;
+  // Only divert from the caller's default per-dimension extent lowering when a
+  // rank-1 bound base (e.g. mb(n) in res(mb(n))) would otherwise be
+  // re-evaluated once per dimension; lowerExplicitExtents evaluates it once.
+  bool hasRankOneBound = false;
+  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound())
+    for (const Fortran::semantics::Bound &bound :
+         {std::cref(spec->lbound()), std::cref(spec->ubound())})
+      if (const auto &explicitBound = bound.GetExplicit())
+        if (Fortran::evaluate::UnwrapExpr<
+                Fortran::evaluate::RankOneBoundElement>(*explicitBound))
+          hasRankOneBound = true;
+  if (!hasRankOneBound)
+    return extents;
+  llvm::SmallVector<mlir::Value> lowerBounds;
+  lowerExplicitLowerBounds(converter, loc, box, lowerBounds, symMap, stmtCtx);
+  lowerExplicitExtents(converter, loc, box, lowerBounds, extents, symMap,
+                       stmtCtx);
+  return extents;
+}
+
 /// Lower explicit character length if any. Return empty mlir::Value if no
 /// explicit length.
 static mlir::Value
