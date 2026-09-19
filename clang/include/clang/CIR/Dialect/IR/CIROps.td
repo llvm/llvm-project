@@ -6598,12 +6598,23 @@ def CIR_ComplexImagPtrOp : CIR_ComplexPartPtrOp<"complex.imag_ptr"> {
 
 class CIR_ComplexBinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
   let results = (outs CIR_ComplexType:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($result)) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
 }
 
 def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {

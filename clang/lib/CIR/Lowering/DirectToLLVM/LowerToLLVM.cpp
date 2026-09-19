@@ -560,6 +560,24 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
   return mlir::success();
 }
 
+static mlir::Value createConstrainedFPIntrinsicCall(
+    mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+    mlir::ValueRange operands, mlir::Type llvmResTy, cir::FenvAttr fenv,
+    llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
+    mlir::LLVM::FastmathFlags fastmathFlags = {}) {
+  llvm::SmallVector<mlir::Value> callOperands(operands.begin(), operands.end());
+  if (hasRoundingMode)
+    callOperands.push_back(createFenvMetadataValue(
+        rewriter, loc, getConstrainedRoundingMetadata(fenv)));
+  callOperands.push_back(createFenvMetadataValue(
+      rewriter, loc, getConstrainedExceptMetadata(fenv)));
+
+  mlir::LLVM::CallIntrinsicOp intrinsic = createCallLLVMIntrinsicOp(
+      rewriter, loc, "llvm.experimental.constrained." + constrainedMnemonic,
+      llvmResTy, callOperands, fastmathFlags);
+  return intrinsic->getResult(0);
+}
+
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
@@ -5207,11 +5225,22 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
                                         rhsImag);
   } else {
     assert(!cir::MissingFeatures::fastMathFlags());
-    assert(!cir::MissingFeatures::fpConstraints());
-    newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy, lhsReal,
-                                         rhsReal);
-    newImag = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy, lhsImag,
-                                         rhsImag);
+    if (cir::FenvAttr fenv = op.getFenvAttr()) {
+      newReal = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fadd",
+          /*hasRoundingMode=*/true);
+
+      newImag = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fadd",
+          /*hasRoundingMode=*/true);
+    } else {
+      newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
+                                           lhsReal, rhsReal);
+      newImag = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy,
+                                           lhsImag, rhsImag);
+    }
   }
 
   mlir::Type complexLLVMTy =
@@ -5290,11 +5319,22 @@ mlir::LogicalResult CIRToLLVMComplexSubOpLowering::matchAndRewrite(
                                         rhsImag);
   } else {
     assert(!cir::MissingFeatures::fastMathFlags());
-    assert(!cir::MissingFeatures::fpConstraints());
-    newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy, lhsReal,
-                                         rhsReal);
-    newImag = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy, lhsImag,
-                                         rhsImag);
+    if (cir::FenvAttr fenv = op.getFenvAttr()) {
+      newReal = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fsub",
+          /*hasRoundingMode=*/true);
+
+      newImag = createConstrainedFPIntrinsicCall(
+          rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
+          /*constrainedMnemonic=*/"fsub",
+          /*hasRoundingMode=*/true);
+    } else {
+      newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
+                                           lhsReal, rhsReal);
+      newImag = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy,
+                                           lhsImag, rhsImag);
+    }
   }
 
   mlir::Type complexLLVMTy =
@@ -5665,9 +5705,9 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
   // If the poison attribute is set, use llvm.mlir.poison as the address.
   // This happens when the block has no predecessors and is essentially
   // unreachable. Do NOT erase the block argument directly, as that violates
-  // the MLIR dialect conversion framework contract (the framework tracks block
-  // arguments and will clean them up). A block with no predecessors simply
-  // produces no PHI node.
+  // the MLIR dialect conversion framework contract (the framework tracks
+  // block arguments and will clean them up). A block with no predecessors
+  // simply produces no PHI node.
   if (op.getPoison()) {
     auto llvmPtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     targetAddr =
@@ -5786,8 +5826,8 @@ mlir::LogicalResult CIRToLLVMMemChrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-// Function to do the clear-padding operation. This is a faithful translation of
-// CGBuiltin.cpp's ClearPadding function.
+// Function to do the clear-padding operation. This is a faithful
+// translation of CGBuiltin.cpp's ClearPadding function.
 static void clearPadding(mlir::ConversionPatternRewriter &rewriter,
                          mlir::Location loc, mlir::Value inputPtr,
                          uint64_t baseAlignment,

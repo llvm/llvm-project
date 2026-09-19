@@ -623,7 +623,7 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexAddOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexAdd(op.loc, op.lhs, op.rhs);
 
   auto createAdd = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())
@@ -651,7 +651,7 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
 
   if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
-    return cir::ComplexSubOp::create(builder, op.loc, op.lhs, op.rhs);
+    return builder.createComplexSub(op.loc, op.lhs, op.rhs);
 
   auto createSub = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
     return cir::isFPOrVectorOfFPType(a.getType())

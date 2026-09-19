@@ -326,6 +326,24 @@ public:
     return cir::ComplexImagOp::create(*this, loc, resultType, operand);
   }
 
+  mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    cir::FenvAttr fenv;
+    if (isAnyFloatingPointType(
+            mlir::cast<cir::ComplexType>(lhs.getType()).getElementType()))
+      fenv = getConstrainedFPAttr();
+    return cir::ComplexAddOp::create(*this, loc, lhs, rhs, fenv);
+  }
+
+  mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    cir::FenvAttr fenv;
+    if (isAnyFloatingPointType(
+            mlir::cast<cir::ComplexType>(lhs.getType()).getElementType()))
+      fenv = getConstrainedFPAttr();
+    return cir::ComplexSubOp::create(*this, loc, lhs, rhs, fenv);
+  }
+
   mlir::Value createComplexConj(mlir::Location loc, mlir::Value operand) {
     return cir::ComplexConjOp::create(*this, loc, operand.getType(), operand);
   }
