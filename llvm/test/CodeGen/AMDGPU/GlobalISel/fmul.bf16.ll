@@ -161,22 +161,7 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b) 
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b16_e32 v2.l, v0.h
-; GFX1250-NEXT:    v_mov_b16_e32 v3.l, v1.h
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v2, 16, v2 :: v_dual_lshlrev_b32 v3, 16, v3
-; GFX1250-NEXT:    v_dual_mul_f32 v0, v0, v1 :: v_dual_mul_f32 v1, v2, v3
-; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
-; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, v0, v1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul <2 x bfloat> %a, %b
   ret <2 x bfloat> %result
@@ -237,24 +222,7 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inre
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-NEXT:    s_lshl_b32 s1, s0, 16
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX1250-NEXT:    v_dual_mul_f32 v0, s1, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_mul_f32_e32 v1, s0, v1
-; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
-; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul <2 x bfloat> %a, %b
   ret <2 x bfloat> %result
@@ -327,30 +295,7 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_ss(<2 x bfloat> inreg %a, <2 x bfloat
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_lshl_b32 s2, s0, 16
-; GFX1250-NEXT:    s_lshl_b32 s3, s1, 16
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    s_mul_f32 s2, s2, s3
-; GFX1250-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX1250-NEXT:    s_bfe_u32 s3, s2, 0x10010
-; GFX1250-NEXT:    s_or_b32 s4, s2, 0x400000
-; GFX1250-NEXT:    s_add_co_i32 s3, s3, s2
-; GFX1250-NEXT:    s_addk_co_i32 s3, 0x7fff
-; GFX1250-NEXT:    s_cmp_u_f32 s2, 0
-; GFX1250-NEXT:    s_cselect_b32 s2, s4, s3
-; GFX1250-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX1250-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX1250-NEXT:    s_lshr_b32 s2, s2, 16
-; GFX1250-NEXT:    s_mul_f32 s0, s0, s1
-; GFX1250-NEXT:    s_bfe_u32 s1, s0, 0x10010
-; GFX1250-NEXT:    s_or_b32 s3, s0, 0x400000
-; GFX1250-NEXT:    s_add_co_i32 s1, s1, s0
-; GFX1250-NEXT:    s_addk_co_i32 s1, 0x7fff
-; GFX1250-NEXT:    s_cmp_u_f32 s0, 0
-; GFX1250-NEXT:    s_cselect_b32 s0, s3, s1
-; GFX1250-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX1250-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, s0, s1
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul <2 x bfloat> %a, %b
   ret <2 x bfloat> %result
@@ -405,20 +350,7 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vc(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_dual_mul_f32 v0, 0.5, v0 :: v_dual_mul_f32 v1, 0.5, v1
-; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
-; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, v0, 0.5 op_sel:[0,1]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul <2 x bfloat> %a, <bfloat 0.5, bfloat 0.5>
   ret <2 x bfloat> %result
@@ -473,20 +405,7 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vl(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
-; GFX1250-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 0x42c80000, v1
-; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
-; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
-; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
-; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
-; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
-; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 0x42c83f80, v0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = fmul <2 x bfloat> %a, <bfloat 1.0, bfloat 100.0>
   ret <2 x bfloat> %result
