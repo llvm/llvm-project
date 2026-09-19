@@ -7643,23 +7643,48 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   //  "If the compound literal occurs outside the body of a function, the
   //  initializer list shall consist of constant expressions."
   if (IsFileScope)
-    if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
+    if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr)) {
+      // An element with an immediate call or source_location is left for the
+      // use site, and for its rebuild too when the rebuilt default arguments
+      // could not be given the use-site location.
+      bool DeferImmediate =
+          isCheckingDefaultArgumentOrInitializer() ||
+          (currentEvaluationContext().DelayedDefaultInitializationContext &&
+           !OutermostDeclarationWithDelayedImmediateInvocations());
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
-        if (!Init->isTypeDependent() && !Init->isValueDependent() &&
-            !Init->isConstantInitializer(Context)) {
+        if (Init->isTypeDependent() || Init->isValueDependent()) {
+          ILE->setInit(i, ConstantExpr::Create(Context, Init));
+          continue;
+        }
+        if (DeferImmediate) {
+          ImmediateCallVisitor V(Context);
+          V.TraverseStmt(Init);
+          if (V.HasImmediateCalls) {
+            ILE->setInit(i, ConstantExpr::Create(Context, Init));
+            continue;
+          }
+        }
+
+        Expr::EvalResult Eval;
+        if (!Init->EvaluateAsConstantInitializer(Eval, Context)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
         }
-
-        ILE->setInit(i, ConstantExpr::Create(Context, Init));
+        // Store the value so CodeGen does not re-evaluate the element outside
+        // a constant context; an immediate invocation already is a
+        // ConstantExpr.
+        if (!isa<ConstantExpr>(Init))
+          ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
       }
+    }
 
   auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
                                               LiteralExpr, IsFileScope);
   if (IsFileScope) {
-    if (!LiteralExpr->isTypeDependent() &&
+    // The elements of an initializer list were checked above.
+    if (!isa<InitListExpr>(LiteralExpr) && !LiteralExpr->isTypeDependent() &&
         !LiteralExpr->isValueDependent() &&
         !literalType->isDependentType()) // C99 6.5.2.5p3
       if (CheckForConstantInitializer(LiteralExpr))

@@ -5875,16 +5875,44 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
       return this->emitNull(ValType, 0, nullptr, Info);
 
     APValue::LValueBase Base = Val.getLValueBase();
-    ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
-
-    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
-      return this->visit(BaseExpr);
-    if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
+    QualType EntryType;
+    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
+      if (!this->visit(BaseExpr))
+        return false;
+      EntryType = BaseExpr->getType();
+    } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))
         return false;
+      EntryType = VD->getType();
+    } else if (Base.is<TypeInfoLValue>()) {
+      // The type_info object for the type the lvalue describes.
+      const Type *OperandType = Base.get<TypeInfoLValue>()
+                                    .getType()
+                                    ->getCanonicalTypeUnqualified()
+                                    .getTypePtr();
+      EntryType = Base.getTypeInfoType();
+      if (!this->emitGetTypeid(OperandType, EntryType.getTypePtr(), Info))
+        return false;
+    } else if (!Base) {
+      // An integer cast to a pointer.
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      QualType PtrType = E->isGLValue()
+                             ? Ctx.getASTContext().getPointerType(E->getType())
+                             : E->getType();
+      uint64_t Offset = Val.getLValueOffset().getQuantity();
+      if (!this->emitConstUint64(Offset, Info))
+        return false;
+      if (!this->emitGetIntPtrUint64(PtrType.getTypePtr(), Info))
+        return false;
+      EntryType = PtrType->getPointeeType();
+    } else {
+      return false;
+    }
 
-      QualType EntryType = VD->getType();
-      for (auto &Entry : Path) {
+    if (Val.hasLValuePath()) {
+      for (auto &Entry : Val.getLValuePath()) {
         if (EntryType->isArrayType()) {
           uint64_t Index = Entry.getAsArrayIndex();
           QualType ElemType =
@@ -5921,9 +5949,23 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
           }
         }
       }
-
-      return true;
     }
+
+    if (isPtrType(ValType))
+      return true;
+
+    // A pointer cast to an integer is stored as an lvalue; cast it the same
+    // way the source expression does.
+    if (ValType == PT_IntAP || ValType == PT_IntAPS) {
+      const Expr *E = Info.asExpr();
+      if (!E)
+        return false;
+      uint32_t BitWidth = Ctx.getBitWidth(E->getType());
+      return ValType == PT_IntAP
+                 ? this->emitCastPointerIntegralAP(BitWidth, Info)
+                 : this->emitCastPointerIntegralAPS(BitWidth, Info);
+    }
+    return this->emitCastPointerIntegral(ValType, Info);
   }
 
   return false;
