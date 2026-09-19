@@ -1175,7 +1175,7 @@ define <2 x i32> @xor_andn_commute1(<2 x i32> %a, <2 x i32> %b) {
 define i33 @xor_andn_commute2(i33 %a, i33 %pb) {
 ; CHECK-LABEL: @xor_andn_commute2(
 ; CHECK-NEXT:    [[B:%.*]] = udiv i33 42, [[PB:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = or i33 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[Z:%.*]] = or i33 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    ret i33 [[Z]]
 ;
   %b = udiv i33 42, %pb ; thwart complexity-based canonicalization
@@ -1664,3 +1664,67 @@ entry:
   %or = or <2 x i32> %add, %c
   ret <2 x i32> %or
 }
+
+; An assume that (x & y) == 0 proves x and y share no common bits, even
+; though neither is a constant, so xor -> or disjoint should fire.
+define i32 @xor_disjoint_via_assume(i32 %x, i32 %y) {
+; CHECK-LABEL: @xor_disjoint_via_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[XOR:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %xor = xor i32 %y, %x
+  ret i32 %xor
+}
+
+; Negative test: the assume proves nothing about %z, so the fold must not fire.
+define i32 @xor_no_fold_wrong_operand_assume(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @xor_no_fold_wrong_operand_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %xor = xor i32 %z, %x
+  ret i32 %xor
+}
+
+; Negative test: the assume does not dominate the xor (it's in a
+; not-always-executed sibling block), so it must not justify the fold.
+define i32 @xor_no_fold_non_dominating_assume(i32 %x, i32 %y, i1 %cond) {
+; CHECK-LABEL: @xor_no_fold_non_dominating_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ASSUME_BB:%.*]], label [[XOR_BB:%.*]]
+; CHECK:       assume_bb:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[XOR_BB]]
+; CHECK:       xor_bb:
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+entry:
+  br i1 %cond, label %assume_bb, label %xor_bb
+
+assume_bb:
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  br label %xor_bb
+
+xor_bb:
+  %xor = xor i32 %y, %x
+  ret i32 %xor
+}
+
+declare void @llvm.assume(i1)

@@ -5334,3 +5334,65 @@ define i32 @zext_add_no_fold_symmetric(i8 %x) {
   %r = add i32 %z, -4
   ret i32 %r
 }
+
+; An assume that (x & y) == 0 proves x and y share no common bits, even
+; though neither is a constant, so add should fold to or disjoint.
+define i32 @add_disjoint_via_assume(i32 %x, i32 %y) {
+; CHECK-LABEL: @add_disjoint_via_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %add = add i32 %y, %x
+  ret i32 %add
+}
+
+; Negative test: the assume proves nothing about %z, so no fold.
+define i32 @add_no_fold_wrong_operand_assume(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @add_no_fold_wrong_operand_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %add = add i32 %z, %x
+  ret i32 %add
+}
+
+; Negative test: the assume does not dominate the add (it's in a
+; not-always-executed sibling block), so no fold.
+define i32 @add_no_fold_non_dominating_assume(i32 %x, i32 %y, i1 %cond) {
+; CHECK-LABEL: @add_no_fold_non_dominating_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ASSUME_BB:%.*]], label [[ADD_BB:%.*]]
+; CHECK:       assume_bb:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[ADD_BB]]
+; CHECK:       add_bb:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %cond, label %assume_bb, label %add_bb
+
+assume_bb:
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  br label %add_bb
+
+add_bb:
+  %add = add i32 %y, %x
+  ret i32 %add
+}
