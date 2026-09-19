@@ -20,6 +20,21 @@ PREMERGE_ADVISOR_URL = (
 COMMENT_TAG = "<!--PREMERGE ADVISOR COMMENT: {platform}-->"
 
 
+def get_advisor_explanations(
+    explanation_request: dict,
+) -> tuple[list[generate_test_report_lib.FailureExplanation], bool]:
+    """Return advisor explanations and whether the request succeeded."""
+    try:
+        advisor_response = requests.get(
+            PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
+        )
+        advisor_response.raise_for_status()
+        return advisor_response.json(), True
+    except requests.RequestException as error:
+        print(f"Warning: premerge advisor request failed: {error}", file=sys.stderr)
+        return [], False
+
+
 def get_comment_id(platform: str, pr: github.PullRequest.PullRequest) -> int | None:
     platform_comment_tag = COMMENT_TAG.format(platform=platform)
     for comment in pr.as_issue().get_comments():
@@ -101,15 +116,13 @@ def main(
             )
     comments = []
     advisor_explanations = []
+    advisor_request_succeeded = True
     if return_code != 0:
-        advisor_response = requests.get(
-            PREMERGE_ADVISOR_URL, json=explanation_request, timeout=5
+        advisor_explanations, advisor_request_succeeded = get_advisor_explanations(
+            explanation_request
         )
-        if advisor_response.status_code == 200:
-            print(advisor_response.json())
-            advisor_explanations = advisor_response.json()
-        else:
-            print(advisor_response.reason)
+        if advisor_request_succeeded:
+            print(advisor_explanations)
     report, failures_explained = generate_test_report_lib.generate_report(
         generate_test_report_lib.compute_platform_title(),
         return_code,
@@ -126,7 +139,8 @@ def main(
     with open(comments_file_name, "w") as comment_file_handle:
         json.dump(comments, comment_file_handle)
     print(f"Wrote comments to {comments_file_name}")
-    return failures_explained
+    # The advisor is an optional service. Do not let an outage veto premerge CI.
+    return failures_explained or not advisor_request_succeeded
 
 
 if __name__ == "__main__":

@@ -20,6 +20,16 @@ PREMERGE_ADVISOR_URLS = [
 ]
 
 
+def upload_failure_info(failure_info: dict) -> None:
+    """Best-effort upload of failure information to advisor instances."""
+    for premerge_advisor_url in PREMERGE_ADVISOR_URLS:
+        try:
+            response = requests.post(premerge_advisor_url, json=failure_info, timeout=5)
+            response.raise_for_status()
+        except requests.RequestException as error:
+            print(f"Warning: premerge advisor upload failed: {error}", file=sys.stderr)
+
+
 def main(commit_sha, workflow_run_number, build_log_files):
     junit_objects, ninja_logs = generate_test_report_lib.load_info_from_files(
         build_log_files
@@ -44,8 +54,7 @@ def main(commit_sha, workflow_run_number, build_log_files):
         ninja_failures = generate_test_report_lib.find_failure_in_ninja_logs(ninja_logs)
         for name, failure_message in ninja_failures:
             failure_info["failures"].append({"name": name, "message": failure_message})
-    for premerge_advisor_url in PREMERGE_ADVISOR_URLS:
-        requests.post(premerge_advisor_url, json=failure_info, timeout=5)
+    upload_failure_info(failure_info)
 
 
 if __name__ == "__main__":
