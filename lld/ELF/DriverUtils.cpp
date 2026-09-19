@@ -36,7 +36,7 @@ using namespace lld::elf;
 #define OPTTABLE_CODE
 #include "Options.inc"
 
-ELFOptTable::ELFOptTable() : OptTable(OptionTables) {}
+ELFOptTable::ELFOptTable() : OptTable(optionTables()) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
