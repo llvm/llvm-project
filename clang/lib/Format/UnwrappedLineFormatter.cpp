@@ -1657,7 +1657,8 @@ static auto computeNewlines(const AnnotatedLine &Line,
       (!RootToken.Next ||
        (RootToken.Next->is(tok::semi) && !RootToken.Next->Next)) &&
       // Do not remove empty lines before namespace closing "}".
-      !getNamespaceToken(&Line, Lines)) {
+      !getNamespaceToken(&Line, Lines) &&
+      !Style.KeepEmptyLines.AtEndOfBlock) {
     Newlines = std::min(Newlines, 1u);
   }
   // Remove empty lines at the start of nested blocks (lambdas/arrow functions)
