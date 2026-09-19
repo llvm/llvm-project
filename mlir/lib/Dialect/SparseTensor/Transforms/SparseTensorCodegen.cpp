@@ -1302,9 +1302,14 @@ public:
   LogicalResult
   matchAndRewrite(NumberOfEntriesOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // Loose-compressed tensors may have holes in their values buffer. Their
+    // entry counts must be lowered to foreach before converting storage.
+    if (llvm::any_of(getSparseTensorType(op.getTensor()).getLvlTypes(),
+                     isLooseCompressedLT))
+      return rewriter.notifyMatchFailure(
+          op, "loose-compressed entry count must be lowered to foreach");
+
     // Query memSizes for the actually stored values.
-    // FIXME: the nse value computed in this way might be wrong when there is
-    // any "loose_compressed" level.
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor(),
                                              op.getTensor().getType());
     rewriter.replaceOp(op, desc.getValMemSize(rewriter, op.getLoc()));
