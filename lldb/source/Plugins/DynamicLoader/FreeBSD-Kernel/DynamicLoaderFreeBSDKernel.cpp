@@ -115,6 +115,18 @@ DynamicLoaderFreeBSDKernel::CreateInstance(lldb_private::Process *process,
     }
   }
 
+  // ProcessFreeBSDKernelCore explicitly selects this plugin after libkvm has
+  // established the kernel's section load addresses.  Some architectures do
+  // not map the ELF file and program headers at the kernel's load address, so
+  // use the supplied kernel module instead of requiring an in-memory header.
+  if (force && exec) {
+    Address base_address = exec->GetObjectFile()->GetBaseAddress();
+    addr_t kernel_address = base_address.GetLoadAddress(&process->GetTarget());
+    if (kernel_address == LLDB_INVALID_ADDRESS)
+      kernel_address = base_address.GetFileAddress();
+    return new DynamicLoaderFreeBSDKernel(process, kernel_address);
+  }
+
   // At this point we have checked the target is a FreeBSD kernel and all we
   // have to do is to find the kernel address
   const addr_t kernel_address = FindFreeBSDKernel(process);
