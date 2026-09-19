@@ -55,6 +55,10 @@ static bool canReduceUse(Use &Op) {
   if (isa<LifetimeIntrinsic>(Op.getUser()))
     return false;
 
+  // Landing pad clauses must remain constants.
+  if (isa<LandingPadInst>(Op.getUser()))
+    return false;
+
   return true;
 }
 
