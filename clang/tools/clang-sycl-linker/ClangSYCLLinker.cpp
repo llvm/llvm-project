@@ -58,6 +58,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SplitModuleByCategory.h"
 
+#include <mutex>
+
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
@@ -182,8 +184,11 @@ static void printCommands(ArrayRef<StringRef> CmdArgs) {
 /// Execute the command \p ExecutablePath with the arguments \p Args.
 static Error executeCommands(StringRef ExecutablePath,
                              ArrayRef<StringRef> Args) {
-  if (Verbose || DryRun)
+  if (Verbose || DryRun) {
+    static std::mutex PrintMutex;
+    std::lock_guard<std::mutex> Lock(PrintMutex);
     printCommands(Args);
+  }
 
   if (DryRun)
     return Error::success();
