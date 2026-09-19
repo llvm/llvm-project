@@ -454,6 +454,19 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
 }
 
+def LoopIdiomRecognize : Pass<"flang-loop-idiom", "mlir::func::FuncOp"> {
+  let summary = "Recognize and optimize specific loop idioms in FIR";
+  let description = [{
+    Eliminate redundant min/max value tracking in masked location-search loops
+    where the mask is an equality test against a loop-invariant value.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect",
+    "mlir::arith::ArithDialect",
+    "hlfir::hlfirDialect"
+  ];
+}
+
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
   let summary = "Add vscale_range attribute to functions";
   let description = [{
