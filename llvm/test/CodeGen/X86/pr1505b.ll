@@ -34,22 +34,20 @@ define i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    subl $40, %esp
+; CHECK-NEXT:    subl $24, %esp
 ; CHECK-NEXT:    flds _a
 ; CHECK-NEXT:    fstps (%esp)
 ; CHECK-NEXT:    calll _tanf
-; CHECK-NEXT:    fstpl 24(%esp) ## 8-byte Folded Spill
+; CHECK-NEXT:    fstpl 16(%esp) ## 8-byte Folded Spill
 ; CHECK-NEXT:    fldl _b
 ; CHECK-NEXT:    fstpl (%esp)
 ; CHECK-NEXT:    calll _tan
-; CHECK-NEXT:    fstps 20(%esp)
-; CHECK-NEXT:    flds 20(%esp)
-; CHECK-NEXT:    fstpl 32(%esp) ## 8-byte Folded Spill
+; CHECK-NEXT:    fstps 12(%esp)
 ; CHECK-NEXT:    movl L__ZSt4cout$non_lazy_ptr, %esi
 ; CHECK-NEXT:    movl %esi, (%esp)
 ; CHECK-NEXT:    movl $_.str, 4(%esp)
 ; CHECK-NEXT:    calll __ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc
-; CHECK-NEXT:    fldl 24(%esp) ## 8-byte Folded Reload
+; CHECK-NEXT:    fldl 16(%esp) ## 8-byte Folded Reload
 ; CHECK-NEXT:    fstpl 4(%esp)
 ; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    calll __ZNSolsEd
@@ -58,14 +56,14 @@ define i32 @main() nounwind {
 ; CHECK-NEXT:    movl %esi, (%esp)
 ; CHECK-NEXT:    movl $_.str1, 4(%esp)
 ; CHECK-NEXT:    calll __ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc
-; CHECK-NEXT:    fldl 32(%esp) ## 8-byte Folded Reload
+; CHECK-NEXT:    flds 12(%esp)
 ; CHECK-NEXT:    fstpl 4(%esp)
 ; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    calll __ZNSolsEd
 ; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    calll __ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    addl $40, %esp
+; CHECK-NEXT:    addl $24, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:
