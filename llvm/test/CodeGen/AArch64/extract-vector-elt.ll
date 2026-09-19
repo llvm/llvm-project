@@ -694,9 +694,6 @@ define i32 @extract_v4i32_abs_const(<4 x float> %a, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI25_0
 ; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI25_0]
-; CHECK-GI-NEXT:    frintp v0.4s, v0.4s
-; CHECK-GI-NEXT:    frintm v0.4s, v0.4s
-; CHECK-GI-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    abs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    mov s0, v0.s[1]
@@ -736,9 +733,6 @@ define i32 @extract_v4i32_abs_half_const(<4 x float> %a, i32 %c) {
 ; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI26_0]
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
-; CHECK-GI-NEXT:    frintp v0.4s, v0.4s
-; CHECK-GI-NEXT:    frintm v0.4s, v0.4s
-; CHECK-GI-NEXT:    fabs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    abs v0.4s, v0.4s
 ; CHECK-GI-NEXT:    str q0, [sp]
