@@ -30,6 +30,7 @@
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
+#include "AMDGPUQueueUserCount.h"
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "OpenMP/OMPT/Callback.h"
@@ -780,7 +781,7 @@ using AMDGPUSignalManagerTy = GenericDeviceResourceManagerTy<AMDGPUSignalRef>;
 /// Class holding an HSA queue to submit kernel and barrier packets.
 struct AMDGPUQueueTy {
   /// Create an empty queue.
-  AMDGPUQueueTy() : Queue(nullptr), Mutex(), NumUsers(0) {}
+  AMDGPUQueueTy() : Queue(nullptr), Mutex() {}
 
   /// Lazily initialize a new queue belonging to a specific agent.
   Error init(GenericDeviceTy &Device, hsa_agent_t Agent, int32_t QueueSize) {
@@ -813,17 +814,17 @@ struct AMDGPUQueueTy {
     return Plugin::check(Status, "error in hsa_queue_destroy: %s");
   }
 
-  /// Returns the number of streams, this queue is currently assigned to.
-  bool getUserCount() const { return NumUsers; }
+  /// Returns the number of streams this queue is currently assigned to.
+  uint32_t getUserCount() const { return UserCount.getUserCount(); }
 
   /// Returns if the underlying HSA queue is initialized.
   bool isInitialized() { return Queue != nullptr; }
 
   /// Decrement user count of the queue object.
-  void removeUser() { --NumUsers; }
+  void removeUser() { UserCount.removeUser(); }
 
   /// Increase user count of the queue object.
-  void addUser() { ++NumUsers; }
+  void addUser() { UserCount.addUser(); }
 
   /// Push a kernel launch to the queue. The kernel launch requires an output
   /// signal and can define an optional input signal (nullptr if none).
@@ -1006,9 +1007,9 @@ private:
   /// atomic operations. We can further investigate it if this is a bottleneck.
   std::mutex Mutex;
 
-  /// The number of streams, this queue is currently assigned to. A queue is
+  /// Tracks how many streams this queue is currently assigned to. A queue is
   /// considered idle when this is zero, otherwise: busy.
-  uint32_t NumUsers;
+  AMDGPUQueueUserCount UserCount;
 };
 
 /// Struct that implements a stream of asynchronous operations for AMDGPU
