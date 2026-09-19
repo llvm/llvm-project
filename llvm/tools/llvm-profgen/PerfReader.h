@@ -73,6 +73,7 @@ enum PerfContent {
   UnknownContent = 0,
   LBR = 1,      // Only LBR sample.
   LBRStack = 2, // Hybrid sample including call stack and LBR stack.
+  ArmSPE = 3,   // Arm SPE branch samples.
 };
 
 struct InputFile {
@@ -95,11 +96,18 @@ struct LBREntry {
 #endif
 };
 
+// Number of branch-stack entries PerfSample::TakenMask can flag, one bit each.
+// Arm BRBE, the deepest branch stack in hardware, holds 64 records.
+constexpr size_t TakenMaskWidth = 64;
+
 #ifndef NDEBUG
-static inline void printLBRStack(const SmallVectorImpl<LBREntry> &LBRStack) {
+static inline void printLBRStack(const SmallVectorImpl<LBREntry> &LBRStack,
+                                 uint64_t TakenMask = ~uint64_t(0)) {
   for (size_t I = 0; I < LBRStack.size(); I++) {
     dbgs() << "[" << I << "] ";
     LBRStack[I].print();
+    if (I < TakenMaskWidth && !((TakenMask >> I) & 1))
+      dbgs() << " (not taken)";
     dbgs() << "\n";
   }
 }
@@ -154,6 +162,19 @@ struct PerfSample {
   // Call stack recorded in FILO(leaf to root) order, it's used for CS-profile
   // generation
   SmallVector<uint64_t, 16> CallStack;
+  // Bit I is clear where LBRStack[I] is a branch that was not taken, which perf
+  // flags with the N suffix of the prediction field; such an entry names the
+  // instruction that follows the branch as its target. Only Arm SPE records
+  // such a branch. Kept beside the stack so that an LBREntry stays two
+  // addresses wide. Every bit starts set, so a reader of taken branches alone
+  // leaves the mask as it is.
+  uint64_t TakenMask = ~uint64_t(0);
+
+  // Whether the branch of LBRStack[Index] was taken. An entry past the width of
+  // the mask carries no flag and counts as taken.
+  bool taken(size_t Index) const {
+    return Index >= TakenMaskWidth || (TakenMask >> Index) & 1;
+  }
 
   virtual ~PerfSample() = default;
   uint64_t getHashCode() const {
@@ -169,6 +190,9 @@ struct PerfSample {
       Hash = HashCombine(Hash, Entry.Source);
       Hash = HashCombine(Hash, Entry.Target);
     }
+    // TakenMask is left out, so a taken and a not-taken record holding the
+    // same two addresses hash alike, which a conditional branch to the
+    // instruction that follows it produces; isEqual tells the two apart.
     return Hash;
   }
 
@@ -176,8 +200,11 @@ struct PerfSample {
     const SmallVector<uint64_t, 16> &OtherCallStack = Other->CallStack;
     const SmallVector<LBREntry, 16> &OtherLBRStack = Other->LBRStack;
 
+    // A branch that was taken and one that was not are separate events even
+    // where they hold the same two addresses, so the masks take part.
     if (CallStack.size() != OtherCallStack.size() ||
-        LBRStack.size() != OtherLBRStack.size())
+        LBRStack.size() != OtherLBRStack.size() ||
+        TakenMask != Other->TakenMask)
       return false;
 
     if (!std::equal(CallStack.begin(), CallStack.end(), OtherCallStack.begin()))
@@ -197,7 +224,7 @@ struct PerfSample {
   void print() const {
     dbgs() << "Line " << Linenum << "\n";
     dbgs() << "LBR stack\n";
-    printLBRStack(LBRStack);
+    printLBRStack(LBRStack, TakenMask);
     dbgs() << "Call stack\n";
     printCallStack(CallStack);
   }
@@ -646,25 +673,53 @@ protected:
   void parseEventOrSample(TraceStream &TraceIt);
   // Warn if the relevant mmap event is missing.
   void warnIfMissingMMap();
+  // Reject an input that holds no record this reader can use, once the whole
+  // trace has been read. A branch-stack reader recognizes the shape of its
+  // trace before reading it, so this does nothing for one.
+  virtual void validateParsedTrace() {}
   // Emit accumulate warnings.
   void warnTruncatedStack();
   // Warn if range is invalid.
-  void warnInvalidRange();
+  virtual void warnInvalidRange();
   // Warn if sampled branch/target addresses don't match the binary.
   void warnIfBranchTargetMismatch();
   // Extract call stack from the perf trace lines
   bool extractCallstack(TraceStream &TraceIt,
                         SmallVectorImpl<uint64_t> &CallStack);
-  // Extract LBR stack from one perf trace line
-  bool extractLBRStack(TraceStream &TraceIt,
-                       SmallVectorImpl<LBREntry> &LBRStack);
-  uint64_t parseAggregatedCount(TraceStream &TraceIt);
+  // Parse one branch-stack entry "<source>/<destination>/<flags>...", the way
+  // `perf script -F brstack` prints it, into addresses canonicalized against
+  // the runtime mapping and the one flag the profile depends on. Return false
+  // for any other token, which each reader reports in its own way.
+  bool parseBranchEntry(StringRef Token, uint64_t &Source, uint64_t &Target,
+                        bool &Taken);
+  // Read from the prediction field of a branch-stack entry whether the branch
+  // was taken, or std::nullopt for a field the reader cannot read, which makes
+  // the entry unreadable. A hardware branch stack holds taken branches alone,
+  // so the base implementation answers yes without reading the field.
+  virtual std::optional<bool> parseTakenFlag(StringRef) { return true; }
+  // Extract LBR stack from one perf trace line. Bit I of \p TakenMask flags
+  // LBRStack[I], as PerfSample::TakenMask describes.
+  virtual bool extractLBRStack(TraceStream &TraceIt,
+                               SmallVectorImpl<LBREntry> &LBRStack,
+                               uint64_t &TakenMask);
+  // Consume a line that holds a decimal repeat count alone and return it, or
+  // return 1 and leave the line for the record parser. Override this where a
+  // record cannot be preceded by such a line, so it is not read as a count.
+  virtual uint64_t parseAggregatedCount(TraceStream &TraceIt);
   // Parse one sample from multiple perf lines, override this for different
   // sample type
   void parseSample(TraceStream &TraceIt);
   // An aggregated count is given to indicate how many times the sample is
   // repeated.
   virtual void parseSample(TraceStream &TraceIt, uint64_t Count){};
+  // Return the end of the executed range that follows the most recent branch of
+  // the sample, or zero when the reader cannot infer it. Consecutive entries of
+  // a branch stack bound every other range of the sample, but not this one, so
+  // the LBR and BRBE readers omit it while a reader of single-branch records
+  // infers it from the binary. Repeat is how often the sample was recorded.
+  virtual uint64_t inferFirstRangeEnd(const PerfSample *, uint64_t) {
+    return 0;
+  }
   void computeCounterFromLBR(const PerfSample *Sample, uint64_t Repeat);
   // Post process the profile after trace aggregation, we will do simple range
   // overlap computation for AutoFDO, or unwind for CSSPGO(hybrid sample).
@@ -693,6 +748,65 @@ public:
       : PerfScriptReader(Binary, PerfTrace, PID) {};
   // Parse the LBR only sample.
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
+};
+
+// The reader of an Arm SPE branch profile, whose record holds a single branch
+// printed as a branch stack of one entry and fed into the same aggregation.
+class ArmSPEReader : public LBRPerfReader {
+public:
+  ArmSPEReader(ProfiledBinary *Binary, StringRef PerfTrace,
+               std::optional<int32_t> PID, bool ConvertedFromPerfData)
+      : LBRPerfReader(Binary, PerfTrace, PID),
+        ConvertedFromPerfData(ConvertedFromPerfData) {}
+
+protected:
+  // Weigh every Arm SPE record by one, since perf prints no repeat count for it
+  // and a record damaged down to its instruction pointer would read as a count.
+  uint64_t parseAggregatedCount(TraceStream &TraceIt) override;
+  // Read the N flag perf appends to the prediction field of a branch that was
+  // not taken, which only Arm SPE records.
+  std::optional<bool> parseTakenFlag(StringRef PredictionFlags) override;
+  // Parse one Arm SPE branch record, and reject a record that holds more than
+  // the sampled branch, which a trace decoded without --itrace=bl1 carries.
+  bool extractLBRStack(TraceStream &TraceIt,
+                       SmallVectorImpl<LBREntry> &LBRStack,
+                       uint64_t &TakenMask) override;
+  // Infer from the binary the range executed after the recorded branch, and
+  // count the sample as reduced when no function range covers its destination.
+  uint64_t inferFirstRangeEnd(const PerfSample *Sample,
+                              uint64_t Repeat) override;
+  // Reject a trace that holds no Arm SPE branch record at all, naming the
+  // record format the lines were read as.
+  void validateParsedTrace() override;
+  // Report nothing: the base report describes ranges bounded by consecutive
+  // branch-stack entries, which a single-branch record cannot form.
+  void warnInvalidRange() override {}
+  // Compute the counters, then report what the trace lost on the way to them.
+  void generateUnsymbolizedProfile() override;
+
+private:
+  // Report, as shares of the sample lines of the trace, the lines that hold no
+  // record, the records that carry no counter and the samples whose range was
+  // reduced, and report a trace that yields no counter at all.
+  void reportTraceLosses();
+
+  // Number of parsable Arm SPE branch records, whether or not they yield a
+  // counter for this binary.
+  uint64_t NumRecords = 0;
+  // Number of lines that hold no readable record, every line of a trace printed
+  // with another field list among them.
+  uint64_t NumInvalidRecords = 0;
+  // Number of records dropped because their destination is not an instruction
+  // of this binary: a branch leaving the binary, a trace of another process or
+  // build, or a record whose branch target address was lost.
+  uint64_t NumDroppedRecords = 0;
+  // Number of samples, weighed by how often each was recorded, whose range was
+  // reduced to the sampled instruction because no function range covers it.
+  uint64_t NumUncoveredSamples = 0;
+  // Whether this tool printed the trace from a --perfdata recording. Only the
+  // report of an input that holds no record depends on it: the perf command to
+  // correct is one the user wrote for a --perfscript input alone.
+  bool ConvertedFromPerfData = false;
 };
 
 /*

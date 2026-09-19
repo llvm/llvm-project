@@ -3199,6 +3199,15 @@ in unused profile data. Consider omitting this option in such cases.
    it provides better call information, which improves the accuracy of
    the profile data.
 
+   Arm SPE can also be used to collect branch records on AArch64:
+
+   ```console
+   $ perf record -e arm_spe/branch_filter=1,event_filter=2/ ./code
+   ```
+
+   This requires perf 6.15 or later and hardware with FEAT_SPEv1p2 and event
+   filtering.
+
    When using SEP:
 
    ```console
@@ -3231,6 +3240,13 @@ in unused profile data. Consider omitting this option in such cases.
 
    Please note, `perf.data` must be collected with `-b` flag to Linux `perf`
    for the above step to work.
+
+   For an Arm SPE branch recording, pass `--spe-branch-profile`:
+
+   ```console
+   $ llvm-profgen --binary=./code --output=code.prof \
+     --perfdata=perf.data --spe-branch-profile
+   ```
 
    When using SEP the output is in the textual format corresponding to
    `llvm-profgen --perfscript`. For example:

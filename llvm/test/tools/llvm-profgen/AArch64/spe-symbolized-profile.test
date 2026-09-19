@@ -1,0 +1,109 @@
+## The other Arm SPE tests skip symbolization and check the inferred ranges
+## themselves. This one carries a line table, so that the range and branch
+## counters of a single-branch record are checked where they end up: as the
+## line samples and the head count of the enclosing function.
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/spe-symbolized-profile.exe
+# RUN: llvm-profgen --binary=%t/spe-symbolized-profile.exe \
+# RUN:   --perfscript=%t/perfscript --spe-branch-profile --format=text \
+# RUN:   --output=%t/profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --input-file=%t/profile
+
+## The record is a return into a function that carries debug info, so neither
+## its source nor its destination is reported as unexpected, and no record is
+## dropped.
+# NO-WARN-NOT: warning: {{.*}}do not match the binary
+# NO-WARN-NOT: warning: {{.*}}not an instruction of this binary
+# NO-WARN-NOT: warning: No samples in perf script
+
+## The range inferred for the destination covers both instructions of
+## with_debug, which the line table attributes to the two lines that follow its
+## declaration, and the branch to its entry becomes the head count. The total
+## weighs each line sample by the size of the instructions it covers, as it
+## does for a branch-stack profile.
+# CHECK:      with_debug:8:1{{$}}
+# CHECK-NEXT:  1: 1
+# CHECK-NEXT:  2: 1
+
+#--- binary.yaml
+## with_debug is described by both the line table and a subprogram; the
+## instructions of without_debug are described by neither, which leaves the
+## source of the record unsymbolized without affecting the counters.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0
+    Offset:   0
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x27C
+    Offset:       0x27C
+    AddressAlign: 0x4
+    ## with_debug: add w0, w0, #1; ret
+    ## without_debug: add w0, w0, #2; ret
+    Content:      00040011C0035FD600080011C0035FD6
+  - Name:         .debug_abbrev
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      011101252513050325721710171B25111B120673170000022E00111B1206401803253A0B3B0B49133F19000003240003253E0B0B0B000000
+  - Name:         .debug_info
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      33000000050001080000000001001D0001080000000000000002000800000008000000020008000000016F030001320000000304050400
+  - Name:         .debug_str_offsets
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      18000000050000000200000007000000000000001D00000003000000
+  - Name:         .debug_line
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x1
+    Content:      460000000500080025000000010101FB0E0D00010101010000000100000101011F010000000002011F020F0102000000000400050C0A0009027C020000000000001305034B0204000101
+  - Name:         .debug_line_str
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign: 0x1
+    EntSize:      0x1
+    Content:      2F007761726E2D6E6F742D73796D626F6C697A65642E6300
+Symbols:
+  - Name:    with_debug
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x27C
+    Size:    0x8
+  - Name:    without_debug
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x284
+    Size:    0x8
+DWARF:
+  debug_str:
+    - '/'
+    - ''
+    - int
+    - warn-not-symbolized.c
+    - with_debug
+  debug_addr:
+    - Length:      0xC
+      Version:     0x5
+      AddressSize: 0x8
+      Entries:
+        - Address: 0x27C
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x1000) @ 0 00:00 0 0]: r-xp /tmp/spe-symbolized-profile.exe
+700000000288 0x700000000288/0x70000000027c/P/-/-/10/RET/-
