@@ -532,38 +532,28 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
-/// Returns true if \p V is known to not wrap in signed or unsigned, depending
-/// on \p Signed.
-static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
-  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+/// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
+/// is known to not wrap in signed or unsigned, depending on \p Signed.
+static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+                          unsigned NoWrapFlags, const ConstraintInfo &Info,
+                          bool Signed) {
+  using OBO = OverflowingBinaryOperator;
+
+  if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
     return true;
 
-  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
-    if (Signed)
-      return Trunc->hasNoSignedWrap();
-    // A trunc nsw only truncates without unsigned wrap if its operand is
-    // non-negative.
-    return Trunc->hasNoUnsignedWrap() ||
-           (Trunc->hasNoSignedWrap() &&
-            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  if (Opcode == Instruction::Sub) {
+    // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
+    if (!Signed)
+      return Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
+
+    // Op0 - Op1 does not wrap signed if 0 <=s Op1 <=s Op0.
+    if (Info.isKnownNonNegative(Op1) &&
+        Info.doesHold(CmpInst::ICMP_SGE, Op0, Op1))
+      return true;
   }
 
-  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
-  if (!BO)
-    return false;
-
-  if (Signed ? BO->hasNoSignedWrap() : BO->hasNoUnsignedWrap())
-    return true;
-
-  Value *Op0 = BO->getOperand(0);
-  Value *Op1 = BO->getOperand(1);
-  auto Opcode = static_cast<Instruction::BinaryOps>(BO->getOpcode());
-
-  // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
-  if (Opcode == Instruction::Sub)
-    return !Signed && Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
-
-  if (!Signed && BO->hasNoSignedWrap() &&
+  if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
       Info.isKnownNonNegative(Op0))
     return true;
@@ -574,12 +564,35 @@ static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
   if (!C)
     return false;
 
-  using OBO = OverflowingBinaryOperator;
   return doesHoldInRange(Info, Op0,
                          ConstantRange::makeExactNoWrapRegion(
                              Opcode, C->getValue(),
                              Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
                          Signed);
+}
+
+/// Returns true if \p V is known to not wrap in signed or unsigned, depending
+/// on \p Signed.
+static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
+  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+    return true;
+
+  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Signed)
+      return Trunc->hasNoSignedWrap();
+
+    // A trunc nsw only truncates without unsigned wrap if its operand is
+    // non-negative.
+    return Trunc->hasNoUnsignedWrap() ||
+           (Trunc->hasNoSignedWrap() &&
+            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  }
+
+  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
+  return BO &&
+         isKnownNoWrap(static_cast<Instruction::BinaryOps>(BO->getOpcode()),
+                       BO->getOperand(0), BO->getOperand(1),
+                       BO->getNoWrapKind(), Info, Signed);
 }
 
 static Decomposition decomposeGEP(GEPOperator &GEP, const ConstraintInfo &Info,
@@ -1389,9 +1402,11 @@ static bool canStrengthenFlags(Instruction *I) {
 
   switch (BO->getOpcode()) {
   case Instruction::Sub:
-    // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
-    // canonicalized to Add.
-    return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // A - B does not wrap unsigned if A >=u B, and does not wrap signed if
+    // 0 <=s B <=s A. With a constant B, bounds on A can refine both flags.
+    return true;
   case Instruction::Add:
   case Instruction::Mul:
   case Instruction::Shl:
