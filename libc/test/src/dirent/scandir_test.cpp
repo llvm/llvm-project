@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_dirent.h"
+#include "src/__support/File/scan_impl.h"
 #include "src/__support/OSUtil/path.h"
+#include "src/__support/error_or.h"
 #include "src/dirent/scandir.h"
 #include "src/stdio/asprintf.h"
 #include "src/stdio/fclose.h"
@@ -141,4 +143,42 @@ TEST_F(LlvmLibcScandirTest, TestBadDirname) {
   struct dirent **namelist;
   ASSERT_THAT(LIBC_NAMESPACE::scandir("", &namelist, NULL, NULL),
               Fails(ENOENT, -1));
+}
+
+namespace LIBC_NAMESPACE_DECL {
+
+struct MockDir {
+  static int read_call_count;
+
+  static LIBC_NAMESPACE::ErrorOr<MockDir *> open(const char *path) {
+    (void)path;
+    read_call_count = 0;
+    return new MockDir();
+  }
+
+  LIBC_NAMESPACE::ErrorOr<struct dirent *> read() {
+    read_call_count++;
+
+    if (read_call_count == 1) {
+      return LIBC_NAMESPACE::Error(EIO);
+    }
+    return nullptr;
+  }
+
+  int close() {
+    delete this;
+    return 0;
+  }
+};
+
+int MockDir::read_call_count = 0;
+
+} // namespace LIBC_NAMESPACE_DECL
+
+TEST_F(LlvmLibcScandirTest, ReadFailsWithEIO) {
+  struct dirent **namelist = nullptr;
+  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
+      "fake/path", &namelist, nullptr, nullptr);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error(), EIO);
 }
