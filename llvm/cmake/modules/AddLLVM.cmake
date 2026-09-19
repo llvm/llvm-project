@@ -2368,10 +2368,9 @@ function(get_llvm_lit_path base_dir file_name)
   set(${base_dir} ${LLVM_LIT_BASE_DIR} PARENT_SCOPE)
 endfunction()
 
-# A raw function to create a lit target. This is used to implement the testuite
-# management functions.
-function(add_lit_target target comment)
-  cmake_parse_arguments(ARG "" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
+# Construct the command used to run a lit test suite.
+function(get_llvm_lit_command output)
+  cmake_parse_arguments(ARG "" "" "PARAMS;ARGS" ${ARGN})
   set(LIT_ARGS "${ARG_ARGS} ${LLVM_LIT_ARGS}")
   separate_arguments(LIT_ARGS)
   if (NOT CMAKE_CFG_INTDIR STREQUAL ".")
@@ -2391,6 +2390,14 @@ function(add_lit_target target comment)
   foreach(param ${ARG_PARAMS})
     list(APPEND LIT_COMMAND --param ${param})
   endforeach()
+  set(${output} ${LIT_COMMAND} PARENT_SCOPE)
+endfunction()
+
+# A raw function to create a lit target. This is used to implement the testuite
+# management functions.
+function(add_lit_target target comment)
+  cmake_parse_arguments(ARG "" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
+  get_llvm_lit_command(LIT_COMMAND PARAMS ${ARG_PARAMS} ARGS ${ARG_ARGS})
   if (ARG_UNPARSED_ARGUMENTS)
     add_custom_target(${target}
       COMMAND ${LIT_COMMAND} ${ARG_UNPARSED_ARGUMENTS}
@@ -2495,6 +2502,38 @@ function(add_lit_testsuites project directory)
       set(ARG_FOLDER "${subproject_title}/Tests/LIT Testsuites")
     endif()
 
+    # CMake expands the transitive closure of a custom target's dependencies
+    # onto every custom command that depends on it. For large lit test suites,
+    # repeating the full tool dependency list on every per-directory check
+    # target makes the generated Ninja file unnecessarily large. A symbolic
+    # custom command output can be named directly on Ninja's command line, so
+    # use one shared stamp to represent the dependency closure and make each
+    # check command depend only on that stamp.
+    set(use_factored_lit_dependencies OFF)
+    if(CMAKE_MINIMUM_REQUIRED_VERSION VERSION_GREATER_EQUAL 3.27)
+      get_property(lit_version_fallback_warned GLOBAL PROPERTY
+        LLVM_LIT_VERSION_FALLBACK_WARNED)
+      if(NOT lit_version_fallback_warned)
+        message(WARNING
+          "The pre-CMake-3.27 fallback in add_lit_testsuites can be removed")
+        set_property(GLOBAL PROPERTY LLVM_LIT_VERSION_FALLBACK_WARNED TRUE)
+      endif()
+    endif()
+    if (CMAKE_GENERATOR STREQUAL "Ninja" AND
+        CMAKE_VERSION VERSION_GREATER_EQUAL 3.27)
+      set(use_factored_lit_dependencies ON)
+      string(TOLOWER "${project}" project_lower)
+      set(lit_deps_stamp
+        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/check-${project_lower}-test-depends.stamp")
+      add_custom_command(OUTPUT ${lit_deps_stamp}
+        COMMAND ${CMAKE_COMMAND} -E touch ${lit_deps_stamp}
+        DEPENDS ${ARG_DEPENDS}
+        COMMENT "Building ${project} lit test dependencies"
+      )
+      get_llvm_lit_command(LIT_COMMAND PARAMS ${ARG_PARAMS} ARGS ${ARG_ARGS})
+      set(lit_test_outputs)
+    endif()
+
     # Search recursively for test directories by assuming anything not
     # in a directory called Inputs contains tests.
     file(GLOB_RECURSE to_process LIST_DIRECTORIES true ${directory}/*)
@@ -2529,16 +2568,39 @@ function(add_lit_testsuites project directory)
         if (ARG_BINARY_DIR)
           set(lit_args ${ARG_BINARY_DIR} --filter=${filter})
         endif()
-        add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
-          ${lit_args}
-          ${EXCLUDE_FROM_CHECK_ALL}
-          PARAMS ${ARG_PARAMS}
-          DEPENDS ${ARG_DEPENDS}
-          ARGS ${ARG_ARGS}
-        )
-        set_target_properties(check-${name_var} PROPERTIES FOLDER ${ARG_FOLDER})
+        if (use_factored_lit_dependencies)
+          set(lit_test_output "${CMAKE_BINARY_DIR}/check-${name_var}")
+          add_custom_command(OUTPUT ${lit_test_output}
+            COMMAND ${LIT_COMMAND} ${lit_args}
+            DEPENDS ${lit_deps_stamp}
+            DEPENDS_EXPLICIT_ONLY
+            COMMENT "Running lit suite ${lit_suite}"
+            USES_TERMINAL
+          )
+          # The command intentionally does not create this output. Marking it
+          # symbolic keeps Ninja's directly invokable check-* target dirty.
+          set_source_files_properties(${lit_test_output} PROPERTIES SYMBOLIC TRUE)
+          list(APPEND lit_test_outputs ${lit_test_output})
+        else()
+          add_lit_target("check-${name_var}" "Running lit suite ${lit_suite}"
+            ${lit_args}
+            ${EXCLUDE_FROM_CHECK_ALL}
+            PARAMS ${ARG_PARAMS}
+            DEPENDS ${ARG_DEPENDS}
+            ARGS ${ARG_ARGS}
+          )
+          set_target_properties(check-${name_var} PROPERTIES FOLDER ${ARG_FOLDER})
+        endif()
       endif()
     endforeach()
+
+    if (use_factored_lit_dependencies)
+      # CMake only emits an add_custom_command(OUTPUT) rule when a target in
+      # the same directory consumes its output. This internal target anchors
+      # the per-directory check commands in the generated build graph.
+      add_custom_target(lit-testsuites-${project_lower}-anchor
+        DEPENDS ${lit_test_outputs})
+    endif()
   endif()
 endfunction()
 
