@@ -26,6 +26,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
@@ -493,10 +494,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     if (exe_ctx) {
       if (Target *target = exe_ctx->GetTargetPtr()) {
         ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
-        // ValueObjectRegister stores typed vectors in target byte order and
-        // all other register buffers in host byte order.
+        // ValueObjectRegister stores structured register types in target byte
+        // order and all other register buffers in host byte order.
         if (m_context_type == ContextType::RegisterInfo &&
-            !llvm::isa_and_present<RegisterTypeVector>(
+            !llvm::isa_and_present<RegisterTypeVector, RegisterTypeUnion>(
                 GetRegisterInfo()->register_type))
           byte_order = endian::InlHostByteOrder();
         data.SetByteOrder(byte_order);

@@ -274,3 +274,344 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.assert_union_info("first", 8, ["first (uint64, 8 bytes)"])
         self.assert_union_info("second", 4, ["second (uint32, 4 bytes)"])
         self.assert_no_union_info("unresolved")
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_direct_union_sb_api(self):
+        process = self.setup_register_test(
+            """\
+            <vector id="v4f" type="ieee_single" count="4"/>
+            <vector id="v2d" type="ieee_double" count="2"/>
+            <union id="views">
+              <field name="f32" type="ieee_single"/>
+              <field name="f64" type="ieee_double"/>
+              <field name="floats" type="v4f"/>
+              <field name="doubles" type="v2d"/>
+              <field name="raw" type="uint128"/>
+            </union>
+            <reg name="u0" regnum="0" bitsize="128" type="views"/>
+            <reg name="pc" bitsize="64"/>""",
+            "0000c03f000020400000604000009040" + "00" * 8,
+        )
+
+        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        union = frame.FindRegister("u0")
+        self.assertTrue(union.IsValid())
+        self.assertTrue(union.GetType().IsValid())
+        self.assertEqual(union.GetByteSize(), 16)
+        self.assertEqual(union.GetNumChildren(), 5)
+        self.assertEqual(
+            [union.GetChildAtIndex(i).GetName() for i in range(5)],
+            ["f32", "f64", "floats", "doubles", "raw"],
+        )
+        self.assertAlmostEqual(
+            union.GetChildMemberWithName("f32").GetData().float[0], 1.5
+        )
+        self.assertAlmostEqual(
+            union.GetValueForExpressionPath(".floats[2]").GetData().float[0],
+            3.5,
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_smaller_than_register_sb_api(self):
+        process = self.setup_register_test(
+            """\
+            <union id="small">
+              <field name="value" type="uint32"/>
+            </union>
+            <reg name="u0" regnum="0" bitsize="128" type="small"/>
+            <reg name="pc" bitsize="64"/>""",
+            "2a000000" + "00" * 20,
+        )
+
+        union = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("u0")
+        self.assertEqual(union.GetByteSize(), 16)
+        self.assertEqual(union.GetType().GetByteSize(), 4)
+        self.assertEqual(union.GetChildMemberWithName("value").GetValueAsUnsigned(), 42)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_nested_union_and_vector_sb_api(self):
+        process = self.setup_register_test(
+            """\
+            <vector id="v4f" type="ieee_single" count="4"/>
+            <union id="float_views">
+              <field name="scalar" type="ieee_single"/>
+              <field name="lanes" type="v4f"/>
+            </union>
+            <union id="nested">
+              <field name="f32_view" type="float_views"/>
+              <field name="raw" type="uint128"/>
+            </union>
+            <reg name="n0" regnum="0" bitsize="128" type="nested"/>
+            <reg name="pc" bitsize="64"/>""",
+            "0000c03f000020400000604000009040" + "00" * 8,
+        )
+
+        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        union = frame.FindRegister("n0")
+        self.assertEqual(union.GetNumChildren(), 2)
+        lane = union.GetValueForExpressionPath(".f32_view.lanes[3]")
+        self.assertTrue(lane.IsValid())
+        self.assertAlmostEqual(lane.GetData().float[0], 4.5)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_byte_view_and_vector_of_unions_sb_api(self):
+        process = self.setup_register_test(
+            """\
+            <vector id="c32" type="uint8" count="32"/>
+            <union id="bytes_view">
+              <field name="c" type="c32"/>
+            </union>
+            <union id="scalar32_views">
+              <field name="f32" type="ieee_single"/>
+              <field name="u32" type="uint32"/>
+            </union>
+            <vector id="v4views" type="scalar32_views" count="4"/>
+            <reg name="b0" regnum="0" bitsize="256" type="bytes_view"/>
+            <reg name="vu0" regnum="1" bitsize="128" type="v4views"/>
+            <reg name="pc" bitsize="64"/>""",
+            bytes(range(32)).hex() + "0000c03f000020400000604000009040" + "00" * 8,
+        )
+
+        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        byte_view = frame.FindRegister("b0").GetChildMemberWithName("c")
+        self.assertEqual(byte_view.GetNumChildren(), 32)
+        self.assertEqual(byte_view.GetChildAtIndex(16).GetValueAsUnsigned(), 16)
+
+        vector = frame.FindRegister("vu0")
+        self.assertEqual(vector.GetNumChildren(), 4)
+        third = vector.GetChildAtIndex(2)
+        self.assertEqual(
+            [third.GetChildAtIndex(i).GetName() for i in range(2)],
+            ["f32", "u32"],
+        )
+        self.assertAlmostEqual(
+            third.GetChildMemberWithName("f32").GetData().float[0], 3.5
+        )
+        self.expect("register read vu0[2].f32", substrs=["vu0[2].f32 = 3.5"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_target_sized_union_vector_sb_api(self):
+        process = self.setup_register_test(
+            """\
+            <union id="pointer_view">
+              <field name="pointer" type="data_ptr"/>
+            </union>
+            <vector id="v2p" type="pointer_view" count="2"/>
+            <reg name="v0" regnum="0" bitsize="128" type="v2p"/>
+            <reg name="pc" bitsize="64"/>""",
+            "34120000000000007856000000000000" + "00" * 8,
+        )
+
+        vector = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
+        self.assertEqual(vector.GetNumChildren(), 2)
+        self.assertEqual(
+            vector.GetChildAtIndex(0)
+            .GetChildMemberWithName("pointer")
+            .GetValueAsUnsigned(),
+            0x1234,
+        )
+        self.assertEqual(
+            vector.GetChildAtIndex(1)
+            .GetChildMemberWithName("pointer")
+            .GetValueAsUnsigned(),
+            0x5678,
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("SystemZ")
+    def test_big_endian_union_sb_api(self):
+        process = self.setup_multidoc_test(
+            {
+                "target.xml": dedent(
+                    """\
+                <?xml version="1.0"?>
+                <target version="1.0">
+                  <architecture>s390x</architecture>
+                  <feature name="test.register.unions">
+                    <vector id="v2f" type="ieee_single" count="2"/>
+                    <union id="views">
+                      <field name="scalar" type="ieee_single"/>
+                      <field name="lanes" type="v2f"/>
+                    </union>
+                    <reg name="u0" regnum="0" bitsize="64" type="views"/>
+                    <union id="small">
+                      <field name="value" type="uint32"/>
+                    </union>
+                    <reg name="small" regnum="1" bitsize="128" type="small"/>
+                    <reg name="pswa" regnum="2" bitsize="64"/>
+                  </feature>
+                </target>"""
+                )
+            },
+            "3fc0000040200000" + "0000002a" + "00" * 20,
+        )
+
+        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
+        union = frame.FindRegister("u0")
+        self.assertAlmostEqual(
+            union.GetChildMemberWithName("scalar").GetData().float[0], 1.5
+        )
+        lanes = union.GetChildMemberWithName("lanes")
+        self.assertEqual(
+            [lanes.GetChildAtIndex(i).GetData().float[0] for i in range(2)],
+            [1.5, 2.5],
+        )
+        ull = process.GetTarget().GetBasicType(lldb.eBasicTypeUnsignedLongLong)
+        self.assertEqual(union.Cast(ull).GetValueAsUnsigned(), 0x3FC0000040200000)
+
+        small = frame.FindRegister("small")
+        self.assertEqual(small.GetByteSize(), 16)
+        self.assertEqual(small.GetType().GetByteSize(), 4)
+        self.assertEqual(small.GetChildMemberWithName("value").GetValueAsUnsigned(), 42)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_cli_summary_and_member_paths(self):
+        process = self.setup_register_test(
+            """\
+            <vector id="v4f" type="ieee_single" count="4"/>
+            <union id="views">
+              <field name="f32" type="ieee_single"/>
+              <field name="f64" type="ieee_double"/>
+              <field name="u64" type="uint64"/>
+            </union>
+            <union id="vector_views">
+              <field name="floats" type="v4f"/>
+              <field name="raw" type="uint128"/>
+            </union>
+            <union id="nested">
+              <field name="view" type="vector_views"/>
+              <field name="raw" type="uint128"/>
+            </union>
+            <reg name="u0" altname="alt_u0" regnum="0" bitsize="64" type="views"/>
+            <reg name="u1" regnum="1" bitsize="128" type="vector_views"/>
+            <reg name="n0" regnum="2" bitsize="128" type="nested"/>
+            <reg name="pc" bitsize="64"/>""",
+            "0000c03fffffffff" + "0000c03f000020400000604000009040" * 2 + "00" * 8,
+        )
+
+        union = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("u0")
+        self.assertEqual(
+            union.GetSummary(),
+            "(f32 = 1.5, f64 = NaN, u64 = 18446744070484131840)",
+        )
+
+        self.expect(
+            "register read u0",
+            substrs=[
+                "u0 = 0xffffffff3fc00000",
+                "     = (f32 = 1.5, f64 = NaN, u64 = 18446744070484131840)",
+            ],
+        )
+        self.expect("register read u0.f32", substrs=["u0.f32 = 1.5"])
+        self.expect(
+            "register read u0.u64 --format X",
+            substrs=["u0.u64 = 0xFFFFFFFF3FC00000"],
+        )
+        self.expect(
+            "register read u0 --format X",
+            substrs=["u0 = 0xFFFFFFFF3FC00000"],
+        )
+        self.expect("register read u0 --format X", matching=False, substrs=["f32 ="])
+        self.expect("register read -A alt_u0.f32", substrs=["alt_u0.f32 = 1.5"])
+        self.expect("register read $u0.f64", substrs=["u0.f64 = NaN"])
+        self.expect("register read u1.floats[2]", substrs=["u1.floats[2] = 3.5"])
+        self.expect(
+            "register read n0.view.floats[3]",
+            substrs=["n0.view.floats[3] = 4.5"],
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_exact_dotted_register_name_takes_precedence(self):
+        self.setup_register_test(
+            """\
+            <union id="views">
+              <field name="f32" type="ieee_single"/>
+              <field name="raw" type="uint64"/>
+            </union>
+            <reg name="u0" regnum="0" bitsize="64" type="views"/>
+            <reg name="u0.f32" regnum="1" bitsize="32"/>
+            <reg name="u0.view" regnum="2" bitsize="64" type="views"/>
+            <reg name="pc" bitsize="64"/>""",
+            "0000c03f00000000" + "2a000000" + "0000c03f00000000" + "00" * 8,
+        )
+
+        self.expect("register read u0.f32", substrs=["u0.f32 = 0x0000002a"])
+        self.expect("register read u0.view.f32", substrs=["u0.view.f32 = 1.5"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_invalid_union_member_paths(self):
+        self.setup_register_test(
+            """\
+            <union id="views">
+              <field name="f32" type="ieee_single"/>
+              <field name="raw" type="uint64"/>
+            </union>
+            <vector id="v2views" type="views" count="2"/>
+            <reg name="u0" regnum="0" bitsize="64" type="views"/>
+            <reg name="v0" regnum="1" bitsize="128" type="v2views"/>
+            <reg name="pc" regnum="2" bitsize="64"/>""",
+            "00" * 32,
+        )
+
+        self.expect("register read u0.missing", error=True, substrs=["No field path"])
+        self.expect("register read u0.", error=True, substrs=["No field path"])
+        self.expect("register read u0..f32", error=True, substrs=["No field path"])
+        for path in ["u0[0]", "v0[", "v0[0", "v0[]", "v0[x]", "v0[0]junk"]:
+            self.expect(
+                "register read " + path,
+                error=True,
+                substrs=["No field path"],
+            )
+        self.expect(
+            "register read v0[9].f32",
+            error=True,
+            substrs=["No field path '[9].f32'"],
+        )
+        self.expect(
+            "register read pc.field",
+            error=True,
+            substrs=["does not have a structured type"],
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    @skipIfLLVMTargetMissing("SystemZ")
+    def test_big_endian_union_cli(self):
+        self.setup_multidoc_test(
+            {
+                "target.xml": dedent(
+                    """\
+                <?xml version="1.0"?>
+                <target version="1.0">
+                  <architecture>s390x</architecture>
+                  <feature name="test.register.unions">
+                    <vector id="v2f" type="ieee_single" count="2"/>
+                    <union id="views">
+                      <field name="scalar" type="ieee_single"/>
+                      <field name="lanes" type="v2f"/>
+                    </union>
+                    <reg name="u0" regnum="0" bitsize="64" type="views"/>
+                    <reg name="pswa" regnum="1" bitsize="64"/>
+                  </feature>
+                </target>"""
+                )
+            },
+            "3fc0000040200000" + "00" * 8,
+        )
+
+        self.expect(
+            "register read u0",
+            substrs=[
+                "u0 = 0x3fc0000040200000",
+                "     = (scalar = 1.5, lanes = (1.5, 2.5))",
+            ],
+        )

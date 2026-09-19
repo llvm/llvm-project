@@ -10,6 +10,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Core/DumpRegisterValue.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -23,11 +24,16 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObjectRegister.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -39,6 +45,61 @@ using namespace lldb_private;
 static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
   const char *reg_name = use_primary_name ? reg_info->name : reg_info->alt_name;
   return reg_name ? strlen(reg_name) : 0;
+}
+
+static std::pair<const RegisterInfo *, llvm::StringRef>
+FindRegisterWithExpressionPath(RegisterContext &reg_ctx, llvm::StringRef name) {
+  if (const RegisterInfo *reg_info = reg_ctx.GetRegisterInfoByName(name))
+    return {reg_info, {}};
+
+  size_t search_end = name.size();
+  while (search_end) {
+    size_t split = name.take_front(search_end).find_last_of(".[");
+    if (split == llvm::StringRef::npos)
+      break;
+    if (const RegisterInfo *reg_info =
+            reg_ctx.GetRegisterInfoByName(name.take_front(split)))
+      return {reg_info, name.drop_front(split)};
+    search_end = split;
+  }
+  return {nullptr, {}};
+}
+
+static bool HasValidRegisterIndexes(ValueObjectSP value,
+                                    llvm::StringRef expression_path) {
+  size_t search_from = 0;
+  while (true) {
+    size_t open_bracket = expression_path.find('[', search_from);
+    if (open_bracket == llvm::StringRef::npos)
+      return true;
+
+    size_t close_bracket = expression_path.find(']', open_bracket + 1);
+    if (close_bracket == llvm::StringRef::npos)
+      return false;
+
+    uint32_t index;
+    if (expression_path.slice(open_bracket + 1, close_bracket)
+            .getAsInteger(0, index))
+      return false;
+
+    llvm::StringRef parent_path = expression_path.take_front(open_bracket);
+    ValueObjectSP parent = parent_path.empty()
+                               ? value
+                               : value->GetValueForExpressionPath(parent_path);
+    if (!parent)
+      return false;
+
+    llvm::Expected<uint32_t> num_children = parent->GetNumChildren();
+    if (!num_children) {
+      llvm::consumeError(num_children.takeError());
+      return false;
+    }
+    if (index >= *num_children)
+      return false;
+
+    search_from = close_bracket + 1;
+  }
+  return true;
 }
 
 static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
@@ -78,8 +139,9 @@ static size_t ComputeLongestRegisterName(Args &command,
     llvm::StringRef arg_str = entry.ref();
     arg_str.consume_front("$");
 
-    if (const RegisterInfo *reg_info =
-            reg_ctx->GetRegisterInfoByName(arg_str)) {
+    const RegisterInfo *reg_info =
+        FindRegisterWithExpressionPath(*reg_ctx, arg_str).first;
+    if (reg_info) {
       name_right_align_at = std::max(name_right_align_at,
                                      GetNameSize(reg_info, use_primary_name));
     }
@@ -158,6 +220,71 @@ public:
       }
     }
     strm.EOL();
+    return true;
+  }
+
+  bool DumpRegisterField(const ExecutionContext &exe_ctx, Stream &strm,
+                         const RegisterInfo &reg_info,
+                         llvm::StringRef expression_path,
+                         size_t reg_name_right_align_at,
+                         CommandReturnObject &result) {
+    if (!llvm::isa_and_present<RegisterTypeUnion, RegisterTypeVector>(
+            reg_info.register_type)) {
+      result.AppendErrorWithFormat(
+          "Register '%s' does not have a structured type", reg_info.name);
+      return false;
+    }
+
+    StackFrame *frame = exe_ctx.GetFramePtr();
+    if (!frame)
+      return false;
+    lldb::RegisterContextSP reg_ctx_sp = frame->GetRegisterContextSP();
+    ValueObjectSP register_value =
+        ValueObjectRegister::Create(frame, reg_ctx_sp, &reg_info);
+    ValueObject::ExpressionPathScanEndReason reason =
+        ValueObject::eExpressionPathScanEndReasonUnknown;
+    ValueObject::ExpressionPathEndResultType result_type =
+        ValueObject::eExpressionPathEndResultTypeInvalid;
+    ValueObjectSP child;
+    // Generic expression paths permit out-of-bounds synthetic array members,
+    // but register paths must stay within the bytes supplied by the target.
+    if (HasValidRegisterIndexes(register_value, expression_path))
+      child = register_value->GetValueForExpressionPath(expression_path,
+                                                        &reason, &result_type);
+    if (!child ||
+        reason != ValueObject::eExpressionPathScanEndReasonEndOfString ||
+        result_type != ValueObject::eExpressionPathEndResultTypePlain) {
+      llvm::StringRef error_path = expression_path;
+      error_path.consume_front(".");
+      result.AppendErrorWithFormat("No field path '%s' in register '%s'",
+                                   error_path.str().c_str(), reg_info.name);
+      return false;
+    }
+
+    DumpValueObjectOptions options(*child);
+    options.SetHideRootType(true)
+        .SetHideRootName(true)
+        .SetHideName(true)
+        .SetAllowOnelinerMode(true);
+    if (m_format_options.GetFormatValue().OptionWasSet())
+      options.SetFormat(m_format_options.GetFormatValue().GetCurrentValue());
+
+    StreamString value_stream;
+    if (llvm::Error error = child->Dump(value_stream, options)) {
+      result.AppendError(toString(std::move(error)));
+      return false;
+    }
+
+    llvm::StringRef value = value_stream.GetString();
+    value.consume_back("\n");
+    const char *register_name =
+        m_command_options.alternate_name && reg_info.alt_name
+            ? reg_info.alt_name
+            : reg_info.name;
+    strm.Indent();
+    strm.Printf("%*s%s = ", static_cast<int>(reg_name_right_align_at),
+                register_name, expression_path.str().c_str());
+    strm << value << '\n';
     return true;
   }
 
@@ -264,14 +391,19 @@ protected:
           auto arg_str = entry.ref();
           arg_str.consume_front("$");
 
-          if (const RegisterInfo *reg_info =
-                  reg_ctx->GetRegisterInfoByName(arg_str)) {
+          auto [reg_info, expression_path] =
+              FindRegisterWithExpressionPath(*reg_ctx, arg_str);
+
+          if (reg_info && expression_path.empty()) {
             // If they have asked for a specific format don't obscure that by
             // printing a structured value afterwards.
             bool print_type = !m_format_options.GetFormatValue().OptionWasSet();
             if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info, print_type,
                               reg_name_right_align_at))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
+          } else if (reg_info) {
+            DumpRegisterField(m_exe_ctx, strm, *reg_info, expression_path,
+                              reg_name_right_align_at, result);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'",
                                          arg_str.str().c_str());
