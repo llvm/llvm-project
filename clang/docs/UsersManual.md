@@ -3037,6 +3037,17 @@ at block entry, which is more expensive and no more useful for the jumps this
 feature exists to guard against. Clang applies the C++ rule in both languages.
 :::
 
+:::{option} -f[no-]stack-protector-layout-only
+
+When specified, stack protectors will not be inserted, but stack variables will
+continue to be rearranged as if they were. This allows targets that have
+features that can act as pseudo-stack-protectors, like RISC-V's shadow stack,
+to benefit from the protection added by reordering stack variables.
+
+This option depends on at least `-fstack-protector`, so it will be overridden to
+being enabled with a warning, even if `-fno-stack-protector` is given.
+:::
+
 (strict_aliasing)=
 (strict-aliasing)=
 

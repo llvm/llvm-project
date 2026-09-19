@@ -172,6 +172,10 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* Added the `"stack-protector-layout-only"` attribute. When specified, the
+  `ssp`/`sspstrong`/`sspreq` attributes still make changes to the layout of the
+  stack frame, but do not actually insert any stack protectors.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
@@ -386,6 +390,10 @@ Makes programs 10x faster by doing Special New Thing.
   ptradd representation.
 
 ### Changes to the CodeGen infrastructure
+
+* `MachineFrameInfo` gained a `stackProtectorLayoutOnly` flag. It tells the
+  prolog/epilog inserter and local stack slot allocation to lay out the stack
+  objects as if the function had a stack protector, even though it does not.
 
 * Fixed a crash
   ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when

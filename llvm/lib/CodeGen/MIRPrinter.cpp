@@ -384,6 +384,7 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.AdjustsStack = MFI.adjustsStack();
   YamlMFI.HasCalls = MFI.hasCalls();
   YamlMFI.FramePointerPolicy = MFI.getFramePointerPolicy();
+  YamlMFI.StackProtectorLayoutOnly = MFI.hasStackProtectorLayoutOnly();
   YamlMFI.MaxCallFrameSize = MFI.isMaxCallFrameSizeComputed()
     ? MFI.getMaxCallFrameSize() : ~0u;
   YamlMFI.CVBytesOfCalleeSavedRegisters =
