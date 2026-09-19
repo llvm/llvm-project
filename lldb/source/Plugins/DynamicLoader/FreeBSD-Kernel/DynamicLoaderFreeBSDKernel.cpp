@@ -459,6 +459,7 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
         target.SetSectionLoadAddress(on_disk_section_sp,
                                      on_disk_section_sp->GetFileAddress() +
                                          fixed_slide);
+        ++num_load_sections;
 
       } else {
         const Section *memory_section =
