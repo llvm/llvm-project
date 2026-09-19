@@ -740,6 +740,9 @@ features cannot lower the translation-unit ABI level;
   when calling a explicit object member function. (#GH218829)
 
 #### Miscellaneous Bug Fixes
+- Fixed incorrect header search when filename starts with two path separators.
+  Clang now treats path in `#include <//foo.h>` as `/foo.h` instead of `foo.h`.
+  (GH#133174)
 
 #### Miscellaneous Clang Crashes Fixed
 
