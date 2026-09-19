@@ -96,36 +96,6 @@ public:
       }
     }
   }
-
-  void splice_front(rcu_atomic_list_view& other) noexcept {
-    if (other.entry_.load(std::memory_order_relaxed).head_ == nullptr) {
-      return;
-    }
-
-    entry to_be_inserted = other.entry_.exchange(entry{nullptr, nullptr}, std::memory_order_relaxed);
-
-    auto original_next = to_be_inserted.tail_->__next_;
-
-    auto expected_entry = entry_.load(std::memory_order_relaxed);
-
-    while (true) {
-      auto new_entry = [&] {
-        if (expected_entry.head_ == nullptr) {
-          return to_be_inserted;
-        } else {
-          to_be_inserted.tail_->__next_ = expected_entry.head_;
-          return entry{to_be_inserted.head_, expected_entry.tail_};
-        }
-      }();
-
-      if (entry_.compare_exchange_weak(
-              expected_entry, new_entry, std::memory_order_acq_rel, std::memory_order_relaxed)) {
-        break;
-      } else {
-        to_be_inserted.tail_->__next_ = original_next;
-      }
-    }
-  }
 };
 
 void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexcept {

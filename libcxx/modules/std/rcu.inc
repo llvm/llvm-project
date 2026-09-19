@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#  if _LIBCPP_STD_VER >= 23
+#if _LIBCPP_STD_VER >= 26
   // 2.2.3, class template rcu_obj_base using std::rcu_obj_base;
   // 2.2.4, class rcu_domain
   using std::rcu_domain;
@@ -16,5 +16,5 @@ export namespace std {
   using std::rcu_barrier;
   using std::rcu_retire;
   using std::rcu_synchronize;
-#  endif // _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 26
 } // namespace std
