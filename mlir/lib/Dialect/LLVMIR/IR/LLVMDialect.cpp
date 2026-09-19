@@ -565,8 +565,7 @@ ParseResult mlir::LLVM::parseSwitchOpCases(
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
     if (!parser.parseOptionalLParen()) {
-      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
-                                  /*allowResultNumber=*/false) ||
+      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None) ||
           parser.parseColonTypeList(operandTypes) || parser.parseRParen())
         return failure();
     }
