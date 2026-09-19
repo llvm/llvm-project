@@ -17,8 +17,8 @@ define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ -1, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ -1, %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[TMP20]]
@@ -29,8 +29,8 @@ define i32 @simple_find_last_reduction(i64 %N, ptr %data, i32 %a) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = freeze i1 [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12]] = select i1 [[TMP11]], i1 [[TMP7]], i1 [[TMP0]]
-; CHECK-NEXT:    [[TMP13]] = select i1 [[TMP11]], i1 [[TMP8]], i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP12]] = select i1 [[TMP11]], i1 [[TMP9]], i1 [[TMP3]]
+; CHECK-NEXT:    [[TMP13]] = select i1 [[TMP11]], i1 [[TMP10]], i1 [[TMP22]]
 ; CHECK-NEXT:    [[TMP14]] = select i1 [[TMP11]], i32 [[TMP5]], i32 [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP19]] = select i1 [[TMP11]], i32 [[TMP21]], i32 [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

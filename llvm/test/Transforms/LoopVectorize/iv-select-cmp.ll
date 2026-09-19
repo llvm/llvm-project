@@ -1877,7 +1877,7 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x float> [ <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; CHECK-VF4IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[ARRAYIDX]], align 8
 ; CHECK-VF4IC1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV]]
@@ -1885,7 +1885,7 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC1-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-VF4IC1-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; CHECK-VF4IC1-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]
+; CHECK-VF4IC1-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP6]], <4 x i1> [[TMP14]]
 ; CHECK-VF4IC1-NEXT:    [[TMP9]] = select i1 [[TMP7]], <4 x float> [[VEC_IND]], <4 x float> [[VEC_PHI]]
 ; CHECK-VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-VF4IC1-NEXT:    [[VEC_IND_NEXT]] = fadd <4 x float> [[VEC_IND]], splat (float 4.000000e+00)
@@ -1940,9 +1940,9 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP31:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x float> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP32:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x float> [ [[BROADCAST_SPLAT]], %[[VECTOR_PH]] ], [ [[TMP33:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP27:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[TMP18:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[TMP18:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP27:%.*]], %[[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[TMP20:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[TMP25:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = fadd <4 x float> [[VEC_IND]], splat (float 4.000000e+00)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = fadd <4 x float> [[STEP_ADD]], splat (float 4.000000e+00)
@@ -1975,10 +1975,10 @@ define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %
 ; CHECK-VF4IC4-NEXT:    [[TMP22:%.*]] = or <4 x i1> [[TMP41]], [[TMP21]]
 ; CHECK-VF4IC4-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP22]], [[TMP23]]
 ; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
-; CHECK-VF4IC4-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]
-; CHECK-VF4IC4-NEXT:    [[TMP27]] = select i1 [[TMP7]], <4 x i1> [[TMP15]], <4 x i1> [[TMP14]]
-; CHECK-VF4IC4-NEXT:    [[TMP28]] = select i1 [[TMP7]], <4 x i1> [[TMP16]], <4 x i1> [[TMP18]]
-; CHECK-VF4IC4-NEXT:    [[TMP29]] = select i1 [[TMP7]], <4 x i1> [[TMP17]], <4 x i1> [[TMP25]]
+; CHECK-VF4IC4-NEXT:    [[TMP8]] = select i1 [[TMP7]], <4 x i1> [[TMP6]], <4 x i1> [[TMP14]]
+; CHECK-VF4IC4-NEXT:    [[TMP27]] = select i1 [[TMP7]], <4 x i1> [[TMP19]], <4 x i1> [[TMP18]]
+; CHECK-VF4IC4-NEXT:    [[TMP28]] = select i1 [[TMP7]], <4 x i1> [[TMP21]], <4 x i1> [[TMP20]]
+; CHECK-VF4IC4-NEXT:    [[TMP29]] = select i1 [[TMP7]], <4 x i1> [[TMP23]], <4 x i1> [[TMP25]]
 ; CHECK-VF4IC4-NEXT:    [[TMP9]] = select i1 [[TMP7]], <4 x float> [[VEC_IND]], <4 x float> [[VEC_PHI]]
 ; CHECK-VF4IC4-NEXT:    [[TMP31]] = select i1 [[TMP7]], <4 x float> [[STEP_ADD]], <4 x float> [[VEC_PHI1]]
 ; CHECK-VF4IC4-NEXT:    [[TMP32]] = select i1 [[TMP7]], <4 x float> [[STEP_ADD_2]], <4 x float> [[VEC_PHI2]]
