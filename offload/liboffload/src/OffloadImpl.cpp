@@ -1642,5 +1642,11 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   return Error::success();
 }
 
+// Temporary helpers to help transition of libomptarget to liboffload
+extern "C" GenericPluginTy *
+__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
+  return Platform->Plugin.get();
+}
+
 } // namespace offload
 } // namespace llvm
