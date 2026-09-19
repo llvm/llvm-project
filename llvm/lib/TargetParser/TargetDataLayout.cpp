@@ -389,6 +389,10 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
   // 64-bit integers are naturally aligned.
   Ret += "-i64:64";
 
+  // 128-bit integers are aligned only to 64 bits, unlike the 128-bit default
+  // of the data layout.
+  Ret += "-i128:64";
+
   // 128-bit floats are aligned only to 64 bits.
   Ret += "-f128:64";
 

@@ -764,7 +764,7 @@ define amdgpu_kernel void @kernel_uses_read_register_a56_59(ptr addrspace(1) %pt
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_uses_read_register_a56_59(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR20:[0-9]+]] {
 ; CHECK-NEXT:    [[REG:%.*]] = call i128 @llvm.read_register.i128(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    store i128 [[REG]], ptr addrspace(1) [[PTR]], align 8
+; CHECK-NEXT:    store i128 [[REG]], ptr addrspace(1) [[PTR]], align 16
 ; CHECK-NEXT:    call void @use_most()
 ; CHECK-NEXT:    ret void
 ;

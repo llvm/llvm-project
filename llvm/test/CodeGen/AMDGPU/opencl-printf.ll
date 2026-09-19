@@ -292,9 +292,9 @@ define amdgpu_kernel void @format_str_d(i1 %i1, i4 %i4, i8 %i8, i24 %i24, i16 %i
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 4
 ; GCN-NEXT:    store i64 [[I64:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], align 8
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR6:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], i32 8
-; GCN-NEXT:    store i96 [[I96:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 8
+; GCN-NEXT:    store i96 [[I96:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 16
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR7:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], i32 16
-; GCN-NEXT:    store i128 [[I128:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 8
+; GCN-NEXT:    store i128 [[I128:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 16
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR8:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], i32 16
 ; GCN-NEXT:    store i32 1234, ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], align 4
 ; GCN-NEXT:    br label [[TMP7]]
@@ -335,9 +335,9 @@ define amdgpu_kernel void @format_str_u(i1 %i1, i4 %i4, i8 %i8, i24 %i24, i16 %i
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR5:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR4]], i32 4
 ; GCN-NEXT:    store i64 [[I64:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], align 8
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR6:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR5]], i32 8
-; GCN-NEXT:    store i96 [[I96:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 8
+; GCN-NEXT:    store i96 [[I96:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], align 16
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR7:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR6]], i32 16
-; GCN-NEXT:    store i128 [[I128:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 8
+; GCN-NEXT:    store i128 [[I128:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], align 16
 ; GCN-NEXT:    [[PRINTBUFFNEXTPTR8:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR7]], i32 16
 ; GCN-NEXT:    store i32 1234, ptr addrspace(1) [[PRINTBUFFNEXTPTR8]], align 4
 ; GCN-NEXT:    br label [[TMP7]]

@@ -252,9 +252,9 @@ define amdgpu_kernel void @local_store_i48(ptr addrspace(3) %ptr, i48 %arg) #0 {
 define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ; HAWAII-LABEL: local_store_i65:
 ; HAWAII:       ; %bb.0:
-; HAWAII-NEXT:    s_load_dword s2, s[8:9], 0x4
+; HAWAII-NEXT:    s_load_dword s2, s[8:9], 0x6
 ; HAWAII-NEXT:    s_load_dword s3, s[8:9], 0x0
-; HAWAII-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x2
+; HAWAII-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x4
 ; HAWAII-NEXT:    s_mov_b32 m0, -1
 ; HAWAII-NEXT:    s_waitcnt lgkmcnt(0)
 ; HAWAII-NEXT:    s_and_b32 s2, s2, 1
@@ -268,9 +268,9 @@ define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ;
 ; FIJI-LABEL: local_store_i65:
 ; FIJI:       ; %bb.0:
-; FIJI-NEXT:    s_load_dword s2, s[8:9], 0x10
+; FIJI-NEXT:    s_load_dword s2, s[8:9], 0x18
 ; FIJI-NEXT:    s_load_dword s3, s[8:9], 0x0
-; FIJI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; FIJI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x10
 ; FIJI-NEXT:    s_mov_b32 m0, -1
 ; FIJI-NEXT:    s_waitcnt lgkmcnt(0)
 ; FIJI-NEXT:    s_and_b32 s2, s2, 1
@@ -284,9 +284,9 @@ define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ;
 ; GFX9-LABEL: local_store_i65:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x10
+; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x18
 ; GFX9-NEXT:    s_load_dword s3, s[8:9], 0x0
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x10
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_and_b32 s2, s2, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s3
@@ -300,9 +300,9 @@ define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ; GFX10-LABEL: local_store_i65:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    s_load_dword s2, s[8:9], 0x10
+; GFX10-NEXT:    s_load_dword s2, s[8:9], 0x18
 ; GFX10-NEXT:    s_load_dword s3, s[8:9], 0x0
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x10
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_and_b32 s2, s2, 1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s3
@@ -316,9 +316,9 @@ define amdgpu_kernel void @local_store_i65(ptr addrspace(3) %ptr, i65 %arg) #0 {
 ; GFX11-LABEL: local_store_i65:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x10
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x18
 ; GFX11-NEXT:    s_load_b32 s3, s[4:5], 0x0
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_and_b32 s2, s2, 1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

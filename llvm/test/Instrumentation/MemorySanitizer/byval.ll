@@ -19,14 +19,14 @@ define i128 @ByValArgument(i32, ptr byval(i128) %p) sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP3]], ptr align 8 getelementptr (i8, ptr @__msan_param_tls, i64 8), i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP5]], ptr align 4 getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[X:%.*]] = load i128, ptr [[P]], align 8
+; CHECK-NEXT:    [[X:%.*]] = load i128, ptr [[P]], align 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 87960930222080
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP7]], 17592186044416
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i128, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i128, ptr [[TMP8]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 16
 ; CHECK-NEXT:    store i128 [[_MSLD]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i128 [[X]]
@@ -45,9 +45,9 @@ define i128 @ByValArgumentNoSanitize(i32, ptr byval(i128) %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[TMP3]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[X:%.*]] = load i128, ptr [[P]], align 8
+; CHECK-NEXT:    [[X:%.*]] = load i128, ptr [[P]], align 16
 ; CHECK-NEXT:    store i128 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_origin_tls, align 4
 ; CHECK-NEXT:    ret i128 [[X]]
@@ -87,7 +87,7 @@ define void @ByValForwardNoSanitize(i32, ptr byval(i128) %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[TMP3]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @Fn(ptr [[P]])
@@ -135,7 +135,7 @@ define void @ByValForwardByValNoSanitize(i32, ptr byval(i128) %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 17592186044416
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[TMP3]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i64 [[TMP6]], 87960930222080

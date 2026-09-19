@@ -438,9 +438,17 @@ entry:
 define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS2-LABEL: shl_i128:
 ; MIPS2:       # %bb.0: # %entry
-; MIPS2-NEXT:    addiu $sp, $sp, -32
-; MIPS2-NEXT:    .cfi_def_cfa_offset 32
-; MIPS2-NEXT:    lw $1, 60($sp)
+; MIPS2-NEXT:    addiu $sp, $sp, -48
+; MIPS2-NEXT:    .cfi_def_cfa_offset 48
+; MIPS2-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS2-NEXT:    .cfi_offset 31, -4
+; MIPS2-NEXT:    .cfi_offset 30, -8
+; MIPS2-NEXT:    move $fp, $sp
+; MIPS2-NEXT:    .cfi_def_cfa_register 30
+; MIPS2-NEXT:    addiu $1, $zero, -16
+; MIPS2-NEXT:    and $sp, $sp, $1
+; MIPS2-NEXT:    lw $1, 76($fp)
 ; MIPS2-NEXT:    srl $2, $1, 3
 ; MIPS2-NEXT:    sw $7, 12($sp)
 ; MIPS2-NEXT:    sw $6, 8($sp)
@@ -448,7 +456,7 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS2-NEXT:    sw $4, 0($sp)
 ; MIPS2-NEXT:    andi $2, $2, 12
 ; MIPS2-NEXT:    addiu $3, $sp, 0
-; MIPS2-NEXT:    addu $4, $3, $2
+; MIPS2-NEXT:    or $4, $3, $2
 ; MIPS2-NEXT:    sw $zero, 28($sp)
 ; MIPS2-NEXT:    sw $zero, 24($sp)
 ; MIPS2-NEXT:    sw $zero, 20($sp)
@@ -472,14 +480,25 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS2-NEXT:    srlv $4, $4, $7
 ; MIPS2-NEXT:    or $4, $5, $4
 ; MIPS2-NEXT:    sllv $5, $6, $1
+; MIPS2-NEXT:    move $sp, $fp
+; MIPS2-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS2-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS2-NEXT:    jr $ra
-; MIPS2-NEXT:    addiu $sp, $sp, 32
+; MIPS2-NEXT:    addiu $sp, $sp, 48
 ;
 ; MIPS32-LABEL: shl_i128:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    addiu $sp, $sp, -32
-; MIPS32-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32-NEXT:    lw $1, 60($sp)
+; MIPS32-NEXT:    addiu $sp, $sp, -48
+; MIPS32-NEXT:    .cfi_def_cfa_offset 48
+; MIPS32-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    .cfi_offset 30, -8
+; MIPS32-NEXT:    move $fp, $sp
+; MIPS32-NEXT:    .cfi_def_cfa_register 30
+; MIPS32-NEXT:    addiu $1, $zero, -16
+; MIPS32-NEXT:    and $sp, $sp, $1
+; MIPS32-NEXT:    lw $1, 76($fp)
 ; MIPS32-NEXT:    srl $2, $1, 3
 ; MIPS32-NEXT:    sw $7, 12($sp)
 ; MIPS32-NEXT:    sw $6, 8($sp)
@@ -487,7 +506,7 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32-NEXT:    sw $4, 0($sp)
 ; MIPS32-NEXT:    andi $2, $2, 12
 ; MIPS32-NEXT:    addiu $3, $sp, 0
-; MIPS32-NEXT:    addu $4, $3, $2
+; MIPS32-NEXT:    or $4, $3, $2
 ; MIPS32-NEXT:    sw $zero, 28($sp)
 ; MIPS32-NEXT:    sw $zero, 24($sp)
 ; MIPS32-NEXT:    sw $zero, 20($sp)
@@ -511,14 +530,25 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32-NEXT:    srlv $4, $4, $7
 ; MIPS32-NEXT:    or $4, $5, $4
 ; MIPS32-NEXT:    sllv $5, $6, $1
+; MIPS32-NEXT:    move $sp, $fp
+; MIPS32-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 32
+; MIPS32-NEXT:    addiu $sp, $sp, 48
 ;
 ; MIPS32R2-LABEL: shl_i128:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    addiu $sp, $sp, -32
-; MIPS32R2-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R2-NEXT:    lw $1, 60($sp)
+; MIPS32R2-NEXT:    addiu $sp, $sp, -48
+; MIPS32R2-NEXT:    .cfi_def_cfa_offset 48
+; MIPS32R2-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R2-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R2-NEXT:    .cfi_offset 31, -4
+; MIPS32R2-NEXT:    .cfi_offset 30, -8
+; MIPS32R2-NEXT:    move $fp, $sp
+; MIPS32R2-NEXT:    .cfi_def_cfa_register 30
+; MIPS32R2-NEXT:    addiu $1, $zero, -16
+; MIPS32R2-NEXT:    and $sp, $sp, $1
+; MIPS32R2-NEXT:    lw $1, 76($fp)
 ; MIPS32R2-NEXT:    srl $2, $1, 3
 ; MIPS32R2-NEXT:    sw $7, 12($sp)
 ; MIPS32R2-NEXT:    sw $6, 8($sp)
@@ -526,7 +556,7 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R2-NEXT:    sw $4, 0($sp)
 ; MIPS32R2-NEXT:    andi $2, $2, 12
 ; MIPS32R2-NEXT:    addiu $3, $sp, 0
-; MIPS32R2-NEXT:    addu $4, $3, $2
+; MIPS32R2-NEXT:    or $4, $3, $2
 ; MIPS32R2-NEXT:    sw $zero, 28($sp)
 ; MIPS32R2-NEXT:    sw $zero, 24($sp)
 ; MIPS32R2-NEXT:    sw $zero, 20($sp)
@@ -550,14 +580,25 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R2-NEXT:    srlv $4, $4, $7
 ; MIPS32R2-NEXT:    or $4, $5, $4
 ; MIPS32R2-NEXT:    sllv $5, $6, $1
+; MIPS32R2-NEXT:    move $sp, $fp
+; MIPS32R2-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R2-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    addiu $sp, $sp, 32
+; MIPS32R2-NEXT:    addiu $sp, $sp, 48
 ;
 ; MIPS32R6-LABEL: shl_i128:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    addiu $sp, $sp, -32
-; MIPS32R6-NEXT:    .cfi_def_cfa_offset 32
-; MIPS32R6-NEXT:    lw $1, 60($sp)
+; MIPS32R6-NEXT:    addiu $sp, $sp, -48
+; MIPS32R6-NEXT:    .cfi_def_cfa_offset 48
+; MIPS32R6-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS32R6-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MIPS32R6-NEXT:    .cfi_offset 31, -4
+; MIPS32R6-NEXT:    .cfi_offset 30, -8
+; MIPS32R6-NEXT:    move $fp, $sp
+; MIPS32R6-NEXT:    .cfi_def_cfa_register 30
+; MIPS32R6-NEXT:    addiu $1, $zero, -16
+; MIPS32R6-NEXT:    and $sp, $sp, $1
+; MIPS32R6-NEXT:    lw $1, 76($fp)
 ; MIPS32R6-NEXT:    srl $2, $1, 3
 ; MIPS32R6-NEXT:    sw $7, 12($sp)
 ; MIPS32R6-NEXT:    sw $6, 8($sp)
@@ -565,7 +606,7 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R6-NEXT:    sw $4, 0($sp)
 ; MIPS32R6-NEXT:    andi $2, $2, 12
 ; MIPS32R6-NEXT:    addiu $3, $sp, 0
-; MIPS32R6-NEXT:    addu $4, $3, $2
+; MIPS32R6-NEXT:    or $4, $3, $2
 ; MIPS32R6-NEXT:    sw $zero, 28($sp)
 ; MIPS32R6-NEXT:    sw $zero, 24($sp)
 ; MIPS32R6-NEXT:    sw $zero, 20($sp)
@@ -589,8 +630,11 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R6-NEXT:    srlv $4, $4, $7
 ; MIPS32R6-NEXT:    or $4, $5, $4
 ; MIPS32R6-NEXT:    sllv $5, $6, $1
+; MIPS32R6-NEXT:    move $sp, $fp
+; MIPS32R6-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS32R6-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    addiu $sp, $sp, 32
+; MIPS32R6-NEXT:    addiu $sp, $sp, 48
 ;
 ; MIPS3-LABEL: shl_i128:
 ; MIPS3:       # %bb.0: # %entry
@@ -678,11 +722,19 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ;
 ; MMR3-LABEL: shl_i128:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    addiusp -40
-; MMR3-NEXT:    .cfi_def_cfa_offset 40
+; MMR3-NEXT:    addiusp -48
+; MMR3-NEXT:    .cfi_def_cfa_offset 48
+; MMR3-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MMR3-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
 ; MMR3-NEXT:    swp $16, 32($sp)
-; MMR3-NEXT:    .cfi_offset 17, -4
-; MMR3-NEXT:    .cfi_offset 16, -8
+; MMR3-NEXT:    .cfi_offset 31, -4
+; MMR3-NEXT:    .cfi_offset 30, -8
+; MMR3-NEXT:    .cfi_offset 17, -12
+; MMR3-NEXT:    .cfi_offset 16, -16
+; MMR3-NEXT:    move $fp, $sp
+; MMR3-NEXT:    .cfi_def_cfa_register 30
+; MMR3-NEXT:    addiu $1, $zero, -16
+; MMR3-NEXT:    and $sp, $sp, $1
 ; MMR3-NEXT:    li16 $2, 0
 ; MMR3-NEXT:    sw $2, 28($sp)
 ; MMR3-NEXT:    sw $2, 24($sp)
@@ -690,11 +742,11 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    sw $2, 16($sp)
 ; MMR3-NEXT:    swp $6, 8($sp)
 ; MMR3-NEXT:    swp $4, 0($sp)
-; MMR3-NEXT:    lw $2, 68($sp)
+; MMR3-NEXT:    lw $2, 76($fp)
 ; MMR3-NEXT:    srl16 $3, $2, 3
 ; MMR3-NEXT:    andi $3, $3, 12
 ; MMR3-NEXT:    addiur1sp $4, 0
-; MMR3-NEXT:    addu16 $4, $4, $3
+; MMR3-NEXT:    or16 $4, $3
 ; MMR3-NEXT:    lw16 $6, 8($4)
 ; MMR3-NEXT:    lw16 $7, 4($4)
 ; MMR3-NEXT:    andi16 $5, $2, 31
@@ -714,14 +766,25 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    srlv $4, $4, $1
 ; MMR3-NEXT:    or16 $4, $6
 ; MMR3-NEXT:    sllv $5, $7, $5
+; MMR3-NEXT:    move $sp, $fp
 ; MMR3-NEXT:    lwp $16, 32($sp)
-; MMR3-NEXT:    addiusp 40
+; MMR3-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
+; MMR3-NEXT:    addiusp 48
 ; MMR3-NEXT:    jrc $ra
 ;
 ; MMR6-LABEL: shl_i128:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    addiu $sp, $sp, -32
-; MMR6-NEXT:    .cfi_def_cfa_offset 32
+; MMR6-NEXT:    addiu $sp, $sp, -48
+; MMR6-NEXT:    .cfi_def_cfa_offset 48
+; MMR6-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
+; MMR6-NEXT:    .cfi_offset 31, -4
+; MMR6-NEXT:    .cfi_offset 30, -8
+; MMR6-NEXT:    move $fp, $sp
+; MMR6-NEXT:    .cfi_def_cfa_register 30
+; MMR6-NEXT:    addiu $1, $zero, -16
+; MMR6-NEXT:    and $sp, $sp, $1
 ; MMR6-NEXT:    li16 $2, 0
 ; MMR6-NEXT:    sw $2, 28($sp)
 ; MMR6-NEXT:    sw $2, 24($sp)
@@ -731,11 +794,11 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MMR6-NEXT:    sw $6, 8($sp)
 ; MMR6-NEXT:    sw $5, 4($sp)
 ; MMR6-NEXT:    sw $4, 0($sp)
-; MMR6-NEXT:    lw $2, 60($sp)
+; MMR6-NEXT:    lw $2, 76($fp)
 ; MMR6-NEXT:    srl16 $3, $2, 3
-; MMR6-NEXT:    andi $3, $3, 12
-; MMR6-NEXT:    addiu $4, $sp, 0
-; MMR6-NEXT:    addu16 $4, $4, $3
+; MMR6-NEXT:    andi $1, $3, 12
+; MMR6-NEXT:    addiu $3, $sp, 0
+; MMR6-NEXT:    or $4, $3, $1
 ; MMR6-NEXT:    lw16 $5, 8($4)
 ; MMR6-NEXT:    lw16 $3, 4($4)
 ; MMR6-NEXT:    andi16 $6, $2, 31
@@ -755,7 +818,10 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 ; MMR6-NEXT:    srlv $4, $4, $7
 ; MMR6-NEXT:    or $4, $1, $4
 ; MMR6-NEXT:    sllv $5, $5, $6
-; MMR6-NEXT:    addiu $sp, $sp, 32
+; MMR6-NEXT:    move $sp, $fp
+; MMR6-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
+; MMR6-NEXT:    addiu $sp, $sp, 48
 ; MMR6-NEXT:    jrc $ra
 entry:
 

@@ -544,8 +544,8 @@ for.end:                                          ; preds = %for.body, %entry
 define void @test9(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  bb.nph:
-; CHECK-NEXT:    [[BASE:%.*]] = alloca i128, i32 10000, align 8
-; CHECK-NEXT:    [[DEST:%.*]] = alloca i128, i32 10000, align 8
+; CHECK-NEXT:    [[BASE:%.*]] = alloca i128, i32 10000, align 16
+; CHECK-NEXT:    [[DEST:%.*]] = alloca i128, i32 10000, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[SIZE:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i64(ptr align 16 [[DEST]], ptr align 16 [[BASE]], i64 [[TMP0]], i32 16)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -583,8 +583,8 @@ for.end:                                          ; preds = %for.body, %entry
 define void @test10(i64 %Size) nounwind ssp {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  bb.nph:
-; CHECK-NEXT:    [[BASE:%.*]] = alloca i256, i32 10000, align 8
-; CHECK-NEXT:    [[DEST:%.*]] = alloca i256, i32 10000, align 8
+; CHECK-NEXT:    [[BASE:%.*]] = alloca i256, i32 10000, align 16
+; CHECK-NEXT:    [[DEST:%.*]] = alloca i256, i32 10000, align 16
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[BB_NPH:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_BODY]] ]

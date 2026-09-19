@@ -157,15 +157,29 @@ entry:
 define signext i128 @or_i128(i128 signext %a, i128 signext %b) {
 ; GP32-LABEL: or_i128:
 ; GP32:       # %bb.0: # %entry
-; GP32-NEXT:    lw $1, 20($sp)
-; GP32-NEXT:    lw $2, 16($sp)
+; GP32-NEXT:    addiu $sp, $sp, -16
+; GP32-NEXT:    .cfi_def_cfa_offset 16
+; GP32-NEXT:    sw $ra, 12($sp) # 4-byte Folded Spill
+; GP32-NEXT:    sw $fp, 8($sp) # 4-byte Folded Spill
+; GP32-NEXT:    .cfi_offset 31, -4
+; GP32-NEXT:    .cfi_offset 30, -8
+; GP32-NEXT:    move $fp, $sp
+; GP32-NEXT:    .cfi_def_cfa_register 30
+; GP32-NEXT:    addiu $1, $zero, -16
+; GP32-NEXT:    and $sp, $sp, $1
+; GP32-NEXT:    lw $1, 36($fp)
+; GP32-NEXT:    lw $2, 32($fp)
 ; GP32-NEXT:    or $2, $4, $2
 ; GP32-NEXT:    or $3, $5, $1
-; GP32-NEXT:    lw $1, 24($sp)
+; GP32-NEXT:    lw $1, 40($fp)
 ; GP32-NEXT:    or $4, $6, $1
-; GP32-NEXT:    lw $1, 28($sp)
-; GP32-NEXT:    jr $ra
+; GP32-NEXT:    lw $1, 44($fp)
 ; GP32-NEXT:    or $5, $7, $1
+; GP32-NEXT:    move $sp, $fp
+; GP32-NEXT:    lw $fp, 8($sp) # 4-byte Folded Reload
+; GP32-NEXT:    lw $ra, 12($sp) # 4-byte Folded Reload
+; GP32-NEXT:    jr $ra
+; GP32-NEXT:    addiu $sp, $sp, 16
 ;
 ; GP64-LABEL: or_i128:
 ; GP64:       # %bb.0: # %entry
@@ -175,25 +189,53 @@ define signext i128 @or_i128(i128 signext %a, i128 signext %b) {
 ;
 ; MM32-LABEL: or_i128:
 ; MM32:       # %bb.0: # %entry
-; MM32-NEXT:    lwp $2, 16($sp)
+; MM32-NEXT:    addiusp -16
+; MM32-NEXT:    .cfi_def_cfa_offset 16
+; MM32-NEXT:    sw $ra, 12($sp) # 4-byte Folded Spill
+; MM32-NEXT:    sw $fp, 8($sp) # 4-byte Folded Spill
+; MM32-NEXT:    .cfi_offset 31, -4
+; MM32-NEXT:    .cfi_offset 30, -8
+; MM32-NEXT:    move $fp, $sp
+; MM32-NEXT:    .cfi_def_cfa_register 30
+; MM32-NEXT:    addiu $1, $zero, -16
+; MM32-NEXT:    and $sp, $sp, $1
+; MM32-NEXT:    lwp $2, 32($fp)
 ; MM32-NEXT:    or16 $2, $4
 ; MM32-NEXT:    or16 $3, $5
-; MM32-NEXT:    lw $4, 24($sp)
+; MM32-NEXT:    lw $4, 40($fp)
 ; MM32-NEXT:    or16 $4, $6
-; MM32-NEXT:    lw $5, 28($sp)
+; MM32-NEXT:    lw $5, 44($fp)
 ; MM32-NEXT:    or16 $5, $7
+; MM32-NEXT:    move $sp, $fp
+; MM32-NEXT:    lw $fp, 8($sp) # 4-byte Folded Reload
+; MM32-NEXT:    lw $ra, 12($sp) # 4-byte Folded Reload
+; MM32-NEXT:    addiusp 16
 ; MM32-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: or_i128:
 ; MM32R6:       # %bb.0: # %entry
-; MM32R6-NEXT:    lw $1, 20($sp)
-; MM32R6-NEXT:    lw $2, 16($sp)
+; MM32R6-NEXT:    addiu $sp, $sp, -16
+; MM32R6-NEXT:    .cfi_def_cfa_offset 16
+; MM32R6-NEXT:    sw $ra, 12($sp) # 4-byte Folded Spill
+; MM32R6-NEXT:    sw $fp, 8($sp) # 4-byte Folded Spill
+; MM32R6-NEXT:    .cfi_offset 31, -4
+; MM32R6-NEXT:    .cfi_offset 30, -8
+; MM32R6-NEXT:    move $fp, $sp
+; MM32R6-NEXT:    .cfi_def_cfa_register 30
+; MM32R6-NEXT:    addiu $1, $zero, -16
+; MM32R6-NEXT:    and $sp, $sp, $1
+; MM32R6-NEXT:    lw $1, 36($fp)
+; MM32R6-NEXT:    lw $2, 32($fp)
 ; MM32R6-NEXT:    or $2, $4, $2
 ; MM32R6-NEXT:    or $3, $5, $1
-; MM32R6-NEXT:    lw $1, 24($sp)
+; MM32R6-NEXT:    lw $1, 40($fp)
 ; MM32R6-NEXT:    or $4, $6, $1
-; MM32R6-NEXT:    lw $1, 28($sp)
+; MM32R6-NEXT:    lw $1, 44($fp)
 ; MM32R6-NEXT:    or $5, $7, $1
+; MM32R6-NEXT:    move $sp, $fp
+; MM32R6-NEXT:    lw $fp, 8($sp) # 4-byte Folded Reload
+; MM32R6-NEXT:    lw $ra, 12($sp) # 4-byte Folded Reload
+; MM32R6-NEXT:    addiu $sp, $sp, 16
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = or i128 %a, %b

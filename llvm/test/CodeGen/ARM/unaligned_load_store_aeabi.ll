@@ -677,32 +677,34 @@ entry:
 define void @store12_align4_trunc_minsize(i96* %a, i96 %b) nounwind minsize {
 ; CHECK-V6M-MINSIZE-LABEL: store12_align4_trunc_minsize:
 ; CHECK-V6M-MINSIZE:       @ %bb.0: @ %entry
-; CHECK-V6M-MINSIZE-NEXT:    .save {r4, lr}
-; CHECK-V6M-MINSIZE-NEXT:    push {r4, lr}
-; CHECK-V6M-MINSIZE-NEXT:    mov r1, r3
-; CHECK-V6M-MINSIZE-NEXT:    mov r4, r0
-; CHECK-V6M-MINSIZE-NEXT:    mov r0, r2
-; CHECK-V6M-MINSIZE-NEXT:    mov r2, r4
+; CHECK-V6M-MINSIZE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-V6M-MINSIZE-NEXT:    push {r4, r5, r7, lr}
+; CHECK-V6M-MINSIZE-NEXT:    mov r4, r3
+; CHECK-V6M-MINSIZE-NEXT:    mov r5, r0
+; CHECK-V6M-MINSIZE-NEXT:    mov r0, r1
+; CHECK-V6M-MINSIZE-NEXT:    mov r1, r2
+; CHECK-V6M-MINSIZE-NEXT:    mov r2, r5
 ; CHECK-V6M-MINSIZE-NEXT:    bl __aeabi_uwrite8
-; CHECK-V6M-MINSIZE-NEXT:    adds r4, #8
-; CHECK-V6M-MINSIZE-NEXT:    ldr r0, [sp, #8]
-; CHECK-V6M-MINSIZE-NEXT:    mov r1, r4
+; CHECK-V6M-MINSIZE-NEXT:    adds r5, #8
+; CHECK-V6M-MINSIZE-NEXT:    mov r0, r4
+; CHECK-V6M-MINSIZE-NEXT:    mov r1, r5
 ; CHECK-V6M-MINSIZE-NEXT:    bl __aeabi_uwrite4
-; CHECK-V6M-MINSIZE-NEXT:    pop {r4, pc}
+; CHECK-V6M-MINSIZE-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; CHECK-V7M-MINSIZE-LABEL: store12_align4_trunc_minsize:
 ; CHECK-V7M-MINSIZE:       @ %bb.0: @ %entry
-; CHECK-V7M-MINSIZE-NEXT:    .save {r4, lr}
-; CHECK-V7M-MINSIZE-NEXT:    push {r4, lr}
-; CHECK-V7M-MINSIZE-NEXT:    mov r4, r0
-; CHECK-V7M-MINSIZE-NEXT:    mov r0, r2
-; CHECK-V7M-MINSIZE-NEXT:    mov r1, r3
-; CHECK-V7M-MINSIZE-NEXT:    mov r2, r4
+; CHECK-V7M-MINSIZE-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-V7M-MINSIZE-NEXT:    push {r4, r5, r7, lr}
+; CHECK-V7M-MINSIZE-NEXT:    mov r5, r0
+; CHECK-V7M-MINSIZE-NEXT:    mov r0, r1
+; CHECK-V7M-MINSIZE-NEXT:    mov r1, r2
+; CHECK-V7M-MINSIZE-NEXT:    mov r2, r5
+; CHECK-V7M-MINSIZE-NEXT:    mov r4, r3
 ; CHECK-V7M-MINSIZE-NEXT:    bl __aeabi_uwrite8
-; CHECK-V7M-MINSIZE-NEXT:    ldr r0, [sp, #8]
-; CHECK-V7M-MINSIZE-NEXT:    add.w r1, r4, #8
+; CHECK-V7M-MINSIZE-NEXT:    add.w r1, r5, #8
+; CHECK-V7M-MINSIZE-NEXT:    mov r0, r4
 ; CHECK-V7M-MINSIZE-NEXT:    bl __aeabi_uwrite4
-; CHECK-V7M-MINSIZE-NEXT:    pop {r4, pc}
+; CHECK-V7M-MINSIZE-NEXT:    pop {r4, r5, r7, pc}
 entry:
   store i96 %b, i96* %a, align 1
   ret void
