@@ -338,8 +338,9 @@ Error executeObjcopyOnBinary(const CommonConfig &Config,
   assert(Obj && "Unable to deserialize COFF object");
   if (Error E = handleArgs(Config, COFFConfig, *Obj))
     return createFileError(Config.InputFilename, std::move(E));
-  COFFWriter Writer(*Obj, Out);
-  if (Error E = Writer.write())
+  if (Error E = Config.OutputFormat == FileFormat::Binary
+                    ? BinaryWriter(*Obj, Out).write()
+                    : COFFWriter(*Obj, Out).write())
     return createFileError(Config.OutputFilename, std::move(E));
   return Error::success();
 }
