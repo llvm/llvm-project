@@ -289,6 +289,11 @@ class StructurizeCFG {
   BBSet Visited;
   BBSet FlowSet;
 
+  // The terminator carries a profile of the block's execution, independently
+  // of its branch condition. Keep it when replacing the terminator of the
+  // same block, but do not propagate it to newly created flow blocks.
+  DenseMap<BasicBlock *, MDNode *> BlockUniformityProfiles;
+
   SmallVector<WeakVH, 8> AffectedPhis;
   BBPhiMap DeletedPhis;
   BB2BBVecMap AddedPhis;
@@ -1031,6 +1036,9 @@ DebugLoc StructurizeCFG::killTerminator(BasicBlock *BB) {
   for (BasicBlock *Succ : successors(BB))
     delPhiValues(BB, Succ);
 
+  if (MDNode *MD = Term->getMetadata(LLVMContext::MD_block_uniformity_profile))
+    BlockUniformityProfiles[BB] = MD;
+
   DebugLoc DL = Term->getDebugLoc();
   Term->eraseFromParent();
   return DL;
@@ -1101,8 +1109,13 @@ std::pair<BasicBlock *, DebugLoc> StructurizeCFG::needPrefix(bool NeedEmpty) {
 
   if (!PrevNode->isSubRegion()) {
     DebugLoc DL = killTerminator(Entry);
-    if (!NeedEmpty || Entry->getFirstInsertionPt() == Entry->end())
+    if (!NeedEmpty || Entry->getFirstInsertionPt() == Entry->end()) {
+      // An empty prefix reused as a loop header also executes on backedges.
+      // Its old execution profile does not describe those additional visits.
+      if (NeedEmpty)
+        BlockUniformityProfiles.erase(Entry);
       return {Entry, DL};
+    }
   }
 
   // create a new flow node
@@ -1423,7 +1436,12 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   simplifyAffectedPhis();
   rebuildSSA();
 
+  for (auto [BB, MD] : BlockUniformityProfiles)
+    BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
+                                     MD);
+
   // Cleanup
+  BlockUniformityProfiles.clear();
   Order.clear();
   Visited.clear();
   DeletedPhis.clear();

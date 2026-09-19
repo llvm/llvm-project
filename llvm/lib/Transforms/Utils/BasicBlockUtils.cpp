@@ -362,6 +362,10 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     // Update branch in the predecessor.
     PredBB_BI->setSuccessor(FallThruPath, NewSucc);
   } else {
+    // The merged block retains the predecessor's executions. Its terminator
+    // changes, but its block-uniformity classification still applies.
+    STI->copyMetadata(*PTI, {LLVMContext::MD_block_uniformity_profile});
+
     // Delete the unconditional branch from the predecessor.
     PredBB->back().eraseFromParent();
 
