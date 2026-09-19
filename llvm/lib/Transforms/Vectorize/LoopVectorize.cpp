@@ -6478,6 +6478,7 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
+      RUN_VPLAN_PASS(VPlanTransforms::foldPredicateMerge, *Plan);
     }
 
     if (auto P =
