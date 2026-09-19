@@ -777,7 +777,7 @@ _COMPS = {
     ast.Lt: "<",
     ast.LtE: "=<",
     ast.Gt: ">",
-    ast.GtE: "=>",
+    ast.GtE: ">=",
 }
 
 # Maps Python method names in a formatter class to their bytecode signatures.
