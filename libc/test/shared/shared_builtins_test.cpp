@@ -61,3 +61,18 @@ TEST(LlvmLibcSharedBuiltinsTest, TruncateConversion) {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 }
+
+TEST(LlvmLibcSharedBuiltinsTest, SingleCompare) {
+  const float aNaN =
+      LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan().get_val();
+  EXPECT_EQ(-1, shared::gesf2(1.0f, 2.0f));
+  EXPECT_EQ(0, shared::gesf2(1.0f, 1.0f));
+  EXPECT_EQ(1, shared::gesf2(2.0f, 1.0f));
+  EXPECT_EQ(-1, shared::gesf2(aNaN, 1.0f));
+  EXPECT_EQ(-1, shared::lesf2(1.0f, 2.0f));
+  EXPECT_EQ(0, shared::lesf2(1.0f, 1.0f));
+  EXPECT_EQ(1, shared::lesf2(2.0f, 1.0f));
+  EXPECT_EQ(1, shared::lesf2(aNaN, 1.0f));
+  EXPECT_EQ(0, shared::unordsf2(1.0f, 2.0f));
+  EXPECT_EQ(1, shared::unordsf2(aNaN, 1.0f));
+}
