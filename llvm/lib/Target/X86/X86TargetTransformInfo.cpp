@@ -5489,8 +5489,14 @@ InstructionCost X86TTIImpl::getVectorInstrCost(
         return Entry->Cost + RegisterFileMoveCost;
 
     // Consider cheap cases.
-    if (IsCheapPInsrPExtrInsertPS())
+    if (IsCheapPInsrPExtrInsertPS()) {
+      // A pextr to a GPR is a cross-domain move whose latency exceeds its
+      // throughput cost.
+      if (CostKind == TTI::TCK_Latency &&
+          Opcode == Instruction::ExtractElement && MScalarTy.isInteger())
+        return 3 + RegisterFileMoveCost;
       return 1 + RegisterFileMoveCost;
+    }
 
     // For extractions we just need to shuffle the element to index 0, which
     // should be very cheap (assume cost = 1). For insertions we need to shuffle

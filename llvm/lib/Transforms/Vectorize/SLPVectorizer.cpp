@@ -19683,15 +19683,19 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // lane 0 and is priced as a free extract by the extract-fusion cost model.
   for (ExternalUser &EU : ExternalUses)
     ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
+  // Look through an optional single-use index-promotion cast.
+  auto LookThroughIndexCast = [](Value *V) -> Value * {
+    if (V && match(V, m_OneUse(m_ZExtOrSExt(m_Value()))))
+      return cast<Instruction>(V)->user_back();
+    return V;
+  };
   // Detect external uses that drive address computations: the scalar (through
   // an optional single-use index-promotion cast) is used as a GEP index.
   bool AllUsersGEPSWithStoresLoads = true;
   SmallVector<const Value *> Pointers;
   Type *UserScalarTy = nullptr;
   for (ExternalUser &EU : ExternalUses) {
-    Value *Usr = EU.User;
-    if (Usr && match(Usr, m_OneUse(m_ZExtOrSExt(m_Value()))))
-      Usr = cast<Instruction>(Usr)->user_back();
+    Value *Usr = LookThroughIndexCast(EU.User);
     auto *User = dyn_cast_if_present<GetElementPtrInst>(Usr);
     // Only a GEP that feeds a single load/store of a fixed access type drives
     // a real memory address computation.
@@ -19757,6 +19761,20 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       It->second = DT->findNearestCommonDominator(It->second, UseBlock);
   }
 
+  // The extracted value feeds a memory address if its user is a GEP index or
+  // the pointer operand of a load/store.
+  auto IsExtractOnAddressPath = [&](const ExternalUser &EU) {
+    Value *Usr = LookThroughIndexCast(EU.User);
+    if (auto *GEP = dyn_cast_if_present<GetElementPtrInst>(Usr))
+      // Conservatively assume an address use if there are too many to check.
+      return GEP->hasNUsesOrMore(UsesLimit) ||
+             any_of(GEP->users(), IsaPred<LoadInst, StoreInst>);
+    if (auto *LI = dyn_cast_if_present<LoadInst>(Usr))
+      return LI->getPointerOperand() == EU.Scalar;
+    if (auto *SI = dyn_cast_if_present<StoreInst>(Usr))
+      return SI->getPointerOperand() == EU.Scalar;
+    return false;
+  };
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
   for (ExternalUser &EU : ExternalUses) {
     LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
@@ -19886,30 +19904,34 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     if (!isa_and_nonnull<InsertElementInst>(EU.User) &&
         !ExtractCostCalculated.insert(ExtractKey).second)
       continue;
-    if (It != MinBWs.end()) {
-      Type *MinTy = IntegerType::get(F->getContext(), It->second.first);
-      if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy))
-        MinTy = getWidenedType(MinTy, VecTy->getNumElements());
-      unsigned Extend = isKnownNonNegative(EU.Scalar, SimplifyQuery(*DL))
-                            ? Instruction::ZExt
-                            : Instruction::SExt;
-      VecTy = getWidenedType(MinTy, BundleWidth);
-      ExtraCost =
-          getExtractWithExtendCost(*TTI, SLPReVec, Extend, ScalarTy,
-                                   cast<VectorType>(VecTy), EU.Lane, CostKind);
+    // Extraction cost at the given cost kind.
+    auto GetExtractCost = [&](TTI::TargetCostKind Kind) -> InstructionCost {
+      if (It != MinBWs.end()) {
+        Type *MinTy = IntegerType::get(F->getContext(), It->second.first);
+        if (auto *VTy = dyn_cast<FixedVectorType>(ScalarTy))
+          MinTy = getWidenedType(MinTy, VTy->getNumElements());
+        unsigned Extend = isKnownNonNegative(EU.Scalar, SimplifyQuery(*DL))
+                              ? Instruction::ZExt
+                              : Instruction::SExt;
+        auto *ExtVecTy = getWidenedType(MinTy, BundleWidth);
+        return getExtractWithExtendCost(*TTI, SLPReVec, Extend, ScalarTy,
+                                        cast<VectorType>(ExtVecTy), EU.Lane,
+                                        Kind);
+      }
+      Type *ExtractTy = VecTy;
+      if (auto *ST = dyn_cast<StructType>(VecTy))
+        ExtractTy = ExtractValueInst::getIndexedType(ST, Indices);
+      return getVectorInstrCost(*TTI, SLPReVec, ScalarTy,
+                                Instruction::ExtractElement, ExtractTy, Kind,
+                                EU.Lane, EU.Scalar, ScalarUserAndIdx);
+    };
+    ExtraCost = GetExtractCost(CostKind);
+    if (It != MinBWs.end())
       LLVM_DEBUG(dbgs() << "  ExtractExtend or ExtractSubvec cost: "
                         << ExtraCost << "\n");
-    } else {
-      Type *ExtractTy = VecTy;
-      if (auto *ST = dyn_cast<StructType>(VecTy)) {
-        ExtractTy = ExtractValueInst::getIndexedType(ST, Indices);
-      }
-      ExtraCost = getVectorInstrCost(
-          *TTI, SLPReVec, ScalarTy, Instruction::ExtractElement, ExtractTy,
-          CostKind, EU.Lane, EU.Scalar, ScalarUserAndIdx);
+    else
       LLVM_DEBUG(dbgs() << "  ExtractElement cost for " << *ScalarTy << " from "
                         << *VecTy << ": " << ExtraCost << "\n");
-    }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||
         Entry->getOpcode() == Instruction::Load) {
@@ -20052,6 +20074,16 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // existing ScaleCost path (user-block based) remains correct, since the
     // scalar instruction executes at its definition site's frequency.
     if (!ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
+      // An extract feeding a memory address is on the critical path to that
+      // access, so its latency is exposed rather than hidden by parallelism;
+      // charge the extraction latency, not the throughput.
+      if (IsExtractOnAddressPath(EU)) {
+        InstructionCost LatencyCost = GetExtractCost(TTI::TCK_Latency);
+        if (LatencyCost.isValid())
+          ExtraCost = std::max(ExtraCost, LatencyCost);
+        LLVM_DEBUG(dbgs() << "  Extract on address path cost: " << ExtraCost
+                          << "\n");
+      }
       if (ExtraCost.isValid() && ExtraCost != 0) {
         if (!EU.User) {
           // No external user instruction is recorded (User == nullptr): the
