@@ -1916,6 +1916,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Instruction::Sub:
       case Instruction::And:
       case Instruction::Or:
+      case Instruction::Xor:
       case Instruction::Mul: {
         // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
@@ -1923,8 +1924,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
                                               KnownStart, KnownStep, Q, Depth);
 
-        Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
-                                       KnownStep.countMinTrailingZeros()));
+        if (Opcode == Instruction::Or || Opcode == Instruction::Xor) {
+          Known.Zero |= KnownStart.Zero & KnownStep.Zero;
+          if (Opcode == Instruction::Or)
+            Known.One |= KnownStart.One;
+        } else if (Opcode == Instruction::And) {
+          Known.Zero |= KnownStart.Zero;
+          Known.One |= KnownStart.One & KnownStep.One;
+        } else {
+          Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
+                                         KnownStep.countMinTrailingZeros()));
+        }
 
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
         if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))
@@ -3192,6 +3202,8 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   case Instruction::AShr:
   case Instruction::LShr:
     return BO->isExact();
+  case Instruction::Or:
+    return true;
   default:
     return false;
   }
@@ -3565,9 +3577,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
       return true;
 
-    // Check if all incoming values are non-zero using recursion.
+    // Check if all incoming values are non-zero using recursion. A phi with a
+    // single incoming value is just a copy, so don't limit the depth for it.
     SimplifyQuery RecQ = Q.getWithoutCondContext();
-    unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
+    unsigned NewDepth = PN->getNumIncomingValues() == 1
+                            ? Depth
+                            : std::max(Depth, MaxAnalysisRecursionDepth - 1);
     return llvm::all_of(PN->operands(), [&](const Use &U) {
       if (U.get() == PN)
         return true;
