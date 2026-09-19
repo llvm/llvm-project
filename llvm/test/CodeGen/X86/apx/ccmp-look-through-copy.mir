@@ -1,0 +1,41 @@
+# RUN: llc -o - %s -mtriple=x86_64-- -mattr=+ccmp -x86-enable-ccmp-opt -run-pass=machine-ccmp -stress-machine-ccmp | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-- -mattr=+ccmp -x86-enable-ccmp-opt -passes=machine-ccmp -stress-machine-ccmp | FileCheck %s
+
+# The Tail PHI selects copy-equivalent values from Head (%4) and CmpBB (%7),
+# both tracing to %0. lookThroughCopies must see them as equal so the triangle
+# is still recognized as trivially convertible and folds into a CCMP.
+---
+name: ccmp_look_through_copy
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: ccmp_look_through_copy
+  ; CHECK: bb.0:
+  ; CHECK: CCMP32rr
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $edi, $esi
+
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    %4:gr32 = COPY %0
+    %7:gr32 = COPY %4
+    %6:gr32 = SUB32rr %0, %1, implicit-def $eflags
+    JCC_1 %bb.2, 12, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %8:gr32 = SUB32rr %1, %0, implicit-def $eflags
+    JCC_1 %bb.2, 13, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    %9:gr32 = PHI %4, %bb.0, %7, %bb.1
+    $eax = COPY %9
+    RET 0, $eax
+
+  bb.3:
+    $eax = COPY %0
+    RET 0, $eax
+...
