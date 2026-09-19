@@ -2473,7 +2473,25 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   nextToken();
   if (Previous) {
     const auto *PrevPrev = Previous->getPreviousNonComment();
-    if (Previous->is(tok::star) && PrevPrev && PrevPrev->isTypeName(LangOpts))
+    // The star may be part of the type in a trailing return type or new
+    // expression. Then the square brackets will mean array instead of capture.
+    auto StarIsType = [&]() {
+      if (!PrevPrev)
+        return false;
+      if (PrevPrev->isTypeName(LangOpts))
+        return true;
+      if (PrevPrev->isNot(tok::identifier))
+        return false;
+      const auto *Tok = PrevPrev->getPreviousNonComment();
+      // Skip the placement part of the new expression.
+      if (Tok && Tok->is(tok::r_paren)) {
+        Tok = Tok->MatchingParen;
+        if (Tok)
+          Tok = Tok->getPreviousNonComment();
+      }
+      return Tok && Tok->is(tok::kw_new);
+    };
+    if (Previous->is(tok::star) && StarIsType())
       return false;
     if (Previous->closesScope()) {
       // Not a potential C-style cast.
@@ -2753,6 +2771,8 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
           FormatTok->setBlockKind(BK_BracedInit);
         }
       }
+      RParen->MatchingParen = LParen;
+      LParen->MatchingParen = RParen;
       return SeenEqual;
     }
     case tok::r_brace:
