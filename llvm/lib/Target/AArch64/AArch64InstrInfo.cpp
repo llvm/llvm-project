@@ -126,8 +126,9 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     return 16;
   case AArch64::BR:
   case AArch64::BLR:
-    // Indirect branches/calls expand to 2 instructions (guard + br/blr).
-    return 8;
+    // Indirect branches/calls expand to 2 instructions (guard + br/blr),
+    // plus up to 1 instruction for a flushed deferred LR guard.
+    return 12;
   case AArch64::RET:
     // RET through another register expands to 2 instructions (guard + ret).
     // RET through LR may also expand to 2 instructions if a deferred LR guard
@@ -136,7 +137,7 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
   case AArch64::RETAA:
   case AArch64::RETAB:
     // Authenticated returns expand to 3 instructions (authenticate + guard +
-    // ret).
+    // ret). Any deferred LR guard is discarded.
     return 12;
   case AArch64::BRAA:
   case AArch64::BRAAZ:
@@ -147,8 +148,9 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
   case AArch64::BLRAB:
   case AArch64::BLRABZ:
     // Authenticated branches/calls expand to 3 instructions (authenticate +
-    // guard + branch).
-    return 12;
+    // guard + branch), plus up to 1 instruction for a flushed deferred LR
+    // guard.
+    return 16;
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIAZ:
@@ -192,6 +194,11 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
 
   // Non memory operations that modify LR or SP expand to 2 instructions.
   if (ModifiesSP || ModifiesLR)
+    return 8;
+
+  // Any branch or call instruction may have a deferred LR guard flushed
+  // before it (+4 bytes).
+  if (MI.isBranch() || MI.isCall())
     return 8;
 
   // Default case: instructions that don't cause expansion.
