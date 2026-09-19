@@ -321,3 +321,22 @@ end:
   ret i1 %ov
 }
 
+
+; Negative test: %c is not known to be 0/1 and cannot be a borrow-in.
+; See https://github.com/llvm/llvm-project/issues/222839.
+define i8 @no_subcarry_carry_in_not_bool(i64 %a, i64 %b, i8 %c) nounwind {
+; CHECK-LABEL: no_subcarry_carry_in_not_bool:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x1
+; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    and w8, w8, w2
+; CHECK-NEXT:    csinc w0, w8, wzr, hs
+; CHECK-NEXT:    ret
+  %ult = icmp ult i64 %a, %b
+  %ultz = zext i1 %ult to i8
+  %eq = icmp eq i64 %a, %b
+  %eqz = zext i1 %eq to i8
+  %and = and i8 %eqz, %c
+  %or = or i8 %ultz, %and
+  ret i8 %or
+}
