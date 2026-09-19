@@ -15,6 +15,12 @@ struct EC {
   __device__ EC(int) {}  // -- not allowed
 };
 
+// host/device, empty constructor
+struct HD_EC {
+  int hd_ec;
+  __host__ __device__ HD_EC() {} // -- allowed
+};
+
 // empty destructor
 struct ED {
   __device__ ~ED() {}     // -- allowed
@@ -52,6 +58,12 @@ struct ECI {
 struct NEC {
   int nec;
   __device__ NEC() { nec = 1; }
+};
+
+// host/device, non-empty constructor -- not allowed
+struct HD_NEC {
+  int hd_nec;
+  __host__ __device__ HD_NEC() { hd_nec = 1; }
 };
 
 // non-empty destructor -- not allowed

@@ -363,6 +363,12 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
   ConstantEmitter emitter(*this);
   llvm::Constant *Init = emitter.tryEmitForInitializer(D);
 
+  // CUDA device compilation only.  Sema has verified that a function-scope
+  // static in device code has an empty/constant initializer and an empty
+  // destructor, so neither needs to be emitted here.
+  const bool SkipCUDADeviceInit =
+      getLangOpts().CUDAIsDevice && !getLangOpts().GPUAllowDeviceInit;
+
   // If constant emission failed, then this should be a C++ static
   // initializer.
   if (!Init) {
@@ -375,7 +381,8 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
       // be constant.
       GV->setConstant(false);
 
-      EmitCXXGuardedInit(D, GV, /*PerformInit*/true);
+      if (!SkipCUDADeviceInit)
+        EmitCXXGuardedInit(D, GV, /*PerformInit*/ true);
     }
     return GV;
   }
@@ -399,7 +406,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
 
   emitter.finalize(GV);
 
-  if (NeedsDtor && HaveInsertPoint()) {
+  if (NeedsDtor && HaveInsertPoint() && !SkipCUDADeviceInit) {
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.
