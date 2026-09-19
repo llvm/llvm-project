@@ -77,6 +77,7 @@ LazyCallGraph::EdgeSequence &LazyCallGraph::Node::populateSlow() {
 
   SmallVector<Constant *, 16> Worklist;
   SmallPtrSet<Function *, 4> Callees;
+  SmallPtrSet<Function *, 4> SeenDeclCallees;
   SmallPtrSet<Constant *, 16> Visited;
 
   // Find all the potential call graph edges in this function. We track both
@@ -97,14 +98,24 @@ LazyCallGraph::EdgeSequence &LazyCallGraph::Node::populateSlow() {
   // safety of optimizing a direct call edge.
   for (BasicBlock &BB : *F)
     for (Instruction &I : BB) {
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (Function *Callee = CB->getCalledFunction())
-          if (!Callee->isDeclaration())
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        if (Function *Callee = CB->getCalledFunction()) {
+          if (!Callee->isDeclaration()) {
             if (Callees.insert(Callee).second) {
               Visited.insert(Callee);
               addEdge(Edges->Edges, Edges->EdgeIndexMap, G->get(*Callee),
                       LazyCallGraph::Edge::Call);
             }
+          } else {
+            if (SeenDeclCallees.insert(Callee).second) {
+              DeclCallees.push_back(Callee);
+              Visited.insert(Callee);
+            }
+          }
+        } else {
+          HasIndirectCalls = true;
+        }
+      }
 
       for (Value *Op : I.operand_values())
         if (Constant *C = dyn_cast<Constant>(Op))
