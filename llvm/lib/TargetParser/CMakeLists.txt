@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMTargetParser
   PPCTargetParser.cpp
   RISCVISAInfo.cpp
   RISCVTargetParser.cpp
+  SuperHTargetParser.cpp
   SubtargetFeature.cpp
   TargetParser.cpp
   Triple.cpp
