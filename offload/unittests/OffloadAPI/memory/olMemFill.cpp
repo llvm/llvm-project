@@ -48,6 +48,46 @@ struct olMemFillTest : OffloadQueueTest {
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemFillTest);
 
+using olMemFillHostDeviceTest = OffloadQueueTest;
+OFFLOAD_TESTS_INSTANTIATE_HOST_DEVICE_FIXTURE(olMemFillHostDeviceTest);
+
+TEST_P(olMemFillHostDeviceTest, DoesNotWritePastFillSize) {
+  constexpr size_t AllocSize = 16;
+  constexpr size_t FillSize = 8;
+  constexpr unsigned char Canary = 0xAA;
+  const unsigned char Pattern[4] = {1, 2, 3, 4};
+
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, AllocSize, &Alloc));
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, 1, &Canary, AllocSize));
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, sizeof(Pattern), Pattern, FillSize));
+  olSyncQueue(Queue);
+
+  auto *Bytes = static_cast<unsigned char *>(Alloc);
+  for (size_t I = 0; I < FillSize; ++I)
+    ASSERT_EQ(Bytes[I], Pattern[I % sizeof(Pattern)]);
+  for (size_t I = FillSize; I < AllocSize; ++I)
+    ASSERT_EQ(Bytes[I], Canary) << "wrote past FillSize at byte " << I;
+
+  olMemFree(Alloc);
+}
+
+TEST_P(olMemFillHostDeviceTest, SuccessSingleByteNotMultipleOfFour) {
+  constexpr size_t FillSize = 7;
+  constexpr unsigned char Pattern = 0x5A;
+
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, FillSize, &Alloc));
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, 1, &Pattern, FillSize));
+  olSyncQueue(Queue);
+
+  auto *Bytes = static_cast<unsigned char *>(Alloc);
+  for (size_t I = 0; I < FillSize; ++I)
+    ASSERT_EQ(Bytes[I], Pattern);
+
+  olMemFree(Alloc);
+}
+
 TEST_P(olMemFillTest, Success8) { test_body<uint8_t, 0x42, 1024>(); }
 TEST_P(olMemFillTest, Success8NotMultiple4) {
   test_body<uint8_t, 0x42, 1023>();
