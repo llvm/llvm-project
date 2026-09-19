@@ -232,7 +232,7 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C3]]
   // CHECK:       %[[dim:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32>
   // CHECK:       %[[add:.*]] = affine.apply #[[$MAP0]](%[[I]])[%[[base]]]
-  // CHECK:       %[[cond1:.*]] = arith.cmpi sgt, %[[dim]], %[[add]] : index
+  // CHECK:       %[[cond1:.*]] = arith.cmpi ugt, %[[dim]], %[[add]] : index
   // CHECK:       scf.if %[[cond1]] {
   // CHECK:         %[[vec_1d:.*]] = vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // CHECK:         memref.store %[[vec_1d]], %[[alloc_casted]][%[[I]]] : memref<3xvector<15xf32>>
@@ -246,7 +246,7 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // FULL-UNROLL-DAG: %[[VEC0:.*]] = arith.constant dense<7.000000e+00> : vector<3x15xf32>
   // FULL-UNROLL-DAG: %[[C0:.*]] = arith.constant 0 : index
   // FULL-UNROLL: %[[DIM:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32>
-  // FULL-UNROLL: cmpi sgt, %[[DIM]], %[[base]] : index
+  // FULL-UNROLL: cmpi ugt, %[[DIM]], %[[base]] : index
   // FULL-UNROLL: %[[VEC1:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {
   // FULL-UNROLL:   vector.transfer_read %[[A]][%[[base]], %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // FULL-UNROLL:   vector.insert %{{.*}}, %[[VEC0]] [0] : vector<15xf32> into vector<3x15xf32>
@@ -255,7 +255,7 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // FULL-UNROLL:   scf.yield %{{.*}} : vector<3x15xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: affine.apply #[[$MAP1]]()[%[[base]]]
-  // FULL-UNROLL: cmpi sgt, %{{.*}}, %{{.*}} : index
+  // FULL-UNROLL: cmpi ugt, %{{.*}}, %{{.*}} : index
   // FULL-UNROLL: %[[VEC2:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {
   // FULL-UNROLL:   vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // FULL-UNROLL:   vector.insert %{{.*}}, %[[VEC1]] [1] : vector<15xf32> into vector<3x15xf32>
@@ -264,7 +264,7 @@ func.func @transfer_read_progressive(%A : memref<?x?xf32>, %base: index) -> vect
   // FULL-UNROLL:   scf.yield %{{.*}} : vector<3x15xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: affine.apply #[[$MAP2]]()[%[[base]]]
-  // FULL-UNROLL: cmpi sgt, %{{.*}}, %{{.*}} : index
+  // FULL-UNROLL: cmpi ugt, %{{.*}}, %{{.*}} : index
   // FULL-UNROLL: %[[VEC3:.*]] = scf.if %{{.*}} -> (vector<3x15xf32>) {
   // FULL-UNROLL:   vector.transfer_read %[[A]][%{{.*}}, %[[base]]], %[[C7]] : memref<?x?xf32>, vector<15xf32>
   // FULL-UNROLL:   vector.insert %{{.*}}, %[[VEC2]] [2] : vector<15xf32> into vector<3x15xf32>
@@ -304,7 +304,7 @@ func.func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: 
   // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C3]]
   // CHECK:       %[[dim:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32>
   // CHECK:       %[[add:.*]] = affine.apply #[[$MAP0]](%[[I]])[%[[base]]]
-  // CHECK:       %[[cmp:.*]] = arith.cmpi sgt, %[[dim]], %[[add]] : index
+  // CHECK:       %[[cmp:.*]] = arith.cmpi ugt, %[[dim]], %[[add]] : index
   // CHECK:       scf.if %[[cmp]] {
   // CHECK:         %[[vec_1d:.*]] = memref.load %[[vmemref]][%[[I]]] : memref<3xvector<15xf32>>
   // CHECK:         vector.transfer_write %[[vec_1d]], %[[A]][{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
@@ -313,19 +313,19 @@ func.func @transfer_write_progressive(%A : memref<?x?xf32>, %base: index, %vec: 
 
   // FULL-UNROLL: %[[C0:.*]] = arith.constant 0 : index
   // FULL-UNROLL: %[[DIM:.*]] = memref.dim %[[A]], %[[C0]] : memref<?x?xf32>
-  // FULL-UNROLL: %[[CMP0:.*]] = arith.cmpi sgt, %[[DIM]], %[[base]] : index
+  // FULL-UNROLL: %[[CMP0:.*]] = arith.cmpi ugt, %[[DIM]], %[[base]] : index
   // FULL-UNROLL: scf.if %[[CMP0]] {
   // FULL-UNROLL:   %[[V0:.*]] = vector.extract %[[vec]][0] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL:   vector.transfer_write %[[V0]], %[[A]][%[[base]], %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: %[[I1:.*]] = affine.apply #[[$MAP1]]()[%[[base]]]
-  // FULL-UNROLL: %[[CMP1:.*]] = arith.cmpi sgt, %{{.*}}, %[[I1]] : index
+  // FULL-UNROLL: %[[CMP1:.*]] = arith.cmpi ugt, %{{.*}}, %[[I1]] : index
   // FULL-UNROLL: scf.if %[[CMP1]] {
   // FULL-UNROLL:   %[[V1:.*]] = vector.extract %[[vec]][1] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL:   vector.transfer_write %[[V1]], %[[A]][%{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
   // FULL-UNROLL: }
   // FULL-UNROLL: %[[I2:.*]] = affine.apply #[[$MAP2]]()[%[[base]]]
-  // FULL-UNROLL: %[[CMP2:.*]] = arith.cmpi sgt, %{{.*}}, %[[I2]] : index
+  // FULL-UNROLL: %[[CMP2:.*]] = arith.cmpi ugt, %{{.*}}, %[[I2]] : index
   // FULL-UNROLL: scf.if %[[CMP2]] {
   // FULL-UNROLL:   %[[V2:.*]] = vector.extract %[[vec]][2] : vector<15xf32> from vector<3x15xf32>
   // FULL-UNROLL:   vector.transfer_write %[[V2]], %[[A]][%{{.*}}, %[[base]]] : vector<15xf32>, memref<?x?xf32>
@@ -414,7 +414,7 @@ func.func @transfer_read_minor_identity(%A : memref<?x?x?x?xf32>) -> vector<3x3x
 //  CHECK:        %[[cast:.*]] = vector.type_cast %[[m]] : memref<vector<3x3xf32>> to memref<3xvector<3xf32>>
 //  CHECK:        scf.for %[[arg1:.*]] = %[[c0]] to %[[c3]]
 //  CHECK:          %[[d:.*]] = memref.dim %[[A]], %[[c2]] : memref<?x?x?x?xf32>
-//  CHECK:          %[[cmp:.*]] = arith.cmpi sgt, %[[d]], %[[arg1]] : index
+//  CHECK:          %[[cmp:.*]] = arith.cmpi ugt, %[[d]], %[[arg1]] : index
 //  CHECK:          scf.if %[[cmp]] {
 //  CHECK:            %[[tr:.*]] = vector.transfer_read %[[A]][%c0, %c0, %[[arg1]], %c0], %[[f0]] : memref<?x?x?x?xf32>, vector<3xf32>
 //  CHECK:            memref.store %[[tr]], %[[cast]][%[[arg1]]] : memref<3xvector<3xf32>>
@@ -446,7 +446,7 @@ func.func @transfer_write_minor_identity(%A : vector<3x3xf32>, %B : memref<?x?x?
 // CHECK:         %[[cast:.*]] = vector.type_cast %[[m]] : memref<vector<3x3xf32>> to memref<3xvector<3xf32>>
 // CHECK:         scf.for %[[arg2:.*]] = %[[c0]] to %[[c3]]
 // CHECK:           %[[d:.*]] = memref.dim %[[B]], %[[c2]] : memref<?x?x?x?xf32>
-// CHECK:           %[[cmp:.*]] = arith.cmpi sgt, %[[d]], %[[arg2]] : index
+// CHECK:           %[[cmp:.*]] = arith.cmpi ugt, %[[d]], %[[arg2]] : index
 // CHECK:           scf.if %[[cmp]] {
 // CHECK:             %[[tmp:.*]] = memref.load %[[cast]][%[[arg2]]] : memref<3xvector<3xf32>>
 // CHECK:             vector.transfer_write %[[tmp]], %[[B]][%[[c0]], %[[c0]], %[[arg2]], %[[c0]]] : vector<3xf32>, memref<?x?x?x?xf32>
@@ -923,3 +923,23 @@ func.func private @transfer_write_no_alloc_scope()
 %cst = arith.constant dense<0.0> : vector<2x3xf32>
 %m = memref.alloc() : memref<2x3xf32>
 vector.transfer_write %cst, %m[%c0, %c0] : vector<2x3xf32>, memref<2x3xf32>
+
+// -----
+
+// Negative test: dynamic start index. The upper-bound comparison alone
+// (`%idx < %dimSize`) would incorrectly treat a negative %idx as in-bounds
+// since it also satisfies a signed less-than against a positive bound. The
+// guard must use an unsigned comparison so that a negative index, reinterpreted
+// as unsigned, is correctly seen as out-of-range.
+// CHECK-LABEL: func.func @transfer_read_neg_start_guard
+func.func @transfer_read_neg_start_guard(%a: memref<4x8xf32>, %i: index)
+    -> vector<2x8xf32> {
+  %pad = arith.constant -42.0 : f32
+  // Static dim folds `ugt %c4, %idx` to `ult %idx, %c4` (unsigned, so idx < 0 is OOB).
+  // CHECK: arith.cmpi ult
+  // CHECK-NOT: arith.cmpi slt
+  // CHECK-NOT: arith.cmpi ugt
+  %v = vector.transfer_read %a[%i, %i], %pad {in_bounds = [false, true]}
+    : memref<4x8xf32>, vector<2x8xf32>
+  return %v : vector<2x8xf32>
+}
