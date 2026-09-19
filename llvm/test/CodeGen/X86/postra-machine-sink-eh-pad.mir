@@ -1,0 +1,48 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=postra-machine-sink -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes=postra-machine-sink -o - %s | FileCheck %s
+
+# Regression test for llvm/llvm-project#224802.
+
+--- |
+  declare i32 @__gxx_personality_v0(...)
+  declare void @may_throw()
+
+  define i64 @no_sink_into_landing_pad() personality ptr @__gxx_personality_v0 {
+    unreachable
+  }
+...
+---
+name:            no_sink_into_landing_pad
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x7ffff800), %bb.2(0x00000800)
+    liveins: $rbx
+
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL64pcrel32 @may_throw, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    EH_LABEL <mcsymbol .Ltmp1>
+    renamable $rax = COPY killed renamable $rbx
+    JMP_1 %bb.1
+
+  bb.1:
+    RET 0
+
+  bb.2 (landing-pad):
+    liveins: $rax
+
+    EH_LABEL <mcsymbol .Ltmp2>
+    RET 0, $rax
+...
+
+# The COPY must stay on the normal path, and the landing pad must keep $rax
+# live-in and return it untouched.
+#
+# CHECK-LABEL: name: no_sink_into_landing_pad
+# CHECK:         renamable $rax = COPY killed renamable $rbx
+# CHECK-NEXT:    JMP_1 %bb.1
+#
+# CHECK:       bb.2 (landing-pad):
+# CHECK-NEXT:    liveins: $rax
+# CHECK:         EH_LABEL
+# CHECK-NEXT:    RET 0, $rax
