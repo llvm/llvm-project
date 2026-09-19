@@ -958,7 +958,8 @@ TYPE_PARSER(construct<DataIDoObject>(scalar(indirect(designator))) ||
 
 // R843 data-stmt-value -> [data-stmt-repeat *] data-stmt-constant
 TYPE_PARSER(construct<DataStmtValue>(
-    maybe(Parser<DataStmtRepeat>{} / "*"), Parser<DataStmtConstant>{}))
+    maybe(Parser<DataStmtRepeat>{} / ("*"_tok / !"*"_tok)),
+    Parser<DataStmtConstant>{}))
 
 // R847 constant-subobject -> designator
 // R846 int-constant-subobject -> constant-subobject
@@ -986,15 +987,16 @@ TYPE_PARSER(construct<DataStmtRepeat>(intLiteralConstant) ||
 // first to avoid a partial match with a literal constant.
 TYPE_PARSER(sourced(first(
     construct<DataStmtConstant>(indirect(charLiteralConstantSubstring)),
-    construct<DataStmtConstant>(literalConstant),
-    construct<DataStmtConstant>(signedRealLiteralConstant),
-    construct<DataStmtConstant>(signedIntLiteralConstant),
+    construct<DataStmtConstant>(literalConstant / !"**"_tok),
+    construct<DataStmtConstant>(signedRealLiteralConstant / !"**"_tok),
+    construct<DataStmtConstant>(signedIntLiteralConstant / !"**"_tok),
     extension<LanguageFeature::SignedComplexLiteral>(
         "nonstandard usage: signed COMPLEX literal"_port_en_US,
         construct<DataStmtConstant>(Parser<SignedComplexLiteralConstant>{})),
     construct<DataStmtConstant>(nullInit),
     construct<DataStmtConstant>(indirect(designator) / !"("_tok),
-    construct<DataStmtConstant>(Parser<StructureConstructor>{}))))
+    construct<DataStmtConstant>(Parser<StructureConstructor>{}),
+    construct<DataStmtConstant>(indirect(expr)))))
 
 // R848 dimension-stmt ->
 //        DIMENSION [::] array-name ( array-spec )
