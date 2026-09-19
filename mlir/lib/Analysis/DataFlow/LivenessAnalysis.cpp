@@ -48,6 +48,13 @@ ChangeResult Liveness::meet(const AbstractSparseLattice &other) {
 // LivenessAnalysis
 //===----------------------------------------------------------------------===//
 
+LogicalResult LivenessAnalysis::initialize(Operation *top) {
+  // Users outside the analysis root are not visited.
+  for (Value result : top->getResults())
+    setToExitState(getLatticeElement(result));
+  return SparseBackwardDataFlowAnalysis<Liveness>::initialize(top);
+}
+
 /// For every value, liveness analysis determines whether or not it is "live".
 ///
 /// A value is considered "live" iff it:

@@ -1365,6 +1365,37 @@ SegmentedRegionBranchTerminatorOp::getMutableSuccessorOperands(
 }
 
 //===----------------------------------------------------------------------===//
+// IsolatedRegionBranchOp
+//===----------------------------------------------------------------------===//
+
+void IsolatedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.emplace_back(getOperation());
+    return;
+  }
+  for (Region &region : getBranches())
+    regions.emplace_back(&region);
+}
+
+ValueRange
+IsolatedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isOperation()
+             ? ValueRange(getOutputs())
+             : ValueRange(successor.getSuccessor()->getArguments());
+}
+
+OperandRange
+IsolatedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return getInputs();
+}
+
+MutableOperandRange
+IsolatedRegionYieldOp::getMutableSuccessorOperands(RegionSuccessor successor) {
+  return getValuesMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopBlockOp
 //===----------------------------------------------------------------------===//
 

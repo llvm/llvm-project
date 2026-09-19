@@ -786,14 +786,14 @@ struct RemoveDeadValues
 
 void RemoveDeadValues::runOnOperation() {
   auto &la = getAnalysis<RunLivenessAnalysis>();
-  Operation *module = getOperation();
+  Operation *root = getOperation();
 
   // Build a symbol user map once up front so that processFuncOp can look up the
   // callers of each function in O(1). Otherwise, each call would walk the
-  // entire module to find the callers, making the pass O(numFunctions *
+  // entire root to find the callers, making the pass O(numFunctions *
   // numOperations).
   SymbolTableCollection symbolTableCollection;
-  SymbolUserMap symbolUserMap(symbolTableCollection, module);
+  SymbolUserMap symbolUserMap(symbolTableCollection, root);
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
@@ -803,7 +803,9 @@ void RemoveDeadValues::runOnOperation() {
   // end of this pass.
   RDVFinalCleanupList finalCleanupList;
 
-  module->walk([&](Operation *op) {
+  root->walk([&](Operation *op) {
+    if (op == root)
+      return;
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
       processFuncOp(funcOp, symbolUserMap, la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
@@ -821,27 +823,30 @@ void RemoveDeadValues::runOnOperation() {
     }
   });
 
-  MLIRContext *context = module->getContext();
+  MLIRContext *context = root->getContext();
   cleanUpDeadVals(context, finalCleanupList);
 
   if (!canonicalize)
     return;
 
-  // Canonicalize all region branch ops.
-  SmallVector<Operation *> opsToCanonicalize;
-  module->walk([&](RegionBranchOpInterface regionBranchOp) {
-    opsToCanonicalize.push_back(regionBranchOp.getOperation());
-  });
-  // Collect all canonicalization patterns for region branch ops.
-  RewritePatternSet owningPatterns(context);
-  DenseSet<RegisteredOperationName> populatedPatterns;
-  for (Operation *op : opsToCanonicalize)
-    if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
-      if (populatedPatterns.insert(*info).second)
-        info->getCanonicalizationPatterns(owningPatterns, context);
-  if (failed(applyOpPatternsGreedily(opsToCanonicalize,
-                                     std::move(owningPatterns)))) {
-    module->emitError("greedy pattern rewrite failed to converge");
-    signalPassFailure();
+  for (Region &region : root->getRegions()) {
+    SmallVector<Operation *> opsToCanonicalize;
+    region.walk([&](RegionBranchOpInterface regionBranchOp) {
+      opsToCanonicalize.push_back(regionBranchOp.getOperation());
+    });
+    RewritePatternSet owningPatterns(context);
+    DenseSet<RegisteredOperationName> populatedPatterns;
+    for (Operation *op : opsToCanonicalize)
+      if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
+        if (populatedPatterns.insert(*info).second)
+          info->getCanonicalizationPatterns(owningPatterns, context);
+    // Keep greedy worklist expansion below the pass root.
+    GreedyRewriteConfig config;
+    config.setScope(&region);
+    if (failed(applyOpPatternsGreedily(opsToCanonicalize,
+                                       std::move(owningPatterns), config))) {
+      root->emitError("greedy pattern rewrite failed to converge");
+      return signalPassFailure();
+    }
   }
 }
