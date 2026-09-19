@@ -110,11 +110,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; COEXEC-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; COEXEC-NEXT:    v_dual_mov_b32 v48, 0 :: v_dual_lshlrev_b32 v0, 4, v0
-; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; COEXEC-NEXT:    v_and_b32_e32 v0, 0x3ff0, v0
+; COEXEC-NEXT:    s_mov_b32 s2, 0x3ff0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
-; COEXEC-NEXT:    v_dual_mov_b32 v49, s1 :: v_dual_add_nc_u32 v4, s0, v0
-; COEXEC-NEXT:    v_add_nc_u32_e32 v50, s1, v0
+; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; COEXEC-NEXT:    v_dual_mov_b32 v49, s1 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
+; COEXEC-NEXT:    v_dual_add_nc_u32 v4, s0, v0 :: v_dual_add_nc_u32 v50, s1, v0
 ; COEXEC-NEXT:    ds_load_b128 v[8:11], v4
 ; COEXEC-NEXT:    ds_load_b128 v[12:15], v4 offset:512
 ; COEXEC-NEXT:    ds_load_b128 v[16:19], v4 offset:5120
@@ -329,11 +329,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; COEXEC-NEXT:    v_mov_b32_e32 v16, 0
-; COEXEC-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; COEXEC-NEXT:    s_mov_b32 s2, 0x3ff
+; COEXEC-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; COEXEC-NEXT:    v_dual_mov_b32 v16, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    v_mov_b32_e32 v17, s1
-; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; COEXEC-NEXT:    v_lshl_add_u32 v18, v0, 5, s0
 ; COEXEC-NEXT:    v_lshl_add_u32 v19, v0, 4, s1
 ; COEXEC-NEXT:    ds_load_b128 v[8:11], v18 offset:1024
