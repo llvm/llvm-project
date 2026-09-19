@@ -430,7 +430,13 @@ def FCC : RegisterClass<"Mips", [i32], 32, (sequence "FCC%u", 0, 7)>,
 // MIPS32r6/MIPS64r6 store FPU condition codes in normal FGR registers.
 // This class allows us to represent this in codegen patterns.
 def FGR32CC : RegisterClass<"Mips", [i32], 32, (sequence "F%u", 0, 31)>;
-def FGR64CC : RegisterClass<"Mips", [i32, f32, f64], 64, (sequence "D%u_64", 0, 31)>;
+def FGR64CC : RegisterClass<"Mips", [i32, f32, f64], 64, (sequence "D%u_64", 0, 31)> {
+  // The first value type is i32, but this class also carries full f64 values
+  // (SEL.D ties its condition and result). Alignment alone does not set the
+  // spill size. A 32-bit slot both loses the upper word and prevents this
+  // class from being recognized as an FGR64 subclass by spill/reload lowering.
+  let Size = 64;
+}
 
 def MSA128B: RegisterClass<"Mips", [v16i8], 128,
                            (sequence "W%u", 0, 31)>;
