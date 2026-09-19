@@ -22,7 +22,7 @@ struct LLVM_LIBRARY_VISIBILITY SHCPUInfo {
 };
 
 static constexpr SHCPUInfo CPUInfo[] = {
-    {{"sh1"}}, {{"sh2"}}, {{"sh2a"}}, {{"sh3"}}, {{"sh4"}}, {{"sh4a"}},
+    {{"sh1"}}, {{"sh2"}}, {{"sh2e"}}, {{"sh2a"}}, {{"sh3"}}, {{"sh3e"}}, {{"sh4"}}, {{"sh4a"}},
 };
 
 bool SuperHTargetInfo::isValidCPUName(StringRef Name) const {

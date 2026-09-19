@@ -553,8 +553,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<SparcV9TargetInfo>(Triple, Opts);
     }
     
-  case llvm::Triple::sh:
-  case llvm::Triple::shl:
+  case llvm::Triple::sheb:
+  case llvm::Triple::shel:
     switch (os) {
     default:
       return std::make_unique<SuperHTargetInfo>(Triple, Opts);
