@@ -8,11 +8,6 @@
 
 # Module Files
 
-```{contents}
----
-local:
----
-```
 
 Module files hold information from a module (or submodule) that is
 necessary to compile program units in other source files that depend on that module.
