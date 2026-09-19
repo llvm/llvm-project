@@ -201,7 +201,7 @@ static Value generateInBoundsCheck(
     Value base = xferOp.getIndices()[*dim];
     Value memrefIdx =
         affine::makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
-    cond = arith::CmpIOp::create(lb, arith::CmpIPredicate::sgt, memrefDim,
+    cond = arith::CmpIOp::create(lb, arith::CmpIPredicate::ugt, memrefDim,
                                  memrefIdx);
   }
 
