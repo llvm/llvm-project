@@ -555,9 +555,8 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
-      Info.isKnownNonNegative(Op0)) {
+      Info.isKnownNonNegative(Op0))
     return true;
-  }
 
   // For a constant Op1, the ranges of Op0 for which the operation does not
   // wrap are known exactly; check if the systems imply one of them.
