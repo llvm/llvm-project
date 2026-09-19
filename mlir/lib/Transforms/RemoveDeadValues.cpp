@@ -832,6 +832,19 @@ void RemoveDeadValues::runOnOperation() {
   if (!canonicalize)
     return;
 
+  // Collect and freeze the patterns once for all root regions.
+  RewritePatternSet owningPatterns(context);
+  DenseSet<RegisteredOperationName> populatedPatterns;
+  root->walk([&](RegionBranchOpInterface regionBranchOp) {
+    Operation *op = regionBranchOp.getOperation();
+    if (op == root)
+      return;
+    if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
+      if (populatedPatterns.insert(*info).second)
+        info->getCanonicalizationPatterns(owningPatterns, context);
+  });
+  FrozenRewritePatternSet patterns(std::move(owningPatterns));
+
   // Process each root region separately. For operations in different root
   // regions, the inferred common scope can contain the root itself.
   for (Region &region : root->getRegions()) {
@@ -839,18 +852,11 @@ void RemoveDeadValues::runOnOperation() {
     region.walk([&](RegionBranchOpInterface regionBranchOp) {
       opsToCanonicalize.push_back(regionBranchOp.getOperation());
     });
-    RewritePatternSet owningPatterns(context);
-    DenseSet<RegisteredOperationName> populatedPatterns;
-    for (Operation *op : opsToCanonicalize)
-      if (std::optional<RegisteredOperationName> info = op->getRegisteredInfo())
-        if (populatedPatterns.insert(*info).second)
-          info->getCanonicalizationPatterns(owningPatterns, context);
     // The greedy driver can add ancestors to its worklist. Set an explicit
     // scope so that it cannot rewrite the root or operations outside the root.
     GreedyRewriteConfig config;
     config.setScope(&region);
-    if (failed(applyOpPatternsGreedily(opsToCanonicalize,
-                                       std::move(owningPatterns), config))) {
+    if (failed(applyOpPatternsGreedily(opsToCanonicalize, patterns, config))) {
       root->emitError("greedy pattern rewrite failed to converge");
       return signalPassFailure();
     }

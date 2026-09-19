@@ -76,13 +76,26 @@ func.func @effects(%mem: memref<i32>, %x: i32) {
   return
 }
 
+// Remove dead loop results in both root regions with the shared patterns.
 // CANON-LABEL: func.func @dead_carry
 // CANON: "test.isolated_region_branch"
 // CANON: scf.for {{.*}} iter_args(%[[CARRY:.*]] = %{{.*}}) -> (i32)
 // CANON: scf.yield %{{.*}} : i32
 // CANON: "test.isolated_region_yield"
+// CANON: scf.for {{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32)
+// CANON: scf.yield %{{.*}} : i32
+// CANON: "test.isolated_region_yield"
 func.func @dead_carry(%lb: index, %ub: index, %step: index, %x: i32) -> i32 {
   %r = "test.isolated_region_branch"(%lb, %ub, %step, %x) ({
+  ^bb0(%lower: index, %upper: index, %stride: index, %init: i32):
+    %loop:2 = scf.for %iv = %lower to %upper step %stride
+        iter_args(%live = %init, %dead = %init) -> (i32, i32) {
+      %sum = arith.addi %live, %live : i32
+      %unused = arith.muli %dead, %dead : i32
+      scf.yield %sum, %unused : i32, i32
+    }
+    "test.isolated_region_yield"(%loop#0) : (i32) -> ()
+  }, {
   ^bb0(%lower: index, %upper: index, %stride: index, %init: i32):
     %loop:2 = scf.for %iv = %lower to %upper step %stride
         iter_args(%live = %init, %dead = %init) -> (i32, i32) {
