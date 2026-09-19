@@ -29498,9 +29498,8 @@ define bfloat @v_log_bf16(bfloat %a) #0 {
 ; GFX1250-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 0x41b17218, vcc_lo
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, -v1, 1.0, v0 op_sel:[0,1,0] op_sel_hi:[0,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call bfloat @llvm.log.bf16(bfloat %a)
   ret bfloat %op
@@ -29921,9 +29920,8 @@ define bfloat @v_log10_bf16(bfloat %a) #0 {
 ; GFX1250-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 0x411a209b, vcc_lo
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, -v1, 1.0, v0 op_sel:[0,1,0] op_sel_hi:[0,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call bfloat @llvm.log10.bf16(bfloat %a)
   ret bfloat %op
@@ -31310,9 +31308,7 @@ define bfloat @v_round_bf16(bfloat %a) #0 {
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v1
-; GFX1250-NEXT:    v_add_f32_e32 v0, v2, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v2, 1.0, v0 op_sel:[0,1,0] op_sel_hi:[0,1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call bfloat @llvm.round.bf16(bfloat %a)
   ret bfloat %op
