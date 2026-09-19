@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 
+#include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
@@ -25,11 +26,15 @@
 
 namespace llvm {
 class APInt;
+class FastMathFlags;
 class FixedVectorType;
+class Instruction;
+class TargetLibraryInfo;
 class Type;
 class User;
 class Value;
 class VectorType;
+enum class RecurKind;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
@@ -70,6 +75,24 @@ getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec, unsigned Opcode,
                     const TargetTransformInfo::TargetCostKind CostKind,
                     FixedVectorType **PaddedTy = nullptr);
 
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as the wide reduction
+/// plus the result trunc.
+InstructionCost
+getBoolReduxWideRdxCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                        FixedVectorType *VecTy, const Value *Root,
+                        FastMathFlags FMF,
+                        TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as trunc+bitcast+cmp,
+/// estimated in the context of the replaced cast chain \p ChainInsts.
+InstructionCost
+getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                           FixedVectorType *VecTy, const Value *Root,
+                           ArrayRef<Instruction *> ChainInsts,
+                           TargetTransformInfo::TargetCostKind CostKind);
+
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
 /// instead of a scalar.
@@ -98,6 +121,19 @@ getExtractWithExtendCost(const TargetTransformInfo &TTI, bool ReVec,
                          unsigned Opcode, Type *Dst, VectorType *VecTy,
                          unsigned Index,
                          const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the bitfield packing of \p SrcTy into \p ResultTy,
+/// picking the cheapest shift width. The packing is a trunc, an lshr, a byte
+/// shuffle and a bitcast. \p ZExtSrcWidth is the source width of the lanes if
+/// they are a plain zext (0 otherwise), so compacting them back to it is free.
+/// \p CCH is the context of the pack's source operand.
+InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
+                               FixedVectorType *SrcTy, Type *ResultTy,
+                               const BitPackInfo &Info, unsigned ZExtSrcWidth,
+                               TargetTransformInfo::CastContextHint CCH,
+                               TargetTransformInfo::TargetCostKind CostKind,
+                               const TargetLibraryInfo *TLI,
+                               const Instruction *CxtI, unsigned &ShiftWidth);
 
 } // namespace llvm::slpvectorizer
 

@@ -127,6 +127,9 @@ public:
               (ol_queue_handle_t Queue, void *DstPtr,
                ol_device_handle_t DstDevice, const void *SrcPtr,
                ol_device_handle_t SrcDevice, size_t Size));
+  MOCK_METHOD(ol_result_t, olMemFill,
+              (ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+               const void *PatternPtr, size_t FillSize));
   MOCK_METHOD(ol_result_t, olMemPrefetch,
               (ol_queue_handle_t Queue, size_t Count, const void **Mems,
                const size_t *Sizes, ol_mem_migration_flags_t Flags));
@@ -139,6 +142,12 @@ public:
   MOCK_METHOD(ol_result_t, olMemAllocHost,
               (ol_device_handle_t Device, size_t Size, void **AllocationOut));
   MOCK_METHOD(ol_result_t, olMemFree, (void *Address));
+  MOCK_METHOD(ol_result_t, olMemAllocAligned,
+              (ol_device_handle_t Device, ol_alloc_type_t AllocType,
+               size_t Size, size_t Alignment, void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemAllocAlignedHost,
+              (ol_device_handle_t Device, size_t Size, size_t Alignment,
+               void **AllocationOut));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =

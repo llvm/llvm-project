@@ -122,8 +122,11 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
     return convertEnumType(cast<EnumType>(QT));
   case Type::Complex:
     return convertComplexType(cast<ComplexType>(QT));
-  case Type::Atomic:
-    return convertType(cast<AtomicType>(QT)->getValueType());
+  case Type::Atomic: {
+    const auto *AT = cast<AtomicType>(QT);
+    return Builder.getAtomicType(convertType(AT->getValueType()),
+                                 ASTCtx.getTypeSize(QT), getTypeAlign(QT));
+  }
   case Type::BlockPointer:
   case Type::Pipe:
     return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
@@ -439,7 +442,8 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
   const RecordDecl *RD = RT->getDecl()->getDefinition();
   if (!RD)
     return Builder.getRecordType({}, llvm::TypeSize::getFixed(0),
-                                 llvm::Align(1));
+                                 llvm::Align(1),
+                                 /*UnadjustedAlign=*/llvm::Align(1));
 
   if (RD->isUnion())
     return convertUnionType(RD);
@@ -505,6 +509,8 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::IsCXXRecord;
   if (RD->isPolymorphic())
@@ -514,7 +520,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   if (RD->hasFlexibleArrayMember())
     RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
-  return Builder.getRecordType(Fields, Size, Alignment,
+  return Builder.getRecordType(Fields, Size, Alignment, UnadjustedAlign,
                                llvm::abi::StructPacking::Default, BaseClasses,
                                VirtualBaseClasses, RecFlags);
 }
@@ -553,6 +559,8 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::None;
   if (IsCXXRecord)
@@ -562,7 +570,7 @@ QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
   if (RD->hasFlexibleArrayMember())
     RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
-  return Builder.getRecordType(Fields, Size, Alignment,
+  return Builder.getRecordType(Fields, Size, Alignment, UnadjustedAlign,
                                llvm::abi::StructPacking::Default, {}, {},
                                RecFlags);
 }
@@ -583,6 +591,8 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
   llvm::TypeSize Size =
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+  llvm::Align UnadjustedAlign =
+      llvm::Align(Layout.getUnadjustedAlignment().getQuantity());
 
   llvm::abi::RecordFlags RecFlags = llvm::abi::RecordFlags::None;
   if (RD->hasAttr<TransparentUnionAttr>())
@@ -592,7 +602,7 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
   if (isa<CXXRecordDecl>(RD))
     RecFlags |= llvm::abi::RecordFlags::IsCXXRecord;
 
-  return Builder.getUnionType(AllFields, Size, Alignment,
+  return Builder.getUnionType(AllFields, Size, Alignment, UnadjustedAlign,
                               llvm::abi::StructPacking::Default, RecFlags);
 }
 
