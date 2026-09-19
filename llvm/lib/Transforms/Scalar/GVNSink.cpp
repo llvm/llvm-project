@@ -50,6 +50,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -535,8 +536,12 @@ private:
 
   bool shouldAvoidSinkingInstruction(Instruction *I) {
     // These instructions may change or break semantics if moved.
+    // A pseudo probe marks the block it is in, so sinking it would attribute
+    // the samples of that block to another one. Sinking two of them together
+    // would also leave a non-constant index behind, which extractProbe() does
+    // not expect.
     if (isa<PHINode>(I) || I->isEHPad() || isa<AllocaInst>(I) ||
-        I->getType()->isTokenTy())
+        I->getType()->isTokenTy() || isa<PseudoProbeInst>(I))
       return true;
     return false;
   }
