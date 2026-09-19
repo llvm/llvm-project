@@ -428,6 +428,13 @@ namespace std::ranges {
       enable_borrowed_range<V>;                                            // C++23
 
   namespace views { inline constexpr unspecified stride = unspecified; }   // C++23
+
+  // [range.cache.latest], cache latest view
+  template<input_range V>
+    requires view<V>
+  class cache_latest_view;                                                      // C++26
+
+  namespace views { inline constexpr unspecified cache_latest = unspecified; }  // C++26
 }
 
 namespace std {
@@ -525,6 +532,7 @@ namespace std {
 #  endif
 
 #  if _LIBCPP_STD_VER >= 26
+#    include <__ranges/cache_latest_view.h>
 #    include <__ranges/concat_view.h>
 #  endif
 
