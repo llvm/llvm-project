@@ -1494,13 +1494,76 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   return true;
 }
 
-// Mark and Report IPToState for each Block under IsEHa
+// Called for eh-asynch modules. Table-SEH ranges must describe protected code,
+// not just calls, and their boundaries must survive later machine passes.
+// Other personalities retain their existing asynchronous state handling below.
 void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
   llvm::WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo();
   if (!EHInfo)
     return;
+  bool IsTableSEH =
+      MF->getFunction().hasPersonalityFn() &&
+      classifyEHPersonality(MF->getFunction().getPersonalityFn()) ==
+          EHPersonality::MSVC_TableSEH;
   for (MachineBasicBlock &MBB : *MF) {
     const BasicBlock *BB = MBB.getBasicBlock();
+    if (!BB)
+      continue;
+    if (IsTableSEH) {
+      // Missing state information is not evidence that the block is unguarded.
+      auto StateIt = EHInfo->BlockToStateMap.find(BB);
+      if (StateIt == EHInfo->BlockToStateMap.end())
+        continue;
+      int State = StateIt->second;
+      auto Begin = MBB.getFirstNonPHI();
+      if (Begin == MBB.end())
+        continue;
+      auto End = MBB.getFirstTerminator();
+      // A branch-only block can still need coverage: scope emission can extend
+      // its end past the branch. Do not create such a range for a bare return.
+      if (Begin == End && !MBB.back().isBranch())
+        continue;
+
+      // Invoke labels already describe their call. Add only a preceding range
+      // for the block's prefix, rather than nesting a new range around them.
+      auto FirstEHLabel = llvm::find_if(
+          MBB, [](const MachineInstr &MI) { return MI.isEHLabel(); });
+      if (FirstEHLabel != MBB.end()) {
+        if (State < 0)
+          continue;
+        if (Begin == FirstEHLabel) {
+          // Labels alone are skipped by machine insertion-point scans. The
+          // barrier must precede the label so moved-in code cannot silently
+          // become part of its protected range.
+          BuildMI(MBB, Begin, DebugLoc(),
+                  TII->get(TargetOpcode::SEH_REGION_BARRIER));
+          continue;
+        }
+        End = FirstEHLabel;
+      }
+
+      // Even an unguarded (-1) block needs labels when otherwise unlabelled, so
+      // the table scan can stop an earlier protected run before that code.
+      // Empty debug locations avoid attributing these zero-code boundaries to
+      // whichever source instruction happened to be selected last.
+      MCSymbol *BeginLabel = MF->getContext().createTempSymbol();
+      MCSymbol *EndLabel = MF->getContext().createTempSymbol();
+      EHInfo->addIPToStateRange(State, BeginLabel, EndLabel);
+      if (State >= 0)
+        BuildMI(MBB, Begin, DebugLoc(),
+                TII->get(TargetOpcode::SEH_REGION_BARRIER));
+      BuildMI(MBB, Begin, DebugLoc(), TII->get(TargetOpcode::EH_LABEL))
+          .addSym(BeginLabel);
+      BuildMI(MBB, End, DebugLoc(), TII->get(TargetOpcode::EH_LABEL))
+          .addSym(EndLabel);
+      // The end-label/barrier pair lets late copies and spills find an
+      // insertion point inside the range. A prefix ending at an invoke uses its
+      // labels.
+      if (State >= 0 && FirstEHLabel == MBB.end())
+        BuildMI(MBB, End, DebugLoc(),
+                TII->get(TargetOpcode::SEH_REGION_BARRIER));
+      continue;
+    }
     int State = EHInfo->BlockToStateMap[BB];
     if (BB->getFirstMayFaultInst()) {
       // Report IP range only for blocks with Faulty inst

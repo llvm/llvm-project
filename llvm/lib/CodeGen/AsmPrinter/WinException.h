@@ -51,6 +51,15 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   /// The list of symbols to add to the ehcont section
   std::vector<const MCSymbol *> EHContTargets;
 
+  // Resolve these only after machine passes have finished splitting and merging
+  // blocks. Keep the EH_LABEL in place, but emit the block end as the exclusive
+  // range end when trailing branches also belong to the protected region.
+  DenseMap<const MCSymbol *, MCSymbol *> SEHScopeEndLabels;
+
+  // Relative instruction positions, not byte offsets. Meta instructions and
+  // region barriers emit no code and do not separate otherwise adjacent labels.
+  DenseMap<const MCSymbol *, unsigned> SEHLabelPositions;
+
   void emitCSpecificHandlerTable(const MachineFunction *MF);
 
   void emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
