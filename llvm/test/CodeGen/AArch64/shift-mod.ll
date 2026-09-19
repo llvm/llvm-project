@@ -52,11 +52,17 @@ define i64 @test3(i64 %x, i64 %y) {
 }
 
 define i64 @test4(i64 %y, i32 %s) {
-; CHECK-LABEL: test4:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test4:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-SD-NEXT:    asr x0, x0, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test4:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, w1
+; CHECK-GI-NEXT:    asr x0, x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %sh_prom = zext i32 %s to i64
   %shr = ashr i64 %y, %sh_prom
@@ -67,7 +73,8 @@ define i64 @test5(i64 %y, i32 %s) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    asr x0, x0, x8
 ; CHECK-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
@@ -79,7 +86,8 @@ define i64 @test6(i64 %y, i32 %s) {
 ; CHECK-LABEL: test6:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x0, x0, x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    lsl x0, x0, x8
 ; CHECK-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
@@ -190,4 +198,78 @@ define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) {
   %sext = add i64 %conv, 4294967296
   %conv1 = ashr i64 %sext, 8
   ret i64 %conv1
+}
+
+; Test that narrow shift amounts (i8/i16) don't generate redundant AND.
+define i32 @shl_i32_i8(i32 %x, i8 %amt) {
+; CHECK-LABEL: shl_i32_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i32
+  %r = shl i32 %x, %ext
+  ret i32 %r
+}
+
+define i32 @lshr_i32_i8(i32 %x, i8 %amt) {
+; CHECK-LABEL: lshr_i32_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i32
+  %r = lshr i32 %x, %ext
+  ret i32 %r
+}
+
+define i32 @ashr_i32_i8(i32 %x, i8 %amt) {
+; CHECK-LABEL: ashr_i32_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i32
+  %r = ashr i32 %x, %ext
+  ret i32 %r
+}
+
+define i32 @shl_i32_i16(i32 %x, i16 %amt) {
+; CHECK-LABEL: shl_i32_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w0, w0, w1
+; CHECK-NEXT:    ret
+  %ext = zext i16 %amt to i32
+  %r = shl i32 %x, %ext
+  ret i32 %r
+}
+
+define i64 @shl_i64_i8(i64 %x, i8 %amt) {
+; CHECK-LABEL: shl_i64_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsl x0, x0, x1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i64
+  %r = shl i64 %x, %ext
+  ret i64 %r
+}
+
+define i64 @lshr_i64_i8(i64 %x, i8 %amt) {
+; CHECK-LABEL: lshr_i64_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    lsr x0, x0, x1
+; CHECK-NEXT:    ret
+  %ext = zext i8 %amt to i64
+  %r = lshr i64 %x, %ext
+  ret i64 %r
+}
+
+define i64 @ashr_i64_i16(i64 %x, i16 %amt) {
+; CHECK-LABEL: ashr_i64_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    asr x0, x0, x1
+; CHECK-NEXT:    ret
+  %ext = zext i16 %amt to i64
+  %r = ashr i64 %x, %ext
+  ret i64 %r
 }
