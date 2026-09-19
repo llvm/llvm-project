@@ -3554,7 +3554,7 @@ struct AANoSync
     SmallVector<Attribute, 2> Attrs;
     A.getAttrs(IRP, {Attribute::Memory}, Attrs, IgnoreSubsumingPositions);
 
-    MemoryEffects ME = MemoryEffects::unknown();
+    MemoryEffects ME = MemoryEffects::unknown_mem();
     for (const Attribute &Attr : Attrs)
       ME &= Attr.getMemoryEffects();
 
@@ -3771,7 +3771,7 @@ struct AAWillReturn
     A.getAttrs(IRP, {Attribute::Memory}, Attrs,
                /* IgnoreSubsumingPositions */ false);
 
-    MemoryEffects ME = MemoryEffects::unknown();
+    MemoryEffects ME = MemoryEffects::unknown_mem();
     for (const Attribute &Attr : Attrs)
       ME &= Attr.getMemoryEffects();
     return ME.onlyReadsMemory();

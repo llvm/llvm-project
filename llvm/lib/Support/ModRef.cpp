@@ -55,6 +55,12 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     case IRMemLocation::TargetMem1:
       OS << "TargetMem1: ";
       break;
+    case IRMemLocation::FPControl:
+      OS << "FPControl: ";
+      break;
+    case IRMemLocation::FPStatus:
+      OS << "FPStatus: ";
+      break;
     }
     OS << ME.getModRef(Loc);
   });
