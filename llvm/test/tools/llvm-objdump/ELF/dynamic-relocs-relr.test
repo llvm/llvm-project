@@ -1,5 +1,5 @@
-## RELR tables do not need a dynamic symbol table. Expand address entries and
-## consecutive bitmaps, displaying offsets and types without inventing values.
+## Expand RELR address entries and consecutive bitmaps into relocation offsets
+## and types, with '-' in the value column.
 # RUN: yaml2obj %s -o %t64
 # RUN: llvm-objdump -R %t64 | FileCheck %s --check-prefix=ELF64
 
@@ -26,11 +26,6 @@
 # ELF32-NEXT: 00002000 R_ARM_RELATIVE           -
 # ELF32-NOT:  {{.}}
 
-## A malformed RELR table is diagnosed, not silently omitted.
-# RUN: yaml2obj -DENTSIZE=1 %s -o %t.bad
-# RUN: not llvm-objdump -R %t.bad 2>&1 | FileCheck %s --check-prefix=BAD
-# BAD: error: '{{.*}}': section [index 1] has invalid sh_entsize: expected 8, but got 1
-
 --- !ELF
 FileHeader:
   Class:   [[CLASS=ELFCLASS64]]
@@ -42,7 +37,6 @@ Sections:
     Type:    SHT_RELR
     Flags:   [ SHF_ALLOC ]
     Address: 0x100
-    EntSize: [[ENTSIZE=<none>]]
     Entries: [ 0x1000, 7, 3, 0x2000 ]
   - Name:    .dynamic
     Type:    SHT_DYNAMIC

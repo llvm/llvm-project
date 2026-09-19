@@ -367,12 +367,14 @@ template <typename ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
   for (const SectionRef &Section : DynRelSec) {
     if (ELFSectionRef(Section).getType() == ELF::SHT_RELR) {
       const auto &Elf = getELFFile();
-      auto Relrs =
-          unwrapOrError(Elf.relrs(*Obj.getSection(Section.getRawDataRefImpl())),
-                        Obj.getFileName());
+      auto Relrs = Elf.relrs(*Obj.getSection(Section.getRawDataRefImpl()));
+      if (!Relrs) {
+        reportWarning(toString(Relrs.takeError()), Obj.getFileName());
+        continue;
+      }
       StringRef RelocName =
           Elf.getRelocationTypeName(Elf.getRelativeRelocationType());
-      for (const auto &Rel : Elf.decode_relrs(Relrs)) {
+      for (const auto &Rel : Elf.decode_relrs(*Relrs)) {
         uint64_t Address = Rel.r_offset;
         // RELR has neither a symbol reference nor an explicit addend.
         outs() << format(Fmt.data(), Address) << ' '
