@@ -165,7 +165,7 @@
 ; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r3_length3_nonsimple_ancestor %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=MATRIX-REJECT --implicit-check-not='loop-interchange: prepared function=' %}
 ; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r15_nested_scalar_all %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=MATRIX-NESTED %}
 ; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r16_depth3_nonempty_fission_row %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=MATRIX-R16 %}
-; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r6_runtime_then_static %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=SCAN-RUNTIME --implicit-check-not='loop-interchange: prepared a complete' --implicit-check-not='loop-interchange: rejected function=' %}
+; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r6_runtime_then_static %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} -loop-interchange-outer-epilogue-runtime-versioning %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=SCAN-RUNTIME --implicit-check-not='loop-interchange: prepared a complete' --implicit-check-not='loop-interchange: rejected function=' %}
 ; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r12_two_static_collected_order %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=SCAN-ORDER --implicit-check-not='loop-interchange: discovered a closed' --implicit-check-not='loop-interchange: prepared a complete' %}
 ; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r14_strict_fp %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=STRICT --implicit-check-not='loop-interchange: prepared function=' %}
 ; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r4_uncomputable_ancestor %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=COMPUTE-SKIP %{prep_checks} %}
@@ -173,8 +173,10 @@
 ; RUN: %if asserts %{ llvm-extract -S --recursive --keep-const-init --func=r8_ineligible_then_static %s -o - | opt -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -debug-only=loop-interchange -disable-output 2>&1 | FileCheck %s --check-prefix=SCAN-SKIP --implicit-check-not="Couldn't compute backedge count" %}
 ;
 ; Every feature line per function is listed; the implicit exclusion rejects
-; any other, including a second selected static plan or a runtime decline
-; when a later static plan exists.
+; any other, including a second selected static plan. Every run except the
+; SCAN-RUNTIME one leaves runtime versioning off, so a runtime-bound candidate
+; is rejected during its own preparation with the disabled reason. That
+; rejection line is asserted wherever a configuration reaches the candidate.
 ; CHAIN3-LABEL: loop-interchange: prepared function=r1_r2_length3_simple_ancestor{{ }}
 ; CHAIN3-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; CHAIN3-SAME:  absolute-depth=3 routing-depth=3 fission-rows=0 routing-rows=1 cross-deps=1 reductions=2
@@ -194,6 +196,11 @@
 ; PREP-COMMON-LABEL: loop-interchange: rejected function=r10_r11_budget_slot_sequence{{ }}
 ; PREP-COMMON-SAME:  outer=reject.outer inner=reject.inner reason=cross-partition dependence is not statically proved N-to-E{{$}}
 ; PREP-COMMON-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: cross-partition dependence is not statically proved N-to-E
+; With runtime versioning off, the runtime-bound candidate is rejected during
+; its own preparation. That rejection line shows it consumed a preparation
+; attempt before the static candidate.
+; PREP-NEXT:  loop-interchange: rejected function=r10_r11_budget_slot_sequence outer=runtime.outer inner=runtime.inner reason=runtime outer-epilogue versioning is disabled{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: runtime outer-epilogue versioning is disabled
 ; PREP-LABEL: loop-interchange: prepared function=r10_r11_budget_slot_sequence{{ }}
 ; PREP-SAME:  outer=static.outer inner=static.inner path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
@@ -201,13 +208,8 @@
 ; PREP-SAME:  requirement-ids=[[R10_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R10_ID]]:object-containment/static/by-constant-max{{$}}
 ; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
 ; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
-; BUDGET2-LABEL: loop-interchange: prepared function=r10_r11_budget_slot_sequence{{ }}
-; BUDGET2-SAME:  outer=runtime.outer inner=runtime.inner path-blocks=1 epilogue-insts=4 rematerialized=0
-; BUDGET2-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
-; BUDGET2-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=4
-; BUDGET2-SAME:  requirement-ids=[[B2_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[B2_ID]]:object-containment/static/by-constant-max{{$}}
-; BUDGET2-NEXT:  loop-interchange: rejected function=r10_r11_budget_slot_sequence outer=runtime.outer inner=runtime.inner reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
-; BUDGET2-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check
+; BUDGET2-NEXT:  loop-interchange: rejected function=r10_r11_budget_slot_sequence outer=runtime.outer inner=runtime.inner reason=runtime outer-epilogue versioning is disabled{{$}}
+; BUDGET2-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: runtime outer-epilogue versioning is disabled
 ; CACHE-LABEL: loop-interchange: rejected function=r10_r11_budget_slot_sequence{{ }}
 ; CACHE-SAME:  outer=reject.outer inner=reject.inner reason=cross-partition dependence is not statically proved N-to-E{{$}}
 ; CACHE:       loop-interchange: rejected function=r10_r11_budget_slot_sequence outer=runtime.outer inner=runtime.inner reason=virtual extracted nest failed existing default profitability{{$}}
@@ -277,20 +279,17 @@
 ; CACHE-SAME:  outer=first.outer inner=first.inner reason=virtual extracted nest failed existing default profitability{{$}}
 ; CACHE:       loop-interchange: rejected function=r5_first_static_then_later_ordinary outer=second.outer inner=second.inner reason=post-inner region has no material epilogue memory slice{{$}}
 ;
-; PREP-LATER-LABEL: loop-interchange: prepared function=r6_runtime_then_static{{ }}
+; PREP-LATER-LABEL: loop-interchange: rejected function=r6_runtime_then_static outer=runtime.outer inner=runtime.inner reason=runtime outer-epilogue versioning is disabled{{$}}
+; PREP-LATER-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: runtime outer-epilogue versioning is disabled
+; PREP-LATER-NEXT:  loop-interchange: prepared function=r6_runtime_then_static{{ }}
 ; PREP-LATER-SAME:  outer=static.outer inner=static.inner path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-LATER-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-LATER-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-LATER-SAME:  requirement-ids=[[R6_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R6_ID]]:object-containment/static/by-constant-max{{$}}
 ; PREP-LATER-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
 ; PREP-LATER-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
-; BUDGET1-LABEL: loop-interchange: prepared function=r6_runtime_then_static{{ }}
-; BUDGET1-SAME:  outer=runtime.outer inner=runtime.inner path-blocks=1 epilogue-insts=4 rematerialized=0
-; BUDGET1-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
-; BUDGET1-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=4
-; BUDGET1-SAME:  requirement-ids=[[B1_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[B1_ID]]:object-containment/static/by-constant-max{{$}}
-; BUDGET1-NEXT:  loop-interchange: rejected function=r6_runtime_then_static outer=runtime.outer inner=runtime.inner reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
-; BUDGET1-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check
+; BUDGET1-LABEL: loop-interchange: rejected function=r6_runtime_then_static outer=runtime.outer inner=runtime.inner reason=runtime outer-epilogue versioning is disabled{{$}}
+; BUDGET1-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: runtime outer-epilogue versioning is disabled
 ; CACHE-LABEL: loop-interchange: rejected function=r6_runtime_then_static{{ }}
 ; CACHE-SAME:  outer=runtime.outer inner=runtime.inner reason=virtual extracted nest failed existing default profitability{{$}}
 ; CACHE:       loop-interchange: rejected function=r6_runtime_then_static outer=static.outer inner=static.inner reason=virtual extracted nest failed existing default profitability{{$}}

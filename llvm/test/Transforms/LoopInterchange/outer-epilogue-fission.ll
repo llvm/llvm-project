@@ -13,7 +13,10 @@
 ; The profitability policy is fixed so that the small synthetic kernels are
 ; judged by instruction order rather than by the cache model.
 ; DEFINE: %{policy} = -loop-interchange-profitabilities=instorder,vectorize
-; DEFINE: %{prepare} = -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan
+; %{prepare} enables runtime versioning, so %{no_versioning} verifies that these
+; statically bounded kernels stay free of clones, versioning markers, and alias
+; metadata.
+; DEFINE: %{prepare} = -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan -loop-interchange-outer-epilogue-runtime-versioning
 ; DEFINE: %{remarks} = -pass-remarks=loop-interchange -pass-remarks-analysis=loop-interchange -pass-remarks-missed=loop-interchange
 ; DEFINE: %{applied} = \
 ; DEFINE:   --func=checksum_diagonal_epilogue --func=n_to_e_flow \

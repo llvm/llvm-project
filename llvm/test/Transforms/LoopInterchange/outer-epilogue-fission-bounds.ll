@@ -4,7 +4,10 @@
 ; constant trips at, below, and above the row extent, a contextual exact trip
 ; behind a truncation, an enclosing AddRec trip, and the storage kinds an
 ; object-containment requirement may or may not read. N denotes the retained
-; nest, E the post-inner epilogue, and W the row stride in elements.
+; nest, E the post-inner epilogue, and W the row stride in elements. A test case
+; whose recovered bound is a runtime value is versioned behind one unsigned
+; trip guard 'trip u> Wmin', and the versioned copy of that pair has its
+; epilogue distributed into a sibling loop.
 ;
 ; DEFINE: %{outer_backedges} = \
 ; DEFINE:   --implicit-check-not='{{^Loop %outer.header: (backedge-taken|constant max backedge-taken) count is }}'
@@ -27,17 +30,23 @@
 ; The profitability policy is fixed so that the small synthetic kernels are
 ; judged by instruction order rather than by the cache model.
 ; DEFINE: %{policy} = -loop-interchange-profitabilities=instorder,vectorize
-; DEFINE: %{prepare} = -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan
+; %{prepare} also enables runtime versioning, so the runtime-classified
+; test cases of this file are guarded and applied.
+; DEFINE: %{prepare} = -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan -loop-interchange-outer-epilogue-runtime-versioning
 ; DEFINE: %{remarks} = -pass-remarks=loop-interchange -pass-remarks-analysis=loop-interchange -pass-remarks-missed=loop-interchange
 ; DEFINE: %{applied} = \
-; DEFINE:   --func=bound_typed_canonical --func=bound_byte_canonical \
-; DEFINE:   --func=bound_offset_high32 --func=bound_storage_defined_global \
+; DEFINE:   --func=bound_typed_canonical --func=bound_same_trip_wmin \
+; DEFINE:   --func=bound_byte_canonical --func=bound_offset_high32 \
+; DEFINE:   --func=bound_storage_defined_global \
 ; DEFINE:   --func=bound_storage_external_global \
 ; DEFINE:   --func=bound_storage_replaceable_global \
+; DEFINE:   --func=bound_runtime_canonical \
 ; DEFINE:   --func=bound_const_below --func=bound_const_eq \
 ; DEFINE:   --func=bound_dominating_guard --func=bound_max_too_broad \
 ; DEFINE:   --func=bound_assume --func=bound_scunknown_range \
+; DEFINE:   --func=bound_ineffective_min_metadata --func=bound_nofact \
 ; DEFINE:   --func=bound_widen_i32 --func=bound_context_exact_trunc \
+; DEFINE:   --func=bound_context_nofact_trunc \
 ; DEFINE:   --func=bound_context_exact_addrec
 ; DEFINE: %{no_versioning} = \
 ; DEFINE:   --implicit-check-not='.lver' \
@@ -45,6 +54,9 @@
 ; DEFINE:   --implicit-check-not='!noalias' \
 ; DEFINE:   --implicit-check-not='llvm.loop.interchange.runtime_versioned' \
 ; DEFINE:   --implicit-check-not='LoopVersioning'
+; DEFINE: %{no_alias_metadata} = \
+; DEFINE:   --implicit-check-not='!alias.scope' \
+; DEFINE:   --implicit-check-not='!noalias'
 ;
 ; With the option on, every function in %{applied} is transformed and every
 ; other function is unchanged.
@@ -53,19 +65,45 @@
 ; RUN: llvm-extract -S --delete %{applied} %t.out -o %t.out.rest
 ; RUN: llvm-extract -S --delete %{applied} %t.prep -o %t.prep.rest
 ; RUN: diff -u -I '^; ModuleID' %t.out.rest %t.prep.rest
-; RUN: FileCheck %s --check-prefix=APPLIED --input-file=%t.prep %{no_versioning} --implicit-check-not='{{^define }}'
+; RUN: FileCheck %s --check-prefix=APPLIED --input-file=%t.prep %{no_alias_metadata} --implicit-check-not='{{^define }}' --implicit-check-not='!llvm.loop' --implicit-check-not='{{^[^[:space:]]*[.]lver[.]check[^:]*:}}'
+; RUN: llvm-extract -S --delete --func=bound_same_trip_wmin --func=bound_runtime_canonical --func=bound_ineffective_min_metadata --func=bound_nofact --func=bound_context_nofact_trunc %t.prep -o %t.prep.static
+; RUN: FileCheck %s --check-prefix=STATIC --input-file=%t.prep.static %{no_versioning} --implicit-check-not='{{^define }}'
 ;
 ; The updated LoopInfo must match a fresh rebuild, sibling order included, and
 ; a second run of the pass must change nothing.
-; RUN: opt -passes='loop(loop-interchange),print<loops>' -cache-line-size=64 %{policy} -loop-interchange-outer-epilogue-fission -disable-output %s 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
+; RUN: opt -passes='loop(loop-interchange),print<loops>' -cache-line-size=64 %{policy} -loop-interchange-outer-epilogue-fission -loop-interchange-outer-epilogue-runtime-versioning -disable-output %s 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
 ; RUN: opt -passes='print<loops>' -disable-output %t.prep 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
 ; RUN: opt -S -passes='loop(loop-interchange,loop-interchange)' -cache-line-size=64 %{policy} %{prepare} -verify-each -verify-dom-info -verify-loop-info -verify-scev -verify-loop-lcssa %s -o %t.twice
 ; RUN: diff -u %t.prep %t.twice
 ;
+; With runtime versioning turned off, the canonical runtime test case reports
+; the disabled reason and nothing changes.
+; RUN: llvm-extract -S --func=bound_runtime_canonical %s -o %t.rtcanon.ll
+; RUN: opt -S -passes=no-op-loopnest %t.rtcanon.ll -o %t.rtcanon.noop
+; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} -loop-interchange-outer-epilogue-runtime-versioning=false %t.rtcanon.ll -o %t.rt.off 2> %t.rt.off.stderr
+; RUN: diff -u %t.rtcanon.noop %t.rt.off
+; RUN: FileCheck %s --check-prefix=RUNTIME-OFF --input-file=%t.rt.off.stderr --implicit-check-not='loop-interchange:'
+;
+; Runtime versioning is off by default, so naming the fission option alone
+; leaves all five runtime test cases unchanged.
+; RUN: llvm-extract -S --func=bound_same_trip_wmin --func=bound_runtime_canonical --func=bound_ineffective_min_metadata --func=bound_nofact --func=bound_context_nofact_trunc %s -o %t.five.ll
+; RUN: opt -S -passes=no-op-loopnest %t.five.ll -o %t.five.noop
+; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-outer-epilogue-fission %t.five.ll -o %t.five.default
+; RUN: diff -u %t.five.noop %t.five.default
+;
+; Disabling runtime versioning leaves this statically bounded test case prepared
+; and distributed without a guard.
+; RUN: llvm-extract -S --func=bound_const_eq %s -o %t.consteq.ll
+; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} -loop-interchange-outer-epilogue-runtime-versioning=false %t.consteq.ll -o %t.consteq.off 2> %t.consteq.off.stderr
+; RUN: FileCheck %s --check-prefix=STATIC-RUNTIME-OFF --input-file=%t.consteq.off.stderr --implicit-check-not='loop-interchange:'
+; RUN: FileCheck %s --check-prefix=STATIC-RUNTIME-OFF-IR --input-file=%t.consteq.off --implicit-check-not='.lver'
+;
 ; Each printed plan has passed both dependence matrices, legality,
-; profitability, and validation. The two remarks after it come from the apply
-; step. W is recovered from the element-normalized byte stride, not from the
-; storage size, and each generalized N/E pair has its own modular and
+; profitability, and validation, and a runtime-classified plan has also passed
+; the runtime versioning checks. The two remarks after it come from the
+; apply step. A runtime-classified plan reports Wmin where a static one
+; reports W. W is recovered from the element-normalized byte stride, not from
+; the storage size, and each generalized N/E pair has its own modular and
 ; containment requirements.
 ; PREP-LABEL: loop-interchange: prepared function=bound_typed_canonical{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
@@ -80,7 +118,8 @@
 ; PREP-SAME:  byte-offset-proofs=2 requirements=4 bound=runtime-bound Wmin=4
 ; PREP-SAME:  requirement-ids=[[#WMIN_ID:]]:modular-outer-span/runtime/runtime
 ; PREP-SAME:  ,[[#WMIN_ID]]:object-containment/static/by-constant-max,[[#WMIN_ID+1]]:modular-outer-span/runtime/runtime,[[#WMIN_ID+1]]:object-containment/static/by-constant-max{{$}}
-; PREP-NEXT:  loop-interchange: rejected function=bound_same_trip_wmin outer=outer.header inner=inner.header reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=runtime-bound, Wmin=4.
 ; PREP-LABEL: loop-interchange: rejected function=bound_distinct_runtime{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header reason=second-distinct-runtime-trip-object-containment{{$}}
 ; PREP-LABEL: loop-interchange: rejected function=bound_outer_static_inner_runtime{{ }}
@@ -141,7 +180,8 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=1335
 ; PREP-SAME:  requirement-ids=[[RUNTIME_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[RUNTIME_ID]]:object-containment/static/by-constant-max{{$}}
-; PREP-NEXT:  loop-interchange: rejected function=bound_runtime_canonical outer=outer.header inner=inner.header reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=runtime-bound, Wmin=1335.
 ;
 ; W-1 and W trips are safe. W+1 and W+2 must not be accepted by comparing
 ; backedges directly to W. The i8 wraparound case below has 256 trips, not zero.
@@ -199,13 +239,15 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=4
 ; PREP-SAME:  requirement-ids=[[MIN_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[MIN_ID]]:object-containment/static/by-constant-max{{$}}
-; PREP-NEXT:  loop-interchange: rejected function=bound_ineffective_min_metadata outer=outer.header inner=inner.header reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=runtime-bound, Wmin=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_nofact{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=4
 ; PREP-SAME:  requirement-ids=[[NOFACT_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[NOFACT_ID]]:object-containment/static/by-constant-max{{$}}
-; PREP-NEXT:  loop-interchange: rejected function=bound_nofact outer=outer.header inner=inner.header reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=runtime-bound, Wmin=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_widen_i32{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=1
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
@@ -230,9 +272,8 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=4
 ; PREP-SAME:  requirement-ids=[[NOFACT_TRUNC_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[NOFACT_TRUNC_ID]]:object-containment/static/by-constant-max{{$}}
-; PREP-NEXT:  loop-interchange: rejected function=bound_context_nofact_trunc outer=outer.header inner=inner.header reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
-; PREP-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check
-; PREP-NEXT:  remark: <unknown>:0:0: Cannot interchange loops due to dependences.
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=runtime-bound, Wmin=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_context_exact_addrec{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=3 routing-depth=3 fission-rows=0 routing-rows=1 cross-deps=1 reductions=2
@@ -255,13 +296,22 @@
 ; ADDREC-SCEV-NEXT: {{^}}Loop %outer.header: constant max backedge-taken count is i64 999999{{$}}
 
 ; The transformed module. Every definition is listed, so the RUN line's
-; '{{^define }}' exclusion makes the list exhaustive. Each applied function
-; gains one sibling epilogue loop whose latch branches to the original
-; continuation, and its nest is interchanged. The emptied original epilogue
-; block, the epilogue loop, and the continuation are checked instruction by
-; instruction. Block labels are plain directives because the printed IR
-; separates blocks with a blank line. The other functions were already shown
-; unchanged by the llvm-extract --delete pair above and carry only their label.
+; '{{^define }}' exclusion makes the list exhaustive. Each statically bounded
+; applied function gains one sibling epilogue loop whose latch branches to the
+; original continuation, and its nest is interchanged. The emptied original
+; epilogue block, the epilogue loop, and the continuation are checked
+; instruction by instruction. Each runtime-bounded applied function gains one
+; guard block, one untransformed fallback clone, one distributed and
+; interchanged versioned nest, and one sibling epilogue loop on that path. The
+; fallback clone keeps the whole original epilogue, so its epilogue block is
+; checked instruction by instruction, including the inner loop's exit into it
+; and its stores. The same invocation also excludes every '!llvm.loop'
+; attachment and every '.lver.check' label definition it does not match here,
+; so the two markers per versioned function and the single guard per versioned
+; function are exhaustive too. Block labels are plain directives because the
+; printed IR separates blocks with a blank line. The other functions were
+; already shown unchanged by the llvm-extract --delete pair above and carry
+; only their label.
 ;
 ; APPLIED-LABEL: define {{.*}}@bound_typed_canonical(
 ; APPLIED:         epilogue:
@@ -285,7 +335,66 @@
 ; APPLIED:         exit.cont:
 ; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
 ; APPLIED-NEXT:      ret void
+;
+; The two byte-offset proofs constrain the same trip with row strides 4 and 6.
+; One guard compares that trip with their minimum, Wmin = 4.
 ; APPLIED-LABEL: define {{.*}}@bound_same_trip_wmin(
+; APPLIED:         outer.header.lver.check:
+; APPLIED-NEXT:      %0 = add i64 %n, -1
+; APPLIED-NEXT:      %1 = zext i64 %0 to i65
+; APPLIED-NEXT:      %2 = add nuw i65 %1, 1
+; APPLIED-NEXT:      %ident.check = icmp ugt i65 %2, 4
+; APPLIED-NEXT:      br i1 %ident.check, label %outer.header.ph.lver.orig, label %inner.header.preheader
+; APPLIED:           br i1 %j.ec.lver.orig, label %epilogue.lver.orig, label %inner.header.lver.orig
+; APPLIED:         epilogue.lver.orig:
+; APPLIED-NEXT:      %chk.next.lver.orig = phi double [ %chk.next.j.lver.orig, %inner.header.lver.orig ]
+; APPLIED-NEXT:      %adiag.lver.orig = getelementptr inbounds [4 x double], ptr %A, i64 %i.lver.orig, i64 %i.lver.orig
+; APPLIED-NEXT:      %adv.lver.orig = load double, ptr %adiag.lver.orig, align 8
+; APPLIED-NEXT:      %adn.lver.orig = fmul double %adv.lver.orig, 1.500000e+00
+; APPLIED-NEXT:      store double %adn.lver.orig, ptr %adiag.lver.orig, align 8
+; APPLIED-NEXT:      %bdiag.lver.orig = getelementptr inbounds [6 x double], ptr %B, i64 %i.lver.orig, i64 %i.lver.orig
+; APPLIED-NEXT:      %bdv.lver.orig = load double, ptr %bdiag.lver.orig, align 8
+; APPLIED-NEXT:      %bdn.lver.orig = fmul double %bdv.lver.orig, 1.500000e+00
+; APPLIED-NEXT:      store double %bdn.lver.orig, ptr %bdiag.lver.orig, align 8
+; APPLIED-NEXT:      br label %outer.latch.lver.orig
+; APPLIED:         outer.latch.lver.orig:
+; APPLIED-NEXT:      %i.next.lver.orig = add i64 %i.lver.orig, 1
+; APPLIED-NEXT:      %i.ec.lver.orig = icmp eq i64 %i.next.lver.orig, %n
+; APPLIED-NEXT:      br i1 %i.ec.lver.orig, label %exit.loopexit, label %outer.header.lver.orig, !llvm.loop ![[FB_WMIN:[0-9]+]]
+; APPLIED:         outer.latch:
+; APPLIED-NEXT:      %i.next = add i64 %i, 1
+; APPLIED-NEXT:      %i.ec = icmp eq i64 %i.next, %n
+; APPLIED-NEXT:      br i1 %i.ec, label %inner.header.split, label %outer.header, !llvm.loop ![[FAST_WMIN:[0-9]+]]
+; APPLIED:         exit.loopexit:
+; APPLIED-NEXT:      %chk.res.ph = phi double [ %chk.next.lver.orig, %outer.latch.lver.orig ]
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         exit.loopexit1:
+; APPLIED-NEXT:      %chk.res.ph2 = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %adiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %adv.epil = load double, ptr %adiag.epil, align 8
+; APPLIED-NEXT:      %adn.epil = fmul double %adv.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %adn.epil, ptr %adiag.epil, align 8
+; APPLIED-NEXT:      %bdiag.epil = getelementptr inbounds [6 x double], ptr %B, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %bdv.epil = load double, ptr %bdiag.epil, align 8
+; APPLIED-NEXT:      %bdn.epil = fmul double %bdv.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %bdn.epil, ptr %bdiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %n
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.loopexit1.cont, label %epilogue.header
+; APPLIED:         exit.loopexit1.cont:
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         {{^exit:}}
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.res.ph, %exit.loopexit ], [ %chk.res.ph2, %exit.loopexit1.cont ]
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+;
 ; APPLIED-LABEL: define {{.*}}@bound_distinct_runtime(
 ; APPLIED-LABEL: define {{.*}}@bound_outer_static_inner_runtime(
 ; APPLIED-LABEL: define {{.*}}@bound_byte_canonical(
@@ -410,7 +519,57 @@
 ; APPLIED-LABEL: define {{.*}}@bound_storage_undersized(
 ; APPLIED-LABEL: define {{.*}}@bound_storage_nullable(
 ; APPLIED-LABEL: define {{.*}}@bound_storage_weak(
+;
+; The canonical runtime test case is versioned behind the guard 'trip u> 1335'.
 ; APPLIED-LABEL: define {{.*}}@bound_runtime_canonical(
+; APPLIED:         outer.header.lver.check:
+; APPLIED-NEXT:      %0 = add i64 %n, -1
+; APPLIED-NEXT:      %1 = zext i64 %0 to i65
+; APPLIED-NEXT:      %2 = add nuw i65 %1, 1
+; APPLIED-NEXT:      %ident.check = icmp ugt i65 %2, 1335
+; APPLIED-NEXT:      br i1 %ident.check, label %outer.header.ph.lver.orig, label %inner.header.preheader
+; APPLIED:           br i1 %j.ec.lver.orig, label %epilogue.lver.orig, label %inner.header.lver.orig
+; APPLIED:         epilogue.lver.orig:
+; APPLIED-NEXT:      %chk.next.lver.orig = phi double [ %chk.next.j.lver.orig, %inner.header.lver.orig ]
+; APPLIED-NEXT:      %ddiag.lver.orig = getelementptr inbounds [1335 x double], ptr %A, i64 %i.lver.orig, i64 %i.lver.orig
+; APPLIED-NEXT:      %dval.lver.orig = load double, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      %dnew.lver.orig = fmul double %dval.lver.orig, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.lver.orig, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      br label %outer.latch.lver.orig
+; APPLIED:         outer.latch.lver.orig:
+; APPLIED-NEXT:      %i.next.lver.orig = add i64 %i.lver.orig, 1
+; APPLIED-NEXT:      %i.ec.lver.orig = icmp eq i64 %i.next.lver.orig, %n
+; APPLIED-NEXT:      br i1 %i.ec.lver.orig, label %exit.loopexit, label %outer.header.lver.orig, !llvm.loop ![[FB_RTCANON:[0-9]+]]
+; APPLIED:         outer.latch:
+; APPLIED-NEXT:      %i.next = add i64 %i, 1
+; APPLIED-NEXT:      %i.ec = icmp eq i64 %i.next, %n
+; APPLIED-NEXT:      br i1 %i.ec, label %inner.header.split, label %outer.header, !llvm.loop ![[FAST_RTCANON:[0-9]+]]
+; APPLIED:         exit.loopexit:
+; APPLIED-NEXT:      %chk.res.ph = phi double [ %chk.next.lver.orig, %outer.latch.lver.orig ]
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         exit.loopexit1:
+; APPLIED-NEXT:      %chk.res.ph2 = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [1335 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %n
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.loopexit1.cont, label %epilogue.header
+; APPLIED:         exit.loopexit1.cont:
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         {{^exit:}}
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.res.ph, %exit.loopexit ], [ %chk.res.ph2, %exit.loopexit1.cont ]
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+;
 ; APPLIED-LABEL: define {{.*}}@bound_const_below(
 ; APPLIED:         epilogue:
 ; APPLIED-NEXT:      br label %outer.latch
@@ -545,8 +704,111 @@
 ; APPLIED:         exit.cont:
 ; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
 ; APPLIED-NEXT:      ret void
+;
+; The check block holds the shared smin call, now without its !range metadata,
+; and the inner increment keeps its nuw and nsw flags in the fallback and in
+; the versioned loop.
 ; APPLIED-LABEL: define {{.*}}@bound_ineffective_min_metadata(
+; APPLIED:         outer.header.lver.check:
+; APPLIED-NEXT:      %mn = call i64 @llvm.smin.i64(i64 %m, i64 %k){{$}}
+; APPLIED-NEXT:      %0 = add i64 %mn, -1
+; APPLIED-NEXT:      %1 = zext i64 %0 to i65
+; APPLIED-NEXT:      %2 = add nuw i65 %1, 1
+; APPLIED-NEXT:      %ident.check = icmp ugt i65 %2, 4
+; APPLIED-NEXT:      br i1 %ident.check, label %outer.header.ph.lver.orig, label %inner.header.preheader
+; APPLIED:           %j.next.lver.orig = add nuw nsw i64 %j.lver.orig, 1
+; APPLIED:           br i1 %j.ec.lver.orig, label %epilogue.lver.orig, label %inner.header.lver.orig
+; APPLIED:         epilogue.lver.orig:
+; APPLIED-NEXT:      %chk.next.lver.orig = phi double [ %chk.next.j.lver.orig, %inner.header.lver.orig ]
+; APPLIED-NEXT:      %ddiag.lver.orig = getelementptr inbounds [4 x double], ptr %A, i64 %i.lver.orig, i64 %i.lver.orig
+; APPLIED-NEXT:      %dval.lver.orig = load double, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      %dnew.lver.orig = fmul double %dval.lver.orig, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.lver.orig, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      br label %outer.latch.lver.orig
+; APPLIED:         outer.latch.lver.orig:
+; APPLIED-NEXT:      %i.next.lver.orig = add i64 %i.lver.orig, 1
+; APPLIED-NEXT:      %i.ec.lver.orig = icmp eq i64 %i.next.lver.orig, %mn
+; APPLIED-NEXT:      br i1 %i.ec.lver.orig, label %exit.loopexit, label %outer.header.lver.orig, !llvm.loop ![[FB_MIN:[0-9]+]]
+; APPLIED:           %j.next = add nuw nsw i64 %j, 1
+; APPLIED:         outer.latch:
+; APPLIED-NEXT:      %i.next = add i64 %i, 1
+; APPLIED-NEXT:      %i.ec = icmp eq i64 %i.next, %mn
+; APPLIED-NEXT:      br i1 %i.ec, label %inner.header.split, label %outer.header, !llvm.loop ![[FAST_MIN:[0-9]+]]
+; APPLIED:         exit.loopexit:
+; APPLIED-NEXT:      %chk.res.ph = phi double [ %chk.next.lver.orig, %outer.latch.lver.orig ]
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         exit.loopexit1:
+; APPLIED-NEXT:      %chk.res.ph2 = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %mn
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.loopexit1.cont, label %epilogue.header
+; APPLIED:         exit.loopexit1.cont:
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         {{^exit:}}
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.res.ph, %exit.loopexit ], [ %chk.res.ph2, %exit.loopexit1.cont ]
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+;
 ; APPLIED-LABEL: define {{.*}}@bound_nofact(
+; APPLIED:         outer.header.lver.check:
+; APPLIED-NEXT:      %0 = add i64 %n, -1
+; APPLIED-NEXT:      %1 = zext i64 %0 to i65
+; APPLIED-NEXT:      %2 = add nuw i65 %1, 1
+; APPLIED-NEXT:      %ident.check = icmp ugt i65 %2, 4
+; APPLIED-NEXT:      br i1 %ident.check, label %outer.header.ph.lver.orig, label %inner.header.preheader
+; APPLIED:           br i1 %j.ec.lver.orig, label %epilogue.lver.orig, label %inner.header.lver.orig
+; APPLIED:         epilogue.lver.orig:
+; APPLIED-NEXT:      %chk.next.lver.orig = phi double [ %chk.next.j.lver.orig, %inner.header.lver.orig ]
+; APPLIED-NEXT:      %ddiag.lver.orig = getelementptr inbounds [4 x double], ptr %A, i64 %i.lver.orig, i64 %i.lver.orig
+; APPLIED-NEXT:      %dval.lver.orig = load double, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      %dnew.lver.orig = fmul double %dval.lver.orig, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.lver.orig, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      br label %outer.latch.lver.orig
+; APPLIED:         outer.latch.lver.orig:
+; APPLIED-NEXT:      %i.next.lver.orig = add i64 %i.lver.orig, 1
+; APPLIED-NEXT:      %i.ec.lver.orig = icmp eq i64 %i.next.lver.orig, %n
+; APPLIED-NEXT:      br i1 %i.ec.lver.orig, label %exit.loopexit, label %outer.header.lver.orig, !llvm.loop ![[FB_NOFACT:[0-9]+]]
+; APPLIED:         outer.latch:
+; APPLIED-NEXT:      %i.next = add i64 %i, 1
+; APPLIED-NEXT:      %i.ec = icmp eq i64 %i.next, %n
+; APPLIED-NEXT:      br i1 %i.ec, label %inner.header.split, label %outer.header, !llvm.loop ![[FAST_NOFACT:[0-9]+]]
+; APPLIED:         exit.loopexit:
+; APPLIED-NEXT:      %chk.res.ph = phi double [ %chk.next.lver.orig, %outer.latch.lver.orig ]
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         exit.loopexit1:
+; APPLIED-NEXT:      %chk.res.ph2 = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %n
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.loopexit1.cont, label %epilogue.header
+; APPLIED:         exit.loopexit1.cont:
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         {{^exit:}}
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.res.ph, %exit.loopexit ], [ %chk.res.ph2, %exit.loopexit1.cont ]
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+;
 ; APPLIED-LABEL: define {{.*}}@bound_widen_i32(
 ; APPLIED:         epilogue:
 ; APPLIED-NEXT:      br label %outer.latch
@@ -593,7 +855,61 @@
 ; APPLIED:         exit.cont:
 ; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
 ; APPLIED-NEXT:      br label %done
+;
+; The guard truncates %n to the i3 backedge-taken count, zero-extends it to
+; i65, adds one to form the trip, and compares the trip there. The versioned
+; pair sits inside the entry branch.
 ; APPLIED-LABEL: define {{.*}}@bound_context_nofact_trunc(
+; APPLIED:         outer.header.lver.check:
+; APPLIED-NEXT:      %0 = trunc i64 %n to i3
+; APPLIED-NEXT:      %1 = zext i3 %0 to i65
+; APPLIED-NEXT:      %2 = add nuw nsw i65 %1, 1
+; APPLIED-NEXT:      %ident.check = icmp ugt i65 %2, 4
+; APPLIED-NEXT:      br i1 %ident.check, label %outer.header.ph.lver.orig, label %inner.header.preheader
+; APPLIED:           br i1 %j.ec.lver.orig, label %epilogue.lver.orig, label %inner.header.lver.orig
+; APPLIED:         epilogue.lver.orig:
+; APPLIED-NEXT:      %chk.next.lver.orig = phi double [ %chk.next.j.lver.orig, %inner.header.lver.orig ]
+; APPLIED-NEXT:      %ddiag.lver.orig = getelementptr inbounds [4 x double], ptr %A, i64 %i.lver.orig, i64 %i.lver.orig
+; APPLIED-NEXT:      %dval.lver.orig = load double, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      %dnew.lver.orig = fmul double %dval.lver.orig, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.lver.orig, ptr %ddiag.lver.orig, align 8
+; APPLIED-NEXT:      br label %outer.latch.lver.orig
+; APPLIED:         outer.latch.lver.orig:
+; APPLIED-NEXT:      %i.next.lver.orig = add i64 %i.lver.orig, 1
+; APPLIED-NEXT:      %i.ec.lver.orig = icmp eq i64 %i.next.lver.orig, %nn
+; APPLIED-NEXT:      br i1 %i.ec.lver.orig, label %exit.loopexit, label %outer.header.lver.orig, !llvm.loop ![[FB_TRUNC:[0-9]+]]
+; APPLIED:         outer.latch:
+; APPLIED-NEXT:      %i.next = add i64 %i, 1
+; APPLIED-NEXT:      %i.ec = icmp eq i64 %i.next, %nn
+; APPLIED-NEXT:      br i1 %i.ec, label %inner.header.split, label %outer.header, !llvm.loop ![[FAST_TRUNC:[0-9]+]]
+; APPLIED:         exit.loopexit:
+; APPLIED-NEXT:      %chk.res.ph = phi double [ %chk.next.lver.orig, %outer.latch.lver.orig ]
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         exit.loopexit1:
+; APPLIED-NEXT:      %chk.res.ph2 = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %nn
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.loopexit1.cont, label %epilogue.header
+; APPLIED:         exit.loopexit1.cont:
+; APPLIED-NEXT:      br label %exit
+; APPLIED:         {{^exit:}}
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.res.ph, %exit.loopexit ], [ %chk.res.ph2, %exit.loopexit1.cont ]
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      br label %done
+; APPLIED:         done:
+; APPLIED-NEXT:      ret void
+;
 ; APPLIED-LABEL: define {{.*}}@bound_context_exact_addrec(
 ; APPLIED:         epilogue:
 ; APPLIED-NEXT:      br label %outer.latch
@@ -617,17 +933,70 @@
 ; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
 ; APPLIED-NEXT:      br label %top.latch
 ;
-; The same loop-info lines are checked against the loop manager's live
-; LoopInfo and against a fresh rebuild of the transformed module. The block
-; lists inside the nest are wildcarded because LoopInfo stores them in
-; discovery order, which an incremental update and a fresh walk reach
-; differently; the loop order, the depths, and the epilogue loop's two blocks
-; are exact.
+; Every attachment the file carries is one of the ten matched above: a versioned
+; and a fallback marker for each of the five versioned functions. Each is a
+; distinct loop id whose second operand is the shared marker name. The range
+; metadata of @bound_scunknown_range separates the fourth id from the fifth, so
+; the chain restarts there.
+; APPLIED:         ![[FB_WMIN]] = distinct !{![[FB_WMIN]], ![[MARK:[0-9]+]]}
+; APPLIED-NEXT:    ![[MARK]] = !{!"llvm.loop.interchange.runtime_versioned"}
+; APPLIED-NEXT:    ![[FAST_WMIN]] = distinct !{![[FAST_WMIN]], ![[MARK]]}
+; APPLIED-NEXT:    ![[FB_RTCANON]] = distinct !{![[FB_RTCANON]], ![[MARK]]}
+; APPLIED-NEXT:    ![[FAST_RTCANON]] = distinct !{![[FAST_RTCANON]], ![[MARK]]}
+; APPLIED:         ![[FB_MIN]] = distinct !{![[FB_MIN]], ![[MARK]]}
+; APPLIED-NEXT:    ![[FAST_MIN]] = distinct !{![[FAST_MIN]], ![[MARK]]}
+; APPLIED-NEXT:    ![[FB_NOFACT]] = distinct !{![[FB_NOFACT]], ![[MARK]]}
+; APPLIED-NEXT:    ![[FAST_NOFACT]] = distinct !{![[FAST_NOFACT]], ![[MARK]]}
+; APPLIED-NEXT:    ![[FB_TRUNC]] = distinct !{![[FB_TRUNC]], ![[MARK]]}
+; APPLIED-NEXT:    ![[FAST_TRUNC]] = distinct !{![[FAST_TRUNC]], ![[MARK]]}
+;
+; With the five versioned functions deleted, the remaining module is free of
+; guards, versioning markers, and alias metadata. The definition exclusion
+; makes this list exhaustive.
+; STATIC-LABEL: define {{.*}}@bound_typed_canonical(
+; STATIC-LABEL: define {{.*}}@bound_distinct_runtime(
+; STATIC-LABEL: define {{.*}}@bound_outer_static_inner_runtime(
+; STATIC-LABEL: define {{.*}}@bound_byte_canonical(
+; STATIC-LABEL: define {{.*}}@bound_byte_nondivisible(
+; STATIC-LABEL: define {{.*}}@bound_offset_high32(
+; STATIC-LABEL: define {{.*}}@bound_optsize_canonical(
+; STATIC-LABEL: define {{.*}}@bound_minsize_canonical(
+; STATIC-LABEL: define {{.*}}@bound_storage_defined_global(
+; STATIC-LABEL: define {{.*}}@bound_storage_external_global(
+; STATIC-LABEL: define {{.*}}@bound_storage_replaceable_global(
+; STATIC-LABEL: define {{.*}}@bound_storage_missing(
+; STATIC-LABEL: define {{.*}}@bound_storage_undersized(
+; STATIC-LABEL: define {{.*}}@bound_storage_nullable(
+; STATIC-LABEL: define {{.*}}@bound_storage_weak(
+; STATIC-LABEL: define {{.*}}@bound_const_below(
+; STATIC-LABEL: define {{.*}}@bound_const_eq(
+; STATIC-LABEL: define {{.*}}@bound_const_above1(
+; STATIC-LABEL: define {{.*}}@bound_const_above2(
+; STATIC-LABEL: define {{.*}}@bound_dominating_guard(
+; STATIC-LABEL: define {{.*}}@bound_max_too_broad(
+; STATIC-LABEL: define {{.*}}@bound_assume(
+; STATIC-LABEL: define {{.*}}@bound_scunknown_range(
+; STATIC-LABEL: define {{.*}}@bound_widen_i32(
+; STATIC-LABEL: define {{.*}}@bound_overflow(
+; STATIC-LABEL: define {{.*}}@bound_context_exact_trunc(
+; STATIC-LABEL: define {{.*}}@bound_context_exact_addrec(
+;
+; Compare incremental LoopInfo with a fresh reconstruction. Block order inside
+; a nest is wildcarded because the two traversals may discover blocks
+; differently. The loop order, the depths, and the epilogue loop's two blocks
+; are exact. Every versioned function also states its headers and latches
+; exactly and leaves the sibling order fallback, epilogue, versioned.
 ;
 ; APPLY-LOOPS-LABEL: Loop info for function 'bound_typed_canonical':
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
 ; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_same_trip_wmin':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %outer.header.lver.orig<header>,{{.*}}%outer.latch.lver.orig<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header.lver.orig<header><latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}%inner.header.split<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}%outer.latch<latch><exiting>
 ; APPLY-LOOPS-LABEL: Loop info for function 'bound_byte_canonical':
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
@@ -648,6 +1017,12 @@
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
 ; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_runtime_canonical':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %outer.header.lver.orig<header>,{{.*}}%outer.latch.lver.orig<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header.lver.orig<header><latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}%inner.header.split<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}%outer.latch<latch><exiting>
 ; APPLY-LOOPS-LABEL: Loop info for function 'bound_const_below':
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
@@ -672,6 +1047,18 @@
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
 ; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_ineffective_min_metadata':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %outer.header.lver.orig<header>,{{.*}}%outer.latch.lver.orig<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header.lver.orig<header><latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}%inner.header.split<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}%outer.latch<latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_nofact':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %outer.header.lver.orig<header>,{{.*}}%outer.latch.lver.orig<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header.lver.orig<header><latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}%inner.header.split<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}%outer.latch<latch><exiting>
 ; APPLY-LOOPS-LABEL: Loop info for function 'bound_widen_i32':
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
@@ -680,11 +1067,31 @@
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
 ; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_context_nofact_trunc':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %outer.header.lver.orig<header>,{{.*}}%outer.latch.lver.orig<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header.lver.orig<header><latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}%inner.header.split<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}%outer.latch<latch><exiting>
 ; APPLY-LOOPS-LABEL: Loop info for function 'bound_context_exact_addrec':
 ; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %top.header<header>,{{.*}}
 ; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header<header>,{{.*}}
 ; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %outer.header<header>,{{.*}}
 ; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+;
+; With runtime versioning disabled, the runtime test case reports the disabled
+; reason and remains unchanged.
+; RUNTIME-OFF: loop-interchange: rejected function=bound_runtime_canonical{{ }}
+; RUNTIME-OFF-SAME: outer=outer.header inner=inner.header reason=runtime outer-epilogue versioning is disabled{{$}}
+;
+; Disabling runtime versioning does not affect static preparation or epilogue
+; extraction.
+; STATIC-RUNTIME-OFF: loop-interchange: prepared function=bound_const_eq{{ }}
+; STATIC-RUNTIME-OFF-SAME: outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
+; STATIC-RUNTIME-OFF-SAME: absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
+; STATIC-RUNTIME-OFF-SAME: byte-offset-proofs=1 requirements=2 bound=static-bound W=4
+; STATIC-RUNTIME-OFF-SAME: requirement-ids=[[CONSTEQ_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[CONSTEQ_ID]]:object-containment/static/by-constant-max{{$}}
+; STATIC-RUNTIME-OFF-IR: epilogue.header:
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -1644,7 +2051,7 @@ inner.header:
   %idx = getelementptr inbounds [4 x double], ptr %col, i64 %j, i64 0
   %v = load double, ptr %idx, align 8
   %chk.next.j = fadd reassoc double %chk.j, %v
-  %j.next = add i64 %j, 1
+  %j.next = add nuw nsw i64 %j, 1
   %j.ec = icmp eq i64 %j.next, 4
   br i1 %j.ec, label %epilogue, label %inner.header
 epilogue:

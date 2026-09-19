@@ -24,10 +24,13 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -48,6 +51,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -62,6 +66,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
@@ -73,6 +78,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-interchange"
 
@@ -163,6 +169,31 @@ static cl::opt<unsigned int> MaxOuterEpilogueFissionCandidates(
     cl::Hidden,
     cl::desc("Maximum number of eligible outer-epilogue fission candidates "
              "prepared"));
+
+static constexpr StringLiteral RuntimeVersionedLoopMarker =
+    "llvm.loop.interchange.runtime_versioned";
+
+// Outer-epilogue runtime versioning: opt-in, effective only with
+// outer-epilogue fission enabled.
+static cl::opt<bool> EnableOuterEpilogueRuntimeVersioning(
+    "loop-interchange-outer-epilogue-runtime-versioning", cl::init(false),
+    cl::Hidden,
+    cl::desc("Version runtime-bounded outer-epilogue fission candidates"));
+
+static cl::opt<unsigned int> MaxRuntimeVersioningBlocks(
+    "loop-interchange-max-runtime-versioning-blocks", cl::init(16), cl::Hidden,
+    cl::desc("Maximum number of blocks in an outer loop selected for runtime "
+             "versioning"));
+
+static cl::opt<unsigned int> MaxRuntimeVersioningInstructions(
+    "loop-interchange-max-runtime-versioning-instructions", cl::init(128),
+    cl::Hidden,
+    cl::desc("Maximum number of non-debug instructions in an outer loop "
+             "selected for runtime versioning"));
+
+static cl::opt<unsigned int> RuntimeTripExpansionBudget(
+    "loop-interchange-runtime-trip-expansion-budget", cl::init(8), cl::Hidden,
+    cl::desc("Maximum SCEV expansion cost for a runtime outer-trip guard"));
 
 static cl::opt<bool> PrintPreparedEpiloguePlans(
     "loop-interchange-print-prepared-plan", cl::init(false), cl::Hidden,
@@ -861,6 +892,21 @@ struct PreparedTripBound {
   APInt Wmin;
 };
 
+/// Pre-mutation state recorded by prepareRuntimeVersioning for versioning a
+/// runtime-bounded selected outer loop. The vectors record the loop's structure
+/// at preparation time. applyPreparedRuntimeInterchange rechecks them against
+/// the live loop immediately before mutation and clears them before cloning, so
+/// the structure never holds a post-version preheader, exit, or join.
+struct PreparedRuntimeVersioning {
+  Instruction *CheckPoint = nullptr;
+  Loop *ParentLoop = nullptr;
+  SmallVector<Loop *, 2> SubLoops;
+  SmallVector<BasicBlock *, 16> Blocks;
+  SmallVector<Instruction *, 128> Instructions;
+  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 32> Edges;
+  SmallVector<Instruction *, 8> DefsUsedOutside;
+};
+
 /// All state needed to validate one collected-chain tail without mutating IR.
 struct PreparedInterchangePlan {
   DistributableOuterEpilogue Epilogue;
@@ -873,6 +919,7 @@ struct PreparedInterchangePlan {
   SmallVector<Instruction *, 16> NestMemoryInstructions;
   SmallVector<PreparedCrossPartitionDependence, 8> CrossDependences;
   PreparedTripBound TripBound;
+  std::optional<PreparedRuntimeVersioning> RuntimeVersioning;
   CharMatrix FissionContextMatrix;
   CharMatrix RoutingMatrix;
   Loop *FissionContextScanRoot = nullptr;
@@ -892,6 +939,23 @@ struct PreparedInterchangePlan {
   bool InterchangeLegal = false;
   bool Profitable = false;
 };
+
+static bool hasRuntimeVersionedLoopMarker(const Loop *L) {
+  MDNode *LoopID = L->getLoopID();
+  return LoopID &&
+         findOptionMDForLoopID(LoopID, RuntimeVersionedLoopMarker) != nullptr;
+}
+
+static void markRuntimeVersionedLoop(Loop *L) {
+  assert(!L->getLoopID() && "prepared loop must not carry input loop metadata");
+  LLVMContext &Ctx = L->getHeader()->getContext();
+  Metadata *MarkerOps[] = {MDString::get(Ctx, RuntimeVersionedLoopMarker)};
+  Metadata *Marker = MDNode::get(Ctx, MarkerOps);
+  SmallVector<Metadata *, 2> MDs = {nullptr, Marker};
+  MDNode *LoopID = MDNode::get(Ctx, MDs);
+  LoopID->replaceOperandWith(0, LoopID);
+  L->setLoopID(LoopID);
+}
 
 static void debugPreparationReject(Loop *Outer, Loop *Inner, StringRef Reason) {
   LLVM_DEBUG(dbgs() << "loop-interchange: outer-epilogue preparation rejected "
@@ -1087,6 +1151,10 @@ discoverDistributableOuterEpilogue(Loop *Outer, Loop *Inner,
     debugPreparationReject(Outer, Inner, Reason);
     return std::nullopt;
   };
+
+  if (hasRuntimeVersionedLoopMarker(Outer) ||
+      hasRuntimeVersionedLoopMarker(Inner))
+    return Reject("loop was already runtime-versioned");
 
   if (Outer->getSubLoops().size() != 1 ||
       Outer->getSubLoops().front() != Inner ||
@@ -1911,8 +1979,9 @@ static std::optional<PreparedTripBound> resolvePreparedTripBound(
       RejectReason = "runtime-trip-unsafe-to-expand";
       return std::nullopt;
     }
-    if (!TTI || Expander.isHighCostExpansion({ExactTrip}, L, /*Budget=*/8, TTI,
-                                             CheckPoint)) {
+    if (!TTI ||
+        Expander.isHighCostExpansion({ExactTrip}, L, RuntimeTripExpansionBudget,
+                                     TTI, CheckPoint)) {
       RejectReason = "runtime-trip-expansion-too-costly";
       return std::nullopt;
     }
@@ -1977,8 +2046,267 @@ buildCandidateAncestorChain(Loop *Outer, Loop *Inner) {
   return Ancestors;
 }
 
+static bool hasSafeRuntimeVersioningControl(const Loop *L) {
+  for (BasicBlock *BB : L->blocks()) {
+    if (!isa<CondBrInst, UncondBrInst>(BB->getTerminator()))
+      return false;
+    for (Instruction &I : *BB) {
+      if (I.getType()->isTokenLikeTy())
+        return false;
+      if (auto *Load = dyn_cast<LoadInst>(&I)) {
+        if (!Load->isSimple())
+          return false;
+        continue;
+      }
+      if (auto *Store = dyn_cast<StoreInst>(&I)) {
+        if (!Store->isSimple())
+          return false;
+        continue;
+      }
+      if (auto *Call = dyn_cast<CallBase>(&I)) {
+        if (!isa<CallInst>(Call) || Call->cannotDuplicate() ||
+            Call->isConvergent() || Call->hasDeoptState() || Call->mayThrow() ||
+            !Call->willReturn() || Call->mayReadOrWriteMemory() ||
+            Call->mayHaveSideEffects())
+          return false;
+        continue;
+      }
+      if (I.mayReadOrWriteMemory() || I.mayThrow())
+        return false;
+    }
+  }
+  return true;
+}
+
+static bool
+runtimeRequirementsAreConsistent(const PreparedTripBound &TripBound) {
+  if (TripBound.Outcome != PreparedBoundOutcome::RuntimeBound ||
+      !TripBound.RuntimeExactTrip || TripBound.Wmin.isZero())
+    return false;
+
+  bool SawRuntime = false;
+  APInt ComputedWmin;
+  for (const PreparedBoundRequirement &Req : TripBound.Requirements) {
+    if (!Req.Runtime)
+      continue;
+    if (!Req.ExactTrip || Req.ExactTrip != TripBound.RuntimeExactTrip ||
+        Req.Limit.isZero() ||
+        Req.Limit.getBitWidth() != TripBound.Wmin.getBitWidth())
+      return false;
+    if (SawRuntime)
+      ComputedWmin = APIntOps::umin(ComputedWmin, Req.Limit);
+    else {
+      SawRuntime = true;
+      ComputedWmin = Req.Limit;
+    }
+  }
+  return SawRuntime && ComputedWmin == TripBound.Wmin;
+}
+
+static bool hasIrreducibleRuntimeVersioningControl(Loop *L,
+                                                   const LoopInfo &LI) {
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(&LI);
+  return containsIrreducibleCFG<const BasicBlock *>(RPOT, LI);
+}
+
+/// Return true unless a recorded live-out has an unreachable use outside the
+/// loop. findDefsUsedOutsideOfLoop records a definition as live-out when any
+/// user lies outside the loop, while Loop::isLCSSAForm attributes a PHI use to
+/// its incoming block and ignores uses in blocks unreachable from entry. A
+/// definition whose outside uses are all ignored by LCSSA lacks an exit PHI,
+/// so LoopVersioning would synthesize a join PHI whose incoming value need not
+/// dominate the exiting block. The predicate applies LCSSA's own attribution
+/// here, so the set passed to versionLoop is exactly the set covered by LCSSA
+/// exit PHIs. When this predicate returns false, the caller rejects the
+/// candidate before any mutation.
+static bool liveOutsMatchLCSSA(ArrayRef<Instruction *> Defs, const Loop *L,
+                               const DominatorTree &DT) {
+  for (Instruction *Def : Defs) {
+    for (const Use &U : Def->uses()) {
+      auto *UserInst = cast<Instruction>(U.getUser());
+      BasicBlock *UserBB = UserInst->getParent();
+      if (auto *PN = dyn_cast<PHINode>(UserInst))
+        UserBB = PN->getIncomingBlock(U);
+      if (!L->contains(UserBB) && !DT.isReachableFromEntry(UserBB))
+        return false;
+    }
+  }
+  return true;
+}
+
+static bool prepareRuntimeVersioning(PreparedInterchangePlan &Plan,
+                                     ScalarEvolution &SE, LoopInfo &LI,
+                                     DominatorTree &DT,
+                                     const TargetTransformInfo &TTI,
+                                     const char *&RejectReason) {
+  assert(Plan.TripBound.Outcome == PreparedBoundOutcome::RuntimeBound &&
+         "runtime versioning checks require a runtime-bound plan");
+  Loop *Outer = Plan.Epilogue.Outer;
+  Loop *Inner = Plan.Epilogue.Inner;
+  if (!Outer || !Inner || !runtimeRequirementsAreConsistent(Plan.TripBound)) {
+    RejectReason = "runtime-bound requirements are inconsistent";
+    return false;
+  }
+  if (!EnableOuterEpilogueRuntimeVersioning) {
+    RejectReason = "runtime outer-epilogue versioning is disabled";
+    return false;
+  }
+  if (Outer->getHeader()->getParent()->hasOptSize()) {
+    RejectReason =
+        "runtime versioning is disabled for size-optimized functions";
+    return false;
+  }
+  if (hasRuntimeVersionedLoopMarker(Outer) ||
+      hasRuntimeVersionedLoopMarker(Inner)) {
+    RejectReason = "loop was already runtime-versioned";
+    return false;
+  }
+  if (!Outer->isSafeToCloneConditionally(DT)) {
+    RejectReason = "selected outer loop is not safe to clone";
+    return false;
+  }
+
+  BasicBlock *Preheader = Outer->getLoopPreheader();
+  if (!Preheader || !Outer->getUniqueExitBlock() || !Outer->getExitingBlock() ||
+      !Outer->isLoopSimplifyForm() || !Outer->hasDedicatedExits() ||
+      !Outer->isRecursivelyLCSSAForm(DT, LI) ||
+      hasIrreducibleRuntimeVersioningControl(Outer, LI)) {
+    RejectReason =
+        "selected outer loop is not canonical single-exit recursive LCSSA";
+    return false;
+  }
+  if (!hasSafeRuntimeVersioningControl(Outer)) {
+    RejectReason = "selected outer loop contains unsafe versioning control";
+    return false;
+  }
+  if (Outer->getNumBlocks() > MaxRuntimeVersioningBlocks) {
+    RejectReason = "selected outer loop exceeds the runtime block limit";
+    return false;
+  }
+
+  Instruction *CheckPoint = Preheader->getTerminator();
+  const SCEV *ExactTrip = Plan.TripBound.RuntimeExactTrip;
+  SCEVExpander Expander(SE, "loop-interchange-bound");
+  if (!SE.isLoopInvariant(ExactTrip, Outer) ||
+      !SE.isAvailableAtLoopEntry(ExactTrip, Outer) ||
+      !Expander.isSafeToExpandAt(ExactTrip, CheckPoint)) {
+    RejectReason = "runtime trip is unavailable or unsafe to expand";
+    return false;
+  }
+  if (Expander.isHighCostExpansion(
+          {ExactTrip}, Outer, RuntimeTripExpansionBudget, &TTI, CheckPoint)) {
+    RejectReason = "runtime trip expansion exceeds the cost budget";
+    return false;
+  }
+
+  PreparedRuntimeVersioning Runtime;
+  Runtime.CheckPoint = CheckPoint;
+  Runtime.ParentLoop = Outer->getParentLoop();
+  Runtime.SubLoops.append(Outer->getSubLoops().begin(),
+                          Outer->getSubLoops().end());
+
+  unsigned NonDebugInstructions = 0;
+  for (BasicBlock *BB : Outer->blocks()) {
+    Runtime.Blocks.push_back(BB);
+    for (Instruction &I : *BB) {
+      Runtime.Instructions.push_back(&I);
+      if (!I.isDebugOrPseudoInst() &&
+          ++NonDebugInstructions > MaxRuntimeVersioningInstructions) {
+        RejectReason =
+            "selected outer loop exceeds the runtime instruction limit";
+        return false;
+      }
+    }
+    for (BasicBlock *Successor : successors(BB))
+      Runtime.Edges.emplace_back(BB, Successor);
+  }
+  Runtime.DefsUsedOutside = findDefsUsedOutsideOfLoop(Outer);
+  if (!liveOutsMatchLCSSA(Runtime.DefsUsedOutside, Outer, DT)) {
+    RejectReason =
+        "selected outer loop has a live-out used in unreachable code";
+    return false;
+  }
+  Plan.RuntimeVersioning = std::move(Runtime);
+  return true;
+}
+
+static bool isRuntimeVersioningStateCurrent(const PreparedInterchangePlan &Plan,
+                                            const DominatorTree &DT,
+                                            const LoopInfo &LI) {
+  if (!Plan.RuntimeVersioning)
+    return false;
+  const PreparedRuntimeVersioning &Runtime = *Plan.RuntimeVersioning;
+  Loop *Outer = Plan.Epilogue.Outer;
+  Loop *Inner = Plan.Epilogue.Inner;
+  if (!EnableOuterEpilogueRuntimeVersioning || !Outer || !Inner ||
+      Runtime.CheckPoint == nullptr ||
+      Outer->getHeader()->getParent()->hasOptSize() ||
+      Runtime.ParentLoop != Outer->getParentLoop() ||
+      hasRuntimeVersionedLoopMarker(Outer) ||
+      hasRuntimeVersionedLoopMarker(Inner) ||
+      !Outer->isSafeToCloneConditionally(DT) || !Outer->isLoopSimplifyForm() ||
+      !Outer->hasDedicatedExits() || !Outer->getUniqueExitBlock() ||
+      !Outer->getExitingBlock() || !Outer->isRecursivelyLCSSAForm(DT, LI) ||
+      hasIrreducibleRuntimeVersioningControl(Outer, LI))
+    return false;
+
+  BasicBlock *Preheader = Outer->getLoopPreheader();
+  if (!Preheader || Runtime.CheckPoint != Preheader->getTerminator() ||
+      !llvm::equal(Runtime.SubLoops, Outer->getSubLoops()) ||
+      Outer->getNumBlocks() > MaxRuntimeVersioningBlocks ||
+      !hasSafeRuntimeVersioningControl(Outer))
+    return false;
+
+  unsigned NonDebugInstructions = 0;
+  unsigned BlockIndex = 0;
+  unsigned InstructionIndex = 0;
+  unsigned EdgeIndex = 0;
+  for (BasicBlock *BB : Outer->blocks()) {
+    if (BlockIndex == Runtime.Blocks.size() ||
+        Runtime.Blocks[BlockIndex++] != BB)
+      return false;
+    for (Instruction &I : *BB) {
+      if (InstructionIndex == Runtime.Instructions.size() ||
+          Runtime.Instructions[InstructionIndex++] != &I)
+        return false;
+      if (!I.isDebugOrPseudoInst() &&
+          ++NonDebugInstructions > MaxRuntimeVersioningInstructions)
+        return false;
+    }
+    for (BasicBlock *Successor : successors(BB)) {
+      if (EdgeIndex == Runtime.Edges.size() ||
+          Runtime.Edges[EdgeIndex++] != std::make_pair(BB, Successor))
+        return false;
+    }
+  }
+  if (BlockIndex != Runtime.Blocks.size() ||
+      InstructionIndex != Runtime.Instructions.size() ||
+      EdgeIndex != Runtime.Edges.size())
+    return false;
+  SmallVector<Instruction *, 8> CurrentDefs = findDefsUsedOutsideOfLoop(Outer);
+  return liveOutsMatchLCSSA(CurrentDefs, Outer, DT) &&
+         llvm::equal(Runtime.DefsUsedOutside, CurrentDefs);
+}
+
+static void forgetAffectedTopmostLoops(ScalarEvolution &SE,
+                                       ArrayRef<Loop *> Loops) {
+  SmallPtrSet<Loop *, 4> TopmostLoops;
+  for (Loop *L : Loops) {
+    if (!L)
+      continue;
+    while (L->getParentLoop())
+      L = L->getParentLoop();
+    TopmostLoops.insert(L);
+  }
+  for (Loop *L : TopmostLoops)
+    SE.forgetTopmostLoop(L);
+  SE.forgetBlockAndLoopDispositions();
+}
+
 /// Revalidate the plan without IR mutation or SCEV/DependenceInfo queries.
-static bool validatePreparedPlan(const PreparedInterchangePlan &Plan) {
+static bool validatePreparedPlan(const PreparedInterchangePlan &Plan,
+                                 const DominatorTree &DT, const LoopInfo &LI) {
   const DistributableOuterEpilogue &Epi = Plan.Epilogue;
   if (!Epi.Outer || !Epi.Inner || !Plan.FissionLegal ||
       !Plan.FissionContextMatrixComplete || !Plan.FissionContextLegal ||
@@ -2199,7 +2527,8 @@ static bool validatePreparedPlan(const PreparedInterchangePlan &Plan) {
   }
 
   if (Plan.TripBound.Outcome == PreparedBoundOutcome::RuntimeBound) {
-    if (!Plan.TripBound.RuntimeExactTrip || Plan.TripBound.Wmin.isZero())
+    if (!Plan.TripBound.RuntimeExactTrip || Plan.TripBound.Wmin.isZero() ||
+        !isRuntimeVersioningStateCurrent(Plan, DT, LI))
       return false;
     bool SawRuntime = false;
     APInt ExpectedWmin;
@@ -2217,7 +2546,7 @@ static bool validatePreparedPlan(const PreparedInterchangePlan &Plan) {
     if (!SawRuntime || ExpectedWmin != Plan.TripBound.Wmin)
       return false;
   } else {
-    if (Plan.TripBound.RuntimeExactTrip ||
+    if (Plan.TripBound.RuntimeExactTrip || Plan.RuntimeVersioning ||
         any_of(Plan.TripBound.Requirements,
                [](const PreparedBoundRequirement &Req) { return Req.Runtime; }))
       return false;
@@ -2301,7 +2630,6 @@ prepareInterchangeWithOuterEpilogue(ArrayRef<Loop *> RoutingChain,
                                     DependenceInfo *DI, DominatorTree *DT,
                                     LoopStandardAnalysisResults *AR,
                                     OptimizationRemarkEmitter *ORE) {
-  (void)LI;
   if (RoutingChain.size() < 2)
     return std::nullopt;
   Loop *Outer = RoutingChain[RoutingChain.size() - 2];
@@ -2440,7 +2768,16 @@ prepareInterchangeWithOuterEpilogue(ArrayRef<Loop *> RoutingChain,
   ArrayRef<Instruction *> DropNoInf = Plan.Legality->getHasNoInfInsts();
   Plan.DropNoInf.append(DropNoInf.begin(), DropNoInf.end());
 
-  if (!validatePreparedPlan(Plan)) {
+  if (Plan.TripBound.Outcome == PreparedBoundOutcome::RuntimeBound) {
+    const char *RuntimeRejectReason = "runtime versioning checks failed";
+    if (!prepareRuntimeVersioning(Plan, *SE, *LI, *DT, AR->TTI,
+                                  RuntimeRejectReason)) {
+      rejectPreparedEpilogue(ORE, Outer, Inner, RuntimeRejectReason);
+      return std::nullopt;
+    }
+  }
+
+  if (!validatePreparedPlan(Plan, *DT, *LI)) {
     rejectPreparedEpilogue(ORE, Outer, Inner,
                            "prepared plan failed pure re-validation");
     return std::nullopt;
@@ -2528,6 +2865,14 @@ struct LoopInterchange {
 
     Loop *Outer = Chain[Chain.size() - 2];
     Loop *Inner = Chain.back();
+    if (hasRuntimeVersionedLoopMarker(Outer) ||
+        hasRuntimeVersionedLoopMarker(Inner)) {
+      LLVM_DEBUG(dbgs() << "loop-interchange: outer-epilogue candidate "
+                           "discovery skipped chain Outer '"
+                        << Outer->getName() << "', Inner '" << Inner->getName()
+                        << "': one loop is already versioned.\n");
+      return false;
+    }
     Loop *Pair[] = {Outer, Inner};
     if (!hasSupportedLoopDepth(ArrayRef<Loop *>(Pair)))
       return false;
@@ -2561,7 +2906,7 @@ struct LoopInterchange {
       if (!Plan)
         continue;
       if (Plan->TripBound.Outcome == PreparedBoundOutcome::StaticBound) {
-        if (!validatePreparedPlan(*Plan)) {
+        if (!validatePreparedPlan(*Plan, *DT, *LI)) {
           rejectPreparedEpilogue(
               ORE, Plan->Epilogue.Outer, Plan->Epilogue.Inner,
               "prepared plan failed pure re-validation before selection");
@@ -2575,34 +2920,37 @@ struct LoopInterchange {
     }
 
     if (FirstRuntime) {
-      if (!validatePreparedPlan(*FirstRuntime)) {
+      if (!validatePreparedPlan(*FirstRuntime, *DT, *LI)) {
         rejectPreparedEpilogue(
             ORE, FirstRuntime->Epilogue.Outer, FirstRuntime->Epilogue.Inner,
             "prepared plan failed pure re-validation before selection");
         return std::nullopt;
       }
       printPreparedPlanDiagnostic(*FirstRuntime);
-      rejectPreparedEpilogue(
-          ORE, FirstRuntime->Epilogue.Outer, FirstRuntime->Epilogue.Inner,
-          "recovered selected-outer array bound is a runtime value; safe "
-          "distribution requires a runtime bound check");
     }
     return FirstRuntime;
   }
 
   /// Materialize the prepared outer-loop epilogue as its own sibling loop and
   /// perform the interchange decided during preparation. Below, E is that
-  /// epilogue slice and N the retained nest. Only StaticBound
-  /// plans reach here, so no runtime guard or fallback clone is created. The
-  /// selected outer loop may be top-level or nested; steps 5 and 10 register
-  /// the new loop accordingly. The mutation invalidates the IR pointers
-  /// recorded in \p Plan, so the caller must not read the plan afterwards.
-  void applyPreparedInterchange(PreparedInterchangePlan &Plan, LPMUpdater &U) {
-    assert(Plan.TripBound.Outcome == PreparedBoundOutcome::StaticBound &&
-           "apply materializes only statically bounded plans; a runtime-bound "
-           "plan must be declined before apply");
+  /// epilogue slice and N the retained nest. A statically bounded plan reaches
+  /// this routine directly. A runtime-bounded plan reaches it only after the
+  /// caller has created and marked a whole-loop versioned and fallback pair,
+  /// cleared the prepared trip SCEV and the pre-version state, and passed the
+  /// fallback loop in \p RuntimeFallback. The selected outer loop may be
+  /// top-level or nested, and the epilogue and fallback loops are registered
+  /// accordingly. The mutation invalidates the IR pointers recorded in
+  /// \p Plan, so the caller must not read the plan afterwards.
+  void applyPreparedInterchange(PreparedInterchangePlan &Plan, LPMUpdater &U,
+                                Loop *RuntimeFallback = nullptr) {
+    bool IsRuntime =
+        Plan.TripBound.Outcome == PreparedBoundOutcome::RuntimeBound;
+    assert(IsRuntime == (RuntimeFallback != nullptr) &&
+           "runtime materialization requires its fallback loop");
     assert(!Plan.TripBound.RuntimeExactTrip &&
-           "a static plan must not carry a runtime trip SCEV");
+           "the runtime trip SCEV must be absent before apply");
+    assert(!Plan.RuntimeVersioning &&
+           "pre-version structural state must be retired before apply");
     DistributableOuterEpilogue &Epi = Plan.Epilogue;
     Loop *Outer = Epi.Outer;
     Loop *Inner = Epi.Inner;
@@ -2915,41 +3263,71 @@ struct LoopInterchange {
     }
 
     // (5) Register the epilogue loop as the sibling following the selected
-    // outer loop. The two LoopInfo containers store siblings in opposite
-    // orders.
+    // outer loop. Runtime materialization also moves LoopVersioning's appended
+    // fallback into the program order N, E, fallback. The two LoopInfo
+    // containers store siblings in opposite orders.
     Loop *EpiLoop = LI->AllocateLoop();
     if (!OuterParent) {
       // TopLevelLoops is in reverse program order, so E precedes Outer there.
+      // Static storage is E then N. Runtime storage is fallback, E, then N.
       SmallVector<Loop *, 4> ExistingTopLevelLoops =
           LI->takeChildrenIf(/*Parent=*/nullptr, [](Loop *) { return true; });
-      bool InsertedEpilogue = false;
+      bool FoundOuter = false;
+      bool FoundFallback = false;
       for (Loop *L : ExistingTopLevelLoops) {
+        if (IsRuntime && L == RuntimeFallback) {
+          assert(!FoundFallback && "fallback loop appears more than once");
+          FoundFallback = true;
+          continue;
+        }
         if (L == Outer) {
+          assert(!FoundOuter && "selected outer appears more than once");
+          if (IsRuntime)
+            LI->addTopLevelLoop(RuntimeFallback);
           LI->addTopLevelLoop(EpiLoop);
-          InsertedEpilogue = true;
+          LI->addTopLevelLoop(Outer);
+          FoundOuter = true;
+          continue;
         }
         LI->addTopLevelLoop(L);
       }
-      assert(InsertedEpilogue &&
+      assert(FoundOuter &&
              "prepared top-level outer must be present in LoopInfo");
-      (void)InsertedEpilogue;
+      assert((!IsRuntime || FoundFallback) &&
+             "runtime fallback must be present in top-level LoopInfo");
+      (void)FoundOuter;
+      (void)FoundFallback;
     } else {
-      // SubLoops is in program order, so E follows Outer there. The
-      // interchange later replaces Outer in place (LI->replaceLoop), which
-      // keeps this order.
+      // SubLoops is in program order, so the static order is N then E and the
+      // runtime order is N, E, then fallback. The interchange later replaces
+      // Outer in place (LI->replaceLoop), which keeps this order.
       SmallVector<Loop *, 4> ExistingChildren =
           LI->takeChildrenIf(OuterParent, [](Loop *) { return true; });
-      bool InsertedEpilogue = false;
+      bool FoundOuter = false;
+      bool FoundFallback = false;
       for (Loop *L : ExistingChildren) {
-        OuterParent->addChildLoop(L);
-        if (L == Outer) {
-          OuterParent->addChildLoop(EpiLoop);
-          InsertedEpilogue = true;
+        if (IsRuntime && L == RuntimeFallback) {
+          assert(!FoundFallback && "fallback loop appears more than once");
+          FoundFallback = true;
+          continue;
         }
+        if (L == Outer) {
+          assert(!FoundOuter && "selected outer appears more than once");
+          OuterParent->addChildLoop(Outer);
+          OuterParent->addChildLoop(EpiLoop);
+          if (IsRuntime)
+            OuterParent->addChildLoop(RuntimeFallback);
+          FoundOuter = true;
+          continue;
+        }
+        OuterParent->addChildLoop(L);
       }
-      assert(InsertedEpilogue &&
+      assert(FoundOuter &&
              "prepared nested outer must be present in its parent's subloops");
-      (void)InsertedEpilogue;
+      assert((!IsRuntime || FoundFallback) &&
+             "runtime fallback must be present in parent subloops");
+      (void)FoundOuter;
+      (void)FoundFallback;
       // The epilogue's dedicated preheader lives inside the parent loop but
       // outside E, so it belongs to the parent and its ancestors.
       OuterParent->addBasicBlockToLoop(EpiPreheader, *LI);
@@ -2986,8 +3364,12 @@ struct LoopInterchange {
     // (7) Cached SCEV expressions and dispositions may still name the erased
     // path blocks. Drop them before the LCSSA formation and the interchange,
     // which both query SCEV.
-    SE->forgetLoop(Outer);
-    SE->forgetBlockAndLoopDispositions();
+    if (IsRuntime)
+      forgetAffectedTopmostLoops(*SE, {Outer, Inner, EpiLoop, RuntimeFallback});
+    else {
+      SE->forgetLoop(Outer);
+      SE->forgetBlockAndLoopDispositions();
+    }
 
     // The epilogue loop is closed (no live-outs); keep it in LCSSA defensively
     // before the interchange updates analyses.
@@ -2996,19 +3378,43 @@ struct LoopInterchange {
     // (8) Interchange with the stored legality and flag-drop decisions.
     LoopInterchangeTransform LIT(Outer, Inner, SE, LI, DT, *Plan.Legality);
     LIT.transform(Plan.DropNoWrap, Plan.DropNoInf);
-    llvm::formLCSSARecursively(*Outer, *DT, LI, SE);
-    // The parent gained a subloop and the interchange moved blocks between
-    // loops, so drop the parent's cached SCEV and the dispositions again.
-    if (OuterParent)
-      SE->forgetLoop(OuterParent);
-    SE->forgetBlockAndLoopDispositions();
+    if (IsRuntime) {
+      // The interchange is the final CFG mutation. Drop the cached SCEV and
+      // dispositions for every affected topmost loop before rebuilding
+      // recursive LCSSA from the updated loop tree.
+      forgetAffectedTopmostLoops(*SE, {Outer, Inner, EpiLoop, RuntimeFallback});
+      if (OuterParent) {
+        Loop *AffectedRoot = OuterParent;
+        while (AffectedRoot->getParentLoop())
+          AffectedRoot = AffectedRoot->getParentLoop();
+        formLCSSARecursively(*AffectedRoot, *DT, LI, SE);
+      } else {
+        formLCSSARecursively(*Inner, *DT, LI, SE);
+        formLCSSARecursively(*EpiLoop, *DT, LI, SE);
+        formLCSSARecursively(*RuntimeFallback, *DT, LI, SE);
+      }
+      forgetAffectedTopmostLoops(*SE, {Outer, Inner, EpiLoop, RuntimeFallback});
+    } else {
+      llvm::formLCSSARecursively(*Outer, *DT, LI, SE);
+      // The parent gained a subloop and the interchange moved blocks between
+      // loops, so drop the parent's cached SCEV and the dispositions again.
+      if (OuterParent)
+        SE->forgetLoop(OuterParent);
+      SE->forgetBlockAndLoopDispositions();
+    }
     LoopsInterchanged++;
     OuterEpiloguesDistributed++;
 
     // The remark names the largest accepted bound limit W, or says that the
-    // plan needed no bound requirement.
+    // plan did not need a bound requirement. A runtime plan instead names Wmin,
+    // the smallest of its runtime bound limits, and its guard enforces that
+    // limit.
     std::string BoundNote = "bound=static-bound, no-bound-requirement";
-    if (!Plan.TripBound.Requirements.empty()) {
+    if (IsRuntime) {
+      BoundNote = ("bound=runtime-bound, Wmin=" +
+                   Twine(Plan.TripBound.Wmin.getZExtValue()))
+                      .str();
+    } else if (!Plan.TripBound.Requirements.empty()) {
       APInt StaticW(64, 0);
       for (const PreparedBoundRequirement &Req : Plan.TripBound.Requirements)
         if (Req.Limit.ugt(StaticW))
@@ -3034,14 +3440,149 @@ struct LoopInterchange {
     // (10) In loop-nest mode the updater accepts only new top-level siblings.
     // A nested epilogue loop is found by the next loop-nest walk after run()
     // reports the change.
-    if (!OuterParent)
-      U.addSiblingLoops({EpiLoop});
+    if (!OuterParent) {
+      if (IsRuntime)
+        U.addSiblingLoops({RuntimeFallback, EpiLoop});
+      else
+        U.addSiblingLoops({EpiLoop});
+    }
 
     LLVM_DEBUG(
         dbgs() << "loop-interchange: materialized outer-epilogue fission + "
                   "interchange, "
                << (OuterParent ? "nested sibling" : "top-level sibling")
                << ", in function '" << F.getName() << "'.\n");
+  }
+
+  /// Guard the selected outer trip, version the whole selected outer loop, and
+  /// materialize the prepared transform in the versioned loop only. Every
+  /// rejection precedes the guard expansion, the first mutation. After that
+  /// point only assertions check the transform.
+  bool applyPreparedRuntimeInterchange(PreparedInterchangePlan &Plan,
+                                       LPMUpdater &U) {
+    assert(Plan.TripBound.Outcome == PreparedBoundOutcome::RuntimeBound &&
+           Plan.RuntimeVersioning &&
+           "runtime apply requires a completely prepared runtime plan");
+    Loop *Outer = Plan.Epilogue.Outer;
+    Loop *Inner = Plan.Epilogue.Inner;
+
+    // LoopVersioning composes the LoopAccessInfo predicate union into the
+    // condition replaced below, so the union must be empty. LoopAccessAnalysis
+    // rejects non-innermost loops before recording predicates or convergent
+    // operations, so the requirement holds in the current implementation. The
+    // check enforces the LoopVersioning precondition if the analysis gains
+    // outer-loop support.
+    LoopAccessInfoManager LAIM(*SE, AR->AA, *DT, *LI, &AR->TTI, &AR->TLI,
+                               &AR->AC);
+    const LoopAccessInfo &LAI = LAIM.getInfo(*Outer);
+    const SCEVPredicate &PSEPredicate = LAI.getPSE().getPredicate();
+    const auto *PSEUnion = dyn_cast<SCEVUnionPredicate>(&PSEPredicate);
+    if (!PSEUnion || !PSEUnion->isAlwaysTrue() ||
+        !PSEUnion->getPredicates().empty() || LAI.hasConvergentOp()) {
+      rejectPreparedEpilogue(
+          ORE, Outer, Inner,
+          "loop access predicates are not an empty always-true union");
+      return false;
+    }
+
+    bool StillValid = validatePreparedPlan(Plan, *DT, *LI);
+    assert(StillValid && "a prepared runtime plan must stay valid until apply");
+    if (!StillValid) {
+      rejectPreparedEpilogue(
+          ORE, Outer, Inner,
+          "prepared runtime plan failed re-validation before apply");
+      return false;
+    }
+
+    PreparedRuntimeVersioning &Runtime = *Plan.RuntimeVersioning;
+    BasicBlock *CheckBlock = Outer->getLoopPreheader();
+    assert(CheckBlock && Runtime.CheckPoint == CheckBlock->getTerminator() &&
+           "runtime check point must be the selected outer preheader");
+    Loop *OuterParent = Outer->getParentLoop();
+    assert(OuterParent == Runtime.ParentLoop &&
+           "selected outer parent changed after preparation");
+    (void)OuterParent;
+    SmallVector<Instruction *, 8> DefsUsedOutside = Runtime.DefsUsedOutside;
+
+    LoopVersioning LVer(LAI, /*Checks=*/{}, Outer, LI, DT, SE);
+    Value *Bad = nullptr;
+    {
+      const SCEV *ExactTrip = Plan.TripBound.RuntimeExactTrip;
+      const APInt &Wmin = Plan.TripBound.Wmin;
+      unsigned TripWidth = ExactTrip->getType()->getIntegerBitWidth();
+      unsigned CompareWidth = std::max(TripWidth, Wmin.getBitWidth());
+      Type *CompareType = Type::getIntNTy(SE->getContext(), CompareWidth);
+      const SCEV *CompareTrip =
+          CompareWidth == TripWidth
+              ? ExactTrip
+              : SE->getZeroExtendExpr(ExactTrip, CompareType);
+      const SCEV *CompareLimit = SE->getConstant(Wmin.zext(CompareWidth));
+      const SCEVPredicate *Predicate = SE->getComparePredicate(
+          ICmpInst::ICMP_ULE, CompareTrip, CompareLimit);
+      SCEVExpander Expander(*SE, "loop-interchange-bound");
+      // SCEV expansion may drop poison-generating annotations on a reused
+      // instruction that dominates the check point. Both versions share that
+      // instruction, and only the versioned body is interchanged afterwards.
+      Bad = Expander.expandComparePredicate(
+          cast<SCEVComparePredicate>(Predicate), CheckBlock->getTerminator());
+    }
+
+    // Clear the prepared trip SCEVs and the recorded structure before cloning.
+    // The rest of the plan stays valid. After expansion, the guard needs only
+    // the expanded predicate, and Wmin remains available for the remark.
+    Plan.TripBound.RuntimeExactTrip = nullptr;
+    for (PreparedBoundRequirement &Req : Plan.TripBound.Requirements)
+      Req.ExactTrip = nullptr;
+    Plan.RuntimeVersioning.reset();
+
+    LVer.versionLoop(DefsUsedOutside);
+    assert(LVer.getVersionedLoop() == Outer &&
+           "the supplied loop must remain the versioned loop");
+    Loop *Fallback = LVer.getNonVersionedLoop();
+    assert(Fallback && Fallback != Outer &&
+           "loop versioning must create a fallback clone");
+
+    auto *Branch = cast<CondBrInst>(CheckBlock->getTerminator());
+    assert(match(Branch->getCondition(), m_Zero()) &&
+           "empty checks and predicates must emit a false condition");
+    assert(Branch->getSuccessor(0) == Fallback->getLoopPreheader() &&
+           Branch->getSuccessor(1) == Outer->getLoopPreheader() &&
+           "the failure edge must select the fallback, and the success edge "
+           "must select the versioned loop");
+    Branch->setCondition(Bad);
+
+    markRuntimeVersionedLoop(Outer);
+    markRuntimeVersionedLoop(Fallback);
+
+    // Resolve the exits again from the loop objects. The versioned loop and
+    // the clone have distinct dedicated exits feeding one shared join. Apply
+    // inserts the versioned loop's epilogue only between the versioned exit
+    // and that join.
+    BasicBlock *VersionedExit = Outer->getExitBlock();
+    BasicBlock *FallbackExit = Fallback->getExitBlock();
+    assert(VersionedExit && FallbackExit && VersionedExit != FallbackExit &&
+           VersionedExit->getSingleSuccessor() &&
+           VersionedExit->getSingleSuccessor() ==
+               FallbackExit->getSingleSuccessor() &&
+           "versioned loops must feed one shared join through dedicated exits");
+    (void)VersionedExit;
+    (void)FallbackExit;
+    assert(Outer->getParentLoop() == OuterParent &&
+           Fallback->getParentLoop() == OuterParent &&
+           Inner->getParentLoop() == Outer &&
+           "versioning must preserve the selected pair in the versioned loop "
+           "and create a sibling clone");
+    assert(Outer->isLoopSimplifyForm() && Fallback->isLoopSimplifyForm() &&
+           Outer->isRecursivelyLCSSAForm(*DT, *LI) &&
+           Fallback->isRecursivelyLCSSAForm(*DT, *LI) &&
+           "both versions must remain canonical recursive LCSSA loops");
+
+    // LoopVersioning changed the CFG and live-out PHIs. Invalidate every
+    // distinct affected topmost loop before fission's first SCEV-aware query.
+    forgetAffectedTopmostLoops(*SE, {Outer, Fallback});
+
+    applyPreparedInterchange(Plan, U, Fallback);
+    return true;
   }
 
   bool run(LoopNest &LN, LPMUpdater &U) {
@@ -3053,16 +3594,17 @@ struct LoopInterchange {
 
     // Try fission on the ordinary parent/leaf-child candidates. A StaticBound
     // plan extracts a sibling epilogue loop and interchanges the retained nest
-    // without a runtime guard or clone. A RuntimeBound plan is declined with a
-    // missed remark, and ordinary routing continues. Size-optimized functions
-    // skip fission but still use ordinary routing.
+    // without a runtime guard or clone. A RuntimeBound plan versions the whole
+    // selected outer loop behind one guard on its trip. Only the versioned
+    // loop is distributed and interchanged, and the clone is the fallback.
+    // Size-optimized functions skip fission but still use ordinary routing.
     if (EnableOuterEpilogueFission && !LN.getParent()->hasOptSize()) {
       if (std::optional<PreparedInterchangePlan> Prepared =
               tryPrepareOuterEpilogueFission(LoopLists)) {
         if (Prepared->TripBound.Outcome == PreparedBoundOutcome::StaticBound) {
           // No IR has changed since preparation. Assert on validation failure.
           // A release build reports the rejection and uses ordinary routing.
-          bool StillValid = validatePreparedPlan(*Prepared);
+          bool StillValid = validatePreparedPlan(*Prepared, *DT, *LI);
           assert(StillValid && "a prepared plan must stay valid until apply");
           if (StillValid) {
             applyPreparedInterchange(*Prepared, U);
@@ -3071,6 +3613,8 @@ struct LoopInterchange {
           rejectPreparedEpilogue(
               ORE, Prepared->Epilogue.Outer, Prepared->Epilogue.Inner,
               "prepared plan failed re-validation immediately before apply");
+        } else if (applyPreparedRuntimeInterchange(*Prepared, U)) {
+          return true;
         }
         // An unapplied plan is destroyed here, before ordinary routing mutates
         // the chains it points into.

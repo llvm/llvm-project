@@ -9,7 +9,8 @@
 # bound_context_nofact_trunc test case plus K dependent additions in the outer
 # header, where %c{K-1} feeds the epilogue's uitofp feeding the stored fmul, so
 # the chain reaches no address and no loop condition. The candidate stays
-# RuntimeBound, so the feature-on module must equal the feature-off module.
+# RuntimeBound. Because runtime versioning is disabled, the fission-enabled
+# and fission-disabled modules must match.
 #
 # REQUIRES: system-linux
 #
@@ -19,8 +20,10 @@
 # RUN: %python %t/generate-runtime-chain.py 300000 > %t/k300000.ll
 # RUN: %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -disable-output %t/k3.ll
 # RUN: %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -disable-output %t/k300000.ll
-# Feature-on preparation at both K reports K rematerialized definitions; the
-# plan is then declined as RuntimeBound.
+# For both K values, preparation walks all K rematerialized definitions and
+# classifies the plan as RuntimeBound. Runtime versioning is disabled, so the
+# candidate is rejected. The asserts-build discovery trace reports the exact
+# count at both K.
 # RUN: %python %t/bounded-stack.py opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission=false %t/k3.ll -o %t/k3.off.ll
 # RUN: %python %t/bounded-stack.py opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan %t/k3.ll -o %t/k3.on.ll 2> %t/k3.on.stderr
 # RUN: diff -u %t/k3.off.ll %t/k3.on.ll
@@ -32,28 +35,21 @@
 # RUN: FileCheck %s --check-prefix=K300000 --input-file=%t/k300000.on.stderr --implicit-check-not='loop-interchange:'
 # RUN: FileCheck %s --check-prefix=NO-MARKER --input-file=%t/k300000.on.ll --implicit-check-not='.lver' --implicit-check-not='!alias.scope' --implicit-check-not='!noalias'
 # RUN: %if asserts %{ %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan -debug-only=loop-interchange -disable-output %t/k3.ll 2>&1 | FileCheck %s --check-prefix=K3-DEBUG %}
+# RUN: %if asserts %{ %python %t/bounded-stack.py opt -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=instorder,vectorize -verify-each -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan -debug-only=loop-interchange -disable-output %t/k300000.ll 2>&1 | FileCheck %s --check-prefix=K300000-DEBUG %}
 #
-# K3-LABEL: loop-interchange: prepared function=deep_runtime_nofact{{ }}
-# K3-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=5 rematerialized=3
-# K3-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
-# K3-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=4
-# K3-SAME:  requirement-ids=[[K3_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[K3_ID]]:object-containment/static/by-constant-max{{$}}
-# K3-NEXT:  loop-interchange: rejected function=deep_runtime_nofact{{ }}
-# K3-SAME:  outer=outer.header inner=inner.header reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
+# K3-LABEL: loop-interchange: rejected function=deep_runtime_nofact{{ }}
+# K3-SAME:  outer=outer.header inner=inner.header reason=runtime outer-epilogue versioning is disabled{{$}}
 #
-# K300000-LABEL: loop-interchange: prepared function=deep_runtime_nofact{{ }}
-# K300000-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=5 rematerialized=300000
-# K300000-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
-# K300000-SAME:  byte-offset-proofs=1 requirements=2 bound=runtime-bound Wmin=4
-# K300000-SAME:  requirement-ids=[[K300000_ID:[0-9]+]]:modular-outer-span/runtime/runtime,[[K300000_ID]]:object-containment/static/by-constant-max{{$}}
-# K300000-NEXT:  loop-interchange: rejected function=deep_runtime_nofact{{ }}
-# K300000-SAME:  outer=outer.header inner=inner.header reason=recovered selected-outer array bound is a runtime value; safe distribution requires a runtime bound check{{$}}
+# K300000-LABEL: loop-interchange: rejected function=deep_runtime_nofact{{ }}
+# K300000-SAME:  outer=outer.header inner=inner.header reason=runtime outer-epilogue versioning is disabled{{$}}
 #
-# The discarded plan leaves no guard, no fallback loop, no versioning marker,
-# and no alias metadata in the module at either K.
+# For either value of K, the rejected candidate leaves the module without a
+# guard, fallback loop, versioning marker, or alias metadata.
 # NO-MARKER: {{^}}define void @deep_runtime_nofact({{.*$}}
 #
 # K3-DEBUG: loop-interchange: discovered a closed outer-loop epilogue in function 'deep_runtime_nofact' with 1 path block(s), 5 instruction(s), and 3 rematerialized loop-local definition(s).
+#
+# K300000-DEBUG: loop-interchange: discovered a closed outer-loop epilogue in function 'deep_runtime_nofact' with 1 path block(s), 5 instruction(s), and 300000 rematerialized loop-local definition(s).
 #
 #--- generate-runtime-chain.py
 #!/usr/bin/env python3
