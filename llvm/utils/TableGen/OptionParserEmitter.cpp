@@ -339,8 +339,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef OPTTABLE_CODE\n";
 
   // Dump prefixes.
-  OS << "static constexpr llvm::StringTable::Offset OptionPrefixesTable[] = "
-        "{\n";
+  OS << "constexpr llvm::StringTable::Offset OptionPrefixesTable[] = {\n";
   {
     // Ensure the first prefix set is always empty.
     assert(!Prefixes.empty() &&
@@ -365,7 +364,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Dump help text variants. Each option's variants form a run ended by a zero
   // row; offset 0 is the empty run.
-  OS << "static constexpr llvm::opt::OptTable::HelpTextVariant "
+  OS << "constexpr llvm::opt::OptTable::HelpTextVariant "
         "OptionHelpTextVariantsTable[] = {\n";
   DenseMap<const Record *, unsigned> HelpTextVariantsOffset;
   unsigned NumVariantRows = 1;
@@ -395,8 +394,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Dump subcommands.
   if (!SubCommands.empty()) {
-    OS << "static constexpr llvm::opt::OptTable::SubCommand "
-          "OptionSubCommands[] = {\n";
+    OS << "constexpr llvm::opt::OptTable::SubCommand OptionSubCommands[] = {\n";
     for (const Record *SubCommand : SubCommands) {
       OS << "  { \"" << SubCommand->getValueAsString("Name") << "\", ";
       OS << "\"" << SubCommand->getValueAsString("HelpText") << "\", ";
@@ -406,7 +404,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
 
   // Dump subcommand IDs.
-  OS << "static constexpr unsigned OptionSubCommandIDsTable[] = {\n";
+  OS << "constexpr unsigned OptionSubCommandIDsTable[] = {\n";
   {
     // Ensure the first subcommand set is always empty.
     assert(!SubCommandIDs.empty() &&
@@ -436,7 +434,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n};\n\n";
 
   // Dump the option table in OptTable::Info field order.
-  OS << "static constexpr llvm::opt::OptTable::Info OptionInfoTable[] = {\n";
+  OS << "constexpr llvm::opt::OptTable::Info OptionInfoTable[] = {\n";
   for (const Record &R : llvm::make_pointee_range(Groups)) {
     OS << "  {";
     writeStrTableOffset(OS, Table, R.getValueAsString("Name"),
