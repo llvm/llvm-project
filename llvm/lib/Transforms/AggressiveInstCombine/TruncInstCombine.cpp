@@ -65,6 +65,8 @@ static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
   case Instruction::AShr:
   case Instruction::UDiv:
   case Instruction::URem:
+  case Instruction::SDiv:
+  case Instruction::SRem:
     return true;
   case Instruction::InsertElement:
     return OpNo < 2;
@@ -152,6 +154,8 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
     case Instruction::AShr:
     case Instruction::UDiv:
     case Instruction::URem:
+    case Instruction::SDiv:
+    case Instruction::SRem:
     case Instruction::InsertElement:
     case Instruction::ExtractElement:
     case Instruction::Select:
@@ -181,9 +185,6 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       return false;
     }
     default:
-      // TODO: Can handle more cases here:
-      // 1. sdiv, srem
-      // ...
       return false;
     }
   }
@@ -372,6 +373,27 @@ Type *TruncInstCombine::getBestTruncatedType() {
         llvm_unreachable("Unhandled intrinsic");
       }
     }
+    if (I->getOpcode() == Instruction::SDiv ||
+        I->getOpcode() == Instruction::SRem) {
+      unsigned NumSignBits0 = ComputeNumSignBits(I->getOperand(0));
+      unsigned NumSignBits1 = ComputeNumSignBits(I->getOperand(1));
+      unsigned MinBitWidthOp0 = OrigBitWidth - NumSignBits0 + 1;
+      unsigned MinBitWidthOp1 = OrigBitWidth - NumSignBits1 + 1;
+      unsigned MinBitWidth = std::max(MinBitWidthOp0, MinBitWidthOp1);
+
+      // In two's complement, sdiv and srem produce UB / poison on INT_MIN / -1.
+      // If LHS can be negative and RHS can be -1, we must ensure the reduced
+      // type has at least MinBitWidthOp0 + 1 bits so that LHS cannot be INT_MIN
+      // in the reduced type.
+      KnownBits KnownLHS = computeKnownBits(I->getOperand(0));
+      KnownBits KnownRHS = computeKnownBits(I->getOperand(1));
+      if (!KnownLHS.isNonNegative() && KnownRHS.Zero.isZero())
+        MinBitWidth = std::max(MinBitWidth, MinBitWidthOp0 + 1);
+
+      if (MinBitWidth >= OrigBitWidth)
+        return nullptr;
+      Itr.second.MinBitWidth = MinBitWidth;
+    }
   }
 
   // Calculate minimum allowed bit-width allowed for shrinking the currently
@@ -466,7 +488,9 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::UDiv:
-    case Instruction::URem: {
+    case Instruction::URem:
+    case Instruction::SDiv:
+    case Instruction::SRem: {
       Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
       Res = Builder.CreateBinOp((Instruction::BinaryOps)Opc, LHS, RHS);
