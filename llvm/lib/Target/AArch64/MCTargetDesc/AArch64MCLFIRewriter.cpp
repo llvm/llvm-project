@@ -305,7 +305,7 @@ void AArch64MCLFIRewriter::onLabel(const MCSymbol *Symbol, MCStreamer &Out) {
 
   // Flush a deferred LR guard before the label, since the label is a potential
   // branch target and code reached through it may use LR for control flow.
-  if (DeferredLRGuard && LastSTI && (!Symbol || !Symbol->isTemporary())) {
+  if (DeferredLRGuard && LastSTI && !Symbol->isTemporary()) {
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
     DeferredLRGuard = false;
   }
