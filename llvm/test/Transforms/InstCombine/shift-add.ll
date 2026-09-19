@@ -804,3 +804,109 @@ define <2 x i8> @lshr_fold_or_disjoint_cnt_out_of_bounds(<2 x i8> %x) {
   %r = lshr <2 x i8> <i8 2, i8 3>, %a
   ret <2 x i8> %r
 }
+
+; Pre-shift fold without exact/nsw/nuw flags, guarded by known range of X.
+
+define i32 @lshr_add_negative_no_exact_known_range(i32 %x) {
+; CHECK-LABEL: @lshr_add_negative_no_exact_known_range(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 4, [[MASKED]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %masked = and i32 %x, 15
+  %a = add i32 %masked, -1
+  %r = lshr i32 2, %a
+  ret i32 %r
+}
+
+define i32 @shl_add_negative_no_flags_known_range(i32 %x) {
+; CHECK-LABEL: @shl_add_negative_no_flags_known_range(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i32 3, [[MASKED]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %masked = and i32 %x, 15
+  %a = add i32 %masked, -2
+  %r = shl i32 12, %a
+  ret i32 %r
+}
+
+define i32 @ashr_add_negative_no_exact_known_range(i32 %x) {
+; CHECK-LABEL: @ashr_add_negative_no_exact_known_range(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 -8, [[MASKED]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %masked = and i32 %x, 15
+  %a = add i32 %masked, -1
+  %r = ashr i32 -4, %a
+  ret i32 %r
+}
+
+define <2 x i32> @lshr_add_negative_no_exact_known_range_vec(<2 x i32> %x) {
+; CHECK-LABEL: @lshr_add_negative_no_exact_known_range_vec(
+; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 15)
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> splat (i32 4), [[MASKED]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %masked = and <2 x i32> %x, <i32 15, i32 15>
+  %a = add <2 x i32> %masked, <i32 -1, i32 -1>
+  %r = lshr <2 x i32> <i32 2, i32 2>, %a
+  ret <2 x i32> %r
+}
+
+; Motivating example from issue #222281
+define i32 @from_sub_issue222281(i8 %x) {
+; CHECK-LABEL: @from_sub_issue222281(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], 120
+; CHECK-NEXT:    [[V:%.*]] = or disjoint i8 [[M]], -128
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i8 3, 8) i8 @llvm.cttz.i8(i8 [[V]], i1 true)
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i8 [[TZ]] to i32
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 512, [[Z]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = and i8 %x, -8
+  %v = or i8 %m, -128
+  %tz = call i8 @llvm.cttz.i8(i8 %v, i1 true)
+  %z = zext nneg i8 %tz to i32
+  %s = sub nuw nsw i32 %z, 3
+  %r = lshr i32 64, %s
+  ret i32 %r
+}
+
+; negative test: X range is unknown, fold should not fire without exact
+define i32 @lshr_add_negative_no_exact_unknown_range(i32 %x) {
+; CHECK-LABEL: @lshr_add_negative_no_exact_unknown_range(
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 2, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add i32 %x, -1
+  %r = lshr i32 2, %a
+  ret i32 %r
+}
+
+; negative test: constant not roundtrippable (3 >> 1 loses bit 0 for shl)
+define i32 @shl_add_negative_no_flags_not_roundtrippable(i32 range(i32 1, 16) %x) {
+; CHECK-LABEL: @shl_add_negative_no_flags_not_roundtrippable(
+; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = shl i32 3, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nsw i32 %x, -1
+  %r = shl i32 3, %a
+  ret i32 %r
+}
+
+; negative test: constant not roundtrippable (64 << 28 overflows 32-bit integer for lshr)
+define i32 @lshr_add_negative_no_exact_overflow(i32 range(i32 28, 32) %x) {
+; CHECK-LABEL: @lshr_add_negative_no_exact_overflow(
+; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[X:%.*]], -28
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 64, [[A]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = add nsw i32 %x, -28
+  %r = lshr i32 64, %a
+  ret i32 %r
+}
+
