@@ -72,6 +72,9 @@ processCoordinateOp(mlir::OpBuilder &builder, fir::CoordinateOp coordOp,
 // result there.  Used to expand a whole-record assignment such as
 // `idx = threadIdx` into three per-field register reads so the destination
 // receives actual GPU register values rather than a copy from the global.
+// The field reference inherits the destination's volatility so that a volatile
+// destination (e.g. `type(dim3), volatile :: idx`) produces volatile stores
+// and passes --strict-fir-volatile-verifier.
 template <typename OpTy>
 static void emitFieldStore(mlir::OpBuilder &builder, mlir::Location loc,
                            mlir::Value dest, unsigned fieldIdx,
@@ -85,8 +88,9 @@ static void emitFieldStore(mlir::OpBuilder &builder, mlir::Location loc,
   }
   fir::IntOrValue idx =
       mlir::IntegerAttr::get(i32Ty, static_cast<int32_t>(fieldIdx));
+  bool isVolatile = fir::isa_volatile_type(dest.getType());
   mlir::Value fieldRef = fir::CoordinateOp::create(
-      builder, loc, fir::ReferenceType::get(i32Ty), dest,
+      builder, loc, fir::ReferenceType::get(i32Ty, isVolatile), dest,
       llvm::SmallVector<fir::IntOrValue, 1>{idx});
   fir::StoreOp::create(builder, loc, gpuVal, fieldRef);
 }

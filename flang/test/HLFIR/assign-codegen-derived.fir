@@ -89,5 +89,5 @@ func.func @test_simple_self_assign(%a: !fir.ref<!t_simple>) {
 }
 // CHECK-LABEL: func.func @test_simple_self_assign(
 // CHECK-NOT:   fir.coordinate_of
-// CHECK:       fir.copy %{{.*}} to %{{.*}} : !fir.ref<!fir.type<simple{i:i32}>>, !fir.ref<!fir.type<simple{i:i32}>>
+// CHECK:       fir.copy %arg0 to %arg0 : !fir.ref<!fir.type<simple{i:i32}>>, !fir.ref<!fir.type<simple{i:i32}>>
 // CHECK-NOT:   no_overlap

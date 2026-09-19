@@ -518,19 +518,63 @@ func.func @_QPcopy_threadidx(%arg0: !fir.ref<!fir.type<_QM__fortran_builtinsT__b
 // CHECK-LABEL: func.func @_QPcopy_threadidx
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
 // CHECK-NOT: fir.copy
+// Capture the destination declare so we can require each value lands in the
+// correct field.
+// CHECK: %[[DEST:.*]] = fir.declare %arg0 {uniq_name = "_QFsub1Eidx"}
 // Whole-record copy expanded: x field (field 0).
 // CHECK: %[[TIDX:.*]] = nvvm.read.ptx.sreg.tid.x : i32
 // CHECK: %[[ADDX:.*]] = arith.addi %[[TIDX]], %c1{{.*}} : i32
-// CHECK: fir.store %[[ADDX]] to %{{.*}} : !fir.ref<i32>
+// CHECK: %[[COORDX:.*]] = fir.coordinate_of %[[DEST]], x :
+// CHECK: fir.store %[[ADDX]] to %[[COORDX]] : !fir.ref<i32>
 // Whole-record copy expanded: y field (field 1).
 // CHECK: %[[TIDY:.*]] = nvvm.read.ptx.sreg.tid.y : i32
 // CHECK: %[[ADDY:.*]] = arith.addi %[[TIDY]], %c1{{.*}} : i32
-// CHECK: fir.store %[[ADDY]] to %{{.*}} : !fir.ref<i32>
+// CHECK: %[[COORDY:.*]] = fir.coordinate_of %[[DEST]], y :
+// CHECK: fir.store %[[ADDY]] to %[[COORDY]] : !fir.ref<i32>
 // Whole-record copy expanded: z field (field 2).
 // CHECK: %[[TIDZ:.*]] = nvvm.read.ptx.sreg.tid.z : i32
 // CHECK: %[[ADDZ:.*]] = arith.addi %[[TIDZ]], %c1{{.*}} : i32
-// CHECK: fir.store %[[ADDZ]] to %{{.*}} : !fir.ref<i32>
+// CHECK: %[[COORDZ:.*]] = fir.coordinate_of %[[DEST]], z :
+// CHECK: fir.store %[[ADDZ]] to %[[COORDZ]] : !fir.ref<i32>
 // The subsequent component read (i = threadIdx%x) also becomes a register read.
 // CHECK: %[[TID2:.*]] = nvvm.read.ptx.sreg.tid.x : i32
 // CHECK: %[[ADD2:.*]] = arith.addi %[[TID2]], %c1{{.*}} : i32
 // CHECK: fir.store %[[ADD2]] to %{{.*}} : !fir.ref<i32>
+
+// -----
+
+// A fir.copy with a volatile destination (e.g. `type(dim3), volatile :: idx`)
+// must be expanded into stores through volatile field references so that the
+// memory effects are preserved and the output passes
+// --strict-fir-volatile-verifier.
+func.func @_QPcopy_volatile_threadidx(%arg0: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>, volatile> {fir.bindc_name = "idx"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %0 = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %1 = fir.declare %0 {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+  %2 = fir.declare %arg0 {uniq_name = "_QFcopy_volatile_threadidxEidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>, volatile>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>, volatile>
+  // Whole-record assignment to a volatile destination: idx = threadIdx
+  fir.copy %1 to %2 no_overlap : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>, volatile>
+  return
+}
+
+// The expanded stores must use volatile field references so that volatility is
+// preserved through the rewrite.
+// CHECK-LABEL: func.func @_QPcopy_volatile_threadidx
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+// CHECK-NOT: fir.copy
+// Capture the volatile destination declare.
+// CHECK: %[[DEST:.*]] = fir.declare %arg0 {uniq_name = "_QFcopy_volatile_threadidxEidx"}
+// x field: store through a volatile field reference.
+// CHECK: %[[TIDX:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+// CHECK: %[[ADDX:.*]] = arith.addi %[[TIDX]], %c1{{.*}} : i32
+// CHECK: %[[COORDX:.*]] = fir.coordinate_of %[[DEST]], x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>, volatile>) -> !fir.ref<i32, volatile>
+// CHECK: fir.store %[[ADDX]] to %[[COORDX]] : !fir.ref<i32, volatile>
+// y field.
+// CHECK: %[[TIDY:.*]] = nvvm.read.ptx.sreg.tid.y : i32
+// CHECK: %[[ADDY:.*]] = arith.addi %[[TIDY]], %c1{{.*}} : i32
+// CHECK: %[[COORDY:.*]] = fir.coordinate_of %[[DEST]], y : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>, volatile>) -> !fir.ref<i32, volatile>
+// CHECK: fir.store %[[ADDY]] to %[[COORDY]] : !fir.ref<i32, volatile>
+// z field.
+// CHECK: %[[TIDZ:.*]] = nvvm.read.ptx.sreg.tid.z : i32
+// CHECK: %[[ADDZ:.*]] = arith.addi %[[TIDZ]], %c1{{.*}} : i32
+// CHECK: %[[COORDZ:.*]] = fir.coordinate_of %[[DEST]], z : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>, volatile>) -> !fir.ref<i32, volatile>
+// CHECK: fir.store %[[ADDZ]] to %[[COORDZ]] : !fir.ref<i32, volatile>
