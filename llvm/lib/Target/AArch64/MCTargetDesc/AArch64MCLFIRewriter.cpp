@@ -300,12 +300,12 @@ MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
 }
 
 void AArch64MCLFIRewriter::onLabel(const MCSymbol *Symbol, MCStreamer &Out) {
-  if (Guard || (Symbol && Symbol->isTemporary()))
+  if (Guard)
     return;
 
   // Flush a deferred LR guard before the label, since the label is a potential
   // branch target and code reached through it may use LR for control flow.
-  if (DeferredLRGuard && LastSTI) {
+  if (DeferredLRGuard && LastSTI && (!Symbol || !Symbol->isTemporary())) {
     emitAddMask(AArch64::LR, AArch64::LR, Out, *LastSTI);
     DeferredLRGuard = false;
   }

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple aarch64_lfi -filetype=obj %s -o /dev/null
 // RUN: llvm-mc -triple aarch64_lfi %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64_lfi -filetype=obj %s | llvm-objdump -d - | FileCheck %s --check-prefix=OBJ
 
 .arch_extension pauth
 
@@ -87,6 +87,10 @@ ret
 // CHECK:      autiasp
 // CHECK-NEXT: add x30, x27, w30, uxtw
 // CHECK-NEXT: ret
+// OBJ:        ldp x29, x30, [sp], #0x10
+// OBJ-NEXT:   autiasp
+// OBJ-NEXT:   add x30, x27, w30, uxtw
+// OBJ-NEXT:   ret
 
 mov x30, x0
 // CHECK:      mov x30, x0
