@@ -2413,6 +2413,12 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
     return false;
   if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)
     return false;
+  // A tied form defines and reads the same register, so the whole
+  // accumulator chain shares one virtual register. Every member then sees
+  // the consumer of the final value and is rejected. Instead, leave the
+  // choice to getRewriteCost.
+  if (MI->isRegTiedToUseOperand(0))
+    return true;
   // Reject candidates whose users force an unavoidable bridge copy.
   Register DstReg = MI->getOperand(0).getReg();
   for (const MachineInstr &UseMI : DAG.MRI.use_nodbg_instructions(DstReg)) {
