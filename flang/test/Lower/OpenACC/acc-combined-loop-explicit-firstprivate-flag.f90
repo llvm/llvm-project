@@ -1,7 +1,7 @@
-! Test that -fno-openacc-combined-loop-firstprivate keeps firstprivate on the
-! compute construct only, with no implicit loop firstprivate.
+! Test that -fno-openacc-combined-loop-explicit-firstprivate keeps firstprivate
+! on the compute construct only, with no implicit loop firstprivate.
 
-! RUN: %flang_fc1 -fopenacc -fno-openacc-combined-loop-firstprivate -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenacc -fno-openacc-combined-loop-explicit-firstprivate -emit-hlfir %s -o - | FileCheck %s
 
 subroutine flag_off_scalar
   integer :: i, n, v

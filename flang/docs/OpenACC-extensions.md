@@ -59,7 +59,7 @@ These extensions require no flag.
 
 ## Extensions enabled by default
 
-### `-fopenacc-combined-loop-firstprivate` — combined loop firstprivate
+### `-fopenacc-combined-loop-explicit-firstprivate` — combined loop explicit firstprivate
 
 `firstprivate` is a compute-construct clause, not a `loop` clause.  On a
 combined `parallel loop` or `serial loop`, Flang keeps the explicit clause on
@@ -73,8 +73,27 @@ affected because `kernels` cannot take `firstprivate`.  Standalone `acc loop`
 and non-combined `parallel` / `serial` with separate inner `acc loop` are not
 affected.
 
-Disable with `-fno-openacc-combined-loop-firstprivate` to keep firstprivate
-only on the compute construct (spec behavior).
+Disable with `-fno-openacc-combined-loop-explicit-firstprivate` to keep
+explicit firstprivate only on the compute construct (spec behavior).
+
+### Combined-loop implicit firstprivate (`acc-implicit-data`)
+
+OpenACC section 2.6.2 treats a scalar referenced in a `parallel` or `serial`
+region with no explicit data clause as `firstprivate` on the compute
+construct.  On a combined `parallel loop` or `serial loop`, that gang-shared
+copy races when each iteration writes the scalar (including through an
+`!$acc routine seq` by-reference argument).
+
+By default, `acc-implicit-data` attaches that implicit `firstprivate` on the
+combined `acc.loop` only, matching `private` and `reduction` (per-lane
+copies).  The criterion is the MLIR `combined(loop)` attribute on the compute
+construct, not tightly-nested analysis.  Non-combined `parallel` / `serial`
+with a nested `acc loop` keep compute `firstprivate`.  `kernels loop` is not
+affected because `kernels` cannot take `firstprivate`.
+
+Disable with the pass option
+`enable-combined-loop-implicit-firstprivate=false` to keep spec behavior
+(compute `firstprivate` only).
 
 ### `-fopenacc-multiple-names-in-routine` — `!$acc routine(<name>[, <name>]*) <clause-list>`
 

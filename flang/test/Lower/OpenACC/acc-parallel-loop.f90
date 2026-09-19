@@ -789,7 +789,8 @@ end subroutine
 ! CHECK: acc.loop
 
 ! Scalars used without an explicit firstprivate are implicitly firstprivate
-! on the compute construct later. Do not emit a loop firstprivate here.
+! later (acc-implicit-data). Do not emit a loop firstprivate here; that is
+! controlled by enable-combined-loop-implicit-firstprivate (default on).
 subroutine acc_parallel_loop_no_explicit_firstprivate
   integer :: i, n, v
   real :: a(10)
