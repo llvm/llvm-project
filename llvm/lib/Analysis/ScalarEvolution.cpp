@@ -13890,13 +13890,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
     MayAddOverflow = true;
   }
 
-  if (!isLoopEntryGuardedByCond(L, Cond, getAddExpr(Start, Stride), RHS)) {
-    // If we know that Start >= RHS in the context of loop, then we know that
-    // min(RHS, Start) = RHS at this point.
-    if (isLoopEntryGuardedByCond(
-            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, Start, RHS))
-      End = RHS;
-    else
+  // If we know that Start >= RHS in the context of loop, then we know that
+  // min(RHS, Start) = RHS at this point and End needs no clamping.
+  if (!isLoopEntryGuardedByCond(
+          L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, Start, RHS)) {
+    // Otherwise clamp End to min(RHS, Start) when needed.
+    if (MayAddOverflow ||
+        !isLoopEntryGuardedByCond(L, Cond, getAddExpr(Start, Stride), RHS))
       End = IsSigned ? getSMinExpr(RHS, Start) : getUMinExpr(RHS, Start);
   }
 
@@ -13915,10 +13915,9 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
   const SCEV *BECount;
   if (MayAddOverflow) {
     // The ceiling division instead needs Start >= End, so that (Start - End) is
-    // the exact unsigned distance between them.
-    if (!isLoopEntryGuardedByCond(
-            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, Start, End))
-      return getCouldNotCompute();
+    // the exact unsigned distance between them. It holds, either either because
+    // the loop is guarded by Start >= RHS or because End has been clamped to
+    // min(RHS, Start) above,
     BECount = getUDivCeilSCEV(Delta, Stride);
   } else {
     // Compute ((Start - End) + (Stride - 1)) / Stride, if the IV cannot
