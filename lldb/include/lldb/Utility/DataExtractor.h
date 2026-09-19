@@ -283,7 +283,7 @@ public:
   /// Returns a pointer to a C String from the data at the offset pointed to
   /// by \a offset_ptr. A variable length null-terminated C string will be
   /// extracted and the \a offset_ptr will be updated with the offset of the
-  /// byte that follows the null terminator byte.
+  /// byte that follows the null terminator.
   ///
   /// \param[in,out] offset_ptr
   ///     A pointer to an offset within the data that will be advanced
@@ -318,8 +318,8 @@ public:
   ///     A pointer to the C string value in the data. If the offset
   ///     pointed to by \a offset_ptr is out of bounds, or if the
   ///     offset plus the length of the field is out of bounds, or if
-  ///     the field does not contain a null terminator byte, nullptr will
-  ///     be returned.
+  ///     the field does not contain a null terminator, nullptr will be
+  ///     returned.
   const char *GetCStr(lldb::offset_t *offset_ptr, lldb::offset_t len) const;
 
   /// Extract \a length bytes from \a *offset_ptr.

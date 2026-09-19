@@ -144,7 +144,7 @@ size_t Stream::PrintfVarArg(const char *format, va_list args) {
   llvm::SmallString<1024> buf;
   VASprintf(buf, format, args);
 
-  // Include the null termination byte for binary output
+  // Include the null terminator for binary output
   size_t length = buf.size();
   if (m_flags.Test(eBinary))
     ++length;

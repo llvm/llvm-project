@@ -149,8 +149,8 @@ public:
   /// Append bytes to the end of the owned data.
   ///
   /// Append the bytes contained in the string reference. This function will
-  /// not append a null termination character for a C string. Use the
-  /// AppendCString function for this purpose.
+  /// not append a null terminator for a C string. Use the AppendCString
+  /// function for this purpose.
   ///
   /// \param data
   ///     A string reference that contains bytes to append.
@@ -167,8 +167,8 @@ public:
   /// Append a C string to the end of the owned data.
   ///
   /// Append the bytes contained in the string reference along with an extra
-  /// null termination character if the StringRef bytes doesn't include one as
-  /// the last byte.
+  /// null terminator if the StringRef bytes doesn't include one as the last
+  /// byte.
   ///
   /// \param data
   ///     A string reference that contains bytes to append.

@@ -1692,11 +1692,11 @@ public:
 
   /// Read a null-terminated C string from memory
   ///
-  /// This function will read a cache page at a time until the NULL
-  /// C string terminator is found. It will stop reading if the NULL
-  /// termination byte isn't found before reading \a cstr_max_len bytes, and
-  /// the results are always guaranteed to be null-terminated (at most
-  /// cstr_max_len - 1 bytes will be read).
+  /// This function will read a cache page at a time until the null
+  /// terminator is found. It will stop reading if the null terminator isn't
+  /// found before reading \a cstr_max_len bytes, and the results are always
+  /// guaranteed to be null-terminated (at most cstr_max_len - 1 bytes will be
+  /// read).
   size_t ReadCStringFromMemory(lldb::addr_t vm_addr, char *cstr,
                                size_t cstr_max_len, Status &error);
 

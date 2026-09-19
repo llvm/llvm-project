@@ -217,7 +217,7 @@ public:
   ///
   /// \return
   ///     Returns the number of bytes that this string occupies in
-  ///     memory, not including the null termination byte.
+  ///     memory, not including the null terminator.
   size_t GetLength() const;
 
   /// Clear this object's state.
