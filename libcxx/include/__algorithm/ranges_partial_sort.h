@@ -60,7 +60,10 @@ struct __partial_sort {
     requires sortable<iterator_t<_Range>, _Comp, _Proj>
   _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
   operator()(_Range&& __r, iterator_t<_Range> __middle, _Comp __comp = {}, _Proj __proj = {}) const {
-    return __partial_sort_fn_impl(ranges::begin(__r), std::move(__middle), ranges::end(__r), __comp, __proj);
+    auto __first = ranges::begin(__r);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__r);
+
+    return __partial_sort_fn_impl(std::move(__first), std::move(__middle), std::move(__last), __comp, __proj);
   }
 };
 

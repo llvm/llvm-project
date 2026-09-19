@@ -61,8 +61,11 @@ struct __inplace_merge {
     requires sortable<iterator_t<_Range>, _Comp, _Proj>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 borrowed_iterator_t<_Range>
   operator()(_Range&& __range, iterator_t<_Range> __middle, _Comp __comp = {}, _Proj __proj = {}) const {
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
     return __inplace_merge_impl(
-        ranges::begin(__range), std::move(__middle), ranges::end(__range), std::move(__comp), std::move(__proj));
+        std::move(__first), std::move(__middle), std::move(__last), std::move(__comp), std::move(__proj));
   }
 };
 
