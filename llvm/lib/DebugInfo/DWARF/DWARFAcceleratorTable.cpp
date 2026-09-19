@@ -386,7 +386,8 @@ AppleAcceleratorTable::equal_range(StringRef Key) const {
     std::optional<uint32_t> NumEntries = this->readU32FromAccel(DataOffset);
     if (!MaybeStr || !NumEntries)
       return EmptyRange;
-    uint64_t EndOffset = DataOffset + *NumEntries * getHashDataEntryLength();
+    uint64_t EndOffset = DataOffset + static_cast<uint64_t>(*NumEntries) *
+                                          getHashDataEntryLength();
     if (Key == *MaybeStr)
       return make_range({*this, DataOffset},
                         SameNameIterator{*this, EndOffset});
