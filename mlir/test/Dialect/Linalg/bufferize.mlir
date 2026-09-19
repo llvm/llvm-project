@@ -162,6 +162,45 @@ func.func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
 
 // -----
 
+// Test that an init operand that is read by the map payload is copied.
+
+// CHECK-LABEL: func @map_with_read_from_init(
+// CHECK-SAME:      %[[INIT:.*]]: tensor<4xf32>, %[[BUFFER:.*]]: memref<f32>)
+// CHECK:         %[[INIT_BUFFER:.*]] = bufferization.to_buffer %[[INIT]] : tensor<4xf32> to memref<4xf32>
+// CHECK:         %[[RESULT_BUFFER:.*]] = memref.alloc() {{.*}} : memref<4xf32>
+// CHECK:         memref.copy %[[INIT_BUFFER]], %[[RESULT_BUFFER]] : memref<4xf32> to memref<4xf32>
+// CHECK:         linalg.map outs(%[[RESULT_BUFFER]] : memref<4xf32>)
+// CHECK-NEXT:      (%[[OUT:.*]]: f32) {
+// CHECK:           memref.store %[[OUT]], %[[BUFFER]][] : memref<f32>
+func.func @map_with_read_from_init(%init: tensor<4xf32>,
+                                   %buffer: memref<f32>) -> tensor<4xf32> {
+  %cst = arith.constant 0.0 : f32
+  %mapped = linalg.map outs(%init : tensor<4xf32>) (%out: f32) {
+    memref.store %out, %buffer[] : memref<f32>
+    linalg.yield %cst : f32
+  }
+  return %mapped : tensor<4xf32>
+}
+
+// -----
+
+// Test that an init operand that isn't read by the map payload isn't copied.
+
+// CHECK-LABEL: func @map_without_read_from_init(
+// CHECK-SAME:      %{{.*}}: tensor<4xf32>)
+// CHECK:         %[[RESULT_BUFFER:.*]] = memref.alloc() {{.*}} : memref<4xf32>
+// CHECK-NOT:     memref.copy
+// CHECK:         linalg.map outs(%[[RESULT_BUFFER]] : memref<4xf32>)
+func.func @map_without_read_from_init(%init: tensor<4xf32>) -> tensor<4xf32> {
+  %cst = arith.constant 0.0 : f32
+  %mapped = linalg.map outs(%init : tensor<4xf32>) (%out: f32) {
+    linalg.yield %cst : f32
+  }
+  return %mapped : tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @bufferize_fill(
 // CHECK-SAME:    %[[IN:.*]]: tensor<?xf32>
 func.func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
