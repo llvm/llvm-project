@@ -771,15 +771,10 @@ static RowTy getRowForLessEqual(const Decomposition &ADec,
                                 const Decomposition &BDec,
                                 const DenseMap<Value *, unsigned> &Value2Index,
                                 SmallVectorImpl<Value *> &NewVariables) {
-  int64_t Offset1 = ADec.Offset;
-  int64_t Offset2 = BDec.Offset;
-  if (MulOverflow(Offset1, int64_t(-1), Offset1))
-    return {};
-
   // Build the row, by first adding all coefficients from A and then subtracting
   // all coefficients from B.
   int64_t OffsetSum;
-  if (AddOverflow(Offset1, Offset2, OffsetSum))
+  if (SubOverflow(BDec.Offset, ADec.Offset, OffsetSum))
     return {};
   RowTy R(1, Entry(OffsetSum, 0));
   auto GetCoefficient = [&R](unsigned Idx) -> int64_t & {
