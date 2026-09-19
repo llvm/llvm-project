@@ -142,12 +142,12 @@ TEST(FeatureModulesTest, BeforePPCallbacks) {
   std::vector<std::string> Includes;
   auto Module = std::make_unique<TestModule>();
   Module->BeforePPCallbacks = [&Includes](CompilerInstance &CI) {
-    // The preamble build processes the main file's initial directives, including
-    // #include "header.h", and the included header's contents. The main-file
-    // build reuses that preamble and skips those directives. ReplayPreamble
-    // synthesizes InclusionDirective callbacks for the saved direct includes.
-    // Register only during the main-file build to observe this replay, rather
-    // than the original include during preamble construction.
+    // The preamble build processes the main file's initial directives,
+    // including #include "header.h", and the included header's contents. The
+    // main-file build reuses that preamble and skips those directives.
+    // ReplayPreamble synthesizes InclusionDirective callbacks for the saved
+    // direct includes. Register only during the main-file build to observe this
+    // replay, rather than the original include during preamble construction.
     if (CI.getFrontendOpts().ProgramAction == frontend::ParseSyntaxOnly)
       CI.getPreprocessor().addPPCallbacks(
           std::make_unique<IncludeRecorder>(Includes));
