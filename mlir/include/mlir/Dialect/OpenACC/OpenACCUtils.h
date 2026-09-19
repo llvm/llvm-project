@@ -103,13 +103,13 @@ bool isDeviceAccessibleValue(mlir::Value val);
 /// Check if a value already lives on the device and requires no runtime mapping
 /// or attach.
 ///
-/// This is stricter than isDeviceAccessibleValue: isDeviceAccessibleValue answers device
-/// accessibility, whereas residence requires a static guarantee that the
-/// storage already lives on the device so that mapping/attach can be skipped.
-/// Managed/unified storage may reside on the device at any given time, but that
-/// is not a guarantee. It is therefore conservatively treated as not resident:
-/// it must still be mapped so the runtime can attach and, where needed,
-/// privatize it, and so must not be treated as `deviceptr`.
+/// This is stricter than isDeviceAccessibleValue: isDeviceAccessibleValue
+/// answers device accessibility, whereas residence requires a static guarantee
+/// that the storage already lives on the device so that mapping/attach can be
+/// skipped. Managed/unified storage may reside on the device at any given time,
+/// but that is not a guarantee. It is therefore conservatively treated as not
+/// resident: it must still be mapped so the runtime can attach and, where
+/// needed, privatize it, and so must not be treated as `deviceptr`.
 /// \param val The value to check
 /// \return true if the value is device-resident data, false otherwise
 bool isDeviceResidentValue(mlir::Value val);

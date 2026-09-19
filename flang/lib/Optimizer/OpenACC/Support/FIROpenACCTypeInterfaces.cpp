@@ -1758,9 +1758,9 @@ template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genCast(
 
 /// Check CUDA attributes on a function argument, classifying the attribute
 /// with the provided predicate (e.g. device-data vs device-resident).
-static bool
-hasCUDADataAttrOnFuncArg(mlir::BlockArgument blockArg,
-                         llvm::function_ref<bool(cuf::DataAttribute)> classify) {
+static bool hasCUDADataAttrOnFuncArg(
+    mlir::BlockArgument blockArg,
+    llvm::function_ref<bool(cuf::DataAttribute)> classify) {
   auto *owner = blockArg.getOwner();
   if (!owner)
     return false;
@@ -1824,39 +1824,34 @@ static bool isDeviceAccessibleImpl(mlir::Value var) {
 
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::isDeviceAccessible(mlir::Type pointer,
-                                               mlir::Value var) const {
+                                                     mlir::Value var) const {
   return isDeviceAccessibleImpl(var);
 }
 
 template bool OpenACCPointerLikeModel<fir::ReferenceType>::isDeviceAccessible(
     mlir::Type, mlir::Value) const;
-template bool
-    OpenACCPointerLikeModel<fir::PointerType>::isDeviceAccessible(mlir::Type,
-                                                            mlir::Value) const;
-template bool
-    OpenACCPointerLikeModel<fir::HeapType>::isDeviceAccessible(mlir::Type,
-                                                         mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::PointerType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::HeapType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
 template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isDeviceAccessible(
     mlir::Type, mlir::Value) const;
 
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::isDeviceAccessible(mlir::Type type,
-                                            mlir::Value var) const {
+                                                  mlir::Value var) const {
   return isDeviceAccessibleImpl(var);
 }
 
-template bool
-    OpenACCMappableModel<fir::BaseBoxType>::isDeviceAccessible(mlir::Type,
-                                                         mlir::Value) const;
-template bool
-    OpenACCMappableModel<fir::ReferenceType>::isDeviceAccessible(mlir::Type,
-                                                           mlir::Value) const;
+template bool OpenACCMappableModel<fir::BaseBoxType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
+template bool OpenACCMappableModel<fir::ReferenceType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
 template bool
     OpenACCMappableModel<fir::HeapType>::isDeviceAccessible(mlir::Type,
-                                                      mlir::Value) const;
-template bool
-    OpenACCMappableModel<fir::PointerType>::isDeviceAccessible(mlir::Type,
-                                                         mlir::Value) const;
+                                                            mlir::Value) const;
+template bool OpenACCMappableModel<fir::PointerType>::isDeviceAccessible(
+    mlir::Type, mlir::Value) const;
 
 /// Shared impl for checking if a value has managed/unified storage.
 static bool isManagedOrUnifiedDataImpl(mlir::Value var) {
@@ -1893,21 +1888,21 @@ static bool isManagedOrUnifiedDataImpl(mlir::Value var) {
 }
 
 template <typename Ty>
-bool OpenACCPointerLikeModel<Ty>::isManagedOrUnifiedData(mlir::Type pointer,
-                                                         mlir::Value var) const {
+bool OpenACCPointerLikeModel<Ty>::isManagedOrUnifiedData(
+    mlir::Type pointer, mlir::Value var) const {
   return isManagedOrUnifiedDataImpl(var);
 }
 
 template bool
-OpenACCPointerLikeModel<fir::ReferenceType>::isManagedOrUnifiedData(
-    mlir::Type, mlir::Value) const;
+    OpenACCPointerLikeModel<fir::ReferenceType>::isManagedOrUnifiedData(
+        mlir::Type, mlir::Value) const;
 template bool OpenACCPointerLikeModel<fir::PointerType>::isManagedOrUnifiedData(
     mlir::Type, mlir::Value) const;
 template bool OpenACCPointerLikeModel<fir::HeapType>::isManagedOrUnifiedData(
     mlir::Type, mlir::Value) const;
 template bool
-OpenACCPointerLikeModel<fir::LLVMPointerType>::isManagedOrUnifiedData(
-    mlir::Type, mlir::Value) const;
+    OpenACCPointerLikeModel<fir::LLVMPointerType>::isManagedOrUnifiedData(
+        mlir::Type, mlir::Value) const;
 
 template <typename Ty>
 bool OpenACCMappableModel<Ty>::isManagedOrUnifiedData(mlir::Type type,

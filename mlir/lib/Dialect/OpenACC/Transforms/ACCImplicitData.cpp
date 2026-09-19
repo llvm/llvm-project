@@ -464,8 +464,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
   // accessible and may migrate onto the device, but that is not a strong enough
   // guarantee of residence to skip mapping (the runtime still needs to attach
   // and, where needed, privatize it), so it must not be treated as deviceptr.
-  // isDeviceResidentValue refines isDeviceAccessibleValue's accessibility answer to residence
-  // by conservatively excluding managed/unified.
+  // isDeviceResidentValue refines isDeviceAccessibleValue's accessibility
+  // answer to residence by conservatively excluding managed/unified.
   if (acc::isDeviceResidentValue(var)) {
     // If the variable is device-resident data, use deviceptr clause.
     LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
