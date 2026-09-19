@@ -29,6 +29,10 @@ using namespace llvm::opt;
 #include "clang/Options/Options.inc"
 #undef OPTTABLE_PREFIXES_UNION_CODE
 
+#define OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
+#include "clang/Options/Options.inc"
+#undef OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
+
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "clang/Options/Options.inc"
@@ -43,6 +47,7 @@ public:
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
                             OptionPrefixesUnion) {
     setValuesCodeFn(getOptionValuesCode);
+    setHelpTextVariantsTable(OptionHelpTextVariantsTable);
   }
 };
 } // anonymous namespace
