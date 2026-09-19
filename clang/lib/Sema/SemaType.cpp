@@ -10091,6 +10091,40 @@ BuildTypeCoupledDecls(Expr *E,
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
 }
 
+bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
+                                           FieldDecl *FD, Expr *Arg) {
+  assert(Arg);
+
+  // Only the counted_by family exists so far.
+  auto *CATy = cast<CountAttributedType>(BATy);
+
+  auto Reject = [&]() -> bool {
+    // Guarded so shared declarators (`IP __counted_by(n) a, b;`) only complete
+    // the node once.
+    if (!CATy->getCountExpr())
+      Context.completeCountAttributedType(CATy, Arg, {});
+    FD->setInvalidDecl();
+    return false;
+  };
+
+  if (Arg->containsErrors())
+    return Reject();
+
+  if (CheckCountedByAttrOnField(FD, Arg, CATy->isCountInBytes(),
+                                CATy->isOrNull()))
+    return Reject();
+
+  llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
+  BuildTypeCoupledDecls(Arg, Decls);
+  // Several declarators can share one node when the attribute was written in
+  // declaration-specifier position (`IP __counted_by(n) a, b;`), so this runs
+  // once per field
+  if (!CATy->getCountExpr())
+    Context.completeCountAttributedType(CATy, Arg, Decls);
+
+  return true;
+}
+
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
