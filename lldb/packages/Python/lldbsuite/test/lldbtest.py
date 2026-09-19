@@ -903,6 +903,9 @@ class Base(unittest.TestCase):
             # LLDB-internal utility expressions can take very long when the
             # host is under heavy load.
             "settings set target.process.utility-expression-timeout 600",
+            # Same for the shell expansion of launch arguments: disable the
+            # timeout so a loaded host doesn't cause flaky failures.
+            "settings set platform.shell-expand-timeout 0",
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir
             ),

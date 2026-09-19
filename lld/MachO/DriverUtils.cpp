@@ -32,24 +32,10 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-// Create prefix string literals used in Options.td
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr OptTable::Info optInfo[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
-
-MachOOptTable::MachOOptTable()
-    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
+MachOOptTable::MachOOptTable() : OptTable(OptionTables) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.

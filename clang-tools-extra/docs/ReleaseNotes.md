@@ -176,6 +176,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
 
+- Fixed a crash in {doc}`bugprone-misplaced-pointer-arithmetic-in-alloc
+  <clang-tidy/checks/bugprone/misplaced-pointer-arithmetic-in-alloc>` when
+  pointer arithmetic is applied to a non-array `new` expression whose
+  constructor has no arguments.
+
 - Fixed a crash in {doc}`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
   the pointer points to an incomplete (forward-declared) type.
@@ -204,6 +209,9 @@ infrastructure are described first, followed by tool-specific sections.
 
   - Fixed false positives when the pointee is written through a pointer
     assignment, such as `*(p = q) = 0`.
+
+  - No longer diagnoses variables declared with `decltype(auto)`, where the
+    suggested `const` does not compile.
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in

@@ -47,6 +47,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
@@ -367,11 +368,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   // off any return attributes, e.g. zeroext doesn't make sense with a struct.
   NewFunc->stealArgumentListFrom(F);
 
-  AttributeMask RetAttrs;
-  RetAttrs.addAttribute(Attribute::SExt);
-  RetAttrs.addAttribute(Attribute::ZExt);
-  RetAttrs.addAttribute(Attribute::NoAlias);
-  NewFunc->removeRetAttrs(RetAttrs);
+  NewFunc->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewRetTy, NewFunc->getAttributes().getRetAttrs()));
   // TODO: How to preserve metadata?
 
   // Move the body of the function into the new rewritten function, and replace
