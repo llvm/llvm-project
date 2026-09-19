@@ -562,6 +562,8 @@ features cannot lower the translation-unit ABI level;
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
   types that their evaluation silently mishandled. (#GH216997)
+- Fixed a crash when constant-evaluating `__builtin_align_up`, `__builtin_align_down`,
+  or `__builtin_is_aligned` with a pointer that has no underlying object, including null pointers. (#GH224549)
 
 #### Bug Fixes to Attribute Support
 
