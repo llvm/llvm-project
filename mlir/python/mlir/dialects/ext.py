@@ -669,6 +669,18 @@ class Operation(ir.OpView):
             ir.DynamicOpTrait.attach(cls.OPERATION_NAME, cls)
 
     @classmethod
+    def _attach_hooks(cls) -> None:
+        if hasattr(cls, "get_canonicalization_patterns"):
+
+            def get_canonicalization_patterns(patterns, context):
+                with context:
+                    (cls.get_canonicalization_patterns)(patterns)
+
+            ir.DynamicOpDefinition(
+                cls.OPERATION_NAME
+            ).set_get_canonicalization_patterns_fn(get_canonicalization_patterns)
+
+    @classmethod
     def _emit_operation(cls) -> None:
         ctx = ConstraintLoweringContext()
         operands, attrs, results, regions = partition_fields(cls._fields)
@@ -992,6 +1004,7 @@ class Dialect(ir.Dialect):
 
         for op in cls.operations:
             op._attach_traits()
+            op._attach_hooks()
 
         _cext.globals._register_dialect_impl(cls.DIALECT_NAMESPACE, cls, replace=True)
 
