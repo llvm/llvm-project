@@ -39,6 +39,8 @@ const char *NVPTXSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::SETP_F16X2)
     MAKE_CASE(NVPTXISD::SETP_BF16X2)
     MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
+    MAKE_CASE(NVPTXISD::SPCOMPRESS)
+    MAKE_CASE(NVPTXISD::SPDECOMPRESS)
   }
 #undef MAKE_CASE
 
@@ -61,6 +63,10 @@ void NVPTXSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   case NVPTXISD::ProxyReg:
     // invalid number of results; expected 2, got 1
+    return;
+  case NVPTXISD::SPCOMPRESS:
+  case NVPTXISD::SPDECOMPRESS:
+    // The packed register lists have variable numbers of operands and results.
     return;
   }
 
