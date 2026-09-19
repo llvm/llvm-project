@@ -795,3 +795,55 @@ void [[clang::annotate_type("webkit.nodelete")]] valueInitNew() {
 }
 
 } // namespace trivial_implicit_ctor_in_new_expr
+
+namespace std {
+
+// The compiler only recognises the real ::std::initializer_list, so this mock
+// has to live in the global std namespace.
+template <typename T>
+class initializer_list {
+  const T* m_begin;
+  decltype(sizeof(0)) m_size;
+
+public:
+  constexpr initializer_list() : m_begin(nullptr), m_size(0) { }
+  constexpr const T* begin() const { return m_begin; }
+  constexpr const T* end() const { return m_begin + m_size; }
+  constexpr decltype(sizeof(0)) size() const { return m_size; }
+};
+
+template <typename T>
+constexpr T min(initializer_list<T> list) {
+  const T* first = list.begin();
+  const T* last = list.end();
+  T result = *first;
+  for (++first; first != last; ++first) {
+    if (*first < result)
+      result = *first;
+  }
+  return result;
+}
+
+} // namespace std
+
+namespace std_initializer_list {
+
+// A braced list passed as std::initializer_list materialises a backing array
+// temporary wrapped in a CXXStdInitializerListExpr. That array is destructed in
+// this function, so it's only safe when its element type destructs trivially.
+
+unsigned [[clang::annotate_type("webkit.nodelete")]] safeSize();
+
+void [[clang::annotate_type("webkit.nodelete")]] callsMinWithInitializerList(unsigned other) {
+  unsigned smallest = std::min({ safeSize(), other, 3u });
+  (void)smallest;
+}
+
+void takesTrackedList(std::initializer_list<ObjectWithNonTrivialDestructor>);
+
+void [[clang::annotate_type("webkit.nodelete")]] passesListOfTrackedObjects() {
+  takesTrackedList({ ObjectWithNonTrivialDestructor(), ObjectWithNonTrivialDestructor() });
+  // expected-warning@-1{{A function 'passesListOfTrackedObjects' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace std_initializer_list
