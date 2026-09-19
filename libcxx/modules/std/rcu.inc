@@ -12,7 +12,7 @@ export namespace std {
   // 2.2.3, class template rcu_obj_base using std::rcu_obj_base;
   // 2.2.4, class rcu_domain
   using std::rcu_domain;
-  using std::rcu_default_domain();
+  using std::rcu_default_domain;
   using std::rcu_barrier;
   using std::rcu_retire;
   using std::rcu_synchronize;
