@@ -1651,7 +1651,6 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FCEIL:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FNEARBYINT:
-  case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUND:
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_INTRINSIC_TRUNC: {
@@ -2011,7 +2010,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fpext(KnownSrc, DstSem, SrcSem);
     break;
   }
-  case TargetOpcode::G_FPTRUNC: {
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND: {
     computeKnownFPClassForFPTrunc(MI, DemandedElts, InterestedClasses, Known,
                                   Depth);
     break;
