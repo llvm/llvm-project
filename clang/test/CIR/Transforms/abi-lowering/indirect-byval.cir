@@ -79,17 +79,16 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  // A load is inserted at entry so the body sees the original value type.
+  // A byval parameter the body never reads gets nothing at entry.
   cir.func @takes_big(%arg0: !rec_Big) -> !s32i
       attributes { test_classify = #byval_arg } {
     %r = cir.const #cir.int<0> : !s32i
     cir.return %r : !s32i
   }
 
-  // CHECK:      cir.func{{.*}} @takes_big(%[[ARG:.*]]: !cir.ptr<!rec_Big>
+  // CHECK:      cir.func{{.*}} @takes_big(%{{.*}}: !cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.align = 8 : i64
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
-  // CHECK:        %{{.*}} = cir.load %[[ARG]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK-NEXT:   %{{.*}} = cir.const #cir.int<0> : !s32i
 
   // byval composes with an Extend return.
@@ -244,9 +243,8 @@ module attributes {
 
   // CHECK:      cir.func{{.*}} @takes_big_byval_field(%[[PTR:.*]]: !cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
-  // CHECK:        %[[LOADED:.*]] = cir.load %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:        %[[SLOT:.*]] = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[LOADED]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.copy %[[PTR]] align(8) to %[[SLOT]] align(8) : !cir.ptr<!rec_Big>
   // CHECK:        %[[M:.*]] = cir.get_member %[[SLOT]][0] {name = "a"} : !cir.ptr<!rec_Big> -> !cir.ptr<!s64i>
   // CHECK:        %[[V:.*]] = cir.load %[[M]] : !cir.ptr<!s64i>, !s64i
   // CHECK:        cir.return %[[V]] : !s64i

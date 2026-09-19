@@ -237,8 +237,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noundef})
-  // CHECK:   %{{.*}} = cir.load %arg0 : !cir.ptr<!rec_UBig>, !rec_UBig
+  // CHECK:      cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noundef})
+  // CHECK-NEXT:   cir.return
 
   // Nothing spans this union's 24 declared bytes, the widest covering 17.  No
   // member can reach SSEUP, so its size alone sends it to memory.
@@ -681,7 +681,7 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @call_nua_big_empty_int(%arg0: !cir.ptr<!rec_UNuaBigEmptyInt> {llvm.align = 32 : i64, llvm.byval = !rec_UNuaBigEmptyInt, llvm.noundef})
   // CHECK:   %[[BYVAL:.*]] = cir.alloca "byval" align(32) : !cir.ptr<!rec_UNuaBigEmptyInt>
-  // CHECK:   cir.store %{{.*}}, %[[BYVAL]] : !rec_UNuaBigEmptyInt, !cir.ptr<!rec_UNuaBigEmptyInt>
+  // CHECK:   cir.copy %arg0 align(32) to %[[BYVAL]] align(32) : !cir.ptr<!rec_UNuaBigEmptyInt>
   // CHECK:   cir.call @take_nua_big_empty_int(%[[BYVAL]]) : (!cir.ptr<!rec_UNuaBigEmptyInt> {llvm.align = 32 : i64, llvm.byval = !rec_UNuaBigEmptyInt, llvm.noundef}) -> ()
 
   cir.func @ret_nua_empty_floats(%arg0: !rec_UNuaEmptyFloats) -> !rec_UNuaEmptyFloats {
@@ -791,9 +791,10 @@ module attributes {
     cir.return %1 : !rec_UBig
   }
 
-  // CHECK: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBig, llvm.writable}, %arg1: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noundef})
-  // CHECK:   %[[VAL:.*]] = cir.load %arg1 : !cir.ptr<!rec_UBig>, !rec_UBig
-  // CHECK:   cir.store %[[VAL]], %arg0 : !rec_UBig, !cir.ptr<!rec_UBig>
+  // The sret buffer stands in for the parameter's own slot, so the byval
+  // parameter is copied straight into it.
+  // CHECK:      cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBig, llvm.writable}, %arg1: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noundef})
+  // CHECK-NEXT:   cir.copy %arg1 align(8) to %arg0 : !cir.ptr<!rec_UBig>
 
   // The call site coerces the union argument the same way the callee expects
   // it.
