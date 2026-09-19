@@ -16,13 +16,15 @@
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -42,12 +44,26 @@ struct __atomic_waitable_traits {
   static void __atomic_contention_address(_AtomicWaitable&&) = delete;
 };
 
+#  if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 concept __atomic_waitable = requires(const _Tp __t, memory_order __order) {
   typename __atomic_waitable_traits<__decay_t<_Tp> >::__value_type;
   { __atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(__t, __order) };
   { __atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(__t) };
 };
+#  else
+template <class _Tp, class = void>
+struct __atomic_waitable_impl : false_type {};
+template <class _Tp>
+struct __atomic_waitable_impl< _Tp,
+                               __void_t<typename __atomic_waitable_traits<__decay_t<_Tp> >::__value_type,
+                                        decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(
+                                            std::declval<const _Tp&>(), std::declval<memory_order>())),
+                                        decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(
+                                            std::declval<const _Tp&>())) > > : true_type {};
+template <class _Tp>
+constexpr inline bool __atomic_waitable = __atomic_waitable_impl<_Tp>::value;
+#  endif // _LIBCPP_STD_VER >= 20
 
 #  ifdef __linux__
 #    define _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_APPLY) _APPLY(4)
@@ -82,20 +98,32 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl() {
   };
 }
 
+#    if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 concept __has_native_atomic_wait =
     has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
     std::__has_native_atomic_wait_impl<_Tp>();
+#    else
+template <class _Tp>
+constexpr inline bool __has_native_atomic_wait =
+    has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
+    std::__has_native_atomic_wait_impl<_Tp>();
+#    endif // _LIBCPP_STD_VER >= 20
 
 #  else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
+#    if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 concept __has_native_atomic_wait = is_same_v<_Tp, __cxx_contention_t>;
+#    else
+template <class _Tp>
+constexpr inline bool __has_native_atomic_wait = is_same_v<_Tp, __cxx_contention_t>;
+#    endif // _LIBCPP_STD_VER >= 20
 
 #  endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___ATOMIC_ATOMIC_WAITABLE_TRAITS_H
