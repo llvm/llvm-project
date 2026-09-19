@@ -31375,14 +31375,15 @@ public:
                     RecurrenceDescriptor::getOpcode(RdxKind), VecTy, FMF,
                     CostKind);
       // One exit block is executed per loop execution: charge the final
-      // reductions of the largest one.
+      // reductions of the largest one. Code size counts all of them.
       unsigned MaxExitRdx = 0;
       SmallDenseMap<BasicBlock *, unsigned> ExitBlockPhis;
       for (PHINode *ExitPhi : ExitPhis)
         MaxExitRdx =
             std::max(MaxExitRdx, ++ExitBlockPhis[ExitPhi->getParent()]);
       InstructionCost Cost =
-          RdxCost * MaxExitRdx +
+          RdxCost *
+              (CostKind == TTI::TCK_CodeSize ? ExitPhis.size() : MaxExitRdx) +
           TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
                                  /*Index=*/0);
       return Cost * R.getLoopNestScale(L->getParentLoop());
