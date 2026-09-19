@@ -1517,7 +1517,7 @@ void PDBLinker::addImportFilesToPDB() {
     if (!file->thunkSym)
       continue;
 
-    if (!file->thunkSym->isLive())
+    if (!file->thunkSym->isLive() && !file->impchkThunk)
       continue;
 
     std::string dll = StringRef(file->dllName).lower();
@@ -1542,28 +1542,13 @@ void PDBLinker::addImportFilesToPDB() {
       mod->setObjFileName(libPath);
     }
 
-    DefinedImportThunk *thunk = cast<DefinedImportThunk>(file->thunkSym);
-    Chunk *thunkChunk = thunk->getChunk();
-    OutputSection *thunkOS = ctx.getOutputSection(thunkChunk);
-
     ObjNameSym ons(SymbolRecordKind::ObjNameSym);
     Compile3Sym cs(SymbolRecordKind::Compile3Sym);
-    Thunk32Sym ts(SymbolRecordKind::Thunk32Sym);
-    ScopeEndSym es(SymbolRecordKind::ScopeEndSym);
 
     ons.Name = file->dllName;
     ons.Signature = 0;
 
     fillLinkerVerRecord(cs, ctx.config.machine);
-
-    ts.Name = thunk->getName();
-    ts.Parent = 0;
-    ts.End = 0;
-    ts.Next = 0;
-    ts.Thunk = ThunkOrdinal::Standard;
-    ts.Length = thunkChunk->getSize();
-    ts.Segment = thunkOS->sectionIndex;
-    ts.Offset = thunkChunk->getRVA() - thunkOS->getRVA();
 
     llvm::BumpPtrAllocator &bAlloc = lld::bAlloc();
     mod->addSymbol(codeview::SymbolSerializer::writeOneSymbol(
@@ -1571,24 +1556,47 @@ void PDBLinker::addImportFilesToPDB() {
     mod->addSymbol(codeview::SymbolSerializer::writeOneSymbol(
         cs, bAlloc, CodeViewContainer::Pdb));
 
-    CVSymbol newSym = codeview::SymbolSerializer::writeOneSymbol(
-        ts, bAlloc, CodeViewContainer::Pdb);
+    auto addThunk = [&](Symbol *sym, Chunk *chunk) {
+      OutputSection *thunkOS = ctx.getOutputSection(chunk);
 
-    // Write ptrEnd for the S_THUNK32.
-    ScopeRecord *thunkSymScope =
-        getSymbolScopeFields(const_cast<uint8_t *>(newSym.data().data()));
+      Thunk32Sym ts(SymbolRecordKind::Thunk32Sym);
+      ScopeEndSym es(SymbolRecordKind::ScopeEndSym);
 
-    mod->addSymbol(newSym);
+      ts.Name = sym->getName();
+      ts.Parent = 0;
+      ts.End = 0;
+      ts.Next = 0;
+      ts.Thunk = ThunkOrdinal::Standard;
+      ts.Length = chunk->getSize();
+      ts.Segment = thunkOS->sectionIndex;
+      ts.Offset = chunk->getRVA() - thunkOS->getRVA();
 
-    newSym = codeview::SymbolSerializer::writeOneSymbol(es, bAlloc,
-                                                        CodeViewContainer::Pdb);
-    thunkSymScope->ptrEnd = mod->getNextSymbolOffset();
+      CVSymbol newSym = codeview::SymbolSerializer::writeOneSymbol(
+          ts, bAlloc, CodeViewContainer::Pdb);
 
-    mod->addSymbol(newSym);
+      // Write ptrEnd for the S_THUNK32.
+      ScopeRecord *thunkSymScope =
+          getSymbolScopeFields(const_cast<uint8_t *>(newSym.data().data()));
 
-    pdb::SectionContrib sc =
-        createSectionContrib(ctx, thunk->getChunk(), mod->getModuleIndex());
-    mod->setFirstSectionContrib(sc);
+      mod->addSymbol(newSym);
+
+      newSym = codeview::SymbolSerializer::writeOneSymbol(
+          es, bAlloc, CodeViewContainer::Pdb);
+      thunkSymScope->ptrEnd = mod->getNextSymbolOffset();
+
+      mod->addSymbol(newSym);
+
+      pdb::SectionContrib sc =
+          createSectionContrib(ctx, chunk, mod->getModuleIndex());
+      mod->setFirstSectionContrib(sc);
+    };
+
+    if (file->auxThunkSym && file->auxThunkSym->isLive())
+      addThunk(file->thunkSym, file->auxThunkSym->getChunk());
+    if (file->impchkThunk)
+      addThunk(file->impchkThunk->sym, file->impchkThunk);
+    if (file->thunkSym->isLive())
+      addThunk(file->thunkSym, file->thunkSym->getChunk());
   }
 }
 
