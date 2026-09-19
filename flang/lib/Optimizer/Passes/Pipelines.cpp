@@ -52,14 +52,6 @@ void addMemoryAllocationOpt(mlir::PassManager &pm) {
   });
 }
 
-void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
-  fir::AllocationPlacementOptions options;
-  options.stackArrays = stackArrays;
-  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
-  options.totalStackLimitBytes = allocationPlacementStackLimit;
-  pm.addPass(fir::createAllocationPlacement(options));
-}
-
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
   fir::CodeGenRewriteOptions options;
   options.preserveDeclare = preserveDeclare;
@@ -114,6 +106,7 @@ getFIRToLLVMPassOptions(const MLIRToLLVMPassPipelineConfig &config) {
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
+  options.unsafeFPConversion = config.UnsafeFPMath;
   return options;
 }
 
@@ -205,7 +198,7 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
       fir::CudaHeapAllocPromotionOptions{pc.StackArrays}));
 
   if (enableAllocationPlacement)
-    fir::addAllocationPlacement(pm, pc.StackArrays);
+    pm.addPass(fir::createAllocationPlacement());
   else if (pc.StackArrays)
     pm.addPass(fir::createStackArrays());
   else
@@ -471,7 +464,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
-       /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
+       config.DisableTailCalls, /*tuneCPU=*/"", setNoCapture, setNoAlias,
+       setReadOnly}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
