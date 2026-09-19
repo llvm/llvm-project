@@ -5,12 +5,17 @@
 ; RUN: not llc -O0 -mtriple=amdgpu9.42 < %s 2>&1 | FileCheck -check-prefixes=GFX942 %s
 ; RUN: llc -O0 -mtriple=amdgpu10.30 < %s | FileCheck -check-prefixes=GFX1030 %s
 ; RUN: llc -O0 -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GFX1100 %s
+; RUN: not llc -mtriple=amdgpu12.50 -global-isel=0 -stop-after=finalize-isel -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX125X %s
+; RUN: not llc -mtriple=amdgpu12.51 -global-isel=0 -stop-after=finalize-isel -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX125X %s
+; RUN: not llc -mtriple=amdgpu12.50 -global-isel=1 -global-isel-abort=1 -stop-after=legalizer -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX125X %s
+; RUN: not llc -mtriple=amdgpu12.51 -global-isel=1 -global-isel-abort=1 -stop-after=legalizer -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX125X %s
 
 ; GFX9-LABEL: image_sample_test:
 ; GFX9: image_sample_lz
 
 ; GFX90A: error: <unknown>:0:0: in function image_sample_test void (ptr addrspace(1), float, float, <8 x i32>, <4 x i32>): requested image instruction is not supported on this GPU
 ; GFX942: error: <unknown>:0:0: in function image_sample_test void (ptr addrspace(1), float, float, <8 x i32>, <4 x i32>): requested image instruction is not supported on this GPU
+; GFX125X: error: {{.*}}in function image_sample_test {{.*}}requested image instruction is not supported on this GPU
 
 ; GFX1030-LABEL: image_sample_test:
 ; GFX1030: image_sample_lz
@@ -30,6 +35,7 @@ declare <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f32(i32 immarg, float,
 
 ; GFX90A: error: <unknown>:0:0: in function sample_1d_tfe <4 x float> (<8 x i32>, <4 x i32>, ptr addrspace(1), float): TFE is not supported on this GPU
 ; GFX942: error: <unknown>:0:0: in function sample_1d_tfe <4 x float> (<8 x i32>, <4 x i32>, ptr addrspace(1), float): TFE is not supported on this GPU
+; GFX125X: error: {{.*}}in function sample_1d_tfe {{.*}}requested image instruction is not supported on this GPU
 define <4 x float> @sample_1d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, ptr addrspace(1) inreg %out, float %s) {
   %v = call {<4 x float>,i32} @llvm.amdgcn.image.sample.1d.v4f32i32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
