@@ -19,3 +19,31 @@ add_libc_test(
     libc.src.__support.pwd.flat_file_db
     libc.src.grp.grp_utils
 )
+
+add_libc_test(
+  getgrent_test
+  SUITE
+    libc_grp_unittests
+  HDRS
+    grp_test_utils.h
+  SRCS
+    getgrent_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_group
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.ctype_utils
+    libc.src.__support.libc_errno
+    libc.src.errno.errno
+    libc.src.grp.endgrent
+    libc.src.grp.getgrent
+    libc.src.grp.grp_utils
+    libc.src.grp.setgrent
+    libc.src.stdio.remove
+    libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

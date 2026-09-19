@@ -668,6 +668,8 @@ public:
   /// function declared with the sycl_kernel_entry_point attribute.
   void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
                             clang::ASTContext &ctx);
+
+  void addSYCLModuleIdAttr(cir::FuncOp fn);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 

@@ -129,11 +129,10 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     // Indirect branches/calls expand to 2 instructions (guard + br/blr).
     return 8;
   case AArch64::RET:
-    // RET through LR is not rewritten, but RET through another register
-    // expands to 2 instructions (guard + ret).
-    if (MI.getOperand(0).getReg() != AArch64::LR)
-      return 8;
-    return 4;
+    // RET through another register expands to 2 instructions (guard + ret).
+    // RET through LR may also expand to 2 instructions if a deferred LR guard
+    // is flushed before the return.
+    return 8;
   case AArch64::RETAA:
   case AArch64::RETAB:
     // Authenticated returns expand to 3 instructions (authenticate + guard +
