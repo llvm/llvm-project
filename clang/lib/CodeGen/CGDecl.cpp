@@ -1527,39 +1527,37 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     // If this value is an array or struct with a statically determinable
     // constant initializer, there are optimizations we can do.
     //
-    // TODO: We should constant-evaluate the initializer of any variable,
-    // as long as it is initialized by a constant expression. Currently,
-    // isConstantInitializer produces wrong answers for structs with
-    // reference or bitfield members, and a few other cases, and checking
-    // for POD-ness protects us from some of these.
+    // TODO: We should be able to delete most of the restrictions here; there's
+    // no reason we specifically need a POD array/record type. But we'd need to
+    // evaluate the performance, update regression tests, and fix a crash with
+    // OpenMP.
     if (D.getInit() && (Ty->isArrayType() || Ty->isRecordType()) &&
         (D.isConstexpr() ||
          ((Ty.isPODType(getContext()) ||
-           getContext().getBaseElementType(Ty)->isObjCObjectPointerType()) &&
-          D.getInit()->isConstantInitializer(getContext())))) {
+           getContext().getBaseElementType(Ty)->isObjCObjectPointerType())))) {
+      emission.ConstantAggregateInitializer =
+        ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
+      if (emission.ConstantAggregateInitializer) {
+        // If the variable's a const type, and it's neither an NRVO
+        // candidate nor a __block variable and has no mutable members,
+        // emit it as a global instead.
+        // Exception is if a variable is located in non-constant address space
+        // in OpenCL.
+        bool NeedsDtor =
+            D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
+        if ((!getLangOpts().OpenCL ||
+             Ty.getAddressSpace() == LangAS::opencl_constant) &&
+            (CGM.getCodeGenOpts().MergeAllConstants && !NRVO &&
+             !isEscapingByRef &&
+             Ty.isConstantStorage(getContext(), true, !NeedsDtor))) {
+          EmitStaticVarDecl(D, llvm::GlobalValue::InternalLinkage);
 
-      // If the variable's a const type, and it's neither an NRVO
-      // candidate nor a __block variable and has no mutable members,
-      // emit it as a global instead.
-      // Exception is if a variable is located in non-constant address space
-      // in OpenCL.
-      bool NeedsDtor =
-          D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
-      if ((!getLangOpts().OpenCL ||
-           Ty.getAddressSpace() == LangAS::opencl_constant) &&
-          (CGM.getCodeGenOpts().MergeAllConstants && !NRVO &&
-           !isEscapingByRef &&
-           Ty.isConstantStorage(getContext(), true, !NeedsDtor))) {
-        EmitStaticVarDecl(D, llvm::GlobalValue::InternalLinkage);
-
-        // Signal this condition to later callbacks.
-        emission.Addr = Address::invalid();
-        assert(emission.wasEmittedAsGlobal());
-        return emission;
+          // Signal this condition to later callbacks.
+          emission.Addr = Address::invalid();
+          assert(emission.wasEmittedAsGlobal());
+          return emission;
+        }
       }
-
-      // Otherwise, tell the initialization code that we're in this case.
-      emission.IsConstantAggregate = true;
     }
 
     // A normal fixed sized variable becomes an alloca in the entry block,
@@ -2027,10 +2025,13 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     return initializeWhatIsTechnicallyUninitialized(Loc);
 
   llvm::Constant *constant = nullptr;
-  if (emission.IsConstantAggregate ||
+  if (emission.ConstantAggregateInitializer ||
       D.mightBeUsableInConstantExpressions(getContext())) {
     assert(!capturedByInit && "constant init contains a capturing block?");
-    constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
+    if (emission.ConstantAggregateInitializer)
+      constant = emission.ConstantAggregateInitializer;
+    else
+      constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
     if (constant && !constant->isNullValue() &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
@@ -2082,7 +2083,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 
   PGO->markStmtMaybeUsed(Init);
 
-  if (!emission.IsConstantAggregate) {
+  if (!emission.ConstantAggregateInitializer) {
     // For simple scalar/complex initialization, store the value directly.
     LValue lv = MakeAddrLValue(Loc, type);
     lv.setNonGC(true);
