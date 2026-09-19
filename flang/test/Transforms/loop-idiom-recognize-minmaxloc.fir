@@ -36,7 +36,8 @@ func.func @test_1d_fir_cmpi_eq(%input: !fir.ref<!fir.array<100xi32>>, %val: i32)
 // CHECK:           arith.cmpi eq
 // CHECK:           arith.andi
 // CHECK:           fir.if {{.*}} -> (i32, i1) {
-// CHECK:             fir.result %{{.*}}, %false : i32, i1
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:           }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -110,7 +111,8 @@ func.func @test_eq_mask_fir_target_lhs(%input: !fir.ref<!fir.array<100xi32>>, %v
 // CHECK:           arith.cmpi eq
 // CHECK:           arith.andi
 // CHECK:           fir.if {{.*}} -> (i32, i1) {
-// CHECK:             fir.result %{{.*}}, %false : i32, i1
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:           }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -234,7 +236,8 @@ func.func @test_minloc_2d_eq_mask(%inputA: !fir.ref<!fir.array<10x20xi32>>,
 // CHECK:             arith.cmpi eq
 // CHECK:             arith.andi
 // CHECK:             fir.if {{.*}} -> (i32, i32, i1) {
-// CHECK:               fir.result %{{.*}}, %{{.*}}, %false : i32, i32, i1
+// CHECK:               %[[FALSE:.*]] = arith.constant false
+// CHECK:               fir.result %{{.*}}, %{{.*}}, %[[FALSE]] : i32, i32, i1
 // CHECK:             }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -409,7 +412,8 @@ func.func @test_transform_inside_unrelated_outer_loop(
 // CHECK:             arith.cmpi eq
 // CHECK:             arith.andi
 // CHECK:             fir.if {{.*}} -> (i32, i1) {
-// CHECK:               fir.result %{{.*}}, %false : i32, i1
+// CHECK:               %[[FALSE:.*]] = arith.constant false
+// CHECK:               fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:             }
 // CHECK-NOT:       arith.cmpi slt
 // CHECK-NOT:       arith.select {{.*}} : i32
@@ -468,7 +472,8 @@ func.func @test_minloc_3d_eq_mask(%input: !fir.ref<!fir.array<4x5x6xi32>>,
 // CHECK:               arith.cmpi eq
 // CHECK:               arith.andi
 // CHECK:               fir.if {{.*}} -> (i32, i32, i32, i1) {
-// CHECK:                 fir.result %{{.*}}, %{{.*}}, %{{.*}}, %false : i32, i32, i32, i1
+// CHECK:                 %[[FALSE:.*]] = arith.constant false
+// CHECK:                 fir.result %{{.*}}, %{{.*}}, %{{.*}}, %[[FALSE]] : i32, i32, i32, i1
 // CHECK:               }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -508,7 +513,8 @@ func.func @test_minloc_hlfir_designate(%input: !fir.box<!fir.array<?xi32>>,
 // CHECK:           arith.cmpi eq
 // CHECK:           arith.andi
 // CHECK:           fir.if {{.*}} -> (i32, i1) {
-// CHECK:             fir.result %{{.*}}, %false : i32, i1
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:           }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -545,7 +551,8 @@ func.func @test_minloc_hlfir_apply(%input: !hlfir.expr<?xi32>, %val: i32) -> i32
 // CHECK:           arith.cmpi eq
 // CHECK:           arith.andi
 // CHECK:           fir.if {{.*}} -> (i32, i1) {
-// CHECK:             fir.result %{{.*}}, %false : i32, i1
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:           }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -586,7 +593,8 @@ func.func @test_transform_volatile_minval(%input: !fir.ref<!fir.array<100xi32>>,
 // CHECK:           arith.cmpi eq
 // CHECK:           arith.andi
 // CHECK:           fir.if {{.*}} -> (i32, i1) {
-// CHECK:             fir.result %{{.*}}, %false : i32, i1
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:           }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -637,7 +645,8 @@ func.func @test_maxloc_2d_eq_mask(%input: !fir.ref<!fir.array<10x20xi32>>,
 // CHECK:             arith.cmpi eq
 // CHECK:             arith.andi
 // CHECK:             fir.if {{.*}} -> (i32, i32, i1) {
-// CHECK:               fir.result %{{.*}}, %{{.*}}, %false : i32, i32, i1
+// CHECK:               %[[FALSE:.*]] = arith.constant false
+// CHECK:               fir.result %{{.*}}, %{{.*}}, %[[FALSE]] : i32, i32, i1
 // CHECK:             }
 // CHECK-NOT:     arith.cmpi sgt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -771,7 +780,8 @@ func.func @test_eq_mask_with_convert(%input: !fir.ref<!fir.array<100xi32>>, %val
 // CHECK:           arith.cmpi eq
 // CHECK:           arith.andi
 // CHECK:           fir.if {{.*}} -> (i32, i1) {
-// CHECK:             fir.result %{{.*}}, %false : i32, i1
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:           }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
@@ -933,7 +943,8 @@ func.func @test_transform_2d_outer_iterarg_target(
 // CHECK:               arith.cmpi eq
 // CHECK:               arith.andi
 // CHECK:               fir.if {{.*}} -> (i32, i32, i1) {
-// CHECK:                 fir.result %{{.*}}, %{{.*}}, %false : i32, i32, i1
+// CHECK:                 %[[FALSE:.*]] = arith.constant false
+// CHECK:                 fir.result %{{.*}}, %{{.*}}, %[[FALSE]] : i32, i32, i1
 // CHECK:               }
 // CHECK-NOT:       arith.cmpi slt
 // CHECK-NOT:       arith.select {{.*}} : i32
@@ -981,14 +992,67 @@ func.func @test_transform_outer_same_numargs_unrelated_i1(
 // CHECK:             arith.cmpi eq
 // CHECK:             arith.andi
 // CHECK:             fir.if {{.*}} -> (i32, i1) {
-// CHECK:               fir.result %{{.*}}, %false : i32, i1
+// CHECK:               %[[FALSE:.*]] = arith.constant false
+// CHECK:               fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:             }
 // CHECK-NOT:       arith.cmpi slt
 // CHECK-NOT:       arith.select {{.*}} : i32
 
-// User-written ordered loop (no unordered) -- transform fires without LICM.
-func.func @test_user_written_ordered_loop(%input: !fir.ref<!fir.array<100xi32>>,
-                                          %val: i32) -> i32 {
+// 2D nest with intermediate operations before inner loop -- must transform.
+func.func @test_minloc_2d_intermediate_ops(%inputA: !fir.ref<!fir.array<10x20xi32>>,
+                                            %val: i32, %offset: index) -> (i32, i32) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %true = arith.constant true
+  %false = arith.constant false
+  %shape = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
+  %res:4 = fir.do_loop %j = %c1 to %c20 step %c1 unordered
+      iter_args(%arg0 = %c0_i32, %arg1 = %c0_i32, %arg2 = %c2147483647_i32, %arg3 = %true)
+      -> (i32, i32, i32, i1) {
+    %j_adj = arith.addi %j, %offset : index
+    %inner:4 = fir.do_loop %i = %c1 to %c10 step %c1 unordered
+        iter_args(%arg4 = %arg0, %arg5 = %arg1, %arg6 = %arg2, %arg7 = %arg3)
+        -> (i32, i32, i32, i1) {
+      %coor = fir.array_coor %inputA(%shape) %i, %j_adj : (!fir.ref<!fir.array<10x20xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+      %ld = fir.load %coor : !fir.ref<i32>
+      %mask = arith.cmpi eq, %ld, %val : i32
+      %if:4 = fir.if %mask -> (i32, i32, i32, i1) {
+        %cmp = arith.cmpi slt, %ld, %arg6 : i32
+        %upd = arith.ori %cmp, %arg7 : i1
+        %loci = fir.convert %i : (index) -> i32
+        %locj = fir.convert %j : (index) -> i32
+        %nloci = arith.select %upd, %loci, %arg4 : i32
+        %nlocj = arith.select %upd, %locj, %arg5 : i32
+        %nmin = arith.select %upd, %ld, %arg6 : i32
+        fir.result %nloci, %nlocj, %nmin, %false : i32, i32, i32, i1
+      } else {
+        fir.result %arg4, %arg5, %arg6, %arg7 : i32, i32, i32, i1
+      }
+      fir.result %if#0, %if#1, %if#2, %if#3 : i32, i32, i32, i1
+    }
+    fir.result %inner#0, %inner#1, %inner#2, %inner#3 : i32, i32, i32, i1
+  }
+  return %res#0, %res#1 : i32, i32
+}
+// CHECK-LABEL: func.func @test_minloc_2d_intermediate_ops(
+// CHECK:         fir.do_loop {{.*}} iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i32, i1)
+// CHECK:           arith.addi
+// CHECK:           fir.do_loop {{.*}} iter_args(%{{.*}}, %{{.*}}, %{{.*}}) -> (i32, i32, i1)
+// CHECK:             arith.cmpi eq
+// CHECK:             arith.andi
+// CHECK:             fir.if {{.*}} -> (i32, i32, i1) {
+// CHECK:               %[[FALSE:.*]] = arith.constant false
+// CHECK:               fir.result %{{.*}}, %{{.*}}, %[[FALSE]] : i32, i32, i1
+// CHECK:             }
+// CHECK-NOT:     arith.cmpi slt
+// CHECK-NOT:     arith.select {{.*}} : i32
+
+// Mask and minloc use different indices on the same array -- no transform.
+func.func @test_no_transform_different_indices_same_array(
+    %input: !fir.ref<!fir.array<100xi32>>, %val: i32) -> i32 {
   %c1 = arith.constant 1 : index
   %c100 = arith.constant 100 : index
   %c0_i32 = arith.constant 0 : i32
@@ -996,13 +1060,53 @@ func.func @test_user_written_ordered_loop(%input: !fir.ref<!fir.array<100xi32>>,
   %true = arith.constant true
   %false = arith.constant false
   %shape = fir.shape %c100 : (index) -> !fir.shape<1>
-  %res:3 = fir.do_loop %i = %c1 to %c100 step %c1
+  %res:3 = fir.do_loop %i = %c1 to %c100 step %c1 unordered
+      iter_args(%arg0 = %c0_i32, %arg1 = %c2147483647_i32, %arg2 = %true)
+      -> (i32, i32, i1) {
+    %inext = arith.addi %i, %c1 : index
+    %coor_mask = fir.array_coor %input(%shape) %inext : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    %ld_mask = fir.load %coor_mask : !fir.ref<i32>
+    %mask = arith.cmpi eq, %ld_mask, %val : i32
+    %if:3 = fir.if %mask -> (i32, i32, i1) {
+      %coor_val = fir.array_coor %input(%shape) %i : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+      %ld_val = fir.load %coor_val : !fir.ref<i32>
+      %cmp = arith.cmpi slt, %ld_val, %arg1 : i32
+      %upd = arith.ori %cmp, %arg2 : i1
+      %loc = fir.convert %i : (index) -> i32
+      %nloc = arith.select %upd, %loc, %arg0 : i32
+      %nmin = arith.select %upd, %ld_val, %arg1 : i32
+      fir.result %nloc, %nmin, %false : i32, i32, i1
+    } else {
+      fir.result %arg0, %arg1, %arg2 : i32, i32, i1
+    }
+    fir.result %if#0, %if#1, %if#2 : i32, i32, i1
+  }
+  return %res#0 : i32
+}
+// CHECK-LABEL: func.func @test_no_transform_different_indices_same_array(
+// CHECK:         arith.constant 2147483647
+// CHECK:         iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i32, i1)
+// CHECK-NOT:     arith.andi
+
+// Call inside then-block -- preserved while location tracking is optimized.
+func.func private @side_effect_fn(i32)
+func.func @test_call_in_then_preserved(%input: !fir.ref<!fir.array<100xi32>>,
+                                       %val: i32) -> i32 {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %true = arith.constant true
+  %false = arith.constant false
+  %shape = fir.shape %c100 : (index) -> !fir.shape<1>
+  %res:3 = fir.do_loop %i = %c1 to %c100 step %c1 unordered
       iter_args(%arg0 = %c0_i32, %arg1 = %c2147483647_i32, %arg2 = %true)
       -> (i32, i32, i1) {
     %coor = fir.array_coor %input(%shape) %i : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
     %ld = fir.load %coor : !fir.ref<i32>
     %mask = arith.cmpi eq, %ld, %val : i32
     %if:3 = fir.if %mask -> (i32, i32, i1) {
+      fir.call @side_effect_fn(%ld) : (i32) -> ()
       %cmp = arith.cmpi slt, %ld, %arg1 : i32
       %upd = arith.ori %cmp, %arg2 : i1
       %loc = fir.convert %i : (index) -> i32
@@ -1016,12 +1120,207 @@ func.func @test_user_written_ordered_loop(%input: !fir.ref<!fir.array<100xi32>>,
   }
   return %res#0 : i32
 }
-// CHECK-LABEL: func.func @test_user_written_ordered_loop(
+// CHECK-LABEL: func.func @test_call_in_then_preserved(
 // CHECK:         fir.do_loop {{.*}} iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i1)
-// CHECK:           arith.cmpi eq
+// CHECK:           %[[MASK:.*]] = arith.cmpi eq
+// CHECK:           fir.if %[[MASK]] -> (i32, i32, i1) {
+// CHECK:             fir.call @side_effect_fn
+// CHECK:           }
 // CHECK:           arith.andi
 // CHECK:           fir.if {{.*}} -> (i32, i1) {
-// CHECK:             fir.result %{{.*}}, %false : i32, i1
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %{{.*}}, %[[FALSE]] : i32, i1
 // CHECK:           }
 // CHECK-NOT:     arith.cmpi slt
 // CHECK-NOT:     arith.select {{.*}} : i32
+
+// Call in then uses minMax iter arg directly -- no transform.
+func.func @test_no_transform_call_uses_minmax_arg(%input: !fir.ref<!fir.array<100xi32>>,
+                                                   %val: i32) -> i32 {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %true = arith.constant true
+  %false = arith.constant false
+  %shape = fir.shape %c100 : (index) -> !fir.shape<1>
+  %res:3 = fir.do_loop %i = %c1 to %c100 step %c1 unordered
+      iter_args(%arg0 = %c0_i32, %arg1 = %c2147483647_i32, %arg2 = %true)
+      -> (i32, i32, i1) {
+    %coor = fir.array_coor %input(%shape) %i : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    %ld = fir.load %coor : !fir.ref<i32>
+    %mask = arith.cmpi eq, %ld, %val : i32
+    %if:3 = fir.if %mask -> (i32, i32, i1) {
+      fir.call @side_effect_fn(%arg1) : (i32) -> ()
+      %cmp = arith.cmpi slt, %ld, %arg1 : i32
+      %upd = arith.ori %cmp, %arg2 : i1
+      %loc = fir.convert %i : (index) -> i32
+      %nloc = arith.select %upd, %loc, %arg0 : i32
+      %nmin = arith.select %upd, %ld, %arg1 : i32
+      fir.result %nloc, %nmin, %false : i32, i32, i1
+    } else {
+      fir.result %arg0, %arg1, %arg2 : i32, i32, i1
+    }
+    fir.result %if#0, %if#1, %if#2 : i32, i32, i1
+  }
+  return %res#0 : i32
+}
+// CHECK-LABEL: func.func @test_no_transform_call_uses_minmax_arg(
+// CHECK:         iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i32, i1)
+// CHECK-NOT:     arith.andi
+
+// Outer loop intermediate op uses outer minMaxArg -- no transform.
+func.func @test_no_transform_outer_loop_uses_minmax_arg(
+    %input: !fir.ref<!fir.array<10x20xi32>>, %val: i32) -> (i32, i32) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %true = arith.constant true
+  %false = arith.constant false
+  %shape = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
+  %res:4 = fir.do_loop %j = %c1 to %c20 step %c1 unordered
+      iter_args(%arg0 = %c0_i32, %arg1 = %c0_i32, %arg2 = %c2147483647_i32, %arg3 = %true)
+      -> (i32, i32, i32, i1) {
+    fir.call @side_effect_fn(%arg2) : (i32) -> ()
+    %inner:4 = fir.do_loop %i = %c1 to %c10 step %c1 unordered
+        iter_args(%arg4 = %arg0, %arg5 = %arg1, %arg6 = %arg2, %arg7 = %arg3)
+        -> (i32, i32, i32, i1) {
+      %coor = fir.array_coor %input(%shape) %i, %j : (!fir.ref<!fir.array<10x20xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
+      %ld = fir.load %coor : !fir.ref<i32>
+      %mask = arith.cmpi eq, %ld, %val : i32
+      %if:4 = fir.if %mask -> (i32, i32, i32, i1) {
+        %cmp = arith.cmpi slt, %ld, %arg6 : i32
+        %upd = arith.ori %cmp, %arg7 : i1
+        %loci = fir.convert %i : (index) -> i32
+        %locj = fir.convert %j : (index) -> i32
+        %nloci = arith.select %upd, %loci, %arg4 : i32
+        %nlocj = arith.select %upd, %locj, %arg5 : i32
+        %nmin = arith.select %upd, %ld, %arg6 : i32
+        fir.result %nloci, %nlocj, %nmin, %false : i32, i32, i32, i1
+      } else {
+        fir.result %arg4, %arg5, %arg6, %arg7 : i32, i32, i32, i1
+      }
+      fir.result %if#0, %if#1, %if#2, %if#3 : i32, i32, i32, i1
+    }
+    fir.result %inner#0, %inner#1, %inner#2, %inner#3 : i32, i32, i32, i1
+  }
+  return %res#0, %res#1 : i32, i32
+}
+// CHECK-LABEL: func.func @test_no_transform_outer_loop_uses_minmax_arg(
+// CHECK:         iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i32, i32, i1)
+// CHECK-NOT:     arith.andi
+
+// loc computed from loop-body SSA value -- must transform.
+func.func @test_loc_from_loop_body_ssa(%input: !fir.ref<!fir.array<100xi32>>,
+                                        %val: i32) -> i32 {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %true = arith.constant true
+  %false = arith.constant false
+  %shape = fir.shape %c100 : (index) -> !fir.shape<1>
+  %res:3 = fir.do_loop %i = %c1 to %c100 step %c1 unordered
+      iter_args(%arg0 = %c0_i32, %arg1 = %c2147483647_i32, %arg2 = %true)
+      -> (i32, i32, i1) {
+    %coor = fir.array_coor %input(%shape) %i : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    %ld = fir.load %coor : !fir.ref<i32>
+    %mask = arith.cmpi eq, %ld, %val : i32
+    %if:3 = fir.if %mask -> (i32, i32, i1) {
+      %cmp = arith.cmpi slt, %ld, %arg1 : i32
+      %upd = arith.ori %cmp, %arg2 : i1
+      %loc_raw = arith.addi %ld, %c0_i32 : i32
+      %nloc = arith.select %upd, %loc_raw, %arg0 : i32
+      %nmin = arith.select %upd, %ld, %arg1 : i32
+      fir.result %nloc, %nmin, %false : i32, i32, i1
+    } else {
+      fir.result %arg0, %arg1, %arg2 : i32, i32, i1
+    }
+    fir.result %if#0, %if#1, %if#2 : i32, i32, i1
+  }
+  return %res#0 : i32
+}
+// CHECK-LABEL: func.func @test_loc_from_loop_body_ssa(
+// CHECK:         fir.do_loop {{.*}} iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i1)
+// CHECK:           %[[LD:.*]] = fir.load
+// CHECK:           arith.cmpi eq
+// CHECK:           arith.andi
+// CHECK:           fir.if {{.*}} -> (i32, i1) {
+// CHECK:             %[[LOC_RAW:.*]] = arith.addi %[[LD]]
+// CHECK:             %[[FALSE:.*]] = arith.constant false
+// CHECK:             fir.result %[[LOC_RAW]], %[[FALSE]] : i32, i1
+// CHECK:           }
+// CHECK-NOT:     arith.cmpi slt
+// CHECK-NOT:     arith.select {{.*}} : i32
+
+// minMax select false-branch is not the iter arg -- no transform.
+func.func @test_no_transform_select_wrong_false_branch(
+    %input: !fir.ref<!fir.array<100xi32>>, %val: i32, %other: i32) -> i32 {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %true = arith.constant true
+  %false = arith.constant false
+  %shape = fir.shape %c100 : (index) -> !fir.shape<1>
+  %res:3 = fir.do_loop %i = %c1 to %c100 step %c1 unordered
+      iter_args(%arg0 = %c0_i32, %arg1 = %c2147483647_i32, %arg2 = %true)
+      -> (i32, i32, i1) {
+    %coor = fir.array_coor %input(%shape) %i : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    %ld = fir.load %coor : !fir.ref<i32>
+    %mask = arith.cmpi eq, %ld, %val : i32
+    %if:3 = fir.if %mask -> (i32, i32, i1) {
+      %cmp = arith.cmpi slt, %ld, %arg1 : i32
+      %upd = arith.ori %cmp, %arg2 : i1
+      %loc = fir.convert %i : (index) -> i32
+      %nloc = arith.select %upd, %loc, %arg0 : i32
+      %nmin = arith.select %upd, %ld, %other : i32
+      fir.result %nloc, %nmin, %false : i32, i32, i1
+    } else {
+      fir.result %arg0, %arg1, %arg2 : i32, i32, i1
+    }
+    fir.result %if#0, %if#1, %if#2 : i32, i32, i1
+  }
+  return %res#0 : i32
+}
+// CHECK-LABEL: func.func @test_no_transform_select_wrong_false_branch(
+// CHECK:         iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i32, i1)
+// CHECK-NOT:     arith.andi
+
+// Location computation depends on an iter_arg recurrence -- no transform.
+func.func @test_no_transform_loc_uses_iterarg(%input: !fir.ref<!fir.array<100xi32>>,
+                                              %val: i32) -> i32 {
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c2147483647_i32 = arith.constant 2147483647 : i32
+  %true = arith.constant true
+  %false = arith.constant false
+  %shape = fir.shape %c100 : (index) -> !fir.shape<1>
+  %res:3 = fir.do_loop %i = %c1 to %c100 step %c1 unordered
+      iter_args(%arg0 = %c0_i32, %arg1 = %c2147483647_i32, %arg2 = %true)
+      -> (i32, i32, i1) {
+    %coor = fir.array_coor %input(%shape) %i : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+    %ld = fir.load %coor : !fir.ref<i32>
+    %mask = arith.cmpi eq, %ld, %val : i32
+    %if:3 = fir.if %mask -> (i32, i32, i1) {
+      %cmp = arith.cmpi slt, %ld, %arg1 : i32
+      %upd = arith.ori %cmp, %arg2 : i1
+      %next_accum = arith.addi %arg0, %c1_i32 : i32
+      %nloc = arith.select %upd, %next_accum, %arg0 : i32
+      %nmin = arith.select %upd, %ld, %arg1 : i32
+      fir.result %nloc, %nmin, %false : i32, i32, i1
+    } else {
+      fir.result %arg0, %arg1, %arg2 : i32, i32, i1
+    }
+    fir.result %if#0, %if#1, %if#2 : i32, i32, i1
+  }
+  return %res#0 : i32
+}
+// CHECK-LABEL: func.func @test_no_transform_loc_uses_iterarg(
+// CHECK:         arith.constant 2147483647
+// CHECK:         iter_args(%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %true) -> (i32, i32, i1)
+// CHECK-NOT:     arith.andi
