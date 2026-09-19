@@ -386,6 +386,7 @@ public:
   bool isMatch(int);
 
   void call() const;
+  void callOnce() const;
   void callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const;
   void doSomeWork() const;
 };
@@ -407,6 +408,14 @@ void RefCountedObj::call() const
         doSomeWork();
     };
     callLambda(lambda);
+}
+
+void RefCountedObj::callOnce() const
+{
+  static std::once_flag flag;
+  std::call_once(flag, [&]() {
+    call();
+  });
 }
 
 void scope_exit(RefCountable* obj) {
