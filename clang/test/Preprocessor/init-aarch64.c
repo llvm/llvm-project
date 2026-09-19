@@ -1170,3 +1170,6 @@
 // CMODEL_TINY: #define __AARCH64_CMODEL_TINY__ 1
 // CMODEL_SMALL: #define __AARCH64_CMODEL_SMALL__ 1
 // CMODEL_LARGE: #define __AARCH64_CMODEL_LARGE__ 1
+
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=aarch64-none-elf < /dev/null | FileCheck --match-full-lines --check-prefix=AARCH64-NONE-ELF-CXX %s
+// AARCH64-NONE-ELF-CXX: #define _GNU_SOURCE 1
