@@ -543,6 +543,19 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
+unsigned
+TargetTransformInfo::getMaximumVFMultipleForMemoryOp(ElementCount VF,
+                                                     unsigned UF) const {
+  return TTIImpl->getMaximumVFMultipleForMemoryOp(VF, UF);
+}
+
+unsigned TargetTransformInfo::getPreferredVFMultipleForMemoryOp(
+    unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
+    bool IsMasked, std::optional<Instruction::CastOps> CastHint) const {
+  return TTIImpl->getPreferredVFMultipleForMemoryOp(Opcode, DataType, VF, UF,
+                                                    IsMasked, CastHint);
+}
+
 bool TargetTransformInfo::isLegalInterleavedAccessType(
     VectorType *VTy, unsigned Factor, Align Alignment,
     unsigned AddrSpace) const {

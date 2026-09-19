@@ -977,6 +977,22 @@ public:
                                 unsigned Opcode1,
                                 const SmallBitVector &OpcodeMask) const;
 
+  /// Returns the maximum VF multiple that can be used for a contiguous
+  /// load/store for the given \p VF and \p UF.
+  LLVM_ABI unsigned getMaximumVFMultipleForMemoryOp(ElementCount VF,
+                                                    unsigned UF) const;
+
+  /// Return the preferred multiple of VF to use for a contiguous load/store.
+  /// Returning 1 leaves the operation at VF. The returned value must divide UF.
+  /// \p CastHint is non-null if the stored value is produced by a cast
+  /// instruction or the loaded value is consumed by one.
+  ///
+  /// \p Opcode must be either Instruction::Load or Instruction::Store.
+  LLVM_ABI unsigned getPreferredVFMultipleForMemoryOp(
+      unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
+      bool IsMasked = false,
+      std::optional<Instruction::CastOps> CastHint = std::nullopt) const;
+
   /// Return true if we should be enabling ordered reductions for the target.
   LLVM_ABI bool enableOrderedReductions() const;
 
