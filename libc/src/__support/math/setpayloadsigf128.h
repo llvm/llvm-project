@@ -14,8 +14,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SETPAYLOADSIGF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SETPAYLOADSIGF128_H
 
-#include "src/__support/FPUtil/float128.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -25,8 +25,7 @@ namespace math {
 using LIBC_NAMESPACE::fputil::Float128;
 
 LIBC_INLINE constexpr int setpayloadsigf128(Float128 *res, Float128 pl) {
-  return static_cast<int>(
-      fputil::setpayload</*IsSignaling=*/true>(*res, pl));
+  return static_cast<int>(fputil::setpayload</*IsSignaling=*/true>(*res, pl));
 }
 
 } // namespace math
