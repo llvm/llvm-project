@@ -42,6 +42,11 @@ class BreakpointConditionsTestCase(TestBase):
         self.build()
         self.breakpoint_invalid_conditions_python()
 
+    def test_breakpoint_condition_with_DIL(self):
+        """Test evaluating breakpoint conditions with Data Inspection Language."""
+        self.build()
+        self.breakpoint_conditions_with_DIL()
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -260,3 +265,74 @@ class BreakpointConditionsTestCase(TestBase):
 
         # The hit count for the breakpoint should be 1.
         self.assertEqual(breakpoint.GetHitCount(), 1)
+
+    def breakpoint_conditions_with_DIL(self):
+        """Test evaluating breakpoint conditions with Data Inspection Language."""
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        self.runCmd(
+            "settings set target.experimental.use-DIL-for-breakpoint-conditions true"
+        )
+
+        def break_on_symbol_with_condition(symbol, condition):
+            lldbutil.run_break_set_by_symbol(
+                self,
+                symbol,
+                extra_options=" -c '{}' -Y c++".format(condition),
+                num_expected_locations=1,
+                sym_exact=True,
+            )
+
+        # Create a breakpoint with a condition that can be evaluated by DIL.
+        break_on_symbol_with_condition("a", "val == 1")
+        # Create a breakpoint with a condition where DIL fails during lexing.
+        break_on_symbol_with_condition("b", "val # 1")
+        # Create a breakpoint with a condition where DIL fails during parsing.
+        break_on_symbol_with_condition("b", "val == ?")
+        # Create a breakpoint with a condition where DIL fails during evaluating.
+        break_on_symbol_with_condition("b", "val == no_such_variable")
+        # Create a breakpoint with a condition where DIL fails during evaluating
+        # and successfully falls back to UserExpression.
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)")
+
+        # Enable logging
+        log_file = self.getBuildArtifact("log-file.txt")
+        if os.path.exists(log_file):
+            os.remove(log_file)
+        self.runCmd("log enable -f '%s' lldb break" % (log_file))
+
+        # Run the program until breakpoint "a"
+        self.runCmd("run", RUN_SUCCEEDED)
+        # Continue until breakpoint "b"
+        self.runCmd("continue")
+        # Continue until breakpoint "c"
+        self.runCmd("continue")
+
+        self.expect("process status", PROCESS_STOPPED, patterns=["Process .* stopped"])
+
+        self.filecheck_log(log_file, __file__)
+
+        ## Check the breakpoint "a" was evaluated successfully by DIL.
+        # CHECK: DIL successfully parsed the condition: val == 1
+        # CHECK: Condition successfully evaluated by DIL, result is true.
+
+        ## Check that when DIL's lexer, parser and interpreter fail at breakpoint "b",
+        ## the evaluation falls back to UserExpression, which should also fail.
+        ## condition: "val # 1"
+        # CHECK: Lexing condition with DIL failed
+        # CHECK: Error evaluating condition
+        ## condition: "val == ?"
+        # CHECK: Parsing condition with DIL failed
+        # CHECK: Error evaluating condition
+        ## condition: "val == no_such_variable"
+        # CHECK: DIL successfully parsed the condition
+        # CHECK: Evaluating condition with DIL failed
+        # CHECK: Error evaluating condition
+
+        ## Check that when DIL fails evaluating at breakpoint "c",
+        ## the evaluation falls back to UserExpression and succeeds.
+        # CHECK: DIL successfully parsed the condition: val == static_cast<int>(1.0)
+        # CHECK: Evaluating condition with DIL failed
+        # CHECK: Condition successfully evaluated by UserExpression, result is true.
+
+        self.runCmd("process kill")
