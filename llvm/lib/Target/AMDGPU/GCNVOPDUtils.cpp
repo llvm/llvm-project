@@ -105,6 +105,46 @@ static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
          getNamedOp(MI, AMDGPU::OpName::src2).getReg();
 }
 
+// In a VOPD3 whose OPX is a 64-bit operation an OPY VGPR source operand reads
+// back the wrong value if it names the last VGPR the wave owns.
+//
+// The number of VGPRs a wave owns is always a whole number of allocation
+// granules, so the last VGPR it owns is always the one just below a granule
+// boundary. A source which is not there cannot be it, whatever the wave's VGPR
+// count turns out to be. That count is deliberately not consulted: it is only
+// known once the whole call graph has been seen, at emission time.
+static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
+                                   const MachineInstr &MIX,
+                                   const MachineInstr &MIY) {
+  const MachineFunction &MF = *MIX.getMF();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.hasVOPD3F64OPYSrcHazard())
+    return false;
+
+  // Every 64-bit VOPD3 OPX opcode has a 64-bit vdst, and no 32-bit one has.
+  int VDstIdx =
+      AMDGPU::getNamedOperandIdx(MIX.getOpcode(), AMDGPU::OpName::vdst);
+  assert(VDstIdx != -1 && "VOPD3 OPX component must have a vdst");
+  if (TII.getOpSize(MIX, VDstIdx) != 8)
+    return false;
+
+  // Targets with this hazard do not support dynamic VGPR allocation.
+  unsigned Granule =
+      AMDGPU::IsaInfo::getVGPRAllocGranule(ST, /*DynamicVGPRBlockSize=*/0);
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  for (AMDGPU::OpName Name :
+       {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
+    const MachineOperand *Src = TII.getNamedOperand(MIY, Name);
+    // Every OPY source which can be a VGPR is 32 bits wide.
+    if (!Src || !Src->isReg() ||
+        !AMDGPU::VGPR_32RegClass.contains(Src->getReg()))
+      continue;
+    if ((TRI->getHWRegIndex(Src->getReg()) + 1) % Granule == 0)
+      return true;
+  }
+  return false;
+}
+
 static bool canMaterializeVOPDLiterals(const MachineFunction &MF) {
   // A free register cannot be found without liveness. A move also makes the
   // code longer, so a function which asked for small code keeps its literals.
@@ -123,6 +163,8 @@ checkVOPDRegConstraints(const SIInstrInfo &TII, const MachineInstr &MIX,
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
 
   if (IsVOPD3 && !ST.hasVOPD3())
+    return false;
+  if (IsVOPD3 && isVOPD3F64OPYSrcHazard(TII, MIX, MIY))
     return false;
   if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
                    (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
