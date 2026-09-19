@@ -710,7 +710,6 @@ add_fp_unittest(
     libc.src.__support.math.atanf
 )
 
-
 add_fp_unittest(
   asinf_test
   NO_RUN_POSTBUILD
