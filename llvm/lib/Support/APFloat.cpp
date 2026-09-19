@@ -75,6 +75,21 @@ constexpr fltSemantics APFloatBase::semBFloat = {127, -126, 8, 16};
 constexpr fltSemantics APFloatBase::semIEEEsingle = {127, -126, 24, 32};
 constexpr fltSemantics APFloatBase::semIEEEdouble = {1023, -1022, 53, 64};
 constexpr fltSemantics APFloatBase::semIEEEquad = {16383, -16382, 113, 128};
+constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
+    16383,
+    -16382,
+    64,
+    80,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    true};
+constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {-1, 0, 0, 128};
+constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
+    1023, -1022 + 53, 53 + 53, 128};
 constexpr fltSemantics APFloatBase::semFloat8E5M2 = {15, -14, 3, 8};
 constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
     15, -15, 3, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
@@ -116,22 +131,7 @@ constexpr fltSemantics APFloatBase::semFloat6E2M3FN = {
     2, 0, 4, 6, fltNonfiniteBehavior::FiniteOnly};
 constexpr fltSemantics APFloatBase::semFloat4E2M1FN = {
     2, 0, 2, 4, fltNonfiniteBehavior::FiniteOnly};
-constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
-    16383,
-    -16382,
-    64,
-    80,
-    fltNonfiniteBehavior::IEEE754,
-    fltNanEncoding::IEEE,
-    true,
-    true,
-    true,
-    true,
-    true};
 constexpr fltSemantics APFloatBase::semBogus = {0, 0, 0, 0};
-constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {-1, 0, 0, 128};
-constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
-    1023, -1022 + 53, 53 + 53, 128};
 
 const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
   switch (S) {
@@ -145,6 +145,8 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return IEEEdouble();
   case S_IEEEquad:
     return IEEEquad();
+  case S_x87DoubleExtended:
+    return x87DoubleExtended();
   case S_PPCDoubleDouble:
     return PPCDoubleDouble();
   case S_PPCDoubleDoubleLegacy:
@@ -175,8 +177,6 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return Float6E2M3FN();
   case S_Float4E2M1FN:
     return Float4E2M1FN();
-  case S_x87DoubleExtended:
-    return x87DoubleExtended();
   }
   llvm_unreachable("Unrecognised floating semantics");
 }
@@ -193,6 +193,8 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_IEEEdouble;
   else if (&Sem == &llvm::APFloat::IEEEquad())
     return S_IEEEquad;
+  else if (&Sem == &llvm::APFloat::x87DoubleExtended())
+    return S_x87DoubleExtended;
   else if (&Sem == &llvm::APFloat::PPCDoubleDouble())
     return S_PPCDoubleDouble;
   else if (&Sem == &llvm::APFloat::PPCDoubleDoubleLegacy())
@@ -223,8 +225,6 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_Float6E2M3FN;
   else if (&Sem == &llvm::APFloat::Float4E2M1FN())
     return S_Float4E2M1FN;
-  else if (&Sem == &llvm::APFloat::x87DoubleExtended())
-    return S_x87DoubleExtended;
   else
     llvm_unreachable("Unknown floating semantics");
 }
@@ -3714,6 +3714,10 @@ APInt IEEEFloat::bitcastToAPInt() const {
     return convertQuadrupleAPFloatToAPInt();
 
   if (semantics ==
+      (const llvm::fltSemantics *)&APFloatBase::semX87DoubleExtended)
+    return convertF80LongDoubleAPFloatToAPInt();
+
+  if (semantics ==
       (const llvm::fltSemantics *)&APFloatBase::semPPCDoubleDoubleLegacy)
     return convertPPCDoubleDoubleLegacyAPFloatToAPInt();
 
@@ -3757,10 +3761,7 @@ APInt IEEEFloat::bitcastToAPInt() const {
   if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat4E2M1FN)
     return convertFloat4E2M1FNAPFloatToAPInt();
 
-  assert(semantics ==
-             (const llvm::fltSemantics *)&APFloatBase::semX87DoubleExtended &&
-         "unknown format!");
-  return convertF80LongDoubleAPFloatToAPInt();
+  llvm_unreachable("unknown format!");
 }
 
 float IEEEFloat::convertToFloat() const {
@@ -4039,10 +4040,10 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloatAPInt(api);
   if (Sem == &APFloatBase::semIEEEdouble)
     return initFromDoubleAPInt(api);
-  if (Sem == &APFloatBase::semX87DoubleExtended)
-    return initFromF80LongDoubleAPInt(api);
   if (Sem == &APFloatBase::semIEEEquad)
     return initFromQuadrupleAPInt(api);
+  if (Sem == &APFloatBase::semX87DoubleExtended)
+    return initFromF80LongDoubleAPInt(api);
   if (Sem == &APFloatBase::semPPCDoubleDoubleLegacy)
     return initFromPPCDoubleDoubleLegacyAPInt(api);
   if (Sem == &APFloatBase::semFloat8E5M2)
