@@ -148,7 +148,7 @@ public:
 
   /// The tables TableGen emits for an option set under OPTTABLE_CODE.
   struct Tables {
-    const StringTable &StrTable;
+    StringTable StrTable;
     ArrayRef<StringTable::Offset> PrefixesTable;
     ArrayRef<Info> Infos;
     ArrayRef<InfoExtra> InfoExtras;
@@ -174,7 +174,7 @@ public:
 private:
   // A unified string table for these options. Individual strings are stored as
   // null terminated C-strings at offsets within this table.
-  const StringTable *StrTable;
+  StringTable StrTable;
 
   // A table of different sets of prefixes. Each set starts with the number of
   // prefixes in that set followed by that many offsets into the string table
@@ -238,7 +238,7 @@ private:
   }
 
   StringRef getOptionValues(const Info &I) const {
-    StringRef Values = (*StrTable)[getExtra(I).ValuesOffset];
+    StringRef Values = StrTable[getExtra(I).ValuesOffset];
     if (Values.empty() && ValuesCodeFn)
       Values = ValuesCodeFn(getOptionID(I));
     return Values;
@@ -262,7 +262,7 @@ public:
   virtual ~OptTable();
 
   /// Return the string table used for option names.
-  const StringTable &getStrTable() const { return *StrTable; }
+  const StringTable &getStrTable() const { return StrTable; }
 
   ArrayRef<SubCommand> getSubCommands() const { return SubCommands; }
 
@@ -286,25 +286,25 @@ public:
 
   /// Lookup the name of the given option.
   StringRef getOptionName(OptSpecifier id) const {
-    return getInfo(id).getName(*StrTable, PrefixesTable);
+    return getInfo(id).getName(StrTable, PrefixesTable);
   }
 
   /// Lookup the prefix of the given option.
   StringRef getOptionPrefix(OptSpecifier id) const {
     const Info &I = getInfo(id);
     return I.hasNoPrefix() ? StringRef()
-                           : I.getPrefix(*StrTable, PrefixesTable, 0);
+                           : I.getPrefix(StrTable, PrefixesTable, 0);
   }
 
   void appendOptionPrefixes(OptSpecifier id,
                             SmallVectorImpl<StringRef> &Prefixes) const {
     const Info &I = getInfo(id);
-    I.appendPrefixes(*StrTable, PrefixesTable, Prefixes);
+    I.appendPrefixes(StrTable, PrefixesTable, Prefixes);
   }
 
   /// Lookup the prefixed name of the given option.
   StringRef getOptionPrefixedName(OptSpecifier id) const {
-    return getInfo(id).getPrefixedName(*StrTable);
+    return getInfo(id).getPrefixedName(StrTable);
   }
 
   /// Get the kind of the given option.
@@ -327,18 +327,18 @@ public:
   // visibility mask, use that text instead of the generic text.
   StringRef getOptionHelpText(OptSpecifier id,
                               Visibility VisibilityMask) const {
-    return (*StrTable)[getHelpTextOffset(getInfo(id), VisibilityMask)];
+    return StrTable[getHelpTextOffset(getInfo(id), VisibilityMask)];
   }
 
   /// Get the meta-variable name to use when describing
   /// this options values in the help text.
   StringRef getOptionMetaVar(OptSpecifier id) const {
-    return (*StrTable)[getExtra(getInfo(id)).MetaVarOffset];
+    return StrTable[getExtra(getInfo(id)).MetaVarOffset];
   }
 
   /// Get the alias arguments as a \0 separated list, e.g. "foo\0bar\0".
   const char *getOptionAliasArgs(OptSpecifier id) const {
-    return StrTable->getCString(getExtra(getInfo(id)).AliasArgsOffset);
+    return StrTable.getCString(getExtra(getInfo(id)).AliasArgsOffset);
   }
 
   /// Specify the environment variable where initial options should be read.

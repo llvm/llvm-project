@@ -481,8 +481,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "  };\n\n";
 
-  OS << "  return {OptionStrTable, OptionPrefixesTable, OptionInfoTable,\n";
-  OS << "          OptionInfoExtrasTable, OptionHelpTextVariantsTable, "
+  OS << "  return {OptionStrTableStorage, OptionPrefixesTable,\n";
+  OS << "          OptionInfoTable, OptionInfoExtrasTable, "
+        "OptionHelpTextVariantsTable, "
      << (SubCommands.empty() ? "{}" : "OptionSubCommands")
      << ", OptionSubCommandIDsTable};\n";
   OS << "}\n";
