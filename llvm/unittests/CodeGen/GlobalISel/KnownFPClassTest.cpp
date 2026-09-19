@@ -1026,6 +1026,29 @@ TEST_F(AArch64GISelMITest, TestFPClassFLDExp) {
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassFFrexp) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %fabs:_(s32) = nnan ninf G_FABS %val
+    %frexp_mant:_(s32), %frexp_exp:_(s32) = G_FFREXP %fabs
+    %copy_frexp_mant:_(s32) = COPY %frexp_mant
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  GISelValueTracking Info(*MF);
+
+  Register CopyReg = Copies.back();
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+  EXPECT_EQ(fcPosZero | fcPosNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassFPowPos) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
@@ -1378,9 +1401,9 @@ TEST_F(AArch64GISelMITest, TestFPClassFRemSelf_KnownFiniteNonZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  // 2.0 % 2.0 = 0.0 exactly — NaN is impossible since 2.0 is finite and
+  // 2.0 % 2.0 = +0.0 exactly. NaN is impossible since 2.0 is finite and
   // nonzero.
-  EXPECT_EQ(fcZero, Known.getKnownFPClasses());
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassShuffleVec) {
