@@ -118,7 +118,7 @@ USAGE: {program}`llvm-remarkutil` count \[*options*\] \<input file>
 
 #### Summary
 
-{program}`llvm-remarkutil count` counts {doc}`remarks <../Remarks>` based on specified properties.
+{program}`llvm-remarkutil count` counts [remarks](../Remarks.md) based on specified properties.
 By default the tool counts remarks based on how many occur in a source file or function or total for the generated remark file.
 The tool also supports collecting count based on specific remark arguments. The specified arguments should have an integer value to be able to report a count.
 
@@ -206,7 +206,7 @@ USAGE: {program}`llvm-remarkutil` size-diff \[*options*\] *file_a* *file_b* **--
 
 #### Summary
 
-{program}`llvm-remarkutil size-diff` diffs size {doc}`remarks <../Remarks>` in two remark files: `file_a`
+{program}`llvm-remarkutil size-diff` diffs size [remarks](../Remarks.md) in two remark files: `file_a`
 and `file_b`.
 
 {program}`llvm-remarkutil size-diff` can be used to gain insight into which
