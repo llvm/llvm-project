@@ -91,8 +91,9 @@ void thread_limit_at_max() {
 // CHECK:      "omp_target_num_teams"="44"
 
 // Widened by a warp for generic mode, except on SPIRV, which does not reserve
-// one.
-// CHECK:      "omp_target_thread_limit"="{{86|22}}"
+// one. The widened value depends on the target warp size: 86 = 22 + 64 (wave64),
+// 54 = 22 + 32 (wave32 / nvptx); SPIRV stays at the unwidened 22.
+// CHECK:      "omp_target_thread_limit"="{{86|54|22}}"
 
 // CHECK:      "omp_target_thread_limit"="11"
 
