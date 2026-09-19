@@ -84,10 +84,16 @@ LIBC_INLINE double atan(double x) {
     }
 
     double x_d = xbits.get_val();
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+    double k = fputil::nearest_integer(0x1.0p4 * x_d);
+    unsigned idx = static_cast<unsigned>(k);
+    k *= 0x1.0p-4;
+#else
     // k = 2^-6 * round(2^6 * |x|)
     double k = fputil::nearest_integer(0x1.0p6 * x_d);
     unsigned idx = static_cast<unsigned>(k);
     k *= 0x1.0p-6;
+#endif
 
     // numerator = |x| - k
     DoubleDouble num, den;
@@ -144,10 +150,16 @@ LIBC_INLINE double atan(double x) {
   double x_d = xbits.get_val();
   double y = 1.0 / x_d;
 
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+  double k = fputil::nearest_integer(0x1.0p4 * y);
+  unsigned idx = static_cast<unsigned>(k);
+  k *= 0x1.0p-4;
+#else
   // k = 2^-6 * round(2^6 / |x|)
   double k = fputil::nearest_integer(0x1.0p6 * y);
   unsigned idx = static_cast<unsigned>(k);
   k *= 0x1.0p-6;
+#endif
 
   // denominator = |x| + k
   DoubleDouble den = fputil::exact_add(x_d, k);

@@ -9,7 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG2F_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG2F_H
 
+#if !(defined(LIBC_MATH_HAS_SMALL_TABLES) &&                                   \
+      defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT))
 #include "common_constants.h" // Lookup table for (1/f)
+#endif
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -59,7 +62,6 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE float log2f(float x) {
-  using namespace common_constants_internal;
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);
@@ -93,7 +95,43 @@ LIBC_INLINE float log2f(float x) {
     // Normalize denormal inputs.
     xbits = FPBits(xbits.get_val() * 0x1.0p23f);
     m -= 23;
+    x_u = xbits.uintval();
   }
+
+#if defined(LIBC_MATH_HAS_SMALL_TABLES) &&                                     \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
+  uint32_t mant = xbits.get_mantissa();
+  m += static_cast<int>(x_u >> FPBits::FRACTION_LEN);
+  if (mant > 0x0035'04f3U) {
+    xbits.set_biased_exponent(FPBits::EXP_BIAS - 1);
+    m += 1;
+  } else {
+    xbits.set_biased_exponent(FPBits::EXP_BIAS);
+  }
+  float d = xbits.get_val() - 1.0f;
+  float mf = static_cast<float>(m);
+
+  float s = d / (d + 2.0f);
+  float r_div = fputil::multiply_add(-s, d + 2.0f, d);
+  float s2 = s * s;
+  float p = fputil::polyeval(s2, 0x1.555556p-1f, 0x1.99999ap-2f, 0x1.24924ap-2f,
+                             0x1.c71c72p-3f);
+  float lo =
+      fputil::multiply_add(s, fputil::multiply_add(s2, p, -d), -s * r_div);
+
+  constexpr float INV_LN2_HI = 0x1.715476p+0f;
+  constexpr float INV_LN2_LO = 0x1.4ae0bfp-25f;
+
+  float prod_hi = d * INV_LN2_HI;
+  float prod_err = fputil::multiply_add(d, INV_LN2_HI, -prod_hi);
+  float prod_lo = fputil::multiply_add(
+      lo, INV_LN2_HI, fputil::multiply_add(d, INV_LN2_LO, prod_err));
+
+  float sum_hi = mf + prod_hi;
+  float sum_lo = (prod_hi - (sum_hi - mf)) + prod_lo;
+  return sum_hi + sum_lo;
+#else
+  using namespace common_constants_internal;
 
   m += xbits.get_biased_exponent();
   int index = xbits.get_mantissa() >> 16;
@@ -125,6 +163,7 @@ LIBC_INLINE float log2f(float x) {
   double r = fputil::polyeval(vsq, c0, c1, c2);
 
   return static_cast<float>(r);
+#endif
 }
 
 } // namespace math

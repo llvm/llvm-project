@@ -92,11 +92,6 @@ LIBC_INLINE double atan2(double y, double x) {
                                       0x1.921fb54442d18p-1};
   constexpr DoubleDouble THREE_PI_OVER_4 = {0x1.a79394c9e8a0ap-54,
                                             0x1.2d97c7f3321d2p+1};
-  // Adjustment for constant term:
-  //   CONST_ADJ[x_sign][y_sign][recip]
-  constexpr DoubleDouble CONST_ADJ[2][2][2] = {
-      {{ZERO, MPI_OVER_2}, {MZERO, MPI_OVER_2}},
-      {{MPI, PI_OVER_2}, {MPI, PI_OVER_2}}};
 
   FPBits x_bits(x), y_bits(y);
   bool x_sign = x_bits.sign().is_neg();
@@ -125,22 +120,16 @@ LIBC_INLINE double atan2(double y, double x) {
     unsigned x_except = x == 0.0 ? 0 : (FPBits(x_abs).is_inf() ? 2 : 1);
     unsigned y_except = y == 0.0 ? 0 : (FPBits(y_abs).is_inf() ? 2 : 1);
 
-    // Exceptional cases:
-    //   EXCEPT[y_except][x_except][x_is_neg]
-    // with x_except & y_except:
-    //   0: zero
-    //   1: finite, non-zero
-    //   2: infinity
-    constexpr DoubleDouble EXCEPTS[3][3][2] = {
-        {{ZERO, PI}, {ZERO, PI}, {ZERO, PI}},
-        {{PI_OVER_2, PI_OVER_2}, {ZERO, ZERO}, {ZERO, PI}},
-        {{PI_OVER_2, PI_OVER_2},
-         {PI_OVER_2, PI_OVER_2},
-         {PI_OVER_4, THREE_PI_OVER_4}},
-    };
-
     if ((x_except != 1) || (y_except != 1)) {
-      DoubleDouble r = EXCEPTS[y_except][x_except][x_sign];
+      DoubleDouble r = ZERO;
+      if (y_except == 2) {
+        r = (x_except == 2) ? (x_sign ? THREE_PI_OVER_4 : PI_OVER_4)
+                            : PI_OVER_2;
+      } else if (y_except == 1) {
+        r = (x_except == 0) ? PI_OVER_2 : (x_sign ? PI : ZERO);
+      } else {
+        r = x_sign ? PI : ZERO;
+      }
       return fputil::multiply_add(IS_NEG[y_sign], r.hi, IS_NEG[y_sign] * r.lo);
     }
     bool scale_up = min_exp < 128U;
@@ -164,7 +153,8 @@ LIBC_INLINE double atan2(double y, double x) {
   }
 
   double final_sign = IS_NEG[(x_sign != y_sign) != recip];
-  DoubleDouble const_term = CONST_ADJ[x_sign][y_sign][recip];
+  DoubleDouble const_term = recip ? (x_sign ? PI_OVER_2 : MPI_OVER_2)
+                                  : (x_sign ? MPI : (y_sign ? MZERO : ZERO));
   unsigned exp_diff = max_exp - min_exp;
   // We have the following bound for normalized n and d:
   //   2^(-exp_diff - 1) < n/d < 2^(-exp_diff + 1).
@@ -173,10 +163,16 @@ LIBC_INLINE double atan2(double y, double x) {
                                 final_sign * (const_term.lo + num / den));
   }
 
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+  double k = fputil::nearest_integer(16.0 * num / den);
+  unsigned idx = static_cast<unsigned>(k);
+  k *= 0x1.0p-4;
+#else
   double k = fputil::nearest_integer(64.0 * num / den);
   unsigned idx = static_cast<unsigned>(k);
   // k = idx / 64
   k *= 0x1.0p-6;
+#endif
 
   // Range reduction:
   // atan(n/d) - atan(k/64) = atan((n/d - k/64) / (1 + (n/d) * (k/64)))
