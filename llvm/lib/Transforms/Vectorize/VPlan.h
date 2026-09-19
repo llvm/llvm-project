@@ -565,7 +565,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the recipe to stderr (for debugging).
-  LLVM_ABI_FOR_TEST void dump() const;
+  void dump() const;
 
   /// Print the recipe, delegating to printRecipe().
   void print(raw_ostream &O, const Twine &Indent,
@@ -695,7 +695,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
-  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
