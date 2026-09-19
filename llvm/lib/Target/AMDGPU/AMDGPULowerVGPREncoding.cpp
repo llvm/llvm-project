@@ -42,11 +42,14 @@
 
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPU.h"
+#include "AMDGPUMachineInstrs.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -132,6 +135,7 @@ public:
   bool run(MachineFunction &MF);
 
 private:
+  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
 
@@ -176,6 +180,8 @@ private:
 
   /// Handle single \p MI. \return true if changed.
   bool runOnMachineInstr(MachineInstr &MI);
+
+  void lowerLoadStoreIdx(MachineInstr &MI);
 
   /// Compute the mode for a single \p MI given \p Ops operands
   /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
@@ -379,6 +385,93 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   return false;
 }
 
+void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
+  auto &LdSt = cast<AMDGPUMI::VLoadStoreIdxInst>(MI);
+  MachineBasicBlock &BB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const bool IsStore = LdSt.mayStore();
+
+  // $data is operand 0 of both the load (def) and store (use) pseudos.
+  Register Data = LdSt.getDataOp().getReg();
+  MachineOperand &IdxOp = LdSt.getIdxOp();
+  unsigned Offset = LdSt.getOffsetOp().getImm();
+  unsigned NumDwords = LdSt.getBitWidth() / 32;
+
+  // A statically out-of-range offset is undefined behavior; mask it into the
+  // addressable range below rather than emit an invalid register.
+  unsigned NumAddressableVGPRs = ST->getAddressableNumVGPRs(
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
+#ifndef NDEBUG
+  bool AllowOffsetWrap = NumAddressableVGPRs == ST->getTotalNumVGPRs();
+  assert((AllowOffsetWrap || Offset + NumDwords <= NumAddressableVGPRs) &&
+         "out of bounds VGPR 'as memory' (address space 13) access");
+#endif
+
+  // With movrel the index is in M0, put there by the custom inserter. The rest
+  // use the VGPR indexing mode, which reads it from its SGPR.
+  const bool UseGPRIdxMode = ST->useVGPRIndexMode();
+
+  MachineInstr *SetOn = nullptr;
+  if (UseGPRIdxMode) {
+    SetOn = BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
+                .add(IdxOp)
+                .addImm(IsStore ? AMDGPU::VGPRIndexMode::DST_ENABLE
+                                : AMDGPU::VGPRIndexMode::SRC0_ENABLE)
+                .getInstr();
+    SetOn->getOperand(3).setIsUndef();
+  } else {
+    assert(IdxOp.isReg() && IdxOp.getReg() == AMDGPU::M0 &&
+           "movrel index should have been copied into M0");
+  }
+
+  unsigned Opcode;
+  if (UseGPRIdxMode)
+    Opcode = IsStore ? AMDGPU::V_MOV_B32_indirect_write
+                     : AMDGPU::V_MOV_B32_indirect_read;
+  else
+    Opcode =
+        IsStore ? AMDGPU::V_MOVRELD_B32_as_mem : AMDGPU::V_MOVRELS_B32_as_mem;
+
+  // A move touches VGPR($offset + i) *plus M0*, known only at run time, so no
+  // operand can name it and such operands are undef. Liveness is therefore not
+  // expressed here; correctness relies on nothing else being allocated to these
+  // registers, which is why frontend use of this address space is discouraged.
+  const RegState DataFlags = IsStore
+                                 ? getUndefRegState(LdSt.getDataOp().isUndef())
+                                 : RegState::NoFlags;
+  for (unsigned i = 0; i < NumDwords; ++i) {
+    Register Base = AMDGPU::VGPR0 + ((Offset + i) & (NumAddressableVGPRs - 1));
+    Register Sub = Data;
+    if (NumDwords != 1)
+      Sub = TRI->getSubReg(Data, TRI->getSubRegFromChannel(i));
+
+    MachineInstr *Mov;
+    if (IsStore)
+      Mov = BuildMI(BB, MI, DL, TII->get(Opcode))
+                .addReg(Base, RegState::Undef)
+                .addReg(Sub, DataFlags)
+                .getInstr();
+    else
+      Mov = BuildMI(BB, MI, DL, TII->get(Opcode), Sub)
+                .addReg(Base, RegState::Undef)
+                .getInstr();
+
+    // Encode high address bits above 256 addressable VGPRs; else a no-op.
+    if (ST->has1024AddressableVGPRs())
+      runOnMachineInstr(*Mov);
+  }
+
+  // Keep the mode switch and the moves it applies to together, so nothing is
+  // scheduled or spilled in between while indexing is enabled.
+  if (SetOn) {
+    MachineInstr *SetOff =
+        BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
+    finalizeBundle(BB, SetOn->getIterator(), std::next(SetOff->getIterator()));
+  }
+
+  MI.eraseFromParent();
+}
+
 MachineBasicBlock::instr_iterator
 AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
   if (!ClauseRemaining)
@@ -570,12 +663,13 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
 }
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.has1024AddressableVGPRs())
-    return false;
+  ST = &MF.getSubtarget<GCNSubtarget>();
+  TII = ST->getInstrInfo();
+  TRI = ST->getRegisterInfo();
 
-  TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
+  // S_SET_VGPR_MSB is only needed above 256 addressable VGPRs, but the pass
+  // still runs elsewhere to lower the indexed load/store pseudos.
+  const bool LowerVGPRMSBs = ST->has1024AddressableVGPRs();
 
   LLVM_DEBUG(dbgs() << "*** AMDGPULowerVGPREncoding on " << MF.getName()
                     << " ***\n");
@@ -592,6 +686,16 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
                       << ":\n");
 
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
+      // Lowered on every subtarget; the MSB work below is not.
+      if (isa<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+        lowerLoadStoreIdx(MI);
+        Changed = true;
+        continue;
+      }
+
+      if (!LowerVGPRMSBs)
+        continue;
+
       if (MI.isMetaInstruction())
         continue;
 
@@ -624,7 +728,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
       }
 
       if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-          ST.hasSetregVGPRMSBFixup()) {
+          ST->hasSetregVGPRMSBFixup()) {
         Changed |= handleSetregMode(MI);
         continue;
       }
@@ -648,8 +752,10 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
     }
 
     // Reset the mode if we are falling through.
-    LLVM_DEBUG(dbgs() << "  end of BB, resetting mode\n");
-    resetMode(MBB.instr_end());
+    if (LowerVGPRMSBs) {
+      LLVM_DEBUG(dbgs() << "  end of BB, resetting mode\n");
+      resetMode(MBB.instr_end());
+    }
   }
 
   return Changed;

@@ -128,6 +128,7 @@ private:
 
   SDValue widenLoad(LoadSDNode *Ld, DAGCombinerInfo &DCI) const;
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerLoadStoreVGPR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFastUnsafeFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFastUnsafeFDIV64(SDValue Op, SelectionDAG &DAG) const;
