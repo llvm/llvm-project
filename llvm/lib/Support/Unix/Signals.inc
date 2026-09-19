@@ -328,13 +328,13 @@ static void RegisterHandlers(
   static ManagedStatic<sys::SmartMutex<true>> SignalHandlerRegistrationMutex;
   sys::SmartScopedLock<true> Guard(*SignalHandlerRegistrationMutex);
 
-  // If the handlers are already registered, we're done.
-  if (NumRegisteredSignals.load() != 0)
-    return;
-
-  // Create an alternate stack for signal handling. This is necessary for us to
-  // be able to reliably handle signals due to stack overflow.
-  CreateSigAltStack();
+  // Remember NeedsPOSIXUtilitySignalHandling from the first call that
+  // registers the handlers. If a later call registers SIGPIPE (see below), it
+  // must use this saved value, not its own argument, so that SIGPIPE gets the
+  // same handling semantics as all the signals registered before it.
+  static bool POSIXUtilitySignalHandling = false;
+  if (NumRegisteredSignals.load() == 0)
+    POSIXUtilitySignalHandling = NeedsPOSIXUtilitySignalHandling;
 
   enum class SignalKind { IsKill, IsInfo };
   auto registerHandler = [&](int Signal, SignalKind Kind) {
@@ -346,7 +346,7 @@ static void RegisterHandlers(
 
     switch (Kind) {
     case SignalKind::IsKill:
-      if (NeedsPOSIXUtilitySignalHandling)
+      if (POSIXUtilitySignalHandling)
         // If POSIX signal-handling semantics are followed, the signal handler
         // resignal itself to terminate after handling the signal.
         NewHandler.sa_sigaction = SignalHandlerTerminate;
@@ -355,7 +355,7 @@ static void RegisterHandlers(
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
-      if (NeedsPOSIXUtilitySignalHandling)
+      if (POSIXUtilitySignalHandling)
         // If POSIX signal-handling semantics are followed, the signal handler
         // resignal itself to terminate after handling the signal.
         NewHandler.sa_handler = InfoSignalHandlerTerminate;
@@ -366,7 +366,7 @@ static void RegisterHandlers(
     }
     sigemptyset(&NewHandler.sa_mask);
 
-    if (NeedsPOSIXUtilitySignalHandling) {
+    if (POSIXUtilitySignalHandling) {
       // Don't install the new handler if the signal disposition is SIG_IGN.
       struct sigaction act;
       if (sigaction(Signal, NULL, &act) == 0 && act.sa_handler != SIG_IGN)
@@ -377,6 +377,25 @@ static void RegisterHandlers(
     RegisteredSignalInfo[Index].SigNo = Signal;
     ++NumRegisteredSignals;
   };
+
+  // If the handlers are already registered, the only work that may remain is
+  // a sigaction() for SIGPIPE, which is skipped until a one-shot pipe signal
+  // function is installed. SetOneShotPipeSignalFunction can be called
+  // after the other handlers have been registered (for example InitLLVM
+  // registers a cleanup handler before it installs the pipe function), so
+  // register SIGPIPE now if it is needed and still missing.
+  if (NumRegisteredSignals.load() != 0) {
+    bool SigPipeRegistered = false;
+    for (unsigned i = 0, e = NumRegisteredSignals.load(); i != e; ++i)
+      SigPipeRegistered |= RegisteredSignalInfo[i].SigNo == SIGPIPE;
+    if (OneShotPipeSignalFunction && !SigPipeRegistered)
+      registerHandler(SIGPIPE, SignalKind::IsKill);
+    return;
+  }
+
+  // Create an alternate stack for signal handling. This is necessary for us to
+  // be able to reliably handle signals due to stack overflow.
+  CreateSigAltStack();
 
   for (auto S : IntSigs)
     registerHandler(S, SignalKind::IsKill);
