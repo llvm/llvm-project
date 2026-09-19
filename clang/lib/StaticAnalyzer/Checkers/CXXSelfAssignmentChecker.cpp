@@ -44,6 +44,9 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
     return;
   if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
     return;
+  if (!MD->isImplicitObjectMemberFunction())
+    return;
+
   auto &State = C.getState();
   auto &SVB = C.getSValBuilder();
   auto ThisVal = State->getSVal(SVB.getCXXThis(MD, SF));
