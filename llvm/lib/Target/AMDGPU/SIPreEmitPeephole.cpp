@@ -904,6 +904,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
     // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
     // may be bundled with the instructions they modify.
     for (auto &MI : make_early_inc_range(MBB.instrs())) {
+      if (MI.isDebugInstr())
+        continue;
       if (Count == Threshold)
         SetGPRMI = nullptr;
       else
