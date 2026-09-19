@@ -259,7 +259,8 @@ module {
 // CHECK:           [[VAL_11:%.*]] = affine.apply #[[$MAP1]]([[VAL_8]]){{\[}}%[[C0]], %[[C3]]]
 // CHECK:           [[VAL_12:%.*]] = arith.constant 4 : index
 // CHECK:           [[VAL_13:%.*]] = affine.apply #[[$MAP1]]([[VAL_12]]){{\[}}%[[C0]], %[[C1]]]
-// CHECK:           [[VAL_15:%.*]] = affine.apply #[[$MAP1]](%[[C3]]){{\[}}%[[C0]], %[[C1]]]
+// CHECK:           [[VAL_14:%.*]] = arith.constant 3 : index
+// CHECK:           [[VAL_15:%.*]] = affine.apply #[[$MAP1]]([[VAL_14]]){{\[}}%[[C0]], %[[C1]]]
 // CHECK:           gpu.launch blocks([[VAL_16:%.*]], [[VAL_17:%.*]], [[VAL_18:%.*]]) in ([[VAL_19:%.*]] = [[VAL_10]], [[VAL_20:%.*]] = [[VAL_11]], [[VAL_21:%.*]] = [[VAL_9]]) threads([[VAL_22:%.*]], [[VAL_23:%.*]], [[VAL_24:%.*]]) in ([[VAL_25:%.*]] = [[VAL_13]], [[VAL_26:%.*]] = [[VAL_15]], [[VAL_27:%.*]] = [[VAL_9]]) {
 // CHECK:             [[VAL_28:%.*]] = affine.apply #[[$MAP2]]([[VAL_16]]){{\[}}%[[C2]], %[[C0]]]
 // CHECK:             [[VAL_29:%.*]] = affine.apply #[[$MAP2]]([[VAL_17]]){{\[}}%[[C3]], %[[C0]]]
@@ -721,3 +722,40 @@ func.func @scf2gpu_index_creation_1d() {
 //       CHECK:   gpu.launch
 //       CHECK:     %[[IDX:.*]] = affine.apply
 //       CHECK:     arith.addi %[[IDX]],
+
+// -----
+
+// The upper bound of the inner loop cannot be derived to a constant: it is an
+// `arith.muli` whose operand is the outer induction variable. Deriving a bound
+// for that operand fails, so `arith.minsi` has to fall back to its other
+// operand instead of dereferencing the failed result.
+
+func.func @nested_underivable_upper_bound(%buf : memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c-1 = arith.constant -1 : index
+  %c64 = arith.constant 64 : index
+
+  scf.parallel (%i) = (%c0) to (%c64) step (%c1) {
+    %scaled = arith.muli %i, %c1 : index
+    %bound = arith.minsi %scaled, %c-1 : index
+    scf.parallel (%j) = (%c0) to (%bound) step (%c1) {
+      %v = memref.load %buf[%j] : memref<?xf32>
+    } {
+      mapping = [
+        #gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>
+      ]
+    }
+  } {
+    mapping = [
+      #gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>
+    ]
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_underivable_upper_bound
+//       CHECK:   gpu.launch
+//       CHECK:     %[[BOUND:.*]] = arith.minsi
+//       CHECK:     %[[IV:.*]] = affine.apply
+//       CHECK:     arith.cmpi slt, %[[IV]], %[[BOUND]]

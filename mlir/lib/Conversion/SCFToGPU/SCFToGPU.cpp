@@ -26,6 +26,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseSet.h"
@@ -316,44 +317,42 @@ struct ParallelToGpuLaunchLowering : public OpRewritePattern<ParallelOp> {
 
 /// Tries to derive a static upper bound from the defining operation of
 /// `upperBound`.
-static Value deriveStaticUpperBound(Value upperBound,
-                                    PatternRewriter &rewriter) {
+static FailureOr<int64_t> deriveStaticUpperBound(Value upperBound) {
   if (auto op = upperBound.getDefiningOp<arith::ConstantIndexOp>()) {
-    return op;
+    return op.value();
   }
 
   if (auto minOp = upperBound.getDefiningOp<AffineMinOp>()) {
     for (const AffineExpr &result : minOp.getMap().getResults()) {
-      if (auto constExpr = dyn_cast<AffineConstantExpr>(result)) {
-        return arith::ConstantIndexOp::create(rewriter, minOp.getLoc(),
-                                              constExpr.getValue());
-      }
+      if (auto constExpr = dyn_cast<AffineConstantExpr>(result))
+        return constExpr.getValue();
     }
   }
 
   if (auto minOp = upperBound.getDefiningOp<arith::MinSIOp>()) {
     for (Value operand : {minOp.getLhs(), minOp.getRhs()}) {
-      if (auto staticBound = deriveStaticUpperBound(operand, rewriter))
-        return staticBound;
+      FailureOr<int64_t> staticBound = deriveStaticUpperBound(operand);
+      if (succeeded(staticBound))
+        return *staticBound;
     }
   }
 
   if (auto multiplyOp = upperBound.getDefiningOp<arith::MulIOp>()) {
-    if (auto lhs = deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
-                       .getDefiningOp<arith::ConstantIndexOp>())
-      if (auto rhs = deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
-                         .getDefiningOp<arith::ConstantIndexOp>()) {
-        // Assumptions about the upper bound of minimum computations no longer
-        // work if multiplied by mixed signs, so abort in this case.
-        if ((lhs.value() < 0) != (rhs.value() < 0))
-          return {};
+    FailureOr<int64_t> lhs = deriveStaticUpperBound(multiplyOp.getOperand(0));
+    if (failed(lhs))
+      return failure();
+    FailureOr<int64_t> rhs = deriveStaticUpperBound(multiplyOp.getOperand(1));
+    if (failed(rhs))
+      return failure();
+    // Assumptions about the upper bound of minimum computations no longer
+    // work if multiplied by mixed signs, so abort in this case.
+    if ((lhs.value() < 0) != (rhs.value() < 0))
+      return failure();
 
-        return arith::ConstantIndexOp::create(rewriter, multiplyOp.getLoc(),
-                                              lhs.value() * rhs.value());
-      }
+    return lhs.value() * rhs.value();
   }
 
-  return {};
+  return failure();
 }
 
 static bool isMappedToProcessor(gpu::Processor processor) {
@@ -499,13 +498,15 @@ static LogicalResult processParallelLoop(
           PatternRewriter::InsertionGuard guard(rewriter);
           rewriter.setInsertionPoint(launchOp);
           if (!boundIsPrecise) {
-            upperBound = deriveStaticUpperBound(upperBound, rewriter);
-            if (!upperBound) {
+            FailureOr<int64_t> staticBound = deriveStaticUpperBound(upperBound);
+            if (failed(staticBound)) {
               return rewriter.notifyMatchFailure(
                   parallelOp,
                   "cannot derive loop-invariant upper bound for number of"
                   "iterations");
             }
+            upperBound = arith::ConstantIndexOp::create(
+                rewriter, upperBound.getLoc(), *staticBound);
           }
           // Compute the number of iterations needed. We compute this as an
           // affine expression ceilDiv (upperBound - lowerBound) step. We use
