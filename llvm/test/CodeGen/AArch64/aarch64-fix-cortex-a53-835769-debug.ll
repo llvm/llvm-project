@@ -12,12 +12,12 @@ define i64 @a53_debug_front(i64 %a, i64 %b, ptr nocapture readonly %c) nounwind 
 ; CHECK-NEXT:    .file 1 "/" "a53-debug-front.c"
 ; CHECK-NEXT:    .loc 1 2 17 prologue_end // a53-debug-front.c:2:17
 ; CHECK-NEXT:    ldr x8, [x2]
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .Ltmp0: // Block address taken
 ; CHECK-NEXT:  // %bb.1: // %block1
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    //DEBUG_LABEL: a53_debug_front:block1
 ; CHECK-NEXT:    .loc 1 5 3 // a53-debug-front.c:5:3
-; CHECK-NEXT:    nop
 ; CHECK-NEXT:    madd x8, x8, x1, x0
 ; CHECK-NEXT:    adrp x9, .Ltmp0
 ; CHECK-NEXT:    add x9, x9, :lo12:.Ltmp0
