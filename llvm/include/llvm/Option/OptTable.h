@@ -159,7 +159,6 @@ public:
   struct Tables {
     const StringTable &StrTable;
     ArrayRef<StringTable::Offset> PrefixesTable;
-    ArrayRef<StringTable::Offset> PrefixesUnion;
     ArrayRef<Info> Infos;
     ArrayRef<HelpTextVariant> HelpTextVariants;
     ArrayRef<SubCommand> SubCommands;
