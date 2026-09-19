@@ -147,6 +147,11 @@ struct StoreToLoadForwardingCandidate {
 #endif
 };
 
+struct StoreToLoadDependences {
+  std::forward_list<StoreToLoadForwardingCandidate> Candidates;
+  std::forward_list<StoreToLoadForwardingCandidate> PotentialClobbers;
+};
+
 } // end anonymous namespace
 
 /// Check if the store dominates all latches, so as long as there is no
@@ -180,14 +185,13 @@ public:
   ///
   /// Note that no candidate is returned if LAA has failed to analyze the loop
   /// (e.g. if it's not bottom-tested, contains volatile memops, etc.)
-  std::forward_list<StoreToLoadForwardingCandidate>
-  findStoreToLoadDependences(const LoopAccessInfo &LAI) {
-    std::forward_list<StoreToLoadForwardingCandidate> Candidates;
+  StoreToLoadDependences findStoreToLoadDependences(const LoopAccessInfo &LAI) {
+    StoreToLoadDependences Dependences;
 
     const auto &DepChecker = LAI.getDepChecker();
     const auto *Deps = DepChecker.getDependences();
     if (!Deps)
-      return Candidates;
+      return Dependences;
 
     // Find store->load dependences (consequently true dep).  Both lexically
     // forward and backward dependences qualify.  Disqualify loads that have
@@ -225,20 +229,25 @@ public:
         continue;
 
       // Only propagate if the stored values are bit/pointer castable.
-      if (!CastInst::isBitOrNoopPointerCastable(
-              getLoadStoreType(Store), getLoadStoreType(Load),
-              Store->getDataLayout()))
+      // if the types are not bitcastable, add the candidate to the potential
+      // clobbers list
+      if (!CastInst::isBitOrNoopPointerCastable(getLoadStoreType(Store),
+                                                getLoadStoreType(Load),
+                                                Store->getDataLayout())) {
+        Dependences.PotentialClobbers.emplace_front(Load, Store);
         continue;
+      }
 
-      Candidates.emplace_front(Load, Store);
+      Dependences.Candidates.emplace_front(Load, Store);
     }
 
     if (!LoadsWithUnknownDependence.empty())
-      Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
-        return LoadsWithUnknownDependence.count(C.Load);
-      });
+      Dependences.Candidates.remove_if(
+          [&](const StoreToLoadForwardingCandidate &C) {
+            return LoadsWithUnknownDependence.count(C.Load);
+          });
 
-    return Candidates;
+    return Dependences;
   }
 
   /// Return the index of the instruction according to program order.
@@ -246,6 +255,15 @@ public:
     auto I = InstOrder.find(Inst);
     assert(I != InstOrder.end() && "No index for instruction");
     return I->second;
+  }
+
+  /// Remove candidates whose forwarded value is clobbered before the load in
+  /// the next iteration.
+  void removeCandidatesWithPotentialClobbers(
+      SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates,
+      const std::forward_list<StoreToLoadForwardingCandidate>
+          &PotentialClobbers) {
+    // TODO: Use potential clobbers to filter forwarding candidates.
   }
 
   /// If a load has multiple candidates associated (i.e. different
@@ -511,7 +529,7 @@ public:
 
     // First start with store->load dependences.
     auto StoreToLoadDependences = findStoreToLoadDependences(LAI);
-    if (StoreToLoadDependences.empty())
+    if (StoreToLoadDependences.Candidates.empty())
       return false;
 
     // Generate an index for each load and store according to the original
@@ -520,13 +538,14 @@ public:
 
     // To keep things simple for now, remove those where the load is potentially
     // fed by multiple stores.
-    removeDependencesFromMultipleStores(StoreToLoadDependences);
-    if (StoreToLoadDependences.empty())
+    removeDependencesFromMultipleStores(StoreToLoadDependences.Candidates);
+    if (StoreToLoadDependences.Candidates.empty())
       return false;
 
     // Filter the candidates further.
     SmallVector<StoreToLoadForwardingCandidate, 4> Candidates;
-    for (const StoreToLoadForwardingCandidate &Cand : StoreToLoadDependences) {
+    for (const StoreToLoadForwardingCandidate &Cand :
+         StoreToLoadDependences.Candidates) {
       LLVM_DEBUG(dbgs() << "Candidate " << Cand);
 
       // Make sure that the stored values is available everywhere in the loop in
@@ -557,6 +576,11 @@ public:
           << Candidates.size()
           << ". Valid store-to-load forwarding across the loop backedge\n");
     }
+    if (Candidates.empty())
+      return false;
+
+    removeCandidatesWithPotentialClobbers(
+        Candidates, StoreToLoadDependences.PotentialClobbers);
     if (Candidates.empty())
       return false;
 
