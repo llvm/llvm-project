@@ -2,7 +2,8 @@
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=51 -emit-hlfir %s -o - | \
 ! RUN:   FileCheck %s
 
-! TARGET hides the outer PARALLEL, so the SIMD replacement is not lowered.
+! TARGET hides the outer PARALLEL. The unreachable SIMD replacement must
+! not be lowered, since its COLLAPSE clause is invalid for the single loop.
 ! CHECK-LABEL: func.func @_QPactual_target(
 ! CHECK: omp.parallel
 ! CHECK: omp.target
@@ -13,7 +14,7 @@ subroutine actual_target(n, a)
   !$omp parallel
     !$omp target
       !$omp metadirective &
-      !$omp& when(construct={parallel}: simd) default(nothing)
+      !$omp& when(construct={parallel}: simd collapse(2)) default(nothing)
       do i = 1, n
         a(i) = i
       end do
@@ -32,7 +33,7 @@ subroutine selected_target(n, a)
   !$omp parallel
     !$omp begin metadirective default(target)
       !$omp metadirective &
-      !$omp& when(construct={parallel, target}: simd) &
+      !$omp& when(construct={parallel, target}: simd collapse(2)) &
       !$omp& default(nothing)
       do i = 1, n
         a(i) = i

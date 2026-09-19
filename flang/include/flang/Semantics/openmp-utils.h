@@ -242,6 +242,15 @@ private:
   std::string features_;
 };
 
+/// Add the construct traits implied by an OpenMP directive to \p vmi.
+/// Combined and composite directives contribute each of their leaf traits.
+void AppendConstructTraitsForDirective(
+    llvm::omp::Directive, llvm::omp::VariantMatchInfo &vmi);
+
+/// Add the traits implied by a construct selector without properties.
+void AppendConstructTraitsForSelector(
+    const parser::OmpTraitSelectorName &, llvm::omp::VariantMatchInfo &vmi);
+
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
       llvm::omp::VariantMatchInfo vmi, bool isExplicit,
@@ -260,7 +269,7 @@ struct MetadirectiveCandidate {
 
 struct MetadirectiveCandidateSet {
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
-  /// Null represents either an explicit NOTHING fallback or no fallback.
+  /// Null represents either a clause-free NOTHING fallback or no fallback.
   const parser::OmpDirectiveSpecification *fallback{nullptr};
 };
 
@@ -294,7 +303,7 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);
 
 /// Return every replacement that can be selected, retaining lower-ranked
-/// candidates after a dynamic condition. Null represents NOTHING.
+/// candidates after a dynamic condition. Null represents clause-free NOTHING.
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
 GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);
