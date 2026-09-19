@@ -54,6 +54,9 @@ public:
   const bool BaseClass;
 
   const uint32_t SubClassMaskOff;    ///< Relative offset to uint32_t array.
+  /// Relative offset to a uint32_t array holding, for each entry of
+  /// getSuperRegIndices(), the relative offset of that entry's bit mask.
+  const uint32_t SuperRegMaskOffsetsOff;
   const uint32_t SuperRegIndicesOff; ///< Relative offset to MCPhysReg array.
   const LaneBitmask LaneMask;
   /// Classes with a higher priority value are assigned first by register
@@ -186,6 +189,32 @@ public:
         reinterpret_cast<const char *>(this) + SubClassMaskOff);
   }
 
+  /// Returns the relative offsets of this class's super-register class bit
+  /// masks, one per entry of getSuperRegIndices(). Identical masks are stored
+  /// once and shared, so the masks of one class are not contiguous and cannot
+  /// be reached by striding. Resolve an entry with getSuperRegClassMaskAt().
+  ///
+  /// Prefer this over getSuperRegClassMask() when walking the whole list: it
+  /// locates the offsets once, leaving one load per entry.
+  const uint32_t *getSuperRegClassMaskOffsets() const {
+    return reinterpret_cast<const uint32_t *>(
+        reinterpret_cast<const char *>(this) + SuperRegMaskOffsetsOff);
+  }
+
+  /// Returns the bit mask of register classes that the sub-register index
+  /// belonging to Offset projects into this class, where Offset is an entry of
+  /// getSuperRegClassMaskOffsets().
+  const uint32_t *getSuperRegClassMaskAt(uint32_t Offset) const {
+    return reinterpret_cast<const uint32_t *>(
+        reinterpret_cast<const char *>(this) + Offset);
+  }
+
+  /// Returns the bit mask of register classes that the sub-register index
+  /// getSuperRegIndices()[N] projects into this class.
+  const uint32_t *getSuperRegClassMask(unsigned N) const {
+    return getSuperRegClassMaskAt(getSuperRegClassMaskOffsets()[N]);
+  }
+
   /// Returns a 0-terminated list of sub-register indices that project some
   /// super-register class into this register class. The list has an entry for
   /// each Idx such that:
@@ -214,13 +243,17 @@ public:
 };
 
 template <unsigned RegClassCount, unsigned RegCount, unsigned BitSetSize,
-          unsigned SubClassMaskSize, unsigned SuperRegIdxSeqSize,
-          unsigned SuperClassSize>
+          unsigned SubClassMaskSize, unsigned SuperRegMaskOffsetSize,
+          unsigned SuperRegIdxSeqSize, unsigned SuperClassSize>
 struct MCRegisterClassStorage {
   MCRegisterClass Classes[RegClassCount];
   MCPhysReg Regs[RegCount];
   uint8_t BitSets[BitSetSize];
   uint32_t SubClassMasks[SubClassMaskSize];
+  // Avoid zero-sized arrays.
+  uint32_t SuperRegMaskOffsets[SuperRegMaskOffsetSize > 0
+                                   ? SuperRegMaskOffsetSize
+                                   : 1];
   uint16_t SuperRegIdxSeqs[SuperRegIdxSeqSize];
   // Avoid zero-sized arrays.
   unsigned SuperClasses[SuperClassSize > 0 ? SuperClassSize : 1];
