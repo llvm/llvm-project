@@ -862,8 +862,8 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 #endif
 }
 
-std::error_code mapped_file_region::init(file_t FD, uint64_t Offset, mapmode Mode,
-                                         const char *Name) {
+std::error_code mapped_file_region::init(file_t FD, uint64_t Offset,
+                                         mapmode Mode, const char *Name) {
   assert(Size != 0);
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
@@ -1201,8 +1201,8 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 }
 
 Expected<file_t> openNativeFile(const Twine &Name, CreationDisposition Disp,
-                             FileAccess Access, OpenFlags Flags,
-                             unsigned Mode) {
+                                FileAccess Access, OpenFlags Flags,
+                                unsigned Mode) {
   sandbox::violationIfEnabled();
 
   int FD;

@@ -22,15 +22,16 @@ struct file_t {
 #if defined(_WIN32)
   /// A Win32 HANDLE is a typedef of void*
   using value_type = void *;
+  /// Value for an invalid file handle INVALID_FILE_HANDLE.
+  static constexpr value_type Invalid =
+      reinterpret_cast<void *>(static_cast<intptr_t>(-1));
 #else
   /// A file descriptor on UNIX.
   using value_type = int;
+  /// Value for an invalid file descriptor.
+  static constexpr value_type Invalid = -1;
 #endif
   value_type Value;
-
-  /// Value for an invalid file descriptor/handle. It is -1 for all supported
-  /// platforms including Windows and Fuchsia.
-  static constexpr value_type Invalid = -1;
 
   /// Default constructor to invalid file.
   file_t() : Value(Invalid) {}
