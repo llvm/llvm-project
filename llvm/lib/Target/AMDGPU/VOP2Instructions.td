@@ -943,13 +943,15 @@ let isAdd = 1 in {
 }
 
 let isReMaterializable = 1 in {
-let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit] in {
+let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit],
+    GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 // We don't actually have something like V_SUBREV_U64 so V_SUB_U64 can't be treated as commutable.
 let isCommutable = 0 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
-} // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit]
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble] in
+} // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
+let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble],
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1
 
@@ -1486,17 +1488,19 @@ def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
 }
 
 let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
-  let SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1 in {
+  let SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1,
+      GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
     defm V_ADD_F64_pseudo : VOP2Inst_VOPD <"v_add_f64_pseudo", VOP_F64_F64_F64, 0x21, "v_add_f64", any_fadd>;
     defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x22, "v_mul_f64", any_fmul>;
-  } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1
-  let SchedRW = [Write64Bit] in {
+  } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1, IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
+  let SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;
-  } // End SchedRW = [Write64Bit]
+  } // End SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 } // End SubtargetPredicate = isGFX12Plus, isReMaterializable = 1
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, isReMaterializable = 1,
-    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1 in {
+    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1,
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
   defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
   defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
 }

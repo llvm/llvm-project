@@ -27,6 +27,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -42,10 +43,6 @@ class OpenMPIRBuilder;
 class Loop;
 class LoopAnalysis;
 class LoopInfo;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// Move the instruction after an InsertPoint to the beginning of another
 /// BasicBlock.
@@ -744,7 +741,6 @@ public:
   struct LocationDescription {
     LocationDescription(const IRBuilderBase &IRB)
         : IP(IRB.saveIP()), DL(IRB.getCurrentDebugLocation()) {}
-    LocationDescription(const InsertPointTy &IP) : IP(IP) {}
     LocationDescription(const InsertPointTy &IP, const DebugLoc &DL)
         : IP(IP), DL(DL) {}
     InsertPointTy IP;

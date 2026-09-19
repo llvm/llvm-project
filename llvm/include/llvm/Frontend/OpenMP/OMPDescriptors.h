@@ -72,9 +72,6 @@ using Properties = EnumSet<Property, Property_enumSize>;
 using Modifiers = EnumSet<Modifier, Modifier_enumSize>;
 using ModifierSets = EnumSet<ModifierSet, ModifierSet_enumSize>;
 
-using Clauses = llvm::omp::ClauseSet;
-using Directives = llvm::omp::DirectiveSet;
-
 namespace descriptor {
 namespace details {
 struct Base {

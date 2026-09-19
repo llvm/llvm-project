@@ -705,6 +705,38 @@ static Value addOffsetToBaseAddr(ConversionPatternRewriter &rewriter,
   return newAddr;
 }
 
+// Returns true when every element of `mask` carries the same bit, so gating a
+// whole contiguous block on element 0 is equivalent. Splat constants, an
+// all-ones or all-zeros `vector.constant_mask`, broadcasts of a scalar, and a
+// `vector.from_elements` of one repeated value qualify.
+//
+// TODO: this recognizes a fixed list of producers. A general uniformity query
+// on the vector dialect would cover more forms and would not need updating
+// every time a new producer shows up here.
+static bool isUniformMask(Value mask) {
+  if (!isa<VectorType>(mask.getType()))
+    return true;
+  DenseElementsAttr splat;
+  if (matchPattern(mask, m_Constant(&splat)) && splat.isSplat())
+    return true;
+  if (auto constantMask = mask.getDefiningOp<vector::ConstantMaskOp>()) {
+    // All-ones and all-zeros are uniform. A zero dim size is only legal when
+    // every dim is zero, so those are the only two uniform cases.
+    return constantMask.isAllOnesMask() ||
+           llvm::all_of(constantMask.getMaskDimSizes(),
+                        [](int64_t size) { return size == 0; });
+  }
+  if (auto broadcast = mask.getDefiningOp<vector::BroadcastOp>())
+    return !isa<VectorType>(broadcast.getSource().getType());
+  if (auto fromElements = mask.getDefiningOp<vector::FromElementsOp>())
+    return llvm::all_equal(fromElements.getElements());
+  // Flattening a rank > 1 operand to rank 1 inserts a shape cast. It keeps the
+  // same elements, so it keeps uniformity.
+  if (auto shapeCast = mask.getDefiningOp<vector::ShapeCastOp>())
+    return isUniformMask(shapeCast.getSource());
+  return false;
+}
+
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, xegpu::LoadGatherOp, xegpu::StoreScatterOp>::value>>
@@ -770,6 +802,25 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
                                           basePtrI64);
     }
     Value mask = adaptor.getMask();
+
+    // Coalesce a lane's multi-element access into one block access.
+    //
+    // Distribution gives every element its own offset and mask bit, so a lane
+    // that takes D neighbouring elements arrives with `vector<D>` offsets and
+    // mask. One block access needs one base offset and one mask bit, so take
+    // both from element 0. A non-uniform mask cannot be reduced to one bit, so
+    // it stays a vector and fails to match below.
+    auto origOffsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+    if (isa<VectorType>(offset.getType()) && origOffsetsTy && valOrResVecTy &&
+        origOffsetsTy.getNumElements() == valOrResVecTy.getNumElements() &&
+        isUniformMask(op.getMask())) {
+      offset = vector::ExtractOp::create(rewriter, loc, offset,
+                                         ArrayRef<int64_t>{0});
+      if (isa<VectorType>(mask.getType()))
+        mask = vector::ExtractOp::create(rewriter, loc, mask,
+                                         ArrayRef<int64_t>{0});
+    }
+
     if (dyn_cast<VectorType>(offset.getType())) {
       // Offset needs be scalar. Single element vector is converted to scalar
       // by type converter.
@@ -925,8 +976,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
           VectorType::get(valOrResVecTy.getShape(), intElemTy);
 
       if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-        Value loadOp =
-            xevm::BlockLoadOp::create(rewriter, loc, intVecTy, basePtrLLVM);
+        Value loadOp = xevm::BlockLoadOp::create(
+            rewriter, loc, intVecTy, basePtrLLVM, /*cache_control=*/nullptr);
         if (intVecTy != valOrResVecTy) {
           loadOp =
               vector::BitCastOp::create(rewriter, loc, valOrResVecTy, loadOp);

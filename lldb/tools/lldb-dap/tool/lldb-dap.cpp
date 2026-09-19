@@ -110,24 +110,11 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr llvm::opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
-class LLDBDAPOptTable : public llvm::opt::GenericOptTable {
+class LLDBDAPOptTable : public llvm::opt::OptTable {
 public:
-  LLDBDAPOptTable()
-      : llvm::opt::GenericOptTable(OptionStrTable, OptionPrefixesTable,
-                                   InfoTable, true) {}
+  LLDBDAPOptTable() : llvm::opt::OptTable(OptionTables, true) {}
 };
 } // anonymous namespace
 

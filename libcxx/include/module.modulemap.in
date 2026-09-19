@@ -931,6 +931,7 @@ module std {
     module invert_if        { header "__bit/invert_if.h" }
     module popcount         { header "__bit/popcount.h" }
     module rotate           { header "__bit/rotate.h" }
+    module shift            { header "__bit/shift.h" }
 
     header "bit"
     export *
@@ -1608,7 +1609,6 @@ module std {
   module locale {
     header "locale"
     module check_grouping  { header "__locale_dir/check_grouping.h" }
-    module get_c_locale    { header "__locale_dir/get_c_locale.h" }
     module messages        { header "__locale_dir/messages.h" }
     module money           { header "__locale_dir/money.h" }
     module num             { header "__locale_dir/num.h" }
@@ -1627,6 +1627,7 @@ module std {
       textual header "__locale_dir/support/aix.h"
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
+      textual header "__locale_dir/support/default/get_c_locale.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
@@ -1782,6 +1783,11 @@ module std {
   module new {
     header "new"
     module align_val_t          { header "__new/align_val_t.h" }
+    module allocate {
+      header "__new/allocate.h"
+      export std.utility.element_count // used as part of the API
+      export * // TODO: Workaround for https://llvm.org/PR120108
+    }
     module destroying_delete_t  { header "__new/destroying_delete_t.h" }
     module exceptions           { header "__new/exceptions.h" }
     module global_new_delete    {
@@ -2251,6 +2257,7 @@ module std {
   module utility {
     module as_const                        { header "__utility/as_const.h" }
     module as_lvalue                       { header "__utility/as_lvalue.h" }
+    module assume                          { header "__utility/assume.h" }
     module auto_cast                       {
       header "__utility/auto_cast.h"
       export std_core.type_traits.decay // the macro expansion uses that trait
@@ -2468,6 +2475,9 @@ module std {
       }
       module transform_reduce {
         header "__pstl/cpu_algos/transform_reduce.h"
+      }
+      module uninitialized_algorithms {
+        header "__pstl/cpu_algos/uninitialized_algorithms.h"
       }
     }
     module dispatch           { header "__pstl/dispatch.h" }

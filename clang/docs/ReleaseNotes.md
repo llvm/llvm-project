@@ -105,11 +105,22 @@ features cannot lower the translation-unit ABI level;
   This also fixes a crash when such a struct was passed or returned.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
+- Clang now considers matrix types in its isHomogeneousAggregate() handling,
+  which can lead to differences in how structures containing matrix types are
+  classified for ABI purposes. The previous exclusion of matrix types appears
+  to have been accidental. Matrix types now follow the same rules as arrays
+  for homogeneous aggregate classification.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
 
 - Templight support has been removed.
+
+- `-fstack-clash-protection` has been enabled implicitly by default for android
+  target triples (except 32b arm targets). Can be disabled via
+  `-fno-stack-clash-protection`.
 
 ### Clang Python Bindings Potentially Breaking Changes
 
@@ -129,6 +140,8 @@ features cannot lower the translation-unit ABI level;
 - `CompletionString.availability` now returns instances of `AvailabilityKind`.
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
+- `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
 
 ### OpenCL Potentially Breaking Changes
 
@@ -483,7 +496,27 @@ features cannot lower the translation-unit ABI level;
   `int vla[n][0]`. (#GH28328)
 
 - Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
-  (#GH181730)
+
+- Clang now diagnoses passing wrong vector type as a mask to `__builtin_shufflevector`. (#GH218132)
+
+- `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
+  no longer warn when the selected deallocation function is a destroying
+  `operator delete`, since such a delete expression never invokes the
+  destructor. (#GH65524)
+
+- Fixed a false-positive `-Wshadow` warning when a variable in an
+  inline-defined friend function shares the name of a non-static class
+  member variable. (#GH221190)
+
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
+
+- Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
+  vector element types but different sizes. (GH221791)
+
+- Suggests the correct location for an attribute written before the `using`
+  keyword of an alias-declaration. (#GH155787)
+
+- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
 
 ### Improvements to Clang's time-trace
 
@@ -513,6 +546,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
+- Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -546,6 +580,9 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed the destruction timing of temporaries created by default member
+  initializers during aggregate initialization. Such an initializer is part of
+  the full-expression containing the aggregate initialization. (#GH85601)
 - Fixed false-positive module ODR diagnostics when a type is found through a
   using-declaration in one definition and directly in another. ODR hashing also
   now distinguishes differently qualified uses of types found through
@@ -571,6 +608,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a CTAD bug when combining with concepts. (#GH124715)
+
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
   anonymous-namespace helper) declared in the global module fragment of the
   current translation unit was removed from the overload set when the calling
@@ -580,6 +619,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
+
+- Fixed concept evaluation bugs where some declarations were not added to
+  the current instantiation scope. (#GH198052)
 
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
@@ -597,6 +639,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
+
+- Fixed an assertion when a call to a class object was resolved through a
+  conversion function to a function pointer that was introduced into the class
+  by a using-declaration (e.g. `using Base::operator auto;`). Such a conversion
+  function is now also diagnosed if it is deleted. (#GH189146)
 
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
@@ -637,6 +684,9 @@ features cannot lower the translation-unit ABI level;
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
 
+- Fixed an assertion when mangling an abbreviated function template whose
+  return type has an ABI tag. (#GH204178)
+
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
 - Fixed a regression where deprecation warnings were omitted for synthesized
@@ -668,6 +718,15 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed deduction of the template parameters appearing in the type of a
+  constant template parameter of reference type. (#GH40328)
+
+- Fixed an issue where an explicit specialization of a constexpr variable would
+  result in a link error. (#GH219796)
+
+- Fixed ambiguous overload where two non-static member functions with
+  different signatures could be incorrectly considered equivalent. (#GH224499)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -676,6 +735,9 @@ features cannot lower the translation-unit ABI level;
 
 - `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
   location of a trailing return type. (#GH162649)
+
+- Added missed information to the AST node representing the member function
+  when calling a explicit object member function. (#GH218829)
 
 #### Miscellaneous Bug Fixes
 
@@ -701,6 +763,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
   evaluated to a value not representable by a signed integer, such as an
   unsigned wrap around. (#GH221418)
+- Fixed an assertion failure when a method or function definition follows an
+  Objective-C `@implementation` that was ended by a nested `@interface`,
+  `@protocol` or `@implementation` before its `@end`. (#GH209503)
 
 ### OpenACC Specific Changes
 
@@ -745,6 +810,16 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
+  position when ``-fms-compatibility`` is enabled, matching the existing
+  ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
+  identifier outside that context.
+
+- Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
+  stack pointer as it was on entry to the function, as the frame value the CRT
+  stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
+  already did on AArch64.
+
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
@@ -781,6 +856,11 @@ features cannot lower the translation-unit ABI level;
 
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
+
+- Clang now provides device-side definitions of `__cxa_pure_virtual()` and
+  `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
+  virtual function that could not be optimised out would cause the program to
+  fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
 #### AIX Support
 
@@ -820,6 +900,14 @@ features cannot lower the translation-unit ABI level;
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
+
+- Parameters declared with a `decltype` are now presented as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`. This affects the completion strings produced by
+  libclang as well as those used by clangd.
+
+- Members inherited from a dependent base class that is named through an alias
+  template are suggested by code completion when relevant.
 
 ### Static Analyzer
 
