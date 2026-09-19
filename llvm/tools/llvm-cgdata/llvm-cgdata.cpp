@@ -57,7 +57,7 @@ using namespace llvm::opt;
 
 class CGDataOptTable : public opt::OptTable {
 public:
-  CGDataOptTable() : OptTable(OptionTables) {}
+  CGDataOptTable() : OptTable(optionTables()) {}
 };
 } // end anonymous namespace
 

@@ -78,12 +78,18 @@ OptTable::OptTable(const Tables &T, bool IgnoreCase)
       OptionInfos(T.Infos), IgnoreCase(IgnoreCase), SubCommands(T.SubCommands),
       SubCommandIDsTable(T.SubCommandIDs),
       HelpTextVariantsTable(T.HelpTextVariants) {
-  for (StringTable::Offset PrefixOffset : T.PrefixesUnion) {
-    StringRef Prefix = (*StrTable)[PrefixOffset];
-    PrefixesUnion.push_back(Prefix);
-    for (char C : Prefix)
-      if (!is_contained(PrefixChars, C))
-        PrefixChars.push_back(C);
+  // Each prefix set in PrefixesTable starts with its size.
+  for (unsigned I = 0, E = PrefixesTable.size(); I != E;) {
+    unsigned Size = PrefixesTable[I++].value();
+    for (unsigned J = 0; J != Size; ++J) {
+      StringRef Prefix = (*StrTable)[PrefixesTable[I++]];
+      if (is_contained(PrefixesUnion, Prefix))
+        continue;
+      PrefixesUnion.push_back(Prefix);
+      for (char C : Prefix)
+        if (!is_contained(PrefixChars, C))
+          PrefixChars.push_back(C);
+    }
   }
 
   // Find start of normal options.

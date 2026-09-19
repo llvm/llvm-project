@@ -23,7 +23,7 @@ namespace {
 
 class DriverOptTable : public OptTable {
 public:
-  DriverOptTable() : OptTable(OptionTables) {
+  DriverOptTable() : OptTable(optionTables()) {
     setValuesCodeFn(getOptionValuesCode);
   }
 };
