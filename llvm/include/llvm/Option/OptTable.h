@@ -155,6 +155,17 @@ public:
     }
   };
 
+  /// The tables TableGen emits for an option set under OPTTABLE_CODE.
+  struct Tables {
+    const StringTable &StrTable;
+    ArrayRef<StringTable::Offset> PrefixesTable;
+    ArrayRef<StringTable::Offset> PrefixesUnion;
+    ArrayRef<Info> Infos;
+    ArrayRef<HelpTextVariant> HelpTextVariants;
+    ArrayRef<SubCommand> SubCommands;
+    ArrayRef<unsigned> SubCommandIDs;
+  };
+
 public:
   bool isValidForSubCommand(const Info *CandidateInfo,
                             StringRef SubCommand) const {
@@ -202,7 +213,6 @@ private:
   unsigned InputOptionID = 0;
   unsigned UnknownOptionID = 0;
 
-protected:
   /// The index of the first option which can be parsed (i.e., is not a
   /// special option like 'input' or 'unknown', and is not an option group).
   unsigned FirstSearchableIndex = 0;
@@ -214,7 +224,6 @@ protected:
   /// The union of the first element of all option prefixes.
   SmallString<8> PrefixChars;
 
-private:
   const Info &getInfo(OptSpecifier Opt) const {
     unsigned id = Opt.getID();
     assert(id > 0 && id - 1 < getNumOptions() && "Invalid Option ID.");
@@ -243,22 +252,9 @@ private:
                                           unsigned &Index) const;
 
 protected:
-  /// Initialize OptTable using Tablegen'ed OptionInfos. Child class must
-  /// manually call \c buildPrefixChars once they are fully constructed.
-  OptTable(const StringTable &StrTable,
-           ArrayRef<StringTable::Offset> PrefixesTable,
-           ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
-           ArrayRef<SubCommand> SubCommands = {},
-           ArrayRef<unsigned> SubCommandIDsTable = {});
+  OptTable(const Tables &Tables, bool IgnoreCase = false);
 
   void setValuesCodeFn(ValuesCodeFnTy Fn) { ValuesCodeFn = Fn; }
-
-  void setHelpTextVariantsTable(ArrayRef<HelpTextVariant> Table) {
-    HelpTextVariantsTable = Table;
-  }
-
-  /// Build (or rebuild) the PrefixChars member.
-  void buildPrefixChars();
 
 public:
   virtual ~OptTable();
@@ -513,33 +509,6 @@ private:
                          Visibility VisibilityMask) const;
 };
 
-/// Specialization of OptTable
-class GenericOptTable : public OptTable {
-protected:
-  LLVM_ABI GenericOptTable(const StringTable &StrTable,
-                           ArrayRef<StringTable::Offset> PrefixesTable,
-                           ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
-                           ArrayRef<SubCommand> SubCommands = {},
-                           ArrayRef<unsigned> SubCommandIDsTable = {});
-};
-
-class PrecomputedOptTable : public OptTable {
-protected:
-  PrecomputedOptTable(const StringTable &StrTable,
-                      ArrayRef<StringTable::Offset> PrefixesTable,
-                      ArrayRef<Info> OptionInfos,
-                      ArrayRef<StringTable::Offset> PrefixesUnionOffsets,
-                      bool IgnoreCase = false,
-                      ArrayRef<SubCommand> SubCommands = {},
-                      ArrayRef<unsigned> SubCommandIDsTable = {})
-      : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
-                 SubCommandIDsTable) {
-    for (auto PrefixOffset : PrefixesUnionOffsets)
-      PrefixesUnion.push_back(StrTable[PrefixOffset]);
-    buildPrefixChars();
-  }
-};
-
 } // end namespace opt
 
 } // end namespace llvm
@@ -555,26 +524,6 @@ protected:
                          HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES,      \
                          SUBCOMMANDIDS_OFFSET)                                 \
   LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(                                             \
-      OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,     \
-      ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,     \
-      METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)
-
-#define LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                \
-    ID_PREFIX, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,  \
-    ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
-    METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)                                     \
-  llvm::opt::OptTable::Info {                                                  \
-    PREFIXED_NAME_OFFSET, HELPTEXT, METAVAR, ALIASARGS, VALUES, FLAGS,         \
-        VISIBILITY, PREFIXES_OFFSET, ID_PREFIX##GROUP, ID_PREFIX##ALIAS,       \
-        HELPTEXTSFORVARIANTS, SUBCOMMANDIDS_OFFSET,                            \
-        llvm::opt::Option::KIND##Class, PARAM                                  \
-  }
-
-#define LLVM_CONSTRUCT_OPT_INFO(                                               \
-    PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS,  \
-    FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
-    SUBCOMMANDIDS_OFFSET)                                                      \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(                                      \
       OPT_, PREFIXES_OFFSET, PREFIXED_NAME_OFFSET, ID, KIND, GROUP, ALIAS,     \
       ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,     \
       METAVAR, VALUES, SUBCOMMANDIDS_OFFSET)

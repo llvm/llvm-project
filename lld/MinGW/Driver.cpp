@@ -58,27 +58,13 @@ enum {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr opt::OptTable::Info infoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
 
 namespace {
-class MinGWOptTable : public opt::GenericOptTable {
+class MinGWOptTable : public opt::OptTable {
 public:
-  MinGWOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, infoTable,
-                             false) {}
+  MinGWOptTable() : opt::OptTable(OptionTables, false) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace

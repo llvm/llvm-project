@@ -45,26 +45,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "TapiOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "TapiOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "TapiOpts.inc"
-#undef OPTION
-};
-
-class TAPIOptTable : public opt::GenericOptTable {
+class TAPIOptTable : public opt::OptTable {
 public:
-  TAPIOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
-    setGroupedShortOptions(true);
-  }
+  TAPIOptTable() : opt::OptTable(OptionTables) { setGroupedShortOptions(true); }
 };
 
 struct StubOptions {
