@@ -1593,6 +1593,10 @@ std::string VPSlotTracker::getName(const Value *V) {
   return Name;
 }
 
+void VPSlotTracker::printMetadataAsOperand(raw_ostream &O, const MDNode *N) {
+  N->printAsOperand(O, getOrCreateMST(), getModule());
+}
+
 std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   std::string Name = VPValue2Name.lookup(V);
   if (!Name.empty())
