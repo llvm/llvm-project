@@ -925,8 +925,8 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
   });
 }
 
-/// AOT-compiles every already-produced image in \p SplitModules concurrently
-/// and swaps each module's path to point at the compiled object.
+/// AOT-compiles every JIT image in \p SplitModules concurrently and swaps each
+/// module's path to point at the compiled object.
 static Error aotCompileSplitModules(SmallVectorImpl<SplitModule> &SplitModules,
                                     const ArgList &Args, StringRef OutputFile) {
   // Each worker thread writes only its own index, so this is race-free.
