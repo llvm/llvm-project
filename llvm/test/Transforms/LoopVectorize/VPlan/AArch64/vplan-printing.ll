@@ -108,37 +108,40 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
 ; CHECK-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%N>, ir<1>
 ; CHECK-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub ir<%N>, vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp ugt ir<%N>, vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = select vp<[[VP5]]>, vp<[[VP4]]>, ir<0>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP7:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ACTIVE-LANE-MASK-PHI vp<[[VP6:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%accum> = phi (add) vp<[[VP3]]>, vp<[[VP10:%[0-9]+]]> (VF scaled by 1/4)
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[VP7]]>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i8, ir<%gep.a>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%load.a> = load vp<[[VP8]]>, vp<[[VP6]]>
-; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[VP7]]>
-; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer i8, ir<%gep.b>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP9]]>, vp<[[VP6]]>
-; CHECK-NEXT:      EXPRESSION vp<[[VP10]]> = ir<%accum> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32), vp<[[VP6]]>)
-; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
-; CHECK-NEXT:      EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<%N>, ir<1>
+; CHECK-NEXT:      ACTIVE-LANE-MASK-PHI vp<[[VP9:%[0-9]+]]> = phi vp<%extract.entry.alm.part>, vp<%extract.next.alm.part>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%accum> = phi (add) vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
+; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[VP10]]>
+; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer i8, ir<%gep.a>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%load.a> = load vp<[[VP11]]>, vp<[[VP9]]>
+; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[VP10]]>
+; CHECK-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer i8, ir<%gep.b>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP12]]>, vp<[[VP9]]>
+; CHECK-NEXT:      EXPRESSION vp<[[VP13]]> = ir<%accum> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32), vp<[[VP9]]>)
+; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP7]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%active.lane.mask.next> = wide active lane mask vp<[[VP7]]>, vp<[[VP6]]>, ir<1>
 ; CHECK-NEXT:      EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = not vp<%extract.next.alm.part>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP11]]>
+; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = not vp<%extract.next.alm.part>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP13]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[VP13]]> from middle.block)
+; CHECK-NEXT:    IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[VP16]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:

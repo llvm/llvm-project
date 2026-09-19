@@ -142,7 +142,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
 //   branch-on-cond %Negated
 //
 static VPActiveLaneMaskPHIRecipe *
-addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
+addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan, bool IVUpdateMayOverflow) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   VPValue *StartV = Plan.getZero(TopRegion->getCanonicalIVType());
@@ -171,13 +171,25 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
   LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
+  // If the canonical IV increment could overflow, adjust the trip count (TC)
+  // to TC - VF * UF.
+  VPValue *IncrementValue = CanonicalIVIncrement;
+  if (IVUpdateMayOverflow) {
+    IncrementValue = TopRegion->getCanonicalIV();
+    VPValue &VFxUF = Plan.getVFxUF();
+    VPValue *Sub = Builder.createSub(TC, &VFxUF);
+    VPValue *Cmp = Builder.createICmp(CmpInst::Predicate::ICMP_UGT, TC, &VFxUF);
+    VPValue *Zero = Plan.getConstantInt(TC->getScalarType(), 0);
+    TC = Builder.createSelect(Cmp, Sub, Zero);
+  }
+
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                   {CanonicalIVIncrement, TC, ALMMultiplier},
-                                   DL, "active.lane.mask.next");
+                                   {IncrementValue, TC, ALMMultiplier}, DL,
+                                   "active.lane.mask.next");
   ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                              {ALM, Plan.getConstantInt(64, 0)}, DL,
                              "extract.next.alm.part");
@@ -192,14 +204,16 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
 }
 
 void VPlanTransforms::materializeHeaderMask(
-    VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow) {
+    VPlan &Plan, bool UseActiveLaneMask, bool UseActiveLaneMaskForControlFlow,
+    bool IVUpdateMayOverflow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPValue *HeaderMask = LoopRegion->getUsedHeaderMask();
   if (!HeaderMask)
     return;
 
   if (UseActiveLaneMaskForControlFlow) {
-    HeaderMask->replaceAllUsesWith(addVPLaneMaskPhiAndUpdateExitBranch(Plan));
+    HeaderMask->replaceAllUsesWith(
+        addVPLaneMaskPhiAndUpdateExitBranch(Plan, IVUpdateMayOverflow));
     return;
   }
 

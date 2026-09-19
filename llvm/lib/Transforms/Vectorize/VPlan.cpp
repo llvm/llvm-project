@@ -853,7 +853,8 @@ VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
   VPRegionValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
 
-  if (auto *Inc = vputils::findCanonicalIVIncrement(*getPlan()))
+  if (auto *Inc = vputils::findCanonicalIVIncrement(
+          *getPlan(), /*RequireAfterMaterialization=*/false))
     return Inc;
 
   assert(!getPlan()->getVFxUF().isMaterialized() &&
