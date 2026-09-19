@@ -159,7 +159,6 @@ public:
   struct Tables {
     const StringTable &StrTable;
     ArrayRef<StringTable::Offset> PrefixesTable;
-    ArrayRef<StringTable::Offset> PrefixesUnion;
     ArrayRef<Info> Infos;
     ArrayRef<HelpTextVariant> HelpTextVariants;
     ArrayRef<SubCommand> SubCommands;
@@ -252,11 +251,10 @@ private:
                                           unsigned &Index) const;
 
 protected:
-  OptTable(const Tables &Tables, bool IgnoreCase = false);
-
   void setValuesCodeFn(ValuesCodeFnTy Fn) { ValuesCodeFn = Fn; }
 
 public:
+  OptTable(const Tables &T, bool IgnoreCase = false);
   virtual ~OptTable();
 
   /// Return the string table used for option names.

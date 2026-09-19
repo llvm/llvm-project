@@ -282,17 +282,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     SubCommandIDs.try_emplace(SubCommandKey, 0);
   }
 
-  DenseSet<StringRef> PrefixesUnionSet;
-  for (const auto &[Prefix, _] : Prefixes)
-    PrefixesUnionSet.insert_range(Prefix);
-  SmallVector<StringRef> PrefixesUnion(PrefixesUnionSet.begin(),
-                                       PrefixesUnionSet.end());
-  array_pod_sort(PrefixesUnion.begin(), PrefixesUnion.end());
-
   llvm::StringToOffsetTable Table;
-  // We can add all the prefixes via the union.
-  for (const auto &Prefix : PrefixesUnion)
-    Table.GetOrAddStringOffset(Prefix);
+  for (const auto &[PrefixSet, _] : Prefixes)
+    for (const auto &Prefix : PrefixSet)
+      Table.GetOrAddStringOffset(Prefix);
   for (const Record &R : llvm::make_pointee_range(Groups)) {
     Table.GetOrAddStringOffset(R.getValueAsString("Name"));
     Table.GetOrAddStringOffset(getHelpText(R));
@@ -346,8 +339,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef OPTTABLE_CODE\n";
 
   // Dump prefixes.
-  OS << "static constexpr llvm::StringTable::Offset OptionPrefixesTable[] = "
-        "{\n";
+  OS << "constexpr llvm::StringTable::Offset OptionPrefixesTable[] = {\n";
   {
     // Ensure the first prefix set is always empty.
     assert(!Prefixes.empty() &&
@@ -370,20 +362,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "\n};\n\n";
 
-  // Dump prefixes union.
-  if (!PrefixesUnion.empty()) {
-    OS << "static constexpr llvm::StringTable::Offset OptionPrefixesUnion[] = "
-          "{\n";
-    llvm::ListSeparator Sep(", ");
-    for (auto Prefix : PrefixesUnion)
-      OS << Sep << "  " << *Table.GetStringOffset(Prefix) << " /* '" << Prefix
-         << "' */";
-    OS << "\n};\n\n";
-  }
-
   // Dump help text variants. Each option's variants form a run ended by a zero
   // row; offset 0 is the empty run.
-  OS << "static constexpr llvm::opt::OptTable::HelpTextVariant "
+  OS << "constexpr llvm::opt::OptTable::HelpTextVariant "
         "OptionHelpTextVariantsTable[] = {\n";
   DenseMap<const Record *, unsigned> HelpTextVariantsOffset;
   unsigned NumVariantRows = 1;
@@ -413,8 +394,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Dump subcommands.
   if (!SubCommands.empty()) {
-    OS << "static constexpr llvm::opt::OptTable::SubCommand "
-          "OptionSubCommands[] = {\n";
+    OS << "constexpr llvm::opt::OptTable::SubCommand OptionSubCommands[] = {\n";
     for (const Record *SubCommand : SubCommands) {
       OS << "  { \"" << SubCommand->getValueAsString("Name") << "\", ";
       OS << "\"" << SubCommand->getValueAsString("HelpText") << "\", ";
@@ -424,7 +404,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
 
   // Dump subcommand IDs.
-  OS << "static constexpr unsigned OptionSubCommandIDsTable[] = {\n";
+  OS << "constexpr unsigned OptionSubCommandIDsTable[] = {\n";
   {
     // Ensure the first subcommand set is always empty.
     assert(!SubCommandIDs.empty() &&
@@ -454,7 +434,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "\n};\n\n";
 
   // Dump the option table in OptTable::Info field order.
-  OS << "static constexpr llvm::opt::OptTable::Info OptionInfoTable[] = {\n";
+  OS << "constexpr llvm::opt::OptTable::Info OptionInfoTable[] = {\n";
   for (const Record &R : llvm::make_pointee_range(Groups)) {
     OS << "  {";
     writeStrTableOffset(OS, Table, R.getValueAsString("Name"),
@@ -489,13 +469,13 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "};\n\n";
 
-  OS << "static constexpr llvm::opt::OptTable::Tables OptionTables = {\n";
-  OS << "    OptionStrTable, OptionPrefixesTable, "
-     << (PrefixesUnion.empty() ? "{}" : "OptionPrefixesUnion")
-     << ", OptionInfoTable,\n";
-  OS << "    OptionHelpTextVariantsTable, "
+  // A function rather than an object: the object needs relocations.
+  OS << "static constexpr llvm::opt::OptTable::Tables optionTables() {\n";
+  OS << "  return {OptionStrTable, OptionPrefixesTable, OptionInfoTable,\n";
+  OS << "          OptionHelpTextVariantsTable, "
      << (SubCommands.empty() ? "{}" : "OptionSubCommands")
      << ", OptionSubCommandIDsTable};\n";
+  OS << "}\n";
   OS << "#undef OPTTABLE_CODE\n";
   OS << "#endif // OPTTABLE_CODE\n\n";
 

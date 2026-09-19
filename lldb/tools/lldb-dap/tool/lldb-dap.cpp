@@ -114,7 +114,7 @@ enum ID {
 #include "Options.inc"
 class LLDBDAPOptTable : public llvm::opt::OptTable {
 public:
-  LLDBDAPOptTable() : llvm::opt::OptTable(OptionTables, true) {}
+  LLDBDAPOptTable() : llvm::opt::OptTable(optionTables(), true) {}
 };
 } // anonymous namespace
 
