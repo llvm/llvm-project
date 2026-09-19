@@ -1381,7 +1381,7 @@ public:
                                size_t dst_max_len, Status &result_error,
                                bool force_live_memory = false);
 
-  /// Read a NULL terminated string from memory
+  /// Read a null-terminated string from memory
   ///
   /// This function will read a cache page at a time until a NULL string
   /// terminator is found. It will stop reading if an aligned sequence of NULL
