@@ -5636,8 +5636,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
 
-    case bitc::FUNC_CODE_INST_BITINSERT: { // BITINSERT: [ty, opval, opval,
-                                           // opval]
+    case bitc::FUNC_CODE_INST_BITINSERT: { // BITINSERT: [opval, opval, opval]
       unsigned OpNum = 0;
       Value *Base, *Val, *Offset;
       unsigned BaseTypeID, ValTypeID, OffsetTypeID;
