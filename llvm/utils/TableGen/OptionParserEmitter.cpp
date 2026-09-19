@@ -469,7 +469,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "};\n\n";
 
-  // A function rather than an object: the object needs relocations.
+  // A function rather than an object: the object needs dynamic relocations.
   OS << "static constexpr llvm::opt::OptTable::Tables optionTables() {\n";
   OS << "  return {OptionStrTable, OptionPrefixesTable, OptionInfoTable,\n";
   OS << "          OptionHelpTextVariantsTable, "
