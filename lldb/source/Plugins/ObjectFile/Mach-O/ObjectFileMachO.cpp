@@ -9,6 +9,8 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <algorithm>
+
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
@@ -1658,7 +1660,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
             << 8, // Section ID is the 1 based segment index
         // shifted right by 8 bits as not to collide with any of the 256
         // section IDs that are possible
-        ConstString(segname),  // Name of this section
+        segname.str(),         // Name of this section
         eSectionTypeContainer, // This section is a container of other
         // sections.
         load_cmd.vmaddr, // File VM address == addresses as they are
@@ -1822,7 +1824,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
               // shifted right by 8 bits as not to
               // collide with any of the 256 section IDs
               // that are possible
-              ConstString(segname),  // Name of this section
+              segname.str(),         // Name of this section
               eSectionTypeContainer, // This section is a container of
               // other sections.
               sect64.addr, // File VM address == addresses as they are
@@ -1849,7 +1851,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
 
       SectionSP section_sp = std::make_shared<Section>(
           segment_sp, module_sp, this, ++context.NextSectionIdx,
-          ConstString(section_name), sect_type,
+          section_name.str(), sect_type,
           sect64.addr - segment_sp->GetFileAddress(), sect64.size,
           section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
           sect64.align, sect64.flags);
@@ -2179,12 +2181,12 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     case LC_LOADFVMLIB:
     case LC_LOAD_UPWARD_DYLIB: {
       uint32_t name_offset = cmd_offset + m_data_nsp->GetU32(&offset);
-      const char *path = m_data_nsp->PeekCStr(name_offset);
-      if (path) {
-        FileSpec file_spec(path);
+      if (std::optional<llvm::StringRef> path =
+              m_data_nsp->PeekCStr(name_offset)) {
+        FileSpec file_spec(*path);
         // Strip the path if there is @rpath, @executable, etc so we just use
         // the basename
-        if (path[0] == '@')
+        if (path->starts_with("@"))
           file_spec.ClearDirectory();
 
         if (lc.cmd == LC_REEXPORT_DYLIB) {
@@ -2686,6 +2688,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       DataExtractor dsc_local_symbols_data(nlist_buffer,
                                            nlist_count * nlist_byte_size,
                                            byte_order, addr_byte_size);
+      DataExtractor dsc_string_table_data(string_table, vm_string_bytes_read,
+                                          byte_order, addr_byte_size);
       unmapped_local_symbols_found = nlist_count;
 
                 // The normal nlist code cannot correctly size the Symbols
@@ -2710,21 +2714,25 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                     struct nlist_64 nlist = *nlist_maybe;
 
                     SymbolType type = eSymbolTypeInvalid;
-          const char *symbol_name = string_table + nlist.n_strx;
+                    const char *symbol_name = NULL;
+                    std::optional<llvm::StringRef> name =
+                        dsc_string_table_data.PeekCStr(nlist.n_strx);
 
-                    if (symbol_name == NULL) {
+                    if (!name) {
                       // No symbol should be NULL, even the symbols with no
                       // string values should have an offset zero which
                       // points to an empty C-string
                       Debugger::ReportError(llvm::formatv(
-                          "DSC unmapped local symbol[{0}] has invalid "
-                          "string table offset {1:x} in {2}, ignoring symbol",
+                          "DSC unmapped local symbol[{0}] has invalid or "
+                          "unterminated string table offset {1:x} in {2}, "
+                          "ignoring symbol",
                           nlist_index, nlist.n_strx,
                           module_sp->GetFileSpec().GetPath()));
                       continue;
                     }
-                    if (symbol_name[0] == '\0')
-                      symbol_name = NULL;
+                    // The code below spells "no name" as a NULL pointer.
+                    if (!name->empty())
+                      symbol_name = name->data();
 
                     const char *symbol_name_non_abi_mangled = NULL;
 
@@ -3111,13 +3119,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                       switch (n_type) {
                       case N_INDR: {
-                        const char *reexport_name_cstr =
+                        std::optional<llvm::StringRef> reexport_name_str =
                             strtab_data.PeekCStr(nlist.n_value);
-                        if (reexport_name_cstr && reexport_name_cstr[0]) {
+                        if (reexport_name_str && !reexport_name_str->empty()) {
                           type = eSymbolTypeReExported;
                           ConstString reexport_name(
-                              reexport_name_cstr +
-                              ((reexport_name_cstr[0] == '_') ? 1 : 0));
+                              reexport_name_str->drop_front(
+                                  reexport_name_str->front() == '_' ? 1 : 0));
                           sym[sym_idx].SetReExportedSymbolName(reexport_name);
                           set_value = false;
                           reexport_shlib_needs_fixup[sym_idx] = reexport_name;
@@ -3468,11 +3476,16 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
   if (nlist_data.GetByteSize() > 0) {
 
+    const uint64_t max_nsyms = nlist_data.GetByteSize() / nlist_byte_size;
+    const uint64_t max_nindirectsyms =
+        indirect_symbol_index_data.GetByteSize() / sizeof(uint32_t);
+
     // If the sym array was not created while parsing the DSC unmapped
     // symbols, create it now.
     if (sym == nullptr) {
-      sym =
-          symtab.Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
+      sym = symtab.Resize(
+          std::min<uint64_t>(symtab_load_command.nsyms, max_nsyms) +
+          std::min<uint64_t>(m_dysymtab.nindirectsyms, max_nindirectsyms));
       num_syms = symtab.GetNumSymbols();
     }
 
@@ -3505,19 +3518,21 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       const char *symbol_name = nullptr;
 
       if (have_strtab_data) {
-        symbol_name = strtab_data.PeekCStr(nlist.n_strx);
+        std::optional<llvm::StringRef> name =
+            strtab_data.PeekCStr(nlist.n_strx);
 
-        if (symbol_name == nullptr) {
+        if (!name) {
           // No symbol should be NULL, even the symbols with no string values
           // should have an offset zero which points to an empty C-string
           Debugger::ReportError(llvm::formatv(
-              "symbol[{0}] has invalid string table offset {1:x} in {2}, "
-              "ignoring symbol",
+              "symbol[{0}] has invalid or unterminated string table offset "
+              "{1:x} in {2}, ignoring symbol",
               nlist_idx, nlist.n_strx, module_sp->GetFileSpec().GetPath()));
           return true;
         }
-        if (symbol_name[0] == '\0')
-          symbol_name = nullptr;
+        // The code below spells "no name" as a nullptr.
+        if (!name->empty())
+          symbol_name = name->data();
       } else {
         const addr_t str_addr = strtab_addr + nlist.n_strx;
         Status str_error;
@@ -3875,11 +3890,12 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
         switch (n_type) {
         case N_INDR: {
-          const char *reexport_name_cstr = strtab_data.PeekCStr(nlist.n_value);
-          if (reexport_name_cstr && reexport_name_cstr[0] && symbol_name) {
+          std::optional<llvm::StringRef> reexport_name_str =
+              strtab_data.PeekCStr(nlist.n_value);
+          if (reexport_name_str && !reexport_name_str->empty() && symbol_name) {
             type = eSymbolTypeReExported;
-            ConstString reexport_name(reexport_name_cstr +
-                                      ((reexport_name_cstr[0] == '_') ? 1 : 0));
+            ConstString reexport_name(reexport_name_str->drop_front(
+                reexport_name_str->front() == '_' ? 1 : 0));
             sym[sym_idx].SetReExportedSymbolName(reexport_name);
             set_value = false;
             reexport_shlib_needs_fixup[sym_idx] = reexport_name;
@@ -4179,7 +4195,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     // First parse all the nlists but don't process them yet. See the next
     // comment for an explanation why.
     std::vector<struct nlist_64> nlists;
-    nlists.reserve(symtab_load_command.nsyms);
+    nlists.reserve(std::min<uint64_t>(symtab_load_command.nsyms, max_nsyms));
     for (; nlist_idx < symtab_load_command.nsyms; ++nlist_idx) {
       if (auto nlist =
               ParseNList(nlist_data, nlist_data_offset, nlist_byte_size))
@@ -4810,23 +4826,20 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
         if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
           is_delayed_init = true;
       }
-      const char *path = m_data_nsp->PeekCStr(name_offset);
-      if (path && !is_delayed_init) {
+      std::optional<llvm::StringRef> maybe_path =
+          m_data_nsp->PeekCStr(name_offset);
+      if (maybe_path && !is_delayed_init) {
+        llvm::StringRef path = *maybe_path;
         if (load_cmd.cmd == LC_RPATH)
-          rpath_paths.push_back(path);
-        else {
-          if (path[0] == '@') {
-            if (strncmp(path, "@rpath", strlen("@rpath")) == 0)
-              rpath_relative_paths.push_back(path + strlen("@rpath"));
-            else if (strncmp(path, "@executable_path",
-                             strlen("@executable_path")) == 0)
-              at_exec_relative_paths.push_back(path +
-                                               strlen("@executable_path"));
-          } else {
-            FileSpec file_spec(path);
-            if (files.AppendIfUnique(file_spec))
-              count++;
-          }
+          rpath_paths.push_back(path.str());
+        else if (path.consume_front("@rpath"))
+          rpath_relative_paths.push_back(path.str());
+        else if (path.consume_front("@executable_path"))
+          at_exec_relative_paths.push_back(path.str());
+        else if (!path.starts_with("@")) {
+          FileSpec file_spec(path);
+          if (files.AppendIfUnique(file_spec))
+            count++;
         }
       }
     } break;

@@ -158,5 +158,9 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::DescriptionLevel level) {
   return PythonInteger((int64_t) level);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::StepType step_type) {
+  return PythonInteger((int64_t) step_type);
+}
+
 } // namespace python
 } // namespace lldb_private

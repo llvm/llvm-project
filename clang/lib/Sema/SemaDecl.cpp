@@ -3144,6 +3144,17 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       continue; // regular attr merging will take care of validating this.
     }
 
+    if (NewAttribute->getLocation().isInvalid()) {
+      // An attribute with no source location was not written by the user. API
+      // notes, in particular, are matched against whichever declaration the
+      // compiler reaches, which can be a redeclaration that follows the
+      // definition, possibly in a different module. There is nothing for the
+      // user to correct, and erasing the attribute would silently change what
+      // the annotated API means.
+      ++I;
+      continue;
+    }
+
     if (isa<C11NoReturnAttr>(NewAttribute)) {
       // C's _Noreturn is allowed to be added to a function after it is defined.
       ++I;
@@ -6419,6 +6430,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
   // declaration. For a template-id, we perform the checks in
   // CheckTemplateSpecializationScope.
   if (!Cur->Encloses(DC) && !(TemplateId || IsMemberSpecialization)) {
+    Cur = Cur->getEnclosingNonExpansionStatementContext();
     if (Cur->isRecord())
       Diag(Loc, diag::err_member_qualification)
         << Name << SS.getRange();
@@ -7547,7 +7559,7 @@ static bool hasParsedAttr(Scope *S, const Declarator &PD,
 }
 
 bool Sema::adjustContextForLocalExternDecl(DeclContext *&DC) {
-  if (!DC->getEnclosingNonExpansionStatementContext()->isFunctionOrMethod())
+  if (!DC->isFunctionOrMethod())
     return false;
 
   // If this is a local extern function or variable declared within a function
@@ -8627,12 +8639,18 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (const auto *MD =
-            dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
+    DeclContext *FnDC = getFunctionLevelDeclContext();
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FnDC)) {
       // Fields aren't shadowed in C++ static members or in member functions
       // with an explicit object parameter.
       if (MD->isStatic() || MD->isExplicitObjectMemberFunction())
         return;
+    } else if (isa<FunctionDecl>(FnDC)) {
+      // A FunctionDecl here (not a CXXMethodDecl) can only be an
+      // inline-defined friend function, since that's the only way to
+      // introduce a non-member function inside a class body. Friends have
+      // no implicit `this`, so nothing here can shadow a field.
+      return;
     }
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.
@@ -8970,6 +8988,10 @@ static bool CheckC23ConstexprVarType(Sema &SemaRef, SourceLocation VarLoc,
   return false;
 }
 
+static bool isSYCLAddressSpace(LangAS AS) {
+  return AS >= LangAS::sycl_global && AS <= LangAS::sycl_constant;
+}
+
 void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // If the decl is already known invalid, don't check it.
   if (NewVD->isInvalidDecl())
@@ -8989,6 +9011,18 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       << FixItHint::CreateInsertion(NewVD->getLocation(), "*");
     T = Context.getObjCObjectPointerType(T);
     NewVD->setType(T);
+  }
+
+  // The top-level type of a variable declaration cannot have a SYCL address
+  // space qualifier.
+  if (getLangOpts().isSYCL()) {
+    LangAS AS = Context.getBaseElementType(T).getAddressSpace();
+    if (isSYCLAddressSpace(AS)) {
+      Diag(NewVD->getLocation(), diag::err_sycl_address_space_qualified_object)
+          << Qualifiers::getAddrSpaceAsString(AS);
+      NewVD->setInvalidDecl();
+      return;
+    }
   }
 
   // Emit an error if an address space was applied to decl with local storage.
@@ -21105,7 +21139,17 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
   assert(ED->isCompleteDefinition() && "expected enum definition");
 
-  llvm::APInt FlagBits = FlagBitsCache.at(ED);
+  auto R = FlagBitsCache.try_emplace(ED);
+  llvm::APInt &FlagBits = R.first->second;
+
+  if (R.second) {
+    for (auto *E : ED->enumerators()) {
+      const auto &EVal = E->getInitVal();
+      // Only single-bit enumerators introduce new flag values.
+      if (EVal.isPowerOf2())
+        FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
+    }
+  }
 
   // A value is in a flag enum if either its bits are a subset of the enum's
   // flag bits (the first condition) or we are allowing masks and the same is
@@ -21315,20 +21359,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
-
-  if (Enum->hasAttr<FlagEnumAttr>()) {
-    auto R = FlagBitsCache.try_emplace(Enum);
-    llvm::APInt &FlagBits = R.first->second;
-
-    if (R.second) {
-      for (auto *E : Enum->enumerators()) {
-        const auto &EVal = E->getInitVal();
-        // Only single-bit enumerators introduce new flag values.
-        if (EVal.isPowerOf2())
-          FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
-      }
-    }
-  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {
