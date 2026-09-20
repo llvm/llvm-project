@@ -59,22 +59,6 @@ static cl::opt<bool> UsePartialReductionsByDefault(
     cl::desc("Use partial reduction intrinsics for "
              "all supported unordered reductions."));
 
-/// If the pointer operand \p Addr of a memory access is an affine AddRec
-/// w.r.t. \p L with a constant stride, return the stride in units of
-/// \p AccessTy. Otherwise return std::nullopt.
-static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
-                                                PredicatedScalarEvolution &PSE,
-                                                const Loop *L) {
-  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
-         "should not try to widen irregular types");
-  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
-  if (!AddRec)
-    return {};
-
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
-}
-
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
@@ -83,7 +67,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   // consecutive vector access.
   auto IsConsecutiveAccess = [&](VPValue *Addr, Type *AccessTy) {
     return !hasIrregularType(AccessTy, Plan.getDataLayout()) &&
-           getConstantStride(Addr, AccessTy, PSE, OuterLoop) == 1;
+           vputils::getConstantStride(Addr, AccessTy, PSE, OuterLoop) == 1;
   };
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
@@ -5626,7 +5610,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
         std::optional<int64_t> Stride =
-            getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
+            vputils::getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
         if (Stride != 1 && Stride != -1)
           return false;
         bool Reverse = Stride == -1;
