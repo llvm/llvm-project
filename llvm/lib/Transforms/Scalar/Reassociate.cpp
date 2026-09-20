@@ -32,11 +32,14 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -2244,6 +2247,22 @@ Instruction *ReassociatePass::canonicalizeNegFPConstantsForOp(Instruction *I,
       assert(C->isNegative() && "Expected negative FP constant");
       Negatible->setOperand(1, ConstantFP::get(Negatible->getType(), abs(*C)));
       MadeChange = true;
+    }
+    // The def's value has changed sign; wrap each `#dbg_value`
+    // referencing it with `DW_OP_neg` so the variable keeps reporting
+    // its source-level value.
+    SmallVector<DbgVariableRecord *, 1> DPUsers;
+    findDbgUsers(Negatible, DPUsers);
+    SmallVector<uint64_t, 1> NegOps{dwarf::DW_OP_neg};
+    for (DbgVariableRecord *DVR : DPUsers) {
+      DIExpression *NewExpr = DVR->getExpression();
+      for (unsigned Idx = 0, N = DVR->getNumVariableLocationOps();
+           Idx < N; ++Idx) {
+        if (DVR->getVariableLocationOp(Idx) == Negatible)
+          NewExpr = DIExpression::appendOpsToArg(NewExpr, NegOps, Idx,
+                                                 /*StackValue=*/true);
+      }
+      DVR->setExpression(NewExpr);
     }
   }
   assert(MadeChange == true && "Negative constant candidate was not changed");
