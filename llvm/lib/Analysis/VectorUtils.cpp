@@ -1220,8 +1220,7 @@ static Value *concatenateTwoVectors(IRBuilderBase &Builder, Value *V1,
     // Extend with poison.
     if (isa<PoisonValue>(V2)) {
       V2 = PoisonValue::get(VecTy1);
-    }
-    else {
+    } else {
       V2 = Builder.CreateShuffleVector(
           V2, createSequentialMask(0, NumElts2, NumElts1 - NumElts2));
     }
