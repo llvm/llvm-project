@@ -71,7 +71,8 @@ struct GenericTarget : public CodeGenSpecifics {
   }
 
   mlir::Type boxcharMemoryType(mlir::Type eleTy) const override {
-    auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
+    auto idxTy = mlir::IntegerType::get(
+        eleTy.getContext(), static_cast<const S *>(this)->defaultWidth);
     auto ptrTy = fir::ReferenceType::get(eleTy);
     // Use a type that will be translated into LLVM as:
     // { t*, index }
@@ -81,7 +82,8 @@ struct GenericTarget : public CodeGenSpecifics {
 
   Marshalling boxcharArgumentType(mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
-    auto idxTy = mlir::IntegerType::get(eleTy.getContext(), S::defaultWidth);
+    auto idxTy = mlir::IntegerType::get(
+        eleTy.getContext(), static_cast<const S *>(this)->defaultWidth);
     auto ptrTy = fir::ReferenceType::get(eleTy);
     marshal.emplace_back(ptrTy, AT{});
     // Characters are passed in a split format with all pointers first (in the
@@ -1410,6 +1412,87 @@ struct TargetSparcV9 : public GenericTarget<TargetSparcV9> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// MIPS N32 and N64 target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetMips64 : public GenericTarget<TargetMips64> {
+  using GenericTarget::GenericTarget;
+
+  const int defaultWidth = targetABI == "n32" ? 32 : 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
+    return complexArgumentType(loc, eleTy, {});
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy,
+                      const Marshalling &previousArguments) const override {
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem != &llvm::APFloat::IEEEsingle() &&
+        sem != &llvm::APFloat::IEEEdouble())
+      typeTodo(sem, loc, "argument");
+
+    // N32/N64 share eight argument slots between integer and floating-point
+    // registers. A complex argument uses two FPRs when both parts fit.
+    // Otherwise, pass its memory representation in GPRs or on the stack,
+    // packing COMPLEX(4) into one slot.
+    uint64_t slots = 0;
+    for (auto [ty, attr] : previousArguments) {
+      if (attr.isAppend())
+        continue;
+      if (fir::conformsWithPassByRef(ty)) {
+        if (++slots >= 7)
+          break;
+        continue;
+      }
+      auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
+          loc, ty, getDataLayout(), kindMap);
+      slots = llvm::alignTo(slots, align > 8 ? 2 : 1);
+      slots += llvm::divideCeil(size, uint64_t{8});
+      if (slots >= 7)
+        break;
+    }
+
+    if (slots < 7)
+      return {{eleTy, AT{}}, {eleTy, AT{}}};
+
+    auto i64Ty = mlir::IntegerType::get(eleTy.getContext(), 64);
+    if (sem == &llvm::APFloat::IEEEsingle())
+      return {{i64Ty, AT{}}};
+    return {{mlir::TupleType::get(eleTy.getContext(), {i64Ty, i64Ty}), AT{}}};
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    auto structTy =
+        mlir::TupleType::get(eleTy.getContext(), mlir::TypeRange{eleTy, eleTy});
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble())
+      return {{structTy, AT{}}};
+    if (sem == &llvm::APFloat::IEEEquad())
+      return {{fir::ReferenceType::get(structTy),
+               AT{/*alignment=*/16, /*byval=*/false, /*sret=*/true}}};
+    typeTodo(sem, loc, "return");
+    return {};
+  }
+
+  CodeGenSpecifics::Marshalling
+  integerArgumentType(mlir::Location loc,
+                      mlir::IntegerType argTy) const override {
+    // N32/N64 sign-extend all 32-bit integers, including unsigned values.
+    // Smaller integers follow the usual extension rules.
+    if (argTy.getWidth() == 32)
+      return {{argTy, AT{/*alignment=*/0, /*byval=*/false, /*sret=*/false,
+                         /*append=*/false, AT::IntegerExtension::Sign}}};
+    return GenericTarget::integerArgumentType(loc, argTy);
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // RISCV64 linux target specifics.
 //===----------------------------------------------------------------------===//
 
@@ -2086,6 +2169,13 @@ std::unique_ptr<fir::CodeGenSpecifics> fir::CodeGenSpecifics::get(
     return std::make_unique<TargetRISCV64>(ctx, std::move(trp),
                                            std::move(kindMap), targetCPU,
                                            targetFeatures, targetABI, dl);
+  case llvm::Triple::ArchType::mips64:
+  case llvm::Triple::ArchType::mips64el:
+    if (targetABI.empty())
+      targetABI = trp.isABIN32() ? "n32" : "n64";
+    return std::make_unique<TargetMips64>(ctx, std::move(trp),
+                                          std::move(kindMap), targetCPU,
+                                          targetFeatures, targetABI, dl);
   case llvm::Triple::ArchType::amdgpu:
     return std::make_unique<TargetAMDGPU>(ctx, std::move(trp),
                                           std::move(kindMap), targetCPU,

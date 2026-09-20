@@ -352,7 +352,8 @@ public:
       newOpers.push_back(oper);
       return;
     }
-    auto m = specifics->complexArgumentType(loc, ty.getElementType());
+    auto m = specifics->complexArgumentType(loc, ty.getElementType(),
+                                            newInTyAndAttrs);
     rewriteCallOperands(loc, m, ty, oper, newOpers, savedStackPtr,
                         newInTyAndAttrs);
   }
@@ -670,8 +671,8 @@ public:
     if (noComplexConversion) {
       newInTyAndAttrs.push_back(fir::CodeGenSpecifics::getTypeAndAttr(cmplx));
     } else {
-      auto cplxArgs =
-          specifics->complexArgumentType(loc, cmplx.getElementType());
+      auto cplxArgs = specifics->complexArgumentType(
+          loc, cmplx.getElementType(), newInTyAndAttrs);
       newInTyAndAttrs.insert(newInTyAndAttrs.end(), cplxArgs.begin(),
                              cplxArgs.end());
     }
@@ -1359,8 +1360,8 @@ public:
       newInTyAndAttrs.push_back(fir::CodeGenSpecifics::getTypeAndAttr(cmplx));
       return;
     }
-    auto cplxArgs =
-        specifics->complexArgumentType(func.getLoc(), cmplx.getElementType());
+    auto cplxArgs = specifics->complexArgumentType(
+        func.getLoc(), cmplx.getElementType(), newInTyAndAttrs);
     createFuncOpArgFixups(func, newInTyAndAttrs, cplxArgs, fixups);
   }
 
