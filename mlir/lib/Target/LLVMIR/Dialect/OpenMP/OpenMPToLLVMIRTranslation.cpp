@@ -7056,7 +7056,7 @@ getRefPtrIfDeclareTarget(Value value,
             gOp.getSymName());
 
       return moduleTranslation.getLLVMModule()->getNamedValue(
-          (gOp.getSymName().str() + suffix.str()).str());
+          (gOp.getSymName() + suffix).str());
     }
   }
   return nullptr;
