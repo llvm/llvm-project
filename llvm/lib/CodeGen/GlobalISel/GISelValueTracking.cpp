@@ -496,6 +496,14 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::mulhs(Known, Known2);
     break;
   }
+  case TargetOpcode::G_CLMUL: {
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::clmul(Known, Known2);
+    break;
+  }
   case TargetOpcode::G_UAVGFLOOR: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
@@ -801,6 +809,24 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = Known.zextOrTrunc(BitWidth);
     break;
   }
+  case TargetOpcode::G_TRUNC_SSAT_S: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known = Known.truncSSat(BitWidth);
+    break;
+  }
+  case TargetOpcode::G_TRUNC_SSAT_U: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known = Known.truncSSatU(BitWidth);
+    break;
+  }
+  case TargetOpcode::G_TRUNC_USAT_U: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+    Known = Known.truncUSat(BitWidth);
+    break;
+  }
   case TargetOpcode::G_ASSERT_ZEXT: {
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
@@ -1059,6 +1085,43 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       computeKnownBitsImpl(InVec, Known2, DemandedVecElts, Depth + 1);
       Known = Known.intersectWith(Known2);
     }
+    break;
+  }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    GInsertSubvector &Insert = cast<GInsertSubvector>(MI);
+    Register Src = Insert.getBigVec();
+    Register Sub = Insert.getSubVec();
+    uint64_t Idx = Insert.getIndexImm();
+    LLT SrcTy = MRI.getType(Src);
+    LLT SubTy = MRI.getType(Sub);
+    APInt DemandedSubElts;
+    APInt DemandedSrcElts;
+
+    if (SrcTy.isScalableVector()) {
+      DemandedSubElts = SubTy.isScalableVector()
+                            ? APInt(1, 1)
+                            : APInt::getAllOnes(SubTy.getNumElements());
+      DemandedSrcElts = APInt(1, 1);
+    } else {
+      unsigned NumSubElts = SubTy.getNumElements();
+      DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+      DemandedSrcElts = DemandedElts;
+      DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
+    }
+
+    Known.setAllConflict();
+    if (!!DemandedSubElts) {
+      computeKnownBitsImpl(Sub, Known2, DemandedSubElts, Depth + 1);
+      Known = Known.intersectWith(Known2);
+      if (Known.isUnknown())
+        break;
+    }
+
+    if (!!DemandedSrcElts) {
+      computeKnownBitsImpl(Src, Known2, DemandedSrcElts, Depth + 1);
+      Known = Known.intersectWith(Known2);
+    }
+
     break;
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
@@ -1406,6 +1469,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     FPClassTest InterestedY = InterestedClasses;
     FPClassTest InterestedX = InterestedClasses;
 
+    // We can rule out negative values if y cannot have a negative value.
+    if ((InterestedClasses & fcNegFinite) != fcNone)
+      InterestedY |= fcNegative;
+
+    // We can rule out positive values if y cannot have a positive value.
+    if ((InterestedClasses & fcPosFinite) != fcNone)
+      InterestedY |= fcPositive | fcNegSubnormal;
+
     // We can rule out zero and subnormal if x cannot have a positive value.
     if ((InterestedClasses & (fcZero | fcSubnormal)) != fcNone)
       InterestedX |= fcPositive | fcNegSubnormal;
@@ -1612,22 +1683,33 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
   case TargetOpcode::G_FLOG10: {
-    // log(+inf) -> +inf
-    // log([+-]0.0) -> -inf
-    // log(-inf) -> nan
-    // log(-x) -> nan
-    if ((InterestedClasses & (fcNan | fcInf)) == fcNone)
-      break;
+    FPClassTest InterestedSrcs = fcNone;
 
-    FPClassTest InterestedSrcs = InterestedClasses;
-    if ((InterestedClasses & fcNegInf) != fcNone)
-      InterestedSrcs |= fcZero | fcSubnormal;
+    // log(negative) produces NaN.
     if ((InterestedClasses & fcNan) != fcNone)
       InterestedSrcs |= fcNan | fcNegative;
 
+    // log(logical-zero) produces negative infinity.
+    if ((InterestedClasses & fcNegInf) != fcNone)
+      InterestedSrcs |= fcZero | fcSubnormal;
+
+    // log(x) < -0.0 if x < +1.0
+    if ((InterestedClasses & fcNegNormal) != fcNone)
+      InterestedSrcs |= fcPosSubnormal | fcPosNormal;
+
+    // log(x) >= +0.0 if x >= +1.0
+    if ((InterestedClasses & (fcPosZero | fcPosNormal)) != fcNone)
+      InterestedSrcs |= fcPosNormal;
+
+    // log(x) is positive infinity iff x is positive infinity.
+    if ((InterestedClasses & fcPosInf) != fcNone)
+      InterestedSrcs |= fcPosInf;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
+    if (InterestedSrcs != fcNone)
+      computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc,
+                          Depth + 1);
 
     LLT Ty = MRI.getType(Val).getScalarType();
     const fltSemantics &FltSem = getFltSemanticForLLT(Ty);
