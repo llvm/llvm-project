@@ -273,7 +273,7 @@ __m128d test_mm_round_sd(__m128d x, __m128d y) {
   // OGCG-LABEL: test_mm_round_sd
   // OGCG: %[[A:.*]] = extractelement <2 x double> %{{.*}}, i32 0
   // OGCG: %[[B:.*]] = call double @llvm.roundeven.f64(double %[[A]])
-  // OGCG: insertelement <2 x double> %0, double %[[B]], i32 0
+  // OGCG: insertelement <2 x double> %{{.*}}, double %[[B]], i32 0
   return _mm_round_sd(x, y, 0b1000);
 }
 

@@ -124,7 +124,7 @@ __m128d test_mm_round_sd_fround_no_exc(__m128d x, __m128d y) {
 __m128 test_mm_round_ss_trunc(__m128 x, __m128 y) {
   // CIR-LABEL: test_mm_round_ss_trunc
   // %[[A:.*]] = cir.vec.extract = %{{.*}}[%{{.*}} : !u64] : !cir.vector<2 x !cir.double>
-  // %[[B:.*]] = cir.trunc %6 : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
+  // %[[B:.*]] = cir.trunc %[[A]] : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = unknown, except_mode = masked, strict_except = false>}
   // cir.vec.insert = %[[B]], %{{.*}}[%{{.*}} : !u64] : !cir.vector<2 x !cir.double>
 
   // LLVM-LABEL: test_mm_round_ss_trunc
