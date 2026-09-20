@@ -1228,6 +1228,15 @@ public:
   MachineInstrBuilder buildShuffleVector(const DstOp &Res, const SrcOp &Src1,
                                          const SrcOp &Src2, ArrayRef<int> Mask);
 
+  /// Build and insert \p Res = G_SCALAR_TO_VECTOR \p Src
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with vector type.
+  /// \pre \p Src must be a generic virtual register with scalar type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildScalarToVector(const DstOp &Res, const SrcOp &Src);
+
   /// Build and insert \p Res = G_SPLAT_VECTOR \p Val
   ///
   /// \pre setBasicBlock or setMI must have been called.
