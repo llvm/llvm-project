@@ -145,26 +145,13 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   return errorCount() == 0;
 }
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr opt::OptTable::Info optInfo[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Options.inc"
-#undef OPTION
-};
 
 namespace {
-class WasmOptTable : public opt::GenericOptTable {
+class WasmOptTable : public opt::OptTable {
 public:
-  WasmOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
+  WasmOptTable() : opt::OptTable(optionTables()) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace

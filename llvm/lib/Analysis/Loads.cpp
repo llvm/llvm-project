@@ -890,8 +890,8 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL) &&
       IsBasedOnConstantGlobal(To))
     return true;
-  return getUnderlyingObjectAggressive(From) ==
-         getUnderlyingObjectAggressive(To);
+  return getUnderlyingObjectAggressive(From, /*MustPreserveProvenance=*/true) ==
+         getUnderlyingObjectAggressive(To, /*MustPreserveProvenance=*/true);
 }
 
 bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
