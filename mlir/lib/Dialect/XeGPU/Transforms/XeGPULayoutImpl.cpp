@@ -1315,6 +1315,15 @@ computeReductionLaneLayoutAndData(
     if (static_cast<int>(parentLaneLayout.size()) == srcRank &&
         static_cast<int>(parentLaneData.size()) == srcRank &&
         parentLanes == subgroupSize) {
+      // Lanes cannot exceed what this source supplies. A cross-subgroup
+      // reduction reuses one result layout for both of its stages, so the
+      // parent may describe the wider pre-SLM source (16x32) rather than the
+      // slab being reduced here (16x4); spreading 16 lanes over 4 columns is
+      // not something the shape can carry.
+      for (int i = 0; i < srcRank; ++i)
+        parentLaneLayout[i] =
+            std::min(parentLaneLayout[i],
+                     std::max<int64_t>(1, srcShape[i] / parentLaneData[i]));
       // Raise, never lower, what the parent asks for.
       for (int i = 0; i < srcRank; ++i)
         if (parentLaneLayout[i] == 1 && srcShape[i] > 1) {
@@ -1903,7 +1912,16 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
   // attr
   bool hasTranspose =
       consumerLaneLayout[rank - 2] > 1 && consumerLaneLayout[rank - 1] == 1;
-  bool hasTransform = !hasTranspose && consumerLaneData[rank - 2] > 1 &&
+  // VNNI exists only below 32 bits, so a wider consumer packing rows into
+  // lane_data is not asking for a transform. Reading it as one sends us looking
+  // for a block variant the hardware does not have, and the whole layout is
+  // then abandoned -- leaving the consumer's lane_data on the load, which is
+  // what pack_register would wrongly be set from.
+  bool canTransform =
+      elemTy.isIntOrFloat() &&
+      elemTy.getIntOrFloatBitWidth() < uArch->getGeneralPackedFormatBitSize();
+  bool hasTransform = !hasTranspose && canTransform &&
+                      consumerLaneData[rank - 2] > 1 &&
                       consumerLaneData[rank - 1] == 1;
   assert((consumerLaneData[rank - 2] == 1 || consumerLaneData[rank - 1] == 1) &&
          "Expected consumer lane data to have at most one non-unit dim");
@@ -2033,6 +2051,14 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   if (!laneData.empty())
     laneData.back() =
         std::min(laneData.back(), static_cast<int64_t>(maxChunkSize));
+
+  // Lanes are bounded by what this load's own tile can supply. A consumer may
+  // distribute a dim more finely than the tile is wide -- a cross-subgroup
+  // reduction reloading a 16x4 slab wants the 16 lanes it uses elsewhere -- and
+  // keeping that would leave the layout unable to distribute the result.
+  for (size_t i = 0; i < laneLayout.size() && i < resShape.size(); ++i)
+    laneLayout[i] = std::min(laneLayout[i],
+                             std::max<int64_t>(1, resShape[i] / laneData[i]));
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     SmallVector<int64_t> instData;
