@@ -195,10 +195,6 @@ jobs:
       macos-runtimes: ${{ steps.vars.outputs.macos-runtimes }}
       macos-runtimes-check-targets: ${{ steps.vars.outputs.macos-runtimes-check-targets }}
     steps:
-      # For pull requests we get the changed files from the GitHub API, so we
-      # only need a sparse checkout of .ci/ to run compute_projects.py. For
-      # pushes (e.g. release branches) there is no PR to query, so we fall
-      # back to a git diff, which needs real history.
       - name: Checkout LLVM (sparse)
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
