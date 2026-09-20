@@ -154,8 +154,6 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
   Attr = Attr.addFnAttribute(C, Attribute::NoUnwind);
   Attribute::AttrKind SExtAttr =
       TargetLibraryInfo::getExtAttrForI32Param(TargetTriple, /*Signed=*/true);
-  Attribute::AttrKind ZExtAttr =
-      TargetLibraryInfo::getExtAttrForI32Param(TargetTriple, /*Signed=*/false);
 
   // Initialize the callbacks.  TODO: use TLI/emitLibFunc() for these functions.
   TysanCheck =
@@ -174,24 +172,24 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
 
   TysanIntrumentMemInst = M.getOrInsertFunction(
       "__tysan_instrument_mem_inst",
-      Attr.maybeAddParamAttribute(C, 3, ZExtAttr), IRB.getVoidTy(),
+      Attr.addParamAttribute(C, 3, Attribute::AttrKind::ZExt), IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer of data to be written to
       IRB.getPtrTy(), // Pointer of data to write
       U64Ty,          // Size of the data in bytes
       BoolType        // Do we need to call memmove
   );
 
-  TysanInstrumentWithShadowUpdate =
-      M.getOrInsertFunction("__tysan_instrument_with_shadow_update",
-                            Attr.maybeAddParamAttribute(C, 2, ZExtAttr)
-                                .maybeAddParamAttribute(C, 4, SExtAttr),
-                            IRB.getVoidTy(),
-                            IRB.getPtrTy(), // Pointer to data to be read
-                            IRB.getPtrTy(), // Pointer to type descriptor
-                            BoolType,       // Do we need to type check this
-                            U64Ty,          // Size of data we access in bytes
-                            OrdTy           // Flags
-      );
+  TysanInstrumentWithShadowUpdate = M.getOrInsertFunction(
+      "__tysan_instrument_with_shadow_update",
+      Attr.addParamAttribute(C, 2, Attribute::AttrKind::ZExt)
+          .maybeAddParamAttribute(C, 4, SExtAttr),
+      IRB.getVoidTy(),
+      IRB.getPtrTy(), // Pointer to data to be read
+      IRB.getPtrTy(), // Pointer to type descriptor
+      BoolType,       // Do we need to type check this
+      U64Ty,          // Size of data we access in bytes
+      OrdTy           // Flags
+  );
 
   TysanSetShadowType = M.getOrInsertFunction(
       "__tysan_set_shadow_type", Attr, IRB.getVoidTy(),
