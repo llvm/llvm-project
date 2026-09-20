@@ -40,12 +40,10 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   if (auto ABIOrErr = RISCVABI::computeTargetABI(STI, ABIName)) {
     setTargetABI(*ABIOrErr);
   } else {
-    // Do not warn here and instead silently fall back to the default ABI:
-    // either RISCVSubtarget::initializeSubtargetDependencies() or
-    // RISCVAsmParser::onBeginOfFile() will print the message with proper
-    // contexts. Reporting here would just duplicate that diagnostic.
+    // Do not set TargetABI here if invalid: RISCVSubtarget/RISCVAsmPrinter
+    // (in codegen) or RISCVAsmParser::onBeginOfFile() (in llvm-mc) will
+    // resolve or diagnose it with proper contexts.
     consumeError(ABIOrErr.takeError());
-    setTargetABI(cantFail(RISCVABI::computeTargetABI(STI, "")));
   }
   setFlagsFromFeatures(STI);
 
