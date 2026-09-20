@@ -9544,7 +9544,7 @@ void ASTImporter::RegisterImportedDecl(Decl *FromD, Decl *ToD) {
 
 llvm::Expected<ExprWithCleanups::CleanupObject>
 ASTImporter::Import(ExprWithCleanups::CleanupObject From) {
-  if (auto *CLE = From.dyn_cast<CompoundLiteralExpr *>()) {
+  if (auto *CLE = dyn_cast<CompoundLiteralExpr *>(From)) {
     if (Expected<Expr *> R = Import(CLE))
       return ExprWithCleanups::CleanupObject(cast<CompoundLiteralExpr>(*R));
   }
