@@ -665,12 +665,11 @@ public:
   void finalize() override {}
 };
 
-/// Policy that emits final remarks. Stores all remarks until finalize(),
-/// which enables query-based linking via findRemarks().
+/// Policy that emits only the last remark reported for each identity, see
+/// DenseMapInfo<Remark>. Remarks are stored until finalize().
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
 private:
-  /// user can intercept them for custom processing via a registered callback,
-  /// otherwise they will be reported on engine destruction.
+  /// Remarks reported since the last finalize().
   llvm::DenseSet<detail::Remark> postponedRemarks;
 
 public:
@@ -681,8 +680,10 @@ public:
     postponedRemarks.insert(remark);
   }
 
-  /// Emits all stored remarks. Related remarks are printed as nested notes
-  /// under the remark that references them.
+  /// Emits and drains all stored remarks. Related remarks are printed right
+  /// after the remark that references them; a link only resolves when both
+  /// remarks are in the same call. A later call emits only remarks reported
+  /// since this one.
   void finalize() override;
 };
 

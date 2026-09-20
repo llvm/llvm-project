@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-jitlink.h"
+#include "ConnectionUtils.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
@@ -33,15 +35,15 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ConnectionSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -65,6 +67,7 @@
 #include "llvm/Object/TapiUniversal.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -77,8 +80,7 @@
 #include <string>
 
 #ifdef LLVM_ON_UNIX
-#include <netdb.h>
-#include <netinet/in.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif // LLVM_ON_UNIX
@@ -311,13 +313,12 @@ static cl::opt<bool> PhonyExternals(
     cl::desc("resolve all otherwise unresolved externals to null"),
     cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<std::string> OutOfProcessExecutor(
-    "oop-executor", cl::desc("Launch an out-of-process executor to run code"),
+static cl::opt<std::string> OutOfProcessLaunch(
+    "oop-launch", cl::desc("Launch an out-of-process executor to run code"),
     cl::ValueOptional, cl::cat(JITLinkCategory));
 
-static cl::opt<std::string> OutOfProcessExecutorConnect(
-    "oop-executor-connect",
-    cl::desc("Connect to an out-of-process executor via TCP"),
+static cl::opt<std::string> OutOfProcessConnect(
+    "oop-connect", cl::desc("How to connect to the out-of-process executor"),
     cl::cat(JITLinkCategory));
 
 static cl::opt<std::string>
@@ -401,9 +402,7 @@ static Error addSelfRelocations(LinkGraph &G);
 
 namespace {
 
-template <typename ErrT>
-
-class ConditionalPrintErr {
+template <typename ErrT> class ConditionalPrintErr {
 public:
   ConditionalPrintErr(bool C) : C(C) {}
   void operator()(ErrT &EI) {
@@ -779,20 +778,10 @@ createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(ExecutorProcessControl &EPC) {
-  SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = lookupAndApply(
-          EPC.getExecutionSession().getBootstrapJITDylib(),
-          {recordAddr(rt::sps_ci::SharedMemoryMapperInstanceName,
-                      &SAs.Instance),
-           recordAddr(rt::sps_ci::SharedMemoryMapperReserve::Name,
-                      &SAs.Reserve),
-           recordAddr(rt::sps_ci::SharedMemoryMapperInitialize::Name,
-                      &SAs.Initialize),
-           recordAddr(rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
-                      &SAs.Deinitialize),
-           recordAddr(rt::sps_ci::SharedMemoryMapperRelease::Name,
-                      &SAs.Release)}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = sps::createSharedMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 
 #ifdef _WIN32
   size_t SlabSize = 1024 * 1024;
@@ -804,13 +793,13 @@ createSharedMemoryManager(ExecutorProcessControl &EPC) {
     SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
-      SlabSize, EPC, SAs);
+      SlabSize, ES, std::move(*B));
 }
 
 static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createMemoryManager(ExecutorProcessControl &EPC) {
-  if (OutOfProcessExecutor.getNumOccurrences() ||
-      OutOfProcessExecutorConnect.getNumOccurrences()) {
+  if (OutOfProcessLaunch.getNumOccurrences() ||
+      OutOfProcessConnect.getNumOccurrences()) {
 
     switch (UseMemMgr) {
     case MemMgr::Default:
@@ -917,137 +906,266 @@ static Error loadDylibs(Session &S) {
   return Error::success();
 }
 
-static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
+// maybe_unused because some configurations, e.g. LLVM_ENABLE_THREADS=Off,
+// eliminate all callsites.
+[[maybe_unused]] static Error launchExecutor(std::vector<std::string> Args) {
 #ifndef LLVM_ON_UNIX
-  // FIXME: Add support for Windows.
-  return make_error<StringError>("-" + OutOfProcessExecutor.ArgStr +
+  // FIXME: Add out-of-process support for Windows.
+  return make_error<StringError>("-" + OutOfProcessLaunch.ArgStr +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#else
+  std::string ProgName = OutOfProcessLaunch;
+  std::vector<char *> ExecvpArgs;
+  ExecvpArgs.push_back(ProgName.data());
+  for (auto &Arg : Args)
+    ExecvpArgs.push_back(Arg.data());
+  ExecvpArgs.push_back(nullptr);
+
+  pid_t ChildPID;
+  ChildPID = fork();
+
+  if (ChildPID == 0) {
+    int RC = execvp(OutOfProcessLaunch.data(), ExecvpArgs.data());
+    if (RC != 0) {
+      errs() << "Could not launch out-of-process executor " << ProgName << ": "
+             << strerror(errno) << "\n";
+      exit(1);
+    }
+  }
+
+  return Error::success();
+#endif // LLVM_ON_UNIX
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+launchExecutorWithDefaultConnect() {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add out-of-process support for Windows.
+  return make_error<StringError>("-" + OutOfProcessLaunch.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
   // Out of process mode using SimpleRemoteEPC depends on threads.
   return make_error<StringError>(
-      "-" + OutOfProcessExecutor.ArgStr +
+      "-" + OutOfProcessLaunch.ArgStr +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
       inconvertibleErrorCode());
 #else
-
   constexpr int ParentSocket = 0, ChildSocket = 1;
   int Sockets[2];
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, Sockets) == -1)
     return make_error<StringError>(
         Twine("Unable to create socket for executor: ") + strerror(errno),
         inconvertibleErrorCode());
-
-  pid_t ChildPID;
-  ChildPID = fork();
-
-  if (ChildPID == 0) {
-    // In the child...
-    close(Sockets[ParentSocket]);
-    std::string ConnSpec = "fd=" + std::to_string(Sockets[ChildSocket]);
-    char *const Args[] = {OutOfProcessExecutor.data(), ConnSpec.data(),
-                          nullptr};
-    int RC = execvp(OutOfProcessExecutor.data(), Args);
-    if (RC != 0) {
-      errs() << "unable to launch out-of-process executor \""
-             << OutOfProcessExecutor << "\"\n";
-      exit(1);
+  {
+    auto CloseChildSocket = scope_exit([&]() { close(Sockets[ChildSocket]); });
+    auto CloseParentSocket =
+        scope_exit([&]() { close(Sockets[ParentSocket]); });
+    {
+      // Set CLOEXEC on the parent socket.
+      int Flags = fcntl(Sockets[ParentSocket], F_GETFD);
+      if (Flags == -1)
+        return make_error<StringError>(
+            StringRef("Could not get flags for parent socket: ") +
+                strerror(errno),
+            inconvertibleErrorCode());
+      Flags |= FD_CLOEXEC;
+      if (fcntl(Sockets[ParentSocket], F_SETFD, Flags) == -1)
+        return make_error<StringError>(
+            StringRef("Could not set flags for parent socket: ") +
+                strerror(errno),
+            inconvertibleErrorCode());
     }
-  }
-  // else we're the parent...
-  close(Sockets[ChildSocket]);
 
+    std::string ConnSpec = "fd=";
+    ConnSpec += std::to_string(Sockets[ChildSocket]);
+    if (auto Err = launchExecutor({ConnSpec}))
+      return std::move(Err);
+
+    // Success. Hold on to the parent socket, let child socket close.
+    CloseParentSocket.release();
+  }
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
       Sockets[ParentSocket], Sockets[ParentSocket]);
-#endif
+#endif // LLVM_ON_UNIX
 }
 
 #if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
 static Error createTCPSocketError(Twine Details) {
   return make_error<StringError>(
-      formatv("Failed to connect TCP socket '{0}': {1}",
-              OutOfProcessExecutorConnect, Details),
+      formatv("Failed to set up TCP socket for '{0}': {1}", OutOfProcessConnect,
+              Details),
       inconvertibleErrorCode());
-}
-
-static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
-  addrinfo *AI;
-  addrinfo Hints{};
-  Hints.ai_family = AF_INET;
-  Hints.ai_socktype = SOCK_STREAM;
-  Hints.ai_flags = AI_NUMERICSERV;
-
-  if (int EC = getaddrinfo(Host.c_str(), PortStr.c_str(), &Hints, &AI))
-    return createTCPSocketError("Address resolution failed (" +
-                                StringRef(gai_strerror(EC)) + ")");
-
-  // Cycle through the returned addrinfo structures and connect to the first
-  // reachable endpoint.
-  int SockFD;
-  addrinfo *Server;
-  for (Server = AI; Server != nullptr; Server = Server->ai_next) {
-    // socket might fail, e.g. if the address family is not supported. Skip to
-    // the next addrinfo structure in such a case.
-    if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
-      continue;
-
-    // If connect returns null, we exit the loop with a working socket.
-    if (connect(SockFD, Server->ai_addr, Server->ai_addrlen) == 0)
-      break;
-
-    close(SockFD);
-  }
-  freeaddrinfo(AI);
-
-  // If we reached the end of the loop without connecting to a valid endpoint,
-  // dump the last error that was logged in socket() or connect().
-  if (Server == nullptr)
-    return createTCPSocketError(std::strerror(errno));
-
-  return SockFD;
 }
 #endif
 
-static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutorWithTCPConnect(const ConnectionSpec &CS) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
-  return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
+  return make_error<StringError>("-" + OutOfProcessConnect.ArgStr +
                                      " not supported on non-unix platforms",
                                  inconvertibleErrorCode());
 #elif !LLVM_ENABLE_THREADS
   // Out of process mode using SimpleRemoteEPC depends on threads.
   return make_error<StringError>(
-      "-" + OutOfProcessExecutorConnect.ArgStr +
+      "-" + OutOfProcessConnect.ArgStr +
           " requires threads, but LLVM was built with "
           "LLVM_ENABLE_THREADS=Off",
       inconvertibleErrorCode());
 #else
 
   StringRef Host, PortStr;
-  std::tie(Host, PortStr) = StringRef(OutOfProcessExecutorConnect).split(':');
+  std::tie(Host, PortStr) = StringRef(CS.getDescriptor()).split(':');
   if (Host.empty())
-    return createTCPSocketError("Host name for -" +
-                                OutOfProcessExecutorConnect.ArgStr +
+    return createTCPSocketError("Host name for -" + OutOfProcessConnect.ArgStr +
                                 " can not be empty");
   if (PortStr.empty())
-    return createTCPSocketError("Port number in -" +
-                                OutOfProcessExecutorConnect.ArgStr +
-                                " can not be empty");
+    return createTCPSocketError(
+        "Port number in -" + OutOfProcessConnect.ArgStr + " can not be empty");
   int Port = 0;
   if (PortStr.getAsInteger(10, Port))
     return createTCPSocketError("Port number '" + PortStr +
                                 "' is not a valid integer");
 
-  Expected<int> SockFD = connectTCPSocket(Host.str(), PortStr.str());
+  std::unique_ptr<ExponentialBackoff> Retry;
+  if (OutOfProcessLaunch.getNumOccurrences()) {
+    // Launch the executor and attempt to connect with exponential backoff.
+    if (auto Err =
+            launchExecutor({{("tcp:listen=" + Host + ":" + PortStr).str()}}))
+      return std::move(Err);
+    using namespace std::chrono_literals;
+    Retry = std::make_unique<ExponentialBackoff>(10s);
+  }
+
+  auto SockFD = connectWithRetry(
+      [&]() { return connectTCPSocket(Host, PortStr); }, std::move(Retry));
   if (!SockFD)
-    return SockFD.takeError();
+    return createTCPSocketError(toString(SockFD.takeError()));
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt), *SockFD,
-      *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
+      *SockFD, *SockFD);
 #endif
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutorWithTCPListen(const ConnectionSpec &CS) {
+#ifndef LLVM_ON_UNIX
+  // FIXME: Add TCP support for Windows.
+  return make_error<StringError>("-" + OutOfProcessConnect.ArgStr +
+                                     " not supported on non-unix platforms",
+                                 inconvertibleErrorCode());
+#elif !LLVM_ENABLE_THREADS
+  // Out of process mode using SimpleRemoteEPC depends on threads.
+  return make_error<StringError>(
+      "-" + OutOfProcessConnect.ArgStr +
+          " requires threads, but LLVM was built with "
+          "LLVM_ENABLE_THREADS=Off",
+      inconvertibleErrorCode());
+#else
+
+  StringRef Host, PortStr;
+  std::tie(Host, PortStr) = StringRef(CS.getDescriptor()).split(':');
+  if (PortStr.empty())
+    return createTCPSocketError(
+        "Port number in -" + OutOfProcessConnect.ArgStr + " can not be empty");
+  int Port = 0;
+  if (PortStr.getAsInteger(10, Port))
+    return createTCPSocketError("Port number '" + PortStr +
+                                "' is not a valid integer");
+
+  // Bind and listen before launching the executor.
+  std::string ResolvedPortStr;
+  auto ListenFD = listenTCPSocket(Host, PortStr, &ResolvedPortStr);
+  if (!ListenFD)
+    return createTCPSocketError(toString(ListenFD.takeError()));
+
+  if (OutOfProcessLaunch.getNumOccurrences()) {
+    // An empty host means we bound the wildcard address; loopback is always
+    // reachable on that, so use it as the address the executor dials back
+    // into.
+    StringRef DialBackHost = Host.empty() ? StringRef("127.0.0.1") : Host;
+    if (auto Err = launchExecutor(
+            {("tcp:connect=" + DialBackHost + ":" + ResolvedPortStr).str()}))
+      return std::move(Err);
+  }
+
+  auto SockFD = acceptTCPConnection(*ListenFD);
+  if (!SockFD)
+    return createTCPSocketError(toString(SockFD.takeError()));
+
+  return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
+      *SockFD, *SockFD);
+#endif
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutorWithTCP(const ConnectionSpec &CS) {
+  if (CS.getAction() == "connect")
+    return connectToExecutorWithTCPConnect(CS);
+  if (CS.getAction() == "listen")
+    return connectToExecutorWithTCPListen(CS);
+
+  return make_error<StringError>(CS.getAction() +
+                                     " is not a recognized action for tcp",
+                                 inconvertibleErrorCode());
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+connectToExecutor(const ConnectionSpec &CS) {
+  if (CS.getTransport() == "tcp")
+    return connectToExecutorWithTCP(CS);
+
+  return make_error<StringError>(CS.getTransport() +
+                                     " is not a recognized transport",
+                                 inconvertibleErrorCode());
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+setupOutOfProcessExecutor() {
+  if (!OutOfProcessConnect.getNumOccurrences())
+    return launchExecutorWithDefaultConnect();
+
+  auto ConnSpec = ConnectionSpec::parse(OutOfProcessConnect);
+  if (!ConnSpec)
+    return ConnSpec.takeError();
+  return connectToExecutor(*ConnSpec);
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+createInProcessExecutorEPC(Triple TT) {
+  /// Otherwise use SelfExecutorProcessControl to target the current process.
+  auto PageSize = sys::Process::getPageSize();
+  if (!PageSize)
+    return PageSize.takeError();
+  std::unique_ptr<TaskDispatcher> Dispatcher;
+  if (MaterializationThreads == 0)
+    Dispatcher = std::make_unique<InPlaceTaskDispatcher>();
+  else {
+#if LLVM_ENABLE_THREADS
+    Dispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>(
+        MaterializationThreads);
+#else
+    llvm_unreachable("MaterializationThreads should be 0");
+#endif
+  }
+  return std::make_unique<SelfExecutorProcessControl>(
+      std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
+      std::move(TT), *PageSize);
+}
+
+static Expected<std::unique_ptr<ExecutorProcessControl>>
+createExecutorProcessControl(Triple TT) {
+  if (OutOfProcessLaunch.getNumOccurrences() ||
+      OutOfProcessConnect.getNumOccurrences())
+    return setupOutOfProcessExecutor();
+  else
+    return createInProcessExecutorEPC(TT);
 }
 
 class PhonyExternalsGenerator : public DefinitionGenerator {
@@ -1117,44 +1235,12 @@ static Error writeLazyExecOrder(Session &S) {
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
                                                    SubtargetFeatures Features) {
-
-  std::unique_ptr<ExecutorProcessControl> EPC;
-  if (OutOfProcessExecutor.getNumOccurrences()) {
-    /// If -oop-executor is passed then launch the executor.
-    if (auto REPC = launchExecutor())
-      EPC = std::move(*REPC);
-    else
-      return REPC.takeError();
-  } else if (OutOfProcessExecutorConnect.getNumOccurrences()) {
-    /// If -oop-executor-connect is passed then connect to the executor.
-    if (auto REPC = connectToExecutor())
-      EPC = std::move(*REPC);
-    else
-      return REPC.takeError();
-  } else {
-    /// Otherwise use SelfExecutorProcessControl to target the current process.
-    auto PageSize = sys::Process::getPageSize();
-    if (!PageSize)
-      return PageSize.takeError();
-    std::unique_ptr<TaskDispatcher> Dispatcher;
-    if (MaterializationThreads == 0)
-      Dispatcher = std::make_unique<InPlaceTaskDispatcher>();
-    else {
-#if LLVM_ENABLE_THREADS
-      Dispatcher = std::make_unique<DynamicThreadPoolTaskDispatcher>(
-          MaterializationThreads);
-#else
-      llvm_unreachable("MaterializationThreads should be 0");
-#endif
-    }
-
-    EPC = std::make_unique<SelfExecutorProcessControl>(
-        std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
-        std::move(TT), *PageSize);
-  }
+  auto EPC = createExecutorProcessControl(TT);
+  if (!EPC)
+    return EPC.takeError();
 
   Error Err = Error::success();
-  std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
+  std::unique_ptr<Session> S(new Session(std::move(*EPC), Err));
   if (Err)
     return std::move(Err);
   S->Features = std::move(Features);
@@ -1830,15 +1916,14 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
                                    inconvertibleErrorCode());
 
   // If -slab-allocate is passed, check that we're not trying to use it in
-  // -oop-executor or -oop-executor-connect mode.
+  // -oop-launch or -oop-connect mode.
   //
   // FIXME: Remove once we enable remote slab allocation.
   if (SlabAllocateSizeString != "") {
-    if (OutOfProcessExecutor.getNumOccurrences() ||
-        OutOfProcessExecutorConnect.getNumOccurrences())
+    if (OutOfProcessLaunch.getNumOccurrences() ||
+        OutOfProcessConnect.getNumOccurrences())
       return make_error<StringError>(
-          "-slab-allocate cannot be used with -oop-executor or "
-          "-oop-executor-connect",
+          "-slab-allocate cannot be used with -oop-launch or -oop-connect",
           inconvertibleErrorCode());
   }
 
@@ -1898,18 +1983,18 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
   MaterializationThreads = 0;
 #endif
 
-  if (!!OutOfProcessExecutor.getNumOccurrences() ||
-      !!OutOfProcessExecutorConnect.getNumOccurrences()) {
+  if (!!OutOfProcessLaunch.getNumOccurrences() ||
+      !!OutOfProcessConnect.getNumOccurrences()) {
     if (NoExec)
       return make_error<StringError>("-noexec cannot be used with " +
-                                         OutOfProcessExecutor.ArgStr + " or " +
-                                         OutOfProcessExecutorConnect.ArgStr,
+                                         OutOfProcessLaunch.ArgStr + " or " +
+                                         OutOfProcessConnect.ArgStr,
                                      inconvertibleErrorCode());
 
     if (MaterializationThreads == 0)
       return make_error<StringError>("-threads=0 cannot be used with " +
-                                         OutOfProcessExecutor.ArgStr + " or " +
-                                         OutOfProcessExecutorConnect.ArgStr,
+                                         OutOfProcessLaunch.ArgStr + " or " +
+                                         OutOfProcessConnect.ArgStr,
                                      inconvertibleErrorCode());
   }
 
@@ -1919,23 +2004,14 @@ static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
               "Use -num-threads=0 to stabilize output.\n";
 #endif // NDEBUG
 
-  // Only one of -oop-executor and -oop-executor-connect can be used.
-  if (!!OutOfProcessExecutor.getNumOccurrences() &&
-      !!OutOfProcessExecutorConnect.getNumOccurrences())
-    return make_error<StringError>(
-        "Only one of -" + OutOfProcessExecutor.ArgStr + " and -" +
-            OutOfProcessExecutorConnect.ArgStr + " can be specified",
-        inconvertibleErrorCode());
-
-  // If -oop-executor was used but no value was specified then use a sensible
+  // If -oop-launch was used but no value was specified then use a sensible
   // default.
-  if (!!OutOfProcessExecutor.getNumOccurrences() &&
-      OutOfProcessExecutor.empty()) {
+  if (!!OutOfProcessLaunch.getNumOccurrences() && OutOfProcessLaunch.empty()) {
     SmallString<256> OOPExecutorPath(sys::fs::getMainExecutable(
         ArgV0, reinterpret_cast<void *>(&sanitizeArguments)));
     sys::path::remove_filename(OOPExecutorPath);
     sys::path::append(OOPExecutorPath, "llvm-jitlink-executor");
-    OutOfProcessExecutor = OOPExecutorPath.str().str();
+    OutOfProcessLaunch = OOPExecutorPath.str().str();
   }
 
   // If lazy linking is requested then check compatibility with other options.

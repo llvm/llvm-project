@@ -30293,7 +30293,8 @@ static SDValue performSelectCombine(SDNode *N,
 }
 
 static SDValue performDUPCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
@@ -30317,6 +30318,15 @@ static SDValue performDUPCombine(SDNode *N,
     //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
     //   v4i32 = DUPLANE32 (v4i32), 0
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
+      if (!Subtarget->noPredicatedLD1R() &&
+          Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
+          VT.getScalarType().isInteger() &&
+          VT.getScalarType() != LD->getMemoryVT().getScalarType()) {
+        EVT ScalableVT = getContainerForFixedLengthVector(DCI.DAG, VT);
+        SDValue SplatNode =
+            DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
+        return convertFromScalableVector(DCI.DAG, VT, SplatNode);
+      }
       ISD::LoadExtType ExtType = LD->getExtensionType();
       EVT MemVT = LD->getMemoryVT();
       EVT ElemVT = VT.getVectorElementType();
@@ -31378,8 +31388,78 @@ static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
   return llvm::all_of(Users, [](SDNode *User) { return User != nullptr; });
 }
 
+static SDValue performLegalizedVectorDeinterleaveCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  // Type legalization splits a wide load into consecutive legal loads. Combine
+  // each group used by a legal VECTOR_DEINTERLEAVE into a structured load.
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes ||
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
+    return SDValue();
+
+  if (N->getOpcode() != ISD::VECTOR_DEINTERLEAVE)
+    return SDValue();
+
+  unsigned NumParts = N->getNumOperands();
+  if (NumParts < 2 || NumParts > 4)
+    return SDValue();
+
+  EVT SubVecTy = N->getValueType(0);
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+    return SDValue();
+
+  SmallVector<LoadSDNode *, 4> Loads;
+  for (const SDValue &Operand : N->op_values()) {
+    auto *Load = dyn_cast<LoadSDNode>(Operand);
+    if (!Load || !Operand.hasOneUse())
+      return SDValue();
+    Loads.push_back(Load);
+  }
+
+  LoadSDNode *BaseLoad = Loads[0];
+  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  for (auto [Idx, Load] : enumerate(Loads)) {
+    if (!DAG.areNonVolatileConsecutiveLoads(Load, BaseLoad, Bytes, Idx))
+      return SDValue();
+  }
+
+  static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::aarch64_neon_ld2,
+                                                Intrinsic::aarch64_neon_ld3,
+                                                Intrinsic::aarch64_neon_ld4};
+  SDLoc DL(N);
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(BaseLoad->getMemOperand(), 0, NumParts * Bytes);
+
+  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
+  ResVTs.push_back(MVT::Other);
+
+  // We can now generate a structured load!
+  SDValue NewLoad = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(ResVTs),
+      {BaseLoad->getChain(),
+       DAG.getTargetConstant(NEONLoads[NumParts - 2], DL, MVT::i64),
+       BaseLoad->getBasePtr()},
+      MemVT, MMO);
+
+  SmallVector<SDValue, 4> ResOps;
+  for (unsigned I = 0; I != NumParts; ++I)
+    ResOps.push_back(NewLoad.getValue(I));
+
+  // Replace uses of the original chain result with the new chain result.
+  for (LoadSDNode *Load : Loads)
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), NewLoad.getValue(NumParts));
+
+  return DCI.CombineTo(N, ResOps, false);
+}
+
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  if (SDValue Res = performLegalizedVectorDeinterleaveCombine(N, DCI, DAG))
+    return Res;
+
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
@@ -31815,7 +31895,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::DUPLANE16:
   case AArch64ISD::DUPLANE32:
   case AArch64ISD::DUPLANE64:
-    return performDUPCombine(N, DCI);
+    return performDUPCombine(N, DCI, Subtarget);
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:
@@ -33401,6 +33481,55 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   CI->addParamAttr(1, Attribute::get(Builder.getContext(),
                                      Attribute::ElementType, Val->getType()));
   return CI;
+}
+
+Value *AArch64TargetLowering::emitCanLoadSpeculatively(
+    IRBuilderBase &Builder, Value *Ptr, Value *SizeInBytes) const {
+  // Conservatively only allow speculation for address space 0.
+  if (Ptr->getType()->getPointerAddressSpace() != 0)
+    return nullptr;
+  // For power-of-2 sizes <= 16, emit alignment check: (ptr & (size - 1)) == 0.
+  // If the pointer is aligned to at least 'size' bytes, loading 'size' bytes
+  // cannot cross a page boundary, so it's safe to speculate.
+  // The 16-byte limit ensures correctness with MTE (memory tagging), since
+  // MTE uses 16-byte tag granules.
+  //
+  // The alignment check only works for power-of-2 sizes. For non-power-of-2
+  // sizes, we conservatively return false.
+  constexpr uint64_t MTETagGranuleInBytes = 16;
+
+  if (auto *ConstSize = dyn_cast<ConstantInt>(SizeInBytes)) {
+    uint64_t Size = ConstSize->getZExtValue();
+    // For non-power-of-2 or constant sizes > 16, return nullptr (default
+    // false).
+    if (!isPowerOf2_64(Size) || Size > MTETagGranuleInBytes)
+      return nullptr;
+
+    // Power-of-2 constant size <= 16: use fast alignment check.
+    Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
+    return Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, Size - 1));
+  }
+
+  // Check size <= 16 and alignment. A runtime power-of-2 test is omitted
+  // because the intrinsic's result is poison for non-power-of-2 sizes.
+  Value *SizeLE16 = Builder.CreateICmpULE(
+      SizeInBytes,
+      ConstantInt::get(SizeInBytes->getType(), MTETagGranuleInBytes));
+
+  // Narrow only after the comparison above, so that a size exceeding the
+  // address width is not truncated into the accepted range.
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Type *AddrTy = DL.getAddressType(Ptr->getType());
+  Value *SizeAddr = Builder.CreateZExtOrTrunc(SizeInBytes, AddrTy);
+
+  // alignment check: (ptr & (size - 1)) == 0
+  Value *SizeMinusOne =
+      Builder.CreateSub(SizeAddr, ConstantInt::get(AddrTy, 1));
+  Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
+  Value *AlignCheck =
+      Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, SizeMinusOne));
+
+  return Builder.CreateAnd(SizeLE16, AlignCheck);
 }
 
 bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(
