@@ -14,9 +14,11 @@
 #ifndef LLVM_LIBC_SRC_GRP_GRP_UTILS_H
 #define LLVM_LIBC_SRC_GRP_GRP_UTILS_H
 
+#include "hdr/types/gid_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_group.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/pwd/flat_file_db.h"
@@ -43,6 +45,12 @@ void TESTONLY_reset_group_path();
 ErrorOr<void> open();
 ErrorOr<void> close();
 ErrorOr<struct group *> read_next();
+
+ErrorOr<bool> find_by_name(cpp::string_view name, struct group *grp,
+                           cpp::span<char> buffer, const char *path = nullptr);
+
+ErrorOr<bool> find_by_gid(gid_t gid, struct group *grp, cpp::span<char> buffer,
+                          const char *path = nullptr);
 
 } // namespace grp
 } // namespace LIBC_NAMESPACE_DECL
