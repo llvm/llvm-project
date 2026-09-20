@@ -62,8 +62,15 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// or nullptr if \p Loads are not a vectorizable.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
-  /// Builds a ConstantVector from per-lane constant store operands in \p
-  /// Constants. \returns the packed ConstantVector.
+  /// Returns a constant with the same bits as \p C, but with type \p DestTy.
+  /// \p DestTy must have the same size as \p C. A pointer in a non-integral
+  /// address space has no fixed ptrtoint/inttoptr width, so \p DestTy must not
+  /// be such a pointer.
+  Constant *getEquivalentConstantWithType(Constant *C, Type *DestTy);
+
+  /// Builds a ConstantVector from \p Constants. Every constant's bit width is a
+  /// multiple of the vector lane type, which is no wider than any constant.
+  /// \returns the packed ConstantVector.
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
