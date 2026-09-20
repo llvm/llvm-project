@@ -2415,9 +2415,9 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      /*selfAttr=*/false, reductionOperands, gangPrivateOperands,
       gangFirstPrivateOperands, dataClauseOperands,
-      /*defaultAttr=*/nullptr, /*combined=*/nullptr);
+      /*defaultAttr=*/nullptr, /*combined=*/false);
 }
 
 void acc::ParallelOp::addNumWorkersOperand(

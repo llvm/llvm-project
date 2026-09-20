@@ -300,13 +300,6 @@ public:
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
 
-  /// ThreadModel - This flag specifies the type of threading model to assume
-  /// for things like atomics
-  llvm::ThreadModel ThreadModel = llvm::ThreadModel::POSIX;
-
-  /// EABIVersion - This flag specifies the EABI version
-  EABI EABIVersion = EABI::Default;
-
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
@@ -315,7 +308,7 @@ public:
 
 public:
   /// What exception model to use
-  ExceptionHandling ExceptionModel = ExceptionHandling::None;
+  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
 
   /// Machine level options.
   MCTargetOptions MCOptions;

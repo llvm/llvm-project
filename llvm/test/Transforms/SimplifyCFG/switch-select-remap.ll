@@ -403,6 +403,52 @@ default:
   unreachable
 }
 
+; %x is a PHI in the switch's own block and the stale case for 4 branches back
+; to it. Retargeting that case removes the self-edge and folds the PHI away;
+; the switch used to be left pointing at the erased PHI (GH223138).
+define void @test_remap_retarget_self_loop_phi(i8 %a, i8 %b) {
+; CHECK-LABEL: define void @test_remap_retarget_self_loop_phi(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    switch i8 [[A]], label %[[BB1:.*]] [
+; CHECK-NEXT:      i8 4, label %[[BB2:.*]]
+; CHECK-NEXT:      i8 6, label %[[BB2]]
+; CHECK-NEXT:      i8 10, label %[[BB3:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    call void @func1()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    call void @func2()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    call void @func3()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %loop
+
+loop:
+  %x = phi i8 [ %a, %entry ], [ %b, %loop ]
+  %cmp = icmp eq i8 %x, 4
+  %key = select i1 %cmp, i8 6, i8 %x
+  switch i8 %key, label %bb1 [
+  i8 4, label %loop
+  i8 6, label %bb2
+  i8 10, label %bb3
+  ]
+
+bb1:
+  call void @func1()
+  unreachable
+bb2:
+  call void @func2()
+  unreachable
+bb3:
+  call void @func3()
+  unreachable
+}
+
 ; Negative test: %key (the select) is used by more than just the switch, so
 ; folding it away wouldn't actually remove the compare/select sequence -
 ; leave it alone.
