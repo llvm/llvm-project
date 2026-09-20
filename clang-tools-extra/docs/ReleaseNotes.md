@@ -189,6 +189,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
+- Improved {doc}`bugprone-unchecked-optional-access
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
+  positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
+  value or returned by `bsl::make_optional`.
+
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
   unforwarded `auto&&` parameters in C++20 abbreviated function templates.
