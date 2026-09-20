@@ -89,22 +89,6 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 /// otherwise.
 static Value getStaticPadVal(Operation *op);
 
-/// Return the unique instance of OpType in `block` if it is indeed unique.
-/// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
-  OpType res;
-  block.walk([&](OpType op) {
-    if (res) {
-      res = nullptr;
-      return WalkResult::interrupt();
-    }
-    res = op;
-    return WalkResult::advance();
-  });
-  return res;
-}
-
 /// Helper function to extract the input slices after filter is unrolled along
 /// kw.
 static SmallVector<Value>

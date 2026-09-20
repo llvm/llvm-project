@@ -37,10 +37,18 @@ enum RecordArgABI {
   RAA_Indirect
 };
 
-/// Flags controlling target-specific ABI compatibility behaviour.
-/// Construct with the default constructor for the current ABI, or use
-/// fromVersion() to get the flags that match a specific Clang version.
+/// Flags controlling ABI compatibility behaviour that applies to every target.
+/// Targets with compatibility flags of their own extend this with a derived
+/// structure.
 struct ABICompatInfo {
+  /// Whether a matrix type may be the base type of a homogeneous aggregate.
+  bool IsMatrixHA : 1;
+
+  ABICompatInfo() : IsMatrixHA(true) {}
+};
+
+/// Flags controlling X86-specific ABI compatibility behaviour.
+struct X86ABICompatInfo : ABICompatInfo {
   bool PassInt128VectorsInMem : 1;
   bool ReturnCXXRecordGreaterThan128InMem : 1;
   bool ClassifyIntegerMMXAsSSE : 1;
@@ -48,25 +56,18 @@ struct ABICompatInfo {
   bool Clang11Compat : 1;
   bool ClassifyUnnamedBitFields : 1;
 
-  ABICompatInfo()
+  X86ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
         Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
-
-  /// Return flags matching the ABI emitted by the given Clang major version.
-  // TODO: fill in per-version flag overrides.
-  static ABICompatInfo fromVersion(unsigned /*ClangMajor*/) {
-    return ABICompatInfo();
-  }
 };
 
 class TargetInfo {
-private:
-  ABICompatInfo CompatInfo;
+protected:
+  TypeBuilder &TB;
 
 public:
-  TargetInfo() : CompatInfo() {}
-  explicit TargetInfo(const ABICompatInfo &Info) : CompatInfo(Info) {}
+  explicit TargetInfo(TypeBuilder &Builder) : TB(Builder) {}
 
   virtual ~TargetInfo() = default;
 
@@ -74,7 +75,10 @@ public:
   /// and return value.
   virtual void computeInfo(FunctionInfo &FI) const = 0;
   virtual bool isPassByRef(const Type *Ty) const { return false; }
-  const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
+
+  /// Return this target's ABI compatibility flags. Targets with extra flags
+  /// store a derived object and return that as an ABICompatInfo reference.
+  virtual const ABICompatInfo &getABICompatInfo() const = 0;
 
 protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
@@ -90,6 +94,35 @@ protected:
 
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
+
+  /// Return true if \p Ty is a valid base type for a homogeneous aggregate.
+  virtual bool isHomogeneousAggregateBaseType(const Type *Ty) const {
+    return false;
+  }
+
+  /// Return true if a homogeneous aggregate with \p Members copies of \p Base
+  /// is small enough to be passed in registers for this ABI.
+  virtual bool isHomogeneousAggregateSmallEnough(const Type *Base,
+                                                 uint64_t Members) const {
+    return false;
+  }
+
+  /// Return true if zero-length bitfields should be ignored when deciding
+  /// whether an aggregate is homogeneous.
+  virtual bool isZeroLengthBitfieldPermittedInHomogeneousAggregate() const {
+    return false;
+  }
+
+  /// Return true if the C++ ABI permits \p RT to be a homogeneous aggregate.
+  virtual bool isPermittedToBeHomogeneousAggregate(const RecordType *RT) const {
+    return true;
+  }
+
+  /// Return true if \p Ty is an ELFv2-style homogeneous aggregate. \p Base is
+  /// set to the base element type and \p Members to the number of base
+  /// elements.
+  LLVM_ABI bool isHomogeneousAggregate(const Type *Ty, const Type *&Base,
+                                       uint64_t &Members) const;
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
@@ -104,7 +137,7 @@ enum class X86AVXABILevel {
 
 LLVM_ABI std::unique_ptr<TargetInfo>
 createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
-                       bool Has64BitPointers, const ABICompatInfo &Compat);
+                       bool Has64BitPointers, const X86ABICompatInfo &Compat);
 
 enum class AArch64ABIKind {
   AAPCS = 0,
@@ -113,8 +146,21 @@ enum class AArch64ABIKind {
   AAPCSSoft,
 };
 
+/// Target / language flags that affect AArch64 ABI classification.
+/// Callers (e.g. Clang) resolve Triple and LangOptions into these flags
+/// rather than passing a Triple into the ABI library.
+struct AArch64ABIOptions {
+  AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
+  bool IsILP32 = false;
+  bool IsMicrosoftCXXABI = false;
+  ABICompatInfo CompatInfo;
+
+  AArch64ABIOptions() = default;
+  explicit AArch64ABIOptions(AArch64ABIKind Kind) : Kind(Kind) {}
+};
+
 LLVM_ABI std::unique_ptr<TargetInfo>
-createAArch64TargetInfo(TypeBuilder &TB, AArch64ABIKind Kind);
+createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts);
 
 } // namespace abi
 } // namespace llvm

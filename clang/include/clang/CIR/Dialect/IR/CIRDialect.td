@@ -27,6 +27,8 @@ def CIR_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 1;
 
   let hasOperationAttrVerify = 1;
+  let hasRegionArgAttrVerify = 1;
+  let hasRegionResultAttrVerify = 1;
 
   // Enable constant materialization for the CIR dialect. This generates a
   // declaration for the cir::CIRDialect::materializeConstant function. This
@@ -51,6 +53,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getStrictFPAttrName() { return "strictfp"; }
     static llvm::StringRef getNoDuplicatesAttrName() { return "noduplicate"; }
     static llvm::StringRef getConvergentAttrName() { return "convergent"; }
+    static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
+    static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
+    static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
@@ -99,6 +104,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPUXnackAttrName() { return "cir.amdgpu_xnack"; }
     static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
+    static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
+    static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
     static llvm::StringRef getDefaultTlsModelAttrName() { return "cir.default_tls_model"; }
 
     void registerAttributes();
