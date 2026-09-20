@@ -246,6 +246,9 @@ static void collectBlocks(PtrView Ptr,
 bool EvaluationResult::checkDynamicAllocations(InterpState &S,
                                                const Pointer &Ptr,
                                                SourceInfo Info) {
+  if (!S.hasDynamicAllocations())
+    return true;
+
   if (!Ptr.isBlockPointer())
     return true;
   // Collect all blocks that this pointer (transitively) points to and

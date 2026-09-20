@@ -1474,8 +1474,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!CheckDynamicMemoryAllocation(S, OpPC))
     return false;
 
-  DynamicAllocator &Allocator = S.getAllocator();
-
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
   {
@@ -1500,7 +1498,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     // Check that new[]/delete[] or new/delete were used, not a mixture.
     const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
     if (std::optional<DynamicAllocator::Form> AllocForm =
-            Allocator.getAllocationForm(Source)) {
+            S.getAllocator().getAllocationForm(Source)) {
       DynamicAllocator::Form DeleteForm =
           DeleteIsArrayForm ? DynamicAllocator::Form::Array
                             : DynamicAllocator::Form::NonArray;
@@ -1560,6 +1558,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!RunDestructors(S, OpPC, BlockToDelete))
     return false;
 
+  DynamicAllocator &Allocator = S.getAllocator();
   if (!Allocator.deallocate(Source, BlockToDelete)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);

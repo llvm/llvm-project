@@ -82,8 +82,10 @@ public:
     if (!Alloc) {
       Alloc = std::make_unique<DynamicAllocator>();
     }
-
     return *Alloc;
+  }
+  bool hasDynamicAllocations() const {
+    return Alloc && Alloc->hasAllocations();
   }
 
   /// Diagnose any dynamic allocations that haven't been freed yet.
