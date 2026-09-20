@@ -9150,6 +9150,12 @@ class BuiltinCandidateTypeSet  {
   /// were present in the candidate set.
   bool HasArithmeticOrEnumeralTypes;
 
+  /// A flag indicating whether the candidate set has a type that might
+  /// convert to a promoted arithmetic type or to a vector type. This is
+  /// conservative: only scoped enumerations, pointers, member pointers,
+  /// nullptr_t, and classes that convert to nothing else are known not to.
+  bool MayConvertToArithmetic;
+
   /// A flag indicating whether the nullptr type was present in the
   /// candidate set.
   bool HasNullPtrType;
@@ -9171,7 +9177,8 @@ public:
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
       : HasNonRecordTypes(false), HasArithmeticOrEnumeralTypes(false),
-        HasNullPtrType(false), SemaRef(SemaRef), Context(SemaRef.Context) {}
+        MayConvertToArithmetic(false), HasNullPtrType(false), SemaRef(SemaRef),
+        Context(SemaRef.Context) {}
 
   void AddTypesConvertedFrom(QualType Ty,
                              SourceLocation Loc,
@@ -9193,6 +9200,7 @@ public:
   bool containsMatrixType(QualType Ty) const { return MatrixTypes.count(Ty); }
   bool hasNonRecordTypes() { return HasNonRecordTypes; }
   bool hasArithmeticOrEnumeralTypes() { return HasArithmeticOrEnumeralTypes; }
+  bool mayConvertToArithmetic() const { return MayConvertToArithmetic; }
   bool hasNullPtrType() const { return HasNullPtrType; }
 };
 
@@ -9346,6 +9354,12 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
   HasArithmeticOrEnumeralTypes =
     HasArithmeticOrEnumeralTypes || Ty->isArithmeticType();
 
+  // Flag if the type might convert to a promoted arithmetic or vector type.
+  MayConvertToArithmetic =
+      MayConvertToArithmetic ||
+      !(TyIsRec || Ty->isScopedEnumeralType() || Ty->isAnyPointerType() ||
+        Ty->isMemberPointerType() || Ty->isNullPtrType());
+
   if (Ty->isObjCIdType() || Ty->isObjCClassType())
     PointerTypes.insert(Ty);
   else if (Ty->getAs<PointerType>() || Ty->getAs<ObjCObjectPointerType>()) {
@@ -9387,8 +9401,10 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
 
       // Skip conversion function templates; they don't tell us anything
       // about which builtin types we can convert to.
-      if (isa<FunctionTemplateDecl>(D))
+      if (isa<FunctionTemplateDecl>(D)) {
+        MayConvertToArithmetic = true;
         continue;
+      }
 
       CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
       if (AllowExplicitConversions || !Conv->isExplicit()) {
@@ -9536,6 +9552,11 @@ class BuiltinOperatorOverloadBuilder {
   ArrayRef<Expr *> Args;
   QualifiersAndAtomic VisibleTypeConversionsQuals;
   bool HasArithmeticOrEnumeralCandidateType;
+  // Whether the candidates that only have arithmetic or vector parameter types
+  // can be viable: HasArithmeticOrEnumeralCandidateType is set, and every
+  // argument might convert to such a type. Nothing looks at non-viable builtin
+  // candidates, so these candidates are only added if this is set.
+  bool ArithmeticCandidatesMayBeViable;
   SmallVectorImpl<BuiltinCandidateTypeSet> &CandidateTypes;
   OverloadCandidateSet &CandidateSet;
 
@@ -9683,6 +9704,12 @@ public:
         VisibleTypeConversionsQuals(VisibleTypeConversionsQuals),
         HasArithmeticOrEnumeralCandidateType(
             HasArithmeticOrEnumeralCandidateType),
+        ArithmeticCandidatesMayBeViable(
+            HasArithmeticOrEnumeralCandidateType &&
+            llvm::all_of(CandidateTypes,
+                         [](const BuiltinCandidateTypeSet &Types) {
+                           return Types.mayConvertToArithmetic();
+                         })),
         CandidateTypes(CandidateTypes), CandidateSet(CandidateSet) {
     InitArithmeticTypes();
   }
@@ -9707,7 +9734,7 @@ public:
   //       VQ T&      operator--(VQ T&);
   //       T          operator--(VQ T&, int);
   void addPlusPlusMinusMinusArithmeticOverloads(OverloadedOperatorKind Op) {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Arith = 0; Arith < NumArithmeticTypes; ++Arith) {
@@ -9781,7 +9808,7 @@ public:
   //       T         operator+(T);
   //       T         operator-(T);
   void addUnaryPlusOrMinusArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Arith = FirstPromotedArithmeticType;
@@ -9811,7 +9838,7 @@ public:
   //
   //        T         operator~(T);
   void addUnaryTildePromotedIntegralOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Int = FirstPromotedIntegralType;
@@ -10026,7 +10053,7 @@ public:
   //   between types L and R.
   // Our candidates ignore the first parameter.
   void addGenericBinaryArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstPromotedArithmeticType;
@@ -10119,7 +10146,7 @@ public:
   //   where LR is the result of the usual arithmetic conversions
   //   between types L and R.
   void addBinaryBitwiseArithmeticOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstPromotedIntegralType;
@@ -10284,7 +10311,7 @@ public:
   //        VQ L&      operator+=(VQ L&, R);
   //        VQ L&      operator-=(VQ L&, R);
   void addAssignmentArithmeticOverloads(bool isEqualOp) {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = 0; Left < NumArithmeticTypes; ++Left) {
@@ -10338,7 +10365,7 @@ public:
   //        VQ L&       operator^=(VQ L&, R);
   //        VQ L&       operator|=(VQ L&, R);
   void addAssignmentIntegralOverloads() {
-    if (!HasArithmeticOrEnumeralCandidateType)
+    if (!ArithmeticCandidatesMayBeViable)
       return;
 
     for (unsigned Left = FirstIntegralType; Left < LastIntegralType; ++Left) {
