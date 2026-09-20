@@ -23,11 +23,68 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  premerge-checks-linux:
-    name: Build and Test Linux
+  # Computes which projects/check-targets to build and test on the
+  # self-hosted macOS runners.
+  premerge-compute-macos:
+    name: Compute Projects
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      macos-projects: ${{ steps.vars.outputs.macos-projects }}
+      macos-check-targets: ${{ steps.vars.outputs.macos-check-targets }}
+      macos-runtimes: ${{ steps.vars.outputs.macos-runtimes }}
+      macos-runtimes-check-targets: ${{ steps.vars.outputs.macos-runtimes-check-targets }}
+      Linux-values: ${{ steps.vars.outputs.Linux-values }}
+      Windows-values: ${{ steps.vars.outputs.Windows-values }}
+      Darwin-values: ${{ steps.vars.outputs.Darwin-values }}
+      
+    steps:
+      - name: Checkout LLVM (sparse)
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          sparse-checkout: .ci
+          sparse-checkout-cone-mode: false
+      - name: Get Changed Files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' > /tmp/changed_files.txt
+          else
+            gh api "repos/${REPO}/compare/${{ github.event.before }}...${{ github.event.after }}" --paginate --jq '.files[].filename' > /tmp/changed_files.txt
+          fi
+      - name: Compute Projects
+        id: vars
+        run: |
+          for p in Linux Windows Darwin; do
+            echo $p-values=$(python3 .ci/compute_projects.py $p < /tmp/changed_files.txt) >> $GITHUB_OUTPUT
+          done
+
+#          echo "Building projects: ${projects_to_build}"
+#          echo "Running project checks targets: ${project_check_targets}"
+#          echo "Building runtimes: ${runtimes_to_build}"
+#          echo "Running runtimes checks targets: ${runtimes_check_targets}"
+#          echo "Running runtimes checks requiring reconfiguring targets: ${runtimes_check_targets_needs_reconfig}"
+
+#          echo "macos-projects=${projects_to_build}" >> $GITHUB_OUTPUT
+#          echo "macos-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
+#          echo "macos-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
+#          echo "macos-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
+  premerge-checks-linux:
+    name: Build and Test Linux
+    needs: premerge-compute
+    if: >-
+        github.repository_owner == 'llvm' &&
+        (github.event_name != 'pull_request' || github.event.action != 'closed') &&
+        fromJSON(needs.premerge-compute.outputs.Linux-values).projects_to_build != ''
     runs-on: llvm-premerge-linux-runners
     defaults:
       run:
@@ -40,22 +97,18 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
-          fetch-depth: 2
       - name: Build and Test
         timeout-minutes: 120
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          projects_to_build: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).projects_to_build }}
+          project_check_targets: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).project_check_targets }}
+          runtimes_to_build: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).runtimes_to_build }}
+          runtimes_check_targets: ${{ fromJSON(needs.premerge-compute-outputs.Linux-values).runtimes_check_targets }}
+          runtimes_check_targets_needs_reconfig: ${{ fromJSON(needs.premerge-compute-outputs.Linux-values).runtimes_check_targets_needs_reconfig}}
+
         run: |
-          git config --global --add safe.directory '*'
-
-          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
-
-          if [[ "${projects_to_build}" == "" ]]; then
-            echo "No projects to build"
-            exit 0
-          fi
-
           echo "Building projects: ${projects_to_build}"
           echo "Running project checks targets: ${project_check_targets}"
           echo "Building runtimes: ${runtimes_to_build}"
@@ -104,6 +157,7 @@ jobs:
 
   premerge-checks-windows:
     name: Build and Test Windows
+    needs: premerge-compute
     if: >-
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
@@ -173,65 +227,10 @@ jobs:
           path: |
             comments-Windows-AMD64
 
-  # Computes which projects/check-targets to build and test on the
-  # self-hosted macOS runners. This job intentionally runs on a
-  # GitHub-hosted runner rather than a self-hosted one, since self-hosted
-  # macOS capacity is limited and shouldn't be spent just to compute what
-  # to build. Its outputs feed premerge-check-macos below, which does the
-  # actual build/test on the self-hosted runners, so changes here directly
-  # affect what runs there.
-  premerge-compute-macos:
-    name: Compute macOS Projects
-    if: >-
-        github.repository_owner == 'llvm' &&
-        (github.event_name != 'pull_request' || github.event.action != 'closed')
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      macos-projects: ${{ steps.vars.outputs.macos-projects }}
-      macos-check-targets: ${{ steps.vars.outputs.macos-check-targets }}
-      macos-runtimes: ${{ steps.vars.outputs.macos-runtimes }}
-      macos-runtimes-check-targets: ${{ steps.vars.outputs.macos-runtimes-check-targets }}
-    steps:
-      - name: Checkout LLVM (sparse)
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          sparse-checkout: .ci
-          sparse-checkout-cone-mode: false
-      - name: Get Changed Files
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' > /tmp/changed_files.txt
-          else
-            gh api "repos/${REPO}/compare/${{ github.event.before }}...${{ github.event.after }}" --paginate --jq '.files[].filename' > /tmp/changed_files.txt
-          fi
-      - name: Compute Projects
-        id: vars
-        run: |
-          python3 .ci/compute_projects.py Darwin < /tmp/changed_files.txt > /tmp/env_vars.sh
-          source /tmp/env_vars.sh
-
-          echo "Building projects: ${projects_to_build}"
-          echo "Running project checks targets: ${project_check_targets}"
-          echo "Building runtimes: ${runtimes_to_build}"
-          echo "Running runtimes checks targets: ${runtimes_check_targets}"
-          echo "Running runtimes checks requiring reconfiguring targets: ${runtimes_check_targets_needs_reconfig}"
-
-          echo "macos-projects=${projects_to_build}" >> $GITHUB_OUTPUT
-          echo "macos-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
-          echo "macos-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
-          echo "macos-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
 
   premerge-check-macos:
     name: Build and Test macOS arm64
-    needs: premerge-compute-macos
+    needs: premerge-compute
     runs-on: [self-hosted, macOS, ARM64, apple-runners]
     # Skip the self-hosted runner entirely if there is nothing to build,
     # rather than tying up a runner slot for a no-op run.
