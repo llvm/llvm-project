@@ -46,6 +46,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -16595,7 +16596,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *ClassDecl) {
     if (VD->getInit() && !VD->getInit()->isValueDependent())
       HasConstantInit = VD->evaluateValue();
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr() &&
+    sema::EvalProxy SProxy(*this);
+    if (!VD->evaluateConstantDestruction(Notes, SProxy) && VD->isConstexpr() &&
         HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
@@ -18012,8 +18014,10 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
   Expr::EvalResult Status;
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Status.Diag = &Notes;
+  sema::EvalProxy SProxy(SemaRef);
   if (!Message->EvaluateCharRangeAsString(Result, EvaluatedSize.get(),
-                                          EvaluatedData.get(), Ctx, Status) ||
+                                          EvaluatedData.get(), Ctx, SProxy,
+                                          Status) ||
       !Notes.empty()) {
     SemaRef.Diag(Message->getBeginLoc(),
                  ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
