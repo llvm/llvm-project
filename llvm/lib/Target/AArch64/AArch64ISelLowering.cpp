@@ -29493,13 +29493,130 @@ static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
                      AnyPred, Default, LastB.getOperand(1));
 }
 
+// Whether an inner CSEL may be substituted into \p Arm. Both arms of a CSEL are
+// evaluated whatever the condition, so the expression has to be safe to
+// evaluate unconditionally: no immediate UB such as division by zero. Poison is
+// fine; UB is not.
+//
+// Restricting to a single result with exactly two operands is what lets the
+// caller rebuild the expression from one value type and an operand pair.
+// isBinOp alone is not enough for that: it also admits multi-result nodes such
+// as UADDO and SMUL_LOHI, and ADDE, which takes three operands.
+static bool isFoldableCSELArm(SDValue Arm, const SelectionDAG &DAG) {
+  if (Arm->getNumValues() != 1 || Arm.getNumOperands() != 2)
+    return false;
+  unsigned Opc = Arm.getOpcode();
+  return DAG.getTargetLoweringInfo().isBinOp(Opc) &&
+         DAG.isSafeToSpeculativelyExecute(Opc);
+}
+
 // Optimize CSEL instructions
+// Inside an arm of `CSEL(TV, FV, CC, Flags)`, an inner `CSEL(A, B, CCi, Flags)`
+// reading the very same flags value is known to be A or B, depending on how CCi
+// relates to CC. Substituting it there breaks the arm's dependency on the inner
+// CSEL.
+//
+//   t37 = CSEL a, b, EQ, F        ; the read
+//   t13 = add t37, 1
+//   t36 = CSEL t13, a, EQ, F      ; t37 is a here, so t13 is a+1
+//
+// After substitution the arm is `add a, 1`, which instruction selection folds
+// into CSINC a, a -- i.e. CINC -- so the duplicated add costs nothing.
+//
+// Requiring operand identity on the flags operand is what makes this safe: the
+// dependence is explicit in the DAG, so there is no need to scan for an
+// intervening redefinition of NZCV.
+static SDValue foldInnerCSELInArms(SDNode *N, SelectionDAG &DAG) {
+  SDValue Flags = N->getOperand(3);
+  auto CC = static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+
+  // getInvertedCondCode only flips the low bit, so it maps AL to NV, but both
+  // of those are always true on AArch64. Treating them as complementary would
+  // pick the wrong operand, so bail out as getCSETCondCode does.
+  if (CC == AArch64CC::AL || CC == AArch64CC::NV)
+    return SDValue();
+
+  // Which arm of an inner CSEL on the same flags is live inside outer arm
+  // \p ArmNo: in arm 0 the outer condition holds, in arm 1 it does not.
+  auto innerArmIn = [&](SDValue Inner, unsigned ArmNo) -> SDValue {
+    if (Inner.getOpcode() != AArch64ISD::CSEL || Inner.getOperand(3) != Flags)
+      return SDValue();
+    auto ICC =
+        static_cast<AArch64CC::CondCode>(Inner->getConstantOperandVal(2));
+    bool TakesTrueArm;
+    if (ICC == CC)
+      TakesTrueArm = (ArmNo == 0);
+    else if (ICC == AArch64CC::getInvertedCondCode(CC))
+      TakesTrueArm = (ArmNo != 0);
+    else
+      return SDValue();
+    return Inner.getOperand(TakesTrueArm ? 0 : 1);
+  };
+
+  // The arm may be the inner CSEL directly, with no arithmetic in between. This
+  // creates no new nodes -- it only forwards one of the inner CSEL's operands
+  // -- so it needs no cost guard, and it lets the `CSEL x, x, cc -> x` rule
+  // above finish the job. CNEG/CSNEG are CSELs over a negation, so chained
+  // absolute values reach here and collapse.
+  for (unsigned ArmNo : {0, 1}) {
+    SDValue Repl = innerArmIn(N->getOperand(ArmNo), ArmNo);
+    if (!Repl || Repl == N->getOperand(ArmNo))
+      continue;
+    SmallVector<SDValue, 4> NewOps(N->op_values());
+    NewOps[ArmNo] = Repl;
+    return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+  }
+
+  for (unsigned ArmNo : {0, 1}) {
+    SDValue Arm = N->getOperand(ArmNo);
+    if (!isFoldableCSELArm(Arm, DAG))
+      continue;
+    unsigned Opc = Arm.getOpcode();
+    // A copy of the arm is free when instruction selection can absorb it back
+    // into the CSEL that consumes it, which it does for exactly the three
+    // shapes the CSINC/CSINV/CSNEG patterns match: inc is (add x, 1), not is
+    // (xor x, -1) and ineg is (sub 0, x). Any other constant -- add x, 1000 --
+    // stays a real instruction in every copy, so restrict duplication to a
+    // single use there.
+    bool FoldsIntoSelect =
+        (Opc == ISD::ADD && isOneConstant(Arm.getOperand(1))) ||
+        (Opc == ISD::XOR && isAllOnesConstant(Arm.getOperand(1))) ||
+        (Opc == ISD::SUB && isNullConstant(Arm.getOperand(0)));
+    if (!Arm.hasOneUse() && !FoldsIntoSelect)
+      continue;
+
+    for (unsigned OpNo : {0, 1}) {
+      SDValue Inner = Arm.getOperand(OpNo);
+      SDValue Repl = innerArmIn(Inner, ArmNo);
+      if (!Repl || Repl == Inner)
+        continue;
+      SmallVector<SDValue, 2> Ops(Arm->op_values());
+      Ops[OpNo] = Repl;
+      // The substituted value only equals the inner CSEL under the outer
+      // condition, but the rebuilt arm is still evaluated unconditionally, so a
+      // poison-generating flag justified for the original operand need not hold
+      // for the copy.
+      SDNodeFlags ArmFlags = Arm->getFlags();
+      ArmFlags &= SDNodeFlags(~unsigned(SDNodeFlags::PoisonGeneratingFlags));
+      SDValue NewArm =
+          DAG.getNode(Opc, SDLoc(Arm), Arm.getValueType(), Ops, ArmFlags);
+      SmallVector<SDValue, 4> NewOps(N->op_values());
+      NewOps[ArmNo] = NewArm;
+      return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), N->getVTList(), NewOps);
+    }
+  }
+  return SDValue();
+}
+
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   SelectionDAG &DAG) {
   // CSEL x, x, cc -> x
   if (N->getOperand(0) == N->getOperand(1))
     return N->getOperand(0);
+
+  if (SDValue R = foldInnerCSELInArms(N, DAG))
+    return R;
 
   if (SDValue R = foldCSELOfCSEL(N, DAG))
     return R;
