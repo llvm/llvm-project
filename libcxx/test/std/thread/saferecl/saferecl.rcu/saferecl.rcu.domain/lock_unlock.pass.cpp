@@ -13,9 +13,11 @@
 // bool try_lock() noexcept;
 // void unlock() noexcept;
 
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <chrono>
+#include <concept>
 #include <cstddef>
 #include <latch>
 #include <rcu>
