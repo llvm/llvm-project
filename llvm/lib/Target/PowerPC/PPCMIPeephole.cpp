@@ -1016,13 +1016,11 @@ bool PPCMIPeephole::simplifyCode() {
         if (!NarrowReg.isVirtual())
           break;
 
-        unsigned NarrowSubReg = MI.getOperand(1).getSubReg();
-
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
         unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if ((SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX)) {
+        if (SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
 
@@ -1092,9 +1090,10 @@ bool PPCMIPeephole::simplifyCode() {
           // is eliminated.
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
 
+          unsigned NarrowSubReg = MI.getOperand(1).getSubReg();
           if (NarrowSubReg) {
             // The input reads a subregister of a wider register which we can
-            // use directly.
+            // use directly by dropping the subreg.
             assert(NarrowSubReg == PPC::sub_32 &&
                    "EXTSW_32_64 input must read the sub_32 subregister");
             BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
