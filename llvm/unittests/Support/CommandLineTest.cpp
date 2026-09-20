@@ -1666,6 +1666,35 @@ TEST_F(GetOptionWidthTest,
             ExpectedStrSize);
 }
 
+TEST(CommandLineTest, BoolValues) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptF("f", cl::init(true));
+  StackOption<bool> OptFlag("flag");
+
+  const char *args1[] = {"prog", "-flag", "--f=false"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args1, StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(OptFlag);
+  EXPECT_FALSE(OptF);
+  cl::ResetAllOptionOccurrences();
+
+  // An empty value is not the same as no value.
+  const char *args2[] = {"prog", "-flag="};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args2, StringRef(), &llvm::nulls()));
+  cl::ResetAllOptionOccurrences();
+
+  const char *args3[] = {"prog", "-flag=yes"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args3, StringRef(), &llvm::nulls()));
+  cl::ResetAllOptionOccurrences();
+
+  const char *args4[] = {"prog", "-flag=True"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args4, StringRef(), &llvm::nulls()));
+}
+
 TEST(CommandLineTest, PrefixOptions) {
   cl::ResetCommandLineParser();
 
