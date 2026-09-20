@@ -37,7 +37,10 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
@@ -410,9 +413,37 @@ TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
   return new X86PassConfig(*this, PM);
 }
 
+static void diagnoseX86FPABI(const Function &F, const X86Subtarget &ST) {
+  // A soft-float ABI has no SSE-register requirement to violate, and only the
+  // 64-bit ABI returns scalar FP in SSE registers. When x87 is available the
+  // illegal FP return is diagnosed during lowering instead.
+  if (ST.useSoftFloat() || !ST.is64Bit() || ST.hasX87())
+    return;
+
+  LLVMContext &Ctx = F.getContext();
+  auto CheckReturnType = [&](Type *RetTy, const DiagnosticLocation &Loc) {
+    if (!ST.hasSSE1() && RetTy->isFloatTy())
+      Ctx.diagnose(DiagnosticInfoUnsupported(
+          F, "SSE register return with SSE disabled", Loc));
+    else if (!ST.hasSSE2() && (RetTy->isDoubleTy() || RetTy->is16bitFPTy()))
+      Ctx.diagnose(DiagnosticInfoUnsupported(
+          F, "SSE2 register return with SSE2 disabled", Loc));
+  };
+
+  CheckReturnType(F.getReturnType(), DiagnosticLocation(F.getSubprogram()));
+  for (const Instruction &I : instructions(F)) {
+    const auto *CB = dyn_cast<CallBase>(&I);
+    if (!CB || CB->isInlineAsm() ||
+        (CB->getCalledFunction() && CB->getCalledFunction()->isIntrinsic()))
+      continue;
+    CheckReturnType(CB->getFunctionType()->getReturnType(), CB->getDebugLoc());
+  }
+}
+
 MachineFunctionInfo *X86TargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
+  diagnoseX86FPABI(F, *static_cast<const X86Subtarget *>(STI));
   return X86MachineFunctionInfo::create<X86MachineFunctionInfo>(Allocator, F,
                                                                 STI);
 }
