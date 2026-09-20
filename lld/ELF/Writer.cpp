@@ -2593,7 +2593,7 @@ static uint64_t computeFileOffset(Ctx &ctx, OutputSection *os, uint64_t off,
 
   // If the section is not in a PT_LOAD, we just have to align it.
   if (!os->ptLoad)
-     return alignToPowerOf2(off, os->addralign);
+    return alignToPowerOf2(off, os->addralign);
 
   // An empty section after a NOBITS section in the same PT_LOAD has no file
   // contents either. Skip the formula below, which would reserve file bytes
