@@ -2478,6 +2478,7 @@ module std {
       }
       module transform_scan {
         header "__pstl/cpu_algos/transform_scan.h"
+      }
       module uninitialized_algorithms {
         header "__pstl/cpu_algos/uninitialized_algorithms.h"
       }
