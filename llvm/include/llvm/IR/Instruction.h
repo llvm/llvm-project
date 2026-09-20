@@ -1105,6 +1105,10 @@ private:
   friend class BasicBlock; // For renumbering and DebugMarker.
   friend class DbgMarker;  // For DebugMarker.
 
+  /// Overrides ilist-provided setParent to notify per-function
+  /// InstructionListeners when this instruction is removed.
+  void setParent(BasicBlock *P);
+
   // Shadow Value::setValueSubclassData with a private forwarding method so that
   // subclasses cannot accidentally use it.
   void setValueSubclassData(unsigned short D) {
