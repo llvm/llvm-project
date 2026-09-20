@@ -10,4 +10,4 @@
 
 #include "src/math/rintf16.h"
 
-LIST_RINT_TESTS(float16, LIBC_NAMESPACE::rintf16)
+LIST_RINT_TESTS(Rintf16, float16, LIBC_NAMESPACE::rintf16)
