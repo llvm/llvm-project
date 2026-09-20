@@ -13,17 +13,9 @@ class TestSafeFuncCalls(TestBase):
     def test_with_python_api(self):
         """Test function call thread safety."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-        self.main_source_spec = lldb.SBFileSpec("main.c")
-        break1 = target.BreakpointCreateByName("stopper", "a.out")
-        self.assertTrue(break1, VALID_BREAKPOINT)
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
-        self.assertEqual(len(threads), 1, "Failed to stop at breakpoint 1.")
+        _, process, _, _ = lldbutil.run_to_name_breakpoint(
+            self, "stopper", bkpt_module="a.out"
+        )
 
         self.assertEqual(
             process.GetNumThreads(),

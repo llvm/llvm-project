@@ -12,30 +12,34 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-const char *RegisterEHFrameSectionAllocActionName =
-    "llvm_orc_registerEHFrameAllocAction";
-const char *DeregisterEHFrameSectionAllocActionName =
-    "llvm_orc_deregisterEHFrameAllocAction";
+const SymbolNameSpec RegisterEHFrameSectionAllocActionName =
+    SymbolNameSpec::verbatim("llvm_orc_registerEHFrameAllocAction");
+const SymbolNameSpec DeregisterEHFrameSectionAllocActionName =
+    SymbolNameSpec::verbatim("llvm_orc_deregisterEHFrameAllocAction");
 
-const char *RegisterJITLoaderGDBAllocActionName =
-    "orc_rt_ci_aa_sps_GDBJITRegistrar_register";
-const char *DeregisterJITLoaderGDBAllocActionName =
-    "orc_rt_ci_aa_sps_GDBJITRegistrar_deregister";
+const SymbolNameSpec RegisterJITLoaderGDBAllocActionName =
+    SymbolNameSpec::verbatim("orc_rt_ci_aa_sps_GDBJITRegistrar_register");
+const SymbolNameSpec DeregisterJITLoaderGDBAllocActionName =
+    SymbolNameSpec::verbatim("orc_rt_ci_aa_sps_GDBJITRegistrar_deregister");
 
-const char *const DispatchName = "__orc_rt_jit_dispatch";
-const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
+const SymbolNameSpec DispatchName =
+    SymbolNameSpec::verbatim("__orc_rt_jit_dispatch");
+const SymbolNameSpec DispatchCtxName =
+    SymbolNameSpec::verbatim("__orc_rt_jit_dispatch_ctx");
 
 const MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
-        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections",
-        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections"};
+        SymbolNameSpec::verbatim(
+            "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections"),
+        SymbolNameSpec::verbatim(
+            "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections")};
 
 } // end namespace rt
 namespace rt_alt {
-const char *UnwindInfoManagerRegisterActionName =
-    "orc_rt_alt_UnwindInfoManager_register";
-const char *UnwindInfoManagerDeregisterActionName =
-    "orc_rt_alt_UnwindInfoManager_deregister";
+const SymbolNameSpec UnwindInfoManagerRegisterActionName =
+    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_register");
+const SymbolNameSpec UnwindInfoManagerDeregisterActionName =
+    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_deregister");
 
 } // end namespace rt_alt
 } // end namespace orc
