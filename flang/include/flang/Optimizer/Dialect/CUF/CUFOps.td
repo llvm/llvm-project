@@ -68,7 +68,7 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
-def cuf_FreeOp : cuf_Op<"free", [MemoryEffects<[MemFree]>]> {
+def cuf_FreeOp : cuf_Op<"free", []> {
   let summary = "Free a device allocated object";
 
   let description = [{
