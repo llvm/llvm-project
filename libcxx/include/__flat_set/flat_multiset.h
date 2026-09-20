@@ -76,7 +76,7 @@ class flat_multiset {
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>,
                 "The stored elements' key type must match the underlying key container's value_type.");
-  static_assert(!__is_vector_bool_v<_KeyContainer>,
+  static_assert(!__is_std_vector_bool_v<_KeyContainer>,
                 "The underlying key container must not be std::vector<bool>, which is not a sequence container.");
 
 public:
