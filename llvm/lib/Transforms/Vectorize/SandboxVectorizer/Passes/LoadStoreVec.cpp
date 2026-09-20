@@ -82,7 +82,46 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
 }
 
-Value *LoadStoreVec::createConstantVector(BndlRef<Value *> Operands) {
+/// Reinterprets the bits of \p C as \p DestTy, which must have the same size
+/// in \p DL. Goes through an integer of that size using ptrtoint / inttoptr /
+/// bitcast. \Returns nullptr if the result does not fold to a constant or if a
+/// non-integral pointer is involved.
+static Constant *reinterpretConstant(Constant *C, Type *DestTy,
+                                     BBIterator WhereIt, Context &Ctx,
+                                     const DataLayout &DL) {
+  Type *SrcTy = C->getType();
+  if (SrcTy == DestTy)
+    return C;
+  auto IsNonIntegralPtr = [&DL](Type *Ty) {
+    return Ty->isPointerTy() &&
+           DL.isNonIntegralAddressSpace(Ty->getPointerAddressSpace());
+  };
+  if (IsNonIntegralPtr(SrcTy) || IsNonIntegralPtr(DestTy))
+    return nullptr;
+  auto Cast = [&](Constant *V, Type *To,
+                  Instruction::Opcode Opc) -> Constant * {
+    if (V == nullptr)
+      return nullptr;
+    // Casts of constants fold, so nothing is inserted at WhereIt.
+    return dyn_cast<Constant>(
+        CastInst::create(To, Opc, V, WhereIt, Ctx, "VCast"));
+  };
+  Constant *AsInt = C;
+  if (!SrcTy->isIntegerTy()) {
+    Type *IntTy = IntegerType::get(Ctx, Utils::getNumBits(SrcTy, DL));
+    AsInt = Cast(C, IntTy,
+                 SrcTy->isPointerTy() ? Instruction::Opcode::PtrToInt
+                                      : Instruction::Opcode::BitCast);
+  }
+  if (DestTy->isIntegerTy())
+    return AsInt;
+  return Cast(AsInt, DestTy,
+              DestTy->isPointerTy() ? Instruction::Opcode::IntToPtr
+                                    : Instruction::Opcode::BitCast);
+}
+
+Value *LoadStoreVec::createConstantVector(ArrayRef<Value *> Operands,
+                                          Type *LaneTy, BBIterator WhereIt) {
   SmallVector<Constant *, 8> Constants;
   Constants.reserve(Operands.size());
   for (Value *Op : Operands) {
@@ -113,11 +152,61 @@ Value *LoadStoreVec::createConstantVector(BndlRef<Value *> Operands) {
                              ->getElementCount()
                              .getFixedValue()))
         Constants.push_back(Elm);
+    } else if (isa<ConstantPointerNull>(COp) &&
+               isa<VectorType>(COp->getType())) {
+      auto *VecTy = cast<FixedVectorType>(COp->getType());
+      auto *Elm =
+          ConstantPointerNull::get(cast<PointerType>(VecTy->getElementType()));
+      for ([[maybe_unused]] auto Cnt : seq<unsigned>(VecTy->getNumElements()))
+        Constants.push_back(Elm);
+    } else if (isa<VectorType>(COp->getType())) {
+      // TODO: Flatten the remaining vector constants, e.g. undef or poison.
+      return nullptr;
     } else {
       Constants.push_back(COp);
     }
   }
-  return ConstantVector::get(Constants);
+
+  // The stores may mix element types, e.g. i32 and float, in which case each
+  // constant has to be reinterpreted as the lane type. The lane type is the
+  // narrowest element type (see VecUtils::getCombinedVectorTypeFor()), so a
+  // wider constant, like an i64 in an <N x i32>, spans several lanes and is
+  // split in memory order.
+  unsigned LaneBits = Utils::getNumBits(LaneTy, *DL);
+  SmallVector<Constant *, 8> Lanes;
+  Lanes.reserve(Constants.size());
+  for (Constant *C : Constants) {
+    unsigned Bits = Utils::getNumBits(C->getType(), *DL);
+    if (Bits < LaneBits || Bits % LaneBits != 0)
+      return nullptr;
+
+    if (Bits == LaneBits) {
+      Constant *Lane = reinterpretConstant(C, LaneTy, WhereIt, *Ctx, *DL);
+      if (Lane == nullptr)
+        return nullptr;
+      Lanes.push_back(Lane);
+      continue;
+    }
+
+    // Only integer bit patterns can be split, so this bails out on constants
+    // like the address of a global.
+    auto *CI = dyn_cast_or_null<ConstantInt>(reinterpretConstant(
+        C, IntegerType::get(*Ctx, Bits), WhereIt, *Ctx, *DL));
+    if (CI == nullptr)
+      return nullptr;
+    const APInt &Val = CI->getValue();
+    unsigned NumLanes = Bits / LaneBits;
+    for (unsigned Idx : seq<unsigned>(NumLanes)) {
+      unsigned Part = DL->isLittleEndian() ? Idx : NumLanes - 1 - Idx;
+      Constant *Piece =
+          ConstantInt::get(*Ctx, Val.extractBits(LaneBits, Part * LaneBits));
+      Constant *Lane = reinterpretConstant(Piece, LaneTy, WhereIt, *Ctx, *DL);
+      if (Lane == nullptr)
+        return nullptr;
+      Lanes.push_back(Lane);
+    }
+  }
+  return ConstantVector::get(Lanes);
 }
 
 bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
@@ -168,7 +257,14 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
       return false;
     }
   } else if (AllConstants) {
-    VecOp = createConstantVector(Operands);
+    auto *VecTy =
+        cast<FixedVectorType>(VecUtils::getCombinedVectorTypeFor(Stores, *DL));
+    VecOp = createConstantVector(Operands, VecTy->getElementType(),
+                                 VecUtils::getLowest(Stores)->getIterator());
+    if (VecOp == nullptr) {
+      Ctx->accept();
+      return false;
+    }
   }
 
   // Generate vector store.
