@@ -1119,7 +1119,9 @@ public:
     return 128;
   }
 
-  virtual bool isLegalToVectorizeLoad(LoadInst *LI) const { return true; }
+  virtual bool isLegalToVectorizeLoad(LoadInst *LI) const {
+    return LI->isSimple();
+  }
 
   virtual bool isLegalToVectorizeStore(StoreInst *SI) const { return true; }
 
@@ -1133,6 +1135,10 @@ public:
                                             Align Alignment,
                                             unsigned AddrSpace) const {
     return true;
+  }
+
+  virtual unsigned getMaxAtomicVectorSizeInBits(unsigned AddrSpace) const {
+    return 0;
   }
 
   virtual bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
