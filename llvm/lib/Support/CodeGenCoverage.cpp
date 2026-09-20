@@ -13,7 +13,6 @@
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
@@ -85,7 +84,7 @@ bool CodeGenCoverage::emit(StringRef CoveragePrefix,
     // manage it between multiple processes. Use the process ID to ensure no
     // more than one process is ever writing to the same file at the same time.
     std::string CoverageFilename =
-        formatv("{0}{1}", CoveragePrefix, sys::Process::getProcessId()).str();
+        (CoveragePrefix + Twine(sys::Process::getProcessId())).str();
 
     std::error_code EC;
     sys::fs::OpenFlags OpenFlags = sys::fs::OF_Append;

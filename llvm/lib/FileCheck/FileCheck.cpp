@@ -1847,11 +1847,10 @@ bool FileCheck::readCheckFile(
   for (StringRef PatternString : Req.ImplicitCheckNot) {
     // Create a buffer with fake command line content in order to display the
     // command line option responsible for the specific implicit CHECK-NOT.
-    std::string Prefix = "-implicit-check-not='";
-    std::string Suffix = "'";
+    StringRef Prefix = "-implicit-check-not='";
+    StringRef Suffix = "'";
     std::unique_ptr<MemoryBuffer> CmdLine = MemoryBuffer::getMemBufferCopy(
-        formatv("{0}{1}{2}", Prefix, PatternString, Suffix).str(),
-        "command line");
+        (Prefix + PatternString + Suffix).str(), "command line");
 
     StringRef PatternInBuffer =
         CmdLine->getBuffer().substr(Prefix.size(), PatternString.size());
@@ -2598,7 +2597,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // format as in the input file to be able to reuse
       // parseNumericSubstitutionBlock.
       CmdlineDefsDiag +=
-          formatv("{0}{1} (parsed as: [[", DefPrefix, CmdlineDef).str();
+          (Twine(DefPrefix) + CmdlineDef + " (parsed as: [[").str();
       std::string SubstitutionStr = std::string(CmdlineDef);
       SubstitutionStr[EqIdx] = ':';
       CmdlineDefsIndices.push_back(

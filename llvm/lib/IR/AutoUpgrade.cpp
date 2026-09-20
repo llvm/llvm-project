@@ -7873,7 +7873,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   // to fix more IR than it breaks.
   // Intel MCU is an exception and uses 4-byte-alignment.
   if (!T.isOSIAMCU()) {
-    std::string I128 = "-i128:128";
+    StringRef I128 = "-i128:128";
     if (StringRef Ref = Res; !Ref.contains(I128)) {
       SmallVector<StringRef, 4> Groups;
       Regex R("^(e(-[mpi][^-]*)*)((-[^mpi][^-]*)*)$");
