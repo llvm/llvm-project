@@ -566,14 +566,10 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   // before their children in the worklist and process the worklist in reverse
   // order.
   SmallVector<BasicBlock *, 16> Worklist =
-      collectChildrenInLoop(DT, N, CurLoop);
+      collectDirectChildrenInLoop(DT, N, LI, CurLoop);
 
   bool Changed = false;
   for (BasicBlock *BB : reverse(Worklist)) {
-    // subloop (which would already have been processed).
-    if (inSubLoop(BB, CurLoop, LI))
-      continue;
-
     for (BasicBlock::iterator II = BB->end(); II != BB->begin();) {
       Instruction &I = *--II;
 
