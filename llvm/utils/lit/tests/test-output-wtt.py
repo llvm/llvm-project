@@ -124,9 +124,9 @@
 # CHECK-NEXT: </WTT-Logger>
 
 # Filter nonmembers and selected-but-unsupported tests have no WTT test entries.
-# RUN: %{lit} --filter-requires=Half --wtt-output %t.filtered.wtl %S/Inputs/filter-requires/half.txt %S/Inputs/filter-requires/base.txt %S/Inputs/filter-requires/unsupported.txt %S/Inputs/filter-requires/xfail.txt
+# RUN: %{lit} --filter-requires=Half --wtt-output %t.filtered.wtl %S/Inputs/filter-requires/half.txt %S/Inputs/filter-requires/no-requires.txt %S/Inputs/filter-requires/unsupported.txt %S/Inputs/filter-requires/xfail.txt
 # RUN: %{python} -c "import io; io.open(r'%t.filtered.utf8','w',encoding='utf-8').write(io.open(r'%t.filtered.wtl',encoding='utf-16').read())"
-# RUN: FileCheck %s --check-prefix=FILTERED --implicit-check-not=base.txt --implicit-check-not=unsupported.txt --implicit-check-not="<StartTest" --implicit-check-not="<EndTest" < %t.filtered.utf8
+# RUN: FileCheck %s --check-prefix=FILTERED --implicit-check-not=no-requires.txt --implicit-check-not=unsupported.txt --implicit-check-not="<StartTest" --implicit-check-not="<EndTest" < %t.filtered.utf8
 # FILTERED: <StartTest Title="filter-requires :: half.txt"
 # FILTERED: <EndTest Title="filter-requires :: half.txt" TUID="" Result="Pass"
 # FILTERED: <StartTest Title="filter-requires :: xfail.txt"
@@ -144,8 +144,13 @@
 # ATTEMPTED-FAIL: <PFRollup Total="1" Passed="0" Failed="1"
 
 # An entirely excluded/unsupported run must not manufacture passing tests.
-# RUN: %{lit} --filter-requires=Half --wtt-output %t.empty.wtl %S/Inputs/filter-requires/base.txt %S/Inputs/filter-requires/unsupported.txt
+# RUN: %{lit} --filter-requires=Half --wtt-output %t.empty.wtl %S/Inputs/filter-requires/no-requires.txt %S/Inputs/filter-requires/unsupported.txt
 # RUN: %{python} -c "import io; io.open(r'%t.empty.utf8','w',encoding='utf-8').write(io.open(r'%t.empty.wtl',encoding='utf-16').read())"
-# RUN: FileCheck %s --check-prefix=EMPTY --implicit-check-not="<StartTest" --implicit-check-not="<EndTest" --implicit-check-not=base.txt --implicit-check-not=unsupported.txt < %t.empty.utf8
+# RUN: FileCheck %s --check-prefix=EMPTY --implicit-check-not="<StartTest" --implicit-check-not="<EndTest" --implicit-check-not=no-requires.txt --implicit-check-not=unsupported.txt < %t.empty.utf8
 # EMPTY: 2 test(s) were not run (1 excluded, 1 unsupported) and are omitted from the pass/fail results.
 # EMPTY: <PFRollup Total="0" Passed="0" Failed="0"
+
+# An explicit empty selector also omits selected-but-unsupported tests.
+# RUN: %{lit} --filter-requires="" --unsupported=no-requires.txt --wtt-output %t.no-requires.wtl %S/Inputs/filter-requires/no-requires.txt %S/Inputs/filter-requires/true.txt
+# RUN: %{python} -c "import io; io.open(r'%t.no-requires.utf8','w',encoding='utf-8').write(io.open(r'%t.no-requires.wtl',encoding='utf-16').read())"
+# RUN: FileCheck %s --check-prefix=EMPTY --implicit-check-not="<StartTest" --implicit-check-not="<EndTest" --implicit-check-not=no-requires.txt --implicit-check-not=true.txt < %t.no-requires.utf8

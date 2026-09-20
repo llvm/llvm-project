@@ -48,8 +48,10 @@ class FilterRequires:
 
     def __init__(self, expression):
         self.expression = expression
-        self.is_base = expression.strip() == "Base"
-        self.combinations = None if self.is_base else self._normalize([expression])
+        self.selects_no_requirements = expression == ""
+        self.combinations = (
+            None if self.selects_no_requirements else self._normalize([expression])
+        )
 
     def __str__(self):
         return self.expression
@@ -124,7 +126,7 @@ class FilterRequires:
         return result
 
     def matches(self, requirements):
-        if self.is_base:
+        if self.selects_no_requirements:
             return not requirements
         if not requirements:
             return False

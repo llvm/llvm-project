@@ -1,10 +1,10 @@
 # RUN: %{lit} -a --filter-requires=Half --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=HALF
 # HALF: EXCLUDED{{:}} filter-requires :: and.txt
-# HALF: EXCLUDED{{:}} filter-requires :: base.txt
 # HALF: PASS: filter-requires :: features.txt
 # HALF: PASS: filter-requires :: half.txt
 # HALF: EXCLUDED{{:}} filter-requires :: negative.txt
 # HALF: EXCLUDED{{:}} filter-requires :: nested.txt
+# HALF: EXCLUDED{{:}} filter-requires :: no-requires.txt
 # HALF: PASS: filter-requires :: or.txt
 # HALF: EXCLUDED{{:}} filter-requires :: true.txt
 # HALF: UNSUPPORTED{{:}} filter-requires :: unsupported.txt
@@ -33,22 +33,22 @@
 # NESTED: PASS: filter-requires :: nested.txt
 # NESTED: EXCLUDED{{:}} filter-requires :: or.txt
 
-# RUN: %{lit} -a --filter-requires=Base %S/Inputs/filter-requires | FileCheck %s --check-prefix=BASE
-# BASE: PASS: filter-requires :: base.txt
-# BASE: EXCLUDED{{:}} filter-requires :: half.txt
-# BASE: EXCLUDED{{:}} filter-requires :: true.txt
-# BASE: Passed{{ *}}: 1
+# RUN: %{lit} -a --filter-requires="" %S/Inputs/filter-requires | FileCheck %s --check-prefix=NO-REQS
+# NO-REQS: EXCLUDED{{:}} filter-requires :: half.txt
+# NO-REQS: PASS: filter-requires :: no-requires.txt
+# NO-REQS: EXCLUDED{{:}} filter-requires :: true.txt
+# NO-REQS: Passed{{ *}}: 1
 
 # RUN: %{lit} -a --filter-requires=true --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=TRUE
-# TRUE: EXCLUDED{{:}} filter-requires :: base.txt
 # TRUE: EXCLUDED{{:}} filter-requires :: half.txt
+# TRUE: EXCLUDED{{:}} filter-requires :: no-requires.txt
 # TRUE: PASS: filter-requires :: true.txt
 # TRUE: Passed{{ *}}: 1
 
 # RUN: %{lit} -a %S/Inputs/filter-requires | FileCheck %s --check-prefix=DEFAULT
-# DEFAULT: PASS: filter-requires :: base.txt
 # DEFAULT: UNSUPPORTED{{:}} filter-requires :: half.txt
 # DEFAULT: Test requires the following unavailable features: Half
+# DEFAULT: PASS: filter-requires :: no-requires.txt
 # DEFAULT: PASS: filter-requires :: regex.txt
 # DEFAULT: PASS: filter-requires :: true.txt
 # DEFAULT: Passed{{ *}}: 3
@@ -63,19 +63,27 @@
 # SYNTAX: error: argument --filter-requires: expected:
 # RUN: not %{lit} --filter-requires="Half*" %S/Inputs/filter-requires 2>&1 | FileCheck %s --check-prefix=WILDCARD
 # WILDCARD: error: argument --filter-requires: couldn't parse text:
+# RUN: not %{lit} --filter-requires=" " %S/Inputs/filter-requires 2>&1 | FileCheck %s --check-prefix=WHITESPACE
+# WHITESPACE: error: argument --filter-requires: expected:
 
 # RUN: not %{lit} -a --filter-requires=Half -Dlimit=1 %S/Inputs/filter-requires/half.txt | FileCheck %s --check-prefix=LIMIT
 # LIMIT: UNRESOLVED: filter-requires :: half.txt
 # LIMIT: --filter-requires cannot be combined with limit_to_features
+# RUN: not %{lit} -a --filter-requires="" -Dlimit=1 %S/Inputs/filter-requires/no-requires.txt | FileCheck %s --check-prefix=EMPTY-LIMIT
+# EMPTY-LIMIT: UNRESOLVED: filter-requires :: no-requires.txt
+# EMPTY-LIMIT: --filter-requires cannot be combined with limit_to_features
 # RUN: %{lit} -a -Dlimit=1 %S/Inputs/filter-requires/half.txt | FileCheck %s --check-prefix=DEFAULT-LIMIT
 # DEFAULT-LIMIT: UNSUPPORTED{{:}} filter-requires :: half.txt
 # DEFAULT-LIMIT: Test requires the following unavailable features: Half
 
 # RUN: %{lit} -a -j2 --filter-requires=Half %S/Inputs/filter-requires/half.txt %S/Inputs/filter-requires/features.txt | FileCheck %s --check-prefix=PARALLEL
 # PARALLEL: Passed{{ *}}: 2
+# RUN: %{lit} -a -j2 --filter-requires="" %S/Inputs/filter-requires/no-requires.txt %S/Inputs/filter-requires/true.txt | FileCheck %s --check-prefix=EMPTY-PARALLEL
+# EMPTY-PARALLEL: Excluded{{ *}}: 1
+# EMPTY-PARALLEL: Passed{{ *}}: 1
 
 # Like REQUIRES availability checks, requirement matching gates execution, not discovery.
-# RUN: %{lit} -a --max-tests=1 --filter-requires=Base %S/Inputs/filter-requires | FileCheck %s --check-prefix=MAX
+# RUN: %{lit} -a --max-tests=1 --filter-requires="" %S/Inputs/filter-requires | FileCheck %s --check-prefix=MAX
 # MAX: EXCLUDED{{:}} filter-requires :: and.txt
 # MAX-NOT: PASS:
 

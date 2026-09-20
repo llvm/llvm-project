@@ -80,8 +80,6 @@ class TestFilterRequires(unittest.TestCase):
             ("true", "!Double", True),
             ("true", "True", False),
             ("false", "false", True),
-            ("Base", "Base", False),
-            ("Base && Half", "Base && Half", True),
         ]
         for requirement, selection, expected in cases:
             with self.subTest(requirement=requirement, selection=selection):
@@ -89,9 +87,9 @@ class TestFilterRequires(unittest.TestCase):
                     FilterRequires(selection).matches([requirement]), expected
                 )
 
-    def test_base_and_multiple_entries(self):
-        self.assertTrue(FilterRequires(" Base ").matches([]))
-        self.assertFalse(FilterRequires("Base").matches(["true"]))
+    def test_empty_and_multiple_entries(self):
+        self.assertTrue(FilterRequires("").matches([]))
+        self.assertFalse(FilterRequires("").matches(["true"]))
         self.assertFalse(FilterRequires("true").matches([]))
         self.assertFalse(FilterRequires("Half || true").matches([]))
         self.assertTrue(
@@ -102,7 +100,6 @@ class TestFilterRequires(unittest.TestCase):
 
     def test_errors(self):
         for expression in [
-            "",
             " ",
             "Half &&",
             "Half Int16",
@@ -128,6 +125,8 @@ class TestFilterRequires(unittest.TestCase):
                     FilterRequires(expression)
                 with self.assertRaises(ValueError):
                     FilterRequires("Half").matches([expression])
+        with self.assertRaises(ValueError):
+            FilterRequires("Half").matches([""])
 
     def test_limits(self):
         # Even if an early combination matches, never silently truncate the rest.
@@ -155,7 +154,10 @@ class TestFilterRequires(unittest.TestCase):
         selection = pickle.loads(pickle.dumps(FilterRequires("Half && !Double")))
         self.assertTrue(selection.matches(["Half"]))
         self.assertFalse(selection.matches(["Half && Double"]))
-        self.assertTrue(pickle.loads(pickle.dumps(FilterRequires("Base"))).matches([]))
+        selection = pickle.loads(pickle.dumps(FilterRequires("")))
+        self.assertEqual(str(selection), "")
+        self.assertTrue(selection.matches([]))
+        self.assertFalse(selection.matches(["true"]))
 
 
 if __name__ == "__main__":

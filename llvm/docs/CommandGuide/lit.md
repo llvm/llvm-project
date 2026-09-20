@@ -329,10 +329,12 @@ but not yet run are not included.
 :::{option} --filter-requires EXPR
 Run only those tests with a `REQUIRES` combination matching the requested positive
 features exactly and no extra exclusions. Names are case sensitive and commas mean
-AND. `Base` selects tests without requirements. Matching tests bypass `REQUIRES`
-availability checks. `UNSUPPORTED` and `XFAIL` still apply. Regexes are unsupported.
-The maximum test count applies before requirement matching. The caller must choose
-a suitable device.
+AND. An explicitly empty argument (`--filter-requires=""`) selects only tests with
+no `REQUIRES` entries. Omitting the option disables requirement selection and preserves
+normal `REQUIRES` availability checks. Matching tests bypass `REQUIRES` availability
+checks. `UNSUPPORTED` and `XFAIL` still apply. Regexes are unsupported. The maximum
+test count applies before requirement matching. The caller must choose a suitable
+device.
 :::
 
 :::{option} --xfail LIST
