@@ -222,7 +222,7 @@ define i32 @reduce_i1(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512F-LABEL: 'reduce_i1'
-; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %V1 = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %V1 = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V2 = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of 5 for: %V4 = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of 7 for: %V8 = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> undef)
@@ -233,7 +233,7 @@ define i32 @reduce_i1(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'reduce_i1'
-; AVX512BW-NEXT:  Cost Model: Found costs of 1 for: %V1 = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %V1 = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
 ; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V2 = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> undef)
 ; AVX512BW-NEXT:  Cost Model: Found costs of 5 for: %V4 = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> undef)
 ; AVX512BW-NEXT:  Cost Model: Found costs of 7 for: %V8 = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> undef)
@@ -244,7 +244,7 @@ define i32 @reduce_i1(i32 %arg) {
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512DQ-LABEL: 'reduce_i1'
-; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %V1 = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %V1 = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V2 = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 5 for: %V4 = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 7 for: %V8 = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> undef)

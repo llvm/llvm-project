@@ -174,8 +174,8 @@ define i32 @reduce_i16(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:4 SizeLat:5 for: %V4 = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %V8 = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:9 SizeLat:4 for: %V16 = call i16 @llvm.vector.reduce.umax.v16i16(<16 x i16> undef)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:15 SizeLat:12 for: %V32 = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> undef)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:16 Lat:22 SizeLat:17 for: %V64 = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:16 SizeLat:12 for: %V32 = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:16 Lat:23 SizeLat:17 for: %V64 = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'reduce_i16'
@@ -192,8 +192,8 @@ define i32 @reduce_i16(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:4 SizeLat:5 for: %V4 = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:5 SizeLat:2 for: %V8 = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:9 SizeLat:4 for: %V16 = call i16 @llvm.vector.reduce.umax.v16i16(<16 x i16> undef)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:15 SizeLat:12 for: %V32 = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> undef)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:16 Lat:22 SizeLat:17 for: %V64 = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:16 SizeLat:12 for: %V32 = call i16 @llvm.vector.reduce.umax.v32i16(<32 x i16> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:16 Lat:23 SizeLat:17 for: %V64 = call i16 @llvm.vector.reduce.umax.v64i16(<64 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %V2  = call i16 @llvm.vector.reduce.umax.v2i16(<2 x i16> undef)
@@ -262,8 +262,8 @@ define i32 @reduce_i8(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:7 Lat:6 SizeLat:7 for: %V8 = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:8 SizeLat:5 for: %V16 = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:6 Lat:11 SizeLat:6 for: %V32 = call i8 @llvm.vector.reduce.umax.v32i8(<32 x i8> undef)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:13 Lat:17 SizeLat:14 for: %V64 = call i8 @llvm.vector.reduce.umax.v64i8(<64 x i8> undef)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:18 Lat:24 SizeLat:19 for: %V128 = call i8 @llvm.vector.reduce.umax.v128i8(<128 x i8> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:13 Lat:18 SizeLat:14 for: %V64 = call i8 @llvm.vector.reduce.umax.v64i8(<64 x i8> undef)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:18 Lat:25 SizeLat:19 for: %V128 = call i8 @llvm.vector.reduce.umax.v128i8(<128 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'reduce_i8'
@@ -282,8 +282,8 @@ define i32 @reduce_i8(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:7 Lat:6 SizeLat:7 for: %V8 = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:8 SizeLat:5 for: %V16 = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:6 Lat:11 SizeLat:6 for: %V32 = call i8 @llvm.vector.reduce.umax.v32i8(<32 x i8> undef)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:13 Lat:17 SizeLat:14 for: %V64 = call i8 @llvm.vector.reduce.umax.v64i8(<64 x i8> undef)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:18 Lat:24 SizeLat:19 for: %V128 = call i8 @llvm.vector.reduce.umax.v128i8(<128 x i8> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:13 Lat:18 SizeLat:14 for: %V64 = call i8 @llvm.vector.reduce.umax.v64i8(<64 x i8> undef)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:18 Lat:25 SizeLat:19 for: %V128 = call i8 @llvm.vector.reduce.umax.v128i8(<128 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %V2   = call i8 @llvm.vector.reduce.umax.v2i8(<2 x i8> undef)

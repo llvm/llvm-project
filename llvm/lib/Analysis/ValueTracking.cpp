@@ -7225,20 +7225,22 @@ uint64_t llvm::GetStringLength(const Value *V, unsigned CharSize) {
 
 const Value *
 llvm::getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                           bool MustPreserveOffset) {
+                                           bool MustPreserveOffset,
+                                           bool MustPreserveProvenance) {
   assert(Call &&
          "getArgumentAliasingToReturnedPointer only works on nonnull calls");
   if (const Value *RV = Call->getReturnedArgOperand())
     return RV;
   // This can be used only as a aliasing property.
   if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-          Call, MustPreserveOffset))
+          Call, MustPreserveOffset, MustPreserveProvenance))
     return Call->getArgOperand(0);
   return nullptr;
 }
 
 bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveOffset) {
+    const CallBase *Call, bool MustPreserveOffset,
+    bool MustPreserveProvenance) {
   switch (Call->getIntrinsicID()) {
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
@@ -7254,7 +7256,7 @@ bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
   // writing, they are not), but we document this fact out of an abundance
   // of caution.
   case Intrinsic::amdgcn_make_buffer_rsrc:
-    return true;
+    return !MustPreserveProvenance;
   case Intrinsic::ptrmask:
     return !MustPreserveOffset;
   case Intrinsic::threadlocal_address:
@@ -7293,7 +7295,8 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
   return true;
 }
 
-const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
+const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup,
+                                       bool MustPreserveProvenance) {
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       const Value *PtrOp = GEP->getPointerOperand();
@@ -7328,7 +7331,7 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
         if (auto *RP = getArgumentAliasingToReturnedPointer(
-                Call, /*MustPreserveOffset=*/false)) {
+                Call, /*MustPreserveOffset=*/false, MustPreserveProvenance)) {
           V = RP;
           continue;
         }
@@ -7383,7 +7386,8 @@ void llvm::getUnderlyingObjects(const Value *V,
   } while (!Worklist.empty());
 }
 
-const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
+const Value *llvm::getUnderlyingObjectAggressive(const Value *V,
+                                                 bool MustPreserveProvenance) {
   const unsigned MaxVisited = 8;
 
   SmallPtrSet<const Value *, 8> Visited;
@@ -7393,10 +7397,13 @@ const Value *llvm::getUnderlyingObjectAggressive(const Value *V) {
   // Used as fallback if we can't find a common underlying object through
   // recursion.
   bool First = true;
-  const Value *FirstObject = getUnderlyingObject(V);
+  const Value *FirstObject =
+      getUnderlyingObject(V, MaxLookupSearchDepth, MustPreserveProvenance);
   do {
     const Value *P = Worklist.pop_back_val();
-    P = First ? FirstObject : getUnderlyingObject(P);
+    P = First ? FirstObject
+              : getUnderlyingObject(P, MaxLookupSearchDepth,
+                                    MustPreserveProvenance);
     First = false;
 
     if (!Visited.insert(P).second)

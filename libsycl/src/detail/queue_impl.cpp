@@ -145,19 +145,15 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
-static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
-                                         const void *ptr) {
+static ol_device_handle_t getAllocDevice(const void *ptr) {
   // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
   [[maybe_unused]] ol_result_t Result =
-      callNoCheck(olGetMemInfo, Context, ptr, OL_MEM_INFO_DEVICE,
+      callNoCheck(olGetMemInfo, ptr, OL_MEM_INFO_DEVICE,
                   sizeof(ol_device_handle_t), &Device);
   if (detail::isFailed(Result)) {
-    // NOT_FOUND: the pointer isn't a liboffload allocation at all (plain host
-    // malloc). INVALID_ARGUMENT: it's a liboffload host allocation, which has
-    // no per-device affinity. Either way, route through the host device.
-    if (Result->Code == OL_ERRC_NOT_FOUND ||
-        Result->Code == OL_ERRC_INVALID_ARGUMENT) {
+    // If liboffload could not find the allocation, assume it is a host one.
+    if (Result->Code == OL_ERRC_NOT_FOUND) {
       return getHostOLDevice();
     }
     checkAndThrow(Result);
@@ -178,10 +174,8 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
 
-  ol_device_handle_t DestOLDevice =
-      getAllocDevice(MContext->getOLHandleRef(), Dest);
-  ol_device_handle_t SrcOLDevice =
-      getAllocDevice(MContext->getOLHandleRef(), Src);
+  ol_device_handle_t DestOLDevice = getAllocDevice(Dest);
+  ol_device_handle_t SrcOLDevice = getAllocDevice(Src);
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,

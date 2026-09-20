@@ -5477,9 +5477,10 @@ InstructionCost X86TTIImpl::getVectorInstrCost(
         }
       }
 
-      // Assume movd/movq XMM -> GPR is relatively cheap on all targets.
+      // Assume movd/movq XMM -> GPR is relatively cheap on all targets, but
+      // as a cross-domain move its latency exceeds its throughput cost.
       if (ScalarType->isIntegerTy() && Opcode == Instruction::ExtractElement)
-        return 1 + RegisterFileMoveCost;
+        return (CostKind == TTI::TCK_Latency ? 2 : 1) + RegisterFileMoveCost;
     }
 
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -6109,13 +6110,15 @@ X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
-    // TODO: AVX2 is the current cut-off because we don't have correct
-    //       interleaving costs for prior ISA's.
-    if (!BaseT::isStridedAccess(Ptr))
-      return NumVectorInstToHideOverhead;
-    if (!BaseT::getConstantStrideStep(SE, Ptr))
+  if (PtrTy->isVectorTy() && SE) {
+    if (BaseT::isStridedAccess(Ptr) && !BaseT::getConstantStrideStep(SE, Ptr))
       return 1;
+    if (!ST->hasAVX2()) {
+      // TODO: AVX2 is the current cut-off because we don't have correct
+      //       interleaving costs for prior ISA's.
+      if (!BaseT::isStridedAccess(Ptr))
+        return NumVectorInstToHideOverhead;
+    }
   }
 
   return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);

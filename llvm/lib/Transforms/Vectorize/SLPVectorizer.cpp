@@ -9189,9 +9189,8 @@ static const Loop *findInnermostNonInvariantLoop(const Loop *L,
                                                  ArrayRef<Value *> VL) {
   assert(L && "Expected valid loop");
   auto IsLoopInvariant = [&](const Loop *L, ArrayRef<Value *> VL) {
-    return all_of(VL, [&](Value *V) {
-      return isa<Constant>(V) || !isa<Instruction>(V) || L->isLoopInvariant(V);
-    });
+    return all_of(make_isa_range<Instruction>(VL),
+                  [L](Instruction *I) { return L->isLoopInvariant(I); });
   };
   while (L && IsLoopInvariant(L, VL))
     L = L->getParentLoop();
@@ -15729,6 +15728,22 @@ uint64_t BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
           EI.UserTE->getOpcode() == Instruction::PHI) {
         auto *PH = cast<PHINode>(EI.UserTE->getMainOp());
         Parent = PH->getIncomingBlock(EI.EdgeIdx);
+        const Loop *PhiL = LI->getLoopFor(PH->getParent());
+        const Loop *InL = LI->getLoopFor(Parent);
+        if (PhiL && InL && !PhiL->contains(InL) && !InL->contains(PhiL)) {
+          const SCEV *PhiBTC = SE->getBackedgeTakenCount(PhiL);
+          const SCEV *InBTC = SE->getBackedgeTakenCount(InL);
+          if (isa<SCEVCouldNotCompute>(PhiBTC) || PhiBTC != InBTC) {
+            // If all gathered elements are invariant in the phi's nest below
+            // the common ancestor of the two nests, the gather is a pure
+            // nest-crossing transfer, paid once per crossing: scale it by
+            // the common parent nest.
+            const Loop *FirstVariantL =
+                findInnermostNonInvariantLoop(PhiL, TE.Scalars);
+            if (FirstVariantL && FirstVariantL->contains(InL))
+              Parent = FirstVariantL->getHeader();
+          }
+        }
       } else {
         Parent = EI.UserTE->getMainOp()->getParent();
       }
@@ -19671,7 +19686,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // Look through an optional single-use index-promotion cast.
   auto LookThroughIndexCast = [](Value *V) -> Value * {
     if (V && match(V, m_OneUse(m_ZExtOrSExt(m_Value()))))
-      return cast<Instruction>(V)->user_back();
+      return V->user_back();
     return V;
   };
   // Detect external uses that drive address computations: the scalar (through
@@ -19746,19 +19761,26 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       It->second = DT->findNearestCommonDominator(It->second, UseBlock);
   }
 
-  // The extracted value feeds a memory address if its user is a GEP index or
-  // the pointer operand of a load/store.
-  auto IsExtractOnAddressPath = [&](const ExternalUser &EU) {
-    Value *Usr = LookThroughIndexCast(EU.User);
-    if (auto *GEP = dyn_cast_if_present<GetElementPtrInst>(Usr))
-      // Conservatively assume an address use if there are too many to check.
-      return GEP->hasNUsesOrMore(UsesLimit) ||
-             any_of(GEP->users(), IsaPred<LoadInst, StoreInst>);
-    if (auto *LI = dyn_cast_if_present<LoadInst>(Usr))
-      return LI->getPointerOperand() == EU.Scalar;
-    if (auto *SI = dyn_cast_if_present<StoreInst>(Usr))
-      return SI->getPointerOperand() == EU.Scalar;
-    return false;
+  // An extract feeds a memory address if any external user of the scalar is
+  // a GEP index or the pointer operand of a load/store. The extract is priced
+  // once per scalar, so all its uses are checked for order independence.
+  auto IsExtractOnAddressPath = [&](Value *Scalar) {
+    return any_of(ExternalUses, [&](const ExternalUser &EU) {
+      if (EU.Scalar != Scalar || EphValues.count(EU.User))
+        return false;
+      Value *Usr = LookThroughIndexCast(EU.User);
+      if (auto *GEP = dyn_cast_if_present<GetElementPtrInst>(Usr))
+        // Conservatively assume an address use if there are too many to check.
+        return GEP->hasNUsesOrMore(UsesLimit) ||
+               any_of(GEP->users(), [GEP](User *U) {
+                 return match(U,
+                              m_CombineOr(m_Load(m_Specific(GEP)),
+                                          m_Store(m_Value(), m_Specific(GEP))));
+               });
+      return Usr &&
+             match(Usr, m_CombineOr(m_Load(m_Specific(Scalar)),
+                                    m_Store(m_Value(), m_Specific(Scalar))));
+    });
   };
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
   for (ExternalUser &EU : ExternalUses) {
@@ -19889,7 +19911,6 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     if (!isa_and_nonnull<InsertElementInst>(EU.User) &&
         !ExtractCostCalculated.insert(ExtractKey).second)
       continue;
-    // Extraction cost at the given cost kind.
     auto GetExtractCost = [&](TTI::TargetCostKind Kind) -> InstructionCost {
       if (It != MinBWs.end()) {
         Type *MinTy = IntegerType::get(F->getContext(), It->second.first);
@@ -20061,8 +20082,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     if (!ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
       // An extract feeding a memory address is on the critical path to that
       // access, so its latency is exposed rather than hidden by parallelism;
-      // charge the extraction latency, not the throughput.
-      if (IsExtractOnAddressPath(EU)) {
+      // charge the extraction latency, not the throughput. Not applied for
+      // code size: the number of emitted extracts does not change.
+      if (CostKind != TTI::TCK_CodeSize && IsExtractOnAddressPath(EU.Scalar)) {
         InstructionCost LatencyCost = GetExtractCost(TTI::TCK_Latency);
         if (LatencyCost.isValid())
           ExtraCost = std::max(ExtraCost, LatencyCost);
@@ -23252,6 +23274,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!AllNoInfs)
         I->setHasNoInfs(false);
     }
+    // Copyable lanes modeled as op(V, V) do not preserve the disjoint flag:
+    // or disjoint(V, V) is poison unless V is zero. Matched by value, so
+    // operand reordering does not affect the detection.
+    auto *PDI = dyn_cast<PossiblyDisjointInst>(I);
+    if (E->hasCopyableElements() && PDI &&
+        any_of(enumerate(E->Scalars), [&](const auto &P) {
+          Value *Scalar = P.value();
+          return E->isCopyableElement(Scalar) && !match(Scalar, m_Zero()) &&
+                 E->getOperand(0)[P.index()] == Scalar &&
+                 E->getOperand(1)[P.index()] == Scalar;
+        }))
+      PDI->setIsDisjoint(false);
     // Drop nuw flags for abs(sub(commutative), true).
     if (!MinBWs.contains(E) && Opcode == Instruction::Sub &&
         (E->hasCopyableElements() || any_of(Scalars, [](Value *Scalar) {
@@ -33033,8 +33067,11 @@ private:
       for (const ReductionVectorPart &P : VectorValuesAndScales)
         if (P.Negated == Negated)
           CreateVecOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
-    CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
-                   /*ReducedInTree=*/false, VecResNegated);
+    // All parts may be reduced in the tree already, leaving no vector value
+    // to reduce.
+    if (VecRes)
+      CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
+                     /*ReducedInTree=*/false, VecResNegated);
 
     return {ReducedSubTree, ResNegated};
   }

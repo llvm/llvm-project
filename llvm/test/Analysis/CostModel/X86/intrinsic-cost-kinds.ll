@@ -316,7 +316,7 @@ define void @pdep(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 ;
 ; LATE-LABEL: 'pdep'
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call i32 @llvm.pdep.i32(i32 %a, i32 %b)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %v = call <16 x i32> @llvm.pdep.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v = call <16 x i32> @llvm.pdep.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'pdep'
@@ -342,7 +342,7 @@ define void @pext(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 ;
 ; LATE-LABEL: 'pext'
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s = call i32 @llvm.pext.i32(i32 %a, i32 %b)
-; LATE-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %v = call <16 x i32> @llvm.pext.v16i32(<16 x i32> %va, <16 x i32> %vb)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v = call <16 x i32> @llvm.pext.v16i32(<16 x i32> %va, <16 x i32> %vb)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'pext'

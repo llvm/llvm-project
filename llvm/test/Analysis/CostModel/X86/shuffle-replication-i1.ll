@@ -94,7 +94,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC512-LABEL: 'replication_i1_stride2'
-; AVX512FVEC512-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -105,7 +105,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC256-LABEL: 'replication_i1_stride2'
-; AVX512FVEC256-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -116,7 +116,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC512-LABEL: 'replication_i1_stride2'
-; AVX512DQVEC512-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -127,7 +127,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC256-LABEL: 'replication_i1_stride2'
-; AVX512DQVEC256-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -138,7 +138,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC512-LABEL: 'replication_i1_stride2'
-; AVX512BWVEC512-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -149,7 +149,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC256-LABEL: 'replication_i1_stride2'
-; AVX512BWVEC256-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -160,7 +160,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC512-LABEL: 'replication_i1_stride2'
-; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -171,7 +171,7 @@ define void @replication_i1_stride2() nounwind "min-legal-vector-width"="256" {
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC256-LABEL: 'replication_i1_stride2'
-; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of 3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
+; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:4 SizeLat:3 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <2 x i32> zeroinitializer
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
@@ -271,7 +271,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC512-LABEL: 'replication_i1_stride3'
-; AVX512FVEC512-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -282,7 +282,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC256-LABEL: 'replication_i1_stride3'
-; AVX512FVEC256-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -293,7 +293,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC512-LABEL: 'replication_i1_stride3'
-; AVX512DQVEC512-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -304,7 +304,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC256-LABEL: 'replication_i1_stride3'
-; AVX512DQVEC256-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -315,7 +315,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC512-LABEL: 'replication_i1_stride3'
-; AVX512BWVEC512-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -326,7 +326,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC256-LABEL: 'replication_i1_stride3'
-; AVX512BWVEC256-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -337,7 +337,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC512-LABEL: 'replication_i1_stride3'
-; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -348,7 +348,7 @@ define void @replication_i1_stride3() nounwind "min-legal-vector-width"="256" {
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC256-LABEL: 'replication_i1_stride3'
-; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of 4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
+; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:4 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <3 x i32> zeroinitializer
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <6 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7>
@@ -448,7 +448,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC512-LABEL: 'replication_i1_stride4'
-; AVX512FVEC512-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -459,7 +459,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC256-LABEL: 'replication_i1_stride4'
-; AVX512FVEC256-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -470,7 +470,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC512-LABEL: 'replication_i1_stride4'
-; AVX512DQVEC512-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -481,7 +481,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC256-LABEL: 'replication_i1_stride4'
-; AVX512DQVEC256-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -492,7 +492,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC512-LABEL: 'replication_i1_stride4'
-; AVX512BWVEC512-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -503,7 +503,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC256-LABEL: 'replication_i1_stride4'
-; AVX512BWVEC256-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -514,7 +514,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC512-LABEL: 'replication_i1_stride4'
-; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -525,7 +525,7 @@ define void @replication_i1_stride4() nounwind "min-legal-vector-width"="256" {
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC256-LABEL: 'replication_i1_stride4'
-; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of 5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
+; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:6 SizeLat:5 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <4 x i32> zeroinitializer
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7>
@@ -625,7 +625,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC512-LABEL: 'replication_i1_stride5'
-; AVX512FVEC512-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -636,7 +636,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC256-LABEL: 'replication_i1_stride5'
-; AVX512FVEC256-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:14 Lat:24 SizeLat:14 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -647,7 +647,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC512-LABEL: 'replication_i1_stride5'
-; AVX512DQVEC512-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -658,7 +658,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC256-LABEL: 'replication_i1_stride5'
-; AVX512DQVEC256-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:14 Lat:24 SizeLat:14 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -669,7 +669,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC512-LABEL: 'replication_i1_stride5'
-; AVX512BWVEC512-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -680,7 +680,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC256-LABEL: 'replication_i1_stride5'
-; AVX512BWVEC256-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:11 SizeLat:11 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -691,7 +691,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC512-LABEL: 'replication_i1_stride5'
-; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -702,7 +702,7 @@ define void @replication_i1_stride5() nounwind "min-legal-vector-width"="256" {
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC256-LABEL: 'replication_i1_stride5'
-; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of 6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
+; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:7 SizeLat:6 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <5 x i32> zeroinitializer
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <10 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <20 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <40 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -802,7 +802,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC512-LABEL: 'replication_i1_stride6'
-; AVX512FVEC512-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -813,7 +813,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC256-LABEL: 'replication_i1_stride6'
-; AVX512FVEC256-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:15 Lat:27 SizeLat:15 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -824,7 +824,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC512-LABEL: 'replication_i1_stride6'
-; AVX512DQVEC512-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -835,7 +835,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC256-LABEL: 'replication_i1_stride6'
-; AVX512DQVEC256-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:14 SizeLat:8 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:15 Lat:27 SizeLat:15 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -846,7 +846,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC512-LABEL: 'replication_i1_stride6'
-; AVX512BWVEC512-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -857,7 +857,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC256-LABEL: 'replication_i1_stride6'
-; AVX512BWVEC256-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:11 Lat:11 SizeLat:11 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -868,7 +868,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC512-LABEL: 'replication_i1_stride6'
-; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -879,7 +879,7 @@ define void @replication_i1_stride6() nounwind "min-legal-vector-width"="256" {
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC256-LABEL: 'replication_i1_stride6'
-; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of 7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
+; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:8 SizeLat:7 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <6 x i32> zeroinitializer
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <24 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <48 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -979,7 +979,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC512-LABEL: 'replication_i1_stride7'
-; AVX512FVEC512-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -990,7 +990,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC256-LABEL: 'replication_i1_stride7'
-; AVX512FVEC256-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:30 SizeLat:16 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1001,7 +1001,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC512-LABEL: 'replication_i1_stride7'
-; AVX512DQVEC512-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1012,7 +1012,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC256-LABEL: 'replication_i1_stride7'
-; AVX512DQVEC256-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:30 SizeLat:16 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1023,7 +1023,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC512-LABEL: 'replication_i1_stride7'
-; AVX512BWVEC512-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1034,7 +1034,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC256-LABEL: 'replication_i1_stride7'
-; AVX512BWVEC256-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:13 Lat:13 SizeLat:13 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1045,7 +1045,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC512-LABEL: 'replication_i1_stride7'
-; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1056,7 +1056,7 @@ define void @replication_i1_stride7() nounwind "min-legal-vector-width"="256" {
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC256-LABEL: 'replication_i1_stride7'
-; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of 8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
+; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:9 SizeLat:8 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <7 x i32> zeroinitializer
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <14 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <56 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1156,7 +1156,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC512-LABEL: 'replication_i1_stride8'
-; AVX512FVEC512-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1167,7 +1167,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512FVEC256-LABEL: 'replication_i1_stride8'
-; AVX512FVEC256-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:17 Lat:33 SizeLat:17 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1178,7 +1178,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX512FVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC512-LABEL: 'replication_i1_stride8'
-; AVX512DQVEC512-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1189,7 +1189,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQVEC256-LABEL: 'replication_i1_stride8'
-; AVX512DQVEC256-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:9 SizeLat:5 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:9 Lat:17 SizeLat:9 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:17 Lat:33 SizeLat:17 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1200,7 +1200,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX512DQVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC512-LABEL: 'replication_i1_stride8'
-; AVX512BWVEC512-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1211,7 +1211,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BWVEC256-LABEL: 'replication_i1_stride8'
-; AVX512BWVEC256-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:4 Lat:4 SizeLat:4 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:7 Lat:7 SizeLat:7 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:13 Lat:13 SizeLat:13 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1222,7 +1222,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX512BWVEC256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC512-LABEL: 'replication_i1_stride8'
-; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
@@ -1233,7 +1233,7 @@ define void @replication_i1_stride8() nounwind "min-legal-vector-width"="256" {
 ; AVX512VBMIVEC512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMIVEC256-LABEL: 'replication_i1_stride8'
-; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of 9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
+; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:10 SizeLat:9 for: %vf1 = shufflevector <1 x i1> undef, <1 x i1> poison, <8 x i32> zeroinitializer
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:5 SizeLat:3 for: %vf2 = shufflevector <2 x i1> undef, <2 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:3 Lat:3 SizeLat:3 for: %vf4 = shufflevector <4 x i1> undef, <4 x i1> poison, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
 ; AVX512VBMIVEC256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:5 Lat:5 SizeLat:5 for: %vf8 = shufflevector <8 x i1> undef, <8 x i1> poison, <64 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>

@@ -75,7 +75,7 @@ define fastcc i32 @reduction_cost_int(<8 x i32> %rdx) {
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx.2 = add <8 x i32> %bin.rdx, %rdx.shuf.2
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.3 = shufflevector <8 x i32> %bin.rdx.2, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx.3 = add <8 x i32> %bin.rdx.2, %rdx.shuf.3
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; AVX1-LABEL: 'reduction_cost_int'
@@ -85,7 +85,7 @@ define fastcc i32 @reduction_cost_int(<8 x i32> %rdx) {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx.2 = add <8 x i32> %bin.rdx, %rdx.shuf.2
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.3 = shufflevector <8 x i32> %bin.rdx.2, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx.3 = add <8 x i32> %bin.rdx.2, %rdx.shuf.3
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; AVX2-LABEL: 'reduction_cost_int'
@@ -95,7 +95,7 @@ define fastcc i32 @reduction_cost_int(<8 x i32> %rdx) {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx.2 = add <8 x i32> %bin.rdx, %rdx.shuf.2
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.3 = shufflevector <8 x i32> %bin.rdx.2, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx.3 = add <8 x i32> %bin.rdx.2, %rdx.shuf.3
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; SLM-LABEL: 'reduction_cost_int'
@@ -105,7 +105,7 @@ define fastcc i32 @reduction_cost_int(<8 x i32> %rdx) {
 ; SLM-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx.2 = add <8 x i32> %bin.rdx, %rdx.shuf.2
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.3 = shufflevector <8 x i32> %bin.rdx.2, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx.3 = add <8 x i32> %bin.rdx.2, %rdx.shuf.3
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx.3, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
   %rdx.shuf = shufflevector <8 x i32> %rdx, <8 x i32> undef,
@@ -602,19 +602,19 @@ define fastcc i64 @no_pairwise_reduction2i64(<2 x i64> %rdx, i64 %f1) {
 ; SSE-LABEL: 'no_pairwise_reduction2i64'
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 1, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:2 for: %bin.rdx = add <2 x i64> %rdx, %rdx.shuf
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <2 x i64> %bin.rdx, i32 0
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <2 x i64> %bin.rdx, i32 0
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; AVX-LABEL: 'no_pairwise_reduction2i64'
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 1, i32 poison>
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <2 x i64> %rdx, %rdx.shuf
-; AVX-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <2 x i64> %bin.rdx, i32 0
+; AVX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <2 x i64> %bin.rdx, i32 0
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; SLM-LABEL: 'no_pairwise_reduction2i64'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 1, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:2 SizeLat:2 for: %bin.rdx = add <2 x i64> %rdx, %rdx.shuf
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <2 x i64> %bin.rdx, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <2 x i64> %bin.rdx, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
   %rdx.shuf = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 1, i32 undef>
@@ -630,7 +630,7 @@ define fastcc i32 @no_pairwise_reduction4i32(<4 x i32> %rdx, i32 %f1) {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <4 x i32> %rdx, %rdx.shuf
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <4 x i32> %bin.rdx, %rdx.shuf7
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; SLM-LABEL: 'no_pairwise_reduction4i32'
@@ -638,7 +638,7 @@ define fastcc i32 @no_pairwise_reduction4i32(<4 x i32> %rdx, i32 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <4 x i32> %rdx, %rdx.shuf
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <4 x i32> %bin.rdx, %rdx.shuf7
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
   %rdx.shuf = shufflevector <4 x i32> %rdx, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
@@ -656,7 +656,7 @@ define fastcc i64 @no_pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:4 for: %bin.rdx = add <4 x i64> %rdx, %rdx.shuf
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:4 for: %bin.rdx8 = add <4 x i64> %bin.rdx, %rdx.shuf7
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; AVX1-LABEL: 'no_pairwise_reduction4i64'
@@ -664,7 +664,7 @@ define fastcc i64 @no_pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx = add <4 x i64> %rdx, %rdx.shuf
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx8 = add <4 x i64> %bin.rdx, %rdx.shuf7
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; AVX2-LABEL: 'no_pairwise_reduction4i64'
@@ -672,7 +672,7 @@ define fastcc i64 @no_pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx = add <4 x i64> %rdx, %rdx.shuf
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx8 = add <4 x i64> %bin.rdx, %rdx.shuf7
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; SLM-LABEL: 'no_pairwise_reduction4i64'
@@ -680,7 +680,7 @@ define fastcc i64 @no_pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:4 SizeLat:4 for: %bin.rdx = add <4 x i64> %rdx, %rdx.shuf
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:4 SizeLat:4 for: %bin.rdx8 = add <4 x i64> %bin.rdx, %rdx.shuf7
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
   %rdx.shuf = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
@@ -700,7 +700,7 @@ define fastcc i16 @no_pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <8 x i16> %bin.rdx4, %rdx.shuf
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <8 x i16> %bin.rdx, %rdx.shuf7
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; SSSE3-LABEL: 'no_pairwise_reduction8i16'
@@ -710,7 +710,7 @@ define fastcc i16 @no_pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <8 x i16> %bin.rdx4, %rdx.shuf
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <8 x i16> %bin.rdx, %rdx.shuf7
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; SSE42-LABEL: 'no_pairwise_reduction8i16'
@@ -720,7 +720,7 @@ define fastcc i16 @no_pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <8 x i16> %bin.rdx4, %rdx.shuf
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <8 x i16> %bin.rdx, %rdx.shuf7
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; AVX-LABEL: 'no_pairwise_reduction8i16'
@@ -730,7 +730,7 @@ define fastcc i16 @no_pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <8 x i16> %bin.rdx4, %rdx.shuf
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <8 x i16> %bin.rdx, %rdx.shuf7
-; AVX-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
+; AVX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; SLM-LABEL: 'no_pairwise_reduction8i16'
@@ -740,7 +740,7 @@ define fastcc i16 @no_pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx = add <8 x i16> %bin.rdx4, %rdx.shuf
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <8 x i16> %bin.rdx, %rdx.shuf7
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx8, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
   %rdx.shuf3 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7,i32 undef, i32 undef, i32 undef, i32 undef>
@@ -762,7 +762,7 @@ define fastcc i32 @no_pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx = add <8 x i32> %bin.rdx4, %rdx.shuf
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx8 = add <8 x i32> %bin.rdx, %rdx.shuf7
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; AVX1-LABEL: 'no_pairwise_reduction8i32'
@@ -772,7 +772,7 @@ define fastcc i32 @no_pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx = add <8 x i32> %bin.rdx4, %rdx.shuf
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx8 = add <8 x i32> %bin.rdx, %rdx.shuf7
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; AVX2-LABEL: 'no_pairwise_reduction8i32'
@@ -782,7 +782,7 @@ define fastcc i32 @no_pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx = add <8 x i32> %bin.rdx4, %rdx.shuf
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx8 = add <8 x i32> %bin.rdx, %rdx.shuf7
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; SLM-LABEL: 'no_pairwise_reduction8i32'
@@ -792,7 +792,7 @@ define fastcc i32 @no_pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx = add <8 x i32> %bin.rdx4, %rdx.shuf
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf7 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx8 = add <8 x i32> %bin.rdx, %rdx.shuf7
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx8, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
   %rdx.shuf3 = shufflevector <8 x i32> %rdx, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7,i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1099,21 +1099,21 @@ define fastcc i64 @pairwise_reduction2i64(<2 x i64> %rdx, i64 %f1) {
 ; SSE-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 0, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 1, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:2 for: %bin.rdx8 = add <2 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <2 x i64> %bin.rdx8, i32 0
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <2 x i64> %bin.rdx8, i32 0
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; AVX-LABEL: 'pairwise_reduction2i64'
 ; AVX-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 0, i32 poison>
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 1, i32 poison>
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <2 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
-; AVX-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <2 x i64> %bin.rdx8, i32 0
+; AVX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <2 x i64> %bin.rdx8, i32 0
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; SLM-LABEL: 'pairwise_reduction2i64'
 ; SLM-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 0, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 1, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:2 SizeLat:2 for: %bin.rdx8 = add <2 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <2 x i64> %bin.rdx8, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <2 x i64> %bin.rdx8, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
   %rdx.shuf.1.0 = shufflevector <2 x i64> %rdx, <2 x i64> undef, <2 x i32> <i32 0, i32 undef>
@@ -1132,7 +1132,7 @@ define fastcc i32 @pairwise_reduction4i32(<4 x i32> %rdx, i32 %f1) {
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <4 x i32> %rdx.shuf.1.0, %rdx.shuf.1.1
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; SLM-LABEL: 'pairwise_reduction4i32'
@@ -1142,7 +1142,7 @@ define fastcc i32 @pairwise_reduction4i32(<4 x i32> %rdx, i32 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <4 x i32> %bin.rdx, <4 x i32> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx8 = add <4 x i32> %rdx.shuf.1.0, %rdx.shuf.1.1
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i32> %bin.rdx8, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
   %rdx.shuf.0.0 = shufflevector <4 x i32> %rdx, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
@@ -1164,7 +1164,7 @@ define fastcc i64 @pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; SSE-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:2 Lat:4 SizeLat:4 for: %bin.rdx8 = add <4 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; AVX1-LABEL: 'pairwise_reduction4i64'
@@ -1174,7 +1174,7 @@ define fastcc i64 @pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; AVX1-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx8 = add <4 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; AVX2-LABEL: 'pairwise_reduction4i64'
@@ -1184,7 +1184,7 @@ define fastcc i64 @pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; AVX2-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx8 = add <4 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
 ; SLM-LABEL: 'pairwise_reduction4i64'
@@ -1194,7 +1194,7 @@ define fastcc i64 @pairwise_reduction4i64(<4 x i64> %rdx, i64 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.1.0 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.1.1 = shufflevector <4 x i64> %bin.rdx, <4 x i64> undef, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:4 SizeLat:4 for: %bin.rdx8 = add <4 x i64> %rdx.shuf.1.0, %rdx.shuf.1.1
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <4 x i64> %bin.rdx8, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i64 %r
 ;
   %rdx.shuf.0.0 = shufflevector <4 x i64> %rdx, <4 x i64> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 undef>
@@ -1219,7 +1219,7 @@ define fastcc i16 @pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE2-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE2-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx9 = add <8 x i16> %rdx.shuf.2.0, %rdx.shuf.2.1
-; SSE2-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
+; SSE2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; SSSE3-LABEL: 'pairwise_reduction8i16'
@@ -1232,7 +1232,7 @@ define fastcc i16 @pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSSE3-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx9 = add <8 x i16> %rdx.shuf.2.0, %rdx.shuf.2.1
-; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; SSE42-LABEL: 'pairwise_reduction8i16'
@@ -1245,7 +1245,7 @@ define fastcc i16 @pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE42-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx9 = add <8 x i16> %rdx.shuf.2.0, %rdx.shuf.2.1
-; SSE42-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
+; SSE42-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; AVX-LABEL: 'pairwise_reduction8i16'
@@ -1258,7 +1258,7 @@ define fastcc i16 @pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; AVX-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx9 = add <8 x i16> %rdx.shuf.2.0, %rdx.shuf.2.1
-; AVX-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
+; AVX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
 ; SLM-LABEL: 'pairwise_reduction8i16'
@@ -1271,7 +1271,7 @@ define fastcc i16 @pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %bin.rdx9 = add <8 x i16> %rdx.shuf.2.0, %rdx.shuf.2.1
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i16> %bin.rdx9, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i16 %r
 ;
   %rdx.shuf.0.0 = shufflevector <8 x i16> %rdx, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6,i32 undef, i32 undef, i32 undef, i32 undef>
@@ -1299,7 +1299,7 @@ define fastcc i32 @pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; SSE-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx9 = add <8 x i32> %rdx.shuf.2.0, %rdx.shuf.2.1
-; SSE-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
+; SSE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; AVX1-LABEL: 'pairwise_reduction8i32'
@@ -1312,7 +1312,7 @@ define fastcc i32 @pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; AVX1-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:5 Lat:2 SizeLat:6 for: %bin.rdx9 = add <8 x i32> %rdx.shuf.2.0, %rdx.shuf.2.1
-; AVX1-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
+; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; AVX2-LABEL: 'pairwise_reduction8i32'
@@ -1325,7 +1325,7 @@ define fastcc i32 @pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; AVX2-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:1 SizeLat:2 for: %bin.rdx9 = add <8 x i32> %rdx.shuf.2.0, %rdx.shuf.2.1
-; AVX2-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
+; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
 ; SLM-LABEL: 'pairwise_reduction8i32'
@@ -1338,7 +1338,7 @@ define fastcc i32 @pairwise_reduction8i32(<8 x i32> %rdx, i32 %f1) {
 ; SLM-NEXT:  Cost Model: Found costs of 0 for: %rdx.shuf.2.0 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %rdx.shuf.2.1 = shufflevector <8 x i32> %bin.rdx8, <8 x i32> undef, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SLM-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %bin.rdx9 = add <8 x i32> %rdx.shuf.2.0, %rdx.shuf.2.1
-; SLM-NEXT:  Cost Model: Found costs of 1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
+; SLM-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:2 SizeLat:1 for: %r = extractelement <8 x i32> %bin.rdx9, i32 0
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 %r
 ;
   %rdx.shuf.0.0 = shufflevector <8 x i32> %rdx, <8 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6,i32 undef, i32 undef, i32 undef, i32 undef>
