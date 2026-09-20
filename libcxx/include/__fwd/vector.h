@@ -24,6 +24,12 @@ class vector;
 template <class _Allocator>
 class vector<bool, _Allocator>;
 
+template <class _Tp>
+inline constexpr bool __is_vector_bool_v  = false;
+
+template <class _Allocator>
+inline constexpr bool __is_vector_bool_v<vector<bool, _Allocator>> = true;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___FWD_VECTOR_H

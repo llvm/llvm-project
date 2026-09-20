@@ -61,7 +61,6 @@
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
-#include <__vector/is_vector.h>
 #include <__vector/vector.h>
 #include <initializer_list>
 #include <stdexcept>
@@ -90,9 +89,9 @@ class flat_map {
                 "The stored elements' key type must match the underlying key container's value_type.");
   static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>,
                 "The stored elements' mapped type must match the underlying mapped container's value_type.");
-  static_assert(!__is_vectorbool_v<_KeyContainer>,
+  static_assert(!__is_vector_bool_v<_KeyContainer>,
                 "The underlying key container must not be std::vector<bool>, which is not a sequence container.");
-  static_assert(!__is_vectorbool_v<_MappedContainer>,
+  static_assert(!__is_vector_bool_v<_MappedContainer>,
                 "The underlying mapped container must not be std::vector<bool>, which is not a sequence container.");
 
   template <bool _Const>
