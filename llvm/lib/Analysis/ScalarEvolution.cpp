@@ -13882,16 +13882,16 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
   }
 
   if (Start->getType()->isPointerTy()) {
+    assert(End->getType()->isPointerTy() && RHS->getType()->isPointerTy() &&
+           "Start, End and RHS all must be pointers");
     Start = getPtrToAddrExpr(Start);
     if (isa<SCEVCouldNotCompute>(Start))
       return Start;
-  }
-  if (End->getType()->isPointerTy()) {
+
     End = getPtrToAddrExpr(End);
     if (isa<SCEVCouldNotCompute>(End))
       return End;
-  }
-  if (RHS->getType()->isPointerTy()) {
+
     RHS = getPtrToAddrExpr(RHS);
     if (isa<SCEVCouldNotCompute>(RHS))
       return RHS;
