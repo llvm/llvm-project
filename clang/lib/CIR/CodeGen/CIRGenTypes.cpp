@@ -699,7 +699,6 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
   if (astContext.getLangOpts().HLSL && qualType->isConstantMatrixType()) {
     cgm.errorNYI("convertTypeForMem: HLSL & ConstantMatrixType");
-    return {};
   }
 
   mlir::Type convertedType = convertType(qualType);

@@ -549,6 +549,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 
 def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
 ]> {
   let summary = "CIR matrix type";
   let description = [{
@@ -1228,8 +1229,8 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
-  CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
+  CIR_IntType, CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType, CIR_BitFieldType,
   CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
   CIR_CUDADeviceTextureType,
