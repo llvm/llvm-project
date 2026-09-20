@@ -1,5 +1,4 @@
-//===- AArch64RelocationHandler.cpp
-//-----------------------------------------------===//
+//===- AArch64RelocationHandler.cpp - AArch64 relocation handling -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "bolt/Target/AArch64/AArch64RelocationHandler.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ErrorHandling.h"

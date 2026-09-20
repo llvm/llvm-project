@@ -21,10 +21,8 @@ endif()
 add_llvm_library(LLVMBOLTTargetRISCV
   RISCVMCPlusBuilder.cpp
   RISCVMCSymbolizer.cpp
+  RISCVRelocationHandler.cpp
 
-  # RISCVRelocationHandler.cpp is part of LLVMBOLTCore to avoid a circular
-  # dependency between the core relocation factory and LLVMBOLTTargetRISCV.
-  PARTIAL_SOURCES_INTENDED
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 

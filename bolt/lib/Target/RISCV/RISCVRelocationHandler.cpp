@@ -1,5 +1,4 @@
-//===- RISCVRelocationHandler.cpp
-//-------------------------------------------------===//
+//===- RISCVRelocationHandler.cpp - RISC-V relocation handling -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "bolt/Target/RISCV/RISCVRelocationHandler.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ErrorHandling.h"

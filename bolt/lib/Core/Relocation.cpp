@@ -22,31 +22,9 @@
 using namespace llvm;
 using namespace bolt;
 
-namespace llvm::bolt {
-std::unique_ptr<RelocationHandler> createAArch64RelocationHandler();
-std::unique_ptr<RelocationHandler> createRISCVRelocationHandler(bool Is64Bit);
-std::unique_ptr<RelocationHandler> createX86RelocationHandler();
-} // namespace llvm::bolt
-
 MCBinaryExpr::Opcode
 RelocationHandler::getComposeOpcodeFor(uint32_t Type) const {
   llvm_unreachable("composed relocations are unsupported for this target");
-}
-
-std::unique_ptr<RelocationHandler>
-llvm::bolt::createRelocationHandler(Triple::ArchType Arch) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return createAArch64RelocationHandler();
-  case Triple::riscv32:
-    return createRISCVRelocationHandler(false);
-  case Triple::riscv64:
-    return createRISCVRelocationHandler(true);
-  case Triple::x86_64:
-    return createX86RelocationHandler();
-  }
 }
 
 uint32_t Relocation::getType(const object::RelocationRef &Rel) {

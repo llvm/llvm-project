@@ -21,10 +21,8 @@ endif()
 add_llvm_library(LLVMBOLTTargetAArch64
   AArch64MCPlusBuilder.cpp
   AArch64MCSymbolizer.cpp
+  AArch64RelocationHandler.cpp
 
-  # AArch64RelocationHandler.cpp is part of LLVMBOLTCore to avoid a circular
-  # dependency between the core relocation factory and LLVMBOLTTargetAArch64.
-  PARTIAL_SOURCES_INTENDED
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -61,6 +62,8 @@ protected:
         ObjFile->getFileName(), TheTriple.isRISCV() ? &Features : nullptr, true,
         DWARFContext::create(*ObjFile), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
+    BC->initializeRelocationHandler(
+        createRelocationHandler(TheTriple.getArch()));
   }
 
   char ElfBuf[sizeof(typename ELF64LE::Ehdr)] = {};
@@ -68,19 +71,57 @@ protected:
   std::unique_ptr<BinaryContext> BC;
 };
 
+TEST_P(BinaryContextTester, InitializesRelocationHandler) {
+  const RelocationHandler &Handler = BC->getRelocationHandler();
+
+  switch (GetParam()) {
+  case Triple::x86_64:
+    EXPECT_EQ(Handler.getPC32(), ELF::R_X86_64_PC32);
+    break;
+  case Triple::aarch64:
+    EXPECT_EQ(Handler.getPC32(), ELF::R_AARCH64_PREL32);
+    break;
+  case Triple::riscv64:
+    EXPECT_EQ(Handler.getPC32(), ELF::R_RISCV_32_PCREL);
+    break;
+  default:
+    FAIL() << "unsupported test architecture";
+  }
+}
+
 TEST(RelocationHandlerTest, ArchitectureStateIsIndependent) {
+#ifdef X86_AVAILABLE
   std::unique_ptr<RelocationHandler> X86Handler =
       createRelocationHandler(Triple::x86_64);
+#endif
+
+#ifdef AARCH64_AVAILABLE
   std::unique_ptr<RelocationHandler> AArch64Handler =
       createRelocationHandler(Triple::aarch64);
+#endif
 
+#ifdef RISCV_AVAILABLE
+  std::unique_ptr<RelocationHandler> RISCVHandler =
+      createRelocationHandler(Triple::riscv64);
+#endif
+
+#ifdef X86_AVAILABLE
   EXPECT_EQ(X86Handler->getPC32(), ELF::R_X86_64_PC32);
-  EXPECT_EQ(AArch64Handler->getPC32(), ELF::R_AARCH64_PREL32);
   EXPECT_TRUE(X86Handler->isSupported(ELF::R_X86_64_PC32));
-  EXPECT_FALSE(X86Handler->isSupported(ELF::R_AARCH64_CALL26));
+#endif
+
+#ifdef AARCH64_AVAILABLE
+  EXPECT_EQ(AArch64Handler->getPC32(), ELF::R_AARCH64_PREL32);
   EXPECT_TRUE(AArch64Handler->isSupported(ELF::R_AARCH64_CALL26));
-  EXPECT_FALSE(AArch64Handler->isSupported(ELF::R_X86_64_PC32));
+#endif
+
+#ifdef RISCV_AVAILABLE
+  EXPECT_EQ(RISCVHandler->getPC32(), ELF::R_RISCV_32_PCREL);
+  EXPECT_EQ(RISCVHandler->getRelative(), ELF::R_RISCV_RELATIVE);
+  EXPECT_TRUE(RISCVHandler->isIRelative(ELF::R_RISCV_IRELATIVE));
+#endif
 }
+
 } // namespace
 
 #ifdef X86_AVAILABLE

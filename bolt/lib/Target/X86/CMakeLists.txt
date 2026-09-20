@@ -20,10 +20,8 @@ endif()
 add_llvm_library(LLVMBOLTTargetX86
   X86MCPlusBuilder.cpp
   X86MCSymbolizer.cpp
+  X86RelocationHandler.cpp
 
-  # X86RelocationHandler.cpp is part of LLVMBOLTCore to avoid a circular
-  # dependency between the core relocation factory and LLVMBOLTTargetX86.
-  PARTIAL_SOURCES_INTENDED
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
 

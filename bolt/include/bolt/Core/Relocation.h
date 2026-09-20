@@ -16,8 +16,6 @@
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/TargetParser/Triple.h"
-#include <memory>
 
 namespace llvm {
 class MCSymbol;
@@ -105,9 +103,6 @@ public:
   virtual void printType(raw_ostream &OS, uint32_t Type) const = 0;
 };
 
-std::unique_ptr<RelocationHandler>
-createRelocationHandler(Triple::ArchType Arch);
-
 /// Relocation class.
 class Relocation {
 public:
@@ -171,11 +166,11 @@ public:
 
   bool isRELR() const { return IsRELR; }
 
-  /// Return size of this relocation.
   /// Return the relocation type of \p Rel from llvm::object. It checks for
   /// overflows as BOLT uses 32 bits for the type.
   static uint32_t getType(const object::RelocationRef &Rel);
 
+  /// Return size of this relocation.
   size_t getSize(const RelocationHandler &RH) const {
     return RH.getSizeForType(Type);
   }

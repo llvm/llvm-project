@@ -34,6 +34,15 @@
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/RuntimeLibs/HugifyRuntimeLibrary.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
+#ifdef AARCH64_AVAILABLE
+#include "bolt/Target/AArch64/AArch64RelocationHandler.h"
+#endif
+#ifdef RISCV_AVAILABLE
+#include "bolt/Target/RISCV/RISCVRelocationHandler.h"
+#endif
+#ifdef X86_AVAILABLE
+#include "bolt/Target/X86/X86RelocationHandler.h"
+#endif
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"
@@ -361,10 +370,9 @@ namespace bolt {
 
 extern const char *BoltRevision;
 
-// Weird location for createMCPlusBuilder, but this is here to avoid a
-// cyclic dependency of libCore (its natural place) and libTarget. libRewrite
-// can depend on libTarget, but not libCore. Since libRewrite is the only
-// user of this function, we define it here.
+// Weird location for the target factories, but this is here to avoid a cyclic
+// dependency of libCore (their natural place) and libTarget. libRewrite can
+// depend on libTarget, but libCore cannot.
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
@@ -386,6 +394,28 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 #endif
 
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
+}
+
+std::unique_ptr<RelocationHandler>
+createRelocationHandler(Triple::ArchType Arch) {
+#ifdef X86_AVAILABLE
+  if (Arch == Triple::x86_64)
+    return createX86RelocationHandler();
+#endif
+
+#ifdef AARCH64_AVAILABLE
+  if (Arch == Triple::aarch64)
+    return createAArch64RelocationHandler();
+#endif
+
+#ifdef RISCV_AVAILABLE
+  if (Arch == Triple::riscv32)
+    return createRISCVRelocationHandler(false);
+  if (Arch == Triple::riscv64)
+    return createRISCVRelocationHandler(true);
+#endif
+
+  llvm_unreachable("architecture unsupported by RelocationHandler");
 }
 
 } // namespace bolt
@@ -466,6 +496,8 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     return;
   }
   BC = std::move(BCOrErr.get());
+  BC->initializeRelocationHandler(
+      createRelocationHandler(BC->TheTriple->getArch()));
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
       createMCPlusBuilder(BC->TheTriple->getArch(), BC->MIA.get(),
                           BC->MII.get(), BC->MRI.get(), BC->STI.get())));
