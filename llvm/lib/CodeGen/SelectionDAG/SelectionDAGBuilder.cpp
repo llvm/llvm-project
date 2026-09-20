@@ -4222,12 +4222,12 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
 
   unsigned BaseBitWidth = BaseVT.getScalarSizeInBits();
   unsigned ValBitWidth = ValVT.getScalarSizeInBits();
-  APInt ClearMask =
-      APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
-  SDValue RotatedMask =
-      DAG.getNode(ISD::ROTL, dl, BaseVT, DAG.getConstant(ClearMask, dl, BaseVT),
+  APInt InsertMask = APInt::getLowBitsSet(BaseBitWidth, ValBitWidth);
+  SDValue ShiftedMask =
+      DAG.getNode(ISD::SHL, dl, BaseVT, DAG.getConstant(InsertMask, dl, BaseVT),
                   LegalShiftAmount);
-  SDValue ClearedBase = DAG.getNode(ISD::AND, dl, BaseVT, Base, RotatedMask);
+  SDValue ClearMask = DAG.getNOT(dl, ShiftedMask, BaseVT);
+  SDValue ClearedBase = DAG.getNode(ISD::AND, dl, BaseVT, Base, ClearMask);
 
   SDValue ExtVal = DAG.getZExtOrTrunc(Val, dl, BaseVT);
   SDValue ShiftedVal =

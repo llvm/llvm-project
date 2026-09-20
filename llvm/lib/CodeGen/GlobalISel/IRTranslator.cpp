@@ -4376,13 +4376,12 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
 
   unsigned BaseBitWidth = BaseTy.getSizeInBits();
   unsigned ValBitWidth = ValTy.getSizeInBits();
-  APInt ClearMask =
-      APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
-  Register MaskConst = MIRBuilder.buildConstant(BaseTy, ClearMask).getReg(0);
-  Register RotatedMask =
-      MIRBuilder.buildRotateLeft(BaseTy, MaskConst, LegalOffset).getReg(0);
-  Register ClearedBase =
-      MIRBuilder.buildAnd(BaseTy, Base, RotatedMask).getReg(0);
+  APInt InsertMask = APInt::getLowBitsSet(BaseBitWidth, ValBitWidth);
+  Register MaskConst = MIRBuilder.buildConstant(BaseTy, InsertMask).getReg(0);
+  Register ShiftedMask =
+      MIRBuilder.buildShl(BaseTy, MaskConst, LegalOffset).getReg(0);
+  Register ClearMask = MIRBuilder.buildNot(BaseTy, ShiftedMask).getReg(0);
+  Register ClearedBase = MIRBuilder.buildAnd(BaseTy, Base, ClearMask).getReg(0);
   Register ShiftedVal =
       MIRBuilder.buildShl(BaseTy, ExtVal, LegalOffset).getReg(0);
   MIRBuilder.buildOr(Res, ClearedBase, ShiftedVal);
