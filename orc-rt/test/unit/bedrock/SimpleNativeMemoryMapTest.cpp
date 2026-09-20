@@ -12,9 +12,10 @@
 
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/support/SPSAllocAction.h"
+#include "orc-rt/support/sps/SPSAllocAction.h"
 
 #include "AllocActionTestUtils.h"
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 #include "gtest/gtest.h"
 

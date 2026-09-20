@@ -369,17 +369,25 @@ let mayLoad = 1 in
 class MxMOVEM_RM_Pseudo<MxType TYPE, MxOperand MEMOp>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins MEMOp:$src)>;
 
+// Note that MOVEM doesn't natively support 8-bit values; the pseudos for these
+// get expanded to MOVM16. But they keep the instruction verifier from reporting
+// a mismatch on physical registers.
+
 // Mem <- Reg
+def MOVM8jm_P : MxMOVEM_MR_Pseudo<MxType8d, MxType8.JOp>;
 def MOVM16jm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32jm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.JOp>;
 
+def MOVM8pm_P : MxMOVEM_MR_Pseudo<MxType8d, MxType8.POp>;
 def MOVM16pm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32pm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.POp>;
 
 // Reg <- Mem
+def MOVM8mj_P : MxMOVEM_RM_Pseudo<MxType8d, MxType8.JOp>;
 def MOVM16mj_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32mj_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.JOp>;
 
+def MOVM8mp_P : MxMOVEM_RM_Pseudo<MxType8d, MxType8.POp>;
 def MOVM16mp_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 
@@ -413,8 +421,8 @@ foreach AM = MxMoveSrcAMs in {
   def MOV8c # AM  : MxMoveToCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
 } // foreach AM
 
-// Only data register is allowed.
 def MOV16cd : MxMoveToCCR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+def MOV16ci : MxMoveToCCR<MxOp16AddrMode_i.Op, MxEncAddrMode_i<"src", 16>>;
 
 /// Move from CCR
 /// --------------------------------------------------
@@ -452,7 +460,6 @@ foreach AM = MxMoveDstAMs in {
     : MxMoveFromCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
 } // foreach AM
 
-// Only data register is allowed.
 def MOV16dc : MxMoveFromCCR_R;
 
 /// Move to SR
@@ -477,6 +484,7 @@ foreach AM = MxMoveSrcAMs in {
 } // foreach AM
 
 def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+def MOV16si : MxMoveToSR<MxOp16AddrMode_i.Op, MxEncAddrMode_i<"src", 16>>;
 
 /// Move from SR
 /// --------------------------------------------------

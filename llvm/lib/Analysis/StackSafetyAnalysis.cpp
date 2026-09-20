@@ -152,7 +152,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
 // in case of confution.
 ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
   const DataLayout &DL = AI.getDataLayout();
-  TypeSize TS = DL.getTypeAllocSize(AI.getAllocatedType());
+  TypeSize TS = AI.getAllocationBaseSize(DL);
   unsigned PointerSize = DL.getPointerTypeSizeInBits(AI.getType());
   // Fallback to empty range for alloca size.
   ConstantRange R = ConstantRange::getEmpty(PointerSize);

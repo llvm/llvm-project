@@ -256,3 +256,29 @@ namespace UnknownSizeArrayInEvaluateString {
   }
   }
 } // both-error {{extraneous closing brace}}
+
+namespace SubPtrResultIs1 {
+  struct A {
+    char x;
+  };
+  struct B {
+    char y;
+  };
+  struct C : A, B {};
+  unsigned char x = ((char **)(B *)(C *)0x1000) - (char *)0x1000; // both-error {{not pointers to compatible types}}
+}
+
+namespace NonRecordNonArrayDesc {
+
+  struct S { // both-note {{definition of 'NonRecordNonArrayDesc::S' is not complete until the closing '}'}}
+    const S(foo[42]) : bar{}; // both-error {{use of undeclared identifier 'bar'}} \
+                              // both-error {{field has incomplete type 'const S'}}
+  };
+
+  struct F {
+    _Atomic(S) a;
+    constexpr F(int i) {};
+  };
+
+  F foo(42);
+}

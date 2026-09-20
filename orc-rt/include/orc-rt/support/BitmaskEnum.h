@@ -16,10 +16,10 @@
 #ifndef ORC_RT_SUPPORT_BITMASKENUM_H
 #define ORC_RT_SUPPORT_BITMASKENUM_H
 
-#include "orc-rt/support/Math.h"
 #include "orc-rt/support/bit.h"
 
 #include <cassert>
+#include <limits>
 #include <type_traits>
 
 namespace orc_rt {
@@ -97,19 +97,29 @@ template <typename E>
 struct largest_bitmask_enum_bit<
     E, std::enable_if_t<sizeof(E::ORC_RT_BITMASK_LARGEST_ENUMERATOR) >= 0>> {
   using UnderlyingTy = std::underlying_type_t<E>;
+  static_assert(std::is_unsigned_v<UnderlyingTy>,
+                "Bitmask enums must have an unsigned underlying type. Declare "
+                "the enum with an explicit unsigned base type, e.g. "
+                "'enum class E : unsigned'; a scoped enum without one has an "
+                "underlying type of int.");
   static constexpr UnderlyingTy value =
       static_cast<UnderlyingTy>(E::ORC_RT_BITMASK_LARGEST_ENUMERATOR);
 };
 
 template <typename E>
 constexpr std::underlying_type_t<E> bitmask_enum_mask() noexcept {
-  return nextPowerOf2(largest_bitmask_enum_bit<E>::value) - 1;
+  using UnderlyingTy = std::underlying_type_t<E>;
+  constexpr int Width = bit_width(largest_bitmask_enum_bit<E>::value);
+  // Shifting by the full width of the type would be undefined, so handle a
+  // largest bit in the top position separately: the mask is then every bit.
+  return Width == std::numeric_limits<UnderlyingTy>::digits
+             ? static_cast<UnderlyingTy>(~UnderlyingTy(0))
+             : static_cast<UnderlyingTy>((UnderlyingTy(1) << Width) - 1);
 }
 
 template <typename E>
 constexpr std::underlying_type_t<E> bitmask_enum_to_underlying(E Val) noexcept {
   auto U = static_cast<std::underlying_type_t<E>>(Val);
-  assert(U >= 0 && "Negative enum values are not allowed");
   assert(U <= bitmask_enum_mask<E>() &&
          "Enum value too large (or langest val too small");
   return U;

@@ -167,8 +167,12 @@ bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
 
 bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
+bool test_str_eq(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc);
 
 bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc);
+bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
 
 } // namespace internal

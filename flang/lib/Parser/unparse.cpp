@@ -2172,7 +2172,7 @@ public:
     return false;
   }
   void Unparse(const llvm::omp::Directive &x) {
-    unsigned ompVersion{langOpts_.OpenMPVersion};
+    llvm::omp::Version ompVersion{langOpts_.getOpenMPVersion()};
     Word(llvm::omp::getOpenMPDirectiveName(x, ompVersion).str());
   }
   void Unparse(const OmpAbsentClause &x) { Walk("", x.v, ","); }
@@ -2317,7 +2317,7 @@ public:
     Put(")");
   }
   void Unparse(const OmpDirectiveNameModifier &x) {
-    unsigned ompVersion{langOpts_.OpenMPVersion};
+    llvm::omp::Version ompVersion{langOpts_.getOpenMPVersion()};
     Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
   }
   void Unparse(const OmpDirectiveSpecification &x) {

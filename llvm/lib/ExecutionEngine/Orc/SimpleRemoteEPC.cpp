@@ -11,6 +11,9 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -28,11 +31,16 @@ SimpleRemoteEPC::~SimpleRemoteEPC() {
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
-  int64_t Result = 0;
-  if (auto Err = callSPSWrapper<rt::sps_ci::CallMain::SPSSig>(
-          RunAsMainAddr, Result, MainFnAddr, Args))
-    return std::move(Err);
-  return Result;
+  if (!CallMain)
+    if (auto Err =
+            lookupAndApply(getExecutionSession().getBootstrapJITDylib(),
+                           recordProxy<sps::CallMainProxySpec>(&CallMain)))
+      return Err;
+
+  auto Result = CallMain(getExecutionSession(), MainFnAddr, Args);
+  if (!Result)
+    return Result.takeError();
+  return *Result;
 }
 
 void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
@@ -136,7 +144,6 @@ SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -235,7 +242,6 @@ Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -335,13 +341,11 @@ Error SimpleRemoteEPC::setup() {
   BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
-  BootstrapSymbols[rt::DispatchName] = BootstrapSymbols[DispatchFnName];
-  BootstrapSymbols[rt::DispatchCtxName] =
+  Mangler Mangle(getTargetTriple());
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchName)] =
+      BootstrapSymbols[DispatchFnName];
+  BootstrapSymbols[Mangle.mangledCopy(rt::DispatchCtxName)] =
       BootstrapSymbols[ExecutorSessionObjectName];
-
-  if (auto Err =
-          getBootstrapSymbols({{RunAsMainAddr, rt::sps_ci::CallMain::Name}}))
-    return Err;
 
   return Error::success();
 }
@@ -350,9 +354,9 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                                     shared::WrapperFunctionBuffer ArgBytes) {
   IncomingWFRHandler SendResult;
 
-  if (TagAddr)
-    return make_error<StringError>("Unexpected TagAddr in result message",
-                                   inconvertibleErrorCode());
+  auto WFR = decodeResultMessage(TagAddr, std::move(ArgBytes));
+  if (!WFR)
+    return WFR.takeError();
 
   {
     std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
@@ -366,9 +370,7 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
     releaseSeqNo(SeqNo);
   }
 
-  auto WFR =
-      shared::WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
-  SendResult(std::move(WFR));
+  SendResult(std::move(*WFR));
   return Error::success();
 }
 
@@ -380,9 +382,10 @@ void SimpleRemoteEPC::handleCallWrapper(
       [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() mutable {
         ES->runJITDispatchHandler(
             [this, RemoteSeqNo](shared::WrapperFunctionBuffer WFR) {
+              auto [ResultTag, Payload] = encodeResultMessage(std::move(WFR));
               if (auto Err =
                       sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                                  ExecutorAddr(), {WFR.data(), WFR.size()}))
+                                  ResultTag, {Payload.data(), Payload.size()}))
                 getExecutionSession().reportError(std::move(Err));
             },
             TagAddr, std::move(ArgBytes));

@@ -181,11 +181,8 @@
 #include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -201,14 +198,11 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-
-#include <vector>
 
 #include <cstdio>
 
@@ -936,16 +930,6 @@ public:
       AllLDSUses[F].insert(Vars.begin(), Vars.end());
     for (auto &[F, Vars] : FunctionLDSUses)
       AllLDSUses[F].insert(Vars.begin(), Vars.end());
-
-    // Named barriers are handled by AMDGPULowerExecSync; filter them out.
-    for (auto &[F, Vars] : AllLDSUses) {
-      SmallVector<GlobalVariable *> Barriers;
-      for (GlobalVariable *V : Vars)
-        if (AMDGPU::isNamedBarrier(*V))
-          Barriers.push_back(V);
-      for (GlobalVariable *V : Barriers)
-        Vars.erase(V);
-    }
 
     // Build reverse map: LDS variable -> functions that use it.
     DenseMap<GlobalVariable *, SmallVector<Function *, 4>> VarToFuncs;

@@ -141,7 +141,6 @@ static constexpr unsigned g_string_read_width = 256;
 enum {
 #define LLDB_PROPERTIES_process
 #include "TargetPropertiesEnum.inc"
-  ePropertyExperimental,
 };
 
 #define LLDB_PROPERTIES_process_experimental
@@ -184,6 +183,14 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
         Thread::GetGlobalProperties().GetValueProperties());
+
+    m_experimental_properties_up =
+        std::make_unique<ProcessExperimentalProperties>();
+    m_collection_sp->AppendProperty(
+        Properties::GetExperimentalSettingsName(),
+        "Experimental settings - setting these won't produce "
+        "errors if the setting is not present.",
+        true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Process::GetGlobalProperties());
@@ -194,14 +201,6 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ePropertyDisableLangRuntimeUnwindPlans,
         [this] { DisableLanguageRuntimeUnwindPlansCallback(); });
   }
-
-  m_experimental_properties_up =
-      std::make_unique<ProcessExperimentalProperties>();
-  m_collection_sp->AppendProperty(
-      Properties::GetExperimentalSettingsName(),
-      "Experimental settings - setting these won't produce "
-      "errors if the setting is not present.",
-      true, m_experimental_properties_up->GetValueProperties());
 }
 
 ProcessProperties::~ProcessProperties() = default;
@@ -386,26 +385,25 @@ Args ProcessProperties::GetAlwaysRunThreadNames() const {
   return args;
 }
 
+OptionValueProperties *ProcessProperties::GetExperimentalProperties() const {
+  if (const Property *exp_property = m_collection_sp->GetProperty(
+          Properties::GetExperimentalSettingsName()))
+    return exp_property->GetValue()->GetAsProperties();
+  return nullptr;
+}
+
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
+  OptionValueProperties *exp_values = GetExperimentalProperties();
   if (!exp_values)
     return fail_value;
-
   return exp_values
       ->GetPropertyAtIndexAs<bool>(ePropertyOSPluginReportsAllThreads)
       .value_or(fail_value);
 }
 
 void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
+  if (OptionValueProperties *exp_values = GetExperimentalProperties())
     exp_values->SetPropertyAtIndex(ePropertyOSPluginReportsAllThreads,
                                    does_report);
 }
@@ -1837,34 +1835,42 @@ void Process::RemoveConstituentFromBreakpointSite(
   }
 }
 
-size_t Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
-                                                  uint8_t *buf) const {
-  size_t bytes_removed = 0;
+void Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
+                                                uint8_t *buf) const {
   StopPointSiteList<BreakpointSite> bp_sites_in_range;
+  if (!m_breakpoint_site_list.FindInRange(bp_addr, bp_addr + size,
+                                          bp_sites_in_range))
+    return;
 
-  if (m_breakpoint_site_list.FindInRange(bp_addr, bp_addr + size,
-                                         bp_sites_in_range)) {
-    bp_sites_in_range.ForEach([bp_addr, size,
-                               buf](BreakpointSite *bp_site) -> void {
-      if (bp_site->GetType() == BreakpointSite::eSoftware) {
-        addr_t intersect_addr;
-        size_t intersect_size;
-        size_t opcode_offset;
-        if (bp_site->IntersectsRange(bp_addr, size, &intersect_addr,
-                                     &intersect_size, &opcode_offset)) {
-          assert(bp_addr <= intersect_addr && intersect_addr < bp_addr + size);
-          assert(bp_addr < intersect_addr + intersect_size &&
-                 intersect_addr + intersect_size <= bp_addr + size);
-          assert(opcode_offset + intersect_size <= bp_site->GetByteSize());
-          size_t buf_offset = intersect_addr - bp_addr;
-          ::memcpy(buf + buf_offset,
-                   bp_site->GetSavedOpcodeBytes() + opcode_offset,
-                   intersect_size);
-        }
+  bp_sites_in_range.ForEach([bp_addr, size,
+                             buf](BreakpointSite *bp_site) -> void {
+    if (bp_site->GetType() == BreakpointSite::eSoftware) {
+      addr_t intersect_addr;
+      size_t intersect_size;
+      size_t opcode_offset;
+      if (bp_site->IntersectsRange(bp_addr, size, &intersect_addr,
+                                   &intersect_size, &opcode_offset)) {
+        assert(bp_addr <= intersect_addr && intersect_addr < bp_addr + size);
+        assert(bp_addr < intersect_addr + intersect_size &&
+               intersect_addr + intersect_size <= bp_addr + size);
+        assert(opcode_offset + intersect_size <= bp_site->GetByteSize());
+        size_t buf_offset = intersect_addr - bp_addr;
+        ::memcpy(buf + buf_offset,
+                 bp_site->GetSavedOpcodeBytes() + opcode_offset,
+                 intersect_size);
       }
-    });
-  }
-  return bytes_removed;
+    }
+  });
+}
+
+void Process::AddCacheData(addr_t addr,
+                           const WritableDataBufferSP &data_buffer_sp) {
+  if (!data_buffer_sp || data_buffer_sp->GetByteSize() == 0)
+    return;
+
+  RemoveBreakpointOpcodesFromBuffer(addr, data_buffer_sp->GetByteSize(),
+                                    data_buffer_sp->GetBytes());
+  m_memory_cache.AddCacheData(addr, data_buffer_sp);
 }
 
 size_t Process::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
@@ -2084,11 +2090,23 @@ void Process::VerifyMemoryRead(addr_t addr, const void *cache_buf,
 
 size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
                            size_t size, Status &error) {
+  error.Clear();
+
+  // Non-default address spaces bypass the flat memory cache.
+  if (!process_addr.IsInDefaultAddressSpace()) {
+    llvm::Expected<AddressSpaceInfo> info =
+        GetAddressSpaceInfo(process_addr.GetAddressSpace());
+    if (!info) {
+      error = Status::FromError(info.takeError());
+      return 0;
+    }
+    return DoReadMemory(process_addr, buf, size, error);
+  }
+
   lldb::addr_t addr = process_addr.GetValue();
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
-  error.Clear();
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
 
@@ -2445,50 +2463,6 @@ size_t Process::ReadMemoryFromInferior(addr_t addr, void *buf, size_t size,
   return bytes_read;
 }
 
-lldb::offset_t Process::ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
-                                           lldb::addr_t chunk_size,
-                                           lldb::offset_t size,
-                                           ReadMemoryChunkCallback callback) {
-  // Safety check to prevent an infinite loop.
-  if (chunk_size == 0)
-    return 0;
-
-  // Buffer for when a NULL buf is provided, initialized
-  // to 0 bytes, we set it to chunk_size and then replace buf
-  // with the new buffer.
-  DataBufferHeap data_buffer;
-  if (!buf) {
-    data_buffer.SetByteSize(chunk_size);
-    buf = data_buffer.GetBytes();
-  }
-
-  uint64_t bytes_remaining = size;
-  uint64_t bytes_read = 0;
-  Status error;
-  while (bytes_remaining > 0) {
-    // Get the next read chunk size as the minimum of the remaining bytes and
-    // the write chunk max size.
-    const lldb::addr_t bytes_to_read = std::min(bytes_remaining, chunk_size);
-    const lldb::addr_t current_addr = vm_addr + bytes_read;
-    const lldb::addr_t bytes_read_for_chunk =
-        ReadMemoryFromInferior(current_addr, buf, bytes_to_read, error);
-
-    bytes_read += bytes_read_for_chunk;
-    // If the bytes read in this chunk would cause us to overflow, something
-    // went wrong and we should fail fast.
-    if (bytes_read_for_chunk > bytes_remaining)
-      return 0;
-    else
-      bytes_remaining -= bytes_read_for_chunk;
-
-    if (callback(error, current_addr, buf, bytes_read_for_chunk) ==
-        IterationAction::Stop)
-      break;
-  }
-
-  return bytes_read;
-}
-
 uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
                                                 size_t integer_byte_size,
                                                 uint64_t fail_value,
@@ -2550,12 +2524,19 @@ int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
   return fail_value;
 }
 
-addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error) {
+llvm::Expected<addr_t> Process::ReadPointerFromMemory(lldb::addr_t vm_addr) {
   Scalar scalar;
+  Status error;
   if (ReadScalarIntegerFromMemory(vm_addr, GetAddressByteSize(), false, scalar,
-                                  error))
-    return scalar.ULongLong(LLDB_INVALID_ADDRESS);
-  return LLDB_INVALID_ADDRESS;
+                                  error)) {
+    assert(scalar.GetType() == Scalar::e_int &&
+           "a successful read always yields an integer");
+    return scalar.ULongLong();
+  }
+  if (error.Fail())
+    return error.ToError();
+  return llvm::createStringError(
+      "failed to read pointer from memory at 0x%" PRIx64, vm_addr);
 }
 
 llvm::SmallVector<std::optional<addr_t>>
@@ -2611,10 +2592,6 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
 
   StopPointSiteList<BreakpointSite> bp_sites_in_range;
   if (!m_breakpoint_site_list.FindInRange(addr, addr + size, bp_sites_in_range))
-    return WriteMemoryPrivate(addr, buf, size, error);
-
-  // No breakpoint sites overlap
-  if (bp_sites_in_range.IsEmpty())
     return WriteMemoryPrivate(addr, buf, size, error);
 
   const uint8_t *ubuf = (const uint8_t *)buf;
@@ -7138,4 +7115,44 @@ void Process::SetAddressableBitMasks(AddressableBits bit_masks) {
     SetHighmemCodeAddressMask(high_addr_mask);
     SetHighmemDataAddressMask(high_addr_mask);
   }
+}
+
+llvm::Expected<AddressSpaceInfo>
+Process::GetAddressSpaceInfo(llvm::StringRef address_space_name) {
+  if (m_address_spaces.empty())
+    return llvm::createStringError("process doesn't support address spaces");
+
+  for (const AddressSpaceInfo &info : m_address_spaces) {
+    if (address_space_name == info.name)
+      return info;
+  }
+
+  std::string names = llvm::join(
+      llvm::map_range(m_address_spaces,
+                      [](const AddressSpaceInfo &info) { return info.name; }),
+      ", ");
+  return llvm::createStringError(
+      "invalid address space \"%s\", expected one of: %s",
+      address_space_name.str().c_str(), names.c_str());
+}
+
+llvm::Expected<AddressSpaceInfo>
+Process::GetAddressSpaceInfo(lldb::addr_space_t address_space_id) {
+  if (m_address_spaces.empty())
+    return llvm::createStringError("process doesn't support address spaces");
+
+  for (const AddressSpaceInfo &info : m_address_spaces) {
+    if (info.space_id == address_space_id)
+      return info;
+  }
+
+  std::string ids =
+      llvm::join(llvm::map_range(m_address_spaces,
+                                 [](const AddressSpaceInfo &info) {
+                                   return std::to_string(info.space_id);
+                                 }),
+                 ", ");
+  return llvm::createStringError("invalid address space id %" PRIu64
+                                 ", expected one of: %s",
+                                 address_space_id, ids.c_str());
 }
