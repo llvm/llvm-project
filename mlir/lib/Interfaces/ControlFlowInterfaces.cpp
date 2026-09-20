@@ -751,6 +751,15 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
       // Successor inputs are direct region arguments or results of this op.
       // Valid input IR already prevents captures across nested isolation
       // boundaries, so only this op's boundary needs an additional check.
+      // Example (isolated_op has IsolatedFromAbove):
+      // %r = isolated_op %x {
+      // ^bb0(%arg: ...):
+      //   use(%arg)
+      //   yield %arg
+      // }
+      // use(%r)
+      // Replacing %arg with %x would introduce a capture inside isolated_op.
+      // Replacing %r with %x changes only the outer use and is allowed.
       Region *valueRegion = value.getParentRegion();
       if (isIsolated && valueRegion->getParentOp() == op &&
           replacement.getParentRegion() != valueRegion)
