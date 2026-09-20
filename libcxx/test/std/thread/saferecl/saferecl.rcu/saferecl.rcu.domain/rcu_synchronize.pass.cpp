@@ -11,6 +11,7 @@
 
 // void rcu_synchronize(rcu_domain& dom = rcu_default_domain()) noexcept;
 
+#include <array>
 #include <atomic>
 #include <cassert>
 #include <chrono>

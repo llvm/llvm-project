@@ -15,6 +15,7 @@
 #include <cassert>
 #include <chrono>
 #include <rcu>
+#include <stop_token>
 #include <thread>
 #include <vector>
 

@@ -11,6 +11,7 @@
 
 // <rcu>
 
+#include <atomic>
 #include <rcu>
 #include <thread>
 #include <chrono>
