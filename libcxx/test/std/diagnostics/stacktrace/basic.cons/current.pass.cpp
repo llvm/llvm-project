@@ -26,6 +26,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <memory_resource>
 #include <stacktrace>
 #include <vector>
 
@@ -61,13 +62,34 @@ uintptr_t _b = reinterpret_cast<uintptr_t>(&b);
 uintptr_t _c = reinterpret_cast<uintptr_t>(&c);
 #endif
 
-void expect_trace(const std::stacktrace& st, std::vector<uintptr_t> const& expect_chain) {
+template <class St>
+void expect_trace(const St& st, std::vector<uintptr_t> const& expect_chain) {
   auto trace_it = st.begin();
   for (uintptr_t expect_addr : expect_chain) {
     std::stacktrace_entry const& entry = *trace_it++;
     assert(entry.native_handle() >= expect_addr);
   }
 }
+
+// Same call-chain shape as a/b/c above, but generic over the allocator, so `current()`'s
+// allocator-forwarding overloads can be exercised with a real, non-default allocator.
+namespace {
+template <class Alloc>
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::basic_stacktrace<Alloc>
+alloc_a(size_t skip, size_t max_depth, Alloc const& alloc) {
+  return std::basic_stacktrace<Alloc>::current(skip, max_depth, alloc);
+}
+template <class Alloc>
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::basic_stacktrace<Alloc>
+alloc_b(size_t skip, size_t max_depth, Alloc const& alloc) {
+  return alloc_a(skip, max_depth, alloc);
+}
+template <class Alloc>
+TEST_NO_TAIL_CALLS TEST_NOINLINE std::basic_stacktrace<Alloc>
+alloc_c(size_t skip, size_t max_depth, Alloc const& alloc) {
+  return alloc_b(skip, max_depth, alloc);
+}
+} // namespace
 
 int main(int, char**) {
   // All overloads are noexcept
@@ -91,6 +113,27 @@ int main(int, char**) {
 
   expect_trace(c(2, 1), {_c});
   expect_trace(c(2, 0), {});
+
+  // `skip` far exceeding the actual call depth must clamp to an empty trace rather than
+  // misbehave.
+  assert(c(1'000'000, 10).empty());
+
+  // `current()` overloads with an explicit (non-default) allocator: verify the allocator is
+  // retained and the resulting trace still has real content, using a genuine
+  // `std::pmr::polymorphic_allocator` (i.e. `std::pmr::stacktrace`).
+  {
+    using Alloc = std::pmr::polymorphic_allocator<std::stacktrace_entry>;
+    std::pmr::monotonic_buffer_resource resource;
+    Alloc alloc(&resource);
+
+    static_assert(noexcept(std::pmr::stacktrace::current(alloc)));
+    static_assert(noexcept(std::pmr::stacktrace::current({}, alloc)));
+    static_assert(noexcept(std::pmr::stacktrace::current({}, {}, alloc)));
+
+    std::pmr::stacktrace st = alloc_c(0, 3, alloc);
+    assert(st.get_allocator() == alloc);
+    expect_trace(st, {_a, _b, _c});
+  }
 
   return 0;
 }

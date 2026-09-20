@@ -20,14 +20,16 @@
 
 #include <cassert>
 #include <cstdint>
+#include <memory_resource>
 #include <stacktrace>
 #include <vector>
 
 namespace {
 
 // Create a stacktrace with entries having the given addresses.
-std::stacktrace fake_trace(std::vector<uintptr_t> const& addrs) {
-  std::stacktrace ret;
+template <class Alloc = std::allocator<std::stacktrace_entry>>
+std::basic_stacktrace<Alloc> fake_trace(std::vector<uintptr_t> const& addrs, Alloc const& alloc = Alloc()) {
+  std::basic_stacktrace<Alloc> ret(alloc);
   auto& base = *reinterpret_cast<std::__stacktrace::_Trace*>(&ret);
   for (uintptr_t addr : addrs) {
     auto& entry = base.__entry_append_();
@@ -55,6 +57,18 @@ int main(int, char**) {
   assert(gt == (fake_trace({100}) <=> fake_trace({})));
   assert(gt == (fake_trace({100}) <=> fake_trace({99})));
   assert(gt == (fake_trace({100, 200}) <=> fake_trace({100})));
+
+  // Cross-allocator ordering: `operator<=>` is a template over `Allocator2`, so a
+  // `std::stacktrace` (std::allocator) must order correctly against a `std::pmr::stacktrace`
+  // (std::pmr::polymorphic_allocator).
+  {
+    std::pmr::polymorphic_allocator<std::stacktrace_entry> pmr_alloc;
+
+    assert(eq == (fake_trace({100}) <=> fake_trace<decltype(pmr_alloc)>({100}, pmr_alloc)));
+    assert(lt == (fake_trace({99}) <=> fake_trace<decltype(pmr_alloc)>({100}, pmr_alloc)));
+    assert(gt == (fake_trace({100}) <=> fake_trace<decltype(pmr_alloc)>({99}, pmr_alloc)));
+    assert(lt == (fake_trace({100}) <=> fake_trace<decltype(pmr_alloc)>({100, 200}, pmr_alloc)));
+  }
 
   return 0;
 }
