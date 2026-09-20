@@ -1126,12 +1126,45 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (SrcBits >= 8 && SrcBits < 32 && isa<FixedVectorType>(Src)) {
       if (FPTy->isDoubleTy())
         return Scale(1 + (SrcBits < 16 && IsSigned && ST->has16BitInsts()), 1);
+      if (FPTy->isHalfTy()) {
+        const InstructionCost PairCost =
+            InstructionCost(NElts / 2) * getFullRateInstrCost();
+        // Lanes wider than 16 bits, and every lane without 16 bit instructions,
+        // are converted to f32 first. With the packed conversion each pair is
+        // then converted at once. Otherwise each lane is converted, and without
+        // real true16 each pair of halves is packed.
+        if (!ST->has16BitInsts() || SrcBits > 16) {
+          auto *FloatTy =
+              FixedVectorType::get(Type::getFloatTy(Dst->getContext()), NElts);
+          const InstructionCost FloatCost =
+              getCastInstrCost(Opcode, FloatTy, Src, CCH, CostKind);
+          if (ST->has16BitInsts() && ST->hasCvtPkF16F32Inst())
+            return FloatCost + InstructionCost(divideCeil(NElts, 2)) *
+                                   getFullRateInstrCost();
+          const unsigned PackOps =
+              !ST->has16BitInsts() ? 2 : !ST->useRealTrue16Insts();
+          return FloatCost + Scale(1) + PackOps * PairCost;
+        }
+        // Each lane is converted from a 16 bit subword. Lanes narrower than 16
+        // bits are extended lane by lane, except bytes with SDWA. Signed bytes
+        // are sign extended a pair at a time. Real true16 reads the high
+        // subword in place, so only signed lanes narrower than 16 bits pay per
+        // pair. Otherwise wider lanes shift the high subword of each pair down
+        // without SDWA, and each pair of halves is packed.
+        const unsigned PerElt =
+            1 + (SrcBits == 8 ? !ST->hasSDWA() : SrcBits < 16);
+        const bool RealTrue16 = ST->useRealTrue16Insts();
+        const unsigned PerPair =
+            !RealTrue16 + (SrcBits == 8 || RealTrue16 ? SrcBits < 16 && IsSigned
+                                                      : !ST->hasSDWA());
+        return Scale(PerElt) + PerPair * PairCost;
+      }
       // An unsigned byte is converted straight out of its register.
       if (SrcBits == 8 && !IsSigned)
         return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
       if (SrcBits < 16 && !IsSigned)
         return Scale(2);
-      unsigned PerElt = ST->hasSDWA() ? 1 : 2;
+      unsigned PerElt = ST->hasSDWA() && SrcBits <= 16 ? 1 : 2;
       if (SrcBits < 16 && ST->has16BitInsts())
         ++PerElt;
       return Scale(PerElt);
@@ -1148,12 +1181,17 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       // rounding sequence has seven, plus integer operations and constants.
       return ST->haveRoundOpsF64() ? Scale(1, 6) : Scale(22, 7);
     }
+    // The f32 expansion has one fma, which is quarter rate without fast FMA.
+    const InstructionCost SlowFMACost =
+        ST->hasFastFMAF32() ? 0
+                            : NElts * (getQuarterRateInstrCost(CostKind) -
+                                       getFullRateInstrCost());
     if (FPTy->isFloatTy())
-      return Scale(IsSigned64 ? 13 : 6);
+      return Scale(IsSigned64 ? 13 : 6) + SlowFMACost;
     if (FPTy->isBFloatTy()) {
       // Unlike half, bf16 does not fit in i32. Extend to f32 and use the full
       // i64 expansion.
-      return Scale(1 + (IsSigned64 ? 13 : 6));
+      return Scale(1 + (IsSigned64 ? 13 : 6)) + SlowFMACost;
     }
     return Scale(3);
   }

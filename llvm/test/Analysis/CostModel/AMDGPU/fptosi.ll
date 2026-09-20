@@ -155,21 +155,37 @@ define i32 @fptosi_double_i8(i32 %arg) {
 }
 
 define i32 @fptosi_float_i64(i32 %arg) {
-; ALL-LABEL: 'fptosi_float_i64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %I64 = fptosi float poison to i64
-; ALL-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V2I64 = fptosi <2 x float> poison to <2 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V4I64 = fptosi <4 x float> poison to <4 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %V8I64 = fptosi <8 x float> poison to <8 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 208 for instruction: %V16I64 = fptosi <16 x float> poison to <16 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
+; FAST-LABEL: 'fptosi_float_i64'
+; FAST-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %I64 = fptosi float poison to i64
+; FAST-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V2I64 = fptosi <2 x float> poison to <2 x i64>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V4I64 = fptosi <4 x float> poison to <4 x i64>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %V8I64 = fptosi <8 x float> poison to <8 x i64>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 208 for instruction: %V16I64 = fptosi <16 x float> poison to <16 x i64>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
-; ALL-SIZE-LABEL: 'fptosi_float_i64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %I64 = fptosi float poison to i64
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V2I64 = fptosi <2 x float> poison to <2 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V4I64 = fptosi <4 x float> poison to <4 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %V8I64 = fptosi <8 x float> poison to <8 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 208 for instruction: %V16I64 = fptosi <16 x float> poison to <16 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
+; SLOW-LABEL: 'fptosi_float_i64'
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %I64 = fptosi float poison to i64
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V2I64 = fptosi <2 x float> poison to <2 x i64>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V4I64 = fptosi <4 x float> poison to <4 x i64>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %V8I64 = fptosi <8 x float> poison to <8 x i64>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %V16I64 = fptosi <16 x float> poison to <16 x i64>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
+;
+; FAST-SIZE-LABEL: 'fptosi_float_i64'
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %I64 = fptosi float poison to i64
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V2I64 = fptosi <2 x float> poison to <2 x i64>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V4I64 = fptosi <4 x float> poison to <4 x i64>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %V8I64 = fptosi <8 x float> poison to <8 x i64>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 208 for instruction: %V16I64 = fptosi <16 x float> poison to <16 x i64>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
+;
+; SLOW-SIZE-LABEL: 'fptosi_float_i64'
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %I64 = fptosi float poison to i64
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V2I64 = fptosi <2 x float> poison to <2 x i64>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V4I64 = fptosi <4 x float> poison to <4 x i64>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 112 for instruction: %V8I64 = fptosi <8 x float> poison to <8 x i64>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %V16I64 = fptosi <16 x float> poison to <16 x i64>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
 ;
   %I64 = fptosi float poison to i64
   %V2I64 = fptosi <2 x float> poison to <2 x i64>
