@@ -29,12 +29,28 @@ int main(int, char**) {
   size_t nonempty_hash = std::hash<std::stacktrace>()(nonempty_trace);
   assert(empty_hash != nonempty_hash);
 
+  // Equal objects must hash equal ([hash.requirements]).
+  std::stacktrace empty_trace_copy    = empty_trace;
+  std::stacktrace nonempty_trace_copy = nonempty_trace;
+  assert(empty_trace == empty_trace_copy);
+  assert(std::hash<std::stacktrace>()(empty_trace_copy) == empty_hash);
+  assert(nonempty_trace == nonempty_trace_copy);
+  assert(std::hash<std::stacktrace>()(nonempty_trace_copy) == nonempty_hash);
+
   std::stacktrace_entry const empty_entry;
   std::stacktrace_entry const& nonempty_entry = nonempty_trace[0];
 
   size_t empty_entry_hash    = std::hash<std::stacktrace_entry>()(empty_entry);
   size_t nonempty_entry_hash = std::hash<std::stacktrace_entry>()(nonempty_entry);
   assert(empty_entry_hash != nonempty_entry_hash);
+
+  // Equal objects must hash equal ([hash.requirements]).
+  std::stacktrace_entry const empty_entry_copy    = empty_entry;
+  std::stacktrace_entry const nonempty_entry_copy = nonempty_entry;
+  assert(empty_entry == empty_entry_copy);
+  assert(std::hash<std::stacktrace_entry>()(empty_entry_copy) == empty_entry_hash);
+  assert(nonempty_entry == nonempty_entry_copy);
+  assert(std::hash<std::stacktrace_entry>()(nonempty_entry_copy) == nonempty_entry_hash);
 
   return 0;
 }

@@ -24,6 +24,12 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_macros.h"
+
+// The standard permits self-move-assignment to leave the object in any valid-but-unspecified
+// state; we only assert it doesn't crash/UB. Silence the warning so we can test it.
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wself-move")
+
 namespace {
 
 template <typename T>
@@ -74,6 +80,16 @@ int main() {
     std::basic_stacktrace<A> s2(std::move(s0));
   }
 
+  // Move-construction with an explicit allocator
+
+  {
+    using A = std::allocator<std::stacktrace_entry>;
+    auto s0 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1{s0};
+    std::basic_stacktrace<A> s2{std::move(s0), A()};
+    assert(s1 == s2);
+  }
+
   // Move-assignment tests
 
   {
@@ -104,6 +120,15 @@ int main() {
     static_assert(noexcept(s2 = std::move(s0)));
     s2 = std::move(s0);
     assert(s1 == s2);
+  }
+
+  // Self-move-assignment must not crash; the standard leaves the resulting
+  // state valid-but-unspecified, so we only check it's still a usable object.
+
+  {
+    auto s0 = std::stacktrace::current();
+    s0      = std::move(s0);
+    assert(s0.size() <= s0.max_size());
   }
 
   return 0;

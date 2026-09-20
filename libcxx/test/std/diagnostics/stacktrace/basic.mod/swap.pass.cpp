@@ -52,6 +52,11 @@ int main(int, char**) {
   assert(!trace1.empty());
   assert(trace2.empty());
 
+  // Self-swap must leave the object unchanged.
+  auto const trace1_before = trace1;
+  trace1.swap(trace1);
+  assert(trace1 == trace1_before);
+
   // Check `noexcept`: `swap` is noexcept if either:
   //   (1) the allocator propagates on swap
   //   (2) if instances of that allocator type are always equal.

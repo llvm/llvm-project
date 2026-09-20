@@ -41,5 +41,11 @@ int main(int, char**) {
   auto entry2b = func2();
   assert(entry2 == entry2b);
 
+  // Two default-constructed (empty) entries must compare equal.
+  std::stacktrace_entry const empty1;
+  std::stacktrace_entry const empty2;
+  assert(empty1 == empty2);
+  assert(!(empty1 != empty2));
+
   return 0;
 }

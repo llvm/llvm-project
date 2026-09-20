@@ -12,9 +12,12 @@
 // (19.6.4.3) Observers [stacktrace.basic.obs]
 //
 //   const_reference at(size_type) const;
+//
+// Throws: out_of_range if frame_no >= size().
 
 #include <cassert>
 #include <stacktrace>
+#include <stdexcept>
 
 #include "test_macros.h"
 
@@ -43,6 +46,38 @@ int main(int, char**) {
   assert(*it++ == f2);
   assert(it != st.end());
   assert(*it++ == f3);
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  try {
+    TEST_IGNORE_NODISCARD st.at(st.size());
+    assert(false);
+  } catch (std::out_of_range const&) {
+    // pass
+  } catch (...) {
+    assert(false);
+  }
+
+  try {
+    TEST_IGNORE_NODISCARD st.at(st.size() + 1);
+    assert(false);
+  } catch (std::out_of_range const&) {
+    // pass
+  } catch (...) {
+    assert(false);
+  }
+
+  {
+    std::stacktrace const empty;
+    try {
+      TEST_IGNORE_NODISCARD empty.at(0);
+      assert(false);
+    } catch (std::out_of_range const&) {
+      // pass
+    } catch (...) {
+      assert(false);
+    }
+  }
+#endif // TEST_HAS_NO_EXCEPTIONS
 
   return 0;
 }

@@ -12,6 +12,7 @@
 
 #include <__config>
 
+#include <__assert>
 #include <__stacktrace/stacktrace_entry.h>
 #include <algorithm>
 #include <array>
@@ -76,7 +77,10 @@ struct _Images {
   // OS-specific: enumerate program images in this process's space
   void enumerate();
 
-  _Image& operator[](size_t __index) { return images_[__index]; }
+  _Image& operator[](size_t __index) {
+    _LIBCPP_ASSERT(__index < count_, "__stacktrace::_Images::operator[]: index out of range");
+    return images_[__index];
+  }
 
   // Image representing the main program, or nullptr if we couldn't find it
   _Image* main_prog_image() {
