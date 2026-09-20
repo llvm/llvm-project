@@ -15168,6 +15168,10 @@ private:
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
 
+  /// Concept-ids in normalized constraints that are known to be satisfied,
+  /// keyed like UnsubstitutedConstraintSatisfactionCache.
+  llvm::DenseSet<ArrayRef<unsigned>> SatisfiedConceptIdCache;
+
   /// Cache the instantiation results of template parameter mappings within
   /// concepts. Substituting into normalized concepts can be extremely expensive
   /// due to the redundancy of template parameters. This cache is intended for
