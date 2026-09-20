@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILBitcodeWriter.h"
+#include "DXILDebugInfoMap.h"
 #include "DXILValueEnumerator.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -325,6 +325,10 @@ private:
   }
   void writeDIObjCProperty(const DIObjCProperty *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIProperty(const DIProperty *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DIProperty Nodes");
+  }
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
@@ -398,8 +402,7 @@ dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
 dxil::BitcodeWriter::~BitcodeWriter() { }
 
 /// Write the specified module to the specified output stream.
-void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
-                           const DXILDebugInfoMap &DebugInfo) {
+void dxil::WriteDXILToFile(Module &M, raw_ostream &Out) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
@@ -409,6 +412,7 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out,
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
+  DXILDebugInfoMap DebugInfo = collectDXILDebugInfo(M);
   BitcodeWriter Writer(Buffer);
   Writer.writeModule(M, DebugInfo);
 
@@ -2537,7 +2541,7 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(cast<AtomicCmpXchgInst>(I).isWeak());
     break;
   case Instruction::AtomicRMW:
-    Code = bitc::FUNC_CODE_INST_ATOMICRMW;
+    Code = bitc::FUNC_CODE_INST_ATOMICRMW_OLD;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
     pushValue(I.getOperand(1), InstID, Vals);        // val.
     Vals.push_back(

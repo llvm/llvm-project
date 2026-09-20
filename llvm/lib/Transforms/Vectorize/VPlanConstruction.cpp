@@ -20,7 +20,9 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -53,6 +55,12 @@ class PlainCFGBuilder {
   // Loop versioning for alias metadata.
   LoopVersioning *LVer;
 
+  // Lazily provides branch probabilities for the incoming IR.
+  function_ref<const BranchProbabilityInfo &()> GetBPI;
+
+  // The BranchProbabilityInfo returned by GetBPI, cached on first use.
+  const BranchProbabilityInfo *BPI = nullptr;
+
   // Vectorization plan that we are working on.
   std::unique_ptr<VPlan> Plan;
 
@@ -79,10 +87,12 @@ class PlainCFGBuilder {
 #endif
   VPValue *getOrCreateVPOperand(Value *IRVal);
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
+  VPIRMetadata getTerminatorMetadata(Instruction &Term);
 
 public:
-  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer, Type *IdxTy)
-      : TheLoop(Lp), LI(LI), LVer(LVer),
+  PlainCFGBuilder(Loop *Lp, LoopInfo *LI, LoopVersioning *LVer, Type *IdxTy,
+                  function_ref<const BranchProbabilityInfo &()> GetBPI)
+      : TheLoop(Lp), LI(LI), LVer(LVer), GetBPI(GetBPI),
         Plan(std::make_unique<VPlan>(Lp, IdxTy)) {}
 
   /// Build plain CFG for TheLoop and connect it to Plan's entry.
@@ -183,6 +193,26 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
   return NewVPVal;
 }
 
+// Returns the metadata to preserve for terminator \p Term.
+VPIRMetadata PlainCFGBuilder::getTerminatorMetadata(Instruction &Term) {
+  VPIRMetadata MD(Term);
+  if (MD.getMetadata(LLVMContext::MD_prof))
+    return MD;
+  // Estimates are only read for edges inside the loop region.
+  if (!TheLoop->isInnermost() || Term.getParent() == TheLoop->getLoopLatch())
+    return MD;
+  // The weights describe the edges leaving Term in the order of its successors,
+  // matching the successor order of the VPBasicBlock created for Term's parent.
+  if (!BPI)
+    BPI = &GetBPI();
+  auto Weights = map_to_vector(seq(Term.getNumSuccessors()), [&](unsigned I) {
+    return BPI->getEdgeProbability(Term.getParent(), I).getNumerator();
+  });
+  MD.setEstimatedBranchWeights(
+      MDBuilder(Plan->getContext()).createBranchWeights(Weights));
+  return MD;
+}
+
 // Create new VPInstructions in a VPBasicBlock, given its BasicBlock
 // counterpart. This function must be invoked in RPO so that the operands of a
 // VPInstruction in \p BB have been visited before (except for Phi nodes).
@@ -207,7 +237,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // recipes.
       VPValue *Cond = getOrCreateVPOperand(Br->getCondition());
       VPIRBuilder.createNaryOp(VPInstruction::BranchOnCond, {Cond}, Inst, {},
-                               VPIRMetadata(*Inst), Inst->getDebugLoc());
+                               getTerminatorMetadata(*Inst),
+                               Inst->getDebugLoc());
       continue;
     }
 
@@ -219,7 +250,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       for (auto Case : SI->cases())
         Ops.push_back(getOrCreateVPOperand(Case.getCaseValue()));
       VPIRBuilder.createNaryOp(Instruction::Switch, Ops, Inst, {},
-                               VPIRMetadata(*Inst), Inst->getDebugLoc());
+                               getTerminatorMetadata(*Inst),
+                               Inst->getDebugLoc());
       continue;
     }
 
@@ -265,23 +297,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       SmallVector<VPValue *, 4> VPOperands;
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
-
-      if (auto *CI = dyn_cast<CastInst>(Inst)) {
-        NewR = VPIRBuilder.createScalarCast(CI->getOpcode(), VPOperands[0],
-                                            CI->getType(), CI->getDebugLoc(),
-                                            VPIRFlags(*CI), MD);
-        NewR->setUnderlyingValue(CI);
-      } else if (auto *LI = dyn_cast<LoadInst>(Inst)) {
-        NewR = VPIRBuilder.createScalarLoad(LI->getType(), VPOperands[0],
-                                            LI->getDebugLoc(), MD);
-        NewR->setUnderlyingValue(LI);
-      } else {
-        // Build VPInstruction for any arbitrary Instruction without specific
-        // representation in VPlan.
-        NewR = VPIRBuilder.createNaryOp(
-            Inst->getOpcode(), VPOperands, Inst, VPIRFlags(*Inst), MD,
-            Inst->getDebugLoc(), "", Inst->getType());
-      }
+      NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
+                                      VPIRFlags(*Inst), MD, Inst->getDebugLoc(),
+                                      "", Inst->getType());
     }
 
     IRDef2VPValue[Inst] = NewR;
@@ -598,17 +616,29 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
 /// To make RUN_VPLAN_PASS print initial VPlan.
 static void printAfterInitialConstruction(VPlan &) {}
 
-std::unique_ptr<VPlan>
-VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-                             PredicatedScalarEvolution &PSE,
-                             LoopVersioning *LVer) {
-  PlainCFGBuilder Builder(TheLoop, &LI, LVer, InductionTy);
+std::unique_ptr<VPlan> VPlanTransforms::buildVPlan0(
+    Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
+    PredicatedScalarEvolution &PSE, LoopVersioning *LVer,
+    function_ref<const BranchProbabilityInfo &()> GetBPI) {
+  PlainCFGBuilder Builder(TheLoop, &LI, LVer, InductionTy, GetBPI);
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
 
   RUN_VPLAN_PASS_NO_VERIFY(printAfterInitialConstruction, *VPlan0);
   return VPlan0;
+}
+
+void VPlanTransforms::recordExecutionFrequencies(VPlan &Plan) {
+  VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
+  SmallVector<VPBasicBlock *> Blocks = vp_rpo_plain_cfg_loop_body(Header);
+  auto Frequencies = vputils::computeExecutionFrequencies(Blocks);
+  LLVMContext &Ctx = Plan.getContext();
+  for (VPBasicBlock *VPBB : Blocks) {
+    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB))
+      VPI.setExecutionFrequency(Freq, Ctx);
+  }
 }
 
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
@@ -999,12 +1029,12 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
   // Collect which wide IVs have predicates and add them to PSE.
   auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
   SmallPtrSet<VPWidenInductionRecipe *, 4> PredicatedIVs;
-  for (auto &R : HeaderVPBB->phis()) {
-    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&R);
-    if (!WideIV || WideIV->getNoWrapPredicates().empty())
+  for (VPWidenInductionRecipe &WideIV :
+       make_isa_range<VPWidenInductionRecipe>(HeaderVPBB->phis())) {
+    if (WideIV.getNoWrapPredicates().empty())
       continue;
-    PredicatedIVs.insert(WideIV);
-    for (const auto *P : WideIV->getNoWrapPredicates())
+    PredicatedIVs.insert(&WideIV);
+    for (const auto *P : WideIV.getNoWrapPredicates())
       PSE.addPredicate(*P);
   }
 
@@ -1182,9 +1212,9 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
       CurrentLink->replaceAllUsesWith(RedRecipe);
       // Move any store recipes using the RedRecipe that appear before it in the
       // same block to just after the RedRecipe.
-      for (VPUser *U : make_early_inc_range(RedRecipe->users())) {
-        auto *UserR = dyn_cast<VPRecipeBase>(U);
-        if (!UserR || UserR->getParent() != LinkVPBB)
+      for (VPRecipeBase *UserR : make_early_inc_range(
+               make_isa_range<VPRecipeBase>(RedRecipe->users()))) {
+        if (UserR->getParent() != LinkVPBB)
           continue;
         if (!match(UserR, m_VPInstruction<Instruction::Store>()))
           continue;
@@ -1208,7 +1238,7 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
     for (VPRecipeBase &R : *VPBB) {
-      auto *VPI = dyn_cast<VPInstructionWithType>(&R);
+      auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI || VPI->getOpcode() != Instruction::Load) {
         assert(!R.mayReadFromMemory() && "unexpected recipe reading memory");
         continue;
@@ -1363,7 +1393,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     if (isa<VPIRValue>(V))
       continue;
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
-    VPIRFlags Flags;
+    std::optional<VPIRFlags> Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
     auto *RedIt = find_if(Users, IsaPred<VPReductionPHIRecipe>);
@@ -1404,6 +1434,17 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
+/// Add an incoming value to all phis in \p VPBB for its just-added last
+/// predecessor, re-using the value of the previously last one.
+static void addIncomingForLastPredecessor(VPBasicBlock *VPBB) {
+  for (VPRecipeBase &R : VPBB->phis()) {
+    auto *Phi = cast<VPPhi>(&R);
+    assert(Phi->getNumIncoming() == VPBB->getNumPredecessors() - 1 &&
+           "must have incoming values for all predecessors but the new one");
+    Phi->addIncoming(Phi->getIncomingValue(Phi->getNumIncoming() - 1));
+  }
+}
+
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
 /// connecting it to both vector and scalar preheaders. Updates scalar
 /// preheader phis to account for the new predecessor.
@@ -1415,13 +1456,7 @@ static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
   VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
   VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
   CheckBlockVPBB->swapSuccessors();
-  unsigned NumPreds = ScalarPH->getNumPredecessors();
-  for (VPRecipeBase &R : ScalarPH->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    assert(Phi->getNumIncoming() == NumPreds - 1 &&
-           "must have incoming values for all predecessors");
-    Phi->addIncoming(Phi->getOperand(NumPreds - 2));
-  }
+  addIncomingForLastPredecessor(ScalarPH);
 }
 
 // Likelyhood of bypassing the vectorized loop due to a runtime check block,
@@ -1507,12 +1542,8 @@ void VPlanTransforms::addMinimumIterationCheck(
                                     TripCount, Step)) {
       // Generate the minimum iteration check only if we cannot prove the
       // check is known to be true, or known to be false.
-      // Try to expand Step into VPInstructions in CheckBlock; otherwise fall
-      // back to a VPExpandSCEV recipe in the plan's entry block.
       VPValue *MinTripCountVPV =
-          VPSCEVExpander(Builder, *PSE.getSE(), DL).tryToExpand(Step);
-      if (!MinTripCountVPV)
-        MinTripCountVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Step);
+          VPSCEVExpander(Builder, *PSE.getSE(), DL).expand(Step);
       TripCountCheck = Builder.createICmp(
           CmpPred, TripCountVPV, MinTripCountVPV, DL, "min.iters.check");
     } // else step known to be < trip count, use TripCountCheck preset to false.
@@ -1603,12 +1634,15 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (!match(MinOrMaxR, m_Intrinsic(ExpectedIntrinsicID)))
       return nullptr;
 
+    // MinOrMaxR must combine RedPhiR directly with the new element, as the NaN
+    // check added below only covers the other operand.
+    // TODO: Support multi-step min/max chains (e.g. maxnum(l, maxnum(k, phi)))
+    // by checking all operands feeding the chain for NaNs.
     if (MinOrMaxR->getOperand(0) == RedPhiR)
       return MinOrMaxR->getOperand(1);
-
-    assert(MinOrMaxR->getOperand(1) == RedPhiR &&
-           "Reduction phi operand expected");
-    return MinOrMaxR->getOperand(0);
+    if (MinOrMaxR->getOperand(1) == RedPhiR)
+      return MinOrMaxR->getOperand(0);
+    return nullptr;
   };
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
@@ -1771,12 +1805,11 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
   SmallVector<VPReductionPHIRecipe *, 4> Phis;
-  for (VPRecipeBase &Phi :
-       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
-    if (PhiR && RecurrenceDescriptor::isFindLastRecurrenceKind(
-                    PhiR->getRecurrenceKind()))
-      Phis.push_back(PhiR);
+  for (VPReductionPHIRecipe &PhiR : make_isa_range<VPReductionPHIRecipe>(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            PhiR.getRecurrenceKind()))
+      Phis.push_back(&PhiR);
   }
 
   if (Phis.empty())
@@ -1897,6 +1930,11 @@ static bool handleFirstArgMinOrMax(
          "inloop and ordered reductions not supported");
   assert(FindLastIVPhiR->getVFScaleFactor() == 1 &&
          "FindIV reduction must not be scaled");
+
+  // TODO: support for FP in handleFirstArgMinOrMax
+  if (RecurrenceDescriptor::isFloatingPointRecurrenceKind(
+          MinOrMaxPhiR->getRecurrenceKind()))
+    return false;
 
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
   // TODO: Support non (i.e., narrower than) canonical IV types.
@@ -2043,7 +2081,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // reduction cycle.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
-        RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
+        RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
 
     auto *MinOrMaxOp =
@@ -2061,9 +2099,16 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // ComputeReductionResult.
     assert(MinOrMaxOp->getNumUsers() == 2 &&
            "MinOrMaxOp must have exactly 2 users");
-    VPValue *MinOrMaxOpValue = MinOrMaxOp->getOperand(0);
-    if (MinOrMaxOpValue == MinOrMaxPhiR)
+    // MinOrMaxOp must combine MinOrMaxPhiR directly with the new element;
+    // reject multi-step min/max chains (e.g. max(l, max(k, phi))), which
+    // this transform does not handle.
+    VPValue *MinOrMaxOpValue;
+    if (MinOrMaxOp->getOperand(0) == MinOrMaxPhiR)
       MinOrMaxOpValue = MinOrMaxOp->getOperand(1);
+    else if (MinOrMaxOp->getOperand(1) == MinOrMaxPhiR)
+      MinOrMaxOpValue = MinOrMaxOp->getOperand(0);
+    else
+      return false;
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
@@ -2085,8 +2130,6 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     VPInstruction *MinOrMaxResult =
         findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
-    assert(is_contained(MinOrMaxPhiR->users(), MinOrMaxOp) &&
-           "one user must be MinOrMaxOp");
     assert(MinOrMaxResult && "MinOrMaxResult must be a user of MinOrMaxOp");
 
     // Cmp must be used by the select of a FindLastIV chain.
@@ -2138,6 +2181,19 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
         return Pred == CmpInst::ICMP_SLE || Pred == CmpInst::ICMP_SLT;
       case RecurKind::SMin:
         return Pred == CmpInst::ICMP_SGE || Pred == CmpInst::ICMP_SGT;
+      case RecurKind::FMax:
+      case RecurKind::FMaximumNum:
+        return Pred == CmpInst::FCMP_OLE || Pred == CmpInst::FCMP_OLT;
+      case RecurKind::FMin:
+      case RecurKind::FMinimumNum:
+        return Pred == CmpInst::FCMP_OGE || Pred == CmpInst::FCMP_OGT;
+      // minnum and maxnum need special handling due to expected sNaN behaviour
+      // minimum and maximum return NaN if either input is a NAN
+      case RecurKind::FMinNum:
+      case RecurKind::FMaxNum:
+      case RecurKind::FMinimum:
+      case RecurKind::FMaximum:
+        return false;
       default:
         llvm_unreachable("unhandled recurrence kind");
       }
@@ -2154,6 +2210,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       return false;
     }
 
+    if (RdxKind == RecurKind::FMaximumNum ||
+        RdxKind == RecurKind::FMinimumNum) {
+      auto *StartC = dyn_cast<VPConstant>(MinOrMaxPhiR->getStartValue());
+      if (!StartC || StartC->getConstant()->isNaN())
+        return false;
+    }
+
     auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
     auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
     auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
@@ -2165,7 +2228,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
                                FindIVRdxResult->getIterator());
 
-    bool IsStrictPredicate = ICmpInst::isLT(Pred) || ICmpInst::isGT(Pred);
+    bool IsStrictPredicate = CmpInst::isStrictPredicate(Pred);
     if (IsStrictPredicate) {
       if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
                                   cast<VPWidenIntOrFpInductionRecipe>(IVOp),
@@ -2201,7 +2264,9 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     VPBuilder B(FindIVRdxResult);
     VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
     auto *FinalMinOrMaxCmp =
-        B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
+        (RecurrenceDescriptor::isIntegerRecurrenceKind(RdxKind))
+            ? B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult)
+            : B.createFCmp(CmpInst::FCMP_OEQ, MinOrMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVCmp->getOperand(1);
     VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =

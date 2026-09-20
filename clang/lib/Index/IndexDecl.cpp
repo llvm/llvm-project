@@ -706,8 +706,9 @@ public:
           handleTemplateArgumentLoc(TTP->getDefaultArgument(), Parent,
                                     TP->getLexicalDeclContext());
         if (auto *C = TTP->getTypeConstraint())
-          IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
-                                   Parent, TTP->getLexicalDeclContext());
+          IndexCtx.handleReference(C->getNamedConcept().getAsTemplateDecl(),
+                                   C->getConceptNameLoc(), Parent,
+                                   TTP->getLexicalDeclContext());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
         IndexCtx.indexTypeSourceInfo(NTTP->getTypeSourceInfo(), Parent);
         if (NTTP->hasDefaultArgument())

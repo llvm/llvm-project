@@ -78,9 +78,12 @@ public:
   // The file from which this symbol was created.
   InputFile *file;
 
-  // The default copy constructor is deleted due to atomic flags. Define one for
-  // places where no atomic is needed.
-  Symbol(const Symbol &o) { memcpy(static_cast<void *>(this), &o, sizeof(o)); }
+  // Symbols are referenced by pointer throughout the linker, so an implicit
+  // copy would create a dangerous duplicate; copy the needed members
+  // explicitly instead. Deleting the copy operations also suppresses the
+  // implicit move operations.
+  Symbol(const Symbol &o) = delete;
+  Symbol &operator=(const Symbol &) = delete;
 
 protected:
   const char *nameData;
@@ -340,6 +343,11 @@ public:
   // true for __wrap_foo if foo is referenced).
   LLVM_PREFERRED_TYPE(bool)
   uint8_t referencedAfterWrap : 1;
+
+  // True if this symbol is referenced by the embedded unoptimized part of
+  // dynamic debugging.
+  LLVM_PREFERRED_TYPE(bool)
+  uint8_t isDynDbgRef : 1;
 
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);

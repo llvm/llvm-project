@@ -136,6 +136,7 @@
 // CHECK-NEXT:     smepmp               1.0       'Smepmp' (Enhanced Physical Memory Protection)
 // CHECK-NEXT:     smmpm                1.0       'Smmpm' (Machine-level Pointer Masking for M-mode)
 // CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)
+// CHECK-NEXT:     smpmpdeleg           1.0       'Smpmpdeleg' (Sharing Hardware Resources between PMP and SPMP)
 // CHECK-NEXT:     smrnmi               1.0       'Smrnmi' (Resumable Non-Maskable Interrupts)
 // CHECK-NEXT:     smstateen            1.0       'Smstateen' (Machine-mode view of the state-enable extension)
 // CHECK-NEXT:     ssaia                1.0       'Ssaia' (Advanced Interrupt Architecture Supervisor Level)
@@ -148,6 +149,8 @@
 // CHECK-NEXT:     ssdbltrp             1.0       'Ssdbltrp' (Double Trap Supervisor Level)
 // CHECK-NEXT:     ssnpm                1.0       'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)
 // CHECK-NEXT:     sspm                 1.0       'Sspm' (Indicates Supervisor-mode Pointer Masking)
+// CHECK-NEXT:     sspmp                1.0       'Sspmp' (S-level Physical Memory Protection (SPMP))
+// CHECK-NEXT:     sspmpen              1.0       'Sspmpen' (Optimizing Context Switching of SPMP Entries)
 // CHECK-NEXT:     ssqosid              1.0       'Ssqosid' (Quality-of-Service (QoS) Identifiers)
 // CHECK-NEXT:     ssstateen            1.0       'Ssstateen' (Supervisor-mode view of the state-enable extension)
 // CHECK-NEXT:     ssstrict             1.0       'Ssstrict' (No non-conforming extensions are present)
@@ -241,7 +244,6 @@
 // CHECK-NEXT:     xtheadmempair        1.0       'XTHeadMemPair' (T-Head two-GPR Memory Operations)
 // CHECK-NEXT:     xtheadsync           1.0       'XTHeadSync' (T-Head multicore synchronization instructions)
 // CHECK-NEXT:     xtheadvdot           1.0       'XTHeadVdot' (T-Head Vector Extensions for Dot)
-// CHECK-NEXT:     xventanacondops      1.0       'XVentanaCondOps' (Ventana Conditional Ops)
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
@@ -250,7 +252,7 @@
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zilx                 0.1       'Zilx' (Indexed Integer Load Instructions)
-// CHECK-NEXT:     zvabd                0.7       'Zvabd' (Vector Absolute Difference)
+// CHECK-NEXT:     zvabd                0.9       'Zvabd' (Vector Absolute Difference)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvdot4a8i            0.1       'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)
 // CHECK-NEXT:     zvfbdota32f          0.2       'Zvfbdota32f' (FP32 batched dot-product extension)
@@ -269,14 +271,20 @@
 // CHECK-NEXT:     zvvmm                0.1       'Zvvmm' (Integer Matrix Multiply-Accumulate)
 // CHECK-NEXT:     zvvmtls              0.1       'Zvvmtls' (Matrix Tile Load/Store)
 // CHECK-NEXT:     zvvmttls             0.1       'Zvvmttls' (Transposing Matrix Tile Load/Store)
-// CHECK-NEXT:     zvzip                0.1       'Zvzip' (Vector Reordering Structured Data)
-// CHECK-NEXT:     smcsps               0.19      'Smcsps' (Conditional Stack Pointer Swap at Machine Level)
-// CHECK-NEXT:     smehv                0.19      'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level)
-// CHECK-NEXT:     smijt                0.19      'Smijt' (Interrupt Jump Table at Machine Level)
+// CHECK-NEXT:     zvzip                0.3       'Zvzip' (Vector Reordering Structured Data)
+// CHECK-NEXT:     smcsps               0.20      'Smcsps' (Conditional Stack Pointer Swap at Machine Level)
+// CHECK-NEXT:     smehv                0.20      'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level)
+// CHECK-NEXT:     smidctrl             0.20      'Smidctrl' (Interrupt Domain Control Interface at Machine Level)
+// CHECK-NEXT:     smijt                0.20      'Smijt' (Interrupt Jump Table at Machine Level)
+// CHECK-NEXT:     smip                 0.20      'Smip' (Support for Interrupt Handler Push/Pop at Machine Level)
+// CHECK-NEXT:     smnip                0.20      'Smnip' (Nested Interrupt Preemption Support at Machine Level)
 // CHECK-NEXT:     smpmpmt              0.6       'Smpmpmt' (PMP-based Memory Types Extension)
-// CHECK-NEXT:     sscsps               0.19      'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level)
-// CHECK-NEXT:     ssehv                0.19      'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level)
-// CHECK-NEXT:     ssijt                0.19      'Ssijt' (Interrupt Jump Table at Supervisor Level)
+// CHECK-NEXT:     sscsps               0.20      'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level)
+// CHECK-NEXT:     ssehv                0.20      'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level)
+// CHECK-NEXT:     ssidctrl             0.20      'Ssidctrl' (Interrupt Domain Control Interface at Supervisor Level)
+// CHECK-NEXT:     ssijt                0.20      'Ssijt' (Interrupt Jump Table at Supervisor Level)
+// CHECK-NEXT:     ssip                 0.20      'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level)
+// CHECK-NEXT:     ssnip                0.20      'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level)
 // CHECK-NEXT:     svukte               1.0       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-NEXT:     xqccmt               0.1       'Xqccmt' (Qualcomm 16-bit Table Jump)
 // CHECK-NEXT:     xsfmclic             0.1       'XSfmclic' (SiFive CLIC Machine-mode CSRs)
@@ -295,6 +303,8 @@
 // CHECK-NEXT:     rvi20u64
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental Profiles
+// CHECK-NEXT:     rva23p1s64
+// CHECK-NEXT:     rvb23p1s64
 // CHECK-NEXT:     rvm23u32
 // CHECK-EMPTY:
 // CHECK-NEXT: Use -march to specify the target's extension.

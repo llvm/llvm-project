@@ -1931,6 +1931,7 @@ TLI_DEFINE_VECFUNC("llvm.tanh.f32", "amd_vrs16_tanhf", FIXED(16), NOMASK, "_ZGV_
 
 TLI_DEFINE_VECFUNC("cbrt", "amd_vrd2_cbrt", FIXED(2), NOMASK, "_ZGV_LLVM_N2v")
 TLI_DEFINE_VECFUNC("cbrtf", "amd_vrs4_cbrtf", FIXED(4), NOMASK, "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("cbrtf", "amd_vrs8_cbrtf", FIXED(8), NOMASK, "_ZGV_LLVM_N8v")
 
 TLI_DEFINE_VECFUNC("sincos", "amd_vrd2_sincos", FIXED(2), NOMASK, "_ZGV_LLVM_N2vl8l8")
 TLI_DEFINE_VECFUNC("sincos", "amd_vrd4_sincos", FIXED(4), NOMASK, "_ZGV_LLVM_N4vl8l8")

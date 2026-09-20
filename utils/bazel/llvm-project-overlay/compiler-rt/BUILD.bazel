@@ -59,6 +59,9 @@ cc_library(
         [
             "lib/sanitizer_common/*.cpp",
         ],
+        exclude = [
+            "lib/sanitizer_common/sanitizer_offload*.cpp",
+        ],
     ),
     linkstatic = True,
     deps = [
@@ -164,6 +167,15 @@ cc_library(
     deps = [
         ":orc_rt_common_headers",
     ],
+)
+
+cc_library(
+    name = "emutls",
+    srcs = [
+        "lib/builtins/emutls.c",
+    ],
+    hdrs = glob(["lib/builtins/*.h"]),
+    linkstatic = True,
 )
 
 filegroup(
