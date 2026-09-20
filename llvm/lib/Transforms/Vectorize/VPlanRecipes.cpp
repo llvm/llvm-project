@@ -3268,30 +3268,15 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     MulOp = Instruction::FMul;
   }
 
-  // Determine the number of scalars we need to generate.
-  bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
-  // Compute the scalar steps and save the results in State.
-
-  unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
-  Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
-                                     : Constant::getNullValue(BaseIVTy);
-
-  for (unsigned Lane = 0; Lane < EndLane; ++Lane) {
-    // It is okay if the induction variable type cannot hold the lane number,
-    // we expect truncation in this case.
-    Constant *LaneValue =
-        BaseIVTy->isIntegerTy()
-            ? ConstantInt::get(BaseIVTy, Lane, /*IsSigned=*/false,
-                               /*ImplicitTrunc=*/true)
-            : ConstantFP::get(BaseIVTy, Lane);
-    Value *StartIdx = Builder.CreateBinOp(AddOp, StartIdx0, LaneValue);
-    assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
-           "Expected StartIdx to be folded to a constant when VF is not "
-           "scalable");
-    auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
-    auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
-    State.set(this, Add, VPLane(Lane));
-  }
+  // Lanes other than the first have been materialized as separate
+  // single-scalar recipes by replicateByVF, each with its own start index.
+  assert((vputils::onlyFirstLaneUsed(this) || State.VF.isScalar()) &&
+         "must have been replicated by VF");
+  Value *StartIdx = getStartIndex() ? State.get(getStartIndex(), true)
+                                    : Constant::getNullValue(BaseIVTy);
+  auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+  auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
+  State.set(this, Add, VPLane(0));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -4987,6 +4972,15 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
                                            VectorTy, VectorTy, Ctx.CostKind, {},
                                            0);
+}
+
+InstructionCost
+VPWidenPointerInductionRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  // The recipe creates a scalar phi, a GEP to increment the induction and
+  // vector add to compute the vector of pointers.
+  // TODO: Charge costs for induction increment and vector add as well.
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {

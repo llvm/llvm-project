@@ -120,8 +120,8 @@ target_compile_definitions(BedrockTests PRIVATE
   "NDM_TEST_LIB_PATH=\"$<TARGET_FILE:NativeDylibManagerTestLib>\"")
 add_dependencies(BedrockTests NativeDylibManagerTestLib)
 
-# Build a shared library for RTTICrossDylibTest. It links its own copy of
-# orc-rt-bedrock, giving it a LibraryID distinct from SupportTests's, so the
+# Build a shared library for RTTICrossDylibTest. It links its own copy of the
+# runtime objects, giving it a LibraryID distinct from SupportTests's, so the
 # test exercises RTTI identity across a real library boundary rather than
 # simulating one within a single binary. SupportTests links it directly, the
 # same way any other consumer of orc-rt would.
@@ -132,5 +132,6 @@ set_target_properties(RTTICrossDylibTestLib PROPERTIES
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN ON)
 target_compile_options(RTTICrossDylibTestLib PRIVATE ${ORC_RT_COMPILE_FLAGS})
-target_link_libraries(RTTICrossDylibTestLib PRIVATE orc-rt-bedrock)
+target_link_libraries(RTTICrossDylibTestLib
+  PRIVATE orc-rt-bedrock-objects orc-rt-support-objects)
 target_link_libraries(SupportTests PRIVATE RTTICrossDylibTestLib)

@@ -354,6 +354,7 @@ private:
   SDValue PromoteIntRes_CLMUL(SDNode *N);
   SDValue PromoteIntRes_PEXT(SDNode *N);
   SDValue PromoteIntRes_PDEP(SDNode *N);
+  SDValue PromoteIntRes_MULH(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -499,6 +500,7 @@ private:
   void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_MULH(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -787,6 +789,7 @@ private:
   bool SoftPromoteHalfOperand(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_BITCAST(SDNode *N);
   SDValue SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N);
+  SDValue SoftPromoteHalfOp_INSERT_VECTOR_ELT(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_FP_EXTEND(SDNode *N);
@@ -1123,7 +1126,6 @@ private:
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
-  SDValue WidenVecOp_ExpOp(SDNode *N);
   SDValue WidenVecOp_CttzElements(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
   SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
