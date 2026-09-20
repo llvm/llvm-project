@@ -7145,6 +7145,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "Obj2YamlOptsTableGen",
+    strip_include_prefix = "tools/obj2yaml",
+    tbl_outs = {"tools/obj2yaml/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/obj2yaml/Opts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "obj2yaml",
     testonly = True,
@@ -7159,8 +7168,10 @@ cc_binary(
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":MC",
+        ":Obj2YamlOptsTableGen",
         ":Object",
         ":ObjectYAML",
+        ":Option",
         ":Support",
     ],
 )
