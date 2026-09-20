@@ -30,10 +30,6 @@ PISAMCAsmInfo::PISAMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   InlineAsmEnd = "Inline assembly end";
 
   UseIntegratedAssembler = false;
-
-  // Allow '$' in identifier names so that register names like %$ or %$foo
-  // are correctly lexed as identifiers rather than as AsmToken::Dollar.
-  AllowDollarAtStartOfIdentifier = true;
 }
 
 bool PISAMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
