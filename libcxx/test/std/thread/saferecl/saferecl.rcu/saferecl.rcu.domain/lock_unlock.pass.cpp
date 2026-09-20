@@ -17,7 +17,7 @@
 #include <atomic>
 #include <cassert>
 #include <chrono>
-#include <concept>
+#include <concepts>
 #include <cstddef>
 #include <latch>
 #include <rcu>

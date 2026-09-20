@@ -12,9 +12,11 @@
 // void rcu_synchronize(rcu_domain& dom = rcu_default_domain()) noexcept;
 
 #include <atomic>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <rcu>
+#include <stop_token>
 #include <thread>
 #include <vector>
 #include "make_test_thread.h"
