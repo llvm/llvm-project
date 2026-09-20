@@ -30,6 +30,12 @@ struct datasizeof_impl {
 template <class T>
 constexpr size_t datasizeof_v = offsetof(datasizeof_impl<T>, first_padding_byte);
 
+template <size_t N> struct Padding {
+  char padding[N];
+};
+
+template <> struct Padding<0> {};
+
 /// Stack frame storing temporaries and parameters.
 class InterpStack final {
 public:
@@ -37,12 +43,6 @@ public:
 
   /// Destroys the stack, freeing up storage.
   ~InterpStack();
-
-  template <size_t N> struct Padding {
-    char padding[N];
-  };
-
-  template <> struct Padding<0> {};
 
   template <class T> struct alignas(void *) StackFrame {
     static_assert(alignof(T) <= alignof(void *),
