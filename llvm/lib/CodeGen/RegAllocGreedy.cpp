@@ -2415,9 +2415,12 @@ bool RAGreedy::recolorPhysicalHintInterferences(
 void RAGreedy::tryRecoloringForPhysicalHint(const LiveInterval &VirtReg,
                                             MCRegister PhysHint) {
   MCRegister CurrPhys = VRM->getPhys(VirtReg.reg());
+  if (!CurrPhys)
+    return;
+
   const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
-  if (!CurrPhys || TRI->regsOverlap(CurrPhys, PhysHint) ||
-      !RC->contains(PhysHint) || MRI->isReserved(PhysHint))
+  if (TRI->regsOverlap(CurrPhys, PhysHint) || !RC->contains(PhysHint) ||
+      MRI->isReserved(PhysHint))
     return;
 
   MCRegister CurrCSR = RegClassInfo.getLastCalleeSavedAlias(CurrPhys);
@@ -2462,13 +2465,10 @@ void RAGreedy::tryRecoloringForPhysicalHint(const LiveInterval &VirtReg,
     return;
 
   MachineInstr *Copy = MRI->getUniqueVRegDef(VirtReg.reg());
-  if (!Copy || !Copy->isCopy() || !TII->shouldPostRASink(*Copy) ||
-      Copy->getNumOperands() < 2 || !Copy->getOperand(0).isReg() ||
-      !Copy->getOperand(1).isReg() ||
+  if (!Copy || !Copy->isCopy() ||
       Copy->getOperand(0).getReg() != VirtReg.reg() ||
-      Copy->getOperand(0).getSubReg() ||
       Copy->getOperand(1).getReg() != PhysHint ||
-      Copy->getOperand(1).getSubReg() || Copy->getParent()->succ_size() < 2)
+      Copy->getParent()->succ_size() < 2)
     return;
 
   MachineBasicBlock *CopyMBB = Copy->getParent();
@@ -2481,6 +2481,8 @@ void RAGreedy::tryRecoloringForPhysicalHint(const LiveInterval &VirtReg,
     LiveInSucc = Succ;
   }
   if (!LiveInSucc)
+    return;
+  if (!TII->shouldPostRASink(*Copy))
     return;
 
   SlotIndex LastLocalUse = LIS->getInstructionIndex(*Copy).getDeadSlot();
