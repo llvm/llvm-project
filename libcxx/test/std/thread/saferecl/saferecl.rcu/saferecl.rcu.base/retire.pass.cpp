@@ -15,6 +15,7 @@
 #include <cassert>
 #include <latch>
 #include <rcu>
+#include <stop_token>
 #include <thread>
 #include <vector>
 

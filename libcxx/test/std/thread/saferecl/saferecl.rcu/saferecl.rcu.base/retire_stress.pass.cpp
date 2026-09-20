@@ -14,6 +14,7 @@
 #include <atomic>
 #include <cassert>
 #include <rcu>
+#include <stop_token>
 #include <thread>
 #include <vector>
 
