@@ -288,12 +288,12 @@ private:
         // implementation, break the walk loop. Furthermore, we should not move
         // allocations out of unknown region-based control-flow operations.
         if (!isKnownControlFlowInterface(parentOp) ||
-            !state.isLegalPlacement(parentOp))
+            !state.isLegalPlacement(parentOp, currentBlock->getParent()))
           break;
         // Move to our parent block by notifying the current StateT
         // implementation.
         currentBlock = parentBlock;
-        state.recordMoveToParent(currentBlock);
+        state.recordMoveToParent(parentOp, currentBlock);
       }
     }
     // Return the finally determined placement block.
@@ -337,7 +337,7 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   }
 
   /// Returns true if the given operation does not represent a loop.
-  bool isLegalPlacement(Operation *op) { return !isLoop(op); }
+  bool isLegalPlacement(Operation *op, Region *) { return !isLoop(op); }
 
   /// Returns true if the given operation should be considered for hoisting.
   static bool shouldHoistOpType(Operation *op) {
@@ -348,7 +348,9 @@ struct BufferAllocationHoistingState : BufferAllocationHoistingStateBase {
   void recordMoveToDominator(Block *block) { placementBlock = block; }
 
   /// Sets the current placement block to the given block.
-  void recordMoveToParent(Block *block) { recordMoveToDominator(block); }
+  void recordMoveToParent(Operation *, Block *block) {
+    recordMoveToDominator(block);
+  }
 };
 
 /// A state implementation compatible with the `BufferAllocationHoisting` class
@@ -367,12 +369,22 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
     return dependencyBlock ? dependencyBlock : nullptr;
   }
 
-  /// Returns true if the given operation represents a loop with sequential
-  /// execution semantics and one of the aliases caused the
-  /// `aliasDominatorBlock` to be "above" the block of the given loop operation.
-  /// If this is the case, it indicates that the allocation is passed via a back
-  /// edge.
-  bool isLegalPlacement(Operation *op) {
+  /// Returns true if the placement search can cross the given parent operation.
+  /// Non-loop regions may be crossed if the current region is executed exactly
+  /// once. Loops must have sequential execution semantics and must not violate
+  /// the alias back-edge constraint.
+  bool isLegalPlacement(Operation *op, Region *region) {
+    if (!isLoop(op)) {
+      auto branchOp = cast<RegionBranchOpInterface>(op);
+
+      SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
+      SmallVector<InvocationBounds> bounds;
+      branchOp.getRegionInvocationBounds(operands, bounds);
+
+      const InvocationBounds &bound = bounds[region->getRegionNumber()];
+      return bound.getLowerBound() == 1 && bound.getUpperBound() == 1;
+    }
+
     return isSequentialLoop(op) &&
            !dominators->dominates(aliasDominatorBlock, op->getBlock());
   }
@@ -386,8 +398,11 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
   /// operations out of loops only.
   void recordMoveToDominator(Block *block) {}
 
-  /// Sets the current placement block to the given block.
-  void recordMoveToParent(Block *block) { placementBlock = block; }
+  /// Updates the placement block when crossing a sequential loop.
+  void recordMoveToParent(Operation *parentOp, Block *block) {
+    if (isSequentialLoop(parentOp))
+      placementBlock = block;
+  }
 };
 
 //===----------------------------------------------------------------------===//

@@ -519,3 +519,85 @@ func.func @hoist_alloca(
 //      CHECK: %[[ALLOCA0:.*]] = memref.alloca({{.*}})
 // CHECK-NEXT: %[[ALLOCA1:.*]] = memref.alloca({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
+
+// -----
+
+// CHECK-LABEL: func @loop_execute_region
+func.func @loop_execute_region(%output: memref<8xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+
+  scf.for %i = %c0 to %c8 step %c1 {
+    %value = scf.execute_region -> index {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      %loaded = memref.load %buffer[%c0] : memref<1xindex>
+      scf.yield %loaded : index
+    }
+    memref.store %value, %output[%i] : memref<8xindex>
+  }
+
+  return
+}
+
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: scf.for
+// CHECK: scf.execute_region
+// CHECK-NOT: memref.alloc()
+// CHECK: memref.store {{.*}}, %[[ALLOC]]
+
+// -----
+
+// CHECK-LABEL: func @negative_loop_if_alloc_not_hoisted
+func.func @negative_loop_if_alloc_not_hoisted(%condition: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+
+  scf.for %i = %c0 to %c8 step %c1 {
+    scf.if %condition {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+    }
+  }
+
+  return
+}
+
+// CHECK-NOT: memref.alloc()
+// CHECK: scf.for
+// CHECK-NEXT: scf.if
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+
+// -----
+
+// CHECK-LABEL: func @loop_nested_execute_region_hoisted
+func.func @loop_nested_execute_region_hoisted() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+
+  scf.for %i = %c0 to %c8 step %c1 {
+    scf.execute_region {
+      scf.execute_region {
+        %buffer = memref.alloc() : memref<1xindex>
+        memref.store %i, %buffer[%c0] : memref<1xindex>
+        scf.yield
+      }
+      scf.yield
+    }
+  }
+
+  return
+}
+
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: scf.for
+// CHECK-NEXT: scf.execute_region
+// CHECK-NEXT: scf.execute_region
+// CHECK-NOT: memref.alloc()
+// CHECK: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NOT: memref.alloc()
+// CHECK: return
