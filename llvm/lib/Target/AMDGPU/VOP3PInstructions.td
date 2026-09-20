@@ -769,7 +769,7 @@ defm V_DOT2_F32_BF16 :
 } // End let IsDOT = 1
 
 multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
-  let IsDOT = 1 in
+  let IsDOT = 1, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in
   defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED_NO_OPSEL>,
                         null_frag, 1>;
   // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
