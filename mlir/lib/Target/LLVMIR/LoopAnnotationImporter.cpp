@@ -34,7 +34,7 @@ private:
   LoopAnnotationAttr convertFollowup(const llvm::MDNode *followup);
 
   /// Converts the properties after the validated loop ID or follow-up header.
-  LoopAnnotationAttr convertImpl();
+  LoopAnnotationAttr convertProperties();
 
   /// Initializes the shared state for the conversion member functions.
   LogicalResult initConversionState();
@@ -430,7 +430,8 @@ LoopMetadataConversion::convert(const llvm::MDNode *node, Location loc,
   }
 
   llvm::SmallPtrSet<const llvm::MDNode *, 4> activeNodes;
-  return LoopMetadataConversion(node, loc, importer, activeNodes).convertImpl();
+  return LoopMetadataConversion(node, loc, importer, activeNodes)
+      .convertProperties();
 }
 
 LoopAnnotationAttr
@@ -448,10 +449,10 @@ LoopMetadataConversion::convertFollowup(const llvm::MDNode *followup) {
 
   return LoopMetadataConversion(followup, loc, loopAnnotationImporter,
                                 activeNodes)
-      .convertImpl();
+      .convertProperties();
 }
 
-LoopAnnotationAttr LoopMetadataConversion::convertImpl() {
+LoopAnnotationAttr LoopMetadataConversion::convertProperties() {
   if (!activeNodes.insert(node).second) {
     emitWarning(loc) << "cannot import cyclic loop annotation";
     return {};

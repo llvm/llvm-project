@@ -114,7 +114,7 @@ void LoopAnnotationConversion::convertFollowupNode(StringRef name,
       loopAnnotationTranslation.translateLoopAnnotation(attr, op);
 
   // Follow-ups contain properties directly, without the LoopID self-reference.
-  SmallVector<llvm::Metadata *, 4> operands;
+  SmallVector<llvm::Metadata *> operands;
   operands.push_back(llvm::MDString::get(ctx, name));
   for (const llvm::MDOperand &operand : llvm::drop_begin(loopID->operands()))
     operands.push_back(operand.get());
