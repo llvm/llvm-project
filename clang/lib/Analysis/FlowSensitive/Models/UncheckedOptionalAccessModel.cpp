@@ -247,7 +247,7 @@ auto isMakeOptionalCall() {
       callee(functionDecl(hasAnyName(
           "std::make_optional", "base::make_optional", "absl::make_optional",
           "folly::make_optional", "bsl::make_optional"))),
-      hasOptionalType());
+      hasOptionalOrDerivedType());
 }
 
 auto nulloptTypeDecl() {
@@ -264,6 +264,12 @@ auto inPlaceClass() {
                               "bsl::in_place_t"));
 }
 
+auto allocatorArgClass() {
+  return namedDecl(hasAnyName("std::allocator_arg_t", "bsl::allocator_arg_t"));
+}
+
+auto hasAllocatorArgType() { return hasType(allocatorArgClass()); }
+
 auto isOptionalNulloptConstructor() {
   return cxxConstructExpr(
       hasDeclaration(cxxConstructorDecl(parameterCountIs(1),
@@ -272,15 +278,31 @@ auto isOptionalNulloptConstructor() {
 }
 
 auto isOptionalInPlaceConstructor() {
-  return cxxConstructExpr(hasArgument(0, hasType(inPlaceClass())),
+  return cxxConstructExpr(hasAnyArgument(hasType(inPlaceClass())),
                           hasOptionalOrDerivedType());
 }
 
+// Arguments after the value -- an allocator, or defaulted parameters carrying
+// SFINAE constraints -- are ignored. Leading tags are excluded because they
+// denote other constructions, e.g. `optional(allocator_arg_t, allocator)` is
+// empty.
 auto isOptionalValueOrConversionConstructor() {
   return cxxConstructExpr(
       unless(hasDeclaration(
           cxxConstructorDecl(anyOf(isCopyConstructor(), isMoveConstructor())))),
-      argumentCountIs(1), hasArgument(0, unless(hasNulloptType())),
+      argumentCountAtLeast(1),
+      hasArgument(0, unless(anyOf(hasNulloptType(), hasType(inPlaceClass()),
+                                  hasAllocatorArgType()))),
+      hasOptionalOrDerivedType());
+}
+
+// `optional(allocator_arg_t, allocator, value, ...)`.
+auto isOptionalAllocatorExtendedValueOrConversionConstructor() {
+  return cxxConstructExpr(
+      unless(hasDeclaration(
+          cxxConstructorDecl(anyOf(isCopyConstructor(), isMoveConstructor())))),
+      hasArgument(0, hasAllocatorArgType()), argumentCountAtLeast(3),
+      hasArgument(2, unless(anyOf(hasNulloptType(), hasType(inPlaceClass())))),
       hasOptionalOrDerivedType());
 }
 
@@ -757,16 +779,30 @@ BoolValue &valueOrConversionHasValue(QualType DestType, const Expr &E,
   return State.Env.makeAtomicBoolValue();
 }
 
-void transferValueOrConversionConstructor(
-    const CXXConstructExpr *E, const MatchFinder::MatchResult &MatchRes,
-    LatticeTransferState &State) {
-  assert(E->getNumArgs() > 0);
+void transferValueOrConversionConstructorImpl(
+    const CXXConstructExpr *E, unsigned ValueArgIdx,
+    const MatchFinder::MatchResult &MatchRes, LatticeTransferState &State) {
+  assert(E->getNumArgs() > ValueArgIdx);
 
   constructOptionalValue(
       *E, State.Env,
       valueOrConversionHasValue(
-          E->getConstructor()->getThisType()->getPointeeType(), *E->getArg(0),
-          MatchRes, State));
+          E->getConstructor()->getThisType()->getPointeeType(),
+          *E->getArg(ValueArgIdx), MatchRes, State));
+}
+
+void transferValueOrConversionConstructor(
+    const CXXConstructExpr *E, const MatchFinder::MatchResult &MatchRes,
+    LatticeTransferState &State) {
+  transferValueOrConversionConstructorImpl(E, /*ValueArgIdx=*/0, MatchRes,
+                                           State);
+}
+
+void transferAllocatorExtendedValueOrConversionConstructor(
+    const CXXConstructExpr *E, const MatchFinder::MatchResult &MatchRes,
+    LatticeTransferState &State) {
+  transferValueOrConversionConstructorImpl(E, /*ValueArgIdx=*/2, MatchRes,
+                                           State);
 }
 
 void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
@@ -1015,6 +1051,10 @@ auto buildTransferMatchSwitch() {
       // optional::optional (value/conversion)
       .CaseOfCFGStmt<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                        transferValueOrConversionConstructor)
+      // optional::optional (allocator-extended value/conversion)
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isOptionalAllocatorExtendedValueOrConversionConstructor(),
+          transferAllocatorExtendedValueOrConversionConstructor)
 
       // optional::operator=
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
