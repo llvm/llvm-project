@@ -21,6 +21,7 @@ TEST(ConnectionSpecTest, TransportAndDescriptorOnly) {
   EXPECT_EQ(Spec->getTransport(), "fd");
   EXPECT_EQ(Spec->getAction(), "");
   EXPECT_EQ(Spec->getDescriptor(), "3");
+  EXPECT_EQ(Spec->str(), "fd=3");
 }
 
 TEST(ConnectionSpecTest, TransportActionAndDescriptor) {
@@ -29,6 +30,7 @@ TEST(ConnectionSpecTest, TransportActionAndDescriptor) {
   EXPECT_EQ(Spec->getTransport(), "tcp");
   EXPECT_EQ(Spec->getAction(), "connect");
   EXPECT_EQ(Spec->getDescriptor(), "localhost:20000");
+  EXPECT_EQ(Spec->str(), "tcp:connect=localhost:20000");
 }
 
 TEST(ConnectionSpecTest, EmptyDescriptorIsLegal) {
@@ -37,6 +39,7 @@ TEST(ConnectionSpecTest, EmptyDescriptorIsLegal) {
   EXPECT_EQ(Spec->getTransport(), "fd");
   EXPECT_EQ(Spec->getAction(), "");
   EXPECT_EQ(Spec->getDescriptor(), "");
+  EXPECT_EQ(Spec->str(), "fd=");
 }
 
 TEST(ConnectionSpecTest, ColonInDescriptorAfterAction) {
@@ -47,6 +50,7 @@ TEST(ConnectionSpecTest, ColonInDescriptorAfterAction) {
   EXPECT_EQ(Spec->getTransport(), "tcp");
   EXPECT_EQ(Spec->getAction(), "listen");
   EXPECT_EQ(Spec->getDescriptor(), "[::1]:0");
+  EXPECT_EQ(Spec->str(), "tcp:listen=[::1]:0");
 }
 
 TEST(ConnectionSpecTest, EqualsInDescriptor) {
@@ -57,6 +61,7 @@ TEST(ConnectionSpecTest, EqualsInDescriptor) {
   EXPECT_EQ(Spec->getTransport(), "unix");
   EXPECT_EQ(Spec->getAction(), "listen");
   EXPECT_EQ(Spec->getDescriptor(), "/tmp/a=b.sock");
+  EXPECT_EQ(Spec->str(), "unix:listen=/tmp/a=b.sock");
 }
 
 TEST(ConnectionSpecTest, ColonInActionIsLegal) {
@@ -69,6 +74,7 @@ TEST(ConnectionSpecTest, ColonInActionIsLegal) {
   EXPECT_EQ(Spec->getTransport(), "tcp");
   EXPECT_EQ(Spec->getAction(), ":listen");
   EXPECT_EQ(Spec->getDescriptor(), "[::1]:0");
+  EXPECT_EQ(Spec->str(), "tcp::listen=[::1]:0");
 }
 
 TEST(ConnectionSpecTest, NamesArePreservedVerbatim) {

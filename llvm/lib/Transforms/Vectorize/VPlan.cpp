@@ -340,26 +340,6 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
     Builder.SetCurrentDebugLocation(DL);
 }
 
-Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
-                                                       Value *WideValue,
-                                                       const VPLane &Lane) {
-  Value *ScalarInst = get(Def, Lane);
-  Value *LaneExpr = Lane.getAsRuntimeExpr(Builder, VF);
-  if (auto *StructTy = dyn_cast<StructType>(WideValue->getType())) {
-    // We must handle each element of a vectorized struct type.
-    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; I++) {
-      Value *ScalarValue = Builder.CreateExtractValue(ScalarInst, I);
-      Value *VectorValue = Builder.CreateExtractValue(WideValue, I);
-      VectorValue =
-          Builder.CreateInsertElement(VectorValue, ScalarValue, LaneExpr);
-      WideValue = Builder.CreateInsertValue(WideValue, VectorValue, I);
-    }
-  } else {
-    WideValue = Builder.CreateInsertElement(WideValue, ScalarInst, LaneExpr);
-  }
-  return WideValue;
-}
-
 void VPTransformState::fixupHeaderPhis() {
   for (VPBlockBase *VPB : vp_depth_first_shallow(Plan->getEntry())) {
     if (!VPBlockUtils::isHeader(VPB, VPDT))
@@ -1939,17 +1919,15 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
       for (const VPBasicBlock *VPBB :
            VPBlockUtils::blocksOnly<const VPBasicBlock>(
                vp_depth_first_shallow(VPRB->getEntry()))) {
-        for (const VPRecipeBase &Recipe : *VPBB) {
-          auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
-          if (!RepR)
-            continue;
-          if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
+        for (const VPReplicateRecipe &RepR :
+             make_isa_range<VPReplicateRecipe>(*VPBB)) {
+          if (!isa<StoreInst>(RepR.getUnderlyingInstr()))
             continue;
           // Check if scatter is legal for this store. If so, don't count it.
-          Type *Ty = RepR->getOperand(0)->getScalarType();
+          Type *Ty = RepR.getOperand(0)->getScalarType();
           auto *VTy = VectorType::get(Ty, VF);
           const Align Alignment =
-              getLoadStoreAlignment(RepR->getUnderlyingInstr());
+              getLoadStoreAlignment(RepR.getUnderlyingInstr());
           if (!TTI.isLegalMaskedScatter(VTy, Alignment))
             ++(*NumPredStores);
         }
