@@ -5891,17 +5891,25 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       }
     }
 
-    // Handle the setcc cases here.  select_cc lhs, 0, 1, 0, cc
-    if (!isPPC64 && isNullConstant(N->getOperand(1)) &&
-        isOneConstant(N->getOperand(2)) && isNullConstant(N->getOperand(3)) &&
-        CC == ISD::SETNE &&
-        // FIXME: Implement this optzn for PPC64.
-        N->getValueType(0) == MVT::i32) {
-      SDNode *Tmp =
-          CurDAG->getMachineNode(PPC::ADDIC, dl, MVT::i32, MVT::Glue,
-                                 N->getOperand(0), getI32Imm(~0U, dl));
-      CurDAG->SelectNodeTo(N, PPC::SUBFE, MVT::i32, SDValue(Tmp, 0),
-                           N->getOperand(0), SDValue(Tmp, 1));
+    // Handle the setcc cases here.  select_cc lhs, 0, 1, 0, setne
+    // Compute (lhs != 0) as: addic tmp, lhs, -1; subfe res, tmp, lhs
+    // FIXME: Is it worth sign extending/zero extending on 64-bit if data is
+    // 32-bit?
+    if (isNullConstant(N->getOperand(1)) && isOneConstant(N->getOperand(2)) &&
+        isNullConstant(N->getOperand(3)) && CC == ISD::SETNE &&
+        N->getOperand(0).getValueType() == N->getValueType(0) &&
+        ((!isPPC64 && N->getValueType(0) == MVT::i32) ||
+         (isPPC64 && N->getValueType(0) == MVT::i64))) {
+      bool Is64Bit = N->getValueType(0) == MVT::i64;
+      unsigned AddicOpc = Is64Bit ? PPC::ADDIC8 : PPC::ADDIC;
+      unsigned SubfeOpc = Is64Bit ? PPC::SUBFE8 : PPC::SUBFE;
+      MVT VT = Is64Bit ? MVT::i64 : MVT::i32;
+      SDValue ImmOp = Is64Bit ? getI64Imm(~0ULL, dl) : getI32Imm(~0U, dl);
+
+      SDNode *Tmp = CurDAG->getMachineNode(AddicOpc, dl, VT, MVT::Glue,
+                                           N->getOperand(0), ImmOp);
+      CurDAG->SelectNodeTo(N, SubfeOpc, VT, SDValue(Tmp, 0), N->getOperand(0),
+                           SDValue(Tmp, 1));
       return;
     }
 
