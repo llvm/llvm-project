@@ -3968,9 +3968,12 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                                                     *DAG.getContext(), IntVT)))
     return SDValue();
 
-  // USUBO_CARRY's carry-in must be 0 or 1, which the matched pattern does not
-  // guarantee.
-  if (!DAG.MaskedValueIsZero(
+  // USUBO_CARRY's carry-in must match boolean contents, which the matched
+  // pattern does not guarantee.
+  // TODO: Extend to other boolean contents.
+  if (TLI.getBooleanContents(IntVT) !=
+          TargetLowering::ZeroOrOneBooleanContent ||
+      !DAG.MaskedValueIsZero(
           CarryIn,
           APInt::getBitsSetFrom(CarryIn.getScalarValueSizeInBits(), 1)))
     return SDValue();
