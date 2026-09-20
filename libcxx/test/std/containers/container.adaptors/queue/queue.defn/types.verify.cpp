@@ -8,15 +8,12 @@
 
 // <queue>
 
+// template <class T, class Container = deque<T>>
 // class queue
-
-// bool empty() const noexcept;
-
-// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <queue>
 
-void f() {
-  std::queue<int> c;
-  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+void test() {
+  // expected-error-re@*:* {{static assertion failed{{.*}}{{(The stored elements type must match the underlying container's value_type\.)?}}}}
+  std::queue<double, std::deque<int> > qu;
 }
