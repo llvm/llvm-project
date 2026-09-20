@@ -20082,8 +20082,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     if (!ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
       // An extract feeding a memory address is on the critical path to that
       // access, so its latency is exposed rather than hidden by parallelism;
-      // charge the extraction latency, not the throughput. Not applied for
-      // code size: the number of emitted extracts does not change.
+      // charge the worse of the latency and throughput costs of the same
+      // instruction, so the charge never goes below the throughput-based one.
+      // Not applied for code size: the number of emitted extracts does not
+      // change.
       if (CostKind != TTI::TCK_CodeSize && IsExtractOnAddressPath(EU.Scalar)) {
         InstructionCost LatencyCost = GetExtractCost(TTI::TCK_Latency);
         if (LatencyCost.isValid())
