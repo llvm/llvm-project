@@ -14,6 +14,7 @@ export namespace std {
   using std::rcu_barrier;
   using std::rcu_default_domain;
   using std::rcu_domain;
+  using std::rcu_obj_base;
   using std::rcu_retire;
   using std::rcu_synchronize;
 #endif // _LIBCPP_STD_VER >= 26
