@@ -19,10 +19,10 @@
 #include <vector>
 
 void test() {
-  // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' key type must match the underlying container's key value_type.}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' key type must match the underlying key container's value_type.}}
   std::flat_map<double, int, std::less<double>, std::vector<char>> fm1;
 
-  // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' mapped type must match the underlying container's mapped value_type.}}
+  // expected-error-re@*:* {{static assertion failed{{.*}}The stored elements' mapped type must match the underlying mapped container's value_type.}}
   std::flat_map<int, double, std::less<int>, std::vector<int>, std::vector<char>> fm2;
 
   // expected-error-re@*:* {{static assertion failed{{.*}}vector<bool> is not a sequence container}}
