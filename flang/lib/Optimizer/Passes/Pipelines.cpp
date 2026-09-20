@@ -106,6 +106,7 @@ getFIRToLLVMPassOptions(const MLIRToLLVMPassPipelineConfig &config) {
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
+  options.unsafeFPConversion = config.UnsafeFPMath;
   return options;
 }
 
@@ -463,7 +464,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
-       /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
+       config.DisableTailCalls, /*tuneCPU=*/"", setNoCapture, setNoAlias,
+       setReadOnly}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(

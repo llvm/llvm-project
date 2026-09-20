@@ -58,6 +58,11 @@ functions:
       - type: int
       - type: const char *
       - type: mode_t
+  - name: mkfifo
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: mode_t
   - name: stat
     return_type: int
     arguments:
