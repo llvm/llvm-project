@@ -347,6 +347,7 @@ def YGPR : YGPRRegisterClass<(add (sequence "X%u_Y", 10, 17),
                                   (sequence "X%u_Y", 18, 27),
                                   (sequence "X%u_Y", 0, 4))> {
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
+  let DiagnosticString = GPR.DiagnosticString;
 }
 
 // Note: We have to use a multiclass here instead of inheriting from
@@ -364,11 +365,13 @@ def GPRX0 : GPRRegisterClass<(add X0)> {
 }
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X1, 1>";
   let DiagnosticType = "InvalidRegClassGPRX1";
   let DiagnosticString = "register must be ra (x1)";
 }
 
 def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X5, 5>";
   let DiagnosticType = "InvalidRegClassGPRX5";
   let DiagnosticString = "register must be t0 (x5)";
 }
@@ -378,7 +381,6 @@ def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
   let DiagnosticString = "register must be a GPR excluding zero (x0)";
 }
 def YGPRNoX0 : YGPRRegisterClass<(sub YGPR, X0_Y)> {
-  let DiagnosticType = "InvalidRegClassYGPRNoX0";
   let DiagnosticString = GPRNoX0.DiagnosticString;
 }
 
@@ -430,11 +432,13 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
 def SP_X : GPRRegisterClass<(add X2)> {
-  let DiagnosticType = "InvalidRegClassSP_X";
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X2, 2>";
+  let DiagnosticType = "InvalidRegClassSP";
   let DiagnosticString = "register must be sp (x2)";
 }
 def SP_Y : YGPRRegisterClass<(add X2_Y)> {
-  let DiagnosticType = SP_X.DiagnosticType;
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X2_Y, 2>";
+  let DiagnosticString = SP_X.DiagnosticString;
 }
 defm SP : PtrRegClassByHwMode<SP_X, SP_Y>;
 
@@ -448,6 +452,10 @@ def GPRS07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
 def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticType = "InvalidRegClassGPRX1X5";
   let DiagnosticString = "register must be ra or t0 (x1 or x5)";
+  // sspopchk/sspush (RISCVInstrInfoZicfiss.td) share their encoding with the
+  // generic mop.r.28/mop.rr.7 Zimop instructions except for this operand, so
+  // fall back to decoding those when the register isn't x1 or x5.
+  let hasCompleteDecoder = false;
 }
 
 def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {

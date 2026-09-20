@@ -156,3 +156,23 @@ c.sysp a0, 16(a0)
 // CHECK-RVY32: :[[#@LINE+2]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]
 // CHECK-RVY64: :[[#@LINE+1]]:12: error: immediate must be a multiple of 16 bytes in the range [0, 1008]
 c.sysp a0, 15(sp)
+
+/// Non-GPR (e.g. FPR) registers must produce a register class diagnostic
+/// rather than triggering an assertion when converting GPR to YGPR:
+// CHECK: :[[#@LINE+1]]:12: error: register must be a GPR from x8 to x15
+c.lw a0, 0(f0)
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
+// CHECK-RVY: :[[#@LINE+1]]:6: error: register must be a GPR from x8 to x15
+c.ly f0, 16(a0)
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
+// CHECK-RVY: :[[#@LINE+1]]:13: error: register must be a GPR from x8 to x15
+c.ly a0, 16(f0)
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
+// CHECK-RVY: :[[#@LINE+1]]:8: error: register must be a GPR excluding zero (x0)
+c.lysp f0, 16(sp)
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
+// CHECK-RVY: :[[#@LINE+1]]:15: error: register must be sp (x2)
+c.lysp a0, 16(f0)
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
+// CHECK-RVY: :[[#@LINE+1]]:8: error: register must be a GPR
+c.sysp f0, 16(sp)

@@ -951,16 +951,15 @@ void RISCVISAInfo::updateImplication() {
     }
   }
 
-  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb")) {
+  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb") &&
+      Exts.count("zcmp") && Exts.count("zcmt")) {
     bool ShouldAddZce = false;
-    if (Exts.count("zcmp") && Exts.count("zcmt")) {
-      if (XLen == 32) {
-        ShouldAddZce =
-            !Exts.count("f") || Exts.count("zcf") || hasStdExtYCapMode();
-      } else if (XLen == 64) {
-        // Zcmp/Zcmt are incompatible with RV64Y, so Y can't be set here.
-        ShouldAddZce = true;
-      }
+    if (XLen == 32) {
+      ShouldAddZce =
+          !Exts.count("f") || Exts.count("zcf") || hasStdExtYCapMode();
+    } else if (XLen == 64) {
+      // Zce is incompatible with RV64Y, only add it if Y is not enabled.
+      ShouldAddZce = !hasStdExtYCapMode();
     }
     if (ShouldAddZce)
       Exts["zce"] = *findDefaultVersion("zce");

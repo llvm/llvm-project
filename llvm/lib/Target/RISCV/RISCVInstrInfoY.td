@@ -183,7 +183,7 @@ def SY : Store_rri<0b010, "sy", YGPR, opcode=OPC_RVY_A>,
 
 //
 // Compressed capability loads/stores using Zcf/Zcd encodings.
-// These only exist RVY mode, not in RVI compatibility mode.
+// These only exist in RVY mode, not in RVI compatibility mode.
 //
 let Predicates = [HasStdExtZca, IsStdExtYCapMode, IsRV32] in {
 // DecoderNamespace needed since RVY32 reuses Zcf/Zclsd encodings

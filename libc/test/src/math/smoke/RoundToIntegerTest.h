@@ -127,30 +127,24 @@ public:
   }
 };
 
-#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func,           \
+#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(Name, FloatType, IntType, func,     \
                                            TestModes)                          \
-  using LlvmLibcRoundToIntegerTest =                                           \
+  using LlvmLibc##Name##Test =                                                 \
       RoundToIntegerTestTemplate<FloatType, IntType, TestModes>;               \
-  TEST_F(LlvmLibcRoundToIntegerTest, InfinityAndNaN) {                         \
-    testInfinityAndNaN(&func);                                                 \
-  }                                                                            \
-  TEST_F(LlvmLibcRoundToIntegerTest, RoundNumbers) {                           \
-    testRoundNumbers(&func);                                                   \
-  }                                                                            \
-  TEST_F(LlvmLibcRoundToIntegerTest, SubnormalRange) {                         \
-    testSubnormalRange(&func);                                                 \
-  }
+  TEST_F(LlvmLibc##Name##Test, InfinityAndNaN) { testInfinityAndNaN(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundNumbers) { testRoundNumbers(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) { testSubnormalRange(&func); }
 
-#define LIST_ROUND_TO_INTEGER_TESTS(FloatType, IntType, func)                  \
-  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, false)
+#define LIST_ROUND_TO_INTEGER_TESTS(Name, FloatType, IntType, func)            \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(Name, FloatType, IntType, func, false)
 
 // The GPU target does not support different rounding modes.
 #ifdef LIBC_TARGET_ARCH_IS_GPU
-#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(FloatType, IntType, func)       \
-  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, false)
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(Name, FloatType, IntType, func) \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(Name, FloatType, IntType, func, false)
 #else
-#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(FloatType, IntType, func)       \
-  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, true)
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(Name, FloatType, IntType, func) \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(Name, FloatType, IntType, func, true)
 #endif
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H

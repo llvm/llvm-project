@@ -186,6 +186,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_group
+  HDRS
+    struct_group.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_group
+)
+
+add_proxy_header_library(
   rsize_t
   HDRS
     rsize_t.h
@@ -479,6 +487,16 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.off_t
     libc.include.stdio
+)
+
+add_proxy_header_library(
+  off64_t
+  HDRS
+    off64_t.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.off64_t
 )
 
 add_proxy_header_library(

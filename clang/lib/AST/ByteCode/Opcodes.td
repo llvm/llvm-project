@@ -72,6 +72,7 @@ def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
 def ArgTypePtr : ArgType { let Name = "const Type *"; }
+def ArgDeclOrExpr : ArgType { let Name = "DeclOrExpr"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -618,7 +619,7 @@ def AddOffset : Opcode {
 }
 
 def GetOpaquePtr : SuccessOpcode {
-  let Args = [ArgValueDecl, ArgBool];
+  let Args = [ArgDeclOrExpr, ArgBool];
 }
 
 // [Pointer, Integral] -> [Pointer]
@@ -859,7 +860,7 @@ def ShiftFixedPoint : Opcode {
 }
 
 def PtrPtrCast : Opcode {
-  let Args = [ArgBool];
+  let Args = [ArgBool, ArgTypePtr];
 
 }
 
@@ -958,6 +959,9 @@ def CheckNonNullArg : Opcode {
 }
 
 def Memcpy : Opcode;
+def TrivialCopy : Opcode {
+  let Args = [ArgBool, ArgFunction];
+}
 
 def ToMemberPtr : SuccessOpcode;
 def CastMemberPtrPtr : Opcode;
