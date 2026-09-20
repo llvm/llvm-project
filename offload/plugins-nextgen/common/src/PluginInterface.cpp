@@ -1032,6 +1032,14 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     if (!Alloc)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate from device allocator");
+
+    if (Alignment > 0 && !isAddrAligned(Align(Alignment), Alloc)) {
+      if (auto Err = free(Alloc, Kind))
+        return Err;
+
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "device allocator returned a misaligned pointer");
+    }
   }
 
   // Report error if the memory manager or the device allocator did not return

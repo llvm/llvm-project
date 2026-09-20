@@ -1472,9 +1472,10 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   }
 
   // The active set is precomputed separately from the ownership par_dims for
-  // privatizations; prefer that attribute when present. The inactive dims are
+  // privatizations, and a predicate region may likewise state which dims run
+  // it unpredicated; prefer that attribute when present. The inactive dims are
   // the launch dims which are not active.
-  if (isa<acc::PrivateLocalOp, acc::PrivatizeOp>(op)) {
+  if (isa<acc::PrivateLocalOp, acc::PrivatizeOp, acc::PredicateRegionOp>(op)) {
     if (mlir::acc::ActiveParDimsAttr precomputedActiveParDims =
             getActiveParDimsAttr(op)) {
       mlir::acc::GPUParallelDimAttr lowestParDim =
@@ -2324,10 +2325,8 @@ void ACCCGToGPULowering::processPredicateRegion(
           bool predicatesThreadX = llvm::any_of(
               parDimsPair.second,
               [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
-          if (predicatesThreadX) {
-            createBarrier(loc, mlir::acc::GPUParallelDimsAttr::get(
-                                   interOp->getContext(), parDimsPair.second));
-          }
+          if (predicatesThreadX)
+            createPerRowBarrier(loc);
         }
         // For acc routine ThreadY routines, skip barrier
       } else if (!parDimsPair.first.empty()) {

@@ -918,7 +918,7 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SBFMXri ||
         SrcMI->getOperand(2).getImm() != 0 ||
         SrcMI->getOperand(3).getImm() != 31)
-      return AArch64::NoRegister;
+      return Register();
     return SrcMI->getOperand(1).getReg();
   };
   // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32)))
@@ -926,16 +926,16 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
     if (SrcMI->getOpcode() != AArch64::SUBREG_TO_REG ||
         SrcMI->getOperand(2).getImm() != AArch64::sub_32 ||
         !MRI->hasOneNonDBGUse(SrcMI->getOperand(1).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Orr = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
     if (!Orr || Orr->getOpcode() != AArch64::ORRWrr ||
         Orr->getOperand(1).getReg() != AArch64::WZR ||
         !MRI->hasOneNonDBGUse(Orr->getOperand(2).getReg()))
-      return AArch64::NoRegister;
+      return Register();
     MachineInstr *Cpy = MRI->getUniqueVRegDef(Orr->getOperand(2).getReg());
     if (!Cpy || Cpy->getOpcode() != AArch64::COPY ||
         Cpy->getOperand(1).getSubReg() != AArch64::sub_32)
-      return AArch64::NoRegister;
+      return Register();
     DeadInstrs.insert(Orr);
     return Cpy->getOperand(1).getReg();
   };

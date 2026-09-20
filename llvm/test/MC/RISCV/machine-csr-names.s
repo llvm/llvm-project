@@ -271,6 +271,48 @@ csrrs t1, mip, zero
 # uimm12
 csrrs t2, 0x344, zero
 
+# mistatus
+# name
+# CHECK-INST: csrrs t1, mistatus, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x60,0x34]
+# CHECK-INST-ALIAS: csrr t1, mistatus
+# uimm12
+# CHECK-INST: csrrs t2, mistatus, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x60,0x34]
+# CHECK-INST-ALIAS: csrr t2, mistatus
+# name
+csrrs t1, mistatus, zero
+# uimm12
+csrrs t2, 0x346, zero
+
+# mithreshold
+# name
+# CHECK-INST: csrrs t1, mithreshold, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x34]
+# CHECK-INST-ALIAS: csrr t1, mithreshold
+# uimm12
+# CHECK-INST: csrrs t2, mithreshold, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x34]
+# CHECK-INST-ALIAS: csrr t2, mithreshold
+# name
+csrrs t1, mithreshold, zero
+# uimm12
+csrrs t2, 0x347, zero
+
+# mtopsi
+# name
+# CHECK-INST: csrrs t1, mtopsi, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x34]
+# CHECK-INST-ALIAS: csrr t1, mtopsi
+# uimm12
+# CHECK-INST: csrrs t2, mtopsi, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x34]
+# CHECK-INST-ALIAS: csrr t2, mtopsi
+# name
+csrrs t1, mtopsi, zero
+# uimm12
+csrrs t2, 0x348, zero
+
 # mspcs
 # name
 # CHECK-INST: csrrs t1, mspcs, zero

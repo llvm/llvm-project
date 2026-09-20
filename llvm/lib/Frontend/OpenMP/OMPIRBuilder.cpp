@@ -475,6 +475,13 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
 
   if (AsPtr) {
     FakeVal = FakeValAddr;
+    // The runtime passes these extra arguments to the outlined function as
+    // generic pointers, so cast away a non-zero alloca address space.
+    if (FakeValAddr->getAddressSpace() != 0) {
+      FakeVal = cast<Instruction>(Builder.CreateAddrSpaceCast(
+          FakeValAddr, Builder.getPtrTy(), Name + ".ascast"));
+      ToBeDeleted.push_back(FakeVal);
+    }
   } else {
     FakeVal = Builder.CreateLoad(IntTy, FakeValAddr, Name + ".val");
     ToBeDeleted.push_back(FakeVal);
@@ -5559,8 +5566,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
         Builder.CreateAdd(ScanRedInfo->Span, Builder.getInt32(1));
     for (size_t i = 0; i < ScanVars.size(); i++) {
       Type *IntPtrTy = Builder.getInt32Ty();
-      Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
-      Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
+      Value *Allocsize = Builder.CreateTypeSize(
+          IntPtrTy, M.getDataLayout().getTypeAllocSize(ScanVarsType[i]));
       Value *Buff =
           Builder.CreateMalloc(IntPtrTy, Allocsize, AllocSpan, nullptr, "arr");
       Builder.CreateStore(Buff, (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]]);
@@ -8605,9 +8612,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   }
 
   // Generic mode runs the main thread on a warp of its own, past thread_limit.
-  // Reserve the widest warp any target has.
+  // Reserve the widest warp any target has. Not on SPIR-V, causes problems with
+  // Level Zero.
   if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
-      hasGridValue(T))
+      hasGridValue(T) && !T.isSPIRV())
     MaxThreadsVal = int32_t(
         std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
                           int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
@@ -11516,10 +11524,10 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   if (emitRMWOp) {
     AtomicRMWInst *RMWInst =
         Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
+    if (IsIgnoreDenormalMode)
+      RMWInst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                           llvm::MDNode::get(Builder.getContext(), {}));
     if (T.isAMDGPU()) {
-      if (IsIgnoreDenormalMode)
-        RMWInst->setMetadata("amdgpu.ignore.denormal.mode",
-                             llvm::MDNode::get(Builder.getContext(), {}));
       if (!IsFineGrainedMemory)
         RMWInst->setMetadata("amdgpu.no.fine.grained.memory",
                              llvm::MDNode::get(Builder.getContext(), {}));
