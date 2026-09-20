@@ -29,6 +29,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### ELF Improvements
 
+* `--icf=all` now folds functions whose LSDA and CIE metadata are equivalent,
+  instead of disabling folding for every section with an LSDA.
+
 ### Breaking changes
 
 ### COFF Improvements

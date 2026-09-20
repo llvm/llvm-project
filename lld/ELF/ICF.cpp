@@ -80,6 +80,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -113,6 +114,25 @@ private:
   bool equalsConstant(const InputSection *a, const InputSection *b);
   bool equalsVariable(const InputSection *a, const InputSection *b);
 
+  bool lsdaEqualVariable(const InputSection *a, const InputSection *b);
+  bool cieRelsEqual(ArrayRef<Relocation> a, ArrayRef<Relocation> b) const;
+  bool personalityEqual(const Symbol *a, const Symbol *b) const;
+
+  struct LsdaInfo {
+    // The .gcc_except_table section the FDE's LSDA pointer refers to.
+    const InputSection *lsda;
+    // The CIE the FDE references.
+    ArrayRef<uint8_t> cieData;
+    // The personality function and its addend, resolved through a
+    // DW_EH_PE_indirect thunk if needed. personalityKnown is false when the
+    // personality cannot be resolved (conservatively not foldable).
+    bool personalityKnown;
+    const Symbol *personality;
+    int64_t personalityAddend;
+    // CIE relocations other than the personality pointer.
+    ArrayRef<Relocation> otherCieRels;
+  };
+
   size_t findBoundary(size_t begin, size_t end);
 
   void forEachClassRange(size_t begin, size_t end,
@@ -122,6 +142,13 @@ private:
 
   Ctx &ctx;
   SmallVector<InputSection *, 0> sections;
+
+  // For each section whose .eh_frame FDE has an LSDA, the associated
+  // .gcc_except_table section and the CIE the FDE references. Two sections may
+  // be folded only if their LSDA sections are equal and their CIEs are
+  // equivalent (personality, encodings, CFI), otherwise exception handling
+  // behavior could change.
+  llvm::DenseMap<const InputSection *, LsdaInfo> lsdaMap;
 
   // We repeat the main loop while `Repeat` is true.
   std::atomic<bool> repeat;
@@ -375,6 +402,9 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, Relocs<RelTy> ra,
 // Compare "moving" part of two InputSections, namely relocation targets.
 template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
+  if (!lsdaEqualVariable(a, b))
+    return false;
+
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
   if (ra.areRelocsCrel() || rb.areRelocsCrel())
@@ -382,6 +412,129 @@ bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
   return ra.areRelocsRel() || rb.areRelocsRel()
              ? variableEq(a, ra.rels, b, rb.rels)
              : variableEq(a, ra.relas, b, rb.relas);
+}
+
+// Compare two lists of CIE relocations (e.g. the personality function).
+// Relocation targets are compared like variableEq() compares section
+// relocations: same symbol, or equivalent section-defined targets whose
+// equivalence classes have converged. This looks through the per-object
+// indirection thunk a compiler emits for an indirect personality pointer:
+// equal thunk sections imply equal personality functions.
+template <class ELFT>
+bool ICF<ELFT>::cieRelsEqual(ArrayRef<Relocation> a,
+                             ArrayRef<Relocation> b) const {
+  if (a.size() != b.size())
+    return false;
+  for (size_t i = 0; i != a.size(); ++i) {
+    if (a[i].offset != b[i].offset || a[i].type != b[i].type ||
+        a[i].addend != b[i].addend || a[i].expr != b[i].expr)
+      return false;
+    Symbol *sa = a[i].sym;
+    Symbol *sb = b[i].sym;
+    if (sa == sb)
+      continue;
+    auto *da = dyn_cast<Defined>(sa);
+    auto *db = dyn_cast<Defined>(sb);
+    if (!da || !db)
+      return false;
+    // Absolute symbols are equal if their values are equal.
+    if (!da->section || !db->section) {
+      if (da->value != db->value)
+        return false;
+      continue;
+    }
+    // Section-defined symbols with different kind or offset are not equal.
+    if (da->section->kind() != db->section->kind() ||
+        da->value + a[i].addend != db->value + b[i].addend)
+      return false;
+    auto *x = dyn_cast<InputSection>(da->section);
+    auto *y = dyn_cast<InputSection>(db->section);
+    if (!x || !y)
+      return false;
+    if (x->eqClass[current] == 0 || x->eqClass[current] != y->eqClass[current])
+      return false;
+  }
+  return true;
+}
+
+// Return the symbol referenced by the relocation at `off` in `sec` and set
+// `addend`, or return nullptr if there is no such relocation (or more than
+// one).
+template <class ELFT>
+static const Symbol *relocTargetAt(const InputSection *sec, uint64_t off,
+                                   int64_t &addend) {
+  const RelsOrRelas<ELFT> rs = sec->template relsOrRelas<ELFT>();
+  if (rs.areRelocsCrel())
+    return nullptr;
+  const Symbol *sym = nullptr;
+  if (rs.areRelocsRel()) {
+    for (const typename ELFT::Rel &r : rs.rels)
+      if (r.r_offset == off) {
+        if (sym)
+          return nullptr;
+        sym = &sec->file->getRelocTargetSym(r);
+        addend = 0;
+      }
+  } else {
+    for (const typename ELFT::Rela &r : rs.relas)
+      if (r.r_offset == off) {
+        if (sym)
+          return nullptr;
+        sym = &sec->file->getRelocTargetSym(r);
+        addend = r.r_addend;
+      }
+  }
+  return sym;
+}
+
+// Compare two resolved personality functions like variableEq() compares
+// relocation targets: same symbol, or equivalent section-defined targets whose
+// equivalence classes have converged.
+template <class ELFT>
+bool ICF<ELFT>::personalityEqual(const Symbol *a, const Symbol *b) const {
+  if (a == b)
+    return true;
+  auto *da = dyn_cast<Defined>(a);
+  auto *db = dyn_cast<Defined>(b);
+  if (!da || !db)
+    return false;
+  if (!da->section || !db->section)
+    return da->value == db->value;
+  if (da->section->kind() != db->section->kind() || da->value != db->value)
+    return false;
+  auto *x = dyn_cast<InputSection>(da->section);
+  auto *y = dyn_cast<InputSection>(db->section);
+  if (!x || !y)
+    return false;
+  return x->eqClass[current] != 0 && x->eqClass[current] == y->eqClass[current];
+}
+
+// Return whether two text sections have equivalent exception-handling
+// metadata: the same LSDA (equal .gcc_except_table section and relocation
+// targets) and the same CIE (personality, encodings, CFI). A section with an
+// LSDA never equals a section without one.
+template <class ELFT>
+bool ICF<ELFT>::lsdaEqualVariable(const InputSection *a,
+                                  const InputSection *b) {
+  auto itA = lsdaMap.find(a);
+  auto itB = lsdaMap.find(b);
+  if (itA == lsdaMap.end() && itB == lsdaMap.end())
+    return true;
+  if (itA == lsdaMap.end() || itB == lsdaMap.end())
+    return false;
+  const LsdaInfo &x = itA->second;
+  const LsdaInfo &y = itB->second;
+  // The LSDA contents and their relocation targets must be equivalent. This
+  // uses the same equivalence-class refinement as normal ICF comparisons.
+  if (x.lsda->eqClass[current] == 0 ||
+      x.lsda->eqClass[current] != y.lsda->eqClass[current])
+    return false;
+  // The CIE (personality, encodings, CFI) must be equivalent as well.
+  if (x.cieData != y.cieData || !x.personalityKnown || !y.personalityKnown ||
+      x.personalityAddend != y.personalityAddend ||
+      !personalityEqual(x.personality, y.personality))
+    return false;
+  return cieRelsEqual(x.otherCieRels, y.otherCieRels);
 }
 
 template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t begin, size_t end) {
@@ -463,17 +616,81 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
 // The main function of ICF.
 template <class ELFT> void ICF<ELFT>::run() {
   // Two text sections may have identical content and relocations but different
-  // LSDA, e.g. the two functions may have catch blocks of different types. If a
-  // text section is referenced by a .eh_frame FDE with LSDA, it is not
-  // eligible. This is implemented by iterating over CIE/FDE and setting
-  // eqClass[0] to the referenced text section from a live FDE.
-  //
-  // If two .gcc_except_table have identical semantics (usually identical
-  // content with PC-relative encoding), we will lose folding opportunity.
+  // LSDA, e.g. the two functions may have catch blocks of different types.
+  // A section whose FDE has an LSDA is foldable only when the associated LSDA
+  // section is known and is equal for both sections (see lsdaMap). Sections
+  // with an LSDA that cannot be analyzed (e.g. a shared .gcc_except_table
+  // section referenced at a nonzero offset) are not eligible, as before.
   uint32_t uniqueId = 0;
-  ctx.in.ehFrame->iterateFDEWithLSDA<ELFT>(
-      [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
-
+  DenseMap<InputSection *, LsdaInfo> lsdaSecs;
+  DenseSet<InputSection *> lsdaConflict;
+  SmallVector<InputSection *, 0> lsdaUncomparable;
+  ctx.in.ehFrame->iterateFDEWithLSDATarget<ELFT>(
+      [&](InputSection &text, const CieInfo &cie, const Symbol *sym,
+          int64_t addend) {
+        if (!sym) {
+          lsdaUncomparable.push_back(&text);
+          return;
+        }
+        auto *d = dyn_cast<Defined>(sym);
+        InputSection *lsda =
+            d ? dyn_cast_or_null<InputSection>(d->section) : nullptr;
+        if (!lsda || d->value + addend != 0) {
+          lsdaUncomparable.push_back(&text);
+          return;
+        }
+        // Resolve the personality function. A compiler usually materializes
+        // the CIE personality pointer indirectly through a per-object pointer
+        // ("DW.ref.<personality>"); follow that indirection so that the same
+        // personality in different objects compares equal even though the
+        // local thunk symbols differ.
+        const Symbol *personality = nullptr;
+        int64_t personalityAddend = 0;
+        bool personalityKnown = true;
+        ArrayRef<Relocation> otherCieRels = cie.rels;
+        if (cie.personalityEncoding) {
+          if (cie.rels.empty()) {
+            personalityKnown = false;
+          } else {
+            const Relocation &r = cie.rels.front();
+            otherCieRels = cie.rels.drop_front();
+            if (*cie.personalityEncoding & llvm::dwarf::DW_EH_PE_indirect) {
+              auto *pd = dyn_cast<Defined>(r.sym);
+              auto *thunk =
+                  pd ? dyn_cast_or_null<InputSection>(pd->section) : nullptr;
+              personality =
+                  thunk ? relocTargetAt<ELFT>(thunk, pd->value + r.addend,
+                                              personalityAddend)
+                        : nullptr;
+              if (!personality)
+                personalityKnown = false;
+            } else {
+              personality = r.sym;
+              personalityAddend = r.addend;
+            }
+          }
+        }
+        LsdaInfo info{lsda,        cie.piece->data(), personalityKnown,
+                      personality, personalityAddend, otherCieRels};
+        auto it = lsdaSecs.try_emplace(&text, info);
+        if (!it.second) {
+          const LsdaInfo &prev = it.first->second;
+          if (prev.lsda != lsda || prev.cieData != cie.piece->data() ||
+              prev.personalityKnown != personalityKnown ||
+              prev.personality != personality ||
+              prev.personalityAddend != personalityAddend ||
+              !cieRelsEqual(prev.otherCieRels, otherCieRels))
+            lsdaConflict.insert(&text);
+        }
+      });
+  for (InputSection *s : lsdaUncomparable)
+    s->eqClass[0] = s->eqClass[1] = ++uniqueId;
+  for (auto &[sec, info] : lsdaSecs) {
+    if (lsdaConflict.contains(sec))
+      sec->eqClass[0] = sec->eqClass[1] = ++uniqueId;
+    else
+      lsdaMap.try_emplace(sec, info);
+  }
   // Collect sections to merge.
   for (InputSectionBase *sec : ctx.inputSections) {
     auto *s = dyn_cast<InputSection>(sec);
@@ -487,10 +704,16 @@ template <class ELFT> void ICF<ELFT>::run() {
     }
   }
 
-  // Initially, we use hash values to partition sections.
+  // Initially, we use hash values to partition sections. Mix in the LSDA and
+  // CIE hashes so that sections that only differ in their exception-handling
+  // metadata start in different classes.
   parallelForEach(sections, [&](InputSection *s) {
     // Set MSB to 1 to avoid collisions with unique IDs.
-    s->eqClass[0] = xxh3_64bits(s->content()) | (1U << 31);
+    uint64_t h = xxh3_64bits(s->content());
+    if (auto it = lsdaMap.find(s); it != lsdaMap.end())
+      h += xxh3_64bits(it->second.lsda->content()) +
+           xxh3_64bits(it->second.cieData);
+    s->eqClass[0] = h | (1U << 31);
   });
 
   // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to

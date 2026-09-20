@@ -33,12 +33,16 @@ using namespace lld::elf;
 namespace {
 class EhReader {
 public:
-  EhReader(InputSectionBase *s, ArrayRef<uint8_t> d) : isec(s), d(d) {}
+  EhReader(InputSectionBase *s, ArrayRef<uint8_t> d, bool reportErrors = true)
+      : isec(s), d(d), reportErrors(reportErrors) {}
   uint8_t getFdeEncoding();
+  std::optional<uint8_t> getPersonalityEncoding();
   bool hasLSDA();
 
 private:
   template <class P> void errOn(const P *loc, const Twine &msg) {
+    if (!reportErrors)
+      return;
     Ctx &ctx = isec->file->ctx;
     Err(ctx) << "corrupted .eh_frame: " << msg << "\n>>> defined in "
              << isec->getObjMsg((const uint8_t *)loc - isec->content().data());
@@ -49,10 +53,12 @@ private:
   StringRef readString();
   void skipLeb128();
   void skipAugP();
+  void skipAugPData(uint8_t enc);
   StringRef getAugmentation();
 
   InputSectionBase *isec;
   ArrayRef<uint8_t> d;
+  bool reportErrors;
 };
 }
 
@@ -119,8 +125,7 @@ static size_t getAugPSize(Ctx &ctx, unsigned enc) {
   return 0;
 }
 
-void EhReader::skipAugP() {
-  uint8_t enc = readByte();
+void EhReader::skipAugPData(uint8_t enc) {
   if ((enc & 0xf0) == DW_EH_PE_aligned)
     return errOn(d.data() - 1, "DW_EH_PE_aligned encoding is not supported");
   size_t size = getAugPSize(isec->getCtx(), enc);
@@ -131,12 +136,22 @@ void EhReader::skipAugP() {
   d = d.slice(size);
 }
 
+void EhReader::skipAugP() {
+  uint8_t enc = readByte();
+  skipAugPData(enc);
+}
+
 uint8_t elf::getFdeEncoding(EhSectionPiece *p) {
   return EhReader(p->sec, p->data()).getFdeEncoding();
 }
 
-bool elf::hasLSDA(const EhSectionPiece &p) {
-  return EhReader(p.sec, p.data()).hasLSDA();
+std::optional<uint8_t> elf::getPersonalityEncoding(const EhSectionPiece &p,
+                                                   bool reportErrors) {
+  return EhReader(p.sec, p.data(), reportErrors).getPersonalityEncoding();
+}
+
+bool elf::hasLSDA(const EhSectionPiece &p, bool reportErrors) {
+  return EhReader(p.sec, p.data(), reportErrors).hasLSDA();
 }
 
 StringRef EhReader::getAugmentation() {
@@ -183,6 +198,28 @@ uint8_t EhReader::getFdeEncoding() {
     }
   }
   return DW_EH_PE_absptr;
+}
+
+std::optional<uint8_t> EhReader::getPersonalityEncoding() {
+  StringRef aug = getAugmentation();
+  for (char c : aug) {
+    if (c == 'P') {
+      uint8_t enc = readByte();
+      skipAugPData(enc);
+      return enc;
+    }
+    if (c == 'z')
+      skipLeb128();
+    else if (c == 'L')
+      readByte();
+    else if (c == 'R')
+      readByte();
+    else if (c != 'B' && c != 'S' && c != 'G') {
+      errOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
+      break;
+    }
+  }
+  return std::nullopt;
 }
 
 bool EhReader::hasLSDA() {

@@ -292,34 +292,84 @@ template <endianness e> void EhFrameSection::addRecords(EhInputSection *sec) {
   }
 }
 
-// Used by ICF<ELFT>::handleLSDA(). This function is very similar to
-// EhFrameSection::addRecords().
+// Used by ICF<ELFT>::run() and findKeepUniqueSections(). This function is very
+// similar to EhFrameSection::addRecords().
+// Call fn for each live FDE whose CIE has an LSDA. `ciesWithLSDA` is a
+// scratch map, reused across input sections.
 template <class ELFT>
-void EhFrameSection::iterateFDEWithLSDAAux(
-    EhInputSection &sec, DenseSet<size_t> &ciesWithLSDA,
-    llvm::function_ref<void(InputSection &)> fn) {
+void EhFrameSection::iterateFDEWithLSDATargetAux(
+    EhInputSection &sec, DenseMap<size_t, CieInfo> &ciesWithLSDA,
+    llvm::function_ref<void(InputSection &, const CieInfo &, const Symbol *,
+                            int64_t)>
+        fn,
+    bool reportErrors) {
   for (EhSectionPiece &cie : sec.cies)
-    if (hasLSDA(cie))
-      ciesWithLSDA.insert(cie.inputOff);
+    if (hasLSDA(cie, reportErrors)) {
+      // Parsing the personality encoding re-reads the augmentation; keep it
+      // silent so that this scan reports at most as many diagnostics as the
+      // pre-ICF scan did (EhFrameSection::finalizeContents reports the rest).
+      CieInfo info{
+          &cie, {}, getPersonalityEncoding(cie, /*reportErrors=*/false)};
+      ciesWithLSDA.try_emplace(cie.inputOff, info);
+    }
   for (EhSectionPiece &fde : sec.fdes) {
     uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
-    if (!ciesWithLSDA.contains(fde.inputOff + 4 - id))
+    auto cieIt = ciesWithLSDA.find(fde.inputOff + 4 - id);
+    if (cieIt == ciesWithLSDA.end())
       continue;
-
-    // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive(fde, sec.rels))
-      if (auto *s = dyn_cast_or_null<InputSection>(d->section))
-        fn(*s);
+    const CieInfo &cie = cieIt->second;
+    Defined *d = isFdeLive(fde, sec.rels);
+    if (!d)
+      continue;
+    auto *s = dyn_cast_or_null<InputSection>(d->section);
+    if (!s)
+      continue;
+    // The CIE's relocations (e.g. the personality function).
+    ArrayRef<Relocation> cieRels;
+    if (cie.piece->firstRelocation != unsigned(-1)) {
+      unsigned n = 0;
+      for (unsigned i = cie.piece->firstRelocation;
+           i != sec.rels.size() &&
+           sec.rels[i].offset < cie.piece->inputOff + cie.piece->size;
+           ++i)
+        ++n;
+      cieRels =
+          ArrayRef<Relocation>(sec.rels).slice(cie.piece->firstRelocation, n);
+    }
+    CieInfo info{cie.piece, cieRels, cie.personalityEncoding};
+    // The FDE's augmentation data contains one LSDA pointer, which is the
+    // relocation following the initial location relocation. If there is not
+    // exactly one such relocation, the FDE cannot be analyzed: pass a null
+    // symbol so that the caller does not mistake the section for one without
+    // an LSDA.
+    unsigned firstRel = fde.firstRelocation;
+    const Relocation *lsdaRel = nullptr;
+    unsigned nRels = 0;
+    if (firstRel != unsigned(-1))
+      for (unsigned i = firstRel + 1;
+           i != sec.rels.size() && sec.rels[i].offset < fde.inputOff + fde.size;
+           ++i) {
+        ++nRels;
+        lsdaRel = &sec.rels[i];
+      }
+    if (nRels != 1) {
+      fn(*s, info, nullptr, 0);
+      continue;
+    }
+    fn(*s, info, lsdaRel->sym, lsdaRel->addend);
   }
 }
 
 template <class ELFT>
-void EhFrameSection::iterateFDEWithLSDA(
-    llvm::function_ref<void(InputSection &)> fn) {
-  DenseSet<size_t> ciesWithLSDA;
+void EhFrameSection::iterateFDEWithLSDATarget(
+    llvm::function_ref<void(InputSection &, const CieInfo &, const Symbol *,
+                            int64_t)>
+        fn,
+    bool reportErrors) {
+  DenseMap<size_t, CieInfo> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    iterateFDEWithLSDAAux<ELFT>(*sec, ciesWithLSDA, fn);
+    iterateFDEWithLSDATargetAux<ELFT>(*sec, ciesWithLSDA, fn, reportErrors);
   }
 }
 
@@ -4689,14 +4739,22 @@ template void elf::splitSections<ELF32BE>(Ctx &);
 template void elf::splitSections<ELF64LE>(Ctx &);
 template void elf::splitSections<ELF64BE>(Ctx &);
 
-template void EhFrameSection::iterateFDEWithLSDA<ELF32LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF32BE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64LE>(
-    function_ref<void(InputSection &)>);
-template void EhFrameSection::iterateFDEWithLSDA<ELF64BE>(
-    function_ref<void(InputSection &)>);
+template void EhFrameSection::iterateFDEWithLSDATarget<ELF32LE>(
+    function_ref<void(InputSection &, const CieInfo &, const Symbol *,
+                      int64_t)>,
+    bool);
+template void EhFrameSection::iterateFDEWithLSDATarget<ELF32BE>(
+    function_ref<void(InputSection &, const CieInfo &, const Symbol *,
+                      int64_t)>,
+    bool);
+template void EhFrameSection::iterateFDEWithLSDATarget<ELF64LE>(
+    function_ref<void(InputSection &, const CieInfo &, const Symbol *,
+                      int64_t)>,
+    bool);
+template void EhFrameSection::iterateFDEWithLSDATarget<ELF64BE>(
+    function_ref<void(InputSection &, const CieInfo &, const Symbol *,
+                      int64_t)>,
+    bool);
 
 template class elf::SymbolTableSection<ELF32LE>;
 template class elf::SymbolTableSection<ELF32BE>;

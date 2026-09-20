@@ -2677,13 +2677,17 @@ static void replaceCommonSymbols(Ctx &ctx) {
 
 // The section referred to by `s` is considered address-significant. Set the
 // keepUnique flag on the section if appropriate.
-static void markAddrsig(bool icfSafe, Symbol *s) {
+static void markAddrsig(bool icfSafe, Symbol *s,
+                        DenseSet<InputSectionBase *> *explicitlySignificant) {
   // We don't need to keep text sections unique under --icf=all even if they
   // are address-significant.
   if (auto *d = dyn_cast_or_null<Defined>(s))
     if (auto *sec = dyn_cast_or_null<InputSectionBase>(d->section))
-      if (icfSafe || !(sec->flags & SHF_EXECINSTR))
+      if (icfSafe || !(sec->flags & SHF_EXECINSTR)) {
         sec->keepUnique = true;
+        if (explicitlySignificant)
+          explicitlySignificant->insert(sec);
+      }
 }
 
 // Record sections that define symbols mentioned in --keep-unique <symbol>
@@ -2691,6 +2695,9 @@ static void markAddrsig(bool icfSafe, Symbol *s) {
 // ineligible for ICF.
 template <class ELFT>
 static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
+  // Sections explicitly requested via --keep-unique; they win over the LSDA
+  // exemption below.
+  SmallPtrSet<InputSectionBase *, 4> forced;
   for (auto *arg : args.filtered(OPT_keep_unique)) {
     StringRef name = arg->getValue();
     auto *d = dyn_cast_or_null<Defined>(ctx.symtab->find(name));
@@ -2698,9 +2705,17 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
       Warn(ctx) << "could not find symbol " << name << " to keep unique";
       continue;
     }
-    if (auto *sec = dyn_cast<InputSectionBase>(d->section))
+    if (auto *sec = dyn_cast<InputSectionBase>(d->section)) {
       sec->keepUnique = true;
+      forced.insert(sec);
+    }
   }
+
+  // Sections marked address-significant by the dynsym or an address-
+  // significance table. The LSDA exemption below only clears the conservative
+  // fallback marking for objects without an address-significance table, so
+  // these sections stay unique.
+  DenseSet<InputSectionBase *> explicitlySignificant;
 
   // --icf=all --ignore-data-address-equality means that we can ignore
   // the dynsym and address-significance tables entirely.
@@ -2712,7 +2727,7 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   bool icfSafe = ctx.arg.icf == ICFLevel::Safe;
   for (Symbol *sym : ctx.symtab->getSymbols())
     if (sym->isExported)
-      markAddrsig(icfSafe, sym);
+      markAddrsig(icfSafe, sym, &explicitlySignificant);
 
   // Visit the address-significance table in each object file and mark each
   // referenced symbol as address-significant.
@@ -2731,16 +2746,34 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
           Err(ctx) << f << ": could not decode addrsig section: " << err;
           break;
         }
-        markAddrsig(icfSafe, syms[symIndex]);
+        markAddrsig(icfSafe, syms[symIndex], &explicitlySignificant);
         cur += size;
       }
     } else {
       // If an object file does not have an address-significance table,
       // conservatively mark all of its symbols as address-significant.
       for (Symbol *s : syms)
-        markAddrsig(icfSafe, s);
+        markAddrsig(icfSafe, s, nullptr);
     }
   }
+
+  // ICF folds an LSDA-bearing function only when its LSDA and CIE are
+  // equivalent to the surviving function's (ICF::lsdaEqualVariable), so the
+  // conservative keepUnique marking of an LSDA section can be cleared. Explicit
+  // --keep-unique requests and address-significant sections (dynsym or
+  // .llvm_addrsig) stay unique. Diagnostics are reported later by
+  // EhFrameSection::finalizeContents.
+  ctx.in.ehFrame->iterateFDEWithLSDATarget<ELFT>(
+      [&](InputSection &, const CieInfo &, const Symbol *sym, int64_t) {
+        if (!sym)
+          return;
+        auto *d = dyn_cast<Defined>(sym);
+        auto *sec = d ? dyn_cast_or_null<InputSection>(d->section) : nullptr;
+        if (sec && !forced.contains(sec) &&
+            !explicitlySignificant.contains(sec))
+          sec->keepUnique = false;
+      },
+      /*reportErrors=*/false);
 }
 
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
