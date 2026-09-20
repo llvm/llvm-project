@@ -42806,38 +42806,19 @@ static SDValue combineX86ShufflesRecursively(SDValue Op, SelectionDAG &DAG,
       SDLoc(Op), Subtarget);
 }
 
-/// Get the PSHUF-style mask from PSHUF node.
-///
-/// This is a very minor wrapper around getTargetShuffleMask to easy forming v4
-/// PSHUF-style masks that can be reused with such instructions.
+/// Get the raw PSHUF-style mask[4] from PSHUF node.
 static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
-  MVT VT = N.getSimpleValueType();
   SmallVector<int, 4> Mask;
-  SmallVector<SDValue, 2> Ops;
-  bool HaveMask = getTargetShuffleMask(N, false, Ops, Mask);
-  (void)HaveMask;
-  assert(HaveMask);
-
-  // If we have more than 128-bits, only the low 128-bits of shuffle mask
-  // matter. Check that the upper masks are repeats and remove them.
-  if (VT.getSizeInBits() > 128) {
-    int LaneElts = 128 / VT.getScalarSizeInBits();
-#ifndef NDEBUG
-    for (int i = 1, NumLanes = VT.getSizeInBits() / 128; i < NumLanes; ++i)
-      for (int j = 0; j < LaneElts; ++j)
-        assert(Mask[j] == Mask[i * LaneElts + j] - (LaneElts * i) &&
-               "Mask doesn't repeat in high 128-bit lanes!");
-#endif
-    Mask.resize(LaneElts);
-  }
-
   switch (N.getOpcode()) {
   case X86ISD::PSHUFD:
+    DecodePSHUFMask(4, 32, N.getConstantOperandVal(1), Mask);
     return Mask;
   case X86ISD::PSHUFLW:
+    DecodePSHUFLWMask(8, N.getConstantOperandVal(1), Mask);
     Mask.resize(4);
     return Mask;
   case X86ISD::PSHUFHW:
+    DecodePSHUFHWMask(8, N.getConstantOperandVal(1), Mask);
     Mask.erase(Mask.begin(), Mask.begin() + 4);
     for (int &M : Mask)
       M -= 4;

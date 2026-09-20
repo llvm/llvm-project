@@ -10326,15 +10326,14 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
       (LocalState.getMainOp()->isUnaryOp() &&
        LocalState.getAltOp()->isUnaryOp())) {
     SmallVector<Value *> Ops0, Ops1;
-    for (Value *V : VL) {
-      auto *I = dyn_cast<Instruction>(V);
-      if (!I)
-        continue;
+    for (Instruction *I : make_isa_range<Instruction>(VL)) {
       Ops0.push_back(I->getOperand(0));
-      Ops1.push_back(I->getOperand(I->isBinaryOp() ? 1 : 0));
+      if (I->isBinaryOp())
+        Ops1.push_back(I->getOperand(1));
     }
     TTI::OperandValueInfo Op1Info = getOperandInfo(Ops0);
-    TTI::OperandValueInfo Op2Info = getOperandInfo(Ops1);
+    TTI::OperandValueInfo Op2Info =
+        Ops1.empty() ? TTI::OperandValueInfo() : getOperandInfo(Ops1);
     InstructionCost OriginalVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, VecTy, CostKind, Op1Info, Op2Info,
                                     {}, LocalState.getMainOp()) +
@@ -11159,7 +11158,7 @@ public:
             MainOpcode, VecTy, Kind,
             TTI::commonOperandInfo(Operands[0][0], Operands[0][1]),
             TTI::commonOperandInfo(Operands[1][0], Operands[1][1]), {},
-            S.getMainOp());
+            S.getMainOp(), &TLI);
         break;
       default:
         // Calls (min/max, fmuladd) return above before reaching this switch.
