@@ -20,7 +20,7 @@ PISAMCAsmInfo::PISAMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   HasDotTypeDotSizeDirective = false;
 
   MinInstAlignment = 4;
-  CodePointerSize = 4;
+  CodePointerSize = 8;
   HasFunctionAlignment = false;
 
   SeparatorString = ";";
