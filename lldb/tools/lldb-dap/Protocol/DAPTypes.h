@@ -20,6 +20,7 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
 
@@ -43,13 +44,14 @@ private:
   static constexpr uint32_t k_kind_mask = 0xFF;
 
 public:
-  static constexpr uint32_t k_invalid_var_ref = UINT32_MAX;
-  static constexpr uint32_t k_no_child = 0;
+  static const var_ref_t k_invalid_var_ref;
+  static const var_ref_t k_no_child;
 
   explicit constexpr var_ref_t(uint32_t reference, ReferenceKind kind)
       : reference(reference), kind(kind) {}
 
-  explicit constexpr var_ref_t(uint32_t masked_ref = k_invalid_var_ref)
+  explicit constexpr var_ref_t(
+      uint32_t masked_ref = k_invalid_var_ref.AsUInt32())
       : reference(masked_ref & k_reference_bit_mask),
         kind((masked_ref >> k_reference_bit_size) & k_kind_mask) {}
 
@@ -86,9 +88,15 @@ private:
 static_assert(sizeof(var_ref_t) == sizeof(uint32_t) &&
               "the size of var_ref_t must be equal to the size of uint32_t.");
 
+inline constexpr var_ref_t var_ref_t::k_no_child{0};
+inline constexpr var_ref_t var_ref_t::k_invalid_var_ref{UINT32_MAX};
+
 bool fromJSON(const llvm::json::Value &, var_ref_t &, llvm::json::Path);
 inline llvm::json::Value toJSON(const var_ref_t &var_ref) {
   return var_ref.AsUInt32();
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, var_ref_t ref) {
+  return os << ref.AsUInt32();
 }
 
 /// Data used to help lldb-dap resolve breakpoints persistently across different

@@ -28,13 +28,13 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
   const var_ref_t var_ref = arguments.variablesReference;
   if (var_ref.Kind() == eReferenceKindInvalid)
     return llvm::make_error<DAPError>(
-        llvm::formatv("invalid variablesReference: {}.", var_ref.AsUInt32()),
+        llvm::formatv("invalid variablesReference: {}.", var_ref),
         /*error_code=*/llvm::inconvertibleErrorCode(), /*show_user=*/false);
 
   VariableStore *store = dap.reference_storage.GetVariableStore(var_ref);
   if (!store)
     return llvm::make_error<DAPError>(
-        llvm::formatv("invalid variablesReference: {}.", var_ref.AsUInt32()),
+        llvm::formatv("invalid variablesReference: {}.", var_ref),
         /*error_code=*/llvm::inconvertibleErrorCode(), /*show_user=*/false);
 
   Expected<std::vector<Variable>> variables = store->GetVariables(arguments);
