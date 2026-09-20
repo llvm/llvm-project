@@ -251,6 +251,10 @@ __extension__ _Static_assert(
   1, ""
 );
 
+__extension__ _Static_assert(
+ __builtin_copysign(1.0, 1.0) == 1.0 
+, "");
+
 //double       g19 = __builtin_powi(2.0, 4);
 //float        g20 = __builtin_powif(2.0f, 4);
 //long double  g21 = __builtin_powil(2.0L, 4);
