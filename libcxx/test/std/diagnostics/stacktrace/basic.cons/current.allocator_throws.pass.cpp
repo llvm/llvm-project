@@ -63,13 +63,13 @@ TEST_NO_TAIL_CALLS TEST_NOINLINE throwing_stacktrace f() { return throwing_stack
 int main(int, char**) {
   // Every allocation fails: current() must come back empty, not terminate.
   throwing_allocator<std::stacktrace_entry>::throw_after_n_allocs = 0;
-  throwing_stacktrace empty = f();
+  throwing_stacktrace empty                                       = f();
   assert(empty.empty());
 
   // The first allocation (room for the first captured frame) succeeds, everything after fails:
   // current() must retain that one entry rather than discard everything.
   throwing_allocator<std::stacktrace_entry>::throw_after_n_allocs = 1;
-  throwing_stacktrace partial = f();
+  throwing_stacktrace partial                                     = f();
   assert(partial.size() >= 1);
 
   throwing_allocator<std::stacktrace_entry>::throw_after_n_allocs = -1;
