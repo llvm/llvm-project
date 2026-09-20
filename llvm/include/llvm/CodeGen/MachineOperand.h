@@ -129,11 +129,10 @@ private:
   ///   $eax = XOR32rr undef $eax, undef $eax
   ///
   /// Any register can be used, and its value doesn't matter, but the operands
-  /// must be the same register, so a pass that moves one of them to another
-  /// register has to move the rest with it.  Rewriting a tie moves just the
-  /// tied operand: it follows the def while the other reads stay behind.  So a
-  /// virtual register operand may not be tied to a def of another register;
-  /// read a register defined by IMPLICIT_DEF instead.
+  /// must be the same register.  Rewriting a tie renames only the tied
+  /// operand, so an undef use of a virtual register may not be tied to a def
+  /// of another register while another undef operand reads the same register;
+  /// read an IMPLICIT_DEF instead.
   ///
   unsigned IsUndef : 1;
 

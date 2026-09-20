@@ -83,6 +83,9 @@ bool ProcessImplicitDefs::canTurnIntoImplicitDef(MachineInstr *MI) {
 void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "Processing " << *MI);
   Register Reg = MI->getOperand(0).getReg();
+  // Trim any extra operands.
+  for (unsigned i = MI->getNumOperands() - 1; i; --i)
+    MI->removeOperand(i);
 
   if (Reg.isVirtual()) {
     // For virtual registers, mark all uses as <undef>, and convert users to
@@ -90,8 +93,6 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
     bool AllUsesUndef = true;
     for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
       MachineInstr *UserMI = MO.getParent();
-      // A tied use is rewritten to the register of its def, which a sibling
-      // read marked undef could not follow. Leave those reads a definition.
       if (UserMI->hasTiedAndOtherReadOf(Reg, MO.getSubReg())) {
         AllUsesUndef = false;
         continue;
@@ -103,16 +104,19 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
       UserMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
       WorkList.insert(UserMI);
     }
-    if (AllUsesUndef)
+    if (AllUsesUndef) {
       MI->eraseFromParent();
+      return;
+    }
+    // A kept PHI, now an IMPLICIT_DEF, leaves the PHI block.
+    MachineBasicBlock *MBB = MI->getParent();
+    MachineBasicBlock::iterator Next = std::next(MI->getIterator());
+    if (Next != MBB->end() && Next->isPHI())
+      MBB->splice(MBB->SkipPHIsAndLabels(Next), MBB, MI);
     return;
   }
 
   // This is a physreg implicit-def.
-  // Trim any extra operands.
-  for (unsigned i = MI->getNumOperands() - 1; i; --i)
-    MI->removeOperand(i);
-
   // Try to add undef flag to all uses.  If all uses are updated remove
   // implicit-def.
   MachineBasicBlock::instr_iterator SearchMI = MI->getIterator();

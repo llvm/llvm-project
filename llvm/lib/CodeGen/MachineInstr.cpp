@@ -1134,16 +1134,13 @@ int MachineInstr::findRegisterUseOperandIdx(Register Reg,
 bool MachineInstr::hasTiedAndOtherReadOf(Register Reg, unsigned SubReg) const {
   bool Tied = false;
   unsigned Reads = 0;
-  for (const MachineOperand &MO : operands()) {
-    if (!MO.isReg() || !MO.isUse() || MO.getReg() != Reg ||
-        MO.getSubReg() != SubReg)
+  for (const MachineOperand &MO : all_uses()) {
+    if (MO.getReg() != Reg || MO.getSubReg() != SubReg)
       continue;
-    // A tie the def already satisfies is rewritten to nothing, so it keeps
-    // the reads together rather than moving one of them.
-    if (MO.isTied() &&
-        getOperand(findTiedOperandIdx(getOperandNo(&MO))).getReg() != Reg)
-      Tied = true;
     ++Reads;
+    // A tie its def already satisfies is not rewritten.
+    Tied |= MO.isTied() &&
+            getOperand(findTiedOperandIdx(getOperandNo(&MO))).getReg() != Reg;
   }
   return Tied && Reads > 1;
 }
