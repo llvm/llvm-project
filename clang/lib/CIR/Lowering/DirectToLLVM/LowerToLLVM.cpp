@@ -2694,7 +2694,12 @@ static bool shouldDropFuncAttribute(cir::FuncOp func, mlir::NamedAttribute attr,
          attr.getName() == func.getSideEffectAttrName() ||
          attr.getName() == CIRDialect::getNoReturnAttrName() ||
          attr.getName() == CIRDialect::getStrictFPAttrName() ||
-         attr.getName() == func.getAnnotationsAttrName();
+         attr.getName() == CIRDialect::getNoRecurseAttrName() ||
+         attr.getName() == CIRDialect::getMustProgressAttrName() ||
+         attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
+         attr.getName() == func.getAnnotationsAttrName() ||
+         attr.getName() == func.getComdatAttrName() ||
+         attr.getName() == func.getAlignmentAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -2804,9 +2809,11 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
                                        attributes)))
     return mlir::failure();
 
+  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
+
   mlir::LLVM::LLVMFuncOp fn = mlir::LLVM::LLVMFuncOp::create(
       rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
-      mlir::SymbolRefAttr(), attributes);
+      comdatAttr, attributes);
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
@@ -2844,13 +2851,25 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
 
-  // The LLVM dialect's LLVMFuncOp has no dedicated field for the `strictfp`
-  // function attribute, so route it through the `passthrough` array. The MLIR
-  // LLVM IR translator forwards `passthrough` entries to LLVM IR as function
+  // Function attributes with no dedicated field on the LLVM dialect's
+  // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR
+  // translator forwards `passthrough` entries to LLVM IR as function
   // attributes.
-  if (op->hasAttr(CIRDialect::getStrictFPAttrName()))
-    fn.setPassthroughAttr(rewriter.getArrayAttr(
-        {rewriter.getStringAttr(CIRDialect::getStrictFPAttrName())}));
+  SmallVector<mlir::Attribute> passthrough;
+  for (llvm::StringRef flagAttr :
+       {CIRDialect::getStrictFPAttrName(), CIRDialect::getNoRecurseAttrName(),
+        CIRDialect::getMustProgressAttrName()})
+    if (op->hasAttr(flagAttr))
+      passthrough.push_back(rewriter.getStringAttr(flagAttr));
+
+  if (auto moduleId = op->getAttrOfType<mlir::StringAttr>(
+          CIRDialect::getSYCLModuleIdAttrName()))
+    passthrough.push_back(rewriter.getArrayAttr(
+        {rewriter.getStringAttr(CIRDialect::getSYCLModuleIdAttrName()),
+         moduleId}));
+
+  if (!passthrough.empty())
+    fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);
@@ -2863,6 +2882,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   fn.setVisibility_(
       lowerCIRVisibilityToLLVMVisibility(op.getGlobalVisibility()));
+
+  fn.setAlignment(op.getAlignment());
+  assert(!MissingFeatures::opFuncPreferredAlignment());
 
   rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
   if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
@@ -3146,23 +3168,28 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::SymbolRefAttr
-CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
-                                         mlir::OpBuilder &builder) const {
-  if (!op.getComdat())
-    return mlir::SymbolRefAttr{};
-
-  mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
+static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
+                                               mlir::OpBuilder &builder,
+                                               StringRef symName,
+                                               mlir::LLVM::ComdatOp &comdatOp) {
   mlir::OpBuilder::InsertionGuard guard(builder);
-  StringRef comdatName("__llvm_comdat_globals");
+  StringRef comdatName = "__llvm_comdat";
+  if (!comdatOp) {
+    // The GlobalOp and FuncOp lowering patterns each cache their own
+    // 'comdatOp', but both now share a single module-level comdat region, so
+    // whichever pattern gets here second has to find the existing one rather
+    // than create a duplicate symbol.
+    comdatOp = modOp.lookupSymbol<mlir::LLVM::ComdatOp>(comdatName);
+  }
+
   if (!comdatOp) {
     builder.setInsertionPointToStart(modOp.getBody());
     comdatOp =
         mlir::LLVM::ComdatOp::create(builder, modOp.getLoc(), comdatName);
   }
 
-  if (auto comdatSelector = comdatOp.lookupSymbol<mlir::LLVM::ComdatSelectorOp>(
-          op.getSymName())) {
+  if (auto comdatSelector =
+          comdatOp.lookupSymbol<mlir::LLVM::ComdatSelectorOp>(symName)) {
     return mlir::SymbolRefAttr::get(
         builder.getContext(), comdatName,
         mlir::FlatSymbolRefAttr::get(comdatSelector.getSymNameAttr()));
@@ -3170,11 +3197,29 @@ CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
 
   builder.setInsertionPointToStart(&comdatOp.getBody().back());
   auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
-      builder, comdatOp.getLoc(), op.getSymName(),
-      mlir::LLVM::comdat::Comdat::Any, /*sym_visibility=*/nullptr);
+      builder, comdatOp.getLoc(), symName, mlir::LLVM::comdat::Comdat::Any,
+      /*sym_visibility=*/nullptr);
   return mlir::SymbolRefAttr::get(
       builder.getContext(), comdatName,
       mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
+}
+
+mlir::SymbolRefAttr
+CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
+                                         mlir::OpBuilder &builder) const {
+  if (!op.getComdat())
+    return mlir::SymbolRefAttr{};
+  return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
+                             op.getSymName(), comdatOp);
+}
+
+mlir::SymbolRefAttr
+CIRToLLVMFuncOpLowering::getComdatAttr(cir::FuncOp &op,
+                                       mlir::OpBuilder &builder) const {
+  if (!op.getComdat())
+    return mlir::SymbolRefAttr{};
+  return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
+                             op.getSymName(), comdatOp);
 }
 
 mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
