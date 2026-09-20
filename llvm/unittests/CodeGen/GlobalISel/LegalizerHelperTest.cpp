@@ -4403,6 +4403,7 @@ TEST_F(AArch64GISelMITest, LowerIntrinsicRoundExtLLT) {
   if (!TM)
     GTEST_SKIP();
 
+  const bool SavedUseExtended = LLT::getUseExtended();
   LLT::setUseExtended(true);
 
   DefineLegalizerInfo(A, {});
@@ -4416,7 +4417,7 @@ TEST_F(AArch64GISelMITest, LowerIntrinsicRoundExtLLT) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*Round, 0, LLT()));
 
-  LLT::setUseExtended(false);
+  LLT::setUseExtended(SavedUseExtended);
 }
 
 // Test that lowerFFloor with extended LLT float types doesn't crash
@@ -4426,6 +4427,7 @@ TEST_F(AArch64GISelMITest, LowerFFloorExtLLT) {
   if (!TM)
     GTEST_SKIP();
 
+  const bool SavedUseExtended = LLT::getUseExtended();
   LLT::setUseExtended(true);
 
   DefineLegalizerInfo(A, {});
@@ -4439,7 +4441,7 @@ TEST_F(AArch64GISelMITest, LowerFFloorExtLLT) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*Floor, 0, LLT()));
 
-  LLT::setUseExtended(false);
+  LLT::setUseExtended(SavedUseExtended);
 }
 
 // Test that lowerFMODF with extended LLT float types doesn't crash
@@ -4449,6 +4451,7 @@ TEST_F(AArch64GISelMITest, LowerFMODFExtLLT) {
   if (!TM)
     GTEST_SKIP();
 
+  const bool SavedUseExtended = LLT::getUseExtended();
   LLT::setUseExtended(true);
 
   DefineLegalizerInfo(A, {});
@@ -4462,7 +4465,7 @@ TEST_F(AArch64GISelMITest, LowerFMODFExtLLT) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*FMODF, 0, LLT()));
 
-  LLT::setUseExtended(false);
+  LLT::setUseExtended(SavedUseExtended);
 }
 
 // Test that lowerFMinimumMaximum with extended LLT float types doesn't crash
@@ -4472,6 +4475,7 @@ TEST_F(AArch64GISelMITest, LowerFMinimumExtLLT) {
   if (!TM)
     GTEST_SKIP();
 
+  const bool SavedUseExtended = LLT::getUseExtended();
   LLT::setUseExtended(true);
 
   DefineLegalizerInfo(A, {});
@@ -4487,7 +4491,7 @@ TEST_F(AArch64GISelMITest, LowerFMinimumExtLLT) {
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.lower(*FMin, 0, LLT()));
 
-  LLT::setUseExtended(false);
+  LLT::setUseExtended(SavedUseExtended);
 }
 
 } // namespace
