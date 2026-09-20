@@ -3605,7 +3605,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -5574,6 +5574,10 @@ public:
       CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD, Expr *InitExpr,
+                                                SourceLocation InitLoc);
+  ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD,
+                                                const InitializedEntity &Entity,
+                                                Expr *InitExpr,
                                                 SourceLocation InitLoc);
 
   /// FinalizeVarWithDestructor - Prepare for calling destructor on the
@@ -7744,7 +7748,24 @@ public:
   /// Emit a warning for all pending noderef expressions that we recorded.
   void WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec);
 
-  ExprResult BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
+private:
+  /// Shared logic for building default member initializer which used in a
+  /// constructor or an aggregate initialization.
+  ///
+  ///
+  /// The caller enters that evaluation context and decides whether the result
+  /// is finished as a full-expression. \p NestedDefaultChecking and
+  /// \p NeedRebuild have to be sampled before entering it.
+  ExprResult BuildCXXDefaultInitInternal(SourceLocation Loc, FieldDecl *Field,
+                                         const InitializedEntity &Entity,
+                                         bool NestedDefaultChecking,
+                                         bool NeedRebuild);
+
+public:
+  ExprResult BuildCXXCtorDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
+  ExprResult
+  BuildCXXAggregateDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                   const InitializedEntity &MemberEntity);
 
   /// Instantiate or parse a C++ default argument expression as necessary.
   /// Return true on error.
@@ -15215,6 +15236,23 @@ private:
 
   // The current stack of constraint satisfactions, so we can exit-early.
   llvm::SmallVector<SatisfactionStackEntryTy, 10> SatisfactionStack;
+
+  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to set up the
+  /// LocalInstantiationScope of the current non-lambda function. For lambdas,
+  /// use LambdaScopeForCallOperatorInstantiationRAII.
+  bool
+  SetupConstraintScope(FunctionDecl *FD,
+                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       const MultiLevelTemplateArgumentList &MLTAL,
+                       LocalInstantiationScope &Scope);
+
+  /// Used during constraint checking, sets up the constraint template argument
+  /// lists, and calls SetupConstraintScope to set up the
+  /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
+  std::optional<MultiLevelTemplateArgumentList>
+  SetupConstraintCheckingTemplateArgumentsAndScope(
+      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+      LocalInstantiationScope &Scope);
 
   ///@}
 

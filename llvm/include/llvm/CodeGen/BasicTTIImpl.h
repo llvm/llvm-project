@@ -450,11 +450,6 @@ public:
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
   }
 
-  bool isSingleThreaded() const override {
-    return getTLI()->getTargetMachine().Options.ThreadModel ==
-           ThreadModel::Single;
-  }
-
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override {
     return getTLI()->getTargetMachine().getPredicatedAddrSpace(V);
@@ -668,10 +663,9 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
-    // small code model allows a 4GB span of text + data, which might not fit
-    // in the 32-bit offsets relative lookup tables generate.
-    if (TargetTriple.isAArch64())
+    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
+    // there.
+    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
       return false;
 
     return true;
@@ -2761,6 +2755,12 @@ public:
     case Intrinsic::clmul:
       ISD = ISD::CLMUL;
       break;
+    case Intrinsic::smulh:
+      ISD = ISD::MULHS;
+      break;
+    case Intrinsic::umulh:
+      ISD = ISD::MULHU;
+      break;
     case Intrinsic::masked_udiv:
     case Intrinsic::masked_sdiv:
     case Intrinsic::masked_urem:
@@ -3146,6 +3146,25 @@ public:
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
       return BW * PerBitCost;
+    }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh: {
+      unsigned BW = RetTy->getScalarSizeInBits();
+      Type *WideTy = RetTy->getWithNewBitWidth(BW * 2);
+      bool IsSigned = IID == Intrinsic::smulh;
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
+      InstructionCost Cost = 0;
+      Cost +=
+          2 * thisT()->getCastInstrCost(ExtOp, WideTy, RetTy,
+                                        TTI::CastContextHint::None, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Mul, WideTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, WideTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getCastInstrCost(Instruction::Trunc, RetTy, WideTy,
+                                        TTI::CastContextHint::None, CostKind);
+      return Cost;
     }
     default:
       break;

@@ -1924,7 +1924,6 @@ define amdgpu_ps float @test_wwm2(i32 inreg %idx) #1 {
 ; GFX1032-LABEL: test_wwm2:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX1032-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX1032-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -2011,7 +2010,6 @@ define amdgpu_ps float @test_strict_wwm2(i32 inreg %idx) #1 {
 ; GFX1032-LABEL: test_strict_wwm2:
 ; GFX1032:       ; %bb.0: ; %main_body
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX1032-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX1032-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s1, vcc_lo
