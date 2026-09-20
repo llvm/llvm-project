@@ -561,7 +561,17 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
   // If we have an equals sign, remember the value.
   if (EqualPos == StringRef::npos) {
     // Look up the option.
-    return Sub.OptionsMap.lookup(Arg);
+    if (Option *O = Sub.OptionsMap.lookup(Arg))
+      return O;
+    // -no-<name> negates the boolean option <name>.
+    StringRef Name = Arg;
+    if (!Name.consume_front("no-"))
+      return nullptr;
+    Option *O = Sub.OptionsMap.lookup(Name);
+    if (!O || !O->isNegatable())
+      return nullptr;
+    Value = "false";
+    return O;
   }
 
   // If the argument before the = is a valid option name and the option allows

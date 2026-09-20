@@ -292,6 +292,9 @@ public:
     return Value ? ((enum ValueExpected)Value) : getValueExpectedFlagDefault();
   }
 
+  // Whether -no-<ArgStr> is accepted and sets the option to false.
+  virtual bool isNegatable() const { return false; }
+
   inline enum OptionHidden getOptionHiddenFlag() const {
     return (enum OptionHidden)HiddenFlag;
   }
@@ -1479,6 +1482,11 @@ class opt
 
   enum ValueExpected getValueExpectedFlagDefault() const override {
     return Parser.getValueExpectedFlagDefault();
+  }
+
+  bool isNegatable() const override {
+    return std::is_same_v<DataType, bool> ||
+           std::is_same_v<DataType, boolOrDefault>;
   }
 
   void getExtraOptionNames(SmallVectorImpl<StringRef> &OptionNames) override {

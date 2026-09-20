@@ -2187,6 +2187,43 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
   EXPECT_TRUE(Errs.empty());
 }
 
+TEST(CommandLineTest, BoolNegation) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptFlag("flag", cl::init(true));
+  StackOption<cl::boolOrDefault> OptBod("bod");
+  StackOption<std::string> OptStr("str");
+  // A registered no-<name> takes precedence over negating <name>.
+  StackOption<bool> OptExplicit("explicit", cl::init(true));
+  StackOption<bool> OptNoExplicit("no-explicit");
+
+  const char *args1[] = {"prog", "-no-flag", "--no-bod", "-no-explicit"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(4, args1, StringRef(), &llvm::nulls()));
+  EXPECT_FALSE(OptFlag);
+  EXPECT_EQ(cl::boolOrDefault::BOU_FALSE, OptBod);
+  EXPECT_TRUE(OptExplicit);
+  EXPECT_TRUE(OptNoExplicit);
+  cl::ResetAllOptionOccurrences();
+
+  // The last occurrence wins.
+  const char *args2[] = {"prog", "-no-flag", "-flag"};
+  EXPECT_TRUE(
+      cl::ParseCommandLineOptions(3, args2, StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(OptFlag);
+  cl::ResetAllOptionOccurrences();
+
+  // Only boolean options are negatable, and the negated form takes no value.
+  const char *args3[] = {"prog", "-no-str"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args3, StringRef(), &llvm::nulls()));
+  cl::ResetAllOptionOccurrences();
+
+  const char *args4[] = {"prog", "-no-flag=false"};
+  EXPECT_FALSE(
+      cl::ParseCommandLineOptions(2, args4, StringRef(), &llvm::nulls()));
+}
+
 TEST(CommandLineTest, ConsumeOptionalString) {
   cl::ResetCommandLineParser();
 

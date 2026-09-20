@@ -221,13 +221,15 @@ literally into the content of the string variable... we obviously cannot do that
 in the boolean case, however, so we must use a smarter parser.  In the case of
 the boolean parser, it allows no options (in which case it assigns the value of
 true to the variable), or it allows the values "`true`" or "`false`" to be
-specified, allowing any of the following inputs:
+specified; a boolean option can also be negated with a `no-` prefix, allowing
+any of the following inputs:
 
 ```
 compiler -f          # No value, 'Force' == true
 compiler -f=true     # Value specified, 'Force' == true
 compiler -f=TRUE     # Value specified, 'Force' == true
 compiler -f=FALSE    # Value specified, 'Force' == false
+compiler -no-f       # Negated, 'Force' == false
 ```
 
 ... you get the idea.  The {ref}`bool parser <bool parser>` just turns the string values into
