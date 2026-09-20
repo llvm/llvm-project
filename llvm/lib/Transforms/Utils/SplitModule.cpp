@@ -36,7 +36,6 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/SplitModuleCommon.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <iterator>
@@ -126,7 +125,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     if (GV.isDeclaration())
       return;
 
-    nameUnnamedGlobalValue(GV);
+    GV.nameUnnamed();
 
     // Comdat groups must not be partitioned. For comdat groups that contain
     // locals, record all their members here so we can keep them together.
@@ -230,13 +229,13 @@ void llvm::SplitModule(
     bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
-      externalizeGlobal(F);
+      F.externalize();
     for (GlobalVariable &GV : M.globals())
-      externalizeGlobal(GV);
+      GV.externalize();
     for (GlobalAlias &GA : M.aliases())
-      externalizeGlobal(GA);
+      GA.externalize();
     for (GlobalIFunc &GIF : M.ifuncs())
-      externalizeGlobal(GIF);
+      GIF.externalize();
   }
 
   // This performs splitting without a need for externalization, which might not

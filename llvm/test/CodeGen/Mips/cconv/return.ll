@@ -1,9 +1,8 @@
 ; RUN: llc -mtriple=mips-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32 %s
 ; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; These tests are failing on both O32 and O64
-; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,O32 %s
 
 ; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o64 < %s | FileCheck --check-prefixes=ALL,O64 %s
 ; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o64 < %s | FileCheck --check-prefixes=ALL,O64 %s
