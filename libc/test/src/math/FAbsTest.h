@@ -48,9 +48,9 @@ public:
   }
 };
 
-#define LIST_FABS_TESTS(T, func)                                               \
-  using LlvmLibcFAbsTest = FAbsTest<T>;                                        \
-  TEST_F(LlvmLibcFAbsTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcFAbsTest, Range) { testRange(&func); }
+#define LIST_FABS_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = FAbsTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FABSTEST_H

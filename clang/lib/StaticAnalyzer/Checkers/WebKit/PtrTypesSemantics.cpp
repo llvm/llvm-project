@@ -30,6 +30,15 @@ bool hasPublicMethodInBaseClass(const CXXRecordDecl *R, StringRef NameToMatch) {
     if (MethodName == NameToMatch && MD->getAccess() == AS_public)
       return true;
   }
+
+  for (const Decl *D : R->decls()) {
+    const auto *Shadow = dyn_cast<UsingShadowDecl>(D);
+    if (!Shadow || Shadow->getAccess() != AS_public)
+      continue;
+    const auto *MD = dyn_cast<CXXMethodDecl>(Shadow->getTargetDecl());
+    if (MD && safeGetName(MD) == NameToMatch)
+      return true;
+  }
   return false;
 }
 
@@ -64,55 +73,53 @@ hasPublicMethodInBase(const CXXBaseSpecifier *Base, StringRef NameToMatch) {
   return hasPublicMethodInBaseClass(R, NameToMatch) ? R : nullptr;
 }
 
-std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
-                                         StringRef IncMethodName,
-                                         StringRef DecMethodName) {
+static std::optional<bool> hasPublicMethodInHierarchy(const CXXRecordDecl *R,
+                                                      StringRef MethodName) {
   assert(R);
 
   R = R->getDefinition();
   if (!R)
     return std::nullopt;
 
-  bool hasRef = hasPublicMethodInBaseClass(R, IncMethodName);
-  bool hasDeref = hasPublicMethodInBaseClass(R, DecMethodName);
-  if (hasRef && hasDeref)
+  if (hasPublicMethodInBaseClass(R, MethodName))
     return true;
 
   CXXBasePaths Paths;
   Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
 
   bool AnyInconclusiveBase = false;
-  const auto hasPublicRefInBase = [&](const CXXBaseSpecifier *Base,
-                                      CXXBasePath &) {
-    auto hasRefInBase = clang::hasPublicMethodInBase(Base, IncMethodName);
-    if (!hasRefInBase) {
+  const auto hasPublicMethod = [&](const CXXBaseSpecifier *Base,
+                                   CXXBasePath &) {
+    auto HasMethodInBase = clang::hasPublicMethodInBase(Base, MethodName);
+    if (!HasMethodInBase) {
       AnyInconclusiveBase = true;
       return false;
     }
-    return (*hasRefInBase) != nullptr;
+    return (*HasMethodInBase) != nullptr;
   };
 
-  hasRef = hasRef || R->lookupInBases(hasPublicRefInBase, Paths,
-                                      /*LookupInDependent =*/true);
+  bool Found = R->lookupInBases(hasPublicMethod, Paths,
+                                /*LookupInDependent =*/true);
   if (AnyInconclusiveBase)
     return std::nullopt;
 
-  Paths.clear();
-  const auto hasPublicDerefInBase = [&](const CXXBaseSpecifier *Base,
-                                        CXXBasePath &) {
-    auto hasDerefInBase = clang::hasPublicMethodInBase(Base, DecMethodName);
-    if (!hasDerefInBase) {
-      AnyInconclusiveBase = true;
-      return false;
-    }
-    return (*hasDerefInBase) != nullptr;
-  };
-  hasDeref = hasDeref || R->lookupInBases(hasPublicDerefInBase, Paths,
-                                          /*LookupInDependent =*/true);
-  if (AnyInconclusiveBase)
+  return Found;
+}
+
+std::optional<bool> isSmartPtrCompatible(const CXXRecordDecl *R,
+                                         StringRef IncMethodName,
+                                         StringRef DecMethodName) {
+  assert(R);
+
+  auto HasInc = hasPublicMethodInHierarchy(R, IncMethodName);
+  if (!HasInc)
     return std::nullopt;
 
-  return hasRef && hasDeref;
+  auto HasDec = hasPublicMethodInHierarchy(R, DecMethodName);
+  if (!HasDec)
+    return std::nullopt;
+
+  return *HasInc && *HasDec;
 }
 
 std::optional<bool> isRefCountable(const clang::CXXRecordDecl *R) {
@@ -138,9 +145,13 @@ bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
+bool isUniquePtr(const std::string &Name) {
+  return Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+}
+
 bool isOwnerPtr(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
-         Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+         isUniquePtr(Name);
 }
 
 static bool isWeakPtrClass(const std::string &Name) {
@@ -401,6 +412,20 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       return T && (T->isPointerType() || T->isReferenceType() ||
                    T->isObjCObjectPointerType());
     }
+  }
+  return false;
+}
+
+bool isGetterOfUniquePtr(const CXXMethodDecl *M) {
+  assert(M);
+  if (!isUniquePtr(safeGetName(M->getParent())))
+    return false;
+  auto method = safeGetName(M);
+  if (method == "get" || method == "ptr")
+    return true;
+  if (auto *conversion = dyn_cast<CXXConversionDecl>(M)) {
+    const Type *T = conversion->getConversionType().getTypePtrOrNull();
+    return T && (T->isPointerType() || T->isReferenceType());
   }
   return false;
 }
