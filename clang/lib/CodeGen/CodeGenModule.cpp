@@ -383,6 +383,29 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   return false;
 }
 
+static void initializeCommonABICompatInfo(llvm::abi::ABICompatInfo &CompatInfo,
+                                          const LangOptions::ClangABI Compat) {
+  CompatInfo.IsMatrixHA = Compat > LangOptions::ClangABI::Ver23;
+}
+
+static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
+                                       const llvm::Triple &T,
+                                       const LangOptions::ClangABI Compat) {
+  initializeCommonABICompatInfo(CompatInfo, Compat);
+  CompatInfo.ClassifyIntegerMMXAsSSE = Compat > LangOptions::ClangABI::Ver3_8 &&
+                                       !T.isOSDarwin() && !T.isPS() &&
+                                       !T.isOSFreeBSD();
+  CompatInfo.HonorsRevision98 = !T.isOSDarwin();
+  CompatInfo.PassInt128VectorsInMem =
+      Compat > LangOptions::ClangABI::Ver9 && (T.isOSLinux() || T.isOSNetBSD());
+  // Clang <= 20.0 did not do this, and PlayStation does not do this.
+  CompatInfo.ReturnCXXRecordGreaterThan128InMem =
+      Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
+  CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+  CompatInfo.ClassifyUnnamedBitFields =
+      Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+}
+
 const llvm::abi::TargetInfo &
 CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   if (TheLLVMABITargetInfo)
@@ -411,12 +434,16 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
 
+    initializeCommonABICompatInfo(Opts.CompatInfo,
+                                  getLangOpts().getClangABICompat());
+
     TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
 
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
+    // BPF targets do not require any ABI compatibility information.
     TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
     return *TheLLVMABITargetInfo;
 
@@ -427,21 +454,9 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
                         : llvm::abi::X86AVXABILevel::None;
 
-    llvm::abi::ABICompatInfo CompatInfo;
-    LangOptions::ClangABI Compat = getLangOpts().getClangABICompat();
-    CompatInfo.ClassifyIntegerMMXAsSSE =
-        Compat > LangOptions::ClangABI::Ver3_8 && !T.isOSDarwin() &&
-        !T.isPS() && !T.isOSFreeBSD();
-    CompatInfo.HonorsRevision98 = !T.isOSDarwin();
-    CompatInfo.PassInt128VectorsInMem = Compat > LangOptions::ClangABI::Ver9 &&
-                                        (T.isOSLinux() || T.isOSNetBSD());
-    // Clang <= 20.0 did not do this, and PlayStation does not do this.
-    CompatInfo.ReturnCXXRecordGreaterThan128InMem =
-        Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
-    CompatInfo.Clang11Compat =
-        Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
-    CompatInfo.ClassifyUnnamedBitFields =
-        Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+    llvm::abi::X86ABICompatInfo CompatInfo;
+    initializeX86ABICompatInfo(CompatInfo, T,
+                               getLangOpts().getClangABICompat());
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 

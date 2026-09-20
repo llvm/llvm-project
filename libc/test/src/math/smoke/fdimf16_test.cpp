@@ -10,4 +10,4 @@
 
 #include "src/math/fdimf16.h"
 
-LIST_FDIM_TESTS(float16, LIBC_NAMESPACE::fdimf16);
+LIST_FDIM_TESTS(Fdimf16, float16, LIBC_NAMESPACE::fdimf16);

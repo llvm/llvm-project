@@ -24,6 +24,10 @@ public:
   AArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts)
       : TargetInfo(TB), Opts(Opts) {}
 
+  const ABICompatInfo &getABICompatInfo() const override {
+    return Opts.CompatInfo;
+  }
+
   void computeInfo(FunctionInfo &FI) const override {
     if (!maybeCommonClassifyReturnType(FI))
       FI.getReturnInfo() =
@@ -142,6 +146,37 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
   if (auto RecordRAA = getRecordArgABI(Ty)) {
     return getNaturalAlignIndirect(Ty, RecordRAA ==
                                            RecordArgABI::RAA_DirectInMemory);
+  }
+
+  TypeSize TySize = Ty->getSizeInBits();
+  uint64_t Size = TySize.isFixed() ? TySize.getFixedValue() : 0;
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!Ty->isSVESizelessType() && ((RT && RT->isEmpty()) || Size == 0)) {
+    reportNYI("Empty record argument handling");
+    return ArgInfo::getIgnore();
+  }
+
+  // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
+  const Type *Base = nullptr;
+  uint64_t Members = 0;
+  bool IsWin64 = Opts.Kind == AArch64ABIKind::Win64 ||
+                 CallingConvention == llvm::CallingConv::Win64;
+  bool IsWinVariadic = IsWin64 && IsVariadicFn;
+  // In variadic functions on Windows, all composite types are treated alike,
+  // no special handling of HFAs/HVAs.
+  if (!IsWinVariadic && isHomogeneousAggregate(Ty, Base, Members)) {
+    NSRN = std::min(NSRN + Members, uint64_t(8));
+    uint64_t BaseAllocSizeInBits = Base->getTypeAllocSize().getFixedValue() * 8;
+    const Type *CoerceTy =
+        TB.getArrayType(Base, Members, Members * BaseAllocSizeInBits);
+    if (Opts.Kind != AArch64ABIKind::AAPCS)
+      return ArgInfo::getDirect(CoerceTy);
+
+    // For HFAs/HVAs, cap the argument alignment to 16, otherwise
+    // set it to 8 according to the AAPCS64 document.
+    unsigned TyAlign = Ty->getUnadjustedAlignment().value();
+    TyAlign = (TyAlign >= 16) ? 16 : 8;
+    return ArgInfo::getDirect(CoerceTy, /*Offset=*/0, llvm::Align(TyAlign));
   }
 
   reportNYI("Aggregate argument type handling");

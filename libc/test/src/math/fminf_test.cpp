@@ -10,4 +10,4 @@
 
 #include "src/math/fminf.h"
 
-LIST_FMIN_TESTS(float, LIBC_NAMESPACE::fminf)
+LIST_FMIN_TESTS(Fminf, float, LIBC_NAMESPACE::fminf)
