@@ -120,7 +120,6 @@ static std::string computeLoongArchDataLayout(const Triple &TT) {
   return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
-
 // The Linux m68k target uses the ABI used
 // by Sun Microsystems for the old a.out-based binaries: 16-bit
 // alignment of int/long/pointer.
@@ -140,7 +139,7 @@ static std::string computeM68kDataLayout(const Triple &TT) {
   // FIXME how to wire it with the used object format?
   Ret += "-m:e";
 
-  if (! TT.isOSNetBSD()) {
+  if (!TT.isOSNetBSD()) {
     // M68k pointers are always 32 bit wide even for 16-bit CPUs.
     // The ABI only specifies 16-bit alignment.
     // On at least the 68020+ with a 32-bit bus, there is a performance benefit
