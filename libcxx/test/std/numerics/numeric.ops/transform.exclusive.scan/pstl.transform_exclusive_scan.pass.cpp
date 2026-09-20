@@ -36,33 +36,53 @@
 template <class Iter>
 struct Test {
   template <class Policy>
-  void operator()(Policy&& policy) {
-    for (int size : {0, 1, 2, 100, 350, 10000}) {
-      std::vector<int> a(size);
-      for (int i = 0; i != size; ++i)
-        a[i] = i;
+  void operator()(const Policy& policy) const {
+    for (const int size : {0, 1, 2, 100, 350, 10'000}) {
+      std::vector<int> data(size);
+      std::iota(data.begin(), data.end(), 7);
 
-      std::vector<int> expected(size);
-      std::transform_exclusive_scan(a.begin(), a.end(), expected.begin(), 0, std::plus{}, [](int x) { return x + 1; });
+      const int init = 42;
+      int* first     = data.data();
+      int* last      = first + size;
 
-      std::vector<int> result(size);
-      auto ret = std::transform_exclusive_scan(
-          policy,
-          Iter(std::data(a)),
-          Iter(std::data(a) + std::size(a)),
-          std::data(result),
-          0,
-          [check = std::string("Banane")](int i, int j) {
-            assert(check == "Banane");
-            return i + j;
-          },
-          [check = std::string("Banane")](int i) {
-            assert(check == "Banane");
-            return i + 1;
-          });
-      static_assert(std::is_same_v<decltype(ret), int*>);
-      assert(ret == std::data(result) + size);
-      assert(result == expected);
+      { // general smoke test
+        std::vector<int> expected(size);
+        std::transform_exclusive_scan(first, last, expected.begin(), init, std::plus{}, [](int x) { return x + 1; });
+
+        std::vector<int> result(size);
+        auto ret = std::transform_exclusive_scan(
+            policy,
+            Iter(first),
+            Iter(last),
+            result.data(),
+            init,
+            [check = std::string("Banane")](int i, int j) {
+              assert(check == "Banane");
+              return i + j;
+            },
+            [check = std::string("Banane")](int i) {
+              assert(check == "Banane");
+              return i + 1;
+            });
+        static_assert(std::is_same_v<decltype(ret), int*>);
+        assert(ret == result.data() + size);
+        assert(result == expected);
+      }
+
+      { // binary_op whose identity element is not int{}
+        const auto binary_op = std::multiplies{};
+        const auto unary_op  = [](int x) { return (x % 1'000 == 0) ? 2 : 1; }; // keeps product below 2^10
+
+        std::vector<int> expected(size);
+        std::transform_exclusive_scan(first, last, expected.begin(), init, binary_op, unary_op);
+
+        std::vector<int> result(size);
+        auto ret =
+            std::transform_exclusive_scan(policy, Iter(first), Iter(last), result.data(), init, binary_op, unary_op);
+        static_assert(std::is_same_v<decltype(ret), int*>);
+        assert(ret == result.data() + size);
+        assert(result == expected);
+      }
     }
   }
 };
