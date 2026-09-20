@@ -1031,28 +1031,6 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
   if (!shouldAllocateRegister(VirtReg))
     return;
 
-  // If there are multiple undef uses, give them the same register. The def is
-  // already freed, so take the register from the tie, not the lookup below.
-  MachineInstr &MI = *MO.getParent();
-  for (const MachineOperand &Tied : MI.all_uses()) {
-    if (!Tied.isTied() || Tied.getReg() != VirtReg)
-      continue;
-    MCRegister DefReg =
-        MI.getOperand(MI.findTiedOperandIdx(MI.getOperandNo(&Tied)))
-            .getReg()
-            .asMCReg();
-    for (MachineOperand &O : MI.all_uses()) {
-      if (O.getReg() != VirtReg)
-        continue;
-      // The def is already narrowed, so a tie takes its register whole.
-      unsigned SubIdx = O.isTied() ? 0 : O.getSubReg();
-      O.setReg(SubIdx ? TRI->getSubReg(DefReg, SubIdx) : DefReg);
-      O.setSubReg(0);
-      O.setIsRenamable(!MRI->isReserved(O.getReg()));
-    }
-    return;
-  }
-
   LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
   MCRegister PhysReg;
   bool IsRenamable = true;
@@ -1502,13 +1480,19 @@ static bool isTiedToNotUndef(const MachineInstr &MI, const MachineOperand &MO) {
 
 void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // Backwards, a def frees a register and a use occupies it. The phases:
+  // - defs
   // * pre-assigned physreg defs
   // * virtual register defs
   // * free the def operands' registers
   // * displace registers clobbered by regmasks
+  //
+  // - uses
   // * pre-assigned physreg uses
   // * virtual register uses, inserting reloads
   // * undef uses
+  //
+  // - special defs
+  // * free defs tied to undef uses
   // * free early-clobber defs
   //
   // Freeing follows the def allocation so a def is not handed a register this
@@ -1532,6 +1516,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   bool HasDef = false;
   bool HasEarlyClobber = false;
   bool NeedToAssignLiveThroughs = false;
+  SmallVector<MCRegister, 4> UndefTiedDefs;
   for (MachineOperand &MO : MI.operands()) {
     if (MO.isReg()) {
       Register Reg = MO.getReg();
@@ -1647,6 +1632,11 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       assert(Reg.isPhysical());
       if (MRI->isReserved(Reg))
         continue;
+      // A def tied to an undef use is freed after that use takes its register.
+      if (MO.isTied()) {
+        UndefTiedDefs.push_back(Reg.asMCReg());
+        continue;
+      }
       freePhysReg(Reg);
       unmarkRegUsedInInstr(Reg);
     }
@@ -1726,6 +1716,9 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       allocVirtRegUndef(MO);
     }
   }
+
+  for (MCRegister Reg : UndefTiedDefs)
+    freePhysReg(Reg);
 
   // Free early clobbers. Last, because they must not share a register with any
   // use.
