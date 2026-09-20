@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_BUILDER_MUTABLEBOX_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -115,12 +116,14 @@ MutableBoxReallocation
 genReallocIfNeeded(fir::FirOpBuilder &builder, mlir::Location loc,
                    const fir::MutableBoxValue &box, mlir::ValueRange shape,
                    mlir::ValueRange lenParams,
-                   ReallocStorageHandlerFunc storageHandler = {});
+                   ReallocStorageHandlerFunc storageHandler = {},
+                   cuf::DataAttributeAttr dataAttr = {});
 
 void finalizeRealloc(fir::FirOpBuilder &builder, mlir::Location loc,
                      const fir::MutableBoxValue &box, mlir::ValueRange lbounds,
                      bool takeLboundsIfRealloc,
-                     const MutableBoxReallocation &realloc);
+                     const MutableBoxReallocation &realloc,
+                     cuf::DataAttributeAttr dataAttr = {});
 
 /// Deallocate a mutable box with fir.freemem if it is allocated or associated.
 /// This only deallocates the storage and does not call finalization, the
