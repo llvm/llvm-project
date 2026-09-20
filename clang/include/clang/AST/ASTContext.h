@@ -243,7 +243,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
   mutable llvm::UniquingSet<ComplexType> ComplexTypes;
   mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
-  mutable llvm::FoldingSet<AdjustedType> AdjustedTypes;
+  mutable llvm::UniquingSet<AdjustedType> AdjustedTypes;
   mutable llvm::UniquingSet<BlockPointerType> BlockPointerTypes;
   mutable llvm::UniquingSet<LValueReferenceType, QualTypeBoolInfo>
       LValueReferenceTypes;
@@ -277,10 +277,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
       DependentPackIndexingTypes;
 
-  mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
-  mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
-  mutable llvm::FoldingSet<SubstTemplateTypeParmType>
-    SubstTemplateTypeParmTypes;
+  mutable llvm::UniquingSet<TemplateTypeParmType> TemplateTypeParmTypes;
+  mutable llvm::UniquingSet<ObjCTypeParamType> ObjCTypeParamTypes;
+  mutable llvm::UniquingSet<SubstTemplateTypeParmType>
+      SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
   mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
@@ -294,10 +294,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
+  mutable llvm::UniquingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
-  mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
+  mutable llvm::UniquingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
+  mutable llvm::UniquingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
@@ -311,11 +311,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
       AttributedTypes;
   mutable llvm::UniquingSet<PipeType, QualTypeBoolInfo> PipeTypes;
-  mutable llvm::FoldingSet<BitIntType> BitIntTypes;
+  mutable llvm::UniquingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
-  mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::UniquingSet<OverflowBehaviorType> OverflowBehaviorTypes;
   mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
       HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
@@ -1680,6 +1680,22 @@ public:
   getCountAttributedType(QualType T, Expr *CountExpr, bool CountInBytes,
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
+  /// Return a `CountAttributedType` whose count expression has not been parsed
+  /// yet, for use by a late-parsed bounds attribute. The result is *not*
+  /// uniqued, and must be completed with `completeCountAttributedType` once the
+  /// argument becomes parseable. Returns the node rather than a `QualType` so
+  /// the caller can retain it for completion.
+  CountAttributedType *getIncompleteCountAttributedType(QualType WrappedTy,
+                                                        bool CountInBytes,
+                                                        bool OrNull) const;
+
+  /// Supply the count expression and coupled declarations for a type created by
+  /// `getIncompleteCountAttributedType`. Enclosing types keep pointing at the
+  /// same node, so nothing above it needs rebuilding.
+  void completeCountAttributedType(
+      CountAttributedType *CATy, Expr *CountExpr,
+      ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
 
   /// Return a placeholder type for a late-parsed type attribute.
   /// This type wraps another type and holds the LateParsedAttribute
@@ -3658,6 +3674,9 @@ public:
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;
 
+  /// Ordinal for the next TopLevelStmtDecl; counts created and loaded ones.
+  unsigned NumTopLevelStmtDecls = 0;
+
   bool hasSeenTypeAwareOperatorNewOrDelete() const {
     return !TypeAwareOperatorNewAndDeletes.empty();
   }
@@ -3967,7 +3986,7 @@ public:
   std::vector<PFPField> findPFPFields(QualType Ty) const;
 
   bool hasPFPFields(QualType Ty) const;
-  bool isPFPField(const FieldDecl *Field) const;
+  static bool isPFPField(const FieldDecl *Field);
 
   /// Returns whether this record's PFP fields (if any) are trivially
   /// copyable (i.e. may be memcpy'd). This may also return true if the

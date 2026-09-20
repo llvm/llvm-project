@@ -540,3 +540,25 @@ void test29(void) {
   // expected-error@-1 {{cannot convert between scalar type 'int' and vector type 'svuint8_t' (aka '__SVUint8_t') as implicit conversion would cause truncation}}
 }
 #endif
+// GH203575
+typedef unsigned gh203575_uvec __attribute__((__vector_size__(sizeof(int))));
+
+int gh203575_1(gh203575_uvec *c) {
+  return -1 == -*c; // expected-warning {{comparison of integers of different signs: 'int' and 'gh203575_uvec' (vector of 1 'unsigned int' value)}}
+}
+
+int gh203575_2(gh203575_uvec *c) {
+  return -8 == -*c; // expected-warning {{comparison of integers of different signs: 'int' and 'gh203575_uvec' (vector of 1 'unsigned int' value)}}
+}
+
+int gh203575_3(gh203575_uvec *c) {
+  return -1 == ~*c; // expected-warning {{comparison of integers of different signs: 'int' and 'gh203575_uvec' (vector of 1 'unsigned int' value)}}
+}
+
+int gh203575_4(gh203575_uvec a, gh203575_uvec b) {
+  return a == -b; // no-warning
+}
+
+int gh203575_5(gh203575_uvec a, gh203575_uvec b) {
+  return a == ~b; // no-warning
+}

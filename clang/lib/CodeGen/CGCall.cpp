@@ -976,6 +976,10 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
       CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
       CheckSimple(Target.getDirectOffset(), Res.getDirectOffset(),
                   "DirectOffset");
+      // Extend falls through to here, and only Direct carries the flag.
+      if (Res.isDirect())
+        CheckSimple(Target.getCanBeFlattened(), Res.getCanBeFlattened(),
+                    "CanBeFlattened");
       break;
     case ABIArgInfo::Indirect:
       CheckSimple(Target.getIndirectByVal(), Res.getIndirectByVal(),
@@ -1023,7 +1027,14 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = getTypes().ConvertType(Type);
-    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset());
+    unsigned DirectAlign = 0;
+    if (llvm::MaybeAlign Align = AbiInfo.getDirectAlign())
+      DirectAlign = Align->value();
+    // TODO: Move Padding into the ABIArgInfo struct when we add support for
+    //       targets that need a different setting than we have here.
+    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset(),
+                                 /*Padding=*/nullptr,
+                                 AbiInfo.getCanBeFlattened(), DirectAlign);
   }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
@@ -6444,9 +6455,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             // unprototyped calls.
             for (const CallArg &Arg : CallArgs)
               ParamTypes.push_back(Arg.getType());
-            FunctionProtoType::ExtProtoInfo EPI;
-            CST = getContext().getFunctionType(FNPT->getReturnType(),
-                                               ParamTypes, EPI);
+            CST = CGM.ReconstructCallGraphPrototype(FNPT, ParamTypes);
           }
 
           llvm::Metadata *MD =

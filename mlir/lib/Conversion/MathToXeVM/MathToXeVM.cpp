@@ -9,6 +9,7 @@
 #include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -144,16 +145,9 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     // calls, in order to allow further fastmath optimizations: We thus need to
     // convert arith fastmath attrs into attrs recognized by llvm.
     arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
-    SmallVector<NamedAttribute> discardableAttrs;
-    for (mlir::NamedAttribute attr : fastAttrConverter.getAttrs()) {
-      if (attr.getName() == LLVM::CallOp::getFastmathAttrName()) {
-        callOp.setFastmathFlagsAttr(
-            cast<LLVM::FastmathFlagsAttr>(attr.getValue()));
-        continue;
-      }
-      discardableAttrs.push_back(attr);
-    }
-    callOp->setDiscardableAttrs(discardableAttrs);
+    callOp.setFastmathFlagsAttr(
+        fastAttrConverter.getProperties().getFastmathFlags());
+    callOp->setDiscardableAttrs(fastAttrConverter.getDiscardableAttrs());
 
     if (unwrapSizeOneVec) {
       // Re-wrap the scalar result back into a size-1 vector to preserve types.
@@ -287,12 +281,14 @@ void ConvertMathToXeVMPass::runOnOperation() {
   LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
 
-  // Native OCL patterns should take precedence for `fast` ops even when
-  // convertToOCL is set.
-  populateMathToXeVMConversionPatterns(patterns, convertArith,
-                                       convertToOCL + 1);
+  // The native (`afn`) patterns must outrank the precise OCL patterns: an op
+  // marked `afn` gets the native intrinsic, and every other op falls through to
+  // the precise OCL intrinsic.
+  constexpr unsigned oclBenefit = 1;
+  populateMathToXeVMConversionPatterns(patterns, convertArith, oclBenefit + 1);
   if (convertToOCL) {
-    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns, 1);
+    populateMathToScalarOCLExtSetConversionPatterns(converter, patterns,
+                                                    oclBenefit);
     target
         .addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::LogOp,
                       LLVM::Log10Op, LLVM::Log2Op, LLVM::SinOp, LLVM::SqrtOp>();
