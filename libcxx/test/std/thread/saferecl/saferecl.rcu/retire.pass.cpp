@@ -42,7 +42,7 @@ std::atomic<MyObject*> global_obj = nullptr;
 
 int main(int, char**) {
   auto start = std::chrono::system_clock::now();
-  auto t1    = support::make_test_thread([start]() {
+  auto t1    = support::make_test_jthread([start]() {
     std::rcu_domain& dom = std::rcu_default_domain();
     for (int i = 0; i < loop_num; ++i) {
       log(start, "t1: entering rcu read-side critical section " + std::to_string(i));
@@ -59,7 +59,7 @@ int main(int, char**) {
     }
   });
 
-  auto t2 = support::make_test_thread([start]() {
+  auto t2 = support::make_test_jthread([start]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     std::rcu_domain& dom = std::rcu_default_domain();
     for (int i = 0; i < loop_num; ++i) {
@@ -77,7 +77,7 @@ int main(int, char**) {
     }
   });
 
-  auto t3 = support::make_test_thread([start]() {
+  auto t3 = support::make_test_jthread([start]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
     std::rcu_domain& dom = std::rcu_default_domain();
     for (int i = 0; i < loop_num; ++i) {
@@ -94,7 +94,7 @@ int main(int, char**) {
       dom.__debug_print_all_reader_states_in_hex();
     }
   });
-  auto t4 = support::make_test_thread([start]() {
+  auto t4 = support::make_test_jthread([start]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     std::rcu_domain& dom = std::rcu_default_domain();
     for (int i = 0; i < loop_num; ++i) {
@@ -112,7 +112,7 @@ int main(int, char**) {
     }
   });
 
-  auto t5 = support::make_test_thread([start]() {
+  auto t5 = support::make_test_jthread([start]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     for (int i = 0; i < loop_num; ++i) {
       auto new_obj = new MyObject();
@@ -120,7 +120,8 @@ int main(int, char**) {
       log(start, "t5: updating global to : " + new_obj->data_);
       auto old = global_obj.exchange(new_obj);
       log(start, "t5: retiring old object " + (old ? old->data_ : "nullptr"));
-      old->retire();
+      if (old)
+        old->retire();
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   });
@@ -142,11 +143,6 @@ int main(int, char**) {
     log(start, "t0: rcu_synchronize returned" + std::to_string(i));
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
-
-  t1.join();
-  t2.join();
-  t3.join();
-  t4.join();
 
   return 0;
 }
