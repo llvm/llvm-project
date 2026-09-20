@@ -23,7 +23,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1524,10 +1523,9 @@ public:
         continue;
       }
 
-      IRMapping mapper;
-      affine::fuseLoops(sibAffineForOp, dstAffineForOp, bestSlice,
-                        enableSiblingInsertionCleanup,
-                        hasUsedSiblingResults ? &mapper : nullptr);
+      SmallVector<Value> clonedSibResults =
+          affine::fuseLoops(sibAffineForOp, dstAffineForOp, bestSlice,
+                            enableSiblingInsertionCleanup);
 
       auto dstForInst = cast<AffineForOp>(dstNode->op);
       // Update operation position of fused loop nest (if needed).
@@ -1539,11 +1537,12 @@ public:
       if (hasUsedSiblingResults) {
         SmallVector<Value> usedClonedSibResults;
         SmallVector<Value> usedSibInits;
-        for (auto [oldResult, init] : llvm::zip(sibAffineForOp->getResults(),
-                                                sibAffineForOp.getInits())) {
+        for (auto [oldResult, init, clonedResult] :
+             llvm::zip(sibAffineForOp->getResults(), sibAffineForOp.getInits(),
+                       clonedSibResults)) {
           if (oldResult.use_empty())
             continue;
-          usedClonedSibResults.push_back(mapper.lookup(oldResult));
+          usedClonedSibResults.push_back(clonedResult);
           usedSibInits.push_back(init);
         }
 

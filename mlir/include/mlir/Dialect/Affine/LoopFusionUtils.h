@@ -22,7 +22,6 @@
 
 namespace mlir {
 class Operation;
-class IRMapping;
 
 namespace affine {
 class AffineForOp;
@@ -116,12 +115,11 @@ canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp, unsigned dstLoopDepth,
 /// point and source slice loop bounds specified in 'srcSlice'.
 /// `isInnermostSiblingInsertionFusion` enables cleanup of `srcForOp` that is a
 /// single-iteration reduction loop being sibling-fused into a 'dstForOp'.
-/// If provided, `mapper` records the mapping from the source loop IR to the
-/// cloned loop IR.
-void fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
-               const ComputationSliceState &srcSlice,
-               bool isInnermostSiblingInsertionFusion = false,
-               IRMapping *mapper = nullptr);
+/// Returns the values that replace the results of `srcForOp` in the cloned
+/// loop nest.
+SmallVector<Value> fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
+                             const ComputationSliceState &srcSlice,
+                             bool isInnermostSiblingInsertionFusion = false);
 
 /// LoopNestStats aggregates various per-loop statistics (eg. loop trip count
 /// and operation count) for a loop nest up until (and including) the innermost
