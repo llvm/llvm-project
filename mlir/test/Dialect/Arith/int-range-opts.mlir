@@ -110,6 +110,31 @@ func.func @trivial_rem() -> i8 {
 
 // -----
 
+// CHECK-LABEL: func @trivial_remui_sign_bit_set_modulus
+// CHECK: [[val:%.+]] = test.with_bounds
+// CHECK-NEXT: return [[val]]
+func.func @trivial_remui_sign_bit_set_modulus() -> i8 {
+  // The i8 bit pattern for -56 represents 200 when interpreted as unsigned.
+  %c200 = arith.constant -56 : i8
+  %val = test.with_bounds { umin = 0 : ui8, umax = 63 : ui8, smin = 0 : si8, smax = 63 : si8 } : i8
+  %mod = arith.remui %val, %c200 : i8
+  return %mod : i8
+}
+
+// -----
+
+// CHECK-LABEL: func @trivial_remui_sign_bit_set_range
+// CHECK: [[val:%.+]] = test.with_bounds
+// CHECK-NEXT: return [[val]]
+func.func @trivial_remui_sign_bit_set_range() -> i8 {
+  %c200 = arith.constant -56 : i8
+  %val = test.with_bounds { umin = 128 : ui8, umax = 199 : ui8, smin = -128 : si8, smax = -57 : si8 } : i8
+  %mod = arith.remui %val, %c200 : i8
+  return %mod : i8
+}
+
+// -----
+
 // CHECK-LABEL: func @non_const_rhs
 // CHECK: [[mod:%.+]] = arith.remui
 // CHECK: return [[mod]]
