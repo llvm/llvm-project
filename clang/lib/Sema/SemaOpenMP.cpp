@@ -18589,7 +18589,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
 
 OMPClause *SemaOpenMP::ActOnOpenMPFullClause(SourceLocation StartLoc,
                                              SourceLocation EndLoc) {
-  return OMPFullClause::Create(getASTContext(), StartLoc, EndLoc);
+  return new (getASTContext()) OMPFullClause(StartLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPPartialClause(Expr *FactorExpr,
@@ -18606,8 +18606,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPPartialClause(Expr *FactorExpr,
     FactorExpr = FactorResult.get();
   }
 
-  return OMPPartialClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
-                                  FactorExpr);
+  return new (getASTContext())
+      OMPPartialClause(StartLoc, LParenLoc, EndLoc, FactorExpr);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPLoopRangeClause(
@@ -18631,8 +18631,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPLoopRangeClause(
   // loop sequence length of the associated canonical loop sequence.
   // This check must be performed afterwards due to the delayed
   // parsing and computation of the associated loop sequence
-  return OMPLoopRangeClause::Create(getASTContext(), StartLoc, LParenLoc,
-                                    FirstLoc, CountLoc, EndLoc, First, Count);
+  return new (getASTContext()) OMPLoopRangeClause(
+      StartLoc, LParenLoc, FirstLoc, CountLoc, EndLoc, First, Count);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAlignClause(Expr *A, SourceLocation StartLoc,
@@ -18642,8 +18642,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPAlignClause(Expr *A, SourceLocation StartLoc,
   AlignVal = VerifyPositiveIntegerConstantInClause(A, OMPC_align);
   if (AlignVal.isInvalid())
     return nullptr;
-  return OMPAlignClause::Create(getASTContext(), AlignVal.get(), StartLoc,
-                                LParenLoc, EndLoc);
+  return new (getASTContext())
+      OMPAlignClause(AlignVal.get(), StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
@@ -22427,8 +22427,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDepobjClause(Expr *Depobj,
         << 1 << Depobj->getSourceRange();
   }
 
-  return OMPDepobjClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
-                                 Depobj);
+  return new (getASTContext())
+      OMPDepobjClause(StartLoc, LParenLoc, EndLoc, Depobj);
 }
 
 namespace {
@@ -26481,8 +26481,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPBindClause(OpenMPBindClauseKind Kind,
     return nullptr;
   }
 
-  return OMPBindClause::Create(getASTContext(), Kind, KindLoc, StartLoc,
-                               LParenLoc, EndLoc);
+  return new (getASTContext())
+      OMPBindClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPXDynCGroupMemClause(Expr *Size,
