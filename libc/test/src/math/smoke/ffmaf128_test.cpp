@@ -10,4 +10,4 @@
 
 #include "src/math/ffmaf128.h"
 
-LIST_NARROWING_FMA_TESTS(float, float128, LIBC_NAMESPACE::ffmaf128)
+LIST_NARROWING_FMA_TESTS(Ffmaf128, float, float128, LIBC_NAMESPACE::ffmaf128)

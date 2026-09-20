@@ -1,9 +1,10 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -mattr=+bti -filetype=obj -triple=aarch64 asm -o a.o
-// RUN: ld.lld --script lds -fix-cortex-a53-843419 -verbose a.o -o exe \
+// RUN: ld.lld --script lds -fix-cortex-a53-843419 --emit-relocs -verbose a.o -o exe \
 // RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=aarch64-linux-gnu -d exe | FileCheck %s
+// RUN: llvm-readelf --relocs exe | FileCheck -check-prefix=CHECK-EMIT %s
 // RUN: rm exe a.o
 
 /// Test case for specific crash wrt interaction between thunks and errata
@@ -48,6 +49,7 @@ far_away_no_bti:
         .section .data
         .globl dat
 dat:    .quad 0
+	.quad .text
 
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 8010FFC in unpatched output.
 
@@ -96,6 +98,10 @@ dat:    .quad 0
 // CHECK-NEXT: 10011040:       ldr     x16, 0x10011048
 // CHECK-NEXT:                 br      x16
 // CHECK-NEXT: 10011048: 30 00 01 08   .word   0x08010030
+
+/// Check that -emit-relocs entry to .text is not affected by relocation to
+/// synthetic symbol generated in thunk as target for errata patch relocation.
+// CHECK-EMIT: {{.*}} {{.*}} R_AARCH64_ABS64 0000000000010000 .text + 10002040
 
 //--- lds
 SECTIONS {
