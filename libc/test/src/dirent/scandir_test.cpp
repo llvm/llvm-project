@@ -148,21 +148,16 @@ TEST_F(LlvmLibcScandirTest, TestBadDirname) {
 namespace LIBC_NAMESPACE_DECL {
 
 struct MockDir {
-  static int read_call_count;
+  static int read_errno_val;
 
   static LIBC_NAMESPACE::ErrorOr<MockDir *> open(const char *path) {
     (void)path;
-    read_call_count = 0;
     return new MockDir();
   }
 
   LIBC_NAMESPACE::ErrorOr<struct dirent *> read() {
-    read_call_count++;
 
-    if (read_call_count == 1) {
-      return LIBC_NAMESPACE::Error(EIO);
-    }
-    return nullptr;
+    return LIBC_NAMESPACE::Error(read_errno_val);
   }
 
   int close() {
@@ -171,14 +166,15 @@ struct MockDir {
   }
 };
 
-int MockDir::read_call_count = 0;
+int MockDir::read_errno_val = 0;
 
 } // namespace LIBC_NAMESPACE_DECL
 
-TEST_F(LlvmLibcScandirTest, ReadFailsWithEIO) {
+TEST_F(LlvmLibcScandirTest, ReadFailsWithENOENT) {
   struct dirent **namelist = nullptr;
+  LIBC_NAMESPACE::MockDir::read_errno_val = ENOENT;
   auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
       "fake/path", &namelist, nullptr, nullptr);
   ASSERT_FALSE(res.has_value());
-  EXPECT_EQ(res.error(), EIO);
+  EXPECT_EQ(res.error(), ENOENT);
 }
