@@ -7497,6 +7497,10 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() const {
   return !(ST->isAtom());
 }
 
+bool X86TTIImpl::enableMaskedInterleavedAccessVectorization() const {
+  return ST->hasAVX512();
+}
+
 bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
@@ -7552,7 +7556,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
       MVT::getVectorVT(TLI->getSimpleValueType(DL, VecTy->getScalarType()), VF);
 
   InstructionCost MaskCost;
-  if (UseMaskedMemOp) {
+  if (UseMaskForCond) {
     APInt DemandedLoadStoreElts = APInt::getZero(VecTy->getNumElements());
     for (unsigned Index : Indices) {
       assert(Index < Factor && "Invalid index for interleaved memory op");
