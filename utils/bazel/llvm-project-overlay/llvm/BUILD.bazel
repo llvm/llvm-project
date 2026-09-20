@@ -5244,6 +5244,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "CovGcovOptsTableGen",
+    strip_include_prefix = "tools/llvm-cov",
+    tbl_outs = {"tools/llvm-cov/GcovOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-cov/GcovOpts.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_binary(
     name = "llvm-cov",
     srcs = glob([
@@ -5253,11 +5262,13 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":CovGcovOptsTableGen",
         ":Coverage",
         ":Debuginfod",
         ":HTTP",
         ":Instrumentation",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Support",
         ":TargetParser",
