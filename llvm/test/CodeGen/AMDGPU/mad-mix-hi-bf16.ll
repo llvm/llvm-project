@@ -18,8 +18,8 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo(bfloat %src0,
   ret <2 x bfloat> %vec.result
 }
 
-define <2 x bfloat> @v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_undeflo(half %src0, bfloat %src1, bfloat %src2) #0 {
-; GFX1250-LABEL: v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_undeflo:
+define <2 x bfloat> @v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_poisonlo(half %src0, bfloat %src1, bfloat %src2) #0 {
+; GFX1250-LABEL: v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_poisonlo:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -30,7 +30,7 @@ define <2 x bfloat> @v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_undeflo(half %src0, bf
   %src2.ext = fpext bfloat %src2 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
   %cvt.result = fptrunc float %result to bfloat
-  %vec.result = insertelement <2 x bfloat> undef, bfloat %cvt.result, i32 1
+  %vec.result = insertelement <2 x bfloat> poison, bfloat %cvt.result, i32 1
   ret <2 x bfloat> %vec.result
 }
 
