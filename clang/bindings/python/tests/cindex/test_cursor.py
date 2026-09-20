@@ -1,9 +1,6 @@
-import os
-
 from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
-    Config,
     Cursor,
     CursorKind,
     PrintingPolicy,
@@ -15,8 +12,6 @@ from clang.cindex import (
     conf,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
 import unittest
@@ -709,6 +704,23 @@ int add(float a, float b) { return a + b; }
         self.assertEqual(spam.enum_value, 0)
         self.assertEqual(ham.kind, CursorKind.ENUM_CONSTANT_DECL)
         self.assertEqual(ham.enum_value, 200)
+
+    def test_enum_values_bool(self):
+        tu = get_tu("enum ON : bool { NO = false, YES = true };", lang="cpp")
+        enum = get_cursor(tu, "ON")
+        self.assertIsNotNone(enum)
+
+        self.assertEqual(enum.kind, CursorKind.ENUM_DECL)
+
+        enum_constants = list(enum.get_children())
+        self.assertEqual(len(enum_constants), 2)
+
+        no, yes = enum_constants
+
+        self.assertEqual(no.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(no.enum_value, 0)
+        self.assertEqual(yes.kind, CursorKind.ENUM_CONSTANT_DECL)
+        self.assertEqual(yes.enum_value, 1)
 
     def test_annotation_attribute(self):
         tu = get_tu(

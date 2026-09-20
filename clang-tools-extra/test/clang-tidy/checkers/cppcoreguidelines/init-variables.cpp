@@ -168,3 +168,36 @@ namespace gh161978 {
     // CHECK-FIXES: bool (*fp5)(int, int) = nullptr, (*fp6)(int, int) = nullptr;
   }
 }
+
+void gh180894() {
+  struct S {
+    int x;
+  };
+
+  int S::* mp;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'mp' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: int S::* mp = nullptr;
+
+  int S::* mp1 = nullptr, S::* mp2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: variable 'mp2' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: int S::* mp1 = nullptr, S::* mp2 = nullptr;
+
+  int S::* mp3, S::* mp4 = &S::x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'mp3' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: int S::* mp3 = nullptr, S::* mp4 = &S::x;
+
+  using MemPtr = int S::*;
+  MemPtr mp5;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: variable 'mp5' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: MemPtr mp5 = nullptr;
+
+  struct S1 {
+    int x;
+    int y;
+  };
+
+  int S::* mp6, S1::* mp7;
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: variable 'mp6' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-MESSAGES: :[[@LINE-2]]:23: warning: variable 'mp7' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: int S::* mp6 = nullptr, S1::* mp7 = nullptr;
+}

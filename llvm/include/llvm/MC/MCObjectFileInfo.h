@@ -29,10 +29,6 @@ class MCSection;
 
 class LLVM_ABI MCObjectFileInfo {
 protected:
-  /// True if target object file supports a weak_definition of constant 0 for an
-  /// omitted EH frame.
-  bool SupportsWeakOmittedEHFrame = false;
-
   /// True if the target object file supports emitting a compact unwind section
   /// without an associated EH frame section.
   bool SupportsCompactUnwindWithoutEHFrame = false;
@@ -72,9 +68,6 @@ protected:
   /// If exception handling is supported by the target, this is the section the
   /// Language Specific Data Area information is emitted to.
   MCSection *LSDASection = nullptr;
-
-  /// Section containing call graph metadata.
-  MCSection *CallGraphSection = nullptr;
 
   /// If exception handling is supported by the target and the target can
   /// support a compact representation of the CIE and FDE, this is the section
@@ -260,9 +253,6 @@ public:
   virtual ~MCObjectFileInfo();
   MCContext &getContext() const { return *Ctx; }
 
-  bool getSupportsWeakOmittedEHFrame() const {
-    return SupportsWeakOmittedEHFrame;
-  }
   bool getSupportsCompactUnwindWithoutEHFrame() const {
     return SupportsCompactUnwindWithoutEHFrame;
   }
@@ -380,26 +370,12 @@ public:
 
   MCSection *getPseudoProbeSection(const MCSection &TextSec) const;
 
-  MCSection *getPseudoProbeDescSection(StringRef FuncName) const;
+  MCSection *getPseudoProbeDescSection(StringRef FuncName,
+                                       uint64_t FuncHash) const;
 
   MCSection *getLLVMStatsSection() const;
 
   MCSection *getPCSection(StringRef Name, const MCSection *TextSec) const;
-
-  // ELF specific sections.
-  MCSection *getDataRelROSection() const { return DataRelROSection; }
-  const MCSection *getMergeableConst4Section() const {
-    return MergeableConst4Section;
-  }
-  const MCSection *getMergeableConst8Section() const {
-    return MergeableConst8Section;
-  }
-  const MCSection *getMergeableConst16Section() const {
-    return MergeableConst16Section;
-  }
-  const MCSection *getMergeableConst32Section() const {
-    return MergeableConst32Section;
-  }
 
   // MachO specific sections.
   const MCSection *getTLSTLVSection() const { return TLSTLVSection; }

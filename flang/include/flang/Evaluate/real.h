@@ -30,6 +30,12 @@ namespace Fortran::evaluate::value {
 // LOG10(2.)*1E12
 static constexpr std::int64_t ScaledLogBaseTenOfTwo{301029995664};
 
+// Ignore error about requesting a large alignment not being ABI compatible
+// with older AIX systems.
+#if defined(_AIX)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waix-compat"
+#endif
 // Models IEEE binary floating-point numbers (IEEE 754-2008,
 // ISO/IEC/IEEE 60559.2011).  The first argument to this
 // class template must be (or look like) an instance of Integer<>;
@@ -174,6 +180,8 @@ public:
   ValueWithRealFlags<Real> MOD(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> KahanSummation(const Real &, Real &correction,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   template <typename INT> constexpr INT EXPONENT() const {
@@ -444,6 +452,26 @@ public:
       llvm::raw_ostream &, int kind, bool minimal = false) const;
   std::string AsFortran(int kind, bool minimal = false) const;
 
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  /// Note that for REAL(10), this is 16 because X87IntegerContainer specifies
+  /// an alignment of 16 bytes which adds 6 unitialized bytes of limbs.
+  static constexpr std::size_t bytesStored() { return Word::bytesStored(); }
+
+  /// De-serializes a real from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Real FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
+    return Real{Word::FromRawBytes(raw, expectedSize)};
+  }
+
+  /// Serializes this real to \p dst. \p expectedSize must match the the number
+  /// of bytes to be written. If \p changed points to a boolean, it will be set
+  /// to true if any bytes at \p dst have changed.
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
+    word_.StoreRawBytes(dst, expectedSize, changed);
+  }
+
 private:
   using Significand = Integer<significandBits>; // no implicit bit
 
@@ -496,6 +524,9 @@ private:
   // by unaligned address.
   alignas(Word::alignment / 8) Word word_{}; // an Integer<>
 };
+#if defined(_AIX)
+#pragma GCC diagnostic pop
+#endif
 
 extern template class Real<Integer<16>, 11>; // IEEE half format
 extern template class Real<Integer<16>, 8>; // the "other" half format

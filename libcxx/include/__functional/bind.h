@@ -81,16 +81,12 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __mu(reference_w
   return __t.get();
 }
 
-template <class _Ti, class... _Uj, size_t... _Indx>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<_Ti&, _Uj...>
-__mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __index_sequence<_Indx...>) {
-  return __ti(std::forward<_Uj>(std::get<_Indx>(__uj))...);
-}
-
 template <class _Ti, class... _Uj, __enable_if_t<is_bind_expression<_Ti>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __invoke_result_t<_Ti&, _Uj...>
 __mu(_Ti& __ti, tuple<_Uj...>& __uj) {
-  return std::__mu_expand(__ti, __uj, __make_index_sequence<sizeof...(_Uj)>());
+  return [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> __invoke_result_t<_Ti&, _Uj...> {
+    return __ti(std::forward<_Uj>(std::get<_Indices>(__uj))...);
+  }(__index_sequence_for<_Uj...>{});
 }
 
 template <bool _IsPh, class _Ti, class _Uj>
@@ -217,10 +213,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type
   operator()(_Args&&... __args) {
     return std::__apply_functor(
-        __f_,
-        __bound_args_,
-        __make_index_sequence<sizeof...(_BoundArgs)>(),
-        tuple<_Args&&...>(std::forward<_Args>(__args)...));
+        __f_, __bound_args_, __index_sequence_for<_BoundArgs...>(), tuple<_Args&&...>(std::forward<_Args>(__args)...));
   }
 
   template <class... _Args>
@@ -228,10 +221,7 @@ public:
   typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type
   operator()(_Args&&... __args) const {
     return std::__apply_functor(
-        __f_,
-        __bound_args_,
-        __make_index_sequence<sizeof...(_BoundArgs)>(),
-        tuple<_Args&&...>(std::forward<_Args>(__args)...));
+        __f_, __bound_args_, __index_sequence_for<_BoundArgs...>(), tuple<_Args&&...>(std::forward<_Args>(__args)...));
   }
 };
 

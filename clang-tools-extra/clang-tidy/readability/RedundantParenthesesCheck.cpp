@@ -10,9 +10,11 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Lex/Lexer.h"
 #include <cassert>
 
 using namespace clang::ast_matchers;
@@ -32,7 +34,28 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
+AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
+  return !Node.getUnqualifiedLoc().getAs<TypeOfExprTypeLoc>().isNull();
+}
+
 } // namespace
+
+static FixItHint createSpacedRemoval(SourceLocation Loc,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  if (Loc.isValid() && !Loc.isMacroID()) {
+    const auto LocInfo = SM.getDecomposedLoc(Loc);
+    bool Invalid = false;
+    StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
+    if (!Invalid && LocInfo.second > 0 && LocInfo.second + 1 < Buffer.size() &&
+        Lexer::isAsciiIdentifierContinueChar(Buffer[LocInfo.second - 1],
+                                             LangOpts) &&
+        Lexer::isAsciiIdentifierContinueChar(Buffer[LocInfo.second + 1],
+                                             LangOpts))
+      return FixItHint::CreateReplacement(SourceRange(Loc, Loc), " ");
+  }
+  return FixItHint::CreateRemoval(Loc);
+}
 
 RedundantParenthesesCheck::RedundantParenthesesCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -51,13 +74,19 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
                  cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
   Finder->addMatcher(
-      parenExpr(
-          subExpr(anyOf(parenExpr(), ConstantExpr,
-                        declRefExpr(to(namedDecl(unless(
-                            matchers::matchesAnyListedName(AllowedDecls))))))),
-          unless(anyOf(isInMacro(),
-                       // sizeof(...) is common used.
-                       hasParent(unaryExprOrTypeTraitExpr()))))
+      parenExpr(subExpr(anyOf(
+                    parenExpr(), ConstantExpr,
+                    declRefExpr(to(namedDecl(unless(
+                        matchers::matchesAnyListedRegexName(AllowedDecls))))),
+                    memberExpr(),
+                    callExpr(unless(cxxOperatorCallExpr(
+                        unless(hasAnyOperatorName("()", "[]"))))),
+                    arraySubscriptExpr())),
+                unless(anyOf(isInMacro(),
+                             // sizeof(...) is common used.
+                             hasParent(unaryExprOrTypeTraitExpr()),
+                             // typeof(...) parentheses are required syntax.
+                             hasParent(typeLoc(isTypeOfExprTypeLoc())))))
           .bind("dup"),
       this);
 }
@@ -65,7 +94,8 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
   diag(PE->getBeginLoc(), "redundant parentheses around expression")
-      << FixItHint::CreateRemoval(PE->getLParen())
+      << createSpacedRemoval(PE->getLParen(), *Result.SourceManager,
+                             getLangOpts())
       << FixItHint::CreateRemoval(PE->getRParen());
 }
 

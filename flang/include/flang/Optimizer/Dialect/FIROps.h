@@ -50,13 +50,15 @@ static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
 /// Model operations which affect global debugging information
 struct DebuggingResource
     : public mlir::SideEffects::Resource::Base<DebuggingResource> {
-  mlir::StringRef getName() final { return "DebuggingResource"; }
+  mlir::StringRef getName() const final { return "DebuggingResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 /// Model operations which read from/write to volatile memory
 struct VolatileMemoryResource
     : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {
-  mlir::StringRef getName() final { return "VolatileMemoryResource"; }
+  mlir::StringRef getName() const final { return "VolatileMemoryResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 class CoordinateIndicesAdaptor;
@@ -152,6 +154,11 @@ struct LocalitySpecifierOperands {
   llvm::SmallVector<::mlir::Value> privateVars;
   llvm::SmallVector<::mlir::Attribute> privateSyms;
 };
+
+/// Returns true if the given box value may be absent.
+/// The given value must have BaseBoxType.
+bool mayBeAbsentBox(mlir::Value val);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPS_H

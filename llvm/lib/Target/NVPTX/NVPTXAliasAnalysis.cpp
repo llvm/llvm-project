@@ -109,7 +109,7 @@ AliasResult NVPTXAAResult::alias(const MemoryLocation &Loc1,
 // allow any writes to .param pointers.
 static bool isConstOrParam(unsigned AS) {
   return AS == AddressSpace::ADDRESS_SPACE_CONST ||
-         AS == AddressSpace::ADDRESS_SPACE_PARAM;
+         AS == AddressSpace::ADDRESS_SPACE_ENTRY_PARAM;
 }
 
 ModRefInfo NVPTXAAResult::getModRefInfoMask(const MemoryLocation &Loc,

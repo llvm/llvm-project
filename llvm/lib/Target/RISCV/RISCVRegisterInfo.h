@@ -68,7 +68,7 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
 
-  unsigned getCSRFirstUseCost() const override {
+  unsigned getCSRCost() const override {
     // The cost will be compared against BlockFrequency where entry has the
     // value of 1 << 14. A value of 5 will choose to spill or split cold
     // path instead of using a callee-saved register.
@@ -76,6 +76,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   }
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
+
+  const TargetRegisterClass *
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
+
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB, bool Is64Bit) const;
 
   const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
 
@@ -119,6 +126,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
+  bool isArgumentRegister(const MachineFunction &MF,
+                          MCRegister Reg) const override;
+
   StringRef getRegAsmName(MCRegister Reg) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
@@ -127,11 +137,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override {
     return true;
-  }
-
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override {
-    return &RISCV::GPRRegClass;
   }
 
   const TargetRegisterClass *
@@ -167,6 +172,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
+  }
+
+  static bool isFPRegister(MCRegister Reg) {
+    return RISCV::FPR16RegClass.contains(Reg) ||
+           RISCV::FPR32RegClass.contains(Reg) ||
+           RISCV::FPR64RegClass.contains(Reg) ||
+           RISCV::FPR128RegClass.contains(Reg);
   }
 };
 } // namespace llvm

@@ -23,14 +23,24 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <bitset>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "MipsGenSubtargetInfo.inc"
 
 namespace llvm {
 class StringRef;
+
+enum CompactBranchPolicy {
+  CB_Never,   ///< The policy 'never' may in some circumstances or for some
+              ///< ISAs not be absolutely adhered to.
+  CB_Optimal, ///< Optimal is the default and will produce compact branches
+              ///< when appropriate.
+  CB_Always   ///< 'always' may in some circumstances may not be
+              ///< absolutely adhered to, there may not be a corresponding
+              ///< compact form of a branch.
+};
 
 class MipsTargetMachine;
 
@@ -102,6 +112,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // IsGP64bit - General-purpose registers are 64 bits wide
   bool IsGP64bit;
 
+  // MIPS GPRs explicitly reserved through -ffixed-REG.
+  std::bitset<32> UserReservedGPR;
+
   // IsPTR64bit - Pointers are 64 bit wide
   bool IsPTR64bit;
 
@@ -113,6 +126,12 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // CPU supports cnMIPSP (Cavium Networks Octeon+ CPU).
   bool HasCnMipsP;
+
+  // IsR5900 - CPU is R5900 (PlayStation 2 Emotion Engine).
+  bool IsR5900;
+
+  // FixR5900 - Enable R5900 short loop erratum fix.
+  bool FixR5900;
 
   // isLinux - Target system is Linux. Is false we consider ELFOS for now.
   bool IsLinux;
@@ -201,14 +220,15 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Disable unaligned load store for r6.
   bool StrictAlign;
 
+  // Use compact branch instructions for R6.
+  bool UseCompactBranches = true;
+
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment;
 
   /// The overridden stack alignment.
   MaybeAlign StackAlignOverride;
-
-  InstrItineraryData InstrItins;
 
   // We can override the determination of whether we are in mips16 mode
   // as from the command line
@@ -235,6 +255,11 @@ public:
   bool isABI_O32() const;
   const MipsABIInfo &getABI() const;
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
+
+  bool isGPRReservedByUser(unsigned GPR) const {
+    assert(GPR < UserReservedGPR.size() && "GPR number out of range");
+    return UserReservedGPR[GPR];
+  }
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
@@ -284,6 +309,8 @@ public:
 
   bool hasCnMips() const { return HasCnMips; }
   bool hasCnMipsP() const { return HasCnMipsP; }
+  bool isR5900() const { return IsR5900; }
+  bool fixR5900() const { return FixR5900; }
 
   bool isLittle() const { return IsLittle; }
   bool isABICalls() const { return !NoABICalls; }
@@ -335,6 +362,10 @@ public:
     return UseIndirectJumpsHazard && hasMips32r2();
   }
   bool useSmallSection() const { return UseSmallSection; }
+
+  bool useCompactBranches() const {
+    return UseCompactBranches && hasMips32r6();
+  }
 
   bool hasStandardEncoding() const { return !InMips16Mode && !InMicroMipsMode; }
 
@@ -398,10 +429,6 @@ public:
   const MipsTargetLowering *getTargetLowering() const override {
     return TLInfo.get();
   }
-  const InstrItineraryData *getInstrItineraryData() const override {
-    return &InstrItins;
-  }
-
   void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
 protected:

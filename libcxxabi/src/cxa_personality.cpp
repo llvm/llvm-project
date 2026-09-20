@@ -23,7 +23,7 @@
 
 #if __has_feature(ptrauth_calls)
 
-// CXXABI depends on defintions in libunwind as pointer auth couples the
+// CXXABI depends on definitions in libunwind as pointer auth couples the
 // definitions
 #  include "libunwind.h"
 
@@ -62,13 +62,9 @@
 #  define __ptrauth_scan_results_landingpad_intptr
 #endif
 
-// TODO: This is a temporary workaround for libc++abi to recognize that it's being
-// built against LLVM's libunwind. LLVM's libunwind started reporting _LIBUNWIND_VERSION
-// in LLVM 15 -- we can remove this workaround after shipping LLVM 17. Once we remove
-// this workaround, it won't be possible to build libc++abi against libunwind headers
-// from LLVM 14 and before anymore.
-#if defined(____LIBUNWIND_CONFIG_H__) && !defined(_LIBUNWIND_VERSION)
-#   define _LIBUNWIND_VERSION
+// The functions defined in this file are magic functions called only by the compiler.
+#ifdef __clang__
+#  pragma clang diagnostic ignored "-Wmissing-prototypes"
 #endif
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
@@ -1015,9 +1011,7 @@ static inline void get_landing_pad(__cxa_catch_temp_type &dest,
 #endif
 }
 
-#ifdef __WASM_EXCEPTIONS__
-_Unwind_Reason_Code __gxx_personality_wasm0
-#elif defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#if (defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)) || defined(__WASM_EXCEPTIONS__)
 static _Unwind_Reason_Code __gxx_personality_imp
 #else
 _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
@@ -1118,10 +1112,23 @@ __gxx_personality_seh0(PEXCEPTION_RECORD ms_exc, void *this_frame,
 }
 #endif
 
+#ifdef __WASM_EXCEPTIONS__
+extern "C" _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code __gxx_wasm_personality_v0(void* exception_ptr) {
+  struct _Unwind_Exception* exception_object = (struct _Unwind_Exception*)exception_ptr;
+
+  // Reset the selector.
+  __wasm_lpad_context.selector = 0;
+
+  // Call personality function. Wasm does not have two-phase unwinding, so we
+  // only do the search phase.
+  return __gxx_personality_imp(1, _UA_SEARCH_PHASE, exception_object->exception_class, exception_object,
+                               (struct _Unwind_Context*)&__wasm_lpad_context);
+}
+#endif
+
 #else
 
-extern "C" _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception*,
-                                                  _Unwind_Context*);
+extern "C" _Unwind_Reason_Code __gnu_unwind_frame(_Unwind_Exception*, _Unwind_Context*);
 
 // Helper function to unwind one frame.
 // ARM EHABI 7.3 and 7.4: If the personality function returns _URC_CONTINUE_UNWIND, the
@@ -1277,8 +1284,7 @@ __gxx_personality_v0(_Unwind_State state,
 #endif
 
 
-__attribute__((noreturn))
-_LIBCXXABI_FUNC_VIS void
+[[noreturn]] _LIBCXXABI_FUNC_VIS void
 __cxa_call_unexpected(void* arg)
 {
     _Unwind_Exception* unwind_exception = static_cast<_Unwind_Exception*>(arg);

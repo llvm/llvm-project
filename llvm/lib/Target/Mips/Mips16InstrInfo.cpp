@@ -25,10 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
-#include <cstdlib>
-#include <cstring>
 #include <iterator>
 #include <vector>
 
@@ -177,7 +174,7 @@ unsigned Mips16InstrInfo::getOppositeBranchOpc(unsigned Opc) const {
 
 static void addSaveRestoreRegs(MachineInstrBuilder &MIB,
                                ArrayRef<CalleeSavedInfo> CSI,
-                               unsigned Flags = 0) {
+                               RegState Flags = {}) {
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // Add the callee-saved register as live-in. Do not add if the register is
     // RA and return address is taken, because it has already been added in

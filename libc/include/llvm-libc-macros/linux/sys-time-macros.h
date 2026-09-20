@@ -9,6 +9,11 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SYS_TIME_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SYS_TIME_MACROS_H
 
+// Timer types for setitimer(2).
+#define ITIMER_REAL 0
+#define ITIMER_VIRTUAL 1
+#define ITIMER_PROF 2
+
 // Add two timevals and put the result in timeval_ptr_result. If the resulting
 // usec value is greater than 999,999 then the microseconds are turned into full
 // seconds (1,000,000 is subtracted from usec and 1 is added to sec).

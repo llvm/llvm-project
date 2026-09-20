@@ -48,6 +48,8 @@ struct Base {
   virtual void t() throw();
 
   virtual void il(IntPair);
+
+  virtual void u(int x __attribute__((unused))) {}
 };
 
 struct SimpleCases : public Base {
@@ -82,11 +84,11 @@ public:
 
   virtual void f()=0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: void f() override =0;
+  // CHECK-FIXES: void f() override=0;
 
   virtual void f2() const=0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
-  // CHECK-FIXES: void f2() const override =0;
+  // CHECK-FIXES: void f2() const override=0;
 
   virtual void g() ABSTRACT;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
@@ -132,6 +134,10 @@ public:
   virtual       /*      */ void g2();
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual'
   // CHECK-FIXES: /*      */ void g2() override;
+
+  virtual void u(int x __attribute__((unused)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using 'override' or (rarely) 'final' instead of 'virtual'
+  // CHECK-FIXES: void u(int x __attribute__((unused))) override;
 };
 
 // CHECK-MESSAGES-NOT: warning:
@@ -308,7 +314,7 @@ struct MembersOfSpecializations : public Base2 {
   // CHECK-FIXES: void a() override;
 };
 template <> void MembersOfSpecializations<3>::a() {}
-void ff() { MembersOfSpecializations<3>().a(); };
+void ff() { MembersOfSpecializations<3>().a(); }
 
 // In case try statement is used as a method body,
 // make sure that override fix is placed before try keyword.

@@ -21,8 +21,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @array = internal global [2 x x86_fp80] zeroinitializer, align 16, !dbg !0
 
-; CHECK: @array.0 = internal unnamed_addr global x86_fp80 0xK00000000000000000000, align 16, !dbg ![[EL0:.*]]
-; CHECK: @array.1 = internal unnamed_addr global x86_fp80 0xK00000000000000000000, align 16, !dbg ![[EL1:.*]]
+; CHECK: @array.0 = internal unnamed_addr global x86_fp80 0.000000e+00, align 16, !dbg ![[EL0:.*]]
+; CHECK: @array.1 = internal unnamed_addr global x86_fp80 0.000000e+00, align 16, !dbg ![[EL1:.*]]
 ;
 ; CHECK: ![[EL0]] = !DIGlobalVariableExpression(var: ![[VAR:.*]], expr: !DIExpression(DW_OP_LLVM_fragment, 0, 128))
 ; CHECK: ![[VAR]] = distinct !DIGlobalVariable(name: "array"

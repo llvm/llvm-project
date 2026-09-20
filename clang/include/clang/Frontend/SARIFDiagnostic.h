@@ -63,10 +63,20 @@ private:
                                   ArrayRef<CharSourceRange> Ranges,
                                   const Diagnostic &Diag);
 
+  SarifResult addRelatedLocationToResult(SarifResult Result, FullSourceLoc Loc,
+                                         PresumedLoc PLoc);
+
+  llvm::SmallVector<CharSourceRange>
+  getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                   ArrayRef<CharSourceRange> Ranges);
+
   SarifRule addDiagnosticLevelToRule(SarifRule Rule,
                                      DiagnosticsEngine::Level Level);
 
   llvm::StringRef emitFilename(StringRef Filename, const SourceManager &SM);
+
+  llvm::SmallVector<std::pair<FullSourceLoc, PresumedLoc>>
+      RelatedLocationsCache;
 };
 
 } // end namespace clang

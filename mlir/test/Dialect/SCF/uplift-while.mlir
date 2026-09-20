@@ -185,34 +185,3 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> (i32, f32) 
 //       CHECK:     %[[T2:.*]] = "test.test2"(%[[ARG2]]) : (f32) -> f32
 //       CHECK:     scf.yield %[[T1]], %[[T2]] : i32, f32
 //       CHECK:     return %[[RES]]#0, %[[RES]]#1 : i32, f32
-
-// -----
-
-func.func @uplift_while(%low: index, %upper: index, %val : i32) -> i32 {
-  %c1 = arith.constant 1 : index
-  %1:2 = scf.while (%iv = %low, %iter = %val) : (index, i32) -> (index, i32) {
-    %2 = arith.cmpi slt, %iv, %upper : index
-    %3:2 = scf.if %2 -> (index, i32) {
-      %4 = "test.test"(%iter) : (i32) -> i32
-      %5 = arith.addi %iv, %c1 : index
-      scf.yield %5, %4 : index, i32
-    } else {
-      scf.yield %iv, %iter : index, i32
-    }
-    scf.condition(%2) %3#0, %3#1 : index, i32
-  } do {
-  ^bb0(%arg0: index, %arg1: i32):
-    scf.yield %arg0, %arg1 : index, i32
-  }
-  return %1#1 : i32
-}
-
-// CHECK-LABEL:   func.func @uplift_while(
-// CHECK-SAME:      %[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: i32) -> i32 {
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-// CHECK:           %[[FOR_0:.*]] = scf.for %[[VAL_0:.*]] = %[[ARG0]] to %[[ARG1]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[ARG2]]) -> (i32) {
-// CHECK:             %[[VAL_2:.*]] = "test.test"(%[[VAL_1]]) : (i32) -> i32
-// CHECK:             scf.yield %[[VAL_2]] : i32
-// CHECK:           }
-// CHECK:           return %[[FOR_0]] : i32
-// CHECK:         }

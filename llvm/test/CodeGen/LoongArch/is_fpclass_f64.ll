@@ -719,18 +719,12 @@ entry:
 define i1 @isnone_d(double %x) {
 ; CHECK32-LABEL: isnone_d:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    fclass.d $fa0, $fa0
-; CHECK32-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK32-NEXT:    andi $a0, $a0, 0
-; CHECK32-NEXT:    sltu $a0, $zero, $a0
+; CHECK32-NEXT:    move $a0, $zero
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: isnone_d:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    fclass.d $fa0, $fa0
-; CHECK64-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK64-NEXT:    andi $a0, $a0, 0
-; CHECK64-NEXT:    sltu $a0, $zero, $a0
+; CHECK64-NEXT:    move $a0, $zero
 ; CHECK64-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 0)
@@ -740,18 +734,12 @@ entry:
 define i1 @isany_d(double %x) {
 ; CHECK32-LABEL: isany_d:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    fclass.d $fa0, $fa0
-; CHECK32-NEXT:    movfr2gr.s $a0, $fa0
-; CHECK32-NEXT:    andi $a0, $a0, 1023
-; CHECK32-NEXT:    sltu $a0, $zero, $a0
+; CHECK32-NEXT:    ori $a0, $zero, 1
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: isany_d:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    fclass.d $fa0, $fa0
-; CHECK64-NEXT:    movfr2gr.d $a0, $fa0
-; CHECK64-NEXT:    andi $a0, $a0, 1023
-; CHECK64-NEXT:    sltu $a0, $zero, $a0
+; CHECK64-NEXT:    ori $a0, $zero, 1
 ; CHECK64-NEXT:    ret
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f64(double %x, i32 1023)

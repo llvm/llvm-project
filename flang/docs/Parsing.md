@@ -1,9 +1,9 @@
-<!--===- docs/Parsing.md 
-  
+<!--===- docs/Parsing.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # The Flang Parser
@@ -182,7 +182,7 @@ Parse tree entities should be viewed as values, not objects; their
 addresses should not be abused for purposes of identification.  They are
 assembled with C++ move semantics during parse tree construction.
 Their default and copy constructors are deliberately deleted in their
-declarations. 
+declarations.
 
 The std::list<> data type is used in the parse tree to reliably store pointers
 to other relevant entries in the tree. Since the tree lists are moved and

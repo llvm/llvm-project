@@ -121,6 +121,11 @@
 // BITALG: "-target-feature" "+avx512bitalg"
 // NO-BITALG: "-target-feature" "-avx512bitalg"
 
+// RUN: %clang --target=i386 -march=i386 -mavx512bmm %s -### 2>&1 | FileCheck -check-prefix=BMM %s
+// RUN: %clang --target=i386 -march=i386 -mno-avx512bmm %s -### 2>&1 | FileCheck -check-prefix=NO-BMM %s
+// BMM: "-target-feature" "+avx512bmm"
+// NO-BMM: "-target-feature" "-avx512bmm"
+
 // RUN: %clang --target=i386 -march=i386 -mavx512vnni %s -### 2>&1 | FileCheck -check-prefix=VNNI %s
 // RUN: %clang --target=i386 -march=i386 -mno-avx512vnni %s -### 2>&1 | FileCheck -check-prefix=NO-VNNI %s
 // VNNI: "-target-feature" "+avx512vnni"
@@ -311,13 +316,6 @@
 // AMX-AVX512: "-target-feature" "+amx-avx512"
 // NO-AMX-AVX512: "-target-feature" "-amx-avx512"
 
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-tf32 %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TF32 %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-tf32 %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TF32 %s
-// AMX-TF32: "-target-feature" "+amx-tf32"
-// NO-AMX-TF32: "-target-feature" "-amx-tf32"
-
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"
@@ -417,11 +415,11 @@
 
 // RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
 // RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
-// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
-// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefixes=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefixes=NON-APX %s
 // RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
 // NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
-// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APX:      error: unsupported option '-mapx-features=' for target 'i386'
 // NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
@@ -443,8 +441,8 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s
@@ -454,6 +452,7 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=nf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NF %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=cf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CF %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=zu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ZU %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=jmpabs %s -### -o %t.o 2>&1 | FileCheck -check-prefix=JMPABS %s
 // EGPR: "-target-feature" "+egpr"
 // PUSH2POP2: "-target-feature" "+push2pop2"
 // PPX: "-target-feature" "+ppx"
@@ -462,6 +461,7 @@
 // NF: "-target-feature" "+nf"
 // CF: "-target-feature" "+cf"
 // ZU: "-target-feature" "+zu"
+// JMPABS: "-target-feature" "+jmpabs"
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s

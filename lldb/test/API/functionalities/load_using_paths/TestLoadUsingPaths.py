@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 @skipIfWindows  # The Windows platform doesn't implement DoLoadImage.
 class LoadUsingPathsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -33,7 +34,7 @@ class LoadUsingPathsTestCase(TestBase):
         self.hidden_lib = os.path.join(self.hidden_dir, self.lib_name)
 
     @skipIfRemote
-    @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @requirePOSIX  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @expectedFlakeyNetBSD
     @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr45894")
     def test_load_using_paths(self):

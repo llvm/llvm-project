@@ -1,0 +1,6 @@
+// Checks that BOLT correctly errors out on compressed debug sections.
+//
+// RUN: yaml2obj %p/Inputs/compressed-debug-sections.yaml -o %t.exe
+// RUN: not llvm-bolt %t.exe -o %t.bolt --update-debug-sections 2>&1 | FileCheck %s
+//
+// CHECK: compressed debug section '.debug_info' detected. --update-debug-sections requires uncompressed debug info

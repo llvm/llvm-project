@@ -35,7 +35,7 @@ std::optional<FixItHint> UsingInserter::createUsingDeclaration(
   if (!Function)
     return std::nullopt;
 
-  if (AddedUsing.count(std::make_pair(Function, QualifiedName.str())) != 0)
+  if (AddedUsing.count({Function, QualifiedName.str()}) != 0)
     return std::nullopt;
 
   const SourceLocation InsertLoc = Lexer::getLocForEndOfToken(
@@ -57,7 +57,7 @@ std::optional<FixItHint> UsingInserter::createUsingDeclaration(
     return std::nullopt;
   }
   // Find conflicting declarations and references.
-  auto ConflictingDecl = namedDecl(hasName(UnqualifiedName));
+  const auto ConflictingDecl = namedDecl(hasName(UnqualifiedName));
   const bool HasConflictingDeclaration =
       !match(findAll(ConflictingDecl), *Function, Context).empty();
   const bool HasConflictingDeclRef =

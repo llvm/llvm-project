@@ -298,11 +298,13 @@ namespace {
 }
 
 Address AtomicInfo::CreateTempAlloca() const {
-  Address TempAlloca = CGF.CreateMemTemp(
-      (LVal.isBitField() && ValueSizeInBits > AtomicSizeInBits) ? ValueTy
-                                                                : AtomicTy,
-      getAtomicAlignment(),
-      "atomic-temp");
+  // Remove addrspace info from the atomic pointer element when making the
+  // alloca pointer element.
+  QualType TmpTy = (LVal.isBitField() && ValueSizeInBits > AtomicSizeInBits)
+                       ? ValueTy
+                       : AtomicTy.getUnqualifiedType();
+  Address TempAlloca =
+      CGF.CreateMemTempWithoutCast(TmpTy, getAtomicAlignment(), "atomic-temp");
   // Cast to pointer to value type for bitfields.
   if (LVal.isBitField())
     return CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
@@ -534,7 +536,6 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
                                Op == AtomicExpr::AO__scoped_atomic_max_fetch)
                                   ? llvm::Intrinsic::maxnum
                                   : llvm::Intrinsic::minnum;
-
     return Builder.CreateBinaryIntrinsic(IID, OldVal, RHS, llvm::FMFSource(),
                                          "newval");
   }
@@ -630,6 +631,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::LoadInst *Load = CGF.Builder.CreateLoad(Ptr);
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
+    CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Load, E);
     CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
     auto *I = CGF.Builder.CreateStore(Load, Dest);
     CGF.addInstToCurrentSourceAtom(I, Load);
@@ -647,6 +649,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::StoreInst *Store = CGF.Builder.CreateStore(LoadVal1, Ptr);
     Store->setAtomic(Order, Scope);
     Store->setVolatile(E->isVolatile());
+    CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Store, E);
     CGF.addInstToCurrentSourceAtom(Store, LoadVal1);
     return;
   }
@@ -705,6 +708,20 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
                     : llvm::AtomicRMWInst::UMin);
     break;
 
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+    assert(E->getValueType()->isFloatingType() &&
+           "fminimum operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMinimum;
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+    assert(E->getValueType()->isFloatingType() &&
+           "fminimum_num operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMinimumNum;
+    break;
+
   case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
     PostOpMinMax = true;
@@ -719,6 +736,20 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
              : (E->getValueType()->isSignedIntegerType()
                     ? llvm::AtomicRMWInst::Max
                     : llvm::AtomicRMWInst::UMax);
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+    assert(E->getValueType()->isFloatingType() &&
+           "fmaximum operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMaximum;
+    break;
+
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+    assert(E->getValueType()->isFloatingType() &&
+           "fmaximum_num operations only support floating-point types");
+    Op = llvm::AtomicRMWInst::FMaximumNum;
     break;
 
   case AtomicExpr::AO__atomic_and_fetch:
@@ -767,10 +798,12 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     Op = llvm::AtomicRMWInst::Nand;
     break;
 
-  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
     Op = llvm::AtomicRMWInst::UIncWrap;
     break;
-  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+  case AtomicExpr::AO__atomic_fetch_udec:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
     Op = llvm::AtomicRMWInst::UDecWrap;
     break;
 
@@ -791,6 +824,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
         CGF.Builder.CreateStore(CGF.Builder.getInt8(0), Ptr);
     Store->setAtomic(Order, Scope);
     Store->setVolatile(E->isVolatile());
+    CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Store, E);
     CGF.addInstToCurrentSourceAtom(Store, nullptr);
     return;
   }
@@ -822,10 +856,21 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
 // into a temporary alloca.
 static Address
 EmitValToTemp(CodeGenFunction &CGF, Expr *E) {
-  Address DeclPtr = CGF.CreateMemTemp(E->getType(), ".atomictmp");
+  Address DeclPtr = CGF.CreateMemTempWithoutCast(E->getType(), ".atomictmp");
   CGF.EmitAnyExprToMem(E, DeclPtr, E->getType().getQualifiers(),
                        /*Init*/ true);
   return DeclPtr;
+}
+
+/// Return true if \param ValTy is a type that should be casted to integer
+/// around the atomic memory operation. If \param CmpXchg is true, then the
+/// cast of a floating point type is made as that instruction can not have
+/// floating point operands.  TODO: Allow compare-and-exchange and FP - see
+/// comment in AtomicExpandPass.cpp.
+static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
+  if (ValTy->isFloatingPointTy())
+    return ValTy->isX86_FP80Ty() || CmpXchg;
+  return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
 }
 
 static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
@@ -939,7 +984,6 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   llvm::Value *Order = EmitScalarExpr(E->getOrder());
   llvm::Value *Scope =
       E->getScopeModel() ? EmitScalarExpr(E->getScope()) : nullptr;
-  bool ShouldCastToIntPtrTy = true;
 
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -1011,7 +1055,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       CharUnits PointeeIncAmt =
           getContext().getTypeSizeInChars(MemTy->getPointeeType());
       Val1Scalar = Builder.CreateMul(Val1Scalar, CGM.getSize(PointeeIncAmt));
-      auto Temp = CreateMemTemp(Val1Ty, ".atomictmp");
+      auto Temp = CreateMemTempWithoutCast(Val1Ty, ".atomictmp");
       Val1 = Temp;
       EmitStoreOfScalar(Val1Scalar, MakeAddrLValue(Temp, Val1Ty));
       break;
@@ -1035,17 +1079,22 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    ShouldCastToIntPtrTy = !MemTy->isFloatingType();
     [[fallthrough]];
 
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__atomic_fetch_xor:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__atomic_fetch_udec:
   case AtomicExpr::AO__atomic_and_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
   case AtomicExpr::AO__atomic_or_fetch:
@@ -1078,13 +1127,19 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_store_n:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
-  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
-  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
     Val1 = EmitValToTemp(*this, E->getVal1());
     break;
   }
 
   QualType RValTy = E->getType().getUnqualifiedType();
+  bool ShouldCastToIntPtrTy =
+      shouldCastToInt(ConvertTypeForMem(MemTy), E->isCmpXChg());
 
   // The inlined atomics only function on iN types, where N is a power of 2. We
   // need to make sure (via temporaries if necessary) that all incoming values
@@ -1104,7 +1159,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     if (ShouldCastToIntPtrTy)
       Dest = Atomics.castToAtomicIntPointer(Dest);
   } else if (E->isCmpXChg())
-    Dest = CreateMemTemp(RValTy, "cmpxchg.bool");
+    Dest = CreateMemTempWithoutCast(RValTy, "cmpxchg.bool");
   else if (!RValTy->isVoidType()) {
     Dest = Atomics.CreateTempAlloca();
     if (ShouldCastToIntPtrTy)
@@ -1141,8 +1196,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);
       auto *DestType = llvm::PointerType::get(getLLVMContext(), DestAS);
 
-      return getTargetHooks().performAddrSpaceCast(*this, V, AS, DestType,
-                                                   false);
+      return performAddrSpaceCast(V, DestType);
     };
 
     Args.add(RValue::get(CastToGenericAddrSpace(Ptr.emitRawPointer(*this),
@@ -1278,10 +1332,20 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_max_fetch:
-    case AtomicExpr::AO__scoped_atomic_uinc_wrap:
-    case AtomicExpr::AO__scoped_atomic_udec_wrap:
+    case AtomicExpr::AO__atomic_fetch_fminimum:
+    case AtomicExpr::AO__atomic_fetch_fmaximum:
+    case AtomicExpr::AO__atomic_fetch_fminimum_num:
+    case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+    case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+    case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+    case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+    case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+    case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+    case AtomicExpr::AO__scoped_atomic_fetch_udec:
     case AtomicExpr::AO__atomic_test_and_set:
     case AtomicExpr::AO__atomic_clear:
+    case AtomicExpr::AO__atomic_fetch_uinc:
+    case AtomicExpr::AO__atomic_fetch_udec:
       llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
@@ -1502,17 +1566,6 @@ RValue AtomicInfo::convertAtomicTempToRValue(Address addr,
       LVal.getBaseInfo(), TBAAAccessInfo()));
 }
 
-/// Return true if \param ValTy is a type that should be casted to integer
-/// around the atomic memory operation. If \param CmpXchg is true, then the
-/// cast of a floating point type is made as that instruction can not have
-/// floating point operands.  TODO: Allow compare-and-exchange and FP - see
-/// comment in AtomicExpandPass.cpp.
-static bool shouldCastToInt(llvm::Type *ValTy, bool CmpXchg) {
-  if (ValTy->isFloatingPointTy())
-    return ValTy->isX86_FP80Ty() || CmpXchg;
-  return !ValTy->isIntegerTy() && !ValTy->isPointerTy();
-}
-
 RValue AtomicInfo::ConvertToValueOrAtomic(llvm::Value *Val,
                                           AggValueSlot ResultSlot,
                                           SourceLocation Loc, bool AsValue,
@@ -1579,6 +1632,7 @@ llvm::Value *AtomicInfo::EmitAtomicLoadOp(llvm::AtomicOrdering AO,
     Addr = castToAtomicIntPointer(Addr);
   llvm::LoadInst *Load = CGF.Builder.CreateLoad(Addr, "atomic-load");
   Load->setAtomic(AO);
+  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Load);
 
   // Other decoration.
   if (IsVolatile)
@@ -1746,6 +1800,7 @@ std::pair<llvm::Value *, llvm::Value *> AtomicInfo::EmitAtomicCompareExchangeOp(
   // Other decoration.
   Inst->setVolatile(LVal.isVolatileQualified());
   Inst->setWeak(IsWeak);
+  CGF.getTargetHooks().setTargetAtomicMetadata(CGF, *Inst);
 
   // Okay, turn that back into the original value type.
   auto *PreviousVal = CGF.Builder.CreateExtractValue(Inst, /*Idxs=*/0);
@@ -2101,8 +2156,10 @@ void CodeGenFunction::EmitAtomicStore(RValue rvalue, LValue dest,
     else if (AO == llvm::AtomicOrdering::AcquireRelease)
       AO = llvm::AtomicOrdering::Release;
     // Initializations don't need to be atomic.
-    if (!isInit)
+    if (!isInit) {
       store->setAtomic(AO);
+      getTargetHooks().setTargetAtomicMetadata(*this, *store);
+    }
 
     // Other decoration.
     if (IsVolatile)
@@ -2144,6 +2201,13 @@ CodeGenFunction::emitAtomicRMWInst(llvm::AtomicRMWInst::BinOp Op, Address Addr,
       Builder.CreateAtomicRMW(Op, Addr, Val, Order, SSID);
   getTargetHooks().setTargetAtomicMetadata(*this, *RMW, AE);
   return RMW;
+}
+
+llvm::FenceInst *CodeGenFunction::emitAtomicFence(llvm::AtomicOrdering Order,
+                                                  llvm::SyncScope::ID SSID) {
+  llvm::FenceInst *Fence = Builder.CreateFence(Order, SSID);
+  getTargetHooks().setTargetAtomicMetadata(*this, *Fence);
+  return Fence;
 }
 
 void CodeGenFunction::EmitAtomicUpdate(

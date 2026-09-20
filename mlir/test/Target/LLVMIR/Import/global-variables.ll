@@ -1,4 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
 
 %sub_struct = type {}
 %my_struct = type { %sub_struct, i64 }
@@ -91,6 +92,21 @@
 ; CHECK:  llvm.mlir.global external thread_local @thread_local_var
 ; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
 @thread_local_var = external thread_local global %my_struct
+
+; Note: Classic LLVM-IR doesn't parse 'generaldynamic' in 'thread_local' as the dialect does,
+; so there is no _gd test.
+
+; CHECK:  llvm.mlir.global external thread_local(localdynamic) @thread_local_var_ld
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_ld = external thread_local(localdynamic) global %my_struct
+
+; CHECK:  llvm.mlir.global external thread_local(initialexec) @thread_local_var_ie
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_ie = external thread_local(initialexec) global %my_struct
+
+; CHECK:  llvm.mlir.global external thread_local(localexec) @thread_local_var_le
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_le = external thread_local(localexec) global %my_struct
 
 ; // -----
 
@@ -281,8 +297,10 @@ define void @foo() {
 
 ; CHECK-DAG: #[[TYPE:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
 ; CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"source.c" in "/path/to/file">
-; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C99, file = #[[FILE]], isOptimized = false, emissionKind = None>
-; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition>
+; CHECK-DAG: #[[CU:.*]] = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C99, file = #[[FILE]]>
+; CHECK-DAG: #[[NULL_TYPE:.*]] = #llvm.di_null_type
+; CHECK-DAG: #[[SRT:.*]] = #llvm.di_subroutine_type<types = #[[NULL_TYPE]]>
+; CHECK-DAG: #[[SPROG:.*]] = #llvm.di_subprogram<id = distinct[{{.*}}]<>, scope = #[[CU]], name = "foo", file = #[[FILE]], line = 5, subprogramFlags = Definition, type = #[[SRT]]>
 ; CHECK-DAG: #[[GVAR0:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "foo", linkageName = "foo", file = #[[FILE]], line = 7, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[GVAR1:.*]] = #llvm.di_global_variable<scope = #[[SPROG]], name = "bar", linkageName = "bar", file = #[[FILE]], line = 8, type = #[[TYPE]], isLocalToUnit = true>
 ; CHECK-DAG: #[[EXPR0:.*]] = #llvm.di_global_variable_expression<var = #[[GVAR0]], expr = <[DW_OP_LLVM_fragment(0, 16)]>>
@@ -295,11 +313,13 @@ define void @foo() {
 !0 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !1 = !DIFile(filename: "source.c", directory: "/path/to/file")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
-!3 = distinct !DISubprogram(name: "foo", scope: !2, file: !1, line: 5)
+!3 = distinct !DISubprogram(name: "foo", scope: !2, file: !1, line: 5, type: !9)
 !4 = !DIGlobalVariable(name: "foo", linkageName: "foo", scope: !3, file: !1, line: 7, type: !0, isLocal: true, isDefinition: false)
 !5 = !DIGlobalVariableExpression(var: !4, expr: !DIExpression(DW_OP_LLVM_fragment, 0, 16))
 !6 = !DIGlobalVariable(name: "bar", linkageName: "bar", scope: !3, file: !1, line: 8, type: !0, isLocal: true, isDefinition: false)
 !7 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression(DW_OP_constu, 3, DW_OP_plus))
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)
 !100 = !{i32 2, !"Debug Info Version", i32 3}
 !llvm.module.flags = !{!100}
 
@@ -369,3 +389,64 @@ attributes #0 = { readnone "int-attr"="4" "no-enum-attr" "string-attr"="string" 
 ; CHECK-SAME: target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]}
 @target_specific_attrs_combined = global i32 2, align 4, section "mysection" #0
 attributes #0 = { norecurse "bss-section"="my_bss.1" }
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a
+; CHECK-SAME: {addr_space = 0 : i32, associated = @b} : i32
+; CHECK: llvm.mlir.global external @b
+; CHECK-SAME: {addr_space = 0 : i32} : i32
+@a = global i32 0, !associated !0
+@b = global i32 0
+!0 = !{ptr @b}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a
+; CHECK-SAME: {addr_space = 0 : i32, associated = @f} : i32
+@a = global i32 0, !associated !0
+declare void @f()
+!0 = !{ptr @f}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @associated_via_alias
+; CHECK-SAME: associated = @alias_of_target
+@alias_target = global i32 1
+@alias_of_target = alias i32, ptr @alias_target
+@associated_via_alias = global i32 2, !associated !0
+!0 = !{ptr @alias_of_target}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @associated_ifunc_global
+; CHECK-SAME: associated = @associated_ifunc
+; CHECK: llvm.mlir.ifunc external @associated_ifunc
+@associated_ifunc = ifunc i32 (i32), ptr @associated_ifunc_resolver
+@associated_ifunc_global = global i32 0, !associated !0
+define ptr @associated_ifunc_resolver() {
+  ret ptr null
+}
+!0 = !{ptr @associated_ifunc}
+
+; // -----
+
+; WARN: warning: unhandled associated metadata: {{.*}}ptr null{{.*}} on @associated_null
+; CHECK: llvm.mlir.global external @associated_null() {addr_space = 0 : i32} : i8
+@associated_null = external global i8, !associated !0
+!0 = !{ptr null}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a()
+; CHECK-SAME: {absolute_symbol = [0, 42], addr_space = 0 : i32} : i8
+@a = external global i8, !absolute_symbol !0
+!0 = !{i64 0, i64 42}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a()
+; CHECK-SAME: {absolute_symbol = [-1, -1], addr_space = 0 : i32} : i8
+@a = external global i8, !absolute_symbol !0
+!0 = !{i64 -1, i64 -1}
+

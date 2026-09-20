@@ -7,7 +7,7 @@
 program main
   integer :: i, x
 
-  !$omp teams 
+  !$omp teams
   !ERROR: `BIND(TEAMS)` must be specified since the `LOOP` region is strictly nested inside a `TEAMS` region.
   !$omp loop bind(thread)
   do i = 1, 10

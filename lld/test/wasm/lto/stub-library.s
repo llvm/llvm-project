@@ -1,19 +1,23 @@
 ## The function `bar` is declared in stub.so and depends on `foo` which is
 ## defined in an LTO object.  We also test the case where the LTO object is
 ## with an archive file.
+## The function `baz` is declared in stub.so and depends on `quux`, and both
+## `baz` and `quux` are defined in an LTO object. When `baz` and `quux` are
+## DCE'd and become undefined in the LTO process, wasm-ld should not try to
+## export the (nonexistent) `quux`.
 ## This verifies that stub library dependencies (which are required exports) can
 ## be defined in LTO objects, even when they are within archive files.
 
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
 # RUN: mkdir -p %t
-# RUN: llvm-as %S/Inputs/foo.ll -o %t/foo.o
-# RUN: wasm-ld %t.o %t/foo.o %p/Inputs/stub.so -o %t.wasm
+# RUN: llvm-as %S/Inputs/funcs.ll -o %t/funcs.o
+# RUN: wasm-ld %t.o %t/funcs.o %p/Inputs/stub.so -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
-## Run the same test but with foo.o inside of an archive file.
-# RUN: rm -f %t/libfoo.a
-# RUN: llvm-ar rcs %t/libfoo.a %t/foo.o
-# RUN: wasm-ld %t.o %t/libfoo.a %p/Inputs/stub.so -o %t2.wasm
+## Run the same test but with funcs.o inside of an archive file.
+# RUN: rm -f %t/libfuncs.a
+# RUN: llvm-ar rcs %t/libfuncs.a %t/funcs.o
+# RUN: wasm-ld %t.o %t/libfuncs.a %p/Inputs/stub.so -o %t2.wasm
 # RUN: obj2yaml %t2.wasm | FileCheck %s
 
 .functype bar () -> ()
@@ -40,3 +44,5 @@ _start:
 # CHECK-NEXT:       - Name:            foo
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Index:           2
+
+# CHECK-NOT:        - Name:            quux

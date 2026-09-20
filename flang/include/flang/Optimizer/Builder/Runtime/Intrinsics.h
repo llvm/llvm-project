@@ -13,14 +13,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_LOWER_RUNTIME_H
-#define FORTRAN_LOWER_RUNTIME_H
+#ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_INTRINSICS_H
+#define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_INTRINSICS_H
 
 #include <optional>
 
 namespace mlir {
 class Location;
-class Type;
 class Value;
 } // namespace mlir
 
@@ -32,12 +31,6 @@ namespace runtime {
 
 mlir::Value genAssociated(fir::FirOpBuilder &, mlir::Location,
                           mlir::Value pointer, mlir::Value target);
-
-void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
-                         mlir::Value pointer, mlir::Value target);
-void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
-                                  mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds, bool isMonomorphic);
 
 mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
 void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
@@ -82,6 +75,9 @@ mlir::Value genSecnds(fir::FirOpBuilder &builder, mlir::Location loc,
 /// generate time runtime call
 mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);
 
+/// generate timef runtime call
+mlir::Value genTimef(fir::FirOpBuilder &builder, mlir::Location loc);
+
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Value resultBox, mlir::Value sourceBox,
@@ -111,7 +107,16 @@ void genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genChdir(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value name);
 
+mlir::Value genIrand(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value i);
+mlir::Value genRand(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value i);
+
+/// generate dump of a descriptor
+void genShowDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value descriptor);
+
 } // namespace runtime
 } // namespace fir
 
-#endif // FORTRAN_LOWER_RUNTIME_H
+#endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_INTRINSICS_H

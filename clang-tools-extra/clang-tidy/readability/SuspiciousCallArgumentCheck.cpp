@@ -91,37 +91,37 @@ struct AllHeuristicsBoundsWellConfigured {
 static_assert(AllHeuristicsBoundsWellConfigured::Value);
 } // namespace
 
-static constexpr llvm::StringLiteral DefaultAbbreviations = "addr=address;"
-                                                            "arr=array;"
-                                                            "attr=attribute;"
-                                                            "buf=buffer;"
-                                                            "cl=client;"
-                                                            "cnt=count;"
-                                                            "col=column;"
-                                                            "cpy=copy;"
-                                                            "dest=destination;"
-                                                            "dist=distance"
-                                                            "dst=distance;"
-                                                            "elem=element;"
-                                                            "hght=height;"
-                                                            "i=index;"
-                                                            "idx=index;"
-                                                            "len=length;"
-                                                            "ln=line;"
-                                                            "lst=list;"
-                                                            "nr=number;"
-                                                            "num=number;"
-                                                            "pos=position;"
-                                                            "ptr=pointer;"
-                                                            "ref=reference;"
-                                                            "src=source;"
-                                                            "srv=server;"
-                                                            "stmt=statement;"
-                                                            "str=string;"
-                                                            "val=value;"
-                                                            "var=variable;"
-                                                            "vec=vector;"
-                                                            "wdth=width";
+static constexpr StringRef DefaultAbbreviations = "addr=address;"
+                                                  "arr=array;"
+                                                  "attr=attribute;"
+                                                  "buf=buffer;"
+                                                  "cl=client;"
+                                                  "cnt=count;"
+                                                  "col=column;"
+                                                  "cpy=copy;"
+                                                  "dest=destination;"
+                                                  "dist=distance"
+                                                  "dst=distance;"
+                                                  "elem=element;"
+                                                  "hght=height;"
+                                                  "i=index;"
+                                                  "idx=index;"
+                                                  "len=length;"
+                                                  "ln=line;"
+                                                  "lst=list;"
+                                                  "nr=number;"
+                                                  "num=number;"
+                                                  "pos=position;"
+                                                  "ptr=pointer;"
+                                                  "ref=reference;"
+                                                  "src=source;"
+                                                  "srv=server;"
+                                                  "stmt=statement;"
+                                                  "str=string;"
+                                                  "val=value;"
+                                                  "var=variable;"
+                                                  "vec=vector;"
+                                                  "wdth=width";
 
 static constexpr std::size_t SmallVectorSize =
     SuspiciousCallArgumentCheck::SmallVectorSize;
@@ -188,8 +188,9 @@ static bool applySubstringHeuristic(StringRef Arg, StringRef Param,
           Current[J] = 1 + Previous[J - 1];
 
         MaxLength = std::max(MaxLength, Current[J]);
-      } else
+      } else {
         Current[J] = 0;
+      }
     }
 
     Current.swap(Previous);
@@ -203,7 +204,7 @@ static bool applyLevenshteinHeuristic(StringRef Arg, StringRef Param,
                                       int8_t Threshold) {
   const std::size_t LongerLength = std::max(Arg.size(), Param.size());
   double Dist = Arg.edit_distance(Param);
-  Dist = (1.0 - Dist / LongerLength) * 100.0;
+  Dist = (1.0 - (Dist / LongerLength)) * 100.0;
   return Dist > Threshold;
 }
 
@@ -500,13 +501,13 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     : ClangTidyCheck(Name, Context),
       MinimumIdentifierNameLength(Options.get(
           "MinimumIdentifierNameLength", DefaultMinimumIdentifierNameLength)) {
-  auto GetToggleOpt = [this](Heuristic H) -> bool {
-    auto Idx = static_cast<std::size_t>(H);
+  const auto GetToggleOpt = [this](Heuristic H) -> bool {
+    const auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
     return Options.get(HeuristicToString[Idx], Defaults[Idx].Enabled);
   };
-  auto GetBoundOpt = [this](Heuristic H, BoundKind BK) -> int8_t {
-    auto Idx = static_cast<std::size_t>(H);
+  const auto GetBoundOpt = [this](Heuristic H, BoundKind BK) -> int8_t {
+    const auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
 
     SmallString<32> Key = HeuristicToString[Idx];
@@ -518,20 +519,22 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
     return Options.get(Key, Default);
   };
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
-    auto H = static_cast<Heuristic>(Idx);
+    const auto H = static_cast<Heuristic>(Idx);
     if (GetToggleOpt(H))
       AppliedHeuristics.emplace_back(H);
-    ConfiguredBounds.emplace_back(
-        std::make_pair(GetBoundOpt(H, BoundKind::DissimilarBelow),
-                       GetBoundOpt(H, BoundKind::SimilarAbove)));
+    ConfiguredBounds.emplace_back(GetBoundOpt(H, BoundKind::DissimilarBelow),
+                                  GetBoundOpt(H, BoundKind::SimilarAbove));
   }
 
   for (const StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
-    auto KeyAndValue = Abbreviation.split("=");
-    assert(!KeyAndValue.first.empty() && !KeyAndValue.second.empty());
-    AbbreviationDictionary.insert(
-        std::make_pair(KeyAndValue.first, KeyAndValue.second.str()));
+    const auto [Key, Value] = Abbreviation.split("=");
+    if (Key.empty() || Value.empty()) {
+      configurationDiag("Invalid abbreviation configuration '%0', ignoring.")
+          << Abbreviation;
+      continue;
+    }
+    AbbreviationDictionary.try_emplace(Key, Value.str());
   }
 }
 
@@ -540,11 +543,11 @@ void SuspiciousCallArgumentCheck::storeOptions(
   Options.store(Opts, "MinimumIdentifierNameLength",
                 MinimumIdentifierNameLength);
   const auto &SetToggleOpt = [this, &Opts](Heuristic H) -> void {
-    auto Idx = static_cast<std::size_t>(H);
+    const auto Idx = static_cast<std::size_t>(H);
     Options.store(Opts, HeuristicToString[Idx], isHeuristicEnabled(H));
   };
   const auto &SetBoundOpt = [this, &Opts](Heuristic H, BoundKind BK) -> void {
-    auto Idx = static_cast<std::size_t>(H);
+    const auto Idx = static_cast<std::size_t>(H);
     assert(Idx < HeuristicCount);
     if (!Defaults[Idx].hasBounds())
       return;
@@ -556,7 +559,7 @@ void SuspiciousCallArgumentCheck::storeOptions(
   };
 
   for (std::size_t Idx = 0; Idx < HeuristicCount; ++Idx) {
-    auto H = static_cast<Heuristic>(Idx);
+    const auto H = static_cast<Heuristic>(Idx);
     SetToggleOpt(H);
     SetBoundOpt(H, BoundKind::DissimilarBelow);
     SetBoundOpt(H, BoundKind::SimilarAbove);
@@ -583,7 +586,7 @@ bool SuspiciousCallArgumentCheck::isHeuristicEnabled(Heuristic H) const {
 
 std::optional<int8_t>
 SuspiciousCallArgumentCheck::getBound(Heuristic H, BoundKind BK) const {
-  auto Idx = static_cast<std::size_t>(H);
+  const auto Idx = static_cast<std::size_t>(H);
   assert(Idx < HeuristicCount);
 
   if (!Defaults[Idx].hasBounds())
@@ -723,12 +726,11 @@ void SuspiciousCallArgumentCheck::setArgNamesAndTypes(
         ArgNames.push_back(Var->getName());
         continue;
       }
-      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl())) {
-        if (FCall->getNameInfo().getName().isIdentifier()) {
-          ArgTypes.push_back(FCall->getType());
-          ArgNames.push_back(FCall->getName());
-          continue;
-        }
+      if (const auto *FCall = dyn_cast<FunctionDecl>(ArgExpr->getDecl());
+          FCall && FCall->getNameInfo().getName().isIdentifier()) {
+        ArgTypes.push_back(FCall->getType());
+        ArgNames.push_back(FCall->getName());
+        continue;
       }
     }
 
@@ -758,7 +760,7 @@ bool SuspiciousCallArgumentCheck::areParamAndArgComparable(
 
 bool SuspiciousCallArgumentCheck::areArgsSwapped(std::size_t Position1,
                                                  std::size_t Position2) const {
-  for (const Heuristic H : AppliedHeuristics) {
+  return llvm::any_of(AppliedHeuristics, [&](Heuristic H) {
     const bool A1ToP2Similar = areNamesSimilar(
         ArgNames[Position2], ParamNames[Position1], H, BoundKind::SimilarAbove);
     const bool A2ToP1Similar = areNamesSimilar(
@@ -771,11 +773,9 @@ bool SuspiciousCallArgumentCheck::areArgsSwapped(std::size_t Position1,
         !areNamesSimilar(ArgNames[Position2], ParamNames[Position2], H,
                          BoundKind::DissimilarBelow);
 
-    if ((A1ToP2Similar || A2ToP1Similar) && A1ToP1Dissimilar &&
-        A2ToP2Dissimilar)
-      return true;
-  }
-  return false;
+    return (A1ToP2Similar || A2ToP1Similar) && A1ToP1Dissimilar &&
+           A2ToP2Dissimilar;
+  });
 }
 
 bool SuspiciousCallArgumentCheck::areNamesSimilar(StringRef Arg,

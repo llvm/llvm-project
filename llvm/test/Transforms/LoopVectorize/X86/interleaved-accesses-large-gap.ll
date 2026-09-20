@@ -21,7 +21,7 @@ define void @test1(ptr noalias %B) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %p1 = getelementptr inbounds %struct.ST4, ptr %B, i64 %indvars.iv, i32 0
   store i32 65536, ptr %p1, align 4
@@ -35,7 +35,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 }
 

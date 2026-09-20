@@ -213,7 +213,8 @@ inline bool operator!=(CanQual<T> x, CanQual<U> y) {
 using CanQualType = CanQual<Type>;
 
 inline CanQualType Type::getCanonicalTypeUnqualified() const {
-  return CanQualType::CreateUnsafe(getCanonicalTypeInternal());
+  return CanQualType::CreateUnsafe(
+      getCanonicalTypeInternal().getUnqualifiedType());
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,

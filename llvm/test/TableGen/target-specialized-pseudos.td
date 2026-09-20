@@ -22,13 +22,13 @@
 
 // CHECK: extern const MyTargetInstrTable MyTargetDescs = {
 // CHECK-NEXT: {
-// CHECK-NEXT: { [[MY_MOV_OPCODE]],	2,	1,	2,	0,	0,	0,	{{[0-9]+}},	MyTargetImpOpBase + 0,	0|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // MY_MOV
-// CHECK-NEXT: { [[G_UBFX_OPCODE]],	4,	1,	0,	0,	0,	0,	{{[0-9]+}},	MyTargetImpOpBase + 0,	0|(1ULL<<MCID::PreISelOpcode)|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // G_UBFX
+// CHECK-NEXT: { [[MY_MOV_OPCODE]],	2,	1,	2,	0,	0,	0,	MyTargetOpInfoBase + {{[0-9]+}},	0,	0|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // MY_MOV
+// CHECK-NEXT: { [[G_UBFX_OPCODE]],	4,	1,	0,	0,	0,	0,	MyTargetOpInfoBase + {{[0-9]+}},	0,	0|(1ULL<<MCID::PreISelOpcode)|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // G_UBFX
 
-// ALLCASES: { [[PATCHABLE_TYPED_EVENT_CALL_OPCODE]],	3,	0,	0,	0,	0,	0,	[[PATCHABLE_TYPED_EVENT_CALL_OP_ENTRY:[0-9]+]],	MyTargetImpOpBase + 0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::Call)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::MayStore)|(1ULL<<MCID::UsesCustomInserter)|(1ULL<<MCID::UnmodeledSideEffects)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
-// ALLCASES: { [[PATCHABLE_EVENT_CALL_OPCODE]],	2,	0,	0,	0,	0,	0,	[[PATCHABLE_EVENT_CALL_OP_ENTRY:[0-9]+]],	MyTargetImpOpBase + 0, 0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::Call)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::MayStore)|(1ULL<<MCID::UsesCustomInserter)|(1ULL<<MCID::UnmodeledSideEffects)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
-// ALLCASES: { [[PREALLOCATED_ARG_OPCODE]],	3,	1,	0,	0,	0,	0,	[[PREALLOCATED_ARG_OP_ENTRY:[0-9]+]],	MyTargetImpOpBase + 0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::UsesCustomInserter)|(1ULL<<MCID::UnmodeledSideEffects)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
-// ALLCASES: { [[LOAD_STACK_GUARD_OPCODE]],	1,	1,	0,	0,	0,	0,	[[LOAD_STACK_GUARD_OP_ENTRY:[0-9]+]],	MyTargetImpOpBase + 0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::Rematerializable)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
+// ALLCASES: { [[PATCHABLE_TYPED_EVENT_CALL_OPCODE]],	3,	0,	0,	0,	0,	0,	MyTargetOpInfoBase + [[PATCHABLE_TYPED_EVENT_CALL_OP_ENTRY:[0-9]+]],	0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::Call)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::MayStore)|(1ULL<<MCID::UsesCustomInserter)|(1ULL<<MCID::UnmodeledSideEffects)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
+// ALLCASES: { [[PATCHABLE_EVENT_CALL_OPCODE]],	2,	0,	0,	0,	0,	0,	MyTargetOpInfoBase + [[PATCHABLE_EVENT_CALL_OP_ENTRY:[0-9]+]],	0, 0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::Call)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::MayStore)|(1ULL<<MCID::UsesCustomInserter)|(1ULL<<MCID::UnmodeledSideEffects)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
+// ALLCASES: { [[PREALLOCATED_ARG_OPCODE]],	3,	1,	0,	0,	0,	0,	MyTargetOpInfoBase + [[PREALLOCATED_ARG_OP_ENTRY:[0-9]+]],	0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::UsesCustomInserter)|(1ULL<<MCID::UnmodeledSideEffects)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
+// ALLCASES: { [[LOAD_STACK_GUARD_OPCODE]],	1,	1,	0,	0,	0,	0,	MyTargetOpInfoBase + [[LOAD_STACK_GUARD_OP_ENTRY:[0-9]+]],	0,	0|(1ULL<<MCID::Pseudo)|(1ULL<<MCID::MayLoad)|(1ULL<<MCID::Rematerializable)|(1ULL<<MCID::ExtraSrcRegAllocReq)|(1ULL<<MCID::ExtraDefRegAllocReq), 0x0ULL },  // anonymous_
 
 // CHECK: /* 0 */ { -1, 0, MCOI::OPERAND_UNKNOWN, 0 },
 
@@ -73,7 +73,7 @@ def MY_LOAD_STACK_GUARD :
   let OutOperandList = (outs XRegs:$dst);
 }
 
-// ERROR-MISSING: error: missing target override for pseudoinstruction using PointerLikeRegClass
+// ERROR-MISSING: error: missing target override for pseudoinstruction using ptr_rc
 // ERROR-MISSING note: target should define equivalent instruction with RegisterClassLike replacement; (use RemapAllTargetPseudoPointerOperands?)
 
 
@@ -98,8 +98,8 @@ def MY_LOAD_STACK_GUARD_1 : TargetSpecializedStandardPseudoInstruction<LOAD_STAC
 #ifdef ERROR_NONPSEUDO
 
 // FIXME: Double error
-// ERROR-NONPSEUDO: [[@LINE+2]]:5: error: non-pseudoinstruction user of PointerLikeRegClass
-// ERROR-NONPSEUDO: [[@LINE+1]]:5: error: non-pseudoinstruction user of PointerLikeRegClass
+// ERROR-NONPSEUDO: [[@LINE+2]]:5: error: non-pseudoinstruction user of ptr_rc
+// ERROR-NONPSEUDO: [[@LINE+1]]:5: error: non-pseudoinstruction user of ptr_rc
 def NON_PSEUDO : TestInstruction {
   let OutOperandList = (outs XRegs:$dst);
   let InOperandList = (ins ptr_rc:$src);

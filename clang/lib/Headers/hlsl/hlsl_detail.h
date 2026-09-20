@@ -13,6 +13,8 @@ namespace hlsl {
 
 namespace __detail {
 
+constexpr double Pi = 3.14159265358979323846L;
+
 template <typename T, typename U> struct is_same {
   static const bool value = false;
 };
@@ -30,6 +32,18 @@ template <typename T> struct enable_if<true, T> {
 template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::Type;
 
+template <typename T> struct type_identity {
+  using Type = T;
+};
+
+template <typename T> using type_identity_t = typename type_identity<T>::Type;
+
+template <typename U, typename T, int R, int C>
+constexpr enable_if_t<sizeof(U) == sizeof(T), matrix<U, R, C>>
+bit_cast(matrix<T, R, C> M) {
+  return __builtin_bit_cast(matrix<U, R, C>, M);
+}
+
 template <typename U, typename T, int N>
 constexpr enable_if_t<sizeof(U) == sizeof(T), vector<U, N>>
 bit_cast(vector<T, N> V) {
@@ -45,9 +59,16 @@ template <typename T> struct is_arithmetic {
   static const bool Value = __is_arithmetic(T);
 };
 
-template <typename T, int N>
-using HLSL_FIXED_VECTOR =
-    vector<__detail::enable_if_t<(N > 1 && N <= 4), T>, N>;
+template <typename T> struct elem_type {
+  using Type = T;
+};
+template <typename T, int N> struct elem_type<vector<T, N>> {
+  using Type = T;
+};
+template <typename T, int R, int C> struct elem_type<matrix<T, R, C>> {
+  using Type = T;
+};
+template <typename T> using elem_type_t = typename elem_type<T>::Type;
 
 } // namespace __detail
 } // namespace hlsl

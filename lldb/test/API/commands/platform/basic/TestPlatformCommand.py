@@ -2,13 +2,13 @@
 Test some lldb platform commands.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # a platform command needs a connection to the host it runs on
 class PlatformCommandTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -71,8 +71,10 @@ class PlatformCommandTestCase(TestBase):
             self.expect("platform shell ls /", substrs=["cache", "dev", "system"])
             self.expect("shell ls /", substrs=["cache", "dev", "system"])
         else:
-            self.expect("platform shell ls /", substrs=["dev", "tmp", "usr"])
-            self.expect("shell ls /", substrs=["dev", "tmp", "usr"])
+            self.expect(
+                "platform shell ls /", substrs=["dev", "tmp", "usr"], ordered=False
+            )
+            self.expect("shell ls /", substrs=["dev", "tmp", "usr"], ordered=False)
 
     @no_debug_info_test
     def test_shell_builtin(self):

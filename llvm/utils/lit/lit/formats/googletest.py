@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import json
 import math
 import os
@@ -43,7 +42,7 @@ class GoogleTest(TestFormat):
             return None
         return sum(
             map(
-                lambda line: lit.util.to_string(line).startswith("  "),
+                lambda line: line.startswith(b"  "),
                 out.splitlines(False),
             )
         )
@@ -192,7 +191,7 @@ class GoogleTest(TestFormat):
             out, _, exitCode = lit.util.executeCommand(
                 cmd,
                 env=test.config.environment,
-                timeout=litConfig.maxIndividualTestTime,
+                timeout=test.config.maxIndividualTestTime,
                 redirect_stderr=True,
             )
         except lit.util.ExecuteCommandTimeoutException as e:
@@ -200,7 +199,7 @@ class GoogleTest(TestFormat):
             return (
                 lit.Test.TIMEOUT,
                 f"{shard_header}{stream_msg}Reached "
-                f"timeout of {litConfig.maxIndividualTestTime} seconds",
+                f"timeout of {test.config.maxIndividualTestTime} seconds",
             )
 
         if not os.path.exists(test.gtest_json_file):
@@ -283,7 +282,7 @@ class GoogleTest(TestFormat):
         return cmd
 
     @staticmethod
-    def post_process_shard_results(selected_tests, discovered_tests):
+    def post_process_shard_results(selected_tests, discovered_tests, opts):
         def remove_gtest(tests):
             return [t for t in tests if t.gtest_json_file is None]
 
@@ -333,10 +332,20 @@ class GoogleTest(TestFormat):
                         )
 
                         output = ""
-                        if testinfo["result"] == "SKIPPED":
+                        if "failures" in testinfo:
+                            # Remember that this shard's non-zero exit code is
+                            # accounted for by a test we know about, even if
+                            # that test ends up excluded just below.
+                            has_failure_in_shard = True
+
+                        # A gtest shard is a single lit test, so --filter-out
+                        # cannot select individual gtest cases at discovery
+                        # time. Apply it here, where the real names are known.
+                        if opts.filter_out.search(subtest.getFullName()):
+                            returnCode = lit.Test.EXCLUDED
+                        elif testinfo["result"] == "SKIPPED":
                             returnCode = lit.Test.SKIPPED
                         elif "failures" in testinfo:
-                            has_failure_in_shard = True
                             returnCode = (
                                 lit.Test.XFAIL
                                 if test.isExpectedToFail()

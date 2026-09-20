@@ -125,6 +125,50 @@ func.func @customOpParserPrinter() {
   return
 }
 
+// -----
+
+func.func @failedDynamicGenericOpNoTerminator() {
+  // expected-error@+1 {{empty block: expect at least a terminator}}
+  "test.dynamic_generic"() ({
+    ^bb1:
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @dynamicTerminatorOp() {
+  // CHECK: "test.dynamic_generic"()
+  "test.dynamic_generic"() ({
+    ^bb1:
+      // CHECK: test.dynamic_terminator"()
+      "test.dynamic_terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @failedDynamicTerminatorOp() {
+  "test.dynamic_generic"() ({
+    ^bb1:
+      // expected-error@+1 {{'test.dynamic_terminator' op must be the last operation in the parent block}}
+      "test.dynamic_terminator"() : () -> ()
+      "test.dynamic_generic"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @dynamicNoTerminatorOp() {
+  // CHECK: "test.dynamic_noterminator"()
+  "test.dynamic_noterminator"() ({
+    ^bb1:
+  }) : () -> ()
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // Dynamic dialect
 //===----------------------------------------------------------------------===//

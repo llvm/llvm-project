@@ -1,7 +1,7 @@
 ! REQUIRES: openmp_runtime
 
-!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
-!RUN: bbc -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 %s -o - | FileCheck %s
+!RUN: bbc -emit-hlfir %openmp_flags -fopenmp-version=50 %s -o - | FileCheck %s
 
 !===============================================================================
 ! Single construct
@@ -74,7 +74,7 @@ end subroutine single_allocate
 !===============================================================================
 
 ! CHECK-LABEL: func.func @_QPsingle_privatization(
-! CHECK-SAME:                                     %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x"}, 
+! CHECK-SAME:                                     %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                     %[[Y:.*]]: !fir.ref<f64> {fir.bindc_name = "y"}) {
 ! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsingle_privatizationEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFsingle_privatizationEy"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)

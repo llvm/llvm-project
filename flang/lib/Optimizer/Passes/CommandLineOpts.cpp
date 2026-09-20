@@ -51,7 +51,6 @@ codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};
 
 /// Optimizer Passes
 DisableOption(CfgConversion, "cfg-conversion", "disable FIR to CFG pass");
-DisableOption(FirAvc, "avc", "array value copy analysis and transformation");
 DisableOption(FirMao, "memory-allocation-opt",
               "memory allocation optimization");
 
@@ -61,6 +60,10 @@ cl::opt<bool> useOldAliasTags(
     cl::desc("Use a single TBAA tree for all functions and do not use "
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
+DisableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+EnableOption(AllocationPlacement, "allocation-placement",
+             "unified array allocation placement (experimental; replaces "
+             "stack-arrays and memory-allocation-opt)");
 
 /// CodeGen Passes
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");
@@ -70,6 +73,8 @@ DisableOption(FirToLlvmIr, "fir-to-llvmir", "FIR to LLVM-IR dialect");
 DisableOption(LlvmIrToLlvm, "llvm", "conversion to LLVM");
 DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
               "rewrite boxed procedures");
+EnableOption(SafeTrampoline, "safe-trampoline",
+             "W^X compliant runtime trampoline pool");
 
 DisableOption(ExternalNameConversion, "external-name-interop",
               "convert names with external convention");

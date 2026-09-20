@@ -31,7 +31,7 @@ void test5(read_only pipe int4 p) {
 
 typedef read_only pipe int MyPipe;
 kernel void test6(MyPipe p) {
-// CHECK: define{{.*}} spir_kernel void @test6(ptr %p)
+// CHECK: define{{.*}} void @test6(ptr %p)
 }
 
 struct Person {

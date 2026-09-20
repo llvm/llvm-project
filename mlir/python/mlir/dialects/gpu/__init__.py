@@ -86,7 +86,10 @@ class GPUFuncOp(GPUFuncOp):
             if not isinstance(function_type, TypeAttr)
             else function_type
         )
+        if not isinstance(sym_name, (str, StringAttr)):
+            raise ValueError("sym_name must be a string or a StringAttr")
         super().__init__(
+            sym_name,
             function_type,
             arg_attrs=arg_attrs,
             res_attrs=res_attrs,
@@ -95,13 +98,6 @@ class GPUFuncOp(GPUFuncOp):
             loc=loc,
             ip=ip,
         )
-
-        if isinstance(sym_name, str):
-            self.attributes[self.SYM_NAME_ATTR_NAME] = StringAttr.get(sym_name)
-        elif isinstance(sym_name, StringAttr):
-            self.attributes[self.SYM_NAME_ATTR_NAME] = sym_name
-        else:
-            raise ValueError("sym_name must be a string or a StringAttr")
 
         if kernel:
             self.attributes[self.KERNEL_ATTR_NAME] = UnitAttr.get()
@@ -186,6 +182,7 @@ class LaunchFuncOp(LaunchFuncOp):
         async_dependencies: Optional[List[Value]] = None,
         dynamic_shared_memory_size: Optional[Value] = None,
         async_object=None,
+        cluster_size: Optional[Tuple[Any, Any, Any]] = None,
         *,
         loc=None,
         ip=None,
@@ -202,6 +199,11 @@ class LaunchFuncOp(LaunchFuncOp):
         block_size_x, block_size_y, block_size_z = map(
             _convert_literal_to_constant, block_size
         )
+        cluster_size_x, cluster_size_y, cluster_size_z = (
+            map(_convert_literal_to_constant, cluster_size)
+            if cluster_size
+            else (None, None, None)
+        )
 
         super().__init__(
             async_token,
@@ -214,6 +216,9 @@ class LaunchFuncOp(LaunchFuncOp):
             block_size_y,
             block_size_z,
             kernel_operands,
+            clusterSizeX=cluster_size_x,
+            clusterSizeY=cluster_size_y,
+            clusterSizeZ=cluster_size_z,
             dynamicSharedMemorySize=dynamic_shared_memory_size,
             asyncObject=async_object,
             loc=loc,
@@ -229,6 +234,7 @@ def launch_func(
     async_dependencies: Optional[List[Value]] = None,
     dynamic_shared_memory_size: Optional[Value] = None,
     async_object=None,
+    cluster_size: Optional[Tuple[Any, Any, Any]] = None,
     *,
     loc=None,
     ip=None,
@@ -241,6 +247,7 @@ def launch_func(
         async_dependencies=async_dependencies,
         dynamic_shared_memory_size=dynamic_shared_memory_size,
         async_object=async_object,
+        cluster_size=cluster_size,
         loc=loc,
         ip=ip,
     )

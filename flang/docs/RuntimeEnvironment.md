@@ -1,9 +1,9 @@
-<!--===- docs/RuntimeEnvironment.md 
-  
+<!--===- docs/RuntimeEnvironment.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 ```{contents}
@@ -33,6 +33,23 @@ Determines data conversions applied to unformatted I/O.
 * `LITTLE_ENDIAN`: assume input is little-endian; emit little-endian output
 * `BIG_ENDIAN`: assume input is big-endian; emit big-endian output
 * `SWAP`: reverse endianness (always convert)
+
+## `FLANG_RT_COPYOUT_MODIFIED_ONLY`
+
+The system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY` selects how
+the runtime performs copy-out.
+
+When the compiler passes a copy of an actual argument to a procedure
+(copy-in/copy-out), the runtime scans the temporary for the first element
+whose bit pattern differs from the original and copies back only from that
+element through the end; when the callee never modified the copy, nothing
+is stored at all. This avoids stores to the original argument when the
+callee never modified the data -- in particular, stores into read-only
+storage backing a non-definable actual argument.
+Set the system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY=0` to
+restore the unconditional whole-object copy-out. Note that this restores
+stores of unmodified data as well (including into read-only storage), so it
+is an escape hatch and A/B-comparison aid, not a safer mode.
 
 ## `FORT_CHECK_POINTER_DEALLOCATION`
 
@@ -66,3 +83,21 @@ when output takes place to a sequential unit after
 executing a `BACKSPACE` or `REWIND` statement.
 Truncation of a stream-access unit is common to several other
 compilers, but it is not mentioned in the standard.
+
+## `FORT_NO_EMPTY_ALLOCATION`
+
+Set `FORT_NO_EMPTY_ALLOCATION=1` to cause `ALLOCATE` statements
+fail when the allocated size is empty.
+
+## `FLANG_TRAMPOLINE_POOL_SIZE`
+
+Set `FLANG_TRAMPOLINE_POOL_SIZE` to an integer value to control the maximum
+number of runtime trampoline slots available when `-fsafe-trampoline` is
+enabled. Each slot consists of a small executable code stub (size varies by
+target; e.g. 32 bytes on x86-64 and AArch64) backed by a writable data entry.
+The default is 1024 slots, which is sufficient for typical Fortran
+programs. If more internal-procedure closures are alive simultaneously than
+the pool can hold, the runtime terminates with a diagnostic message that
+includes the current pool capacity.
+
+Example: `export FLANG_TRAMPOLINE_POOL_SIZE=4096`

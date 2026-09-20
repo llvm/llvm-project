@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass renames everything with metasyntatic names. The intent is to use
-// this pass after bugpoint reduction to conceal the nature of the original
+// this pass after llvm-reduce reduction to conceal the nature of the original
 // program.
 //
 //===----------------------------------------------------------------------===//
@@ -120,7 +120,7 @@ void MetaRename(Function &F) {
       Arg.setName("arg");
 
   for (auto &BB : F) {
-    BB.setName("bb");
+    BB.setName("bbl");
 
     for (auto &I : BB)
       if (!I.getType()->isVoidTy())
@@ -157,10 +157,9 @@ void MetaRename(Module &M,
   // Leave library functions alone because their presence or absence could
   // affect the behavior of other passes.
   auto ExcludeLibFuncs = [&](Function &F) {
-    LibFunc Tmp;
     StringRef Name = F.getName();
     return F.isIntrinsic() || (!Name.empty() && Name[0] == 1) ||
-           GetTLI(F).getLibFunc(F, Tmp) ||
+           GetTLI(F).getLibFunc(F) != NotLibFunc ||
            IsNameExcluded(Name, ExcludedFuncPrefixes);
   };
 

@@ -17,31 +17,31 @@
 ; ---------------------------------------------------------------------
 ; i8 load
 ; ---------------------------------------------------------------------
-define i8 @test_load_i8(i8* %p) {
+define i8 @test_load_i8(ptr %p) {
 ; ALL-LABEL: test_load_i8:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    w{{[0-9]+}} = *(u8 *)(r1 + 0)
 ; ALL-NEXT:    exit
-  %v = load i8, i8* %p, align 1
+  %v = load i8, ptr %p, align 1
   ret i8 %v
 }
 
 ; ---------------------------------------------------------------------
 ; i8 store
 ; ---------------------------------------------------------------------
-define void @test_store_i8(i8* %p, i8 %v) {
+define void @test_store_i8(ptr %p, i8 %v) {
 ; ALL-LABEL: test_store_i8:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    *(u8 *)(r1 + 0) = w{{[0-9]+}}
 ; ALL-NEXT:    exit
-  store i8 %v, i8* %p, align 1
+  store i8 %v, ptr %p, align 1
   ret void
 }
 
 ; ---------------------------------------------------------------------
 ; i16 load
 ; ---------------------------------------------------------------------
-define i16 @test_load_i16(i16* %p) {
+define i16 @test_load_i16(ptr %p) {
 ; MISALIGN-LABEL: test_load_i16:
 ; MISALIGN:       # %bb.0:
 ; MISALIGN:    w{{[0-9]+}} = *(u16 *)(r1 + 0)
@@ -54,14 +54,14 @@ define i16 @test_load_i16(i16* %p) {
 ; ALIGN-DAG:    w{{[0-9]+}} <<= 8
 ; ALIGN-DAG:    w{{[0-9]+}} |= w{{[0-9]+}}
 ; ALIGN:        exit
-  %v = load i16, i16* %p, align 1
+  %v = load i16, ptr %p, align 1
   ret i16 %v
 }
 
 ; ---------------------------------------------------------------------
 ; i16 store
 ; ---------------------------------------------------------------------
-define void @test_store_i16(i16* %p, i16 %v) {
+define void @test_store_i16(ptr %p, i16 %v) {
 ; MISALIGN-LABEL: test_store_i16:
 ; MISALIGN:       # %bb.0:
 ; MISALIGN:    *(u16 *)(r1 + 0) = w{{[0-9]+}}
@@ -73,7 +73,7 @@ define void @test_store_i16(i16* %p, i16 %v) {
 ; ALIGN-DAG:    w{{[0-9]+}} >>= 8
 ; ALIGN-DAG:    *(u8 *)(r1 + 1) = w{{[0-9]+}}
 ; ALIGN:        exit
-  store i16 %v, i16* %p, align 1
+  store i16 %v, ptr %p, align 1
   ret void
 }
 
@@ -81,7 +81,7 @@ define void @test_store_i16(i16* %p, i16 %v) {
 ; i32 load
 ; ---------------------------------------------------------------------
 
-define i32 @test_load_i32(i32* %p) {
+define i32 @test_load_i32(ptr %p) {
 ; MISALIGN-LABEL: test_load_i32:
 ; MISALIGN:       # %bb.0:
 ; MISALIGN:    w{{[0-9]+}} = *(u32 *)(r1 + 0)
@@ -98,7 +98,7 @@ define i32 @test_load_i32(i32* %p) {
 ; ALIGN-DAG:    w{{[0-9]+}} = *(u8 *)(r1 + 3)
 ; ALIGN-DAG:    w{{[0-9]+}} <<= 24
 ; ALIGN:        exit
-  %v = load i32, i32* %p, align 1
+  %v = load i32, ptr %p, align 1
   ret i32 %v
 }
 
@@ -106,7 +106,7 @@ define i32 @test_load_i32(i32* %p) {
 ; i32 store
 ; ---------------------------------------------------------------------
 
-define void @test_store_i32(i32* %p, i32 %v) {
+define void @test_store_i32(ptr %p, i32 %v) {
 ; MISALIGN-LABEL: test_store_i32:
 ; MISALIGN:       # %bb.0:
 ; MISALIGN:    *(u32 *)(r1 + 0) = w{{[0-9]+}}
@@ -124,7 +124,7 @@ define void @test_store_i32(i32* %p, i32 %v) {
 ; ALIGN-DAG:    w{{[0-9]+}} >>= 8
 ; ALIGN-DAG:    *(u8 *)(r1 + 3) = w{{[0-9]+}}
 ; ALIGN:        exit
-  store i32 %v, i32* %p, align 1
+  store i32 %v, ptr %p, align 1
   ret void
 }
 
@@ -132,7 +132,7 @@ define void @test_store_i32(i32* %p, i32 %v) {
 ; i64 load
 ; ---------------------------------------------------------------------
 
-define i64 @test_load_i64(i64* %p) {
+define i64 @test_load_i64(ptr %p) {
 ; MISALIGN-LABEL: test_load_i64:
 ; MISALIGN:       # %bb.0:
 ; MISALIGN:    r0 = *(u64 *)(r1 + 0)
@@ -158,7 +158,7 @@ define i64 @test_load_i64(i64* %p) {
 ; ALIGN-DAG:    w{{[0-9]+}} <<= 24
 ; ALIGN-DAG:    r{{[0-9]+}} <<= 32
 ; ALIGN:        exit
-  %v = load i64, i64* %p, align 1
+  %v = load i64, ptr %p, align 1
   ret i64 %v
 }
 
@@ -166,7 +166,7 @@ define i64 @test_load_i64(i64* %p) {
 ; i64 store
 ; ---------------------------------------------------------------------
 
-define void @test_store_i64(i64* %p, i64 %v) {
+define void @test_store_i64(ptr %p, i64 %v) {
 ; MISALIGN-LABEL: test_store_i64:
 ; MISALIGN:       # %bb.0:
 ; MISALIGN:    *(u64 *)(r1 + 0) = r2
@@ -191,6 +191,6 @@ define void @test_store_i64(i64* %p, i64 %v) {
 ; ALIGN-DAG:    r{{[0-9]+}} >>= 8
 ; ALIGN-DAG:    *(u8 *)(r1 + 7) = w{{[0-9]+}}
 ; ALIGN:        exit
-  store i64 %v, i64* %p, align 1
+  store i64 %v, ptr %p, align 1
   ret void
 }

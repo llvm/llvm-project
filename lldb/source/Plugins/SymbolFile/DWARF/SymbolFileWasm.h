@@ -19,11 +19,16 @@ public:
 
   ~SymbolFileWasm() override;
 
+  /// The Wasm "name" section stores only demangled names, so symbols parsed
+  /// from it have no mangled name to index C++ name variants or to match
+  /// lookups by mangled name. Recover the mangled names from the DWARF.
+  void AddSymbols(Symtab &symtab) override;
+
   lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
-  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+  bool ParseVendorDWARFOpcode(uint8_t op, const llvm::DataExtractor &opcodes,
                               lldb::offset_t &offset, RegisterContext *reg_ctx,
                               lldb::RegisterKind reg_kind,
                               std::vector<Value> &stack) const override;

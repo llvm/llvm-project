@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -62,7 +62,7 @@ void TestRecipePopulatePass::runOnOperation() {
   SmallVector<std::tuple<Operation *, Value, std::string>> testVars;
 
   module.walk([&](Operation *op) {
-    if (auto varName = op->getAttrOfType<StringAttr>("test.var")) {
+    if (auto varName = op->getDiscardableAttrOfType<StringAttr>("test.var")) {
       for (auto result : op->getResults()) {
         testVars.push_back({op, result, varName.str()});
       }
@@ -80,18 +80,41 @@ void TestRecipePopulatePass::runOnOperation() {
     ValueRange bounds; // No bounds for memref tests
 
     if (recipeType == "private") {
-      auto recipe = PrivateRecipeOp::createAndPopulate(
-          builder, loc, recipeName, var.getType(), varName, bounds);
+      auto recipe = PrivateRecipeOp::createAndPopulate(builder, loc, recipeName,
+                                                       var, varName, bounds);
 
       if (!recipe) {
         op->emitError("Failed to create private recipe for ") << varName;
       }
     } else if (recipeType == "firstprivate") {
       auto recipe = FirstprivateRecipeOp::createAndPopulate(
-          builder, loc, recipeName, var.getType(), varName, bounds);
+          builder, loc, recipeName, var, varName, bounds);
 
       if (!recipe) {
         op->emitError("Failed to create firstprivate recipe for ") << varName;
+      }
+    } else if (recipeType == "private_from_firstprivate") {
+      // First create a firstprivate recipe, then use it to drive creation of a
+      // matching private recipe via the convenience overload. Give each recipe
+      // a stable, predictable name so tests can check both.
+      std::string firstprivName = "first_firstprivate_" + varName;
+      std::string privName = "private_from_firstprivate_" + varName;
+
+      auto firstpriv = FirstprivateRecipeOp::createAndPopulate(
+          builder, loc, firstprivName, var, varName, bounds);
+
+      if (!firstpriv) {
+        op->emitError("Failed to create firstprivate recipe for ") << varName;
+        return;
+      }
+
+      auto priv = PrivateRecipeOp::createAndPopulate(builder, loc, privName,
+                                                     *firstpriv);
+
+      if (!priv) {
+        op->emitError(
+            "Failed to create private recipe (from firstprivate) for ")
+            << varName;
       }
     }
   }

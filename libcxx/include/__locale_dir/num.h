@@ -19,7 +19,8 @@
 #include <__iterator/istreambuf_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale_dir/check_grouping.h>
-#include <__locale_dir/get_c_locale.h>
+#include <__locale_dir/ctype.h>
+#include <__locale_dir/locale.h>
 #include <__locale_dir/pad_and_output.h>
 #include <__locale_dir/scan_keyword.h>
 #include <__memory/unique_ptr.h>
@@ -42,6 +43,105 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+// template <class charT> class numpunct
+
+template <class _CharT>
+class numpunct;
+
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct<char> : public locale::facet {
+public:
+  typedef char char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct(size_t __refs = 0);
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+
+  static locale::id id;
+
+protected:
+  ~numpunct() override;
+  virtual char_type do_decimal_point() const;
+  virtual char_type do_thousands_sep() const;
+  virtual string do_grouping() const;
+  virtual string_type do_truename() const;
+  virtual string_type do_falsename() const;
+
+  char_type __decimal_point_;
+  char_type __thousands_sep_;
+  string __grouping_;
+};
+
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct<wchar_t> : public locale::facet {
+public:
+  typedef wchar_t char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct(size_t __refs = 0);
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+
+  static locale::id id;
+
+protected:
+  ~numpunct() override;
+  virtual char_type do_decimal_point() const;
+  virtual char_type do_thousands_sep() const;
+  virtual string do_grouping() const;
+  virtual string_type do_truename() const;
+  virtual string_type do_falsename() const;
+
+  char_type __decimal_point_;
+  char_type __thousands_sep_;
+  string __grouping_;
+};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+// template <class charT> class numpunct_byname
+
+template <class _CharT>
+class numpunct_byname;
+
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<char> : public numpunct<char> {
+public:
+  typedef char char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
+  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
+
+protected:
+  ~numpunct_byname() override;
+};
+
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<wchar_t> : public numpunct<wchar_t> {
+public:
+  typedef wchar_t char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
+  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
+
+protected:
+  ~numpunct_byname() override;
+};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 struct _LIBCPP_EXPORTED_FROM_ABI __num_get_base {
   static const int __num_get_buf_sz = 40;
@@ -95,9 +195,8 @@ struct __num_get : protected __num_get_base {
       _LIBCPP_DIAGNOSTIC_PUSH
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
       using __vec   = __simd_vector<char, 32>;
-      __vec __chars = std::__broadcast<__vec>(__val);
       __vec __cmp   = std::__partial_load<__vec, __int_chr_cnt>(__atoms);
-      auto __res    = __chars == __cmp;
+      auto __res    = __vec(__val) == __cmp;
       if (std::__none_of(__res))
         return __int_chr_cnt;
       return std::min(__int_chr_cnt, std::__find_first_set(__res));
@@ -207,17 +306,17 @@ _LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtof(__a, __p2, __locale::__get_c_locale());
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtod(__a, __p2, __locale::__get_c_locale());
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__strtold(__a, __p2, __locale::__get_c_locale());
 }
 
 template <class _Tp>
@@ -436,6 +535,7 @@ protected:
         ++__first;
         if (__first == __last) {
           __err |= ios_base::eofbit;
+          __v = 0;
           return __first;
         }
         // __c2 == 'x' || __c2 == 'X'
@@ -444,6 +544,7 @@ protected:
           ++__first;
         } else {
           __base = 8;
+          __parsed_num = true; // We only swallowed '0', so we've started to parse a number
         }
       } else {
         __base = 10;
@@ -944,15 +1045,15 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   if (__specify_precision)
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
   else
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, __v);
   unique_ptr<char, void (*)(void*)> __nbh(nullptr, free);
   if (__nc > static_cast<int>(__nbuf - 1)) {
     if (__specify_precision)
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
     else
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, __v);
     if (__nc == -1)
       std::__throw_bad_alloc();
     __nbh.reset(__nb);
@@ -1006,6 +1107,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

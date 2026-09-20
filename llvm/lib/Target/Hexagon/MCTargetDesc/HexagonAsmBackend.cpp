@@ -13,6 +13,7 @@
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCShuffler.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -79,6 +80,21 @@ public:
     MCInst * Result = Extender;
     const_cast<HexagonAsmBackend *>(this)->Extender = nullptr;
     return Result;
+  }
+
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
+    unsigned Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y) .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
+#undef ELF_RELOC
+                        .Case("BFD_RELOC_NONE", ELF::R_HEX_NONE)
+                        .Case("BFD_RELOC_8", ELF::R_HEX_8)
+                        .Case("BFD_RELOC_16", ELF::R_HEX_16)
+                        .Case("BFD_RELOC_32", ELF::R_HEX_32)
+                        .Default(-1u);
+    if (Type == -1u)
+      return std::nullopt;
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
@@ -595,6 +611,13 @@ public:
               MCContext &Context = getContext();
               auto &RF = *Frags[K];
               MCInst Inst = RF.getInst();
+
+              // Don't add nops to packets that have fixups, as reshuffling can
+              // invalidate fixup offsets.
+              if (!RF.getVarFixups().empty()) {
+                Size = 0;
+                break;
+              }
 
               const bool WouldTraverseLabel = llvm::any_of(
                   Asm->symbols(), [&RF, &Inst, Asm = Asm](MCSymbol const &sym) {

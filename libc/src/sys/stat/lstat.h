@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_LSTAT_H
 #define LLVM_LIBC_SRC_SYS_STAT_LSTAT_H
 
+#include "hdr/types/struct_stat.h"
 #include "src/__support/macros/config.h"
-#include <sys/stat.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

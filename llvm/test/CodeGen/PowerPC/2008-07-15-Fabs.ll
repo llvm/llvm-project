@@ -7,7 +7,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK: blr
 define hidden i256 @__divtc3(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) nounwind readnone  {
 entry:
-	call ppc_fp128 @fabsl( ppc_fp128 %d ) nounwind readnone 		; <ppc_fp128>:0 [#uses=1]
+	call ppc_fp128 @llvm.fabs.ppcf128( ppc_fp128 %d ) nounwind readnone 		; <ppc_fp128>:0 [#uses=1]
 	%1 = fcmp olt ppc_fp128 0xM00000000000000000000000000000000, %0		; <i1>:1 [#uses=1]
 	%.pn106 = select i1 %1, ppc_fp128 %a, ppc_fp128 0xM00000000000000000000000000000000		; <ppc_fp128> [#uses=1]
 	%.pn = fsub ppc_fp128 0xM00000000000000000000000000000000, %.pn106		; <ppc_fp128> [#uses=1]
@@ -20,4 +20,4 @@ entry:
 	ret i256 0
 }
 
-declare ppc_fp128 @fabsl(ppc_fp128) nounwind readnone 
+declare ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128) nounwind readnone 

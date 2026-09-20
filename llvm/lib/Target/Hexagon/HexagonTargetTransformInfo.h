@@ -38,6 +38,10 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 
   const HexagonSubtarget &ST;
   const HexagonTargetLowering &TLI;
+  // Set when the function is annotated `hexagon_hmx`, meaning it is intended
+  // to run on a thread dedicated to HMX work. See areInlineCompatible for why
+  // HVX must be kept out of such a function.
+  const bool IsHMX;
 
   const HexagonSubtarget *getST() const { return &ST; }
   const HexagonTargetLowering *getTLI() const { return &TLI; }
@@ -52,8 +56,8 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 
 public:
   explicit HexagonTTIImpl(const HexagonTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getDataLayout()),
-        ST(*TM->getSubtargetImpl(F)), TLI(*ST.getTargetLowering()) {}
+      : BaseT(TM, F.getDataLayout()), ST(*TM->getSubtargetImpl(F)),
+        TLI(*ST.getTargetLowering()), IsHMX(F.hasFnAttribute("hexagon_hmx")) {}
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -83,7 +87,8 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getMinVectorRegisterBitWidth() const override;
@@ -120,18 +125,10 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   InstructionCost
-  getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
-                        TTI::TargetCostKind CostKind) const override;
-  InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
-  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -153,17 +150,18 @@ public:
                    TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                    const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
 
   InstructionCost
   getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                  const Instruction *I = nullptr) const override {
     return 1;
   }
-
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
                           unsigned AddressSpace,
                           TTI::MaskKind MaskKind) const override;
@@ -176,6 +174,15 @@ public:
   bool forceScalarizeMaskedScatter(VectorType *VTy,
                                    Align Alignment) const override;
 
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
   /// @}
 
   InstructionCost
@@ -184,6 +191,9 @@ public:
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const override;
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const override;
 };
 
 } // end namespace llvm

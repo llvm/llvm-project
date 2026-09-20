@@ -124,6 +124,11 @@ protected:
     B.setMF(*MF);
     MRI = &MF->getRegInfo();
     B.setInsertPt(*EntryMBB, EntryMBB->end());
+    RTLCI.emplace(TM->getTargetTriple());
+    const TargetSubtargetInfo &STI = MF->getSubtarget();
+    LibcallLowering.emplace(*RTLCI, [&STI](LibcallLoweringInfo &Info) {
+      STI.initLibcallLoweringInfo(Info);
+    });
   }
 
   LLVMContext Context;
@@ -135,6 +140,8 @@ protected:
   MachineBasicBlock *EntryMBB;
   MachineIRBuilder B;
   MachineRegisterInfo *MRI;
+  std::optional<RTLIB::RuntimeLibcallsInfo> RTLCI;
+  std::optional<LibcallLoweringInfo> LibcallLowering;
 };
 
 class AArch64GISelMITest : public GISelMITest {
@@ -164,9 +171,16 @@ class AMDGPUGISelMITest : public GISelMITest {
       (void)s64;                                                               \
       const LLT s128 = LLT::scalar(128);                                       \
       (void)s128;                                                              \
+      const LLT f16 = LLT::float16();                                          \
+      (void)f16;                                                               \
+      const LLT f32 = LLT::float32();                                          \
+      (void)f32;                                                               \
+      const LLT f64 = LLT::float64();                                          \
+      (void)f64;                                                               \
+      const LLT f128 = LLT::float128();                                        \
+      (void)f128;                                                              \
       do                                                                       \
         SettingUpActionsBlock while (0);                                       \
-      getLegacyLegalizerInfo().computeTables();                                \
       verify(*ST.getInstrInfo());                                              \
     }                                                                          \
   };

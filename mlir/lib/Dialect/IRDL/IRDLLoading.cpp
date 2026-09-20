@@ -533,6 +533,41 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
     return false;
   }
 
+  if (auto base = dyn_cast<BaseOp>(op)) {
+    if (base.getBaseName()) {
+      StringRef baseName = *base.getBaseName();
+      if (baseName[0] == '!') {
+        auto abstractType =
+            AbstractType::lookup(baseName.drop_front(1), op->getContext());
+        assert(abstractType && "type name should refer to an existing type");
+        paramIds.insert(abstractType->get().getTypeID());
+      } else if (baseName[0] == '#') {
+        auto abstractAttr =
+            AbstractAttribute::lookup(baseName.drop_front(1), op->getContext());
+        assert(abstractAttr && "attribute name should refer to an existing "
+                               "attribute");
+        paramIds.insert(abstractAttr->get().getTypeID());
+      } else {
+        llvm_unreachable(
+            "invalid `irdl.base` operation: base name should start "
+            "with '!' for types or '#' for attributes");
+      }
+      return false;
+    }
+
+    if (base.getBaseRef()) {
+      SymbolRefAttr symRef = *base.getBaseRef();
+      Operation *defOp = irdl::lookupSymbolNearDialect(op, symRef);
+      assert(defOp && "symbol reference should refer to an existing operation");
+      paramIrdlOps.insert(defOp);
+      return false;
+    }
+
+    llvm_unreachable(
+        "invalid `irdl.base` operation: expected either a base name "
+        "or a base symbol reference");
+  }
+
   // For `irdl.any`, we return `false` since we can match any type or attribute
   // base.
   if (auto isA = dyn_cast<AnyOp>(op))

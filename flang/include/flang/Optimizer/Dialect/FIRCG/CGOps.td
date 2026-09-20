@@ -15,6 +15,7 @@
 #define FORTRAN_DIALECT_FIRCG_OPS
 
 include "mlir/IR/SymbolInterfaces.td"
+include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "mlir/IR/BuiltinAttributes.td"
@@ -22,7 +23,6 @@ include "mlir/IR/BuiltinAttributes.td"
 def fircg_Dialect : Dialect {
   let name = "fircg";
   let cppNamespace = "::fir::cg";
-  let usePropertiesForAttributes = 1;
 }
 
 // Base class for FIR CG operations.
@@ -237,6 +237,7 @@ def fircg_XDeclareOp : fircg_Op<"ext_declare", [AttrSizedOperandSegments]> {
       Optional<AnyReferenceLike>:$storage,
       DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
       Builtin_StringAttr:$uniq_name,
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
       OptionalAttr<UI32Attr>:$dummy_arg_no);
   let results = (outs AnyRefOrBox);
 

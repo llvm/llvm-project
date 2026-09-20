@@ -52,17 +52,18 @@ public:
   virtual void emitDirectiveOptionNoRelax();
   virtual void emitDirectiveOptionRVC();
   virtual void emitDirectiveOptionNoRVC();
+  virtual void setArchString(StringRef Arch) {}
   virtual void emitDirectiveVariantCC(MCSymbol &Symbol);
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
   virtual void emitTextAttribute(unsigned Attribute, StringRef String);
   virtual void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
                                     StringRef StringValue);
-  void emitNoteGnuPropertySection(const uint32_t Feature1And);
 
   void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
+  bool hasTargetABI() const { return TargetABI != RISCVABI::ABI_Unknown; }
   void setFlagsFromFeatures(const MCSubtargetInfo &STI);
   bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }

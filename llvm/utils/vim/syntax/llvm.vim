@@ -132,7 +132,9 @@ syn keyword llvmKeyword
       \ nofree
       \ noimplicitfloat
       \ noinline
+      \ noipa
       \ nomerge
+      \ nooutline
       \ nonlazybind
       \ nonnull
       \ noprofile
@@ -198,7 +200,6 @@ syn keyword llvmKeyword
       \ unnamed_addr
       \ unordered
       \ uselistorder
-      \ uselistorder_bb
       \ uwtable
       \ volatile
       \ weak

@@ -52,7 +52,7 @@ def RTZArg : AsmOperandClass {
 def rtzarg : Operand<XLenVT> {
   let ParserMatchClass = RTZArg;
   let PrintMethod = "printFRMArg";
-  let DecoderMethod = "decodeRTZArg";
+  let DecoderMethod = "decodeFRMArg";
   let OperandType = "OPERAND_RTZARG";
   let OperandNamespace = "RISCVOp";
 }
@@ -86,6 +86,7 @@ class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
                  (ins rs1ty:$rs1, rtzarg:$frm), opcodestr,
                   "$rd, $rs1$frm"> {
   let rs2 = rs2val;
+  let frm = FRM_RTZ;
 }
 
 //===----------------------------------------------------------------------===//

@@ -7,13 +7,11 @@
 ! ERROR2: error: Unknown diagnostic option: -WKnown-Bad-Implicit-Interface
 
 program disable_diagnostic
-  REAL :: x
-  INTEGER :: y
-   ! CHECK-NOT: warning
+  ! CHECK-NOT: warning
   ! WARN: warning: If the procedure's interface were explicit, this reference would be in error
-  call sub(x)
+  call sub(1.)
   ! WARN: warning: If the procedure's interface were explicit, this reference would be in error
-  call sub(y)
+  call sub(1)
 end program disable_diagnostic
 
 subroutine sub()

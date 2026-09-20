@@ -119,9 +119,8 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-LE-WACC-NEXT:    bl _Z15buildVectorPairPu13__vector_pairDv16_hS0_@notoc
 ; CHECK-LE-WACC-NEXT:    dmxxsetaccz wacc0
 ; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, v31, v30
-; CHECK-LE-WACC-NEXT:    lxv vs0, 48(r1)
-; CHECK-LE-WACC-NEXT:    lxv vs1, 32(r1)
-; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, vs1, vs0
+; CHECK-LE-WACC-NEXT:    lxvp vsp34, 32(r1)
+; CHECK-LE-WACC-NEXT:    xvf32gerpp wacc0, v3, v2
 ; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; CHECK-LE-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; CHECK-LE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
@@ -160,9 +159,8 @@ define void @testMultiply(ptr nocapture noundef readonly %a, ptr nocapture nound
 ; CHECK-BE-WACC-NEXT:    nop
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc0
 ; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, v31, v30
-; CHECK-BE-WACC-NEXT:    lxv vs0, 128(r1)
-; CHECK-BE-WACC-NEXT:    lxv vs1, 144(r1)
-; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, vs0, vs1
+; CHECK-BE-WACC-NEXT:    lxvp vsp34, 128(r1)
+; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc0, v2, v3
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-WACC-NEXT:    vmr v1, v2
 ; CHECK-BE-WACC-NEXT:    vmr v7, v4

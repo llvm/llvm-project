@@ -15,7 +15,7 @@
 
 # RUN: llvm-ar --format=gnu crS %t/invalid-class.a %t/invalid.o
 # RUN: not ld.lld -whole-archive %t/invalid-class.a -o /dev/null 2>&1 | FileCheck %s
-# CHECK: invalid-class.a(invalid.o): corrupted ELF file: invalid file class
+# CHECK: error: {{.*}}invalid-class.a(invalid.o): corrupted ELF file: invalid file class
 
 # RUN: not ld.lld %t/invalid.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OBJ
-# OBJ: invalid.o: corrupted ELF file: invalid file class
+# OBJ: error: {{.*}}invalid.o: corrupted ELF file: invalid file class

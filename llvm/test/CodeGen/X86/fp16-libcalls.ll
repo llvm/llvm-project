@@ -421,10 +421,13 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
+; F16C-NEXT:    vcvtss2sd %xmm1, %xmm1, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; F16C-NEXT:    callq fmaf@PLT
-; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    vcvtss2sd %xmm2, %xmm2, %xmm2
+; F16C-NEXT:    callq fma@PLT
+; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
@@ -440,24 +443,27 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    subq $16, %rsp
 ; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    movss %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; X64-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movaps %xmm1, %xmm0
+; X64-NEXT:    movaps %xmm2, %xmm0
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    cvtss2sd %xmm0, %xmm0
 ; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
 ; X64-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    cvtss2sd %xmm1, %xmm1
 ; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 4-byte Reload
 ; X64-NEXT:    # xmm2 = mem[0],zero,zero,zero
-; X64-NEXT:    callq fmaf@PLT
-; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    cvtss2sd %xmm2, %xmm2
+; X64-NEXT:    callq fma@PLT
+; X64-NEXT:    callq __truncdfhf2@PLT
 ; X64-NEXT:    pextrw $0, %xmm0, %eax
 ; X64-NEXT:    movw %ax, (%rbx)
 ; X64-NEXT:    addq $16, %rsp
@@ -467,7 +473,7 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ; X86-LABEL: test_half_fma:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $72, %esp
+; X86-NEXT:    subl $88, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
@@ -487,17 +493,17 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esp)
 ; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    calll fmaf
-; X86-NEXT:    fstps (%esp)
-; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    fstpl (%esp)
+; X86-NEXT:    calll fma
+; X86-NEXT:    fstpl (%esp)
+; X86-NEXT:    calll __truncdfhf2
 ; X86-NEXT:    pextrw $0, %xmm0, %eax
 ; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $72, %esp
+; X86-NEXT:    addl $88, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
   %res = call half @llvm.fma.half(half %a0, half %a1, half %a2)

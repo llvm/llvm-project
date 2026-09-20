@@ -27,12 +27,22 @@ return:
 }
 
 
-; CHECK: @0 = private unnamed_addr addrspace(4) constant [10 x i8] c"Stmt_body\00"
-; CHECK: @1 = private unnamed_addr addrspace(4) constant [2 x i8] c"(\00"
-; CHECK: @2 = private unnamed_addr addrspace(4) constant [2 x i8] c")\00"
+; CHECK: @0 = private unnamed_addr addrspace(4) constant [7 x i8] c"Scop: \00"
+; CHECK: @1 = private unnamed_addr addrspace(4) constant [2 x i8] c"n\00"
+; CHECK: @2 = private unnamed_addr addrspace(4) constant [2 x i8] c"=\00"
 ; CHECK: @3 = private unnamed_addr addrspace(4) constant [2 x i8] c"\0A\00"
-; CHECK: @4 = private unnamed_addr constant [12 x i8] c"%s%s%ld%s%s\00"
+; CHECK: @4 = private unnamed_addr constant [12 x i8] c"%s%s%s%ld%s\00"
+
+; CHECK: @5 = private unnamed_addr addrspace(4) constant [10 x i8] c"Stmt_body\00"
+; CHECK: @6 = private unnamed_addr addrspace(4) constant [2 x i8] c"(\00"
+; CHECK: @7 = private unnamed_addr addrspace(4) constant [2 x i8] c")\00"
+; CHECK: @8 = private unnamed_addr addrspace(4) constant [2 x i8] c"\0A\00"
+; CHECK: @9 = private unnamed_addr constant [12 x i8] c"%s%s%ld%s%s\00"
+
+; CHECK:       polly.start:
+; CHECK:         call i32 (...) @printf(ptr @4, ptr addrspace(4) @0, ptr addrspace(4) @1, ptr addrspace(4) @2, i64 %0, ptr addrspace(4) @3)
+; CHECK-NEXT:    call i32 @fflush(ptr null)
 
 ; CHECK:      polly.stmt.body:
-; CHECK:        call i32 (...) @printf(ptr @4, ptr addrspace(4) @0, ptr addrspace(4) @1, i64 %polly.indvar, ptr addrspace(4) @2, ptr addrspace(4) @3)
+; CHECK:        call i32 (...) @printf(ptr @9, ptr addrspace(4) @5, ptr addrspace(4) @6, i64 %polly.indvar, ptr addrspace(4) @7, ptr addrspace(4) @8)
 ; CHECK-NEXT:   call i32 @fflush(ptr null)

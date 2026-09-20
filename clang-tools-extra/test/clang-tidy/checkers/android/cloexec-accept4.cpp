@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s android-cloexec-accept4 %t
 
+#include <cstddef>
+
 typedef int socklen_t;
 struct sockaddr {};
 
@@ -13,7 +15,6 @@ struct sockaddr {};
       _rc = (exp);              \
     } while (_rc == -1);        \
   })
-#define NULL 0
 
 extern "C" int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
 

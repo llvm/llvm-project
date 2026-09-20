@@ -89,6 +89,30 @@ protected:
     return toks;
   }
 
+  bool MainFileIsMultipleIncludeGuarded(StringRef Filename, StringRef Source) {
+    FileEntryRef FE = FileMgr.getVirtualFileRef(Filename, Source.size(), 0);
+    SourceMgr.setMainFileID(
+        SourceMgr.createFileID(FE, SourceLocation(), SrcMgr::C_User));
+    SourceMgr.overrideFileContents(
+        FE, llvm::MemoryBuffer::getMemBufferCopy(Source, Filename));
+
+    TrivialModuleLoader ModLoader;
+    HeaderSearchOptions HSOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    PreprocessorOptions PPOpts;
+    std::unique_ptr<Preprocessor> LocalPP = std::make_unique<Preprocessor>(
+        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+        /*IILookup=*/nullptr,
+        /*OwnsHeaderSearch=*/false);
+    if (!PreDefines.empty())
+      LocalPP->setPredefines(PreDefines);
+    LocalPP->Initialize(*Target);
+    LocalPP->EnterMainSourceFile();
+    std::vector<Token> Toks;
+    LocalPP->LexTokensUntilEOF(&Toks);
+    return LocalPP->getHeaderSearchInfo().isFileMultipleIncludeGuarded(FE);
+  }
+
   std::string getSourceText(Token Begin, Token End) {
     bool Invalid;
     StringRef Str =
@@ -358,6 +382,16 @@ TEST_F(LexerTest, LexAPI) {
   EXPECT_EQ("INN", Lexer::getImmediateMacroName(idLoc2, SourceMgr, LangOpts));
   EXPECT_EQ("NOF2", Lexer::getImmediateMacroName(idLoc3, SourceMgr, LangOpts));
   EXPECT_EQ("N", Lexer::getImmediateMacroName(idLoc4, SourceMgr, LangOpts));
+}
+
+TEST_F(LexerTest, MainFileHeaderGuardedWithCPlusPlusModules) {
+  LangOpts.CPlusPlus = true;
+  LangOpts.CPlusPlusModules = true;
+
+  EXPECT_TRUE(MainFileIsMultipleIncludeGuarded("guarded.h", "#ifndef GUARD\n"
+                                                            "#define GUARD\n"
+                                                            "int x;\n"
+                                                            "#endif\n"));
 }
 
 TEST_F(LexerTest, HandlesSplitTokens) {
@@ -816,4 +850,42 @@ TEST_F(LexerTest, CheckFirstPPToken) {
     EXPECT_TRUE(Tok.getRawIdentifier() == "FOO");
   }
 }
+
+TEST_F(LexerTest, FindEndOfIdentifierContinuation) {
+  const auto Measure = [&](const StringRef Code,
+                           const unsigned Offset) -> unsigned {
+    auto Buf = llvm::MemoryBuffer::getMemBuffer(Code);
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
+    const auto Loc = SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
+                         .getLocWithOffset(Offset);
+    const auto End =
+        Lexer::findEndOfIdentifierContinuation(Loc, SourceMgr, LangOpts);
+    const unsigned Length = SourceMgr.getFileOffset(End) - Offset;
+    SourceMgr.clearIDTables();
+    return Length;
+  };
+
+  // ASCII identifiers.
+  EXPECT_EQ(Measure("abcd", 0), 4u);       // Full identifier.
+  EXPECT_EQ(Measure("abcd", 1), 3u);       // Mid-identifier.
+  EXPECT_EQ(Measure("ab12", 1), 3u);       // At digit.
+  EXPECT_EQ(Measure("ab cd", 1), 1u);      // At space.
+  EXPECT_EQ(Measure("ab+cd", 1), 1u);      // At non-identifier.
+  EXPECT_EQ(Measure("ab(cd)", 1), 1u);     // At '('.
+  EXPECT_EQ(Measure("ab<cd>(ef)", 1), 1u); // At '<'.
+  EXPECT_EQ(Measure("ab{cd}", 1), 1u);     // At '{'.
+  EXPECT_EQ(Measure("ab=cd;", 1), 1u);     // At '='.
+
+  // UTF-8 identifier characters.
+  LangOpts.CPlusPlus = true;
+  EXPECT_EQ(Measure("naïve", 2), 4u); // 'ï' (2 bytes) + "ve".
+  EXPECT_EQ(Measure("æon", 0), 4u);   // Starts with 'æ' (2 bytes).
+
+  // Dollar sign (requires DollarIdents).
+  LangOpts.DollarIdents = true;
+  EXPECT_EQ(Measure("ab$cd", 2), 3u); // '$' is identifier continue.
+  LangOpts.DollarIdents = false;
+  EXPECT_EQ(Measure("ab$cd", 2), 0u); // '$' is not identifier continue.
+}
+
 } // anonymous namespace

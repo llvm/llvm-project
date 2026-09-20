@@ -24,8 +24,10 @@ def NeoverseV2Model : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
+                                                    SVE2p1Unsupported.F,
                                                     [HasSVE2p1, HasSVEB16B16,
-                                                     HasCPA, HasCSSC]);
+                                                     HasSVEBFSCALE,
+                                                     HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -889,14 +891,24 @@ def V2Write_11c_18L01_18S_18V01 : SchedWriteRes<[V2UnitL01, V2UnitL01,
 
 def V2Write_ArithI : SchedWriteVariant<[
                        SchedVar<IsCheapLSL,  [V2Write_1c_1I]>,
+                       SchedVar<NeoverseShift0,  [V2Write_1c_1I]>,
                        SchedVar<NoSchedPred, [V2Write_2c_1M]>]>;
 
 def V2Write_ArithF : SchedWriteVariant<[
                        SchedVar<IsCheapLSL,  [V2Write_1c_1F_1Flg]>,
+                       SchedVar<NeoverseShift0,  [V2Write_1c_1F_1Flg]>,
                        SchedVar<NoSchedPred, [V2Write_2c_1M_1Flg]>]>;
 
+def V2Write_ArithWExtend : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V2Write_2c_1M]>,
+                       SchedVar<NoSchedPred,        [V2Write_1c_1I]>]>;
+
+def V2Write_ArithWExtendS : SchedWriteVariant<[
+                       SchedVar<IsRealArithExtendW, [V2Write_2c_1M_1Flg]>,
+                       SchedVar<NoSchedPred,        [V2Write_1c_1F_1Flg]>]>;
+
 def V2Write_Logical : SchedWriteVariant<[
-                        SchedVar<NeoverseNoLSL, [V2Write_1c_1F_1Flg]>,
+                        SchedVar<NeoverseShift0, [V2Write_1c_1F_1Flg]>,
                         SchedVar<NoSchedPred,   [V2Write_2c_1M_1Flg]>]>;
 
 def V2Write_Extr : SchedWriteVariant<[
@@ -1124,6 +1136,11 @@ def : InstRW<[V2Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, V2Write_2c_1M>;
+
+def : InstRW<[V2Write_ArithWExtend],  (instrs ADDWrx, SUBWrx)>;
+def : InstRW<[V2Write_ArithWExtendS], (instrs ADDSWrx, SUBSWrx)>;
+def : InstRW<[V2Write_1c_1I],      (instrs ADDXrx64, SUBXrx64)>;
+def : InstRW<[V2Write_1c_1F_1Flg], (instrs ADDSXrx64, SUBSXrx64)>;
 
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, flagset, LSL shift, shift <= 4
@@ -2088,7 +2105,7 @@ def : InstRW<[V2Write_3c_2M], (instregex "^PTRUES_[BHSD]")>;
 def : InstRW<[V2Write_2c_1M], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
 
 // Predicate test
-def : InstRW<[V2Write_1c_1M], (instrs PTEST_PP)>;
+def : InstRW<[V2Write_1c_1M], (instrs PTEST_PP, PTEST_PP_ANY, PTEST_PP_FIRST)>;
 
 // Predicate transpose
 def : InstRW<[V2Write_2c_1M], (instregex "^TRN[12]_PPP_[BHSD]")>;
@@ -2125,7 +2142,7 @@ def : InstRW<[V2Write_2c_1V],
                         "^ADR_LSL_ZZZ_[SD]_[0123]",
                         "^[SU](ADD|SUB)[LW][BT]_ZZZ_[HSD]",
                         "^SADDLBT_ZZZ_[HSD]",
-                        "^[SU]H(ADD|SUB|SUBR)_ZPmZ_[BHSD]",
+                        "^[SU]H(ADD|SUB|SUBR)_(ZPmZ|ZPZZ)_[BHSD]",
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
@@ -2188,7 +2205,8 @@ def : InstRW<[V2Write_4c_1V13], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[V2Write_6c_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[V2Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ")>;
+def : InstRW<[V2Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ",
+                                         "^(EON|NAND|NOR)_ZZZ$")>;
 
 // Count/reverse bits
 def : InstRW<[V2Write_2c_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;
@@ -2537,7 +2555,7 @@ def : InstRW<[V2Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                          "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[V2Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[V2Write_3c_1V], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                          "^FMULX_ZPZZ_[HSD]",
                                          "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;

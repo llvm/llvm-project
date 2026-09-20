@@ -99,6 +99,9 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned TestFlagInEHCleanup : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsSEHFinallyCleanup : 1;
+
     /// The amount of extra storage needed by the Cleanup.
     /// Always a multiple of the scope-stack alignment.
     unsigned CleanupSize : 12;
@@ -357,6 +360,7 @@ public:
     CleanupBits.IsActive = true;
     CleanupBits.IsLifetimeMarker = false;
     CleanupBits.IsFakeUse = false;
+    CleanupBits.IsSEHFinallyCleanup = false;
     CleanupBits.TestFlagInNormalCleanup = false;
     CleanupBits.TestFlagInEHCleanup = false;
     CleanupBits.CleanupSize = cleanupSize;
@@ -391,6 +395,9 @@ public:
 
   bool isFakeUse() const { return CleanupBits.IsFakeUse; }
   void setFakeUse() { CleanupBits.IsFakeUse = true; }
+
+  bool isSEHFinallyCleanup() const { return CleanupBits.IsSEHFinallyCleanup; }
+  void setSEHFinallyCleanup() { CleanupBits.IsSEHFinallyCleanup = true; }
 
   bool hasActiveFlag() const { return ActiveFlag.isValid(); }
   Address getActiveFlag() const {

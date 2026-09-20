@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_SDK_H
-#define LLDB_UTILITY_SDK_H
+#ifndef LLDB_UTILITY_XCODESDK_H
+#define LLDB_UTILITY_XCODESDK_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-forward.h"
@@ -64,10 +64,12 @@ public:
   /// directory component of a path one would pass to clang's -isysroot
   /// parameter. For example, "MacOSX.10.14.sdk".
   XcodeSDK(std::string &&name) : m_name(std::move(name)) {}
+  /// Initialize an XcodeSDK object with an SDK name and the sysroot the SDK
+  /// was used from. The sysroot is not necessarily a path to the SDK named by
+  /// \c name: a compiler may record a sysroot that was remapped, for example
+  /// with -fdebug-prefix-map.
   XcodeSDK(std::string name, FileSpec sysroot)
-      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {
-    assert(!m_sysroot || m_name == m_sysroot.GetFilename().GetStringRef());
-  }
+      : m_name(std::move(name)), m_sysroot(std::move(sysroot)) {}
   static XcodeSDK GetAnyMacOS() { return XcodeSDK("MacOSX.sdk"); }
 
   /// The merge function follows a strict order to maintain monotonicity:

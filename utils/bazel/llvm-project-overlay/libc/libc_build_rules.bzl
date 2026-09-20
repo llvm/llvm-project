@@ -18,7 +18,40 @@ def libc_common_copts():
         "-I" + libc_include_path,
         "-I" + paths.join(libc_include_path, "include"),
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
-    ]
+    ] + select({
+        Label(":full_build"): [
+            "-DLIBC_FULL_BUILD",
+            "-ffreestanding",
+            "-fno-asynchronous-unwind-tables",
+            "-fno-exceptions",
+            "-fno-rtti",
+            "-fno-unwind-tables",
+            "-nostdinc++",
+            "-nostdlib",
+            "-nostdlib++",
+            # This is a clang-only option. To support gcc, we should use
+            # -nostdinc and pass in compiler builtin headers separately.
+            "-nostdlibinc",
+        ],
+        "//conditions:default": [],
+    })
+
+def libc_common_deps():
+    return select({
+        Label(":full_build"): [
+            # This is too broad. Really, we should have every public header
+            # accessible as a distinct cc_library target. However, the glob
+            # here is convenient for keeping Bazel rules in sync with CMake.
+            Label(":public_headers"),
+            Label(":public_headers_deps"),
+        ],
+        "//conditions:default": [],
+    }) + select({
+        Label(":full_build_linux"): [
+            "@linux_uapi//:linux_uapi_headers",
+        ],
+        "//conditions:default": [],
+    })
 
 def libc_release_copts():
     copts = [
@@ -42,21 +75,48 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-def _libc_library(name, **kwargs):
+# Allowlisted sets of copts that may be used for a single libc library target.
+# Adding copts here is discouraged, as it complicates the build.
+_LIBC_LIBRARY_COPT_SETS = {
+    "startup_object": [
+        "-ffreestanding",
+        "-fno-builtin",
+        "-fno-omit-frame-pointer",
+        "-fno-stack-protector",
+    ],
+    "threading": [
+        "-fno-omit-frame-pointer",
+        "-Wno-frame-address",
+    ],
+}
+
+def _libc_library(
+        name,
+        deps = [],
+        copt_sets = [],
+        **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
+      deps: cc_library deps.
+      copt_sets: Which sets of allow-listed copts to include.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
     for attr in ["copts", "local_defines"]:
         if attr in kwargs:
             fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
+
+    copts = []
+    for feature in copt_sets:
+        copts.extend(_LIBC_LIBRARY_COPT_SETS[feature])
+
     cc_library(
         name = name,
-        copts = libc_common_copts(),
+        copts = libc_common_copts() + copts,
         local_defines = LIBC_CONFIGURE_OPTIONS,
+        deps = deps + libc_common_deps(),
         linkstatic = 1,
         **kwargs
     )
@@ -66,6 +126,20 @@ def _libc_library(name, **kwargs):
 # libc_support_library.
 def libc_support_library(name, **kwargs):
     _libc_library(name = name, **kwargs)
+
+def libc_startup_library(name, **kwargs):
+    """Add target for a libc startup library.
+
+    Args:
+      name: Target name.
+      **kwargs: Other attributes relevant for a cc_library.
+    """
+
+    _libc_library(
+        name = name,
+        copt_sets = ["startup_object"],
+        **kwargs
+    )
 
 def libc_function(name, **kwargs):
     """Add target for a libc function.
@@ -169,6 +243,7 @@ def libc_release_library(
         name,
         libc_functions,
         weak_symbols = [],
+        srcs = [],
         **kwargs):
     """Create the release version of a libc library.
 
@@ -177,6 +252,7 @@ def libc_release_library(
         libc_functions: List of functions to include in the library. They should be
             created by libc_function macro.
         weak_symbols: List of function names that should be marked as weak symbols.
+        srcs: Additional sources for the cc_library.
         **kwargs: Other arguments relevant to cc_library.
     """
 
@@ -200,12 +276,12 @@ def libc_release_library(
     ]
     cc_library(
         name = name,
-        srcs = [":" + name + "_srcs"],
+        srcs = [":" + name + "_srcs"] + srcs,
         copts = libc_common_copts() + libc_release_copts(),
         local_defines = weak_attributes + LIBC_CONFIGURE_OPTIONS,
         deps = [
             ":" + name + "_textual_hdr_library",
-        ],
+        ] + libc_common_deps(),
         **kwargs
     )
 
@@ -239,7 +315,7 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         # We put _hdr_deps in srcs, as they are not a part of this cc_library
         # interface, but instead are used to implement shared headers.
         srcs = [":" + name + "_hdr_deps"],
-        deps = [":" + name + "_textual_hdr_library"],
+        deps = [":" + name + "_textual_hdr_library"] + libc_common_deps(),
         # copts don't really matter, since it's a header-only library, but we
         # need proper -I flags for header validation, which are specified in
         # libc_common_copts().
@@ -247,7 +323,15 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         **kwargs
     )
 
-def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
+    # Also generate a filegroup that contains _all_ of the headers for use in
+    # systems like Carbon's where runtime sources are shipped outside of Bazel.
+    _libc_srcs_filegroup(
+        name = name + "_hdrs",
+        libs = [":" + name],
+        enforce_headers_only = True,
+    )
+
+def libc_generated_header(name, hdr, yaml_template, other_srcs = [], proxy = False):
     """Generates a libc header file from YAML template.
 
     Args:
@@ -255,12 +339,13 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
       hdr: Path of the header file to generate.
       yaml_template: Path of the YAML template file.
       other_srcs: Other files required to generate the header, if any.
+      proxy: Whether this is a proxy header with slightly different generation results.
     """
     hdrgen = "//libc:hdrgen"
     cmd = "$(location {hdrgen}) $(location {yaml}) -o $@".format(
         hdrgen = hdrgen,
         yaml = yaml_template,
-    )
+    ) + (" --proxy" if proxy else "")
 
     if not hdr.startswith("staging/"):
         fail(
@@ -275,6 +360,19 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
         srcs = [yaml_template] + other_srcs,
         cmd = cmd,
         tools = [hdrgen],
+    )
+
+def libc_header_info(
+        name,
+        has_def_template = False,
+        proxy = False,
+        other_srcs = []):
+    return struct(
+        target_name = "include_{}_h".format(name.replace("/", "_")),
+        staging_path = "staging/include/{}.h".format(name),
+        yaml_template = "include/{}.yaml".format(name),
+        proxy = proxy,
+        other_srcs = other_srcs + (["include/{}.h.def".format(name)] if has_def_template else []),
     )
 
 def libc_math_function(
@@ -306,5 +404,9 @@ def libc_math_function(
         name = name,
         srcs = ["src/math/generic/" + name + ".cpp"],
         hdrs = ["src/math/" + name + ".h"],
-        deps = [":__support_common"] + OLD_FPUTIL_DEPS + additional_deps,
+        deps = [
+            ":__support_common",
+            ":__support_macros_config",
+            ":__support_macros_properties_types",
+        ] + OLD_FPUTIL_DEPS + additional_deps,
     )

@@ -29,9 +29,7 @@ end:
 ; CHECK: mtocrf 128, [[REG3]]
 
 ; CHECK: lwz [[REG4:[0-9]+]], 8(1)
-; CHECK-DAG: mtocrf 32, [[REG4]]
-; CHECK-DAG: mtocrf 16, [[REG4]]
-; CHECK-DAG: mtocrf 8, [[REG4]]
+; CHECK-DAG: mtcrf 56, [[REG4]]
 ; CHECK: blr
 }
 
@@ -62,9 +60,7 @@ end:
 ; CHECK: mtocrf 128, [[REG3]]
 
 ; CHECK: lwz [[REG4:[0-9]+]], 8(1)
-; CHECK-DAG: mtocrf 32, [[REG4]]
-; CHECK-DAG: mtocrf 16, [[REG4]]
-; CHECK-DAG: mtocrf 8, [[REG4]]
+; CHECK-DAG: mtcrf 56, [[REG4]]
 ; CHECK: blr
 }
 

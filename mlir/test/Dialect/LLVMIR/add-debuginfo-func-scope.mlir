@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(ensure-debug-info-scope-on-llvm-func)" --split-input-file --mlir-print-debuginfo | FileCheck %s
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(ensure-debug-info-scope-on-llvm-func{emission-kind=DebugDirectivesOnly})" --split-input-file --mlir-print-debuginfo | FileCheck --check-prefix=CHECK_OTHER_KIND %s 
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(ensure-debug-info-scope-on-llvm-func{emission-kind=DebugDirectivesOnly})" --split-input-file --mlir-print-debuginfo | FileCheck --check-prefix=CHECK_OTHER_KIND %s
 
 // CHECK-LABEL: llvm.func @func_no_debug()
 // CHECK: llvm.return loc(#loc
@@ -54,7 +54,7 @@ module {
 // CHECK: loc(#loc[[FUNCLOC:[0-9]+]])
 // CHECK: loc(#loc[[MODULELOC:[0-9]+]])
 // CHECK-DAG: #[[DI_FILE_MODULE:.+]] = #llvm.di_file<"bar.mlir" in "baz">
-// CHECK-DAG: #[[DI_FILE_FUNC:.+]] = #llvm.di_file<"file.mlir" in ""> 
+// CHECK-DAG: #[[DI_FILE_FUNC:.+]] = #llvm.di_file<"file.mlir" in "">
 // CHECK-DAG: #loc[[FUNCFILELOC:[0-9]+]] = loc("file.mlir":9:8)
 // CHECK-DAG: #di_compile_unit = #llvm.di_compile_unit<id = distinct[{{.*}}]<>, sourceLanguage = DW_LANG_C, file = #[[DI_FILE_MODULE]], producer = "MLIR", isOptimized = true, emissionKind = LineTablesOnly>
 // CHECK-DAG: #di_subprogram = #llvm.di_subprogram<id = distinct[{{.*}}]<>, compileUnit = #di_compile_unit, scope = #[[DI_FILE_FUNC]], name = "propagate_compile_unit", linkageName = "propagate_compile_unit", file = #[[DI_FILE_FUNC]], line = 9, scopeLine = 9, subprogramFlags = "Definition|Optimized", type = #di_subroutine_type>
@@ -160,3 +160,27 @@ module {
   } loc(#loc)
 } loc(unknown)
 
+
+// -----
+
+// Test that operations with CallSiteLoc outside of an llvm.func do not crash.
+llvm.func @dummy()
+func.func @test_func() {
+  return
+} loc(#loc2)
+
+#loc = loc("a.py":1150:34)
+#loc1 = loc("b.py":321:17)
+#loc2 = loc(callsite(#loc at #loc1))
+
+
+// -----
+
+// Test that a CallSiteLoc with an UnknownLoc callee does not crash.
+llvm.func @callsite_unknown_callee() {
+  llvm.return loc(#loc_cuc2)
+} loc(#loc_cuc0)
+
+#loc_cuc0 = loc("a.py":1:1)
+#loc_cuc1 = loc(unknown)
+#loc_cuc2 = loc(callsite(#loc_cuc1 at #loc_cuc0))

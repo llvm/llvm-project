@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #ifdef __APPLE__
 #include <dlfcn.h>
@@ -20,7 +23,7 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionBuffer
 llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
                                            size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
@@ -37,7 +40,7 @@ llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
       .release();
 }
 
-static orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionBuffer
 llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *ArgData,
                                              size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>);
@@ -106,10 +109,21 @@ bool UnwindInfoManager::TryEnable() {
 }
 
 void UnwindInfoManager::addBootstrapSymbols(StringMap<ExecutorAddr> &M) {
-  M[rt_alt::UnwindInfoManagerRegisterActionName] =
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  M[Mangle.mangledCopy(rt_alt::UnwindInfoManagerRegisterActionName)] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
-  M[rt_alt::UnwindInfoManagerDeregisterActionName] =
+  M[Mangle.mangledCopy(rt_alt::UnwindInfoManagerDeregisterActionName)] =
       ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
+
+  {
+    // Also provide symbols defined by StandaloneMachOUnwindInfoRegistrar
+    // in the new ORC runtime.
+    const auto &SNs = rt::orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
+    M[Mangle.mangledCopy(SNs.RegisterSectionsName)] =
+        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_register);
+    M[Mangle.mangledCopy(SNs.DeregisterSectionsName)] =
+        ExecutorAddr::fromPtr(llvm_orc_rt_alt_UnwindInfoManager_deregister);
+  }
 }
 
 Error UnwindInfoManager::registerSections(

@@ -36,10 +36,10 @@ status of all important Fortran 2023 features. The table entries are based on th
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | Allow longer statement lines and overall statement length  | Y      | |
 | Automatic allocation of lengths of character variables     | N      | |
-| The specifiers typeof and classof                          | N      | |
+| The specifiers typeof and classof                          | Y      | |
 | Conditional expressions and arguments                      | N      | |
 | More use of boz constants                                  | P      | All usages other than enum are supported |
-| Intrinsics for extracting tokens from a string             | N      | |
+| Intrinsics for extracting tokens from a string             | Y      | |
 | Intrinsics for Trig functions that work in degrees         | Y      | |
 | Intrinsics for Trig functions that work in half revolutions| Y      | |
 | Changes to system_clock                                    | N      | |
@@ -48,16 +48,16 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Extensions for c_f_pointer intrinsic                       | Y      | |
 | Procedures for converting between fortran and c strings    | N      | |
 | The at edit descriptor                                     | N      | |
-| Control over leading zeros in output of real values        | N      | |
+| Control over leading zeros in output of real values        | Y      | |
 | Extensions for Namelist                                    | N      | |
-| Allow an object of a type with a coarray ultimate component to be an array or allocatable | N | |
-| Put with Notify                                            | N      | |
-| Error conditions in collectives                            | N      | |
+| Allow an object of a type with a coarray ultimate component to be an array or allocatable | N | Multi-image/Coarray feature |
+| Put with Notify                                            | N      | Multi-image/Coarray feature |
+| Error conditions in collectives                            | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Simple procedures                                          | N      | |
 | Using integer arrays to specify subscripts                 | N      | |
 | Using integer arrays to specify rank and bound of an array | N      | |
-| Using an integer constant to specify rank                  | N      | |
-| Reduction specifier for do concurrent                      | P      | Syntax is accepted |
+| Using an integer constant to specify rank                  | Y      | |
+| Reduction specifier for do concurrent                      | P      | |
 | Enumerations                                               | N      | |
 
 ## Fortran 2018
@@ -67,35 +67,36 @@ the multi-image execution. The table entries are based on the document [The new 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | Asynchronous communication                                 | P      | Syntax is accepted |
-| Teams                                                      | N      | Multi-image/Coarray feature |
-| Image failure                                              | P      | Multi-image/Coarray feature. stat_failed_image is added |
-| Form team statement                                        | N      | Multi-image/Coarray feature |
-| Change team construct                                      | N      | Multi-image/Coarray feature |
+| Collective subroutines                                     | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md), missing co_reduce |
+| Intrinsic function coshape                                 | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Form team statement                                        | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Change team construct                                      | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md), missing coarray association |
+| Sync team statement                                        | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Intrinsic functions get_team and team_number               | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Team arguments to other intrinsics                         | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
 | Coarrays allocated in teams                                | N      | Multi-image/Coarray feature |
 | Critical construct                                         | N      | Multi-image/Coarray feature |
-| Lock and unlock statements                                 | N      | Multi-image/Coarray feature |
 | Events                                                     | N      | Multi-image/Coarray feature |
-| Sync team construct                                        | N      | Multi-image/Coarray feature |
-| Image selectors                                            | N      | Multi-image/Coarray feature |
-| Intrinsic functions get_team 	and team_number              | N      | Multi-image/Coarray feature |
-| Intrinsic function image_index                             | N      | Multi-image/Coarray feature |
-| Intrinsic function num_images                              | N      | Multi-image/Coarray feature |
-| Intrinsic function this_image                              | N      | Multi-image/Coarray feature |
 | Intrinsic move_alloc extensions                            | P      | Multi-image/Coarray feature |
 | Detecting failed and stopped images                        | N      | Multi-image/Coarray feature |
-| Collective subroutines                                     | N      | Multi-image/Coarray feature |
 | New and enhanced atomic subroutines                        | N      | Multi-image/Coarray feature |
-| Failed images and stat= specifiers                         | N      | Multi-image/Coarray feature |
-| Intrinsic function coshape                                 | N      | Multi-image/Coarray feature |
+| Image failure and stat= specifiers                         | P      | Multi-image/Coarray feature. stat_failed_image is added |
 
 ## Fortran 2008
 All features except those listed in the following table are supported.
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
-| Coarrays                                                   | N      | Lowering and runtime support is not implemented         |
-| do concurrent                                              | P      | Sequential execution works. Parallel support in progress|
-| Internal procedure as an actual argument or pointer target | Y      | Current implementation requires stack to be executable. See [Proposal](InternalProcedureTrampolines.md) |
+| do concurrent                                              | Y      | See [Do Concurrent Conversion To OpenMP](DoConcurrentConversionToOpenMP.md) for implementation details.|
+| Internal procedure as an actual argument or pointer target | Y      | The default implementation requires an executable stack; `-fsafe-trampoline` uses a runtime-managed pool on supported targets. See [FAQ](FAQ.md#why-do-i-get-a-warning-or-an-error-about-an-executable-stack) and [design documentation](InternalProcedureTrampolines.md) |
+| Intrinsic functions this_image, num_images                 | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Sync all, sync images, sync memory statements              | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Non-allocatable save coarrays of intrinsic type            | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Other coarray data objects                                 | N      | Multi-image/Coarray feature |
+| Intrinsic functions image_index, ucobound, lcobound        | P      | Experimental support via [PRIF](ParallelMultiImageFortranRuntime.md) |
+| Image selectors (coindexed access)                         | N      | Multi-image/Coarray feature |
+| Atomic subroutines                                         | N      | Multi-image/Coarray feature |
+| Lock and unlock statements                                 | N      | Multi-image/Coarray feature |
 
 ## Fortran 2003
 All features except those listed in the following table are supported.

@@ -13,15 +13,15 @@ body:             |
     ; CHECK-LABEL: name: testmsws
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(s64) = G_INTRINSIC_LRINT [[COPY]](s32)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[INTRINSIC_LRINT]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(i64) = G_INTRINSIC_LRINT [[COPY]](f32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[INTRINSIC_LRINT]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:_(s32) = COPY $s0
-    %1:_(s64) = G_INTRINSIC_LRINT %0(s32)
-    %2:_(s32) = G_TRUNC %1(s64)
-    $w0 = COPY %2(s32)
+    %0:_(f32) = COPY $s0
+    %1:_(i64) = G_INTRINSIC_LRINT %0(f32)
+    %2:_(i32) = G_TRUNC %1(i64)
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -38,13 +38,13 @@ body:             |
     ; CHECK-LABEL: name: testmsxs
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(s64) = G_INTRINSIC_LRINT [[COPY]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[INTRINSIC_LRINT]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(i64) = G_INTRINSIC_LRINT [[COPY]](f32)
+    ; CHECK-NEXT: $x0 = COPY [[INTRINSIC_LRINT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s32) = COPY $s0
-    %1:_(s64) = G_INTRINSIC_LRINT %0(s32)
-    $x0 = COPY %1(s64)
+    %0:_(f32) = COPY $s0
+    %1:_(i64) = G_INTRINSIC_LRINT %0(f32)
+    $x0 = COPY %1(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -61,15 +61,15 @@ body:             |
     ; CHECK-LABEL: name: testmswd
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(s64) = G_INTRINSIC_LRINT [[COPY]](s64)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[INTRINSIC_LRINT]](s64)
-    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(i64) = G_INTRINSIC_LRINT [[COPY]](f64)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[INTRINSIC_LRINT]](i64)
+    ; CHECK-NEXT: $w0 = COPY [[TRUNC]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:_(s64) = COPY $d0
-    %1:_(s64) = G_INTRINSIC_LRINT %0(s64)
-    %2:_(s32) = G_TRUNC %1(s64)
-    $w0 = COPY %2(s32)
+    %0:_(f64) = COPY $d0
+    %1:_(i64) = G_INTRINSIC_LRINT %0(f64)
+    %2:_(i32) = G_TRUNC %1(i64)
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 
 ...
@@ -86,13 +86,13 @@ body:             |
     ; CHECK-LABEL: name: testmsxd
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(s64) = G_INTRINSIC_LRINT [[COPY]](s64)
-    ; CHECK-NEXT: $x0 = COPY [[INTRINSIC_LRINT]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+    ; CHECK-NEXT: [[INTRINSIC_LRINT:%[0-9]+]]:_(i64) = G_INTRINSIC_LRINT [[COPY]](f64)
+    ; CHECK-NEXT: $x0 = COPY [[INTRINSIC_LRINT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %0:_(s64) = COPY $d0
-    %1:_(s64) = G_INTRINSIC_LRINT %0(s64)
-    $x0 = COPY %1(s64)
+    %0:_(f64) = COPY $d0
+    %1:_(i64) = G_INTRINSIC_LRINT %0(f64)
+    $x0 = COPY %1(i64)
     RET_ReallyLR implicit $x0
 
 ...

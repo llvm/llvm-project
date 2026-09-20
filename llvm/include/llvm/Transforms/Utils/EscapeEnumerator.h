@@ -43,7 +43,7 @@ public:
       : F(F), CleanupBBName(N), StateBB(F.begin()), StateE(F.end()),
         Builder(F.getContext()), HandleExceptions(HandleExceptions), DTU(DTU) {}
 
-  IRBuilder<> *Next();
+  LLVM_ABI IRBuilder<> *Next();
 };
 
 }

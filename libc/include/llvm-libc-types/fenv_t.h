@@ -10,10 +10,17 @@
 #define LLVM_LIBC_TYPES_FENV_T_H
 
 #ifdef __aarch64__
+#ifdef __APPLE__
+typedef struct {
+  unsigned long long __fpsr;
+  unsigned long long __fpcr;
+} fenv_t;
+#else
 typedef struct {
   unsigned char __control_word[4];
   unsigned char __status_word[4];
 } fenv_t;
+#endif
 #elif defined(__x86_64__)
 typedef struct {
   unsigned char __x86_status[28];
@@ -25,7 +32,7 @@ typedef struct {
 } fenv_t;
 #elif defined(__riscv)
 typedef unsigned int fenv_t;
-#elif defined(__AMDGPU__) || defined(__NVPTX__)
+#elif defined(__AMDGPU__) || defined(__NVPTX__) || defined(__SPIRV__)
 typedef struct {
   unsigned int __fpc;
 } fenv_t;

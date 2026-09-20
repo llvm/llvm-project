@@ -1,5 +1,44 @@
 # Build for the undefined behavior sanitizer runtime support library.
 
+include_directories(.)
+include_directories(..)
+include_directories(../../include)
+
+# GPU targets only need the handler shims. The host interceptor archive is
+# built in the offload/ project.
+if(COMPILER_RT_GPU_BUILD)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    add_compiler_rt_component(ubsan)
+    return()
+  endif()
+
+  set(UBSAN_SOURCES ubsan_offload.cpp)
+
+  set(UBSAN_HEADERS
+    ubsan_offload_packet.h
+    ubsan_offload_checks.inc
+    )
+
+  set(UBSAN_OFFLOAD_CFLAGS
+    ${SANITIZER_COMMON_CFLAGS}
+    -DSANITIZER_COMMON_NO_REDEFINE_BUILTINS)
+  append_rtti_flag(OFF UBSAN_OFFLOAD_CFLAGS)
+
+  add_compiler_rt_component(ubsan)
+
+  add_compiler_rt_runtime(clang_rt.ubsan_standalone
+    STATIC
+    ARCHS ${UBSAN_SUPPORTED_ARCH}
+    SOURCES ${UBSAN_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
+    CFLAGS ${UBSAN_OFFLOAD_CFLAGS}
+    LINK_LIBS llvm-libc-common-utilities
+    PARENT_TARGET ubsan)
+
+  return()
+endif()
+
 set(UBSAN_SOURCES
   ubsan_diag.cpp
   ubsan_init.cpp
@@ -7,6 +46,10 @@ set(UBSAN_SOURCES
   ubsan_handlers.cpp
   ubsan_monitor.cpp
   ubsan_value.cpp
+  )
+
+set(UBSAN_LOOP_DETECT_SOURCES
+  ubsan_loop_detect.cpp
   )
 
 set(UBSAN_STANDALONE_SOURCES
@@ -29,6 +72,7 @@ set(UBSAN_HEADERS
   ubsan_flags.inc
   ubsan_handlers.h
   ubsan_handlers_cxx.h
+  ubsan_handlers_internal.h
   ubsan_init.h
   ubsan_interface.inc
   ubsan_monitor.h
@@ -37,8 +81,6 @@ set(UBSAN_HEADERS
   ubsan_type_hash.h
   ubsan_value.h
   )
-
-include_directories(..)
 
 set(UBSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_list_if(MSVC /Zl UBSAN_CFLAGS)
@@ -54,9 +96,7 @@ set(UBSAN_CXXFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(ON UBSAN_CXXFLAGS)
 
 # Silence warnings in system headers with MSVC.
-if(NOT CLANG_CL)
-  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" UBSAN_CXXFLAGS)
-endif()
+append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" UBSAN_CXXFLAGS)
 
 set(UBSAN_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
@@ -155,6 +195,13 @@ else()
     ADDITIONAL_HEADERS ${UBSAN_HEADERS}
     CFLAGS ${UBSAN_CXXFLAGS})
 
+  add_compiler_rt_object_libraries(RTUbsan_loop_detect
+    ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
+    SOURCES ${UBSAN_LOOP_DETECT_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
+    CFLAGS ${UBSAN_CXXFLAGS}
+    DEPS compiler-rt-headers)
+
   if (WIN32)
     set(RUNTIME_THUNK_CFLAGS -DSANITIZER_DYNAMIC_RUNTIME_THUNK -DSANITIZER_STATIC_RUNTIME_THUNK)
     add_compiler_rt_object_libraries(UbsanRuntimeThunk
@@ -195,6 +242,13 @@ else()
       STATIC
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTUbsan_cxx
+      CFLAGS ${UBSAN_CXXFLAGS}
+      PARENT_TARGET ubsan)
+
+    add_compiler_rt_runtime(clang_rt.ubsan_loop_detect
+      STATIC
+      ARCHS ${UBSAN_SUPPORTED_ARCH}
+      OBJECT_LIBS RTUbsan_loop_detect
       CFLAGS ${UBSAN_CXXFLAGS}
       PARENT_TARGET ubsan)
 
@@ -251,6 +305,14 @@ else()
         ARCHS ${ARCHS_FOR_SYMBOLS}
         PARENT_TARGET ubsan
         EXTRA ubsan.syms.extra)
+      add_sanitizer_rt_symbols(clang_rt.ubsan_loop_detect
+        ARCHS ${ARCHS_FOR_SYMBOLS}
+        PARENT_TARGET ubsan)
     endif()
+  endif()
+
+  # Thin host interceptors for offloading. Linked with -u to keep it separate.
+  if(OS_NAME MATCHES "Linux" AND NOT ANDROID)
+    add_subdirectory(offload)
   endif()
 endif()

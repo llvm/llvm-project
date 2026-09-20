@@ -22,16 +22,16 @@ end subroutine
 
 !CHECK-PARSE: | ExecutionPart -> Block
 !CHECK-PARSE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!CHECK-PARSE-NEXT: | | | OmpBeginLoopDirective
+!CHECK-PARSE-NEXT: | | | OmpBeginDirective
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | Flags = {}
 !CHECK-PARSE-NEXT: | | | Block
 !CHECK-PARSE-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!CHECK-PARSE-NEXT: | | | | | OmpBeginLoopDirective
+!CHECK-PARSE-NEXT: | | | | | OmpBeginDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = fuse
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | | | Flags = {}
 !CHECK-PARSE-NEXT: | | | | | Block
 !CHECK-PARSE-NEXT: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
 !CHECK-PARSE-NEXT: | | | | | | | NonLabelDoStmt
@@ -55,14 +55,14 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | | | | Block
 !CHECK-PARSE-NEXT: | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> ContinueStmt
 !CHECK-PARSE-NEXT: | | | | | | | EndDoStmt ->
-!CHECK-PARSE-NEXT: | | | | | OmpEndLoopDirective
+!CHECK-PARSE-NEXT: | | | | | OmpEndDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = fuse
 !CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | | | Flags = None
-!CHECK-PARSE-NEXT: | | | OmpEndLoopDirective
+!CHECK-PARSE-NEXT: | | | | | | Flags = {}
+!CHECK-PARSE-NEXT: | | | OmpEndDirective
 !CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList ->
-!CHECK-PARSE-NEXT: | | | | Flags = None
+!CHECK-PARSE-NEXT: | | | | Flags = {}
 
 !CHECK-UNPARSE: SUBROUTINE loop_transformation_construct
 !CHECK-UNPARSE-NEXT:  IMPLICIT NONE

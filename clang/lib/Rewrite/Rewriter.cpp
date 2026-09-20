@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <iterator>
@@ -111,14 +112,14 @@ std::string Rewriter::getRewrittenText(CharSourceRange Range) const {
     return std::string(Ptr, Ptr+EndOff-StartOff);
   }
 
-  const RewriteBuffer &RB = I->second;
-  EndOff = RB.getMappedOffset(EndOff, true);
-  StartOff = RB.getMappedOffset(StartOff);
-
   // Adjust the end offset to the end of the last token, instead of being the
   // start of the last token.
   if (Range.isTokenRange())
     EndOff += Lexer::MeasureTokenLength(Range.getEnd(), *SourceMgr, *LangOpts);
+
+  const RewriteBuffer &RB = I->second;
+  EndOff = RB.getMappedOffset(EndOff, true);
+  StartOff = RB.getMappedOffset(StartOff);
 
   // Advance the iterators to the right spot, yay for linear time algorithms.
   RewriteBuffer::iterator Start = RB.begin();
@@ -320,6 +321,8 @@ bool Rewriter::overwriteChangedFiles() {
     OptionalFileEntryRef Entry = getSourceMgr().getFileEntryRefForID(I->first);
     llvm::SmallString<128> Path(Entry->getName());
     getSourceMgr().getFileManager().makeAbsolutePath(Path);
+    // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
     if (auto Error = llvm::writeToOutput(Path, [&](llvm::raw_ostream &OS) {
           I->second.write(OS);
           return llvm::Error::success();

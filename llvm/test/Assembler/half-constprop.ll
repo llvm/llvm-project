@@ -12,7 +12,7 @@ entry:
   %tmp = load half, ptr %a, align 2
   %tmp1 = load half, ptr %b, align 2
   %add = fadd half %tmp, %tmp1
-; CHECK: 0xH4C8D
+; CHECK: 1.820310e+01
   ret half %add
 }
 

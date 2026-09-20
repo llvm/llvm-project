@@ -21,6 +21,8 @@
 
 namespace llvm {
 
+class MCContext;
+class MCSymbol;
 class NVPTXSubtarget;
 
 //===--------------------------------------------------------------------===//
@@ -32,32 +34,14 @@ public:
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
-
-  Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
-                                     const DataLayout &DL) const;
-
-  /// getFunctionParamOptimizedAlign - since function arguments are passed via
-  /// .param space, we may want to increase their alignment in a way that
-  /// ensures that we can effectively vectorize their loads & stores. We can
-  /// increase alignment only if the function has internal or has private
-  /// linkage as for other linkage types callers may already rely on default
-  /// alignment. To allow using 128-bit vectorized loads/stores, this function
-  /// ensures that alignment is 16 or greater.
-  Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
-                                       const DataLayout &DL) const;
-
-  /// Helper for computing alignment of a device function byval parameter.
-  Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
-                                   Align InitialAlign,
-                                   const DataLayout &DL) const;
 
   // Helper for getting a function parameter name. Name is composed from
   // its index and the function name. Negative index corresponds to special
   // parameter (unsized array) used for passing variable arguments.
-  std::string getParamName(const Function *F, int Idx) const;
+  MCSymbol *getParamSymbol(MCContext &Ctx, const Function *F, int Idx) const;
 
   /// isLegalAddressingMode - Return true if the addressing mode represented
   /// by AM is legal for this target, for a load/store of the specified type
@@ -101,11 +85,6 @@ public:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
 
-  std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
-                           const SmallVectorImpl<ISD::OutputArg> &,
-                           std::optional<unsigned> FirstVAArg,
-                           const CallBase &CB, unsigned UniqueCallSite) const;
-
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
@@ -114,8 +93,6 @@ public:
   void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
-
-  const NVPTXTargetMachine *nvTM;
 
   // PTX always uses 32-bit shift amounts
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
@@ -173,7 +150,7 @@ public:
   }
 
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
     // There's rarely any point of packing something into a vector type if we
@@ -208,8 +185,8 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
 
-  SDValue getParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
-  SDValue getCallParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getParamSymbolNode(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getCallParamSymbolNode(SelectionDAG &DAG, int I, EVT T) const;
   SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
@@ -242,8 +219,6 @@ private:
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
@@ -259,8 +234,15 @@ private:
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
-  Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                             const DataLayout &DL) const;
+  bool mayFoldFMULIntoFMA(SDNode *N, MachineFunction &MF,
+                          CodeGenOptLevel OptLevel) const;
+  SDValue performScalarizeV2F32Op(SDNode *N, DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                                         DAGCombinerInfo &DCI,
+                                         CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombine(SDNode *N, DAGCombinerInfo &DCI,
+                             CodeGenOptLevel OptLevel) const;
 };
 
 } // namespace llvm

@@ -16,10 +16,13 @@
 #include <cassert>
 #include <optional>
 #include <type_traits>
+#include <vector>
 
 #include "test_macros.h"
 #include "archetypes.h"
 #include "test_convertible.h"
+
+#include "../optional_helper_types.h"
 
 using std::optional;
 
@@ -40,6 +43,14 @@ struct ExplicitThrow {
 struct ImplicitAny {
   template <class U>
   constexpr ImplicitAny(U&&) {}
+};
+
+struct ImplicitNoThrow {
+  constexpr ImplicitNoThrow(int) noexcept {}
+};
+
+struct ExplicitNoThrow {
+  constexpr explicit ExplicitNoThrow(int) noexcept {}
 };
 
 template <class To, class From>
@@ -96,6 +107,10 @@ void test_implicit() {
     static_assert(!test_convertible<O, std::in_place_t&&>(), "");
     static_assert(!test_convertible<O, const std::in_place_t&&>(), "");
   }
+  {
+    LIBCPP_ASSERT_NOEXCEPT(optional<ImplicitNoThrow>(42));
+    LIBCPP_ASSERT_NOT_NOEXCEPT(optional<ImplicitThrow>(42));
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
     try {
@@ -137,6 +152,13 @@ void test_explicit() {
     }
     assert(T::alive == 0);
   }
+  {
+    LIBCPP_ASSERT_NOEXCEPT(optional<ExplicitNoThrow>(42));
+    LIBCPP_ASSERT_NOT_NOEXCEPT(optional<ExplicitThrow>(42));
+  }
+  {
+    LIBCPP_STATIC_ASSERT(std::is_nothrow_constructible<optional<std::vector<int>>, std::vector<int>&&>::value, "");
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   {
     try {
@@ -149,9 +171,72 @@ void test_explicit() {
 #endif
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test_ref() {
+  {
+    int i = 0;
+    std::optional<int&> o(i);
+    ASSERT_NOEXCEPT(std::optional<int&>(i));
+    assert(o.has_value());
+    assert(&(*o) == &i);
+    assert(*o == 0);
+    assert(o.value() == 0);
+  }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    ASSERT_NOEXCEPT(std::optional<int&>(t));
+    std::optional<int&> o(t);
+    assert(o.has_value());
+    assert(&(*o) == &t.lvalue);
+    assert(*o == 1);
+  }
+
+  {
+    ReferenceConversion<int> t{1, 2};
+    ASSERT_NOEXCEPT(std::optional<int&>(std::move(t)));
+    std::optional<int&> o(std::move(t));
+    assert(o.has_value());
+    assert(&(*o) == &t.rvalue);
+    assert(*o == 2);
+  }
+
+#  ifndef TEST_HAS_NO_EXCEPTIONS
+  {
+    ReferenceConversionThrows<int> t{1, 2, false};
+    ASSERT_NOT_NOEXCEPT(std::optional<int&>(t));
+    try {
+      std::optional<int&> o(t);
+      assert(o.has_value());
+      assert(&(*o) == &t.lvalue);
+      assert(*o == 1);
+    } catch (int) {
+      assert(false);
+    }
+  }
+  {
+    ReferenceConversionThrows<int> t{1, 2, false};
+    ASSERT_NOT_NOEXCEPT(std::optional<int&>(std::move(t)));
+    try {
+      std::optional<int&> o(std::move(t));
+      assert(o.has_value());
+      assert(&(*o) == &t.rvalue);
+      assert(*o == 2);
+    } catch (int) {
+      assert(false);
+    }
+  }
+#  endif
+  return true;
+}
+#endif
+
 int main(int, char**) {
   test_implicit();
   test_explicit();
-
+#if TEST_STD_VER >= 26
+  assert(test_ref());
+  static_assert(test_ref());
+#endif
   return 0;
 }

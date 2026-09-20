@@ -12,7 +12,7 @@
 
 // class map
 
-// map(map&& m);
+// map(map&& m); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -22,7 +22,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef std::pair<const int, double> V;
   {
     typedef test_less<int> C;
@@ -114,6 +114,13 @@ int main(int, char**) {
     assert(mo.size() == 0);
     assert(std::distance(mo.begin(), mo.end()) == 0);
   }
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

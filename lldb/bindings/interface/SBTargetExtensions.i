@@ -105,12 +105,14 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         def module_iter(self):
             '''Returns an iterator over all modules in a lldb.SBTarget
             object.'''
-            return lldb_iter(self, 'GetNumModules', 'GetModuleAtIndex')
+            for i in range(self.GetNumModules()):
+                yield self.GetModuleAtIndex(i)
 
         def breakpoint_iter(self):
             '''Returns an iterator over all breakpoints in a lldb.SBTarget
             object.'''
-            return lldb_iter(self, 'GetNumBreakpoints', 'GetBreakpointAtIndex')
+            for i in range(self.GetNumBreakpoints()):
+                yield self.GetBreakpointAtIndex(i)
 
         class bkpts_access(object):
             '''A helper object that will lazily hand out bkpts for a target when supplied an index.'''
@@ -144,7 +146,8 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         def watchpoint_iter(self):
             '''Returns an iterator over all watchpoints in a lldb.SBTarget
             object.'''
-            return lldb_iter(self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
+            for i in range(self.GetNumWatchpoints()):
+                yield self.GetWatchpointAtIndex(i)
 
         class watchpoints_access(object):
             '''A helper object that will lazily hand out watchpoints for a target when supplied an index.'''
@@ -191,8 +194,8 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
         triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
         arch_name = property(GetArchName, None, doc='''A read only property that returns the architecture name for this target as a string.''')
-        data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
-        code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
+        data_byte_size = property(GetDataByteSize, None, doc='''Deprecated. Always returns 1.''')
+        code_byte_size = property(GetCodeByteSize, None, doc='''Deprecated. Always returns 1.''')
         platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
     %}
 #endif

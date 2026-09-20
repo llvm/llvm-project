@@ -43,16 +43,18 @@ S3:
   call void @llvm.lifetime.end.p0(ptr nonnull %v) #1
   tail call void @z1() #1
   br label %exit2
-; CHECK-NOT: settag
+; CHECK: call void @llvm.aarch64.settag(ptr %v, i64 48)
 
+; Dominated by S1 and S2
 exit1:
 ; CHECK-LABEL: exit1:
 ; CHECK: call void @llvm.aarch64.settag(ptr %v, i64 48)
   ret void
 
+; Dominated by S3
 exit2:
 ; CHECK-LABEL: exit2:
-; CHECK: call void @llvm.aarch64.settag(ptr %v, i64 48)
+; CHECK-NOT: call void @llvm.aarch64.settag
   ret void
 
 exit3:
@@ -77,6 +79,6 @@ declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
-attributes #0 = { sanitize_memtag "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+mte,+neon,+v8.5a" "use-soft-float"="false" }
+attributes #0 = { sanitize_memtag "correctly-rounded-divide-sqrt-fp-math"="false" denormal_fpenv(preservesign) "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+mte,+neon,+v8.5a" "use-soft-float"="false" }
 attributes #1 = { nounwind }
 

@@ -85,8 +85,8 @@ class VEAsmParser : public MCTargetAsmParser {
 
 public:
   VEAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-              const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
+              const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII), Parser(parser) {
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
@@ -694,7 +694,7 @@ public:
     if (!ConstExpr)
       return false;
     unsigned regIdx = ConstExpr->getValue();
-    if (regIdx > 31 || MISCRegs[regIdx] == VE::NoRegister)
+    if (regIdx >= std::size(MISCRegs) || MISCRegs[regIdx] == VE::NoRegister)
       return false;
     Op.Kind = k_Register;
     Op.Reg.Reg = MISCRegs[regIdx];

@@ -23,7 +23,7 @@ func.func @bad_address_space(%a: memref<2xindex, "foo">) {
 // CHECK-LABEL: @invalid_int_conversion
 func.func @invalid_int_conversion() {
      // expected-error@unknown{{conversion of memref memory space 1 : ui64 to integer address space failed. Consider adding memory space conversions.}}
-     %alloc = memref.alloc() {alignment = 64 : i64} : memref<10xf32, 1 : ui64> 
+     %alloc = memref.alloc() alignment = 64 : memref<10xf32, 1 : ui64>
     return
 }
 
@@ -38,5 +38,17 @@ func.func @issue_70160() {
   // CHECK: memref.load
   %0 = memref.load %alloc[%c0, %c0, %c0] : memref<1x32x33xi32, #gpu.address_space<workgroup>>
   memref.store %0, %alloc1[] : memref<i32>
+  func.return
+}
+
+
+// -----
+
+func.func @test_atomic_exch(%arg0: memref<?xi32>, %idx: index, %value: i32) {
+  // expected-error @+1 {{result not defined in region}}
+  %1 = memref.generic_atomic_rmw %arg0[%idx] : memref<?xi32> {
+  ^bb0(%arg3: i32):
+    memref.atomic_yield %value : i32
+  }
   func.return
 }

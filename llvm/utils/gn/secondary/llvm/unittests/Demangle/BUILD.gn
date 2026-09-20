@@ -6,6 +6,7 @@ unittest("DemangleTests") {
     "DLangDemangleTest.cpp",
     "DemangleTest.cpp",
     "ItaniumDemangleTest.cpp",
+    "MicrosoftDemangleTest.cpp",
     "OutputBufferTest.cpp",
     "PartialDemangleTest.cpp",
     "RustDemangleTest.cpp",

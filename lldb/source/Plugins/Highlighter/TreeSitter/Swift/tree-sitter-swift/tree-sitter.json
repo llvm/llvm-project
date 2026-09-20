@@ -1,0 +1,39 @@
+{
+  "grammars": [
+    {
+      "name": "swift",
+      "camelcase": "Swift",
+      "scope": "source.swift",
+      "path": ".",
+      "file-types": [
+        "swift"
+      ],
+      "highlights": "queries/highlights.scm",
+      "injections": "queries/injections.scm",
+      "locals": "queries/locals.scm",
+      "injection-regex": "swift"
+    }
+  ],
+  "metadata": {
+    "version": "0.7.1",
+    "license": "MIT",
+    "description": "A tree-sitter grammar for the Swift programming language.",
+    "authors": [
+      {
+        "name": "Alex Pinkus",
+        "email": "alex.pinkus@gmail.com"
+      }
+    ],
+    "links": {
+      "repository": "git+https://github.com/alex-pinkus/tree-sitter-swift.git"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true
+  }
+}

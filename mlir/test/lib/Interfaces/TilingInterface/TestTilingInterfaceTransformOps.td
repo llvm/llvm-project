@@ -44,7 +44,7 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
-    (`use_forall` $use_forall^)? attr-dict 
+    (`use_forall` $use_forall^)? attr-dict
     `:` functional-type(operands, results)
   }];
 }
@@ -64,7 +64,7 @@ def TestFuseConsumerUsingSliceOp : Op<Transform_Dialect, "test.fuse_consumer_usi
     fusion.
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
       Variadic<TransformHandleTypeInterface>:$targets,
       Variadic<TransformHandleTypeInterface>:$loops,
       DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
@@ -73,8 +73,7 @@ def TestFuseConsumerUsingSliceOp : Op<Transform_Dialect, "test.fuse_consumer_usi
 
   let assemblyFormat = [{
     $targets `in` `(` $loops `)`
-    (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
-    attr-dict `:` functional-type(operands, results)
+    (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -83,24 +82,32 @@ def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    For the `consumer` that uses the result of the outer-most loop of a loop nest passed in 
+    For the `consumer` that uses the result of the outer-most loop of a loop nest passed in
     as `loops` (that are typically generated through tiling), fuse the consumer into the
     loop.
 
     Returns a handle to the consumer operation after fusion and the loops that might be
     modified.
+
+    The optional `inner_tile_alignments` array is supplied to the SCF driver as a
+    constant `scf::InnerTileAlignmentFnTy` control function (returning it for
+    every op, see `InnerTileAlignment`).
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
       TransformHandleTypeInterface:$consumer,
-      Variadic<TransformHandleTypeInterface>:$loops);
+      Variadic<TransformHandleTypeInterface>:$loops,
+      DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$inner_tile_alignments);
   let results = (outs TransformHandleTypeInterface:$fused_consumer,
       Variadic<TransformHandleTypeInterface>:$result_loops);
 
   let assemblyFormat = [{
     $consumer `into` `(` $loops `)`
+    (`inner_tile_alignments` `=`
+        custom<InnerTileAlignmentArray>($inner_tile_alignments)^)?
     attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
 }
 
 
@@ -129,8 +136,7 @@ def TestTileUsingForallOp : Op<Transform_Dialect, "test.tile_using_forall",
 
   let assemblyFormat = [{
     $target ($tile_sizes^)? (`interchange` `=` $interchange^)?
-    (`mapping` `=` $mapping^)?
-    attr-dict `:` functional-type(operands, results)
+    (`mapping` `=` $mapping^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -152,8 +158,7 @@ def TestFuseUsingForallOp : Op<Transform_Dialect, "test.fuse_using_forall",
 
   let assemblyFormat = [{
     $root_op ($tile_sizes^)? (`interchange` $interchange^)?
-    (`mapping` `=` $mapping^)?
-    attr-dict `:` functional-type(operands, results)
+    (`mapping` `=` $mapping^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -176,8 +181,7 @@ def TestTileAndFuseOuterParallelPartialReductionOp : Op<
                  Variadic<TransformHandleTypeInterface>:$loops);
   let assemblyFormat = [{
     $root_op (`reduction_dims` `=` $reduction_dims^)?
-    (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)?
-    attr-dict `:` functional-type(operands, results)
+    (`tile_sizes` `=` $tile_sizes^)? (`mapping` `=` $mapping^)? attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -197,10 +201,53 @@ def TestTileUsingCustomLoopOp : Op<
                    DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
   let results  = (outs TransformHandleTypeInterface:$tiled_ops,
                   Variadic<TransformHandleTypeInterface>:$loops);
-  
+
   let assemblyFormat = [{
-    $root_op `tile_sizes` `=` $tile_sizes
-    attr-dict `:` functional-type(operands, results)
+    $root_op `tile_sizes` `=` $tile_sizes attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def TestQueryProducerFusability : Op<
+    Transform_Dialect, "test.query_producer_fusability",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Test operation for the producer fusability query method in the
+    TilingInterface.
+
+    For each operation in the target handle, this looks for tensor.insert_slice
+    ops that produce operands to the tilable op. The offset/sizes from those
+    inserts is used as the arguments to `isOpFusableWithProducerSlices` and
+    emits a remark with the result of the query.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $target attr-dict `:` type($target)
+  }];
+}
+
+def TestQueryConsumerFusability
+    : Op<Transform_Dialect, "test.query_consumer_fusability",
+         [DeclareOpInterfaceMethods<TransformOpInterface>,
+          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Test operation for the consumer fusability query method in the
+    TilingInterface.
+
+    For each operation in the target handle, this looks for tensor.extract_slice
+    ops that consume results of the tilable op. The offset/sizes from those
+    extracts is used as the arguments to `isOpFusableWithConsumerSlice` and
+    emits a remark with the result of the query.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = [{
+    $target attr-dict `:` type($target)
   }];
 }
 

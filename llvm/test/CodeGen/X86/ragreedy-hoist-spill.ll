@@ -67,10 +67,11 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    cmpq %rax, %rcx
 ; CHECK-NEXT:    jae LBB0_8
 ; CHECK-NEXT:  ## %bb.7: ## %for.body.lr.ph
+; CHECK-NEXT:    movq %rdi, %r14
+; CHECK-NEXT:    ## implicit-def: $rdi
 ; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movl $512, %edx ## imm = 0x200
 ; CHECK-NEXT:    movl $32, %esi
-; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    callq _memset
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    movq %rbx, %rdx
@@ -156,6 +157,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    jne LBB0_31
 ; CHECK-NEXT:  ## %bb.30: ## %lor.rhs500
 ; CHECK-NEXT:    ## in Loop: Header=BB0_28 Depth=2
+; CHECK-NEXT:    ## implicit-def: $edi
 ; CHECK-NEXT:    movl $256, %esi ## imm = 0x100
 ; CHECK-NEXT:    callq ___maskrune
 ; CHECK-NEXT:    movb $1, %sil
@@ -258,6 +260,8 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 ## 8-byte Reload
 ; CHECK-NEXT:  LBB0_47: ## %if.then1477
+; CHECK-NEXT:    ## implicit-def: $edi
+; CHECK-NEXT:    ## implicit-def: $rsi
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    callq _write
 ; CHECK-NEXT:    subq %rbx, %r14

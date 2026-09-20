@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
@@ -66,9 +67,9 @@ void CPlusPlusLanguage::Terminate() {
 }
 
 std::unique_ptr<Language::MethodName>
-CPlusPlusLanguage::GetMethodName(ConstString full_name) const {
+CPlusPlusLanguage::GetMethodName(llvm::StringRef full_name) const {
   std::unique_ptr<CxxMethodName> cpp_method =
-      std::make_unique<CxxMethodName>(full_name);
+      std::make_unique<CxxMethodName>(full_name.str());
   cpp_method->IsValid();
   return cpp_method;
 }
@@ -79,7 +80,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
     return {eFunctionNameTypeFull, std::nullopt};
 
   FunctionNameType func_name_type = eFunctionNameTypeNone;
-  CxxMethodName method(name);
+  CxxMethodName method(name.GetStringRef().str());
   llvm::StringRef basename = method.GetBasename();
   if (basename.empty()) {
     llvm::StringRef context;
@@ -124,7 +125,7 @@ ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
                                         // eventually handle eSymbolTypeData,
                                         // we will want this back)
     {
-      CxxMethodName cxx_method(demangled_name);
+      CxxMethodName cxx_method(demangled_name.GetStringRef().str());
       if (!cxx_method.GetBasename().empty()) {
         std::string shortname;
         if (!cxx_method.GetContext().empty())
@@ -226,10 +227,10 @@ static bool IsTrivialContext(llvm::StringRef context) {
 /// but replaces each argument type with the variable name
 /// and the corresponding pretty-printed value
 static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
-                                            char const *full_name,
+                                            llvm::StringRef full_name,
                                             ExecutionContextScope *exe_scope,
                                             VariableList const &args) {
-  CPlusPlusLanguage::CxxMethodName cpp_method{ConstString(full_name)};
+  CPlusPlusLanguage::CxxMethodName cpp_method{full_name.str()};
 
   if (!cpp_method.IsValid())
     return false;
@@ -260,24 +261,24 @@ static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
 GetAndValidateInfo(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
   if (!mangled)
-    return llvm::createStringError("Function does not have a mangled name.");
+    return llvm::createStringError("function does not have a mangled name");
 
   auto demangled_name = mangled.GetDemangledName().GetStringRef();
   if (demangled_name.empty())
-    return llvm::createStringError(
-        "Function '%s' does not have a demangled name.",
-        mangled.GetMangledName().AsCString(""));
+    return llvm::createStringErrorV(
+        "function '{0}' does not have a demangled name",
+        mangled.GetMangledName());
 
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  const DemangledNameInfo *info = mangled.GetDemangledInfo();
   if (!info)
-    return llvm::createStringError(
-        "Function '%s' does not have demangled info.", demangled_name.data());
+    return llvm::createStringErrorV(
+        "function '{0}' does not have demangled info", demangled_name);
 
   // Function without a basename is nonsense.
   if (!info->hasBasename())
-    return llvm::createStringError(
-        "DemangledInfo for '%s does not have basename range.",
-        demangled_name.data());
+    return llvm::createStringErrorV(
+        "demangled info for '{0}' does not have a basename range",
+        demangled_name);
 
   return std::make_pair(demangled_name, *info);
 }
@@ -304,8 +305,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledTemplateArguments(
     llvm::StringRef demangled, const DemangledNameInfo &info) {
   if (!info.hasTemplateArguments())
-    return llvm::createStringError(
-        "Template arguments range for '%s' is invalid.", demangled.data());
+    return llvm::createStringErrorV(
+        "template arguments range for '{0}' is invalid", demangled);
 
   return demangled.slice(info.TemplateArgumentsRange.first,
                          info.TemplateArgumentsRange.second);
@@ -326,8 +327,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledReturnTypeLHS(llvm::StringRef demangled,
                                              const DemangledNameInfo &info) {
   if (info.ScopeRange.first >= demangled.size())
-    return llvm::createStringError(
-        "Scope range for '%s' LHS return type is invalid.", demangled.data());
+    return llvm::createStringErrorV(
+        "scope range for '{0}' LHS return type is invalid", demangled);
 
   return demangled.substr(0, info.ScopeRange.first);
 }
@@ -347,8 +348,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledFunctionQualifiers(
     llvm::StringRef demangled, const DemangledNameInfo &info) {
   if (!info.hasQualifiers())
-    return llvm::createStringError("Qualifiers range for '%s' is invalid.",
-                                   demangled.data());
+    return llvm::createStringErrorV("qualifiers range for '{0}' is invalid",
+                                    demangled);
 
   return demangled.slice(info.QualifiersRange.first,
                          info.QualifiersRange.second);
@@ -370,9 +371,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledReturnTypeRHS(llvm::StringRef demangled,
                                              const DemangledNameInfo &info) {
   if (info.QualifiersRange.first < info.ArgumentsRange.second)
-    return llvm::createStringError(
-        "Qualifiers range for '%s' RHS return type  is invalid.",
-        demangled.data());
+    return llvm::createStringErrorV(
+        "qualifiers range for '{0}' RHS return type is invalid", demangled);
 
   return demangled.slice(info.ArgumentsRange.second,
                          info.QualifiersRange.first);
@@ -393,8 +393,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledScope(llvm::StringRef demangled,
                                      const DemangledNameInfo &info) {
   if (!info.hasScope())
-    return llvm::createStringError("Scope range for '%s' is invalid.",
-                                   demangled.data());
+    return llvm::createStringErrorV("scope range for '{0}' is invalid",
+                                    demangled);
 
   return demangled.slice(info.ScopeRange.first, info.ScopeRange.second);
 }
@@ -414,8 +414,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledFunctionSuffix(llvm::StringRef demangled,
                                               const DemangledNameInfo &info) {
   if (!info.hasSuffix())
-    return llvm::createStringError("Suffix range for '%s' is invalid.",
-                                   demangled.data());
+    return llvm::createStringErrorV("suffix range for '{0}' is invalid",
+                                    demangled);
 
   return demangled.slice(info.SuffixRange.first, info.SuffixRange.second);
 }
@@ -435,8 +435,8 @@ llvm::Expected<llvm::StringRef>
 CPlusPlusLanguage::GetDemangledFunctionArguments(
     llvm::StringRef demangled, const DemangledNameInfo &info) {
   if (!info.hasArguments())
-    return llvm::createStringError(
-        "Function arguments range for '%s' is invalid.", demangled.data());
+    return llvm::createStringErrorV(
+        "function arguments range for '{0}' is invalid", demangled);
 
   return demangled.slice(info.ArgumentsRange.first, info.ArgumentsRange.second);
 }
@@ -474,7 +474,7 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
   // function don't have return types and templates in the name.
   // A::B::C::fun(std::vector<T> &) const
   size_t arg_start, arg_end;
-  llvm::StringRef full(m_full.GetCString());
+  llvm::StringRef full(m_full);
   llvm::StringRef parens("()", 2);
   if (ReverseFindMatchingChars(full, parens, arg_start, arg_end)) {
     m_arguments = full.substr(arg_start, arg_end - arg_start + 1);
@@ -511,11 +511,11 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
 }
 
 void CPlusPlusLanguage::CxxMethodName::Parse() {
-  if (!m_parsed && m_full) {
+  if (!m_parsed && !m_full.empty()) {
     if (TrySimplifiedParse()) {
       m_parse_error = false;
     } else {
-      CPlusPlusNameParser parser(m_full.GetStringRef());
+      CPlusPlusNameParser parser(m_full);
       if (auto function = parser.ParseAsFunctionDefinition()) {
         m_basename = function->name.basename;
         m_context = function->name.context;
@@ -555,14 +555,14 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
   // If we can't parse the incoming name, then just check that it contains path.
   if (m_parse_error)
-    return m_full.GetStringRef().contains(path);
+    return llvm::StringRef(m_full).contains(path);
 
   llvm::StringRef identifier;
   llvm::StringRef context;
   const bool success =
       CPlusPlusLanguage::ExtractContextAndIdentifier(path, context, identifier);
   if (!success)
-    return m_full.GetStringRef().contains(path);
+    return llvm::StringRef(m_full).contains(path);
 
   // Basename may include template arguments.
   // E.g.,
@@ -599,7 +599,7 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
-  CxxMethodName demangled_name(demangled);
+  CxxMethodName demangled_name(demangled.GetStringRef().str());
   return demangled_name.ContainsPath(path);
 }
 
@@ -699,7 +699,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
   if (!demangled)
     return ConstString();
 
-  CxxMethodName cpp_name(demangled);
+  CxxMethodName cpp_name(demangled.GetStringRef().str());
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
   if (!scope_qualified_name.size())
@@ -722,7 +722,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
     Mangled mangled(alternate_mangled_name);
     ConstString demangled = mangled.GetDemangledName();
 
-    CxxMethodName alternate_cpp_name(demangled);
+    CxxMethodName alternate_cpp_name(demangled.GetStringRef().str());
     if (!cpp_name.IsValid())
       continue;
 
@@ -880,11 +880,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibcxxStdListSyntheticFrontEndCreator,
-      "libc++ std::list synthetic children",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
+      "libc++ std::list synthetic children", "^std::__[[:alnum:]]+::list<.+>$",
       stl_deref_flags, true);
   AddCXXSynthetic(
       cpp_category_sp,
@@ -912,7 +908,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::unordered containers synthetic children",
       "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
       stl_synth_flags, true);
-  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+  AddCXXSynthetic(cpp_category_sp, GenericContainerAdaptorFrontEndCreator,
                   "libc++ std::queue synthetic children",
                   "^std::__[[:alnum:]]+::queue<.+>$", stl_synth_flags, true);
   AddCXXSynthetic(cpp_category_sp, LibcxxTupleFrontEndCreator,
@@ -1006,14 +1002,10 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libc++ std::list summary provider",
       "^std::__[[:alnum:]]+::forward_list<.+>$", stl_summary_flags, true);
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libc++ std::list summary provider",
-      // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
-      // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
-      "^std::__([A-Zabd-z0-9]|cx?[A-Za-wyz0-9]|cxx1?[A-Za-z02-9]|"
-      "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
-      stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libc++ std::list summary provider",
+                "^std::__[[:alnum:]]+::list<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::map summary provider",
@@ -1294,6 +1286,28 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       TypeSummaryImplSP(new StringSummaryFormat(
           eTypeOptionHideChildren | eTypeOptionHideValue,
           "${var.__y_} ${var.__m_} ${var.__wdl_}")));
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxPartialOrderingSummaryProvider,
+                "libc++ std::partial_ordering summary provider",
+                "^std::__[[:alnum:]]+::partial_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxWeakOrderingSummaryProvider,
+                "libc++ std::weak_ordering summary provider",
+                "^std::__[[:alnum:]]+::weak_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStrongOrderingSummaryProvider,
+                "libc++ std::strong_ordering summary provider",
+                "^std::__[[:alnum:]]+::strong_ordering$",
+                eTypeOptionHideChildren | eTypeOptionHideValue, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxSourceLocationSummaryProvider,
+                "libc++ std::source_location summary provider",
+                "^std::__[[:alnum:]]+::source_location$", stl_summary_flags,
+                true);
 }
 
 static void RegisterStdStringSummaryProvider(
@@ -1427,10 +1441,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
-  AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
-      "libstdc++ std::bitset summary provider",
-      "^std::(__debug::)?bitset<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
+                "libstdc++ std::bitset summary provider",
+                "^std::__debug::bitset<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::ContainerSizeSummaryProvider,
@@ -1507,13 +1521,19 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibStdcppBitsetSyntheticFrontEndCreator,
-      "std::bitset synthetic child", "^std::(__debug::)?bitset<.+>(( )?&)?$",
+      "std::bitset synthetic child", "^std::__debug::bitset<.+>(( )?&)?$",
       stl_deref_flags, true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
                 "libstdc++ std::coroutine_handle summary provider",
                 libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
+
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibStdcppSourceLocationSummaryProvider,
+      "libstdc++ std::source_location summary provider", "std::source_location",
+      stl_summary_flags);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
@@ -1670,6 +1690,94 @@ GenericDequeSyntheticFrontEndCreator(CXXSyntheticChildren *children,
       "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider", *valobj_sp);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericSpanSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                    ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlSpan(*valobj_sp))
+    return MsvcStlSpanSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppSpanSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool
+GenericPartialOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
+                                      const TypeSummaryOptions &options) {
+  if (IsMsvcStlOrdering(valobj))
+    return MsvcStlPartialOrderingSummaryProvider(valobj, stream, options);
+  return LibStdcppPartialOrderingSummaryProvider(valobj, stream, options);
+}
+
+static bool
+GenericWeakOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
+                                   const TypeSummaryOptions &options) {
+  if (IsMsvcStlOrdering(valobj))
+    return MsvcStlWeakOrderingSummaryProvider(valobj, stream, options);
+  return LibStdcppWeakOrderingSummaryProvider(valobj, stream, options);
+}
+
+static bool
+GenericStrongOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options) {
+  if (IsMsvcStlOrdering(valobj))
+    return MsvcStlStrongOrderingSummaryProvider(valobj, stream, options);
+  return LibStdcppStrongOrderingSummaryProvider(valobj, stream, options);
+}
+
+static SyntheticChildrenFrontEnd *
+GenericBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                      ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlBitset(*valobj_sp))
+    return MsvcStlBitsetSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppBitsetSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static SyntheticChildrenFrontEnd *
+GenericExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                        lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  if (IsMsvcStlExpected(*valobj_sp))
+    return MsvcStlExpectedSyntheticFrontEndCreator(children, valobj_sp);
+  return nullptr;
+}
+
+static bool GenericExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                           const TypeSummaryOptions &options) {
+  if (IsMsvcStlExpected(valobj))
+    return MsvcStlExpectedSummaryProvider(valobj, stream, options);
+  return false;
+}
+
+static SyntheticChildrenFrontEnd *
+GenericValarraySyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                        lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  if (IsMsvcStlValarray(*valobj_sp))
+    return MsvcStlValarraySyntheticFrontEndCreator(children, valobj_sp);
+  return nullptr;
+}
+
+static bool GenericValarraySummaryProvider(ValueObject &valobj, Stream &stream,
+                                           const TypeSummaryOptions &options) {
+  if (!IsMsvcStlValarray(valobj))
+    return false;
+  return ContainerSizeSummaryProvider(valobj, stream, options);
+}
+
+static bool
+GenericSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options) {
+  if (IsMsvcStlSourceLocation(valobj))
+    return MsvcStlSourceLocationSummaryProvider(valobj, stream, options);
+  return LibStdcppSourceLocationSummaryProvider(valobj, stream, options);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1713,6 +1821,70 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
 
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::string_view", "char",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::ASCII>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::ASCII>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u8string_view", "char8_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::UTF8>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::UTF8>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::u8string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u16string_view", "char16_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::UTF16>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::UTF16>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::u16string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::u32string_view", "char32_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlStringViewSummaryProvider<StringElementType::UTF32>(
+                  valobj, stream, options);
+            return LibStdcppStringViewSummaryProvider<StringElementType::UTF32>(
+                valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::u32string_view summary provider"));
+  RegisterStdStringViewSummaryProvider(
+      cpp_category_sp, "std::wstring_view", "wchar_t",
+      std::make_shared<CXXFunctionSummaryFormat>(
+          stl_summary_flags,
+          [](ValueObject &valobj, Stream &stream,
+             const TypeSummaryOptions &options) {
+            if (IsMsvcStlStringViewType(valobj))
+              return MsvcStlWStringViewSummaryProvider(valobj, stream, options);
+            return LibStdcppWStringViewSummaryProvider(valobj, stream, options);
+          },
+          "MSVC STL/libstdc++ std::wstring_view summary provider"));
+
   // NOTE: it is loaded as a common formatter because the libc++ version is not
   // in the `__1` namespace, hence we need to dispatch based on the class
   // layout.
@@ -1720,6 +1892,14 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   GenericInitializerListSyntheticFrontEndCreator,
                   "std::initializer_list synthetic children",
                   "^std::initializer_list<.+>$", stl_synth_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericFilesystemPathSummaryProvider,
+                "MSVC STL/libstdc++ std::filesystem::path summary provider",
+                "^std::filesystem::(__cxx11::)?path$", stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericSourceLocationSummaryProvider,
+                "MSVC STL/libstdc++ std::source_location summary provider",
+                "std::source_location", stl_summary_flags);
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
@@ -1758,11 +1938,17 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(cpp_category_sp, GenericDequeSyntheticFrontEndCreator,
                   "std::deque container synthetic children",
                   "^std::deque<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericSpanSyntheticFrontEndCreator,
+                  "std::span container synthetic children", "^std::span<.+>$",
+                  stl_deref_flags, true);
 
   AddCXXSynthetic(cpp_category_sp, GenericMapLikeSyntheticFrontEndCreator,
                   "std::(multi)?map/set synthetic children",
                   "^std::(multi)?(map|set)<.+>(( )?&)?$", stl_synth_flags,
                   true);
+  AddCXXSynthetic(cpp_category_sp, GenericBitsetSyntheticFrontEndCreator,
+                  "std::bitset synthetic children", "^std::bitset<.+>(( )?&)?$",
+                  stl_deref_flags, true);
 
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "std::initializer_list summary provider",
@@ -1810,6 +1996,70 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstd++ std::deque summary provider",
                 "^std::deque<.+>(( )?&)?$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstd++ std::span summary provider",
+                "^std::span<.+>$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericPartialOrderingSummaryProvider,
+                "MSVC STL/libstdc++ std::partial_ordering summary provider",
+                "std::partial_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
+  AddCXXSummary(cpp_category_sp, GenericWeakOrderingSummaryProvider,
+                "MSVC STL/libstdc++ std::weak_ordering summary provider",
+                "std::weak_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
+  AddCXXSummary(cpp_category_sp, GenericStrongOrderingSummaryProvider,
+                "MSVC STL/libstdc++ std::strong_ordering summary provider",
+                "std::strong_ordering",
+                eTypeOptionHideChildren | eTypeOptionHideValue, false);
+
+  // Container adaptors expose the underlying container as the standard
+  // protected member `c` ([queue.defn], [stack.defn], [priqueue.overview]).
+  AddCXXSynthetic(cpp_category_sp, GenericContainerAdaptorFrontEndCreator,
+                  "std::queue synthetic children", "^std::queue<.+>(( )?&)?$",
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericContainerAdaptorFrontEndCreator,
+                  "std::stack synthetic children", "^std::stack<.+>(( )?&)?$",
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, GenericContainerAdaptorFrontEndCreator,
+                  "std::priority_queue synthetic children",
+                  "^std::priority_queue<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::queue summary provider", "^std::queue<.+>(( )?&)?$",
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::stack summary provider", "^std::stack<.+>(( )?&)?$",
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::priority_queue summary provider",
+                "^std::priority_queue<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_code summary provider",
+                "std::error_code", stl_summary_flags);
+  AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_condition summary provider",
+                "std::error_condition", stl_summary_flags);
+  AddCXXSynthetic(cpp_category_sp, GenericErrorCodeSyntheticFrontEndCreator,
+                  "MSVC STL/libstdc++ std::error_code/error_condition "
+                  "synthetic children",
+                  "^std::error_(code|condition)$", stl_synth_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL/libstdc++ std::bitset summary provider",
+                "^std::bitset<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSynthetic(cpp_category_sp, GenericExpectedSyntheticFrontEndCreator,
+                  "MSVC STL std::expected synthetic children",
+                  "^std::expected<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericExpectedSummaryProvider,
+                "MSVC STL std::expected summary provider",
+                "^std::expected<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSynthetic(cpp_category_sp, GenericValarraySyntheticFrontEndCreator,
+                  "MSVC STL std::valarray synthetic children",
+                  "^std::valarray<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericValarraySummaryProvider,
+                "MSVC STL std::valarray summary provider",
+                "^std::valarray<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -1849,36 +2099,6 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           MsvcStlStringSummaryProvider<StringElementType::UTF32>,
           "MSVC STL std::u32string summary provider"));
 
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::string_view", "char",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::ASCII>,
-          "MSVC STL std::string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::u8string_view", "char8_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::UTF8>,
-          "MSVC STL std::u8string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::u16string_view", "char16_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::UTF16>,
-          "MSVC STL std::u16string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::u32string_view", "char32_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags,
-          MsvcStlStringViewSummaryProvider<StringElementType::UTF32>,
-          "MSVC STL std::u32string_view summary provider"));
-  RegisterStdStringViewSummaryProvider(
-      cpp_category_sp, "std::wstring_view", "wchar_t",
-      std::make_shared<CXXFunctionSummaryFormat>(
-          stl_summary_flags, MsvcStlWStringViewSummaryProvider,
-          "MSVC STL std::wstring_view summary provider"));
-
   stl_summary_flags.SetDontShowChildren(false);
 
   AddCXXSynthetic(cpp_category_sp, MsvcStlAtomicSyntheticFrontEndCreator,
@@ -1896,6 +2116,10 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL tree iterator summary",
                 "^std::_Tree(_const)?_iterator<.+>(( )?&)?$", stl_summary_flags,
                 true);
+  AddCXXSynthetic(
+      cpp_category_sp, MsvcStlVectorIteratorSyntheticFrontEndCreator,
+      "MSVC STL vector iterator synthetic children",
+      "^std::_Vector(_const)?_iterator<.+>(( )?&)?$", stl_synth_flags, true);
 }
 
 static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
@@ -2175,7 +2399,7 @@ static bool PrintFunctionNameWithArgs(Stream &s,
 
   const char *cstr = sc.GetPossiblyInlinedFunctionName()
                          .GetName(Mangled::NamePreference::ePreferDemangled)
-                         .AsCString();
+                         .AsCString(nullptr);
   if (!cstr)
     return false;
 
@@ -2393,8 +2617,8 @@ protected:
 
   llvm::Expected<ConstString> substituteImpl(llvm::StringRef Mangled) {
     if (this->parse() == nullptr)
-      return llvm::createStringError(
-          llvm::formatv("Failed to substitute mangling in '{0}'", Mangled));
+      return llvm::createStringErrorV("failed to substitute mangling in '{0}'",
+                                      Mangled);
 
     if (!Substituted)
       return ConstString();
@@ -2517,7 +2741,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_language_cplusplus_properties);
+    m_collection_sp->Initialize(g_language_cplusplus_properties_def);
   }
 
   FormatEntity::Entry GetFunctionNameFormat() const {

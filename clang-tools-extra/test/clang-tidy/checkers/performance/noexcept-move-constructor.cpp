@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s performance-noexcept-move-constructor %t -- -- -fexceptions
-// RUN: %check_clang_tidy -std=c++17 -check-suffixes=,ERR %s performance-noexcept-move-constructor %t \
+// RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=,ERR %s performance-noexcept-move-constructor %t \
 // RUN:                   -- --fix-errors -- -fexceptions -DENABLE_ERROR
 
 namespace std

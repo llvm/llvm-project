@@ -14,7 +14,7 @@
 namespace llvm {
 
 class AMDGPUPreloadKernArgPrologPass
-    : public PassInfoMixin<AMDGPUPreloadKernArgPrologPass> {
+    : public RequiredPassInfoMixin<AMDGPUPreloadKernArgPrologPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &AM);

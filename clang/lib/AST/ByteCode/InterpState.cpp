@@ -17,10 +17,13 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
-                         Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame) {
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
+                         FrameAllocator &FrameAlloc, Context &Ctx,
+                         SourceMapper *M)
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
@@ -28,11 +31,14 @@ InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
   EvalMode = Parent.EvalMode;
 }
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
+                         FrameAllocator &FrameAlloc,
+
                          Context &Ctx, const Function *Func)
-    : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
-      BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame) {
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr),
+      FrameAlloc(FrameAlloc), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
@@ -48,12 +54,7 @@ bool InterpState::inConstantContext() const {
 }
 
 InterpState::~InterpState() {
-  while (Current && !Current->isBottomFrame()) {
-    InterpFrame *Next = Current->Caller;
-    delete Current;
-    Current = Next;
-  }
-  BottomFrame.destroyScopes();
+  assert(Current->isBottomFrame());
 
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;
@@ -75,7 +76,7 @@ void InterpState::cleanup() {
     Alloc->cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() { return Current; }
+const Frame *InterpState::getCurrentFrame() { return Current; }
 
 void InterpState::deallocate(Block *B) {
   assert(B);
@@ -146,10 +147,17 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       QualType ElemType = TAL[0].getAsType();
-      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
+      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetOpPC()));
       return {NewCall, ElemType};
     }
   }
 
   return {};
+}
+
+bool InterpState::diagnoseStepLimitExceeded(CodePtr OpPC) {
+  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded, 1)
+      << getLangOpts().ConstexprStepLimit;
+  Note(Current->getSource(OpPC), diag::note_constexpr_steps);
+  return false;
 }

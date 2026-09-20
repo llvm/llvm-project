@@ -60,12 +60,6 @@ LogicalResult vectorOneToOneRewrite(Operation *op, StringRef targetOp,
                                     Attribute propertiesAttr,
                                     const LLVMTypeConverter &typeConverter,
                                     ConversionPatternRewriter &rewriter);
-
-/// Return "true" if the given type is an unsupported floating point type. In
-/// case of a vector type, return "true" if the element type is an unsupported
-/// floating point type.
-bool isUnsupportedFloatingPointType(const TypeConverter &typeConverter,
-                                    Type type);
 } // namespace detail
 } // namespace LLVM
 
@@ -76,13 +70,16 @@ bool isUnsupportedFloatingPointType(const TypeConverter &typeConverter,
 template <typename SourceOp, typename TargetOp>
 class AttrConvertPassThrough {
 public:
-  AttrConvertPassThrough(SourceOp srcOp) : srcAttrs(srcOp->getAttrs()) {}
+  AttrConvertPassThrough(SourceOp srcOp)
+      : srcAttrs(srcOp->getDiscardableAttrDictionary().getValue()),
+        propertiesAttr(srcOp->getPropertiesAsAttribute()) {}
 
   ArrayRef<NamedAttribute> getAttrs() const { return srcAttrs; }
-  Attribute getPropAttr() const { return {}; }
+  Attribute getPropAttr() const { return propertiesAttr; }
 
 private:
   ArrayRef<NamedAttribute> srcAttrs;
+  Attribute propertiesAttr;
 };
 
 /// Basic lowering implementation to rewrite Ops with just one result to the
@@ -98,9 +95,11 @@ template <typename SourceOp, typename TargetOp,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough,
           bool FailOnUnsupportedFP = false>
-class VectorConvertToLLVMPattern : public ConvertOpToLLVMPattern<SourceOp> {
+class VectorConvertToLLVMPattern
+    : public ConvertOpToLLVMPattern<SourceOp, FailOnUnsupportedFP> {
 public:
-  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern<SourceOp,
+                               FailOnUnsupportedFP>::ConvertOpToLLVMPattern;
   using Super = VectorConvertToLLVMPattern<SourceOp, TargetOp>;
 
   LogicalResult
@@ -112,16 +111,9 @@ public:
 
     // Bail on unsupported floating point types. (These are type-converted to
     // integer types.)
-    if (FailOnUnsupportedFP) {
-      for (Value operand : op->getOperands())
-        if (LLVM::detail::isUnsupportedFloatingPointType(
-                *this->getTypeConverter(), operand.getType()))
-          return rewriter.notifyMatchFailure(op,
-                                             "unsupported floating point type");
-      if (LLVM::detail::isUnsupportedFloatingPointType(
-              *this->getTypeConverter(), op->getResult(0).getType()))
-        return rewriter.notifyMatchFailure(op,
-                                           "unsupported floating point type");
+    if (FailOnUnsupportedFP && LLVM::detail::opHasUnsupportedFloatingPointTypes(
+                                   op, *this->typeConverter)) {
+      return rewriter.notifyMatchFailure(op, "unsupported floating point type");
     }
 
     // Determine attributes for the target op

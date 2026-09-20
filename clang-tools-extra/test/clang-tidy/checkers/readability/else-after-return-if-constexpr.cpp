@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-else-after-return %t -- -- -std=c++17
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-else-after-return %t
 
 // Constexpr if is an exception to the rule, we cannot remove the else.
 void f() {

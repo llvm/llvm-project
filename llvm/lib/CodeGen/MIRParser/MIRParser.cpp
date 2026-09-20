@@ -106,7 +106,8 @@ public:
   ///
   /// Return true if an error occurred.
   bool parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                            ModuleAnalysisManager *FAM);
+                            ModuleAnalysisManager *FAM,
+                            Module::iterator &FirstUnvisitedFunction);
 
   /// Initialize the machine function to the state that's described in the MIR
   /// file.
@@ -114,6 +115,12 @@ public:
   /// Return true if error occurred.
   bool initializeMachineFunction(const yaml::MachineFunction &YamlMF,
                                  MachineFunction &MF);
+
+  bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
+                              const yaml::MachineFunction &YamlMF);
+
+  bool initializePrefetchTargets(PerFunctionMIParsingState &PFS,
+                                 const yaml::MachineFunction &YamlMF);
 
   bool parseRegisterInfo(PerFunctionMIParsingState &PFS,
                          const yaml::MachineFunction &YamlMF);
@@ -128,9 +135,6 @@ public:
       PerFunctionMIParsingState &PFS,
       const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
       llvm::SaveRestorePoints &SaveRestorePoints);
-
-  bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
-                              const yaml::MachineFunction &YamlMF);
 
   bool parseCalleeSavedRegister(PerFunctionMIParsingState &PFS,
                                 std::vector<CalleeSavedInfo> &CSIInfo,
@@ -173,9 +177,6 @@ private:
   bool parseMBBReference(PerFunctionMIParsingState &PFS,
                          MachineBasicBlock *&MBB,
                          const yaml::StringValue &Source);
-
-  bool parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                            const yaml::StringValue &Source);
 
   /// Return a MIR diagnostic converted from an MI string diagnostic.
   SMDiagnostic diagFromMIStringDiag(const SMDiagnostic &Error,
@@ -296,8 +297,9 @@ bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI,
     return false;
 
   // Parse the machine functions.
+  auto FirstUnvisitedFunction = M.begin();
   do {
-    if (parseMachineFunction(M, MMI, MAM))
+    if (parseMachineFunction(M, MMI, MAM, FirstUnvisitedFunction))
       return true;
     In.nextDocument();
   } while (In.setCurrentDocument());
@@ -319,8 +321,19 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   return F;
 }
 
-bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                                         ModuleAnalysisManager *MAM) {
+static Function *
+getNextUnusedUnnamedFunction(const Module &M,
+                             Module::iterator &FirstUnvisitedFunction) {
+  for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
+    if (!FirstUnvisitedFunction->hasName())
+      return &*FirstUnvisitedFunction++;
+
+  return nullptr;
+}
+
+bool MIRParserImpl::parseMachineFunction(
+    Module &M, MachineModuleInfo &MMI, ModuleAnalysisManager *MAM,
+    Module::iterator &FirstUnvisitedFunction) {
   // Parse the yaml.
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
@@ -339,7 +352,8 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
   if (!F) {
     if (NoLLVMIR) {
       F = createDummyFunction(FunctionName, M);
-    } else {
+    } else if (!FunctionName.empty() ||
+               !(F = getNextUnusedUnnamedFunction(M, FirstUnvisitedFunction))) {
       return error(Twine("function '") + FunctionName +
                    "' isn't defined in the provided LLVM IR");
     }
@@ -586,6 +600,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))
     return true;
+  if (initializePrefetchTargets(PFS, YamlMF))
+    return true;
   if (!YamlMF.Constants.empty()) {
     auto *ConstantPool = MF.getConstantPool();
     assert(ConstantPool && "Constant pool must be created");
@@ -671,11 +687,29 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   if (parseCalledGlobals(PFS, MF, YamlMF))
     return true;
 
+  if (initializePrefetchTargets(PFS, YamlMF))
+    return true;
+
   setupDebugValueTracking(MF, PFS, YamlMF);
 
   MF.getSubtarget().mirFileLoaded(MF);
 
   MF.verify(nullptr, nullptr, &errs());
+  return false;
+}
+
+bool MIRParserImpl::initializePrefetchTargets(
+    PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
+  MachineFunction &MF = PFS.MF;
+  SMDiagnostic Error;
+  DenseMap<UniqueBBID, SmallVector<unsigned>> Targets;
+  for (const auto &YamlTarget : YamlMF.PrefetchTargets) {
+    CallsiteID Target;
+    if (llvm::parsePrefetchTarget(PFS, Target, YamlTarget.Value, Error))
+      return error(Error, YamlTarget.SourceRange);
+    Targets[Target.BBID].push_back(Target.CallsiteIndex);
+  }
+  MF.setPrefetchTargets(Targets);
   return false;
 }
 
@@ -765,6 +799,46 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
       CalleeSavedRegisters.push_back(Reg.id());
     }
     RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
+  }
+
+  // Stash any VirtRegMap state on MRI.
+  // VirtRegMap::init() will use that information to get pre-populated
+  // on the first analysis run.
+  for (const auto &VReg : YamlMF.VirtualRegisters) {
+    if (VReg.SplitFrom.Value.empty() && VReg.AssignedPhys.Value.empty())
+      continue;
+
+    auto It = PFS.VRegInfos.find(VReg.ID.Value);
+    if (It == PFS.VRegInfos.end())
+      continue;
+    Register ChildReg = It->second->VReg;
+
+    MachineRegisterInfo::PendingVirtRegMapEntry Pending;
+    Pending.VReg = ChildReg;
+
+    if (!VReg.SplitFrom.Value.empty()) {
+      VRegInfo *Parent = nullptr;
+      if (parseVirtualRegisterReference(PFS, Parent, VReg.SplitFrom.Value,
+                                        Error))
+        return error(Error, VReg.SplitFrom.SourceRange);
+      if (Parent->VReg == ChildReg)
+        return error(VReg.SplitFrom.SourceRange.Start,
+                     Twine("'split-from' references the same vreg as 'id' (%") +
+                         Twine(VReg.ID.Value) + ")");
+      Pending.SplitFrom = Parent->VReg;
+    }
+    if (!VReg.AssignedPhys.Value.empty()) {
+      Register Phys;
+      if (parseRegisterReference(PFS, Phys, VReg.AssignedPhys.Value, Error))
+        return error(Error, VReg.AssignedPhys.SourceRange);
+      if (!Phys.isPhysical())
+        return error(
+            VReg.AssignedPhys.SourceRange.Start,
+            Twine("'assigned-phys' must be a physical register, got '") +
+                VReg.AssignedPhys.Value + "'");
+      Pending.AssignedPhys = Phys.asMCReg();
+    }
+    RegInfo.addPendingVirtRegMapEntry(Pending);
   }
 
   return false;
@@ -863,6 +937,8 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
     MFI.ensureMaxAlignment(Align(YamlMFI.MaxAlignment));
   MFI.setAdjustsStack(YamlMFI.AdjustsStack);
   MFI.setHasCalls(YamlMFI.HasCalls);
+  if (YamlMFI.FramePointerPolicy != FramePointerKind::None)
+    MFI.setFramePointerPolicy(YamlMFI.FramePointerPolicy);
   if (YamlMFI.MaxCallFrameSize != ~0u)
     MFI.setMaxCallFrameSize(YamlMFI.MaxCallFrameSize);
   MFI.setCVBytesOfCalleeSavedRegisters(YamlMFI.CVBytesOfCalleeSavedRegisters);
@@ -1147,26 +1223,31 @@ bool MIRParserImpl::parseMBBReference(PerFunctionMIParsingState &PFS,
   return false;
 }
 
-bool MIRParserImpl::parseMachineMetadata(PerFunctionMIParsingState &PFS,
-                                         const yaml::StringValue &Source) {
-  SMDiagnostic Error;
-  if (llvm::parseMachineMetadata(PFS, Source.Value, Source.SourceRange, Error))
-    return error(Error, Source.SourceRange);
-  return false;
-}
-
 bool MIRParserImpl::parseMachineMetadataNodes(
     PerFunctionMIParsingState &PFS, MachineFunction &MF,
     const yaml::MachineFunction &YMF) {
-  for (const auto &MDS : YMF.MachineMetadataNodes) {
-    if (parseMachineMetadata(PFS, MDS))
+  SmallVector<StringRef> Definitions;
+  for (const auto &MDS : YMF.MachineMetadataNodes)
+    Definitions.push_back(MDS.Value);
+
+  SlotMapping Slots = PFS.IRSlots;
+  SMDiagnostic Error;
+  unsigned ErrorDefinitionIndex = 0;
+  if (parseMetadataDefinitions(Definitions, Error,
+                               *MF.getFunction().getParent(), Slots,
+                               ErrorDefinitionIndex)) {
+    const yaml::StringValue &Source =
+        YMF.MachineMetadataNodes[ErrorDefinitionIndex];
+    if (StringRef(Source.Value).contains('\n')) {
+      reportDiagnostic(diagFromBlockStringDiag(Error, Source.SourceRange));
       return true;
+    }
+    return error(Error, Source.SourceRange);
   }
-  // Report missing definitions from forward referenced nodes.
-  if (!PFS.MachineForwardRefMDNodes.empty())
-    return error(PFS.MachineForwardRefMDNodes.begin()->second.second,
-                 "use of undefined metadata '!" +
-                     Twine(PFS.MachineForwardRefMDNodes.begin()->first) + "'");
+
+  for (auto &[ID, MD] : Slots.MetadataNodes)
+    if (PFS.IRSlots.MetadataNodes.find(ID) == PFS.IRSlots.MetadataNodes.end())
+      PFS.MachineMetadataNodes.try_emplace(ID, MD);
   return false;
 }
 
@@ -1273,7 +1354,7 @@ std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(
   auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
     Error = SMDiagnostic(Filename, SourceMgr::DK_Error,
-                         "Could not open input file: " + EC.message());
+                         "could not open input file: " + EC.message());
     return nullptr;
   }
   return createMIRParser(std::move(FileOrErr.get()), Context,
@@ -1290,7 +1371,7 @@ llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
         DS_Error,
         SMDiagnostic(
             Filename, SourceMgr::DK_Error,
-            "Can't read MIR with a Context that discards named Values")));
+            "cannot read MIR with a Context that discards named Values")));
     return nullptr;
   }
   return std::make_unique<MIRParser>(std::make_unique<MIRParserImpl>(

@@ -30,10 +30,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vrnov0 = COPY $v1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vrnov0 = COPY $v2
-    ; CHECK-NEXT: [[PseudoVNMSUB_VV_M1_:%[0-9]+]]:vr = PseudoVNMSUB_VV_M1 [[PseudoVNMSUB_VV_M1_]], [[COPY1]], [[COPY2]], -1, 6 /* e64 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vr = COPY [[PseudoVNMSUB_VV_M1_]]
-    ; CHECK-NEXT: dead [[PseudoVSLL_VI_M1_:%[0-9]+]]:vr = PseudoVSLL_VI_M1 undef [[PseudoVSLL_VI_M1_]], [[PseudoVSLL_VI_M1_]], 11, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-    ; CHECK-NEXT: $v0 = COPY [[PseudoVNMSUB_VV_M1_]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = PseudoVNMSUB_VV_M1 [[COPY]], [[COPY1]], [[COPY2]], -1 /* vl=VLMAX */, 6 /* e64 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vr = COPY [[COPY]]
+    ; CHECK-NEXT: dead [[COPY3:%[0-9]+]]:vr = PseudoVSLL_VI_M1 undef [[COPY3]], [[COPY3]], 11, $noreg /* vl */, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: $v0 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $v0
     %0:vr = COPY $v0
     %1:vrnov0 = COPY $v1

@@ -335,10 +335,9 @@ define i64 @xor_imm8_i64(i64 %a) {
 ;
 ; GISEL-X86-LABEL: xor_imm8_i64:
 ; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-NEXT:    movl $1, %eax
-; GISEL-X86-NEXT:    xorl %edx, %edx
 ; GISEL-X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_imm8_i64:

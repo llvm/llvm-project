@@ -29,7 +29,7 @@ func.func @image_dref_gather_with_mismatch_imageoperands(%arg0 : !spirv.sampled_
 // -----
 
 func.func @image_dref_gather_error_result_type(%arg0 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
-  // expected-error @+1 {{must be vector of 8/16/32/64-bit integer values of length 4 or vector of 16/32/64-bit float values of length 4}}
+  // expected-error @+1 {{op result #0 must be vector of 8/16/32/64-bit integer values of length 4 of ranks 1 or vector of 16/32/64-bit float values of length 4 of ranks 1, but got 'vector<3xi32>'}}
   %0 = spirv.ImageDrefGather %arg0, %arg1, %arg2 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, vector<4xf32>, f32 -> vector<3xi32>
   spirv.Return
 }
@@ -326,7 +326,7 @@ func.func @image_fetch_type_mismatch(%arg0: !spirv.image<f32, Dim2D, NoDepth, No
 // -----
 
 func.func @image_fetch_2d_result(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, %arg1: vector<2xsi32>) -> () {
-  // expected-error @+1 {{op result #0 must be vector of 16/32/64-bit float values of length 4 or vector of 8/16/32/64-bit integer values of length 4, but got 'vector<2xf32>'}}
+  // expected-error @+1 {{op result #0 must be vector of 16/32/64-bit float values of length 4 of ranks 1 or vector of 8/16/32/64-bit integer values of length 4 of ranks 1, but got 'vector<2xf32>'}}
   %0 = spirv.ImageFetch %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, vector<2xsi32> -> vector<2xf32>
   spirv.Return
 }
@@ -334,7 +334,7 @@ func.func @image_fetch_2d_result(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArr
 // -----
 
 func.func @image_fetch_float_coords(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, %arg1: vector<2xf32>) -> () {
-  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16, but got 'vector<2xf32>'}}
+  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values of length 2/3/4/8/16 of ranks 1, but got 'vector<2xf32>'}}
   %0 = spirv.ImageFetch %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, vector<2xf32> -> vector<2xf32>
   spirv.Return
 }
@@ -362,6 +362,22 @@ func.func @bias_too_many_arguments(%arg0 : !spirv.sampled_image<!spirv.image<f32
 func.func @bias_with_rect(%arg0 : !spirv.sampled_image<!spirv.image<f32, Rect, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : f32) -> () {
   // expected-error @+1 {{Bias must only be used with an image type that has a dim operand of 1D, 2D, 3D, or Cube}}
   %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Rect, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, f32 -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @bias_bfloat16(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : bf16) -> () {
+  // expected-error @+1 {{Bias must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, bf16 -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @bias_float8(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : f32, %arg2 : f8E4M3FN) -> () {
+  // expected-error @+1 {{Bias must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 ["Bias"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, f32, f8E4M3FN -> vector<4xf32>
   spirv.Return
 }
 
@@ -403,9 +419,35 @@ func.func @lod_with_rect(%arg0 : !spirv.sampled_image<!spirv.image<f32, Rect, No
   spirv.Return
 }
 
+// -----
+
+func.func @lod_bfloat16(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : bf16) -> () {
+  // expected-error @+1 {{for sampling operations, Lod must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Lod"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, bf16 -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @lod_float8(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : f8E4M3FN) -> () {
+  // expected-error @+1 {{for sampling operations, Lod must be a floating-point type scalar}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Lod"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, f8E4M3FN -> vector<4xf32>
+  spirv.Return
+}
+
 // TODO: We cannot currently test Lod with MS != 0 as all implemented explicit operations already check for that.
 
-// TODO: Add Lod tests for fetch operations once available.
+// -----
+
+// Lod is valid for spirv.ImageFetch (fetch instruction).
+func.func @lod_with_image_fetch(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>,
+                                %arg1: vector<2xsi32>, %arg2: si32) -> () {
+  // CHECK: {{%.*}} = spirv.ImageFetch {{%.*}}, {{%.*}} ["Lod"], {{%.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, vector<2xsi32>, si32 -> vector<4xf32>
+  %0 = spirv.ImageFetch %arg0, %arg1 ["Lod"], %arg2 :
+      !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>,
+      vector<2xsi32>, si32 -> vector<4xf32>
+  spirv.Return
+}
 
 // -----
 
@@ -447,6 +489,22 @@ func.func @gard_arg_wrong_type(%arg0 : !spirv.sampled_image<!spirv.image<f32, Di
 
 // -----
 
+func.func @gard_arg_bfloat16(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : vector<2xbf16>) -> () {
+  // expected-error @+1 {{Grad arguments must be a vector of floating-point type}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Grad"], %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, vector<2xbf16>, vector<2xbf16> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @gard_arg_float8(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : vector<2xf8E4M3FN>) -> () {
+  // expected-error @+1 {{Grad arguments must be a vector of floating-point type}}
+  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Grad"], %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, vector<2xf8E4M3FN>, vector<2xf8E4M3FN> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
 func.func @gard_arg_size_mismatch_scalar(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : f32) -> () {
   // expected-error @+1 {{number of components of each Grad argument must equal the number of components in coordinate, minus the array layer component, if present}}
   %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Grad"], %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, f32, f32 -> vector<4xf32>
@@ -466,5 +524,49 @@ func.func @gard_int_args(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, N
 func.func @gard_too_many_args(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : vector<2xf32>) -> () {
   // expected-error @+1 {{too many image operand arguments have been provided}}
   %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Grad"], %arg2, %arg2, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, vector<2xf32>, vector<2xf32>, vector<2xf32> -> vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SampledImage
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @sampled_image(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, %arg1 : !spirv.sampler) -> () {
+  // CHECK: spirv.SampledImage {{%.*}}, {{%.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>
+  %0 = spirv.SampledImage %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>
+  spirv.Return
+}
+
+// -----
+
+func.func @sampled_image_sampler_unknown(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>, %arg1 : !spirv.sampler) -> () {
+  // CHECK: spirv.SampledImage {{%.*}}, {{%.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>>
+  %0 = spirv.SampledImage %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>>
+  spirv.Return
+}
+
+// -----
+
+func.func @sampled_image_error(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, %arg1 : !spirv.sampler) -> () {
+  // expected-error @+1 {{type of 'result' wraps the image type of 'image'}}
+  %0 = spirv.SampledImage %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>
+  spirv.Return
+}
+
+// -----
+
+func.func @sampled_image_dim_subpassdata(%arg0 : !spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, %arg1 : !spirv.sampler) -> () {
+  // expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got SubpassData}}
+  %0 = spirv.SampledImage %arg0, %arg1 : !spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>
+  spirv.Return
+}
+
+// -----
+
+func.func @sampled_image_sampled_operand(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, %arg1 : !spirv.sampler) -> () {
+  // expected-error @+1 {{the sampled operand of the underlying image must be SamplerUnknown or NeedSampler}}
+  %0 = spirv.SampledImage %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
   spirv.Return
 }

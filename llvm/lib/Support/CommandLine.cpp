@@ -40,6 +40,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -67,6 +68,7 @@ template class LLVM_EXPORT_TEMPLATE basic_parser<double>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<float>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<std::string>;
 template class LLVM_EXPORT_TEMPLATE basic_parser<char>;
+template class LLVM_EXPORT_TEMPLATE basic_parser<ElementCount>;
 
 #if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
 // Only instantiate opt<std::string> when not building a Windows DLL. When
@@ -103,6 +105,7 @@ void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
 void parser<std::optional<std::string>>::anchor() {}
 void parser<char>::anchor() {}
+void parser<ElementCount>::anchor() {}
 
 // These anchor functions instantiate opt<T> and reference its virtual
 // destructor to ensure MSVC exports the corresponding vtable and typeinfo when
@@ -146,6 +149,7 @@ static inline bool isPrefixedOrGrouping(const Option *O) {
          O->getFormattingFlag() == cl::AlwaysPrefix;
 }
 
+using OptionsMapTy = DenseMap<StringRef, Option *>;
 
 namespace {
 
@@ -276,10 +280,11 @@ public:
       OptionNames.push_back(O->ArgStr);
 
     SubCommand &Sub = *SC;
-    auto End = Sub.OptionsMap.end();
     for (auto Name : OptionNames) {
       auto I = Sub.OptionsMap.find(Name);
-      if (I != End && I->getValue() == O)
+      // Re-query end() each iteration: a prior erase invalidates iterators
+      // (including a cached end()) under backward-shift deletion.
+      if (I != Sub.OptionsMap.end() && I->second == O)
         Sub.OptionsMap.erase(I);
     }
 
@@ -374,7 +379,7 @@ public:
           O->hasArgStr())
         addOption(O, sub);
       else
-        addLiteralOption(*O, sub, E.first());
+        addLiteralOption(*O, sub, E.first);
     }
   }
 
@@ -422,7 +427,15 @@ private:
 
 } // namespace
 
-static ManagedStatic<CommandLineParser> GlobalParser;
+// The global parser is kept as a block-scope static so that option
+// constructors running during dynamic initialization of other translation
+// units never reference a namespace-scope global whose initialization order
+// is unspecified. The ManagedStatic keeps construction lazy and destruction
+// tied to llvm_shutdown().
+static CommandLineParser &globalParser() {
+  static ManagedStatic<CommandLineParser> GlobalParser;
+  return *GlobalParser;
+}
 
 template <typename T, T TrueVal, T FalseVal>
 static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
@@ -441,23 +454,30 @@ static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
 }
 
 void cl::AddLiteralOption(Option &O, StringRef Name) {
-  GlobalParser->addLiteralOption(O, Name);
+  globalParser().addLiteralOption(O, Name);
 }
 
 extrahelp::extrahelp(StringRef Help) : morehelp(Help) {
-  GlobalParser->MoreHelp.push_back(Help);
+  globalParser().MoreHelp.push_back(Help);
+}
+
+Option::Option(NumOccurrencesFlag OccurrencesFlag, OptionHidden Hidden)
+    : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
+      HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
+      FullyInitialized(false), Position(0), AdditionalVals(0) {
+  Categories.push_back(&getGeneralCategory());
 }
 
 void Option::addArgument() {
-  GlobalParser->addOption(this);
+  globalParser().addOption(this);
   FullyInitialized = true;
 }
 
-void Option::removeArgument() { GlobalParser->removeOption(this); }
+void Option::removeArgument() { globalParser().removeOption(this); }
 
 void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
-    GlobalParser->updateArgStr(this, S);
+    globalParser().updateArgStr(this, S);
   assert(!S.starts_with("-") && "Option can't start with '-");
   ArgStr = S;
   if (ArgStr.size() == 1)
@@ -483,29 +503,31 @@ void Option::reset() {
 }
 
 void OptionCategory::registerCategory() {
-  GlobalParser->registerCategory(this);
+  globalParser().registerCategory(this);
 }
 
-// A special subcommand representing no subcommand. It is particularly important
-// that this ManagedStatic uses constant initailization and not dynamic
-// initialization because it is referenced from cl::opt constructors, which run
-// dynamically in an arbitrary order.
-LLVM_REQUIRE_CONSTANT_INITIALIZATION
-static ManagedStatic<SubCommand> TopLevelSubCommand;
+// A special subcommand representing no subcommand. It is kept as a
+// block-scope static because it is referenced from cl::opt constructors,
+// which run dynamically in an arbitrary order across translation units;
+// block-scope statics are initialized on first use and therefore have no
+// initialization-order hazard.
+SubCommand &SubCommand::getTopLevel() {
+  static ManagedStatic<SubCommand> TopLevelSubCommand;
+  return *TopLevelSubCommand;
+}
 
 // A special subcommand that can be used to put an option into all subcommands.
-static ManagedStatic<SubCommand> AllSubCommands;
-
-SubCommand &SubCommand::getTopLevel() { return *TopLevelSubCommand; }
-
-SubCommand &SubCommand::getAll() { return *AllSubCommands; }
+SubCommand &SubCommand::getAll() {
+  static ManagedStatic<SubCommand> AllSubCommands;
+  return *AllSubCommands;
+}
 
 void SubCommand::registerSubCommand() {
-  GlobalParser->registerSubCommand(this);
+  globalParser().registerSubCommand(this);
 }
 
 void SubCommand::unregisterSubCommand() {
-  GlobalParser->unregisterSubCommand(this);
+  globalParser().unregisterSubCommand(this);
 }
 
 void SubCommand::reset() {
@@ -517,7 +539,7 @@ void SubCommand::reset() {
 }
 
 SubCommand::operator bool() const {
-  return (GlobalParser->getActiveSubCommand() == this);
+  return (globalParser().getActiveSubCommand() == this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -588,7 +610,7 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
 /// (after an equal sign) return that as well.  This assumes that leading dashes
 /// have already been stripped.
 static Option *LookupNearestOption(StringRef Arg,
-                                   const StringMap<Option *> &OptionsMap,
+                                   const OptionsMapTy &OptionsMap,
                                    std::string &NearestString) {
   // Reject all dashes.
   if (Arg.empty())
@@ -734,9 +756,9 @@ bool llvm::cl::ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
 //
 static Option *getOptionPred(StringRef Name, size_t &Length,
                              bool (*Pred)(const Option *),
-                             const StringMap<Option *> &OptionsMap) {
-  StringMap<Option *>::const_iterator OMI = OptionsMap.find(Name);
-  if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+                             const OptionsMapTy &OptionsMap) {
+  auto OMI = OptionsMap.find(Name);
+  if (OMI != OptionsMap.end() && !Pred(OMI->second))
     OMI = OptionsMap.end();
 
   // Loop while we haven't found an option and Name still has at least two
@@ -745,7 +767,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   while (OMI == OptionsMap.end() && Name.size() > 1) {
     Name = Name.drop_back();
     OMI = OptionsMap.find(Name);
-    if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+    if (OMI != OptionsMap.end() && !Pred(OMI->second))
       OMI = OptionsMap.end();
   }
 
@@ -760,10 +782,9 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
 /// with at least one '-') does not fully match an available option.  Check to
 /// see if this is a prefix or grouped option.  If so, split arg into output an
 /// Arg/Value pair and return the Option to parse it with.
-static Option *
-HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
-                              bool &ErrorParsing,
-                              const StringMap<Option *> &OptionsMap) {
+static Option *HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
+                                             bool &ErrorParsing,
+                                             const OptionsMapTy &OptionsMap) {
   if (Arg.size() == 1)
     return nullptr;
 
@@ -839,9 +860,10 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
                                 SmallVectorImpl<const char *> &NewArgv,
                                 bool MarkEOLs) {
   SmallString<128> Token;
+  bool InToken = false;
   for (size_t I = 0, E = Src.size(); I != E; ++I) {
     // Consume runs of whitespace.
-    if (Token.empty()) {
+    if (!InToken) {
       while (I != E && isWhitespace(Src[I])) {
         // Mark the end of lines in response files.
         if (MarkEOLs && Src[I] == '\n')
@@ -850,6 +872,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
       }
       if (I == E)
         break;
+      InToken = true;
     }
 
     char C = Src[I];
@@ -878,12 +901,12 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
 
     // End the token if this is whitespace.
     if (isWhitespace(C)) {
-      if (!Token.empty())
-        NewArgv.push_back(Saver.save(Token.str()).data());
+      NewArgv.push_back(Saver.save(Token.str()).data());
       // Mark the end of lines in response files.
       if (MarkEOLs && C == '\n')
         NewArgv.push_back(nullptr);
       Token.clear();
+      InToken = false;
       continue;
     }
 
@@ -892,7 +915,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
   }
 
   // Append the last token after hitting EOF with no whitespace.
-  if (!Token.empty())
+  if (InToken)
     NewArgv.push_back(Saver.save(Token.str()).data());
 }
 
@@ -1482,7 +1505,7 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
   int NewArgc = static_cast<int>(NewArgv.size());
 
   // Parse all options.
-  return GlobalParser->ParseCommandLineOptions(
+  return globalParser().ParseCommandLineOptions(
       NewArgc, &NewArgv[0], Overview, Errs, VFS, LongOptionsUseDoubleDash);
 }
 
@@ -1492,8 +1515,14 @@ void CommandLineParser::ResetAllOptionOccurrences() {
   // Options might be reset twice (they can be reference in both OptionsMap
   // and one of the other members), but that does not harm.
   for (auto *SC : RegisteredSubCommands) {
+    // reset() removes default options from OptionsMap (via removeArgument), so
+    // collect the options first to avoid invalidating the map iterator.
+    SmallVector<Option *, 0> Opts;
+    Opts.reserve(SC->OptionsMap.size());
     for (auto &O : SC->OptionsMap)
-      O.second->reset();
+      Opts.push_back(O.second);
+    for (Option *O : Opts)
+      O->reset();
     for (Option *O : SC->PositionalOpts)
       O->reset();
     for (Option *O : SC->SinkOpts)
@@ -1554,7 +1583,7 @@ bool CommandLineParser::ParseCommandLineOptions(
     if (ChosenSubCommand != &SubCommand::getTopLevel())
       FirstArg = 2;
   }
-  GlobalParser->ActiveSubCommand = ChosenSubCommand;
+  globalParser().ActiveSubCommand = ChosenSubCommand;
 
   assert(ChosenSubCommand);
   auto &ConsumeAfterOpt = ChosenSubCommand->ConsumeAfterOpt;
@@ -1872,7 +1901,7 @@ bool Option::error(const Twine &Message, StringRef ArgName, raw_ostream &Errs) {
   if (ArgName.empty())
     Errs << HelpStr; // Be nice for positional arguments
   else
-    Errs << GlobalParser->ProgramName << ": for the " << PrintArg(ArgName, 0);
+    Errs << globalParser().ProgramName << ": for the " << PrintArg(ArgName, 0);
 
   Errs << " option: " << Message << "\n";
   return true;
@@ -1995,7 +2024,43 @@ bool parser<bool>::parse(Option &O, StringRef ArgName, StringRef Arg,
 //
 bool parser<boolOrDefault>::parse(Option &O, StringRef ArgName, StringRef Arg,
                                   boolOrDefault &Value) {
-  return parseBool<boolOrDefault, BOU_TRUE, BOU_FALSE>(O, ArgName, Arg, Value);
+  return parseBool<boolOrDefault, boolOrDefault::BOU_TRUE,
+                   boolOrDefault::BOU_FALSE>(O, ArgName, Arg, Value);
+}
+
+// parser<FixedOrScalableQuantity> implementation
+//
+template <typename FixedOrScalableQuantityT>
+static bool parseFixedOrScalableQuantity(Option &O, StringRef Arg,
+                                         StringRef ValueKind,
+                                         FixedOrScalableQuantityT &Value) {
+  using ScalarTy = typename FixedOrScalableQuantityT::ScalarTy;
+
+  Arg = Arg.trim();
+
+  ScalarTy MinValue;
+  if (!Arg.getAsInteger(0, MinValue)) {
+    Value = FixedOrScalableQuantityT::getFixed(MinValue);
+    return false;
+  }
+
+  StringRef Remainder = Arg;
+  if (!Remainder.consume_front("vscale"))
+    return O.error("'" + Arg + "' value invalid for " + ValueKind +
+                   " argument!");
+
+  Remainder = Remainder.ltrim();
+  if (!Remainder.consume_front('x'))
+    return O.error("'" + Arg + "' value invalid for " + ValueKind +
+                   " argument!");
+
+  Remainder = Remainder.ltrim();
+  if (Remainder.getAsInteger(0, MinValue))
+    return O.error("'" + Arg + "' value invalid for " + ValueKind +
+                   " argument!");
+
+  Value = FixedOrScalableQuantityT::getScalable(MinValue);
+  return false;
 }
 
 // parser<int> implementation
@@ -2054,6 +2119,13 @@ bool parser<unsigned long long>::parse(Option &O, StringRef ArgName,
   if (Arg.getAsInteger(0, Value))
     return O.error("'" + Arg + "' value invalid for ullong argument!");
   return false;
+}
+
+// parser<ElementCount> implementation
+//
+bool parser<ElementCount>::parse(Option &O, StringRef ArgName, StringRef Arg,
+                                 ElementCount &Value) {
+  return parseFixedOrScalableQuantity(O, Arg, getValueName(), Value);
 }
 
 // parser<double>/parser<float> implementation
@@ -2213,6 +2285,14 @@ void generic_parser_base::printGenericOptionDiff(
 
 // printOptionDiff - Specializations for printing basic value types.
 //
+namespace llvm {
+namespace cl {
+static raw_ostream &operator<<(raw_ostream &OS, boolOrDefault V) {
+  return OS << static_cast<int>(V);
+}
+} // namespace cl
+} // namespace llvm
+
 #define PRINT_OPT_DIFF(T)                                                      \
   void parser<T>::printOptionDiff(const Option &O, T V, OptionValue<T> D,      \
                                   size_t GlobalWidth) const {                  \
@@ -2244,6 +2324,7 @@ PRINT_OPT_DIFF(unsigned long long)
 PRINT_OPT_DIFF(double)
 PRINT_OPT_DIFF(float)
 PRINT_OPT_DIFF(char)
+PRINT_OPT_DIFF(ElementCount)
 
 void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
                                           const OptionValue<std::string> &D,
@@ -2297,13 +2378,12 @@ static int SubNameCompare(const std::pair<const char *, SubCommand *> *LHS,
 }
 
 // Copy Options into a vector so we can sort them as we like.
-static void sortOpts(StringMap<Option *> &OptMap,
+static void sortOpts(OptionsMapTy &OptMap,
                      SmallVectorImpl<std::pair<const char *, Option *>> &Opts,
                      bool ShowHidden) {
   SmallPtrSet<Option *, 32> OptionSet; // Duplicate option detection.
 
-  for (StringMap<Option *>::iterator I = OptMap.begin(), E = OptMap.end();
-       I != E; ++I) {
+  for (auto I = OptMap.begin(), E = OptMap.end(); I != E; ++I) {
     // Ignore really-hidden options.
     if (I->second->getOptionHiddenFlag() == ReallyHidden)
       continue;
@@ -2317,7 +2397,7 @@ static void sortOpts(StringMap<Option *> &OptMap,
       continue;
 
     Opts.push_back(
-        std::pair<const char *, Option *>(I->getKey().data(), I->second));
+        std::pair<const char *, Option *>(I->first.data(), I->second));
   }
 
   // Sort the options list alphabetically.
@@ -2376,7 +2456,7 @@ public:
   }
 
   void printHelp() {
-    SubCommand *Sub = GlobalParser->getActiveSubCommand();
+    SubCommand *Sub = globalParser().getActiveSubCommand();
     auto &OptionsMap = Sub->OptionsMap;
     auto &PositionalOpts = Sub->PositionalOpts;
     auto &ConsumeAfterOpt = Sub->ConsumeAfterOpt;
@@ -2385,13 +2465,13 @@ public:
     sortOpts(OptionsMap, Opts, ShowHidden);
 
     StrSubCommandPairVector Subs;
-    sortSubCommands(GlobalParser->RegisteredSubCommands, Subs);
+    sortSubCommands(globalParser().RegisteredSubCommands, Subs);
 
-    if (!GlobalParser->ProgramOverview.empty())
-      outs() << "OVERVIEW: " << GlobalParser->ProgramOverview << "\n";
+    if (!globalParser().ProgramOverview.empty())
+      outs() << "OVERVIEW: " << globalParser().ProgramOverview << "\n";
 
     if (Sub == &SubCommand::getTopLevel()) {
-      outs() << "USAGE: " << GlobalParser->ProgramName;
+      outs() << "USAGE: " << globalParser().ProgramName;
       if (!Subs.empty())
         outs() << " [subcommand]";
       outs() << " [options]";
@@ -2400,7 +2480,7 @@ public:
         outs() << "SUBCOMMAND '" << Sub->getName()
                << "': " << Sub->getDescription() << "\n\n";
       }
-      outs() << "USAGE: " << GlobalParser->ProgramName << " " << Sub->getName()
+      outs() << "USAGE: " << globalParser().ProgramName << " " << Sub->getName()
              << " [options]";
     }
 
@@ -2424,7 +2504,7 @@ public:
       outs() << "SUBCOMMANDS:\n\n";
       printSubCommands(Subs, MaxSubLen);
       outs() << "\n";
-      outs() << "  Type \"" << GlobalParser->ProgramName
+      outs() << "  Type \"" << globalParser().ProgramName
              << " <subcommand> --help\" to get more help on a specific "
                 "subcommand";
     }
@@ -2440,9 +2520,9 @@ public:
     printOptions(Opts, MaxArgLen);
 
     // Print any extra help the user has declared.
-    for (const auto &I : GlobalParser->MoreHelp)
+    for (const auto &I : globalParser().MoreHelp)
       outs() << I;
-    GlobalParser->MoreHelp.clear();
+    globalParser().MoreHelp.clear();
   }
 };
 
@@ -2470,7 +2550,7 @@ protected:
     // Collect registered option categories into vector in preparation for
     // sorting.
     llvm::append_range(SortedCategories,
-                       GlobalParser->RegisteredOptionCategories);
+                       globalParser().RegisteredOptionCategories);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");
@@ -2557,7 +2637,7 @@ public:
 namespace {
 class VersionPrinter {
 public:
-  void print(std::vector<VersionPrinterTy> ExtraPrinters = {}) {
+  void print(const std::vector<VersionPrinterTy> &ExtraPrinters) {
     raw_ostream &OS = outs();
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
@@ -2718,7 +2798,7 @@ void HelpPrinterWrapper::operator=(bool Value) {
   // Decide which printer to invoke. If more than one option category is
   // registered then it is useful to show the categorized help instead of
   // uncategorized help.
-  if (GlobalParser->RegisteredOptionCategories.size() > 1) {
+  if (globalParser().RegisteredOptionCategories.size() > 1) {
     // unhide --help-list option so user can have uncategorized output if they
     // want it.
     CommonOptions->HLOp.setHiddenFlag(NotHidden);
@@ -2730,7 +2810,7 @@ void HelpPrinterWrapper::operator=(bool Value) {
 }
 
 // Print the value of each option.
-void cl::PrintOptionValues() { GlobalParser->printOptionValues(); }
+void cl::PrintOptionValues() { globalParser().printOptionValues(); }
 
 void CommandLineParser::printOptionValues() {
   if (!CommonOptions->PrintOptions && !CommonOptions->PrintAllOptions)
@@ -2793,6 +2873,9 @@ ArrayRef<StringRef> cl::getCompilerBuildConfig() {
 #if __has_feature(undefined_behavior_sanitizer)
       "+ubsan",
 #endif
+#ifdef LLVM_INTEGRATED_CRT_ALLOC
+      "+alloc:" LLVM_INTEGRATED_CRT_ALLOC,
+#endif
   };
   return ArrayRef(Config).drop_front(1);
 }
@@ -2819,9 +2902,9 @@ void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
   CommonOptions->ExtraVersionPrinters.push_back(func);
 }
 
-StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+OptionsMapTy &cl::getRegisteredOptions(SubCommand &Sub) {
   initCommonOptions();
-  auto &Subs = GlobalParser->RegisteredSubCommands;
+  auto &Subs = globalParser().RegisteredSubCommands;
   (void)Subs;
   assert(Subs.contains(&Sub));
   return Sub.OptionsMap;
@@ -2829,7 +2912,7 @@ StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
 
 iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 cl::getRegisteredSubcommands() {
-  return GlobalParser->getRegisteredSubcommands();
+  return globalParser().getRegisteredSubcommands();
 }
 
 void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
@@ -2860,9 +2943,9 @@ void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
   }
 }
 
-void cl::ResetCommandLineParser() { GlobalParser->reset(); }
+void cl::ResetCommandLineParser() { globalParser().reset(); }
 void cl::ResetAllOptionOccurrences() {
-  GlobalParser->ResetAllOptionOccurrences();
+  globalParser().ResetAllOptionOccurrences();
 }
 
 void LLVMParseCommandLineOptions(int argc, const char *const *argv,
