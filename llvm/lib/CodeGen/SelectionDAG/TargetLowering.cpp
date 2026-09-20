@@ -826,6 +826,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
 
+    // If either operand is known zero for every demanded bit, the result is
+    // zero.
+    if (DemandedBits.isSubsetOf(LHSKnown.Zero | RHSKnown.Zero))
+      return DAG.getConstant(0, SDLoc(Op), VT);
+
     // If all of the demanded bits are known 1 on one side, return the other.
     // These bits cannot contribute to the result of the 'and' in this
     // context.
