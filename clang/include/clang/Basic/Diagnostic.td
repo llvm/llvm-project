@@ -224,8 +224,8 @@ multiclass CompatWarning<
                     !strconcat(message, " incompatible with C++98"),
                     !strconcat(message, " incompatible with ", lang, " standards before ", lang, std_ver_name))>,
         InGroup<!cast<DiagGroup>(!if(is_cxx_11,
-                                     prefix#"98Compat",
-                                     prefix#"Pre"#diag_group_ver_str#"Compat"))>,
+                                     !strconcat(prefix, "98Compat", !if(ext_warn, "", "Pedantic")),
+                                     !strconcat(prefix, "Pre", diag_group_ver_str, "Compat", !if(ext_warn, "", "Pedantic"))))>,
         DefaultIgnore;
 
     def : CompatWarningId<
