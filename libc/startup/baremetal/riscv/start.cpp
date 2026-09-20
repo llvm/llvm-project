@@ -15,71 +15,102 @@
 #include "startup/baremetal/fini.h"
 #include "startup/baremetal/init.h"
 
+namespace LIBC_NAMESPACE_DECL {
+
 extern "C" {
-int main(int argc, char **argv);
-void _start();
 
-// Semihosting library initialisation if applicable. Required for printf, etc.
-[[gnu::weak]] void _platform_init() {}
+int main(int argc, char **argv, char **envp);
+[[noreturn]] void _start();
+void _platform_init();
 
-// These symbols are provided by the linker. The exact names are not defined by
-// a standard.
-extern uintptr_t __stack;
-extern uintptr_t __data_source[];
-extern uintptr_t __data_start[];
-extern uintptr_t __data_size[];
-extern uintptr_t __bss_start[];
-extern uintptr_t __bss_size[];
+// These symbols are provided by the linker script. The exact names are not
+// defined by a standard. The _size symbols use the symbol table to store
+// integers rather than addresses.
+
+extern uintptr_t __data_source;
+extern uintptr_t __data_start;
+extern uintptr_t __data_size;
+
+extern uintptr_t __bss_start;
+extern uintptr_t __bss_size;
+
 } // extern "C"
 
-namespace {
-[[gnu::aligned(4)]] void trap_handler() { LIBC_NAMESPACE::exit(1); }
-} // namespace
+// Semihosting library initialization if applicable. Required for printf, etc.
+[[gnu::weak]] void _platform_init() {}
 
-namespace LIBC_NAMESPACE_DECL {
+namespace {
+
+// Enable Vector unit by setting VS (10:9) bits (01 = Initial).
+[[maybe_unused]] constexpr uint32_t MSTATUS_VS_INITIAL = 1U << 9;
+// Enable FPU by setting FS (14:13) bits (01 = Initial).
+[[maybe_unused]] constexpr uint32_t MSTATUS_FS_INITIAL = 1U << 13;
+[[maybe_unused]] constexpr uint32_t MSTATUS_INITIAL =
+#ifdef __riscv_flen
+    MSTATUS_FS_INITIAL |
+#endif
+#ifdef __riscv_vector
+    MSTATUS_VS_INITIAL |
+#endif
+    0;
+
+// The mtvec BASE field must be aligned on a 4-byte boundary, with the lower
+// two bits holding the MODE (0 = Direct). With the C extension, functions are
+// only 2-byte aligned by default.
+[[gnu::aligned(4)]] void trap_handler() { LIBC_NAMESPACE::exit(1); }
 
 [[noreturn]] void do_start() {
   // Set up trap handling.
-  __asm__ volatile("csrw mtvec, %0" ::"r"(&trap_handler));
+  __asm__ volatile("csrw mtvec, %0" : : "r"(&trap_handler));
 
-#ifdef __riscv_flen
-  // Enable FPU by setting FS bits (14:13) to Initial (01) in mstatus.
-  __asm__ volatile("csrs mstatus, %0" ::"r"(1UL << 13) : "memory");
-  // Clear fcsr.
-  __asm__ volatile("fscsr zero");
-#endif
-#ifdef __riscv_vector
-  // Enable Vector unit by setting VS bits (10:9) to Initial (01) in mstatus.
-  __asm__ volatile("csrs mstatus, %0" ::"r"(1UL << 9) : "memory");
-#endif
-
-  LIBC_NAMESPACE::memcpy(__data_start, __data_source,
-                         reinterpret_cast<uintptr_t>(__data_size));
-  LIBC_NAMESPACE::memset(__bss_start, '\0',
-                         reinterpret_cast<uintptr_t>(__bss_size));
-  __libc_init_array();
+  LIBC_NAMESPACE::memcpy(&__data_start, &__data_source,
+                         reinterpret_cast<uintptr_t>(&__data_size));
+  LIBC_NAMESPACE::memset(&__bss_start, '\0',
+                         reinterpret_cast<uintptr_t>(&__bss_size));
 
   _platform_init();
+  __libc_init_array();
   LIBC_NAMESPACE::atexit(&__libc_fini_array);
-  LIBC_NAMESPACE::exit(main(0, nullptr));
+  LIBC_NAMESPACE::exit(main(0, nullptr, nullptr));
 }
-} // namespace LIBC_NAMESPACE_DECL
 
-extern "C" {
-[[gnu::section(".text.init.enter"), gnu::naked]]
+} // namespace
+
+[[noreturn, gnu::section(".text.init.enter"), gnu::naked]]
 void _start() {
-  // Initialize global pointer if defined by linker.
-  // We use .option norelax to prevent the assembler from relaxing the lla
-  // instruction.
-  __asm__ volatile(".option push\n"
-                   ".option norelax\n"
-                   "lla gp, __global_pointer$\n"
-                   ".option pop\n");
+  // Initialize global pointer and stack pointer.
+  __asm__(R"(
+      .option push
+      .option exact
+      lla gp, __global_pointer$
+      .option pop
+      lla sp, __stack
+  )");
 
-  // Initialize stack pointer.
-  __asm__ volatile("lla sp, %0" : : "i"(&__stack));
+#ifdef __riscv_zcmt
+  // Initialize jvt CSR if defined by linker.
+  __asm__(R"(
+      .weak __jvt_base$
+      lla t0, __jvt_base$
+      beqz t0, 1f
+      csrw jvt, t0
+    1:
+  )");
+#endif
+
+#if defined(__riscv_flen) || defined(__riscv_vector)
+  // Enable FPU and/or Vector unit.
+  __asm__(
+      R"(
+      li t0, %[mstatus_initial]
+      csrs mstatus, t0
+      )"
+      :
+      : [mstatus_initial] "i"(MSTATUS_INITIAL));
+#endif
 
   // Call do_start.
-  __asm__ volatile("tail %0" : : "i"(&LIBC_NAMESPACE::do_start));
+  __asm__("tail %cc0" : : "s"(do_start));
 }
-} // extern "C"
+
+} // namespace LIBC_NAMESPACE_DECL
