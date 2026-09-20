@@ -3903,6 +3903,16 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
         return true;
     }
 
+    // Trivial default constructors might never be implicitly defined by the
+    // AST, so we need to special-case them here.
+    if (Ctor->isTrivial() && Ctor->isDefaultConstructor()) {
+      if (!this->emitDefaultInit(Ctor, E))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
+    }
+
     // Avoid materializing a temporary for an elidable copy/move constructor.
     if (!ZeroInit && E->isElidable()) {
       const Expr *SrcObj = E->getArg(0);
