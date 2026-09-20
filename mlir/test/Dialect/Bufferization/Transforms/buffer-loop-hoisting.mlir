@@ -519,3 +519,198 @@ func.func @hoist_alloca(
 //      CHECK: %[[ALLOCA0:.*]] = memref.alloca({{.*}})
 // CHECK-NEXT: %[[ALLOCA1:.*]] = memref.alloca({{.*}})
 // CHECK-NEXT: {{.*}} = scf.for
+
+// -----
+
+// CHECK-LABEL: func @loop_execute_region
+func.func @loop_execute_region(%output: memref<8xindex>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+
+  scf.for %i = %c0 to %c8 step %c1 {
+    %value = scf.execute_region -> index {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      %loaded = memref.load %buffer[%c0] : memref<1xindex>
+      scf.yield %loaded : index
+    }
+    memref.store %value, %output[%i] : memref<8xindex>
+  }
+
+  return
+}
+
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: scf.for
+// CHECK: scf.execute_region
+// CHECK-NOT: memref.alloc()
+// CHECK: memref.store {{.*}}, %[[ALLOC]]
+
+// -----
+
+// CHECK-LABEL: func @negative_loop_if_alloc_not_hoisted
+func.func @negative_loop_if_alloc_not_hoisted(%condition: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+
+  scf.for %i = %c0 to %c8 step %c1 {
+    scf.if %condition {
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+    }
+  }
+
+  return
+}
+
+// CHECK-NOT: memref.alloc()
+// CHECK: scf.for
+// CHECK-NEXT: scf.if
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+
+// -----
+
+// CHECK-LABEL: func @loop_nested_execute_region_hoisted
+func.func @loop_nested_execute_region_hoisted() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+
+  scf.for %i = %c0 to %c8 step %c1 {
+    scf.execute_region {
+      scf.execute_region {
+        %buffer = memref.alloc() : memref<1xindex>
+        memref.store %i, %buffer[%c0] : memref<1xindex>
+        scf.yield
+      }
+      scf.yield
+    }
+  }
+
+  return
+}
+
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: scf.for
+// CHECK-NEXT: scf.execute_region
+// CHECK-NEXT: scf.execute_region
+// CHECK-NOT: memref.alloc()
+// CHECK: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NOT: memref.alloc()
+// CHECK: return
+
+// -----
+
+// An exactly-once region can contain a block that executes multiple times.
+// CHECK-LABEL: func @cfg_backedge_repro
+func.func @cfg_backedge_repro() -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c99 = arith.constant 99 : index
+  %initial = memref.alloc() : memref<1xindex>
+  memref.store %c99, %initial[%c0] : memref<1xindex>
+  %out = memref.alloc() : memref<2xindex>
+
+  scf.for %outer = %c0 to %c1 step %c1 {
+    scf.execute_region {
+      cf.br ^again(%c0, %initial : index, memref<1xindex>)
+    ^again(%j: index, %prev: memref<1xindex>):
+      %new = memref.alloc() : memref<1xindex>
+      memref.store %j, %new[%c0] : memref<1xindex>
+      %old = memref.load %prev[%c0] : memref<1xindex>
+      memref.store %old, %out[%j] : memref<2xindex>
+      %next = arith.addi %j, %c1 : index
+      %continue = arith.cmpi slt, %next, %c2 : index
+      cf.cond_br %continue,
+          ^again(%next, %new : index, memref<1xindex>), ^exit
+    ^exit:
+      scf.yield
+    }
+  }
+
+  %answer = memref.load %out[%c1] : memref<2xindex>
+  return %answer : index
+}
+
+// CHECK: memref.alloc() : memref<1xindex>
+// CHECK: memref.alloc() : memref<2xindex>
+// CHECK-NOT: memref.alloc()
+// CHECK: scf.for
+// CHECK-NEXT: scf.execute_region
+// CHECK-NEXT: cf.br ^[[AGAIN:bb[0-9]+]](
+// CHECK-NEXT: ^[[AGAIN]](%[[J:.*]]: index, %[[PREV:.*]]: memref<1xindex>):
+// CHECK-NEXT: %[[NEW:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: memref.store %[[J]], %[[NEW]]
+// CHECK: cf.cond_br {{.*}}, ^[[AGAIN]]({{.*}}, %[[NEW]] : index, memref<1xindex>)
+
+// -----
+
+// The allocation block is also cyclic when the backedge comes from a latch.
+// CHECK-LABEL: func @cfg_indirect_cycle
+func.func @cfg_indirect_cycle(%keep_going: i1) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.for %i = %c0 to %c1 step %c1 {
+    scf.execute_region {
+      cf.br ^again
+    ^again:
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      cf.br ^latch
+    ^latch:
+      cf.cond_br %keep_going, ^again, ^exit
+    ^exit:
+      scf.yield
+    }
+  }
+  return
+}
+
+// CHECK-NOT: memref.alloc()
+// CHECK: scf.for
+// CHECK-NEXT: scf.execute_region
+// CHECK-NEXT: cf.br ^[[AGAIN:bb[0-9]+]]
+// CHECK-NEXT: ^[[AGAIN]]:
+// CHECK-NEXT: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: cf.br ^[[LATCH:bb[0-9]+]]
+// CHECK-NEXT: ^[[LATCH]]:
+// CHECK-NEXT: cf.cond_br {{.*}}, ^[[AGAIN]], ^{{bb[0-9]+}}
+
+// -----
+
+// Multi-block acyclic regions still allow hoisting out of the enclosing loop.
+// CHECK-LABEL: func @loop_acyclic_execute_region
+func.func @loop_acyclic_execute_region() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  scf.for %i = %c0 to %c8 step %c1 {
+    scf.execute_region {
+      cf.br ^body
+    ^body:
+      %buffer = memref.alloc() : memref<1xindex>
+      memref.store %i, %buffer[%c0] : memref<1xindex>
+      cf.br ^exit
+    ^exit:
+      scf.yield
+    }
+  }
+  return
+}
+
+// CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<1xindex>
+// CHECK-NEXT: scf.for
+// CHECK-NEXT: scf.execute_region
+// CHECK-NEXT: cf.br ^[[BODY:bb[0-9]+]]
+// CHECK-NEXT: ^[[BODY]]:
+// CHECK-NEXT: memref.store {{.*}}, %[[ALLOC]]
+// CHECK-NEXT: cf.br ^[[EXIT:bb[0-9]+]]
+// CHECK-NEXT: ^[[EXIT]]:
+// CHECK-NEXT: scf.yield
+// CHECK-NOT: memref.alloc()
+// CHECK: return
