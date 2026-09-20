@@ -1334,7 +1334,6 @@ private:
   /// Offset into the storage.
   uint64_t Offset = 0;
 
-  Storage StorageKind = Storage::Int;
   union {
     IntPointer Int;
     BlockPointer BS;
@@ -1343,6 +1342,7 @@ private:
     StringPointer Str;
     OpaquePointer Opaque;
   };
+  Storage StorageKind = Storage::Int;
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
