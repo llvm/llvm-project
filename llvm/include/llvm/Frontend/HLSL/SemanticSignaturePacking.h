@@ -29,6 +29,7 @@ class LLVM_ABI SignaturePackingError : public ErrorInfo<SignaturePackingError> {
 public:
   enum ErrorKind {
     SignatureOverflow,
+    SemanticIndexOutOfRange,
   };
 
   static char ID;
@@ -60,6 +61,24 @@ private:
 /// unallocated row and column sentinels.
 LLVM_ABI Expected<unsigned>
 packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
+                     Triple::EnvironmentType ShaderStage, IOType IOTy);
+
+/// Packs eligible signature elements at rows selected by semantic index.
+///
+/// See llvm/docs/DirectX/SemanticSignatures.md#indexed-packing for details.
+///
+/// Requires each eligible element to occupy exactly one row and have exactly
+/// one semantic index. Semantic indices must be unique among eligible elements.
+///
+/// Returns one past the highest allocated row, or zero if no elements were
+/// allocated. Gaps between semantic indices count towards this row extent.
+///
+/// On failure, Elements is left partially packed: the elements preceding the
+/// one reported by the returned SignaturePackingError keep the locations
+/// they were assigned, while that element and the ones following it retain the
+/// unallocated row and column sentinels.
+LLVM_ABI Expected<unsigned>
+packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
 } // namespace llvm::hlsl

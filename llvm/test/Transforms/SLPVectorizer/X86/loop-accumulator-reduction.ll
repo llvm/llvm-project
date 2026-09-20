@@ -1325,3 +1325,76 @@ exit:
   %res = phi i32 [ %sum, %loop ]
   ret i32 %res
 }
+
+; Three exit blocks with an exit phi each: only one of them runs per loop
+; execution, so the cost model charges a single final reduction and the
+; vector accumulator is still used.
+define double @three_exit_blocks(ptr %p, i64 %n, i1 %c, i1 %d) {
+; CHECK-LABEL: define double @three_exit_blocks(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i1 [[C:%.*]], i1 [[D:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[OP_RDX:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P0]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
+; CHECK-NEXT:    [[OP_RDX]] = fadd fast double [[TMP4]], [[ACC]]
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT1:.*]], label %[[MID:.*]]
+; CHECK:       [[MID]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[EXIT2:.*]], label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT3:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[OP_RDX]], %[[LOOP]] ]
+; CHECK-NEXT:    ret double [[TMP1]]
+; CHECK:       [[EXIT2]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[OP_RDX]], %[[MID]] ]
+; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK:       [[EXIT3]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi double [ [[OP_RDX]], %[[LATCH]] ]
+; CHECK-NEXT:    ret double [[TMP3]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %latch ]
+  %acc = phi double [ 0.0, %entry ], [ %sum, %latch ]
+  %p0 = getelementptr double, ptr %p, i64 %iv
+  %l0 = load double, ptr %p0, align 8
+  %p1 = getelementptr double, ptr %p0, i64 1
+  %l1 = load double, ptr %p1, align 8
+  %p2 = getelementptr double, ptr %p0, i64 2
+  %l2 = load double, ptr %p2, align 8
+  %p3 = getelementptr double, ptr %p0, i64 3
+  %l3 = load double, ptr %p3, align 8
+  %t0 = fadd fast double %l0, %acc
+  %t1 = fadd fast double %t0, %l1
+  %t2 = fadd fast double %t1, %l2
+  %sum = fadd fast double %t2, %l3
+  br i1 %c, label %exit1, label %mid
+
+mid:
+  br i1 %d, label %exit2, label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cmp = icmp eq i64 %iv, %n
+  br i1 %cmp, label %exit3, label %loop
+
+exit1:
+  %res1 = phi double [ %sum, %loop ]
+  ret double %res1
+
+exit2:
+  %res2 = phi double [ %sum, %mid ]
+  ret double %res2
+
+exit3:
+  %res3 = phi double [ %sum, %latch ]
+  ret double %res3
+}
