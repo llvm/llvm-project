@@ -73,6 +73,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasPCRelativeMemops = false;
   bool HasQuadwordAtomics = false;
   bool UseLongCalls = false;
+  bool HasFloat16 = false;
 
 protected:
   std::string ABI;
@@ -363,6 +364,10 @@ public:
   const char *getIbm128Mangling() const override { return "g"; }
 
   bool hasBitIntType() const override { return true; }
+
+  // Returns true when _Float16 is available as a native type. Requires the
+  // explicit opt-in (-mfloat16).
+  bool hasFloat16Type() const override { return HasFloat16; }
 
   bool isSPRegName(StringRef RegName) const override {
     return RegName == "r1" || RegName == "x1";

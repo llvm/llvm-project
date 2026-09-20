@@ -1373,9 +1373,7 @@ entry:
 define fp128 @ext(half %a) nounwind {
 ; CHECK-LABEL: ext:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    clrlwi r3, r3, 16
-; CHECK-NEXT:    mtfprwz f0, r3
-; CHECK-NEXT:    xscvhpdp v2, f0
+; CHECK-NEXT:    xscvhpdp v2, f1
 ; CHECK-NEXT:    xscvdpqp v2, v2
 ; CHECK-NEXT:    blr
 ;
@@ -1383,7 +1381,6 @@ define fp128 @ext(half %a) nounwind {
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
-; CHECK-P8-NEXT:    clrldi r3, r3, 48
 ; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    bl __extendhfsf2
 ; CHECK-P8-NEXT:    nop
