@@ -134,7 +134,6 @@ private:
   void SelectI128toV2I64(SDNode *N);
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
-  void selectSPNode(SDNode *N);
   void selectAtomicSwap128(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
@@ -286,10 +285,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryStoreVector(N))
       return;
     break;
-  case NVPTXISD::SPCOMPRESS:
-  case NVPTXISD::SPDECOMPRESS:
-    selectSPNode(N);
-    return;
   case ISD::INTRINSIC_W_CHAIN:
     if (tryIntrinsicChain(N))
       return;
@@ -440,68 +435,6 @@ void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
                        getTcgen05LdOpcode(IID, enablePack), DL, N->getVTList(),
                        {N->getOperand(2), N->getOperand(0)}));
   }
-}
-
-// TableGen's variadic morph encoding supports at most seven fixed operands,
-// while SP register bundles can be much wider, so select their opcodes here.
-static unsigned getSPCompressOpcode(unsigned NumResults) {
-#define SPCOMPRESS_OPCODE_CASE(NumResults)                                     \
-  case NumResults:                                                             \
-    return NVPTX::SPCOMPRESS_OUT_##NumResults
-
-  switch (NumResults) {
-    SPCOMPRESS_OPCODE_CASE(2);
-    SPCOMPRESS_OPCODE_CASE(3);
-    SPCOMPRESS_OPCODE_CASE(5);
-    SPCOMPRESS_OPCODE_CASE(6);
-    SPCOMPRESS_OPCODE_CASE(9);
-    SPCOMPRESS_OPCODE_CASE(10);
-    SPCOMPRESS_OPCODE_CASE(12);
-    SPCOMPRESS_OPCODE_CASE(18);
-    SPCOMPRESS_OPCODE_CASE(20);
-    SPCOMPRESS_OPCODE_CASE(24);
-    SPCOMPRESS_OPCODE_CASE(36);
-    SPCOMPRESS_OPCODE_CASE(40);
-    SPCOMPRESS_OPCODE_CASE(48);
-    SPCOMPRESS_OPCODE_CASE(72);
-    SPCOMPRESS_OPCODE_CASE(80);
-    SPCOMPRESS_OPCODE_CASE(96);
-  default:
-    llvm_unreachable("invalid spcompress result count");
-  }
-
-#undef SPCOMPRESS_OPCODE_CASE
-}
-
-static unsigned getSPDecompressOpcode(unsigned NumResults) {
-#define SPDECOMPRESS_OPCODE_CASE(NumResults)                                   \
-  case NumResults:                                                             \
-    return NVPTX::SPDECOMPRESS_OUT_##NumResults
-
-  switch (NumResults) {
-    SPDECOMPRESS_OPCODE_CASE(1);
-    SPDECOMPRESS_OPCODE_CASE(2);
-    SPDECOMPRESS_OPCODE_CASE(4);
-    SPDECOMPRESS_OPCODE_CASE(8);
-    SPDECOMPRESS_OPCODE_CASE(16);
-    SPDECOMPRESS_OPCODE_CASE(32);
-    SPDECOMPRESS_OPCODE_CASE(64);
-    SPDECOMPRESS_OPCODE_CASE(128);
-  default:
-    llvm_unreachable("invalid spdecompress result count");
-  }
-
-#undef SPDECOMPRESS_OPCODE_CASE
-}
-
-void NVPTXDAGToDAGISel::selectSPNode(SDNode *N) {
-  unsigned Opcode = N->getOpcode() == NVPTXISD::SPCOMPRESS
-                        ? getSPCompressOpcode(N->getNumValues())
-                        : getSPDecompressOpcode(N->getNumValues());
-  SmallVector<SDValue, 16> Operands;
-  llvm::append_range(Operands, N->ops());
-  ReplaceNode(
-      N, CurDAG->getMachineNode(Opcode, SDLoc(N), N->getVTList(), Operands));
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {

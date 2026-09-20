@@ -3300,6 +3300,58 @@ static void appendSplitSPOperands(ArrayRef<SDUse> Input,
   }
 }
 
+static unsigned getSPCompressNodeOpcode(unsigned NumResults) {
+  // SelectionDAG node descriptions have a fixed result arity, so use one node
+  // kind for each result-register count selected by the legal SP layouts.
+#define SPCOMPRESS_NODE_CASE(NumResults)                                      \
+  case NumResults:                                                            \
+    return NVPTXISD::SPCOMPRESS_R##NumResults
+
+  switch (NumResults) {
+    SPCOMPRESS_NODE_CASE(2);
+    SPCOMPRESS_NODE_CASE(3);
+    SPCOMPRESS_NODE_CASE(5);
+    SPCOMPRESS_NODE_CASE(6);
+    SPCOMPRESS_NODE_CASE(9);
+    SPCOMPRESS_NODE_CASE(10);
+    SPCOMPRESS_NODE_CASE(12);
+    SPCOMPRESS_NODE_CASE(18);
+    SPCOMPRESS_NODE_CASE(20);
+    SPCOMPRESS_NODE_CASE(24);
+    SPCOMPRESS_NODE_CASE(36);
+    SPCOMPRESS_NODE_CASE(40);
+    SPCOMPRESS_NODE_CASE(48);
+    SPCOMPRESS_NODE_CASE(72);
+    SPCOMPRESS_NODE_CASE(80);
+    SPCOMPRESS_NODE_CASE(96);
+  default:
+    llvm_unreachable("invalid spcompress result count");
+  }
+
+#undef SPCOMPRESS_NODE_CASE
+}
+
+static unsigned getSPDecompressNodeOpcode(unsigned NumResults) {
+#define SPDECOMPRESS_NODE_CASE(NumResults)                                    \
+  case NumResults:                                                            \
+    return NVPTXISD::SPDECOMPRESS_R##NumResults
+
+  switch (NumResults) {
+    SPDECOMPRESS_NODE_CASE(1);
+    SPDECOMPRESS_NODE_CASE(2);
+    SPDECOMPRESS_NODE_CASE(4);
+    SPDECOMPRESS_NODE_CASE(8);
+    SPDECOMPRESS_NODE_CASE(16);
+    SPDECOMPRESS_NODE_CASE(32);
+    SPDECOMPRESS_NODE_CASE(64);
+    SPDECOMPRESS_NODE_CASE(128);
+  default:
+    llvm_unreachable("invalid spdecompress result count");
+  }
+
+#undef SPDECOMPRESS_NODE_CASE
+}
+
 static SDValue lowerSPIntrinsic(SDValue Op, ArrayRef<SDValue> Qualifiers,
                                 SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
@@ -3321,8 +3373,9 @@ static SDValue lowerSPIntrinsic(SDValue Op, ArrayRef<SDValue> Qualifiers,
   assert((IID == Intrinsic::nvvm_spcompress ||
           IID == Intrinsic::nvvm_spdecompress) &&
          "unexpected SP intrinsic");
-  unsigned Opcode = IID == Intrinsic::nvvm_spcompress ? NVPTXISD::SPCOMPRESS
-                                                      : NVPTXISD::SPDECOMPRESS;
+  unsigned Opcode = IID == Intrinsic::nvvm_spcompress
+                        ? getSPCompressNodeOpcode(ResultTys.size())
+                        : getSPDecompressNodeOpcode(ResultTys.size());
   SDValue Lowered = DAG.getNode(Opcode, DL, ResultTys, Ops);
 
   SmallVector<SDValue, 2> Retvals;
@@ -3347,18 +3400,31 @@ static SDValue lowerSPCompress(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
   EVT DataVT = N->getOperand(1).getValueType();
+  EVT CDataVT = N->getValueType(1);
+  assert(DataVT.isVector() && CDataVT.isVector() &&
+         "invalid spcompress types");
+
   unsigned ElemSize = DataVT.getScalarSizeInBits();
   unsigned IdxSize = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  unsigned NumTgt = cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
+  unsigned DataElts = DataVT.getVectorNumElements();
+  unsigned NumSrcNumerator = NumTgt * CDataVT.getVectorNumElements();
+  assert(DataElts != 0 && NumSrcNumerator % DataElts == 0 &&
+         "invalid spcompress factor");
+  unsigned NumSrc = NumSrcNumerator / DataElts;
+
   unsigned DataSize = getSPVectorNumParts(DataVT);
   assert(DataSize % 2 == 0 && "invalid spcompress data size");
   unsigned RepeatFactor = DataSize / 2;
   assert(nvvm::isValidSPRepeatFactor(RepeatFactor) &&
          "invalid spcompress repeat factor");
 
-  SmallVector<SDValue, 3> Qualifiers = {
+  SmallVector<SDValue, 5> Qualifiers = {
       DAG.getTargetConstant(ElemSize, DL, MVT::i32),
       DAG.getTargetConstant(IdxSize, DL, MVT::i32),
-      DAG.getTargetConstant(RepeatFactor, DL, MVT::i32)};
+      DAG.getTargetConstant(RepeatFactor, DL, MVT::i32),
+      DAG.getTargetConstant(NumSrc, DL, MVT::i32),
+      DAG.getTargetConstant(NumTgt, DL, MVT::i32)};
   return lowerSPIntrinsic(Op, Qualifiers, DAG);
 }
 

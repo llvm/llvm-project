@@ -486,7 +486,7 @@ static void printSPRegList(NVPTXInstPrinter *Printer, const MCInst *MI,
   O << "}";
 }
 
-void NVPTXInstPrinter::printSPQualifier(const MCInst *MI, int OpNum,
+void NVPTXInstPrinter::printSPModifiers(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O, StringRef Modifier) {
   if (Modifier.empty()) {
@@ -540,7 +540,7 @@ void NVPTXInstPrinter::printSPQualifier(const MCInst *MI, int OpNum,
     auto Layout = GetSPLayout(nvvm::getSPCompressLayout);
     assert(Layout && "invalid spcompress qualifiers");
 
-    unsigned FirstVariableOp = OpNum + 3;
+    unsigned FirstVariableOp = OpNum + 5;
     assert(static_cast<unsigned>(OpNum) ==
                Layout->MetadataSize + Layout->CompressedDataSize &&
            MI->getNumOperands() == FirstVariableOp + Layout->DataSize + 1 &&
