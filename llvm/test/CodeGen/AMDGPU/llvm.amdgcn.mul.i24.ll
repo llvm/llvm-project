@@ -78,20 +78,23 @@ define amdgpu_kernel void @test_mul_i24_zero_lhs(ptr addrspace(1) %out, i32 %src
 define amdgpu_kernel void @test_mul_i24_zero_low24(ptr addrspace(1) %out, i32 %src) #1 {
 ; GCN-LABEL: test_mul_i24_zero_low24:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0xb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NEXT:    v_mov_b32_e32 v0, 0x1000000
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mul_i32_i24_e32 v0, s6, v0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: test_mul_i24_zero_low24:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_store_b32 v0, v0, s[0:1]
+; GFX12-NEXT:    v_mul_i32_i24_e64 v1, 0x1000000, s2
+; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %val = call i32 @llvm.amdgcn.mul.i24(i32 %src, i32 16777216) #0
   store i32 %val, ptr addrspace(1) %out
