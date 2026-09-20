@@ -1,0 +1,71 @@
+// RUN: not cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:     2>&1 | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A non-byval parameter with no spill at all: its only use is the
+  // forwarding call, so there is no load to look through and no slot to point
+  // the callee at.
+  cir.func @forwards_unspilled(%unspilled: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    cir.call @takes_big(%unspilled) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big(%unspilled)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A parameter both spilled and forwarded, as CIRSimplify leaves it after
+  // folding a read of a const parameter's slot: the spill is one of two uses
+  // rather than the only one.
+  cir.func @spills_and_forwards(%spilled: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %slot = cir.alloca "spilled" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %spilled, %slot : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big(%spilled) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big(%spilled)
+
+}

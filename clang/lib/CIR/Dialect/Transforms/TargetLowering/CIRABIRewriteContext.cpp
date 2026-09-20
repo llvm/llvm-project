@@ -558,22 +558,24 @@ static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
       load->erase();
 }
 
-/// The store that spills non-byval indirect parameter \p blockArg, and the
-/// slot it spills into.  CIRGen spills every by-value parameter into a local
-/// alloca with a single store before any other use, and this pass runs on that
-/// CIRGen output before any alloca-promoting or splitting pass, so the block
-/// argument has exactly that one use.  Both results are null when DCE already
-/// removed a dead spill.
+/// The store that spills non-byval indirect parameter \p blockArg into a local
+/// alloca it names directly, and that alloca.  Both are null unless the block
+/// argument's only use is such a store.  CIRGen emits the spill as that only
+/// use, but an earlier pass can add more: CIRSimplify replaces each read of
+/// the const slot a const-qualified parameter is spilled to with the stored
+/// value, so the block argument then feeds the spill and every one of those
+/// readers.
 static std::pair<cir::StoreOp, cir::AllocaOp>
 findParamSpill(mlir::BlockArgument blockArg) {
-  if (blockArg.use_empty())
+  if (!blockArg.hasOneUse())
     return {};
-  assert(blockArg.hasOneUse() &&
-         "non-byval arg must have exactly one use (the CIRGen param spill)");
-  auto store = cast<cir::StoreOp>(*blockArg.user_begin());
-  assert(store.getValue() == blockArg &&
-         "non-byval arg's use must be the value operand of its store");
-  return {store, cast<cir::AllocaOp>(store.getAddr().getDefiningOp())};
+  auto store = dyn_cast<cir::StoreOp>(*blockArg.user_begin());
+  if (!store || store.getValue() != blockArg)
+    return {};
+  auto slot = dyn_cast_or_null<cir::AllocaOp>(store.getAddr().getDefiningOp());
+  if (!slot)
+    return {};
+  return {store, slot};
 }
 
 /// For each Direct arg with a coerced type, change the block argument's type
