@@ -707,6 +707,10 @@ features cannot lower the translation-unit ABI level;
   inside a union caused the union to be treated as a polymorphic class.
   (#GH213854)
 
+- Fixed a crash, a rejected-valid case and a miscompile when instantiating a
+  constructor whose mem-initializer used parenthesized aggregate initialization,
+  e.g. ``: agg({1, 2})`` or ``: arr(1, 2)``. (#GH176161)
+
 - Fixed an assertion when a type-trait keyword that had already been made
   available as an identifier (e.g. `struct __make_unsigned`) was seen again
   in a token that was lexed and cached before the first occurrence was parsed.
