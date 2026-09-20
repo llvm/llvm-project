@@ -32,7 +32,7 @@ void add_image(const struct mach_header* mh, intptr_t vmaddr_slide) {
   auto& images = _Images::instance_;
   std::lock_guard<std::mutex> __lock(images.mutex_);
 
-  if (images.count_ == _Images::k_max_images) {
+  if (images.count_ == _Images::__max_images) {
     return;
   }
   auto load_addr = uintptr_t(mh);

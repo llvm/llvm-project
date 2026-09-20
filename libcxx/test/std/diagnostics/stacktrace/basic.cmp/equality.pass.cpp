@@ -41,7 +41,7 @@ std::basic_stacktrace<Alloc> fake_trace(std::vector<uintptr_t> const& addrs, All
   std::basic_stacktrace<Alloc> ret(alloc);
   auto& base = *reinterpret_cast<std::__stacktrace::_Trace*>(&ret);
   for (uintptr_t addr : addrs) {
-    auto& entry = base.__entry_append_();
+    auto& entry = base.__cx_.__append_entry_(base.__cx_.__self_);
     auto& eb    = *reinterpret_cast<std::__stacktrace::_Entry*>(&entry);
     eb.__addr_  = addr;
   }

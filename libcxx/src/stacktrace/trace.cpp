@@ -18,6 +18,8 @@
 
 #if !defined(_WIN32)
 #  include <unwind.h>
+
+#  include "images.h"
 #endif
 
 // Purposely avoids optimizations to make call-chain predictable
@@ -39,7 +41,7 @@ namespace __stacktrace {
 namespace {
 
 struct _Unwind_Wrapper {
-  _Trace& base_;
+  _Context& cx_;
   size_t skip_;
   size_t maxDepth_;
 
@@ -57,26 +59,32 @@ struct _Unwind_Wrapper {
     if (!__ip) {
       return _Unwind_Reason_Code::_URC_NORMAL_STOP;
     }
-    auto& __entry = base_.__entry_append_();
-    auto& __eb    = (_Entry&)__entry;
+    auto& __entry = cx_.__append_entry_(cx_.__self_);
+    auto& __eb    = reinterpret_cast<_Entry&>(__entry);
     __eb.__addr_  = (__ip_before ? __ip : __ip - 1);
     return _Unwind_Reason_Code::_URC_NO_REASON;
   }
 
   static _Unwind_Reason_Code callback(_Unwind_Context* __cx, void* __self) {
-    return ((_Unwind_Wrapper*)__self)->callback(__cx);
+    return static_cast<_Unwind_Wrapper*>(__self)->callback(__cx);
   }
 };
 
 } // namespace
 
-// Kept out-of-line, avoiding inlining so we get a predictable trace
-_LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT void _Trace::__populate_addrs(size_t __skip, size_t __depth) {
+_LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT _LIBCPP_NOINLINE static void
+__get_trace_from_unwind(_Context& __cx, size_t __skip, size_t __depth) {
   if (!__depth) {
     return;
   }
-  _Unwind_Wrapper __bt{*this, __skip + 1, __depth}; // +1 to skip our own frame
+  _Unwind_Wrapper __bt{__cx, __skip + 1, __depth}; // +1 to skip our own frame
   _Unwind_Backtrace(_Unwind_Wrapper::callback, &__bt);
+}
+
+void __collect(_Context& __cx, size_t __skip, size_t __depth) {
+  // +1 to additionally skip this function's own frame, on top of __get_trace_from_unwind's.
+  __get_trace_from_unwind(__cx, __skip + 1, __depth);
+  __populate_images(__cx);
 }
 
 #endif // !_WIN32
@@ -84,7 +92,7 @@ _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT void _Trace::__populate_addrs(size_t __skip
 #if _LIBCPP_HAS_LOCALIZATION
 
 ostream& _Trace::__write_to(std::ostream& __os) const {
-  auto iters = __entry_iters_();
+  auto iters = __cx_.__entry_iters_(__cx_.__self_);
   auto count = iters.size();
   if (!count) {
     __os << "(empty stacktrace)";
@@ -115,7 +123,7 @@ string _Trace::__to_string() const {
 
 size_t _Trace::__hash_code() const {
   size_t __ret = size_t(0xc3a5c85c97cb3127ull); // taken from __functional/hash.h
-  for (_Entry const& __e : __entry_iters_()) {
+  for (_Entry const& __e : __cx_.__entry_iters_(__cx_.__self_)) {
     __ret = (__ret << 1) ^ __e.__hash_code();
   }
   return __ret;

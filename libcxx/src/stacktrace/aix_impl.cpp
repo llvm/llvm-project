@@ -38,7 +38,7 @@ void scan_images(_Images& imgs) {
 
   bool found_new      = false;
   struct ld_info* ldi = reinterpret_cast<struct ld_info*>(buf.data());
-  while (imgs.count_ < _Images::k_max_images) {
+  while (imgs.count_ < _Images::__max_images) {
     auto load_addr = reinterpret_cast<uintptr_t>(ldi->ldinfo_textorg);
 
     auto __end = imgs.images_.begin() + imgs.count_;

@@ -26,13 +26,13 @@ namespace __stacktrace {
 #if _LIBCPP_HAS_LOCALIZATION
 
 ostream& _Entry::__write_to(ostream& __os) const {
-  constexpr static unsigned k_max_addr_len = 18; // "0x" + 16 hex digits
-  char ubuf[k_max_addr_len + 1]{0};
+  constexpr static unsigned __max_addr_len = 18; // "0x" + 16 hex digits
+  char ubuf[__max_addr_len + 1]{0};
   if constexpr (sizeof(void*) > 4) {
     // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
-    snprintf(ubuf, k_max_addr_len, "0x%012llx", (unsigned long long)(__addr_));
+    snprintf(ubuf, __max_addr_len, "0x%012llx", static_cast<unsigned long long>(__addr_));
   } else {
-    snprintf(ubuf, k_max_addr_len, "0x%08lx", (unsigned long)(__addr_));
+    snprintf(ubuf, __max_addr_len, "0x%08lx", static_cast<unsigned long>(__addr_));
   }
   __os << ubuf;
 
@@ -45,7 +45,7 @@ ostream& _Entry::__write_to(ostream& __os) const {
   }
 
   if (__line_) {
-    snprintf(ubuf, k_max_addr_len, "%u", __line_);
+    snprintf(ubuf, __max_addr_len, "%u", __line_);
     __os << ":" << ubuf;
   }
 

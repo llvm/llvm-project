@@ -23,12 +23,12 @@ namespace __stacktrace {
 _Names _Names::instance_;
 _Images _Images::instance_;
 
-void _Trace::__populate_images() {
+void __populate_images(_Context& __cx) {
   _Images& images = _Images::instance_;
   images.enumerate();
 
   std::lock_guard<std::mutex> __lock(images.mutex_);
-  for (auto& entry : __entry_iters_()) {
+  for (auto& entry : __cx.__entry_iters_(__cx.__self_)) {
     auto __i = images.find(entry.__addr_);
     if (auto& image = images[__i]) {
       entry.__image_ = &image;

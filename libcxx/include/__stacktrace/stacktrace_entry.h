@@ -14,7 +14,6 @@
 #include <__config>
 #include <__functional/function.h>
 #include <__fwd/format.h>
-#include <__memory_resource/memory_resource.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -54,8 +53,8 @@ struct _Entry {
   uintptr_t __addr_{};
   uint_least32_t __line_{};
   _Image const* __image_{};
-  std::pmr::string __desc_;
-  std::pmr::string __file_;
+  std::string __desc_;
+  std::string __file_;
 
 #  if _LIBCPP_HAS_LOCALIZATION
   _LIBCPP_EXPORTED_FROM_ABI std::ostream& __write_to(std::ostream& __os) const;
@@ -67,8 +66,6 @@ struct _Entry {
   _LIBCPP_HIDE_FROM_ABI static _Entry const& __entry_base(stacktrace_entry const& __entry);
 
   _LIBCPP_HIDE_FROM_ABI uintptr_t __adjusted_addr() const;
-
-  _LIBCPP_HIDE_FROM_ABI explicit _Entry(std::pmr::memory_resource* __res) : __desc_(__res), __file_(__res) {}
 
   _LIBCPP_HIDE_FROM_ABI ~_Entry()                                  = default;
   _LIBCPP_HIDE_FROM_ABI constexpr _Entry()                         = default;

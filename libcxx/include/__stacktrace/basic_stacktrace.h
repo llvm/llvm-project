@@ -19,16 +19,11 @@
 #include <__iterator/iterator.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator_traits.h>
-#include <__memory_resource/memory_resource.h>
 #include <__memory_resource/polymorphic_allocator.h>
-#include <__new/allocate.h>
 #include <__stacktrace/stacktrace_entry.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__vector/vector.h>
-#include <cstddef>
-#include <iostream>
 #include <string>
-#include <utility>
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <__fwd/ostream.h>
 #endif // _LIBCPP_HAS_LOCALIZATION
@@ -52,24 +47,29 @@ struct _Iters {
   _Tp* __data_{};
   size_t __size_{};
 
-  _Bp* data() { return (_Bp*)__data_; }
+  _Bp* data() { return reinterpret_cast<_Bp*>(__data_); }
   size_t size() const { return __size_; }
   _Bp* begin() { return data(); }
   _Bp* end() { return data() + size(); }
+};
+
+using _EntryIters _LIBCPP_NODEBUG = _Iters<stacktrace_entry, _Entry>;
+
+struct _Context {
+  void* __self_{};
+  _EntryIters (*__entry_iters_)(void* __self){};
+  _Entry& (*__append_entry_)(void* __self){};
+  void* (*__alloc_)(void* __self, size_t __bytes){};
+  void (*__dealloc_)(void* __self, void* __p, size_t __bytes){};
 };
 
 struct _Trace {
   constexpr static size_t __default_max_depth  = 64;
   constexpr static size_t __absolute_max_depth = 256;
 
-  using _EntryIters _LIBCPP_NODEBUG = _Iters<stacktrace_entry, _Entry>;
-  function<_EntryIters()> __entry_iters_;
-  function<_Entry&()> __entry_append_;
-  std::pmr::memory_resource* __resource_;
+  _Context __cx_;
 
-  _LIBCPP_HIDE_FROM_ABI _Trace(
-      function<_EntryIters()> __entry_iters, function<_Entry&()> __entry_append, std::pmr::memory_resource* __resource)
-      : __entry_iters_(__entry_iters), __entry_append_(__entry_append), __resource_(__resource) {}
+  _LIBCPP_HIDE_FROM_ABI explicit _Trace(_Context __cx) : __cx_(__cx) {}
 
   _LIBCPP_EXPORTED_FROM_ABI ostream& __write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string __to_string() const;
@@ -81,13 +81,14 @@ struct _Trace {
 #  ifdef _WIN32
   // Windows: full, self-contained impl in this function
   _LIBCPP_EXPORTED_FROM_ABI void __windows_impl(size_t skip, size_t max_depth);
-#  else
-  // Out-of-line (not header-inline) so it can never get folded into its caller: it must
-  // always be its own stack frame for the `__skip + 1` in trace.cpp to skip correctly.
-  _LIBCPP_EXPORTED_FROM_ABI void __populate_addrs(size_t __skip, size_t __depth);
-  _LIBCPP_EXPORTED_FROM_ABI void __populate_images();
 #  endif
 };
+
+#  ifndef _WIN32
+// Out-of-line (not header-inline) so it can never get folded into its caller.  It must always be
+// its own stack frame for the frame-skip accounting in trace.cpp to work correctly.
+_LIBCPP_EXPORTED_FROM_ABI void __collect(_Context& __cx, size_t __skip, size_t __depth);
+#  endif
 
 } // namespace __stacktrace
 
@@ -100,48 +101,22 @@ template <class _Allocator>
 class basic_stacktrace : private __stacktrace::_Trace {
   friend struct __stacktrace::_Trace;
 
-  struct _Resource : std::pmr::memory_resource {
-    basic_stacktrace* __owner_;
-
-    _LIBCPP_HIDE_FROM_ABI explicit _Resource(basic_stacktrace* __owner) noexcept : __owner_(__owner) {}
-
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t) override {
-      using _Value = typename allocator_traits<_Allocator>::value_type;
-      size_t __n   = (__bytes + sizeof(_Value) - 1) / sizeof(_Value);
-      _Allocator __a(__owner_->__entries_.get_allocator());
-      return static_cast<void*>(std::to_address(allocator_traits<_Allocator>::allocate(__a, __n)));
-    }
-
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void* __p, size_t __bytes, size_t) override {
-      using _Value = typename allocator_traits<_Allocator>::value_type;
-      size_t __n   = (__bytes + sizeof(_Value) - 1) / sizeof(_Value);
-      _Allocator __a(__owner_->__entries_.get_allocator());
-      allocator_traits<_Allocator>::deallocate(__a, static_cast<_Value*>(__p), __n);
-    }
-
-    _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool do_is_equal(const std::pmr::memory_resource& __other) const noexcept override {
-      return this == &__other;
-    }
-  };
-
   vector<stacktrace_entry, _Allocator> __entries_;
-  _Resource __resource_{this};
 
-  _LIBCPP_HIDE_FROM_ABI _EntryIters __entry_iters() { return {__entries_.data(), __entries_.size()}; }
-
-  _LIBCPP_HIDE_FROM_ABI __stacktrace::_Entry& __entry_append() {
-    __stacktrace::_Entry& __e = (__stacktrace::_Entry&)__entries_.emplace_back();
-    __e.~_Entry();
-    ::new (static_cast<void*>(&__e)) __stacktrace::_Entry(std::addressof(__resource_));
-    return __e;
+  _LIBCPP_HIDE_FROM_ABI __stacktrace::_Entry& __do_append_entry() {
+    return reinterpret_cast<__stacktrace::_Entry&>(__entries_.emplace_back());
   }
 
-  _LIBCPP_HIDE_FROM_ABI auto __entry_iters_fn() {
-    return [this] -> _EntryIters { return __entry_iters(); };
+  _LIBCPP_HIDE_FROM_ABI static __stacktrace::_EntryIters __entry_iters_(void* __self) {
+    auto* __this = static_cast<basic_stacktrace*>(__self);
+    return {__this->__entries_.data(), __this->__entries_.size()};
   }
-  _LIBCPP_HIDE_FROM_ABI auto __entry_append_fn() {
-    return [this] -> __stacktrace::_Entry& { return __entry_append(); };
+
+  _LIBCPP_HIDE_FROM_ABI static __stacktrace::_Entry& __append_entry_(void* __self) {
+    return static_cast<basic_stacktrace*>(__self)->__do_append_entry();
   }
+
+  _LIBCPP_HIDE_FROM_ABI __stacktrace::_Context __make_context() { return {this, &__entry_iters_, &__append_entry_}; }
 
 public:
   // (19.6.4.1)
@@ -182,8 +157,7 @@ public:
 #  if defined(_WIN32)
       __ret.__windows_impl(__skip, __max_depth);
 #  else
-      __ret.__populate_addrs(__skip, __max_depth);
-      __ret.__populate_images();
+      __stacktrace::__collect(__ret.__cx_, __skip, __max_depth);
 #  endif
     }
 
@@ -194,23 +168,19 @@ public:
       : basic_stacktrace(allocator_type()) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc) noexcept
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)), __entries_(__alloc) {}
+      : _Trace(__make_context()), __entries_(__alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other)
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)), __entries_(__other.__entries_) {
-  }
+      : _Trace(__make_context()), __entries_(__other.__entries_) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)),
-        __entries_(std::move(__other.__entries_)) {}
+      : _Trace(__make_context()), __entries_(std::move(__other.__entries_)) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other, const allocator_type& __alloc)
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)),
-        __entries_(__other.__entries_, __alloc) {}
+      : _Trace(__make_context()), __entries_(__other.__entries_, __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, const allocator_type& __alloc)
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)),
-        __entries_(std::move(__other.__entries_), __alloc) {}
+      : _Trace(__make_context()), __entries_(std::move(__other.__entries_), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other) {
     __entries_ = __other.__entries_;
@@ -335,9 +305,6 @@ struct hash<basic_stacktrace<_Allocator>> {
 };
 
 namespace __stacktrace {
-
-// __populate_addrs (non-Windows) is defined out-of-line in trace.cpp, not here; see the
-// comment on its declaration above for why it must never be inlined into its caller.
 
 _Trace& _Trace::__trace_base(auto& __trace) { return *static_cast<_Trace*>(std::addressof(__trace)); }
 

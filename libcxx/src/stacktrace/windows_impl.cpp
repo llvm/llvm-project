@@ -240,7 +240,7 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
       break;
     }
 
-    _Entry& entry = __entry_append_();
+    _Entry& entry = __cx_.__append_entry_(__cx_.__self_);
 
     // Note: can't differentiate between a signal / exception, or a normal
     // function call. This assumes the more common (presumably) case of
@@ -264,7 +264,7 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
   // https://learn.microsoft.com/en-us/cpp/build/reference/h-restrict-length-of-external-names
   constexpr static size_t __max_sym_len = 2047;
 
-  for (_Entry& entry : __entry_iters_()) {
+  for (_Entry& entry : __cx_.__entry_iters_(__cx_.__self_)) {
     char space[sizeof(IMAGEHLP_SYMBOL) + __max_sym_len + 1];
     IMAGEHLP_SYMBOL* sym = reinterpret_cast<IMAGEHLP_SYMBOL*>(space);
     sym->SizeOfStruct    = sizeof(IMAGEHLP_SYMBOL);

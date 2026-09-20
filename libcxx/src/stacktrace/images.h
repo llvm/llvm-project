@@ -13,6 +13,7 @@
 #include <__config>
 
 #include <__assert>
+#include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
 #include <algorithm>
 #include <array>
@@ -39,8 +40,8 @@ struct _Image {
 // Bump-allocating arena for image names.  These names are not permitted on caller's heap,
 // and must survive after `stacktrace::current` returns, so allocate
 struct _Names {
-  constexpr static size_t k_bytes = 32 << 10;
-  char names_[k_bytes]{};
+  constexpr static size_t __bytes = 32 << 10;
+  char names_[__bytes]{};
   size_t used_{};
 
   static _Names instance_;
@@ -51,7 +52,7 @@ struct _Names {
     if (!__name) {
       return {};
     }
-    size_t __len = std::min(strlen(__name), k_bytes - used_);
+    size_t __len = std::min(strlen(__name), __bytes - used_);
     char* __dst  = names_ + used_;
     memcpy(__dst, __name, __len);
     used_ += __len;
@@ -62,8 +63,8 @@ struct _Names {
 // Contains _Image objects in sorted order, according to `_Image::operator<`.
 struct _Images {
   // Includes two dummy low/high "sentinel" entries in addition to this max number of images
-  constexpr static size_t k_max_images = 256;
-  std::array<_Image, k_max_images + 2> images_{}; // includes left/right sentinels
+  constexpr static size_t __max_images = 256;
+  std::array<_Image, __max_images + 2> images_{}; // includes left/right sentinels
   unsigned count_{};                              // image count, including sentinels
   std::mutex mutex_{};
 
@@ -102,6 +103,8 @@ struct _Images {
     return size_t(__it - images_.begin()) - 1;
   }
 };
+
+void __populate_images(_Context& __cx);
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD

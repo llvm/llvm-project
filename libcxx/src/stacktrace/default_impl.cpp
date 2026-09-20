@@ -31,7 +31,7 @@ struct _ScanState {
 };
 
 int add_image(dl_phdr_info* info, size_t, void* state_v) {
-  auto& state  = *(_ScanState*)state_v;
+  auto& state  = *static_cast<_ScanState*>(state_v);
   auto& images = state.images_;
 
   auto __end = images.images_.begin() + images.count_;
@@ -43,7 +43,7 @@ int add_image(dl_phdr_info* info, size_t, void* state_v) {
     return 0;
   }
 
-  if (images.count_ == _Images::k_max_images) {
+  if (images.count_ == _Images::__max_images) {
     return 1; // at capacity; stop iterating, nothing further can be added
   }
   auto is_first = (images.count_ == 0);
