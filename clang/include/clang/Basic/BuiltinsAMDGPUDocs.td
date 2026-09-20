@@ -884,23 +884,14 @@ Converts 32 packed 6-bit brain-float values in ``src`` to brain-float16, then
 multiplies each result by a shared block-scale factor.
 
 ``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
-contiguously (192 bits total).
+contiguously.
 
-``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
-in E8M0 (bias 127) format, shared across a group of 32 values. Use
-``scale_sel`` to select which one to apply.
+``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
-that selects which 16-bit half of the ``scale`` register and which set of lanes
-(even or odd) provides the block-scale byte for this lane:
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
 
-  - 0: even lanes, bits [15:0]
-  - 1: even lanes, bits [31:16]
-  - 2: odd lanes,  bits [15:0]
-  - 3: odd lanes,  bits [31:16]
-
-``src`` must be a VGPR. Destination registers must not overlap any source
-registers. Only available in wavefront size 32.
+This operation is available only for wavefront size 32.
 }];
 }
 
@@ -911,23 +902,14 @@ Converts 32 packed 6-bit float values in ``src`` to brain-float16, then
 multiplies each result by a shared block-scale factor.
 
 ``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
-contiguously (192 bits total).
+contiguously.
 
-``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
-in E8M0 (bias 127) format, shared across a group of 32 values. Use
-``scale_sel`` to select which one to apply.
+``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
-that selects which 16-bit half of the ``scale`` register and which set of lanes
-(even or odd) provides the block-scale byte for this lane:
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
 
-  - 0: even lanes, bits [15:0]
-  - 1: even lanes, bits [31:16]
-  - 2: odd lanes,  bits [15:0]
-  - 3: odd lanes,  bits [31:16]
-
-``src`` must be a VGPR. Destination registers must not overlap any source
-registers. Only available in wavefront size 32.
+This operation is available only for wavefront size 32.
 }];
 }
 
@@ -938,23 +920,14 @@ Converts 32 packed 6-bit brain-float values in ``src`` to half-precision
 float16, then multiplies each result by a shared block-scale factor.
 
 ``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
-contiguously (192 bits total).
+contiguously.
 
-``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
-in E8M0 (bias 127) format, shared across a group of 32 values. Use
-``scale_sel`` to select which one to apply.
+``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
-that selects which 16-bit half of the ``scale`` register and which set of lanes
-(even or odd) provides the block-scale byte for this lane:
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
 
-  - 0: even lanes, bits [15:0]
-  - 1: even lanes, bits [31:16]
-  - 2: odd lanes,  bits [15:0]
-  - 3: odd lanes,  bits [31:16]
-
-``src`` must be a VGPR. Destination registers must not overlap any source
-registers. Only available in wavefront size 32.
+This operation is available only for wavefront size 32.
 }];
 }
 
@@ -965,23 +938,14 @@ Converts 32 packed 6-bit float values in ``src`` to half-precision float16,
 then multiplies each result by a shared block-scale factor.
 
 ``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
-contiguously (192 bits total).
+contiguously.
 
-``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
-in E8M0 (bias 127) format, shared across a group of 32 values. Use
-``scale_sel`` to select which one to apply.
+``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
-that selects which 16-bit half of the ``scale`` register and which set of lanes
-(even or odd) provides the block-scale byte for this lane:
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
 
-  - 0: even lanes, bits [15:0]
-  - 1: even lanes, bits [31:16]
-  - 2: odd lanes,  bits [15:0]
-  - 3: odd lanes,  bits [31:16]
-
-``src`` must be a VGPR. Destination registers must not overlap any source
-registers. Only available in wavefront size 32.
+This operation is available only for wavefront size 32.
 }];
 }
 
@@ -992,23 +956,14 @@ Converts 32 packed 6-bit brain-float values in ``src`` to single-precision
 float32, then multiplies each result by a shared block-scale factor.
 
 ``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
-contiguously (192 bits total).
+contiguously.
 
-``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
-in E8M0 (bias 127) format, shared across a group of 32 values. Use
-``scale_sel`` to select which one to apply.
+``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
-that selects which 16-bit half of the ``scale`` register and which set of lanes
-(even or odd) provides the block-scale byte for this lane:
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
 
-  - 0: even lanes, bits [15:0]
-  - 1: even lanes, bits [31:16]
-  - 2: odd lanes,  bits [15:0]
-  - 3: odd lanes,  bits [31:16]
-
-``src`` must be a VGPR. Destination registers must not overlap any source
-registers. Only available in wavefront size 32.
+This operation is available only for wavefront size 32.
 }];
 }
 
@@ -1019,23 +974,14 @@ Converts 32 packed 6-bit float values in ``src`` to single-precision float32,
 then multiplies each result by a shared block-scale factor.
 
 ``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
-contiguously (192 bits total).
+contiguously.
 
-``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
-in E8M0 (bias 127) format, shared across a group of 32 values. Use
-``scale_sel`` to select which one to apply.
+``scale`` contains four packed 8-bit E8M0 scale factors.
 
-``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
-that selects which 16-bit half of the ``scale`` register and which set of lanes
-(even or odd) provides the block-scale byte for this lane:
+``scale_sel`` is a compile-time argument in the range [0, 3] to select the
+applicable scale factor.
 
-  - 0: even lanes, bits [15:0]
-  - 1: even lanes, bits [31:16]
-  - 2: odd lanes,  bits [15:0]
-  - 3: odd lanes,  bits [31:16]
-
-``src`` must be a VGPR. Destination registers must not overlap any source
-registers. Only available in wavefront size 32.
+This operation is available only for wavefront size 32.
 }];
 }
 
