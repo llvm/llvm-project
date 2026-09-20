@@ -213,7 +213,8 @@ bool SanitizerBinaryMetadata::run() {
     // Calls to the initialization functions with different versions cannot be
     // merged. Give the structors unique names based on the version, which will
     // also be used as the COMDAT key.
-    const std::string StructorPrefix = (MI->FunctionPrefix + VersionStr).str();
+    const std::string StructorPrefix =
+        (Twine(MI->FunctionPrefix) + VersionStr).str();
 
     // We declare the _add and _del functions as weak, and only call them if
     // there is a valid symbol linked. This allows building binaries with
