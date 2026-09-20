@@ -16,6 +16,7 @@
 #include <__utility/forward.h>
 #include <clocale> // std::lconv
 #include <ctype.h>
+#include <langinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -196,6 +197,10 @@ inline size_t __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbs
   return mbsrtowcs(__dest, __src, __len, __ps);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
+}
 #endif   // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
