@@ -48,8 +48,8 @@ define i32 @nsw_kept_same_sign(i32 %start.in, i32 %step.in, i32 %n) {
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[N]], [[STEP]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[TMP0]], [[START]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i32 [[N]], [[STEP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], [[START]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -84,7 +84,7 @@ define i32 @nsw_start_stop_negative(i32 range(i32 -1024, 0) %start, i32 range(i3
 ; CHECK-NEXT:    br label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N]], [[STEP]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[START]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -190,8 +190,8 @@ define i32 @nsw_kept_same_sign_const_count(i32 range(i32 0, -2147483648) %start,
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[STEP]], 10
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i32 [[STEP]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[START]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:

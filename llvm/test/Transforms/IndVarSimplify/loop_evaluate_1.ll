@@ -30,7 +30,7 @@ define i32 @test2(i32 %arg) {
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp ugt i32 [[ARG:%.*]], 10
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG]], -11
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP]], i32 [[TMP2]], i32 0
 ; CHECK-NEXT:    ret i32 [[TMP8]]
 ;
