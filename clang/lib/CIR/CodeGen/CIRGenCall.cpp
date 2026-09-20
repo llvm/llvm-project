@@ -390,22 +390,26 @@ void CIRGenModule::constructAttributeList(
 
     assert(!cir::MissingFeatures::opCallAttrs());
 
-    std::optional<cir::ModRefInfo> access;
-    if (targetDecl->hasAttr<ConstAttr>())
-      access = cir::ModRefInfo::NoModRef;
-    else if (targetDecl->hasAttr<PureAttr>())
-      access = cir::ModRefInfo::Ref;
+    auto setMemoryEffects = [&](cir::MemoryEffectsAttr effects) {
+      attrs.set(cir::CIRDialect::getMemoryEffectsAttrName(), effects);
+    };
 
-    if (access) {
-      // 'const' and 'pure' describe the callee as a whole, so every class of
-      // memory carries the same access.
-      attrs.set(cir::CIRDialect::getMemoryEffectsAttrName(),
-                cir::MemoryEffectsAttr::get(&getMLIRContext(), *access));
-      // 'const' and 'pure' attributed functions are also nounwind.
+    // 'const', 'pure' and 'noalias' attributed functions are also nounwind.
+    if (targetDecl->hasAttr<ConstAttr>()) {
+      setMemoryEffects(cir::MemoryEffectsAttr::none(&getMLIRContext()));
       addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
-      // gcc specifies that 'const' and 'pure' functions cannot have infinite
-      // loops.
+      // gcc specifies that 'const' functions have greater restrictions than
+      // 'pure' functions, so they also cannot have infinite loops.
       addUnitAttr(cir::CIRDialect::getWillReturnAttrName());
+    } else if (targetDecl->hasAttr<PureAttr>()) {
+      setMemoryEffects(cir::MemoryEffectsAttr::readOnly(&getMLIRContext()));
+      addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
+      // gcc specifies that 'pure' functions cannot have infinite loops.
+      addUnitAttr(cir::CIRDialect::getWillReturnAttrName());
+    } else if (targetDecl->hasAttr<NoAliasAttr>()) {
+      setMemoryEffects(
+          cir::MemoryEffectsAttr::inaccessibleOrArgMemOnly(&getMLIRContext()));
+      addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
     }
 
     // TODO(cir): Add noalias to returns for malloc-like functions

@@ -2058,6 +2058,62 @@ def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
     }]>
   ];
 
+  let extraClassDeclaration = [{
+    // These mirror the like-named factories on `llvm::MemoryEffects`.
+
+    /// Create MemoryEffectsAttr that cannot read or write any memory.
+    static MemoryEffectsAttr none(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can read any memory.
+    static MemoryEffectsAttr readOnly(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can write any memory.
+    static MemoryEffectsAttr writeOnly(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can only access argument memory.
+    static MemoryEffectsAttr argMemOnly(::mlir::MLIRContext *ctx,
+                                        ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible memory.
+    static MemoryEffectsAttr
+    inaccessibleMemOnly(::mlir::MLIRContext *ctx,
+                        ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access errno memory.
+    static MemoryEffectsAttr errnoMemOnly(::mlir::MLIRContext *ctx,
+                                          ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access other memory.
+    static MemoryEffectsAttr otherMemOnly(::mlir::MLIRContext *ctx,
+                                          ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible or argument
+    /// memory.
+    static MemoryEffectsAttr
+    inaccessibleOrArgMemOnly(::mlir::MLIRContext *ctx,
+                             ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible or errno
+    /// memory.
+    static MemoryEffectsAttr inaccessibleOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo inaccessibleMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible, argument or
+    /// errno memory.
+    static MemoryEffectsAttr inaccessibleOrArgOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo inaccessibleOrArgMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access argument or errno memory.
+    static MemoryEffectsAttr
+    argumentOrErrnoMemOnly(::mlir::MLIRContext *ctx,
+                           ModRefInfo argMr = ModRefInfo::ModRef,
+                           ModRefInfo errnoMr = ModRefInfo::ModRef);
+  }];
+
   let assemblyFormat = "`<` struct(params) `>`";
   let canHaveIllegalCXXABIType = 0;
 }
