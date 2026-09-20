@@ -8847,13 +8847,30 @@ bool OpenMPIterationSpaceChecker::checkAndSetInc(Expr *S) {
   return true;
 }
 
+/// Check if the expression \p E contains a statement expression.
+static bool containsStmtExpr(const Expr *E) {
+  SmallVector<const Stmt *, 8> Worklist{E};
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+    if (isa<StmtExpr>(S))
+      return true;
+    llvm::append_range(Worklist, S->children());
+  }
+  return false;
+}
+
 static ExprResult
 tryBuildCapture(Sema &SemaRef, Expr *Capture,
                 llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
                 StringRef Name = ".capture_expr.") {
   if (SemaRef.CurContext->isDependentContext() || Capture->containsErrors())
     return Capture;
-  if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
+  // A statement expression must be captured even if it is constant, since the
+  // declarations inside it can only be emitted once.
+  if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects) &&
+      !containsStmtExpr(Capture))
     return SemaRef.PerformImplicitConversion(Capture->IgnoreImpCasts(),
                                              Capture->getType(),
                                              AssignmentAction::Converting,
