@@ -80,7 +80,9 @@ public:
 
   DynamicAllocator &getAllocator() {
     if (!Alloc) {
-      Alloc = std::make_unique<DynamicAllocator>();
+      if (!Allocator)
+        Allocator.emplace();
+      Alloc = std::make_unique<DynamicAllocator>(*Allocator);
     }
 
     return *Alloc;
@@ -223,10 +225,10 @@ private:
   DeadBlock *DeadBlocks = nullptr;
   /// Reference to the offset-source mapping.
   SourceMapper *M;
-  /// Allocator used for dynamic allocations performed via the program.
-  std::unique_ptr<DynamicAllocator> Alloc;
   /// Allocator for everything else, e.g. floating-point values.
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
+  /// Allocator used for dynamic allocations performed via the program.
+  std::unique_ptr<DynamicAllocator> Alloc;
   /// Diagnose that we've reached the constexpr step limit.
   bool diagnoseStepLimitExceeded(CodePtr OpPC);
 
