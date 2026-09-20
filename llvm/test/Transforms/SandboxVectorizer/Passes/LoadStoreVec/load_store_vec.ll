@@ -301,7 +301,7 @@ define void @load_store_vec_constants(ptr %ptr) {
 ; CHECK-LABEL: define void @load_store_vec_constants(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i8, ptr [[PTR]], i32 0
-; CHECK-NEXT:    store <3 x i8> <i8 42, i8 43, i8 44>, ptr [[PTR0]], align 1, !sandboxvec [[META15:![0-9]+]]
+; CHECK-NEXT:    store <4 x i8> <i8 42, i8 43, i8 0, i8 44>, ptr [[PTR0]], align 1, !sandboxvec [[META15:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i8, ptr %ptr, i32 0
