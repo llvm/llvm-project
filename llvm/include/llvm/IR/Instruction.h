@@ -37,7 +37,6 @@ class FastMathFlags;
 class MDNode;
 class Module;
 struct AAMDNodes;
-class DbgMarker;
 class DbgRecord;
 
 template <> struct ilist_alloc_traits<Instruction> {
@@ -112,11 +111,13 @@ private:
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
 
-public:
   /// Optional marker recording the position for debugging information that
   /// takes effect immediately before this instruction. Null unless there is
   /// debugging information present.
   DbgMarker *DebugMarker = nullptr;
+
+public:
+  DbgMarker *getDbgMarker() const { return DebugMarker; }
 
   /// Clone any debug-info attached to \p From onto this instruction. Used to
   /// copy debugging information from one block to another, when copying entire
@@ -1101,7 +1102,8 @@ public:
 private:
   friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
                                      ilist_parent<BasicBlock>>;
-  friend class BasicBlock; // For renumbering.
+  friend class BasicBlock; // For renumbering and DebugMarker.
+  friend class DbgMarker;  // For DebugMarker.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that
   // subclasses cannot accidentally use it.

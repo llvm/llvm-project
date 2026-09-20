@@ -532,38 +532,28 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
-/// Returns true if \p V is known to not wrap in signed or unsigned, depending
-/// on \p Signed.
-static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
-  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+/// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
+/// is known to not wrap in signed or unsigned, depending on \p Signed.
+static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+                          unsigned NoWrapFlags, const ConstraintInfo &Info,
+                          bool Signed) {
+  using OBO = OverflowingBinaryOperator;
+
+  if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
     return true;
 
-  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
-    if (Signed)
-      return Trunc->hasNoSignedWrap();
-    // A trunc nsw only truncates without unsigned wrap if its operand is
-    // non-negative.
-    return Trunc->hasNoUnsignedWrap() ||
-           (Trunc->hasNoSignedWrap() &&
-            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  if (Opcode == Instruction::Sub) {
+    // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
+    if (!Signed)
+      return Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
+
+    // Op0 - Op1 does not wrap signed if 0 <=s Op1 <=s Op0.
+    if (Info.isKnownNonNegative(Op1) &&
+        Info.doesHold(CmpInst::ICMP_SGE, Op0, Op1))
+      return true;
   }
 
-  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
-  if (!BO)
-    return false;
-
-  if (Signed ? BO->hasNoSignedWrap() : BO->hasNoUnsignedWrap())
-    return true;
-
-  Value *Op0 = BO->getOperand(0);
-  Value *Op1 = BO->getOperand(1);
-  auto Opcode = static_cast<Instruction::BinaryOps>(BO->getOpcode());
-
-  // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
-  if (Opcode == Instruction::Sub)
-    return !Signed && Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
-
-  if (!Signed && BO->hasNoSignedWrap() &&
+  if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
       Info.isKnownNonNegative(Op0))
     return true;
@@ -574,12 +564,35 @@ static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
   if (!C)
     return false;
 
-  using OBO = OverflowingBinaryOperator;
   return doesHoldInRange(Info, Op0,
                          ConstantRange::makeExactNoWrapRegion(
                              Opcode, C->getValue(),
                              Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
                          Signed);
+}
+
+/// Returns true if \p V is known to not wrap in signed or unsigned, depending
+/// on \p Signed.
+static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
+  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+    return true;
+
+  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Signed)
+      return Trunc->hasNoSignedWrap();
+
+    // A trunc nsw only truncates without unsigned wrap if its operand is
+    // non-negative.
+    return Trunc->hasNoUnsignedWrap() ||
+           (Trunc->hasNoSignedWrap() &&
+            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  }
+
+  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
+  return BO &&
+         isKnownNoWrap(static_cast<Instruction::BinaryOps>(BO->getOpcode()),
+                       BO->getOperand(0), BO->getOperand(1),
+                       BO->getNoWrapKind(), Info, Signed);
 }
 
 static Decomposition decomposeGEP(GEPOperator &GEP, const ConstraintInfo &Info,
@@ -656,107 +669,46 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return V;
 
-  // Decompose \p V used with a signed predicate.
-  if (IsSigned) {
-    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+  if (auto *CI = dyn_cast<ConstantInt>(V)) {
+    if (IsSigned) {
       if (canUseSExt(CI))
         return CI->getSExtValue();
+    } else if (!CI->uge(MaxConstraintValue)) {
+      return int64_t(CI->getZExtValue());
     }
-    Value *Op0;
-    Value *Op1;
-
-    if (match(V, m_SExt(m_Value(Op0))))
-      V = Op0;
-    else if (match(V, m_NNegZExt(m_Value(Op0)))) {
-      V = Op0;
-    } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
-      if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
-          isKnownNoWrap(Trunc, Info, IsSigned))
-        V = Trunc->getOperand(0);
-    }
-
-    if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
-      if (isKnownNoWrap(V, Info, IsSigned))
-        if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-          return *Decomp;
-      return V;
-    }
-
-    // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
-    if (match(V, m_Not(m_Value(Op0)))) {
-      Decomposition Result(-1);
-      if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
-        return Result;
-      return V;
-    }
-
-    if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
-      if (isKnownNoWrap(V, Info, IsSigned)) {
-        auto ResA = decompose(Op0, Info, IsSigned, DL);
-        auto ResB = decompose(Op1, Info, IsSigned, DL);
-        if (!ResA.sub(ResB))
-          return ResA;
-      }
-      return V;
-    }
-
-    ConstantInt *CI;
-    if (match(V, m_Mul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
-      if (isKnownNoWrap(V, Info, IsSigned)) {
-        auto Result = decompose(Op0, Info, IsSigned, DL);
-        if (!Result.mul(CI->getSExtValue()))
-          return Result;
-      }
-      return V;
-    }
-
-    // (shl nsw x, shift) is (mul nsw x, (1<<shift)), with the exception of
-    // shift == bw-1.
-    if (match(V, m_Shl(m_Value(Op0), m_ConstantInt(CI)))) {
-      uint64_t Shift = CI->getValue().getLimitedValue();
-      if (Shift < Ty->getIntegerBitWidth() - 1 &&
-          isKnownNoWrap(V, Info, IsSigned)) {
-        assert(Shift < 64 && "Would overflow");
-        auto Result = decompose(Op0, Info, IsSigned, DL);
-        if (!Result.mul(int64_t(1) << Shift))
-          return Result;
-        return V;
-      }
-    }
-
     return V;
   }
 
-  if (auto *CI = dyn_cast<ConstantInt>(V)) {
-    if (CI->uge(MaxConstraintValue))
-      return V;
-    return int64_t(CI->getZExtValue());
-  }
-
   Value *Op0;
+  Value *Op1;
+  ConstantInt *CI;
+
   if (match(V, m_ZExt(m_Value(Op0)))) {
+    // In the signed system, the ZExt must be non-negative.
+    if (IsSigned && !cast<ZExtInst>(V)->hasNonNeg())
+      return V;
     V = Op0;
   } else if (match(V, m_SExt(m_Value(Op0)))) {
-    // Looking through the sext is only valid if the operand is non-negative.
-    if (!Info.isKnownNonNegative(Op0))
+    // In the unsigned system, the SExt operand must be non-negative.
+    if (!IsSigned && !Info.isKnownNonNegative(Op0))
       return V;
     V = Op0;
   } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
     if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
-        isKnownNoWrap(Trunc, Info, /*Signed=*/false))
+        isKnownNoWrap(Trunc, Info, IsSigned))
       V = Trunc->getOperand(0);
   }
 
-  Value *Op1;
-  ConstantInt *CI;
   if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
-    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
+    if (isKnownNoWrap(V, Info, IsSigned)) {
       if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
         return *Decomp;
       return V;
     }
-    // Adding a negative constant only wraps if Op0 is smaller than it.
-    if (match(Op1, m_ConstantInt(CI)) && CI->isNegative() && canUseSExt(CI) &&
+    // In the unsigned system, adding a negative constant only wraps if Op0 is
+    // smaller than it.
+    if (!IsSigned && match(Op1, m_ConstantInt(CI)) && CI->isNegative() &&
+        canUseSExt(CI) &&
         Info.doesHold(CmpInst::ICMP_UGE, Op0,
                       ConstantInt::get(Op0->getType(), -CI->getSExtValue())))
       if (auto Decomp = MergeResults(Op0, CI, /*IsSignedB=*/true))
@@ -764,41 +716,99 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
     return V;
   }
 
-  if (match(V, m_Shl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
-    // The scale 1 << shift must fit in the signed coefficient, so reject a
-    // shift of 63, for which int64_t{1} << 63 is INT64_MIN.
-    if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 63)
-      return V;
-    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
-      auto Result = decompose(Op1, Info, IsSigned, DL);
-      if (!Result.mul(int64_t{1} << CI->getSExtValue()))
-        return Result;
+  // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
+  if (IsSigned && match(V, m_Not(m_Value(Op0)))) {
+    Decomposition Result(-1);
+    if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
+      return Result;
+    return V;
+  }
+
+  if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
+    if (isKnownNoWrap(V, Info, IsSigned)) {
+      auto ResA = decompose(Op0, Info, IsSigned, DL);
+      auto ResB = decompose(Op1, Info, IsSigned, DL);
+      if (!ResA.sub(ResB))
+        return ResA;
     }
     return V;
   }
 
-  if (match(V, m_Mul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
-      !CI->isNegative()) {
-    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
-      auto Result = decompose(Op1, Info, IsSigned, DL);
+  if (match(V, m_Mul(m_Value(Op0), m_ConstantInt(CI)))) {
+    // A negative constant is only a valid coefficient in the signed system; in
+    // the unsigned system the multiplier is the constant's unsigned value.
+    if (canUseSExt(CI) && (IsSigned || !CI->isNegative()) &&
+        isKnownNoWrap(V, Info, IsSigned)) {
+      auto Result = decompose(Op0, Info, IsSigned, DL);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
     }
     return V;
   }
 
-  if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
-    // a - b can be decomposed when there is no unsigned wrap.
-    if (!isKnownNoWrap(V, Info, /*Signed=*/false))
-      return V;
-    auto ResA = decompose(Op0, Info, IsSigned, DL);
-    auto ResB = decompose(Op1, Info, IsSigned, DL);
-    if (!ResA.sub(ResB))
-      return ResA;
+  if (match(V, m_Shl(m_Value(Op0), m_ConstantInt(CI)))) {
+    // (shl x, shift) is (mul x, 1 << shift). The scale must fit in the signed
+    // coefficient, so reject shifts >= 63. Also reject a shift of bw-1, for
+    // which the product is not representable.
+    int64_t MaxShift = IsSigned ? Ty->getIntegerBitWidth() - 1 : 63;
+    if (!CI->isNegative() && CI->getSExtValue() < MaxShift &&
+        isKnownNoWrap(V, Info, IsSigned)) {
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (!Result.mul(int64_t{1} << CI->getSExtValue()))
+        return Result;
+    }
     return V;
   }
 
   return V;
+}
+
+/// Build the row for 'ADec <= BDec', using the indices from \p Value2Index.
+/// Variables not in \p Value2Index are appended to \p NewVariables and get the
+/// indices following the ones in \p Value2Index. Returns an empty row if the
+/// coefficients overflow.
+static RowTy getRowForLessEqual(const Decomposition &ADec,
+                                const Decomposition &BDec,
+                                const DenseMap<Value *, unsigned> &Value2Index,
+                                SmallVectorImpl<Value *> &NewVariables) {
+  // Build the row, by first adding all coefficients from A and then subtracting
+  // all coefficients from B.
+  int64_t OffsetSum;
+  if (SubOverflow(BDec.Offset, ADec.Offset, OffsetSum))
+    return {};
+  RowTy R(1, Entry(OffsetSum, 0));
+  auto GetCoefficient = [&R](unsigned Idx) -> int64_t & {
+    // The entry for Idx, or the place to insert it at, is the first entry with
+    // an index >= Idx.
+    Entry *I =
+        find_if(drop_begin(R), [Idx](const Entry &E) { return E.Id >= Idx; });
+    if (I == R.end() || I->Id != Idx)
+      I = R.insert(I, Entry(0, Idx));
+    return I->Coefficient;
+  };
+  // First try to look up \p V in Value2Index and NewVariables. Otherwise add a
+  // new entry to NewVariables.
+  auto GetOrAddIndex = [&Value2Index, &NewVariables](Value *V) -> unsigned {
+    auto V2I = Value2Index.find(V);
+    if (V2I != Value2Index.end())
+      return V2I->second;
+    unsigned Idx = find(NewVariables, V) - NewVariables.begin();
+    if (Idx == NewVariables.size())
+      NewVariables.push_back(V);
+    return Value2Index.size() + Idx + 1;
+  };
+  for (const DecompEntry &KV : ADec.Vars)
+    GetCoefficient(GetOrAddIndex(KV.Variable)) += KV.Coefficient;
+
+  for (const DecompEntry &KV : BDec.Vars) {
+    auto &Coeff = GetCoefficient(GetOrAddIndex(KV.Variable));
+    if (SubOverflow(Coeff, KV.Coefficient, Coeff))
+      return {};
+  }
+
+  // Drop coefficients that cancelled out.
+  erase_if(R, [](const Entry &E) { return E.Id != 0 && E.Coefficient == 0; });
+  return R;
 }
 
 ConstraintTy
@@ -853,57 +863,13 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(), *this,
                         IsSigned, DL);
-  int64_t Offset1 = ADec.Offset;
-  int64_t Offset2 = BDec.Offset;
-  if (MulOverflow(Offset1, int64_t(-1), Offset1))
+  RowTy R = getRowForLessEqual(ADec, BDec, Value2Index, NewVariables);
+  if (R.empty())
     return {};
 
-  auto &VariablesA = ADec.Vars;
-  auto &VariablesB = BDec.Vars;
-
-  // First try to look up \p V in Value2Index and NewVariables. Otherwise add a
-  // new entry to NewVariables.
-  auto GetOrAddIndex = [&Value2Index, &NewVariables](Value *V) -> unsigned {
-    auto V2I = Value2Index.find(V);
-    if (V2I != Value2Index.end())
-      return V2I->second;
-    unsigned Idx = find(NewVariables, V) - NewVariables.begin();
-    if (Idx == NewVariables.size())
-      NewVariables.push_back(V);
-    return Value2Index.size() + Idx + 1;
-  };
-
-  // Build result constraint, by first adding all coefficients from A and then
-  // subtracting all coefficients from B.
-  RowTy R(1, Entry(0, 0));
-  auto GetCoefficient = [&R](unsigned Idx) -> int64_t & {
-    // The entry for Idx, or the place to insert it at, is the first entry with
-    // an index >= Idx.
-    Entry *I =
-        find_if(drop_begin(R), [Idx](const Entry &E) { return E.Id >= Idx; });
-    if (I == R.end() || I->Id != Idx)
-      I = R.insert(I, Entry(0, Idx));
-    return I->Coefficient;
-  };
-  for (const auto &KV : VariablesA)
-    GetCoefficient(GetOrAddIndex(KV.Variable)) += KV.Coefficient;
-
-  for (const auto &KV : VariablesB) {
-    auto &Coeff = GetCoefficient(GetOrAddIndex(KV.Variable));
-    if (SubOverflow(Coeff, KV.Coefficient, Coeff))
-      return {};
-  }
-
-  int64_t OffsetSum;
-  if (AddOverflow(Offset1, Offset2, OffsetSum))
-    return {};
   if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT)
-    if (AddOverflow(OffsetSum, int64_t(-1), OffsetSum))
+    if (AddOverflow(R[0].Coefficient, int64_t(-1), R[0].Coefficient))
       return {};
-  R[0].Coefficient = OffsetSum;
-
-  // Drop coefficients that cancelled out.
-  erase_if(R, [](const Entry &E) { return E.Id != 0 && E.Coefficient == 0; });
 
   // Remove any new variable without a coefficient in the row.
   unsigned NumV2I = Value2Index.size();
@@ -1431,9 +1397,11 @@ static bool canStrengthenFlags(Instruction *I) {
 
   switch (BO->getOpcode()) {
   case Instruction::Sub:
-    // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
-    // canonicalized to Add.
-    return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // A - B does not wrap unsigned if A >=u B, and does not wrap signed if
+    // 0 <=s B <=s A. With a constant B, bounds on A can refine both flags.
+    return true;
   case Instruction::Add:
   case Instruction::Mul:
   case Instruction::Shl:

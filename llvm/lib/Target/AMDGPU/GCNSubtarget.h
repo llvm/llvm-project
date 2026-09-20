@@ -1032,6 +1032,10 @@ public:
     return HasGFX1250Insts;
   }
 
+  /// True if VALU pipe occupancy is modeled with GFX1250BlockingCycles
+  /// (gfx1250 pipeline property, not gfx1250 ISA feature).
+  bool hasGFX1250VALUBlockingCycles() const { return AMDGPU::isGFX1250(*this); }
+
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.
   unsigned getSNopBits() const {
