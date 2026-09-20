@@ -129,8 +129,20 @@ static DecodeStatus DecodeSingleRegister(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
+namespace {
+DecodeStatus DecodeSPRegClassByHwMode(MCInst &Inst,
+                                      const MCDisassembler *Decoder) {
+  bool IsY = RISCVFeatures::hasStdExtYCapMode(
+      Decoder->getSubtargetInfo().getFeatureBits());
+  Inst.addOperand(MCOperand::createReg(IsY ? RISCV::X2_Y : RISCV::X2));
+  return MCDisassembler::Success;
+}
+} // namespace
+
 constexpr auto DecodeGPRRegisterClass =
     DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
+constexpr auto DecodeYGPRRegisterClass =
+    DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>;
 
 template <auto DecodeFn, auto PredicateFn>
 static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
@@ -148,6 +160,8 @@ constexpr bool PredX1OrX5(uint32_t RegNo) { return RegNo == 1 || RegNo == 5; }
 
 constexpr auto DecodeGPRNoX0RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX0>;
+constexpr auto DecodeYGPRNoX0RegisterClass =
+    DecodeFilteredRegisterClass<DecodeYGPRRegisterClass, PredNoX0>;
 constexpr auto DecodeGPRNoX2RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX2>;
 constexpr auto DecodeGPRNoX31RegisterClass =
@@ -600,6 +614,13 @@ static constexpr DecoderListEntry DecoderList16[]{
      "Xqccmt (Qualcomm 16-bit Table Jump Instructions)"},
     {DecoderTableXwchc16, {RISCV::FeatureVendorXwchc}, "WCH QingKe XW"},
     // Standard Extensions
+    // RVY instructions remap Zcf (RVY32) or Zcd (RVY64) encodings.
+    {DecoderTableRVY32Only16,
+     {RISCV::FeatureStdExtY, RISCV::Feature32Bit},
+     "RVY32-only 16-bit instructions"},
+    {DecoderTableRVY64Only16,
+     {RISCV::FeatureStdExtY, RISCV::Feature64Bit},
+     "RVY64-only 16-bit instructions"},
     {DecoderTable16, {}, "standard 16-bit instructions"},
     {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd

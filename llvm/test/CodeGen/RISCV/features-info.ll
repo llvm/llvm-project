@@ -158,6 +158,7 @@
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.
 ; CHECK-NEXT:   rvi20u64                         - RISC-V rvi20u64 profile.
+; CHECK-NEXT:   rvy-int-mode                     - For internal testing only: Using RVY Base ISA with Integral Pointer (Compatibility) Mode.
 ; CHECK-NEXT:   save-restore                     - Enable save/restore.
 ; CHECK-NEXT:   sdext                            - 'Sdext' (External debugger).
 ; CHECK-NEXT:   sdtrig                           - 'Sdtrig' (Debugger triggers).

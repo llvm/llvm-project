@@ -41,3 +41,14 @@ ybndswi a0, a0, 8192
 // CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
 ybndswi a0, a0, 4112
 // CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [1, 255], a multiple of 8 in the range [256, 504], or a multiple of 16 in the range [512, 4096]
+
+lw a0, 0(f0)
+// CHECK: :[[#@LINE-1]]:10: error: register must be a GPR excluding zero (x0)
+ly f0, 0(a0)
+// CHECK: :[[#@LINE-1]]:4: error: register must be a GPR
+ly a0, 0(f0)
+// CHECK: :[[#@LINE-1]]:10: error: register must be a GPR excluding zero (x0)
+sy f0, 0(a0)
+// CHECK: :[[#@LINE-1]]:4: error: register must be a GPR
+yaddi f0, a0, 0
+// CHECK: :[[#@LINE-1]]:7: error: register must be a GPR
