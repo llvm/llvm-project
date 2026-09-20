@@ -11,14 +11,10 @@
 
 // rcu_domain& rcu_default_domain() noexcept;
 
-#include <atomic>
 #include <cassert>
-#include <chrono>
+#include <concept>
 #include <cstddef>
-#include <latch>
 #include <rcu>
-#include <thread>
-#include <utility>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
