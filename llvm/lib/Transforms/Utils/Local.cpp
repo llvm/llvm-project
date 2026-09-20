@@ -3020,6 +3020,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                          MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
         }
         break;
+      case LLVMContext::MD_callees:
+        // If K moves, it replaces J on J's path and must allow J's callees as
+        // well. If K does not move, its callees remain valid.
+        if (!AAOnly && DoesKMove)
+          K->setMetadata(Kind, MDNode::getMergedCalleesMetadata(KMD, JMD));
+        break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(
