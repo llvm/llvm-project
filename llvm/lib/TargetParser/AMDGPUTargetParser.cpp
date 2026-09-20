@@ -558,14 +558,6 @@ unsigned AMDGPU::getLDSAllocGranule(Triple::SubArchType SubArch) {
 
 unsigned AMDGPU::getLDSEncodingGranule(GPUKind AK) {
   const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
-  if (Features.none())
-    return 256;
-  assert((Features.test(FEAT_LDS_ENCODING_GRANULARITY_256) ||
-          Features.test(FEAT_LDS_ENCODING_GRANULARITY_512) ||
-          Features.test(FEAT_LDS_ENCODING_GRANULARITY_1024) ||
-          Features.test(FEAT_LDS_ENCODING_GRANULARITY_1280) ||
-          Features.test(FEAT_LDS_ENCODING_GRANULARITY_2048)) &&
-         "missing LDS encoding granularity feature");
   if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_256))
     return 256;
   if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_512))
@@ -577,7 +569,7 @@ unsigned AMDGPU::getLDSEncodingGranule(GPUKind AK) {
   if (Features.test(FEAT_LDS_ENCODING_GRANULARITY_2048))
     return 2048;
 
-  return 256;
+  return 0;
 }
 
 unsigned AMDGPU::getLDSEncodingGranule(Triple::SubArchType SubArch) {

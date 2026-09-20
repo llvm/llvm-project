@@ -3440,7 +3440,7 @@ TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
       {AMDGPU::GK_GFX11_7_GENERIC, Triple::AMDGPUSubArch11_7, 1024, 512},
       {AMDGPU::GK_GFX12_GENERIC, Triple::AMDGPUSubArch12, 1024, 512},
       {AMDGPU::GK_GFX12_5_GENERIC, Triple::AMDGPUSubArch12_5, 2048, 2048},
-      {AMDGPU::GK_NONE, Triple::NoSubArch, 256, 256},
+      {AMDGPU::GK_NONE, Triple::NoSubArch, 256, 0},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(AMDGPU::getArchNameAMDGCN(Case.Kind));
@@ -3452,7 +3452,7 @@ TEST(TargetParserTest, testAMDGPUgetLDSGranules) {
 
   for (AMDGPU::GPUKind Kind : {AMDGPU::GK_GENERIC, AMDGPU::GK_GENERIC_HSA}) {
     EXPECT_EQ(AMDGPU::getLDSAllocGranule(Kind), 256u);
-    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Kind), 256u);
+    EXPECT_EQ(AMDGPU::getLDSEncodingGranule(Kind), 0u);
   }
 }
 
