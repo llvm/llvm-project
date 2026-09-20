@@ -4585,9 +4585,9 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
 }
 
 void Verifier::visitBitInsertInst(BitInsertInst &BII) {
-  Check(BitInsertInst::isValidOperands(BII.getOperand(0), BII.getOperand(1),
-                                       BII.getOperand(2)),
-        "Invalid bitinsert operands!", &BII);
+  if (const char *Reason = BitInsertInst::areInvalidOperands(
+          BII.getOperand(0), BII.getOperand(1), BII.getOperand(2)))
+    Check(false, Reason, &BII);
   Check(DL.getTypeSizeInBits(BII.getOperand(0)->getType()) >=
             DL.getTypeSizeInBits(BII.getOperand(1)->getType()),
         "bitinsert val type cannot be wider than base type!", &BII);
@@ -4595,9 +4595,9 @@ void Verifier::visitBitInsertInst(BitInsertInst &BII) {
 }
 
 void Verifier::visitBitExtractInst(BitExtractInst &BEI) {
-  Check(BitExtractInst::isValidOperands(BEI.getType(), BEI.getOperand(0),
-                                        BEI.getOperand(1)),
-        "Invalid bitextract operands!", &BEI);
+  if (const char *Reason = BitExtractInst::areInvalidOperands(
+          BEI.getType(), BEI.getOperand(0), BEI.getOperand(1)))
+    Check(false, Reason, &BEI);
   Check(DL.getTypeSizeInBits(BEI.getType()) <=
             DL.getTypeSizeInBits(BEI.getOperand(0)->getType()),
         "bitextract result type cannot be wider than source type!", &BEI);

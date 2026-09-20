@@ -8773,8 +8773,8 @@ bool LLParser::parseBitExtract(Instruction *&Inst, PerFunctionState &PFS) {
       parseTypeAndValue(Op1, PFS))
     return true;
 
-  if (!BitExtractInst::isValidOperands(Ty, Op0, Op1))
-    return error(Loc, "invalid bitextract operands");
+  if (const char *Reason = BitExtractInst::areInvalidOperands(Ty, Op0, Op1))
+    return error(Loc, Reason);
 
   Inst = BitExtractInst::Create(Ty, Op0, Op1);
   return false;
@@ -8792,8 +8792,8 @@ bool LLParser::parseBitInsert(Instruction *&Inst, PerFunctionState &PFS) {
       parseTypeAndValue(Op2, PFS))
     return true;
 
-  if (!BitInsertInst::isValidOperands(Op0, Op1, Op2))
-    return error(Loc, "invalid bitinsert operands");
+  if (const char *Reason = BitInsertInst::areInvalidOperands(Op0, Op1, Op2))
+    return error(Loc, Reason);
 
   Inst = BitInsertInst::Create(Op0, Op1, Op2);
   return false;

@@ -2638,7 +2638,7 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
 BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
                              const Twine &Name, InsertPosition InsertBef)
     : Instruction(Base->getType(), BitInsert, AllocMarker, InsertBef) {
-  assert(isValidOperands(Base, Val, Offset) &&
+  assert(!areInvalidOperands(Base, Val, Offset) &&
          "Invalid bitinsert instruction operands!");
   Op<0>() = Base;
   Op<1>() = Val;
@@ -2646,16 +2646,17 @@ BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
   setName(Name);
 }
 
-bool BitInsertInst::isValidOperands(const Value *Base, const Value *Val,
-                                    const Value *Offset) {
+const char *BitInsertInst::areInvalidOperands(Value *Base, Value *Val,
+                                              Value *Offset) {
   if (!Base->getType()->isByteTy())
-    return false;
+    return "bitinsert base must be a byte type";
   if (!(Val->getType()->isFloatingPointTy() || Val->getType()->isIntegerTy() ||
         Val->getType()->isPointerTy() || Val->getType()->isByteTy()))
-    return false;
+    return "bitinsert value must be an integer, floating-point, pointer, or "
+           "byte type";
   if (!Offset->getType()->isIntegerTy(32))
-    return false;
-  return true;
+    return "bitinsert offset must be i32";
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2664,23 +2665,24 @@ bool BitInsertInst::isValidOperands(const Value *Base, const Value *Val,
 BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
                                const Twine &Name, InsertPosition InsertBef)
     : Instruction(Ty, BitExtract, AllocMarker, InsertBef) {
-  assert(isValidOperands(Ty, Src, Offset) &&
+  assert(!areInvalidOperands(Ty, Src, Offset) &&
          "Invalid bitextract instruction operands!");
   Op<0>() = Src;
   Op<1>() = Offset;
   setName(Name);
 }
 
-bool BitExtractInst::isValidOperands(const Type *Ty, const Value *Src,
-                                     const Value *Offset) {
+const char *BitExtractInst::areInvalidOperands(const Type *Ty, Value *Src,
+                                               Value *Offset) {
   if (!(Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy() ||
         Ty->isByteTy()))
-    return false;
+    return "bitextract result must be an integer, floating-point, pointer, or "
+           "byte type";
   if (!Src->getType()->isByteTy())
-    return false;
+    return "bitextract source must be a byte type";
   if (!Offset->getType()->isIntegerTy(32))
-    return false;
-  return true;
+    return "bitextract offset must be i32";
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

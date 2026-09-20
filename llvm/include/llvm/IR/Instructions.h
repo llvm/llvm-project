@@ -5405,10 +5405,10 @@ public:
   }
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-  /// Return true if a bitinsert instruction can be
-  /// formed with the specified operands.
-  LLVM_ABI static bool isValidOperands(const Value *Base, const Value *Val,
-                                       const Value *Offset);
+  /// Return a string if the specified operands are invalid for a bitinsert
+  /// operation, otherwise return null.
+  LLVM_ABI static const char *areInvalidOperands(Value *Base, Value *Val,
+                                                 Value *Offset);
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == BitInsert;
@@ -5446,10 +5446,10 @@ public:
   }
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-  /// Return true if a bitextract instruction can be
-  /// formed with the specified operands.
-  LLVM_ABI static bool isValidOperands(const Type *Ty, const Value *Val,
-                                       const Value *Offset);
+  /// Return a string if the specified operands are invalid for a bitextract
+  /// operation, otherwise return null.
+  LLVM_ABI static const char *areInvalidOperands(const Type *Ty, Value *Val,
+                                                 Value *Offset);
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
     return I->getOpcode() == BitExtract;
