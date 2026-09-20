@@ -40,11 +40,18 @@ set(LIBCXX_SOURCES
   ryu/d2s.cpp
   ryu/f2s.cpp
   stacktrace/aix_impl.cpp
-  stacktrace/default_impl.cpp
+  stacktrace/dl_iterate_images.cpp
+  stacktrace/dladdr_symbols.cpp
+  stacktrace/dyld_images.cpp
   stacktrace/entry.cpp
   stacktrace/images.cpp
   stacktrace/images.h
+<<<<<<< HEAD
   stacktrace/macos_impl.cpp
+  stacktrace/noop_impl.cpp
+=======
+>>>>>>> f5b3ced873de (foo)
+  stacktrace/symbols.h
   stacktrace/trace.cpp
   stacktrace/windows_impl.cpp
   stdexcept.cpp

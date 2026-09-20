@@ -20,6 +20,7 @@
 #  include <unwind.h>
 
 #  include "images.h"
+#  include "symbols.h"
 #endif
 
 // Purposely avoids optimizations to make call-chain predictable
@@ -85,6 +86,7 @@ void __collect(_Context& __cx, size_t __skip, size_t __depth) {
   // +1 to additionally skip this function's own frame, on top of __get_trace_from_unwind's.
   __get_trace_from_unwind(__cx, __skip + 1, __depth);
   __populate_images(__cx);
+  __populate_symbols(__cx);
 }
 
 #endif // !_WIN32

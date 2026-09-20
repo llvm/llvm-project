@@ -75,7 +75,9 @@ struct _Images {
     images_[count_++] = {~0uz, 0}; // sentinel at high end
   }
 
-  // OS-specific: enumerate program images in this process's space
+  // OS-specific: enumerate program images in this process's space. Defined as a weak no-op in
+  // images.cpp, with the `.cpp`s in this directory each providing a strong definition where
+  // their platform condition holds.
   void enumerate();
 
   _Image& operator[](size_t __index) {
