@@ -57,7 +57,6 @@
 #include <algorithm>
 #include <cassert>
 #include <forward_list>
-#include <optional>
 #include <tuple>
 #include <utility>
 
@@ -148,11 +147,6 @@ struct StoreToLoadForwardingCandidate {
 #endif
 };
 
-struct StoreToLoadDependences {
-  std::forward_list<StoreToLoadForwardingCandidate> Candidates;
-  std::forward_list<StoreToLoadForwardingCandidate> PotentialClobbers;
-};
-
 } // end anonymous namespace
 
 /// Check if the store dominates all latches, so as long as there is no
@@ -186,19 +180,20 @@ public:
   ///
   /// Note that no candidate is returned if LAA has failed to analyze the loop
   /// (e.g. if it's not bottom-tested, contains volatile memops, etc.)
-  StoreToLoadDependences findStoreToLoadDependences(const LoopAccessInfo &LAI) {
-    StoreToLoadDependences Dependences;
+  std::forward_list<StoreToLoadForwardingCandidate>
+  findStoreToLoadDependences(const LoopAccessInfo &LAI) {
+    std::forward_list<StoreToLoadForwardingCandidate> Candidates;
 
     const auto &DepChecker = LAI.getDepChecker();
     const auto *Deps = DepChecker.getDependences();
     if (!Deps)
-      return Dependences;
+      return Candidates;
 
     // Find store->load dependences (consequently true dep).  Both lexically
-    // forward and backward dependences qualify.  Disqualify loads that have
-    // other unknown dependences.
+    // forward and backward dependences qualify.
+    // Disqualify loads that have other unsafe dependences.
 
-    SmallPtrSet<Instruction *, 4> LoadsWithUnknownDependence;
+    SmallPtrSet<Instruction *, 4> LoadsWithUnsafeDependence;
 
     for (const auto &Dep : *Deps) {
       Instruction *Source = Dep.getSource(DepChecker);
@@ -208,9 +203,9 @@ public:
           Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe ||
           Dep.Type == MemoryDepChecker::Dependence::InvariantUnsafe) {
         if (isa<LoadInst>(Source))
-          LoadsWithUnknownDependence.insert(Source);
+          LoadsWithUnsafeDependence.insert(Source);
         if (isa<LoadInst>(Destination))
-          LoadsWithUnknownDependence.insert(Destination);
+          LoadsWithUnsafeDependence.insert(Destination);
         continue;
       }
 
@@ -230,25 +225,24 @@ public:
         continue;
 
       // Only propagate if the stored values are bit/pointer castable.
-      // if the types are not bitcastable, add the candidate to the potential
-      // clobbers list
       if (!CastInst::isBitOrNoopPointerCastable(getLoadStoreType(Store),
                                                 getLoadStoreType(Load),
                                                 Store->getDataLayout())) {
-        Dependences.PotentialClobbers.emplace_front(Load, Store);
+        // This store may partially clobber the value from another forwarding
+        // candidate.
+        LoadsWithUnsafeDependence.insert(Load);
         continue;
       }
 
-      Dependences.Candidates.emplace_front(Load, Store);
+      Candidates.emplace_front(Load, Store);
     }
 
-    if (!LoadsWithUnknownDependence.empty())
-      Dependences.Candidates.remove_if(
-          [&](const StoreToLoadForwardingCandidate &C) {
-            return LoadsWithUnknownDependence.count(C.Load);
-          });
+    if (!LoadsWithUnsafeDependence.empty())
+      Candidates.remove_if([&](const StoreToLoadForwardingCandidate &C) {
+        return LoadsWithUnsafeDependence.count(C.Load);
+      });
 
-    return Dependences;
+    return Candidates;
   }
 
   /// Return the index of the instruction according to program order.
@@ -256,95 +250,6 @@ public:
     auto I = InstOrder.find(Inst);
     assert(I != InstOrder.end() && "No index for instruction");
     return I->second;
-  }
-
-  /// Remove candidates whose forwarded value is clobbered before the load in
-  /// the next iteration.
-  void removeCandidatesWithPotentialClobbers(
-      SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates,
-      const std::forward_list<StoreToLoadForwardingCandidate>
-          &PotentialClobbers) {
-    auto GetStoreToLoadDistance =
-        [&](const StoreToLoadForwardingCandidate &Clobber)
-        -> std::optional<int64_t> {
-      Value *LoadPtr = Clobber.Load->getPointerOperand();
-      Value *StorePtr = Clobber.Store->getPointerOperand();
-      Type *LoadType = getLoadStoreType(Clobber.Load);
-      const DataLayout &DL = Clobber.Load->getDataLayout();
-
-      if (LoadPtr->getType()->getPointerAddressSpace() !=
-          StorePtr->getType()->getPointerAddressSpace())
-        return std::nullopt;
-
-      int64_t StrideLoad =
-          getPtrStride(PSE, LoadType, LoadPtr, L, *DT).value_or(0);
-      int64_t StrideStore =
-          getPtrStride(PSE, LoadType, StorePtr, L, *DT).value_or(0);
-      if (!StrideLoad || StrideLoad != StrideStore)
-        return std::nullopt;
-
-      auto *LoadPtrSCEV = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
-      auto *StorePtrSCEV = dyn_cast<SCEVAddRecExpr>(PSE.getSCEV(StorePtr));
-      if (!LoadPtrSCEV || !StorePtrSCEV)
-        return std::nullopt;
-
-      auto *ByteDistance = dyn_cast<SCEVConstant>(
-          PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
-      if (!ByteDistance || !ByteDistance->getAPInt().isSignedIntN(64))
-        return std::nullopt;
-
-      int64_t StrideInBytes =
-          static_cast<int64_t>(DL.getTypeAllocSize(LoadType)) * StrideLoad;
-      if (!StrideInBytes ||
-          ByteDistance->getAPInt().getSExtValue() % StrideInBytes != 0)
-        return std::nullopt;
-
-      return ByteDistance->getAPInt().getSExtValue() / StrideInBytes;
-    };
-
-    auto ClobbersForwardedValue =
-        [&](const StoreToLoadForwardingCandidate &Candidate,
-            const StoreToLoadForwardingCandidate &Clobber) {
-          std::optional<int64_t> Distance = GetStoreToLoadDistance(Clobber);
-          // If we can't determine the distance, we can't prove that the clobber
-          // doesn't overwrite the candidate's value.
-          if (!Distance)
-            return true;
-
-          // findStoreToLoadDependences normalizes backward dependencies to
-          // store-to-load order, so the distance cannot be negative.
-          if (*Distance < 0)
-            llvm_unreachable(
-                "Store-to-load dependence must not have negative distance");
-
-          // The candidate's dependence distance is 1.
-          //
-          // A distance-0 clobber occurs in the load's iteration.
-          // Candidate -> Clobber -> Load.
-          if (*Distance == 0)
-            return true;
-
-          // A clobber with distance greater than 1 occurs before the candidate
-          // store, which overwrites it. Clobber -> Candidate -> Load.
-          if (*Distance > 1)
-            return false;
-
-          // With distance 1, both stores occur in the candidate's source
-          // iteration. Candidate -> Clobber -> Load if Candidate.Store precedes
-          // Clobber.Store; otherwise, Clobber -> Candidate -> Load.
-          return getInstrIndex(Candidate.Store) < getInstrIndex(Clobber.Store);
-        };
-
-    llvm::erase_if(Candidates,
-                   [&](const StoreToLoadForwardingCandidate &Candidate) {
-                     for (const auto &Clobber : PotentialClobbers) {
-                       if (Clobber.Load != Candidate.Load)
-                         continue;
-                       if (ClobbersForwardedValue(Candidate, Clobber))
-                         return true;
-                     }
-                     return false;
-                   });
   }
 
   /// If a load has multiple candidates associated (i.e. different
@@ -610,7 +515,7 @@ public:
 
     // First start with store->load dependences.
     auto StoreToLoadDependences = findStoreToLoadDependences(LAI);
-    if (StoreToLoadDependences.Candidates.empty())
+    if (StoreToLoadDependences.empty())
       return false;
 
     // Generate an index for each load and store according to the original
@@ -619,14 +524,13 @@ public:
 
     // To keep things simple for now, remove those where the load is potentially
     // fed by multiple stores.
-    removeDependencesFromMultipleStores(StoreToLoadDependences.Candidates);
-    if (StoreToLoadDependences.Candidates.empty())
+    removeDependencesFromMultipleStores(StoreToLoadDependences);
+    if (StoreToLoadDependences.empty())
       return false;
 
     // Filter the candidates further.
     SmallVector<StoreToLoadForwardingCandidate, 4> Candidates;
-    for (const StoreToLoadForwardingCandidate &Cand :
-         StoreToLoadDependences.Candidates) {
+    for (const StoreToLoadForwardingCandidate &Cand : StoreToLoadDependences) {
       LLVM_DEBUG(dbgs() << "Candidate " << Cand);
 
       // Make sure that the stored values is available everywhere in the loop in
@@ -657,11 +561,6 @@ public:
           << Candidates.size()
           << ". Valid store-to-load forwarding across the loop backedge\n");
     }
-    if (Candidates.empty())
-      return false;
-
-    removeCandidatesWithPotentialClobbers(
-        Candidates, StoreToLoadDependences.PotentialClobbers);
     if (Candidates.empty())
       return false;
 
