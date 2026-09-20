@@ -1457,8 +1457,9 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   ULO.SCEVExpansionBudget = UP.SCEVExpansionBudget;
   ULO.RuntimeUnrollMultiExit = UP.RuntimeUnrollMultiExit;
   ULO.AddAdditionalAccumulators = UP.AddAdditionalAccumulators;
-  LoopUnrollResult UnrollResult = UnrollLoop(
-      L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
+  LoopUnrollResult UnrollResult =
+      UnrollLoop(L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA,
+                 &RemainderLoop, AA, UI);
   if (UnrollResult == LoopUnrollResult::Unmodified) {
     if (PInfo.ExplicitUnroll) {
       LLVM_DEBUG(dbgs().indent(1)

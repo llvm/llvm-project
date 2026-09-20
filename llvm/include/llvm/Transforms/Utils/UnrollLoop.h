@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -82,14 +83,12 @@ struct UnrollLoopOptions {
   bool AddAdditionalAccumulators = false;
 };
 
-LLVM_ABI LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO,
-                                     LoopInfo *LI, ScalarEvolution *SE,
-                                     DominatorTree *DT, AssumptionCache *AC,
-                                     const llvm::TargetTransformInfo *TTI,
-                                     OptimizationRemarkEmitter *ORE,
-                                     bool PreserveLCSSA,
-                                     Loop **RemainderLoop = nullptr,
-                                     AAResults *AA = nullptr);
+LLVM_ABI LoopUnrollResult
+UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI, ScalarEvolution *SE,
+           DominatorTree *DT, AssumptionCache *AC,
+           const llvm::TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
+           bool PreserveLCSSA, Loop **RemainderLoop = nullptr,
+           AAResults *AA = nullptr, UniformityInfo *UI = nullptr);
 
 LLVM_ABI bool UnrollRuntimeLoopRemainder(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
@@ -99,7 +98,8 @@ LLVM_ABI bool UnrollRuntimeLoopRemainder(
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
     Loop **ResultLoop = nullptr,
     std::optional<unsigned> OriginalTripCount = std::nullopt,
-    BranchProbability OriginalLoopProb = BranchProbability::getUnknown());
+    BranchProbability OriginalLoopProb = BranchProbability::getUnknown(),
+    UniformityInfo *UI = nullptr);
 
 LLVM_ABI LoopUnrollResult UnrollAndJamLoop(
     Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,

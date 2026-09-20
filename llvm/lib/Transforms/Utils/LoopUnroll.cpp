@@ -925,11 +925,13 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
 ///
 /// If RemainderLoop is non-null, it will receive the remainder loop (if
 /// required and not fully unrolled).
-LoopUnrollResult
-llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
-                 ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-                 const TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
-                 bool PreserveLCSSA, Loop **RemainderLoop, AAResults *AA) {
+LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
+                                  ScalarEvolution *SE, DominatorTree *DT,
+                                  AssumptionCache *AC,
+                                  const TargetTransformInfo *TTI,
+                                  OptimizationRemarkEmitter *ORE,
+                                  bool PreserveLCSSA, Loop **RemainderLoop,
+                                  AAResults *AA, UniformityInfo *UI) {
   assert(DT && "DomTree is required");
 
   if (!L->getLoopPreheader()) {
@@ -1063,7 +1065,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
           ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
           PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
-          RemainderLoop, OriginalTripCount, OriginalLoopProb)) {
+          RemainderLoop, OriginalTripCount, OriginalLoopProb, UI)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {

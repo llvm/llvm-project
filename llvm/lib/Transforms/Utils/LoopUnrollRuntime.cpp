@@ -25,6 +25,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -537,7 +538,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
 
 /// Returns true if we can profitably unroll the multi-exit loop L.
 static bool canProfitablyRuntimeUnrollMultiExitLoop(
-    Loop *L, const TargetTransformInfo *TTI,
+    Loop *L, const TargetTransformInfo *TTI, UniformityInfo *UI,
     SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder) {
 
@@ -580,13 +581,19 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
     assert(LatchBB && "Expected loop to have a latch");
     BasicBlock *NonLatchExitingBlock =
         (ExitingBlocks[0] == LatchBB) ? ExitingBlocks[1] : ExitingBlocks[0];
-    auto BranchProb =
-        llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
-    // If BranchProbability could not be extracted (returns unknown), then
-    // don't return and do the check for deopt block.
-    if (!BranchProb.isUnknown()) {
-      auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
-      return BranchProb < Threshold;
+    // On divergent targets a rarely-taken branch can still be divergent, and
+    // unrolling duplicates that divergent control flow across every copy. So
+    // branch probability isn't a safe proxy here; fall through to the deopt
+    // check.
+    if (!UI || !UI->hasDivergentTerminator(*NonLatchExitingBlock)) {
+      auto BranchProb =
+          llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
+      // If BranchProbability could not be extracted (returns unknown), then
+      // don't return and do the check for deopt block.
+      if (!BranchProb.isUnknown()) {
+        auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
+        return BranchProb < Threshold;
+      }
     }
   }
 
@@ -676,7 +683,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
     Loop **ResultLoop, std::optional<unsigned> OriginalTripCount,
-    BranchProbability OriginalLoopProb) {
+    BranchProbability OriginalLoopProb, UniformityInfo *UI) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -734,7 +741,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
       // it is profitable or the general profitability heuristics apply.
       if (!RuntimeUnrollMultiExit &&
           !canProfitablyRuntimeUnrollMultiExitLoop(
-              L, TTI, OtherExits, LatchExit, UseEpilogRemainder)) {
+              L, TTI, UI, OtherExits, LatchExit, UseEpilogRemainder)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
                              "multi-exit unrolling not enabled!\n");
         return false;
