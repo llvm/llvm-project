@@ -25,7 +25,7 @@ concurrency:
 jobs:
   # Computes which projects/check-targets to build and test on the
   # self-hosted macOS runners.
-  premerge-compute-macos:
+  premerge-compute:
     name: Compute Projects
     if: >-
         github.repository_owner == 'llvm' &&
