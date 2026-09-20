@@ -46,11 +46,6 @@ set(LIBCXX_SOURCES
   stacktrace/entry.cpp
   stacktrace/images.cpp
   stacktrace/images.h
-<<<<<<< HEAD
-  stacktrace/macos_impl.cpp
-  stacktrace/noop_impl.cpp
-=======
->>>>>>> f5b3ced873de (foo)
   stacktrace/symbols.h
   stacktrace/trace.cpp
   stacktrace/windows_impl.cpp

@@ -23,6 +23,10 @@ namespace __stacktrace {
 _Names _Names::instance_;
 _Images _Images::instance_;
 
+// See the comment on the declaration in images.h: this weak no-op is only what actually links
+// when no platform impl file provides a strong override.
+__attribute__((__weak__)) void _Images::enumerate() {}
+
 void __populate_images(_Context& __cx) {
   _Images& images = _Images::instance_;
   images.enumerate();

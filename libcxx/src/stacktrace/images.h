@@ -76,8 +76,7 @@ struct _Images {
   }
 
   // OS-specific: enumerate program images in this process's space. Defined as a weak no-op in
-  // images.cpp, with the `.cpp`s in this directory each providing a strong definition where
-  // their platform condition holds.
+  // images.cpp, with the `*-impl.cpp` files providing strong definitions, where possible.
   void enumerate();
 
   _Image& operator[](size_t __index) {

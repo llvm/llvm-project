@@ -60,9 +60,21 @@ struct _Unwind_Wrapper {
     if (!__ip) {
       return _Unwind_Reason_Code::_URC_NORMAL_STOP;
     }
-    auto& __entry = cx_.__append_entry_(cx_.__self_);
-    auto& __eb    = reinterpret_cast<_Entry&>(__entry);
-    __eb.__addr_  = (__ip_before ? __ip : __ip - 1);
+    // `current()` is `noexcept`, so recording this frame (e.g. allocating room for it) must
+    // never let an exception escape.  Specifically, this must never let one propagate out through
+    // `_Unwind_Backtrace`'s own C frames.
+#  if _LIBCPP_HAS_EXCEPTIONS
+    try {
+#  endif
+      auto& __entry = cx_.__append_entry_(cx_.__self_);
+      auto& __eb    = reinterpret_cast<_Entry&>(__entry);
+      __eb.__addr_  = (__ip_before ? __ip : __ip - 1);
+#  if _LIBCPP_HAS_EXCEPTIONS
+    } catch (...) {
+      // We'll keep whatever frames were captured, and just stop the trace here.
+      return _Unwind_Reason_Code::_URC_NORMAL_STOP;
+    }
+#  endif
     return _Unwind_Reason_Code::_URC_NO_REASON;
   }
 
@@ -85,8 +97,25 @@ __get_trace_from_unwind(_Context& __cx, size_t __skip, size_t __depth) {
 void __collect(_Context& __cx, size_t __skip, size_t __depth) {
   // +1 to additionally skip this function's own frame, on top of __get_trace_from_unwind's.
   __get_trace_from_unwind(__cx, __skip + 1, __depth);
-  __populate_images(__cx);
-  __populate_symbols(__cx);
+
+  // Each enrichment step runs in its own try/catch, independently of the others: a failure in
+  // one (e.g. the allocator throwing while populating a `string`) shouldn't stop another from
+  // at least being attempted. `current()` is `noexcept`, so none of these may let an exception
+  // escape.
+#  if _LIBCPP_HAS_EXCEPTIONS
+  try {
+#  endif
+    __populate_images(__cx);
+#  if _LIBCPP_HAS_EXCEPTIONS
+  } catch (...) {
+  }
+  try {
+#  endif
+    __populate_symbols(__cx);
+#  if _LIBCPP_HAS_EXCEPTIONS
+  } catch (...) {
+  }
+#  endif
 }
 
 #endif // !_WIN32
