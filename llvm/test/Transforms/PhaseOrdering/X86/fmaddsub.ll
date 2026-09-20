@@ -427,11 +427,11 @@ define <8 x double> @buildvector_mul_addsub_pd512_partial(<8 x double> %C, <8 x 
 ; SSE-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP9]], [[TMP10]]
 ; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
 ; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <6 x double> [[TMP5]], <6 x double> [[TMP6]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; SSE-NEXT:    [[A7:%.*]] = extractelement <8 x double> [[A]], i64 7
 ; SSE-NEXT:    [[B7:%.*]] = extractelement <8 x double> [[B]], i64 7
 ; SSE-NEXT:    [[ADD7:%.*]] = fadd double [[A7]], [[B7]]
-; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <6 x double> [[TMP7]], <6 x double> <double undef, double poison, double poison, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 poison>
+; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <6 x double> [[TMP5]], <6 x double> [[TMP6]], <6 x i32> <i32 0, i32 6, i32 1, i32 7, i32 2, i32 3>
+; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <6 x double> [[TMP7]], <6 x double> <double undef, double poison, double poison, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 5, i32 poison>
 ; SSE-NEXT:    [[VECINSERT8:%.*]] = insertelement <8 x double> [[TMP8]], double [[ADD7]], i64 7
 ; SSE-NEXT:    ret <8 x double> [[VECINSERT8]]
 ;
@@ -950,11 +950,11 @@ define <8 x double> @buildvector_mul_subadd_pd512_partial(<8 x double> %C, <8 x 
 ; SSE-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP9]], [[TMP10]]
 ; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
 ; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <6 x double> [[TMP5]], <6 x double> [[TMP6]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; SSE-NEXT:    [[A7:%.*]] = extractelement <8 x double> [[A]], i64 7
 ; SSE-NEXT:    [[B7:%.*]] = extractelement <8 x double> [[B]], i64 7
 ; SSE-NEXT:    [[ADD7:%.*]] = fsub double [[A7]], [[B7]]
-; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <6 x double> [[TMP7]], <6 x double> <double undef, double poison, double poison, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 poison>
+; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <6 x double> [[TMP5]], <6 x double> [[TMP6]], <6 x i32> <i32 0, i32 6, i32 1, i32 7, i32 2, i32 3>
+; SSE-NEXT:    [[TMP8:%.*]] = shufflevector <6 x double> [[TMP7]], <6 x double> <double undef, double poison, double poison, double poison, double poison, double poison>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 6, i32 5, i32 poison>
 ; SSE-NEXT:    [[VECINSERT8:%.*]] = insertelement <8 x double> [[TMP8]], double [[ADD7]], i64 7
 ; SSE-NEXT:    ret <8 x double> [[VECINSERT8]]
 ;
