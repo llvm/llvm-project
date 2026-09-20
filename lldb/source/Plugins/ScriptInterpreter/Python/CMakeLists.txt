@@ -103,10 +103,16 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   target_link_directories(lldbStaticScriptInterpreterPython
     PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
 else()
-  # On Windows with the limited API, the Python import library is selected via
-  # #pragma comment(lib, ...) in pyconfig.h based on Py_LIMITED_API.
-  # On all other platforms, always link Python3_LIBRARIES explicitly.
-  if (NOT (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API))
+  if (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API)
+    if (MINGW)
+      set(python_link_libs ${Python3_SABI_LIBRARIES})
+    else()
+      # On Windows in MSVC mode, with the limited API, the Python import
+      # library is selected via #pragma comment(lib, ...) in pyconfig.h
+      # based on Py_LIMITED_API.
+    endif()
+  else()
+    # On all other platforms, always link Python3_LIBRARIES explicitly.
     set(python_link_libs ${Python3_LIBRARIES})
   endif()
   add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
