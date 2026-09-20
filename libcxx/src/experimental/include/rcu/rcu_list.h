@@ -98,7 +98,7 @@ public:
   }
 };
 
-void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexcept {
+inline void rcu_singly_list_view::splice_back(rcu_atomic_list_view& other) noexcept {
   if (other.entry_.load(std::memory_order_relaxed).head_ == nullptr) {
     return;
   }
