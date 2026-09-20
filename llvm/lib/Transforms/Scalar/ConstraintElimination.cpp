@@ -1508,7 +1508,7 @@ void State::addInfoFor(BasicBlock &BB) {
       }
       break;
     }
-    // Enqueue the overflow intrinsics for simplification.
+    // Enqueue intrinsics for simplification.
     case Intrinsic::uadd_with_overflow:
     case Intrinsic::sadd_with_overflow:
     case Intrinsic::usub_with_overflow:
