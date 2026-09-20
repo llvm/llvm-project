@@ -253,6 +253,11 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+
+  // O32 uses 32-bit GPRs even when the selected CPU supports a 64-bit ISA.
+  if (isABI_O32())
+    IsGP64bit = false;
+
   if (InMips16Mode && !IsSoftFloat)
     InMips16HardFloat = true;
 
