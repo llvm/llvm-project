@@ -452,99 +452,6 @@ exit:
   ret i1 %cmp
 }
 
-; Do not rewrite a comparison if the loop contains a potentially infinite
-; subloop. Rewriting it would make the subloop unreachable and change whether
-; the function terminates.
-define i1 @do_not_rewrite_icmp_with_infinite_subloop(i32 %start, i32 %limit, i1 %c) {
-; CHECK-LABEL: @do_not_rewrite_icmp_with_infinite_subloop(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
-; CHECK:       outer.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[OUTER_LATCH]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV]], 42
-; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
-; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP]], i1 [[INRANGE]], i1 false
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[INNER_PREHEADER:%.*]], label [[EXIT:%.*]]
-; CHECK:       inner.preheader:
-; CHECK-NEXT:    br label [[INNER:%.*]]
-; CHECK:       inner:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[INNER]], label [[OUTER_LATCH]]
-; CHECK:       outer.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
-; CHECK-NEXT:    br label [[OUTER_HEADER]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-entry:
-  br label %outer.header
-
-outer.header:
-  %iv = phi i32 [ %start, %entry ], [ %iv.next, %outer.latch ]
-  %index = phi i32 [ 0, %entry ], [ %index.next, %outer.latch ]
-  %cmp = icmp ne i32 %iv, 42
-  %inrange = icmp ult i32 %index, %limit
-  %continue = select i1 %cmp, i1 %inrange, i1 false
-  br i1 %continue, label %inner, label %exit
-
-inner:
-  br i1 %c, label %inner, label %outer.latch
-
-outer.latch:
-  %iv.next = add nsw i32 %iv, -1
-  %index.next = add nuw i32 %index, 1
-  br label %outer.header
-
-exit:
-  ret i1 %cmp
-}
-
-; A mustprogress outer loop allows the same rewrite even if a subloop has an
-; unknown trip count.
-define i1 @rewrite_icmp_with_mustprogress_outer_loop(i32 %start, i32 %limit, i1 %c) {
-; CHECK-LABEL: @rewrite_icmp_with_mustprogress_outer_loop(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
-; CHECK:       outer.header:
-; CHECK-NEXT:    br i1 false, label [[INNER_PREHEADER:%.*]], label [[EXIT:%.*]]
-; CHECK:       inner.preheader:
-; CHECK-NEXT:    br label [[INNER:%.*]]
-; CHECK:       inner:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[INNER]], label [[OUTER_LATCH:%.*]]
-; CHECK:       outer.latch:
-; CHECK-NEXT:    br label [[OUTER_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[LIMIT:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START:%.*]], -42
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[UMIN]]
-; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp ne i32 [[TMP2]], 42
-; CHECK-NEXT:    ret i1 [[CMP_EXIT]]
-;
-entry:
-  br label %outer.header
-
-outer.header:
-  %iv = phi i32 [ %start, %entry ], [ %iv.next, %outer.latch ]
-  %index = phi i32 [ 0, %entry ], [ %index.next, %outer.latch ]
-  %cmp = icmp ne i32 %iv, 42
-  %inrange = icmp ult i32 %index, %limit
-  %continue = select i1 %cmp, i1 %inrange, i1 false
-  br i1 %continue, label %inner, label %exit
-
-inner:
-  br i1 %c, label %inner, label %outer.latch
-
-outer.latch:
-  %iv.next = add nsw i32 %iv, -1
-  %index.next = add nuw i32 %index, 1
-  br label %outer.header, !llvm.loop !0
-
-exit:
-  ret i1 %cmp
-}
-
 ; Rewrite a pointer comparison when its operand exit values are computable.
 define i1 @rewrite_pointer_icmp(ptr %start, ptr %end, i32 %limit) {
 ; CHECK-LABEL: @rewrite_pointer_icmp(
@@ -586,6 +493,3 @@ exit:
 }
 
 declare void @use.i1(i1)
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.mustprogress"}

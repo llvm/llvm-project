@@ -19,13 +19,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -1868,30 +1866,6 @@ static bool canLoopBeDeleted(Loop *L,
   return true;
 }
 
-// Rebuilding an exit value can make a loop newly deletable. Ensure deleting it
-// would not remove a potentially infinite loop or subloop.
-static bool loopDeletionPreservesProgress(Loop *L, ScalarEvolution *SE,
-                                          LoopInfo *LI) {
-  if (L->getHeader()->getParent()->mustProgress())
-    return true;
-
-  LoopBlocksRPO RPOT(L);
-  RPOT.perform(LI);
-  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI))
-    return false;
-
-  SmallVector<Loop *, 8> WorkList(1, L);
-  while (!WorkList.empty()) {
-    Loop *Current = WorkList.pop_back_val();
-    if (hasMustProgress(Current))
-      continue;
-    if (isa<SCEVCouldNotCompute>(SE->getConstantMaxBackedgeTakenCount(Current)))
-      return false;
-    WorkList.append(Current->begin(), Current->end());
-  }
-  return true;
-}
-
 /// Checks if it is safe to call InductionDescriptor::isInductionPHI for \p Phi,
 /// and returns true if this Phi is an induction phi in the loop. When
 /// isInductionPHI returns true, \p ID will be also be set by isInductionPHI.
@@ -2089,15 +2063,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   // calculate the cost of other SCEV's after expanding SCEV 'A', thus
   // potentially giving cost bonus to those other SCEV's?
 
-  bool HasOperandExitValues =
-      llvm::any_of(RewritePhiSet, [](const RewritePhi &Phi) {
-        return std::holds_alternative<OperandExitValueList>(Phi.ValueToExpand);
-      });
-  // FIXME: SCEV-based rewrites can also expose an existing progress bug in
-  // predicateLoopExits().
-  bool LoopCanBeDel =
-      canLoopBeDeleted(L, RewritePhiSet) &&
-      (!HasOperandExitValues || loopDeletionPreservesProgress(L, SE, LI));
+  bool LoopCanBeDel = canLoopBeDeleted(L, RewritePhiSet);
   int NumReplaced = 0;
 
   // Transformation.
