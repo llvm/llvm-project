@@ -321,7 +321,11 @@ struct CUFAddConstructor
     // Create the constructor function that call CUFRegisterAllocator.
     builder.setInsertionPointToEnd(mod.getBody());
     mlir::LLVM::GlobalOp cudaCompiledGlobal;
-    if (emitCudaCompiled) {
+    // Only the program unit needs the link-time CUDA Fortran runtime check.
+    bool emitCudaCompiledMarker =
+        emitCudaCompiled &&
+        symTab.lookup<mlir::func::FuncOp>(fir::NameUniquer::doProgramEntry());
+    if (emitCudaCompiledMarker) {
       // Undefined sentinel: objects compiled as CUDA Fortran reference this
       // symbol so linking without the CUDA Fortran runtime produces
       // "undefined reference to `Mcuda_compiled'".
@@ -478,7 +482,7 @@ struct CUFAddConstructor
         }
       }
     }
-    if (emitCudaCompiled) {
+    if (emitCudaCompiledMarker) {
       // Keep the sentinel reference alive: an unused non-volatile load would
       // be folded away before it reaches the object file.
       auto addr =

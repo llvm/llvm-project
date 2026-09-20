@@ -571,6 +571,22 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  bool checkIfFunctionMustProgress() {
+    if (cgm.getCodeGenOpts().getFiniteLoops() ==
+        clang::CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
+    // C++11 and later guarantees that a thread eventually will do one of the
+    // following (C++11 [intro.multithread]p24 and C++17 [intro.progress]p1):
+    // - terminate,
+    //  - make a call to a library I/O function,
+    //  - perform an access through a volatile glvalue, or
+    //  - perform a synchronization operation or an atomic operation.
+    //
+    // Hence each function is 'mustprogress' in C++11 or later.
+    return getLangOpts().CPlusPlus11;
+  }
+
   /// True if an insertion point is defined. If not, this indicates that the
   /// current code being emitted is unreachable.
   /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism

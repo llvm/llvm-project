@@ -31336,7 +31336,10 @@ public:
 
     /// Collects the reduced values that were not vectorized; they are folded
     /// into the reduction on top of the vectorized part. The accumulator
-    /// identity constant is never folded.
+    /// identity constant is never folded. The operation list of a value has
+    /// one entry per occurrence of the value in the reduction, all reducing
+    /// the same value, so the vectorized occurrences are accounted for by
+    /// count only.
     void collectLeftovers(
         const DenseMap<Value *, unsigned> &VectorizedVals,
         ArrayRef<SmallVector<Value *>> ReducedVals,
@@ -32271,8 +32274,9 @@ public:
                                    V.getReductionType(), VL.front()->getType());
         // On a tie the accumulator wins: it also replaces the loop-carried
         // scalar dependency through the horizontal reduction by a lane-wise
-        // one.
-        const bool UseLoopAccForm = LoopAccCandidate && LoopAccDelta <= 0;
+        // one. An invalid reduction cost rejects the tree below anyway.
+        const bool UseLoopAccForm =
+            LoopAccCandidate && ReductionCost.isValid() && LoopAccDelta <= 0;
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);

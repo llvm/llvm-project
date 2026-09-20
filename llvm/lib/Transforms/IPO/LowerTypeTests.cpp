@@ -18,12 +18,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -727,6 +729,9 @@ class LowerTypeTestsModule {
 
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
+
+  // Map from function to hotness passed via cfi.functions metadata.
+  DenseMap<const Function *, CfiFunctionHotness> FunctionSummaryHotness;
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -2220,16 +2225,45 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     return O1.size() < O2.size();
   });
 
+  bool IsGlobalSet =
+      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
+
+  unique_function<bool(uint64_t, uint64_t)> Less;
+  if (!IsGlobalSet && !FunctionSummaryHotness.empty() &&
+      ReorderCfiJumpTablesProfiles) {
+    // Estimated weight of each jump entry.
+    std::vector<CfiFunctionHotness> GTMHotness;
+    GTMHotness.reserve(Globals.size());
+    for (GlobalTypeMember *GTM : Globals) {
+      GTMHotness.push_back(
+          FunctionSummaryHotness.lookup(cast<Function>(GTM->getGlobal())));
+    }
+
+    // Order jump table entries by hotness ascending so that the hottest
+    // entry is placed at the end of the jump table:
+    // 1. Under jump table relaxation (SHT_LLVM_CFI_JUMP_TABLE), the linker
+    //    moves the jump table directly before the target of the last entry
+    //    and deletes its branch so the target function body acts as the
+    //    last entry.
+    // 2. The jump table is placed into the output section of that last
+    //    target. Jump tables are critical to performance; if the last
+    //    entry were a cold function, the jump table would be dragged into a
+    //    cold binary section (such as .text.unlikely). Placing the hottest
+    //    entry at the end ensures the jump table lands in a hot section and
+    //    the hottest callee benefits from fall-through without a branch.
+    Less = [GTMHotness = std::move(GTMHotness)](uint64_t A, uint64_t B) {
+      return GTMHotness[A] < GTMHotness[B];
+    };
+  }
+
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
-  GlobalLayoutBuilder GLB(Globals.size());
+  GlobalLayoutBuilder GLB(Globals.size(), std::move(Less));
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
   // Build a vector of globals with the computed layout.
-  bool IsGlobalSet =
-      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
   for (uint64_t Offset : GLB.build()) {
@@ -2254,11 +2288,11 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
   if (Arch == Triple::arm)
     CanUseArmJumpTable = true;
   if (Arch == Triple::arm || Arch == Triple::thumb) {
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
       // Skip declarations since we should not query the TTI for them.
       if (F.isDeclaration())
@@ -2640,6 +2674,12 @@ bool LowerTypeTestsModule::lower() {
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
         }
+        uint8_t Encoded = cast<ConstantAsMetadata>(FuncMD->getOperand(1))
+                              ->getValue()
+                              ->getUniqueInteger()
+                              .getZExtValue();
+        // TODO: Implement for Full LTO.
+        FunctionSummaryHotness[F] = decodeCfiFunctionHotness(Encoded);
       }
     }
   }
@@ -2703,6 +2743,10 @@ bool LowerTypeTestsModule::lower() {
         if (!CrossDsoCfi || !IsJumpTableCanonical || F->hasLocalLinkage())
           continue;
       }
+
+      // TODO: Pre-fill for full LTO.
+      // if (!ExportSummary)
+      //   FunctionSummaryHotness[F] = getHotness(*F, PSI, BFIGetter);
     }
 
     auto *GTM = GlobalTypeMember::create(Alloc, &GO, IsJumpTableCanonical,
