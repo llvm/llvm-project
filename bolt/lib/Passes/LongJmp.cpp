@@ -15,6 +15,7 @@
 #include "bolt/Passes/BranchLivenessUtils.h"
 #include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1043,6 +1044,9 @@ public:
   bool run();
 
 private:
+  static constexpr uint64_t ShortThunkSize = 4;
+  static constexpr uint64_t LongThunkSize = 12;
+
   /// A group of function fragments that are located within the longest direct
   /// branch/call instruction distance. Jumps within the cluster do not require
   /// a thunk. The cluster may span output sections and include thunks for jumps
@@ -1058,6 +1062,12 @@ private:
 
     /// Estimated output offset of the cluster.
     uint64_t StartOffset{0};
+
+    /// Estimated bytes for thunks that may be inserted around this cluster.
+    uint64_t EstimatedThunkBytes{0};
+
+    /// Actual bytes for thunks emitted by this cluster.
+    uint64_t ActualThunkBytes{0};
 
     /// Number of function fragments in the cluster.
     size_t NumFragments{0};
@@ -1106,13 +1116,13 @@ private:
     unsigned TargetCluster;
   };
 
-  static bool isWithinClusterRange(uint64_t SourceOffset,
-                                   uint64_t TargetOffset);
   static unsigned getClusterDistance(unsigned A, unsigned B);
   static uint64_t estimateFragmentSize(const BinaryFunction &BF,
                                        const FunctionFragment &FF);
   void buildLayout();
+  void printStats() const;
   void collectOutOfRangeReferences();
+  void estimateThunkBytes();
   const MCSymbol *getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
                                               unsigned MaxThunks);
   void relaxCalls();
@@ -1139,18 +1149,11 @@ private:
   size_t NumShortThunksReused = 0;
   size_t NumLongThunks = 0;
   size_t NumLongThunksReused = 0;
+  size_t NumRelaxedBranches = 0;
   size_t NumBranchThunks = 0;
   size_t NumBranchThunksReused = 0;
 };
 } // namespace
-
-bool ClusteredRelaxation::isWithinClusterRange(uint64_t SourceOffset,
-                                               uint64_t TargetOffset) {
-  const uint64_t Distance = SourceOffset <= TargetOffset
-                                ? TargetOffset - SourceOffset
-                                : SourceOffset - TargetOffset;
-  return Distance < opts::MaxClusterSize;
-}
 
 unsigned ClusteredRelaxation::getClusterDistance(unsigned A, unsigned B) {
   return A > B ? A - B : B - A;
@@ -1317,16 +1320,55 @@ void ClusteredRelaxation::buildLayout() {
 
   LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
                     << '\n');
+}
 
-  // Print cluster stats.
+void ClusteredRelaxation::printStats() const {
   BC.outs() << "BOLT-INFO: built " << Clusters.size()
             << " function fragment cluster(s)\n";
   for (size_t I = 0; I < Clusters.size(); ++I) {
     const FragmentCluster &FC = Clusters[I];
     BC.outs() << "BOLT-INFO: cluster: " << I << '\n'
               << "BOLT-INFO:   " << FC.NumFragments << " fragment(s)\n"
-              << "BOLT-INFO:   " << FC.Size << " estimated bytes\n";
+              << "BOLT-INFO:   " << FC.Size
+              << " estimated bytes without thunks\n"
+              << "BOLT-INFO:   " << FC.EstimatedThunkBytes
+              << " estimated thunk bytes\n"
+              << "BOLT-INFO:   " << FC.ActualThunkBytes
+              << " actual thunk bytes\n";
   }
+
+  if (NumShortThunkCalls)
+    BC.outs() << "BOLT-INFO: relaxed " << NumShortThunkCalls
+              << " calls with short thunks\n";
+
+  if (NumLongThunkCalls)
+    BC.outs() << "BOLT-INFO: relaxed " << NumLongThunkCalls
+              << " calls with long thunks\n";
+
+  if (NumShortThunks)
+    BC.outs() << "BOLT-INFO: " << NumShortThunks << " short thunks created\n";
+
+  if (NumLongThunks)
+    BC.outs() << "BOLT-INFO: " << NumLongThunks << " long thunks created\n";
+
+  if (NumShortThunksReused)
+    BC.outs() << "BOLT-INFO: " << NumShortThunksReused
+              << " short thunks reused\n";
+
+  if (NumLongThunksReused)
+    BC.outs() << "BOLT-INFO: " << NumLongThunksReused
+              << " long thunks reused\n";
+
+  if (NumRelaxedBranches)
+    BC.outs() << "BOLT-INFO: relaxed " << NumRelaxedBranches
+              << " unconditional branches\n";
+
+  if (NumBranchThunks)
+    BC.outs() << "BOLT-INFO: " << NumBranchThunks << " branch thunks created\n";
+
+  if (NumBranchThunksReused)
+    BC.outs() << "BOLT-INFO: " << NumBranchThunksReused
+              << " branch thunks reused\n";
 }
 
 void ClusteredRelaxation::collectOutOfRangeReferences() {
@@ -1369,9 +1411,8 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         // Unmapped targets use maximum offset and are treated as out of range.
         const Position Target = Found ? TargetIt->second : Position{-1u, -1ULL};
 
-        // Skip already in-range references that do not need relaxation.
-        if (Source.Cluster == Target.Cluster ||
-            isWithinClusterRange(SourceOffset, Target.Offset))
+        // References within the same cluster do not need relaxation.
+        if (Source.Cluster == Target.Cluster)
           continue;
 
         const OutOfRangeRef Reference{&Inst,          TargetSymbol,
@@ -1393,7 +1434,7 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
 
         assert(IsCall && "expected call after branch-chain handling");
 
-        if (Reference.TargetCluster == -1u) {
+        if (!Found) {
           OutOfLayoutCalls.push_back(Reference);
         } else {
           const unsigned Distance = getClusterDistance(Reference.SourceCluster,
@@ -1403,6 +1444,68 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
       }
     }
   }
+}
+
+void ClusteredRelaxation::estimateThunkBytes() {
+  // Estimate in the same order as relaxation so reuse approximates the
+  // thunks that will actually be created below. This models the worst case
+  // by assuming selected thunks are necessary without performing range checks.
+  SmallVector<DenseSet<const MCSymbol *>, 4> BranchThunkTargets;
+  SmallVector<DenseSet<const MCSymbol *>, 4> LongThunkTargets;
+  BranchThunkTargets.resize(Clusters.size());
+  LongThunkTargets.resize(Clusters.size());
+
+  auto estimateBranchThunks = [&](const OutOfRangeRef &Ref) {
+    const bool IsForward = Ref.SourceCluster < Ref.TargetCluster;
+    auto getClusterAtHop = [&](unsigned Hop) {
+      return IsForward ? Ref.SourceCluster + Hop : Ref.SourceCluster - Hop;
+    };
+
+    const unsigned NumHops =
+        getClusterDistance(Ref.SourceCluster, Ref.TargetCluster);
+    for (unsigned Hop = 0; Hop < NumHops; ++Hop) {
+      const unsigned Cluster = getClusterAtHop(Hop);
+      if (BranchThunkTargets[Cluster].insert(Ref.TargetSymbol).second)
+        Clusters[Cluster].EstimatedThunkBytes += ShortThunkSize;
+    }
+  };
+
+  auto estimateLongThunk = [&](const OutOfRangeRef &Ref) {
+    const unsigned SourceCluster = Ref.SourceCluster;
+    const bool IsForward = SourceCluster < Ref.TargetCluster;
+    if (LongThunkTargets[SourceCluster].contains(Ref.TargetSymbol))
+      return;
+
+    unsigned ReuseCluster = -1u;
+    if (IsForward && SourceCluster > 0)
+      ReuseCluster = SourceCluster - 1;
+    else if (!IsForward && SourceCluster + 1 < Clusters.size())
+      ReuseCluster = SourceCluster + 1;
+
+    if (ReuseCluster != -1u &&
+        LongThunkTargets[ReuseCluster].contains(Ref.TargetSymbol))
+      return;
+
+    LongThunkTargets[SourceCluster].insert(Ref.TargetSymbol);
+    Clusters[SourceCluster].EstimatedThunkBytes += LongThunkSize;
+  };
+
+  for (const OutOfRangeRef &Call : OutOfLayoutCalls)
+    estimateLongThunk(Call);
+
+  for (auto &Calls : llvm::reverse(CallsByDistance)) {
+    for (const OutOfRangeRef &Call : Calls) {
+      const unsigned Distance =
+          getClusterDistance(Call.SourceCluster, Call.TargetCluster);
+      if (Distance <= opts::MaxThunkChainLength)
+        estimateBranchThunks(Call);
+      else
+        estimateLongThunk(Call);
+    }
+  }
+
+  for (const OutOfRangeRef &Branch : Branches)
+    estimateBranchThunks(Branch);
 }
 
 const MCSymbol *
@@ -1460,6 +1563,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
         IsForward ? Cluster.ForwardThunkList : Cluster.BackwardThunkList;
     ThunkList.push_back(Thunk);
     registerBranchThunk(Cluster, Ref.TargetSymbol, Thunk);
+    Cluster.ActualThunkBytes += ShortThunkSize;
     return Thunk;
   };
 
@@ -1472,10 +1576,21 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     return IsForward ? FC.getEndOffset() : FC.StartOffset;
   };
 
+  auto isWithinClusterRange = [&](Position Source, Position Target) {
+    uint64_t EstimatedThunkBytes = 0;
+    for (unsigned I = Source.Cluster; I <= Target.Cluster; ++I)
+      EstimatedThunkBytes += Clusters[getClusterAtHop(I)].EstimatedThunkBytes;
+
+    const uint64_t Distance = Source.Offset <= Target.Offset
+                                  ? Target.Offset - Source.Offset
+                                  : Source.Offset - Target.Offset;
+    return Distance + EstimatedThunkBytes < opts::MaxClusterSize;
+  };
+
   SmallVector<unsigned> ThunkClusters;
-  uint64_t CurrentOffset = Ref.SourceOffset;
+  Position Current{0, Ref.SourceOffset};
   unsigned NextHop = 0;
-  while (!isWithinClusterRange(CurrentOffset, Ref.TargetOffset)) {
+  while (!isWithinClusterRange(Current, {NumHops, Ref.TargetOffset})) {
     // Stop if the chain would exceed the configured thunk budget.
     if (ThunkClusters.size() == MaxThunks)
       return nullptr;
@@ -1483,7 +1598,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     unsigned BestHop = -1u;
     for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
       const unsigned Cluster = getClusterAtHop(Hop);
-      if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
+      if (!isWithinClusterRange(Current, {Hop, getThunkOffset(Cluster)}))
         break;
       BestHop = Hop;
     }
@@ -1493,8 +1608,8 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 
     const unsigned BestCluster = getClusterAtHop(BestHop);
     ThunkClusters.push_back(BestCluster);
-    CurrentOffset = getThunkOffset(BestCluster);
     NextHop = BestHop + 1;
+    Current = {BestHop, getThunkOffset(BestCluster)};
   }
 
   BinaryFunction *FirstThunk = nullptr;
@@ -1569,6 +1684,7 @@ void ClusteredRelaxation::relaxCalls() {
         IsForward ? FC.ForwardThunkList : FC.BackwardThunkList;
     ThunkList.push_back(Thunk);
     registerLongThunk(FC, TargetSymbol, Thunk);
+    FC.ActualThunkBytes += LongThunkSize;
     return Thunk;
   };
 
@@ -1588,6 +1704,9 @@ void ClusteredRelaxation::relaxCalls() {
       // Attempt a branch thunk chain if length is below threshold.
       if (const MCSymbol *Target =
               getOrCreateBranchThunkChain(Call, opts::MaxThunkChainLength)) {
+        // Skip already in-range calls that do not need relaxation.
+        if (Target == Call.TargetSymbol)
+          continue;
         BC.MIB->replaceBranchTarget(*Call.Inst, Target, BC.Ctx.get());
         ++NumShortThunkCalls;
         continue;
@@ -1597,28 +1716,6 @@ void ClusteredRelaxation::relaxCalls() {
       relaxCallWithLongThunk(Call);
     }
   }
-
-  if (NumShortThunkCalls)
-    BC.outs() << "BOLT-INFO: relaxed " << NumShortThunkCalls
-              << " calls with short thunks\n";
-
-  if (NumLongThunkCalls)
-    BC.outs() << "BOLT-INFO: relaxed " << NumLongThunkCalls
-              << " calls with long thunks\n";
-
-  if (NumShortThunks)
-    BC.outs() << "BOLT-INFO: " << NumShortThunks << " short thunks created\n";
-
-  if (NumLongThunks)
-    BC.outs() << "BOLT-INFO: " << NumLongThunks << " long thunks created\n";
-
-  if (NumShortThunksReused)
-    BC.outs() << "BOLT-INFO: " << NumShortThunksReused
-              << " short thunks reused\n";
-
-  if (NumLongThunksReused)
-    BC.outs() << "BOLT-INFO: " << NumLongThunksReused
-              << " long thunks reused\n";
 }
 
 void ClusteredRelaxation::relaxUnconditionalBranches() {
@@ -1626,19 +1723,12 @@ void ClusteredRelaxation::relaxUnconditionalBranches() {
     const MCSymbol *Target =
         getOrCreateBranchThunkChain(Branch, /*MaxThunks=*/-1u);
     assert(Target && "expected branch thunk chain");
+    // Skip already in-range branches that do not need relaxation.
+    if (Target == Branch.TargetSymbol)
+      continue;
     BC.MIB->replaceBranchTarget(*Branch.Inst, Target, BC.Ctx.get());
+    ++NumRelaxedBranches;
   }
-
-  if (!Branches.empty())
-    BC.outs() << "BOLT-INFO: relaxed " << Branches.size()
-              << " unconditional branches\n";
-
-  if (NumBranchThunks)
-    BC.outs() << "BOLT-INFO: " << NumBranchThunks << " branch thunks created\n";
-
-  if (NumBranchThunksReused)
-    BC.outs() << "BOLT-INFO: " << NumBranchThunksReused
-              << " branch thunks reused\n";
 }
 
 void ClusteredRelaxation::insertThunks() {
@@ -1681,8 +1771,10 @@ bool ClusteredRelaxation::run() {
     return false;
 
   collectOutOfRangeReferences();
+  estimateThunkBytes();
   relaxCalls();
   relaxUnconditionalBranches();
+  printStats();
   insertThunks();
 
   LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
