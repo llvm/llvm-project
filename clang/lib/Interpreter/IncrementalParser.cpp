@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
@@ -247,6 +248,9 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     }
   }
 
+  // Act->getCodeGen()->restoreManglings();
+
+  // FIXME: We should de-allocate MostRecentTU
   for (Decl *D : MostRecentTU->decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
     if (!ND || ND->getDeclName().isEmpty())
@@ -256,6 +260,8 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
 
   // Lookup alone is not enough: the redeclaration chain still reaches these.
   withdrawMostRecentTU(MostRecentTU);
+  // RepairRedeclChain(MostRecentTU, MostRecentTU);
+  // S.getASTContext().setTranslationUnitDecl(MostRecentTU->getPreviousDecl());
 }
 
 PartialTranslationUnit &

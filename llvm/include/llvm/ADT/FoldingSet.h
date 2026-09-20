@@ -620,6 +620,11 @@ public:
     Vector.push_back(N);
   }
 
+  void pop_back() {
+    Set.erase(Vector.back());
+    Vector.pop_back();
+  }
+
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.
   void insert(T *N) {

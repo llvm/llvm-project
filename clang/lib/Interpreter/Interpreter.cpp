@@ -35,6 +35,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Interpreter/ErrorRecovery.h"
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
@@ -553,6 +554,31 @@ size_t Interpreter::getEffectivePTUSize() const {
 
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
+  class PTURollbackGuard {
+  public:
+    explicit PTURollbackGuard(Sema &S)
+        : Ctx(S.getASTContext()),
+          CheckPoint(Ctx.getAllocator().checkPoint()) {
+          }
+
+    ~PTURollbackGuard() {
+      if (!Committed) {
+        // TODO add memory restore support.
+        // Ctx.getAllocator().restoreToCheckPoint(CheckPoint);
+      }
+    }
+
+    void commit(PartialTranslationUnit &PTU) {
+      PTU.SlabCheckPoint = CheckPoint;
+      Committed = true;
+    }
+
+  private:
+    ASTContext &Ctx;
+    llvm::SlabCheckPoint CheckPoint;
+    bool Committed = false;
+  };
+
   // If we have a device parser, parse it first. The generated code will be
   // included in the host compilation
   if (DeviceParser) {
@@ -576,6 +602,8 @@ Interpreter::Parse(llvm::StringRef Code) {
   getCompilerInstance()->getDiagnostics().setSeverity(
       clang::diag::warn_unused_expr, diag::Severity::Ignored, SourceLocation());
 
+  // PTUSlabRollback Rollback(CI->getSema());
+
   llvm::Expected<TranslationUnitDecl *> TuOrErr = IncrParser->Parse(Code);
   if (!TuOrErr)
     return TuOrErr.takeError();
@@ -588,6 +616,7 @@ Interpreter::Parse(llvm::StringRef Code) {
           frontend::EmitLLVM)
     LastPTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
+  // Rollback.commit(LastPTU);
   return LastPTU;
 }
 
