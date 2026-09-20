@@ -12,7 +12,7 @@
 // rcu_domain& rcu_default_domain() noexcept;
 
 #include <cassert>
-#include <concept>
+#include <concepts>
 #include <cstddef>
 #include <rcu>
 
