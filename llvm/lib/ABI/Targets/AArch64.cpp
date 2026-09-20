@@ -9,16 +9,24 @@
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
+#include <algorithm>
+#include <cstdint>
 
 namespace llvm {
 namespace abi {
 
 class AArch64TargetInfo : public TargetInfo {
 public:
-  AArch64TargetInfo(TypeBuilder &TB, AArch64ABIKind Kind)
-      : TB(TB), Kind(Kind) {}
+  AArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts)
+      : TargetInfo(TB), Opts(Opts) {}
+
+  const ABICompatInfo &getABICompatInfo() const override {
+    return Opts.CompatInfo;
+  }
 
   void computeInfo(FunctionInfo &FI) const override {
     if (!maybeCommonClassifyReturnType(FI))
@@ -37,21 +45,27 @@ public:
   }
 
 private:
-  [[maybe_unused]] TypeBuilder &TB;
-  AArch64ABIKind Kind;
+  AArch64ABIOptions Opts;
 
   ArgInfo classifyReturnType(const Type *RetTy, bool IsVariadicFn) const;
   ArgInfo classifyArgumentType(const Type *Ty, bool IsVariadicFn,
                                bool IsNamedArg, unsigned CallingConvention,
                                unsigned &NSRN, unsigned &NPRN) const;
 
-  bool isDarwinPCS() const { return Kind == AArch64ABIKind::DarwinPCS; }
+  bool isDarwinPCS() const { return Opts.Kind == AArch64ABIKind::DarwinPCS; }
+  bool isSoftFloat() const { return Opts.Kind == AArch64ABIKind::AAPCSSoft; }
   bool passAsAggregateType(const Type *Ty) const;
+
+  bool isHomogeneousAggregateBaseType(const Type *Ty) const override;
+  bool isHomogeneousAggregateSmallEnough(const Type *Base,
+                                         uint64_t Members) const override;
+  bool isZeroLengthBitfieldPermittedInHomogeneousAggregate() const override;
+  bool isPermittedToBeHomogeneousAggregate(const RecordType *RT) const override;
 };
 
-std::unique_ptr<TargetInfo> createAArch64TargetInfo(TypeBuilder &TB,
-                                                    AArch64ABIKind Kind) {
-  return std::make_unique<AArch64TargetInfo>(TB, Kind);
+std::unique_ptr<TargetInfo>
+createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts) {
+  return std::make_unique<AArch64TargetInfo>(TB, Opts);
 }
 
 static void reportNYI(StringRef Feature) {
@@ -67,7 +81,7 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
 
   if (RetTy->isVector()) {
     reportNYI("Vector return type handling");
-    return ArgInfo::getDirect();
+    return ArgInfo::getIgnore();
   }
 
   if (!passAsAggregateType(RetTy)) {
@@ -84,8 +98,18 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     return ArgInfo::getDirect();
   }
 
+  // TODO: Handle empty records and zero-size non-SVE types.
+
+  const Type *Base = nullptr;
+  uint64_t Members = 0;
+  if (isHomogeneousAggregate(RetTy, Base, Members) &&
+      !(Opts.IsILP32 && IsVariadicFn)) {
+    // Homogeneous Floating-point Aggregates (HFAs) are returned directly.
+    return ArgInfo::getDirect();
+  }
+
   reportNYI("Aggregate return type handling");
-  return ArgInfo::getDirect();
+  return ArgInfo::getIgnore();
 }
 
 ArgInfo AArch64TargetInfo::classifyArgumentType(
@@ -93,11 +117,9 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     unsigned CallingConvention, unsigned &NSRN, unsigned &NPRN) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  // TODO: Handle variadic functins here when Windows Arm64 EC is supported.
-
   if (Ty->isVector()) {
     reportNYI("Vector argument type handling");
-    return ArgInfo::getDirect();
+    return ArgInfo::getIgnore();
   }
 
   if (!passAsAggregateType(Ty)) {
@@ -126,13 +148,93 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
                                            RecordArgABI::RAA_DirectInMemory);
   }
 
+  TypeSize TySize = Ty->getSizeInBits();
+  uint64_t Size = TySize.isFixed() ? TySize.getFixedValue() : 0;
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!Ty->isSVESizelessType() && ((RT && RT->isEmpty()) || Size == 0)) {
+    reportNYI("Empty record argument handling");
+    return ArgInfo::getIgnore();
+  }
+
+  // Homogeneous Floating-point Aggregates (HFAs) need to be expanded.
+  const Type *Base = nullptr;
+  uint64_t Members = 0;
+  bool IsWin64 = Opts.Kind == AArch64ABIKind::Win64 ||
+                 CallingConvention == llvm::CallingConv::Win64;
+  bool IsWinVariadic = IsWin64 && IsVariadicFn;
+  // In variadic functions on Windows, all composite types are treated alike,
+  // no special handling of HFAs/HVAs.
+  if (!IsWinVariadic && isHomogeneousAggregate(Ty, Base, Members)) {
+    NSRN = std::min(NSRN + Members, uint64_t(8));
+    uint64_t BaseAllocSizeInBits = Base->getTypeAllocSize().getFixedValue() * 8;
+    const Type *CoerceTy =
+        TB.getArrayType(Base, Members, Members * BaseAllocSizeInBits);
+    if (Opts.Kind != AArch64ABIKind::AAPCS)
+      return ArgInfo::getDirect(CoerceTy);
+
+    // For HFAs/HVAs, cap the argument alignment to 16, otherwise
+    // set it to 8 according to the AAPCS64 document.
+    unsigned TyAlign = Ty->getUnadjustedAlignment().value();
+    TyAlign = (TyAlign >= 16) ? 16 : 8;
+    return ArgInfo::getDirect(CoerceTy, /*Offset=*/0, llvm::Align(TyAlign));
+  }
+
   reportNYI("Aggregate argument type handling");
-  return ArgInfo::getDirect();
+  return ArgInfo::getIgnore();
 }
 
 bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {
   // TODO: Handle SVE types. For now, they don't get through the type mapper.
   return isAggregateTypeForABI(Ty);
+}
+
+bool AArch64TargetInfo::isHomogeneousAggregateBaseType(const Type *Ty) const {
+  // Soft-float ABI: no types are homogeneous aggregates.
+  if (isSoftFloat())
+    return false;
+
+  // Homogeneous aggregates for AAPCS64 must have base types of a floating
+  // point type or a short-vector type.
+  if (Ty->isFloat())
+    return true;
+
+  if (const auto *VT = dyn_cast<VectorType>(Ty)) {
+    if (VT->isScalable() || VT->isSVEData() || VT->isSVEPredicate())
+      return false;
+
+    // Clang's getTypeSize for non-power-of-2 vectors rounds the width up to
+    // the next power-of-2 alignment (e.g. 3 x float is 96 bits of payload but
+    // 128 bits of ABI size), so those vectors are short-vector HVA bases.
+    uint64_t VecSize =
+        bit_ceil(std::max<uint64_t>(8, VT->getSizeInBits().getFixedValue()));
+    if (VecSize == 64 || VecSize == 128)
+      return true;
+  }
+  return false;
+}
+
+bool AArch64TargetInfo::isHomogeneousAggregateSmallEnough(
+    const Type * /*Base*/, uint64_t Members) const {
+  return Members <= 4;
+}
+
+bool AArch64TargetInfo::isZeroLengthBitfieldPermittedInHomogeneousAggregate()
+    const {
+  // AAPCS64 applies homogeneity to the output of the data layout decision, so
+  // zero-length bitfields do not affect homogeneity.
+  return true;
+}
+
+bool AArch64TargetInfo::isPermittedToBeHomogeneousAggregate(
+    const RecordType *RT) const {
+  if (Opts.IsMicrosoftCXXABI && RT->isCXXRecord()) {
+    // This won't always return false, but we don't have enough information to
+    // perform the full check correctly yet.
+    reportNYI("MicrosoftCXXABI homogeneous record classification");
+    return false;
+  }
+
+  return true;
 }
 
 } // namespace abi

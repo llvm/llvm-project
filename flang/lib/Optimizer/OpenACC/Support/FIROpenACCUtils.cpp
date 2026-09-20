@@ -762,6 +762,13 @@ bool fir::acc::isValidSymbolUse(mlir::Operation *user,
           fir::FIROpsDialect::getFirRuntimeAttrName()))
     return true;
 
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::intrinsic>(
+          definingOp))
+    return true;
+
+  if (fir::hasBindcAttr(definingOp))
+    return true;
+
   if (auto cufProcAttr = definingOp->getAttrOfType<cuf::ProcAttributeAttr>(
           cuf::getProcAttrName())) {
     if (cufProcAttr.getValue() != cuf::ProcAttribute::Host)
