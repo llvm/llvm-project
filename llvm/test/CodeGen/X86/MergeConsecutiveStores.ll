@@ -1661,9 +1661,8 @@ define i32 @merge_store_load_store_seq(ptr %buff) {
 ;
 ; X64-LABEL: merge_store_load_store_seq:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl $0, (%rdi)
 ; X64-NEXT:    movl 4(%rdi), %eax
-; X64-NEXT:    movl $0, 4(%rdi)
+; X64-NEXT:    movq $0, (%rdi)
 ; X64-NEXT:    retq
 entry:
 

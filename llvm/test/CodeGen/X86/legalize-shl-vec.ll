@@ -139,9 +139,9 @@ define <2 x i256> @test_srl(<2 x i256> %In) nounwind {
 ; X64-NEXT:    movq %rdx, 48(%rdi)
 ; X64-NEXT:    movq %rsi, 40(%rdi)
 ; X64-NEXT:    movq %r9, 32(%rdi)
+; X64-NEXT:    movq %r8, (%rdi)
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
-; X64-NEXT:    movq %r8, (%rdi)
 ; X64-NEXT:    movq $0, 8(%rdi)
 ; X64-NEXT:    retq
   %Amt = insertelement <2 x i256> <i256 3, i256 4>, i256 255, i32 0

@@ -366,6 +366,8 @@ define i256 @test2(i256 %a) nounwind {
 ; LIN-LABEL: test2:
 ; LIN:       # %bb.0:
 ; LIN-NEXT:    movq %rdi, %rax
+; LIN-NEXT:    xorps %xmm0, %xmm0
+; LIN-NEXT:    movaps %xmm0, 16(%rdi)
 ; LIN-NEXT:    movl $127, %edi
 ; LIN-NEXT:    movq %rsi, %r9
 ; LIN-NEXT:    negq %r9
@@ -398,8 +400,6 @@ define i256 @test2(i256 %a) nounwind {
 ; LIN-NEXT:    cmoveq %rdx, %r8
 ; LIN-NEXT:    movq %r8, (%rax)
 ; LIN-NEXT:    movq $0, 8(%rax)
-; LIN-NEXT:    xorps %xmm0, %xmm0
-; LIN-NEXT:    movaps %xmm0, 16(%rax)
 ; LIN-NEXT:    retq
   %b = sub i256 0, %a
   %c = and i256 %b, %a
@@ -587,6 +587,8 @@ define i256 @test3(i256 %n) nounwind {
 ; LIN-LABEL: test3:
 ; LIN:       # %bb.0:
 ; LIN-NEXT:    movq %rdi, %rax
+; LIN-NEXT:    xorps %xmm0, %xmm0
+; LIN-NEXT:    movaps %xmm0, 16(%rdi)
 ; LIN-NEXT:    movl $127, %r9d
 ; LIN-NEXT:    movq %rsi, %rdi
 ; LIN-NEXT:    negq %rdi
@@ -623,8 +625,6 @@ define i256 @test3(i256 %n) nounwind {
 ; LIN-NEXT:    cmoveq %rsi, %rdi
 ; LIN-NEXT:    movq %rdi, (%rax)
 ; LIN-NEXT:    movq $0, 8(%rax)
-; LIN-NEXT:    xorps %xmm0, %xmm0
-; LIN-NEXT:    movaps %xmm0, 16(%rax)
 ; LIN-NEXT:    retq
   %m = sub i256 -1, %n
   %x = sub i256 0, %n
@@ -844,9 +844,9 @@ define i256 @PR25498(i256 %a) nounwind {
 ; BURR-NEXT:  .LBB4_1:
 ; BURR-NEXT:    movl $256, %ecx # imm = 0x100
 ; BURR-NEXT:  .LBB4_3: # %cond.end
+; BURR-NEXT:    movq %rcx, (%rax)
 ; BURR-NEXT:    xorps %xmm0, %xmm0
 ; BURR-NEXT:    movaps %xmm0, 16(%rax)
-; BURR-NEXT:    movq %rcx, (%rax)
 ; BURR-NEXT:    movq $0, 8(%rax)
 ; BURR-NEXT:    retq
 ;
@@ -887,9 +887,9 @@ define i256 @PR25498(i256 %a) nounwind {
 ; SRC-NEXT:  .LBB4_1:
 ; SRC-NEXT:    movl $256, %ecx # imm = 0x100
 ; SRC-NEXT:  .LBB4_3: # %cond.end
+; SRC-NEXT:    movq %rcx, (%rax)
 ; SRC-NEXT:    xorps %xmm0, %xmm0
 ; SRC-NEXT:    movaps %xmm0, 16(%rax)
-; SRC-NEXT:    movq %rcx, (%rax)
 ; SRC-NEXT:    movq $0, 8(%rax)
 ; SRC-NEXT:    retq
 ;
@@ -930,10 +930,10 @@ define i256 @PR25498(i256 %a) nounwind {
 ; LIN-NEXT:  .LBB4_1:
 ; LIN-NEXT:    movl $256, %ecx # imm = 0x100
 ; LIN-NEXT:  .LBB4_3: # %cond.end
-; LIN-NEXT:    movq %rcx, (%rax)
-; LIN-NEXT:    movq $0, 8(%rax)
 ; LIN-NEXT:    xorps %xmm0, %xmm0
 ; LIN-NEXT:    movaps %xmm0, 16(%rax)
+; LIN-NEXT:    movq %rcx, (%rax)
+; LIN-NEXT:    movq $0, 8(%rax)
 ; LIN-NEXT:    retq
   %b = sub i256 0, %a
   %cmpz = icmp eq i256 %b, 0

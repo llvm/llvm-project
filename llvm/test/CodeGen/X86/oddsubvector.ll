@@ -77,49 +77,28 @@ define void @PR40815(ptr nocapture readonly dereferenceable(64), ptr nocapture d
 ; SSE-NEXT:    movaps %xmm0, 48(%rsi)
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: PR40815:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps (%rdi), %xmm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = mem[2,3,0,1]
-; AVX1-NEXT:    vmovaps 16(%rdi), %xmm2
-; AVX1-NEXT:    vmovups %ymm1, (%rsi)
-; AVX1-NEXT:    vmovaps %xmm2, 32(%rsi)
-; AVX1-NEXT:    vmovaps %xmm0, 48(%rsi)
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: PR40815:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = mem[2,3,0,1]
-; AVX2-NEXT:    vmovaps 16(%rdi), %xmm2
-; AVX2-NEXT:    vmovups %ymm1, (%rsi)
-; AVX2-NEXT:    vmovaps %xmm2, 32(%rsi)
-; AVX2-NEXT:    vmovaps %xmm0, 48(%rsi)
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX-LABEL: PR40815:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovaps 16(%rdi), %xmm1
+; AVX-NEXT:    vmovaps 32(%rdi), %xmm2
+; AVX-NEXT:    vmovaps 48(%rdi), %xmm3
+; AVX-NEXT:    vmovaps %xmm2, 16(%rsi)
+; AVX-NEXT:    vmovaps %xmm3, (%rsi)
+; AVX-NEXT:    vmovaps %xmm0, 48(%rsi)
+; AVX-NEXT:    vmovaps %xmm1, 32(%rsi)
+; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: PR40815:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm2 = mem[2,3,0,1]
-; AVX512-NEXT:    vmovups %ymm2, (%rsi)
-; AVX512-NEXT:    vmovaps %xmm1, 32(%rsi)
-; AVX512-NEXT:    vmovaps %xmm0, 48(%rsi)
+; AVX512-NEXT:    vmovaps 16(%rdi), %xmm0
+; AVX512-NEXT:    vmovaps 48(%rdi), %xmm1
+; AVX512-NEXT:    vinsertf128 $1, (%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vinsertf128 $1, 32(%rdi), %ymm1, %ymm1
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-;
-; XOP-LABEL: PR40815:
-; XOP:       # %bb.0:
-; XOP-NEXT:    vmovaps (%rdi), %xmm0
-; XOP-NEXT:    vperm2f128 {{.*#+}} ymm1 = mem[2,3,0,1]
-; XOP-NEXT:    vmovaps 16(%rdi), %xmm2
-; XOP-NEXT:    vmovups %ymm1, (%rsi)
-; XOP-NEXT:    vmovaps %xmm2, 32(%rsi)
-; XOP-NEXT:    vmovaps %xmm0, 48(%rsi)
-; XOP-NEXT:    vzeroupper
-; XOP-NEXT:    retq
   %3 = load <16 x float>, ptr %0, align 64
   %4 = shufflevector <16 x float> %3, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %5 = getelementptr inbounds %struct.Mat4, ptr %1, i64 0, i32 0, i32 0, i64 4

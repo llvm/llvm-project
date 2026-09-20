@@ -18,14 +18,13 @@ define <4 x i8> @shuffle_ext_byone_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #-16]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #2]
-; NONEON-NOSVE-NEXT:    strh w8, [sp, #14]
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #4]
-; NONEON-NOSVE-NEXT:    strh w8, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #10]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldur w8, [sp, #2]
+; NONEON-NOSVE-NEXT:    ror w8, w8, #16
+; NONEON-NOSVE-NEXT:    str w8, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret

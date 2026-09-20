@@ -189,8 +189,8 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a0, $zero, 10
 ; CHECK-NEXT:    st.d $a0, $sp, 32
 ; CHECK-NEXT:    st.d $zero, $sp, 88
-; CHECK-NEXT:    vst $vr0, $sp, 72
-; CHECK-NEXT:    ori $t0, $zero, 8
+; CHECK-NEXT:    ori $a0, $zero, 8
+; CHECK-NEXT:    st.d $a0, $sp, 64
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a1, $zero, 2
 ; CHECK-NEXT:    ori $a2, $zero, 3
@@ -199,7 +199,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a5, $zero, 6
 ; CHECK-NEXT:    ori $a6, $zero, 7
 ; CHECK-NEXT:    addi.d $a7, $sp, 64
-; CHECK-NEXT:    st.d $t0, $sp, 64
+; CHECK-NEXT:    vst $vr0, $sp, 72
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_scalars_exhausted_regs)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 104 # 8-byte Folded Reload

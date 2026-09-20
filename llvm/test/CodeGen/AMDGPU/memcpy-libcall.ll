@@ -14,17 +14,17 @@ define amdgpu_kernel void @memcpy_p0_p0_minsize(ptr %dest, ptr readonly %src) #0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s3
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s2
-; CHECK-NEXT:    flat_load_dwordx2 v[10:11], v[8:9] offset:39
-; CHECK-NEXT:    flat_load_dwordx2 v[12:13], v[8:9] offset:32
-; CHECK-NEXT:    flat_load_dwordx4 v[0:3], v[8:9] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
+; CHECK-NEXT:    flat_load_dwordx2 v[10:11], v[8:9] offset:32
+; CHECK-NEXT:    flat_load_dwordx2 v[12:13], v[8:9] offset:39
+; CHECK-NEXT:    flat_load_dwordx4 v[0:3], v[8:9]
+; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[8:9] offset:16
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[10:11] offset:39
-; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[12:13] offset:32
-; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[0:3] offset:16
-; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
+; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[10:11] offset:32
+; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[12:13] offset:39
+; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
+; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[4:7] offset:16
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %src, i64 47, i1 false)
@@ -37,18 +37,18 @@ define amdgpu_kernel void @memcpy_p1_p1_minsize(ptr addrspace(1) %dest, ptr addr
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v12, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx2 v[8:9], v12, s[2:3] offset:39
-; CHECK-NEXT:    global_load_dwordx2 v[10:11], v12, s[2:3] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v12, s[2:3] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3]
+; CHECK-NEXT:    global_load_dwordx2 v[8:9], v12, s[2:3] offset:32
+; CHECK-NEXT:    global_load_dwordx2 v[10:11], v12, s[2:3] offset:39
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v12, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx2 v12, v[8:9], s[0:1] offset:39
+; CHECK-NEXT:    global_store_dwordx2 v12, v[8:9], s[0:1] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx2 v12, v[10:11], s[0:1] offset:32
+; CHECK-NEXT:    global_store_dwordx2 v12, v[10:11], s[0:1] offset:39
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1] offset:16
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 47, i1 false)
@@ -61,30 +61,30 @@ define amdgpu_kernel void @memcpy_p1_p4_minsize(ptr addrspace(1) %global, ptr ad
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3] offset:112
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:80
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:112
+; CHECK-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:96
+; CHECK-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) %global, ptr addrspace(4) %0, i64 128, i1 false)
@@ -265,10 +265,10 @@ define amdgpu_kernel void @memcpy_p0_p3_minsize(ptr %generic) #0 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v16, 0
-; CHECK-NEXT:    ds_read_b128 v[0:3], v16
-; CHECK-NEXT:    ds_read_b128 v[4:7], v16 offset:16
-; CHECK-NEXT:    ds_read_b128 v[8:11], v16 offset:32
-; CHECK-NEXT:    ds_read_b128 v[12:15], v16 offset:48
+; CHECK-NEXT:    ds_read2_b64 v[0:3], v16 offset1:1
+; CHECK-NEXT:    ds_read2_b64 v[4:7], v16 offset0:2 offset1:3
+; CHECK-NEXT:    ds_read2_b64 v[8:11], v16 offset0:4 offset1:5
+; CHECK-NEXT:    ds_read2_b64 v[12:15], v16 offset0:6 offset1:7
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -277,8 +277,8 @@ define amdgpu_kernel void @memcpy_p0_p3_minsize(ptr %generic) #0 {
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[0:3]
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[4:7] offset:16
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[8:11] offset:32
-; CHECK-NEXT:    ds_read_b128 v[0:3], v16 offset:64
-; CHECK-NEXT:    ds_read_b128 v[4:7], v16 offset:80
+; CHECK-NEXT:    ds_read2_b64 v[0:3], v16 offset0:8 offset1:9
+; CHECK-NEXT:    ds_read2_b64 v[4:7], v16 offset0:10 offset1:11
 ; CHECK-NEXT:    ds_read_b128 v[8:11], v16 offset:96
 ; CHECK-NEXT:    ds_read_b128 v[16:19], v16 offset:112
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[12:15] offset:48
@@ -302,17 +302,17 @@ define amdgpu_kernel void @memcpy_p0_p0_optsize(ptr %dest, ptr %src) #1 {
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s3
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s2
-; CHECK-NEXT:    flat_load_dwordx2 v[10:11], v[8:9] offset:39
-; CHECK-NEXT:    flat_load_dwordx2 v[12:13], v[8:9] offset:32
-; CHECK-NEXT:    flat_load_dwordx4 v[0:3], v[8:9] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[8:9]
+; CHECK-NEXT:    flat_load_dwordx2 v[10:11], v[8:9] offset:32
+; CHECK-NEXT:    flat_load_dwordx2 v[12:13], v[8:9] offset:39
+; CHECK-NEXT:    flat_load_dwordx4 v[0:3], v[8:9]
+; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[8:9] offset:16
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[10:11] offset:39
-; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[12:13] offset:32
-; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[0:3] offset:16
-; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
+; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[10:11] offset:32
+; CHECK-NEXT:    flat_store_dwordx2 v[8:9], v[12:13] offset:39
+; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
+; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[4:7] offset:16
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %dest, ptr %src, i64 47, i1 false)
@@ -325,18 +325,18 @@ define amdgpu_kernel void @memcpy_p1_p1_optsize(ptr addrspace(1) %dest, ptr addr
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v12, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx2 v[8:9], v12, s[2:3] offset:39
-; CHECK-NEXT:    global_load_dwordx2 v[10:11], v12, s[2:3] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v12, s[2:3] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3]
+; CHECK-NEXT:    global_load_dwordx2 v[8:9], v12, s[2:3] offset:32
+; CHECK-NEXT:    global_load_dwordx2 v[10:11], v12, s[2:3] offset:39
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v12, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v12, s[2:3] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx2 v12, v[8:9], s[0:1] offset:39
+; CHECK-NEXT:    global_store_dwordx2 v12, v[8:9], s[0:1] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx2 v12, v[10:11], s[0:1] offset:32
+; CHECK-NEXT:    global_store_dwordx2 v12, v[10:11], s[0:1] offset:39
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
-; CHECK-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1] offset:16
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 47, i1 false)
@@ -349,30 +349,30 @@ define amdgpu_kernel void @memcpy_p1_p4_optsize(ptr addrspace(1) %global, ptr ad
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3] offset:112
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:80
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3] offset:112
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:112
+; CHECK-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:96
+; CHECK-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:16
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:64
+; CHECK-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:48
+; CHECK-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:80
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:16
+; CHECK-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:96
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
-; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:112
 ; CHECK-NEXT:    s_endpgm
 entry:
   tail call void @llvm.memcpy.p1.p4.i64(ptr addrspace(1) %global, ptr addrspace(4) %0, i64 128, i1 false)
@@ -553,10 +553,10 @@ define amdgpu_kernel void @memcpy_p0_p3_optsize(ptr %generic) #1 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v16, 0
-; CHECK-NEXT:    ds_read_b128 v[0:3], v16
-; CHECK-NEXT:    ds_read_b128 v[4:7], v16 offset:16
-; CHECK-NEXT:    ds_read_b128 v[8:11], v16 offset:32
-; CHECK-NEXT:    ds_read_b128 v[12:15], v16 offset:48
+; CHECK-NEXT:    ds_read2_b64 v[0:3], v16 offset1:1
+; CHECK-NEXT:    ds_read2_b64 v[4:7], v16 offset0:2 offset1:3
+; CHECK-NEXT:    ds_read2_b64 v[8:11], v16 offset0:4 offset1:5
+; CHECK-NEXT:    ds_read2_b64 v[12:15], v16 offset0:6 offset1:7
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -565,8 +565,8 @@ define amdgpu_kernel void @memcpy_p0_p3_optsize(ptr %generic) #1 {
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[0:3]
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[4:7] offset:16
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[8:11] offset:32
-; CHECK-NEXT:    ds_read_b128 v[0:3], v16 offset:64
-; CHECK-NEXT:    ds_read_b128 v[4:7], v16 offset:80
+; CHECK-NEXT:    ds_read2_b64 v[0:3], v16 offset0:8 offset1:9
+; CHECK-NEXT:    ds_read2_b64 v[4:7], v16 offset0:10 offset1:11
 ; CHECK-NEXT:    ds_read_b128 v[8:11], v16 offset:96
 ; CHECK-NEXT:    ds_read_b128 v[16:19], v16 offset:112
 ; CHECK-NEXT:    flat_store_dwordx4 v[20:21], v[12:15] offset:48

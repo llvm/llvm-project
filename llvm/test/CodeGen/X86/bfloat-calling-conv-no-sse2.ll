@@ -713,8 +713,10 @@ define void @call_ret_v4bf16(ptr %ptr) #0 {
 ; NOSSE-NEXT:    calll returns_v4bf16@PLT
 ; NOSSE-NEXT:    subl $4, %esp
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; NOSSE-NEXT:    movl %ecx, 4(%esi)
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; NOSSE-NEXT:    movw %dx, 6(%esi)
+; NOSSE-NEXT:    movw %cx, 4(%esi)
 ; NOSSE-NEXT:    movl %eax, (%esi)
 ; NOSSE-NEXT:    addl $48, %esp
 ; NOSSE-NEXT:    popl %esi
@@ -754,8 +756,10 @@ define void @call_ret_v4bf16(ptr %ptr) #0 {
 ; SSE-NEXT:    calll returns_v4bf16@PLT
 ; SSE-NEXT:    subl $4, %esp
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE-NEXT:    movl %ecx, 4(%esi)
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; SSE-NEXT:    movw %dx, 6(%esi)
+; SSE-NEXT:    movw %cx, 4(%esi)
 ; SSE-NEXT:    movl %eax, (%esi)
 ; SSE-NEXT:    addl $48, %esp
 ; SSE-NEXT:    popl %esi
@@ -828,12 +832,20 @@ define void @call_ret_v8bf16(ptr %ptr) #0 {
 ; NOSSE-NEXT:    calll returns_v8bf16@PLT
 ; NOSSE-NEXT:    subl $4, %esp
 ; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; NOSSE-NEXT:    movl %edi, 12(%esi)
-; NOSSE-NEXT:    movl %edx, 8(%esi)
-; NOSSE-NEXT:    movl %ecx, 4(%esi)
+; NOSSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
+; NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; NOSSE-NEXT:    movw %ax, 14(%esi)
+; NOSSE-NEXT:    movw %bp, 12(%esi)
+; NOSSE-NEXT:    movw %bx, 10(%esi)
+; NOSSE-NEXT:    movw %di, 8(%esi)
+; NOSSE-NEXT:    movw %dx, 6(%esi)
+; NOSSE-NEXT:    movw %cx, 4(%esi)
+; NOSSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; NOSSE-NEXT:    movl %eax, (%esi)
 ; NOSSE-NEXT:    addl $108, %esp
 ; NOSSE-NEXT:    popl %esi
@@ -901,12 +913,20 @@ define void @call_ret_v8bf16(ptr %ptr) #0 {
 ; SSE-NEXT:    calll returns_v8bf16@PLT
 ; SSE-NEXT:    subl $4, %esp
 ; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; SSE-NEXT:    movl %edi, 12(%esi)
-; SSE-NEXT:    movl %edx, 8(%esi)
-; SSE-NEXT:    movl %ecx, 4(%esi)
+; SSE-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %ebp
+; SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    movw %ax, 14(%esi)
+; SSE-NEXT:    movw %bp, 12(%esi)
+; SSE-NEXT:    movw %bx, 10(%esi)
+; SSE-NEXT:    movw %di, 8(%esi)
+; SSE-NEXT:    movw %dx, 6(%esi)
+; SSE-NEXT:    movw %cx, 4(%esi)
+; SSE-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; SSE-NEXT:    movl %eax, (%esi)
 ; SSE-NEXT:    addl $108, %esp
 ; SSE-NEXT:    popl %esi

@@ -2522,10 +2522,10 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:  // %bb.1: // %cond.load
 ; NONEON-NOSVE-NEXT:    fmov s0, wzr
 ; NONEON-NOSVE-NEXT:    ldr h1, [x0], #2
-; NONEON-NOSVE-NEXT:    str h0, [sp, #462]
 ; NONEON-NOSVE-NEXT:    stur wzr, [x9, #250]
 ; NONEON-NOSVE-NEXT:    stur xzr, [x9, #242]
 ; NONEON-NOSVE-NEXT:    str h1, [sp, #448]
+; NONEON-NOSVE-NEXT:    str h0, [sp, #462]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #448]
 ; NONEON-NOSVE-NEXT:    tbnz w8, #1, .LBB6_3
 ; NONEON-NOSVE-NEXT:    b .LBB6_4
@@ -2898,10 +2898,10 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:  // %bb.1: // %cond.load
 ; NONEON-NOSVE-NEXT:    fmov s0, wzr
 ; NONEON-NOSVE-NEXT:    ldr h2, [x0], #2
-; NONEON-NOSVE-NEXT:    str h0, [sp, #974]
 ; NONEON-NOSVE-NEXT:    stur wzr, [x9, #250]
 ; NONEON-NOSVE-NEXT:    stur xzr, [x9, #242]
 ; NONEON-NOSVE-NEXT:    str h2, [sp, #960]
+; NONEON-NOSVE-NEXT:    str h0, [sp, #974]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #960]
 ; NONEON-NOSVE-NEXT:    tbnz w8, #1, .LBB7_3
 ; NONEON-NOSVE-NEXT:    b .LBB7_4

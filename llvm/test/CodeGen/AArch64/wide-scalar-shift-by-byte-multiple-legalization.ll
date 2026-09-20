@@ -234,10 +234,10 @@ define void @lshr_32bytes_dwordOff(ptr %src.ptr, ptr %dwordOff.ptr, ptr %dst) no
 ; ALL-NEXT:    str q1, [sp]
 ; ALL-NEXT:    stp q0, q0, [sp, #32]
 ; ALL-NEXT:    add x8, x9, x8
-; ALL-NEXT:    ldp x9, x10, [x8, #16]
+; ALL-NEXT:    ldp x10, x9, [x8, #16]
 ; ALL-NEXT:    ldr q0, [x8]
 ; ALL-NEXT:    str q0, [x2]
-; ALL-NEXT:    stp x9, x10, [x2, #16]
+; ALL-NEXT:    stp x10, x9, [x2, #16]
 ; ALL-NEXT:    add sp, sp, #64
 ; ALL-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1
@@ -382,10 +382,10 @@ define void @ashr_32bytes_dwordOff(ptr %src.ptr, ptr %dwordOff.ptr, ptr %dst) no
 ; ALL-NEXT:    stp x8, x8, [sp, #48]
 ; ALL-NEXT:    stp x8, x8, [sp, #32]
 ; ALL-NEXT:    add x8, x10, x9
-; ALL-NEXT:    ldp x9, x10, [x8, #16]
+; ALL-NEXT:    ldp x10, x9, [x8, #16]
 ; ALL-NEXT:    ldr q0, [x8]
 ; ALL-NEXT:    str q0, [x2]
-; ALL-NEXT:    stp x9, x10, [x2, #16]
+; ALL-NEXT:    stp x10, x9, [x2, #16]
 ; ALL-NEXT:    add sp, sp, #64
 ; ALL-NEXT:    ret
   %src = load i256, ptr %src.ptr, align 1
