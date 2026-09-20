@@ -11,12 +11,14 @@
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 //
+#  define _IMAGEHLP64
+#  include <dbghelp.h>
+#  include <psapi.h>
+//
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <cstring>
-#  include <dbghelp.h>
 #  include <mutex>
-#  include <psapi.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
@@ -64,27 +66,27 @@ BOOL   (WINAPI* StackWalk)(DWORD, HANDLE, HANDLE, STACKFRAME*, PVOID,
 #  endif
 // clang-format on
 
-bool loadFuncs() {
-  static bool attempted{false};
-  static bool succeeded{false};
-  static std::mutex mutex;
+bool load_funcs() {
+  static bool attempted_{false};
+  static bool succeeded_{false};
+  static std::mutex mutex_;
 
-  std::lock_guard<std::mutex> g(mutex);
+  std::lock_guard<std::mutex> __lock(mutex_);
 
-  if (succeeded) {
+  if (succeeded_) {
     return true;
   }
-  if (attempted /* but not successful */) {
+  if (attempted_ /* but not successful */) {
     return false;
   }
 
-  attempted = true;
+  attempted_ = true;
 
   HMODULE psapi   = LoadLibraryExW(L"psapi.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
   HMODULE dbghelp = LoadLibraryExW(L"dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
   // clang-format off
-  succeeded = true
+  succeeded_ = true
       && (psapi != nullptr)
       && (dbghelp != nullptr)
       && get_func(psapi, &EnumProcessModules, "EnumProcessModules")
@@ -117,14 +119,14 @@ bool loadFuncs() {
       ;
   // clang-format on
 
-  return succeeded;
+  return succeeded_;
 }
 
-struct SymInitScope {
+struct _SymInitScope {
   HANDLE proc_;
 
-  explicit SymInitScope(HANDLE proc) : proc_(proc) { SymInitialize(proc_, nullptr, true); }
-  ~SymInitScope() { SymCleanup(proc_); }
+  explicit _SymInitScope(HANDLE proc) : proc_(proc) { SymInitialize(proc_, nullptr, true); }
+  ~_SymInitScope() { SymCleanup(proc_); }
 };
 
 } // namespace
@@ -135,8 +137,8 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
   return;
 #  endif
 
-  static BOOL loadedDLLFuncs = loadFuncs();
-  if (!loadedDLLFuncs) {
+  static BOOL loaded_dll_funcs_ = load_funcs();
+  if (!loaded_dll_funcs_) {
     return;
   }
 
@@ -150,8 +152,8 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
   //   https://learn.microsoft.com/en-us/windows/win32/psapi/process-status-helper
 
   // These APIs are not thread-safe, according to docs.
-  static std::mutex api_mutex;
-  std::lock_guard<std::mutex> api_guard(api_mutex);
+  static std::mutex api_mutex_;
+  std::lock_guard<std::mutex> __lock(api_mutex_);
 
   HANDLE proc = GetCurrentProcess();
   HMODULE exe = GetModuleHandleW(nullptr);
@@ -159,7 +161,7 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
     return;
   }
 
-  SymInitScope symscope(proc);
+  _SymInitScope symscope(proc);
 
   // Allow space for a handful of paths
   wchar_t sym_path[MAX_PATH * 4];
