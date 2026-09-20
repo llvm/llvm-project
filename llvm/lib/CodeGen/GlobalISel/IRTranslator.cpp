@@ -3748,9 +3748,10 @@ bool IRTranslatorImpl::findUnwindDestinations(
   bool IsMSVCCXX = Personality == EHPersonality::MSVC_CXX;
   bool IsCoreCLR = Personality == EHPersonality::CoreCLR;
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
+  bool IsWasmD = Personality == EHPersonality::Wasm_D;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
-  if (IsWasmCXX) {
+  if (IsWasmCXX || IsWasmD) {
     // Ignore this for now.
     return false;
   }

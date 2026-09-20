@@ -2118,7 +2118,7 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
   // the start of an EH scope/funclet.
   FuncInfo.MBB->setIsEHScopeEntry();
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
-  if (Pers != EHPersonality::Wasm_CXX) {
+  if (Pers != EHPersonality::Wasm_CXX && Pers != EHPersonality::Wasm_D) {
     FuncInfo.MBB->setIsEHFuncletEntry();
     FuncInfo.MBB->setIsCleanupFuncletEntry();
   }
@@ -2142,6 +2142,7 @@ static void findUnwindDestinations(
   bool IsMSVCCXX = Personality == EHPersonality::MSVC_CXX;
   bool IsCoreCLR = Personality == EHPersonality::CoreCLR;
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
+  bool IsWasmD = Personality == EHPersonality::Wasm_D;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
   while (EHPadBB) {
@@ -2158,7 +2159,7 @@ static void findUnwindDestinations(
       UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
       // In Wasm, EH scopes are not funclets
-      if (!IsWasmCXX)
+      if (!IsWasmCXX && !IsWasmD)
         UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {

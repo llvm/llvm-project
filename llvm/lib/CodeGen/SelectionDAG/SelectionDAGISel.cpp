@@ -1475,7 +1475,7 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
   if (auto *RegMask = TRI.getCustomEHPadPreservedMask(*MF))
     MF->getRegInfo().addPhysRegsUsedFromRegMask(RegMask);
 
-  if (Pers == EHPersonality::Wasm_CXX) {
+  if (Pers == EHPersonality::Wasm_CXX || Pers == EHPersonality::Wasm_D) {
     if (const auto *CPI = dyn_cast<CatchPadInst>(LLVMBB->getFirstNonPHIIt()))
       mapWasmLandingPadIndex(MBB, CPI);
   } else {

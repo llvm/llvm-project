@@ -28,6 +28,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -264,7 +265,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         continue;
       }
       if (isa<FuncletPadInst>(PadInst) &&
-          Personality != EHPersonality::Wasm_CXX)
+          Personality != EHPersonality::Wasm_CXX &&
+          Personality != EHPersonality::Wasm_D)
         assert(BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
