@@ -4750,6 +4750,10 @@ cc_library(
     deps = [
         ":Support",
         ":config",
+        # We unconditionally depend on the custom LLVM libxml2 wrapper. This
+        # will be an empty library unless libxml2 is enabled, in which case it
+        # will both provide the necessary dependencies and configuration defines.
+        "//third-party:libxml2",
     ],
 )
 
