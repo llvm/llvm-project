@@ -27,7 +27,7 @@ define void @avoid_sinking_store_across_load(ptr %arr) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <4 x i32> [[STRIDED_VEC]], splat (i32 25)
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 undef, i32 undef, i32 undef, i32 undef>, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <12 x i32> [[TMP12]], <12 x i32> poison, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
 ; CHECK-NEXT:    call void @llvm.masked.store.v12i32.p0(<12 x i32> [[INTERLEAVED_VEC]], ptr align 4 [[TMP8]], <12 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>)
 ; CHECK-NEXT:    [[WIDE_VEC4:%.*]] = load <12 x i32>, ptr [[TMP8]], align 4
