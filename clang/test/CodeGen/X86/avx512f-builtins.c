@@ -1331,15 +1331,15 @@ __mmask16 test_mm512_cmpeq_epi32_mask(__m512i __a, __m512i __b) {
 
 //cmpeq
 TEST_CONSTEXPR(_mm512_cmpeq_epi32_mask(
-    ((__m512i)(__v8qi){ 0x1111111111111111ull, 0x2222222222222222ull, 
-                        0x3333333333333333ull, 0x4444444444444444ull,
-                        0x5555555555555555ull, 0x6666666666666666ull,
-                        0x7777777777777777ull, 0x8888888888888888ull }),
-    ((__m512i)(__v8qi){ 0x1111111111111111ull, 0x2222222222222222ull, 
-                        0x3333333333333333ull, 0x4444444444444444ull,
-                        0x5555555555555555ull, 0x6666666666666666ull,
-                        0x7777777777777777ull, 0x8888888888888888ull })
-)==(__mmask16)0xffffu);
+    ((__m512i)(__v16si){ 0, 1, -1, 0x7FFFFFFF,
+                         0x12345678, 42, -42, (int)0x80000000,
+                         0x0F0F0F0F, 100, 200, (int)0xDEADBEEF,
+                         7, 8, 9, (int)0xFFFFFFFE }),
+    ((__m512i)(__v16si){ 0, 2, -1, 0x7FFFFFFF,
+                         0x12345679, 43, 42, (int)0x80000000,
+                         0x0F0F0F0F, 101, 199, (int)0xDEADBEEF,
+                         70, 80, 90, (int)0xFFFFFFFE })
+) == (__mmask16)0x898Du);
 
 
 __mmask16 test_mm512_mask_cmpeq_epi32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
@@ -1363,15 +1363,13 @@ __mmask8 test_mm512_cmpeq_epi64_mask(__m512i __a, __m512i __b) {
 }
 //cmpeq
 TEST_CONSTEXPR(_mm512_cmpeq_epi64_mask(
-    ((__m512i)(__v8qi){ 0x1111111111111111ull, 0x2222222222222222ull, 
-                        0x3333333333333333ull, 0x4444444444444444ull,
-                        0x5555555555555555ull, 0x6666666666666666ull,
-                        0x7777777777777777ull, 0x8888888888888888ull }),
-    ((__m512i)(__v8qi){ 0x1111111111111111ull, 0x2222222222222222ull, 
-                        0x3333333333333333ull, 0x4444444444444444ull,
-                        0x5555555555555555ull, 0x6666666666666666ull,
-                        0x7777777777777777ull, 0x8888888888888888ull })
-)==(__mmask8)0xffu);
+    ((__m512i)(__v8di){ 0LL, 1LL, -1LL, 0x7FFFFFFFFFFFFFFFLL,
+                        0x123456789ABCDEF0LL, 42LL, (long long)0x8000000000000000ULL,
+                        (long long)0xDEADBEEFCAFEBABEULL }),
+    ((__m512i)(__v8di){ 0LL, 2LL, -1LL, 0x7FFFFFFFFFFFFFFFLL,
+                        0x123456789ABCDEF1LL, -42LL, (long long)0x8000000000000000ULL,
+                        (long long)0xDEADBEEF00000000ULL })
+) == (__mmask8)0x4Du);
 
 __mmask16 test_mm512_cmpgt_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: test_mm512_cmpgt_epi32_mask
