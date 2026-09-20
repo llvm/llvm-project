@@ -2072,6 +2072,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::VECREDUCE_ADD,
                          ISD::VECTOR_SPLICE_RIGHT});
 
+  if (Subtarget.hasStdExtZvzip())
+    setTargetDAGCombine({ISD::VECTOR_INTERLEAVE});
+
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors() || Subtarget.hasStdExtP())
@@ -14775,7 +14778,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
   if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
-      (8 * RISCV::RVVBitsPerBlock)) {
+          (8 * RISCV::RVVBitsPerBlock) ||
+      // In an unlikely case, a vector type might be legal to RISC-V but
+      // exceeds the MVT limit, in which we also want to split it.
+      (Subtarget.hasStdExtZvzip() && Factor == 2 &&
+       !isTypeLegal(VecVT.changeVectorElementCount(
+           VecVT.getVectorElementCount() * Factor)))) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
@@ -14872,10 +14880,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     return DAG.getMergeValues(Loads, DL);
   }
-
-  assert(!VecVT.isFixedLengthVector() &&
-         "Fixed factor=2 vector interleave should already lower to "
-         "SHUFFLE_VECTOR");
 
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
@@ -19051,7 +19055,7 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
   SDValue Max =
       DAG.getNode(ISD::SMAX, DL, SrcVT, True, DAG.getConstant(0, DL, SrcVT));
   SDValue Min =
-      DAG.getNode(ISD::SMIN, DL, SrcVT, Max,
+      DAG.getNode(ISD::UMIN, DL, SrcVT, Max,
                   DAG.getConstant((1ULL << ScalarBits) - 1, DL, SrcVT));
   return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
 }
@@ -22215,6 +22219,52 @@ static SDValue performMaskedLoadToVPLoadCombine(MaskedLoadSDNode *MLoad,
   return DAG.getMergeValues({VPMerge, VPLoad.getValue(1)}, DL);
 }
 
+static SDValue performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  const unsigned Factor = N->getNumOperands();
+  assert(Factor <= 8);
+  MVT VecVT = N->getSimpleValueType(0);
+
+  if (Factor != 4 && Factor != 8)
+    return SDValue();
+
+  // Interleave by a tree of vzip.vv instructions.
+  SmallVector<SDValue, 8> Operands(N->op_values());
+  // First, reorder the operands.
+  // For Factor=4, given the original operand order `ABCD`, we need
+  // to reorder it into `ACBD`.
+  // For Factor=8, given the original operand order `ABCDEFGH`, the new
+  // order should be `AECGBFDH`.
+  // So the rule here is that for every operands with an odd index `I`, swap
+  // it with the operand of index `I + (Factor / 2 - 1)`.
+  for (unsigned I = 1U, HalfFactor = Factor / 2; I < HalfFactor; I += 2)
+    std::swap(Operands[I], Operands[I + (HalfFactor - 1)]);
+
+  for (unsigned CurrFactor = Factor; CurrFactor > 1; CurrFactor /= 2) {
+    // Generate a vector_interleave2 for every two operands.
+    for (unsigned I = 0U; I < CurrFactor; I += 2) {
+      assert(Operands[I].getValueType() == Operands[I + 1].getValueType());
+      EVT OperandEVT = Operands[I].getValueType();
+      EVT ResEVT = OperandEVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+
+      SDValue V = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                              DAG.getVTList(OperandEVT, OperandEVT),
+                              Operands[I], Operands[I + 1]);
+      Operands[I / 2] =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, ResEVT, V, V.getValue(1));
+    }
+  }
+
+  // Operands[0] is the resulting concat vector, but we need to split into
+  // Factor parts.
+  SDValue Interleaved = Operands[0];
+  for (unsigned I = 0U; I < Factor; ++I)
+    Operands[I] = DAG.getExtractSubvector(DL, VecVT, Interleaved,
+                                          I * VecVT.getVectorMinNumElements());
+
+  return DAG.getMergeValues(Operands, DL);
+}
+
 // Convert from one FMA opcode to another based on whether we are negating the
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
@@ -23708,136 +23758,6 @@ static SDValue combineTruncOfSraSext(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::SRA, SDLoc(N), N->getValueType(0), N00, SMin);
 }
 
-// Combine (truncate_vector_vl (umin X, C)) -> (vnclipu_vl X) if C is the
-// maximum value for the truncated type.
-// Combine (truncate_vector_vl (smin (smax X, C2), C1)) -> (vnclip_vl X) if C1
-// is the signed maximum value for the truncated type and C2 is the signed
-// minimum value.
-static SDValue combineTruncToVnclip(SDNode *N, SelectionDAG &DAG,
-                                    const RISCVSubtarget &Subtarget) {
-  assert(N->getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL);
-
-  MVT VT = N->getSimpleValueType(0);
-
-  SDValue Mask = N->getOperand(1);
-  SDValue VL = N->getOperand(2);
-
-  auto MatchMinMax = [&VL, &Mask](SDValue V, unsigned Opc, unsigned OpcVL,
-                                  APInt &SplatVal) {
-    if (V.getOpcode() != Opc &&
-        !(V.getOpcode() == OpcVL && V.getOperand(2).isUndef() &&
-          V.getOperand(3) == Mask && V.getOperand(4) == VL))
-      return SDValue();
-
-    SDValue Op = V.getOperand(1);
-
-    // Peek through conversion between fixed and scalable vectors.
-    if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
-        isNullConstant(Op.getOperand(2)) &&
-        Op.getOperand(1).getValueType().isFixedLengthVector() &&
-        Op.getOperand(1).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        Op.getOperand(1).getOperand(0).getValueType() == Op.getValueType() &&
-        isNullConstant(Op.getOperand(1).getOperand(1)))
-      Op = Op.getOperand(1).getOperand(0);
-
-    if (ISD::isConstantSplatVector(Op.getNode(), SplatVal))
-      return V.getOperand(0);
-
-    if (Op.getOpcode() == RISCVISD::VMV_V_X_VL && Op.getOperand(0).isUndef() &&
-        Op.getOperand(2) == VL) {
-      if (auto *Op1 = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-        SplatVal =
-            Op1->getAPIntValue().sextOrTrunc(Op.getScalarValueSizeInBits());
-        return V.getOperand(0);
-      }
-    }
-
-    return SDValue();
-  };
-
-  SDLoc DL(N);
-
-  auto DetectUSatPattern = [&](SDValue V) {
-    APInt LoC, HiC;
-
-    // Simple case, V is a UMIN.
-    if (SDValue UMinOp = MatchMinMax(V, ISD::UMIN, RISCVISD::UMIN_VL, HiC))
-      if (HiC.isMask(VT.getScalarSizeInBits()))
-        return UMinOp;
-
-    // If we have an SMAX that removes negative numbers first, then we can match
-    // SMIN instead of UMIN.
-    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
-      if (SDValue SMaxOp =
-              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
-        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()))
-          return SMinOp;
-
-    // If we have an SMIN before an SMAX and the SMAX constant is less than or
-    // equal to the SMIN constant, we can use vnclipu if we insert a new SMAX
-    // first.
-    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
-      if (SDValue SMinOp =
-              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
-        if (LoC.isNonNegative() && HiC.isMask(VT.getScalarSizeInBits()) &&
-            HiC.uge(LoC))
-          return DAG.getNode(RISCVISD::SMAX_VL, DL, V.getValueType(), SMinOp,
-                             V.getOperand(1), DAG.getUNDEF(V.getValueType()),
-                             Mask, VL);
-
-    return SDValue();
-  };
-
-  auto DetectSSatPattern = [&](SDValue V) {
-    unsigned NumDstBits = VT.getScalarSizeInBits();
-    unsigned NumSrcBits = V.getScalarValueSizeInBits();
-    APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
-    APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
-
-    APInt HiC, LoC;
-    if (SDValue SMinOp = MatchMinMax(V, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
-      if (SDValue SMaxOp =
-              MatchMinMax(SMinOp, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
-        if (HiC == SignedMax && LoC == SignedMin)
-          return SMaxOp;
-
-    if (SDValue SMaxOp = MatchMinMax(V, ISD::SMAX, RISCVISD::SMAX_VL, LoC))
-      if (SDValue SMinOp =
-              MatchMinMax(SMaxOp, ISD::SMIN, RISCVISD::SMIN_VL, HiC))
-        if (HiC == SignedMax && LoC == SignedMin)
-          return SMinOp;
-
-    return SDValue();
-  };
-
-  SDValue Src = N->getOperand(0);
-
-  // Look through multiple layers of truncates.
-  while (Src.getOpcode() == RISCVISD::TRUNCATE_VECTOR_VL &&
-         Src.getOperand(1) == Mask && Src.getOperand(2) == VL &&
-         Src.hasOneUse())
-    Src = Src.getOperand(0);
-
-  SDValue Val;
-  unsigned ClipOpc;
-  if ((Val = DetectUSatPattern(Src)))
-    ClipOpc = RISCVISD::TRUNCATE_VECTOR_VL_USAT;
-  else if ((Val = DetectSSatPattern(Src)))
-    ClipOpc = RISCVISD::TRUNCATE_VECTOR_VL_SSAT;
-  else
-    return SDValue();
-
-  MVT ValVT = Val.getSimpleValueType();
-
-  do {
-    MVT ValEltVT = MVT::getIntegerVT(ValVT.getScalarSizeInBits() / 2);
-    ValVT = ValVT.changeVectorElementType(ValEltVT);
-    Val = DAG.getNode(ClipOpc, DL, ValVT, Val, Mask, VL);
-  } while (ValVT != VT);
-
-  return Val;
-}
-
 // Convert
 //   (iX ctpop (bitcast (vXi1 A)))
 // ->
@@ -24630,9 +24550,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     return SDValue();
   case RISCVISD::TRUNCATE_VECTOR_VL:
-    if (SDValue V = combineTruncOfSraSext(N, DAG))
-      return V;
-    return combineTruncToVnclip(N, DAG, Subtarget);
+    return combineTruncOfSraSext(N, DAG);
   case ISD::TRUNCATE:
     return performTRUNCATECombine(N, DAG, Subtarget);
   case ISD::SELECT:
@@ -25681,6 +25599,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::MLOAD:
     return performMaskedLoadToVPLoadCombine(cast<MaskedLoadSDNode>(N), DAG);
+  case ISD::VECTOR_INTERLEAVE:
+    assert(Subtarget.hasStdExtZvzip());
+    return performVECTOR_INTERLEAVECombine(N, DAG);
   }
 
   return SDValue();

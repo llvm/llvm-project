@@ -629,6 +629,18 @@ std::unique_ptr<VPlan> VPlanTransforms::buildVPlan0(
   return VPlan0;
 }
 
+void VPlanTransforms::recordExecutionFrequencies(VPlan &Plan) {
+  VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
+  SmallVector<VPBasicBlock *> Blocks = vp_rpo_plain_cfg_loop_body(Header);
+  auto Frequencies = vputils::computeExecutionFrequencies(Blocks);
+  LLVMContext &Ctx = Plan.getContext();
+  for (VPBasicBlock *VPBB : Blocks) {
+    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB))
+      VPI.setExecutionFrequency(Freq, Ctx);
+  }
+}
+
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
 /// for \p Phi based on \p IndDesc.
 static VPHeaderPHIRecipe *
