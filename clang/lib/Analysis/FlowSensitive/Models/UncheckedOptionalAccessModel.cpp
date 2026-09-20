@@ -282,10 +282,8 @@ auto isOptionalInPlaceConstructor() {
                           hasOptionalOrDerivedType());
 }
 
-// Arguments after the value -- an allocator, or defaulted parameters carrying
-// SFINAE constraints -- are ignored. Leading tags are excluded because they
-// denote other constructions, e.g. `optional(allocator_arg_t, allocator)` is
-// empty.
+// `optional(value, ...)`. Arguments after the value are ignored. Tag types are
+// excluded because they denote other constructions.
 auto isOptionalValueOrConversionConstructor() {
   return cxxConstructExpr(
       unless(hasDeclaration(
