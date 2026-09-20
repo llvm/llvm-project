@@ -961,16 +961,6 @@ error at runtime if you don't put them in the right order.)
   You will get a compile time error if you try to use cl::values with a parser
   that does not support it.
 
-(cl::multi_val)=
-
-* The **cl::multi_val** attribute specifies that this option takes has multiple
-  values (example: `-sectalign segname sectname sectvalue`). This attribute
-  takes one unsigned argument - the number of values for the option. This
-  attribute is valid only on `cl::list` options (and will fail with compile
-  error if you try to use it with other option types). It is allowed to use all
-  of the usual modifiers on multi-valued options (besides
-  `cl::ValueDisallowed`, obviously).
-
 (cl::cat)=
 
 * The **cl::cat** attribute specifies the option category that the option
