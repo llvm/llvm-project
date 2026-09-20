@@ -2552,6 +2552,15 @@ private:
   template <typename BVTy, typename ResTy, typename... Args>
   ResTy processBuildVector(const TreeEntry *E, Type *ScalarTy, Args &...Params);
 
+  /// Handles the gather of zero-extended sub-fields of the same wider integer
+  /// scalar, emitted as a bitcast to the field vector plus a permutation and
+  /// an extension to the lane type, if the gathered values match.
+  template <typename ResTy, typename BVTy>
+  std::optional<ResTy> processExtractedFieldsGather(
+      BVTy &ShuffleBuilder, const TreeEntry *E, Type *ScalarTy,
+      ArrayRef<Value *> VL,
+      ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors);
+
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
@@ -12081,7 +12090,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   TreeEntry::EntryState State = getScalarsVectorizationState(
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo,
       ExpandShuffleMask);
-  if (State == TreeEntry::NeedToGather) {
+  // The zero-extended sub-fields of the same wider integer scalar are
+  // gathered and emitted as a bitcast to the field vector plus a permutation.
+  // For 2 lanes the emission is not cheaper than the insertelement chain.
+  if (State == TreeEntry::NeedToGather ||
+      (VL.size() > 2 && ReuseShuffleIndices.empty() &&
+       matchGatheredExtractedFields(VL, *DL))) {
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
@@ -14145,7 +14159,9 @@ void BoUpSLP::transformNodes() {
             // We use allSameOpcode instead of isAltShuffle because we don't
             // want to use interchangeable instruction here.
             !allSameOpcode(VL) || !allSameBlock(VL)) ||
-          allConstant(VL) || isSplat(VL))
+          allConstant(VL) || isSplat(VL) ||
+          (E.ReuseShuffleIndices.empty() &&
+           matchGatheredExtractedFields(VL, *DL)))
         continue;
       if (ForceLoadGather && E.hasState() && E.getOpcode() == Instruction::Load)
         continue;
@@ -15527,6 +15543,43 @@ public:
             cast<FixedVectorType>(Root->getType())->getNumElements()),
         getAllOnesValue(*R.DL, ScalarTy->getScalarType()));
   }
+  /// Estimates the cost of the gather of zero-extended sub-fields of width
+  /// \p FieldWidth of the same wider integer scalar \p Src, permuted by
+  /// \p Mask, as a bitcast to the field vector plus a permutation and an
+  /// extension to the lane type.
+  InstructionCost createExtractedFieldsVector(Value *Src, unsigned FieldWidth,
+                                              ArrayRef<int> Mask,
+                                              const TreeEntry &E) {
+    auto *FieldTy = IntegerType::get(Src->getContext(), FieldWidth);
+    unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
+    assert(SrcWidth % FieldWidth == 0 &&
+           "Expected the field width to divide the source width.");
+    unsigned NumFields = SrcWidth / FieldWidth;
+    auto *FieldVecTy = cast<VectorType>(getWidenedType(FieldTy, NumFields));
+    TTI::CastContextHint CCH = R.getCastContextHint(E);
+    InstructionCost Cost = TTI.getCastInstrCost(
+        Instruction::BitCast, FieldVecTy, Src->getType(), CCH, CostKind);
+    // The permutation is elided only for the full-length identity mask.
+    if (Mask.size() != NumFields ||
+        !ShuffleVectorInst::isIdentityMask(Mask, NumFields))
+      Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, FieldVecTy,
+                             CostKind, Mask);
+    if (!ScalarTy->isIntegerTy(FieldWidth))
+      Cost += TTI.getCastInstrCost(
+          Instruction::ZExt, getWidenedType(ScalarTy, Mask.size()),
+          getWidenedType(FieldTy, Mask.size()), CCH, CostKind);
+    // The extraction instructions die once the fields are emitted from the
+    // source scalar; their scalar cost is credited back for the gathers
+    // directly feeding the reduction. Instructions vectorized elsewhere are
+    // skipped: their scalar cost is already a part of the scalar baseline.
+    if (R.UserIgnoreList &&
+        (!E.UserTreeIndex || E.UserTreeIndex.UserTE->Idx == 0))
+      for (Instruction *I : make_isa_range<Instruction>(E.Scalars))
+        if (CheckedExtracts.insert(I).second && !R.isVectorized(I) &&
+            R.areAllUsersVectorized(I, &VectorizedVals))
+          Cost -= TTI.getInstructionCost(I, CostKind);
+    return Cost;
+  }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
   /// Finalize emission of the shuffles.
   InstructionCost finalize(
@@ -15664,6 +15717,17 @@ TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
     if (ShuffleVectorInst::isReverseMask(Mask, Mask.size()))
       return TTI::CastContextHint::Reversed;
   }
+  // A gather of extracted sub-fields inherits the context of the entry
+  // vectorizing the common source scalar, or of the source scalar load.
+  if (TE.isGather())
+    if (std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+            matchGatheredExtractedFields(TE.Scalars, *DL)) {
+      Value *Src = std::get<0>(*Fields);
+      if (ArrayRef<TreeEntry *> TEs = getTreeEntries(Src); !TEs.empty())
+        return getCastContextHint(*TEs.front());
+      if (isa<LoadInst>(Src))
+        return TTI::CastContextHint::Normal;
+    }
   return TTI::CastContextHint::None;
 }
 
@@ -17458,6 +17522,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
                    [this](Value *V) { return EphValues.contains(V); }) &&
            (allConstant(TE->Scalars) || isSplat(TE->Scalars) ||
             TE->Scalars.size() < Limit ||
+            matchGatheredExtractedFields(TE->Scalars, *DL) ||
             // Nodes with copyable lanes may mix in non-extract lanes, which
             // are not representable as a shuffle of the source vector.
             (((TE->hasState() &&
@@ -22275,6 +22340,26 @@ public:
                       return createShuffle(V1, V2, Mask);
                     });
   }
+  /// Emits the gather of zero-extended sub-fields of width \p FieldWidth of
+  /// the same wider integer scalar \p Src, permuted by \p Mask, as a bitcast
+  /// to the field vector plus a permutation and an extension to the lane type.
+  Value *createExtractedFieldsVector(Value *Src, unsigned FieldWidth,
+                                     ArrayRef<int> Mask, const TreeEntry &) {
+    auto *FieldTy = IntegerType::get(Src->getContext(), FieldWidth);
+    unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
+    assert(SrcWidth % FieldWidth == 0 &&
+           "Expected the field width to divide the source width.");
+    Value *Vec = Builder.CreateBitCast(
+        Src, getWidenedType(FieldTy, SrcWidth / FieldWidth));
+    if (auto *I = dyn_cast<Instruction>(Vec)) {
+      R.GatherShuffleExtractSeq.insert(I);
+      R.CSEBlocks.insert(I->getParent());
+    }
+    Vec = createShuffle(Vec, /*V2=*/nullptr, Mask);
+    // The extracted fields are unsigned.
+    Vec = castToScalarTyElem(Vec, /*IsSigned=*/false);
+    return Vec;
+  }
   Value *createFreeze(Value *V) { return Builder.CreateFreeze(V); }
   /// Finalize emission of the shuffles.
   /// \param Action the action (if any) to be performed before final applying of
@@ -22394,6 +22479,44 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   return vectorizeTree(getOperandEntry(E, NodeIdx));
 }
 
+template <typename ResTy, typename BVTy>
+std::optional<ResTy> BoUpSLP::processExtractedFieldsGather(
+    BVTy &ShuffleBuilder, const TreeEntry *E, Type *ScalarTy,
+    ArrayRef<Value *> VL,
+    ArrayRef<std::pair<const TreeEntry *, unsigned>> SubVectors) {
+  if (!SubVectors.empty() || !E->ReuseShuffleIndices.empty() ||
+      !ScalarTy->isIntegerTy())
+    return std::nullopt;
+  std::optional<std::tuple<Value *, unsigned, SmallVector<int>>>
+      ExtractedFields = matchGatheredExtractedFields(VL, *DL);
+  if (!ExtractedFields ||
+      ScalarTy->getIntegerBitWidth() < std::get<1>(*ExtractedFields))
+    return std::nullopt;
+  Value *Src = std::get<0>(*ExtractedFields);
+  unsigned FieldWidth = std::get<1>(*ExtractedFields);
+  SmallVector<int> &Mask = std::get<2>(*ExtractedFields);
+  unsigned NumFields = Src->getType()->getIntegerBitWidth() / FieldWidth;
+  // The lane order of the reduction root is unobservable when every gathered
+  // scalar is used only by the reduction operations and each lane holds a
+  // distinct field: emit the fields in the natural order and skip the
+  // permutation.
+  if (!E->UserTreeIndex && UserIgnoreList && Mask.size() == NumFields &&
+      all_of(make_isa_range<Instruction>(VL), [&](Instruction *I) {
+        return !I->hasNUsesOrMore(UsesLimit) &&
+               all_of(I->users(),
+                      [&](User *U) { return UserIgnoreList->contains(U); });
+      })) {
+    SmallVector<int> SortedMask(Mask);
+    sort(SortedMask);
+    // Each field is held at most once; poison lanes are ignored.
+    if (adjacent_find(SortedMask, [](int A, int B) {
+          return A != PoisonMaskElem && A == B;
+        }) == SortedMask.end())
+      std::iota(Mask.begin(), Mask.end(), 0);
+  }
+  return ShuffleBuilder.createExtractedFieldsVector(Src, FieldWidth, Mask, *E);
+}
+
 template <typename BVTy, typename ResTy, typename... Args>
 ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
                                   Args &...Params) {
@@ -22505,6 +22628,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   Type *OrigScalarTy = GatheredScalars.front()->getType();
   auto *VecTy = getWidenedType(ScalarTy, GatheredScalars.size());
   unsigned NumParts = getNumberOfParts(VecTy, ScalarTy, GatheredScalars.size());
+  if (std::optional<ResTy> Res = processExtractedFieldsGather<ResTy>(
+          ShuffleBuilder, E, ScalarTy, GatheredScalars, SubVectors))
+    return *Res;
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
     bool Resized = false;
