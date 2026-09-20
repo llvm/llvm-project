@@ -1452,11 +1452,9 @@ define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) 
 ; GFX1250S-UNALIGNED-NEXT:    s_clause 0x1
 ; GFX1250S-UNALIGNED-NEXT:    s_load_b64 s[6:7], s[4:5], 0x8 nv
 ; GFX1250S-UNALIGNED-NEXT:    s_load_b32 s8, s[4:5], 0x0 nv
+; GFX1250S-UNALIGNED-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1250S-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250S-UNALIGNED-NEXT:    s_load_b128 s[0:3], s[6:7], 0x0
-; GFX1250S-UNALIGNED-NEXT:    s_mov_b32 s4, 0x3ff
-; GFX1250S-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1250S-UNALIGNED-NEXT:    v_dual_mov_b32 v1, s3 :: v_dual_bitop2_b32 v0, s4, v0 bitop3:0x40
 ; GFX1250S-UNALIGNED-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250S-UNALIGNED-NEXT:    v_lshl_add_u32 v4, v0, 4, s8
 ; GFX1250S-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
