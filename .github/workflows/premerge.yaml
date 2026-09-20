@@ -200,18 +200,11 @@ jobs:
       # pushes (e.g. release branches) there is no PR to query, so we fall
       # back to a git diff, which needs real history.
       - name: Checkout LLVM (sparse)
-        if: github.event_name == 'pull_request'
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: .ci
           sparse-checkout-cone-mode: false
-      - name: Checkout LLVM
-        if: github.event_name != 'pull_request'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-          fetch-depth: 2
       - name: Get Changed Files
         env:
           GH_TOKEN: ${{ github.token }}
@@ -221,7 +214,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             gh api "repos/${REPO}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' > /tmp/changed_files.txt
           else
-            git diff --name-only HEAD~1...HEAD > /tmp/changed_files.txt
+            gh api "repos/${REPO}/compare/${{ github.event.before }}...${{ github.event.after }}" --paginate --jq '.files[].filename' > /tmp/changed_files.txt
           fi
       - name: Compute Projects
         id: vars
