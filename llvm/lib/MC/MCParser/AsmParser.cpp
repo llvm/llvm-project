@@ -13,6 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -180,6 +181,9 @@ private:
 
   // Is alt macro mode enabled.
   bool AltMacroMode = false;
+
+  // Retrieve all temporary symbols in assembly syntax.
+  DenseMap<const MCSymbol *, SMLoc> TempSymRefLocs;
 
 protected:
   virtual bool parseStatement(ParseStatementInfo &Info,
@@ -1044,12 +1048,22 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
         // explicitly. If we know it's a variable, we have a definition for
         // the purposes of this check.
         if (Sym && Sym->isTemporary() && !Sym->isVariable() &&
-            !Sym->isDefined())
-          // FIXME: We would really like to refer back to where the symbol was
-          // first referenced for a source location. We need to add something
-          // to track that. Currently, we just point to the end of the file.
-          printError(getTok().getLoc(), "assembler local symbol '" +
-                                            Sym->getName() + "' not defined");
+            !Sym->isDefined()) {
+
+          // TODO: First, initialize the lexical analyzer’s pointer to the end
+          // of the file, then iterate through the file to check whether the
+          // symbol pointers match, and finally use the correct position to
+          // output the diagnostic message.
+          SMLoc SymLoc = getTok().getLoc();
+          for (const auto &DirLabel : DirLabels) {
+            if (std::get<2>(DirLabel) == Sym) {
+              SymLoc = std::get<0>(DirLabel);
+              break;
+            }
+          }
+          printError(SymLoc, "assembler local symbol '" + Sym->getName() +
+                                 "' not defined");
+        }
       }
     }
 
@@ -1311,6 +1325,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // This is a '.' reference, which references the current PC.  Emit a
     // temporary label to the streamer and refer to it.
     MCSymbol *Sym = Ctx.createTempSymbol();
+    TempSymRefLocs[Sym] = FirstTokenLoc;
     Out.emitLabel(Sym);
     Res = MCSymbolRefExpr::create(Sym, getContext());
     EndLoc = Lexer.getTok().getEndLoc();
@@ -1873,6 +1888,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
         IDVal = RewrittenLabel;
       }
       Sym = getContext().parseSymbol(IDVal);
+      if (Sym->isWeakExternal() && !Sym->isDefined())
+        Warning(IDLoc, "symbol '" + IDVal + "' is already marked as external");
     } else
       Sym = Ctx.createDirectionalLocalSymbol(LocalLabelVal);
     // End of Labels should be treated as end of line for lexing
@@ -1915,6 +1932,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
                                  IDLoc);
 
     getTargetParser().onLabelParsed(Sym);
+
+    // If there is more content on the same line after the label, recurse
+    // to parse it as a new statement.
+    if (getTok().isNot(AsmToken::EndOfStatement) &&
+        getTok().isNot(AsmToken::Eof))
+      return parseStatement(Info, SI);
 
     return false;
   }
@@ -3439,8 +3462,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
 
   // Compute alignment in bytes.
   if (IsPow2) {
-    // FIXME: Diagnose overflow.
-    if (Alignment >= 32) {
+    // Add a check for negative values.
+    if (Alignment < 0 || Alignment >= 32) {
       ReturnVal |= Error(AlignmentLoc, "invalid alignment value");
       Alignment = 31;
     }
@@ -3494,7 +3517,9 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
     getStreamer().emitCodeAlignment(Align(Alignment),
                                     getTargetParser().getSTI(), MaxBytesToFill);
   } else {
-    // FIXME: Target specific behavior about how the "extra" bytes are filled.
+    // For non-code sections or when an explicit fill value is provided,
+    // fill extra bytes with the given fill expression. Code sections without
+    // explicit fill are handled above via emitCodeAlignment.
     getStreamer().emitValueToAlignment(Align(Alignment), FillExpr, ValueSize,
                                        MaxBytesToFill);
   }
@@ -3559,7 +3584,8 @@ bool AsmParser::parseDirectivePrefAlign() {
 /// ::= .file filename
 /// ::= .file number [directory] filename [md5 checksum] [source source-text]
 bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
-  // FIXME: I'm not sure what this is.
+  // The file number for numbered .file directives (e.g. .file 1 "foo.s").
+  // -1 indicates the single-parameter form (.file "foo.s") was used.
   int64_t FileNumber = -1;
   if (getLexer().is(AsmToken::Integer)) {
     FileNumber = getTok().getIntVal();
@@ -5002,14 +5028,28 @@ bool AsmParser::parseDirectiveSpace(StringRef IDVal) {
     return true;
 
   int64_t FillExpr = 0;
-  if (parseOptionalToken(AsmToken::Comma))
+  bool HasExplicitFill = parseOptionalToken(AsmToken::Comma);
+  if (HasExplicitFill)
     if (parseAbsoluteExpression(FillExpr))
       return true;
   if (parseEOL())
     return true;
 
-  // FIXME: Sometimes the fill expr is 'nop' if it isn't supplied, instead of 0.
-  getStreamer().emitFill(*NumBytes, FillExpr, NumBytesLoc);
+  // For code sections without explicit fill, use target-specific NOP fill
+  // instead of 0, matching GAS behaviour on some targets.
+  const MCSection *Section = getStreamer().getCurrentSectionOnly();
+  if (!HasExplicitFill && Section && MAI.useCodeAlign(*Section)) {
+    int64_t NumBytesVal;
+    if (!NumBytes->evaluateAsAbsolute(NumBytesVal,
+                                      getStreamer().getAssemblerPtr()))
+      return Error(NumBytesLoc, "expected absolute expression");
+
+    if (NumBytesVal > 0)
+      getStreamer().emitNops(NumBytesVal, 0, NumBytesLoc,
+                             getTargetParser().getSTI());
+  } else {
+    getStreamer().emitFill(*NumBytes, FillExpr, NumBytesLoc);
+  }
 
   return false;
 }
@@ -5218,7 +5258,10 @@ bool AsmParser::parseDirectiveAbort(SMLoc DirectiveLoc) {
   if (Str.empty())
     return Error(DirectiveLoc, ".abort detected. Assembly stopping");
 
-  // FIXME: Actually abort assembly here.
+  // Abort assembly: consume the rest of the input so no further statements
+  // are parsed.
+  while (Lexer.isNot(AsmToken::Eof))
+    Lexer.Lex();
   return Error(DirectiveLoc,
                ".abort '" + Str + "' detected. Assembly stopping");
 }
@@ -6546,7 +6589,9 @@ bool llvm::MCParserUtils::parseAssignmentExpression(StringRef Name,
                                                     MCSymbol *&Sym,
                                                     const MCExpr *&Value) {
 
-  // FIXME: Use better location, we should use proper tokens.
+  // Use the start of the value expression as the diagnostic location.
+  // Ideally this would be the location of the '=' or ',' token, but that
+  // has already been consumed by the caller before entering this function.
   SMLoc EqualLoc = Parser.getTok().getLoc();
   if (Parser.parseExpression(Value))
     return Parser.TokError("missing expression");
