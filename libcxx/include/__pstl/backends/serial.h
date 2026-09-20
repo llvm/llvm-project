@@ -22,6 +22,7 @@
 #include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
 #include <__algorithm/stable_sort.h>
+#include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__memory/uninitialized_algorithms.h>
@@ -203,6 +204,15 @@ struct __stable_sort<__serial_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) const noexcept {
     std::stable_sort(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
     return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __swap_ranges<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) const noexcept {
+    return std::swap_ranges(std::move(__first1), std::move(__last1), std::move(__first2));
   }
 };
 
