@@ -369,17 +369,25 @@ let mayLoad = 1 in
 class MxMOVEM_RM_Pseudo<MxType TYPE, MxOperand MEMOp>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins MEMOp:$src)>;
 
+// Note that MOVEM doesn't natively support 8-bit values; the pseudos for these
+// get expanded to MOVM16. But they keep the instruction verifier from reporting
+// a mismatch on physical registers.
+
 // Mem <- Reg
+def MOVM8jm_P : MxMOVEM_MR_Pseudo<MxType8d, MxType8.JOp>;
 def MOVM16jm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32jm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.JOp>;
 
+def MOVM8pm_P : MxMOVEM_MR_Pseudo<MxType8d, MxType8.POp>;
 def MOVM16pm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32pm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.POp>;
 
 // Reg <- Mem
+def MOVM8mj_P : MxMOVEM_RM_Pseudo<MxType8d, MxType8.JOp>;
 def MOVM16mj_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32mj_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.JOp>;
 
+def MOVM8mp_P : MxMOVEM_RM_Pseudo<MxType8d, MxType8.POp>;
 def MOVM16mp_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 
@@ -597,6 +605,9 @@ class MxPseudoMove_RM<MxType DST, MxOperand SRCOpd, list<dag> PAT = []>
 // depending on size, destination register class, and immediate value.
 // This is done with pseudoinstructions in order to not constrain RA to
 // data registers if moveq matches.
+// TODO: We should be more deliberate about whether or not these instructions
+// are expected to preserve the upper bits of the register, because the free
+// sext of moveq and movea have different utility from non-ext move.[bw].
 class MxPseudoMove_DI<MxType TYPE>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins TYPE.IOp:$src),
                [(set TYPE.ROp:$dst, imm:$src)]>;
@@ -604,7 +615,7 @@ class MxPseudoMove_DI<MxType TYPE>
 // i8 imm -> reg can always be converted to moveq,
 // but we still emit a pseudo for consistency.
 def MOVI8di  : MxPseudoMove_DI<MxType8d>;
-def MOVI16ri : MxPseudoMove_DI<MxType16r>;
+def MOVI16di : MxPseudoMove_DI<MxType16d>;
 def MOVI32ri : MxPseudoMove_DI<MxType32r>;
 } // let Defs = [CCR]
 

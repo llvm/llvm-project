@@ -1154,7 +1154,9 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     UniqueID = NextUniqueID++;
   }
 
-  unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+  unsigned Flags =
+      static_cast<const MCSectionELF *>(MBB.getParent()->getSection())
+          ->getFlags();
   std::string GroupName;
   if (F.hasComdat()) {
     Flags |= ELF::SHF_GROUP;
@@ -2116,15 +2118,20 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
       RHS->getType()->getPointerAddressSpace() != 0)
     return nullptr;
 
+  const auto *GA = dyn_cast<GlobalAlias>(LHS);
+  const GlobalObject *GO = GA ? dyn_cast_or_null<GlobalObject>(GA->getAliasee())
+                              : dyn_cast<GlobalObject>(LHS);
+
   // Both ptrtoint instructions must wrap global objects:
-  // - Only global variables are eligible for image relative relocations.
-  // - The subtrahend refers to the special symbol __ImageBase, a GlobalVariable.
-  // We expect __ImageBase to be a global variable without a section, externally
-  // defined.
+  // - Only dso_local global variables/functions (or direct aliases thereof) are
+  //   eligible for image relative relocations.
+  // - The subtrahend refers to the special symbol __ImageBase, a
+  // GlobalVariable. We expect __ImageBase to be a global variable without a
+  // section, externally defined.
   //
   // It should look something like this: @__ImageBase = external constant i8
-  if (!isa<GlobalObject>(LHS) || !isa<GlobalVariable>(RHS) ||
-      LHS->isThreadLocal() || RHS->isThreadLocal() ||
+  if (!GO || !TM.shouldAssumeDSOLocal(LHS) || GO->isThreadLocal() ||
+      !isa<GlobalVariable>(RHS) || RHS->isThreadLocal() ||
       RHS->getName() != "__ImageBase" || !RHS->hasExternalLinkage() ||
       cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
     return nullptr;
@@ -2858,6 +2865,12 @@ bool TargetLoweringObjectFileGOFF::shouldPutJumpTableInFunctionSection(
   return true;
 }
 
+MCSection *TargetLoweringObjectFileGOFF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+  return TextSection;
+}
+
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);
@@ -2885,7 +2898,7 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
 
-  if (Kind.isBSS() || Kind.isData()) {
+  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel()) {
     GOFF::ESDBindingScope PRBindingScope =
         GO->hasExternalLinkage()
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport

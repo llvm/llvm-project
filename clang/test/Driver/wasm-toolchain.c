@@ -123,17 +123,36 @@
 // '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
 // '-mllvm --force-attribute=foo:noinline -mllvm --force-attribute=bar:noinline'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
-// RUN:    --sysroot=/foo %s -mllvm -enable-emscripten-cxx-exceptions \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions \
 // RUN:    -mllvm -emscripten-cxx-exceptions-allowed=foo,bar 2>&1 \
 // RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_NOINLINE %s
 // EMSCRIPTEN_EH_ALLOWED_NOINLINE: "-cc1" {{.*}} "-mllvm" "--force-attribute=foo:noinline" "-mllvm" "--force-attribute=bar:noinline"
 
 // '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
+// '-femscripten-exceptions'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -emscripten-cxx-exceptions-allowed 2>&1 \
 // RUN:   | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_WO_ENABLE %s
-// EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+// EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-femscripten-exceptions'
+
+// '-femscripten-exceptions' sets '-exception-model=emscripten'
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions 2>&1 \
+// RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EXCEPTIONS %s
+// EMSCRIPTEN_EXCEPTIONS: "-cc1" {{.*}} "-exception-model=emscripten"
+
+// '-femscripten-exceptions' satisfies the '-emscripten-cxx-exceptions-allowed'
+// companion requirement.
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions \
+// RUN:    -mllvm -emscripten-cxx-exceptions-allowed=foo,bar 2>&1 \
+// RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_NOINLINE %s
+
+// '-fwasm-exceptions' not allowed with '-femscripten-exceptions'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -fwasm-exceptions -femscripten-exceptions 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_FEMSCRIPTEN_EH %s
+// WASM_EXCEPTIONS_FEMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-femscripten-exceptions'
 
 // '-fwasm-exceptions' sets +exception-handling, -multivalue, -reference-types,
 // "-exception-model=wasm", and '-mllvm -wasm-enable-eh'
@@ -141,14 +160,6 @@
 // RUN:    --sysroot=/foo %s -fwasm-exceptions 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASM_EXCEPTIONS %s
 // WASM_EXCEPTIONS: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm" "-mllvm" "-wasm-enable-eh"
-
-// '-fwasm-exceptions' not allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -fwasm-exceptions \
-// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_EMSCRIPTEN_EH %s
-// WASM_EXCEPTIONS_EMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-enable-emscripten-cxx-exceptions'
 
 // '-fwasm-exceptions' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
@@ -182,14 +193,6 @@
 // RUN:  | FileCheck -check-prefix=WASM_SJLJ %s
 // WASM_SJLJ: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
 
-// '-mllvm -wasm-enable-sjlj' not allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
-// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_SJLJ_EMSCRIPTEN_EH %s
-// WASM_SJLJ_EMSCRIPTEN_EH: invalid argument '-wasm-enable-sjlj' not allowed with '-enable-emscripten-cxx-exceptions'
-
 // '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
@@ -216,14 +219,6 @@
 // RUN:     -mno-reference-types 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_REFERENCE_TYPES %s
 // WASM_SJLJ_NO_REFERENCE_TYPES: invalid argument '-wasm-enable-sjlj' not allowed with '-mno-reference-types'
-
-// '-mllvm -wasm-use-legacy-eh' not allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
-// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_EMSCRIPTEN_EH %s
-// WASM_LEGACY_EH_EMSCRIPTEN_EH: invalid argument '-wasm-use-legacy-eh' not allowed with '-enable-emscripten-cxx-exceptions'
 
 // '-mllvm -wasm-use-legacy-eh' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \

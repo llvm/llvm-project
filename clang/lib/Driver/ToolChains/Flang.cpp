@@ -226,14 +226,22 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
   const auto &TC = getToolChain();
   const Driver &D = TC.getDriver();
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_module_dir, options::OPT_fdebug_module_writer,
-                   options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
-                   options::OPT_std_EQ, options::OPT_W_Joined,
-                   options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
-                   options::OPT_funderscoring, options::OPT_fno_underscoring,
-                   options::OPT_funsigned, options::OPT_fno_unsigned,
+                  {options::OPT_module_dir,
+                   options::OPT_fdebug_module_writer,
+                   options::OPT_fintrinsic_modules_path,
+                   options::OPT_pedantic,
+                   options::OPT_std_EQ,
+                   options::OPT_W_Joined,
+                   options::OPT_fconvert_EQ,
+                   options::OPT_fpass_plugin_EQ,
+                   options::OPT_funderscoring,
+                   options::OPT_fno_underscoring,
+                   options::OPT_funsigned,
+                   options::OPT_fno_unsigned,
                    options::OPT_fenumeration_type,
                    options::OPT_fno_enumeration_type,
+                   options::OPT_fout_of_bounds_subscripts,
+                   options::OPT_fno_out_of_bounds_subscripts,
                    options::OPT_fopenacc_default_none_scalars_strict,
                    options::OPT_fno_openacc_default_none_scalars_strict,
                    options::OPT_fopenacc_multiple_names_in_routine,
@@ -251,7 +259,14 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
   addDebugInfoKind(CmdArgs, DebugInfoKind);
-  if (hasDwarfNArg) {
+  // Pass on the DWARF version when debug information is being generated, or
+  // when -gdwarf-N names a version. Leaving it out means the version stays
+  // unset and the backend falls back to dwarf::DWARF_VERSION (4) instead of
+  // honouring toolchain default like clang does.
+  //
+  // Note that both conditions are needed to match clang for cases like
+  // "-gdwarf-5 -g0".
+  if (hasDwarfNArg || DebugInfoKind != llvm::codegenoptions::NoDebugInfo) {
     const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
     CmdArgs.push_back(
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
@@ -369,6 +384,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
        options::OPT_relaxed_c_loc});
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                     options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   addSeparateSectionFlags(Triple, Args, CmdArgs);
@@ -1237,7 +1255,18 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
                    options::OPT_fno_pseudo_probe_for_profiling, false))
     CmdArgs.push_back("-fpseudo-probe-for-profiling");
 
+  // TODO: Consider reusing Clang's addPGOAndCoverageFlags() for
+  // -fprofile-generate and other similar options handling instead of
+  // duplicating driver logic here.
+  if (Arg *PGOGenerateArg = Args.getLastArg(
+          options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
+          options::OPT_fno_profile_generate)) {
+    if (!PGOGenerateArg->getOption().matches(options::OPT_fno_profile_generate))
+      PGOGenerateArg->render(Args, CmdArgs);
+  }
+
   addSplitMachineFunctionsArgs(TC.getDriver(), Args, CmdArgs, TC.getTriple());
+  Args.addAllArgs(CmdArgs, {options::OPT_fprofile_use_EQ});
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -1305,6 +1334,16 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     A->claim();
   }
 
+  // -fkeep-inline-functions/-fno-keep-inline-functions are real Clang options
+  // but are not supported by Flang; warn and ignore them.
+  for (options::ID Opt : {options::OPT_fkeep_inline_functions,
+                          options::OPT_fno_keep_inline_functions}) {
+    if (const Arg *A = Args.getLastArg(Opt)) {
+      D.Diag(diag::warn_ignored_gcc_optimization) << A->getAsString(Args);
+      A->claim();
+    }
+  }
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 
@@ -1341,6 +1380,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // not skipped by the -ffast-math fast path in addFloatingPointOptions().
   addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
 
+  // Integer MOD/MODULO zero-divisor check. Forwarded here with -ffpe-trap=
+  // rather than in addFloatingPointOptions() so -ffast-math does not drop it.
+  Args.AddLastArg(CmdArgs, options::OPT_fcheck_integer_mod_zero_divisor);
+
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),
                    JA.getOffloadingDeviceKind());
@@ -1369,10 +1412,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Disable all warnings
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
   Args.AddLastArg(CmdArgs, options::OPT_w);
-
-  // recognise options: fprofile-generate -fprofile-use=
-  Args.addAllArgs(
-      CmdArgs, {options::OPT_fprofile_generate, options::OPT_fprofile_use_EQ});
 
   addPGOAndCoverageFlags(TC, JA, Args, CmdArgs);
 

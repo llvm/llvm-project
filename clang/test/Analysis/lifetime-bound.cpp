@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-output=text %s 2>&1 | FileCheck --strict-whitespace %s
 struct A {};
 

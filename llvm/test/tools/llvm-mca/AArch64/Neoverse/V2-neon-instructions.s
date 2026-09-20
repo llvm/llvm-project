@@ -1093,6 +1093,7 @@
 # CHECK-NEXT:  1      2     0.50                        sshll	v9.8h, v2.8b, #0
 # CHECK-NEXT:  1      2     0.50                        sshll	v12.4s, v3.4h, #4
 # CHECK-NEXT:  1      2     0.50                        sshll	v0.2d, v0.2s, #3
+# CHECK-NEXT:  1      2     0.50                        sshll	v0.8h, v1.8b, #0
 # CHECK-NEXT:  1      2     0.50                        sshll2	v28.8h, v12.16b, #7
 # CHECK-NEXT:  1      2     0.50                        sshll2	v0.4s, v0.8h, #3
 # CHECK-NEXT:  1      2     0.50                        sshll2	v17.2d, v13.4s, #22
@@ -1483,6 +1484,7 @@
 # CHECK-NEXT:  1      2     0.50                        ushll	v0.4s, v0.4h, #3
 # CHECK-NEXT:  1      2     0.50                        ushll	v18.8h, v24.8b, #4
 # CHECK-NEXT:  1      2     0.50                        ushll	v16.2d, v16.2s, #31
+# CHECK-NEXT:  1      2     0.50                        ushll	v0.8h, v1.8b, #0
 # CHECK-NEXT:  1      2     0.50                        ushll2	v31.2d, v12.4s, #11
 # CHECK-NEXT:  1      2     0.50                        ushll2	v18.4s, v22.8h, #13
 # CHECK-NEXT:  1      2     0.50                        ushll2	v0.8h, v0.16b, #3
@@ -1594,7 +1596,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -      -      -      -     106.00 189.00 189.00 21.17  8.17   8.17   8.17   8.17   8.17   725.75 566.75 561.75 402.75
+# CHECK-NEXT:  -      -      -      -      -      -      -     106.00 189.00 189.00 21.17  8.17   8.17   8.17   8.17   8.17   725.75 567.75 561.75 403.75
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
@@ -2681,6 +2683,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   sshll	v9.8h, v2.8b, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   sshll	v12.4s, v3.4h, #4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   sshll	v0.2d, v0.2s, #3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   sshll	v0.8h, v1.8b, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   sshll2	v28.8h, v12.16b, #7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   sshll2	v0.4s, v0.8h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   sshll2	v17.2d, v13.4s, #22
@@ -3071,6 +3074,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushll	v0.4s, v0.4h, #3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushll	v18.8h, v24.8b, #4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushll	v16.2d, v16.2s, #31
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushll	v0.8h, v1.8b, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushll2	v31.2d, v12.4s, #11
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushll2	v18.4s, v22.8h, #13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50   ushll2	v0.8h, v0.16b, #3

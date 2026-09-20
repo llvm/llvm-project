@@ -150,7 +150,10 @@ void RegisterInfoPOSIXDynamic_riscv32::ConfigureCSRegInfos(
   // initialization order of globals in other translation units.
   static const llvm::StringMap<llvm::ArrayRef<lldb_private::RegisterInfo>>
       g_register_infos_riscv32_csr_patches = {
-          {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)}};
+          {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)},
+          {"xqci", llvm::ArrayRef(g_register_infos_riscv32_csr_xqci_patch)},
+          {"xqciint",
+           llvm::ArrayRef(g_register_infos_riscv32_csr_xqciint_patch)}};
 
   auto it = g_register_infos_riscv32_csr_patches.find(feature);
   if (it == g_register_infos_riscv32_csr_patches.end())
