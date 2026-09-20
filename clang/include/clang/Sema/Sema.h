@@ -15186,6 +15186,11 @@ private:
   /// here.
   llvm::DenseMap<ConstrainedDeclOrNestedRequirement, NormalizedConstraint *>
       NormalizationCache;
+  /// Caches the normal form of constraint expressions (and their pack
+  /// substitution index). These are shared by e.g. the members of all
+  /// specializations of a class template. Used to fill NormalizationCache.
+  llvm::DenseMap<std::pair<const Expr *, unsigned>, NormalizedConstraint *>
+      NormalizedConstraintExprCache;
 
   /// Cache whether the associated constraint of a declaration
   /// is satisfied.
