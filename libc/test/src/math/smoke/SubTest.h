@@ -157,16 +157,22 @@ public:
   }
 };
 
-#define LIST_SUB_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcSubTest = SubTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcSubTest, SpecialNumbers) { test_special_numbers(&func); }     \
-  TEST_F(LlvmLibcSubTest, InvalidOperations) {                                 \
+#define LIST_SUB_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = SubTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) {                               \
+    test_special_numbers(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, InvalidOperations) {                            \
     test_invalid_operations(&func);                                            \
   }                                                                            \
-  TEST_F(LlvmLibcSubTest, RangeErrors) { test_range_errors(&func); }           \
-  TEST_F(LlvmLibcSubTest, InexactResults) { test_inexact_results(&func); }     \
-  TEST_F(LlvmLibcSubTest, MixedSigns) { test_mixed_signs(&func); }             \
-  TEST_F(LlvmLibcSubTest, SignedZeroResult) { test_signed_zero_result(&func); }
+  TEST_F(LlvmLibc##Name##Test, RangeErrors) { test_range_errors(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, InexactResults) {                               \
+    test_inexact_results(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, MixedSigns) { test_mixed_signs(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, SignedZeroResult) {                             \
+    test_signed_zero_result(&func);                                            \
+  }
 
 #define LIST_SUB_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
   using LlvmLibcSubTest##suffix = SubTest<OutType, InType>;                    \

@@ -1226,9 +1226,9 @@ static BlockFrequency scaleKeepingNonZero(BlockFrequency Freq,
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
   assert(!Blocks.empty() && "expected at least the header block");
-  // Push each block's frequency along its outgoing edges. Blocks is a DAG in
-  // reverse post-order (the loop region's backedge is implicit), so a block's
-  // frequency is final by the time it is visited.
+  // Push each block's frequency along its outgoing edges. Blocks is in reverse
+  // post-order and forms a DAG with the backedge from the latch (the last
+  // block) ignored, so a block's frequency is final by the time it is visited.
   DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
       Frequencies;
   Frequencies.reserve(Blocks.size());
@@ -1243,7 +1243,16 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
     bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
     for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      std::optional<VPExecutionFrequency> &SuccFreq = Frequencies.at(Succ);
+      // Ignore the backedge to the header (already treated as always
+      // executing).
+      if (Succ == Blocks.front())
+        continue;
+      // Ignore edges leaving Blocks, i.e. a plain CFG's edges to the middle
+      // block or to an exit block.
+      auto It = Frequencies.find(Succ);
+      if (It == Frequencies.end())
+        continue;
+      std::optional<VPExecutionFrequency> &SuccFreq = It->second;
       // An unknown edge or predecessor poisons the successor.
       if (!Src || EdgeProb.isUnknown() || !SuccFreq) {
         SuccFreq = std::nullopt;
@@ -1340,29 +1349,29 @@ void vputils::detail::pullOutPermutationsImpl(
     function_ref<VPSingleDefRecipe *(VPSingleDefRecipe *X)> BuildPerm) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
-      if (!Def || !isElementwise(Def))
+    for (VPSingleDefRecipe &Def :
+         make_early_inc_range(make_isa_range<VPSingleDefRecipe>(*VPBB))) {
+      if (!isElementwise(&Def))
         continue;
 
       // At least one of the ops must be a permutation.
-      if (none_of(Def->operands(), MatchPerm))
+      if (none_of(Def.operands(), MatchPerm))
         continue;
 
       // All operands must be a single-use permutation or a live in (splat).
-      if (!all_of(Def->operands(), [&MatchPerm](VPValue *Op) {
+      if (!all_of(Def.operands(), [&MatchPerm](VPValue *Op) {
             return (Op->hasOneUse() && MatchPerm(Op)) || match(Op, m_LiveIn());
           }))
         continue;
 
       // Remove the inner permutations.
-      for (unsigned I = 0, E = Def->getNumOperands(); I != E; ++I)
-        if (VPValue *X = MatchPerm(Def->getOperand(I)))
-          Def->setOperand(I, X);
+      for (unsigned I = 0, E = Def.getNumOperands(); I != E; ++I)
+        if (VPValue *X = MatchPerm(Def.getOperand(I)))
+          Def.setOperand(I, X);
 
-      VPSingleDefRecipe *Res = BuildPerm(Def);
-      Res->insertAfter(Def);
-      Def->replaceUsesWithIf(
+      VPSingleDefRecipe *Res = BuildPerm(&Def);
+      Res->insertAfter(&Def);
+      Def.replaceUsesWithIf(
           Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
     }
   }

@@ -837,19 +837,22 @@ TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytesDisabled) {
   // This should avoid doing any trimming.
   Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
   Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
-  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
-  Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes, 4096);
+  scudo::uptr PageSize = scudo::getPageSizeCached();
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize,
+                        static_cast<scudo::sptr>(4 * PageSize));
+  Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes,
+                        static_cast<scudo::sptr>(4 * PageSize));
 
   EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), 0U);
 
-  Info.MemMaps.emplace_back(Info.allocate(1024));
+  Info.MemMaps.emplace_back(Info.allocate(2 * PageSize));
   const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
   EXPECT_NE(0U, Size1);
   Info.storeMemMap(Info.MemMaps[0]);
   EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1);
 
   // Releasing is disabled so it should not trim.
-  Info.MemMaps.emplace_back(Info.allocate(4096));
+  Info.MemMaps.emplace_back(Info.allocate(3 * PageSize));
   const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
   EXPECT_NE(0U, Size2);
   Info.storeMemMap(Info.MemMaps[1]);
