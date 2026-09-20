@@ -26,10 +26,9 @@ body:             |
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
 
-# FIXME: A 64-bit zero-extending word load (LWZ8/LWZX8) feeding an EXTSW that
-# reads its sub_32 could fold into a sign-extending load, the same way a gprc
-# LWZ/LWZX + EXTSW folds. The load-folding path only matches the 32-bit
-# LWZ/LWZX defs, so these subregister cases are left as a separate load + extsw.
+# A 64-bit zero-extending word load (LWZ8/LWZX8) feeding an EXTSW that reads its
+# sub_32 is folded into a sign-extending load, the same way a gprc LWZ/LWZX +
+# EXTSW folds.
 ---
 name:            extsw_lwz8_subreg_input
 tracksRegLiveness: true
@@ -40,9 +39,9 @@ body:             |
     ; CHECK: liveins: $x3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
-    ; CHECK-NEXT: [[LWZ8_:%[0-9]+]]:g8rc = LWZ8 0, killed [[COPY]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_64_:%[0-9]+]]:g8rc = EXTSW_32_64 killed [[LWZ8_]].sub_32
-    ; CHECK-NEXT: $x3 = COPY killed [[EXTSW_32_64_]]
+    ; CHECK-NEXT: [[LWA:%[0-9]+]]:g8rc = LWA 0, killed [[COPY]] :: (load (s32))
+    ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: $x3 = COPY killed [[LWA]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit killed $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
     %1:g8rc = LWZ8 0, %0 :: (load (s32))
@@ -63,9 +62,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:g8rc = COPY killed $x4
-    ; CHECK-NEXT: [[LWZX8_:%[0-9]+]]:g8rc = LWZX8 killed [[COPY]], killed [[COPY1]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_64_:%[0-9]+]]:g8rc = EXTSW_32_64 killed [[LWZX8_]].sub_32
-    ; CHECK-NEXT: $x3 = COPY killed [[EXTSW_32_64_]]
+    ; CHECK-NEXT: [[LWAX:%[0-9]+]]:g8rc = LWAX killed [[COPY]], killed [[COPY1]] :: (load (s32))
+    ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: $x3 = COPY killed [[LWAX]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit killed $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
     %3:g8rc = COPY $x4
@@ -86,10 +85,10 @@ body:             |
     ; CHECK: liveins: $x3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
-    ; CHECK-NEXT: [[LWZ8_:%[0-9]+]]:g8rc = LWZ8 0, killed [[COPY]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_:%[0-9]+]]:gprc = EXTSW_32 killed [[LWZ8_]].sub_32
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG killed [[DEF]], killed [[EXTSW_32_]], %subreg.sub_32
+    ; CHECK-NEXT: [[LWA_32_:%[0-9]+]]:gprc = LWA_32 0, killed [[COPY]] :: (load (s32))
+    ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG killed [[DEF1]], killed [[LWA_32_]], %subreg.sub_32
     ; CHECK-NEXT: $x3 = COPY killed [[INSERT_SUBREG]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit killed $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
@@ -113,10 +112,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:g8rc = COPY killed $x4
-    ; CHECK-NEXT: [[LWZX8_:%[0-9]+]]:g8rc = LWZX8 killed [[COPY]], killed [[COPY1]] :: (load (s32))
-    ; CHECK-NEXT: [[EXTSW_32_:%[0-9]+]]:gprc = EXTSW_32 killed [[LWZX8_]].sub_32
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG killed [[DEF]], killed [[EXTSW_32_]], %subreg.sub_32
+    ; CHECK-NEXT: [[LWAX_32_:%[0-9]+]]:gprc = LWAX_32 killed [[COPY]], killed [[COPY1]] :: (load (s32))
+    ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG killed [[DEF1]], killed [[LWAX_32_]], %subreg.sub_32
     ; CHECK-NEXT: $x3 = COPY killed [[INSERT_SUBREG]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit killed $x3
     %0:g8rc_and_g8rc_nox0 = COPY $x3
