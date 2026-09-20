@@ -11,11 +11,10 @@
 define dso_local i64 @rotatemask32(i64 noundef %word) local_unnamed_addr #0 {
 ; AIX32-LABEL: rotatemask32:
 ; AIX32:       # %bb.0: # %entry
-; AIX32-NEXT:    cntlzw r5, r3
 ; AIX32-NEXT:    cmplwi r3, 0
-; AIX32-NEXT:    cntlzw r3, r4
-; AIX32-NEXT:    addi r3, r3, 32
-; AIX32-NEXT:    iseleq r3, r3, r5
+; AIX32-NEXT:    cntlzw r5, r4
+; AIX32-NEXT:    cntlzw r6, r3
+; AIX32-NEXT:    iseleq r3, r5, r6
 ; AIX32-NEXT:    rlwnm r4, r4, r3, 1, 31
 ; AIX32-NEXT:    li r3, 0
 ; AIX32-NEXT:    blr
