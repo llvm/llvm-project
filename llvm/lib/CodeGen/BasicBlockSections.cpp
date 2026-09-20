@@ -336,7 +336,8 @@ void llvm::sortBasicBlocksAndUpdateBranches(
 void llvm::avoidZeroOffsetLandingPad(MachineFunction &MF) {
   std::optional<MBBSectionID> CurrentSection;
   auto IsFirstNonEmptyBBInSection = [&](const MachineBasicBlock &MBB) {
-    if (MBB.empty() || MBB.getSectionID() == CurrentSection)
+    if (MBB.getFirstNonDebugInstr() == MBB.end() ||
+        MBB.getSectionID() == CurrentSection)
       return false;
     CurrentSection = MBB.getSectionID();
     return true;
