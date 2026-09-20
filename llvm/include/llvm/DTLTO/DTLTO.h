@@ -366,7 +366,7 @@ private:
 
   // There can be many temporary files to remove. Performing deletion in the
   // background can save a few seconds on Windows hosts.
-  struct BackgroundDeletion : DefaultThreadPool {
+  struct LLVM_ABI BackgroundDeletion : DefaultThreadPool {
     BackgroundDeletion();
     ~BackgroundDeletion();
 

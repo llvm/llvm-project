@@ -11,6 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_H
+
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/properties/types.h"
@@ -68,6 +71,62 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
       // Uncomment to print out failed values.
       if (!correct) {
         EXPECT_MPFR_MATCH_ROUNDING(Op, x, Func(x), 0.5, rounding);
+      }
+    } while (bits++ < stop);
+    return failed;
+  }
+};
+
+template <typename OutType, typename InType,
+          UnaryOp<OutType, InType> BaselineFunc, UnaryOp<OutType, InType> Func,
+          unsigned Tolerance = 0>
+struct UnaryOpAgainstBaselineChecker
+    : public virtual LIBC_NAMESPACE::testing::Test {
+  using FloatType = InType;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
+  using StorageType = typename FPBits::StorageType;
+
+  // Check in a range, return the number of failures.
+  uint64_t check(StorageType start, StorageType stop,
+                 mpfr::RoundingMode rounding) {
+    mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return (stop > start);
+    StorageType bits = start;
+    uint64_t failed = 0;
+    do {
+      FPBits xbits(bits);
+      FloatType x = xbits.get_val();
+      OutType result = Func(x);
+      OutType expected = BaselineFunc(x);
+      using OutFPBits = LIBC_NAMESPACE::fputil::FPBits<OutType>;
+      using OutStorageType = typename OutFPBits::StorageType;
+      OutFPBits result_bits(result);
+      OutFPBits expected_bits(expected);
+
+      bool correct = false;
+      if (expected_bits.is_nan()) {
+        correct = result_bits.is_nan();
+      } else if (result_bits.is_nan()) {
+        correct = false;
+      } else if (Tolerance == 0) {
+        correct = (result_bits.uintval() == expected_bits.uintval());
+      } else {
+        OutStorageType diff = 0;
+        if (expected_bits.sign() == result_bits.sign()) {
+          OutStorageType u1 = expected_bits.uintval();
+          OutStorageType u2 = result_bits.uintval();
+          diff = (u1 > u2) ? (u1 - u2) : (u2 - u1);
+        } else {
+          diff = (expected_bits.uintval() & OutFPBits::EXP_SIG_MASK) +
+                 (result_bits.uintval() & OutFPBits::EXP_SIG_MASK);
+        }
+        correct = (diff <= Tolerance);
+      }
+      failed += (!correct);
+      // Uncomment to print out failed values.
+      if (!correct) {
+        EXPECT_FP_EQ(expected, result);
       }
     } while (bits++ < stop);
     return failed;
@@ -272,6 +331,12 @@ template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func,
 using LlvmLibcUnaryOpExhaustiveMathTest = LlvmLibcExhaustiveMathTest<
     UnaryOpChecker<FloatType, FloatType, Op, Func, Tolerance>>;
 
+template <typename FloatType, UnaryOp<FloatType> BaselineFunc,
+          UnaryOp<FloatType> Func, unsigned Tolerance = 0>
+using LlvmLibcUnaryOpAgainstBaselineExhaustiveMathTest =
+    LlvmLibcExhaustiveMathTest<UnaryOpAgainstBaselineChecker<
+        FloatType, FloatType, BaselineFunc, Func, Tolerance>>;
+
 template <typename OutType, typename InType, mpfr::Operation Op,
           UnaryOp<OutType, InType> Func>
 using LlvmLibcUnaryNarrowingOpExhaustiveMathTest =
@@ -281,3 +346,5 @@ template <typename FloatType, mpfr::Operation Op, BinaryOp<FloatType> Func>
 using LlvmLibcBinaryOpExhaustiveMathTest =
     LlvmLibcExhaustiveMathTest<BinaryOpChecker<FloatType, FloatType, Op, Func>,
                                1 << 2>;
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_EXHAUSTIVE_TEST_H
