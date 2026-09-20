@@ -24,6 +24,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_allocator.h"
 #include "test_macros.h"
 
 // The standard permits self-move-assignment to leave the object in any valid-but-unspecified
@@ -78,6 +79,17 @@ int main() {
     std::basic_stacktrace<A> s1{s0};
     static_assert(noexcept(std::basic_stacktrace<A>(std::move(s0))));
     std::basic_stacktrace<A> s2(std::move(s0));
+  }
+
+  // Move-construction (without an explicit allocator) must take over `other`'s allocator
+  // unconditionally -- regardless of propagate_on_container_move_assignment or is_always_equal,
+  // which only govern move-*assignment*, not move-*construction*.
+  {
+    using A = test_allocator<std::stacktrace_entry>;
+    A alloc(42);
+    std::basic_stacktrace<A> s0(alloc);
+    std::basic_stacktrace<A> s1(std::move(s0));
+    assert(s1.get_allocator().get_data() == 42);
   }
 
   // Move-construction with an explicit allocator

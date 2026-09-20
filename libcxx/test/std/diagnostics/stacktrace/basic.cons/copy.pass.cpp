@@ -18,6 +18,7 @@
 #include <cassert>
 #include <stacktrace>
 
+#include "test_allocator.h"
 #include "test_macros.h"
 
 // Self-assignment must be well-defined (leaves the object unchanged).
@@ -44,6 +45,18 @@ int main() {
     auto s0 = std::stacktrace::current();
     std::stacktrace s1{s0, std::allocator<std::stacktrace_entry>()};
     assert(s1 == s0);
+  }
+
+  // Copy-construction (without an explicit allocator) must apply
+  // allocator_traits<Allocator>::select_on_container_copy_construction(other.get_allocator()).
+  // `test_allocator` doesn't override that trait, so the default behavior applies: the new
+  // object's allocator must be a copy of `other`'s allocator, not a default-constructed one.
+  {
+    using A = test_allocator<std::stacktrace_entry>;
+    A alloc(42);
+    std::basic_stacktrace<A> s0(alloc);
+    std::basic_stacktrace<A> s1{s0};
+    assert(s1.get_allocator().get_data() == 42);
   }
 
   // Copy-assignment tests

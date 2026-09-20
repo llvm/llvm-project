@@ -197,14 +197,12 @@ public:
       : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)), __entries_(__alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other)
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)) {
-    __entries_ = __other.__entries_;
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)), __entries_(__other.__entries_) {
   }
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)) {
-    __entries_ = std::move(__other.__entries_);
-  }
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)),
+        __entries_(std::move(__other.__entries_)) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other, const allocator_type& __alloc)
       : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)),
