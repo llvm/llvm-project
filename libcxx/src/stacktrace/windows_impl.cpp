@@ -11,13 +11,12 @@
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 //
-#  include <dbghelp.h>
-#  include <psapi.h>
-//
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 #  include <cstring>
+#  include <dbghelp.h>
 #  include <mutex>
+#  include <psapi.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS

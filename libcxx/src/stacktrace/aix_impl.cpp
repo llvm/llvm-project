@@ -26,10 +26,6 @@ namespace __stacktrace {
 
 namespace {
 
-// `loadquery` (unlike dyld's add-image callback) is a one-shot "what's loaded right now" scan,
-// same shape as `dl_iterate_phdr` on the generic POSIX backend: re-run it every call so newly
-// `dlopen`'d images aren't missed, but skip (via the same sorted-array binary search) anything
-// already recorded, so the common case stays cheap.
 void scan_images(_Images& imgs) {
   std::vector<char> buf(512);
   while (loadquery(L_GETINFO, buf.data(), buf.size()) == -1) {
@@ -43,17 +39,17 @@ void scan_images(_Images& imgs) {
   bool found_new      = false;
   struct ld_info* ldi = reinterpret_cast<struct ld_info*>(buf.data());
   while (imgs.count_ < _Images::k_max_images) {
-    auto loaded_at = reinterpret_cast<uintptr_t>(ldi->ldinfo_textorg);
+    auto load_addr = reinterpret_cast<uintptr_t>(ldi->ldinfo_textorg);
 
     auto __end = imgs.images_.begin() + imgs.count_;
-    auto __it  = std::lower_bound(imgs.images_.begin(), __end, loaded_at, [](_Image const& __img, uintptr_t __addr) {
-      return __img.loaded_at_ < __addr;
+    auto __it  = std::lower_bound(imgs.images_.begin(), __end, load_addr, [](_Image const& __img, uintptr_t __addr) {
+      return __img.load_addr_ < __addr;
     });
-    if (__it == __end || __it->loaded_at_ != loaded_at) {
+    if (__it == __end || __it->load_addr_ != load_addr) {
       auto is_first       = (imgs.count_ == 0);
       auto& image         = imgs.images_.at(imgs.count_++);
-      image.loaded_at_    = loaded_at;
-      image.slide_        = loaded_at;
+      image.load_addr_    = load_addr;
+      image.slide_offset_ = load_addr;
       image.is_main_prog_ = is_first;
 
       const char* name = ldi->ldinfo_filename;
@@ -79,7 +75,7 @@ void scan_images(_Images& imgs) {
 
 } // namespace
 
-void _Images::refresh() {
+void _Images::enumerate() {
   std::lock_guard<std::mutex> __lock{mutex_};
   scan_images(*this);
 }

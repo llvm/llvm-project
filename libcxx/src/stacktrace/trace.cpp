@@ -70,14 +70,12 @@ struct _Unwind_Wrapper {
 
 } // namespace
 
-// Kept out-of-line here rather than in the header: GCC has been observed to inline this
-// despite `noinline` when reached through an always-inline call chain with a single call
-// site, which silently shifts the captured frames by one (see the `+1` below).
+// Kept out-of-line, avoiding inlining so we get a predictable trace
 _LIBCPP_STACKTRACE_NO_TAIL_CALLS_OUT void _Trace::__populate_addrs(size_t __skip, size_t __depth) {
   if (!__depth) {
     return;
   }
-  _Unwind_Wrapper __bt{*this, __skip + 1, __depth}; /* +1 to skip our own frame */
+  _Unwind_Wrapper __bt{*this, __skip + 1, __depth}; // +1 to skip our own frame
   _Unwind_Backtrace(_Unwind_Wrapper::callback, &__bt);
 }
 
@@ -99,7 +97,6 @@ ostream& _Trace::__write_to(std::ostream& __os) const {
 
       stacktrace_entry& entry = *reinterpret_cast<stacktrace_entry*>(iters.data() + __i);
 
-      // printf-style format to a small buffer, to avoid messing with stream (with `setw` etc.)
       char index_str[21];
       snprintf(index_str, sizeof(index_str), "%3zu", __i + 1);
       __os << "  frame " << index_str << ": " << entry;

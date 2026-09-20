@@ -25,7 +25,7 @@ _Images _Images::instance_;
 
 void _Trace::__populate_images() {
   _Images& images = _Images::instance_;
-  images.refresh();
+  images.enumerate();
 
   std::lock_guard<std::mutex> __lock(images.mutex_);
   for (auto& entry : __entry_iters_()) {

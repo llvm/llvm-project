@@ -26,13 +26,13 @@ namespace __stacktrace {
 #if _LIBCPP_HAS_LOCALIZATION
 
 ostream& _Entry::__write_to(ostream& __os) const {
-  // printf-style format to a small buffer, to avoid messing with stream (with `setw` etc.)
-  char ubuf[25]{};
+  constexpr static unsigned k_max_addr_len = 18; // "0x" + 16 hex digits
+  char ubuf[k_max_addr_len + 1]{0};
   if constexpr (sizeof(void*) > 4) {
     // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
-    snprintf(ubuf, sizeof(ubuf) - 1, "0x%012llx", (unsigned long long)(__addr_));
+    snprintf(ubuf, k_max_addr_len, "0x%012llx", (unsigned long long)(__addr_));
   } else {
-    snprintf(ubuf, sizeof(ubuf) - 1, "0x%08lx", (unsigned long)(__addr_));
+    snprintf(ubuf, k_max_addr_len, "0x%08lx", (unsigned long)(__addr_));
   }
   __os << ubuf;
 
@@ -45,7 +45,7 @@ ostream& _Entry::__write_to(ostream& __os) const {
   }
 
   if (__line_) {
-    snprintf(ubuf, sizeof(ubuf) - 1, "%u", __line_);
+    snprintf(ubuf, k_max_addr_len, "%u", __line_);
     __os << ":" << ubuf;
   }
 
@@ -61,7 +61,7 @@ string _Entry::__to_string() const {
 #endif // _LIBCPP_HAS_LOCALIZATION
 
 uintptr_t _Entry::__adjusted_addr() const {
-  auto sub = __image_ ? __image_->slide_ : 0;
+  auto sub = __image_ ? __image_->slide_offset_ : 0;
   return __addr_ - sub;
 }
 

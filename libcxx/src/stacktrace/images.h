@@ -12,9 +12,6 @@
 
 #include <__config>
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 #include <__stacktrace/stacktrace_entry.h>
 #include <algorithm>
 #include <array>
@@ -28,14 +25,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 struct _Image {
-  uintptr_t loaded_at_{};
-  uintptr_t slide_{};
+  uintptr_t load_addr_{};
+  uintptr_t slide_offset_{};
   string_view name_{}; // into the owning `_Images::names_` arena; see below
   bool is_main_prog_{};
 
   operator bool() const { return !name_.empty(); }
 
-  bool operator<(_Image const& __rhs) const { return tuple{loaded_at_, name_} < tuple{__rhs.loaded_at_, __rhs.name_}; }
+  bool operator<(_Image const& __rhs) const { return tuple{load_addr_, name_} < tuple{__rhs.load_addr_, __rhs.name_}; }
 };
 
 // Bump-allocating arena for image names.  These names are not permitted on caller's heap,
@@ -77,7 +74,7 @@ struct _Images {
   }
 
   // OS-specific: enumerate program images in this process's space
-  void refresh();
+  void enumerate();
 
   _Image& operator[](size_t __index) { return images_[__index]; }
 
@@ -96,7 +93,7 @@ struct _Images {
   size_t find(uintptr_t __addr) const {
     auto __end = images_.begin() + count_;
     auto __it  = std::upper_bound(images_.begin(), __end, __addr, [](uintptr_t __a, _Image const& __img) {
-      return __a < __img.loaded_at_;
+      return __a < __img.load_addr_;
     });
     return size_t(__it - images_.begin()) - 1;
   }
@@ -104,7 +101,5 @@ struct _Images {
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STACKTRACE_IMAGES_H

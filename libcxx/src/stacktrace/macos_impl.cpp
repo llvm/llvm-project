@@ -29,37 +29,34 @@ namespace {
 // The callback we pass to dyld.  This synchronously receives each image at registration time,
 // and asynchronously for each image loaded after initial registration.
 void add_image(const struct mach_header* mh, intptr_t vmaddr_slide) {
-  auto& imgs = _Images::instance_;
-  std::lock_guard<std::mutex> __lock(imgs.mutex_);
-  if (imgs.count_ == _Images::k_max_images) {
+  auto& images = _Images::instance_;
+  std::lock_guard<std::mutex> __lock(images.mutex_);
+
+  if (images.count_ == _Images::k_max_images) {
     return;
   }
-  auto loaded_at = uintptr_t(mh);
+  auto load_addr = uintptr_t(mh);
 
-  auto __end = imgs.images_.begin() + imgs.count_;
-  auto __it  = std::lower_bound(imgs.images_.begin(), __end, loaded_at, [](_Image const& __img, uintptr_t __addr) {
-    return __img.loaded_at_ < __addr;
+  auto __end = images.images_.begin() + images.count_;
+  auto __it  = std::lower_bound(images.images_.begin(), __end, load_addr, [](_Image const& __img, uintptr_t __addr) {
+    return __img.load_addr_ < __addr;
   });
-  if (__it != __end && __it->loaded_at_ == loaded_at) {
+  if (__it != __end && __it->load_addr_ == load_addr) {
     return;
   }
 
-  auto is_first       = (imgs.count_ == 0);
-  auto& image         = imgs.images_.at(imgs.count_++);
-  image.loaded_at_    = loaded_at;
-  image.slide_        = uintptr_t(vmaddr_slide);
-  image.is_main_prog_ = is_first;
+  auto& image         = images.images_.at(images.count_++);
+  image.load_addr_    = load_addr;
+  image.slide_offset_ = uintptr_t(vmaddr_slide);
+  image.is_main_prog_ = (images.count_ == 0);
   Dl_info __dl_info{};
   if (dladdr(mh, &__dl_info) && __dl_info.dli_fname) {
     image.name_ = _Names::instance_.intern(__dl_info.dli_fname);
   }
-  std::sort(imgs.images_.begin(), imgs.images_.begin() + imgs.count_);
+  std::sort(images.images_.begin(), images.images_.begin() + images.count_);
 }
 
-// Deferred to first use rather than done at library load, so a program that never calls
-// std::stacktrace::current() never pays for walking the already-loaded image list. Must be
-// called before `_Images::mutex()` is held: registration synchronously invokes `add_image`,
-// which takes that same lock itself.
+// Note: `_Images::instance_.mutex_` must not be held
 void ensure_registered() {
   static std::once_flag __once;
   std::call_once(__once, [] { _dyld_register_func_for_add_image(add_image); });
@@ -67,7 +64,7 @@ void ensure_registered() {
 
 } // namespace
 
-void _Images::refresh() { ensure_registered(); }
+void _Images::enumerate() { ensure_registered(); }
 
 } // namespace __stacktrace
 
