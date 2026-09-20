@@ -512,7 +512,7 @@ static std::string computeSPIRVDataLayout(const Triple &TT) {
 static std::string computePISADataLayout(const Triple &) {
   // little endian
   std::string Ret = "e";
-  // pointers
+  // pointers: 0-generic, 1-global, 2-constant, 3-shared, 4-private
   Ret += "-p:64:64-p1:64:64-p2:64:64-p3:32:32-p4:32:32";
   // data type alignment
   Ret += "-i1:8:8-i8:8:8-i16:16:16-i32:32:32"
