@@ -105,9 +105,10 @@ LLVM_ABI Expected<unsigned>
 packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
-/// Sorts eligible signature elements using the optimized ordering and then
-/// packs them with the prefix-stable packing algorithm. Like prefix-stable
-/// packing, this is not valid for vertex inputs or pixel outputs.
+/// Packs eligible signature elements in optimized order, allowing clip/cull
+/// values to share compatible rows while preserving their two-row limit.
+/// Like prefix-stable packing, this is not valid for vertex inputs or pixel
+/// outputs.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
 ///
@@ -116,11 +117,17 @@ packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
 /// not the sum of their extents.
 ///
 /// Only StartRow and StartCol are modified; Elements remains in its original
-/// signature order. On failure, elements
-/// packed before the failing element in optimized order keep their assigned
-/// locations; the failing element and those after it in that order retain the
-/// unallocated row and column sentinels. The returned SignaturePackingError
-/// identifies the failing element by its index in the original Elements array.
+/// signature order. Earlier successful allocations are preserved on failure,
+/// except that the clip/cull phase is atomic across all geometry streams:
+/// failure in that phase leaves every clip/cull element unallocated, without
+/// changing preceding non-clip/cull allocations. Later groups are not packed.
+///
+/// SignaturePackingError uses indices in the original Elements array. An
+/// intrinsic clip/cull overflow identifies the first element that fails the
+/// temporary two-row packing. A single-row group's placement failure identifies
+/// its first element; failure to find an adjacent pair identifies the first
+/// clip/cull element of that stream. Invalid streams identify the offending
+/// element. A group error need not indicate that this element alone is invalid.
 LLVM_ABI Expected<unsigned>
 packSignatureOptimized(MutableArrayRef<SemanticSignatureElement> Elements,
                        Triple::EnvironmentType ShaderStage, IOType IOTy,

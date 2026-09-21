@@ -81,6 +81,8 @@ struct SignatureRow {
       SemanticInterpretation::Arbitrary;
 };
 
+using SignatureRows = std::array<SignatureRow, MaxSignatureRows>;
+
 // Everything the packing rules need to know about the element that is being
 // placed. It applies to every row that the element covers.
 struct ElementPlacement {
@@ -95,6 +97,12 @@ struct ElementPlacement {
 struct ElementLocation {
   uint32_t Row = UnallocatedRow;
   uint8_t Col = UnallocatedCol;
+};
+
+struct OptimizedClipCullElement {
+  unsigned Index;
+  ElementPlacement Placement;
+  ElementLocation Location;
 };
 
 // Clip/cull elements are first packed into an independent two-row grid. Each
@@ -126,7 +134,7 @@ static uint8_t getStartColumn(uint8_t ColumnMask) {
 
 static PackingGroup
 getOptimizedPackingGroup(const SemanticSignatureElement &Element,
-                            Triple::EnvironmentType ShaderStage, IOType IOTy) {
+                         Triple::EnvironmentType ShaderStage, IOType IOTy) {
   const SemanticInterpretation Interpretation =
       getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
   assert((Interpretation != SemanticInterpretation::Invalid &&
@@ -185,6 +193,26 @@ static unsigned getComponentWidth(dxil::ElementType ComponentType,
   }
 }
 
+static ElementPlacement
+getElementPlacement(const SemanticSignatureElement &Element,
+                    SemanticInterpretation Interpretation,
+                    bool UseNative16BitTypes) {
+  // Only indexed tessellation factors need the reserved last column.
+  if (Interpretation == SemanticInterpretation::TessFactor && Element.Rows == 1)
+    Interpretation = SemanticInterpretation::SV;
+  return {Element.Rows, Element.Cols,
+          getComponentWidth(Element.CompType, UseNative16BitTypes),
+          Element.InterpMode, Interpretation};
+}
+
+static SemanticInterpretation
+getComponentOrder(SemanticInterpretation Interpretation) {
+  // Clip/cull values have system-value component ordering, but may be indexed.
+  return Interpretation == SemanticInterpretation::ClipCull
+             ? SemanticInterpretation::SV
+             : Interpretation;
+}
+
 // Returns whether Placement may be co-packed into a Row that it covers, where
 // IndexedRange is the range of rows that it is dynamically indexed over.
 static bool canCoPack(const SignatureRow &Row,
@@ -219,7 +247,8 @@ static bool canCoPack(const SignatureRow &Row,
   // Indexed tess factors are reserved in the last column, so arbitrary values
   // may still fill the columns to their left without violating that ordering.
   if (Row.OccupiedColumns &&
-      Placement.Interpretation < Row.RightmostInterpretation &&
+      getComponentOrder(Placement.Interpretation) <
+          getComponentOrder(Row.RightmostInterpretation) &&
       !(Placement.Interpretation == SemanticInterpretation::Arbitrary &&
         Row.RightmostInterpretation == SemanticInterpretation::TessFactor))
     return false;
@@ -414,6 +443,129 @@ packClipCullElement(ElementLocation &Location,
   return std::nullopt;
 }
 
+// Work only on scratch rows and locations. The caller commits the entire
+// clip/cull phase after every stream succeeds.
+static Error
+packOptimizedClipCullStream(MutableArrayRef<OptimizedClipCullElement> Elements,
+                            MutableArrayRef<SignatureRow> Rows) {
+  if (Elements.empty())
+    return Error::success();
+
+  std::array<SignatureRow, MaxClipCullRows> LocalRows;
+  bool HasIndexed = false;
+  for (auto &Element : Elements) {
+    if (!prefixPackElement(Element.Location, LocalRows, Element.Placement))
+      return make_error<SignaturePackingError>(
+          SignaturePackingError::ClipCullOverflow, Element.Index);
+    HasIndexed |= Element.Placement.Rows > 1;
+  }
+
+  if (!HasIndexed) {
+    // Keep single-row elements grouped into at most two rows, rather than
+    // scattering individual distances across unrelated signature gaps.
+    std::array<ElementLocation, MaxClipCullRows> Destinations;
+    for (unsigned Row = 0; Row != MaxClipCullRows; ++Row) {
+      auto First = llvm::find_if(Elements, [Row](const auto &Element) {
+        return Element.Location.Row == Row;
+      });
+      if (First == Elements.end())
+        continue;
+      ElementPlacement Bundle = First->Placement;
+      Bundle.Cols = popcount(LocalRows[Row].OccupiedColumns);
+      if (!prefixPackElement(Destinations[Row], Rows, Bundle))
+        return make_error<SignaturePackingError>(
+            SignaturePackingError::SignatureOverflow, First->Index);
+      // Later elements can establish an initially undefined interpolation mode.
+      Rows[Destinations[Row].Row].InterpMode = LocalRows[Row].InterpMode;
+    }
+    for (auto &Element : Elements) {
+      ElementLocation Destination = Destinations[Element.Location.Row];
+      Element.Location = {
+          Destination.Row,
+          static_cast<uint8_t>(Destination.Col + Element.Location.Col)};
+    }
+    return Error::success();
+  }
+
+  // Try the whole indexed group in each adjacent pair. Preserve absolute row
+  // coordinates for existing indexed ranges, even those extending beyond it.
+  for (unsigned Row = 0; Row + MaxClipCullRows <= Rows.size(); ++Row) {
+    SmallVector<SignatureRow, MaxSignatureRows> CandidateRows(Rows.begin(),
+                                                              Rows.end());
+    bool Fits = true;
+    for (auto &Element : Elements) {
+      Element.Location = {};
+      for (unsigned Start = Row;
+           Start + Element.Placement.Rows <= Row + MaxClipCullRows; ++Start) {
+        if (auto Mask = canPlaceAt(CandidateRows, Start, Element.Placement)) {
+          placeAt(CandidateRows, Start, Element.Placement, *Mask,
+                  Element.Location);
+          break;
+        }
+      }
+      if (Element.Location.Row == UnallocatedRow) {
+        Fits = false;
+        break;
+      }
+    }
+    if (Fits) {
+      llvm::copy(ArrayRef(CandidateRows).slice(Row, MaxClipCullRows),
+                 Rows.begin() + Row);
+      return Error::success();
+    }
+  }
+  // No element alone necessarily caused this failure; identify the group.
+  return make_error<SignaturePackingError>(
+      SignaturePackingError::SignatureOverflow, Elements.front().Index);
+}
+
+static Expected<unsigned>
+packOptimizedClipCull(MutableArrayRef<SemanticSignatureElement> Elements,
+                      ArrayRef<unsigned> Order,
+                      MutableArrayRef<SignatureRows> Rows,
+                      bool UseNative16BitTypes) {
+  if (Order.empty())
+    return 0;
+  SmallVector<SmallVector<OptimizedClipCullElement>, MaxGeometryStreams>
+      Streams(Rows.size());
+  for (unsigned Index : Order) {
+    const auto &Element = Elements[Index];
+    assert(Element.StartRow == UnallocatedRow &&
+           Element.StartCol == UnallocatedCol && "already allocated?");
+    assert(Element.Rows > 0 && "signature element must have at least one row");
+    assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
+           "signature element must have between 1 and 4 columns");
+    if (Element.GSStream >= Rows.size())
+      return make_error<SignaturePackingError>(
+          SignaturePackingError::InvalidGeometryStream, Index);
+    Streams[Element.GSStream].push_back(
+        {Index,
+         getElementPlacement(Element, SemanticInterpretation::ClipCull,
+                             UseNative16BitTypes),
+         {}});
+  }
+
+  SmallVector<SignatureRows, MaxGeometryStreams> CandidateRows(Rows.begin(),
+                                                               Rows.end());
+  for (unsigned Stream = 0; Stream != Streams.size(); ++Stream)
+    if (Error Err =
+            packOptimizedClipCullStream(Streams[Stream], CandidateRows[Stream]))
+      return std::move(Err);
+
+  // Publish only after every stream succeeds. No rollback or partial-prefix
+  // recovery is needed, and preceding non-clip/cull allocations remain intact.
+  llvm::copy(CandidateRows, Rows.begin());
+  unsigned NumRows = 0;
+  for (const auto &Stream : Streams)
+    for (const auto &Element : Stream) {
+      Elements[Element.Index].StartRow = Element.Location.Row;
+      Elements[Element.Index].StartCol = Element.Location.Col;
+      NumRows =
+          std::max(NumRows, Element.Location.Row + Element.Placement.Rows);
+    }
+  return NumRows;
+}
+
 void SignaturePackingError::log(raw_ostream &OS) const {
   switch (Kind) {
   case SignatureOverflow:
@@ -476,19 +628,11 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
 }
 
 template <typename IndexRange>
-static Expected<unsigned>
-packSignatureInOrder(MutableArrayRef<SemanticSignatureElement> Elements,
-                     const IndexRange &Order,
-                     Triple::EnvironmentType ShaderStage, IOType IOTy,
-                     bool UseNative16BitTypes) {
-  // Only a geometry shader output signature packs its streams independently.
-  const unsigned StreamCount =
-      ShaderStage == Triple::EnvironmentType::Geometry && IOTy == IOType::Out
-          ? MaxGeometryStreams
-          : 1;
-
-  SmallVector<std::array<SignatureRow, MaxSignatureRows>, 1> Rows(StreamCount);
-  SmallVector<ClipCullState, 1> ClipCullStates(StreamCount);
+static Expected<unsigned> packSignatureInOrder(
+    MutableArrayRef<SemanticSignatureElement> Elements, const IndexRange &Order,
+    Triple::EnvironmentType ShaderStage, IOType IOTy, bool UseNative16BitTypes,
+    MutableArrayRef<SignatureRows> Rows) {
+  SmallVector<ClipCullState, 1> ClipCullStates(Rows.size());
   unsigned NumRows = 0;
   for (unsigned Index : Order) {
     const SemanticSignatureElement &Element = Elements[Index];
@@ -497,7 +641,7 @@ packSignatureInOrder(MutableArrayRef<SemanticSignatureElement> Elements,
     assert(Element.Rows > 0 && "signature element must have at least one row");
     assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
            "signature element must have between 1 and 4 columns");
-    if (Element.GSStream >= StreamCount)
+    if (Element.GSStream >= Rows.size())
       return make_error<SignaturePackingError>(
           SignaturePackingError::InvalidGeometryStream,
           static_cast<unsigned>(Index));
@@ -515,18 +659,8 @@ packSignatureInOrder(MutableArrayRef<SemanticSignatureElement> Elements,
            "unexpected semantic interpretation for prefix-stable packing, "
            "should have been diagnosed by Sema");
 
-    const unsigned ComponentWidth =
-        getComponentWidth(Element.CompType, UseNative16BitTypes);
-    // Only a tess factor that covers multiple rows is dynamically indexable
-    // and needs to be reserved in the last column.
-    const SemanticInterpretation PackingInterpretation =
-        Interpretation == SemanticInterpretation::TessFactor &&
-                Element.Rows == 1
-            ? SemanticInterpretation::SV
-            : Interpretation;
-    const ElementPlacement Placement = {Element.Rows, Element.Cols,
-                                        ComponentWidth, Element.InterpMode,
-                                        PackingInterpretation};
+    const ElementPlacement Placement =
+        getElementPlacement(Element, Interpretation, UseNative16BitTypes);
 
     const unsigned StreamIndex = Element.GSStream;
     MutableArrayRef<SignatureRow> StreamRows = Rows[StreamIndex];
@@ -559,8 +693,13 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
          !(ShaderStage == Triple::Pixel && IOTy == IOType::Out) &&
          "prefix-stable packing is not valid for vertex inputs or pixel "
          "outputs");
+  const unsigned StreamCount =
+      ShaderStage == Triple::Geometry && IOTy == IOType::Out
+          ? MaxGeometryStreams
+          : 1;
+  SmallVector<SignatureRows, 1> Rows(StreamCount);
   return packSignatureInOrder(Elements, seq<unsigned>(0, Elements.size()),
-                              ShaderStage, IOTy, UseNative16BitTypes);
+                              ShaderStage, IOTy, UseNative16BitTypes, Rows);
 }
 
 Expected<unsigned> llvm::hlsl::packSignatureIndexed(
@@ -645,10 +784,38 @@ Expected<unsigned> llvm::hlsl::packSignatureOptimized(
     return Left.SigId < Right.SigId;
   });
 
-  // Traverse the original elements in packing order without copying their
-  // metadata or changing their signature order. Only locations are written.
-  auto Order = map_range(SortedKeys,
-                         [](const SortKey &Key) { return Key.OriginalIndex; });
-  return packSignatureInOrder(Elements, Order, ShaderStage, IOTy,
-                              UseNative16BitTypes);
+  const unsigned StreamCount =
+      ShaderStage == Triple::Geometry && IOTy == IOType::Out
+          ? MaxGeometryStreams
+          : 1;
+  SmallVector<SignatureRows, 1> Rows(StreamCount);
+  auto ClipBegin = llvm::partition_point(SortedKeys, [](const SortKey &Key) {
+    return Key.Group < PackingGroup::ClipCull;
+  });
+  auto ClipEnd = llvm::partition_point(
+      make_range(ClipBegin, SortedKeys.end()),
+      [](const SortKey &Key) { return Key.Group == PackingGroup::ClipCull; });
+
+  auto Pack = [&](auto Begin, auto End) {
+    auto Order = map_range(make_range(Begin, End), [](const SortKey &Key) {
+      return Key.OriginalIndex;
+    });
+    return packSignatureInOrder(Elements, Order, ShaderStage, IOTy,
+                                UseNative16BitTypes, Rows);
+  };
+
+  Expected<unsigned> Before = Pack(SortedKeys.begin(), ClipBegin);
+  if (!Before)
+    return Before.takeError();
+  SmallVector<unsigned> ClipCullOrder;
+  for (const SortKey &Key : make_range(ClipBegin, ClipEnd))
+    ClipCullOrder.push_back(Key.OriginalIndex);
+  Expected<unsigned> ClipCull =
+      packOptimizedClipCull(Elements, ClipCullOrder, Rows, UseNative16BitTypes);
+  if (!ClipCull)
+    return ClipCull.takeError();
+  Expected<unsigned> After = Pack(ClipEnd, SortedKeys.end());
+  if (!After)
+    return After.takeError();
+  return std::max({*Before, *ClipCull, *After});
 }

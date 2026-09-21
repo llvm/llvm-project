@@ -1267,15 +1267,14 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCull) {
 
   // Optimized layout:
   // reg0: First.xyz       | WithFirst.w
-  // reg1: AfterClipCull.x | unused.yzw
+  // reg1: AfterClipCull.x | Clip1.yz | Cull0.w
   // reg2: Cull1.xyz       | Clip0.w
-  // reg3: Clip1.xy        | Cull0.z | unused.w
-  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/4,
+  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/3,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/2, /*Col=*/3},
                  {/*Row=*/2, /*Col=*/0},
-                 {/*Row=*/3, /*Col=*/2},
-                 {/*Row=*/3, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/3},
+                 {/*Row=*/1, /*Col=*/1},
                  {/*Row=*/0, /*Col=*/3},
                  {/*Row=*/1, /*Col=*/0}});
 }
@@ -1320,14 +1319,13 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedClipCull) {
 
   // Optimized layout:
   // reg0: First.xyz       | WithFirst.w
-  // reg1: AfterClipCull.x | unused.yzw
-  // reg2: Cull1[0].xy     | Clip0.z | Clip1.w
-  // reg3: Cull1[1].xy     | unused.zw
-  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/4,
+  // reg1: AfterClipCull.x | Cull1[0].yz | Clip0.w
+  // reg2: Clip1.x         | Cull1[1].yz | unused.w
+  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/3,
                 {{/*Row=*/0, /*Col=*/0},
-                 {/*Row=*/2, /*Col=*/2},
+                 {/*Row=*/1, /*Col=*/3},
+                 {/*Row=*/1, /*Col=*/1},
                  {/*Row=*/2, /*Col=*/0},
-                 {/*Row=*/2, /*Col=*/3},
                  {/*Row=*/0, /*Col=*/3},
                  {/*Row=*/1, /*Col=*/0}});
 }
@@ -1372,14 +1370,13 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableMultipleIndexedClipCull) {
 
   // Optimized layout:
   // reg0: First.xyz       | WithFirst.w
-  // reg1: AfterClipCull.x | unused.yzw
-  // reg2: Cull1[0].xy     | Clip1[0].z | Clip0.w
-  // reg3: Cull1[1].xy     | Clip1[1].z | unused.w
-  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/4,
+  // reg1: AfterClipCull.x | Cull1[0].yz | Clip1[0].w
+  // reg2: Clip0.x         | Cull1[1].yz | Clip1[1].w
+  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/3,
                 {{/*Row=*/0, /*Col=*/0},
-                 {/*Row=*/2, /*Col=*/3},
                  {/*Row=*/2, /*Col=*/0},
-                 {/*Row=*/2, /*Col=*/2},
+                 {/*Row=*/1, /*Col=*/1},
+                 {/*Row=*/1, /*Col=*/3},
                  {/*Row=*/0, /*Col=*/3},
                  {/*Row=*/1, /*Col=*/0}});
 }
@@ -1801,7 +1798,8 @@ TEST_F(HLSLSemanticSignaturePackingTest,
 TEST_F(HLSLSemanticSignaturePackingTest, OptimizedPreservesPartialAllocation) {
   // Declaration order is Small, Full, Last. Optimized packing places Full
   // first, then fails on Small. Report Small's original index (zero), not its
-  // index in packing order (one), and preserve Full's allocation.
+  // index in packing order (one). Preserve Full's allocation for ordinary
+  // elements, but leave the entire clip/cull phase unallocated on failure.
   //
   // struct VSOut {
   //   float2 Small    : Small;
@@ -1834,8 +1832,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, OptimizedPreservesPartialAllocation) {
             std::string(IsClipCull ? "clip/cull elements do not fit in "
                                    : "signature elements do not fit in ") +
             std::to_string(RowCount) + " rows (element 0)"));
-    EXPECT_EQ(Elements[1].StartRow, 0u);
-    EXPECT_EQ(Elements[1].StartCol, 0u);
+    EXPECT_EQ(Elements[1].StartRow, IsClipCull ? UnallocatedRow : 0u);
+    EXPECT_EQ(Elements[1].StartCol, IsClipCull ? UnallocatedCol : 0u);
     for (unsigned I : {0u, 2u}) {
       EXPECT_EQ(Elements[I].StartRow, UnallocatedRow) << "element " << I;
       EXPECT_EQ(Elements[I].StartCol, UnallocatedCol) << "element " << I;
@@ -1846,6 +1844,188 @@ TEST_F(HLSLSemanticSignaturePackingTest, OptimizedPreservesPartialAllocation) {
       EXPECT_EQ(Elements[I].Cols, Config.Elements[I].Cols) << "element " << I;
     }
   }
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedSingleRowClipCullFailureIsAtomic) {
+  // struct VSOut {
+  //   float2 Clip1    : SV_ClipDistance1;
+  //   float4 Fill[31] : FILL;
+  //   float Cull      : SV_CullDistance0;
+  //   float3 Clip0    : SV_ClipDistance0;
+  // };
+  // The first bundle (Clip0 + Cull) fits in row 31, but Clip1's bundle fails.
+  // Neither bundle is published; only the preceding Fill allocation remains.
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear,
+        /*SemanticIndex=*/1},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows - 1,
+        /*Cols=*/4, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPackingError(PackingMethod::Optimized, Config,
+                     SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/0);
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  const SmallVector<SemanticSignatureElement> Before = Elements;
+  EXPECT_THAT_EXPECTED(pack(PackingMethod::Optimized, Elements, Config),
+                       FailedWithMessage("signature elements do not fit in " +
+                                         std::to_string(MaxSignatureRows) +
+                                         " rows (element 0)"));
+  EXPECT_EQ(Elements[1].StartRow, 0u);
+  EXPECT_EQ(Elements[1].StartCol, 0u);
+  for (unsigned I : {0u, 2u, 3u}) {
+    EXPECT_EQ(Elements[I].StartRow, UnallocatedRow) << "element " << I;
+    EXPECT_EQ(Elements[I].StartCol, UnallocatedCol) << "element " << I;
+  }
+  for (unsigned I = 0; I != Elements.size(); ++I) {
+    SCOPED_TRACE(I);
+    verifyMetadata(Before[I], Elements[I]);
+  }
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedIndexedClipCullFailureIsAtomic) {
+  // struct VSOut {
+  //   float2 Cull     : SV_CullDistance0;
+  //   float4 Fill[30] : FILL;
+  //   float A[2]      : A;
+  //   float2 Clip[2]  : SV_ClipDistance0;
+  // };
+  // The final pair fits Clip in yz but not Cull.xy. Do not retain Clip's
+  // speculative allocation. The error identifies Clip, first in group order.
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows - 2,
+        /*Cols=*/4, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/2, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPackingError(PackingMethod::Optimized, Config,
+                     SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/3);
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  const SmallVector<SemanticSignatureElement> Before = Elements;
+  EXPECT_THAT_EXPECTED(pack(PackingMethod::Optimized, Elements, Config),
+                       FailedWithMessage("signature elements do not fit in " +
+                                         std::to_string(MaxSignatureRows) +
+                                         " rows (element 3)"));
+  EXPECT_EQ(Elements[1].StartRow, 0u);
+  EXPECT_EQ(Elements[1].StartCol, 0u);
+  EXPECT_EQ(Elements[2].StartRow, MaxSignatureRows - 2);
+  EXPECT_EQ(Elements[2].StartCol, 0u);
+  for (unsigned I : {0u, 3u}) {
+    EXPECT_EQ(Elements[I].StartRow, UnallocatedRow) << "element " << I;
+    EXPECT_EQ(Elements[I].StartCol, UnallocatedCol) << "element " << I;
+  }
+  for (unsigned I = 0; I != Elements.size(); ++I) {
+    SCOPED_TRACE(I);
+    verifyMetadata(Before[I], Elements[I]);
+  }
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedClipCullFailureIsAtomicAcrossStreams) {
+  const struct {
+    unsigned Rows;
+    unsigned Stream;
+    SignaturePackingError::ErrorKind Kind;
+  } Failures[] = {
+      {1, 1, SignaturePackingError::SignatureOverflow},
+      {3, 1, SignaturePackingError::ClipCullOverflow},
+      {1, MaxGeometryStreams, SignaturePackingError::InvalidGeometryStream}};
+  for (const auto &Failure : Failures) {
+    SCOPED_TRACE(Failure.Kind);
+    TestConfig Config(
+        Triple::Geometry, IOType::Out,
+        {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows,
+          /*Cols=*/4, dxil::ElementType::F32,
+          dxbc::PSV::InterpolationMode::Linear,
+          /*SemanticIndex=*/0, /*GSStream=*/1},
+         {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear,
+          /*SemanticIndex=*/0, /*GSStream=*/0},
+         {dxbc::PSV::SemanticKind::CullDistance, Failure.Rows, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear,
+          /*SemanticIndex=*/0, Failure.Stream}});
+    // Stream 0 fits, but failure in stream 1 (or an invalid stream) must leave
+    // every clip/cull element unallocated, without undoing the earlier Fill.
+    verifyPackingError(PackingMethod::Optimized, Config, Failure.Kind,
+                       /*ExpectedElementIndex=*/2);
+    SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+    const SmallVector<SemanticSignatureElement> Before = Elements;
+    EXPECT_THAT_EXPECTED(pack(PackingMethod::Optimized, Elements, Config),
+                         Failed<SignaturePackingError>());
+    EXPECT_EQ(Elements[0].StartRow, 0u);
+    EXPECT_EQ(Elements[0].StartCol, 0u);
+    for (unsigned I : {1u, 2u}) {
+      EXPECT_EQ(Elements[I].StartRow, UnallocatedRow) << "element " << I;
+      EXPECT_EQ(Elements[I].StartCol, UnallocatedCol) << "element " << I;
+    }
+    for (unsigned I = 0; I != Elements.size(); ++I) {
+      SCOPED_TRACE(I);
+      verifyMetadata(Before[I], Elements[I]);
+    }
+  }
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedClipCullFailureSkipsLaterGroups) {
+  TestConfig Config(
+      Triple::Pixel, IOType::In,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/MaxClipCullRows + 1,
+        /*Cols=*/1, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::IsFrontFace, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::I1, dxbc::PSV::InterpolationMode::Constant}});
+  verifyPackingError(PackingMethod::Optimized, Config,
+                     SignaturePackingError::ClipCullOverflow,
+                     /*ExpectedElementIndex=*/1);
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  EXPECT_THAT_EXPECTED(pack(PackingMethod::Optimized, Elements, Config),
+                       Failed<SignaturePackingError>());
+  EXPECT_EQ(Elements[0].StartRow, 0u);
+  EXPECT_EQ(Elements[0].StartCol, 0u);
+  for (unsigned I : {1u, 2u}) {
+    EXPECT_EQ(Elements[I].StartRow, UnallocatedRow) << "element " << I;
+    EXPECT_EQ(Elements[I].StartCol, UnallocatedCol) << "element " << I;
+  }
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedLaterFailurePreservesClipCullAllocations) {
+  TestConfig Config(
+      Triple::Pixel, IOType::In,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows - 1,
+        /*Cols=*/4, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::IsFrontFace, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::I1, dxbc::PSV::InterpolationMode::Constant}});
+  verifyPackingError(PackingMethod::Optimized, Config,
+                     SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/2);
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  EXPECT_THAT_EXPECTED(pack(PackingMethod::Optimized, Elements, Config),
+                       Failed<SignaturePackingError>());
+  EXPECT_EQ(Elements[0].StartRow, 0u);
+  EXPECT_EQ(Elements[0].StartCol, 0u);
+  EXPECT_EQ(Elements[1].StartRow, MaxSignatureRows - 1);
+  EXPECT_EQ(Elements[1].StartCol, 0u);
+  EXPECT_EQ(Elements[2].StartRow, UnallocatedRow);
+  EXPECT_EQ(Elements[2].StartCol, UnallocatedCol);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1967,6 +2147,218 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
                   {{/*Row=*/0, /*Col=*/0},
                    {/*Row=*/0, /*Col=*/0},
                    {/*Row=*/1, /*Col=*/0}});
+}
+
+//===----------------------------------------------------------------------===//
+// Optimized clip/cull packing tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, OptimizedClipCullSharesArbitraryRow) {
+  // struct VSOut { float A : A; float3 Clip : SV_ClipDistance; };
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
+  // Optimized layout: reg0: A.x | Clip.yzw.
+  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/1,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, OptimizedClipCullFillsSignature) {
+  // struct VSOut {
+  //   float4 Fill[31] : FILL;
+  //   float A         : A;
+  //   float3 Clip     : SV_ClipDistance;
+  // };
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows - 1,
+        /*Cols=*/4, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPackingError(PackingMethod::PrefixStable, Config,
+                     SignaturePackingError::SignatureOverflow,
+                     /*ExpectedElementIndex=*/2);
+  // All 128 components fit, including A.x | Clip.yzw in the last row.
+  verifyPacking(PackingMethod::Optimized, Config,
+                /*ExpectedRows=*/MaxSignatureRows,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/MaxSignatureRows - 1, /*Col=*/0},
+                 {/*Row=*/MaxSignatureRows - 1, /*Col=*/1}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedClipCullKeepsScalarGroupsTogether) {
+  // struct VSOut {
+  //   float3 A[3] : A;
+  //   float Clip0 : SV_ClipDistance0;
+  //   float Clip1 : SV_ClipDistance1;
+  //   float Cull0 : SV_CullDistance0;
+  // };
+  // Filling the three w gaps individually would use three clip/cull rows.
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/3, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear,
+        /*SemanticIndex=*/1},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/4,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/3, /*Col=*/0},
+                 {/*Row=*/3, /*Col=*/1},
+                 {/*Row=*/3, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedSingleRowClipCullCanUseNonAdjacentRows) {
+  // Three arbitrary float2 values establish distinct interpolation modes.
+  // Cull fits after the first and Clip after the third; row 1 separates them.
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::LinearCentroid},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::LinearCentroid}});
+  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/3,
+                {{/*Row=*/0, /*Col=*/0},
+                 {/*Row=*/1, /*Col=*/0},
+                 {/*Row=*/2, /*Col=*/0},
+                 {/*Row=*/0, /*Col=*/2},
+                 {/*Row=*/2, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedIndexedClipCullCannotShareSystemValueRows) {
+  // Position fixes its row's indexed range to empty. The Clip array must
+  // start in the next row even though Position leaves three free columns.
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Position, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  verifyPacking(PackingMethod::Optimized, Config, /*ExpectedRows=*/3,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedIndexedClipCullRetriesAdjacentPairs) {
+  // struct VSOut {
+  //   float3 A[2]   : A;
+  //   float Clip[2] : SV_ClipDistance;
+  //   float Cull    : SV_CullDistance;
+  // };
+  // The pair at row 0 fits Clip but not Cull. The next pair fits both.
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/3,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/2, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+  // Optimized layout:
+  // reg0: A[0].xyz | unused.w
+  // reg1: A[1].xyz | Clip[0].w
+  // reg2: Cull.x | unused.yz | Clip[1].w
+  verifyPacking(
+      PackingMethod::Optimized, Config, /*ExpectedRows=*/3,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/3}, {/*Row=*/2, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedClipCullRespectsRowCompatibility) {
+  for (bool Native16Bit : {false, true}) {
+    SCOPED_TRACE(Native16Bit);
+    for (bool DifferentInterp : {false, true}) {
+      SCOPED_TRACE(DifferentInterp);
+      TestConfig Config(
+          Triple::Vertex, IOType::Out, Native16Bit,
+          {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+            dxil::ElementType::F16,
+            DifferentInterp ? dxbc::PSV::InterpolationMode::Constant
+                            : dxbc::PSV::InterpolationMode::Linear},
+           {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
+            dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+      const bool Separate = Native16Bit || DifferentInterp;
+      verifyPacking(PackingMethod::Optimized, Config,
+                    /*ExpectedRows=*/Separate ? 2 : 1,
+                    {{/*Row=*/0, /*Col=*/0},
+                     {/*Row=*/Separate ? 1u : 0u,
+                      /*Col=*/static_cast<uint8_t>(Separate ? 0 : 1)}});
+    }
+  }
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedClipCullPrecedesSystemGeneratedValues) {
+  // struct PSIn {
+  //   nointerpolation uint A     : A;
+  //   nointerpolation float Cull : SV_CullDistance;
+  //   bool IsFrontFace           : SV_IsFrontFace;
+  // };
+  TestConfig Config(
+      Triple::Pixel, IOType::In,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::U32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::CullDistance, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Constant},
+       {dxbc::PSV::SemanticKind::IsFrontFace, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::I1, dxbc::PSV::InterpolationMode::Constant}});
+  verifyPacking(
+      PackingMethod::Optimized, Config, /*ExpectedRows=*/1,
+      {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}, {/*Row=*/0, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       OptimizedClipCullPacksGeometryStreamsIndependently) {
+  TestConfig Config(Triple::Geometry, IOType::Out, {});
+  for (unsigned Stream = 0; Stream != MaxGeometryStreams; ++Stream) {
+    Config.Elements.push_back({dxbc::PSV::SemanticKind::Arbitrary,
+                               /*Rows=*/MaxSignatureRows - 1,
+                               /*Cols=*/4, dxil::ElementType::F32,
+                               dxbc::PSV::InterpolationMode::Linear,
+                               /*SemanticIndex=*/0, Stream});
+    Config.Elements.push_back({dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                               /*Cols=*/1, dxil::ElementType::F32,
+                               dxbc::PSV::InterpolationMode::Linear,
+                               /*SemanticIndex=*/0, Stream});
+    Config.Elements.push_back({dxbc::PSV::SemanticKind::ClipDistance,
+                               /*Rows=*/1, /*Cols=*/3, dxil::ElementType::F32,
+                               dxbc::PSV::InterpolationMode::Linear,
+                               /*SemanticIndex=*/0, Stream});
+  }
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  Expected<unsigned> Rows = pack(PackingMethod::Optimized, Elements, Config);
+  ASSERT_THAT_EXPECTED(Rows, Succeeded());
+  EXPECT_EQ(*Rows, MaxSignatureRows);
+  for (unsigned Stream = 0; Stream != MaxGeometryStreams; ++Stream) {
+    SCOPED_TRACE(Stream);
+    EXPECT_EQ(Elements[3 * Stream].StartRow, 0u);
+    EXPECT_EQ(Elements[3 * Stream].StartCol, 0u);
+    EXPECT_EQ(Elements[3 * Stream + 1].StartRow, MaxSignatureRows - 1);
+    EXPECT_EQ(Elements[3 * Stream + 1].StartCol, 0u);
+    EXPECT_EQ(Elements[3 * Stream + 2].StartRow, MaxSignatureRows - 1);
+    EXPECT_EQ(Elements[3 * Stream + 2].StartCol, 1u);
+  }
 }
 
 //===----------------------------------------------------------------------===//

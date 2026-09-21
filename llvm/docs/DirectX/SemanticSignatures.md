@@ -165,8 +165,8 @@ constraints are satisfied:
 - Within each row, elements are ordered by category: arbitrary values first,
   followed by system values, and then system-generated values. For example, a
   system value can never be packed to the left of an arbitrary value.
-  `ClipCull` and `TessFactor` follow these categories in the internal ordering,
-  with the additional placement rules described below.
+  Indexed tessellation factors follow these categories in the component
+  ordering. Clip/cull values occupy dedicated rows as described below.
 - A system value or system generated value cannot be placed in a dynamically
   indexed row. A dynamically indexed row is a row within the range covered by
   a multi-row element, where the row is selected using a dynamic index.
@@ -218,11 +218,12 @@ in this order:
 
 Within each group, elements are ordered first by the numeric value of their
 interpolation mode, then by decreasing row count, then by decreasing column
-count, and finally by increasing signature ID. Component bit width is not a
-sort key; it remains a compatibility constraint when elements are placed in a
-row.
+count, and finally by increasing signature ID.
 
-The sorted elements are then placed using the prefix-stable packing algorithm.
+Unlike prefix-stable packing, optimized packing does not reserve whole rows for
+clip/cull values. They may share compatible rows with other values following the
+same constraints.
+
 This is a greedy optimized ordering rather than an exhaustive search for a
 minimum-row layout. Reordering can reduce the number of rows occupied, but
 means that appending an element may change locations assigned to existing
