@@ -49,8 +49,8 @@ public:
 class LLVM_LIBRARY_VISIBILITY PISAMCInstLower {
 public:
   static void setVariableRef(MCInst &MI, unsigned OpNo) {
-    auto *MC = static_cast<PISAMCInst *>(&MI);
-    auto It = MC->Opnds.find(OpNo);
+    PISAMCInst *MC = static_cast<PISAMCInst *>(&MI);
+    SmallDenseMap<unsigned, PISAMCOpnd>::iterator It = MC->Opnds.find(OpNo);
     if (It == MC->Opnds.end())
       MC->Opnds[OpNo] = {true, 0};
     else
@@ -58,8 +58,9 @@ public:
   }
 
   static bool isVariableRef(const MCInst &MI, unsigned int OpNo) {
-    const auto *MC = static_cast<const PISAMCInst *>(&MI);
-    auto It = MC->Opnds.find(OpNo);
+    const PISAMCInst *MC = static_cast<const PISAMCInst *>(&MI);
+    SmallDenseMap<unsigned, PISAMCOpnd>::const_iterator It =
+        MC->Opnds.find(OpNo);
     if (It == MC->Opnds.end())
       return false;
     return It->second.IsVariable;
@@ -67,8 +68,8 @@ public:
 
   static void setSwizzle(MCInst &MI, unsigned OpNo, PISA::Swizzle Swizzle) {
     static_assert(static_cast<unsigned>(PISA::Swizzle::NONE) <= 7);
-    auto *MC = static_cast<PISAMCInst *>(&MI);
-    auto It = MC->Opnds.find(OpNo);
+    PISAMCInst *MC = static_cast<PISAMCInst *>(&MI);
+    SmallDenseMap<unsigned, PISAMCOpnd>::iterator It = MC->Opnds.find(OpNo);
     if (It == MC->Opnds.end())
       MC->Opnds[OpNo] = {false, static_cast<unsigned>(Swizzle)};
     else
@@ -76,8 +77,9 @@ public:
   }
 
   static PISA::Swizzle getSwizzle(const MCInst &MI, unsigned OpNo) {
-    const auto *MC = static_cast<const PISAMCInst *>(&MI);
-    auto It = MC->Opnds.find(OpNo);
+    const PISAMCInst *MC = static_cast<const PISAMCInst *>(&MI);
+    SmallDenseMap<unsigned, PISAMCOpnd>::const_iterator It =
+        MC->Opnds.find(OpNo);
     if (It == MC->Opnds.end())
       return static_cast<PISA::Swizzle>(PISA::Swizzle::NONE);
     return static_cast<PISA::Swizzle>(It->second.Swizzle);

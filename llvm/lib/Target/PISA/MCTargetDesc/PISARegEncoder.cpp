@@ -15,14 +15,14 @@ using namespace PISA;
 
 const char *RegEncoder::getPrefixFromBank(RegBank Bank) {
 
-  const auto NumBanks = static_cast<size_t>(RegBank::NUM_BANK);
+  const size_t NumBanks = static_cast<size_t>(RegBank::NUM_BANK);
 
   const char *const BankPrefixes[NumBanks] = {
       "%p",   "%b",   "%h",   "%w",   "%d",    "%q",    "%v2b", "%v2h", "%v2w",
       "%v2d", "%v3b", "%v3h", "%v3w", "%v3d",  "%v4b",  "%v4h", "%v4w", "%v4d",
       "%v5w", "%v6w", "%v7w", "%v8w", "%v16w", "%v32w", "%v64w"};
 
-  auto Index = static_cast<size_t>(Bank);
+  size_t Index = static_cast<size_t>(Bank);
   if (Index >= NumBanks)
     llvm_unreachable("Unknown register bank!");
 
@@ -164,7 +164,7 @@ RegEncoder::RegBank RegEncoder::getRegBank(uint8_t TSFlags) {
 unsigned RegEncoder::encodeVirtualRegister(unsigned Idx, RegBank Bank,
                                            RegType Type) {
   // Check that NumRegBits is sufficient to encode the register Idx
-  auto RegBank = static_cast<unsigned>(Bank);
+  unsigned RegBank = static_cast<unsigned>(Bank);
   assert(Idx < (1U << NumRegBits) &&
          "Register index exceeds virtual register encoding limit");
   return Register::index2VirtReg((Type << (NumRegBits + NumBankBits)) |
@@ -174,7 +174,7 @@ unsigned RegEncoder::encodeVirtualRegister(unsigned Idx, RegBank Bank,
 
 std::pair<const char *, unsigned>
 RegEncoder::decodeVirtualRegister(MCRegister Reg) {
-  auto BankBits = (Reg >> NumRegBits) & ((1U << NumBankBits) - 1);
+  unsigned BankBits = (Reg >> NumRegBits) & ((1U << NumBankBits) - 1);
   const char *Prefix = getPrefixFromBank(getRegBank(BankBits));
   unsigned Num = Reg & ((1U << NumRegBits) - 1);
   return std::make_pair(Prefix, Num);

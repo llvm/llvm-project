@@ -128,10 +128,11 @@ struct TypeInfo {
 };
 class DataTypes {
 private:
-  MapVector<std::tuple</*NumElts=*/unsigned, /*BitWidth=*/unsigned,
-                       /*Type=*/unsigned>,
-            TypeInfo>
-      TypeInfos;
+  using TypeInfoMap =
+      MapVector<std::tuple</*NumElts=*/unsigned, /*BitWidth=*/unsigned,
+                           /*Type=*/unsigned>,
+                TypeInfo>;
+  TypeInfoMap TypeInfos;
 
   std::tuple<unsigned, unsigned, unsigned> tupleDT(DataType DT) {
     return std::make_tuple(DT.NumElts, DT.EltSize, DT.RegType);
@@ -143,15 +144,15 @@ public:
   static std::string getPrefixFromLLT(LLT Ty);
   static DataType getTypeFromPrefix(std::string Prefix);
 
-  auto begin() const { return TypeInfos.begin(); }
-  auto end() const { return TypeInfos.end(); }
+  TypeInfoMap::const_iterator begin() const { return TypeInfos.begin(); }
+  TypeInfoMap::const_iterator end() const { return TypeInfos.end(); }
 
   TypeInfo &getInfo(LLT Ty) { return getInfo(getTypeFromLLT(Ty)); }
   TypeInfo &getInfo(unsigned NumElts, unsigned EltSize, unsigned RegType) {
     return getInfo(DataType(NumElts, EltSize, RegType));
   }
   TypeInfo &getInfo(DataType DT) {
-    auto *It = TypeInfos.find(tupleDT(DT));
+    TypeInfoMap::iterator It = TypeInfos.find(tupleDT(DT));
     if (It == TypeInfos.end())
       llvm_unreachable("Expect that requested DataType is already present in "
                        "the TypeInfos map");
@@ -164,9 +165,10 @@ public:
   TypeInfo &emplaceInfo(LLT Ty) { return emplaceInfo(getTypeFromLLT(Ty)); };
   TypeInfo &emplaceInfo(DataType DT) {
     LLT Ty = getLLTFromType(DT);
-    auto [It, Inserted] = TypeInfos.try_emplace(
-        tupleDT(DT), TypeInfo{0, 0, Ty, getPrefixFromLLT(Ty)});
-    return It->second;
+    std::pair<TypeInfoMap::iterator, bool> InsertResult =
+        TypeInfos.try_emplace(
+            tupleDT(DT), TypeInfo{0, 0, Ty, getPrefixFromLLT(Ty)});
+    return InsertResult.first->second;
   }
 
   void insertInfo(unsigned NumElts, unsigned EltSize, unsigned RegType,
@@ -174,8 +176,9 @@ public:
     insertInfo(DataType(NumElts, EltSize, RegType), std::move(TI));
   }
   void insertInfo(DataType DT, TypeInfo TI) {
-    auto [It, Inserted] = TypeInfos.try_emplace(tupleDT(DT), std::move(TI));
-    if (!Inserted)
+    std::pair<TypeInfoMap::iterator, bool> InsertResult =
+        TypeInfos.try_emplace(tupleDT(DT), std::move(TI));
+    if (!InsertResult.second)
       llvm_unreachable("Expect that inserted DataType is not already present "
                        "in the TypeInfos map");
   }
@@ -186,8 +189,8 @@ public:
   // Double-Word TypeInfo should be 4. Note that RegCounter is not changed
   // (in this example, it should still be 4 for d0-d3).
   void finalizeFuncParams() {
-    for (auto &[_, TI] : TypeInfos)
-      TI.RegStart = TI.RegCounter;
+    for (TypeInfoMap::value_type &Entry : TypeInfos)
+      Entry.second.RegStart = Entry.second.RegCounter;
   }
 };
 

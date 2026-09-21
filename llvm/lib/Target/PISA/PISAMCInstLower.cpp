@@ -77,22 +77,24 @@ void PISAMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       Register CurReg = MO.getReg();
       unsigned EncodedVal = CurReg;
       if (CurReg.isVirtual()) {
-        auto &MRI = MI->getParent()->getParent()->getRegInfo();
-        auto *RC = MRI.getRegClass(CurReg);
-        auto NumElts = TRI.getNumEltsFromRegClass(RC);
-        auto EltSize = TRI.getBitSizeFromRegClass(RC);
-        auto Bank = RegMgr.getRegBank(NumElts, EltSize);
+        const MachineRegisterInfo &MRI =
+            MI->getParent()->getParent()->getRegInfo();
+        const TargetRegisterClass *RC = MRI.getRegClass(CurReg);
+        unsigned NumElts = TRI.getNumEltsFromRegClass(RC);
+        unsigned EltSize = TRI.getBitSizeFromRegClass(RC);
+        PISA::RegEncoder::RegBank Bank = RegMgr.getRegBank(NumElts, EltSize);
         EncodedVal = RegMgr.encodeVirtualRegister(Bank, CurReg);
       }
       MCOp = MCOperand::createReg(EncodedVal);
-      auto SubReg = MO.getSubReg();
-      auto IsMov = MI->isMoveImmediate() || MI->isMoveReg();
-      auto Swizzle = TRI.getSwizzle(SubReg);
+      unsigned SubReg = MO.getSubReg();
+      bool IsMov = MI->isMoveImmediate() || MI->isMoveReg();
+      PISA::Swizzle Swizzle = TRI.getSwizzle(SubReg);
       if (IsMov && !SubReg && CurReg.isVirtual()) {
         // vector args in mov instructions always print swizzle
-        auto &MRI = MI->getParent()->getParent()->getRegInfo();
-        auto *RC = MRI.getRegClass(CurReg);
-        auto NumElts = TRI.getNumEltsFromRegClass(RC);
+        const MachineRegisterInfo &MRI =
+            MI->getParent()->getParent()->getRegInfo();
+        const TargetRegisterClass *RC = MRI.getRegClass(CurReg);
+        unsigned NumElts = TRI.getNumEltsFromRegClass(RC);
         if (NumElts == 2)
           Swizzle = PISA::Swizzle::XY;
         else if (NumElts == 4)
