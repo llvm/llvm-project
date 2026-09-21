@@ -16,10 +16,10 @@ using namespace PISA;
 
 void RegManager::computeMapping() {
   std::array<unsigned, RegType::NUM_TYPE> Count{};
-  auto *TII = MF.getSubtarget<PISASubtarget>().getInstrInfo();
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
-      for (auto &MO : MI.operands()) {
+  const PISAInstrInfo *TII = MF.getSubtarget<PISASubtarget>().getInstrInfo();
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isReg() || (!MO.isDef() && !MO.isUndef()))
           continue;
 
@@ -35,7 +35,7 @@ void RegManager::computeMapping() {
         if (TII->isNoEmissionInstr(MI))
           Flags |= Usage::NoEmissionDef;
 
-        auto Type = getRegType(MRI.getRegClass(MO.getReg()));
+        RegType Type = getRegType(MRI.getRegClass(MO.getReg()));
         RegInfo Info{Type, Count[Type]++, static_cast<Usage>(Flags)};
         Mapping[CurReg] = Info;
       }
@@ -44,15 +44,15 @@ void RegManager::computeMapping() {
 }
 
 unsigned RegManager::getRegIdx(Register Reg) const {
-  const auto *I = Mapping.find(Reg);
+  MappingTy::const_iterator I = Mapping.find(Reg);
   assert(I != Mapping.end() && "missing?");
   return I->second.Idx;
 }
 
 unsigned RegManager::encodeVirtualRegister(RegBank Bank, Register Reg) const {
-  auto &MRI = MF.getRegInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned Idx = getRegIdx(Reg);
-  auto Type = getRegType(MRI.getRegClass(Reg));
+  RegType Type = getRegType(MRI.getRegClass(Reg));
   return RegEncoder::encodeVirtualRegister(Idx, Bank, Type);
 }
 
