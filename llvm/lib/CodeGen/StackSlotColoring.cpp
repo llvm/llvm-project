@@ -50,9 +50,8 @@ using namespace llvm;
 #define DEBUG_TYPE "stack-slot-coloring"
 
 static cl::opt<bool>
-DisableSharing("no-stack-slot-sharing",
-             cl::init(false), cl::Hidden,
-             cl::desc("Suppress slot sharing during stack coloring"));
+    EnableSharing("stack-slot-sharing", cl::init(true), cl::Hidden,
+                  cl::desc("Share stack slots during stack coloring"));
 
 static cl::opt<int> DCELimit("ssc-dce-limit", cl::init(-1), cl::Hidden);
 
@@ -312,7 +311,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int FI = li->reg().stackSlotIndex();
   uint8_t StackID = MFI->getStackID(FI);
 
-  if (!DisableSharing) {
+  if (EnableSharing) {
 
     // Check if it's possible to reuse any of the used colors.
     Color = UsedColors[StackID].find_first();
