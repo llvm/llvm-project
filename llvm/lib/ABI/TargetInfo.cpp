@@ -71,6 +71,63 @@ const Type *TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
   return Ty;
 }
 
+const Type *TargetInfo::isSingleElementStruct(const Type *Ty) const {
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return nullptr;
+
+  if (RT->hasFlexibleArrayMember())
+    return nullptr;
+
+  const Type *Found = nullptr;
+
+  for (const auto &Base : RT->getBaseClasses()) {
+    const Type *BaseTy = Base.FieldType;
+    const auto *BaseRT = dyn_cast<RecordType>(BaseTy);
+
+    if (!BaseRT || BaseRT->isEmpty())
+      continue;
+
+    const Type *Elem = isSingleElementStruct(BaseTy);
+    if (!Elem || Found)
+      return nullptr;
+    Found = Elem;
+  }
+
+  for (const auto &FI : RT->getFields()) {
+    if (FI.isEmpty())
+      continue;
+
+    const Type *FTy = FI.FieldType;
+
+    // Treat single element arrays as the element.
+    while (const auto *AT = dyn_cast<ArrayType>(FTy)) {
+      if (AT->getNumElements() != 1)
+        break;
+      FTy = AT->getElementType();
+    }
+
+    const Type *Elem;
+    if (!isAggregateTypeForABI(FTy))
+      Elem = FTy;
+    else
+      Elem = isSingleElementStruct(FTy);
+    if (!Elem || Found)
+      return nullptr;
+    Found = Elem;
+  }
+
+  if (!Found)
+    return nullptr;
+
+  // We don't consider a struct a single-element struct if it has padding
+  // beyond the element type.
+  if (Found->getSizeInBits() != Ty->getSizeInBits())
+    return nullptr;
+
+  return Found;
+}
+
 bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
   const abi::Type *Ty = FI.getReturnType();
 

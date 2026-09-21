@@ -92,6 +92,9 @@ protected:
   /// return Ty unchanged.
   LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
+  /// Returns the scalar a single-element struct reduces to, else null.
+  LLVM_ABI const Type *isSingleElementStruct(const Type *Ty) const;
+
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
 
