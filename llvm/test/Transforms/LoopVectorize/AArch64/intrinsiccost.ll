@@ -7,6 +7,10 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
 ; CHECK-COST-LABEL: sadd
+; CHECK-COST: Cost of 6 for VF 1: EMIT ir<%1> = call ir<%0>, ir<%offset>, ir<@llvm.sadd.sat.i16>
+; CHECK-COST: Cost of 4 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.sadd.sat(ir<%0>, ir<%offset>)
 
 define void @saddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @saddsat(
@@ -123,6 +127,11 @@ while.end:
 }
 
 ; CHECK-COST-LABEL: umin
+; CHECK-COST: Cost of 2 for VF 1: EMIT ir<%1> = call ir<%0>, ir<%offset>, ir<@llvm.umin.i8>
+; CHECK-COST: Cost of 3 for VF 2: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 3 for VF 4: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 8: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
+; CHECK-COST: Cost of 1 for VF 16: WIDEN-INTRINSIC ir<%1> = call llvm.umin(ir<%0>, ir<%offset>)
 
 define void @umin(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @umin(
