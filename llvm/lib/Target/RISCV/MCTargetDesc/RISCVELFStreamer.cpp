@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/RISCVAttributes.h"
 
 using namespace llvm;
 
@@ -102,6 +103,11 @@ void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
 void RISCVTargetELFStreamer::emitTextAttribute(unsigned Attribute,
                                                StringRef String) {
   getStreamer().setAttributeItem(Attribute, String, /*OverwriteExisting=*/true);
+  // Keep the active mapping symbol ISA in sync with .attribute arch and
+  // RISCVTargetStreamer::emitTargetAttributes() (e.g. when LTO reconstructs the
+  // module's ISA from the riscv-isa module flag).
+  if (Attribute == RISCVAttrs::ARCH)
+    setArchString(String);
 }
 
 void RISCVTargetELFStreamer::emitIntTextAttribute(unsigned Attribute,

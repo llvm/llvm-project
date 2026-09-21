@@ -3604,12 +3604,9 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     if (resetToArch(StringValue, ValueExprLoc, Result, false))
       return true;
 
-    // Then emit the arch string.
+    // Emit the arch string (which also updates the target streamer's active
+    // mapping symbol ISA).
     getTargetStreamer().emitTextAttribute(Tag, Result);
-
-    // And then update the active ISA so the next instruction-run emits
-    // an ISA-specific mapping symbol.
-    getTargetStreamer().setArchString(Result);
   }
 
   return false;

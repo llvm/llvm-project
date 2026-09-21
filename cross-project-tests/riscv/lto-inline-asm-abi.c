@@ -25,33 +25,30 @@
 // FLAGS-NEXT:   EF_RISCV_RVC (0x1)
 // FLAGS-NEXT: ]
 //
-/// TODO: RISCVTargetELFStreamer::emitTextAttribute does not update the
-/// streamer's ArchString when emitting the module's RISCVAttrs::ARCH attribute
-/// ("rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_...").
 // DISASM-LABEL: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1>:
+// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0>:
 // DISASM-NEXT:  [[#%x,]]:      	nop
 // DISASM-EMPTY:
-// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1>:
+// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0>:
 // DISASM-NEXT:  [[#%x,]] <symver_fn>:
 // DISASM-NEXT:  [[#%x,]]:      	ret
 // DISASM-EMPTY:
-// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1>:
+// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0>:
 // DISASM-NEXT:  [[#%x,]] <fn>:
 // DISASM-NEXT:  [[#%x,]]:      	nop
 // DISASM-NEXT:  [[#%x,]]:      	ret
 // DISASM-EMPTY:
-// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1>:
+// DISASM-NEXT:  [[#%x,]] <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0>:
 // DISASM-NEXT:  [[#%x,]] <caller>:
 // DISASM-NEXT:  [[#%x,]]:      	nop
 // DISASM-NEXT:  [[#%x,]]:      	ret
 // DISASM-NOT:   {{.}}
 //
-// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1{{$}}
-// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1{{$}}
-// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1{{$}}
-// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1{{$}}
+// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0{{$}}
+// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0{{$}}
+// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0{{$}}
+// SYMS: [[#%x,]] l       .text	0000000000000000 $xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0{{$}}
 // SYMS: [[#%x,]] g     F .text	0000000000000004 fn{{$}}
 // SYMS: [[#%x,]] g     F .text	0000000000000002 symver_fn{{$}}
 // SYMS: [[#%x,]] g     F .text	0000000000000004 caller{{$}}
