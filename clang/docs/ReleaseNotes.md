@@ -724,6 +724,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 
+- Fixed an assertion when substituting an incomplete set of template arguments
+  (explicitly specified, or partially deduced during code completion) into a
+  member access whose nested-name-specifier starts with a template parameter
+  that has no corresponding argument yet, such as
+  `decltype(t.U::template B<>::MEM)`. (#GH204059)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
