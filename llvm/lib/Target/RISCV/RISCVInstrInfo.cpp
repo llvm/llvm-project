@@ -1849,7 +1849,6 @@ static int getJumpTableIndexFromReg(const MachineRegisterInfo &MRI,
   switch (MI->getOpcode()) {
   case RISCV::ADD:
   case RISCV::ADDI:
-  case RISCV::SLLI:
   case RISCV::SH1ADD:
   case RISCV::SH2ADD:
   case RISCV::SH3ADD:
