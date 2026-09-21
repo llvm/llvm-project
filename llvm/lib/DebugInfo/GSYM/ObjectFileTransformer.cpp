@@ -162,7 +162,7 @@ static uint64_t addMachOSymbolStubs(const object::MachOObjectFile &MachO,
       // created here and, unlike the symbol names, has no backing storage in
       // the object file.
       constexpr bool Copy = true;
-      const std::string StubName ="symbol stub for: " + Name->str();
+      const std::string StubName = "symbol stub for: " + Name->str();
       Gsym.addFunctionInfo(FunctionInfo(StubAddr, StubByteSize,
                                         Gsym.insertString(StubName, Copy)));
     }
