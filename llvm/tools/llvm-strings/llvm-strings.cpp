@@ -44,7 +44,7 @@ using namespace llvm::opt;
 
 class StringsOptTable : public opt::OptTable {
 public:
-  StringsOptTable() : OptTable(OptionTables) {
+  StringsOptTable() : OptTable(optionTables()) {
     setGroupedShortOptions(true);
     setDashDashParsing(true);
   }

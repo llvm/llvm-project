@@ -103,7 +103,7 @@ enum ID {
 
 class LinkerOptTable : public opt::OptTable {
 public:
-  LinkerOptTable() : opt::OptTable(OptionTables) {}
+  LinkerOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 

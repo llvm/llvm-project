@@ -33,6 +33,40 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getgrgid_r
+  SRCS
+    getgrgid_r.cpp
+  HDRS
+    getgrgid_r.h
+  DEPENDS
+    libc.hdr.types.gid_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_group
+    libc.src.__support.CPP.span
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .grp_utils
+)
+
+add_entrypoint_object(
+  getgrnam_r
+  SRCS
+    getgrnam_r.cpp
+  HDRS
+    getgrnam_r.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_group
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .grp_utils
+)
+
+add_entrypoint_object(
   setgrent
   SRCS
     setgrent.cpp
@@ -59,6 +93,7 @@ add_object_library(
     libc.hdr.types.size_t
     libc.hdr.types.struct_group
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils

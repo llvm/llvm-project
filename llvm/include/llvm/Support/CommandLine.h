@@ -275,7 +275,6 @@ class LLVM_ABI Option {
   uint16_t Misc : 5;
   uint16_t FullyInitialized : 1; // Has addArgument been called?
   uint16_t Position;             // Position of last occurrence of the option
-  uint16_t AdditionalVals;       // Greater than 0 for multi-valued option.
 
 public:
   StringRef ArgStr;   // The argument string itself (ex: "help", "o")
@@ -303,7 +302,6 @@ public:
 
   inline unsigned getMiscFlags() const { return Misc; }
   inline unsigned getPosition() const { return Position; }
-  inline unsigned getNumAdditionalVals() const { return AdditionalVals; }
 
   // Return true if the argstr != ""
   bool hasArgStr() const { return !ArgStr.empty(); }
@@ -333,8 +331,6 @@ public:
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
                   enum OptionHidden Hidden);
-
-  inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 
 public:
   virtual ~Option() = default;
@@ -381,8 +377,7 @@ public:
 
   // Wrapper around handleOccurrence that enforces Flags.
   //
-  virtual bool addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
-                             bool MultiArg = false);
+  virtual bool addOccurrence(unsigned pos, StringRef ArgName, StringRef Value);
 
   // Prints option name followed by message.  Always returns true.
   bool error(const Twine &Message, StringRef ArgName = StringRef(), raw_ostream &Errs = llvm::errs());
@@ -1790,8 +1785,6 @@ public:
       list_storage<DataType, StorageClass>::addValue(Val, true);
   }
 
-  void setNumAdditionalVals(unsigned n) { Option::setNumAdditionalVals(n); }
-
   template <class... Mods>
   explicit list(const Mods &... Ms)
       : Option(ZeroOrMore, NotHidden), Parser(*this) {
@@ -1805,17 +1798,6 @@ public:
   }
 
   std::function<void(const typename ParserClass::parser_data_type &)> Callback;
-};
-
-// Modifier to set the number of additional values.
-struct multi_val {
-  unsigned AdditionalVals;
-  explicit multi_val(unsigned N) : AdditionalVals(N) {}
-
-  template <typename D, typename S, typename P>
-  void apply(list<D, S, P> &L) const {
-    L.setNumAdditionalVals(AdditionalVals);
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -1975,9 +1957,9 @@ class LLVM_ABI alias : public Option {
     return AliasFor->handleOccurrence(pos, AliasFor->ArgStr, Arg);
   }
 
-  bool addOccurrence(unsigned pos, StringRef /*ArgName*/, StringRef Value,
-                     bool MultiArg = false) override {
-    return AliasFor->addOccurrence(pos, AliasFor->ArgStr, Value, MultiArg);
+  bool addOccurrence(unsigned pos, StringRef /*ArgName*/,
+                     StringRef Value) override {
+    return AliasFor->addOccurrence(pos, AliasFor->ArgStr, Value);
   }
 
   // Handle printing stuff...
