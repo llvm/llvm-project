@@ -3363,7 +3363,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
         ImplicitParamKind::Other));
     const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
     if (const auto *BD = dyn_cast<BindingDecl>(VD))
-      BindingDeclPos[BD] = Counter;
+      BindingDeclPos[cast<BindingDecl>(BD->getCanonicalDecl())] = Counter;
     else
       PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
@@ -3377,7 +3377,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
         ImplicitParamKind::Other));
     const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
     if (const auto *BD = dyn_cast<BindingDecl>(VD))
-      BindingDeclPos[BD] = Counter;
+      BindingDeclPos[cast<BindingDecl>(BD->getCanonicalDecl())] = Counter;
     else
       PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
@@ -3391,7 +3391,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
         ImplicitParamKind::Other));
     const ValueDecl *VD = cast<DeclRefExpr>(E)->getDecl();
     if (const auto *BD = dyn_cast<BindingDecl>(VD))
-      BindingDeclPos[BD] = Counter;
+      BindingDeclPos[cast<BindingDecl>(BD->getCanonicalDecl())] = Counter;
     else
       PrivateVarsPos[cast<VarDecl>(VD)] = Counter;
     ++Counter;
@@ -3454,10 +3454,13 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     // correct.
 
     unsigned Position;
-    if (const auto *BD = dyn_cast<BindingDecl>(LookupVD))
-      Position = BindingDeclPos[BD];
-    else
+    if (const auto *BD = dyn_cast<BindingDecl>(LookupVD)) {
+      Position =
+          BindingDeclPos.lookup(cast<BindingDecl>(BD->getCanonicalDecl()));
+      assert(Position && "binding not in privates mapping");
+    } else {
       Position = PrivateVarsPos[cast<VarDecl>(LookupVD)];
+    }
     const VarDecl *VD = Args[Position];
     LValue RefLVal =
         CGF.MakeAddrLValue(CGF.GetAddrOfLocalVar(VD), VD->getType());

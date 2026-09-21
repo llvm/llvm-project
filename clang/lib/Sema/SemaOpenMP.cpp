@@ -4081,9 +4081,13 @@ static bool checkOriginalVarMappedButOnlyBindingsUsed(
     SourceLocation Loc = Entry.second;
 
     // Check if this original variable has bindings that are used.
+    // For reference bindings (`auto &[a, b] = p`), the bindings alias the
+    // original variable, so mapping `p` covers them correctly.
     bool BindingsFromThisVarUsed = false;
     for (const BindingDecl *BD : UsedBindings) {
       if (auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
+        if (DD->getType()->isReferenceType())
+          continue;
         if (auto *OrigFromDD = DD->getOriginalVar().Var) {
           if (OrigFromDD->getCanonicalDecl() == OrigVar) {
             BindingsFromThisVarUsed = true;

@@ -10306,12 +10306,6 @@ def err_reference_to_local_in_enclosing_context : Error<
   "%select{%3|block literal|lambda expression|context}2">;
 def err_local_nested_class_invalid_scope : Error<
   "nested local class %0 must be defined in the same block scope as %1">;
-def ext_capture_binding : ExtWarn<
-  "captured structured bindings are a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_capture_binding : Warning<
-  "captured structured bindings are incompatible with "
-  "C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_capture_tuple_binding_openmp : Error<
   "capturing tuple-like structured binding %0 is not yet supported in OpenMP">;
 
