@@ -1153,7 +1153,8 @@ entry:
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
 
   sandboxir::VecUtils::DeadInstructionMorgue Morgue;
-  Morgue.collectPotentiallyDeadInstrs({Live, Dead0, Dead1});
+  Morgue.collectPotentiallyDeadInstrs<sandboxir::Instruction>(
+      {Live, Dead0, Dead1});
   Morgue.tryEraseDeadInstrs();
 
   // %dead0 and %dead1 had no uses, so they should have been erased. %live is
@@ -1189,7 +1190,7 @@ entry:
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
 
   sandboxir::VecUtils::DeadInstructionMorgue Morgue;
-  Morgue.collectPotentiallyDeadInstrs({Ld0, Ld1});
+  Morgue.collectPotentiallyDeadInstrs<sandboxir::Instruction>({Ld0, Ld1});
   Morgue.tryEraseDeadInstrs();
 
   // %ld0 and %ld1 are collected directly and have no uses, so they are
@@ -1227,7 +1228,7 @@ entry:
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
 
   sandboxir::VecUtils::DeadInstructionMorgue Morgue;
-  Morgue.collectPotentiallyDeadInstrs({St0, St1});
+  Morgue.collectPotentiallyDeadInstrs<sandboxir::Instruction>({St0, St1});
   Morgue.tryEraseDeadInstrs();
 
   // %st0 and %st1 are collected directly (stores are always "used" 0 times)
@@ -1257,7 +1258,8 @@ entry:
   auto *Ret = cast<sandboxir::Instruction>(&*It++);
 
   sandboxir::VecUtils::DeadInstructionMorgue Morgue;
-  Morgue.collectPotentiallyDeadInstrs({Dead0});
+  Morgue.collectPotentiallyDeadInstrs<sandboxir::Instruction>(
+      SmallVector<sandboxir::Instruction *, 1>({Dead0}));
   Morgue.tryEraseDeadInstrs();
   // The candidate set should have been cleared by the first call, so a
   // second call must be a safe no-op rather than trying to dereference the
@@ -1299,3 +1301,40 @@ entry:
       sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
           .empty());
 }
+
+#ifndef NDEBUG
+TEST_F(VecUtilsTest, BndlRef) {
+  parseIR(R"IR(
+define void @vectorized_seed_user(i8 %v0, i8 %v1) {
+entry:
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %v1, 1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(M->getFunction("vectorized_seed_user"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  auto *Ld0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Ld1 = cast<sandboxir::Instruction>(&*It++);
+  std::string Str;
+  raw_string_ostream SS(Str);
+
+  SmallVector<sandboxir::Value *> ValuesVec(
+      {static_cast<sandboxir::Value *>(Ld0),
+       static_cast<sandboxir::Value *>(Ld1)});
+  sandboxir::BndlRef ValuesBndl(ValuesVec);
+  Str.clear();
+  ValuesBndl.print(SS);
+  EXPECT_THAT(Str, testing::MatchesRegex("0. *%add0 = add i8 %v0, 0 .*\n"
+                                         "1. *%add1 = add i8 %v1, 1 .*\n"));
+
+  SmallVector<sandboxir::Instruction *> InstrsVec({Ld0, Ld1});
+  sandboxir::BndlRef InstrsBndl(InstrsVec);
+  Str.clear();
+  ValuesBndl.print(SS);
+  EXPECT_THAT(Str, testing::MatchesRegex("0. *%add0 = add i8 %v0, 0 .*\n"
+                                         "1. *%add1 = add i8 %v1, 1 .*\n"));
+}
+#endif // NDEBUG

@@ -289,6 +289,25 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
 }
 
 template <>
+lldb::StepType
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StepType>(
+    python::PythonObject &p, Status &error) {
+  lldb::StepType ret_val = lldb::eStepTypeNone;
+
+  llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
+  if (!unsigned_or_err) {
+    error = (Status::FromError(unsigned_or_err.takeError()));
+    return ret_val;
+  }
+  unsigned long long unsigned_val = *unsigned_or_err;
+  if (unsigned_val >= lldb::eStepTypeScripted) {
+    error = Status("value too large for lldb::StepType.");
+    return ret_val;
+  }
+  return static_cast<lldb::StepType>(unsigned_val);
+}
+
+template <>
 lldb::StackFrameListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
     python::PythonObject &p, Status &error) {
