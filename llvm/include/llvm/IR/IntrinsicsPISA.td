@@ -66,12 +66,15 @@ class PISAIntrinsicBarrier<string ClangName, list<LLVMType> param_types = []>
 
 // Helper class for unary float operations with rounding mode.
 class PISAUnaryRndIntrinsic
-    : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i8_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+    : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i8_ty],
+                                [IntrNoMem, ImmArg<ArgIndex<1>>,
+                                 RoundingModeArgInfo<ArgIndex<1>>]>;
 
 // Helper class for binary float operations with rounding mode.
 class PISABinaryRndIntrinsic
     : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
-                                [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+                                [IntrNoMem, ImmArg<ArgIndex<2>>,
+                                 RoundingModeArgInfo<ArgIndex<2>>]>;
 
 // Helper class for float operations with rounding mode + saturation flag.
 class PISAFloatIntrinsic<LLVMType ret_ty, list<LLVMType> operand_types,
@@ -212,9 +215,11 @@ def int_pisa_fptoui_md : PISADefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfl
 
 // Conversions with explicit rounding mode (i8 immediate).
 def int_pisa_fptosi_rnd : PISADefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty, llvm_i8_ty],
-                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+                              [IntrNoMem, ImmArg<ArgIndex<1>>,
+                               RoundingModeArgInfo<ArgIndex<1>>]>;
 def int_pisa_fptoui_rnd : PISADefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty, llvm_i8_ty],
-                              [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+                              [IntrNoMem, ImmArg<ArgIndex<1>>,
+                               RoundingModeArgInfo<ArgIndex<1>>]>;
 
 // Conversions with rounding mode + saturation flag.
 def int_pisa_sitofp : PISAFloatIntrinsic<llvm_anyfloat_ty, [llvm_anyint_ty]>;
