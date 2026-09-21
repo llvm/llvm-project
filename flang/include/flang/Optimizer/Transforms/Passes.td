@@ -637,9 +637,10 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "CUDA Fortran runtime fails with a clear diagnostic.">,
     ListOption<"extraConstructors", "extra-constructors",
                "std::pair<std::string, bool>",
-               "Constructors to add to llvm.mlir.global_ctors. Entries use "
-               "<name>:<if-main>, where if-main is true to add the function "
-               "only when the module contains the Fortran program entry.">
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor. Entries use <name>:<if-main>, where if-main is "
+               "true to call the function only when the module contains the "
+               "Fortran program entry.">
   ];
 }
 

@@ -530,6 +530,24 @@ struct CUFAddConstructor
       mlir::LLVM::LoadOp::create(builder, loc, mlir::IntegerType::get(ctx, 8),
                                  addr, /*alignment=*/0, /*isVolatile=*/true);
     }
+
+    // The extra constructors are defined in a runtime library, so they are
+    // only declared here and called from the constructor: an entry in
+    // llvm.mlir.global_ctors requires a function with a definition.
+    for (const auto &[funcName, onlyWithProgramEntry] : extraConstructors) {
+      if (onlyWithProgramEntry && !hasProgramEntry)
+        continue;
+      if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName)) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(mod.getBody());
+        auto extraFuncOp =
+            mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, funcTy);
+        extraFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+      }
+      mlir::LLVM::CallOp::create(builder, loc, funcTy,
+                                 mlir::SymbolRefAttr::get(ctx, funcName));
+    }
+
     mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
 
     // Create the llvm.global_ctor with the function.
@@ -537,18 +555,12 @@ struct CUFAddConstructor
     // created and adds new functions.
     builder.setInsertionPointToEnd(mod.getBody());
     llvm::SmallVector<mlir::Attribute> funcs;
+    funcs.push_back(
+        mlir::FlatSymbolRefAttr::get(mod.getContext(), func.getSymName()));
     llvm::SmallVector<int> priorities;
     llvm::SmallVector<mlir::Attribute> data;
-    auto addCtor = [&](llvm::StringRef name) {
-      funcs.push_back(mlir::FlatSymbolRefAttr::get(mod.getContext(), name));
-      priorities.push_back(priority);
-      data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
-    };
-    addCtor(func.getSymName());
-    for (const auto &[funcName, ifMain] : extraConstructors) {
-      if (!ifMain || hasProgramEntry)
-        addCtor(funcName);
-    }
+    priorities.push_back(priority);
+    data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     mlir::LLVM::GlobalCtorsOp::create(
         builder, mod.getLoc(), builder.getArrayAttr(funcs),
         builder.getI32ArrayAttr(priorities), builder.getArrayAttr(data));
