@@ -6623,6 +6623,7 @@ td_library(
         "include/mlir/Dialect/LLVMIR/NVVMDialect.td",
         "include/mlir/Dialect/LLVMIR/NVVMEnums.td",
         "include/mlir/Dialect/LLVMIR/NVVMOps.td",
+        "include/mlir/Dialect/LLVMIR/NVVMOpsDoc.td",
     ],
     includes = ["include"],
     deps = [
