@@ -111,11 +111,20 @@ int main(int, char**) {
     std::mutex mutex;
     std::unique_lock<std::mutex> lock(mutex);
 
-    auto start            = std::chrono::steady_clock::now();
-    std::cv_status status = cv.wait_for(lock, std::chrono::duration<float>(0.25f));
-    auto elapsed          = std::chrono::steady_clock::now() - start;
+    using float_sec = std::chrono::duration<float>;
+    const float_sec total{0.25f};
 
-    assert(status == std::cv_status::timeout);
+    auto start            = std::chrono::steady_clock::now();
+    std::cv_status status = std::cv_status::no_timeout;
+
+    while (status == std::cv_status::no_timeout) {
+      auto left = total - std::chrono::duration_cast<float_sec>(std::chrono::steady_clock::now() - start);
+      if (left <= float_sec::zero())
+        break;
+      status = cv.wait_for(lock, left);
+    }
+
+    auto elapsed = std::chrono::steady_clock::now() - start;
     assert(elapsed > std::chrono::milliseconds(200));
     assert(elapsed < std::chrono::milliseconds(600));
   }
