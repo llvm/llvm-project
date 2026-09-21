@@ -53,16 +53,15 @@ concept __atomic_waitable = requires(const _Tp __t, memory_order __order) {
 };
 #  else
 template <class _Tp, class = void>
-struct __atomic_waitable_impl : false_type {};
+constexpr inline bool __atomic_waitable = false;
 template <class _Tp>
-struct __atomic_waitable_impl< _Tp,
-                               __void_t<typename __atomic_waitable_traits<__decay_t<_Tp> >::__value_type,
-                                        decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(
-                                            std::declval<const _Tp&>(), std::declval<memory_order>())),
-                                        decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(
-                                            std::declval<const _Tp&>())) > > : true_type {};
-template <class _Tp>
-constexpr inline bool __atomic_waitable = __atomic_waitable_impl<_Tp>::value;
+constexpr inline bool __atomic_waitable<
+    _Tp,
+    __void_t<typename __atomic_waitable_traits<__decay_t<_Tp> >::__value_type,
+             decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_load(
+                 std::declval<const _Tp&>(), std::declval<memory_order>())),
+             decltype(__atomic_waitable_traits<__decay_t<_Tp> >::__atomic_contention_address(
+                 std::declval<const _Tp&>())) > > = true;
 #  endif // _LIBCPP_STD_VER >= 20
 
 #  ifdef __linux__
