@@ -1993,26 +1993,9 @@ static FailureOr<int64_t> getDistributedDimLaneStride(xegpu::SliceAttr slice) {
 /// subset of the lanes. Each lane keeps a single element, so no data crosses
 /// lanes and one `vector.extract` suffices.
 ///
-///   xegpu.convert_layout %src
-///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1, 1],
-///                                                 lane_data = [2, 1, 1],
-///                                                 order = [0, 2, 1]>,
-///                                   dims = [0]>,
-///       target_layout = #xegpu.layout<lane_layout = [8, 1],
-///                                     lane_data = [1, 1]>}>
-///     : vector<8x1xf8E8M0FNU>
-///
 /// The input layout has effective `lane_layout` [1, 1], so the distributed
-/// source is the full `vector<8x1xf8E8M0FNU>`. The target spreads the 8 rows
-/// over 8 lanes, one row each, so the distributed result is
-/// `vector<1x1xf8E8M0FNU>` holding row `lane_id % 8`:
-///
-///   %flat = vector.shape_cast %src : vector<8x1xf8E8M0FNU> to
-///           vector<8xf8E8M0FNU>
-///   %lane = gpu.lane_id
-///   %row  = arith.remui %lane, %c8 : index
-///   %elem = vector.extract %flat[%row] : f8E8M0FNU from vector<8xf8E8M0FNU>
-///   %res  = vector.from_elements %elem : vector<1x1xf8E8M0FNU>
+/// source is the whole value; the target has [n, 1], so lane `l` keeps row
+/// `l % n` and the distributed result is `vector<1x1>`.
 ///
 /// The source is flattened first because `xegpu-vector-linearize` cannot
 /// linearize a `vector.extract` with a dynamic position out of a rank-2 value.
@@ -2083,19 +2066,10 @@ struct SgToLaneConvertLayoutBroadcastExtract
 /// extracts its own element and gathers the columns of its row with one
 /// `gpu.shuffle idx` per column.
 ///
-///   xegpu.convert_layout %src
-///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2],
-///                                                 lane_data = [4, 1, 1],
-///                                                 order = [0, 2, 1]>,
-///                                   dims = [0]>,
-///       target_layout = #xegpu.layout<lane_layout = [8, 1],
-///                                     lane_data = [1, 1]>}>
-///     : vector<8x2xf8E8M0FNU>
-///
 /// The input layout has effective `lane_layout` [1, 2], so the distributed
-/// source is `vector<8x1xf8E8M0FNU>`: lane `l` holds all 8 rows of column
-/// `l / 8`. The target puts both columns of one row in a single lane, so the
-/// distributed result is `vector<1x2xf8E8M0FNU>` holding row `l % 8`.
+/// source holds one column per lane group; the target has [n, 1], so lane `l`
+/// keeps row `l % n` of both columns and the distributed result is
+/// `vector<1x2>`.
 ///
 /// The source is flattened first because `xegpu-vector-linearize` cannot
 /// linearize a `vector.extract` with a dynamic position out of a rank-2 value.
@@ -2211,29 +2185,10 @@ struct SgToLaneConvertLayoutPartialBroadcastExtractShuffle
 /// subset of the row-major source, so the two columns are separated with one
 /// `vector.deinterleave` and the lane's group selects between them.
 ///
-///   xegpu.convert_layout %src
-///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16],
-///                                                 lane_data = [1, 1, 1]>,
-///                                   dims = [2]>,
-///       target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2],
-///                                                  lane_data = [4, 1, 1],
-///                                                  order = [0, 2, 1]>,
-///                                    dims = [0]>}>
-///     : vector<8x2xbf16>
-///
 /// The input layout has effective `lane_layout` [1, 1], so the distributed
-/// source is the full `vector<8x2xbf16>`. The target has effective
-/// `lane_layout` [1, 2], so the distributed result is `vector<8x1xbf16>`:
-/// lanes 0..7 keep column 0 and lanes 8..15 keep column 1.
-///
-///   %flat       = vector.shape_cast %src : vector<8x2xbf16> to vector<16xbf16>
-///   %even, %odd = vector.deinterleave %flat : vector<16xbf16> ->
-///                 vector<8xbf16>
-///   %lane       = gpu.lane_id
-///   %group      = arith.divui %lane, %c8 : index
-///   %isFirst    = arith.cmpi eq, %group, %c0 : index
-///   %sel        = arith.select %isFirst, %even, %odd : vector<8xbf16>
-///   %res        = vector.shape_cast %sel : vector<8xbf16> to vector<8x1xbf16>
+/// source is the whole value; the target has [1, 2], so the lanes below the
+/// group stride keep column 0, the rest column 1, and the distributed result
+/// has one column per lane.
 struct SgToLaneConvertLayoutDeinterleaveSelect
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;

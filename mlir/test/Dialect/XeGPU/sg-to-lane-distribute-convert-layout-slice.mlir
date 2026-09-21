@@ -2,15 +2,9 @@
 // RUN: --test-xegpu-sg-to-lane-distribute --split-input-file %s | FileCheck %s
 
 // -----
-// The input layout leaves effective lane_layout [1, 1], so the value is fully
-// broadcast: every lane holds all 8 rows. The target spreads the 8 rows over 8
-// lanes, one row each, which is the layout `xegpu.dpas_mx` wants for its scale
-// operands. Lane `l` keeps row `l % 8` and no data crosses lanes, so a single
-// extract suffices.
-//
-// The source is flattened to rank 1 first because `xegpu-vector-linearize`
-// cannot linearize a `vector.extract` with a dynamic position out of a rank-2
-// value.
+// Fully broadcast source to one row per lane, the layout `xegpu.dpas_mx` wants
+// for its scale operands.
+// Handled by SgToLaneConvertLayoutBroadcastExtract.
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @broadcast_to_row_per_lane
 // CHECK:         %[[SRC:.*]] = "test.some_op"()
@@ -32,11 +26,8 @@ gpu.func @broadcast_to_row_per_lane() {
 }
 
 // -----
-// The input layout leaves effective lane_layout [1, 2], with the distributed
-// dimension at lane stride 8, so the value is broadcast over two lane groups:
-// lane `l` holds all 8 rows of column `l / 8`. The target wants both columns of
-// row `l % 8` in lane `l`, and column `c` of a row `r` is owned by lane
-// `r + c * 8`, so every lane gathers both columns from there.
+// Source broadcast over two lane groups to one row per lane.
+// Handled by SgToLaneConvertLayoutPartialBroadcastExtractShuffle.
 //
 // The source `test.some_op` is left undistributed by the pass, hence the cast to
 // the distributed input type; a real, distributed producer needs no cast.
@@ -68,12 +59,8 @@ gpu.func @lane_group_columns_to_row_per_lane() {
 }
 
 // -----
-// The input layout leaves effective lane_layout [1, 1], so the value is fully
-// broadcast. The target leaves effective lane_layout [1, 2], with the
-// distributed dimension at lane stride 8: lanes 0..7 keep column 0 and lanes
-// 8..15 keep column 1. A column is a stride-2 subset of the row-major value, so
-// `vector.deinterleave` separates the two and the lane group selects which one
-// the lane keeps.
+// Fully broadcast source to one column per lane group.
+// Handled by SgToLaneConvertLayoutDeinterleaveSelect.
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @broadcast_to_column_per_lane_group
 // CHECK:         %[[SRC:.*]] = "test.some_op"()
