@@ -865,7 +865,7 @@ struct SgToLaneVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 
 /// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
 /// to lane-level.
-/// The pattern performs the following in-bounds condition:
+/// The pattern constructs a mask based on the following bounds check:
 /// ```
 ///   for d in [0, ..., maskRank):
 ///     mask &= (staticOffset[d] < (bound[d] - base[d]))
@@ -897,10 +897,9 @@ struct SgToLaneVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 ///   %staticOffset_0 = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7]
 ///   %staticOffset_1 = [0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16]
 /// and compares each coordinate against the corresponding mask bound dim:
-///   %mask_0   = arith.cmpi slt, %staticOffset_0,
-///   broadcast(%baseDistanceToBound_0) %mask_1   = arith.cmpi slt,
-///   %staticOffset_1, broadcast(%baseDistanceToBound_1) %mask =
-///   shape_cast(arith.andi %mask_0, %mask_1) : vector<16xi1> to vector<8x2xi1>
+///   %mask_0 = arith.cmpi slt, %staticOffset_0, bcast(%baseDistanceToBound_0)
+///   %mask_1 = arith.cmpi slt, %staticOffset_1, bcast(%baseDistanceToBound_1)
+///   %mask = shape_cast(%mask_0 & %mask_1) : vector<16xi1> to vector<8x2xi1>
 ///
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
