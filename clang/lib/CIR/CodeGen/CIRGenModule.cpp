@@ -65,6 +65,8 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::AppleARM64:
   case TargetCXXABI::GenericARM:
     return CreateCIRGenItaniumCXXABI(cgm);
+  case TargetCXXABI::Microsoft:
+    return CreateCIRGenMicrosoftCXXABI(cgm);
 
   case TargetCXXABI::Fuchsia:
   case TargetCXXABI::iOS:
@@ -72,7 +74,6 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::GenericMIPS:
   case TargetCXXABI::WebAssembly:
   case TargetCXXABI::XL:
-  case TargetCXXABI::Microsoft:
     cgm.errorNYI("createCXXABI: C++ ABI kind");
     return nullptr;
   }

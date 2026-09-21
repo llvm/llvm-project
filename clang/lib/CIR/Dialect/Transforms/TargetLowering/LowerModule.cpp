@@ -37,7 +37,7 @@ static std::unique_ptr<CIRCXXABI> createCXXABI(LowerModule &lm) {
   case clang::TargetCXXABI::XL:
     return createItaniumCXXABI(lm);
   case clang::TargetCXXABI::Microsoft:
-    llvm_unreachable("Windows ABI NYI");
+    return createMicrosoftCXXABI(lm);
   }
 
   llvm_unreachable("invalid C++ ABI kind");
