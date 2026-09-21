@@ -38,7 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#include <array>
 #include <bitset>
 #include <memory>
 
@@ -261,15 +260,14 @@ enum FeatureIDs {
 // various phys regs won't be available. It's easier (maintenance-wise) to
 // bulk-reset the state of the evaluator each time we are about to use it
 // again.
-template <typename T> size_t getTotalSize(const std::vector<int64_t> &Shape) {
+template <typename T> size_t getTotalSize(ArrayRef<int64_t> Shape) {
   size_t Ret = sizeof(T);
   for (const auto V : Shape)
     Ret *= V;
   return Ret;
 }
 
-void resetInputs(MLModelRunner &Runner,
-                 const std::vector<int64_t> &PerLiveRangeShape) {
+void resetInputs(MLModelRunner &Runner, ArrayRef<int64_t> PerLiveRangeShape) {
 #define _RESET(TYPE, NAME, SHAPE, __)                                          \
   std::memset(Runner.getTensorUntyped(FeatureIDs::NAME), 0,                    \
               getTotalSize<TYPE>(SHAPE));
@@ -290,6 +288,8 @@ struct LIFeatureComponents {
   bool IsRemat = false;
 };
 
+static constexpr unsigned ExpectedMaxInterferingIntervals = 32;
+
 using CandidateRegList =
     SmallVector<std::pair<MCRegister, bool>, CompiledModelNumColumns>;
 using FeaturesListNormalizer =
@@ -299,7 +299,7 @@ using FeaturesListNormalizer =
 class MLEvictAdvisor : public RegAllocEvictionAdvisor {
 public:
   MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-                 MLModelRunner *Runner, int64_t NumberOfInterferences,
+                 MLModelRunner *Runner, int64_t NumColumns,
                  const MachineBlockFrequencyInfo &MBFI,
                  const MachineLoopInfo &Loops);
 
@@ -308,10 +308,10 @@ protected:
     return static_cast<const RegAllocEvictionAdvisor &>(DefaultAdvisor);
   }
 
-  const size_t NumberOfInterferences;
-  const size_t CandidateVirtRegPos = NumberOfInterferences - 1;
-  const std::vector<int64_t> PerLiveRangeShape{
-      1, static_cast<int64_t>(NumberOfInterferences)};
+  const size_t NumColumns;
+  const size_t CandidateVirtRegPos = NumColumns - 1;
+  const SmallVector<int64_t, 2> PerLiveRangeShape{
+      1, static_cast<int64_t>(NumColumns)};
 
   // The assumption is that if the Runner could not be constructed, we emit-ed
   // error, and we shouldn't be asking for it here.
@@ -427,10 +427,8 @@ public:
       NumColumns =
           InteractiveChannelBaseName.empty()
               ? CompiledModelNumColumns
-              : std::max<int64_t>(
-                    CompiledModelNumColumns,
-                    getRequiredNumColumns(*MF.getSubtarget().getRegisterInfo(),
-                                          RA.getRegClassInfo()));
+              : getRequiredNumColumns(*MF.getSubtarget().getRegisterInfo(),
+                                      RA.getRegClassInfo());
       const std::vector<int64_t> PerLiveRangeShape{1, NumColumns};
       const std::vector<TensorSpec> InputFeatures{
           RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
@@ -643,14 +641,12 @@ float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
 }
 
 MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-                               MLModelRunner *Runner,
-                               int64_t NumberOfInterferences,
+                               MLModelRunner *Runner, int64_t NumColumns,
                                const MachineBlockFrequencyInfo &MBFI,
                                const MachineLoopInfo &Loops)
-    : RegAllocEvictionAdvisor(MF, RA),
-      NumberOfInterferences(NumberOfInterferences), DefaultAdvisor(MF, RA),
-      Runner(std::move(Runner)), MBFI(MBFI), Loops(Loops),
-      InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
+    : RegAllocEvictionAdvisor(MF, RA), NumColumns(NumColumns),
+      DefaultAdvisor(MF, RA), Runner(std::move(Runner)), MBFI(MBFI),
+      Loops(Loops), InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
   assert(this->Runner);
   Runner->switchContext(MF.getName());
   DoNotNormalize.set(FeatureIDs::mask);
@@ -689,7 +685,8 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   // The cascade tracking is the same as in the default advisor
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
-  SmallVector<const LiveInterval *, 32> InterferingIntervals;
+  SmallVector<const LiveInterval *, ExpectedMaxInterferingIntervals>
+      InterferingIntervals;
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // Different from the default heuristic, we don't make any assumptions
@@ -773,7 +770,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // Track the index->register mapping because AllocationOrder doesn't do that
   // and we'd have to scan it.
   // Also track their mask, to write asserts/debug.
-  CandidateRegList Regs(NumberOfInterferences);
+  CandidateRegList Regs(NumColumns);
 
   // Track the largest value of features seen during this eviction session. We
   // only normalize (some of) the float features, but it's just simpler to
@@ -828,9 +825,8 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     if (DoNotNormalize.test(FeatureIndex))
       continue;
     float *Tensor = Runner->getTensor<float>(FeatureIndex);
-    for (size_t Pos = 0; Pos < ValidPosLimit; ++Pos)
+    for (size_t Pos = 0; Pos < NumColumns; ++Pos)
       Tensor[Pos] /= Largest[FeatureIndex];
-    Tensor[CandidateVirtRegPos] /= Largest[FeatureIndex];
   }
   *Runner->getTensor<float>(FeatureIDs::progress) =
       static_cast<float>(RA.getQueueSize()) / InitialQSize;
@@ -847,6 +843,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
     return MCRegister::NoRegister;
   }
   assert(CandidatePos < ValidPosLimit);
+  (void)ValidPosLimit;
 
   // Update information about how many times the virtual registers being
   // evicted have been evicted so that we can prevent the model from evicting

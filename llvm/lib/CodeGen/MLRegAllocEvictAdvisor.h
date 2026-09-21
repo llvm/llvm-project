@@ -39,8 +39,9 @@ struct LRStartEndInfo {
 // its feature set is the same as that of the interferring ranges. So we'll have
 // one column per allocation order slot, plus one, and by convention, we will
 // use the last column for the virt reg seeking allocation.
-// The advisor computes the column count per target. Changing this constant
-// requires regenerating the precompiled test models.
+// The AOT and reference models bake this width in and do not expose it, so
+// changing it requires regenerating them. The interactive channel derives its
+// own width from the target instead.
 static const int64_t CompiledModelNumColumns = 33;
 
 // The number of instructions that a specific live range might have is variable,
