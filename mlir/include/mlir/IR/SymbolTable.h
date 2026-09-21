@@ -407,19 +407,26 @@ public:
   /// extend beyond that of this map.
   SymbolUserMap(SymbolTableCollection &symbolTable, Operation *symbolTableOp);
 
-  /// Return the users of the provided symbol operation.
+  /// Return the users of the provided symbol operation within this map's scope.
   ArrayRef<Operation *> getUsers(Operation *symbol) const {
     auto it = symbolToUsers.find(symbol);
     return it != symbolToUsers.end() ? it->second.getArrayRef()
                                      : ArrayRef<Operation *>();
   }
 
-  /// Return true if the given symbol has no uses.
+  /// Return true if all uses of the symbol are visible within this map's scope.
+  /// Public symbols can have users outside the IR, and nested symbols can have
+  /// users outside the scope. Return false if the symbol's table is not in the
+  /// map. Changes to symbol visibility or table nesting invalidate this query.
+  bool areAllUsesVisible(Operation *symbol) const;
+
+  /// Return true if the given symbol has no uses within this map's scope.
   bool useEmpty(Operation *symbol) const {
     return !symbolToUsers.count(symbol);
   }
 
-  /// Replace all of the uses of the given symbol with `newSymbolName`.
+  /// Replace all uses of the symbol within this map's scope with
+  /// `newSymbolName`.
   void replaceAllUsesWith(Operation *symbol, StringAttr newSymbolName);
 
 private:
@@ -428,6 +435,9 @@ private:
 
   /// A map of symbol operations to symbol users.
   DenseMap<Operation *, SetVector<Operation *>> symbolToUsers;
+
+  /// Whether all uses of nested-visibility symbols in each table are visible.
+  DenseMap<Operation *, bool> allUsesVisible;
 };
 
 //===----------------------------------------------------------------------===//

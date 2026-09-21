@@ -1050,9 +1050,10 @@ LockedSymbolTableCollection::getSymbolTable(Operation *symbolTableOp) {
 SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
                              Operation *symbolTableOp)
     : symbolTable(symbolTable) {
-  // Walk each of the symbol tables looking for discardable callgraph nodes.
+  // Collect symbol users and visibility within each symbol table.
   SmallVector<Operation *> symbols;
   auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
+    this->allUsesVisible[symbolTableOp] = allUsesVisible;
     for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
       auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
       assert(symbolUses && "expected uses to be valid");
@@ -1066,10 +1067,16 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
       }
     }
   };
-  // We just set `allSymUsesVisible` to false here because it isn't necessary
-  // for building the user map.
-  SymbolTable::walkSymbolTables(symbolTableOp, /*allSymUsesVisible=*/false,
-                                walkFn);
+  SymbolTable::walkSymbolTables(
+      symbolTableOp, /*allSymUsesVisible=*/!symbolTableOp->getBlock(), walkFn);
+}
+
+bool SymbolUserMap::areAllUsesVisible(Operation *symbol) const {
+  auto it = allUsesVisible.find(symbol->getParentOp());
+  if (it == allUsesVisible.end())
+    return false;
+  auto symbolOp = cast<SymbolOpInterface>(symbol);
+  return symbolOp.isPrivate() || (symbolOp.isNested() && it->second);
 }
 
 void SymbolUserMap::replaceAllUsesWith(Operation *symbol,
