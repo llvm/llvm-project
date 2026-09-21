@@ -2487,10 +2487,6 @@ class BinaryOperator(BaseEnumeration):
 class UnaryOperator(BaseEnumeration):
     """Describes the kind of unary operators."""
 
-    def __bool__(self):
-        """Indicates whether this object is a valid UnaryOperator."""
-        return self.value != 0
-
     def is_postfix(self):
         return self in {
             UnaryOperator.PostDec,
