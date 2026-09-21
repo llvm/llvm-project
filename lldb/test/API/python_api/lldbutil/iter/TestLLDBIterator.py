@@ -20,19 +20,9 @@ class LLDBIteratorTestCase(TestBase):
     def test_lldb_iter_module(self):
         """Test module_iter works correctly for SBTarget -> SBModule."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line1)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.LaunchProcess() failed")
+        target, _, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.line1, only_one_thread=False
+        )
 
         from lldbsuite.test.lldbutil import get_description
 
@@ -91,19 +81,9 @@ class LLDBIteratorTestCase(TestBase):
     def test_lldb_iter_frame(self):
         """Test iterator works correctly for SBProcess->SBThread->SBFrame."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line1)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.LaunchProcess() failed")
+        _, process, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.line1, only_one_thread=False
+        )
 
         from lldbsuite.test.lldbutil import print_stacktrace
 

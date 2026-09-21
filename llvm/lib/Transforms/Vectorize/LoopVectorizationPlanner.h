@@ -36,6 +36,7 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -49,10 +50,6 @@ class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
-
-extern cl::opt<bool> EnableVPlanNativePath;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<bool> PreferInLoopReductions;
 
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
@@ -418,12 +415,6 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
-  VPInstruction *createScalarLoad(Type *ResultTy, VPValue *Addr, DebugLoc DL,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstruction(Instruction::Load, Addr, {},
-                                                  Metadata, DL, "", ResultTy));
-  }
-
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
                                   std::optional<VPIRFlags> Flags = std::nullopt,
@@ -473,13 +464,15 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarFreeze(VPValue *Op, DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
+  VPInstruction *createFreeze(VPValue *Op, DebugLoc DL = DebugLoc::getUnknown(),
+                              const Twine &Name = "") {
+    return createNaryOp(Instruction::Freeze, Op, DL, Name);
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
+    assert(Op->getScalarType() != ResultTy &&
+           "must not create a no-op cast recipe");
     return tryInsertInstruction(new VPWidenCastRecipe(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
@@ -892,6 +885,9 @@ class LoopVectorizationPlanner {
 
   OptimizationRemarkEmitter *ORE;
 
+  /// Lazily fetch BranchProbabilityInfo, independent of BlockFrequencyInfo.
+  std::function<const BranchProbabilityInfo &()> GetBPI;
+
   SmallVector<VPlanPtr, 4> VPlans;
 
   /// Profitable vector factors.
@@ -922,7 +918,8 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       std::unique_ptr<LoopVectorizationCostModel> CM,
       VFSelectionContext &Config, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE);
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
+      std::function<const BranchProbabilityInfo &()> GetBPI);
 
   ~LoopVectorizationPlanner();
 
@@ -1057,9 +1054,7 @@ private:
   /// final reduction results. Add Select recipes to the latch block when
   /// folding tail, to feed ComputeReductionResult with the last or penultimate
   /// iteration values according to the header mask.
-  void addReductionResultComputation(VPlanPtr &Plan,
-                                     VPRecipeBuilder &RecipeBuilder,
-                                     ElementCount MinVF);
+  void addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF);
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.

@@ -2764,6 +2764,21 @@ LogicalResult tosa::SliceOp::verify() {
              << startValues << "]";
   }
 
+  // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
+  // get_innermost_block_size<in_out_t>() != 0);
+  const auto elemType = getElementTypeOrSelf(input.getType());
+  if (const auto blockScaledType = llvm::dyn_cast<BlockScaledType>(elemType)) {
+    const auto startBlock = startValues.back();
+    const auto scaleBlock =
+        BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
+    if (startBlock % scaleBlock != 0) {
+      return emitOpError(
+                 "expected start innermost block size to match data type "
+                 "for block scaled input, got start block=")
+             << startBlock << ", scale block=" << scaleBlock;
+    }
+  }
+
   SmallVector<int64_t> sizeValues;
   if (!tosa::getConstShapeValues(size.getDefiningOp(), sizeValues))
     return success();

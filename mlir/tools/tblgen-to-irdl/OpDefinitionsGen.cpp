@@ -351,8 +351,9 @@ static Value createRegionConstraint(OpBuilder &builder,
 
   if (predRec.getName() == "AnyRegion") {
     ValueRange entryBlockArgs = {};
-    auto op =
-        irdl::RegionOp::create(builder, UnknownLoc::get(ctx), entryBlockArgs);
+    auto op = irdl::RegionOp::create(
+        builder, UnknownLoc::get(ctx), entryBlockArgs,
+        /*numberOfBlocks=*/nullptr, /*constrainedArguments=*/false);
     return op.getResult();
   }
 

@@ -16,6 +16,7 @@
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
+#include <cstdint>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -40,15 +41,21 @@ private:
   bool &NestedCallsDetectorRef = NestedCallsDetector;
 };
 
-QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
+QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &contextImpl,
+                     DeviceImpl &deviceImpl, const async_handler &asyncHandler,
                      const property_list &propList, PrivateTag)
     : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
-      MDevice(deviceImpl),
-      MContext(MDevice.getPlatformImpl().getDefaultContext()) {
-  assert(MContext.getOLHandleRef() &&
-         "Queue must be associated with a valid offload context");
-  callAndThrow(olCreateQueue, MContext.getOLHandleRef(), MDevice.getOLHandle(),
-               &MOffloadQueue);
+      MDevice(deviceImpl), MContext(contextImpl) {
+  assert(MContext && "Context impl ptr can't be nullptr");
+
+  ol_result_t Err = callNoCheck(olCreateQueue, MContext->getOLHandleRef(),
+                                MDevice.getOLHandle(), &MOffloadQueue);
+  // liboffload guarantees OL_ERRC_INVALID_DEVICE when the device does not
+  // belong to the context.
+  if (isFailed(Err) && Err->Code == OL_ERRC_INVALID_DEVICE)
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "The device is not associated with the context.");
+  checkAndThrow(Err);
 }
 
 QueueImpl::~QueueImpl() {
@@ -160,14 +167,12 @@ std::shared_ptr<EventImpl>
 QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
-  if (NumBytes == 0) {
+  if (NumBytes == 0)
     return submitWait(DepEvents);
-  }
 
-  if (!Dest || !Src) {
+  if (!Dest || !Src)
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
-  }
 
   ol_device_handle_t DestOLDevice = getAllocDevice(Dest);
   ol_device_handle_t SrcOLDevice = getAllocDevice(Src);
@@ -178,18 +183,37 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
   return createEvent();
 }
 
+EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
+                             std::size_t PatternSize, std::size_t Count,
+                             const std::vector<EventImplPtr> &DepEvents) {
+  assert(PatternSize > 0 && "Pattern size has to be greater than zero");
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  if (Count == 0)
+    return submitWait(DepEvents);
+
+  if (!Ptr)
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in fill/memset operation");
+  if (Count > SIZE_MAX / PatternSize)
+    throw sycl::exception(
+        sycl::make_error_code(sycl::errc::invalid),
+        "Total number of bytes to be filled exceeds SIZE_MAX");
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemFill, MOffloadQueue, Ptr, PatternSize, Pattern,
+               Count * PatternSize);
+  return createEvent();
+}
+
 EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
 
-  if (NumBytes == 0) {
-    handleEventDependencies(DepEvents);
-    return createEvent();
-  }
-  if (!Ptr) {
+  if (NumBytes == 0)
+    return submitWait(DepEvents);
+  if (!Ptr)
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in prefetch operation");
-  }
 
   constexpr std::size_t Count = 1;
   const void *Mems[] = {Ptr};
@@ -200,7 +224,6 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
-
   return createEvent();
 }
 
