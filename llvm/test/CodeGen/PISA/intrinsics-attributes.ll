@@ -19,6 +19,6 @@ define void @test() {
 ; CHECK: declare range(i32 1, 4) i32 @llvm.pisa.work.dim() [[NOMEM]]
 ; CHECK: declare void @llvm.pisa.workgroup.barrier() [[CONV:#[0-9]+]]
 
-; CHECK-DAG: attributes [[CONVMEM]] = { convergent nounwind memory(none) }
+; CHECK-DAG: attributes [[CONVMEM]] = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-DAG: attributes [[NOMEM]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-DAG: attributes [[CONV]] = { convergent nounwind }
