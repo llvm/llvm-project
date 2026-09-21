@@ -21,6 +21,11 @@
 
 TEST_CONSTEXPR_CXX26 bool test() {
   {
+    std::deque<int> d(3);
+    assert(d.size() == 3);
+    assert(d[0] == 0);
+  }
+  {
     typedef std::deque<int> C;
     C c;
     ASSERT_NOEXCEPT(c.size());
@@ -84,9 +89,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
   test();
-  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(test_constexpr());
+  static_assert(test());
 #endif
 
   return 0;

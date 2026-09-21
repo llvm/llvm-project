@@ -67,6 +67,12 @@ TEST_CONSTEXPR_CXX26 void test() {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
+  {
+    std::deque<int> d = {1, 2, 3, 4};
+    assert(std::erase_if(d, [](int v) { return v % 2 == 0; }) == 2);
+    assert((d == std::deque<int>{1, 3}));
+  }
+
   test<std::deque<int>>();
   test<std::deque<int, min_allocator<int>>>();
   test<std::deque<int, safe_allocator<int>>>();
@@ -77,18 +83,10 @@ TEST_CONSTEXPR_CXX26 bool tests() {
   return true;
 }
 
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  std::deque<int> d = {1, 2, 3, 4};
-  assert(std::erase_if(d, [](int v) { return v % 2 == 0; }) == 2);
-  assert((d == std::deque<int>{1, 3}));
-  return true;
-}
-
 int main(int, char**) {
   tests();
-  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(test_constexpr());
+  static_assert(tests());
 #endif
 
   return 0;
