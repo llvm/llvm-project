@@ -251,6 +251,26 @@ define spir_kernel void @trunc_i8_to_i4_icmp_slt(i8 %a, i8 %b, ptr addrspace(1) 
 }
 
 ; ----------------------------------------------------------------------------
+; CHECK: OpFunction
+; CHECK: %[[#GA:]] = OpLoad %[[#I32]]
+; CHECK: %[[#GB:]] = OpLoad %[[#I32]]
+; CHECK: %[[#SHLA8:]] = OpShiftLeftLogical %[[#I32]] %[[#GA]] %[[#K8]]
+; CHECK: %[[#SXA8:]] = OpShiftRightArithmetic %[[#I32]] %[[#SHLA8]] %[[#K8]]
+; CHECK: %[[#SHLB8:]] = OpShiftLeftLogical %[[#I32]] %[[#GB]] %[[#K8]]
+; CHECK: %[[#SXB8:]] = OpShiftRightArithmetic %[[#I32]] %[[#SHLB8]] %[[#K8]]
+; CHECK: OpSDiv %[[#I32]] %[[#SXA8]] %[[#SXB8]]
+@ga = global i24 0
+@gb = global i24 0
+@out24 = global i24 0
+define spir_kernel void @sdiv_i24_from_globals() {
+  %a = load i24, ptr @ga
+  %b = load i24, ptr @gb
+  %r = sdiv i24 %a, %b
+  store i24 %r, ptr @out24
+  ret void
+}
+
+; ----------------------------------------------------------------------------
 ; Negative test: unsigned compare must NOT emit sign-extension shifts.
 ; CHECK: OpFunction
 ; CHECK: %[[#X7:]] = OpFunctionParameter

@@ -1210,43 +1210,16 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 // this table could be generated automatically from RegInfo.
 Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                                 const MachineFunction &MF) const {
-  StringRef Name(RegName);
-  Name.consume_front("%");
-
-  Register Reg = StringSwitch<Register>(Name)
-                     .Cases({"r24", "i0"}, SP::I0)
-                     .Cases({"r25", "i1"}, SP::I1)
-                     .Cases({"r26", "i2"}, SP::I2)
-                     .Cases({"r27", "i3"}, SP::I3)
-                     .Cases({"r28", "i4"}, SP::I4)
-                     .Cases({"r29", "i5"}, SP::I5)
-                     .Cases({"r30", "i6", "fp"}, SP::I6)
-                     .Cases({"r31", "i7"}, SP::I7)
-                     .Cases({"r8", "o0"}, SP::O0)
-                     .Cases({"r9", "o1"}, SP::O1)
-                     .Cases({"r10", "o2"}, SP::O2)
-                     .Cases({"r11", "o3"}, SP::O3)
-                     .Cases({"r12", "o4"}, SP::O4)
-                     .Cases({"r13", "o5"}, SP::O5)
-                     .Cases({"r14", "o6", "sp"}, SP::O6)
-                     .Cases({"r15", "o7"}, SP::O7)
-                     .Cases({"r16", "l0"}, SP::L0)
-                     .Cases({"r17", "l1"}, SP::L1)
-                     .Cases({"r18", "l2"}, SP::L2)
-                     .Cases({"r19", "l3"}, SP::L3)
-                     .Cases({"r20", "l4"}, SP::L4)
-                     .Cases({"r21", "l5"}, SP::L5)
-                     .Cases({"r22", "l6"}, SP::L6)
-                     .Cases({"r23", "l7"}, SP::L7)
-                     .Cases({"r0", "g0"}, SP::G0)
-                     .Cases({"r1", "g1"}, SP::G1)
-                     .Cases({"r2", "g2"}, SP::G2)
-                     .Cases({"r3", "g3"}, SP::G3)
-                     .Cases({"r4", "g4"}, SP::G4)
-                     .Cases({"r5", "g5"}, SP::G5)
-                     .Cases({"r6", "g6"}, SP::G6)
-                     .Cases({"r7", "g7"}, SP::G7)
-                     .Default(0);
+  Register Reg = StringSwitch<Register>(RegName)
+    .Case("i0", SP::I0).Case("i1", SP::I1).Case("i2", SP::I2).Case("i3", SP::I3)
+    .Case("i4", SP::I4).Case("i5", SP::I5).Case("i6", SP::I6).Case("i7", SP::I7)
+    .Case("o0", SP::O0).Case("o1", SP::O1).Case("o2", SP::O2).Case("o3", SP::O3)
+    .Case("o4", SP::O4).Case("o5", SP::O5).Case("o6", SP::O6).Case("o7", SP::O7)
+    .Case("l0", SP::L0).Case("l1", SP::L1).Case("l2", SP::L2).Case("l3", SP::L3)
+    .Case("l4", SP::L4).Case("l5", SP::L5).Case("l6", SP::L6).Case("l7", SP::L7)
+    .Case("g0", SP::G0).Case("g1", SP::G1).Case("g2", SP::G2).Case("g3", SP::G3)
+    .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
+    .Default(0);
 
   // If we're directly referencing register names
   // (e.g in GCC C extension `register int r asm("g1");`),

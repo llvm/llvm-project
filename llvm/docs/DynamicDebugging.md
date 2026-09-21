@@ -21,6 +21,8 @@ Important info:
 * LLD does not support `--wrap=<symbol>` with Dynamic Debugging.
 * Dynamic Debugging with LTO is not supported.
 
+When adding support for additional targets, `prepareForDynamicDebugging` needs to be taught the correct `tail-pad-to-size` and `tail-pad-value` attribute values, which would otherwise be omitted.
+
 ## Nested object design
 
 The broad idea is that the unoptimized program (“inner object”) is compiled and stored in a new section in the optimized version (“outer object"). “Nesting” the objects allows build systems and other tools to continue to manage a single object file per translation unit.

@@ -668,7 +668,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   EHStreamer *ES = nullptr;
   switch (MAI.getExceptionHandlingType()) {
+  case ExceptionHandling::Default:
+    llvm_unreachable("should have resolved exception model kind");
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is handled in JS glue code and emits no EH tables here.
     if (!usesCFIWithoutEH())
       break;
     [[fallthrough]];
@@ -788,6 +792,14 @@ MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
 
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  MaybeAlign AlignmentGranule = getRequiredGlobalAlignmentGranule(*GV);
+  emitGlobalVariable(GV, AlignmentGranule);
+  if (AlignmentGranule)
+    OutStreamer->emitValueToAlignment(*AlignmentGranule);
+}
+
+void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV,
+                                    MaybeAlign AlignmentGranule) {
   bool IsEmuTLSVar = TM.useEmulatedTLS() && GV->isThreadLocal();
   assert(!(IsEmuTLSVar && GV->hasCommonLinkage()) &&
          "No emulated TLS variables in the common section");
@@ -853,7 +865,17 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // If the alignment is specified, we *must* obey it.  Overaligning a global
   // with a specified alignment is a prompt way to break globals emitted to
   // sections and expected to be contiguous (e.g. ObjC metadata).
-  const Align Alignment = getGVAlignment(GV, DL);
+  //
+  // If we get passed in an explicit alignment granule, it is up to the caller
+  // to ensure that is not the case (i.e. that the GV is not in a section).
+  Align Alignment = getGVAlignment(GV, DL);
+
+  if (AlignmentGranule) {
+    assert(!GV->hasSection());
+    Size = alignTo(Size, *AlignmentGranule);
+    if (Alignment < *AlignmentGranule)
+      Alignment = *AlignmentGranule;
+  }
 
   for (auto &Handler : Handlers)
     Handler->setSymbolSize(GVSym, Size);
@@ -2075,7 +2097,9 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
-  bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
+  // Only x86 needs this padding; the Arm unwinders back the PC up themselves.
+  bool NeedsEHaNops = MMI->getModule()->getModuleFlag("eh-asynch") &&
+                      TM.getTargetTriple().isX86();
 
   const MCSubtargetInfo *STI = nullptr;
   if (this->MF)
@@ -2168,7 +2192,7 @@ void AsmPrinter::emitFunctionBody() {
         //  an EH region as it must be led by at least a Load
         {
           auto MI2 = std::next(MI.getIterator());
-          if (IsEHa && MI2 != MBB.end() &&
+          if (NeedsEHaNops && MI2 != MBB.end() &&
               (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
             emitNops(1);
         }
@@ -2406,6 +2430,23 @@ void AsmPrinter::emitFunctionBody() {
   R << ore::NV("NumInstructions", NumInstsInFunction)
     << " instructions in function";
   ORE->emit(R);
+
+  if (ORE->allowExtraAnalysis("target-features")) {
+    const Function &F = MF->getFunction();
+    std::string FunctionName;
+    raw_string_ostream OS(FunctionName);
+    F.printAsOperand(OS, /*PrintType=*/false);
+
+    MachineOptimizationRemarkAnalysis Remark(
+        "target-features", "EnabledFeatures", F.getSubprogram(), &MF->front());
+    Remark << "Enabled features for " << ore::NV("Function", FunctionName)
+           << ": ";
+    // The processor feature table is sorted by feature name.
+    ListSeparator LS(",");
+    for (const auto *Feature : MF->getSubtarget().getEnabledProcessorFeatures())
+      Remark << LS << ore::NV("Feature", Feature->key());
+    ORE->emit(Remark);
+  }
 
   // If the function is empty and the object file uses .subsections_via_symbols,
   // then we need to emit *something* to the function body to prevent the
@@ -3342,13 +3383,21 @@ void AsmPrinter::emitConstantPool() {
       unsigned NewOffset = alignTo(Offset, CPE.getAlign());
       OutStreamer->emitZeros(NewOffset - Offset);
 
-      Offset = NewOffset + CPE.getSizeInBytes(getDataLayout());
-
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
       OutStreamer->emitLabel(Sym);
+
       if (CPE.isMachineConstantPoolEntry())
         emitMachineConstantPoolValue(CPE.Val.MachineCPVal);
       else
         emitGlobalConstant(getDataLayout(), CPE.Val.ConstVal);
+
+      unsigned EntrySize = CPE.getSizeInBytes(getDataLayout());
+      if (MAI.hasDotTypeDotSizeDirective())
+        OutStreamer->emitELFSize(Sym,
+                                 MCConstantExpr::create(EntrySize, OutContext));
+
+      Offset = NewOffset + EntrySize;
     }
   }
 }
@@ -3930,7 +3979,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   }
   case Instruction::GetElementPtr: {
     // Generate a symbolic expression for the byte address
-    APInt OffsetAI(getDataLayout().getPointerTypeSizeInBits(CE->getType()), 0);
+    APInt OffsetAI(getDataLayout().getIndexTypeSizeInBits(CE->getType()), 0);
     cast<GEPOperator>(CE)->accumulateConstantOffset(getDataLayout(), OffsetAI);
 
     const MCExpr *Base = lowerConstant(CE->getOperand(0));

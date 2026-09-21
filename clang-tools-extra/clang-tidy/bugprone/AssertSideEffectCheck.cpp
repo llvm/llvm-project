@@ -39,9 +39,9 @@ AST_MATCHER_P2(Expr, hasSideEffect, bool, CheckFunctionCalls,
 
   if (const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E)) {
     if (const auto *MethodDecl =
-            dyn_cast_or_null<CXXMethodDecl>(OpCallExpr->getDirectCallee()))
-      if (MethodDecl->isConst())
-        return false;
+            dyn_cast_or_null<CXXMethodDecl>(OpCallExpr->getDirectCallee());
+        MethodDecl && MethodDecl->isConst())
+      return false;
 
     const OverloadedOperatorKind OpKind = OpCallExpr->getOperator();
     return OpKind == OO_Equal || OpKind == OO_PlusEqual ||

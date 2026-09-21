@@ -13,9 +13,17 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("msp430-asm-printer-begin", MSP430AsmPrinterBeginPass())
+MODULE_PASS("msp430-asm-printer-end", MSP430AsmPrinterEndPass())
+#undef MODULE_PASS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("msp430-asm-printer", MSP430AsmPrinterPass())
 MACHINE_FUNCTION_PASS("msp430-isel", MSP430ISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("msp430-branch-select", MSP430BranchSelectPass())
 #undef MACHINE_FUNCTION_PASS

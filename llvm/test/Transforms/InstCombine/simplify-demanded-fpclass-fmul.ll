@@ -19,8 +19,8 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__fmul_unknown_or_pinf(i1 %cond,
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
-  %y.or.pinf = select i1 %cond, float %y, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
+  %y.or.pinf = select i1 %cond, float %y, float +inf
   %mul = fmul float %x.or.pinf, %y.or.pinf
   ret float %mul
 }
@@ -33,8 +33,8 @@ define nofpclass(ninf) float @ret_nofpclass_pinf__fmul_unknown_or_ninf(i1 %cond,
 ; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[COND]], float [[TMP1]], float +inf
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.ninf = select i1 %cond, float %x, float 0xFFF0000000000000
-  %y.or.ninf = select i1 %cond, float %y, float 0xFFF0000000000000
+  %x.or.ninf = select i1 %cond, float %x, float -inf
+  %y.or.ninf = select i1 %cond, float %y, float -inf
   %mul = fmul float %x.or.ninf, %y.or.ninf
   ret float %mul
 }
@@ -45,8 +45,8 @@ define nofpclass(inf) float @ret_nofpclass_inf__fmul_unknown_or_pinf(i1 %cond, f
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
-  %y.or.pinf = select i1 %cond, float %y, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
+  %y.or.pinf = select i1 %cond, float %y, float +inf
   %mul = fmul float %x.or.pinf, %y.or.pinf
   ret float %mul
 }
@@ -269,7 +269,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__fmul_square_unknown_or_pinf(i1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_OR_PINF]], [[X_OR_PINF]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
   %mul = fmul float %x.or.pinf, %x.or.pinf
   ret float %mul
 }
@@ -282,7 +282,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__fmul_square_unknown_or_pinf__o
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_OR_PINF]], [[X_OR_PINF]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
   call void @use(float %x.or.pinf)
   %mul = fmul float %x.or.pinf, %x.or.pinf
   ret float %mul
@@ -296,7 +296,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__fmul_square_unknown_or_pinf__o
 ; CHECK-NEXT:    call void @use(float [[X_OR_PINF]])
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
   %mul = fmul float %x.or.pinf, %x.or.pinf
   call void @use(float %x.or.pinf)
   ret float %mul
@@ -401,7 +401,7 @@ define nofpclass(inf) float @ret_only_inf_results__lhs_known_non_inf(i1 %cond, f
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
   %mul = fmul float %x.or.pinf, %y
   ret float %mul
 }
@@ -413,7 +413,7 @@ define nofpclass(inf) float @ret_no_inf_results__rhs_known_non_inf(i1 %cond, flo
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[Y_OR_PINF]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %y.or.pinf = select i1 %cond, float %y, float 0x7FF0000000000000
+  %y.or.pinf = select i1 %cond, float %y, float +inf
   %mul = fmul float %x, %y.or.pinf
   ret float %mul
 }
@@ -426,7 +426,7 @@ define nofpclass(ninf nan) float @ret_no_ninf_or_nan_results__lhs_known_non_inf(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
   %mul = fmul float %x.or.pinf, %y
   ret float %mul
 }
@@ -439,7 +439,7 @@ define nofpclass(pinf nan) float @ret_no_pinf_or_nan_results__lhs_known_non_inf(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[X_OR_PINF]], [[Y]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
   %mul = fmul float %x.or.pinf, %y
   ret float %mul
 }
@@ -451,7 +451,7 @@ define nofpclass(inf nan) float @ret_no_inf_or_nan_results__lhs_known_non_inf(i1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %x.or.pinf = select i1 %cond, float %x, float 0x7FF0000000000000
+  %x.or.pinf = select i1 %cond, float %x, float +inf
   %mul = fmul float %x.or.pinf, %y
   ret float %mul
 }
@@ -463,7 +463,7 @@ define nofpclass(inf nan) float @ret_no_inf_or_nan_results__rhs_known_non_inf(i1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
-  %y.or.pinf = select i1 %cond, float %y, float 0x7FF0000000000000
+  %y.or.pinf = select i1 %cond, float %y, float +inf
   %mul = fmul float %x, %y.or.pinf
   ret float %mul
 }

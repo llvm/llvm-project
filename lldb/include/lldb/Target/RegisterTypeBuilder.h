@@ -18,10 +18,9 @@ class RegisterTypeBuilder : public PluginInterface {
 public:
   ~RegisterTypeBuilder() override = default;
 
-  virtual CompilerType
-  GetRegisterType(const std::string &name,
-                  const lldb_private::RegisterTypeFlags &flags,
-                  uint32_t byte_size) = 0;
+  /// Do not cache the returned CompilerType. A target may replace its scratch
+  /// type system, so callers must request the type again whenever needed.
+  virtual CompilerType GetRegisterType(const RegisterInfo &reg_info) = 0;
 
 protected:
   RegisterTypeBuilder() = default;

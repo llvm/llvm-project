@@ -39,7 +39,7 @@ public:
     std::vector<uint32_t> invalidate_regs;
     uint32_t value_reg_offset = 0;
     // Non-null if there is an XML provided type.
-    const RegisterTypeFlags *flags_type = nullptr;
+    const RegisterType *register_type = nullptr;
   };
 
   DynamicRegisterInfo() = default;

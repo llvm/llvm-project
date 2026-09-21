@@ -16,7 +16,6 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
-    "common/ConPTYUtils.cpp",
     "common/DiagnosticsRendering.cpp",
     "common/DomainSocket.cpp",
     "common/File.cpp",
@@ -69,6 +68,7 @@ static_library("Host") {
 
   if (current_os == "win") {
     sources += [
+      "windows/ConPTYUtils.cpp",
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
       "windows/DomainSocketWindows.cpp",
@@ -98,9 +98,12 @@ static_library("Host") {
       "posix/LockFilePosix.cpp",
       "posix/MainLoopPosix.cpp",
       "posix/PipePosix.cpp",
-      "posix/ProcessLauncherPosixFork.cpp",
       "posix/Support.cpp",
     ]
+
+    if (current_os != "emscripten") {
+      sources += [ "posix/ProcessLauncherPosixFork.cpp" ]
+    }
   }
 
   if (current_os == "aix") {
@@ -124,6 +127,13 @@ static_library("Host") {
     deps += [ "macosx/objcxx" ]
 
     # FIXME: Maybe define NO_XPC_SERVICES
+  }
+
+  if (current_os == "emscripten") {
+    sources += [
+      "emscripten/Host.cpp",
+      "emscripten/HostInfoEmscripten.cpp",
+    ]
   }
 
   if (current_os == "linux" || current_os == "android") {

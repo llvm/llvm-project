@@ -101,10 +101,10 @@ static std::optional<std::string> getStandardEndText(ASTContext &Context,
   unsigned EndIdx = 1;
   const Expr *FirstArg = Call->getArg(0);
   if (const auto *Record =
-          FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl()) {
-    if (Record->getIdentifier() && Record->getName().ends_with("_policy"))
-      EndIdx = 2;
-  }
+          FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl();
+      Record && Record->getIdentifier() &&
+      Record->getName().ends_with("_policy"))
+    EndIdx = 2;
 
   if (Call->getNumArgs() <= EndIdx)
     return std::nullopt;

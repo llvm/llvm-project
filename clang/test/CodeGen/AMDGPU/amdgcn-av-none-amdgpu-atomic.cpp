@@ -10,7 +10,7 @@ void test_atomic_inc32_av(volatile unsigned *p, unsigned val) {
   [[clang::amdgpu_av("none")]] __builtin_amdgcn_atomic_inc32(p, val, __ATOMIC_SEQ_CST, "agent"); // expected-warning {{only applies to atomic expressions or Clang atomic builtins}}
 }
 
-void test_atomic_dec64_av(volatile unsigned long long *p, unsigned long long val) {
+void test_atomic_dec64_av(volatile unsigned long *p, unsigned long val) {
   [[clang::amdgpu_av("none")]] __builtin_amdgcn_atomic_dec64(p, val, __ATOMIC_ACQUIRE, "agent"); // expected-warning {{only applies to atomic expressions or Clang atomic builtins}}
 }
 

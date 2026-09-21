@@ -43,14 +43,14 @@ def AsyncParallelForPass : Pass<"async-parallel-for", "ModuleOp"> {
 def AsyncToAsyncRuntimePass : Pass<"async-to-async-runtime", "ModuleOp"> {
   let summary = "Lower all high level async operations (e.g. async.execute) to"
                 "the explicit async.runtime and async.coro operations";
-  let dependentDialects = ["async::AsyncDialect", "func::FuncDialect", "cf::ControlFlowDialect"];
+  let dependentDialects = ["func::FuncDialect", "cf::ControlFlowDialect"];
 }
 
 def AsyncFuncToAsyncRuntimePass
     : Pass<"async-func-to-async-runtime", "ModuleOp"> {
   let summary = "Lower async.func operations to the explicit async.runtime and"
                 "async.coro operations";
-  let dependentDialects = ["async::AsyncDialect", "func::FuncDialect"];
+  let dependentDialects = ["func::FuncDialect"];
 }
 
 def AsyncRuntimeRefCountingPass : Pass<"async-runtime-ref-counting"> {
@@ -65,15 +65,11 @@ def AsyncRuntimeRefCountingPass : Pass<"async-runtime-ref-counting"> {
 
     See: https://llvm.org/docs/Coroutines.html#switched-resume-lowering
   }];
-
-  let dependentDialects = ["async::AsyncDialect"];
 }
 
 def AsyncRuntimeRefCountingOptPass : Pass<"async-runtime-ref-counting-opt"> {
   let summary = "Optimize automatic reference counting operations for the"
                 "Async runtime by removing redundant operations";
-
-  let dependentDialects = ["async::AsyncDialect"];
 }
 
 def AsyncRuntimePolicyBasedRefCountingPass
@@ -103,8 +99,6 @@ def AsyncRuntimePolicyBasedRefCountingPass
     This pass introduces significanly less runtime overhead compared to the
     automatic reference counting.
   }];
-
-  let dependentDialects = ["async::AsyncDialect"];
 }
 
 #endif // MLIR_DIALECT_ASYNC_PASSES

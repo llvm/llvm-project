@@ -341,6 +341,15 @@ public:
   // linker).
   void MapCommonBlockAndCheckConflicts(const Symbol &);
 
+  // After DATA statement initializations have been compiled into
+  // symbol initializer values, check any pending conflicts recorded by
+  // MapCommonBlockAndCheckConflicts() that could not be resolved earlier
+  // because the initializer values were not yet known: a duplicate
+  // initialization (identical values) of a COMMON block appearing in more
+  // than one program unit is accepted as an extension, but a conflicting
+  // one is a hard error.
+  void CheckCommonBlockInitializationConflicts();
+
   // Get the list of common blocks appearing in the program. If a common block
   // appears in several subprograms, only one of its appearance is returned in
   // the list alongside the biggest byte size of all its appearances.
@@ -377,6 +386,23 @@ public:
   // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
   ProgramTree &SaveProgramTree(ProgramTree &&);
 
+  const std::list<parser::Program> &GetModFileParseTrees() {
+    return modFileParseTrees_;
+  }
+
+  // Label analysis classifies every labeled statement, and only some of those
+  // classifications may be named by a statement that branches.  Lowering needs
+  // the same distinction when it records the targets of a branch, so the
+  // positions of the statements that may be branched to are kept here rather
+  // than being derived a second time from the parse tree.
+  void RecordBranchTarget(parser::CharBlock statementPosition) {
+    branchTargets_.insert(statementPosition);
+  }
+
+  bool IsRecordedBranchTarget(parser::CharBlock statementPosition) const {
+    return branchTargets_.find(statementPosition) != branchTargets_.end();
+  }
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -389,6 +415,7 @@ private:
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
   void CheckError(const Symbol &);
 
+  std::set<parser::CharBlock, ScopeIndexComparator> branchTargets_;
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl &languageFeatures_;
   const common::LangOptions &langOpts_;

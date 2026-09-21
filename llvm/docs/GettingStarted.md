@@ -243,14 +243,14 @@ LLVM is known to work on the following host platforms:
 | Windows x64 | x86-64 | Visual Studio, Clang{sup}`4` |
 | Windows on Arm | ARM64 | Visual Studio, Clang{sup}`4` |
 
-```{note}
+:::{note}
 1. Code generation supported for Pentium processors and up
 1. Code generation supported for 32-bit ABI only
 1. To use LLVM modules on a Win32-based system, you may configure LLVM
    with `-DBUILD_SHARED_LIBS=On`.
 1. Visual Studio alone can compile LLVM. When using Clang, you
    must also have Visual Studio installed.
-```
+:::
 Note that Debug builds require a lot of time and disk space.  An LLVM-only build
 will need about 1-3 GB of space.  A full build of LLVM and Clang will need around
 15-20 GB of disk space.  The exact space requirements will vary by system.  (It
@@ -282,12 +282,12 @@ uses the package and provides other details.
 | [GNU Make](http://savannah.gnu.org/projects/make) | 3.79, 3.79.1 | Makefile/build processor{sup}`2` |
 | [PyYAML](https://pypi.org/project/PyYAML/) | >=5.1 | Header generator{sup}`3` |
 
-```{note}
+:::{note}
 1. Optional, adds compression/uncompression capabilities to selected LLVM
    tools.
 1. Optional, you can use any other build tool supported by CMake.
 1. Only needed when building libc with New Headergen. Mainly used by libc.
-```
+:::
 Additionally, your compilation host is expected to have the usual plethora of
 Unix utilities. Specifically:
 
@@ -956,10 +956,10 @@ This section gives an example of using LLVM with the Clang front end.
    ```console
    % clang hello.c -o hello
    ```
-   ```{note}
+   :::{note}
    Clang works just like GCC by default.  The standard `-S` and `-c` arguments
    work as usual (producing a native `.s` or `.o` file, respectively).
-   ```
+   :::
 1. Next, compile the C file into an LLVM bitcode file:
 
    ```console

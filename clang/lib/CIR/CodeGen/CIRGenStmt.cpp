@@ -90,20 +90,29 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
-  const CallExpr *musttail = nullptr;
+  bool noinline = inNoInlineAttributedStmt;
+  bool alwaysinline = inAlwaysInlineAttributedStmt;
+  const CallExpr *musttail = mustTailCall;
 
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
     default:
       break;
     case attr::NoMerge:
-    case attr::NoInline:
-    case attr::AlwaysInline:
     case attr::NoConvergent:
     case attr::Atomic:
+    case attr::AMDGPUAvailableVisible:
     case attr::HLSLControlFlowHint:
       cgm.errorNYI(s.getSourceRange(),
                    "Unimplemented statement attribute: ", attr->getKind());
+      break;
+    case attr::NoInline:
+      noinline = true;
+      alwaysinline = false;
+      break;
+    case attr::AlwaysInline:
+      alwaysinline = true;
+      noinline = false;
       break;
     case attr::MustTail: {
       const Stmt *sub = s.getSubStmt();
@@ -123,6 +132,12 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     } break;
     }
   }
+
+  assert(!(alwaysinline && noinline) &&
+         "alwaysinline and noinline are mutually exclusive");
+
+  SaveAndRestore save_noinline(inNoInlineAttributedStmt, noinline);
+  SaveAndRestore save_alwaysinline(inAlwaysInlineAttributedStmt, alwaysinline);
 
   SaveAndRestore save_musttail(mustTailCall, musttail);
 
@@ -302,8 +317,12 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPDepobjDirective(cast<OMPDepobjDirective>(*s));
   case Stmt::OMPScanDirectiveClass:
     return emitOMPScanDirective(cast<OMPScanDirective>(*s));
-  case Stmt::OMPOrderedDirectiveClass:
-    return emitOMPOrderedDirective(cast<OMPOrderedDirective>(*s));
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    return emitOMPOrderedStandaloneDirective(
+        cast<OMPOrderedStandaloneDirective>(*s));
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    return emitOMPOrderedBlockAssocDirective(
+        cast<OMPOrderedBlockAssocDirective>(*s));
   case Stmt::OMPAtomicDirectiveClass:
     return emitOMPAtomicDirective(cast<OMPAtomicDirective>(*s));
   case Stmt::OMPTargetDirectiveClass:
@@ -1002,15 +1021,15 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
 
-    // If the condition variable has a non-trivial destructor, its lifetime is
-    // a single iteration, so capture its cleanup and emit it into the loop's
+    // A condition variable's lifetime is a single iteration, so capture its
+    // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region. This scope is constructed after the
-    // init-statement so its cleanups are not captured.
+    // init-statement so the init-statement's cleanups are not captured.
     const VarDecl *condVar = s.getConditionVariable();
     bool needsCondCleanup =
-        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
-    // We will also need cleanup if lifetime markers are enabled.
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1135,14 +1154,14 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
 
-    // If the condition variable has a non-trivial destructor, its lifetime is
-    // a single iteration, so capture its cleanup and emit it into the loop's
+    // A condition variable's lifetime is a single iteration, so capture its
+    // destructor and lifetime-end cleanups and emit them into the loop's
     // per-iteration cleanup region.
     const VarDecl *condVar = s.getConditionVariable();
     bool needsCondCleanup =
-        condVar && condVar->needsDestruction(getContext()) != QualType::DK_none;
-    // We will also need cleanup if lifetime markers are enabled.
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+        condVar &&
+        (condVar->needsDestruction(getContext()) != QualType::DK_none ||
+         shouldEmitLifetimeMarkersForAutoVar());
     DeferredLoopConditionCleanup loopCondScope(*this, needsCondCleanup);
 
     auto condBuilder = [&](mlir::OpBuilder &b, mlir::Location loc) {
