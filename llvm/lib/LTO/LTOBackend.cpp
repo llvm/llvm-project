@@ -199,23 +199,34 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
+// Obtain dynamic pass-plugins in registration order: the ones requested by file
+// name followed by those pre-loaded in the host application
+static SmallVector<PassPlugin *, 2>
+getPassPlugins(const Config &Conf, SmallVectorImpl<PassPlugin> &Storage) {
+  for (const std::string &PluginFN : Conf.PassPluginFilenames) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(PluginFN);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    Storage.push_back(std::move(*Plugin));
+  }
+
+  SmallVector<PassPlugin *, 2> Plugins(make_pointer_range(Storage));
+  append_range(Plugins, Conf.LoadedPassPlugins);
+  return Plugins;
+}
+
+// Call pass builder registration callbacks for all pass-plugins
 static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
+  // Static built-in plugins
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-  // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : Conf.PassPluginFilenames) {
-    auto PassPlugin = PassPlugin::load(PluginFN);
-    if (!PassPlugin)
-      reportFatalUsageError(PassPlugin.takeError());
-    PassPlugin->registerPassBuilderCallbacks(PB);
-  }
-
-  // Register already loaded plugins
-  for (auto *LoadedPlugin : Conf.LoadedPassPlugins)
-    LoadedPlugin->registerPassBuilderCallbacks(PB);
+  // Dynamic plugins
+  SmallVector<PassPlugin, 2> Storage;
+  for (const PassPlugin *Plugin : getPassPlugins(Conf, Storage))
+    Plugin->registerPassBuilderCallbacks(PB);
 }
 
 static std::unique_ptr<TargetMachine>
@@ -478,6 +489,17 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     report_fatal_error(std::move(Err));
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
+
+  // Allow plugins to handle or even take over code generation entirely.
+  SmallVector<PassPlugin, 2> PluginStorage;
+  for (PassPlugin *Plugin : getPassPlugins(Conf, PluginStorage)) {
+    if (Plugin->invokePreCodeGenCallback(Mod, *TM, Conf.CGFileType,
+                                         *Stream->OS)) {
+      if (Error Err = Stream->commit())
+        reportFatalUsageError(std::move(Err));
+      return;
+    }
+  }
 
   // Create the codegen pipeline in its own scope so it gets deleted before
   // Stream->commit() is called. The commit function of CacheStream deletes
