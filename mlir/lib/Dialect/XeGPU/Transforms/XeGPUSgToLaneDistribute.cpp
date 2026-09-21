@@ -864,8 +864,44 @@ struct SgToLaneVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 };
 
 /// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
-/// to lane-level. An element is in-bounds when every dim satisfies
-/// `coord[d] < bound[d]`.
+/// to lane-level.
+/// The pattern performs the following in-bounds condition:
+/// ```
+///   for d in [0, ..., maskRank):
+///     mask &= (staticOffset[d] < (bound[d] - base[d]))
+/// ```
+/// where
+///   - `base` is the coordinate vector of the first distributed unit.
+///   - `staticOffset` is the offsets vector per element.
+///   - `bound` is the original mask bound for the corresponding dimension.
+/// The mask vector contains *all* elements (i.e., non-unit `lane_data` is
+/// flattened). For example,
+/// ```
+///   %mask = vector.create_mask %bound_0, %bound_1 {
+///     lane_layout = [1, 16], lane_data = [2, 1]
+///   }: vector<8x32xi1>
+/// ```
+/// Has 8 dist units (of shape [2, 1]) with offsets for lane 0:
+///   {
+///    [0, 0], [0, 16],
+///    [2, 0], [2, 16],
+///    [4, 0], [4, 16],
+///    [6, 0], [6, 16]
+///   }
+/// We check the distance to the bound from the first dist. unit:
+/// %base_0 = genCoords(gpu.lane_id, layout)[0][0]
+/// %base_1 = genCoords(gpu.lane_id, layout)[0][1]
+/// %baseDistanceToBound_0 = %bound_0 - %base_0
+/// %baseDistanceToBound_1 = %bound_1 - %base_1
+/// The pattern flattens the dimension d coordinates of each element:
+///   %staticOffset_0 = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7]
+///   %staticOffset_1 = [0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16, 0, 16]
+/// and compares each coordinate against the corresponding mask bound dim:
+///   %mask_0   = arith.cmpi slt, %staticOffset_0,
+///   broadcast(%baseDistanceToBound_0) %mask_1   = arith.cmpi slt,
+///   %staticOffset_1, broadcast(%baseDistanceToBound_1) %mask =
+///   shape_cast(arith.andi %mask_0, %mask_1) : vector<16xi1> to vector<8x2xi1>
+///
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
@@ -924,17 +960,17 @@ struct SgToLaneCreateMask : public OpConversionPattern<OpType> {
       return rewriter.notifyMatchFailure(
           op, "lane_data does not tile the distributed vector");
 
-    SmallVector<int64_t> resultStrides = computeStrides(distShape);
+    SmallVector<int64_t> distStrides = computeStrides(distShape);
     assert(static_cast<int64_t>(laneDataCoords.size()) *
                    computeProduct(laneData) ==
                numElements &&
            "number of coordinate sets must match number of lane_data blocks");
 
     // Static offsets to be applied to a dynamic lane's dist units coordinates.
-    SmallVector<SmallVector<int64_t>> staticLaneDataOffsetsOrigShape =
+    SmallVector<SmallVector<int64_t>> staticLaneDataOffsetsOrig =
         layout.computeStaticDistributedCoords(/*linearId=*/0, origShape);
-    if (staticLaneDataOffsetsOrigShape.empty() ||
-        staticLaneDataOffsetsOrigShape.size() != laneDataCoords.size())
+    if (staticLaneDataOffsetsOrig.empty() ||
+        staticLaneDataOffsetsOrig.size() != laneDataCoords.size())
       return rewriter.notifyMatchFailure(
           op, "static and dynamic coordinates disagree on the distribution "
               "unit count");
@@ -942,27 +978,29 @@ struct SgToLaneCreateMask : public OpConversionPattern<OpType> {
     SmallVector<int64_t> unitTile(rank, 1);
     int64_t linearLaneDataIdx = 0;
     // Layout and shape information is static, compute static offset of lane's
-    // elements in the source dimensions.
-    SmallVector<SmallVector<int64_t>> staticElemOffsetInSrcDims(
+    // elements in the source dimensions. Each dim is a flat vec of element
+    // offsets. We store dim-major to have an easy materialization as one const
+    // vector.
+    SmallVector<SmallVector<int64_t>> staticElemOffset(
         rank, SmallVector<int64_t>(numElements));
-    // For each lane_data block in the overall lane's shape
-    for (SmallVector<int64_t> laneDataOffsetInResult :
+    // For each lane_data block in the lane's dist shape
+    for (SmallVector<int64_t> laneDataOffsetDist :
          StaticTileOffsetRange(distShape, laneData)) {
-      ArrayRef<int64_t> staticLaneDataOffsetInSource =
-          staticLaneDataOffsetsOrigShape[linearLaneDataIdx++];
+      ArrayRef<int64_t> staticLaneDataOffsetOrig =
+          staticLaneDataOffsetsOrig[linearLaneDataIdx++];
       // For each element in the lane_data block
-      for (SmallVector<int64_t> elementOffsetInLaneData :
+      for (SmallVector<int64_t> elemOffsetInLaneData :
            StaticTileOffsetRange(laneData, unitTile)) {
         // For each dim of indexing space
-        SmallVector<int64_t> elementOffsetInResult(rank);
+        SmallVector<int64_t> elementOffsetDist(rank);
         for (int64_t d = 0; d < rank; d++)
-          elementOffsetInResult[d] =
-              laneDataOffsetInResult[d] + elementOffsetInLaneData[d];
-        int64_t elemLinearizedIdx =
-            linearize(elementOffsetInResult, resultStrides);
+          elementOffsetDist[d] =
+              laneDataOffsetDist[d] + elemOffsetInLaneData[d];
+        int64_t elemLinearizedIdxDist =
+            linearize(elementOffsetDist, distStrides);
         for (int64_t d = 0; d < rank; d++)
-          staticElemOffsetInSrcDims[d][elemLinearizedIdx] =
-              staticLaneDataOffsetInSource[d] + elementOffsetInLaneData[d];
+          staticElemOffset[d][elemLinearizedIdxDist] =
+              staticLaneDataOffsetOrig[d] + elemOffsetInLaneData[d];
       }
     }
 
@@ -974,9 +1012,12 @@ struct SgToLaneCreateMask : public OpConversionPattern<OpType> {
     auto flatIndexType = VectorType::get(numElements, rewriter.getIndexType());
     Value inBounds;
     for (int64_t d = 0; d < rank; d++) {
+      std::optional<int64_t> constBound = getConstantIntValue(origBounds[d]);
+      if (constBound && *constBound >= origShape[d])
+        continue;
+
       Value materializedStaticOffset = arith::ConstantOp::create(
-          rewriter, loc,
-          rewriter.getIndexVectorAttr(staticElemOffsetInSrcDims[d]));
+          rewriter, loc, rewriter.getIndexVectorAttr(staticElemOffset[d]));
       // Consider only the first unit, all others are compile-time multiple
       // offsets of the first one and are already encoded in staticOffsets.
       Value validDimExtent = arith::SubIOp::create(rewriter, loc, origBounds[d],
@@ -993,6 +1034,14 @@ struct SgToLaneCreateMask : public OpConversionPattern<OpType> {
                                                   elementMaskInDim)
                                 .getResult()
                           : elementMaskInDim;
+    }
+    // Every dim's bound saturates the mask extent, so no comparison was
+    // emitted at all: every element of every lane is in bounds.
+    if (!inBounds) {
+      rewriter.replaceOp(op, arith::ConstantOp::create(
+                                 rewriter, loc, distType,
+                                 DenseElementsAttr::get(distType, true)));
+      return success();
     }
     auto resMask =
         rewriter.createOrFold<vector::ShapeCastOp>(loc, distType, inBounds);
