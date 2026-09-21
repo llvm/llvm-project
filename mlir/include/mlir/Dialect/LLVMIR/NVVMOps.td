@@ -494,13 +494,28 @@ def NVVM_Log2Op : NVVM_F32UnaryApproxOp<"log2"> {
   }];
 }
 
-def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
+def NVVM_Ex2Op
+    : NVVM_SingleResultIntrinsicOp<"ex2", [Pure, SameOperandsAndResultType]> {
   let summary = "Base-2 exponential (fast approximation)";
   let description = [{
-    Computes a fast approximation of 2 raised to the power of the input
-    value. The `ftz` attribute, when set, flushes subnormal inputs and
-    results to sign-preserving zero.
+    Computes a fast approximation of 2 raised to the power of the input value.
+    Supports f32, vector<1xf32>, and packed f16x2 and bf16x2 values. The `ftz`
+    attribute is optional for f32 and vector<1xf32>, unavailable for f16x2,
+    and required for bf16x2.
   }];
+  let arguments = (ins
+    AnyTypeOf<[F32, VectorOfLengthAndType<[1], [F32]>,
+               VectorOfLengthAndType<[2], [F16]>,
+               VectorOfLengthAndType<[2], [BF16]>]>:$src,
+    DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs
+    AnyTypeOf<[F32, VectorOfLengthAndType<[1], [F32]>,
+               VectorOfLengthAndType<[2], [F16]>,
+               VectorOfLengthAndType<[2], [BF16]>]>:$res);
+  let assemblyFormat = [{
+    $src oilist(`ftz` `=` $ftz) attr-dict `:` type($src)
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2128,7 +2143,8 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$a, $b, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2170,7 +2186,8 @@ class NVVM_ConvertFPx2ToF6x2Op<string srcType>
 
   string llvmBuilder = [{
     auto intId = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$src, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2224,7 +2241,10 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    llvm::SmallVector<llvm::Value *> args = {$a, $b};
+    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
+      args.push_back(builder.getInt1(false));
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2270,7 +2290,8 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($dstTy, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    llvm::Value *packedI16 =
+        createIntrinsicCall(builder, intId, {$a, builder.getInt1(false)});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -2320,7 +2341,10 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
 
   string llvmBuilder = [{
     auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($dstTy, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$src});
+    llvm::SmallVector<llvm::Value *> args = {$src};
+    if (!mlir::isa<mlir::Float8E8M0FNUType>($dstTy))
+      args.push_back(builder.getInt1(false));
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -5025,7 +5049,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   string llvmBuilder = [{
     auto [id, args] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 

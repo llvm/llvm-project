@@ -65,6 +65,8 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::AppleARM64:
   case TargetCXXABI::GenericARM:
     return CreateCIRGenItaniumCXXABI(cgm);
+  case TargetCXXABI::Microsoft:
+    return CreateCIRGenMicrosoftCXXABI(cgm);
 
   case TargetCXXABI::Fuchsia:
   case TargetCXXABI::iOS:
@@ -72,7 +74,6 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::GenericMIPS:
   case TargetCXXABI::WebAssembly:
   case TargetCXXABI::XL:
-  case TargetCXXABI::Microsoft:
     cgm.errorNYI("createCXXABI: C++ ABI kind");
     return nullptr;
   }
@@ -136,6 +137,15 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     theModule->setAttr(
         cir::CIRDialect::getSourceLanguageAttrName(),
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
+  if (langOpts.OpenCL || (langOpts.CUDAIsDevice && getTriple().isSPIRV())) {
+    // CUDA and HIP use OpenCL 2.0 metadata when targeting SPIR-V.
+    unsigned version =
+        langOpts.OpenCL ? langOpts.getOpenCLCompatibleVersion() : 200;
+    setOpenCLVersionAttr(cir::CIRDialect::getOpenCLVersionAttrName(), version);
+    if (langOpts.OpenCLCPlusPlus)
+      setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
+                           langOpts.OpenCLCPlusPlusVersion);
+  }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
   // TODO(CIR): These attributes should eventually be replaced by
@@ -198,6 +208,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+void CIRGenModule::setOpenCLVersionAttr(StringRef attrName, unsigned version) {
+  theModule->setAttr(
+      attrName, cir::OpenCLVersionAttr::get(&getMLIRContext(), version / 100,
+                                            (version % 100) / 10));
+}
 
 void CIRGenModule::createCUDARuntime() {
   cudaRuntime.reset(createNVCUDARuntime(*this));
@@ -1279,10 +1295,19 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // at creation time, matching the logic used in emitCXXGlobalVarDeclInit.
   bool isConstant = false;
   if (d) {
+    QualType declType = d->getType();
+
+    // Classic codegen doesn't try to exclude ctor or dtor here, but has a FIXME
+    // to try to do a better job. So this bit of code does slightly more effort
+    // to get a more accurate answer.  We can try to exclude ctor, but only when
+    // the type is complete, as otherwise we have to check for
+    // fields(particularly whether they are mutable).
+    bool excludeCtor = !declType->isIncompleteType();
     bool needsDtor =
         d->needsDestruction(astContext) == QualType::DK_cxx_destructor;
-    isConstant = d->getType().isConstantStorage(
-        astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/!needsDtor);
+
+    isConstant = declType.isConstantStorage(astContext, excludeCtor,
+                                            /*ExcludeDtor=*/!needsDtor);
   }
 
   mlir::ptr::MemorySpaceAttrInterface declCIRAS =
@@ -1680,6 +1705,20 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   // symbol in CIRGenFunction::generateCode.
   if (fd->isInlineBuiltinDeclaration())
     return true;
+
+  if (codeGenOpts.OptimizationLevel == 0 && !fd->hasAttr<AlwaysInlineAttr>())
+    return false;
+
+  // We don't import function bodies from other named module units since that
+  // behavior may break ABI compatibility of the current unit.
+  if (const Module *m = fd->getOwningModule();
+      m && m->getTopLevelModule()->isNamedModule() &&
+      getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
+    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+  }
+
+  if (fd->hasAttr<NoInlineAttr>())
+    return false;
 
   // PR9614 / glibc btowc workaround: an available_externally function whose
   // body just calls itself (via asm label or __builtin_* lowering on the
@@ -2320,8 +2359,9 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
 
   if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
     assert(!cir::MissingFeatures::openMP());
+
   if (getLangOpts().SYCLIsDevice)
-    errorNYI("SYCL temp address space");
+    return LangAS::Default;
 
   return LangAS::Default;
 }
@@ -3355,6 +3395,29 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   }
 
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
+
+  std::optional<uint64_t> explicitAlignment;
+  if (unsigned alignment =
+          decl->getMaxAlignment() / getASTContext().getCharWidth())
+    explicitAlignment = alignment;
+  else if (langOpts.FunctionAlignment)
+    explicitAlignment = 1ull << langOpts.FunctionAlignment;
+
+  if (explicitAlignment) {
+    f.setAlignment(*explicitAlignment);
+    f.setPreferredAlignment(*explicitAlignment);
+  } else if (langOpts.PreferredFunctionAlignment) {
+    f.setPreferredAlignment(langOpts.PreferredFunctionAlignment);
+  }
+
+  // Some C++ ABIs require 2-byte alignment for member functions, in order to
+  // reserve a bit for differentiating between virtual and non-virtual member
+  // functions. If the current target's C++ ABI requires this and this is a
+  // member function, set its alignment accordingly.
+  if (getTarget().getCXXABI().areMemberFunctionsAligned()) {
+    if (isa<CXXMethodDecl>(decl) && f.getAlignment().value_or(1) < 2)
+      f.setAlignment(2);
+  }
 }
 
 // Maps an AST address space to the OpenCL logical address space kind recorded
@@ -3909,6 +3972,24 @@ void CIRGenModule::release() {
                          builder.getStringAttr(fnName));
     }
   }
+
+  // Serialize the lowering-relevant LangOptions onto the ModuleOp,
+  // unconditionally, so a reloaded .cir module is self-describing. See
+  // #cir.lowering_lang_options.
+  theModule->setAttr(
+      cir::CIRDialect::getLoweringLangOptionsAttrName(),
+      cir::LoweringLangOptionsAttr::get(
+          &getMLIRContext(),
+          /*exceptions=*/langOpts.Exceptions,
+          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
+          /*cuda=*/langOpts.CUDA,
+          /*cuda_is_device=*/langOpts.CUDAIsDevice,
+          /*hip=*/langOpts.HIP,
+          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
+          /*openmp=*/langOpts.OpenMP != 0,
+          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
+          /*clang_abi_compat=*/
+          static_cast<int32_t>(langOpts.getClangABICompat())));
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.

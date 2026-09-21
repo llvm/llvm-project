@@ -606,6 +606,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkostemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkostemp
+)
+
+add_entrypoint_object(
   mkstemp
   ALIAS
   DEPENDS
