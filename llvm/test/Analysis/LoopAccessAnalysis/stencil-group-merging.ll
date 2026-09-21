@@ -1327,8 +1327,8 @@ define void @stencil_merge_mixed_member(ptr %a, ptr %out, i64 %n, i64 %s1, i64 %
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
-; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s1 sle) 614891469123651720
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s2 sle) 614891469123651720
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
@@ -1650,8 +1650,8 @@ define void @stencil_merge_factored_diagonal(ptr %p, ptr %q, ptr %q2, i64 %s1, i
 ; MERGE-NEXT:      {((64 * %s2) + %p),+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      {((64 * (%s1 + %s2)) + %p),+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
-; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s1 sle) 72057594037927935
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s2 sle) 72057594037927935
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
@@ -1847,10 +1847,10 @@ define void @stencil_merge_depth_cap(ptr %p, ptr %q, ptr %q2, ptr %q3, i64 %s1, 
 ; MERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
-; MERGE-NEXT:      Compare predicate: (4 * %s3) sgt) 0
-; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s1 sle) 48038396025285290
+; MERGE-NEXT:      Compare predicate: (4 * %s3) sgt) 0
 ; MERGE-NEXT:      Compare predicate: (4 * %s3) sle) 48038396025285290
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s2 sle) 48038396025285290
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
@@ -2215,10 +2215,10 @@ define void @stencil_merge_three_stride_star(ptr %a, ptr %out, ptr %out2, i64 %n
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Compare predicate: %s3 sgt) 0
-; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
-; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s3 sle) 4611686018427387903
+; MERGE-NEXT:      Compare predicate: %s2 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s2 sle) 4611686018427387903
+; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s1 sle) 4611686018427387903
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
@@ -2755,12 +2755,12 @@ define void @stencil_merge_depth_cap_sum(ptr %p, ptr %q, ptr %q2, ptr %q3, ptr %
 ; MERGE-NEXT:      {((64 * %s1) + %p),+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      {%p,+,8}<%loop> Added Flags: <nusw>
 ; MERGE-NEXT:      Compare predicate: %s1 sgt) 0
-; MERGE-NEXT:      Compare predicate: (%s1 + %s2) sgt) 0
-; MERGE-NEXT:      Compare predicate: %s3 sgt) 0
-; MERGE-NEXT:      Compare predicate: %s4 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s1 sle) 144115188075855871
+; MERGE-NEXT:      Compare predicate: (%s1 + %s2) sgt) 0
 ; MERGE-NEXT:      Compare predicate: (%s1 + %s2) sle) 2150972956356057
+; MERGE-NEXT:      Compare predicate: %s3 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s3 sle) 2150972956356057
+; MERGE-NEXT:      Compare predicate: %s4 sgt) 0
 ; MERGE-NEXT:      Compare predicate: %s4 sle) 2150972956356057
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
@@ -3550,7 +3550,7 @@ exit:
 ;; 7 loads from %a at offsets {C - s1 - s2 - s3, +-s1, +-s2, +-s3}.
 ;; @constant_offset_too_large: C = -2^63. abs(C) is 2^63, more than int64
 ;; max, so getStencilStrideUpperLimit finds no stride limit and the DepSet is
-;; skipped. Checks: 7 before, 7 after.
+;; skipped.
 ;; @constant_offset_fits: C = -2^62. The stride limit is (2^63 - 1 - 2^62) / 2
 ;; and the merge fires. Checks: 7 before the merge, 1 after.
 define void @constant_offset_too_large(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2in, i64 %s3in) {
