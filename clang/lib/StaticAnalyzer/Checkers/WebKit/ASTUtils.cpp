@@ -111,14 +111,9 @@ bool tryToFindPtrOrigin(
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
           if (IsGetterOfRefCt && *IsGetterOfRefCt) {
-            E = memberCall->getImplicitObjectArgument()->IgnoreParenCasts();
-            if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-              if (auto *Decl = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-                if (Decl->isLocalVarDeclOrParm()) {
-                  if (StopAtFirstRefCountedObj)
-                    return callback(E, true);
-                }
-              }
+            E = memberCall->getImplicitObjectArgument();
+            if (StopAtFirstRefCountedObj) {
+              return callback(E, true);
             }
             continue;
           }
@@ -218,8 +213,6 @@ bool tryToFindPtrOrigin(
         if (isSafePtrType(Method->getReturnType()))
           return callback(E, true);
       }
-      if (ObjCMsgExpr->isClassMessage())
-        return callback(E, true);
       auto Selector = ObjCMsgExpr->getSelector();
       auto NameForFirstSlot = Selector.getNameForSlot(0);
       if ((NameForFirstSlot == "class" || NameForFirstSlot == "superclass") &&
