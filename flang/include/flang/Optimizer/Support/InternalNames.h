@@ -199,7 +199,8 @@ struct NameUniquer {
   /// If \p excludeStringLiterals is true, string literals are excluded from the
   /// check.
   static bool isCompilerGenerated(llvm::StringRef name,
-                                  bool excludeStringLiterals = true);
+                                  bool excludeStringLiterals = true,
+                                  bool excludeArrayLiterals = true);
 
 private:
   static std::string intAsString(std::int64_t i);
