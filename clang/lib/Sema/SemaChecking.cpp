@@ -1242,7 +1242,7 @@ public:
     llvm::APSInt RE = R->extOrTrunc(W);
 
     return LE * RE;
-  };
+  }
 
   std::optional<llvm::APSInt> ComputeStrLenArgument(unsigned Index) {
     std::optional<unsigned> IndexOptional = TranslateIndex(Index);
@@ -1551,8 +1551,17 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
   case Builtin::BIfgets: {
-    DiagID = diag::warn_fortify_source_size_mismatch;
     SourceSize = Checker.EvaluateIntegerArgument(1);
+
+    if (SourceSize && SourceSize->isNegative()) {
+      DiagRuntimeBehavior(
+          TheCall->getBeginLoc(), TheCall,
+          PDiag(diag::warn_fortify_source_negative_size)
+              << Checker.getFunctionName());
+      return;
+    }
+
+    DiagID = diag::warn_fortify_source_size_mismatch;
     DestinationSize = Checker.ComputeSizeArgument(0);
     break;
   }

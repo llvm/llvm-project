@@ -148,8 +148,10 @@ void call_bcopy_bzero(void) {
 void call_fread_fwrite_fgets(FILE *fp) {
   char src[4];
   fread(src, 2, 3, fp); // expected-warning {{'fread' will always overflow; destination buffer has size 4, but size argument is 6}}
+  fread(src, 1ULL << 32, 1ULL << 32, fp); // expected-warning {{'fread' will always overflow; destination buffer has size 4, but size argument is 18446744073709551616}}
   fwrite(src, 2, 3, fp); // expected-warning {{'fwrite' will always read past the end of the source buffer; source buffer has size 4, but the size is 6}}
   fgets(src, 5, fp); // expected-warning {{'fgets' size argument is too large; destination buffer has size 4, but size argument is 5}}
+  fgets(src, -1, fp); // expected-warning {{'fgets' size argument is negative}}
 
 }
 
