@@ -9,24 +9,12 @@
 #ifndef LLVM_LIB_TARGET_PISA_PISACACHECTRLMMRA_H
 #define LLVM_LIB_TARGET_PISA_PISACACHECTRLMMRA_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/Support/raw_ostream.h"
-
 #include <optional>
 
 namespace llvm {
-namespace PISA {
+class Instruction;
 
-inline constexpr StringRef CacheCtrlMMRAPrefix = "pisa.cache.ctrl";
+namespace PISA {
 
 // Reads the cache-ctrl integer from the "pisa.cache.ctrl" MMRA tag on I.
 // Returns std::nullopt if the tag is absent or malformed. If more than
@@ -35,59 +23,15 @@ inline constexpr StringRef CacheCtrlMMRAPrefix = "pisa.cache.ctrl";
 // the LoadStoreVectorizer), emits a warning through the LLVMContext
 // listing the conflicting values and keeps one of them so the compiler
 // can still produce valid output.
-inline std::optional<unsigned> getCacheCtrlFromMMRA(const Instruction &I) {
-  MMRAMetadata MMRA(I);
-  SmallVector<unsigned, 2> Values;
-  for (const MMRAMetadata::TagT &Tag : MMRA) {
-    StringRef Prefix = Tag.first;
-    StringRef Suffix = Tag.second;
-    if (Prefix != CacheCtrlMMRAPrefix)
-      continue;
-    unsigned Value;
-    if (Suffix.getAsInteger(10, Value))
-      return std::nullopt;
-    if (!is_contained(Values, Value))
-      Values.push_back(Value);
-  }
-  if (Values.empty())
-    return std::nullopt;
-  if (Values.size() > 1) {
-    SmallString<128> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "instruction has conflicting pisa.cache.ctrl MMRA tags: {";
-    interleaveComma(Values, OS);
-    OS << "}; keeping " << Values.front();
-    I.getContext().diagnose(
-        DiagnosticInfoGeneric(&I, Twine(StringRef(Msg)), DS_Warning));
-  }
-  return Values.front();
-}
+std::optional<unsigned> getCacheCtrlFromMMRA(const Instruction &I);
 
 // Sets the "pisa.cache.ctrl" MMRA tag on I to Value. Preserves all
 // other MMRA tags already on I, replacing any prior cache-ctrl tag.
-inline void setCacheCtrlMMRA(Instruction &I, unsigned Value) {
-  LLVMContext &Ctx = I.getContext();
-
-  SmallVector<MMRAMetadata::TagT, 4> Tags;
-  MMRAMetadata Existing(I);
-  for (const MMRAMetadata::TagT &Tag : Existing) {
-    if (Tag.first != CacheCtrlMMRAPrefix)
-      Tags.push_back(Tag);
-  }
-
-  SmallString<8> Buf;
-  Tags.emplace_back(CacheCtrlMMRAPrefix, Twine(Value).toStringRef(Buf));
-
-  I.setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, Tags));
-}
+void setCacheCtrlMMRA(Instruction &I, unsigned Value);
 
 // Copies the "pisa.cache.ctrl" MMRA tag from From to To if present,
 // preserving all other MMRA tags already on To.
-inline void copyCacheCtrlMMRA(const Instruction &From, Instruction &To) {
-  std::optional<unsigned> Value = getCacheCtrlFromMMRA(From);
-  if (Value)
-    setCacheCtrlMMRA(To, *Value);
-}
+void copyCacheCtrlMMRA(const Instruction &From, Instruction &To);
 
 } // namespace PISA
 } // namespace llvm
