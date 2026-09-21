@@ -44,6 +44,11 @@ jobs:
           fetch-depth: 0 # some tools need full git history
           fetch-tags: true
 
+      - name: Print stuff
+        shell: bash
+        run: |
+          ls
+
       - name: Set up Python dependencies
         shell: bash
         run: |
