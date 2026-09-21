@@ -20,9 +20,11 @@
 namespace llvm {
 namespace abi {
 
-class AMDGPUTargetInfo : public TargetInfo {
+class AMDGPUTargetInfo final : public TargetInfo {
 private:
   static const unsigned MaxNumRegsForArgsRet = 16;
+
+  ABICompatInfo CompatInfo;
 
   /// HIP coerces a generic scalar-pointer kernel argument to the global
   /// address space. Gated by the front end, which alone can see LangOpts.HIP.
@@ -38,18 +40,20 @@ private:
   ArgInfo classifyDefaultReturnType(const Type *Ty) const;
 
   /// Estimate number of registers the type will use when passed in registers.
-  uint64_t numRegsForType(const Type *Ty) const;
+  uint64_t getNumRegsForType(const Type *Ty) const;
 
 public:
   AMDGPUTargetInfo(TypeBuilder &TypeBuilder, const ABICompatInfo &Compat,
                    bool CoerceGenericPtrArgToGlobal)
-      : TargetInfo(TypeBuilder, Compat),
+      : TargetInfo(TypeBuilder), CompatInfo(Compat),
         CoerceGenericPtrArgToGlobal(CoerceGenericPtrArgToGlobal) {}
+
+  const ABICompatInfo &getABICompatInfo() const override { return CompatInfo; }
 
   void computeInfo(FunctionInfo &FI) const override;
 };
 
-uint64_t AMDGPUTargetInfo::numRegsForType(const Type *Ty) const {
+uint64_t AMDGPUTargetInfo::getNumRegsForType(const Type *Ty) const {
   uint64_t NumRegs = 0;
 
   if (const auto *VT = dyn_cast<VectorType>(Ty)) {
@@ -69,7 +73,7 @@ uint64_t AMDGPUTargetInfo::numRegsForType(const Type *Ty) const {
 
   if (const auto *RT = dyn_cast<RecordType>(Ty)) {
     for (const FieldInfo &Field : RT->getFields())
-      NumRegs += numRegsForType(Field.FieldType);
+      NumRegs += getNumRegsForType(Field.FieldType);
     return NumRegs;
   }
 
@@ -161,7 +165,7 @@ ArgInfo AMDGPUTargetInfo::classifyReturnType(const Type *RetTy) const {
         return ArgInfo::getDirect(TB.getArrayType(I32Ty, 2, /*SizeInBits=*/64));
       }
 
-      if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
+      if (getNumRegsForType(RetTy) <= MaxNumRegsForArgsRet)
         return ArgInfo::getDirect();
     }
   }
@@ -248,7 +252,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
     }
 
     if (NumRegsLeft > 0) {
-      uint64_t NumRegs = numRegsForType(Ty);
+      uint64_t NumRegs = getNumRegsForType(Ty);
       if (NumRegsLeft >= NumRegs) {
         NumRegsLeft -= NumRegs;
         return ArgInfo::getDirect();
@@ -263,7 +267,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
   // Otherwise just do the default thing.
   ArgInfo AI = classifyDefaultArgumentType(Ty);
   if (!AI.isIndirect()) {
-    uint64_t NumRegs = numRegsForType(Ty);
+    uint64_t NumRegs = getNumRegsForType(Ty);
     NumRegsLeft -= std::min(NumRegs, uint64_t{NumRegsLeft});
   }
 
@@ -273,6 +277,8 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
 void AMDGPUTargetInfo::computeInfo(FunctionInfo &FI) const {
   CallingConv::ID CC = FI.getCallingConvention();
 
+  // Non-trivial C++ records are returned indirectly
+  // in the flat address space.
   if (!maybeCommonClassifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 

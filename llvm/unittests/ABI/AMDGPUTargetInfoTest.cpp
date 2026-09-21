@@ -268,6 +268,18 @@ TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordIsIndirectPrivate) {
                  /*ByVal=*/false, llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
 
+// A non-trivial C++ record return is indirect in the generic (flat) address
+// space with ByVal=false, matching classic's getSRetAddrSpace(LangAS::Default).
+TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordReturnIsIndirectFlat) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *CannotPass = TB.getRecordType(
+      {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
+      llvm::Align(4), StructPacking::Default, {}, {}, RecordFlags::IsCXXRecord);
+  expectIndirect(classifyRet(CannotPass, FI, TI), llvm::Align(4),
+                 /*ByVal=*/false, llvm::AMDGPUAS::FLAT_ADDRESS);
+}
+
 // A variadic argument bypasses register packing and passes through unchanged,
 // kept intact rather than flattened into per-field wire arguments.
 TEST_F(AMDGPUTargetInfoTest, VariadicArgumentPassesDirect) {
