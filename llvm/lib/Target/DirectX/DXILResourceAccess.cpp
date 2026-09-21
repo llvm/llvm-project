@@ -866,7 +866,7 @@ static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
   Type *I32 = Builder.getInt32Ty();
   Value *Offset = ConstantInt::get(I32, ConstantOffset.getSExtValue());
   for (auto &[V, Scale] : VariableOffsets) {
-    Value *Index = Builder.CreateZExtOrTrunc(V, I32);
+    Value *Index = Builder.CreateSExtOrTrunc(V, I32);
     if (!Scale.isOne())
       Index =
           Builder.CreateMul(Index, ConstantInt::get(I32, Scale.getSExtValue()));
@@ -883,7 +883,7 @@ static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
 //  - OffsetIdx is the accumulated byte offset of any GEPs in the ptr chain
 static AccessIndices
 getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
-                 SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
+                 SmallDenseMap<PHINode *, AccessIndices> &VisitedPhis) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
       DeadInsts.insert(II);
@@ -925,7 +925,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
   if (auto *Phi = dyn_cast<PHINode>(I)) {
     // If we're already building indices for this phi, return a ref to the phi
     if (auto It = VisitedPhis.find(Phi); It != VisitedPhis.end())
-      return {nullptr, It->second, nullptr};
+      return It->second;
 
     unsigned NumEdges = Phi->getNumIncomingValues();
     assert(NumEdges != 0 && "Malformed Phi Node");
@@ -943,7 +943,9 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     // the map even if we end up deleting newly created phi below since we can't
     // possibly have a constant value if we recursed.
     if (Phi->getType()->isTargetExtTy())
-      VisitedPhis[Phi] = HandlePhi.get();
+      VisitedPhis[Phi] = {nullptr, HandlePhi.get(), nullptr};
+    else if (Phi->getType()->isPointerTy())
+      VisitedPhis[Phi] = {GetPtrPhi.get(), HandlePhi.get(), OffsetPhi.get()};
 
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
       auto *BB = Phi->getIncomingBlock(Idx);
@@ -1031,7 +1033,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
 static void
 replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
                          SmallSetVector<Instruction *, 16> &DeadInsts,
-                         SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
+                         SmallDenseMap<PHINode *, AccessIndices> &VisitedPhis) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts, VisitedPhis);
   assert(AccessIdx.hasHandleIdx() &&
          "Couldn't retrieve handle index. This is guaranteed by "
@@ -1080,7 +1082,7 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
   SmallSetVector<Instruction *, 16> DeadInsts;
-  SmallDenseMap<PHINode *, PHINode *> VisitedPhis;
+  SmallDenseMap<PHINode *, AccessIndices> VisitedPhis;
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
