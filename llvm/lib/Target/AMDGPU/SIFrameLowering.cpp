@@ -81,7 +81,7 @@ static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
           << uint8_t(dwarf::DW_OP_lit0 + WavefrontSizeLog2)
           << uint8_t(dwarf::DW_OP_shl)
           << uint8_t(dwarf::DW_OP_lit0 +
-                     dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)
+                     llvm::to_underlying(dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave))
           << uint8_t(dwarf::DW_OP_LLVM_user)
           << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
 
@@ -780,7 +780,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         4, // length
         static_cast<char>(dwarf::DW_OP_lit0),
         static_cast<char>(dwarf::DW_OP_lit0 +
-                          dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
+                          llvm::to_underlying(dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)),
         static_cast<char>(dwarf::DW_OP_LLVM_user),
         static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
     static StringRef CFAEncodedInstUserOps =

@@ -157,7 +157,7 @@ void PPCELFStreamer::emitGOTToPCRelReloc(const MCInst &Inst) {
   MCFragment *F = LabelSym->getFragment();
   F->addFixup(
       MCFixup::create(LabelSym->getOffset() - 8, SubExpr2,
-                      FirstLiteralRelocationKind + ELF::R_PPC64_PCREL_OPT));
+                      FirstLiteralRelocationKind + llvm::to_underlying(ELF::R_PPC64_PCREL_OPT)));
   emitLabel(CurrentLocation, Inst.getLoc());
 }
 
