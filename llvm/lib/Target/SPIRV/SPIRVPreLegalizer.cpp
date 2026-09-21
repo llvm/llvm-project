@@ -18,6 +18,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
@@ -30,6 +31,7 @@
 #define DEBUG_TYPE "spirv-prelegalizer"
 
 using namespace llvm;
+using namespace llvm::MIPatternMatch;
 
 namespace {
 class SPIRVPreLegalizerLegacy : public MachineFunctionPass {
@@ -430,6 +432,18 @@ static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   return std::min(std::max<unsigned>(PowerOf2Ceil(BitWidth), 8u), 128u);
 }
 
+static std::optional<unsigned>
+getNarrowScalarWidth(Register Reg, const MachineRegisterInfo &MRI) {
+  LLT Ty = MRI.getType(Reg);
+  if (!Ty.isScalar())
+    return std::nullopt;
+  unsigned W = Ty.getScalarSizeInBits();
+  // <= and not == because widenBitWidthToNextPow2 caps at 128.
+  if (widenBitWidthToNextPow2(W) <= W)
+    return std::nullopt;
+  return W;
+}
+
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
   LLT RegType = MRI.getType(Reg);
   if (!RegType.isScalar())
@@ -525,33 +539,52 @@ static bool isSignSensitiveOp(const MachineInstr &MI) {
   }
 }
 
-struct SignSensitiveWideningInfo {
-  // Width before widening of each value-operand vreg (one entry per vreg).
+struct NarrowWideningInfo {
+  // Width before widening of each sign-sensitive value-operand vreg (one entry
+  // per vreg).
   DenseMap<Register, unsigned> OrigWidth;
-  // Ops whose value operand(s) need replacing, ordered for reproducible vreg
-  // numbering.
-  SmallVector<MachineInstr *> Worklist;
+  // Sign-sensitive ops whose value operand(s) need replacing, ordered for
+  // reproducible vreg numbering.
+  SmallVector<MachineInstr *> SignSensitiveWorklist;
+  // Keyed by instruction, not vreg: G_TRUNC handling can replace the source.
+  SmallVector<std::pair<MachineInstr *, unsigned>> BitCountWorklist;
 };
 
-// Collect sign-sensitive ops with narrow scalar value operands and their
+// G_CTTZ_ZERO_POISON is absent because its low bits are known non-zero, G_CTLS
+// because the backend does not select it.
+static bool isWidthSensitiveBitCountOp(unsigned Opcode) {
+  switch (Opcode) {
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTPOP:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Collect ops whose semantics depend on the operand width along with their
 // pre-widening widths, before later passes retype those vregs to pow2 LLTs
 // and the original width is no longer recoverable.
-static SignSensitiveWideningInfo
-recordSignSensitiveOperandWidths(MachineFunction &MF,
-                                 MachineRegisterInfo &MRI) {
-  SignSensitiveWideningInfo Info;
+static NarrowWideningInfo
+recordNarrowOperandWidths(MachineFunction &MF, const MachineRegisterInfo &MRI) {
+  NarrowWideningInfo Info;
   auto RecordIfNarrow = [&](Register Reg) {
-    LLT Ty = MRI.getType(Reg);
-    if (!Ty.isScalar())
+    std::optional<unsigned> W = getNarrowScalarWidth(Reg, MRI);
+    if (!W)
       return false;
-    unsigned W = Ty.getScalarSizeInBits();
-    if (widenBitWidthToNextPow2(W) == W)
-      return false;
-    Info.OrigWidth.try_emplace(Reg, W);
+    Info.OrigWidth.try_emplace(Reg, *W);
     return true;
   };
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      if (isWidthSensitiveBitCountOp(MI.getOpcode())) {
+        if (std::optional<unsigned> W =
+                getNarrowScalarWidth(MI.getOperand(1).getReg(), MRI))
+          Info.BitCountWorklist.emplace_back(&MI, *W);
+        continue;
+      }
       if (!isSignSensitiveOp(MI))
         continue;
       // Value operands are the trailing two, past any def or predicate.
@@ -563,7 +596,7 @@ recordSignSensitiveOperandWidths(MachineFunction &MF,
       bool NeedsRewrite = RecordIfNarrow(LHS.getReg());
       NeedsRewrite = RecordIfNarrow(RHS.getReg()) || NeedsRewrite;
       if (NeedsRewrite)
-        Info.Worklist.push_back(&MI);
+        Info.SignSensitiveWorklist.push_back(&MI);
     }
   }
   return Info;
@@ -573,7 +606,7 @@ recordSignSensitiveOperandWidths(MachineFunction &MF,
 // operand whose original width was narrower than the widened pow2 width and
 // retype the operand's vreg LLT in place to the widened width.
 //
-// Info must have been populated by recordSignSensitiveOperandWidths before
+// Info must have been populated by recordNarrowOperandWidths before
 // other passes retyped the vregs; otherwise the narrow widths needed here
 // are lost.
 //
@@ -581,7 +614,7 @@ recordSignSensitiveOperandWidths(MachineFunction &MF,
 static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                   MachineIRBuilder &MIB,
                                   MachineRegisterInfo &MRI,
-                                  const SignSensitiveWideningInfo &Info) {
+                                  const NarrowWideningInfo &Info) {
   // Emit G_SEXT_INREG from Reg's recorded narrow width; retypes Reg to the
   // widened width and returns the sign-extended vreg.
   auto SignExtendReg = [&](Register Reg, unsigned OldW,
@@ -601,7 +634,7 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   // TODO: when the same narrow vreg feeds multiple sign-sensitive ops (e.g.
   // sdiv %x, %y and srem %x, %y), emit one shared G_SEXT_INREG instead of one
   // per use.
-  for (MachineInstr *MI : Info.Worklist) {
+  for (MachineInstr *MI : Info.SignSensitiveWorklist) {
     unsigned N = MI->getNumOperands();
     MachineOperand &LHS = MI->getOperand(N - 2);
     MachineOperand &RHS = MI->getOperand(N - 1);
@@ -617,6 +650,76 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     }
     if (auto It = Info.OrigWidth.find(RHSReg); It != Info.OrigWidth.end())
       RHS.setReg(SignExtendReg(RHSReg, It->second, *MI));
+  }
+}
+
+// LegalizerHelper::widenScalar has the same cases but cannot be reached: the
+// relabel retypes every narrow scalar to a pow2 LLT, so no illegal narrow type
+// ever reaches the legalizer.
+//
+// TODO: handle vector operands.
+static void widenBitCountOps(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                             MachineRegisterInfo &MRI,
+                             const NarrowWideningInfo &Info) {
+  for (auto [MI, OldWidth] : Info.BitCountWorklist) {
+    Register SrcReg = MI->getOperand(1).getReg();
+    unsigned NewWidth = widenBitWidthToNextPow2(OldWidth);
+    LLT NewTy = LLT::scalar(NewWidth);
+    widenScalarType(SrcReg, MRI);
+    MIB.setInstrAndDebugLoc(*MI);
+    SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewWidth, MIB);
+
+    // The G_TRUNC lowering masks its result to the narrow width, so a source
+    // coming from it needs no second mask.
+    APInt Cst;
+    bool HighBitsAlreadyZero =
+        mi_match(SrcReg, MRI, m_GAnd(m_Reg(), m_ICst(Cst))) &&
+        Cst.isSubsetOf(APInt::getLowBitsSet(Cst.getBitWidth(), OldWidth));
+    auto ClearHighBits = [&](unsigned Width) -> Register {
+      if (HighBitsAlreadyZero)
+        return SrcReg;
+      Register Masked = createVirtualRegister(SpvTy, GR, MIB);
+      MIB.buildZExtInReg(Masked, SrcReg, Width);
+      return Masked;
+    };
+
+    Register Input;
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_CTLZ_ZERO_POISON: {
+      // Shifting up to the widened MSB moves the poison out too, so no
+      // adjustment.
+      Input = createVirtualRegister(SpvTy, GR, MIB);
+      auto Diff = MIB.buildConstant(NewTy, NewWidth - OldWidth);
+      MIB.buildShl(Input, SrcReg, Diff);
+      break;
+    }
+    case TargetOpcode::G_CTTZ: {
+      // Keeps an all-zero narrow value counting exactly OldWidth zeros.
+      Input = createVirtualRegister(SpvTy, GR, MIB);
+      auto TopBit =
+          MIB.buildConstant(NewTy, APInt::getOneBitSet(NewWidth, OldWidth));
+      MIB.buildOr(Input, SrcReg, TopBit);
+      break;
+    }
+    case TargetOpcode::G_CTPOP:
+      Input = ClearHighBits(OldWidth);
+      break;
+    case TargetOpcode::G_CTLZ: {
+      // Clearing the extra bits adds leading zeros the count has to drop.
+      Input = ClearHighBits(OldWidth);
+      Register DstReg = MI->getOperand(0).getReg();
+      widenScalarType(DstReg, MRI);
+      Register Count = createVirtualRegister(SpvTy, GR, MIB);
+      MI->getOperand(0).setReg(Count);
+      setInsertPtAfterDef(MIB, MI);
+      auto Diff = MIB.buildConstant(NewTy, NewWidth - OldWidth);
+      MIB.buildSub(DstReg, Count, Diff);
+      break;
+    }
+    default:
+      llvm_unreachable("unexpected width-sensitive bit-count opcode");
+    }
+    MI->getOperand(1).setReg(Input);
   }
 }
 
@@ -643,11 +746,10 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     // integer widths of 8, 16, 32, 64. Non-standard widths (e.g., i24, i40)
     // must be widened to the next power of two.
     //
-    // Record the original widths of sign-sensitive operands before either
+    // Record the original widths of width-sensitive operands before either
     // the G_TRUNC handling or the general widening loop retypes vregs, then
     // rewrite those ops after G_TRUNC processing using the recorded widths.
-    SignSensitiveWideningInfo SignSensitiveInfo =
-        recordSignSensitiveOperandWidths(MF, MRI);
+    NarrowWideningInfo WideningInfo = recordNarrowOperandWidths(MF, MRI);
 
     // G_TRUNC requires special handling because its semantics depend on the
     // original destination width. For example:
@@ -718,11 +820,11 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (NewSrcWidth == NewDstWidth) {
           // Rekey OrigWidth from DstReg to MaskedReg so widenSignSensitiveOps
           // still sees the narrow original width after replaceRegWith.
-          if (auto It = SignSensitiveInfo.OrigWidth.find(DstReg);
-              It != SignSensitiveInfo.OrigWidth.end()) {
+          if (auto It = WideningInfo.OrigWidth.find(DstReg);
+              It != WideningInfo.OrigWidth.end()) {
             unsigned W = It->second;
-            SignSensitiveInfo.OrigWidth.erase(It);
-            SignSensitiveInfo.OrigWidth.try_emplace(MaskedReg, W);
+            WideningInfo.OrigWidth.erase(It);
+            WideningInfo.OrigWidth.try_emplace(MaskedReg, W);
           }
           MRI.replaceRegWith(DstReg, MaskedReg);
           TruncToRemove.push_back(&MI);
@@ -734,7 +836,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     for (MachineInstr *MI : TruncToRemove)
       MI->eraseFromParent();
 
-    widenSignSensitiveOps(MF, GR, MIB, MRI, SignSensitiveInfo);
+    widenSignSensitiveOps(MF, GR, MIB, MRI, WideningInfo);
+    widenBitCountOps(GR, MIB, MRI, WideningInfo);
   }
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
@@ -1118,6 +1221,42 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     invalidateAndEraseMI(GR, MI);
 }
 
+// Returns the value of the switch case operand in Reg. The case value stays a
+// G_CONSTANT until the module emits a SPIR-V constant for the same value, at
+// which point the case register is replaced with the one defining that
+// constant, which keeps its value in literal operands rather than in a CImm.
+static const ConstantInt *getSwitchCaseValue(Register Reg,
+                                             const MachineRegisterInfo &MRI,
+                                             LLVMContext &Ctx) {
+  APInt Val;
+  if (mi_match(Reg, MRI, m_ICst(Val)))
+    return ConstantInt::get(Ctx, Val);
+
+  const MachineInstr *Def = nullptr;
+  if (!mi_match(Reg, MRI, m_MInstr(Def)))
+    llvm_unreachable("Switch case operand has no definition");
+
+  LLT Ty = MRI.getType(Reg);
+  assert(Ty.isValid() && "Expected a typed switch case value");
+  Val = APInt(Ty.getScalarSizeInBits(), 0);
+
+  switch (Def->getOpcode()) {
+  case SPIRV::OpConstantNull:
+  case SPIRV::OpConstantI:
+    // The operands after the type are 32-bit literal words, least significant
+    // first, as written by addNumImm(). OpConstantNull carries none, so it
+    // decodes to zero without a case of its own.
+    for (unsigned I = 2, E = Def->getNumExplicitOperands(); I != E; ++I) {
+      uint32_t Word = static_cast<uint32_t>(Def->getOperand(I).getImm());
+      Val |= APInt(Val.getBitWidth(), Word).shl((I - 2) * 32);
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected definition of a switch case value");
+  }
+  return ConstantInt::get(Ctx, Val);
+}
+
 // LLVM allows the switches to use registers as cases, while SPIR-V required
 // those to be immediate values. This function replaces such operands with the
 // equivalent immediate constant.
@@ -1125,6 +1264,7 @@ static void processSwitchesConstants(MachineFunction &MF,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  LLVMContext &Ctx = MF.getFunction().getContext();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_switch))
@@ -1136,9 +1276,8 @@ static void processSwitchesConstants(MachineFunction &MF,
       NewOperands.push_back(MI.getOperand(2)); // Default
       for (unsigned i = 3; i < MI.getNumOperands(); i += 2) {
         Register Reg = MI.getOperand(i).getReg();
-        MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
         NewOperands.push_back(
-            MachineOperand::CreateCImm(ConstInstr->getOperand(1).getCImm()));
+            MachineOperand::CreateCImm(getSwitchCaseValue(Reg, MRI, Ctx)));
 
         NewOperands.push_back(MI.getOperand(i + 1));
       }

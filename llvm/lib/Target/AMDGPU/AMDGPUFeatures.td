@@ -31,8 +31,9 @@ def FeatureFlatOffsetBits12 : SubtargetFeatureFlatOffsetBits<12>;
 def FeatureFlatOffsetBits24 : SubtargetFeatureFlatOffsetBits<24>;
 
 // Addressable local memory size is the maximum number of bytes of LDS that can
-// be allocated to a single workgroup.
-class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
+// be allocated to a single workgroup. A generic target's feature must be present
+// on at least one of its covered GPUs.
+class SubtargetFeatureAddressableLocalMemorySize <int Value> : AMDGPUGenericAnyFeature<
   "addressablelocalmemorysize"#Value,
   "AddressableLocalMemorySize",
   !cast<string>(Value),
@@ -44,6 +45,20 @@ def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMem
 def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
 def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
+
+// A generic target uses the largest allocation granularity of its covered GPUs.
+// Its feature must be present on at least one covered GPU.
+class SubtargetFeatureLDSAllocGranularity <int Granularity> : AMDGPUGenericAnyFeature <
+  "lds-alloc-granularity-"#Granularity,
+  "LDSAllocationGranularity",
+  !cast<string>(Granularity),
+  "LDS allocation granularity in bytes.">;
+
+def FeatureLDSAllocGranularity256 : SubtargetFeatureLDSAllocGranularity<256>;
+def FeatureLDSAllocGranularity512 : SubtargetFeatureLDSAllocGranularity<512>;
+def FeatureLDSAllocGranularity1024 : SubtargetFeatureLDSAllocGranularity<1024>;
+def FeatureLDSAllocGranularity1280 : SubtargetFeatureLDSAllocGranularity<1280>;
+def FeatureLDSAllocGranularity2048 : SubtargetFeatureLDSAllocGranularity<2048>;
 
 // Whether each wavefront size mode is available on the hardware,
 // independent of the active mode.
@@ -77,4 +92,3 @@ class SubtargetFeatureGeneration <string Value, string FeatureName,
                                   list<SubtargetFeature> Implies> :
         SubtargetFeature <FeatureName, "Gen", Subtarget#"::"#Value,
                           Value#" GPU generation", Implies>;
-

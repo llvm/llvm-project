@@ -13,6 +13,7 @@ add_flang_library(FIROpenACCTransforms
   FIROpenACCPassesIncGen
 
   LINK_LIBS
+  CUFAttrs
   CUFDialect
   FIRAnalysis
   FIRBuilder
@@ -20,6 +21,7 @@ add_flang_library(FIROpenACCTransforms
   FIRDialectSupport
   FIROpenACCAnalysis
   FIROpenACCSupport
+  FIRSupport
   HLFIRDialect
 
   MLIR_LIBS

@@ -51,19 +51,48 @@ func.func @private_without_par_dims() {
 
 // -----
 
-// A record element uses the padded stride: real(8) + real(4) has a size of 12
-// and an alignment of 8, so consecutive elements are 16 bytes apart.
+// A record element uses the padded stride: real(8) + real(4) has a stored
+// representation of 12 bytes and an alignment of 8, so consecutive elements
+// are 16 bytes apart (allocation extent rounded up to alignment).
 
 // CHECK-LABEL: func.func @private_static_record
 // CHECK: %[[PRIV:.*]] = acc.privatize
 // CHECK: %[[SIZE:.*]] = arith.constant 128 : i64
 // CHECK: acc.map_info varPtr(%[[PRIV]]
 // CHECK-SAME: size(%[[SIZE]] : i64)
-// CHECK-SAME: elementSize(12)
+// CHECK-SAME: elementSize(16)
 // CHECK-SAME: mapFlags(private)
 func.func @private_static_record() {
   %priv = acc.privatize par_dims(#acc<par_dims[]>)
       : () -> !acc.private_type<!fir.array<8x!fir.type<_QFTpair{hi:f64,lo:f32}>>>
+  return
+}
+
+// -----
+
+// A record with descriptor fields gets its padded element size from the
+// Fortran type descriptor before the static array extent is applied.
+
+// CHECK-LABEL: func.func @private_static_descriptor_record
+// CHECK: %[[PRIV:.*]] = acc.privatize
+// CHECK: fir.type_desc !fir.type<_QMtypesTdescriptor_pair{{.*}}>
+// CHECK: %[[TDESC:.*]] = fir.address_of(@_QMtypesEXdtXdescriptor_pair)
+// CHECK: fir.field_index sizeinbytes
+// CHECK: %[[ELEMENT_SIZE:.*]] = fir.load
+// CHECK: %[[COUNT:.*]] = arith.constant 6 : i64
+// CHECK: %[[SIZE:.*]] = arith.muli %[[ELEMENT_SIZE]], %[[COUNT]] : i64
+// CHECK: acc.map_info varPtr(%[[PRIV]]
+// CHECK-SAME: size(%[[SIZE]] : i64)
+// CHECK-SAME: mapFlags(private)
+
+fir.global linkonce_odr @_QMtypesEXdtXdescriptor_pair constant target : !fir.type<_QM__fortran_type_infoTderivedtype{sizeinbytes:i64}> {
+  %0 = fir.undefined !fir.type<_QM__fortran_type_infoTderivedtype{sizeinbytes:i64}>
+  fir.has_value %0 : !fir.type<_QM__fortran_type_infoTderivedtype{sizeinbytes:i64}>
+}
+
+func.func @private_static_descriptor_record() {
+  %priv = acc.privatize par_dims(#acc<par_dims[]>)
+      : () -> !acc.private_type<!fir.array<6x!fir.type<_QMtypesTdescriptor_pair{p:!fir.box<!fir.ptr<!fir.array<?xf64>>>,x:!fir.box<!fir.ptr<!fir.array<?x?xf64>>>}>>>
   return
 }
 

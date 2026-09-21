@@ -145,6 +145,19 @@ void addGPUNode(StringRef Dir, unsigned Node, StringRef GFXVersion) {
   addNode(Dir, Node, ("gfx_target_version " + GFXVersion + "\n").str());
 }
 
+// Write a node describing a GPU with the given gfx_target_version and
+// capabilities. Write capability2 before and after to catch accidental
+// reads of something other than "capability"
+void addGPUNodeWithCapability(StringRef Dir, unsigned Node,
+                              StringRef GFXVersion, uint64_t Capability,
+                              uint64_t Capability2) {
+  addNode(Dir, Node,
+          ("gfx_target_version " + GFXVersion + "\n" + "capability2 " +
+           Twine(Capability2) + "\n" + "capability " + Twine(Capability) +
+           "\n" + "capability2 " + Twine(Capability2) + "\n")
+              .str());
+}
+
 // Run printGPUsByKFD, collecting what it writes to stdout.
 int printGPUsByKFDCapturingStdout(StringRef NodePath, std::string &Output) {
   testing::internal::CaptureStdout();
@@ -209,6 +222,28 @@ TEST(KFDTopology, MultipleGPUsArePrintedInNodeOrder) {
   std::string Output;
   EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
   EXPECT_EQ(Output, "gfx1101\ngfx90a\n");
+}
+
+// Make sure that A0 of gfx1250 is printed as gfx1250-strict. Happens when
+// ASIC revision is 0. Also tests to make sure other properties that look like
+// capability (like capability2) are not read instead.
+TEST(KFDTopology, GFX1250A0IsPrintedAsStrict) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
+                           /*Capability2=*/0xFFFFFFFF);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250-strict\n");
+}
+
+// Make sure any other version of gfx1250 is printed as gfx1250.
+TEST(KFDTopology, GFX1250NonA0IsPrintedPlain) {
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF877A280,
+                           /*Capability2=*/0x00000000);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250\n");
 }
 
 // --- getIntelGPUArchName ---

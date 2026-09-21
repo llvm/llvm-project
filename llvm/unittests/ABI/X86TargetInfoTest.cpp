@@ -22,7 +22,6 @@ namespace {
 using namespace llvm;
 
 using ABIType = llvm::abi::Type;
-using llvm::abi::ABICompatInfo;
 using llvm::abi::ArgInfo;
 using llvm::abi::createX86_64TargetInfo;
 using llvm::abi::FieldInfo;
@@ -31,6 +30,7 @@ using llvm::abi::RecordFlags;
 using llvm::abi::StructPacking;
 using llvm::abi::TargetInfo;
 using llvm::abi::TypeBuilder;
+using llvm::abi::X86ABICompatInfo;
 using llvm::abi::X86AVXABILevel;
 
 class X86TargetInfoTest : public ::testing::Test {
@@ -55,23 +55,25 @@ protected:
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
         Void(TB.getVoidType()),
         Empty(TB.getRecordType({}, llvm::TypeSize::getFixed(8), llvm::Align(1),
+                               /*UnadjustedAlign=*/llvm::Align(1),
                                StructPacking::Default, {}, {},
                                RecordFlags::CanPassInRegisters)),
-        EmptyOver(TB.getRecordType({}, llvm::TypeSize::getFixed(128),
-                                   llvm::Align(16), StructPacking::Default, {},
-                                   {}, RecordFlags::CanPassInRegisters)) {}
+        EmptyOver(TB.getRecordType(
+            {}, llvm::TypeSize::getFixed(128), llvm::Align(16),
+            /*UnadjustedAlign=*/llvm::Align(16), StructPacking::Default, {}, {},
+            RecordFlags::CanPassInRegisters)) {}
 
   std::unique_ptr<TargetInfo> target() const {
-    return createX86_64TargetInfo(const_cast<TypeBuilder &>(TB),
-                                  X86AVXABILevel::None,
-                                  /*Has64BitPointers=*/true, ABICompatInfo());
+    return createX86_64TargetInfo(
+        const_cast<TypeBuilder &>(TB), X86AVXABILevel::None,
+        /*Has64BitPointers=*/true, X86ABICompatInfo());
   }
 
   const ABIType *unionOf(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeInBits,
                          llvm::Align Alignment,
                          RecordFlags Flags = RecordFlags::None) {
     return TB.getUnionType(Fields, llvm::TypeSize::getFixed(SizeInBits),
-                           Alignment, StructPacking::Default,
+                           Alignment, Alignment, StructPacking::Default,
                            Flags | RecordFlags::CanPassInRegisters);
   }
 
@@ -95,6 +97,23 @@ static void expectDirectInteger(const ArgInfo &Info, unsigned Bits) {
   EXPECT_EQ(IT->getSizeInBits().getFixedValue(), Bits);
 }
 
+static void expectInteger(const ABIType *Ty, unsigned Bits) {
+  const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(Ty);
+  ASSERT_NE(IT, nullptr);
+  EXPECT_EQ(IT->getSizeInBits().getFixedValue(), Bits);
+}
+
+/// The {low, high} halves of a two-eightbyte coercion.
+static llvm::ArrayRef<FieldInfo> directPair(const ArgInfo &Info) {
+  EXPECT_TRUE(Info.isDirect());
+  const auto *RT =
+      llvm::dyn_cast_or_null<llvm::abi::RecordType>(Info.getCoerceToType());
+  EXPECT_NE(RT, nullptr);
+  if (!RT)
+    return {};
+  return RT->getFields();
+}
+
 static void expectDirectFloat(const ArgInfo &Info,
                               const llvm::fltSemantics &Sem) {
   ASSERT_TRUE(Info.isDirect());
@@ -103,6 +122,71 @@ static void expectDirectFloat(const ArgInfo &Info,
   const auto *FT = llvm::dyn_cast<llvm::abi::FloatType>(Coerce);
   ASSERT_NE(FT, nullptr);
   EXPECT_EQ(FT->getSemantics(), &Sem);
+}
+
+// A scalar atomic has its underlying type's scalar evaluation kind. Although
+// the SysV classifier assigns it Memory, it remains a direct LLVM argument.
+TEST_F(X86TargetInfoTest, AtomicFloatScalarIsDirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *AtomicF32 = TB.getAtomicType(F32, 32, llvm::Align(4));
+  const ArgInfo &Info = classifyArg(AtomicF32, FI, TI);
+
+  EXPECT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getCoerceToType(), nullptr);
+}
+
+// An atomic whose value type has aggregate evaluation kind remains aggregate
+// for the indirect-result decision.
+TEST_F(X86TargetInfoTest, AtomicRecordIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Value = TB.getRecordType(
+      {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), StructPacking::Default, {}, {},
+      RecordFlags::CanPassInRegisters);
+  const ABIType *Atomic = TB.getAtomicType(Value, 32, llvm::Align(4));
+  const ArgInfo &Info = classifyArg(Atomic, FI, TI);
+
+  ASSERT_TRUE(Info.isIndirect());
+  EXPECT_TRUE(Info.getIndirectByVal());
+  EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+}
+
+// Atomic fields classify Memory rather than inheriting the underlying float's
+// SSE class, forcing the containing record to the stack.
+TEST_F(X86TargetInfoTest, RecordOfAtomicFloatsIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *AtomicF32 = TB.getAtomicType(F32, 32, llvm::Align(4));
+  const ABIType *Record = TB.getRecordType(
+      {FieldInfo(AtomicF32, 0), FieldInfo(AtomicF32, 32)},
+      llvm::TypeSize::getFixed(64), llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), StructPacking::Default, {}, {},
+      RecordFlags::CanPassInRegisters);
+  const ArgInfo &Info = classifyArg(Record, FI, TI);
+
+  ASSERT_TRUE(Info.isIndirect());
+  EXPECT_TRUE(Info.getIndirectByVal());
+  EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+}
+
+// Without the atomic wrappers, the same record is passed in an SSE register.
+TEST_F(X86TargetInfoTest, RecordOfFloatsIsDirectSSE) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Record = TB.getRecordType(
+      {FieldInfo(F32, 0), FieldInfo(F32, 32)}, llvm::TypeSize::getFixed(64),
+      llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4),
+      StructPacking::Default, {}, {}, RecordFlags::CanPassInRegisters);
+  const ArgInfo &Info = classifyArg(Record, FI, TI);
+
+  ASSERT_TRUE(Info.isDirect());
+  const auto *Vector =
+      llvm::dyn_cast_or_null<llvm::abi::VectorType>(Info.getCoerceToType());
+  ASSERT_NE(Vector, nullptr);
+  EXPECT_EQ(Vector->getNumElements().getFixedValue(), 2u);
+  EXPECT_EQ(Vector->getElementType(), F32);
 }
 
 // An empty member supplies no bytes, so the int is the storage the coercion is
@@ -175,7 +259,7 @@ TEST_F(X86TargetInfoTest, UnionWithEmptyMemberKeepsFloatPair) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *Floats = TB.getRecordType(
       {FieldInfo(F32, 0), FieldInfo(F32, 32)}, llvm::TypeSize::getFixed(64),
-      llvm::Align(4), StructPacking::Default, {}, {},
+      llvm::Align(4), llvm::Align(4), StructPacking::Default, {}, {},
       RecordFlags::CanPassInRegisters);
   const ABIType *U =
       unionOf({FieldInfo(Empty), FieldInfo(Floats)}, 64, llvm::Align(4));
@@ -230,6 +314,87 @@ TEST_F(X86TargetInfoTest, UnionOfZeroWidthBitFieldIsIgnore) {
                       /*IsUnnamedBitField=*/true);
   const ABIType *U = unionOf({ZeroWidth}, 8, llvm::Align(1));
   EXPECT_TRUE(classifyArg(U, FI, TI).isIgnore());
+}
+
+// No member reaches the union's second eightbyte: the array covers 12 of the
+// 16 bytes and the pointer supplies the alignment that rounds the size up.
+// The high half is sized from the bytes the union has there, so the four bytes
+// of array plus the four of padding make it an i64.
+TEST_F(X86TargetInfoTest, UnionTailPaddingSizesHighHalfFromUnion) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *U32 = TB.getIntegerType(32, llvm::Align(4), /*Signed=*/false);
+  const ABIType *Words = TB.getArrayType(U32, /*NumElements=*/3,
+                                         /*SizeInBits=*/96);
+  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *U =
+      unionOf({FieldInfo(Words), FieldInfo(Ptr)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  EXPECT_TRUE(Pair[0].FieldType->isPointer());
+  expectInteger(Pair[1].FieldType, 64);
+}
+
+// One byte of the second eightbyte holds data and the rest is padding, so the
+// high half narrows to that byte instead of spanning the union's tail.
+TEST_F(X86TargetInfoTest, UnionTailPaddingNarrowsHighHalfToByte) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/9,
+                                         /*SizeInBits=*/72);
+  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(Ptr)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  EXPECT_TRUE(Pair[0].FieldType->isPointer());
+  expectInteger(Pair[1].FieldType, 8);
+}
+
+// One more byte of data is enough to stop the narrowing, so the high half
+// covers the union's remaining bytes rather than the two that hold data.
+TEST_F(X86TargetInfoTest, UnionTailPaddingKeepsHighHalfPastOneByte) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/10,
+                                         /*SizeInBits=*/80);
+  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(Ptr)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  EXPECT_TRUE(Pair[0].FieldType->isPointer());
+  expectInteger(Pair[1].FieldType, 64);
+}
+
+// A union that stops short of two full eightbytes sizes the high half from
+// what it has left rather than from a whole eightbyte.
+TEST_F(X86TargetInfoTest, UnionTailPaddingClampsHighHalfToUnionSize) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/12,
+                                         /*SizeInBits=*/96);
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(I32)}, 96, llvm::Align(4));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  expectInteger(Pair[0].FieldType, 64);
+  expectInteger(Pair[1].FieldType, 32);
+}
+
+// Narrowing still applies inside such a union, where only one byte past the
+// first eightbyte holds data.
+TEST_F(X86TargetInfoTest, UnionTailPaddingNarrowsInsideShortUnion) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/9,
+                                         /*SizeInBits=*/72);
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(I32)}, 96, llvm::Align(4));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  expectInteger(Pair[0].FieldType, 64);
+  expectInteger(Pair[1].FieldType, 8);
 }
 
 } // namespace
