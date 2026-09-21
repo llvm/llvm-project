@@ -1393,6 +1393,8 @@ SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
   // arch xnack support.
   if (!BA || isXnackAvailable(getTriple(), BA.ArchName))
     SupportedMask |= SanitizerKind::Address;
+  // Watchpoint probes do not require xnack.
+  SupportedMask |= SanitizerKind::Concurrency;
 
   return SupportedMask;
 }
