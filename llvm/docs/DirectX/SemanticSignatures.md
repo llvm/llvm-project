@@ -147,34 +147,6 @@ in-memory element representation they operate on is declared in
 
 [SemanticSignaturePacking.h]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Frontend/HLSL/SemanticSignaturePacking.h
 
-### Stacked Packing
-
-Stacked packing is used for a vertex shader input signature. Eligible elements
-are visited in declaration order. Each starts at column zero of the first row
-after the preceding element, and a multi-row element occupies consecutive rows.
-Elements are never co-packed into the unused columns of another element, and
-interpolation mode, component type, and semantic interpretation do not otherwise
-affect placement.
-
-For example:
-
-```hlsl
-struct VSIn {
-  float A       : A;
-  float3 B[2]   : B;
-  uint VertexID : SV_VertexID;
-};
-```
-
-The signature is allocated as:
-
-```text
-reg0: A.x        | unused.yzw
-reg1: B[0].xyz   | unused.w
-reg2: B[1].xyz   | unused.w
-reg3: VertexID.x | unused.yzw
-```
-
 ### Prefix-Stable Packing
 
 Prefix-stable packing is used for signatures that connect programmable shader
@@ -232,57 +204,6 @@ reg2: A[2].xyz | D.w
 reg3: C.xy     | unused.zw
 ```
 
-### Prefix-Stable Packing
-
-Prefix-stable packing is used for signatures that connect programmable shader
-stages or carry patch constant data. Elements are visited in declaration order
-and placed at the first compatible location in the 32-row by 4-column register
-space. Once an element is placed it is never moved, so appending elements to a
-signature does not change the locations assigned to its existing prefix.
-
-Elements can share unused components in a row when all applicable packing
-constraints are satisfied:
-
-- Every element in a row must have a compatible interpolation mode.
-- When native 16-bit types are enabled, every element in a row must have the
-  same component width. Without native 16-bit types, min-precision values
-  occupy 32-bit components.
-- Components are ordered from arbitrary values, to system values, to system
-  generated values.
-- A system value or system generated value cannot be placed in a dynamically
-  indexed row. Multi-row elements define the dynamically indexed range that
-  they cover.
-
-Some semantic interpretations require additional handling:
-
-- `SV_ClipDistance` and `SV_CullDistance` are packed only with each other in
-  dedicated rows. Together they may occupy at most eight components across at
-  most two rows. The rows must be adjacent when a clip or cull element spans
-  multiple rows.
-- A multi-row tessellation factor is searched for only in the last column.
-- Geometry shader output streams are packed independently.
-
-For example:
-
-```hlsl
-struct VSOut {
-  float3 A[3] : A;
-  float1x2 B  : B;
-  float2 C    : C;
-  float D     : D;
-};
-```
-
-Assuming `B` has column-major matrix orientation, the signature is allocated
-as:
-
-```text
-reg0: A[0].xyz | B[0][0].w
-reg1: A[1].xyz | B[0][1].w
-reg2: A[2].xyz | D.w
-reg3: C.xy     | unused.zw
-```
-
 ### Optimized Packing
 
 Optimized packing partitions eligible elements into groups and packs the groups
@@ -306,6 +227,34 @@ This is a greedy optimized ordering rather than an exhaustive search for a
 minimum-row layout. Reordering can reduce the number of rows occupied, but
 means that appending an element may change locations assigned to existing
 elements.
+
+### Stacked Packing
+
+Stacked packing is used for a vertex shader input signature. Eligible elements
+are visited in declaration order. Each starts at column zero of the first row
+after the preceding element, and a multi-row element occupies consecutive rows.
+Elements are never co-packed into the unused columns of another element, and
+interpolation mode, component type, and semantic interpretation do not otherwise
+affect placement.
+
+For example:
+
+```hlsl
+struct VSIn {
+  float A       : A;
+  float3 B[2]   : B;
+  uint VertexID : SV_VertexID;
+};
+```
+
+The signature is allocated as:
+
+```text
+reg0: A.x        | unused.yzw
+reg1: B[0].xyz   | unused.w
+reg2: B[1].xyz   | unused.w
+reg3: VertexID.x | unused.yzw
+```
 
 ### Indexed Packing
 
