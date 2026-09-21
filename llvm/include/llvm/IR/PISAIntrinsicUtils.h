@@ -18,21 +18,6 @@
 namespace llvm {
 namespace pisa {
 
-// The enum values must match the Clang preprocessor definitions in
-// lib/Frontend/InitPreprocessor.cpp.
-// See the PISA memory-scope specification:
-// https://intel.github.io/pisa/virtual_machine.html#memory-scope
-namespace MemoryScope {
-enum : unsigned {
-  none = 255,
-  system = 0,    // __MEMORY_SCOPE_SYSTEM
-  gpu = 1,       // __MEMORY_SCOPE_DEVICE
-  workgroup = 2, // __MEMORY_SCOPE_WRKGRP
-  subgroup = 3,  // __MEMORY_SCOPE_WVFRNT
-  total_scopes
-};
-} // namespace MemoryScope
-
 // Integer reduction operations:
 // https://intel.github.io/pisa/instructions_cross_lane.html#ired
 namespace IRedOp {
