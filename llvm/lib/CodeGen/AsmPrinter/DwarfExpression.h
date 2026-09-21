@@ -142,6 +142,10 @@ protected:
   /// buffer, which cannot carry a relocation.
   virtual bool supportsRelocatedAddress() const { return false; }
 
+  /// Whether a global's address is spelled through the address pool, whose
+  /// index is plain data, rather than as a relocated address.
+  bool usesAddressPool() const;
+
   /// Emit a relocated address operand. Only called when
   /// supportsRelocatedAddress() returns true.
   virtual void emitRelocatedAddress(const MCSymbol *Sym) {
@@ -298,8 +302,10 @@ public:
   unsigned getOrCreateBaseType(unsigned BitSize, dwarf::TypeKind Encoding);
 
   /// Emit all remaining operations in the DIExpressionCursor. The
-  /// cursor must not contain any DW_OP_LLVM_arg operations.
-  void addExpression(DIExpressionCursor &&Expr);
+  /// cursor must not contain any DW_OP_LLVM_arg operations. Returns false if
+  /// an operation could not be emitted, in which case the caller is
+  /// responsible for discarding the partial expression.
+  bool addExpression(DIExpressionCursor &&Expr);
 
   /// Emit all remaining operations in the DIExpressionCursor.
   /// DW_OP_LLVM_arg operations are resolved by calling (\p InsertArg).
@@ -325,6 +331,12 @@ public:
   /// address of its storage. Returns false if the address cannot be spelled in
   /// this unit's DWARF.
   bool addGlobalAddress(const GlobalValue *GV, int64_t Offset);
+
+  /// Whether addGlobalAddress() can spell a global's address at all. This
+  /// depends only on the DWARF version and the output form, not on the global,
+  /// so callers that cannot take back what they have already emitted can
+  /// settle it before emitting anything.
+  bool canAddGlobalAddress() const;
 };
 
 /// DwarfExpression implementation for .debug_loc entries.

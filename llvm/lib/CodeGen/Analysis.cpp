@@ -552,6 +552,19 @@ bool llvm::canDescribeGlobalAddressInDebugInfo(const GlobalValue *GV,
   const Module &M = *MF.getFunction().getParent();
   const TargetMachine &TM = MF.getTarget();
 
+  // AsmPrinter may fold a GOT equivalent (an unnamed private constant
+  // holding the address of another global) into a GOT-relative
+  // relocation at its use and then never define the symbol. Whether
+  // that happens is only known once every use has been emitted, and a
+  // debug info reference does not count as a use, so it is not safe
+  // return true here.
+  if (TM.getObjFileLowering()->supportIndirectSymViaGOTPCRel())
+    if (const auto *GVar = dyn_cast<GlobalVariable>(GV))
+      if (GVar->hasGlobalUnnamedAddr() && GVar->isConstant() &&
+          GVar->hasInitializer() && GVar->isDiscardableIfUnused() &&
+          isa<GlobalValue>(GVar->getOperand(0)))
+        return false;
+
   // CodeView has no way to name a symbol in a local variable's location, so
   // choosing one here would leave the variable with no location at all.
   if (M.getCodeViewFlag())

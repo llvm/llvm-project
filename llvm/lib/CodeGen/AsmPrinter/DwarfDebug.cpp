@@ -3271,6 +3271,15 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                    DwarfExpression &DwarfExpr) {
   auto *DIExpr = Value.getExpression();
   DIExpressionCursor ExprCursor(DIExpr);
+
+  // Determine if a global address can be expressed before emitting
+  // anything.
+  if (!DwarfExpr.canAddGlobalAddress() &&
+      any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
+        return Entry.isGlobalAddress();
+      }))
+    return;
+
   DwarfExpr.addFragmentOffset(DIExpr);
 
   // If the DIExpr is an Entry Value, we want to follow the same code path
@@ -3288,7 +3297,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, ExprCursor, Location.getReg()))
       return;
-    return DwarfExpr.addExpression(std::move(ExprCursor));
+    DwarfExpr.addExpression(std::move(ExprCursor));
+    return;
   }
 
   // Regular entry.

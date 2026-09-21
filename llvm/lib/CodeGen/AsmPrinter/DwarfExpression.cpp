@@ -541,11 +541,12 @@ static bool isMemoryLocation(DIExpressionCursor ExprCursor) {
   return true;
 }
 
-void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor) {
-  addExpression(std::move(ExprCursor),
-                [](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
-                  llvm_unreachable("unhandled opcode found in expression");
-                });
+bool DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor) {
+  return addExpression(std::move(ExprCursor),
+                       [](unsigned Idx, DIExpressionCursor &Cursor) -> bool {
+                         llvm_unreachable(
+                             "unhandled opcode found in expression");
+                       });
 }
 
 bool DwarfExpression::addExpression(
@@ -862,9 +863,7 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   emitOp(dwarf::DW_OP_and);
 }
 
-bool DwarfExpression::addGlobalAddress(const GlobalValue *GV, int64_t Offset) {
-  DwarfDebug &DD = CU.getDwarfDebug();
-
+bool DwarfExpression::canAddGlobalAddress() const {
   // This is an implicit location, and finalize() spells that with
   // DW_OP_stack_value, which DWARF 4 introduced. Before it, the expression
   // would read as the address the variable lives at rather than as its value,
@@ -876,15 +875,23 @@ bool DwarfExpression::addGlobalAddress(const GlobalValue *GV, int64_t Offset) {
   // into either output form. Before DWARF 5 the pool is only available under
   // split DWARF, leaving a relocated DW_OP_addr as the only spelling -- which
   // only a DIE can carry.
-  bool UsePool = DwarfVersion >= 5 || DD.useSplitDwarf();
-  if (!UsePool && !supportsRelocatedAddress())
+  return usesAddressPool() || supportsRelocatedAddress();
+}
+
+bool DwarfExpression::usesAddressPool() const {
+  return DwarfVersion >= 5 || CU.getDwarfDebug().useSplitDwarf();
+}
+
+bool DwarfExpression::addGlobalAddress(const GlobalValue *GV, int64_t Offset) {
+  if (!canAddGlobalAddress())
     return false;
 
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
 
+  DwarfDebug &DD = CU.getDwarfDebug();
   const MCSymbol *Sym = CU.getAsmPrinter()->getSymbol(GV);
-  if (UsePool) {
+  if (usesAddressPool()) {
     emitOp(DwarfVersion >= 5 ? dwarf::DW_OP_addrx
                              : dwarf::DW_OP_GNU_addr_index);
     emitUnsigned(DD.getAddressPool().getIndex(Sym));

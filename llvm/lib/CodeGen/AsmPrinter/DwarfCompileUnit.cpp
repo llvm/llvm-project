@@ -853,6 +853,10 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
   }
 
   if (!ArtificialDIEPtr) {
+    // Check that the value can be described before creating a DIE for it.
+    if (!Entry.isLocation() && !Entry.isInt() && !Entry.isConstantFP())
+      return false;
+
     DIE &ProcDIE = createAndAddDIE(dwarf::DW_TAG_dwarf_procedure, getUnitDie());
 
     if (Entry.isLocation()) {
@@ -860,10 +864,8 @@ bool DwarfCompileUnit::emitImplicitPointerLocation(const Loc::Single &Single,
     } else if (Entry.isInt()) {
       if (PointeeTy)
         addConstantValue(ProcDIE, Entry.getInt(), PointeeTy);
-    } else if (Entry.isConstantFP()) {
-      addConstantFPValue(ProcDIE, Entry.getConstantFP());
     } else {
-      return false;
+      addConstantFPValue(ProcDIE, Entry.getConstantFP());
     }
 
     ArtificialDIEPtr = &ProcDIE;
@@ -931,7 +933,10 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       if (!DwarfExpr.addGlobalAddress(Entry->getGlobalAddress(),
                                       Entry->getGlobalOffset()))
         return;
-      DwarfExpr.addExpression(Expr);
+      // A rejected operation leaves the expression built so far in Loc, which
+      // describes some other location rather than none. Drop it instead.
+      if (!DwarfExpr.addExpression(Expr))
+        return;
       addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
       if (DwarfExpr.TagOffset)
         addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
