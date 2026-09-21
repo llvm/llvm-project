@@ -1536,7 +1536,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
          ((Ty.isPODType(getContext()) ||
            getContext().getBaseElementType(Ty)->isObjCObjectPointerType())))) {
       emission.ConstantAggregateInitializer =
-        ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
+          ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
       if (emission.ConstantAggregateInitializer) {
         // If the variable's a const type, and it's neither an NRVO
         // candidate nor a __block variable and has no mutable members,
