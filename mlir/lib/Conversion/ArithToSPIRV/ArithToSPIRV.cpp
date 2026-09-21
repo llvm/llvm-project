@@ -1075,8 +1075,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
 //===----------------------------------------------------------------------===//
 
 /// Converts arith.convertf (same-bitwidth FP cast, e.g. f16 <-> bf16) to
-/// SPIR-V. spirv.FConvert requires differing component widths, so widen to
-/// f32 first and then narrow to the destination type.
+/// spirv.FConvert.
 struct ConvertFOpPattern final : public OpConversionPattern<arith::ConvertFOp> {
   using Base::Base;
 
@@ -1092,14 +1091,6 @@ struct ConvertFOpPattern final : public OpConversionPattern<arith::ConvertFOp> {
       return success();
     }
 
-    Location loc = op.getLoc();
-    Type f32Type = Float32Type::get(rewriter.getContext());
-    if (auto vecType = dyn_cast<VectorType>(dstType))
-      f32Type = VectorType::get(vecType.getShape(), f32Type);
-
-    Value widened =
-        spirv::FConvertOp::create(rewriter, loc, f32Type, adaptor.getIn());
-
     std::optional<spirv::FPRoundingMode> rm = std::nullopt;
     if (arith::RoundingModeAttr roundingMode = op.getRoundingmodeAttr()) {
       if (!(rm = convertArithRoundingModeToSPIRV(roundingMode.getValue())))
@@ -1108,10 +1099,10 @@ struct ConvertFOpPattern final : public OpConversionPattern<arith::ConvertFOp> {
             llvm::formatv("unsupported rounding mode '{0}'", roundingMode));
     }
 
-    auto narrowed =
-        rewriter.replaceOpWithNewOp<spirv::FConvertOp>(op, dstType, widened);
+    auto converted = rewriter.replaceOpWithNewOp<spirv::FConvertOp>(
+        op, dstType, adaptor.getIn());
     if (rm) {
-      narrowed->setAttr(
+      converted->setAttr(
           getDecorationString(spirv::Decoration::FPRoundingMode),
           spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
     }
