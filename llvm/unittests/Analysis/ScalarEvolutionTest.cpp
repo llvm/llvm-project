@@ -1326,6 +1326,12 @@ TEST_F(ScalarEvolutionsTest, SCEVUseDropsRedundantFlags) {
     EXPECT_FALSE(SCEVUse(MaxMixedFlags).isCanonical());
     EXPECT_EQ(SCEVUse(MaxMixedFlags).getCanonical(), MaxRedundantFlags);
 
+    // Redundant exact flag.
+    const SCEV *UDiv = SE.getUDivExpr(X, Y, SCEV::FlagExact);
+    SCEVUse RedundantExactFlags(UDiv, SCEV::FlagExact);
+    EXPECT_FALSE(RedundantExactFlags.hasUseFlags());
+    EXPECT_EQ(RedundantExactFlags, UDiv);
+
     // Expressions that cannot carry no-wrap flags themselves must not get use
     // flags either, while FlagNone remains fine for them.
     const SCEV *ZExt =
@@ -1333,9 +1339,9 @@ TEST_F(ScalarEvolutionsTest, SCEVUseDropsRedundantFlags) {
     EXPECT_FALSE(SCEVUse(ZExt, SCEV::FlagNone).hasUseFlags());
 #ifndef NDEBUG
     EXPECT_DEATH((void)SCEVUse(ZExt, SCEV::FlagNUW),
-                 "use flags require an expression that can carry no-wrap");
+                 "use no-wrap flags require an expression that can carry one");
     EXPECT_DEATH((void)SCEVUse(MaxRedundantFlags, SCEV::FlagNSW),
-                 "use flags require an expression that can carry no-wrap");
+                 "use no-wrap flags require an expression that can carry one");
 #endif
   });
 }

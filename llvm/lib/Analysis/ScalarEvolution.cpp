@@ -391,6 +391,8 @@ void SCEV::print(raw_ostream &OS) const {
   case scUDivExpr: {
     const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(this);
     OS << "(" << UDiv->getLHS() << " /u " << UDiv->getRHS() << ")";
+    if (any(UDiv->getExactFlag() & SCEV::FlagExact))
+      OS << "<exact>";
     return;
   }
   case scUnknown:
@@ -3056,7 +3058,8 @@ const SCEV *ScalarEvolution::getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
   return S;
 }
 
-const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
+const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS,
+                                                 SCEVFlags Flags) {
   FoldingSetNodeID ID;
   ID.AddInteger(scUDivExpr);
   ID.AddPointer(LHS.getOpaqueValue());
@@ -3069,6 +3072,7 @@ const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
     S->computeAndSetCanonical(*this);
     registerUser(S, {LHS, RHS});
   }
+  cast<SCEVUDivExpr>(S)->setExactFlag(Flags);
   return S;
 }
 
@@ -3470,11 +3474,16 @@ const SCEV *ScalarEvolution::getURemExpr(SCEVUse LHS, SCEVUse RHS) {
 
 /// Get a canonical unsigned division expression, or something simpler if
 /// possible.
-const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
+SCEVUse ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
+                                     SCEVFlagsPair Flags) {
   assert(!LHS->getType()->isPointerTy() &&
          "SCEVUDivExpr operand can't be pointer!");
   assert(LHS->getType() == RHS->getType() &&
          "SCEVUDivExpr operand types don't match!");
+  SCEVFlags ExprFlags = Flags.ExprFlags;
+  SCEVFlags UseFlags = Flags.UseFlags;
+  assert(!(ExprFlags & ~SCEV::FlagExact) && "only exact allowed");
+  assert(!(UseFlags & ~SCEV::FlagExact) && "only exact allowed");
 
   if (SCEV *S = findExistingSCEVInCache(scUDivExpr, {LHS, RHS}))
     return S;
@@ -3515,7 +3524,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
                                 SCEV::FlagNone)) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())
-              Operands.push_back(getUDivExpr(Op, RHS));
+              Operands.push_back(getUDivExpr(Op, RHS, Flags));
             return getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagNW);
           }
           /// Get a canonical UDivExpr for a recurrence.
@@ -3545,7 +3554,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
                   getAddRecExpr(NewStart, Step, AR->getLoop(),
                                 NoWrap ? SCEV::FlagNW : SCEV::FlagNone);
               if (LHS != NewLHS)
-                return getUDivExpr(NewLHS, RHS);
+                return getUDivExpr(NewLHS, RHS, Flags);
             }
           }
         }
@@ -3555,7 +3564,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           // Find an operand that's safely divisible.
           for (unsigned i = 0, e = M->getNumOperands(); i != e; ++i) {
             const SCEV *Op = M->getOperand(i);
-            const SCEV *Div = getUDivExpr(Op, RHSC);
+            const SCEV *Div = getUDivExpr(Op, RHSC, Flags);
             if (!isa<SCEVUDivExpr>(Div) && getMulExpr(Div, RHSC) == Op) {
               SmallVector<SCEVUse, 4> Operands(M->operands());
               Operands[i] = Div;
@@ -3572,8 +3581,8 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
               NewOperands.push_back(getConstant(LHSC->getAPInt().udiv(Factor)));
               append_range(NewOperands, M->operands().drop_front());
               const SCEV *NewMul = getMulExpr(NewOperands);
-              return getUDivExpr(NewMul,
-                                 getConstant(RHSC->getAPInt().udiv(Factor)));
+              return getUDivExpr(
+                  NewMul, getConstant(RHSC->getAPInt().udiv(Factor)), Flags);
             }
           }
         }
@@ -3589,7 +3598,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           if (Overflow) {
             return getConstant(RHSC->getType(), 0, false);
           }
-          return getUDivExpr(OtherDiv->getLHS(), getConstant(NewRHS));
+          return getUDivExpr(OtherDiv->getLHS(), getConstant(NewRHS), Flags);
         }
       }
 
@@ -3599,7 +3608,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
         if (A->hasNoUnsignedWrap()) {
           SmallVector<SCEVUse, 4> Operands;
           for (unsigned i = 0, e = A->getNumOperands(); i != e; ++i) {
-            const SCEV *Op = getUDivExpr(A->getOperand(i), RHS);
+            const SCEV *Op = getUDivExpr(A->getOperand(i), RHS, Flags);
             if (isa<SCEVUDivExpr>(Op) ||
                 getMulExpr(Op, RHS) != A->getOperand(i))
               break;
@@ -3626,7 +3635,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
             *NMinusM == N - *M) {
           return getUDivExpr(
               getAddExpr(getConstant(N - 1), getMulExpr(getConstant(*M), A)),
-              RHS);
+              RHS, Flags);
         }
       }
 
@@ -3662,18 +3671,13 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   const SCEV *NewLHS, *NewRHS;
   if (match(LHS, m_scev_c_NUWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
       match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
-    return getUDivExpr(NewLHS, NewRHS);
+    return getUDivExpr(NewLHS, NewRHS, Flags);
 
-  return getOrCreateUDivExpr(LHS, RHS);
+  return {getOrCreateUDivExpr(LHS, RHS, ExprFlags), UseFlags};
 }
 
-/// Get a canonical unsigned division expression, or something simpler if
-/// possible. There is no representation for an exact udiv in SCEV IR, but we
-/// can attempt to optimize it prior to construction.
 const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
-  // Currently there is no exact specific logic.
-
-  return getUDivExpr(LHS, RHS);
+  return getUDivExpr(LHS, RHS, SCEV::FlagExact);
 }
 
 /// Get an add recurrence expression for the specified loop.  Simplify the
@@ -5197,6 +5201,7 @@ struct BinaryOp {
   Value *RHS;
   bool IsNSW = false;
   bool IsNUW = false;
+  bool IsExact = false;
 
   /// Op is set if this BinaryOp corresponds to a concrete LLVM instruction or
   /// constant expression.
@@ -5209,6 +5214,8 @@ struct BinaryOp {
       IsNSW = OBO->hasNoSignedWrap();
       IsNUW = OBO->hasNoUnsignedWrap();
     }
+    if (auto *PEO = dyn_cast<PossiblyExactOperator>(Op))
+      IsExact = PEO->isExact();
   }
 
   explicit BinaryOp(unsigned Opcode, Value *LHS, Value *RHS, bool IsNSW = false,
@@ -7938,7 +7945,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     case Instruction::UDiv:
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
-      return getUDivExpr(LHS, RHS);
+      return getUDivExpr(LHS, RHS,
+                         BO->IsExact ? SCEV::FlagExact : SCEV::FlagNone);
     case Instruction::URem:
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
