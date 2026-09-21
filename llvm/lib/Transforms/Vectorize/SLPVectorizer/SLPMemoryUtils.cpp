@@ -254,11 +254,12 @@ bool isMaskedLoadCompress(
     return false;
   LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
   // The masked load covers the whole span between the outermost loads. When
-  // the span is much wider than the loaded data, the load is split into extra
-  // registers with no active lanes and the compress becomes a multi-register
-  // gather that costs more than the scalar loads it replaces.
+  // the span needs extra registers with no active lanes and is sparse, the
+  // compress becomes a multi-register gather that costs more than the scalar
+  // loads it replaces.
   if (getNumberOfParts(TTI, LoadVecTy, ScalarTy, ReVec) >
-      2 * getNumberOfParts(TTI, VecTy, ScalarTy, ReVec))
+          2 * getNumberOfParts(TTI, VecTy, ScalarTy, ReVec) &&
+      4 * Sz <= static_cast<size_t>(*Diff) + 1)
     return false;
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
   Align CommonAlignment = LI->getAlign();
@@ -304,7 +305,8 @@ bool isMaskedLoadCompress(
   } else {
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
-                            LI->getPointerAddressSpace(), CostKind);
+                            LI->getPointerAddressSpace(), CostKind,
+                            TTI::getOperandInfo(LI->getPointerOperand()));
   }
   if (IsStrided && !IsMasked && Order.empty()) {
     // Check for potential segmented(interleaved) loads.

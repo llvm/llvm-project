@@ -13,6 +13,7 @@
 #include "orc-rt/bedrock/sps/SimpleRemoteCA.h"
 
 #include "orc-rt/support/Compiler.h"
+#include "orc-rt/support/ExecutorAddress.h"
 #include "orc-rt/support/iterator_range.h"
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
@@ -21,6 +22,25 @@
 #include <utility>
 
 namespace orc_rt {
+
+namespace {
+
+/// Converts a call message's tag to the wrapper function it names.
+///
+/// Tags travel as uint64_t whatever the pointer width at either end, so a
+/// controller wider than this process can name an address no pointer here
+/// could hold. That is wire data rather than a local invariant, so it is
+/// reported rather than asserted -- which is what ExecutorAddr::toPtr would do
+/// on its own. The conversion still goes through ExecutorAddr, so that the
+/// result is signed on targets whose ABI requires it.
+Expected<orc_rt_WrapperFunction> tagToWrapperFunction(uint64_t Tag) {
+  if (static_cast<uint64_t>(static_cast<uintptr_t>(Tag)) != Tag)
+    return make_error<StringError>("Handler tag " + std::to_string(Tag) +
+                                   " is out of range for this process");
+  return ExecutorAddr(Tag).toPtr<orc_rt_WrapperFunction>();
+}
+
+} // namespace
 
 const char *SimpleRemoteCA::getOpcodeName(Opcode Op) noexcept {
   switch (Op) {
@@ -134,7 +154,7 @@ SimpleRemoteCA::PendingCallsMap SimpleRemoteCA::takeAllCalls() {
 }
 
 Expected<SimpleRemoteCA::Action>
-SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
+SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, uint64_t Tag,
                               WrapperFunctionBuffer Payload) {
   if (OpC > static_cast<uint64_t>(Opcode::LastOpcode))
     return make_error<StringError>("Invalid opcode " + std::to_string(OpC));
@@ -146,7 +166,7 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
   case Opcode::Hangup: {
     // A hang-up carries no sequence number or tag, and a payload holding the
     // reason the controller is going away.
-    if (SeqNo != 0 || Tag)
+    if (SeqNo != 0 || Tag != 0)
       return make_error<StringError>("Malformed hang-up message");
     // A reason ends the session with that reason; an orderly hang-up, or a
     // payload that will not decode, just ends it.
@@ -158,20 +178,22 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
   case Opcode::Result: {
     // The tag carries the result kind rather than a handler tag. Checked here,
     // so that decodeResult only ever sees a kind it can interpret.
-    uint64_t KindVal = Tag.getValue();
-    if (KindVal > static_cast<uint64_t>(ResultKind::LastResultKind))
+    if (Tag > static_cast<uint64_t>(ResultKind::LastResultKind))
       return make_error<StringError>("Malformed result message: invalid kind " +
-                                     std::to_string(KindVal));
-    if (auto Err = handleResult(SeqNo, static_cast<ResultKind>(KindVal),
+                                     std::to_string(Tag));
+    if (auto Err = handleResult(SeqNo, static_cast<ResultKind>(Tag),
                                 std::move(Payload)))
       return std::move(Err);
     return Action::Continue;
   }
 
-  case Opcode::Call:
-    handleWrapperCall(Tag.toPtr<orc_rt_WrapperFunction>(), std::move(Payload),
-                      SeqNo);
+  case Opcode::Call: {
+    auto Fn = tagToWrapperFunction(Tag);
+    if (!Fn)
+      return Fn.takeError();
+    handleWrapperCall(*Fn, std::move(Payload), SeqNo);
     return Action::Continue;
+  }
   }
   ORC_RT_UNREACHABLE("Unrecognized opcode");
 }
