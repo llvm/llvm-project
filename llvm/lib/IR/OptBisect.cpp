@@ -119,7 +119,7 @@ bool OptBisect::shouldRunPass(StringRef PassName, StringRef IRDescription,
   ShouldRun = ShouldRun && !DisabledPasses.contains(PassName);
 
   // If passed a function name, check if the function is enabled for bisection
-  // via opt-bisect-funcs
+  // via opt-bisect-funcs.
   bool SkipGate = !FuncName.empty() && !OptBisectFuncNames.empty() &&
                   !OptBisectFuncNames.contains(FuncName);
   ShouldRun = ShouldRun && !SkipGate;

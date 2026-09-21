@@ -28,12 +28,8 @@ public:
   virtual ~OptPassGate() = default;
 
   /// IRDescription is a textual description of the IR unit the pass is running
-  /// over.
-  virtual bool shouldRunPass(StringRef PassName,
-                             StringRef IRDescription) const {
-    return shouldRunPass(PassName, IRDescription, "");
-  }
-
+  /// over. FuncName is the name of the function or the empty string if a module
+  /// level pass is being run.
   virtual bool shouldRunPass(StringRef PassName, StringRef IRDescription,
                              StringRef FuncName) const {
     return true;
