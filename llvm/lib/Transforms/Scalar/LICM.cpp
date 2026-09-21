@@ -2362,9 +2362,9 @@ static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
 }
 
 /// Drop alias scopes from \p AATags which can be found in the set of \p Scopes.
-static void dropAliasScopesFromSet(
-    AAMDNodes &AATags,
-    const SmallPtrSetImpl<const MDNode *> &Scopes) {
+static void
+dropAliasScopesFromSet(AAMDNodes &AATags,
+                       const SmallPtrSetImpl<const MDNode *> &Scopes) {
   auto IsLoopLocal = [&](const MDOperand &Op) {
     return Scopes.contains(cast<MDNode>(Op.get()));
   };
