@@ -226,8 +226,8 @@ specified, allowing any of the following inputs:
 ```
 compiler -f          # No value, 'Force' == true
 compiler -f=true     # Value specified, 'Force' == true
-compiler -f=TRUE     # Value specified, 'Force' == true
-compiler -f=FALSE    # Value specified, 'Force' == false
+compiler -f=1        # Value specified, 'Force' == true
+compiler -f=false    # Value specified, 'Force' == false
 ```
 
 ... you get the idea.  The {ref}`bool parser <bool parser>` just turns the string values into
@@ -1497,8 +1497,8 @@ work with new data types and new ways of interpreting the same data.  See the
 (bool parser)=
 
 * The **parser<bool> specialization** is used to convert boolean strings to a
-  boolean value.  Currently accepted strings are "`true`", "`TRUE`",
-  "`True`", "`1`", "`false`", "`FALSE`", "`False`", and "`0`".
+  boolean value.  Currently accepted strings are "`true`", "`1`",
+  "`false`", and "`0`".
 
 * The **parser<boolOrDefault> specialization** is used for cases where the value
   is boolean, but we also need to know whether the option was specified at all.
