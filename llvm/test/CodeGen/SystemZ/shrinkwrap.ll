@@ -6,6 +6,7 @@
 declare void @notdead(ptr)
 
 define void @conditional_alloca(i64 %n) nounwind {
+; existing generated checks...
 ; Z-LABEL: conditional_alloca:
 ; Z:       # %bb.0:
 ; Z-NEXT:    stmg %r11, %r15, 88(%r15)
@@ -51,5 +52,68 @@ if.then:
   br label %if.end
 
 if.end:
+  ret void
+}
+
+; Varargs prologue must remain in the entry block because it saves incoming
+; GPR argument registers before they can be clobbered.
+declare void @llvm.va_start.p0(ptr)
+declare void @llvm.va_end.p0(ptr)
+declare void @take(ptr)
+
+define void @va_fpr(double %a, double %b, double %c, double %d,
+; Z-LABEL: va_fpr:
+; Z:       # %bb.0:
+; Z-NEXT:    stmg %r3, %r15, 24(%r15)
+; Z-NEXT:    aghi %r15, -168
+; Z-NEXT:    #APP
+; Z-NEXT:    lghi %r3, 0
+; Z-NEXT:    #NO_APP
+; Z-NEXT:    cije %r2, 0, .LBB1_2
+; Z-NEXT:  # %bb.1: # %call
+; Z-NEXT:    la %r0, 168(%r15)
+; Z-NEXT:    stg %r0, 184(%r15)
+; Z-NEXT:    la %r0, 328(%r15)
+; Z-NEXT:    stg %r0, 176(%r15)
+; Z-NEXT:    mvghi 168(%r15), 4
+; Z-NEXT:    la %r2, 160(%r15)
+; Z-NEXT:    mvghi 160(%r15), 1
+; Z-NEXT:    brasl %r14, take@PLT
+; Z-NEXT:  .LBB1_2: # %ret
+; Z-NEXT:    lmg %r6, %r15, 216(%r15)
+; Z-NEXT:    br %r14
+;
+; SW-LABEL: va_fpr:
+; SW:       # %bb.0:
+; SW-NEXT:    #APP
+; SW-NEXT:    lghi %r3, 0
+; SW-NEXT:    #NO_APP
+; SW-NEXT:    cibe %r2, 0, 0(%r14)
+; SW-NEXT:  .LBB1_1: # %call
+; SW-NEXT:    stmg %r3, %r15, 24(%r15)
+; SW-NEXT:    aghi %r15, -168
+; SW-NEXT:    la %r0, 168(%r15)
+; SW-NEXT:    stg %r0, 184(%r15)
+; SW-NEXT:    la %r0, 328(%r15)
+; SW-NEXT:    stg %r0, 176(%r15)
+; SW-NEXT:    mvghi 168(%r15), 4
+; SW-NEXT:    la %r2, 160(%r15)
+; SW-NEXT:    mvghi 160(%r15), 1
+; SW-NEXT:    brasl %r14, take@PLT
+; SW-NEXT:    lmg %r6, %r15, 216(%r15)
+; SW-NEXT:    br %r14
+                    i32 %n, ...) nounwind {
+  call void asm sideeffect "lghi %r3, 0", "~{r3}"()
+  %ap = alloca ptr
+  %z = icmp eq i32 %n, 0
+  br i1 %z, label %ret, label %call
+
+call:
+  call void @llvm.va_start.p0(ptr %ap)
+  call void @take(ptr %ap)
+  call void @llvm.va_end.p0(ptr %ap)
+  br label %ret
+
+ret:
   ret void
 }
