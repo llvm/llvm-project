@@ -46,6 +46,7 @@ set(LIBCXX_SOURCES
   stacktrace/entry.cpp
   stacktrace/images.cpp
   stacktrace/images.h
+  stacktrace/noop_impl.cpp
   stacktrace/symbols.h
   stacktrace/trace.cpp
   stacktrace/windows_impl.cpp
