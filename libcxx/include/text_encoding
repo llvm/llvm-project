@@ -70,6 +70,7 @@ struct text_encoding
 
 #    include <__algorithm/find_if.h>
 #    include <__algorithm/lower_bound.h>
+#    include <__algorithm/ranges_any_of.h>
 #    include <__cstddef/ptrdiff_t.h>
 #    include <__functional/hash.h>
 #    include <__iterator/iterator_traits.h>
@@ -77,6 +78,7 @@ struct text_encoding
 #    include <__ranges/view_interface.h>
 #    include <climits>
 #    include <cstdint>
+#    include <initializer_list>
 #    include <string_view>
 #    include <version>
 
@@ -84,6 +86,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 struct text_encoding;
 
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+_LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_HIDDEN const char* __get_environment_encoding_name() noexcept;
 
 _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI text_encoding
 __get_locale_encoding(const char* __name);
@@ -606,12 +610,50 @@ public:
 
   template <id _Id>
   [[nodiscard]] _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT static bool environment_is() {
-    // TODO: It may be worthwhile to implement an optimization for popular encodings, e.g. UTF-8,
-    // to allow checking the environment text encoding without needing to use the data tables.
-
 #      if defined(__ANDROID__)
     return _Id == std::text_encoding::id::UTF8;
 #      else
+    const char* __env_name = __get_environment_encoding_name();
+
+    auto __predicate = [__env_name](auto __str) { return __comp_name(__str, __env_name); };
+
+    if constexpr (_Id == id::UTF8) {
+      return std::ranges::any_of(initializer_list<const char*>{"UTF-8, csUTF8"}, __predicate);
+    }
+    if constexpr (_Id == id::ASCII) {
+      return std::ranges::any_of(
+          initializer_list<const char*>{
+              "US-ASCII",
+              "ANSI_X3.4-1968",
+              "ANSI_X3.4-1986",
+              "IBM367",
+              "ISO646-US",
+              "ISO_646.irv:1991",
+              "cp367",
+              "csASCII",
+              "ASCII",
+              "iso-ir-6",
+              "us"},
+          __predicate);
+    }
+    if constexpr (_Id == id::windows1252) {
+      return std::ranges::any_of(initializer_list<const char*>{"windows-1252, cswindows1252"}, __predicate);
+    }
+    if constexpr (_Id == id::ISOLatin1) {
+      return std::ranges::any_of(
+          initializer_list<const char*>{
+              "ISO-8859-1",
+              "ISO_8859-1:1987",
+              "CP819",
+              "IBM819",
+              "ISO_8859-1",
+              "csISOLatin1",
+              "iso-ir-100",
+              "l1",
+              "latin1"},
+          __predicate);
+    }
+
     return environment() == _Id;
 #      endif
   }
