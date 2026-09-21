@@ -2789,20 +2789,13 @@ static std::string getSPIRVBuiltinName(unsigned BuiltinID,
   return "";
 }
 
-static llvm::TargetExtType *getTargetExtType(CodeGenFunction &CGF,
-                                             CodeGenModule &CGM,
+static llvm::TargetExtType *getTargetExtType(CodeGenModule &CGM,
                                              const CooperativeMatrixType *MTy) {
-  llvm::Type *ElTy = CGF.ConvertType(MTy->getElementType());
-  // Type arguments for TargetExtType
-  llvm::Type *Tys[] = {ElTy};
-  // Unsigned arguments for TargetExtType
-  unsigned Ints[] = {MTy->getScope(), MTy->getNumRows(), MTy->getNumColumns(),
-                     MTy->getUse()};
-  // Create a TargetExtType to represent the coop matrix type
-  llvm::TargetExtType *RetType = llvm::TargetExtType::get(
-      CGM.getLLVMContext(), "spirv.CooperativeMatrixKHR",
-      llvm::ArrayRef<llvm::Type *>(Tys), llvm::ArrayRef<unsigned>(Ints));
-  return RetType;
+  llvm::Type *Ty = CGM.getTypes().ConvertTypeForCoopMat(MTy);
+  auto *TargetTy = llvm::dyn_cast<llvm::TargetExtType>(Ty);
+  if (!TargetTy)
+    return nullptr;
+  return TargetTy;
 }
 
 /// Returns a suffix encoding ALL parameters of a spirv.CooperativeMatrixKHR
@@ -4737,7 +4730,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Layout = EmitScalarExpr(E->getArg(1));
     auto Stride = EmitScalarExpr(E->getArg(2));
     // Create a TargetExtType to represent the coop matrix type
-    llvm::TargetExtType *RetType = getTargetExtType(*this, CGM, MTy);
+    llvm::TargetExtType *RetType = getTargetExtType(CGM, MTy);
 
     // Set function type.
     llvm::FunctionType *FTy = llvm::FunctionType::get(
@@ -4773,7 +4766,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Layout = EmitScalarExpr(E->getArg(2));
     auto Stride = EmitScalarExpr(E->getArg(3));
     // Create a TargetExtType to represent the coop matrix type
-    llvm::TargetExtType *ArgType = getTargetExtType(*this, CGM, MTy);
+    llvm::TargetExtType *ArgType = getTargetExtType(CGM, MTy);
     // Set function type.
     llvm::FunctionType *FTy = llvm::FunctionType::get(
         VoidTy, {Ptr->getType(), ArgType, Layout->getType(), Stride->getType()},
@@ -4817,10 +4810,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
     llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
     llvm::Value *isDataSigned = llvm::ConstantInt::get(Int1Ty, isSigned);
-    auto *RetType = getTargetExtType(*this, CGM, MTy);
-    auto *AType = getTargetExtType(*this, CGM, MATy);
-    auto *BType = getTargetExtType(*this, CGM, MBTy);
-    auto *CType = getTargetExtType(*this, CGM, MCTy);
+    auto *RetType = getTargetExtType(CGM, MTy);
+    auto *AType = getTargetExtType(CGM, MATy);
+    auto *BType = getTargetExtType(CGM, MBTy);
+    auto *CType = getTargetExtType(CGM, MCTy);
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(RetType, {AType, BType, CType, Int1Ty}, false);
 
@@ -4848,9 +4841,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
     const auto *MATy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
     const auto *MBTy = E->getArg(1)->getType()->getAs<CooperativeMatrixType>();
-    auto *RetType = getTargetExtType(*this, CGM, MTy);
-    auto *AType = getTargetExtType(*this, CGM, MATy);
-    auto *BType = getTargetExtType(*this, CGM, MBTy);
+    auto *RetType = getTargetExtType(CGM, MTy);
+    auto *AType = getTargetExtType(CGM, MATy);
+    auto *BType = getTargetExtType(CGM, MBTy);
     llvm::Type *ElTy = ConvertType(MTy->getElementType());
     // Check if the data is signed/unsigned
     QualType QT = MTy->getElementType();
@@ -4884,8 +4877,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Arg1 = EmitScalarExpr(E->getArg(1));
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
     const auto *MATy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
-    auto *RetType = getTargetExtType(*this, CGM, MTy);
-    auto *AType = getTargetExtType(*this, CGM, MATy);
+    auto *RetType = getTargetExtType(CGM, MTy);
+    auto *AType = getTargetExtType(CGM, MATy);
     auto *BType = Arg1->getType();
 
     // Check if the data is signed/unsigned
@@ -4915,8 +4908,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     auto Arg0 = EmitScalarExpr(E->getArg(0));
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
     const auto *MATy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
-    auto *RetType = getTargetExtType(*this, CGM, MTy);
-    auto *AType = getTargetExtType(*this, CGM, MATy);
+    auto *RetType = getTargetExtType(CGM, MTy);
+    auto *AType = getTargetExtType(CGM, MATy);
 
     // Check if the data is signed/unsigned
     QualType QT = MTy->getElementType();
@@ -4944,7 +4937,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIcoop_mat_init: {
     const auto *MTy = E->getType()->getAs<CooperativeMatrixType>();
     auto Init = EmitScalarExpr(E->getArg(0));
-    auto *RetType = getTargetExtType(*this, CGM, MTy);
+    auto *RetType = getTargetExtType(CGM, MTy);
     // Set function type.
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(RetType, {Init->getType()}, false);
@@ -4962,7 +4955,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BIcoop_mat_length: {
     const auto *MTy = E->getArg(0)->getType()->getAs<CooperativeMatrixType>();
-    auto *AType = getTargetExtType(*this, CGM, MTy);
+    auto *AType = getTargetExtType(CGM, MTy);
     auto Arg0 = EmitScalarExpr(E->getArg(0));
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(ConvertType(E->getType()), {AType}, false);
