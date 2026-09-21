@@ -204,6 +204,17 @@ def zext_of_shift_amount_combines : GICombineGroup<[
   canonicalize_zext_lshr, canonicalize_zext_ashr, canonicalize_zext_shl
 ]>;
 
+// Fold (xor x, x) -> 0 and (sub x, x) -> 0.
+//
+// Like same_val_zero, but builds the 0 straight into $dst instead of a new
+// temp reg + COPY. We're past RegBankSelect here, so a new temp reg would
+// have no register bank and fail selection later.
+def same_val_zero_regbank_aware : GICombineRule<
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_XOR, G_SUB):$dst,
+    [{ return matchSameValZeroRegBankAware(*${dst}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${dst}, ${matchinfo}); }])>;
+
 def minmax3_matchdata : GIDefMatchData<"MinMaxToMinMax3MatchInfo">;
 
 class minmax_to_minmax3_opcodes<Instruction minmaxOpcode> : GICombineRule<
@@ -329,14 +340,22 @@ def AMDGPUPostLegalizerCombiner: GICombiner<
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
+// identity_combines, minus same_val_zero (replaced by
+// same_val_zero_regbank_aware above).
+defvar AMDGPURegBankIdentityCombines =
+  !listremove(identity_combines.Rules, [same_val_zero]);
+
 def AMDGPURegBankCombiner : GICombiner<
   "AMDGPURegBankCombinerImpl",
-  [unmerge_merge, unmerge_cst, unmerge_undef,
-   zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
-   fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
-   identity_combines, redundant_and, constant_fold_cast_op,
-   cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
-   d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
-   umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
-   fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+  !listconcat(
+    [unmerge_merge, unmerge_cst, unmerge_undef,
+     zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
+     fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
+     same_val_zero_regbank_aware],
+    AMDGPURegBankIdentityCombines,
+    [redundant_and, constant_fold_cast_op,
+     cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
+     d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
+     umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
+     fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3])> {
 }
