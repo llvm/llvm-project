@@ -88,7 +88,6 @@ TEST_CONSTEXPR_CXX26 bool tests() {
 int main(int, char**) {
   tests();
   static_assert(tests());
-#endif
 
   return 0;
 }

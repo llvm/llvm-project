@@ -135,7 +135,7 @@ template <class It>
 #endif
 }
 
-/*TEST_CONSTEXPR_CXX26*/ void test_iterators() {
+TEST_CONSTEXPR_CXX26 void test_iterators() {
   test_emplacable_concept<cpp17_input_iterator<int*> >();
   test_emplacable_concept<forward_iterator<int*> >();
   test_emplacable_concept<bidirectional_iterator<int*> >();
