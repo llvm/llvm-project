@@ -4086,11 +4086,6 @@ bool IRTranslatorImpl::translateAlloca(const User &U,
 
 bool IRTranslatorImpl::translateVAArg(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
-  // The code generator does not support va_arg with an aggregate type, and an
-  // aggregate has no single vreg to define here.
-  if (U.getType()->isAggregateType())
-    return false;
-
   // FIXME: We may need more info about the type. Because of how LLT works,
   // we're completely discarding the i64/double distinction here (amongst
   // others). Fortunately the ABIs I know of where that matters don't use va_arg
