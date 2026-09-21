@@ -747,6 +747,20 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
   IsInTTDRegion = false;
 }
 
+void CGOpenMPRuntimeGPU::emitBareKernelEnvironment(
+    const OMPExecutableDirective &D, CodeGenFunction &CGF) {
+  // Bare kernels manage their own initialization and never call
+  // __kmpc_target_init, but the runtime still needs a
+  // '<kernel>_kernel_environment' global to know how the kernel was
+  // configured, so emit it directly here.
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_BARE;
+  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
+
+  CGBuilderTy &Bld = CGF.Builder;
+  OMPBuilder.emitKernelEnvironment(Bld, Attrs);
+}
+
 void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
                                         CodeGenFunction &CGF,
                                         EntryFunctionState &EST, bool IsSPMD) {
@@ -825,6 +839,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
     void Enter(CodeGenFunction &CGF) override {
       if (IsBareKernel) {
         RT.CurrentDataSharingMode = DataSharingMode::DS_CUDA;
+        RT.emitBareKernelEnvironment(D, CGF);
         return;
       }
       RT.emitKernelInit(D, CGF, EST, /* IsSPMD */ true);
