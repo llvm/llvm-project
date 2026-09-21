@@ -439,7 +439,6 @@ public:
 
 private:
   UseEntry *findRef(void *Ref, bool EraseFromIndex = false);
-  bool hasRef(void *Ref) const;
   void addRef(void *Ref, OwnerTy Owner);
   void dropRef(void *Ref);
   void moveRef(void *Ref, void *New, const Metadata &MD);

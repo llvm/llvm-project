@@ -308,13 +308,9 @@ ReplaceableUses::UseEntry *ReplaceableUses::findRef(void *Ref,
   return Entry;
 }
 
-bool ReplaceableUses::hasRef(void *Ref) const {
-  return const_cast<ReplaceableUses *>(this)->findRef(Ref) != nullptr;
-}
-
 void ReplaceableUses::addRef(void *Ref, OwnerTy Owner) {
   assert(Ref && "Expected live reference");
-  assert(!hasRef(Ref) && "Reference already tracked");
+  assert(!findRef(Ref) && "Reference already tracked");
   unsigned NewIdx = UseMap.size();
   UseMap.push_back({Ref, Owner});
   if (IndexMap) {
@@ -333,18 +329,13 @@ void ReplaceableUses::dropRef(void *Ref) {
   unsigned Idx = Entry - UseMap.begin();
   UseMap.erase(Entry);
   if (IndexMap) {
-    if (UseMap.size() <= IndexThreshold / 2) {
-      // Tear down the index map with hysteresis to avoid thrashing.
-      IndexMap.reset();
-    } else {
-      for (unsigned I = Idx, E = UseMap.size(); I != E; ++I)
-        (*IndexMap)[UseMap[I].Ref] = I;
-    }
+    for (unsigned I = Idx, E = UseMap.size(); I != E; ++I)
+      (*IndexMap)[UseMap[I].Ref] = I;
   }
 }
 
 void ReplaceableUses::moveRef(void *Ref, void *New, const Metadata &MD) {
-  assert(!hasRef(New) && "Cannot move to an existing reference");
+  assert(!findRef(New) && "Cannot move to an existing reference");
   UseEntry *Entry = findRef(Ref, /*EraseFromIndex=*/true);
   assert(Entry && "Expected to move a reference");
   Entry->Ref = New;
@@ -412,7 +403,7 @@ void ReplaceableUses::replaceAllUsesWith(Metadata *MD) {
   for (const auto &[Ref, Owner] : Uses) {
     // Check that this Ref hasn't disappeared after RAUW (when updating a
     // previous Ref).
-    if (!hasRef(Ref))
+    if (!findRef(Ref))
       continue;
 
     if (!Owner) {
