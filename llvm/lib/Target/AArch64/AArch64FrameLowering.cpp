@@ -430,7 +430,7 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
     return false;
 
   // If there are an odd number of GPRs before LR and FP in the CSRs list,
-  // they will not be paired into one RegPairInfo, which is incompatible with
+  // they will not be paired into one RegGroupInfo, which is incompatible with
   // the assumption made by the homogeneous prolog epilog pass.
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
   unsigned NumGPRs = 0;
@@ -1636,17 +1636,33 @@ static bool invalidateRegisterPairing(bool SpillExtendedVolatile,
 
 namespace {
 
-struct RegPairInfo {
+struct RegGroupInfo {
   Register Reg1;
   Register Reg2;
+  Register Reg3;
+  Register Reg4;
   int FrameIdx;
   int Offset;
   enum RegType { GPR, FPR64, FPR128, PPR, ZPR, VG } Type;
   const TargetRegisterClass *RC;
 
-  RegPairInfo() = default;
+  RegGroupInfo() = default;
 
-  bool isPaired() const { return Reg2.isValid(); }
+  bool isPaired() const {
+    return Reg2.isValid() && !Reg3.isValid() && !Reg4.isValid();
+  }
+
+  bool isQuad() const {
+    return Reg2.isValid() && Reg3.isValid() && Reg4.isValid();
+  }
+
+  unsigned getNumRegs() const {
+    if (isQuad())
+      return 4;
+    if (isPaired())
+      return 2;
+    return 1;
+  }
 
   bool isScalable() const { return Type == PPR || Type == ZPR; }
 };
@@ -1685,7 +1701,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
                                     MachineFunction &MF,
                                     ArrayRef<CalleeSavedInfo> CSI,
                                     const TargetRegisterInfo *TRI,
-                                    SmallVectorImpl<RegPairInfo> &RegPairs,
+                                    SmallVectorImpl<RegGroupInfo> &RegPairs,
                                     bool NeedsFrameRecord) {
 
   if (CSI.empty())
@@ -1759,32 +1775,32 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
 
   // When iterating backwards, the loop condition relies on unsigned wraparound.
   for (unsigned i = FirstReg; i < Count; i += RegInc) {
-    RegPairInfo RPI;
+    RegGroupInfo RPI;
     RPI.Reg1 = CSI[i].getReg();
 
     if (AArch64::GPR64RegClass.contains(RPI.Reg1)) {
-      RPI.Type = RegPairInfo::GPR;
+      RPI.Type = RegGroupInfo::GPR;
       RPI.RC = &AArch64::GPR64RegClass;
     } else if (AArch64::FPR64RegClass.contains(RPI.Reg1)) {
-      RPI.Type = RegPairInfo::FPR64;
+      RPI.Type = RegGroupInfo::FPR64;
       RPI.RC = &AArch64::FPR64RegClass;
     } else if (AArch64::FPR128RegClass.contains(RPI.Reg1)) {
-      RPI.Type = RegPairInfo::FPR128;
+      RPI.Type = RegGroupInfo::FPR128;
       RPI.RC = &AArch64::FPR128RegClass;
     } else if (AArch64::ZPRRegClass.contains(RPI.Reg1)) {
-      RPI.Type = RegPairInfo::ZPR;
+      RPI.Type = RegGroupInfo::ZPR;
       RPI.RC = &AArch64::ZPRRegClass;
     } else if (AArch64::PPRRegClass.contains(RPI.Reg1)) {
-      RPI.Type = RegPairInfo::PPR;
+      RPI.Type = RegGroupInfo::PPR;
       RPI.RC = &AArch64::PPRRegClass;
     } else if (RPI.Reg1 == AArch64::VG) {
-      RPI.Type = RegPairInfo::VG;
+      RPI.Type = RegGroupInfo::VG;
       RPI.RC = &AArch64::FIXED_REGSRegClass;
     } else {
       llvm_unreachable("Unsupported register class.");
     }
 
-    int &ScalableByteOffset = RPI.Type == RegPairInfo::PPR && SplitPPRs
+    int &ScalableByteOffset = RPI.Type == RegGroupInfo::PPR && SplitPPRs
                                   ? PPRByteOffset
                                   : ZPRByteOffset;
 
@@ -1806,37 +1822,57 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       bool PairFitsImmRange =
           PairOffset / Scale >= -64 && PairOffset / Scale <= 63;
       switch (RPI.Type) {
-      case RegPairInfo::GPR:
+      case RegGroupInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
-      case RegPairInfo::FPR64:
+      case RegGroupInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange &&
             !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
                                        RPI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RPI.Reg2 = NextReg;
         break;
-      case RegPairInfo::FPR128:
+      case RegGroupInfo::FPR128:
         if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange)
           RPI.Reg2 = NextReg;
         break;
-      case RegPairInfo::PPR:
+      case RegGroupInfo::PPR:
         break;
-      case RegPairInfo::ZPR:
-        if (!NeedsWinCFI && AFI->getPredicateRegForFillSpill() != 0 &&
-            ((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1)) {
-          // Calculate offset of register pair to see if pair instruction can be
-          // used.
-          int Offset = (ScalableByteOffset + StackFillDir * 2 * Scale) / Scale;
-          if ((-16 <= Offset && Offset <= 14) && (Offset % 2 == 0))
-            RPI.Reg2 = NextReg;
+      case RegGroupInfo::ZPR:
+        if (!NeedsWinCFI && AFI->getPredicateRegForFillSpill() != 0) {
+          if (unsigned(i + 2 * RegInc) < Count &&
+              unsigned(i + 3 * RegInc) < Count &&
+              (RPI.Reg1 - AArch64::Z0) % 4 == 0) {
+            auto Reg3 = CSI[i + RegInc * 2].getReg();
+            auto Reg4 = CSI[i + RegInc * 3].getReg();
+            bool Consecutive = (RPI.Reg1 + 1 == NextReg) &&
+                               (NextReg + 1 == Reg3) && (Reg3 + 1 == Reg4);
+            int Offset =
+                (ScalableByteOffset + StackFillDir * 4 * Scale) / Scale;
+
+            if (Consecutive && (Offset % 4 == 0) &&
+                (-32 <= Offset && Offset <= 28)) {
+              RPI.Reg2 = NextReg;
+              RPI.Reg3 = Reg3;
+              RPI.Reg4 = Reg4;
+            }
+          }
+          if (!RPI.isQuad() && ((RPI.Reg1 - AArch64::Z0) & 1) == 0 &&
+              (NextReg == RPI.Reg1 + 1)) {
+            // Calculate offset of register pair to see if pair instruction can
+            // be used.
+            int Offset =
+                (ScalableByteOffset + StackFillDir * 2 * Scale) / Scale;
+            if ((-16 <= Offset && Offset <= 14) && (Offset % 2 == 0))
+              RPI.Reg2 = NextReg;
+          }
         }
         break;
-      case RegPairInfo::VG:
+      case RegGroupInfo::VG:
         break;
       }
     }
@@ -1850,6 +1886,17 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     assert((!RPI.isPaired() ||
             (CSI[i].getFrameIdx() + RegInc == CSI[i + RegInc].getFrameIdx())) &&
            "Out of order callee saved regs!");
+
+    assert((!RPI.isQuad() ||
+            ((CSI[i].getFrameIdx() + RegInc == CSI[i + RegInc].getFrameIdx()) &&
+             (CSI[i + RegInc].getFrameIdx() + RegInc ==
+              CSI[i + RegInc * 2].getFrameIdx()) &&
+             (CSI[i + RegInc * 2].getFrameIdx() + RegInc ==
+              CSI[i + RegInc * 3].getFrameIdx()))) &&
+           "Out of order callee saved regs!");
+
+    assert((!RPI.isQuad() || RPI.Type == RegGroupInfo::ZPR) &&
+           "Currently only ZPR's support four-register spills");
 
     assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg2 != AArch64::FP ||
             RPI.Reg1 == AArch64::LR) &&
@@ -1871,9 +1918,9 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
            "Callee-save registers not saved as adjacent register pair!");
 
     RPI.FrameIdx = CSI[i].getFrameIdx();
-    if (IsWindows &&
-        RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
-      RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
+    if (IsWindows)
+      // RPI.FrameIdx must be the lower index of the group
+      RPI.FrameIdx = CSI[i + RegInc * (RPI.getNumRegs() - 1)].getFrameIdx();
 
     // Realign the scalable offset if necessary. This is relevant when spilling
     // predicates on Windows.
@@ -1889,9 +1936,9 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     assert(OffsetPre % Scale == 0);
 
     if (RPI.isScalable())
-      ScalableByteOffset += StackFillDir * (RPI.isPaired() ? 2 * Scale : Scale);
+      ScalableByteOffset += StackFillDir * RPI.getNumRegs() * Scale;
     else
-      ByteOffset += StackFillDir * (RPI.isPaired() ? 2 * Scale : Scale);
+      ByteOffset += StackFillDir * RPI.getNumRegs() * Scale;
 
     // Swift's async context is directly before FP, so allocate an extra
     // 8 bytes for it.
@@ -1903,7 +1950,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
     if (NeedGapToAlignStack && !IsWindows && !RPI.isScalable() &&
-        RPI.Type != RegPairInfo::FPR128 && !RPI.isPaired() &&
+        RPI.Type != RegGroupInfo::FPR128 && !RPI.isPaired() &&
         ByteOffset % 16 != 0) {
       ByteOffset += 8 * StackFillDir;
       assert(MFI.getObjectAlign(RPI.FrameIdx) <= Align(16));
@@ -1954,8 +2001,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
       AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
-    if (RPI.isPaired())
-      i += RegInc;
+    i += RegInc * (RPI.getNumRegs() - 1);
   }
   if (IsWindows) {
     // If we need an alignment gap in the stack, align the topmost stack
@@ -1980,7 +2026,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   const AArch64InstrInfo &TII = *Subtarget.getInstrInfo();
   bool NeedsWinCFI = needsWinCFI(MF);
   DebugLoc DL;
-  SmallVector<RegPairInfo, 8> RegPairs;
+  SmallVector<RegGroupInfo, 8> RegPairs;
 
   computeCalleeSaveRegisterPairs(*this, MF, CSI, TRI, RegPairs, hasFP(MF));
 
@@ -2006,9 +2052,11 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     return true;
   }
   bool PTrueCreated = false;
-  for (const RegPairInfo &RPI : llvm::reverse(RegPairs)) {
+  for (const RegGroupInfo &RPI : llvm::reverse(RegPairs)) {
     Register Reg1 = RPI.Reg1;
     Register Reg2 = RPI.Reg2;
+    Register Reg3 = RPI.Reg3;
+    Register Reg4 = RPI.Reg4;
     unsigned StrOpc;
 
     // Issue sequence of spills for cs regs.  The first spill may be converted
@@ -2024,22 +2072,24 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     unsigned Size = TRI->getSpillSize(*RPI.RC);
     Align Alignment = TRI->getSpillAlign(*RPI.RC);
     switch (RPI.Type) {
-    case RegPairInfo::GPR:
+    case RegGroupInfo::GPR:
       StrOpc = RPI.isPaired() ? AArch64::STPXi : AArch64::STRXui;
       break;
-    case RegPairInfo::FPR64:
+    case RegGroupInfo::FPR64:
       StrOpc = RPI.isPaired() ? AArch64::STPDi : AArch64::STRDui;
       break;
-    case RegPairInfo::FPR128:
+    case RegGroupInfo::FPR128:
       StrOpc = RPI.isPaired() ? AArch64::STPQi : AArch64::STRQui;
       break;
-    case RegPairInfo::ZPR:
-      StrOpc = RPI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI;
+    case RegGroupInfo::ZPR:
+      StrOpc = RPI.isQuad()
+                   ? AArch64::ST1B_4Z_IMM
+                   : (RPI.isPaired() ? AArch64::ST1B_2Z_IMM : AArch64::STR_ZXI);
       break;
-    case RegPairInfo::PPR:
+    case RegGroupInfo::PPR:
       StrOpc = AArch64::STR_PXI;
       break;
-    case RegPairInfo::VG:
+    case RegGroupInfo::VG:
       StrOpc = AArch64::STRXui;
       break;
     }
@@ -2088,11 +2138,19 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
     LLVM_DEBUG({
       dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
-      if (RPI.isPaired())
+      if (RPI.isPaired() || RPI.isQuad())
         dbgs() << ", " << printReg(Reg2, TRI);
+      if (RPI.isQuad()) {
+        dbgs() << ", " << printReg(Reg3, TRI);
+        dbgs() << ", " << printReg(Reg4, TRI);
+      }
       dbgs() << ") -> fi#(" << RPI.FrameIdx;
-      if (RPI.isPaired())
+      if (RPI.isPaired() || RPI.isQuad())
         dbgs() << ", " << RPI.FrameIdx + 1;
+      if (RPI.isQuad()) {
+        dbgs() << ", " << RPI.FrameIdx + 2;
+        dbgs() << ", " << RPI.FrameIdx + 3;
+      }
       dbgs() << ")\n";
     });
 
@@ -2104,12 +2162,20 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     // and not (x+1,x).
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
+    unsigned FrameIdxReg3 = RPI.FrameIdx + 2;
+    unsigned FrameIdxReg4 = RPI.FrameIdx + 3;
+
     if (isTargetWindows(MF) && RPI.isPaired()) {
       std::swap(Reg1, Reg2);
       std::swap(FrameIdxReg1, FrameIdxReg2);
+    } else if (isTargetWindows(MF) && RPI.isQuad()) {
+      std::swap(Reg1, Reg4);
+      std::swap(Reg2, Reg3);
+      std::swap(FrameIdxReg1, FrameIdxReg4);
+      std::swap(FrameIdxReg2, FrameIdxReg3);
     }
 
-    if (RPI.isPaired() && RPI.isScalable()) {
+    if ((RPI.isQuad() || RPI.isPaired()) && RPI.isScalable()) {
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -2117,12 +2183,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       assert((PnReg != 0 && enableMultiVectorSpillFill(Subtarget, MF)) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
 #ifdef EXPENSIVE_CHECKS
-      auto IsPPR = [](const RegPairInfo &c) {
-        return c.Reg1 == RegPairInfo::PPR;
+      auto IsPPR = [](const RegGroupInfo &c) {
+        return c.Type == RegGroupInfo::PPR;
       };
       auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
-      auto IsZPR = [](const RegPairInfo &c) {
-        return c.Type == RegPairInfo::ZPR;
+      auto IsZPR = [](const RegGroupInfo &c) {
+        return c.Type == RegGroupInfo::ZPR;
       };
       auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
       assert(!(PPRBegin < ZPRBegin) &&
@@ -2138,14 +2204,31 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         MBB.addLiveIn(Reg1);
       if (!MRI.isReserved(Reg2))
         MBB.addLiveIn(Reg2);
-      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0));
+      if (RPI.isQuad()) {
+        if (!MRI.isReserved(Reg3))
+          MBB.addLiveIn(Reg3);
+        if (!MRI.isReserved(Reg4))
+          MBB.addLiveIn(Reg4);
+      }
+      if (RPI.isPaired()) {
+        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0));
+      } else if (RPI.isQuad()) {
+        MIB.addReg(/*QuadRegs*/ AArch64::Z0_Z1_Z2_Z3 +
+                   (RPI.Reg1 - AArch64::Z0));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg4),
+            MachineMemOperand::MOStore, Size, Alignment));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg3),
+            MachineMemOperand::MOStore, Size, Alignment));
+      }
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOStore, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale],
-                                  // where 2*vscale is implicit
+          .addImm(RPI.Offset /      // [sp, #imm*size*vscale]
+                  RPI.getNumRegs()) // where size*vscale is implicit
           .setMIFlag(MachineInstr::FrameSetup);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
@@ -2177,14 +2260,22 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
     // Update the StackIDs of the SVE stack slots.
     MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (RPI.Type == RegPairInfo::ZPR) {
+    if (RPI.Type == RegGroupInfo::ZPR) {
       MFI.setStackID(FrameIdxReg1, TargetStackID::ScalableVector);
-      if (RPI.isPaired())
+      if (RPI.isPaired() || RPI.isQuad())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
-    } else if (RPI.Type == RegPairInfo::PPR) {
+      if (RPI.isQuad()) {
+        MFI.setStackID(FrameIdxReg3, TargetStackID::ScalableVector);
+        MFI.setStackID(FrameIdxReg4, TargetStackID::ScalableVector);
+      }
+    } else if (RPI.Type == RegGroupInfo::PPR) {
       MFI.setStackID(FrameIdxReg1, TargetStackID::ScalablePredicateVector);
-      if (RPI.isPaired())
+      if (RPI.isPaired() || RPI.isQuad())
         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalablePredicateVector);
+      if (RPI.isQuad()) {
+        MFI.setStackID(FrameIdxReg3, TargetStackID::ScalablePredicateVector);
+        MFI.setStackID(FrameIdxReg4, TargetStackID::ScalablePredicateVector);
+      }
     }
   }
   return true;
@@ -2197,7 +2288,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   const AArch64InstrInfo &TII =
       *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   DebugLoc DL;
-  SmallVector<RegPairInfo, 8> RegPairs;
+  SmallVector<RegGroupInfo, 8> RegPairs;
   bool NeedsWinCFI = needsWinCFI(MF);
 
   if (MBBI != MBB.end())
@@ -2215,19 +2306,25 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   }
 
   // For performance reasons restore SVE register in increasing order
-  auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
+  auto IsPPR = [](const RegGroupInfo &c) {
+    return c.Type == RegGroupInfo::PPR;
+  };
   auto PPRBegin = llvm::find_if(RegPairs, IsPPR);
   auto PPREnd = std::find_if_not(PPRBegin, RegPairs.end(), IsPPR);
   std::reverse(PPRBegin, PPREnd);
-  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
+  auto IsZPR = [](const RegGroupInfo &c) {
+    return c.Type == RegGroupInfo::ZPR;
+  };
   auto ZPRBegin = llvm::find_if(RegPairs, IsZPR);
   auto ZPREnd = std::find_if_not(ZPRBegin, RegPairs.end(), IsZPR);
   std::reverse(ZPRBegin, ZPREnd);
 
   bool PTrueCreated = false;
-  for (const RegPairInfo &RPI : RegPairs) {
+  for (const RegGroupInfo &RPI : RegPairs) {
     Register Reg1 = RPI.Reg1;
     Register Reg2 = RPI.Reg2;
+    Register Reg3 = RPI.Reg3;
+    Register Reg4 = RPI.Reg4;
 
     // Issue sequence of restores for cs regs. The last restore may be converted
     // to a post-increment load later by emitEpilogue if the callee-save stack
@@ -2241,31 +2338,41 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     unsigned Size = TRI->getSpillSize(*RPI.RC);
     Align Alignment = TRI->getSpillAlign(*RPI.RC);
     switch (RPI.Type) {
-    case RegPairInfo::GPR:
+    case RegGroupInfo::GPR:
       LdrOpc = RPI.isPaired() ? AArch64::LDPXi : AArch64::LDRXui;
       break;
-    case RegPairInfo::FPR64:
+    case RegGroupInfo::FPR64:
       LdrOpc = RPI.isPaired() ? AArch64::LDPDi : AArch64::LDRDui;
       break;
-    case RegPairInfo::FPR128:
+    case RegGroupInfo::FPR128:
       LdrOpc = RPI.isPaired() ? AArch64::LDPQi : AArch64::LDRQui;
       break;
-    case RegPairInfo::ZPR:
-      LdrOpc = RPI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI;
+    case RegGroupInfo::ZPR:
+      LdrOpc = RPI.isQuad()
+                   ? AArch64::LD1B_4Z_IMM
+                   : (RPI.isPaired() ? AArch64::LD1B_2Z_IMM : AArch64::LDR_ZXI);
       break;
-    case RegPairInfo::PPR:
+    case RegGroupInfo::PPR:
       LdrOpc = AArch64::LDR_PXI;
       break;
-    case RegPairInfo::VG:
+    case RegGroupInfo::VG:
       continue;
     }
     LLVM_DEBUG({
       dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
-      if (RPI.isPaired())
+      if (RPI.isPaired() || RPI.isQuad())
         dbgs() << ", " << printReg(Reg2, TRI);
+      if (RPI.isQuad()) {
+        dbgs() << ", " << printReg(Reg3, TRI);
+        dbgs() << ", " << printReg(Reg4, TRI);
+      }
       dbgs() << ") -> fi#(" << RPI.FrameIdx;
-      if (RPI.isPaired())
+      if (RPI.isPaired() || RPI.isQuad())
         dbgs() << ", " << RPI.FrameIdx + 1;
+      if (RPI.isQuad()) {
+        dbgs() << ", " << RPI.FrameIdx + 2;
+        dbgs() << ", " << RPI.FrameIdx + 3;
+      }
       dbgs() << ")\n";
     });
 
@@ -2274,13 +2381,23 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     // and not (x+1,x).
     unsigned FrameIdxReg1 = RPI.FrameIdx;
     unsigned FrameIdxReg2 = RPI.FrameIdx + 1;
-    if (isTargetWindows(MF) && RPI.isPaired()) {
-      std::swap(Reg1, Reg2);
-      std::swap(FrameIdxReg1, FrameIdxReg2);
+    unsigned FrameIdxReg3 = RPI.FrameIdx + 2;
+    unsigned FrameIdxReg4 = RPI.FrameIdx + 3;
+
+    if (isTargetWindows(MF)) {
+      if (RPI.isPaired()) {
+        std::swap(Reg1, Reg2);
+        std::swap(FrameIdxReg1, FrameIdxReg2);
+      } else if (RPI.isQuad()) {
+        std::swap(Reg1, Reg4);
+        std::swap(Reg2, Reg3);
+        std::swap(FrameIdxReg1, FrameIdxReg4);
+        std::swap(FrameIdxReg2, FrameIdxReg3);
+      }
     }
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    if (RPI.isPaired() && RPI.isScalable()) {
+    if ((RPI.isQuad() || RPI.isPaired()) && RPI.isScalable()) {
       [[maybe_unused]] const AArch64Subtarget &Subtarget =
                               MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
@@ -2296,15 +2413,26 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
             .setMIFlags(MachineInstr::FrameDestroy);
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
-      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0),
-                 getDefRegState(true));
+      if (RPI.isPaired()) {
+        MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0),
+                   getDefRegState(true));
+      } else if (RPI.isQuad()) {
+        MIB.addReg(/*QuadRegs*/ AArch64::Z0_Z1_Z2_Z3 + (RPI.Reg1 - AArch64::Z0),
+                   getDefRegState(true));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg4),
+            MachineMemOperand::MOLoad, Size, Alignment));
+        MIB.addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, FrameIdxReg3),
+            MachineMemOperand::MOLoad, Size, Alignment));
+      }
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOLoad, Size, Alignment));
       MIB.addReg(PnReg);
       MIB.addReg(AArch64::SP)
-          .addImm(RPI.Offset / 2) // [sp, #imm*2*vscale]
-                                  // where 2*vscale is implicit
+          .addImm(RPI.Offset /      // [sp, #imm*size*vscale]
+                  RPI.getNumRegs()) // where size*vscale is implicit
           .setMIFlag(MachineInstr::FrameDestroy);
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
