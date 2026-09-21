@@ -969,7 +969,7 @@ public:
   LLVM_ABI SCEVUse getSCEVAtScope(Value *V, const Loop *L);
 
   /// Return the SCEV expression at the specified loop exit. Returns the
-  /// original value if not more precisely value can be computed.
+  /// original value if no more precise value can be computed.
   LLVM_ABI SCEVUse getSCEVAtExit(const SCEV *S, const Loop *L,
                                  const BasicBlock *ExitingBlock);
 
