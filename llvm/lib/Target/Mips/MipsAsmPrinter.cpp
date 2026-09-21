@@ -386,6 +386,7 @@ void MipsAsmPrinter::emitFrameDirective() {
 const char *MipsAsmPrinter::getCurrentABIString() const {
   switch (static_cast<MipsTargetMachine &>(TM).getABI().GetEnumValue()) {
   case MipsABIInfo::ABI::O32:  return "abi32";
+  case MipsABIInfo::ABI::O64:  return "abiO64";
   case MipsABIInfo::ABI::N32:  return "abiN32";
   case MipsABIInfo::ABI::N64:  return "abi64";
   default: llvm_unreachable("Unknown Mips ABI");

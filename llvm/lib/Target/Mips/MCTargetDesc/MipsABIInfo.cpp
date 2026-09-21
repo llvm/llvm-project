@@ -27,6 +27,7 @@ cl::opt<bool>
 
 namespace {
 static const MCPhysReg O32IntRegs[4] = {Mips::A0, Mips::A1, Mips::A2, Mips::A3};
+static const MCPhysReg O64IntRegs[4] = {Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64};
 
 static const MCPhysReg Mips64IntRegs[8] = {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64,
@@ -36,6 +37,8 @@ static const MCPhysReg Mips64IntRegs[8] = {
 ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
   if (IsO32())
     return ArrayRef(O32IntRegs);
+  if (IsO64())
+    return ArrayRef(O64IntRegs);
   if (IsN32() || IsN64())
     return ArrayRef(Mips64IntRegs);
   llvm_unreachable("Unhandled ABI");
@@ -48,15 +51,17 @@ ArrayRef<MCPhysReg> MipsABIInfo::getVarArgRegs(bool isGP64bit) const {
     else
       return ArrayRef(O32IntRegs);
   }
+  if (IsO64())
+    return ArrayRef(O64IntRegs);
   if (IsN32() || IsN64())
     return ArrayRef(Mips64IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
 unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
-  if (IsO32())
+  if (IsOABI())
     return CC != CallingConv::Fast ? 16 : 0;
-  if (IsN32() || IsN64())
+  if (IsNABI())
     return 0;
   llvm_unreachable("Unhandled ABI");
 }
@@ -64,6 +69,8 @@ unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
 MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef ABIName) {
   if (ABIName.starts_with("o32"))
     return MipsABIInfo::O32();
+  if (ABIName.starts_with("o64"))
+    return MipsABIInfo::O64();
   if (ABIName.starts_with("n32"))
     return MipsABIInfo::N32();
   if (ABIName.starts_with("n64"))
@@ -129,5 +136,5 @@ unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64
   };
 
-  return IsN64() ? EhDataReg64[I] : EhDataReg[I];
+  return (ArePtrs64bit()) ? EhDataReg64[I] : EhDataReg[I];
 }

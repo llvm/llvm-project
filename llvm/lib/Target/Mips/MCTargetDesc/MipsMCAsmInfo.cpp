@@ -28,10 +28,10 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   MipsABIInfo ABI =
       MipsABIInfo::computeTargetABI(TheTriple, Options.getABIName());
 
-  if (TheTriple.isMIPS64() && !ABI.IsN32())
+  if (TheTriple.isMIPS64() && !(ABI.IsN32() || ABI.IsO64()))
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
-  if (ABI.IsO32())
+  if (ABI.IsO32() || ABI.IsO64())
     InternalSymbolPrefix = "$";
   else if (ABI.IsN32() || ABI.IsN64())
     InternalSymbolPrefix = ".L";

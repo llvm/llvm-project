@@ -4,6 +4,9 @@
 ; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,O32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,O32 %s
 
+; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o64 < %s | FileCheck --check-prefixes=ALL,O64 %s
+; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o64 < %s | FileCheck --check-prefixes=ALL,O64 %s
+
 ; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 ; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 
@@ -31,6 +34,8 @@ entry:
 ; ALL-LABEL: reti8:
 ; O32-DAG:           lui [[R1:\$[0-9]+]], %hi(byte)
 ; O32-DAG:           lbu $2, %lo(byte)([[R1]])
+; O64-DAG:           lui [[R1:\$[0-9]+]], %hi(byte)
+; O64-DAG:           lbu $2, %lo(byte)([[R1]])
 ; N32-DAG:           lui [[R1:\$[0-9]+]], %hi(byte)
 ; N32-DAG:           lbu $2, %lo(byte)([[R1]])
 ; N64-DAG:           lui  [[R1:\$[0-9]+]], %highest(byte)
@@ -45,6 +50,8 @@ entry:
 ; ALL-LABEL: reti32:
 ; O32-DAG:           lui [[R1:\$[0-9]+]], %hi(word)
 ; O32-DAG:           lw $2, %lo(word)([[R1]])
+; O64-DAG:           lui [[R1:\$[0-9]+]], %hi(word)
+; O64-DAG:           lw $2, %lo(word)([[R1]])
 ; N32-DAG:           lui [[R1:\$[0-9]+]], %hi(word)
 ; N32-DAG:           lw $2, %lo(word)([[R1]])
 ; N64-DAG:           lui [[R1:\$[0-9]+]], %highest(word)
@@ -61,6 +68,7 @@ entry:
 ; O32-DAG:           lw $2, %lo(dword)([[R1:\$[0-9]+]])
 ; O32-DAG:           addiu [[R2:\$[0-9]+]], [[R1]], %lo(dword)
 ; O32-DAG:           lw $3, 4([[R2]])
+; O64-DAG:           ld $2, %lo(dword)([[R1:\$[0-9]+]])
 ; N32-DAG:           ld $2, %lo(dword)([[R1:\$[0-9]+]])
 ; N64-DAG:           lui  [[R1:\$[0-9]+]], %highest(dword)
 ; N64-DAG:           ld $2, %lo(dword)([[R1]])

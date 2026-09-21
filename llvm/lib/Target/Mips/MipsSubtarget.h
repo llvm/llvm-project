@@ -127,6 +127,12 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // CPU supports cnMIPSP (Cavium Networks Octeon+ CPU).
   bool HasCnMipsP;
 
+  // IsR4300 - CPU is R4300 (Nintendo 64 CPU-NUS).
+  bool IsR4300;
+
+  // FixR4300 - Enable R4300 mulmul erratum fix.
+  bool FixR4300;
+
   // IsR5900 - CPU is R5900 (PlayStation 2 Emotion Engine).
   bool IsR5900;
 
@@ -253,6 +259,8 @@ public:
   bool isABI_N64() const;
   bool isABI_N32() const;
   bool isABI_O32() const;
+  bool isABI_O64() const;
+  bool isABI_64Bit() const;
   const MipsABIInfo &getABI() const;
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
 
@@ -309,6 +317,8 @@ public:
 
   bool hasCnMips() const { return HasCnMips; }
   bool hasCnMipsP() const { return HasCnMipsP; }
+  bool isR4300() const { return IsR4300; }
+  bool fixR4300() const { return FixR4300; }
   bool isR5900() const { return IsR5900; }
   bool fixR5900() const { return FixR5900; }
 

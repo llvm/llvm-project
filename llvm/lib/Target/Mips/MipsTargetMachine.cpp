@@ -282,7 +282,7 @@ void MipsPassConfig::addPreEmitPass() {
 
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.
-  if (EnableMulMulFix)
+  if (EnableMulMulFix || getMipsSubtarget().fixR4300())
     addPass(createMipsMulMulBugPass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards

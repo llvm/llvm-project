@@ -46,6 +46,7 @@ bool MipsTargetInfo::processorSupportsGPR64() const {
       .Case("mips64r6", true)
       .Case("octeon", true)
       .Case("octeon+", true)
+      .Case("vr4300", true)
       .Case("r5900", true)
       .Case("i6400", true)
       .Case("i6500", true)
@@ -56,8 +57,8 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
     {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
     {"mips64"}, {"mips64r2"}, {"mips64r3"}, {"mips64r5"}, {"mips64r6"},
-    {"octeon"}, {"octeon+"},  {"p5600"},    {"r5900"},    {"i6400"},
-    {"i6500"}};
+    {"octeon"}, {"octeon+"},  {"p5600"},    {"vr4300"},   {"r5900"},
+    {"i6400"},  {"i6500"}};
 
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::is_contained(ValidCPUNames, Name);
@@ -112,6 +113,10 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__mips_o32");
     Builder.defineMacro("_ABIO32", "1");
     Builder.defineMacro("_MIPS_SIM", "_ABIO32");
+  } else if (ABI == "o64") {
+    Builder.defineMacro("__mips_o64");
+    Builder.defineMacro("_ABIO64", "4");
+    Builder.defineMacro("_MIPS_SIM", "_ABIO64");
   } else if (ABI == "n32") {
     Builder.defineMacro("__mips_n32");
     Builder.defineMacro("_ABIN32", "2");
@@ -219,7 +224,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   // found in 64-bit processors. In the case of O32 on a 64-bit processor,
   // the instructions exist but using them violates the ABI since they
   // require 64-bit GPRs and O32 only supports 32-bit GPRs.
-  if (ABI == "n32" || ABI == "n64")
+  if (ABI == "o64" || ABI == "n32" || ABI == "n64")
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
@@ -241,6 +246,7 @@ MipsTargetInfo::getTargetBuiltins() const {
 unsigned MipsTargetInfo::getUnwindWordWidth() const {
   return llvm::StringSwitch<unsigned>(ABI)
       .Case("o32", 32)
+      .Case("o64", 32)
       .Case("n32", 64)
       .Case("n64", 64)
       .Default(getPointerWidth(LangAS::Default));
@@ -254,7 +260,7 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   }
 
   // 64-bit ABI's require 64-bit CPU's.
-  if (!processorSupportsGPR64() && (ABI == "n32" || ABI == "n64")) {
+  if (!processorSupportsGPR64() && (ABI == "o64" || ABI == "n32" || ABI == "n64")) {
     Diags.Report(diag::err_target_unsupported_abi) << ABI << CPU;
     return false;
   }
@@ -297,7 +303,7 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   }
   // Option -mmsa permitted on Mips32 iff revision 2 or higher is present
   if (HasMSA && (CPU == "mips1" || CPU == "mips2" || getISARev() < 2) &&
-      ABI == "o32") {
+      (ABI == "o32" || ABI == "o64")) {
     Diags.Report(diag::err_mips_fp64_req) << "-mmsa";
     return false;
   }
