@@ -149,7 +149,7 @@ TEST(EventAsyncHandler, QueueInheritsContextAsyncHandler) {
   mock::MockWrapper Mock;
   std::vector<std::string> ContextMessages;
 
-  device Device(default_selector_v);
+  device Device;
   context Ctx(Device, makeRecordingHandler(ContextMessages));
   queue Q(Ctx, Device);
 
@@ -166,7 +166,7 @@ TEST(EventAsyncHandler, QueueHandlerHasPriorityOverContextHandler) {
   std::vector<std::string> QueueMessages;
   std::vector<std::string> ContextMessages;
 
-  device Device(default_selector_v);
+  device Device;
   context Ctx(Device, makeRecordingHandler(ContextMessages));
   queue Q(Ctx, Device, makeRecordingHandler(QueueMessages));
 
@@ -183,7 +183,7 @@ TEST(EventAsyncHandler, DeadQueueReportsThroughContextHandler) {
   std::vector<std::string> QueueMessages;
   std::vector<std::string> ContextMessages;
 
-  device Device(default_selector_v);
+  device Device;
   context Ctx(Device, makeRecordingHandler(ContextMessages));
   {
     queue Q(Ctx, Device, makeRecordingHandler(QueueMessages));
@@ -202,7 +202,7 @@ TEST(EventAsyncHandler, ExceptionsAreGroupedPerQueueAndContext) {
   std::vector<std::string> FirstMessages;
   std::vector<std::string> SecondMessages;
 
-  device Device(default_selector_v);
+  device Device;
   context FirstCtx(Device, makeRecordingHandler(FirstMessages));
   context SecondCtx(Device, makeRecordingHandler(SecondMessages));
   queue FirstQ(FirstCtx, Device);
@@ -227,7 +227,7 @@ TEST(EventAsyncHandler, DeadQueueAndContextFallBackToDefaultAsyncHandler) {
         mock::MockWrapper Mock;
         std::vector<std::string> ContextMessages;
         {
-          device Device(default_selector_v);
+          device Device;
           context Ctx(Device, makeRecordingHandler(ContextMessages));
           queue Q(Ctx, Device);
           detail::recordAsyncException(
