@@ -25,17 +25,20 @@ public:
     unsigned Idx;
     Usage Flags;
   };
+  using MappingTy = MapVector<Register, RegInfo>;
 
 public:
   RegManager(const MachineFunction &MF);
   unsigned getRegIdx(Register Reg) const;
   void setRegIdx(Register Reg, unsigned Idx) { Mapping[Reg].Idx = Idx; }
   unsigned encodeVirtualRegister(RegBank Bank, Register Reg) const;
-  auto mapping() const { return make_range(Mapping.begin(), Mapping.end()); }
+  iterator_range<MappingTy::const_iterator> mapping() const {
+    return make_range(Mapping.begin(), Mapping.end());
+  }
   bool exists(Register Reg) const { return Mapping.count(Reg) > 0; }
 
 private:
-  MapVector<Register, RegInfo> Mapping;
+  MappingTy Mapping;
   const MachineFunction &MF;
   const MachineRegisterInfo &MRI;
   void computeMapping();

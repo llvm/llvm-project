@@ -21,16 +21,16 @@ namespace llvm::PISA {
 std::tuple<MachineInstr *, unsigned>
 getDefIgnoringBitcasts(Register Reg, const MachineRegisterInfo &MRI,
                        bool NoVectors) {
-  auto *DefMI = MRI.getVRegDef(Reg);
+  MachineInstr *DefMI = MRI.getVRegDef(Reg);
   unsigned Opc = DefMI->getOpcode();
   Register SrcReg = 0;
   while (Opc == TargetOpcode::G_BITCAST ||
          isPreISelGenericOptimizationHint(Opc)) {
     SrcReg = DefMI->getOperand(1).getReg();
-    auto SrcTy = MRI.getType(SrcReg);
+    LLT SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid())
       break;
-    auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
+    LLT DstTy = MRI.getType(DefMI->getOperand(0).getReg());
     if (NoVectors && (DstTy.isVector() || SrcTy.isVector()))
       break;
     DefMI = MRI.getVRegDef(SrcReg);

@@ -58,7 +58,7 @@ public:
 
   void printRegOpnd(unsigned RCID, const MCInst *MCI, unsigned OpNo,
                     raw_ostream &OS);
-  auto printRegOpnd(unsigned RCID) {
+  printOpndFn printRegOpnd(unsigned RCID) {
     return [=](const MCInst *MCI, unsigned OpNo, raw_ostream &OS) {
       printRegOpnd(RCID, MCI, OpNo, OS);
     };
@@ -81,11 +81,17 @@ public:
                        const char *Modifier = nullptr);
   void printMemSeqOperand(StringRef Pattern, const MCInst *MI, int OpNo,
                           raw_ostream &OS, const char *Modifier);
-  auto printMemSeqOperand(StringRef Pattern) {
-    return [=](const MCInst *MI, int OpNo, raw_ostream &OS,
-               const char *Modifier = nullptr) {
-      printMemSeqOperand(Pattern, MI, OpNo, OS, Modifier);
-    };
+  struct MemSeqOperandPrinter {
+    PISAInstPrinter *Printer;
+    StringRef Pattern;
+
+    void operator()(const MCInst *MI, int OpNo, raw_ostream &OS,
+                    const char *Modifier = nullptr) const {
+      Printer->printMemSeqOperand(Pattern, MI, OpNo, OS, Modifier);
+    }
+  };
+  MemSeqOperandPrinter printMemSeqOperand(StringRef Pattern) {
+    return {this, Pattern};
   }
   void printParamMemOperand(const MCInst *MI, int OpNo, raw_ostream &O);
 

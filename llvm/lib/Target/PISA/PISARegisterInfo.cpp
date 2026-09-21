@@ -73,12 +73,7 @@ bool PISARegisterInfo::shouldCoalesce(
   if (!MI->isCopy())
     return false;
 
-  auto IsLegalSwizzle = [&](unsigned Subreg) {
-    auto Swizzle = SwizzleMap.find(Subreg);
-    return Swizzle != SwizzleMap.end();
-  };
-
-  return IsLegalSwizzle(SubReg) && IsLegalSwizzle(DstSubReg);
+  return SwizzleMap.contains(SubReg) && SwizzleMap.contains(DstSubReg);
 }
 
 PISARegisterInfo::PISARegisterInfo() : PISAGenRegisterInfo(PISA::DummyReg) {
@@ -91,8 +86,9 @@ PISARegisterInfo::PISARegisterInfo() : PISAGenRegisterInfo(PISA::DummyReg) {
   static_assert(std::size(PISAMCRegisterClassStorage.Classes) == 30);
   unsigned NumRCs = getNumRegClasses();
   for (unsigned I = 0; I < NumRCs; I++) {
-    auto *RC = getRegClass(I);
-    auto RCD = std::make_unique<RegClassDescription>();
+    const TargetRegisterClass *RC = getRegClass(I);
+    std::unique_ptr<RegClassDescription> RCD =
+        std::make_unique<RegClassDescription>();
     if (RC == &PISA::RegV64_32bRegClass) {
       // RegV64_32b has no per-element sub-register structure (LLVM's
       // LaneBitmask cannot represent 64 lanes), so derive the metadata
@@ -103,7 +99,8 @@ PISARegisterInfo::PISARegisterInfo() : PISAGenRegisterInfo(PISA::DummyReg) {
       RCD->NumElements = RC->LaneMask.getNumLanes();
       RCD->ScalarBitSize = getScalarBitSize(RC, RCD->NumElements);
     }
-    auto Key = std::make_pair(RCD->NumElements, RCD->ScalarBitSize);
+    std::pair<unsigned, unsigned> Key =
+        std::make_pair(RCD->NumElements, RCD->ScalarBitSize);
     if (!VecRegClassMap[Key])
       VecRegClassMap[std::make_pair(RCD->NumElements, RCD->ScalarBitSize)] = RC;
     RegClassMap[RC] = std::move(RCD);
@@ -195,13 +192,15 @@ unsigned PISARegisterInfo::getCompositeSubRegIdx(unsigned Size, unsigned Base,
 }
 
 PISA::Swizzle PISARegisterInfo::getSwizzle(unsigned SubReg) const {
-  auto Swizzle = SwizzleMap.find(SubReg);
+  DenseMap<unsigned, SwizzleDesc>::iterator Swizzle =
+      SwizzleMap.find(SubReg);
   assert((Swizzle != SwizzleMap.end()) && "invalid swizzle!");
   return Swizzle->second.Swizzle;
 }
 
 const char *PISARegisterInfo::getSwizzleName(unsigned SubReg) const {
-  auto Swizzle = SwizzleMap.find(SubReg);
+  DenseMap<unsigned, SwizzleDesc>::iterator Swizzle =
+      SwizzleMap.find(SubReg);
   assert((Swizzle != SwizzleMap.end()) && "invalid swizzle!");
   return Swizzle->second.SwizzleName;
 }
@@ -247,24 +246,30 @@ const TargetRegisterClass *PISARegisterInfo::getRegClassFromLLT(LLT Ty) const {
 
 unsigned
 PISARegisterInfo::getNumEltsFromRegClass(const TargetRegisterClass *RC) const {
-  auto I = RegClassMap.find(RC);
+  DenseMap<const TargetRegisterClass *,
+           std::unique_ptr<RegClassDescription>>::const_iterator I =
+      RegClassMap.find(RC);
   assert(I != RegClassMap.end());
-  auto &RCD = I->second;
+  const std::unique_ptr<RegClassDescription> &RCD = I->second;
   return RCD->NumElements;
 }
 
 unsigned
 PISARegisterInfo::getBitSizeFromRegClass(const TargetRegisterClass *RC) const {
-  auto I = RegClassMap.find(RC);
+  DenseMap<const TargetRegisterClass *,
+           std::unique_ptr<RegClassDescription>>::const_iterator I =
+      RegClassMap.find(RC);
   assert(I != RegClassMap.end());
-  auto &RCD = I->second;
+  const std::unique_ptr<RegClassDescription> &RCD = I->second;
   return RCD->ScalarBitSize;
 }
 
 const TargetRegisterClass *
 PISARegisterInfo::getVectorRegClass(unsigned NumElts, unsigned BitSize) const {
-  auto P = std::make_pair(NumElts, BitSize);
-  auto I = VecRegClassMap.find(P);
+  std::pair<unsigned, unsigned> P = std::make_pair(NumElts, BitSize);
+  DenseMap<std::pair<unsigned, unsigned>,
+           const TargetRegisterClass *>::const_iterator I =
+      VecRegClassMap.find(P);
   assert(I != VecRegClassMap.end());
   return I->second;
 }

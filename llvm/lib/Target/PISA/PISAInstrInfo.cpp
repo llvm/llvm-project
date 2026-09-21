@@ -70,6 +70,19 @@ static const MachineOperand &getMO(const MachineInstr &MI, PISA::OpName Name) {
 
   return MI.getOperand(Idx);
 }
+
+static const TargetRegisterClass *
+getSubRegClass(const PISARegisterInfo &RI, MachineRegisterInfo &MRI,
+               MachineOperand &MO) {
+  unsigned SubReg = MO.getSubReg();
+  Register Reg = MO.getReg();
+  const TargetRegisterClass *SuperRC =
+      Reg.isPhysical() ? RI.getMinimalPhysRegClass(Reg) : MRI.getRegClass(Reg);
+  if (SubReg == 0)
+    return SuperRC;
+
+  return RI.getSubRegisterClass(SuperRC, SubReg);
+}
 } // namespace PISA
 } // namespace llvm
 
@@ -137,7 +150,7 @@ unsigned PISAInstrInfo::removeBranch(MachineBasicBlock &MBB,
   assert(!BytesRemoved && "not supported!");
 
   unsigned Count = 0;
-  for (auto &MI : llvm::make_early_inc_range(MBB.terminators())) {
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB.terminators())) {
     assert(MI.isBranch() && "not a branch?");
     MI.eraseFromParent();
     Count++;
@@ -224,23 +237,12 @@ void PISAInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 bool RenamableDest, bool RenamableSrc) const {
 
   assert(I->isCopy() && "Copy instruction is expected");
-  auto &MRI = I->getMF()->getRegInfo();
+  MachineRegisterInfo &MRI = I->getMF()->getRegInfo();
 
-  auto GetSubregRc = [&](MachineOperand &MO) -> const TargetRegisterClass * {
-    unsigned Subreg = MO.getSubReg();
-    Register Reg = MO.getReg();
-    auto *SuperRC = Reg.isPhysical() ? RI.getMinimalPhysRegClass(Reg)
-                                     : MRI.getRegClass(Reg);
-    if (Subreg == 0)
-      return SuperRC;
-
-    return RI.getSubRegisterClass(SuperRC, Subreg);
-  };
-
-  auto &DstOp = I->getOperand(0);
-  auto &SrcOp = I->getOperand(1);
-  auto *DstSubRC = GetSubregRc(DstOp);
-  auto *SrcSubRC = GetSubregRc(SrcOp);
+  MachineOperand &DstOp = I->getOperand(0);
+  MachineOperand &SrcOp = I->getOperand(1);
+  const TargetRegisterClass *DstSubRC = getSubRegClass(RI, MRI, DstOp);
+  const TargetRegisterClass *SrcSubRC = getSubRegClass(RI, MRI, SrcOp);
 
   unsigned Op = 0;
 
@@ -355,14 +357,14 @@ void PISAInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     else
       llvm_unreachable("wrong copy operation");
   } else if (DstSubIsScalar && SrcSubIsScalar) {
-    const auto *TRI = static_cast<const PISARegisterInfo *>(
+    const PISARegisterInfo *TRI = static_cast<const PISARegisterInfo *>(
         I->getMF()->getSubtarget().getRegisterInfo());
-    auto I16 = LLT::integer(16);
+    LLT I16 = LLT::integer(16);
 
     if ((DstSubEltSize == 1) && (SrcSubEltSize == 1)) {
       // sel.16b %tmp, 1, 0, %p_in
       // ucmp.ne.16b %p_out, %tmp, 0
-      auto TmpReg = MRI.createGenericVirtualRegister(I16);
+      Register TmpReg = MRI.createGenericVirtualRegister(I16);
       MRI.setRegClass(TmpReg, TRI->getRegClassFromLLT(I16));
       Op = PISA::sel_16_iip;
       BuildMI(MBB, I, DL, get(Op))
@@ -379,7 +381,7 @@ void PISAInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
     if (DstSubEltSize == 1) {
       // ucmp.ne.??b %p, %src, 0
-      auto TmpReg = SrcOp.getReg();
+      Register TmpReg = SrcOp.getReg();
       if (SrcSubEltSize == 8) {
         TmpReg = MRI.createGenericVirtualRegister(I16);
         MRI.setRegClass(TmpReg, TRI->getRegClassFromLLT(I16));
@@ -408,7 +410,7 @@ void PISAInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
     if (SrcSubEltSize == 1) {
       // sel.??b %dst, 1, 0, %p
-      auto TmpReg = DstOp.getReg();
+      Register TmpReg = DstOp.getReg();
       if (DstSubEltSize == 8) {
         TmpReg = MRI.createGenericVirtualRegister(I16);
         MRI.setRegClass(TmpReg, TRI->getRegClassFromLLT(I16));

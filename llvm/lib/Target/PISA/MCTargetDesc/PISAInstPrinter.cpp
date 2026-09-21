@@ -54,8 +54,9 @@ void PISAInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   if (MCRegister::isPhysicalRegister(Reg)) {
     OS << getRegisterName(Reg);
   } else {
-    auto [Prefix, Idx] = RegEncoder::decodeVirtualRegister(Reg);
-    OS << Prefix << Idx;
+    std::pair<const char *, unsigned> DecodedReg =
+        RegEncoder::decodeVirtualRegister(Reg);
+    OS << DecodedReg.first << DecodedReg.second;
   }
 }
 
@@ -155,7 +156,7 @@ void PISAInstPrinter::printMemScopeOpnd(const MCInst *MCI, unsigned OpNo,
 
 void PISAInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
                                    raw_ostream &O) {
-  auto Swizzle = PISAMCInstLower::getSwizzle(*MI, OpNo);
+  PISA::Swizzle Swizzle = PISAMCInstLower::getSwizzle(*MI, OpNo);
   swizzleRepr(O, static_cast<unsigned>(Swizzle));
 }
 
@@ -286,7 +287,7 @@ void PISAInstPrinter::printMemOperand(const MCInst *MI, int OpNo,
   printOperand(MI, OpNo, OS);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
   if (OffsetOp.isImm()) {
-    auto Val = OffsetOp.getImm();
+    int64_t Val = OffsetOp.getImm();
     if (Val != 0) {
       if (Val > 0)
         OS << " + " << formatImm(Val);
@@ -337,7 +338,7 @@ void PISAInstPrinter::printParamMemOperand(const MCInst *MCI, int OpNo,
   unsigned NameOpIdx = OpNo + 2;
   if (NameOpIdx < MCI->getNumOperands() &&
       MCI->getOperand(NameOpIdx).isExpr()) {
-    const auto *SRE =
+    const MCSymbolRefExpr *SRE =
         cast<MCSymbolRefExpr>(MCI->getOperand(NameOpIdx).getExpr());
     OS << "[%" << SRE->getSymbol().getName();
   } else {
