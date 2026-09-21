@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangTidyFeatureModule.h"
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "ConfigProvider.h"
@@ -214,7 +215,8 @@ TEST_F(LSPTest, ClangTidyRename) {
     ClangTidyOpts.CheckOptions["readability-identifier-naming.FunctionCase"] =
         "CamelCase";
   };
-  Opts.ClangTidyProvider = ClangTidyProvider;
+  FeatureModules.add(
+      std::make_unique<ClangTidyFeatureModule>(ClangTidyProvider));
   auto &Client = start();
   Client.didOpen("foo.hpp", Header.code());
   Client.didOpen("foo.cpp", Source.code());
@@ -272,7 +274,8 @@ TEST_F(LSPTest, ClangTidyCrash_Issue109367) {
                                         llvm::StringRef) {
     ClangTidyOpts.Checks = {"-*,boost-use-ranges"};
   };
-  Opts.ClangTidyProvider = ClangTidyProvider;
+  FeatureModules.add(
+      std::make_unique<ClangTidyFeatureModule>(ClangTidyProvider));
   // Check that registering the boost-use-ranges checker's matchers
   // on two different threads does not cause a crash.
   auto &Client = start();
