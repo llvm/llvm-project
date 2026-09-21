@@ -531,6 +531,21 @@ if(WIN32 AND NOT UNIX)
     # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
     # use LZMA the way the NSIS generator does.
     set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
+    # Make the LLVM installation available for all users.  CPack only gained
+    # CPACK_WIX_INSTALL_SCOPE in CMake 3.29, so inject the equivalent ALLUSERS
+    # property when packaging with an older CMake supported by LLVM.
+    # TODO: remove after transition to CMake 3.31.
+    if(CMAKE_VERSION VERSION_LESS "3.29")
+      list(APPEND CPACK_WIX_PATCH_FILE
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/WiXPerMachinePatch.xml")
+    else()
+      set(CPACK_WIX_INSTALL_SCOPE "perMachine")
+    endif()
+    # Permanent WiX UpgradeCode for official LLVM MSI packages. Windows Installer
+    # uses this value to recognize related releases and remove an older LLVM
+    # installation during an upgrade. It must remain identical across all future
+    # releases and release branches. DO NOT regenerate or change this GUID.
+    set(CPACK_WIX_UPGRADE_GUID "B08613CD-8BD0-4FB6-8937-621936604DE3")
   endif()
 endif()
 include(CPack)
@@ -703,6 +718,26 @@ set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression i
 set(LLVM_ENABLE_ZSTD "ON" CACHE STRING "Use zstd for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_USE_STATIC_ZSTD FALSE CACHE BOOL "Use static version of zstd. Can be TRUE, FALSE")
+
+# liblzma is an LLVM dependency now, so temporarily translate LLDB's older
+# LLDB_ENABLE_LZMA; its On meant required, hence FORCE_ON.
+set(LLVM_ENABLE_LZMA_DEFAULT "ON")
+if(DEFINED LLDB_ENABLE_LZMA)
+  string(TOUPPER "${LLDB_ENABLE_LZMA}" lldb_enable_lzma)
+  if(NOT lldb_enable_lzma STREQUAL "AUTO")
+    message(DEPRECATION
+      "LLDB_ENABLE_LZMA is deprecated. Set LLVM_ENABLE_LZMA (ON, OFF or "
+      "FORCE_ON) instead; liblzma is now found by LLVM, not by LLDB.")
+    if(lldb_enable_lzma)
+      set(LLVM_ENABLE_LZMA_DEFAULT "FORCE_ON")
+    else()
+      set(LLVM_ENABLE_LZMA_DEFAULT "OFF")
+    endif()
+  endif()
+  unset(lldb_enable_lzma)
+endif()
+set(LLVM_ENABLE_LZMA "${LLVM_ENABLE_LZMA_DEFAULT}" CACHE STRING "Use liblzma for xz decompression if available. Can be ON, OFF, or FORCE_ON")
+unset(LLVM_ENABLE_LZMA_DEFAULT)
 
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
 

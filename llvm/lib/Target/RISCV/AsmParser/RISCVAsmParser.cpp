@@ -4238,6 +4238,11 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
+  if (Opcode == RISCV::CV_INSERT &&
+      Inst.getOperand(3).getImm() + Inst.getOperand(4).getImm() >= 32)
+    return Error(Operands[3]->getStartLoc(),
+                 "the sum of the immediate operands must be less than 32");
+
   if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
       Opcode == RISCV::TH_LWD) {
     MCRegister Rd1 = Inst.getOperand(0).getReg();
