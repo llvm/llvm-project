@@ -17,8 +17,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace mlir {
 namespace acc {

@@ -195,8 +195,8 @@ def ACCDeclareCtorDtorConversion
     Option<"entryPointName", "entry-point-name", "std::string",
            /*default=*/"",
            "Symbol name of the entry point. Extra constructors with "
-           "if-main=true are emitted only when this symbol is present. Empty "
-           "means if-main constructors are never emitted.">
+           "in entryOnlyConstructors are emitted only when this symbol is "
+           "present. Empty means entryOnlyConstructors are never emitted.">
   ];
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }

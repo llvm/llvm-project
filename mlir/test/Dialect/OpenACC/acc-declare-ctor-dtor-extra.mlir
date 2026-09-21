@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s --pass-pipeline='builtin.module(acc-declare-ctor-dtor-conversion{extra-constructors=foo entry-only-constructors=bar entry-point-name=main})' -split-input-file | FileCheck %s
 
-// extra-constructors is a list of <name>:<if-main> pairs. The functions are
-// declared and called from __openaccExtraConstructor; llvm.mlir.global_ctors
-// cannot reference a declaration. if-main=false always calls the function;
-// if-main=true calls it only when the module contains program-entry-name.
+// The functions in extra-constructors are always declared and called from
+// acc.extr_ctor (or given name in extra-ctor-name option);
+// The functions in entry-only-constructors are declared and called from
+// the extra ctor if the entry-point-name is present in the module.
 
 // CHECK: llvm.func @foo()
 // CHECK: llvm.func internal @acc.extra_ctor() {
