@@ -3533,9 +3533,10 @@ public:
   /// By default, builds a new default field initialization expression, which
   /// does not require any semantic analysis. Subclasses may override this
   /// routine to provide different behavior.
-  ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc,
-                                       FieldDecl *Field) {
-    return getSema().BuildCXXDefaultInitExpr(Loc, Field);
+  ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                       Expr *RewrittenInit) {
+    return CXXDefaultInitExpr::Create(getSema().Context, Loc, Field,
+                                      getSema().CurContext, RewrittenInit);
   }
 
   /// Build a new C++ zero-initialization expression.
@@ -8619,8 +8620,6 @@ TreeTransform<Derived>::TransformSwitchStmt(SwitchStmt *S) {
 
   // Transform the body of the switch statement.
   StmtResult Body = getDerived().TransformStmt(S->getBody());
-  if (Body.isInvalid())
-    return StmtError();
 
   // Complete the switch statement.
   return getDerived().RebuildSwitchStmtBody(S->getSwitchLoc(), Switch.get(),
@@ -15240,11 +15239,23 @@ TreeTransform<Derived>::TransformCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!Field)
     return ExprError();
 
+  ExprResult InitRes;
+  if (E->hasRewrittenInit()) {
+    // The initializer can refer to `this` and to other members, so it has to
+    // be transformed in the scope of the field's class.
+    Sema::CXXThisScopeRAII ThisScope(SemaRef, Field->getParent(), Qualifiers());
+    InitRes = getDerived().TransformExpr(E->getRewrittenExpr());
+    if (InitRes.isInvalid())
+      return ExprError();
+  }
+
   if (!getDerived().AlwaysRebuild() && Field == E->getField() &&
-      E->getUsedContext() == SemaRef.CurContext)
+      E->getUsedContext() == SemaRef.CurContext &&
+      InitRes.get() == E->getRewrittenExpr())
     return E;
 
-  return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field);
+  return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field,
+                                                InitRes.get());
 }
 
 template<typename Derived>
@@ -17941,12 +17952,6 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
                                                  oldCapture));
       assert(blockScope->CaptureMap.count(newCapture));
     }
-
-    // The this pointer may not be captured by the instantiated block, even when
-    // it's captured by the original block, if the expression causing the
-    // capture is in the discarded branch of a constexpr if statement.
-    assert((!blockScope->isCXXThisCaptured() || oldBlock->capturesCXXThis()) &&
-           "this pointer isn't captured in the old block");
   }
 #endif
 

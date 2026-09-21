@@ -81,7 +81,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">, !transform.op<"scf.for">)
 
     // Step 2: Vectorize.
-    transform.structured.vectorize %tiled_linalg_op vector_sizes [[8], [8], 4] {create_named_contraction}
+    transform.structured.vectorize %tiled_linalg_op create_named_contraction vector_sizes [[8], [8], 4]
       : !transform.any_op
 
     // Step 3: Lower vector.mask %mask { vector.transfer_* } to vector.transfer_* %mask

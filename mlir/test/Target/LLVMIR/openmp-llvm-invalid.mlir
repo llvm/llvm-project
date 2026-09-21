@@ -191,7 +191,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_data}}
@@ -205,7 +205,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_update_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_update_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_update}}
@@ -217,7 +217,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_enter_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_enter_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_enter_data}}
@@ -229,7 +229,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
-  llvm.func @target_exit_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>} {
+  llvm.func @target_exit_data_in_device(%arg0 : !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
     // expected-error @below {{op not allowed in a target device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.target_exit_data}}

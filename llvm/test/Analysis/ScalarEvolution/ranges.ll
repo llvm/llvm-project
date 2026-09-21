@@ -132,7 +132,7 @@ define void @add_6(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,6}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,2147483647) Exits: (6 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 6
-; CHECK-NEXT:    --> {6,+,6}<nuw><%loop> U: [6,-3) S: [-2147483648,2147483647) Exits: (6 + (6 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {6,+,6}<nuw><%loop> U: [6,-3) S: [-2147483648,2147483647) Exits: (6 + (6 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))))<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_6
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 6) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 715827882
@@ -157,7 +157,7 @@ define void @add_7(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,7}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 7
-; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))))<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_7
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 613566756
@@ -182,7 +182,7 @@ define void @add_8(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,8}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,2147483641) Exits: (8 * ((7 + %n) /u 8))<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 8
-; CHECK-NEXT:    --> {8,+,8}<nuw><%loop> U: [8,-7) S: [-2147483648,2147483641) Exits: (8 + (8 * ((7 + %n) /u 8))<nuw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {8,+,8}<nuw><%loop> U: [8,-7) S: [-2147483648,2147483641) Exits: (8 + (8 * ((7 + %n) /u 8))<nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_8
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((7 + %n) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 536870911
@@ -208,7 +208,7 @@ define void @add_9(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,9}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 9
-; CHECK-NEXT:    --> {9,+,9}<nuw><%loop> U: [9,-3) S: [9,0) Exits: (9 + (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {9,+,9}<nuw><%loop> U: [9,-3) S: [9,0) Exits: (9 + (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))))<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_9
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 477218588
@@ -234,7 +234,7 @@ define void @add_10(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,10}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,2147483647) Exits: (10 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 10
-; CHECK-NEXT:    --> {10,+,10}<nuw><%loop> U: [10,-5) S: [-2147483648,2147483647) Exits: (10 + (10 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {10,+,10}<nuw><%loop> U: [10,-5) S: [-2147483648,2147483647) Exits: (10 + (10 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))))<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @add_10
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 10) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 429496729

@@ -5370,6 +5370,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
           if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        } else if (Opc == Instruction::AddrSpaceCast) {
+          if (Record[OpNum] & (1 << bitc::ASCI_NON_NULL))
+            cast<AddrSpaceCastInst>(I)->setNonNull(true);
         }
         if (isa<FPMathOperator>(I)) {
           uint64_t Flags = Record[OpNum];
@@ -6402,8 +6405,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       const DataLayout &DL = TheModule->getDataLayout();
       unsigned AS = Record.size() == 5 ? Record[4] : DL.getAllocaAddrSpace();
 
-      SmallPtrSet<Type *, 4> Visited;
-      if (!Align && !Ty->isSized(&Visited))
+      if (!Align && !Ty->isSized())
         return error("alloca of unsized type");
       if (!Align)
         Align = DL.getPrefTypeAlign(Ty);
@@ -6448,8 +6450,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      SmallPtrSet<Type *, 4> Visited;
-      if (!Align && !Ty->isSized(&Visited))
+      if (!Align && !Ty->isSized())
         return error("load of unsized type");
       if (!Align)
         Align = TheModule->getDataLayout().getABITypeAlign(Ty);
@@ -6534,8 +6535,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      SmallPtrSet<Type *, 4> Visited;
-      if (!Align && !Val->getType()->isSized(&Visited))
+      if (!Align && !Val->getType()->isSized())
         return error("store of unsized type");
       if (!Align)
         Align = TheModule->getDataLayout().getABITypeAlign(Val->getType());

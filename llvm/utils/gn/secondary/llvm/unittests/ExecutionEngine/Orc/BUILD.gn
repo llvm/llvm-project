@@ -16,6 +16,7 @@ unittest("OrcJITTests") {
   ]
   sources = [
     "COFFAutoImportGeneratorTest.cpp",
+    "ConnectionSpecTest.cpp",
     "CoreAPIsTest.cpp",
     "EPCGenericDylibManagerTest.cpp",
     "EPCGenericJITLinkMemoryManagerTest.cpp",
@@ -32,7 +33,7 @@ unittest("OrcJITTests") {
     "LookupAndApplyTest.cpp",
     "MachOBuilderTest.cpp",
     "MachOPlatformTest.cpp",
-    "MangleAndInternerTest.cpp",
+    "ManglerTest.cpp",
     "MapperJITLinkMemoryManagerTest.cpp",
     "MemoryFlagsTest.cpp",
     "MemoryMapperTest.cpp",
@@ -48,6 +49,7 @@ unittest("OrcJITTests") {
     "SharedMemoryMapperTest.cpp",
     "SimpleExecutorMemoryManagerTest.cpp",
     "SimplePackedSerializationTest.cpp",
+    "SimpleRemoteEPCUtilsTest.cpp",
     "SymbolLookupSetTest.cpp",
     "SymbolStringPoolTest.cpp",
     "TaskDispatchTest.cpp",

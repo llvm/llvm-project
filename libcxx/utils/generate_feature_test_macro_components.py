@@ -248,7 +248,7 @@ feature_test_macros = [
             "name": "__cpp_lib_bitops",
             "values": {
                 "c++20": 201907,
-                # "c++29": 202606,  # P3793R2 Better shifting
+                "c++29": 202606,  # P3793R2 Better shifting
                 # "c++29": 202607,  # P3104R6 Bit permutations
             },
             "headers": ["bit"],
@@ -1612,7 +1612,6 @@ feature_test_macros = [
                 "c++29": 202606,  # P3052R2 view_interface::at()
             },
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_void_t",
