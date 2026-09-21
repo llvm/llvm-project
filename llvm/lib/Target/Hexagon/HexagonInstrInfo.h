@@ -438,7 +438,6 @@ public:
   bool doesNotReturn(const MachineInstr &CallMI) const;
   bool hasEHLabel(const MachineBasicBlock *B) const;
   bool hasNonExtEquivalent(const MachineInstr &MI) const;
-  bool hasPseudoInstrPair(const MachineInstr &MI) const;
   bool hasUncondBranch(const MachineBasicBlock *B) const;
   bool mayBeCurLoad(const MachineInstr &MI) const;
   bool mayBeNewStore(const MachineInstr &MI) const;
@@ -469,9 +468,8 @@ public:
   int getDotNewPredOp(const MachineInstr &MI,
                       const MachineBranchProbabilityInfo *MBPI) const;
   int getDotOldOp(const MachineInstr &MI) const;
-  HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
-                                                         const;
-  short getEquivalentHWInstr(const MachineInstr &MI) const;
+  HexagonII::SubInstructionGroup
+  getDuplexCandidateGroup(const MachineInstr &MI) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI) const;
   bool getInvertedPredSense(SmallVectorImpl<MachineOperand> &Cond) const;
@@ -482,7 +480,6 @@ public:
   short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
                   unsigned &PredRegPos, RegState &PredRegFlags) const;
-  short getPseudoInstrPair(const MachineInstr &MI) const;
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;
   uint64_t getType(const MachineInstr &MI) const;
