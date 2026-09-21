@@ -429,7 +429,8 @@ static CommandLineParser &globalParser() {
 
 template <typename T, T TrueVal, T FalseVal>
 static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
-  // A bare -flag passes a null Arg; -flag= passes an empty one.
+  // ProvideOption passes a null Arg for a bare -flag (treated as true) and an
+  // empty one for -flag= (treated as invalid).
   if (!Arg.data() || Arg == "true" || Arg == "1") {
     Value = TrueVal;
     return false;
