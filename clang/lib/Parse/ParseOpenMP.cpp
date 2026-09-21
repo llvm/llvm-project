@@ -4864,7 +4864,7 @@ bool Parser::ParseOpenMPAdjustArgsList(SmallVectorImpl<Expr *> &Vars) {
       }
       Vars.push_back(Actions.OpenMP()
                          .ActOnOMPArgumentRangeExpr(LowerBound.get(), ColonLoc,
-                                                     UpperBound.get())
+                                                    UpperBound.get())
                          .get());
     } else if (LowerBound.isUsable()) {
       // Without a colon the item is a parameter name or a position, and is
@@ -4882,8 +4882,7 @@ bool Parser::ParseOpenMPAdjustArgsList(SmallVectorImpl<Expr *> &Vars) {
     // Separator handling mirrors the shared var-list loop, so that a malformed
     // item such as '1:2:3' diagnoses instead of silently mis-parsing.
     if (Tok.isNot(tok::comma)) {
-      if (Tok.isNot(tok::r_paren) &&
-          Tok.isNot(tok::annot_pragma_openmp_end)) {
+      if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::annot_pragma_openmp_end)) {
         Diag(Tok, diag::err_omp_expected_punc)
             << getOpenMPClauseName(OMPC_adjust_args) << /*IsDirective=*/0;
         IsError = true;

@@ -1501,7 +1501,8 @@ public:
   /// Called on a well-formed 'adjust_args' parameter range 'lb:ub'. Either
   /// bound may be null, meaning 1 for \a LowerBound and 'omp_num_args' for
   /// \a UpperBound.
-  ExprResult ActOnOMPArgumentRangeExpr(Expr *LowerBound, SourceLocation ColonLoc,
+  ExprResult ActOnOMPArgumentRangeExpr(Expr *LowerBound,
+                                       SourceLocation ColonLoc,
                                        Expr *UpperBound);
 
   ExprResult ActOnOpenMPDimsModifier(OpenMPClauseKind Kind, int Modifier,

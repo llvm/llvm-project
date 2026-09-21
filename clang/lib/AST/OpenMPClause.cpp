@@ -3281,8 +3281,7 @@ static bool evalOMPAdjustArgsBound(const Expr *Bound, unsigned NumArgs,
     if (const Expr *OffsetExpr = NumArgsExpr->getOffset()) {
       if (OffsetExpr->isValueDependent())
         return false;
-      std::optional<llvm::APSInt> Val =
-          OffsetExpr->getIntegerConstantExpr(Ctx);
+      std::optional<llvm::APSInt> Val = OffsetExpr->getIntegerConstantExpr(Ctx);
       if (!Val)
         return false;
       Offset = Val->getExtValue();
@@ -3315,8 +3314,7 @@ bool clang::resolveOMPAdjustArgsItem(const Expr *Item, const FunctionDecl *FD,
       return false;
     unsigned Index = PVD->getFunctionScopeIndex();
     if (FD->getNumParams() > Index &&
-        FD->getParamDecl(Index)->getCanonicalDecl() ==
-            PVD->getCanonicalDecl())
+        FD->getParamDecl(Index)->getCanonicalDecl() == PVD->getCanonicalDecl())
       AppendIfInRange(static_cast<int64_t>(Index) + 1);
     return true;
   }

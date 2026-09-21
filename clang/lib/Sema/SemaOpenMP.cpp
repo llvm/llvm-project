@@ -8002,8 +8002,8 @@ void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
   // and a name does not collide with a position that happens to resolve to
   // it. In 5.1 this restriction lived in the declare variant directive's own
   // restrictions and was worded per-argument rather than per-item.
-  llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars;  // named items
-  llvm::SmallSet<uint64_t, 4> AdjustPositions;       // literal positional items
+  llvm::SmallPtrSet<const VarDecl *, 4> AdjustVars; // named items
+  llvm::SmallSet<uint64_t, 4> AdjustPositions;      // literal positional items
 
   for (Expr *E : AllAdjustArgs) {
     Expr *Item = E->IgnoreParenImpCasts();
@@ -27104,8 +27104,8 @@ ExprResult SemaOpenMP::ActOnOMPNumArgsExpr(SourceLocation NumArgsLoc,
   }
   // The value stands for a number of arguments, so the expression is an int
   // even though it cannot be evaluated until the parameter list is consumed.
-  return new (Context) OMPNumArgsExpr(Context.IntTy, NumArgsLoc, OpLoc,
-                                      IsSubtraction, Offset);
+  return new (Context)
+      OMPNumArgsExpr(Context.IntTy, NumArgsLoc, OpLoc, IsSubtraction, Offset);
 }
 
 ExprResult SemaOpenMP::ActOnOMPArgumentRangeExpr(Expr *LowerBound,

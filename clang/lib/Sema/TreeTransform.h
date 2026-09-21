@@ -14060,8 +14060,9 @@ ExprResult TreeTransform<Derived>::TransformOMPNumArgsExpr(OMPNumArgsExpr *E) {
   if (!getDerived().AlwaysRebuild() && Offset.get() == E->getOffset())
     return E;
 
-  return getDerived().RebuildOMPNumArgsExpr(
-      E->getNumArgsLoc(), E->getOperatorLoc(), E->isSubtraction(), Offset.get());
+  return getDerived().RebuildOMPNumArgsExpr(E->getNumArgsLoc(),
+                                            E->getOperatorLoc(),
+                                            E->isSubtraction(), Offset.get());
 }
 
 template <typename Derived>
@@ -14081,8 +14082,7 @@ TreeTransform<Derived>::TransformOMPArgumentRangeExpr(OMPArgumentRangeExpr *E) {
       return ExprError();
   }
 
-  if (!getDerived().AlwaysRebuild() &&
-      LowerBound.get() == E->getLowerBound() &&
+  if (!getDerived().AlwaysRebuild() && LowerBound.get() == E->getLowerBound() &&
       UpperBound.get() == E->getUpperBound())
     return E;
 
