@@ -6282,3 +6282,207 @@ entry:
   %cmp = icmp ult i8 %p0, %p1
   ret i1 %cmp
 }
+
+; (x - y) pred C implies x != y if 0 pred C is false.
+
+define i1 @diff_ugt_implies_icmp_eq(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @diff_ugt_implies_icmp_eq(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[DIFF]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i64 %x, %y
+  %cond = icmp ugt i64 %diff, 1
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq i64 %x, %y
+  ret i1 %cmp
+}
+
+define i1 @diff_ugt_implies_icmp_ne_commuted(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @diff_ugt_implies_icmp_ne_commuted(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[DIFF]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i64 %x, %y
+  %cond = icmp ugt i64 %diff, 1
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp ne i64 %y, %x
+  ret i1 %cmp
+}
+
+define i1 @diff_sgt_implies_icmp_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @diff_sgt_implies_icmp_eq(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[DIFF]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i8 %x, %y
+  %cond = icmp sgt i8 %diff, 0
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq i8 %x, %y
+  ret i1 %cmp
+}
+
+define i1 @diff_slt_implies_icmp_eq(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @diff_slt_implies_icmp_eq(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[DIFF]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i8 %x, %y
+  %cond = icmp slt i8 %diff, 0
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq i8 %x, %y
+  ret i1 %cmp
+}
+
+define i1 @ptrdiff_sgt_implies_icmp_eq(ptr %p0, ptr %p1) {
+; CHECK-LABEL: define i1 @ptrdiff_sgt_implies_icmp_eq(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoint ptr [[P0]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[DIFF]], 7
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P0]], [[P1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %i0 = ptrtoint ptr %p0 to i64
+  %i1 = ptrtoint ptr %p1 to i64
+  %diff = sub i64 %i0, %i1
+  %cond = icmp sgt i64 %diff, 7
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @diff_ugt_dom_cond_implies_icmp_eq(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @diff_ugt_dom_cond_implies_icmp_eq(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[DIFF]], 1
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %diff = sub i64 %x, %y
+  %cond = icmp ugt i64 %diff, 1
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %cmp = icmp eq i64 %x, %y
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
+define i1 @diff_sge_dom_cond_false_implies_icmp_ne(i64 %x, i64 %y) {
+; CHECK-LABEL: define i1 @diff_sge_dom_cond_false_implies_icmp_ne(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[DIFF]], -1
+; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i64 %x, %y
+  %cond = icmp sgt i64 %diff, -1
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  ret i1 false
+
+if.else:
+  %cmp = icmp ne i64 %x, %y
+  ret i1 %cmp
+}
+
+; Negative tests: 0 pred C is true.
+
+define i1 @diff_sgt_neg1_implies_icmp_eq_negative(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @diff_sgt_neg1_implies_icmp_eq_negative(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[DIFF]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i8 %x, %y
+  %cond = icmp sgt i8 %diff, -1
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq i8 %x, %y
+  ret i1 %cmp
+}
+
+define i1 @diff_ult_implies_icmp_eq_negative(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @diff_ult_implies_icmp_eq_negative(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[DIFF]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i8 %x, %y
+  %cond = icmp ult i8 %diff, 10
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq i8 %x, %y
+  ret i1 %cmp
+}
+
+define i1 @diff_ugt_implies_icmp_ult_negative(i8 %x, i8 %y) {
+; CHECK-LABEL: define i1 @diff_ugt_implies_icmp_ult_negative(
+; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[DIFF]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i8 %x, %y
+  %cond = icmp ugt i8 %diff, 1
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp ult i8 %x, %y
+  ret i1 %cmp
+}
