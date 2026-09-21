@@ -198,6 +198,8 @@ struct NameUniquer {
   /// Returns true if the passed name denotes a compiler generated name.
   /// If \p excludeStringLiterals is true, string literals are excluded from the
   /// check.
+  /// If \p excludeArrayLiterals is true, array literals are excluded from the
+  /// check.
   static bool isCompilerGenerated(llvm::StringRef name,
                                   bool excludeStringLiterals = true,
                                   bool excludeArrayLiterals = true);
