@@ -21,6 +21,7 @@ from ..ir import (
     Float8E4M3Type,
     Float8E5M2Type,
     Float8E8M0FNUType,
+    Float8E5M3FNUType,
     FloatTF32Type,
     FunctionType,
     IndexType,
@@ -84,6 +85,7 @@ f4E2M1FN = lambda: Float4E2M1FNType.get()
 f6E2M3FN = lambda: Float6E2M3FNType.get()
 f6E3M2FN = lambda: Float6E3M2FNType.get()
 f8E8M0FNU = lambda: Float8E8M0FNUType.get()
+f8E5M3FNU = lambda: Float8E5M3FNUType.get()
 
 none = lambda: NoneType.get()
 

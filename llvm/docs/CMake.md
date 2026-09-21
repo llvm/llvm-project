@@ -134,9 +134,9 @@ for building with NMake. By default, CMake chooses the most specific generator
 supported by your development environment. If you want an alternative generator,
 you must specify this to CMake with the `-G` option.
 
-```{todo}
+:::{todo}
 Explain variables and cache. Move explanation here from #options section.
-```
+:::
 
 (Options and variables)=
 ## Options and variables
@@ -314,9 +314,9 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     Windows, shared libraries may be used when building with MinGW, including
     mingw-w64, but not when building with the Microsoft toolchain.
 
-    ```{note}
+    :::{note}
     `BUILD_SHARED_LIBS` is only recommended for use by LLVM developers. If you want to build LLVM as a shared library, you should use the `LLVM_BUILD_LLVM_DYLIB` option.
-    ```
+    :::
 
 **LLVM_ABI_BREAKING_CHECKS**:STRING
 
@@ -639,13 +639,28 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     having one build for only LLVM and another for clang+llvm using the same
     source checkout.
 
+    When Flang enables Clang and MLIR automatically as dependencies, they
+    contribute only targets needed by Flang to the default build. Their test
+    suites are disabled by default, and installation includes the libraries,
+    headers, and resources needed by Flang's installed binaries and CMake
+    package. Listing Clang or MLIR explicitly restores that project's complete
+    default build, test, and install behavior. Clang also retains its normal
+    behavior when LLDB or clang-tools-extra is enabled.
+
+    Flang's dependency libraries and headers can be selected in distributions
+    with `flang-dependencies` and `flang-dependency-headers`. Their CMake targets
+    are included in Flang's usual exports; an SDK distribution also needs the
+    corresponding LLVM libraries, headers, and CMake exports. Toolchain-only
+    installations omit dependency SDK libraries and headers, but retain shared
+    libraries, runtime tools, and compiler resource headers.
+
     The full list is:
 
     `bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly`
 
-    ```{note}
+    :::{note}
     Some projects listed here can also go in `LLVM_ENABLE_RUNTIMES`. They should only appear in one of the two lists. If a project is a valid possibility for both, prefer putting it in `LLVM_ENABLE_RUNTIMES`.
-    ```
+    :::
 
 **LLVM_ENABLE_RTTI**:BOOL
 
@@ -660,9 +675,9 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     using a system compiler, see the [libc++
     documentation](https://libcxx.llvm.org/VendorDocumentation.html).
 
-    ```{note}
+    :::{note}
     The list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
-    ```
+    :::
 
     To list all possible runtimes, include an invalid name. For example
     `-DLLVM_ENABLE_RUNTIMES=notaruntime`. The resulting CMake error will list
@@ -864,11 +879,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 
 **LLVM_LIT_TOOLS_DIR**:PATH
 
-:   The path to GnuWin32 tools for tests. Valid on Windows host. Defaults to
-    the empty string, in which case lit will look for tools needed for tests
-    (e.g., `grep`, `sort`, etc.) in your `%PATH%`. If GnuWin32 is not in your
-    `%PATH%`, then you can set this variable to the GnuWin32 directory so that
-    lit can find tools needed for tests in that directory.
+:   The path to the [Git for Windows](https://git-scm.com/) tools for tests.
+    Valid on Windows host. Defaults to the empty string, in which case lit will
+    look for tools needed for tests (e.g., `grep`, `sort`, etc.) in your
+    `%PATH%`. If Git for Windows is not in your `%PATH%`, then you can set this
+    variable to the Git for Windows `usr/bin` sub-directory so that lit can
+    find tools needed for tests in that directory.
 
 **LLVM_NATIVE_TOOL_DIR**:STRING
 
@@ -910,11 +926,11 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     use during the build. Enabling this option can significantly speed up build
     times, especially when building LLVM in Debug configurations.
 
-**LLVM_PARALLEL\_{COMPILE,LINK,TABLEGEN}\_JOBS**:STRING
+**LLVM_PARALLEL\_{COMPILE,LINK,TABLEGEN,SPHINX}\_JOBS**:STRING
 
-:   Limit the maximum number of concurrent compilation, link or tablegen jobs
-    respectively. The default total number of parallel jobs is determined by
-    the number of logical CPUs.
+:   Limit the maximum number of concurrent compilation, link, tablegen, or
+    `sphinx-build` invocations respectively. These limits are implemented with
+    Ninja job pools and only take effect when using a Ninja generator.
 
 **LLVM_PROFDATA_FILE**:PATH
 
@@ -939,6 +955,13 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 :   If enabled, all supported unordered llvm containers would be iterated in
     reverse order. This is useful for uncovering non-determinism caused by
     iteration of unordered containers.
+
+**LLVM_SPHINX_THREADS**:STRING
+
+:   Controls `sphinx-build -j`, which is the internal Sphinx worker count.
+    Defaults to half the number of logical cores, rounded up. The default is
+    high because Sphinx is often on the critical path, and rarely uses all
+    available cores. Set to an empty string to omit the Sphinx `-j` option.
 
 **LLVM_STATIC_LINK_CXX_STDLIB**:BOOL
 

@@ -98,24 +98,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "SYCLLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "SYCLLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "SYCLLinkOpts.inc"
-#undef OPTION
-};
-
-class LinkerOptTable : public opt::GenericOptTable {
+class LinkerOptTable : public opt::OptTable {
 public:
-  LinkerOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LinkerOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -750,9 +738,9 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OA))
+  if (OA.isIntelGPU())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OA))
+  if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   llvm_unreachable("runAOTCompile dispatched on unsupported arch");
@@ -978,8 +966,8 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  bool IsAOTCompileNeeded = IsIntelOffloadArch(
-      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
+  bool IsAOTCompileNeeded =
+      StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)).isIntel();
 
   StringRef OutputFileNameExt = ".spv";
 

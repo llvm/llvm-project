@@ -1,8 +1,5 @@
 # Clang Compiler User's Manual
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -278,7 +275,7 @@ specific parts of the diagnostic, e.g.,
 
 ::::{raw} html
 <pre>
-  <b><span style="color:black">test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</span></b>
+  <b>test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</b>
   #endif bad
          <span style="color:green">^</span>
          <span style="color:green">//</span>
@@ -307,7 +304,7 @@ API to output colored diagnostics. This option is only used on Windows and
 defaults to off.
 :::
 
-:::{option} -fdiagnostics-format=clang/msvc/vi
+:::{option} -fdiagnostics-format=clang/msvc/vi/sarif
 
 Changes diagnostic output format to better match IDEs and command line tools.
 
@@ -332,6 +329,26 @@ effect on formatting a simple conversion diagnostic, follow:
   ```
   t.c +3:11: warning: conversion specifies type 'char *' but the argument has type 'int'
   ```
+
+- **sarif**: Emit diagnostics as a [SARIF](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) JSON
+  document. SARIF diagnostics are written to standard error.
+
+  `-Wno-sarif-format-unstable -fno-caret-diagnostics` can be added to disable extraeneous
+  prints if a standalone JSON file is desired.
+
+  ```console
+  clang -fdiagnostics-format=sarif -Wno-sarif-format-unstable -fno-caret-diagnostics t.c 2> diagnostics.sarif
+  ```
+
+  The SARIF diagnostic format is currently unstable.
+:::
+
+:::{option} -fdiagnostics-absolute-paths
+
+Print absolute paths in diagnostics.
+
+This option is useful when a diagnostic consumer does not share Clang's current
+working directory. It resolves symbolic links before printing paths.
 :::
 
 (opt_fdiagnostics-show-option)=
@@ -881,6 +898,28 @@ information can be included in the remarks (see
 
 These are options that report execution time and consumed memory of different
 compilations steps.
+
+:::{option} -ftime-trace[=<path>]
+
+Write a Chrome tracing-format JSON time trace for the compilation.
+Without a path, Clang derives the JSON filename from the compilation output.
+A path names the JSON file or a directory that will contain it.
+
+```console
+$ clang -c foo.c -ftime-trace=compile-trace.json -o foo.o
+```
+:::
+
+:::{option} -ftime-trace-granularity
+
+Sets the minimum recorded duration in microseconds (500 by default).
+:::
+
+:::{option} -ftime-trace-verbose
+
+Records additional event details, including source filenames, and can increase
+the trace size by two to three times.
+:::
 
 :::{option} -fproc-stat-report=
 
@@ -2790,6 +2829,37 @@ $ cd $P/foo && clang -c -funique-internal-linkage-names name_conflict.c
 $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
 $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 ```
+:::
+
+:::{option} -f[no-]keep-inline-functions
+
+Force inline functions to be emitted into the object file, even when they
+have been inlined into all callers or are otherwise unused.
+
+Except as noted below, the option keeps definitions of inline functions that
+are available in the current translation unit. LTO observes the kept
+definitions as being marked as used.
+
+In C, functions declared with inline are kept, except where they are
+C99 inline definitions or GNU C89/C90 extern inline functions. This
+includes __attribute__((gnu_inline)) extern inline functions.
+
+In C++, the option applies to functions declared inline (explicitly
+or implicitly via constexpr or an in-class member-function definition),
+including template specializations whose definitions are generated in this
+translation unit. Inline functions with the gnu_inline attribute and
+specializations subject to C++ explicit instantiation declarations
+(extern template) are not kept. C++20 immediate functions (e.g., consteval)
+are never emitted.
+
+With C++20 named modules, the option applies to inline functions defined
+in the current module unit, including functions that are not exported.
+Imported definitions are affected when their definition is available in the
+current translation unit.
+
+-fno-keep-inline-functions (the default) restores normal inlining
+behaviour.
+
 :::
 
 :::{option} -f[no-]basic-block-address-map:
@@ -6023,7 +6093,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   -no-hip-rt              Do not link against HIP runtime libraries
 >   --no-offload-arch=<value>
 >                           Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
->   --no-offload-new-driver Don't Use the new driver for offloading compilation.
+>   --no-offload-new-driver Deprecated; the legacy offloading driver has been removed.
 >   --no-offloadlib         Do not link device library for CUDA/HIP/SYCL device compilation
 >   --no-wasm-opt           Disable the wasm-opt optimizer
 >   -nobuiltininc           Disable builtin #include directories only
@@ -6038,7 +6108,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   --offload-host-device   Compile for both the offloading host and device (default).
 >   --offload-host-only     Only compile for the offloading host.
 >   --offload-jobs=<value>  Specify the number of threads to use for device offloading tasks during compilation. Can be a positive integer or the string 'jobserver' to use the make-style jobserver from the environment.
->   --offload-new-driver    Use the new driver for offloading compilation.
+>   --offload-new-driver    Deprecated; the new driver is always used for offloading compilation.
 >   --offload-targets=<value>
 >                           Specify a list of target architectures to use for offloading.
 >   --offloadlib            Link device libraries for GPU device compilation

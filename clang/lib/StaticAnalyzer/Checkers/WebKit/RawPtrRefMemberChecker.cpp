@@ -299,6 +299,8 @@ public:
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(Member->getSourceRange());
+    if (auto *EnclosingCtx = Member->getDeclContext())
+      Report->setDeclWithIssue(Decl::castFromDeclContext(EnclosingCtx));
     BR->emitReport(std::move(Report));
   }
 

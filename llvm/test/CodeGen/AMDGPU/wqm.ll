@@ -524,7 +524,6 @@ define amdgpu_ps float @test_wwm3(i32 inreg %idx) {
 ; GFX10-W32-LABEL: test_wwm3:
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -588,7 +587,6 @@ define amdgpu_ps float @test_wwm4(i32 inreg %idx) {
 ; GFX10-W32-LABEL: test_wwm4:
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -713,7 +711,6 @@ define amdgpu_ps float @test_wwm6_then() {
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
@@ -788,9 +785,8 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX10-W32-NEXT:    global_load_dword v1, v[3:4], off glc dlc
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
-; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX10-W32-NEXT:  .LBB17_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_or_saveexec_b32 s1, -1
@@ -979,7 +975,6 @@ define amdgpu_ps float @test_strict_wqm3(i32 inreg %idx) {
 ; GFX10-W32-LABEL: test_strict_wqm3:
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -1045,7 +1040,6 @@ define amdgpu_ps float @test_strict_wqm4(i32 inreg %idx) {
 ; GFX10-W32-LABEL: test_strict_wqm4:
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -1177,7 +1171,6 @@ define amdgpu_ps float @test_strict_wqm6_then() {
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
@@ -1257,9 +1250,8 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX10-W32-NEXT:    global_load_dword v1, v[3:4], off glc dlc
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
-; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX10-W32-NEXT:  .LBB25_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
@@ -2453,7 +2445,6 @@ define amdgpu_ps float @test_strict_wwm3(i32 inreg %idx) {
 ; GFX10-W32-LABEL: test_strict_wwm3:
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -2517,7 +2508,6 @@ define amdgpu_ps float @test_strict_wwm4(i32 inreg %idx) {
 ; GFX10-W32-LABEL: test_strict_wwm4:
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
@@ -2642,7 +2632,6 @@ define amdgpu_ps float @test_strict_wwm6_then() {
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
@@ -2713,9 +2702,8 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX10-W32-NEXT:    global_load_dword v1, v[3:4], off glc dlc
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
-; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX10-W32-NEXT:  .LBB47_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3415,7 +3403,9 @@ define amdgpu_ps void @test_for_deactivating_lanes_in_wave32(ptr addrspace(6) in
 main_body:
   %1 = ptrtoint ptr addrspace(6) %0 to i32
   %2 = insertelement <4 x i32> <i32 poison, i32 32768, i32 32, i32 822177708>, i32 %1, i32 0
-  %3 = call nsz arcp float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %2, i32 0, i32 0) #3
+  %sbuf.rsrc = bitcast <4 x i32> %2 to i128
+  %sbuf.ptr = inttoptr i128 %sbuf.rsrc to ptr addrspace(8)
+  %3 = call nsz arcp float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %sbuf.ptr, i32 0, i32 0) #3, !invariant.load !{}
   %4 = fcmp nsz arcp ugt float %3, 0.000000e+00
   call void @llvm.amdgcn.kill(i1 %4) #1
   ret void
@@ -3575,7 +3565,6 @@ define amdgpu_ps float @short_exact_regions(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    image_sample v[3:6], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s13, exec_lo
-; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-W32-NEXT:    v_cmpx_gt_u32_e32 16, v0
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB59_2
 ; GFX10-W32-NEXT:  ; %bb.1: ; %if
@@ -3608,7 +3597,9 @@ main_body:
 if:
   %idx1 = extractelement <4 x i32> %idx0, i64 0
   %idx2 = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %idx1)
-  %idx3 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %sampler, i32 %idx2, i32 0)
+  %sampler.rsrc = bitcast <4 x i32> %sampler to i128
+  %sampler.ptr = inttoptr i128 %sampler.rsrc to ptr addrspace(8)
+  %idx3 = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) %sampler.ptr, i32 %idx2, i32 0), !invariant.load !{}
 
   call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %tex1, <4 x i32> poison, i32 %idx3, i32 0, i32 0, i32 0)
   br label %endif
@@ -3675,7 +3666,9 @@ main_body:
   %tex2 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %d, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
 
   %idx2 = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %idx1)
-  %idx3 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %sampler, i32 %idx2, i32 0)
+  %sampler.rsrc = bitcast <4 x i32> %sampler to i128
+  %sampler.ptr = inttoptr i128 %sampler.rsrc to ptr addrspace(8)
+  %idx3 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %sampler.ptr, i32 %idx2, i32 0), !invariant.load !{}
 
   %r0 = extractelement <4 x float> %tex1, i64 1
   %r1 = extractelement <4 x float> %tex2, i64 2
@@ -3723,7 +3716,8 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, 
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #2
 declare i32 @llvm.amdgcn.ds.swizzle(i32, i32)
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32 immarg) #7
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32 immarg) #7
+declare i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8), i32, i32 immarg) #7
 declare i32 @llvm.amdgcn.readfirstlane.i32(i32)
 
 attributes #1 = { nounwind }

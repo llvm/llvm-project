@@ -26,6 +26,8 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
           Op<XeGPU_Dialect, mnemonic, traits> {
 
+  let hasCustomPropertiesPrinter = 1;
+
   code extraBaseClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx,
             ::mlir::OpAsmPrinter &p, const Properties &prop,
@@ -44,7 +46,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
       }
 
       if (!filteredAttrs.empty()) {
-        p << "<" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
+        p << " <" << DictionaryAttr::get(ctx, filteredAttrs) << ">";
       }
     }
 
@@ -74,20 +76,20 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Arguments:
     - `source`: an object representing (starting address/pointer of) a memory region.
        It can be either a memref object, or simply a pointer represented by uint64_t type.
-       For the case of dynamic memrefs or pointer, the shape and layout information of the
-       memory region should be explicitly passed via `shape` and `strides` parameters.
+       For a memref source (static or dynamic shape) the shape and strides are taken from
+       the memref itself and must not be passed explicitly; only a pointer source requires
+       the `shape` and `strides` parameters.
 
-    - `shape`: the shape information of the memory region pointed by the "source". It is
-         typically encoded via the MemRefType of the source, e.g., memref<4096x4096xf16>.
-        But if "source" is simply a pointer represented as uint64_t type, or a memref
-        type without shape information e.g., memref<?x?xf16>, the shape information has
-        to be explicitly passed via the "shape" and "const_shape" arguments.
+    - `shape`: the shape information of the memory region pointed by the "source". For a
+        memref source it is encoded via the MemRefType, e.g., memref<4096x4096xf16> or a
+        dynamic memref<?x?xf16> (whose dynamic dims are recovered at lowering time). Only
+        when "source" is a pointer represented as uint64_t type must the shape be passed
+        explicitly via the "shape" and "const_shape" arguments.
 
     - `strides`: the strides of the memory region pointed by the "source". Similar to shape,
-        it is typically encoded via the MemRefType of the source too. But if "source" is
-        simply a pointer represented as uint64_t type, or a memref type without shape
-        information e.g., memref<?x?xf16>, the strides information has to be explicitly
-        passed via the "strides" and "const_strides" argument.
+        for a memref source it is encoded via the MemRefType, including a dynamic
+        memref<?x?xf16>. Only when "source" is a pointer represented as uint64_t type must
+        the strides be passed explicitly via the "strides" and "const_strides" arguments.
 
     Results:
     - `res`: nd tensor descriptor
@@ -98,14 +100,14 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     %1 = xegpu.create_nd_tdesc %0 : memref<1024x1024xf32> -> TensorDesc<8x16xf32>
     ```
 
-    Example 2 (suppose the tensor shape inferred by the compiler is 8x16):
+    Example 2 (dynamic memref; shape/strides are inferred from the memref, not
+    passed explicitly):
     ```mlir
     %0 = memref.alloc(%h, %w) : memref<?x?xf32>
-    %c1 = arith.constant 1 : index
-    %1 = xegpu.create_nd_tdesc %0, shape:[%h, %w], strides:[%w, %c1]: memref<?x?xf32> -> TensorDesc<8x16xf32>
+    %1 = xegpu.create_nd_tdesc %0 : memref<?x?xf32> -> TensorDesc<8x16xf32>
     ```
 
-    Example 3 (suppose the tensor shape inferred by the compiler is 8x16):
+    Example 3 (a pointer source must supply shape/strides explicitly):
     ```mlir
     %0 = ... : ui64
     %c1 = arith.constant 1 : index
@@ -704,16 +706,12 @@ def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
 def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayoutInterface]> {
   let summary = "load a set of scattered data points from memory.";
 
-  let description = [{ It (aka. load) load data per each lane. The output
-    describes the data being loaded at the subgroup level, so its size is
-    consistent with the number of lanes in a subgroup. When the chunk size
-    is larger than 2, the output vector is a 2D vector, with dim-0 correspoding
-    to lanes, and dim-1 corresponding to the chunk size loaded by each lane.
+  let description = [{ It (aka. load) load data per each lane.
     The mask operand masks out memory access so that it is safe to pass out-of-boundary
     addresses/offsets as long as they are masked. Each mask element applies to one lane.
 
-    In lane level, the result is a 1D vector that represents the data to be loaded by
-    each lane. If size is not 1, size should be equal to the chunk size.
+    At every level the mask, offsets, and result may be nD vectors, and all three
+    must have the same shape.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
@@ -724,16 +722,20 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
         1D memref or pointer (ui64, ui32, i64 or i32).
 
     - `offsets`: represents offsets from source.
-        offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 at lane level. scalar offset is also valid for lane level.
+        offsets is a vector of `index` type with the same shape as the result.
+        A scalar offset is also valid: one lane then reads only one element.
 
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
-        mask is a vector of size equal to the subgroup size, or 1 at lane level.
-        scalar mask is also valid for lane level.
-
-    - `chunk_size`: [optional] represents contiguous number of elements to load from per work item.
+        mask has the same shape as the offsets and the result. Each element applies
+        to one lane. A scalar mask is also valid, and gates that one element.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `contiguity`: [optional] the number of neighbouring elements in the
+      innermost dimension that are contiguous in memory. It is an upper bound,
+      not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data`, capped by what one lane can access in one instruction. It
+      must be at least 2 and must divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
       of load. Only valid at workgroup and subgroup levels.
@@ -748,28 +750,36 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
     %a = memref.alloc() : memref<1024xf32>
     %offsets = vector.step : vector<16xindex>
     %mask = vector.constant_mask [16]: vector<16xi1>
-    %val = xegpu.load %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
+    %val = xegpu.load %a[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>,
-                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      : memref<1024xf32>, vector<16xi1>, vector<16xindex> -> vector<16xf32>
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}>
+      : memref<1024xf32>, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   ```
 
   Example 2 (lane level):
-  lane level only accepts the offsets variant. chunk_size can be inferred from result
-  type. In this example, chunk_size is 8.
+  lane level only accepts the offsets variant. The mask, offsets, and result all
+  have the same shape; here each lane reads 8 elements.
   ```mlir
-    %2 = xegpu.load %1[%2], %0 <{l1_hint = #xegpu.cache_hint<cached>,
+    %val = xegpu.load %src[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>,
                              l2_hint = #xegpu.cache_hint<uncached>,
                              l3_hint = #xegpu.cache_hint<uncached>}>
-          : memref<128xf32>, vector<1xindex>, vector<1xi1> -> vector<8xf32>
+          : memref<128xf32>, vector<8xindex>, vector<8xi1> -> vector<8xf32>
+  ```
+
+  Example 3 (subgroup level, contiguous runs):
+  `contiguity = 4` says 4 neighbouring elements in the innermost dimension are
+  contiguous. The shapes stay the same.
+  ```mlir
+    %val = xegpu.load %src[%offsets], %mask <{contiguity = 4 : i64}>
+          : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   ```
 
   }];
 
   let arguments = (ins XeGPU_GatherScatterBaseAddrType:$source,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
@@ -815,13 +825,11 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   let builders = [
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Type": $value, "Value": $source,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
@@ -834,15 +842,10 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorLayoutInterface]> {
   let summary = "store data to scattered memory locations.";
   let description =
-      [{ It (aka. store) stores data to scattered memory locations. The value is
-  typically a 1D vector. But when the chunk size of the TensorDesc is larger than 1, it will be
-  a 2D vector instead. For the later case, dim-1 of the value correspods to the simd lanes
-  and the dim-0 of the value corresponds to the chunk size stored per lane. So `store_scatter`
-  has transpose effect, which is similar to `load_gather`. Therefore, a transpose attribute is
-  introduced on purpose, making sure users are aware of this implicit transformation.
+      [{ It (aka. store) stores data to scattered memory locations.
 
-  In lane level, the result is a 1D vector that represents the data to be stored by
-  each lane. If size is not 1, size should be equal to the chunk size.
+  At every level the mask, offsets, and value may be nD vectors, and all three
+  must have the same shape.
 
   This operation serves as an anchor through which users assign a layout attribute
   to govern computation distribution.
@@ -855,16 +858,20 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
         1D memref or pointer (ui64, ui32, i64 or i32).
 
     - `offsets`: represents offsets from dest.
-        offsets is a vector of `index` type and vector length is either the subgroup size
-        or 1 at lane level. scalar offset is also valid for lane level.
+        offsets is a vector of `index` type with the same shape as the value.
+        A scalar offset is also valid: one lane then writes only one element.
 
     - `mask`: is a vector of `i1` type, which is used to mask out the memory access.
-        mask is a vector of size equal to the subgroup size, or 1 at lane level.
-        scalar mask is also valid for lane level.
-
-    - `chunk_size`: [optional] represents contiguous number of elements to store to per work item.
+        mask has the same shape as the offsets and the value. Each element applies
+        to one lane. A scalar mask is also valid, and gates that one element.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
+
+    - `contiguity`: [optional] the number of neighbouring elements in the
+      innermost dimension that are contiguous in memory. It is an upper bound,
+      not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data`, capped by what one lane can access in one instruction. It
+      must be at least 2 and must divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
       to be stored. Only valid at workgroup and subgroup levels.
@@ -878,21 +885,29 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
     %val = arith.constant dense<0.0> : vector<16xf32>
     %offsets = vector.step : vector<16xindex>
     %mask = vector.constant_mask [16]: vector<16xi1>
-    xegpu.store %val, %a[%offsets], %mask {l1_hint = #xegpu.cache_hint<cached>,
+    xegpu.store %val, %a[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>,
                            l2_hint = #xegpu.cache_hint<cached>,
                            l3_hint = #xegpu.cache_hint<cached>,
-                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      : vector<16xf32>, memref<1024xf32>, vector<16xi1>, vector<16xindex>
+                           layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}>
+      : vector<16xf32>, memref<1024xf32>, vector<16xindex>, vector<16xi1>
   ```
 
   Example 2 (Lane level):
-  Lane level IR only accepts the offsets variant. chunk_size can be inferred from value
-  type. In this example, chunk_size is 8.
+  Lane level IR only accepts the offsets variant. The mask, offsets, and value all
+  have the same shape; here each lane writes 8 elements.
   ```mlir
-    xegpu.store %0, %1[%2], %3 <{l1_hint = #xegpu.cache_hint<uncached>,
+    xegpu.store %val, %dest[%offsets], %mask <{l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>}>
-          : vector<8xf32>, memref<256xf32>, vector<1xindex>, vector<1xi1>
+          : vector<8xf32>, memref<256xf32>, vector<8xindex>, vector<8xi1>
+  ```
+
+  Example 3 (Subgroup level, contiguous runs):
+  `contiguity = 4` says 4 neighbouring elements in the innermost dimension are
+  contiguous. The shapes stay the same.
+  ```mlir
+    xegpu.store %val, %dest[%offsets], %mask <{contiguity = 4 : i64}>
+          : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>
   ```
 
   }];
@@ -900,7 +915,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let arguments = (ins XeGPU_ValueOrScalarType:$value,
       XeGPU_GatherScatterBaseAddrType:$dest,
       AnyTypeOf<[XeGPU_OffsetType, Index]>:$offsets,
-      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask, OptionalAttr<I64Attr>:$chunk_size,
+      AnyTypeOf<[XeGPU_MaskType, I1]>:$mask,
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
@@ -945,13 +960,11 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let builders = [
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint)>,
     OpBuilder<(ins "Value": $value, "Value": $dest,
                     "ArrayRef<OpFoldResult>": $offsets, "Value": $mask,
-                    "IntegerAttr": $chunk_size,
                     "xegpu::CachePolicyAttr": $l1_hint,
                     "xegpu::CachePolicyAttr": $l2_hint,
                     "xegpu::CachePolicyAttr": $l3_hint,
@@ -1013,8 +1026,9 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
       %d = xegpu.dpas %a, %b, %c <{
           layout_a = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 128]>,
           layout_b = #xegpu.layout<sg_layout = [4, 8], sg_data = [128, 16]>,
-          layout_cd = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 16]>}
-          : vector<64x128xf16>, vector<128x128xf16>, vector<64x128xf32> -> vector<64x128xf32>
+          layout_cd = #xegpu.layout<sg_layout = [4, 8], sg_data = [16, 16]>}>
+          : vector<64x128xf16>, vector<128x128xf16>, vector<64x128xf32>
+            -> vector<64x128xf32>
     ```
 
     Example 2 (Lane level, 1D):
@@ -1077,7 +1091,9 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
   }];
 
   let assemblyFormat = [{
-    $lhs `,` $rhs (`,` $acc^)? attr-dict `:` type($lhs)`,` type($rhs) (`,` type($acc)^)?  `->` type($result)
+    $lhs `,` $rhs (`,` $acc^)?
+    prop-dict attr-dict `:`
+    type($lhs)`,` type($rhs) (`,` type($acc)^)?  `->` type($result)
   }];
 
   let hasVerifier = 1;
@@ -1141,7 +1157,8 @@ def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
   let results = (outs XeGPU_ValueType:$result);
 
   let assemblyFormat = [{
-    $kind $tensorDesc `,` $mask `,` $value attr-dict `:`
+    $kind $tensorDesc `,` $mask `,` $value
+    prop-dict attr-dict `:`
     qualified(type($tensorDesc)) `,` type($mask) `,` type($value) `->` type($result)
   }];
 }
@@ -1207,7 +1224,10 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
   }];
   let arguments = (ins XeGPU_MemorySpaceAttr: $memory_kind,
                        XeGPU_FenceScopeAttr: $fence_scope);
-  let assemblyFormat = [{`memory_kind` `=` $memory_kind `,` `fence_scope` `=` $fence_scope attr-dict}];
+  let assemblyFormat = [{
+    `memory_kind` `=` enum($memory_kind) `,`
+    `fence_scope` `=` enum($fence_scope) attr-dict
+  }];
   let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
@@ -1306,7 +1326,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
   }];
   let arguments = (ins StaticSharedMemRefOf<[XeGPU_ScalarType]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
-  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
+  let assemblyFormat = "$source prop-dict attr-dict `:` type($source) `->` qualified(type($mem_desc))";
   let hasVerifier = 1;
 }
 
@@ -1321,7 +1341,7 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   let results = (outs XeGPU_ValueOrScalarType:$res);
   let assemblyFormat = [{
     $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-    prop-dict attr-dict `` `:` type(operands) `->` type(results)
+    prop-dict attr-dict `:` type(operands) `->` type(results)
   }];
 
   let description = [{
@@ -1399,7 +1419,7 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     OptionalAttr<DistributeLayoutAttr>:$layout
   );
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-                          prop-dict attr-dict `` `:` type(operands)}];
+                          prop-dict attr-dict `:` type(operands)}];
   let description = [{
     This operation stores a `data` fragment into the shared local memory region
     specified by a `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.
@@ -1498,6 +1518,78 @@ def XeGPU_TruncfOp
   }];
 
   let hasVerifier = 1;
+}
+
+def XeGPU_LaneShuffleOp
+    : XeGPU_Op<"lane_shuffle", [Pure, AllTypesMatch<["source", "result"]>]> {
+  let summary = "Re-distributes a subgroup's fragments across its lanes.";
+
+  let description = [{
+    `xegpu.lane_shuffle` is a lane-level operation. The `source` operand is the
+    fragment (a 1D vector) held by one lane, and the `result` is the fragment
+    that lane holds afterwards. It re-distributes the elements across the lanes
+    of the subgroup without changing their type, so `source` and `result` have
+    the same type.
+
+    Let `S` be the subgroup size and `N` the number of elements per lane, so the
+    subgroup collectively holds `S * N` elements. Number these elements by their
+    logical position `0 .. S*N-1`. The `mode` selects which of the two
+    orientations of the `S x N` (lane, element) index grid the operation maps
+    between:
+
+    * `pack`: element `j` of lane `i` holds logical position `j * S + i` before
+      the operation and `i * N + j` after it. A lane's elements end up at
+      consecutive logical positions.
+    * `unpack`: the reverse mapping. A lane's elements end up strided by `S`.
+
+    The two modes are exact inverses, so shuffling one way and then the other
+    yields the original fragments.
+
+    For example, consider `vector<2xi16>` with a subgroup size of 8, denoting a
+    lane's fragment as `<a,b>`. In `pack` mode:
+
+    ```
+    lane:       0      1      2      3      4      5      6      7
+    source:   <0,8>  <1,9>  <2,10> <3,11> <4,12> <5,13> <6,14> <7,15>
+    result:   <0,1>  <2,3>  <4,5>  <6,7>  <8,9> <10,11> <12,13> <14,15>
+    ```
+
+    In general each lane's result elements come from `N` different lanes'
+    `source` fragments -- that is the cross-lane shuffle.
+
+    This operation implements the `xegpu.convert_layout` semantics at the lane
+    level, for the case where the `lane_layout` is the same but the `lane_data`
+    is different.
+
+    The operation assumes a full subgroup (the subgroup size equals the maximum
+    subgroup size) and that all lanes execute the same dynamic instance of the
+    operation; otherwise the behavior is undefined.
+
+    Arguments:
+    - `source`: The 1D vector fragment held by one lane.
+    - `mode`: The direction of the shuffle, either `pack` or `unpack`.
+  }];
+
+  let arguments = (ins XeGPU_LaneShuffleType:$source,
+                       XeGPU_LaneShuffleModeAttr:$mode);
+  let results = (outs XeGPU_LaneShuffleType:$result);
+
+  let extraClassDeclaration = [{
+    VectorType getSourceType() {
+      return llvm::cast<VectorType>(getSource().getType());
+    }
+
+    VectorType getResultType() {
+      return llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $source enum($mode) attr-dict `:` type($source)
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
@@ -1606,7 +1698,7 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
     $a `,` $b (`,` $acc^)?
     (`scale_a` `=` $scale_a^)?
     (`scale_b` `=` $scale_b^)?
-    attr-dict `:` functional-type(operands, results)
+    prop-dict attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 }

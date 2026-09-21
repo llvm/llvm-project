@@ -2,7 +2,9 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#double:]] = OpTypeFloat 64
+; CHECK-DAG: %[[#v4float:]] = OpTypeVector %[[#float]] 4
 ; CHECK-DAG: %[[#v4int:]] = OpTypeVector %[[#int]] 4
 ; CHECK-DAG: %[[#v4double:]] = OpTypeVector %[[#double]] 4
 ; CHECK-DAG: %[[#v2int:]] = OpTypeVector %[[#int]] 2
@@ -26,6 +28,8 @@
 @GVec3 = internal addrspace(10) global <3 x double> zeroinitializer
 @Lows3 = internal addrspace(10) global <3 x i32> zeroinitializer
 @Highs3 = internal addrspace(10) global <3 x i32> zeroinitializer
+@FloatVec4 = internal addrspace(10) global <4 x float> zeroinitializer
+@FloatVec6 = internal addrspace(10) global [6 x float] zeroinitializer
 
 ; Test splitting a vector of size 8.
 define internal void @test_split() {
@@ -122,11 +126,24 @@ entry:
   ret void
 }
 
+define internal void @test_float_shuffle() {
+entry:
+  ; CHECK: %[[#float_vec:]] = OpLoad %[[#v4float]]
+  ; CHECK: OpCompositeExtract %[[#float]] %[[#float_vec]] 0
+  ; CHECK: OpCompositeExtract %[[#float]] %[[#float_vec]] 1
+  %vec = load <4 x float>, ptr addrspace(10) @FloatVec4
+  %wide = shufflevector <4 x float> %vec, <4 x float> %vec,
+            <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  store <6 x float> %wide, ptr addrspace(10) @FloatVec6
+  ret void
+}
+
 define void @main() local_unnamed_addr #0 {
 entry:
   call void @test_split()
   call void @test_recombine()
   call void @test_bitcast_expand()
+  call void @test_float_shuffle()
   ret void
 }
 

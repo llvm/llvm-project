@@ -1,6 +1,6 @@
 ## Test writing a z/OS archive.
 
-# RUN: rm -rf %t.dir %t.a %t.odd.a %t.long.a %t.sym.a %t.blank-sym.a && mkdir -p %t.dir
+# RUN: rm -rf %t.dir %t.a %t.odd.a %t.long.a %t.sym.a %t.blank-sym.a %t.gnu-blank.a && mkdir -p %t.dir
 # RUN: split-file %s %t.dir
 
 ## Create a z/OS archive from a plain text file with symbol table writing disabled.
@@ -61,6 +61,13 @@
 # EMPTY-SYMTAB: Archive map
 # EMPTY-SYMTAB-NEXT: in blank.bc
 # EMPTY-SYMTAB-NOT: in blank.bc
+
+## The blank-symbol injection is z/OS specific. A GNU archive with no real
+## symbols should not have a blank symbol injected into its symbol table.
+# RUN: llvm-ar rcD %t.gnu-blank.a %t.dir/blank.bc
+# RUN: llvm-nm --print-armap %t.gnu-blank.a | FileCheck %s --check-prefix=GNU-NO-BLANK
+
+# GNU-NO-BLANK-NOT: in blank.bc
 
 #--- mytest.ll
 define i32 @mytest() {

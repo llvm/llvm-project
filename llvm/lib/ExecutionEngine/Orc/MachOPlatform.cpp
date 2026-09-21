@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
@@ -303,13 +303,14 @@ MachOPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
 
   {
     // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
     if (auto Err = PlatformJD.define(reexports(
             ES.getBootstrapJITDylib(),
             {{ES.intern("___orc_rt_jit_dispatch"),
-              {ES.intern(rt::DispatchName),
+              {Mangle(rt::DispatchName),
                JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
              {ES.intern("___orc_rt_jit_dispatch_ctx"),
-              {ES.intern(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
+              {Mangle(rt::DispatchCtxName), JITSymbolFlags::Exported}}})))
       return Err;
   }
 
@@ -1772,6 +1773,9 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
+
+  if (Opts.TargetTriple)
+    B.template addLoadCommand<MachO::LC_TARGET_TRIPLE>(*Opts.TargetTriple);
 
   using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
   for (auto &LD : Opts.LoadDylibs) {

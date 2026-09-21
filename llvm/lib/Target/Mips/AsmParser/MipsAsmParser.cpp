@@ -31,6 +31,7 @@
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -2020,6 +2021,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::UDivIMacro:
   case Mips::DSDivIMacro:
   case Mips::DUDivIMacro:
+    if (!Inst.getOperand(2).isImm())
+      return Error(IDLoc, "expected immediate operand kind");
     if (Inst.getOperand(2).getImm() == 0) {
       if (Inst.getOperand(1).getReg() == Mips::ZERO ||
           Inst.getOperand(1).getReg() == Mips::ZERO_64)
@@ -2956,11 +2959,11 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     }
 
     bool IsPtr64 = ABI.ArePtrs64bit();
-    bool IsLocalSym =
-        Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
-        (getContext().isELF() &&
-         static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
-             ELF::STB_LOCAL);
+    bool IsLocalSym = Res.getAddSym()->isTemporary() ||
+                      (getContext().isELF()
+                           ? static_cast<const MCSymbolELF *>(Res.getAddSym())
+                                     ->getBinding() == ELF::STB_LOCAL
+                           : Res.getAddSym()->isInSection());
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (InternalSymbolPrefix is "$"). Recognize ".L"
     // manually.

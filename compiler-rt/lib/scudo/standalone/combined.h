@@ -687,11 +687,11 @@ public:
     disableRingBuffer();
   }
 
-  void enable() NO_THREAD_SAFETY_ANALYSIS {
+  void enable(bool IsChild) NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
     enableRingBuffer();
     Secondary.enable();
-    Primary.enable();
+    Primary.enable(IsChild);
     if (!AllocatorConfig::getQuarantineDisabled())
       Quarantine.enable();
     Stats.enable();

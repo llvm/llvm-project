@@ -707,7 +707,7 @@ define amdgpu_gfx void @strict_wwm_call_i64(ptr addrspace(8) inreg %tmp14, i64 i
   ret void
 }
 
-define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) #1 {
+define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(ptr addrspace(8) inreg %desc, i32 %index) #1 {
 ; GFX9-O0-LABEL: strict_wwm_amdgpu_cs_main:
 ; GFX9-O0:       ; %bb.0:
 ; GFX9-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -718,11 +718,20 @@ define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %in
 ; GFX9-O0-NEXT:    s_nop 0
 ; GFX9-O0-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; GFX9-O0-NEXT:    s_mov_b64 exec, s[34:35]
-; GFX9-O0-NEXT:    s_mov_b32 s36, s4
+; GFX9-O0-NEXT:    s_mov_b32 s40, s6
+; GFX9-O0-NEXT:    s_mov_b32 s34, s4
+; GFX9-O0-NEXT:    ; kill: def $sgpr40 killed $sgpr40 def $sgpr40_sgpr41
+; GFX9-O0-NEXT:    s_mov_b32 s41, s7
+; GFX9-O0-NEXT:    s_mov_b32 s42, s41
+; GFX9-O0-NEXT:    s_mov_b32 s43, s40
+; GFX9-O0-NEXT:    ; kill: def $sgpr34 killed $sgpr34 def $sgpr34_sgpr35
+; GFX9-O0-NEXT:    s_mov_b32 s35, s5
+; GFX9-O0-NEXT:    s_mov_b32 s44, s35
+; GFX9-O0-NEXT:    s_mov_b32 s36, s34
 ; GFX9-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_sgpr37_sgpr38_sgpr39
-; GFX9-O0-NEXT:    s_mov_b32 s37, s5
-; GFX9-O0-NEXT:    s_mov_b32 s38, s6
-; GFX9-O0-NEXT:    s_mov_b32 s39, s7
+; GFX9-O0-NEXT:    s_mov_b32 s37, s44
+; GFX9-O0-NEXT:    s_mov_b32 s38, s43
+; GFX9-O0-NEXT:    s_mov_b32 s39, s42
 ; GFX9-O0-NEXT:    s_mov_b32 s34, 5
 ; GFX9-O0-NEXT:    v_lshlrev_b32_e64 v0, s34, v0
 ; GFX9-O0-NEXT:    s_mov_b32 s34, 0
@@ -857,10 +866,10 @@ define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %in
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O3-NEXT:    s_setpc_b64 s[30:31]
   %tmp17 = shl i32 %index, 5
-  %tmp18 = tail call <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32> %desc, i32 %tmp17, i32 0)
+  %tmp18 = tail call <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8) %desc, i32 %tmp17, i32 0), !invariant.load !{}
   %.i0.upto1.bc = bitcast <4 x i32> %tmp18 to <2 x i64>
   %tmp19 = or i32 %tmp17, 16
-  %tmp20 = tail call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %desc, i32 %tmp19, i32 0)
+  %tmp20 = tail call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %desc, i32 %tmp19, i32 0), !invariant.load !{}
   %.i0.upto1.extract = extractelement <2 x i64> %.i0.upto1.bc, i32 0
   %tmp22 = tail call i64 @llvm.amdgcn.set.inactive.i64(i64 %.i0.upto1.extract, i64 9223372036854775807)
   %tmp97 = tail call i64 @llvm.amdgcn.strict.wwm.i64(i64 %tmp22)
@@ -874,10 +883,8 @@ define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %in
   %.cast6 = bitcast i64 %tmp174 to <2 x float>
   %.cast7 = bitcast i64 %tmp251 to <2 x float>
   %tmp254 = shufflevector <2 x float> %.cast, <2 x float> %.cast6, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %desc.int = bitcast <4 x i32> %desc to i128
-  %desc.ptr = inttoptr i128 %desc.int to ptr addrspace(8)
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %tmp254, ptr addrspace(8) %desc.ptr, i32 %tmp17, i32 0, i32 0)
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float> %.cast7, ptr addrspace(8) %desc.ptr, i32 %tmp19, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %tmp254, ptr addrspace(8) %desc, i32 %tmp17, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float> %.cast7, ptr addrspace(8) %desc, i32 %tmp19, i32 0, i32 0)
   ret void
 }
 
@@ -1240,8 +1247,8 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32)
-declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
-declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)
+declare <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8), i32, i32)
+declare <4 x i32> @llvm.amdgcn.ptr.s.buffer.load.v4i32(ptr addrspace(8), i32, i32)
 
 attributes #0 = { "amdgpu-waves-per-eu"="5,5" }
 attributes #1 = { nounwind }

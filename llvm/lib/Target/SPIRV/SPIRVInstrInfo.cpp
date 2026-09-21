@@ -166,6 +166,7 @@ bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI,
   case SPIRV::OpFUnordGreaterThan:
   case SPIRV::OpFUnordGreaterThanEqual:
   case SPIRV::OpExtInst:
+  case SPIRV::OpFunctionCall:
     return KHRFloatControls2 ? true : false;
   default:
     return false;

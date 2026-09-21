@@ -303,6 +303,47 @@ static Type convertStructType(spirv::StructType type,
 
 namespace {
 
+template <typename TargetOp, typename SourceOp>
+static LogicalResult
+collectAttrsForConversion(SourceOp op,
+                          typename TargetOp::Properties &properties,
+                          SmallVectorImpl<NamedAttribute> &discardableAttrs) {
+  NamedAttrList attrs(op->getDiscardableAttrDictionary());
+  if (auto sourceProperties =
+          dyn_cast_or_null<DictionaryAttr>(op->getPropertiesAsAttribute()))
+    attrs.append(sourceProperties.getValue());
+
+  if constexpr (std::is_same_v<typename TargetOp::Properties,
+                               EmptyProperties>) {
+    llvm::append_range(discardableAttrs, attrs);
+    return success();
+  }
+
+  TargetOp::populateDefaultProperties(
+      OperationName(TargetOp::getOperationName(), op->getContext()),
+      properties);
+  if (failed(TargetOp::setPropertiesFromAttr(
+          properties, attrs.getDictionary(op->getContext()),
+          [&]() { return op.emitError("failed to convert properties"); })))
+    return failure();
+
+  auto convertedProperties = dyn_cast_or_null<DictionaryAttr>(
+      TargetOp::getPropertiesAsAttr(op->getContext(), properties));
+  for (NamedAttribute attr : attrs) {
+    StringRef name = attr.getName().getValue();
+    bool isProperty = convertedProperties && convertedProperties.contains(name);
+    if (name == "operand_segment_sizes")
+      isProperty |= convertedProperties &&
+                    convertedProperties.contains("operandSegmentSizes");
+    if (name == "result_segment_sizes")
+      isProperty |= convertedProperties &&
+                    convertedProperties.contains("resultSegmentSizes");
+    if (!isProperty)
+      discardableAttrs.push_back(attr);
+  }
+  return success();
+}
+
 class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
 public:
   using SPIRVToLLVMConversion<spirv::AccessChainOp>::SPIRVToLLVMConversion;
@@ -322,7 +363,7 @@ public:
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     Value zero =
         LLVM::ConstantOp::create(rewriter, op.getLoc(), llvmIndexType,
-                                 rewriter.getIntegerAttr(indexType, 0));
+                                 rewriter.getIntegerAttr(llvmIndexType, 0));
     indices.insert(indices.begin(), zero);
 
     auto elementType = getTypeConverter()->convertType(
@@ -433,8 +474,13 @@ public:
       rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(constOp, dstType, dstAttr);
       return success();
     }
+    LLVM::ConstantOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVM::ConstantOp>(constOp, properties,
+                                                           discardableAttrs)))
+      return failure();
     rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(
-        constOp, dstType, adaptor.getOperands(), constOp->getAttrs());
+        constOp, dstType, adaptor.getOperands(), properties, discardableAttrs);
     return success();
   }
 };
@@ -643,8 +689,13 @@ public:
     auto dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
+    typename LLVMOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVMOp>(op, properties,
+                                                 discardableAttrs)))
+      return failure();
     rewriter.template replaceOpWithNewOp<LLVMOp>(
-        op, dstType, adaptor.getOperands(), op->getAttrs());
+        op, dstType, adaptor.getOperands(), properties, discardableAttrs);
     return success();
   }
 };
@@ -828,7 +879,7 @@ public:
 
     // Attach location attribute if applicable
     if (locationAttr)
-      newGlobalOp->setAttr(locationAttrName, locationAttr);
+      newGlobalOp->setDiscardableAttr(locationAttrName, locationAttr);
 
     return success();
   }
@@ -877,12 +928,19 @@ public:
   LogicalResult
   matchAndRewrite(spirv::FunctionCallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    LLVM::CallOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVM::CallOp>(callOp, properties,
+                                                       discardableAttrs)))
+      return failure();
+    properties.operandSegmentSizes = {
+        static_cast<int32_t>(adaptor.getOperands().size()), 0};
+    properties.op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
+
     if (callOp.getNumResults() == 0) {
-      auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
-      newOp.getProperties().operandSegmentSizes = {
-          static_cast<int32_t>(adaptor.getOperands().size()), 0};
-      newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
+      rewriter.replaceOpWithNewOp<LLVM::CallOp>(callOp, TypeRange(),
+                                                adaptor.getOperands(),
+                                                properties, discardableAttrs);
       return success();
     }
 
@@ -890,11 +948,8 @@ public:
     auto dstType = getTypeConverter()->convertType(callOp.getType(0));
     if (!dstType)
       return rewriter.notifyMatchFailure(callOp, "type conversion failed");
-    auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-        callOp, dstType, adaptor.getOperands(), callOp->getAttrs());
-    newOp.getProperties().operandSegmentSizes = {
-        static_cast<int32_t>(adaptor.getOperands().size()), 0};
-    newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+        callOp, dstType, adaptor.getOperands(), properties, discardableAttrs);
     return success();
   }
 };
@@ -1028,6 +1083,79 @@ public:
                                   adaptor.getY());
     rewriter.template replaceOpWithNewOp<LLVMMinOp>(op, dstType, max,
                                                     adaptor.getZ());
+    return success();
+  }
+};
+
+/// Converts `spirv.FMod` to `x - y * floor(x / y)`. The SPIR-V op requires the
+/// result to take the sign of the divisor, whereas `llvm.frem` keeps the sign
+/// of the dividend, so `frem` cannot be used directly.
+class FModPattern : public SPIRVToLLVMConversion<spirv::FModOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::FModOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::FModOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getOperand1();
+    Value rhs = adaptor.getOperand2();
+    Value div = LLVM::FDivOp::create(rewriter, loc, dstType, lhs, rhs);
+    Value floored = LLVM::FFloorOp::create(rewriter, loc, dstType, div);
+    Value scaled = LLVM::FMulOp::create(rewriter, loc, dstType, rhs, floored);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, dstType, lhs, scaled);
+    return success();
+  }
+};
+
+/// Converts `spirv.SMod` to a signed remainder corrected to take the sign of
+/// the divisor. `llvm.srem` keeps the sign of the dividend, so the result is
+/// adjusted by adding the divisor when the remainder is non-zero and its sign
+/// differs from the divisor's.
+class SModPattern : public SPIRVToLLVMConversion<spirv::SModOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SModOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SModOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.getType();
+    Type dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getOperand1();
+    Value rhs = adaptor.getOperand2();
+    Type i1Type = rewriter.getI1Type();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    Type cmpType =
+        vecSrcType ? VectorType::get(vecSrcType.getShape(), i1Type) : i1Type;
+
+    Value rem = LLVM::SRemOp::create(rewriter, loc, dstType, lhs, rhs);
+    IntegerAttr zeroAttr = rewriter.getIntegerAttr(
+        cast<IntegerType>(getElementTypeOrSelf(srcType)), 0);
+    Value zero =
+        createIntegerConstant(loc, srcType, dstType, rewriter, zeroAttr);
+
+    Value remNonZero = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                            LLVM::ICmpPredicate::ne, rem, zero);
+    Value remNeg = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                        LLVM::ICmpPredicate::slt, rem, zero);
+    Value rhsNeg = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                        LLVM::ICmpPredicate::slt, rhs, zero);
+    Value signMismatch =
+        LLVM::XOrOp::create(rewriter, loc, cmpType, remNeg, rhsNeg);
+    Value needsAdjust =
+        LLVM::AndOp::create(rewriter, loc, cmpType, remNonZero, signMismatch);
+
+    Value adjusted = LLVM::AddOp::create(rewriter, loc, dstType, rem, rhs);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, needsAdjust,
+                                                adjusted, rem);
     return success();
   }
 };
@@ -1866,8 +1994,14 @@ public:
       return success();
     }
 
-    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
-        bitcastOp, dstType, adaptor.getOperands(), bitcastOp->getAttrs());
+    LLVM::BitcastOp::Properties properties{};
+    SmallVector<NamedAttribute> discardableAttrs;
+    if (failed(collectAttrsForConversion<LLVM::BitcastOp>(bitcastOp, properties,
+                                                          discardableAttrs)))
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(bitcastOp, dstType,
+                                                 adaptor.getOperands(),
+                                                 properties, discardableAttrs);
     return success();
   }
 };
@@ -1913,7 +2047,8 @@ public:
 
 #define DISPATCH(functionControl, llvmAttr)                                    \
   case functionControl:                                                        \
-    newFuncOp->setAttr("passthrough", ArrayAttr::get(context, {llvmAttr}));    \
+    newFuncOp->setDiscardableAttr("passthrough",                               \
+                                  ArrayAttr::get(context, {llvmAttr}));        \
     break;
 
       DISPATCH(spirv::FunctionControl::Pure,
@@ -2065,8 +2200,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SDivOp, LLVM::SDivOp>,
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
-      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
-      VectorTimesScalarPattern, SNegatePattern,
+      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, FModPattern,
+      SModPattern, VectorTimesScalarPattern, SNegatePattern,
       ArithmeticWithOverflowPattern<spirv::IAddCarryOp,
                                     LLVM::UAddWithOverflowOp>,
       ArithmeticWithOverflowPattern<spirv::ISubBorrowOp,
@@ -2309,15 +2444,12 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
 //===----------------------------------------------------------------------===//
 
 /// Hook for descriptor set and binding number encoding.
-static constexpr StringRef kBinding = "binding";
-static constexpr StringRef kDescriptorSet = "descriptor_set";
 void mlir::encodeBindAttribute(ModuleOp module) {
   auto spvModules = module.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
     spvModule.walk([&](spirv::GlobalVariableOp op) {
-      IntegerAttr descriptorSet =
-          op->getAttrOfType<IntegerAttr>(kDescriptorSet);
-      IntegerAttr binding = op->getAttrOfType<IntegerAttr>(kBinding);
+      IntegerAttr descriptorSet = op.getDescriptorSetAttr();
+      IntegerAttr binding = op.getBindingAttr();
       // For every global variable in the module, get the ones with descriptor
       // set and binding numbers.
       if (descriptorSet && binding) {
@@ -2338,8 +2470,8 @@ void mlir::encodeBindAttribute(ModuleOp module) {
         if (failed(SymbolTable::replaceAllSymbolUses(op, nameAttr, spvModule)))
           op.emitError("unable to replace all symbol uses for ") << name;
         SymbolTable::setSymbolName(op, nameAttr);
-        op->removeAttr(kDescriptorSet);
-        op->removeAttr(kBinding);
+        op.removeDescriptorSetAttr();
+        op.removeBindingAttr();
       }
     });
   }
