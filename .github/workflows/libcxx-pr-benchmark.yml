@@ -166,9 +166,9 @@ jobs:
           # Run 5 times so we can pick the median, and interleave baseline and candidate to mitigate the impact of
           # environmental noise
           for _ in $(seq 1 5); do
-            ./libcxx/utils/test-at-commit --libcxx-installation install/baseline -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+            ./libcxx/utils/test-at-commit --test-config "${PWD}/libcxx/test/configs/installed-libc++.cfg.in" -B benchmarks/baseline --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
             ./libcxx/utils/consolidate-benchmarks benchmarks/baseline | tee -a baseline.lnt
-            ./libcxx/utils/test-at-commit --libcxx-installation install/candidate -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed "$BENCHMARKS"
+            ./libcxx/utils/test-at-commit --test-config "${PWD}/libcxx/test/configs/installed-libc++.cfg.in" -B benchmarks/candidate --compiler "${COMPILER}" -- -sv -j1 --param optimization=speed --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
             ./libcxx/utils/consolidate-benchmarks benchmarks/candidate | tee -a candidate.lnt
           done
 
