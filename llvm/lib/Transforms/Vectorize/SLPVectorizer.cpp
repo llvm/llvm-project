@@ -6391,11 +6391,11 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         }
         switch (LS) {
         case LoadsState::Vectorize:
-          VecLdCost +=
-              TTI.getMemoryOpCost(Instruction::Load, SubVecTy, LI0->getAlign(),
-                                  LI0->getPointerAddressSpace(), CostKind,
-                                  TTI::OperandValueInfo()) +
-              VectorGEPCost;
+          VecLdCost += TTI.getMemoryOpCost(
+                           Instruction::Load, SubVecTy, LI0->getAlign(),
+                           LI0->getPointerAddressSpace(), CostKind,
+                           TTI::getOperandInfo(LI0->getPointerOperand())) +
+                       VectorGEPCost;
           break;
         case LoadsState::StridedVectorize:
           VecLdCost += TTI.getMemIntrinsicInstrCost(
@@ -9086,7 +9086,10 @@ static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
         getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys, CostKind);
     return std::min(IntrCost, LibCost);
   }
-  return TTI.getArithmeticInstrCost(I->getOpcode(), VecTy, CostKind);
+  SmallVector<const Value *, 2> Args{I->getOperand(0), I->getOperand(1)};
+  return TTI.getArithmeticInstrCost(
+      I->getOpcode(), VecTy, CostKind, TTI::getOperandInfo(I->getOperand(0)),
+      TTI::getOperandInfo(I->getOperand(1)), Args, I);
 }
 
 /// Packs a type's kind and scalar width into one key, so an opcode/intrinsic
@@ -10322,9 +10325,20 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
       (LocalState.getMainOp()->isCast() && LocalState.getAltOp()->isCast()) ||
       (LocalState.getMainOp()->isUnaryOp() &&
        LocalState.getAltOp()->isUnaryOp())) {
+    SmallVector<Value *> Ops0, Ops1;
+    for (Instruction *I : make_isa_range<Instruction>(VL)) {
+      Ops0.push_back(I->getOperand(0));
+      if (I->isBinaryOp())
+        Ops1.push_back(I->getOperand(1));
+    }
+    TTI::OperandValueInfo Op0Info = getOperandInfo(Ops0);
+    TTI::OperandValueInfo Op1Info =
+        Ops1.empty() ? TTI::OperandValueInfo() : getOperandInfo(Ops1);
     InstructionCost OriginalVecOpsCost =
-        TTI->getArithmeticInstrCost(Opcode0, VecTy, CostKind) +
-        TTI->getArithmeticInstrCost(Opcode1, VecTy, CostKind);
+        TTI->getArithmeticInstrCost(Opcode0, VecTy, CostKind, Op0Info, Op1Info,
+                                    {}, LocalState.getMainOp()) +
+        TTI->getArithmeticInstrCost(Opcode1, VecTy, CostKind, Op0Info, Op1Info,
+                                    {}, LocalState.getAltOp());
     SmallVector<int> OriginalMask(VL.size(), PoisonMaskElem);
     for (unsigned Idx : seq<unsigned>(VL.size())) {
       if (isa<PoisonValue>(VL[Idx]))
@@ -10335,8 +10349,10 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
         OriginalVecOpsCost + getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy,
                                             CostKind, OriginalMask);
     InstructionCost NewVecOpsCost =
-        TTI->getArithmeticInstrCost(Opcode0, Op1VecTy, CostKind) +
-        TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, CostKind);
+        TTI->getArithmeticInstrCost(Opcode0, Op1VecTy, CostKind, Op0Info,
+                                    Op1Info, {}, LocalState.getMainOp()) +
+        TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, CostKind, Op0Info,
+                                    Op1Info, {}, LocalState.getAltOp());
     InstructionCost NewCost =
         NewVecOpsCost + InsertCost +
         (!VectorizableTree.empty() && getRootNode().hasState() &&
@@ -11138,7 +11154,11 @@ public:
       case Instruction::FMul:
       case Instruction::FSub:
       case Instruction::FDiv:
-        VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
+        VectorCost = TTI.getArithmeticInstrCost(
+            MainOpcode, VecTy, Kind,
+            TTI::commonOperandInfo(Operands[0][0], Operands[0][1]),
+            TTI::commonOperandInfo(Operands[1][0], Operands[1][1]), {},
+            S.getMainOp(), &TLI);
         break;
       default:
         // Calls (min/max, fmuladd) return above before reaching this switch.
@@ -13688,12 +13708,13 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       getCastContextHint(*getOperandEntry(LhsTE, /*Idx=*/0));
   InstructionCost VecCost =
       TTI->getArithmeticReductionCost(Instruction::Or, VecTy, FMF, CostKind) +
-      TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
-                                  getOperandInfo(LhsTE->Scalars)) +
+      TTI->getArithmeticInstrCost(
+          Instruction::Shl, VecTy, CostKind, getOperandInfo(LhsTE->Scalars),
+          getOperandInfo(RhsTE->Scalars), {}, TE.getMainOp()) +
       TTI->getCastInstrCost(
           Instruction::ZExt, VecTy,
           getWidenedType(SrcScalarTy, LhsTE->getVectorFactor()), CastCtx,
-          CostKind);
+          CostKind, LhsTE->getMainOp());
   InstructionCost BitcastCost = TTI->getCastInstrCost(
       Instruction::BitCast, SrcType, SrcVecTy, CastCtx, CostKind);
   if (!Order.empty()) {
@@ -13726,12 +13747,14 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
         IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcType, {SrcType});
         InstructionCost BSwapCost =
             TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
-                                 LI->getPointerAddressSpace(), CostKind) +
+                                 LI->getPointerAddressSpace(), CostKind,
+                                 TTI::getOperandInfo(LI->getPointerOperand())) +
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         if (BSwapCost <= BitcastCost) {
-          VecCost +=
-              TTI->getMemoryOpCost(Instruction::Load, SrcVecTy, LI->getAlign(),
-                                   LI->getPointerAddressSpace(), CostKind);
+          VecCost += TTI->getMemoryOpCost(
+              Instruction::Load, SrcVecTy, LI->getAlign(),
+              LI->getPointerAddressSpace(), CostKind,
+              TTI::getOperandInfo(LI->getPointerOperand()));
           BitcastCost = BSwapCost;
           ForLoads = true;
         }
@@ -13747,16 +13770,18 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       auto *LI = cast<LoadInst>(SrcTE->getMainOp());
       BitcastCost =
           TTI->getMemoryOpCost(Instruction::Load, SrcType, LI->getAlign(),
-                               LI->getPointerAddressSpace(), CostKind);
+                               LI->getPointerAddressSpace(), CostKind,
+                               TTI::getOperandInfo(LI->getPointerOperand()));
       VecCost +=
           TTI->getMemoryOpCost(Instruction::Load, SrcVecTy, LI->getAlign(),
-                               LI->getPointerAddressSpace(), CostKind);
+                               LI->getPointerAddressSpace(), CostKind,
+                               TTI::getOperandInfo(LI->getPointerOperand()));
       ForLoads = true;
     }
   }
   if (SrcType != ScalarTy) {
     BitcastCost += TTI->getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
-                                         TTI::CastContextHint::None, CostKind);
+                                         CastCtx, CostKind);
   }
   return BitcastCost < VecCost;
 }
@@ -13941,10 +13966,10 @@ bool BoUpSLP::matchesInversedZExtSelect(
       getWidenedType(Cmp->getOperand(0)->getType(), CmpTE->getVectorFactor());
   Type *CmpTy = CmpInst::makeCmpResultType(VecTy);
 
-  InstructionCost VecCost =
-      TTI->getCmpSelInstrCost(CmpTE->getOpcode(), VecTy, CmpTy, MainPred,
-                              CostKind, getOperandInfo(CmpTE->getOperand(0)),
-                              getOperandInfo(CmpTE->getOperand(1)));
+  InstructionCost VecCost = TTI->getCmpSelInstrCost(
+      CmpTE->getOpcode(), VecTy, CmpTy, MainPred, CostKind,
+      getOperandInfo(CmpTE->getOperand(0)),
+      getOperandInfo(CmpTE->getOperand(1)), CmpTE->getMainOp());
   InstructionCost BVCost = getScalarizationOverhead(
       *TTI, SLPReVec, Cmp->getType(), cast<VectorType>(CmpTy),
       APInt::getAllOnes(CmpTE->getVectorFactor()),
@@ -14014,12 +14039,25 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
     BitcastCost += TTI->getCastInstrCost(Instruction::ZExt, ScalarTy, DstTy,
                                          TTI::CastContextHint::None, CostKind);
   }
+  // Use the condition predicate shared by all lanes, if there is one.
+  CmpPredicate SelPred = CmpInst::BAD_ICMP_PREDICATE;
+  CmpPredicate P;
+  if (match(SelectTE.getMainOp(),
+            m_Select(m_ICmp(P, m_Value(), m_Value()), m_Value(), m_Value())) &&
+      all_of(SelectTE.Scalars, [&](Value *V) {
+        CmpPredicate LaneP;
+        return match(V, m_Select(m_ICmp(LaneP, m_Value(), m_Value()), m_Value(),
+                                 m_Value())) &&
+               LaneP == P.dropSameSign();
+      }))
+    SelPred = P;
+
   FastMathFlags FMF;
   InstructionCost SelectCost =
-      TTI->getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
-                              CmpInst::BAD_ICMP_PREDICATE, CostKind,
-                              getOperandInfo(Op1TE->Scalars),
-                              getOperandInfo(Op2TE->Scalars)) +
+      TTI->getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy, SelPred,
+                              CostKind, getOperandInfo(Op1TE->Scalars),
+                              getOperandInfo(Op2TE->Scalars),
+                              SelectTE.getMainOp()) +
       TTI->getArithmeticReductionCost(Instruction::Or, VecTy, FMF, CostKind);
   return BitcastCost <= SelectCost;
 }
@@ -14330,9 +14368,10 @@ void BoUpSLP::transformNodes() {
         inversePermutation(E.ReorderIndices, Mask);
         auto *BaseLI = cast<LoadInst>(E.Scalars.back());
         InstructionCost OriginalVecCost =
-            TTI->getMemoryOpCost(Instruction::Load, VecTy, BaseLI->getAlign(),
-                                 BaseLI->getPointerAddressSpace(), CostKind,
-                                 TTI::OperandValueInfo()) +
+            TTI->getMemoryOpCost(
+                Instruction::Load, VecTy, BaseLI->getAlign(),
+                BaseLI->getPointerAddressSpace(), CostKind,
+                TTI::getOperandInfo(BaseLI->getPointerOperand())) +
             getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, CostKind, Mask);
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
@@ -14373,7 +14412,7 @@ void BoUpSLP::transformNodes() {
         InstructionCost OriginalVecCost =
             TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
                                  BaseSI->getPointerAddressSpace(), CostKind,
-                                 TTI::OperandValueInfo()) +
+                                 getOperandInfo(E.getOperand(0))) +
             getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, CostKind, Mask);
         InstructionCost StridedCost = TTI->getMemIntrinsicInstrCost(
             MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_store,
@@ -15043,7 +15082,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
           CastOpcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
         return TTI.getCastInstrCost(CastOpcode, getWidenedType(ScalarTy, VF),
                                     getWidenedType(EScalarTy, VF),
-                                    TTI::CastContextHint::None, CostKind);
+                                    R.getCastContextHint(E), CostKind);
       }
       return TTI::TCC_Free;
     };
@@ -15059,9 +15098,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         unsigned SrcSz = R.DL->getTypeSizeInBits(EScalarTy);
         if (DstSz > SrcSz)
           CastOpcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
+        TTI::CastContextHint CCH = TTI::CastContextHint::None;
+        if (ArrayRef<TreeEntry *> TEs = R.getTreeEntries(V); TEs.size() == 1)
+          CCH = R.getCastContextHint(*TEs.front());
         return TTI.getCastInstrCost(
             CastOpcode, VectorType::get(ScalarTy, VecTy->getElementCount()),
-            VecTy, TTI::CastContextHint::None, CostKind);
+            VecTy, CCH, CostKind);
       }
       return TTI::TCC_Free;
     };
@@ -16212,7 +16254,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
           TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
           PeeledScalarCost += TTI->getArithmeticInstrCost(
-              I->getOpcode(), OrigScalarTy, CostKind, Op1Info, Op2Info);
+              I->getOpcode(), OrigScalarTy, CostKind, Op1Info, Op2Info, {}, I);
         }
         bool PeeledCostAdded = false;
         InstructionCost CostDiff = GetCostDiff(
@@ -16273,8 +16315,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       auto *CI = cast<CmpInst>(VI->getOperand(0));
       IntrinsicCost -= TTI->getCmpSelInstrCost(
           CI->getOpcode(), Ty, Builder.getInt1Ty(), CI->getPredicate(),
-          CostKind, {TTI::OK_AnyValue, TTI::OP_None},
-          {TTI::OK_AnyValue, TTI::OP_None}, CI);
+          CostKind, TTI::getOperandInfo(CI->getOperand(0)),
+          TTI::getOperandInfo(CI->getOperand(1)), CI);
     }
     return IntrinsicCost;
   };
@@ -16505,6 +16547,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // vector and the original aggregate.
       Align VecAlign = std::max(DL->getPrefTypeAlign(SrcVecTy),
                                 DL->getPrefTypeAlign(VL0->getType()));
+      // The stack slot roundtrip is synthesized by codegen; there is no IR
+      // value or pointer to take operand info from.
       Cost += TTI->getMemoryOpCost(Instruction::Store, SrcVecTy, VecAlign,
                                    /*AddressSpace=*/0, CostKind) +
               TTI->getMemoryOpCost(Instruction::Load, VL0->getType(), VecAlign,
@@ -16805,9 +16849,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
         BitcastCost += IntrinsicCost;
         if (SrcType != ScalarTy) {
-          BitcastCost +=
-              TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
-                                   TTI::CastContextHint::None, CostKind);
+          BitcastCost += TTI.getCastInstrCost(Instruction::ZExt, ScalarTy,
+                                              SrcType, CastCtx, CostKind);
         }
       }
       return BitcastCost + CommonCost;
@@ -16851,7 +16894,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         if (SrcType != ScalarTy) {
           LoadCost +=
               TTI.getCastInstrCost(Instruction::ZExt, ScalarTy, SrcType,
-                                   TTI::CastContextHint::None, CostKind);
+                                   getCastContextHint(*LoadTE), CostKind);
         }
       }
       return LoadCost + CommonCost;
@@ -16966,10 +17009,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Op1);
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(Op2);
+      auto *I = dyn_cast<Instruction>(UniqueValues[Idx]);
       InstructionCost ScalarCost = TTI->getArithmeticInstrCost(
-          ShuffleOrOp, OrigScalarTy, CostKind, Op1Info, Op2Info, Operands);
-      if (auto *I = dyn_cast<Instruction>(UniqueValues[Idx]);
-          I && (ShuffleOrOp == Instruction::FAdd ||
+          ShuffleOrOp, OrigScalarTy, CostKind, Op1Info, Op2Info, Operands,
+          I && I->getOpcode() == ShuffleOrOp ? I : nullptr);
+      if (I && (ShuffleOrOp == Instruction::FAdd ||
                 ShuffleOrOp == Instruction::FSub)) {
         InstructionCost IntrinsicCost = GetFMulAddCost(E->getOperations(), I);
         if (IntrinsicCost.isValid())
@@ -17000,7 +17044,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
       InstructionCost Cost = TTI->getArithmeticInstrCost(
-          ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {}, nullptr, TLI);
+          ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
+          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
@@ -17011,9 +17056,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                 return isBinOpIdentityConstant(V, CombineOpcode);
               }))
             continue;
+          // The first operand is the running fold, a computed value with no
+          // static properties to model.
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
-              getOperandInfo(E->getOperand(Idx)), {}, nullptr, TLI);
+              getOperandInfo(E->getOperand(Idx)), {},
+              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
         }
       }
       return Cost + CommonCost;
@@ -17026,9 +17074,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::Load: {
     auto GetScalarCost = [&](unsigned Idx) {
       auto *VI = cast<LoadInst>(UniqueValues[Idx]);
-      return TTI->getMemoryOpCost(Instruction::Load, OrigScalarTy,
-                                  VI->getAlign(), VI->getPointerAddressSpace(),
-                                  CostKind, TTI::OperandValueInfo(), VI);
+      return TTI->getMemoryOpCost(
+          Instruction::Load, OrigScalarTy, VI->getAlign(),
+          VI->getPointerAddressSpace(), CostKind,
+          TTI::getOperandInfo(VI->getPointerOperand()), VI);
     };
     auto *LI0 = cast<LoadInst>(VL0);
     auto GetVectorCost = [&](InstructionCost CommonCost) {
@@ -17043,7 +17092,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         } else {
           VecLdCost = TTI->getMemoryOpCost(
               Instruction::Load, VecTy, LI0->getAlign(),
-              LI0->getPointerAddressSpace(), CostKind, TTI::OperandValueInfo());
+              LI0->getPointerAddressSpace(), CostKind,
+              TTI::getOperandInfo(LI0->getPointerOperand()));
         }
         break;
       case TreeEntry::StridedVectorize: {
@@ -17101,7 +17151,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         } else {
           VecLdCost = TTI->getMemoryOpCost(
               Instruction::Load, LoadVecTy, CommonAlignment,
-              LI0->getPointerAddressSpace(), CostKind, TTI::OperandValueInfo());
+              LI0->getPointerAddressSpace(), CostKind,
+              TTI::getOperandInfo(LI0->getPointerOperand()));
           // TODO: include this cost into CommonCost.
           VecLdCost += getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, LoadVecTy,
                                       CostKind, CompressMask);
@@ -17311,9 +17362,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           for (unsigned Idx : seq<unsigned>(1, E->getNumOperands())) {
             TTI::OperandValueInfo ColInfo = getOperandInfo(E->getOperand(Idx));
             if (!RunningInfo.isConstant() || !ColInfo.isConstant())
-              Cost += TTIRef.getArithmeticInstrCost(Opcode, VecTy, CostKind,
-                                                    RunningInfo, ColInfo, {},
-                                                    nullptr, TLI);
+              Cost += TTIRef.getArithmeticInstrCost(
+                  Opcode, VecTy, CostKind, RunningInfo, ColInfo, {},
+                  Opcode == E->getOpcode() ? E->getMainOp() : E->getAltOp(),
+                  TLI);
             TTI::OperandValueKind Kind = TTI::OK_AnyValue;
             if (RunningInfo.isConstant() && ColInfo.isConstant())
               Kind = RunningInfo.Kind == TTI::OK_UniformConstantValue &&
@@ -17329,15 +17381,15 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         VecCost = ChainCost(E->getOpcode()) + ChainCost(E->getAltOpcode());
       } else if (auto *CI0 = dyn_cast<CmpInst>(VL0)) {
         auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
-        VecCost = TTIRef.getCmpSelInstrCost(
-            E->getOpcode(), VecTy, MaskTy, CI0->getPredicate(), CostKind,
-            {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None},
-            VL0);
+        TTI::OperandValueInfo Op0Info = getOperandInfo(E->getOperand(0));
+        TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(1));
+        VecCost = TTIRef.getCmpSelInstrCost(E->getOpcode(), VecTy, MaskTy,
+                                            CI0->getPredicate(), CostKind,
+                                            Op0Info, Op1Info, VL0);
         VecCost += TTIRef.getCmpSelInstrCost(
             E->getOpcode(), VecTy, MaskTy,
-            cast<CmpInst>(E->getAltOp())->getPredicate(), CostKind,
-            {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None},
-            E->getAltOp());
+            cast<CmpInst>(E->getAltOp())->getPredicate(), CostKind, Op0Info,
+            Op1Info, E->getAltOp());
       } else {
         Type *SrcSclTy = E->getMainOp()->getOperand(0)->getType();
         auto *SrcTy = getWidenedType(SrcSclTy, VL.size());
@@ -17353,9 +17405,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           }
           if (BWSz <= SrcBWSz) {
             if (BWSz < SrcBWSz)
-              VecCost =
-                  TTIRef.getCastInstrCost(Instruction::Trunc, VecTy, SrcTy,
-                                          TTI::CastContextHint::None, CostKind);
+              VecCost = TTIRef.getCastInstrCost(
+                  Instruction::Trunc, VecTy, SrcTy,
+                  GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind);
             LLVM_DEBUG({
               dbgs()
                   << "SLP: alternate extension, which should be truncated.\n";
@@ -17364,11 +17416,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             return VecCost;
           }
         }
-        VecCost = TTIRef.getCastInstrCost(E->getOpcode(), VecTy, SrcTy,
-                                          TTI::CastContextHint::None, CostKind);
-        VecCost +=
-            TTIRef.getCastInstrCost(E->getAltOpcode(), VecTy, SrcTy,
-                                    TTI::CastContextHint::None, CostKind);
+        VecCost = TTIRef.getCastInstrCost(
+            E->getOpcode(), VecTy, SrcTy,
+            GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind,
+            E->getMainOp());
+        VecCost += TTIRef.getCastInstrCost(
+            E->getAltOpcode(), VecTy, SrcTy,
+            GetCastContextHint(E->getMainOp()->getOperand(0)), CostKind,
+            E->getAltOp());
       }
       SmallVector<int> Mask;
       E->buildAltOpShuffleMask(
@@ -19842,7 +19897,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                   VecOpcode, FTy,
                   getWidenedType(IntegerType::get(FTy->getContext(), BWSz),
                                  FTy->getNumElements()),
-                  TTI::CastContextHint::None, CostKind);
+                  getCastContextHint(*ScalarTE), CostKind);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                                 << " for extending externally used vector with "
                                    "non-equal minimum bitwidth.\n");

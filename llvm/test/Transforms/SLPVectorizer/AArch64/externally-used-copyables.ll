@@ -4,7 +4,7 @@
 define void @test(i64 %0, i64 %1, i64 %2, i64 %3, i64 %.sroa.3341.0.copyload, i64 %.sroa.3308.0.copyload, i64 %.neg1, i64 %indvar3788, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i64 [[TMP0:%.*]], i64 [[TMP1:%.*]], i64 [[TMP2:%.*]], i64 [[TMP3:%.*]], i64 [[DOTSROA_3341_0_COPYLOAD:%.*]], i64 [[DOTSROA_3308_0_COPYLOAD:%.*]], i64 [[DOTNEG1:%.*]], i64 [[INDVAR3788:%.*]], i64 [[TMP4:%.*]], i64 [[TMP5:%.*]], i64 [[TMP6:%.*]], i64 [[TMP7:%.*]], i64 [[TMP8:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[_LR_PH_PREHEADER:.*:]]
+; CHECK-NEXT:  [[_LR_PH_PREHEADER:.*]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul <2 x i64> [[TMP10]], <i64 1, i64 24>
@@ -14,10 +14,9 @@ define void @test(i64 %0, i64 %1, i64 %2, i64 %3, i64 %.sroa.3341.0.copyload, i6
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i64> [[TMP14]], <2 x i64> <i64 -1, i64 poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP16:%.*]] = sub <2 x i64> [[TMP14]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP0]], 11
-; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP35]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = shl <2 x i64> [[TMP12]], <i64 11, i64 0>
 ; CHECK-NEXT:    [[TMP21:%.*]] = sub i64 1, [[TMP20]]
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i64> [[TMP28]], i64 [[TMP20]], i64 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = add <2 x i64> [[TMP25]], <i64 8, i64 1>
 ; CHECK-NEXT:    [[TMP23:%.*]] = or <2 x i64> [[TMP25]], <i64 8, i64 1>
 ; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <2 x i64> [[TMP22]], <2 x i64> [[TMP23]], <2 x i32> <i32 0, i32 3>
@@ -37,6 +36,8 @@ define void @test(i64 %0, i64 %1, i64 %2, i64 %3, i64 %.sroa.3341.0.copyload, i6
 ; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i64> [[TMP37]], i64 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i64> [[TMP38]], i64 [[DOTSROA_3308_0_COPYLOAD]], i64 2
 ; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <4 x i64> [[TMP39]], i64 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP64]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP41:%.*]] = shufflevector <2 x i64> [[TMP17]], <2 x i64> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP43:%.*]] = mul i64 [[TMP0]], [[TMP0]]
@@ -46,8 +47,8 @@ define void @test(i64 %0, i64 %1, i64 %2, i64 %3, i64 %.sroa.3341.0.copyload, i6
 ; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <6 x i64> [[TMP31]], <6 x i64> [[TMP46]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP48:%.*]] = shufflevector <2 x i64> [[TMP16]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    br label %[[DOTLR_PH1977_US:.*]]
-; CHECK:       [[_LR_PH1977_US:.*:]]
-; CHECK-NEXT:    [[INDVAR37888:%.*]] = phi i64 [ 0, [[DOTLR_PH_PREHEADER:%.*]] ], [ 1, %[[DOTLR_PH1977_US]] ]
+; CHECK:       [[DOTLR_PH1977_US]]:
+; CHECK-NEXT:    [[INDVAR37888:%.*]] = phi i64 [ 0, %[[_LR_PH_PREHEADER]] ], [ 1, %[[DOTLR_PH1977_US]] ]
 ; CHECK-NEXT:    [[TMP49:%.*]] = shufflevector <6 x i64> [[TMP47]], <6 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 5, i32 5>
 ; CHECK-NEXT:    [[TMP50:%.*]] = mul <8 x i64> [[TMP30]], [[TMP49]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = or <8 x i64> [[TMP30]], [[TMP49]]
