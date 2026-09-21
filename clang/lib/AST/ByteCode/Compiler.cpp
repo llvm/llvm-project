@@ -2920,8 +2920,12 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return this->discard(Base);
 
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
-    // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable.
+    // If the member is a VarDecl, this is a static variable.
+    // We need to try to lazily evaluate its initializer here since the
+    // variable might've been deserialized and not registered
+    // as a global variable yet.
+    if (VD->getInit() && !VD->getInit()->isValueDependent())
+      VD->evaluateValue();
     if (auto GlobalIndex = P.getGlobal(VD)) {
       if (!this->emitGetPtrGlobal(*GlobalIndex, E))
         return false;
@@ -3897,6 +3901,16 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       // If the constructor is trivial anyway, we're done.
       if (Ctor->isTrivial())
         return true;
+    }
+
+    // Trivial default constructors might never be implicitly defined by the
+    // AST, so we need to special-case them here.
+    if (Ctor->isTrivial() && Ctor->isDefaultConstructor()) {
+      if (!this->emitDefaultInit(Ctor, E))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
     }
 
     // Avoid materializing a temporary for an elidable copy/move constructor.
@@ -6060,6 +6074,25 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   // TODO: Other types.
 
   return false;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
+  if (P.getGlobal(VD))
+    return true;
+
+  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  if (!GlobalIndex) {
+    llvm_unreachable("Why didn't that work?");
+  }
+
+  assert(canClassify(VD->getType()) &&
+         "registerRedecl should only be called with primitive values");
+
+  PrimType T = classifyPrim(VD->getType());
+  if (!visitAPValue(Val, T, VD))
+    return false;
+  return this->emitInitGlobal(T, *GlobalIndex, {});
 }
 
 template <class Emitter>

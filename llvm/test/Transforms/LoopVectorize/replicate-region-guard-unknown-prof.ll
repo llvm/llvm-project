@@ -22,19 +22,19 @@ define void @tail_folded_predicated_store(ptr noalias %a, ptr noalias %b, i64 %n
 ; CHECK:  [[PRED_LOAD_IF5]]:
 ; CHECK:  [[PRED_LOAD_CONTINUE6]]:
 ; CHECK:    [[TMP26:%.*]] = select <4 x i1> [[TMP1:%.*]], <4 x i1> [[TMP25:%.*]], <4 x i1> zeroinitializer
-; CHECK:    br i1 [[TMP27:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:    br i1 [[TMP27:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:  [[PRED_STORE_IF]]:
 ; CHECK:  [[PRED_STORE_CONTINUE]]:
-; CHECK:    br i1 [[TMP30:%.*]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; CHECK:    br i1 [[TMP30:%.*]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF7]]:
 ; CHECK:  [[PRED_STORE_CONTINUE8]]:
-; CHECK:    br i1 [[TMP33:%.*]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; CHECK:    br i1 [[TMP33:%.*]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF9]]:
 ; CHECK:  [[PRED_STORE_CONTINUE10]]:
-; CHECK:    br i1 [[TMP36:%.*]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; CHECK:    br i1 [[TMP36:%.*]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF11]]:
 ; CHECK:  [[PRED_STORE_CONTINUE12]]:
-; CHECK:    br i1 [[TMP39:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:    br i1 [[TMP39:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2:![0-9]+]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:  [[MIDDLE_BLOCK]]:
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -67,27 +67,27 @@ define void @predicated_store(ptr noalias %a, ptr noalias %b, i64 %n) !prof !0 {
 ; CHECK-LABEL: define void @predicated_store(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
 ; CHECK:  [[ENTRY:.*:]]
-; CHECK:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF6:![0-9]+]]
+; CHECK:    br i1 [[MIN_ITERS_CHECK:%.*]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]], !prof [[PROF7:![0-9]+]]
 ; CHECK:  [[VECTOR_PH]]:
 ; CHECK:  [[VECTOR_BODY:.*]]:
-; CHECK:    br i1 [[TMP3:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]], !prof [[PROF7:![0-9]+]]
+; CHECK:    br i1 [[TMP3:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF]]:
 ; CHECK:  [[PRED_STORE_CONTINUE]]:
-; CHECK:    br i1 [[TMP6:%.*]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]], !prof [[PROF7]]
+; CHECK:    br i1 [[TMP6:%.*]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF1]]:
 ; CHECK:  [[PRED_STORE_CONTINUE2]]:
-; CHECK:    br i1 [[TMP10:%.*]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]], !prof [[PROF7]]
+; CHECK:    br i1 [[TMP10:%.*]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF3]]:
 ; CHECK:  [[PRED_STORE_CONTINUE4]]:
-; CHECK:    br i1 [[TMP14:%.*]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]], !prof [[PROF7]]
+; CHECK:    br i1 [[TMP14:%.*]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF5]]:
 ; CHECK:  [[PRED_STORE_CONTINUE6]]:
-; CHECK:    br i1 [[TMP18:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:    br i1 [[TMP18:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:  [[MIDDLE_BLOCK]]:
-; CHECK:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF7]]
+; CHECK:    br i1 [[CMP_N:%.*]], label %[[EXIT:.*]], label %[[SCALAR_PH]], !prof [[PROF1]]
 ; CHECK:  [[SCALAR_PH]]:
 ; CHECK:  [[LOOP_HEADER:.*]]:
-; CHECK:    br i1 [[C:%.*]], label %[[THEN:.*]], label %[[LOOP_LATCH:.*]], !prof [[PROF7]]
+; CHECK:    br i1 [[C:%.*]], label %[[THEN:.*]], label %[[LOOP_LATCH:.*]], !prof [[PROF1]]
 ; CHECK:  [[THEN]]:
 ; CHECK:  [[LOOP_LATCH]]:
 ; CHECK:    br i1 [[EC:%.*]], label %[[EXIT]], label %[[LOOP_HEADER]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -136,19 +136,19 @@ define void @tail_folded_predicated_store_not_profiled(ptr noalias %a, ptr noali
 ; CHECK:  [[PRED_LOAD_IF5]]:
 ; CHECK:  [[PRED_LOAD_CONTINUE6]]:
 ; CHECK:    [[TMP26:%.*]] = select <4 x i1> [[TMP1:%.*]], <4 x i1> [[TMP25:%.*]], <4 x i1> zeroinitializer
-; CHECK:    br i1 [[TMP27:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:    br i1 [[TMP27:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF]]:
 ; CHECK:  [[PRED_STORE_CONTINUE]]:
-; CHECK:    br i1 [[TMP30:%.*]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; CHECK:    br i1 [[TMP30:%.*]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF7]]:
 ; CHECK:  [[PRED_STORE_CONTINUE8]]:
-; CHECK:    br i1 [[TMP33:%.*]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; CHECK:    br i1 [[TMP33:%.*]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF9]]:
 ; CHECK:  [[PRED_STORE_CONTINUE10]]:
-; CHECK:    br i1 [[TMP36:%.*]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
+; CHECK:    br i1 [[TMP36:%.*]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]], !prof [[PROF1]]
 ; CHECK:  [[PRED_STORE_IF11]]:
 ; CHECK:  [[PRED_STORE_CONTINUE12]]:
-; CHECK:    br i1 [[TMP39:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:    br i1 [[TMP39:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF2]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:  [[MIDDLE_BLOCK]]:
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -181,16 +181,16 @@ exit:
 !2 = !{!"branch_weights", i32 1, i32 99}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 24}
-; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
-; CHECK: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 25}
-; CHECK: [[PROF6]] = !{!"branch_weights", i32 1, i32 127}
-; CHECK: [[PROF7]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META4]], [[META5]]}
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 24}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
+; CHECK: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META6]] = !{!"llvm.loop.estimated_trip_count", i32 25}
+; CHECK: [[PROF7]] = !{!"branch_weights", i32 1, i32 127}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META4]], [[META5]], [[META6]]}
 ; CHECK: [[PROF9]] = !{!"branch_weights", i32 1, i32 0}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META4]], [[META3]], [[META11:![0-9]+]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META5]], [[META4]], [[META11:![0-9]+]]}
 ; CHECK: [[META11]] = !{!"llvm.loop.estimated_trip_count", i32 0}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META3]], [[META4]], [[META5]]}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META4]], [[META5]], [[META6]]}
 ;.

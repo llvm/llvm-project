@@ -43,12 +43,13 @@ public:
   using SimpleRemoteCA::encodeResult;
   using SimpleRemoteCA::encodeSetup;
   using SimpleRemoteCA::handleMessage;
-  using SimpleRemoteCA::Opcode;
   using SimpleRemoteCA::PendingCallsMap;
   using SimpleRemoteCA::registerCall;
-  using SimpleRemoteCA::ResultKind;
   using SimpleRemoteCA::takeAllCalls;
   using SimpleRemoteCA::takeCall;
+
+  using Opcode = SimpleRemoteCA::Opcode;
+  using ResultKind = SimpleRemoteCA::ResultKind;
 
   TestCA(Session &S, TestCA **Self = nullptr) : SimpleRemoteCA(S) {
     if (Self)
@@ -203,8 +204,8 @@ TEST(SimpleRemoteCATest, ResultWithAnUnknownKindIsRejected) {
   S.attach<TestCA>(BootstrapInfo(S), &CA);
   ASSERT_TRUE(CA);
 
-  ExecutorAddr UnknownKind(
-      static_cast<uint64_t>(TestCA::ResultKind::LastResultKind) + 1);
+  uint64_t UnknownKind =
+      static_cast<uint64_t>(TestCA::ResultKind::LastResultKind) + 1;
   auto A = CA->handleMessage(static_cast<uint64_t>(TestCA::Opcode::Result),
                              /*SeqNo=*/1, UnknownKind, WrapperFunctionBuffer());
   ASSERT_FALSE(!!A);

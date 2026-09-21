@@ -18,6 +18,7 @@
 #include "CIRGenFunctionInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -1431,10 +1432,28 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       return getUndefRValue(retTy);
     }
 
+    // This call replaces the frame that the handler enforcing the exception
+    // specification belongs to, taking that handler with it.
+    if (ehSpecTryOp) {
+      if (!inEHSpecTerminateScope()) {
+        // The filter of a dynamic specification has to run while an exception
+        // is leaving the function, and the tail call skips over it.
+        cgm.errorUnsupported(mustTailCall, "tail call skipping over cleanups");
+        return getUndefRValue(retTy);
+      }
+
+      // Losing a terminate handler is safe when the callee cannot throw,
+      // because then the callee's own handler stands in for it.
+      if (!cannotThrow) {
+        cgm.getDiags().Report(mustTailCall->getBeginLoc(),
+                              diag::err_musttail_noexcept_mismatch);
+        return getUndefRValue(retTy);
+      }
+    }
+
     // Musttail is required to return immediately, so no cleanup can run
     // between the call and the return. Cleanups that the return makes
     // unnecessary are simply skipped. Anything else cannot be expressed.
-    assert(!cir::MissingFeatures::dynamicExceptionSpec());
     assert(!cir::MissingFeatures::fakeUseCleanup());
     for (EHScopeStack::iterator it = ehStack.begin(),
                                 end = ehStack.find(prologueCleanupDepth);
