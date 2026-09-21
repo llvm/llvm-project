@@ -8,7 +8,7 @@
 
 // <deque>
 
-// iterator erase(const_iterator f, const_iterator l)
+// iterator erase(const_iterator f, const_iterator l); // constexpr since C++26
 
 //  Erasing items from the beginning or the end of a deque shall not invalidate iterators
 //  to items that were not erased.

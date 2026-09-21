@@ -14,7 +14,7 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<container-compatible-range<T> R>
-//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23, constexpr since C++26
+//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23; constexpr since C++26
 
 #include <deque>
 

@@ -8,7 +8,7 @@
 
 // <deque>
 
-// template <class InputIterator> deque(InputIterator f, InputIterator l);
+// template <class InputIterator> deque(InputIterator f, InputIterator l); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <algorithm>

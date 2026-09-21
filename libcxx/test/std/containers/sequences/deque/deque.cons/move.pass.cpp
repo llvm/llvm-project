@@ -10,7 +10,7 @@
 
 // <deque>
 
-// deque(deque&&);
+// deque(deque&&); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

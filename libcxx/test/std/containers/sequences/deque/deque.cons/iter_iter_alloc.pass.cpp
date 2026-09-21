@@ -9,7 +9,7 @@
 // <deque>
 
 // template <class InputIterator>
-//   deque(InputIterator f, InputIterator l, const allocator_type& a);
+//   deque(InputIterator f, InputIterator l, const allocator_type& a); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <algorithm>

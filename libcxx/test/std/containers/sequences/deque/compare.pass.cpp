@@ -10,27 +10,27 @@
 
 // template<class T, class Alloc>
 // bool operator==(const std::deque<T, Alloc>& lhs,
-//                 const std::deque<T,Alloc>& rhs);
+//                 const std::deque<T,Alloc>& rhs); // constexpr since C++26
 
 // template<class T, class Alloc>
 // bool operator!=(const std::deque<T,Alloc>& lhs,
-//                 const std::deque<T,Alloc>& rhs);
+//                 const std::deque<T,Alloc>& rhs); // until C++20; rewritten with operator== since C++20
 
 // template<class T, class Alloc>
 // bool operator<(const std::deque<T,Alloc>& lhs,
-//                const std::deque<T,Alloc>& rhs);
+//                const std::deque<T,Alloc>& rhs);  // until C++20; rewritten with operator<=> since C++20
 
 // template<class T, class Alloc>
 // bool operator<=(const std::deque<T,Alloc>& lhs,
-//                 const std::deque<T,Alloc>& rhs);
+//                 const std::deque<T,Alloc>& rhs); // until C++20; rewritten with operator<=> since C++20
 
 // template<class T, class Alloc>
 // bool operator>(const std::deque<T,Alloc>& lhs,
-//                const std::deque<T,Alloc>& rhs);
+//                const std::deque<T,Alloc>& rhs);  // until C++20; rewritten with operator<=> since C++20
 
 // template<class T, class Alloc>
 // bool operator>=(const std::deque<T,Alloc>& lhs,
-//                 const std::deque<T,Alloc>& rhs);
+//                 const std::deque<T,Alloc>& rhs); // until C++20; rewritten with operator<=> since C++20
 
 #include <deque>
 #include <cassert>

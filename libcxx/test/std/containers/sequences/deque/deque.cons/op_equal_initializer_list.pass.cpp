@@ -10,7 +10,7 @@
 
 // <deque>
 
-// deque& operator=(initializer_list<value_type> il);
+// deque& operator=(initializer_list<value_type> il); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

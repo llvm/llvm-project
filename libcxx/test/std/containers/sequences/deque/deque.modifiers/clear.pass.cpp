@@ -8,7 +8,7 @@
 
 // <deque>
 
-// void clear() noexcept;
+// void clear() noexcept; // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

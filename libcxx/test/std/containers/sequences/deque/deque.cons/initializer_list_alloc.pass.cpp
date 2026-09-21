@@ -10,7 +10,7 @@
 
 // <deque>
 
-// deque(initializer_list<value_type> il, const Allocator& a = allocator_type());
+// deque(initializer_list<value_type> il, const Allocator& a = allocator_type()); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

@@ -10,7 +10,7 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<container-compatible-range<T> R>
-//   constexpr void append_range(R&& rg); // C++23
+//   constexpr void append_range(R&& rg); // C++23; constexpr since C++26
 
 #include <deque>
 

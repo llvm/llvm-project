@@ -8,7 +8,7 @@
 
 // <deque>
 
-// deque(const deque& c, const allocator_type& a);
+// deque(const deque& c, const allocator_type& a); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

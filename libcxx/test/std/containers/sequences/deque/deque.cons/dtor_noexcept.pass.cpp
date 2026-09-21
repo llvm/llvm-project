@@ -8,7 +8,7 @@
 
 // <deque>
 
-// ~deque() // implied noexcept;
+// ~deque(); // implied noexcept; constexpr since C++26
 
 // UNSUPPORTED: c++03
 

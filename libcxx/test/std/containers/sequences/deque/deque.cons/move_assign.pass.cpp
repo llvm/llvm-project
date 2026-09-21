@@ -10,7 +10,7 @@
 
 // <deque>
 
-// deque& operator=(deque&& c);
+// deque& operator=(deque&& c); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

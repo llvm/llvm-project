@@ -13,7 +13,7 @@
 
 // template <class T, class Allocator, class U>
 //   typename deque<T, Allocator>::size_type
-//   erase(deque<T, Allocator>& c, const U& value);
+//   erase(deque<T, Allocator>& c, const U& value); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

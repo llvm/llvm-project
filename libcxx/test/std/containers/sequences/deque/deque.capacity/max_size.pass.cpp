@@ -8,7 +8,7 @@
 
 // <deque>
 
-// size_type max_size() const;
+// size_type max_size() const; // constexpr since C++26
 
 #include "asan_testing.h"
 #include <cassert>

@@ -13,7 +13,7 @@
 
 // template <class T, class Allocator, class Predicate>
 //   typename deque<T, Allocator>::size_type
-//   erase_if(deque<T, Allocator>& c, Predicate pred);
+//   erase_if(deque<T, Allocator>& c, Predicate pred);  // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

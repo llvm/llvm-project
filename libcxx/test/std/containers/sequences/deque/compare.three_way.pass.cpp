@@ -11,7 +11,7 @@
 
 // template<class T, class Allocator>
 //   synth-three-way-result<T> operator<=>(const deque<T, Allocator>& x,
-//                                         const deque<T, Allocator>& y);
+//                                         const deque<T, Allocator>& y); // constexpr since C++26
 
 #include <cassert>
 #include <deque>

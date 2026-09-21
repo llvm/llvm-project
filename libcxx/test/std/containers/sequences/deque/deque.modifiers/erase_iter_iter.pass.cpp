@@ -10,7 +10,7 @@
 
 // <deque>
 
-// iterator erase(const_iterator f, const_iterator l)
+// iterator erase(const_iterator f, const_iterator l); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

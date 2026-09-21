@@ -8,18 +8,18 @@
 
 // <deque>
 
-//       reference operator[](size_type __i);
-// const_reference operator[](size_type __i) const;
+//       reference operator[](size_type __i);       // constexpr since C++26
+// const_reference operator[](size_type __i) const; // constexpr since C++26
 //
-//       reference at(size_type __i);
-// const_reference at(size_type __i) const;
+//       reference at(size_type __i);       // constexpr since C++26
+// const_reference at(size_type __i) const; // constexpr since C++26
 //
-//       reference front();
-// const_reference front() const;
+//       reference front();       // constexpr since C++26
+// const_reference front() const; // constexpr since C++26
 //
 //       reference back();
-// const_reference back() const;
-// libc++ marks these as 'noexcept'
+// const_reference back() const;    // constexpr since C++26
+// libc++ marks these as 'noexcept' // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

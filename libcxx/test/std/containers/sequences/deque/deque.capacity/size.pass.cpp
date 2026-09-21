@@ -10,7 +10,7 @@
 
 // class deque
 
-// size_type size() const noexcept;
+// size_type size() const noexcept; // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

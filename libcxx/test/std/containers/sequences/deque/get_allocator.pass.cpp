@@ -10,7 +10,7 @@
 
 // class deque
 
-// allocator_type get_allocator() const
+// allocator_type get_allocator() const; // constexpr since C++26
 
 #include <deque>
 #include <cassert>

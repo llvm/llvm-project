@@ -8,7 +8,7 @@
 
 // <deque>
 
-// deque& operator=(const deque& c);
+// deque& operator=(const deque& c); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

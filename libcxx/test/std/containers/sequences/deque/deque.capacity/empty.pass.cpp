@@ -10,7 +10,7 @@
 
 // class deque
 
-// bool empty() const noexcept;
+// bool empty() const noexcept; // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>

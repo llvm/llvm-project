@@ -15,7 +15,7 @@
 #include "test_macros.h"
 
 // template<container-compatible-range<T> R>
-//   deque(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23
+//   deque(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23; constexpr since C++26
 
 TEST_CONSTEXPR_CXX26 bool test() {
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
