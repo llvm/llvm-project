@@ -83,9 +83,9 @@ define void @mul_operand_probe(i64 %a, i64 %b, ptr %p) {
 ; CHECK-NEXT:    %m = mul nuw i64 %a, %b
 ; CHECK-NEXT:    --> (%a * %b)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %d = udiv exact i64 %m, 2
-; CHECK-NEXT:    --> ((%a * %b)<nuw> /u 2) U: [0,-9223372036854775808) S: [0,-9223372036854775808)
+; CHECK-NEXT:    --> ((%a * %b)<nuw> /u 2)<exact> U: [0,-9223372036854775808) S: [0,-9223372036854775808)
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
-; CHECK-NEXT:    --> ((4 * ((%a * %b)<nuw> /u 2))<nuw><nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * ((%a * %b)<nuw> /u 2)<exact>)<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %d.inexact = udiv i64 %a, 2
 ; CHECK-NEXT:    --> (%a /u 2) U: [0,-9223372036854775808) S: [0,-9223372036854775808)
 ; CHECK-NEXT:    %gep.inexact = getelementptr inbounds i32, ptr %p, i64 %d.inexact
@@ -144,9 +144,9 @@ define void @add_operand_probe(i64 %a, i64 %b, ptr %p) {
 ; CHECK-NEXT:    %s = add nuw i64 %a, %b
 ; CHECK-NEXT:    --> (%a + %b)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %d = udiv exact i64 %s, 2
-; CHECK-NEXT:    --> ((%a + %b)<nuw> /u 2) U: [0,-9223372036854775808) S: [0,-9223372036854775808)
+; CHECK-NEXT:    --> ((%a + %b)<nuw> /u 2)<exact> U: [0,-9223372036854775808) S: [0,-9223372036854775808)
 ; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %d
-; CHECK-NEXT:    --> ((4 * ((%a + %b)<nuw> /u 2))<nuw><nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((4 * ((%a + %b)<nuw> /u 2)<exact>)<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %d.inexact = udiv i64 %a, 2
 ; CHECK-NEXT:    --> (%a /u 2) U: [0,-9223372036854775808) S: [0,-9223372036854775808)
 ; CHECK-NEXT:    %gep.inexact = getelementptr inbounds i32, ptr %p, i64 %d.inexact

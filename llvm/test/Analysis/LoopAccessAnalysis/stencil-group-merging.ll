@@ -4057,10 +4057,10 @@ define void @equal_predicate_does_not_imply_positive_stride(ptr %src, ptr %dst, 
 ; MERGE-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
 ; MERGE-NEXT:      Grouped accesses:
 ; MERGE-NEXT:        Group GRP0:
-; MERGE-NEXT:          (Low: %dst High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + %dst))
+; MERGE-NEXT:          (Low: %dst High: (4 + (4 * ((-4 + %k) /u 4)<exact>)<nuw> + %dst))
 ; MERGE-NEXT:            Member: {%dst,+,4}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: %src High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + (12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src))
+; MERGE-NEXT:          (Low: %src High: (4 + (4 * ((-4 + %k) /u 4)<exact>)<nuw> + (12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src))
 ; MERGE-NEXT:            Member: {((12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
 ; MERGE-NEXT:            Member: {((4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
 ; MERGE-NEXT:            Member: {(12 + %src),+,4}<%loop>
@@ -4096,16 +4096,16 @@ define void @equal_predicate_does_not_imply_positive_stride(ptr %src, ptr %dst, 
 ; NOMERGE-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
 ; NOMERGE-NEXT:      Grouped accesses:
 ; NOMERGE-NEXT:        Group GRP0:
-; NOMERGE-NEXT:          (Low: %dst High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + %dst))
+; NOMERGE-NEXT:          (Low: %dst High: (4 + (4 * ((-4 + %k) /u 4)<exact>)<nuw> + %dst))
 ; NOMERGE-NEXT:            Member: {%dst,+,4}<nuw><%loop>
 ; NOMERGE-NEXT:        Group GRP1:
-; NOMERGE-NEXT:          (Low: ((12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src) High: (4 + (4 * ((-4 + %k) /u 4))<nuw> + (12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src))
+; NOMERGE-NEXT:          (Low: ((12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src) High: (4 + (4 * ((-4 + %k) /u 4)<exact>)<nuw> + (12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src))
 ; NOMERGE-NEXT:            Member: {((12 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
 ; NOMERGE-NEXT:        Group GRP2:
-; NOMERGE-NEXT:          (Low: ((4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src) High: (4 + (4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + (4 * ((-4 + %k) /u 4))<nuw> + %src))
+; NOMERGE-NEXT:          (Low: ((4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src) High: (4 + (4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + (4 * ((-4 + %k) /u 4)<exact>)<nuw> + %src))
 ; NOMERGE-NEXT:            Member: {((4 * (zext i2 (trunc i64 %k to i2) to i64))<nuw><nsw> + %src),+,4}<%loop>
 ; NOMERGE-NEXT:        Group GRP3:
-; NOMERGE-NEXT:          (Low: %src High: (16 + (4 * ((-4 + %k) /u 4))<nuw> + %src))
+; NOMERGE-NEXT:          (Low: %src High: (16 + (4 * ((-4 + %k) /u 4)<exact>)<nuw> + %src))
 ; NOMERGE-NEXT:            Member: {(12 + %src),+,4}<%loop>
 ; NOMERGE-NEXT:            Member: {%src,+,4}<nuw><%loop>
 ; NOMERGE-EMPTY:

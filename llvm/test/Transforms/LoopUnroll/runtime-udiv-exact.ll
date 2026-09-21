@@ -8,7 +8,7 @@ define void @expand_exact_udiv(i64 %n, ptr %p) {
 ; CHECK-LABEL: define void @expand_exact_udiv(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 [[N]], 24
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv exact i64 [[N]], 24
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 1
@@ -68,13 +68,12 @@ define void @reuse_exact_udiv(i64 %n, ptr %p, ptr %q.out) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[Q_PH:%.*]] = udiv exact i64 [[N]], 24
 ; CHECK-NEXT:    store i64 [[Q_PH]], ptr [[Q_OUT]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[N]], 24
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[TMP2]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[Q_PH]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[Q_PH]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; CHECK:       [[ENTRY_NEW]]:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP2]], [[XTRAITER]]
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[Q_PH]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], %[[LOOP]] ]
