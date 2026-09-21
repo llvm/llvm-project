@@ -40,6 +40,17 @@ std::optional<Type *> LoadStoreVec::canVectorize(BndlRef<Instruction *> Bndl) {
   if (!Sched->trySchedule(Bndl))
     return std::nullopt;
 
+  // Check contiguity
+  if (isa<StoreInst>(Bndl[0])) {
+    if (!VecUtils::areConsecutive<StoreInst, Instruction>(
+            Bndl, A->getScalarEvolution(), *DL))
+      return std::nullopt;
+  } else if (isa<LoadInst>(Bndl[0])) {
+    if (!VecUtils::areConsecutive<LoadInst, Instruction>(
+            Bndl, A->getScalarEvolution(), *DL))
+      return std::nullopt;
+  }
+
   return VecUtils::getCombinedVectorTypeFor(Bndl, *DL);
 }
 
@@ -67,21 +78,6 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
-LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
-  if (!canVectorize(Loads))
-    return nullptr;
-
-  Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
-  Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
-  // TODO: Compute alignment.
-  Align LdAlign(1);
-  auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
-  return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
-}
-
 /// \returns an integer type with the same layout as \p Ty: iN for scalars,
 /// <N x iM> for vectors.
 static Type *getIntTypeFor(Type *Ty, Context &Ctx, const DataLayout &DL) {
@@ -93,6 +89,33 @@ static Type *getIntTypeFor(Type *Ty, Context &Ctx, const DataLayout &DL) {
   return IntegerType::get(Ctx, Utils::getNumBits(Ty, DL));
 }
 
+/// \returns true if each load in \p Loads can be unpacked from a single
+/// vector load of \p VecTy.
+static bool canUnpackFrom(BndlRef<Instruction *> Loads, FixedVectorType *VecTy,
+                          const DataLayout &DL) {
+  unsigned LaneBits = Utils::getNumBits(VecTy->getElementType(), DL);
+  return all_of(Loads, [LaneBits, &DL](Instruction *I) {
+    // Each load has to cover a whole number of lanes.
+    if (Utils::getNumBits(I->getType(), DL) % LaneBits != 0)
+      return false;
+    // Non-integral pointers have no stable integer representation.
+    Type *ScalarTy = I->getType()->getScalarType();
+    return !ScalarTy->isPointerTy() ||
+           !DL.isNonIntegralAddressSpace(ScalarTy->getPointerAddressSpace());
+  });
+}
+
+LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
+  auto *Ty =
+      cast<FixedVectorType>(VecUtils::getCombinedVectorTypeFor(Loads, *DL));
+  if (!canUnpackFrom(Loads, Ty, *DL))
+    return nullptr;
+  Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
+  // TODO: Compute alignment.
+  Align LdAlign(1);
+  auto LdWhereIt = std::next(VecUtils::getLowest(Loads)->getIterator());
+  return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
+}
 /// Reinterprets the bits of \p V as \p DestTy, which must have the same size
 /// in \p DL. Pointers only convert with ptrtoint / inttoptr, so those go
 /// through an integer of matching layout, everything else through a bitcast.
@@ -224,9 +247,6 @@ Value *LoadStoreVec::createConstantVector(ArrayRef<Value *> Operands,
 }
 
 bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
-  if (!VecUtils::areConsecutive<StoreInst, Instruction>(
-          Stores, A->getScalarEvolution(), *DL))
-    return false;
   if (!canVectorize(Stores))
     return false;
   SmallVector<Value *, 4> Operands;
@@ -265,6 +285,8 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
+    if (!canVectorize(Loads))
+      return false;
     VecOp = createVectorLoad(Loads);
     if (VecOp == nullptr) {
       Ctx->accept();
@@ -298,18 +320,7 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
 
 LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
                                        Region &Rgn) {
-  if (!VecUtils::areConsecutive<LoadInst, Instruction>(
-          Loads, A->getScalarEvolution(), *DL))
-    return nullptr;
-  auto VecTy = canVectorize(Loads);
-  if (!VecTy)
-    return nullptr;
-
-  // TODO: Support mixed-type top-level load chains.
-  Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  if (!all_of(Loads, [VecElemTy](Instruction *I) {
-        return VecUtils::getElementType(I->getType()) == VecElemTy;
-      }))
+  if (!canVectorize(Loads))
     return nullptr;
 
   saveIR(Rgn);
@@ -320,14 +331,31 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
     return nullptr;
   }
 
+  // Walk the chain in address order, tracking which lanes each load occupies.
+  // Lane counts are in units of the vector's element type, so a load wider
+  // than that element spans several lanes. For a chain of mixed types the
+  // element type is an integer, so each unpacked lane is cast back to the
+  // type of the load it replaces.
+  auto *ElmTy = cast<FixedVectorType>(VecLoad->getType())->getElementType();
+  unsigned LaneBits = Utils::getNumBits(ElmTy, *DL);
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
-  for (auto [Lane, OrigV] : VecUtils::enumerateLanes(Loads)) {
-    auto *OrigLoad = cast<LoadInst>(OrigV);
-    if (OrigLoad->hasNUses(0))
-      continue;
-    Value *Unpacked =
-        VecUtils::unpack(VecLoad, OrigLoad->getType(), Lane, WhereIt);
-    OrigLoad->replaceAllUsesWith(Unpacked);
+  unsigned Lane = 0;
+  for (Instruction *I : Loads) {
+    auto *OrigLoad = cast<LoadInst>(I);
+    unsigned NumLanes = Utils::getNumBits(OrigLoad->getType(), *DL) / LaneBits;
+    if (!OrigLoad->hasNUses(0)) {
+      Type *ExtrTy =
+          NumLanes > 1 ? VecUtils::getWideType(ElmTy, NumLanes) : ElmTy;
+      Value *Unpacked = VecUtils::unpack(VecLoad, ExtrTy, Lane, WhereIt);
+      Unpacked =
+          reinterpretValue(Unpacked, OrigLoad->getType(), WhereIt, *Ctx, *DL);
+      if (Unpacked == nullptr) {
+        Ctx->revert();
+        return nullptr;
+      }
+      OrigLoad->replaceAllUsesWith(Unpacked);
+    }
+    Lane += NumLanes;
   }
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Loads);
