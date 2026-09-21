@@ -1239,14 +1239,6 @@ specify boolean properties that modify the option.
   be applied to the "`-pos1`" option and the "`-bork`" string to be applied
   to the "`-pos2`" option.
 
-(cl::Sink)=
-
-* The **cl::Sink** modifier is used to handle unknown options. If there is at
-  least one option with `cl::Sink` modifier specified, the parser passes
-  unrecognized option strings to it as values instead of signaling an error. As
-  with `cl::CommaSeparated`, this modifier only makes sense with a {ref}`cl::list <cl::list>`
-  option.
-
 (response files)=
 
 #### Response files
