@@ -119,6 +119,12 @@ bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
     Symbol->setNoStrip();
     break;
 
+  case MCSA_Memtag:
+#if 0
+    Symbol->setMemtag(true);
+#endif
+    break;
+
   default:
     // unrecognized directive
     llvm_unreachable("unexpected MCSymbolAttr");
