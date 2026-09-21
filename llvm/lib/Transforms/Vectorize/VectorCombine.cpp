@@ -156,6 +156,7 @@ private:
   bool foldEquivalentReductionCmp(Instruction &I);
   bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
+  bool foldInterleaveOfReorderedDeinterleave(Instruction &I);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
@@ -6264,11 +6265,91 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   return true;
 }
 
+/// Fold a deinterleave whose fields are reinterleaved in reverse order to a
+/// shuffle that reverses the elements within each group.
+/// i.e.
+/// interleaveN(deinterleaveN(X)[N-1], ...,
+///             deinterleaveN(X)[0]) --> group-reverse(X).
+bool VectorCombine::foldInterleaveOfReorderedDeinterleave(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+  unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+  if (!Factor)
+    return false;
+
+  auto *Store = dyn_cast_or_null<StoreInst>(II->getUniqueUndroppableUser());
+  if (!Store)
+    return false;
+
+  IntrinsicInst *Deinterleave = nullptr;
+  for (unsigned I = 0; I != Factor; ++I) {
+    auto *Extract = dyn_cast<ExtractValueInst>(II->getArgOperand(I));
+    if (!Extract || Extract->getNumIndices() != 1 ||
+        *Extract->idx_begin() != Factor - I - 1 || !Extract->hasOneUse())
+      return false;
+
+    auto *CurrentDeinterleave =
+        dyn_cast<IntrinsicInst>(Extract->getAggregateOperand());
+    if (!CurrentDeinterleave ||
+        CurrentDeinterleave->getIntrinsicID() !=
+            Intrinsic::getDeinterleaveIntrinsicID(Factor) ||
+        (Deinterleave && Deinterleave != CurrentDeinterleave))
+      return false;
+    if (!Deinterleave)
+      Deinterleave = CurrentDeinterleave;
+  }
+
+  Value *Input = Deinterleave->getArgOperand(0);
+
+  auto *Load = dyn_cast<LoadInst>(Input);
+  if (!Load)
+    return false;
+
+  auto *InputTy = dyn_cast<FixedVectorType>(Input->getType());
+  if (!InputTy)
+    return false;
+
+  unsigned NumElts = InputTy->getNumElements();
+  SmallVector<int> Mask;
+  for (unsigned I = 0; I != NumElts; I += Factor)
+    llvm::append_range(Mask, llvm::reverse(llvm::seq(I, I + Factor)));
+
+  SmallVector<unsigned, 8> AllIndices(Factor);
+  std::iota(AllIndices.begin(), AllIndices.end(), 0);
+  InstructionCost OldCost = TTI.getInterleavedMemoryOpCost(
+      Instruction::Load, InputTy, Factor, AllIndices, Load->getAlign(),
+      Load->getPointerAddressSpace(), CostKind);
+  OldCost += TTI.getInterleavedMemoryOpCost(
+      Instruction::Store, InputTy, Factor, AllIndices, Store->getAlign(),
+      Store->getPointerAddressSpace(), CostKind);
+
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, InputTy, Load->getAlign(),
+                          Load->getPointerAddressSpace(), CostKind) +
+      TTI.getMemoryOpCost(Instruction::Store, InputTy, Store->getAlign(),
+                          Store->getPointerAddressSpace(), CostKind);
+  NewCost +=
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, InputTy,
+                         InputTy, CostKind, Mask, 0, nullptr, {Input}, &I);
+
+  LLVM_DEBUG(dbgs() << "VC: Folding reordered reinterleave: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost > OldCost)
+    return false;
+
+  replaceValue(I, *Builder.CreateShuffleVector(Input, Mask));
+  return true;
+}
+
 /// If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
 /// <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
 /// larger splat `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first
 /// before casting it back into `<vscale x 16 x i32>`.
 bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
+  if (foldInterleaveOfReorderedDeinterleave(I))
+    return true;
   const APInt *SplatVal0, *SplatVal1;
   if (!match(&I, m_Intrinsic<Intrinsic::vector_interleave2>(
                      m_APInt(SplatVal0), m_APInt(SplatVal1))))
