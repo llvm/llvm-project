@@ -13327,7 +13327,7 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
 
   // Calculate the maximum backedge count based on the range of values
   // permitted by Start, End, and Stride. If Invert is true, both Start and End
-  // need inverting. Stride is already inverted by the caller.
+  // need negating w.r.t. Stride. Stride was already adjusted by the caller.
   APInt MinStart = getRangeMin(Start, IsSigned, Invert);
 
   APInt MinStride =
