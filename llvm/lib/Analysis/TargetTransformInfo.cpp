@@ -318,6 +318,7 @@ unsigned TargetTransformInfo::getFlatAddressSpace() const {
 
 unsigned TargetTransformInfo::getAddressSpaceJoin(unsigned AS1,
                                                   unsigned AS2) const {
+  assert(AS1 != AS2 && "Expected distinct address spaces");
   return TTIImpl->getAddressSpaceJoin(AS1, AS2);
 }
 

@@ -55,8 +55,6 @@ public:
   }
 
   unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const override {
-    if (AS1 == AS2)
-      return AS1;
     if ((AS1 == AddressSpace::ADDRESS_SPACE_SHARED &&
          AS2 == AddressSpace::ADDRESS_SPACE_SHARED_CLUSTER) ||
         (AS2 == AddressSpace::ADDRESS_SPACE_SHARED &&

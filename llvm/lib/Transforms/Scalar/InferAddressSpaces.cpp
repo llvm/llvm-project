@@ -1099,6 +1099,9 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
 // comments).
 unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
                                                    unsigned AS2) const {
+  if (AS1 == AS2)
+    return AS1;
+
   if (AS1 == FlatAddrSpace || AS2 == FlatAddrSpace)
     return FlatAddrSpace;
 
