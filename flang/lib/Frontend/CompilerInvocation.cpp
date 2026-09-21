@@ -1832,6 +1832,11 @@ bool CompilerInvocation::createFromArgs(
                    clang::options::OPT_fno_openacc_combined_loop_firstprivate,
                    /*default=*/true));
 
+  // -f[no-]oacc-cuda-bind-c-cfi
+  invoc.loweringOpts.setNoCFIDescriptor(!args.hasFlag(
+      clang::options::OPT_foacc_cuda_bind_c_cfi,
+      clang::options::OPT_fno_oacc_cuda_bind_c_cfi, /*default=*/true));
+
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
     invoc.getCodeGenOpts().setFPMaxminBehavior(value);

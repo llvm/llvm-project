@@ -202,6 +202,9 @@ defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-
 defm openacc_combined_loop_firstprivate : OptOutFC1FFlag<"openacc-combined-loop-firstprivate",
   "Attach firstprivate on combined loop in addition to compute construct (extension)",
   "Keep firstprivate only on the compute construct for combined loop">;
+defm oacc_cuda_bind_c_cfi : OptOutFC1FFlag<"oacc-cuda-bind-c-cfi",
+  "Pass assumed-shape, deferred-shape, and assumed-rank BIND(C) dummy arguments using a Fortran 2018 CFI descriptor (default)",
+  "Pass them by address instead, matching the legacy nvfortran OpenACC/CUDA Fortran interoperability convention">;
 defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
   "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
   "Diagnose a USE association conflict with an intrinsic module generic">;

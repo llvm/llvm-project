@@ -2508,6 +2508,27 @@ void Fortran::lower::mapSymbolAttributes(
   // For symbols reaching this point, all properties are constant and can be
   // read/computed already into ssa values.
 
+  // A colon (deferred/assumed) bound's extent can only be recovered from a
+  // CFI descriptor. Normally \p box is guaranteed to be one whenever a colon
+  // bound is reachable here, but LoweringOptions::NoCFIDescriptor
+  // (-fno-oacc-cuda-bind-c-cfi) can make CallInterface.cpp pass a BIND(C)
+  // dummy by bare address instead: there is then no descriptor to read the
+  // shape from. Diagnose that cleanly instead of feeding a non-box operand
+  // to fir.box_dims, which would otherwise fail MLIR verification.
+  auto requireBoxForColonBound = [&](mlir::Value box) {
+    if (box && mlir::isa<fir::BaseBoxType>(box.getType()))
+      return;
+    fir::emitFatalError(
+        loc,
+        llvm::Twine("cannot determine the shape of assumed-shape or "
+                    "deferred-shape dummy argument '") +
+            toStringRef(sym.name()) +
+            "': it was passed by address instead of a Fortran 2018 CFI "
+            "descriptor (-fno-oacc-cuda-bind-c-cfi is only valid for "
+            "dummy arguments whose shape is never queried)",
+        /*genCrashDiag=*/false);
+  };
+
   // The origin must be \vec{1}.
   auto populateShape = [&](auto &shapes, const auto &bounds, mlir::Value box) {
     for (auto iter : llvm::enumerate(bounds)) {
@@ -2520,7 +2541,7 @@ void Fortran::lower::mapSymbolAttributes(
         ub = builder.createConvert(loc, idxTy, ub);
         shapes.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       } else if (spec->ubound().isColon()) {
-        assert(box && "assumed bounds require a descriptor");
+        requireBoxForColonBound(box);
         mlir::Value dim =
             builder.createIntegerConstant(loc, idxTy, iter.index());
         auto dimInfo =
@@ -2544,7 +2565,7 @@ void Fortran::lower::mapSymbolAttributes(
       if (spec->lbound().isColon() || spec->ubound().isColon()) {
         // This is an assumed shape because allocatables and pointers extents
         // are not constant in the scope and are not read here.
-        assert(box && "deferred bounds require a descriptor");
+        requireBoxForColonBound(box);
         mlir::Value dim =
             builder.createIntegerConstant(loc, idxTy, iter.index());
         dimInfo =

@@ -26,6 +26,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <optional>
 
 static mlir::FunctionType
@@ -1274,12 +1275,27 @@ private:
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (useLegacyBindCArrayPassing) {
-      mlir::emitWarning(
-          loc,
-          llvm::Twine("argument '") + characteristics->name +
-              "' will be passed by address, not a Fortran 2018 CFI descriptor, "
-              "because CFI descriptor support is disabled for this "
-              "compilation");
+      // CallerInterface, CalleeInterface, and SignatureBuilder can each
+      // independently reach this code for the very same dummy argument (each
+      // recomputes its own DummyDataObject from the procedure's
+      // characteristics, so its address is not a stable key). Without this,
+      // the same warning would be printed once per one of those instead of
+      // once per argument. (loc, name) identifies the dummy: loc reflects
+      // the enclosing procedure's declaration and does not vary by which of
+      // the three triggered this, and name distinguishes multiple legacy
+      // arguments of the same procedure sharing that loc.
+      static llvm::SmallVector<std::pair<mlir::Location, std::string>, 8>
+          warnedLegacyBindCArrayArgs;
+      auto key = std::make_pair(loc, characteristics->name);
+      if (!llvm::is_contained(warnedLegacyBindCArrayArgs, key)) {
+        warnedLegacyBindCArrayArgs.push_back(key);
+        mlir::emitWarning(
+            loc,
+            llvm::Twine("argument '") + characteristics->name +
+                "' will be passed by address, not a Fortran 2018 CFI "
+                "descriptor, because CFI descriptor support is disabled for "
+                "this compilation");
+      }
       mlir::Type refType = fir::ReferenceType::get(type);
       addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
                     attrs);
