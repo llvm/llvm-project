@@ -31,7 +31,9 @@ concurrency:
 jobs:
   test-tools:
     if: github.repository_owner == 'llvm'
-    runs-on: llvm-premerge-linux-32-runners
+    runs-on:
+      group: llvm-premerge-cluster-us-west
+      labels: llvm-premerge-linux-32-runners
     container:
       image: ghcr.io/llvm/libcxx-linux-builder:6d3cf7f436a01f4622fb660e413a4020209777b8
     env:
