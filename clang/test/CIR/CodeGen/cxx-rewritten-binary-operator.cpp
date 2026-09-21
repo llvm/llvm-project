@@ -168,6 +168,7 @@ void cxx_rewritten_binary_operator_lvalue_expr() {
 // CIR: %[[REF_ADDR:.*]] = cir.alloca "ref" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[TMP_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_SpaceshipLValueResult>
 // CIR: cir.call @_ZNK10LValueItemssERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// FIXME: CIR stores a poison aggregate into the temporary due to empty-record-return behavior; OGCG omits this store.
 // CIR: %[[OP_RESULT:.*]] = cir.const #cir.poison : !rec_SpaceshipLValueResult
 // CIR: cir.store {{.*}} %[[OP_RESULT]], %[[TMP_ADDR]] : !rec_SpaceshipLValueResult, !cir.ptr<!rec_SpaceshipLValueResult>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
@@ -179,6 +180,7 @@ void cxx_rewritten_binary_operator_lvalue_expr() {
 // LLVM: %[[REF_ADDR:.*]] = alloca ptr, align 8
 // LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipLValueResult, align 1
 // LLVM: call void @_ZNK10LValueItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
+// FIXME: CIR stores a poison aggregate into the temporary due to empty-record-return behavior; OGCG omits this store.
 // LLVM: store %struct.SpaceshipLValueResult poison, ptr %[[TMP_ADDR]], align 1
 // LLVM: %[[RESULT:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK21SpaceshipLValueResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
 // LLVM: store ptr %[[RESULT]], ptr %[[REF_ADDR]], align 8
