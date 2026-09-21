@@ -106,5 +106,6 @@ Transforms/TailCallElim/basic.ll
 Transforms/TailCallElim/debugloc.ll
 Transforms/TailCallElim/dropping_debugloc_acc_rec_inst_rnew.ll
 Transforms/TailCallElim/inf-recursion.ll
+Transforms/TailCallElim/shl-accumulator-opt.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/lowerswitch.ll

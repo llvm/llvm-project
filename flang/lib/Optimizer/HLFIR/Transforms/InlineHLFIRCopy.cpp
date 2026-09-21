@@ -24,7 +24,6 @@
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Support/AllocationPolicy.h"
-#include "flang/Optimizer/Support/DataLayout.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -45,32 +44,11 @@ static llvm::cl::opt<bool> noInlineHLFIRCopy(
     llvm::cl::init(false));
 
 namespace {
-/// Everything needed to compute the constant byte size of a buffer, gathered
-/// once by the pass since it is module-level information.
-struct SizeContext {
-  std::optional<mlir::DataLayout> dataLayout;
-  std::optional<fir::KindMapping> kindMap;
-};
-
-/// Gather the module level information needed to compute buffer sizes. Without
-/// a data layout no size can be computed, and all the buffers are then left on
-/// the heap.
-static SizeContext getSizeContext(mlir::Operation *op) {
-  auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
-  if (!module)
-    module = op->getParentOfType<mlir::ModuleOp>();
-  if (!module)
-    return SizeContext{std::nullopt, std::nullopt};
-  return SizeContext{fir::support::getOrSetMLIRDataLayout(
-                         module, /*allowDefaultLayout=*/false),
-                     fir::getKindMapping(module)};
-}
-
 class InlineCopyInConversion : public mlir::OpRewritePattern<hlfir::CopyInOp> {
 public:
   InlineCopyInConversion(mlir::MLIRContext *context,
                          const fir::AllocationPolicy &policy,
-                         const SizeContext &sizeContext)
+                         const fir::AllocationSizeContext &sizeContext)
       : mlir::OpRewritePattern<hlfir::CopyInOp>(context), policy(policy),
         sizeContext(sizeContext) {}
 
@@ -79,39 +57,9 @@ public:
                   mlir::PatternRewriter &rewriter) const override;
 
 private:
-  /// Return true if the copy-in buffer of type \p sequenceType should be
-  /// allocated on the stack rather than on the heap.
-  bool shouldUseStack(mlir::Location loc, mlir::Type sequenceType) const;
-
   fir::AllocationPolicy policy;
-  const SizeContext &sizeContext;
+  const fir::AllocationSizeContext &sizeContext;
 };
-
-bool InlineCopyInConversion::shouldUseStack(mlir::Location loc,
-                                            mlir::Type sequenceType) const {
-  // Only buffers with a compile-time constant size are considered. A buffer
-  // with a runtime size would need stack save/restore to avoid growing the
-  // stack when the copy-in is inside a loop. There is also little to gain: for
-  // a big buffer the element-per-element copy costs much more than the
-  // allocation itself.
-  if (fir::hasDynamicSize(sequenceType))
-    return false;
-  if (!sizeContext.dataLayout || !sizeContext.kindMap)
-    return false;
-  auto sizeAndAlignment = fir::getTypeSizeAndAlignment(
-      loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
-  if (!sizeAndAlignment)
-    return false;
-
-  fir::PendingAllocationInfo info;
-  info.isTemporary = true;
-  info.isDynamic = false;
-  info.byteSize = static_cast<std::int64_t>(sizeAndAlignment->first);
-  // The per-function stack budget is not tracked here: the
-  // allocation-placement pass sees the fir.alloca generated below and can
-  // still move it back to the heap if the budget turns out to be exceeded.
-  return fir::shouldAllocateOnStack(info, policy, /*stackBytesUsed=*/0);
-}
 
 // Inline a copy_out operation (deallocation only — no copy-back).
 // Generates: if (wasCopied) { freemem(temp) }
@@ -179,7 +127,8 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
 
   // Decide where the buffer will live before creating it, so that the matching
   // kind of allocation and deallocation is generated.
-  const bool useStack = shouldUseStack(loc, sequenceType);
+  const bool useStack =
+      fir::shouldUseStackForCopyin(loc, sequenceType, policy, sizeContext);
 
   mlir::Value isContiguous =
       fir::IsContiguousBoxOp::create(builder, loc, inputVariable);
@@ -260,7 +209,9 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   // Erase the copyOut since we've inlined it
   rewriter.eraseOp(copyOut);
 
-  rewriter.replaceOp(copyIn, {resultBox, builder.genNot(loc, isContiguous)});
+  rewriter.replaceOp(copyIn,
+                     {resultBox, builder.genNot(loc, isContiguous),
+                      useStack ? builder.createBool(loc, false) : wasCopied});
   return mlir::success();
 }
 
@@ -285,10 +236,10 @@ public:
     // beneficial. Runtime-sized buffers additionally need stack save/restore
     // to avoid growing the stack when the copy-in sits in a loop.
     fir::AllocationPolicy policy = fir::getAllocationPolicy(getOperation());
-    policy.stackArrays = false;
     fir::overrideIfExplicitlySet(policy.smallArrayThresholdBytes,
                                  smallArrayThresholdBytes);
-    const SizeContext sizeContext = getSizeContext(getOperation());
+    const fir::AllocationSizeContext sizeContext =
+        fir::getAllocationSizeContext(getOperation());
 
     mlir::RewritePatternSet patterns(context);
     if (!noInlineHLFIRCopy) {

@@ -241,8 +241,8 @@ add_fp_unittest(
     exp2f_test.cpp
   DEPENDS
     .unit_test_wrappers
-    libc.src.math.exp2f
     libc.src.mathvec.exp2f
+    libc.src.__support.math.exp2f_double_eval
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS
@@ -275,8 +275,8 @@ add_fp_unittest(
     exp10f_test.cpp
   DEPENDS
     .unit_test_wrappers
-    libc.src.math.exp10f
     libc.src.mathvec.exp10f
+    libc.src.__support.math.exp10f_double_eval
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS
@@ -309,8 +309,8 @@ add_fp_unittest(
     expf_test.cpp
   DEPENDS
     .unit_test_wrappers
-    libc.src.math.expf
     libc.src.mathvec.expf
+    libc.src.__support.math.expf_double_eval
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
   FLAGS
@@ -420,25 +420,28 @@ add_fp_unittest(
     FMA_OPT
 )
 
-add_fp_unittest(
-  sinf_test
-  SUITE
-    libc-mathvec-unittests
-  SRCS
-    sinf_test.cpp
-  HDRS
-    ../math/sdcomp26094.h
-  DEPENDS
-    .unit_test_wrappers
-    libc.src.math.sinf
-    libc.src.mathvec.sinf
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.CPP.simd
-    libc.src.__support.macros.optimization
-  FLAGS
-    ROUND_OPT
-    FMA_OPT
-)
+if(NOT LIBC_CONF_MATH_OPTIMIZATIONS MATCHES
+   "LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT")
+  add_fp_unittest(
+    sinf_test
+    SUITE
+      libc-mathvec-unittests
+    SRCS
+      sinf_test.cpp
+    HDRS
+      ../math/sdcomp26094.h
+    DEPENDS
+      .unit_test_wrappers
+      libc.src.math.sinf
+      libc.src.mathvec.sinf
+      libc.src.__support.FPUtil.fp_bits
+      libc.src.__support.CPP.simd
+      libc.src.__support.macros.optimization
+    FLAGS
+      ROUND_OPT
+      FMA_OPT
+  )
+endif()
 
 add_fp_unittest(
   sinhf_test

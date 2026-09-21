@@ -629,6 +629,18 @@ std::unique_ptr<VPlan> VPlanTransforms::buildVPlan0(
   return VPlan0;
 }
 
+void VPlanTransforms::recordExecutionFrequencies(VPlan &Plan) {
+  VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
+  SmallVector<VPBasicBlock *> Blocks = vp_rpo_plain_cfg_loop_body(Header);
+  auto Frequencies = vputils::computeExecutionFrequencies(Blocks);
+  LLVMContext &Ctx = Plan.getContext();
+  for (VPBasicBlock *VPBB : Blocks) {
+    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB))
+      VPI.setExecutionFrequency(Freq, Ctx);
+  }
+}
+
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
 /// for \p Phi based on \p IndDesc.
 static VPHeaderPHIRecipe *
@@ -1683,6 +1695,17 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     }
   }
 
+  // Freeze MinOrMaxOps since:
+  // * multiple uses are introduced and the value may be undef
+  // * they feed into a branch condition, so block poison propagation to
+  //   prevent immediate UB
+  for (auto &[Phi, MinOrMaxOp] : MinOrMaxNumReductionsToHandle) {
+    VPRecipeBase *MinOrMaxR = Phi->getBackedgeValue()->getDefiningRecipe();
+    VPInstruction *Freeze = VPBuilder(MinOrMaxR).createFreeze(MinOrMaxOp);
+    MinOrMaxR->replaceUsesOfWith(MinOrMaxOp, Freeze);
+    MinOrMaxOp = Freeze;
+  }
+
   VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   VPValue *AllNaNLanes = nullptr;
@@ -1873,7 +1896,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     if (HeaderMask)
       Cond = Builder.createLogicalAnd(HeaderMask, Cond);
 
-    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+    VPValue *AnyOf =
+        Builder.createNaryOp(VPInstruction::AnyOf, Builder.createFreeze(Cond));
+    // FIXME: The Cond here needs to be frozen too.
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addIncoming(MaskSelect);
 

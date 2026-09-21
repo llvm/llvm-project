@@ -135,6 +135,17 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                const TargetLibraryInfo *TLI,
                                const Instruction *CxtI, unsigned &ShiftWidth);
 
+/// i1 reductions can be emitted as the plain target reduction or in the
+/// bitcast-based form (bitcast to a scalar integer type plus a compare for
+/// and/or, plus ctpop for add). Returns the cost of the cheaper form and
+/// whether it is the bitcast-based one. Ties keep the historically default
+/// form: plain for and/or, bitcast-based for add.
+std::pair<InstructionCost, bool>
+getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
+                   FixedVectorType *VectorTy, Type *ScalarTy,
+                   TargetTransformInfo::CastContextHint Ctx,
+                   TargetTransformInfo::TargetCostKind CostKind);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
