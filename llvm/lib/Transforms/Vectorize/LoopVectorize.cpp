@@ -3438,12 +3438,14 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
         "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
+
   if (!LVL.getFixedOrderRecurrences().empty()) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported with fixed-order recurrence",
         "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
+
   // We can apply tail-folding on the vectorized epilogue loop.
   return CM_EpilogueNotNeededFoldTail;
 }
