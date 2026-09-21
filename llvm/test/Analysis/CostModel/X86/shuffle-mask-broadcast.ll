@@ -5,7 +5,7 @@
 
 define <16 x i1> @lane16_bw_0(<16 x i1> %src) #0 {
 ; CHECK-LABEL: 'lane16_bw_0'
-; CHECK-NEXT:  Cost Model: Found costs of 17 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:5 SizeLat:3 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i1> %s
 ;
   %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> splat (i32 0)
@@ -14,7 +14,7 @@ define <16 x i1> @lane16_bw_0(<16 x i1> %src) #0 {
 
 define <16 x i1> @lane16_bw_1(<16 x i1> %src) #0 {
 ; CHECK-LABEL: 'lane16_bw_1'
-; CHECK-NEXT:  Cost Model: Found costs of 17 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:4 Lat:8 SizeLat:5 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i1> %s
 ;
   %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> splat (i32 1)
@@ -22,27 +22,51 @@ define <16 x i1> @lane16_bw_1(<16 x i1> %src) #0 {
 }
 
 define <16 x i1> @lane16_dword_0(<16 x i1> %src) #1 {
-; CHECK-LABEL: 'lane16_dword_0'
-; CHECK-NEXT:  Cost Model: Found costs of 17 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i1> %s
+; X64-LABEL: 'lane16_dword_0'
+; X64-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:5 SizeLat:3 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> zeroinitializer
+; X64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i1> %s
+;
+; X64-NODQ-LABEL: 'lane16_dword_0'
+; X64-NODQ-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:8 SizeLat:3 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> zeroinitializer
+; X64-NODQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i1> %s
+;
+; X86-LABEL: 'lane16_dword_0'
+; X86-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:5 SizeLat:3 for: %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> zeroinitializer
+; X86-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i1> %s
 ;
   %s = shufflevector <16 x i1> %src, <16 x i1> poison, <16 x i32> splat (i32 0)
   ret <16 x i1> %s
 }
 
 define <64 x i1> @lane64_no512_0(<64 x i1> %src) #2 {
-; CHECK-LABEL: 'lane64_no512_0'
-; CHECK-NEXT:  Cost Model: Found costs of 65 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> zeroinitializer
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
+; X64-LABEL: 'lane64_no512_0'
+; X64-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:5 Lat:7 SizeLat:5 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> zeroinitializer
+; X64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
+;
+; X64-NODQ-LABEL: 'lane64_no512_0'
+; X64-NODQ-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:5 Lat:7 SizeLat:5 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> zeroinitializer
+; X64-NODQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
+;
+; X86-LABEL: 'lane64_no512_0'
+; X86-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:10 SizeLat:5 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> zeroinitializer
+; X86-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
 ;
   %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> splat (i32 0)
   ret <64 x i1> %s
 }
 
 define <64 x i1> @lane64_no512_17(<64 x i1> %src) #2 {
-; CHECK-LABEL: 'lane64_no512_17'
-; CHECK-NEXT:  Cost Model: Found costs of 65 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
+; X64-LABEL: 'lane64_no512_17'
+; X64-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:6 Lat:11 SizeLat:6 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; X64-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
+;
+; X64-NODQ-LABEL: 'lane64_no512_17'
+; X64-NODQ-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:6 Lat:11 SizeLat:6 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; X64-NODQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
+;
+; X86-LABEL: 'lane64_no512_17'
+; X86-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:6 Lat:14 SizeLat:6 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; X86-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
 ;
   %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> splat (i32 17)
   ret <64 x i1> %s
@@ -50,7 +74,7 @@ define <64 x i1> @lane64_no512_17(<64 x i1> %src) #2 {
 
 define <64 x i1> @lane64_512_0(<64 x i1> %src) #0 {
 ; CHECK-LABEL: 'lane64_512_0'
-; CHECK-NEXT:  Cost Model: Found costs of 65 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> zeroinitializer
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:3 Lat:5 SizeLat:3 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
 ;
   %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> splat (i32 0)
@@ -59,7 +83,7 @@ define <64 x i1> @lane64_512_0(<64 x i1> %src) #0 {
 
 define <64 x i1> @lane64_512_17(<64 x i1> %src) #0 {
 ; CHECK-LABEL: 'lane64_512_17'
-; CHECK-NEXT:  Cost Model: Found costs of 65 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:6 SizeLat:7 for: %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <64 x i1> %s
 ;
   %s = shufflevector <64 x i1> %src, <64 x i1> poison, <64 x i32> splat (i32 17)
@@ -69,7 +93,3 @@ define <64 x i1> @lane64_512_17(<64 x i1> %src) #0 {
 attributes #0 = { "prefer-vector-width"="256" "min-legal-vector-width"="512" }
 attributes #1 = { "prefer-vector-width"="512" "min-legal-vector-width"="512" }
 attributes #2 = { "prefer-vector-width"="256" "min-legal-vector-width"="0" }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; X64: {{.*}}
-; X64-NODQ: {{.*}}
-; X86: {{.*}}
