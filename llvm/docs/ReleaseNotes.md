@@ -176,6 +176,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+* A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
+  controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
+  `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
+  `LLVM_ENABLE_LZMA`, and it has no effect in a standalone LLDB build.
+
 * The DirectX backend is now an official target and has moved from
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
@@ -312,6 +317,9 @@ Makes programs 10x faster by doing Special New Thing.
   runtime's command line instead of following it. A runtime that dispatches on a
   leading subcommand can therefore name that subcommand through this setting,
   rather than needing a wrapper script.
+* MiniDebugInfo (the ELF `.gnu_debugdata` section) is now decompressed by LLVM
+  rather than by LLDB's own liblzma binding, and is enabled with
+  `LLVM_ENABLE_LZMA` instead of the deprecated `LLDB_ENABLE_LZMA`.
 
 #### SBAPI
 

@@ -968,6 +968,18 @@ public:
   /// This is a convenience function which does getSCEVAtScope(getSCEV(V), L).
   LLVM_ABI SCEVUse getSCEVAtScope(Value *V, const Loop *L);
 
+  /// Return the SCEV expression at the specified loop exit. Returns the
+  /// original value if no more precise value can be computed.
+  LLVM_ABI SCEVUse getSCEVAtExit(const SCEV *S, const Loop *L,
+                                 const BasicBlock *ExitingBlock);
+
+  /// This is a convenience function which does
+  /// getSCEVAtExit(getSCEV(V), L, ExitingBlock).
+  LLVM_ABI SCEVUse getSCEVAtExit(Value *V, const Loop *L,
+                                 const BasicBlock *ExitingBlock) {
+    return getSCEVAtExit(getSCEV(V), L, ExitingBlock);
+  }
+
   /// Test whether entry to the loop is protected by a conditional between LHS
   /// and RHS.  This is used to help avoid max expressions in loop trip
   /// counts, and to eliminate casts.

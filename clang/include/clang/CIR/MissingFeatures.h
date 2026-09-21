@@ -226,7 +226,6 @@ struct MissingFeatures {
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool dynamicExceptionSpec() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
