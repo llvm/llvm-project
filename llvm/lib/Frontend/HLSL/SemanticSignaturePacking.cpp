@@ -148,7 +148,8 @@ getOptimizedPackingGroup(const SemanticSignatureElement &Element,
     return PackingGroup::SystemGenerated;
   case SemanticInterpretation::NotAllocated:
     return PackingGroup::NotAllocated;
-  default:
+  case SemanticInterpretation::Invalid:
+  case SemanticInterpretation::Target:
     break;
   }
   llvm_unreachable("unexpected semantic interpretation for optimized packing");
