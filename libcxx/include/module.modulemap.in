@@ -1587,6 +1587,7 @@ module std {
     module size                       { header "__iterator/size.h" }
     module sortable                   { header "__iterator/sortable.h" }
     module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
+    module static_packed_bounded_iter { header "__iterator/static_packed_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
     module capacity_aware_iterator    { header "__iterator/capacity_aware_iterator.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
@@ -2475,6 +2476,9 @@ module std {
       }
       module transform_reduce {
         header "__pstl/cpu_algos/transform_reduce.h"
+      }
+      module uninitialized_algorithms {
+        header "__pstl/cpu_algos/uninitialized_algorithms.h"
       }
     }
     module dispatch           { header "__pstl/dispatch.h" }
