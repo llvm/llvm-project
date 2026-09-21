@@ -12,6 +12,7 @@
 
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/ADT/Twine.h"
+#include <cassert>
 
 using namespace llvm;
 using namespace IntelGPU;
@@ -27,6 +28,7 @@ using namespace IntelGPU;
 // The reserved bits carry no information.
 static constexpr uint32_t GPUIPMajorShift = 22;
 static constexpr uint32_t GPUIPMinorShift = 14;
+static constexpr uint32_t GPUIPMajorMask = 0x3ff;
 static constexpr uint32_t GPUIPMinorMask = 0xff;
 static constexpr uint32_t GPUIPRevisionMask = 0x3f;
 
@@ -36,8 +38,12 @@ static constexpr uint32_t GPUIPRevisionMask = 0x3f;
 static constexpr uint32_t GPUIPDeviceMask = ~0u << GPUIPMinorShift;
 
 // Pack a major and a minor version the way a GPU IP version does, so that a
-// row of the table can be compared against a reported version as it is.
+// row of the table can be compared against a reported version as it is. A value
+// too wide for its field would silently corrupt the fields above it, which
+// would mean a typo in IntelGPUTargetParser.def going unnoticed.
 static constexpr uint32_t packDevice(uint32_t Major, uint32_t Minor) {
+  assert((Major & ~GPUIPMajorMask) == 0 && "major version too wide");
+  assert((Minor & ~GPUIPMinorMask) == 0 && "minor version too wide");
   return (Major << GPUIPMajorShift) | (Minor << GPUIPMinorShift);
 }
 

@@ -15,6 +15,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <cassert>
 #include <string>
 
 // Defined in AMDGPUArchByHIP.cpp (non-static, compiled into this test).
@@ -249,9 +250,14 @@ TEST(KFDTopology, GFX1250NonA0IsPrintedPlain) {
 // --- getIntelGPUArchName ---
 
 namespace {
-// Build a GPU IP version the way the Level Zero driver reports it.
+// Build a GPU IP version the way the Level Zero driver reports it. A component
+// too wide for its field would corrupt the fields above it and quietly test
+// something other than what it spells out.
 constexpr uint32_t gpuIPVersion(uint32_t Major, uint32_t Minor,
                                 uint32_t Revision) {
+  assert((Major & ~0x3ffu) == 0 && "major version too wide");
+  assert((Minor & ~0xffu) == 0 && "minor version too wide");
+  assert((Revision & ~0x3fu) == 0 && "revision too wide");
   return (Major << 22) | (Minor << 14) | Revision;
 }
 } // namespace
