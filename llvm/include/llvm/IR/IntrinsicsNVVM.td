@@ -158,6 +158,8 @@ defvar MAX_GRID_SIZE_X = 0x7fffffff;
 defvar MAX_GRID_SIZE_Y = 0xffff;
 defvar MAX_GRID_SIZE_Z = 0xffff;
 
+defvar MAX_CLUSTER_RANK = 0x100;
+
 defvar MAX_BLOCK_SIZE_X = 1024;
 defvar MAX_BLOCK_SIZE_Y = 1024;
 defvar MAX_BLOCK_SIZE_Z = 64;
@@ -2761,9 +2763,11 @@ defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GR
 // ctarank is an index within cluster CTA ranks (non-negative).
 // nctarank is the number of CTA ranks in cluster (positive).
 def int_nvvm_read_ptx_sreg_cluster_ctarank
-  : PTXReadSRegIntrinsicNB_r32<[Range<RetIndex, 0, !add(MAX_GRID_SIZE_X, 1)>]>;
+  : PTXReadSRegIntrinsicNB_r32<
+      [Range<RetIndex, 0, MAX_CLUSTER_RANK>]>;
 def int_nvvm_read_ptx_sreg_cluster_nctarank
-  : PTXReadSRegIntrinsicNB_r32<[Range<RetIndex, 1, !add(MAX_GRID_SIZE_X, 1)>]>;
+  : PTXReadSRegIntrinsicNB_r32<
+      [Range<RetIndex, 1, !add(MAX_CLUSTER_RANK, 1)>]>;
 
 //
 // Reserved Shared Memory Intrinsics

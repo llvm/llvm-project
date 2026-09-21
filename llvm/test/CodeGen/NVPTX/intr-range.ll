@@ -178,8 +178,8 @@ define ptx_kernel i32 @test_cluster_dim() "nvvm.cluster_dim"="4,4,1" {
 ; DEFAULT-DAG: declare noundef range(i32 1, 65536)       i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.y()
 ; DEFAULT-DAG: declare noundef range(i32 1, 65536)       i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.z()
 ; DEFAULT-DAG: declare noundef range(i32 0, 1)           i32 @llvm.nvvm.read.ptx.sreg.cluster.nctaid.w()
-; DEFAULT-DAG: declare noundef range(i32 0, -2147483648) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
-; DEFAULT-DAG: declare noundef range(i32 1, -2147483648) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
+; DEFAULT-DAG: declare noundef range(i32 0, 256) i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
+; DEFAULT-DAG: declare noundef range(i32 1, 257) i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
 
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.y()
