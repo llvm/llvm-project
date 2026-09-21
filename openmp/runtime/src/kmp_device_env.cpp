@@ -51,7 +51,6 @@ struct kmp_device_env_dev_node_t {
 };
 
 struct kmp_device_env_state_t {
-  char *host_value; // <ENV>
   char *all_value; // <ENV>_ALL
   char *dev_default_value; // <ENV>_DEV
   kmp_device_env_dev_node_t *per_device; // <ENV>_DEV_<d>
@@ -60,10 +59,9 @@ struct kmp_device_env_state_t {
 static kmp_device_env_state_t *__kmp_device_env_states = NULL;
 
 static int __kmp_device_env_count(void) {
-  int count = 0;
-  while (__kmp_device_env_eligible_names[count] != NULL)
-    ++count;
-  return count;
+  return sizeof(__kmp_device_env_eligible_names) /
+             sizeof(__kmp_device_env_eligible_names[0]) -
+         1;
 }
 
 // Invariant: the eligible-name and denied-base tables must be disjoint --
@@ -89,7 +87,6 @@ static void __kmp_device_env_lazy_init(void) {
   __kmp_device_env_states = (kmp_device_env_state_t *)KMP_INTERNAL_MALLOC(
       sizeof(kmp_device_env_state_t) * count);
   for (int i = 0; i < count; ++i) {
-    __kmp_device_env_states[i].host_value = NULL;
     __kmp_device_env_states[i].all_value = NULL;
     __kmp_device_env_states[i].dev_default_value = NULL;
     __kmp_device_env_states[i].per_device = NULL;
@@ -141,18 +138,15 @@ static int __kmp_is_nonneg_int(char const *s) {
 }
 
 // Returns the parsed value on success, -1 on overflow/empty/non-digit input.
-// We cap valid device ids at INT_MAX-1 to leave INT_MAX as a sentinel.
+// Leading zeros are allowed (e.g., `000000000001` is device 1). INT_MAX and
+// larger values are rejected so -1 remains the only error sentinel.
 static int __kmp_parse_dev_id(char const *s) {
   if (!__kmp_is_nonneg_int(s))
-    return -1;
-  // Reject obviously-overflowing inputs early.
-  size_t len = strlen(s);
-  if (len > 10)
     return -1;
   long long v = 0;
   for (char const *p = s; *p; ++p) {
     v = v * 10 + (*p - '0');
-    if (v >= 2147483647LL)
+    if (v >= (long long)INT_MAX)
       return -1;
   }
   return (int)v;
@@ -314,28 +308,10 @@ static kmp_device_env_state_t *__kmp_device_env_lookup(char const *base_name) {
   return &__kmp_device_env_states[idx];
 }
 
-extern "C" char const *__kmp_resolve_host_env(char const *base_name) {
-  kmp_device_env_state_t *st = __kmp_device_env_lookup(base_name);
-  if (st == NULL)
-    return NULL;
-  // Host: <ENV> > <ENV>_ALL.
-  if (st->host_value != NULL)
-    return st->host_value;
-  // Defensive: after `__kmp_env_initialize` completes, `host_value` is
-  // always populated whenever `<ENV>` or `<ENV>_ALL` was set (the post-pass
-  // calls `observe_host` after replaying `_ALL`). This `all_value` fallback
-  // covers the narrow window of an early query during init bootstrap (e.g.
-  // a query issued from inside `__kmp_stg_parse` while the post-pass has
-  // not yet run). Kept deliberately so the contract holds end-to-end.
-  if (st->all_value != NULL)
-    return st->all_value;
-  return NULL;
-}
-
-extern "C" char const *__kmp_resolve_device_env(char const *base_name,
-                                                int device_id) {
-  // Host queries must use `__kmp_resolve_host_env`; this entry point is for
-  // non-host devices only and takes a 0-based, non-negative device id.
+extern "C" char const *__kmpc_get_device_env(char const *base_name,
+                                             int device_id) {
+  // Host ICVs are observed through the existing OpenMP APIs. This entry
+  // point is for non-host devices only and takes a 0-based device id.
   KMP_DEBUG_ASSERT(device_id >= 0);
   if (device_id < 0)
     return NULL;
@@ -355,22 +331,12 @@ extern "C" char const *__kmp_resolve_device_env(char const *base_name,
   return NULL;
 }
 
-extern "C" void __kmp_device_env_observe_host(char const *full_name,
-                                              char const *value) {
-  int idx = __kmp_device_env_index(full_name);
-  if (idx < 0 || value == NULL)
-    return;
-  __kmp_device_env_lazy_init();
-  __kmp_device_env_set_string(&__kmp_device_env_states[idx].host_value, value);
-}
-
 extern "C" void __kmp_device_env_reset(void) {
   if (__kmp_device_env_states == NULL)
     return;
   int count = __kmp_device_env_count();
   for (int i = 0; i < count; ++i) {
     kmp_device_env_state_t *st = &__kmp_device_env_states[i];
-    __kmp_str_free(&st->host_value);
     __kmp_str_free(&st->all_value);
     __kmp_str_free(&st->dev_default_value);
     kmp_device_env_dev_node_t *n = st->per_device;

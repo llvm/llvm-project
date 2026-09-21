@@ -6242,7 +6242,6 @@ void __kmp_env_initialize(char const *string) {
     }
     if (__kmp_device_env_record(block.vars[i].name, block.vars[i].value))
       continue;
-    __kmp_device_env_observe_host(block.vars[i].name, block.vars[i].value);
 
     kmp_setting_t *setting = __kmp_stg_find(block.vars[i].name);
     if (setting != NULL) {
@@ -6298,10 +6297,8 @@ void __kmp_env_initialize(char const *string) {
     char *all_name = __kmp_str_format("%s_ALL", base);
     char const *all_v = __kmp_env_blk_var(&block, all_name);
     __kmp_str_free(&all_name);
-    if (all_v != NULL) {
+    if (all_v != NULL)
       __kmp_stg_parse(base, all_v);
-      __kmp_device_env_observe_host(base, all_v);
-    }
   }
 
   // If user locks have been allocated yet, don't reset the lock vptr table.

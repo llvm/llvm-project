@@ -24,7 +24,7 @@
 //
 // Restrictions enforced:
 //   * Device-specific environment variables are only accepted for env vars
-//     listed in `__kmp_device_env_table` (i.e. those that initialize
+//     listed in `__kmp_device_env_eligible_names` (i.e. those that initialize
 //     device-scope ICVs and are not global-scope or `OMP_DEFAULT_DEVICE`).
 //     Suffix forms applied to other env vars are ignored with a warning.
 //   * `<ENV>_DEV_<token>` where <token> is not a non-negative integer is
@@ -46,20 +46,10 @@ extern "C" {
 //   0 -- not a device-scope variant; caller continues normal processing.
 int __kmp_device_env_record(char const *full_name, char const *value);
 
-// Resolve the effective string for `base_name` on the host device:
-//   <ENV> > <ENV>_ALL > NULL.
-// Host and device queries are intentionally separate functions so a caller
-// can never accidentally pass a non-host device id (or vice versa).
-char const *__kmp_resolve_host_env(char const *base_name);
-
 // Resolve the effective string for `base_name` on a non-host device:
 //   <ENV>_DEV_<d> > <ENV>_DEV > <ENV>_ALL > NULL.
 // `device_id` is 0-based and must be >= 0.
-char const *__kmp_resolve_device_env(char const *base_name, int device_id);
-
-// Record an unsuffixed `<ENV>=value` pair so the host query is consistent
-// with the host ICV. No-op for non-eligible names.
-void __kmp_device_env_observe_host(char const *full_name, char const *value);
+char const *__kmpc_get_device_env(char const *base_name, int device_id);
 
 // Free all storage owned by the registry.
 void __kmp_device_env_reset(void);
