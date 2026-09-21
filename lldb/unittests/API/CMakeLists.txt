@@ -5,11 +5,13 @@ add_lldb_unittest(APITests
   SBMutexTest.cpp
   SBBreakpointClearConditionTest.cpp
   SBProtocolServerTest.cpp
+  SBProgressTest.cpp
 
   SBAPITEST
 
   LINK_LIBS
     liblldb
+    LLVMTestingSupport
     lldbSBUtilityHelpers
   )
 

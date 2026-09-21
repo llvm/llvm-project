@@ -14,6 +14,7 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+sys.path.append(os.path.join(config.lldb_src_root, "test"))
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
 
@@ -144,9 +145,6 @@ if getattr(config, "lldb_enable_mte", False):
 
 if config.lldb_enable_lua:
     config.available_features.add("lua")
-
-if config.lldb_enable_lzma:
-    config.available_features.add("lzma")
 
 if shutil.which("xz") is not None:
     config.available_features.add("xz")

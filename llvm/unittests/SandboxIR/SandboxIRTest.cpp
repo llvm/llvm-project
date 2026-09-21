@@ -1743,6 +1743,41 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(St1->getOperand(0), Ld0);
 }
 
+TEST_F(SandboxIRTest, Value_stripAndAccumulate) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, <2 x ptr> %ptrs) {
+  %gep0 = getelementptr i8, ptr %ptr, i32 0
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  const DataLayout &DL = M->getDataLayout();
+  BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMIt = LLVMBB->begin();
+  auto *LLVMGEP = &*LLVMIt++;
+  sandboxir::Context Ctx(C);
+  Ctx.createFunction(&LLVMF);
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  auto *GEP = &*It++;
+
+  unsigned Bits = DL.getIndexTypeSizeInBits(LLVMGEP->getType());
+  APInt Offset(Bits, 0);
+  bool AllowNonInbounds = true;
+  bool AllowInvariantGroup = true;
+  function_ref<bool(sandboxir::Value &, APInt &)> ExternalAnalysis = nullptr;
+  auto *Res = GEP->stripAndAccumulateConstantOffsets(
+      DL, Offset, AllowNonInbounds, AllowInvariantGroup, ExternalAnalysis);
+
+  APInt LLVMOffset(Bits, 0);
+  function_ref<bool(llvm::Value &, APInt &)> LLVMExternalAnalysis = nullptr;
+  auto *LLVMRes = LLVMGEP->stripAndAccumulateConstantOffsets(
+      DL, LLVMOffset, AllowNonInbounds, AllowInvariantGroup,
+      LLVMExternalAnalysis);
+  EXPECT_EQ(Res, Ctx.getValue(LLVMRes));
+  EXPECT_EQ(Offset, LLVMOffset);
+}
+
 // Check that the operands/users are counted correctly.
 //  I1
 // /  \
@@ -6341,6 +6376,104 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   EXPECT_THAT(Inserted, testing::IsEmpty());
   EXPECT_THAT(Removed, testing::IsEmpty());
   EXPECT_THAT(Moved, testing::IsEmpty());
+}
+
+TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
+  parseIR(C, R"IR(
+    define void @foo(i8 %v0, ptr %ptr) {
+      %add0 = add i8 %v0, %v0
+      ret void
+    }
+  )IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  sandboxir::Argument *Val = F.getArg(0);
+  sandboxir::Argument *Ptr = F.getArg(1);
+  auto It = BB.begin();
+  sandboxir::Instruction *Add0 = &*It++;
+  sandboxir::Instruction *Ret = &*It++;
+  auto *Arg0 = F.getArg(0);
+
+  // Callbacks write to this vector.
+  SmallVector<unsigned> CBs;
+  {
+    // Check EraseInstr callbacks.
+    CBs.clear();
+    // The first callback.
+    auto CB0 = Ctx.registerEraseInstrCallback(
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
+    // This callback is placed after the first.
+    [[maybe_unused]] auto CB1 = Ctx.registerEraseInstrCallback(
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(1); });
+    // This should insert this callback before the first.
+    [[maybe_unused]] auto CB2 = Ctx.registerEraseInstrCallback(
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(2); },
+        /*BeforeID=*/CB0);
+    Ctx.save();
+    Ret->eraseFromParent();
+    EXPECT_THAT(CBs, testing::ElementsAre(2, 0, 1));
+    Ctx.revert();
+  }
+  {
+    // Check CreateInstr callbacks.
+    CBs.clear();
+    // The first callback.
+    auto CB0 = Ctx.registerCreateInstrCallback(
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
+    // This callback is placed after the first.
+    [[maybe_unused]] auto CB1 = Ctx.registerCreateInstrCallback(
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(1); });
+    // This should insert this callback before the first.
+    [[maybe_unused]] auto CB2 = Ctx.registerCreateInstrCallback(
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(2); },
+        /*BeforeID=*/CB0);
+    Ctx.save();
+    sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
+                                 Ret->getIterator(), Ctx);
+    EXPECT_THAT(CBs, testing::ElementsAre(2, 0, 1));
+    Ctx.revert();
+  }
+  {
+    // Check MoveInstr callbacks.
+    CBs.clear();
+    // The first callback.
+    auto CB0 = Ctx.registerMoveInstrCallback(
+        [&CBs](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
+          CBs.push_back(10);
+        });
+    // This should insert this callback before the first.
+    [[maybe_unused]] auto CB1 = Ctx.registerMoveInstrCallback(
+        [&CBs](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
+          CBs.push_back(11);
+        },
+        /*BeforeID=*/CB0);
+    Ctx.save();
+    Ret->moveBefore(Add0);
+    EXPECT_THAT(CBs, testing::ElementsAre(11, 10));
+    Ctx.revert();
+  }
+  {
+    // Check SetUse callbacks.
+    CBs.clear();
+    // The first callback.
+    auto CB0 = Ctx.registerSetUseCallback(
+        [&CBs](sandboxir::Use U, sandboxir::Value *NewSrc) {
+          CBs.push_back(100);
+        });
+    // This should insert this callback before the first.
+    [[maybe_unused]] auto CB1 = Ctx.registerSetUseCallback(
+        [&CBs](sandboxir::Use U, sandboxir::Value *NewSrc) {
+          CBs.push_back(101);
+        },
+        /*BeforeID=*/CB0);
+    Ctx.save();
+    Add0->setOperand(0, Arg0);
+    EXPECT_THAT(CBs, testing::ElementsAre(101, 100));
+    Ctx.revert();
+  }
 }
 
 // Check callbacks when we set a Use.

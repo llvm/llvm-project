@@ -418,6 +418,62 @@ add_libc_test(
 )
 
 add_libc_test(
+  mkdtemp_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mkdtemp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.stdlib.mkdtemp
+    libc.src.string.strdup
+    libc.src.string.strlen
+    libc.src.sys.stat.stat
+    libc.src.unistd.access
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  mkostemp_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    mkostemp_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.func.free
+    libc.hdr.signal_macros
+    libc.hdr.stdio_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
+    libc.hdr.unistd_macros
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
+    libc.src.fcntl.fcntl
+    libc.src.stdlib.mkostemp
+    libc.src.string.strdup
+    libc.src.string.strlen
+    libc.src.sys.stat.stat
+    libc.src.unistd.access
+    libc.src.unistd.close
+    libc.src.unistd.lseek
+    libc.src.unistd.read
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.MemoryMatcher
+)
+
+add_libc_test(
   mkstemp_test
   SUITE
     libc-stdlib-tests
@@ -601,3 +657,16 @@ if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
       libc.src.stdlib.free
   )
 endif()
+
+add_libc_test(
+  getloadavg_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    getloadavg_test.cpp
+  DEPENDS
+    libc.src.stdlib.getloadavg
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+

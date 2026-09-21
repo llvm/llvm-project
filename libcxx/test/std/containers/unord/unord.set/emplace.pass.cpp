@@ -18,6 +18,7 @@
 //     pair<iterator, bool> emplace(Args&&... args);
 
 #include <cassert>
+#include <string>
 #include <unordered_set>
 
 #include "../../Emplaceable.h"
@@ -74,6 +75,15 @@ int main(int, char**) {
     auto res = set.emplace(std::pair<MoveOnly, MoveOnly>(2, 4));
     assert(std::get<1>(res));
     assert(set.begin() == std::get<0>(res));
+  }
+  { // Regression test for https://llvm.org/PR220451.
+    // Make sure emplace with multiple arguments doesn't extract the first argument as a key for unordered sets.
+    std::unordered_set<std::string> s;
+    s.emplace("foo");
+    auto res = s.emplace(std::string("ofoo"), 1);
+    assert(!res.second);
+    assert(s.size() == 1);
+    assert(*s.begin() == "foo");
   }
 
   return 0;

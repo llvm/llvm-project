@@ -432,10 +432,6 @@ private:
 
   void updateInstrDef(MachineInstr *NewMI, ValueMapTy &VRMap, bool LastDef);
 
-  void generateKernelPhi(Register OrigLoopVal, Register NewLoopVal,
-                         unsigned UnrollNum,
-                         SmallVectorImpl<ValueMapTy> &VRMapProlog,
-                         SmallVectorImpl<ValueMapTy> &VRMapPhi);
   void updateInstrUse(MachineInstr *MI, int StageNum, int PhaseNum,
                       SmallVectorImpl<ValueMapTy> &CurVRMap,
                       SmallVectorImpl<ValueMapTy> *PrevVRMap);

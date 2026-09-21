@@ -775,7 +775,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   auto MakeArg = [&](const unsigned I) {
     Type *Ty = CB.getArgOperand(I)->getType();
 
-    if (CB.paramHasAttr(I, Attribute::ByVal)) {
+    if (CB.isByValArgument(I)) {
       Type *ETy = CB.getParamByValType(I);
       Align ParamByValAlign = getDeviceByValParamAlign(
           &CB, ETy, I + AttributeList::FirstArgIndex, DL);
@@ -2663,7 +2663,7 @@ static const DILocation *getInlineAsmDebugLoc(const MachineInstr *MI) {
   if (!SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return nullptr;
   const DILocation *DL = MI->getDebugLoc();
-  if (!DL->getFile() || !DL->getLine())
+  if (!DL->getFile() || !DL->getLine() || DL->isImplicitCode())
     return nullptr;
   return DL;
 }

@@ -7,8 +7,6 @@
 SomeObj *provide();
 void consume_obj(SomeObj*);
 
-NSString *provide_str();
-
 CFMutableArrayRef provide_cf();
 void consume_cf(CFMutableArrayRef);
 
@@ -450,15 +448,6 @@ namespace alloc_init_pair {
   void foo() {
     auto obj = adoptNS([[SomeObj alloc] init]);
     [obj doWork];
-    auto obj2 = adoptNS([[SomeObj alloc] _init]);
-    [obj2 doWork];
-  }
-
-  void bar(NSZone *zone) {
-    auto obj = adoptNS([[SomeObj allocWithZone:zone] init]);
-    [obj doWork];
-    auto obj2 = adoptNS([(SomeObj *)[SomeObj allocWithZone:zone] _init]);
-    [obj2 doWork];
   }
 }
 
@@ -645,7 +634,6 @@ SomeObj *allocObj();
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
 - (SomeObj *)getSomeObj;
-+ (SomeObj *)sharedObj;
 @end
 
 @implementation TestObject
@@ -665,25 +653,14 @@ SomeObj *allocObj();
   [self doWork:nil];
   [NSApp run];
   adoptNS([allocObj() init]);
-  [provide() isEqual:provide()];
-  [provide_str() isEqualToString:@"foo"];
-  [provide_str() copyWithZone:nullptr];
-  [provide_str() mutableCopy];
 }
 
 - (SomeObj *)getSomeObj {
     return RetainPtr<SomeObj *>(provide()).autorelease();
 }
 
-+ (SomeObj *)sharedObj
-{
-    return adoptNS([[SomeObj alloc] init]).autorelease();
-}
-
 - (void)doWorkOnSomeObj {
     [[self getSomeObj] doWork];
-    // expected-warning@-1{{Receiver '[self getSomeObj]' (to '-[SomeObj doWork]') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
-    [[TestObject sharedObj] doWork];
 }
 
 - (CGImageRef)createImage {

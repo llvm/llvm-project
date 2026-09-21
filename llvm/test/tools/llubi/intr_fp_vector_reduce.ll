@@ -26,14 +26,14 @@ define void @main() {
 
   %fmaximum_num = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> <float 1.0, float 2.0, float 4.0, float 5.0>)
   %fmaximum_num_poison = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> <float 1.0, float poison, float 4.0, float 5.0>)
-  %fmaximum_num_nan = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> <float 1.0, float 0x7FF8000000000000, float 4.0, float 5.0>)
-  %fmaximum_num_all_nan = call float @llvm.vector.reduce.fmaximumnum.v2f32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %fmaximum_num_nan = call float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> <float 1.0, float +qnan, float 4.0, float 5.0>)
+  %fmaximum_num_all_nan = call float @llvm.vector.reduce.fmaximumnum.v2f32(<2 x float> <float +qnan, float +qnan>)
   %fmaximum_num_zeros = call float @llvm.vector.reduce.fmaximumnum.v2f32(<2 x float> <float -0.0, float 0.0>)
 
   %fminimum_num = call float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> <float 1.0, float 2.0, float 4.0, float 5.0>)
   %fminimum_num_poison = call float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> <float 1.0, float poison, float 4.0, float 5.0>)
-  %fminimum_num_nan = call float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> <float 0x7FF8000000000000, float 2.0, float 4.0, float 5.0>)
-  %fminimum_num_all_nan = call float @llvm.vector.reduce.fminimumnum.v2f32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %fminimum_num_nan = call float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> <float +qnan, float 2.0, float 4.0, float 5.0>)
+  %fminimum_num_all_nan = call float @llvm.vector.reduce.fminimumnum.v2f32(<2 x float> <float +qnan, float +qnan>)
   %fminimum_num_zeros = call float @llvm.vector.reduce.fminimumnum.v2f32(<2 x float> <float -0.0, float 0.0>)
 
   %sv_poison = insertelement <vscale x 4 x float> splat (float 2.0), float poison, i64 1

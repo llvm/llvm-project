@@ -92,6 +92,22 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(std::get<1>(res));
     assert(set.begin() == std::get<0>(res));
   }
+  { // Regression test for https://llvm.org/PR220451.
+    // Make sure emplace with multiple arguments doesn't extract the first argument as a key for sets.
+    struct S {
+      const int val;
+      TEST_CONSTEXPR explicit S(int v) : val(v) {}
+      TEST_CONSTEXPR S(const S& s, int offset) : val(s.val + offset) {}
+      TEST_CONSTEXPR bool operator<(const S& other) const { return val < other.val; }
+      TEST_CONSTEXPR bool operator==(const S& other) const { return val == other.val; }
+    };
+    std::set<S> s;
+    s.emplace(2);
+    auto res = s.emplace(S(1), 1);
+    assert(!res.second);
+    assert(s.size() == 1);
+    assert(s.begin()->val == 2);
+  }
 
   return true;
 }

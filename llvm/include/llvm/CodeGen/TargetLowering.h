@@ -929,13 +929,13 @@ public:
   // Given:
   //    (icmp eq/ne (and X, C0), (shift X, C1))
   // or
-  //    (icmp eq/ne X, (rotate X, CPow2))
+  //    (icmp eq/ne X, (rotate X, C1))
 
   // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
   // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
   // Do we prefer the shift to be shift-right, shift-left, or rotate.
-  // Note: Its only valid to convert the rotate version to the shift version iff
-  // the shift-amt (`C1`) is a power of 2 (including 0).
+  // Note: It's only valid to convert between the rotate and shift versions iff
+  // the shift-amt (`C1`) divides the bit width.
   // If ShiftOpc (current Opcode) is returned, do nothing.
   virtual unsigned preferedOpcodeForCmpEqPiecesOfOperand(
       EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
@@ -1775,6 +1775,24 @@ public:
     return Action == Legal || Action == Custom;
   }
 
+  /// Return how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and VT should be handled.
+  LegalizeAction getVectorInterleaveAction(unsigned Opc, unsigned Factor,
+                                           EVT VT) const {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.getSimpleVT().SimpleTy};
+    auto It = VectorInterleaveActions.find(Key);
+    return It != VectorInterleaveActions.end() ? It->second : Expand;
+  }
+
+  /// Return true if a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and fragment type is legal or custom.
+  bool isVectorInterleaveLegalOrCustom(unsigned Opc, unsigned Factor,
+                                       EVT VT) const {
+    LegalizeAction Action = getVectorInterleaveAction(Opc, Factor, VT);
+    return Action == Legal || Action == Custom;
+  }
+
   /// If the action for this operation is to promote, this method returns the
   /// ValueType to promote to.
   MVT getTypeToPromoteTo(unsigned Op, MVT VT) const {
@@ -2279,8 +2297,14 @@ public:
   /// require a more complex expansion.
   unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
 
-  /// Whether the target supports unaligned atomic operations.
-  bool supportsUnalignedAtomics() const { return SupportsUnalignedAtomics; }
+  /// Return true if the target supports an atomic access of \p SizeInBytes
+  /// bytes at the given \p Alignment. The default implementation only allows
+  /// naturally aligned atomics, unless setSupportsUnalignedAtomics(true) was
+  /// called.
+  virtual bool isAtomicAlignmentSupported(Align Alignment,
+                                          uint64_t SizeInBytes) const {
+    return SupportsUnalignedAtomics || Alignment.value() >= SizeInBytes;
+  }
 
   /// Whether AtomicExpandPass should automatically insert fences and reduce
   /// ordering for this atomic. This should be true for most architectures with
@@ -2400,6 +2424,25 @@ public:
                                       MachineBasicBlock::instr_iterator &MBBI,
                                       const TargetInstrInfo *TII) const {
     llvm_unreachable("KCFI is not supported on this target");
+  }
+
+  /// @}
+
+  //===--------------------------------------------------------------------===//
+  /// \name Speculative load lowering.
+  /// @{
+
+  /// Emit code to check if a speculative load of the given size from Ptr is
+  /// safe. Returns a Value* representing the check result (i1), or nullptr
+  /// to use the default lowering (which returns false). Targets can override
+  /// to provide their own safety check (e.g., alignment-based page boundary
+  /// check).
+  /// \param Builder IRBuilder positioned at the intrinsic call site
+  /// \param Ptr the pointer operand
+  /// \param Size the size in bytes (constant or runtime value for scalable)
+  virtual Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                          Value *Size) const {
+    return nullptr;
   }
 
   /// @}
@@ -2873,6 +2916,23 @@ protected:
                                  MVT InputVT, LegalizeAction Action) {
     for (unsigned Opc : Opcodes)
       setPartialReduceMLAAction(Opc, AccVT, InputVT, Action);
+  }
+
+  /// Indicate how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor Factor and type VT should be treated.
+  void setVectorInterleaveAction(unsigned Opc, unsigned Factor, MVT VT,
+                                 LegalizeAction Action) {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.SimpleTy};
+    VectorInterleaveActions[Key] = Action;
+  }
+
+  void setVectorInterleaveAction(ArrayRef<unsigned> Opcodes,
+                                 ArrayRef<unsigned> Factors, MVT VT,
+                                 LegalizeAction Action) {
+    for (unsigned Opc : Opcodes)
+      for (unsigned Factor : Factors)
+        setVectorInterleaveAction(Opc, Factor, VT, Action);
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -3904,6 +3964,12 @@ private:
   /// keep a LegalizeAction which indicates how instruction selection should
   /// deal with this operation.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
+
+  using VectorInterleaveActionKey =
+      std::tuple<unsigned, unsigned, MVT::SimpleValueType>;
+  /// For each vector (de)interleave opcode, interleave factor and fragment
+  /// type combination, keep the corresponding LegalizeAction.
+  DenseMap<VectorInterleaveActionKey, LegalizeAction> VectorInterleaveActions;
 
   ValueTypeActionImpl ValueTypeActions;
 
@@ -5947,6 +6013,9 @@ public:
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
+
+  // Expand ISD::MULH[SU]. Can expand to MUL_LOHI or wide MUL if available.
+  SDValue expandMULH(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Calculate the product twice the width of LHS and RHS. If HiLHS/HiRHS are
   /// non-null they will be included in the multiplication. The expansion works

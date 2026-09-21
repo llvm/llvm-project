@@ -722,8 +722,6 @@ public:
   llvm::Instruction *CurrentFuncletPad = nullptr;
 
   class CallLifetimeEnd final : public EHScopeStack::Cleanup {
-    bool isRedundantBeforeReturn() override { return true; }
-
     llvm::Value *Addr;
 
   public:
@@ -5441,9 +5439,13 @@ public:
   void EmitTrapCheck(llvm::Value *Checked, SanitizerHandler CheckHandlerID,
                      bool NoMerge = false, const TrapReason *TR = nullptr);
 
-  /// Emit a call to trap or debugtrap and attach function attribute
-  /// "trap-func-name" if specified.
-  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID);
+  /// Emit a call to trap or debugtrap. If 'EnsureInsertPoint' is false, the
+  /// IR builder need not have a valid insert point after this returns.
+  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID,
+                               bool EnsureInsertPoint = true);
+
+  /// Emit a call to '\@llvm.trap()' and clear the current insert point.
+  void EmitTrapCallAndMakeUnreachable();
 
   /// Emit a stub for the cross-DSO CFI check function.
   void EmitCfiCheckStub();
