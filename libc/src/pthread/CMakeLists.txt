@@ -607,6 +607,9 @@ add_entrypoint_object(
     libc.src.pthread.pthread_attr_getguardsize
     libc.src.pthread.pthread_attr_getstack
     libc.src.errno.errno
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+    -fno-omit-frame-pointer
 )
 
 add_entrypoint_object(

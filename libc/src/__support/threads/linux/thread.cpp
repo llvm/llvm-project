@@ -11,7 +11,6 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/clone.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getpid.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
@@ -33,15 +32,19 @@
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/threads/thread_attributes.h"
 
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include <arm_acle.h>
+#endif
+
 #include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sched_macros.h" // For CLONE_* flags.
 #include "hdr/signal_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h" // For PROT_* and MAP_* definitions.
-#include <linux/param.h>         // For EXEC_PAGESIZE.
-#include <linux/prctl.h>         // For PR_SET_NAME
-#include <sys/syscall.h>         // For syscall numbers.
+#include <linux/param.h> // For EXEC_PAGESIZE.
+#include <linux/prctl.h> // For PR_SET_NAME
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -58,6 +61,16 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
     | CLONE_CHILD_CLEARTID // Let the kernel clear the tid address
                            // wake the joining thread.
     | CLONE_SETTLS;        // Setup the thread pointer of the new thread.
+
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#define CLONE_RESULT_REGISTER "x0"
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#define CLONE_RESULT_REGISTER "t0"
+#elif defined(LIBC_TARGET_ARCH_IS_X86_64)
+#define CLONE_RESULT_REGISTER "rax"
+#else
+#error "CLONE_RESULT_REGISTER not defined for your target architecture"
+#endif
 
 static constexpr ErrorOr<size_t> add_no_overflow(size_t lhs, size_t rhs) {
   if (lhs > SIZE_MAX - rhs)
@@ -145,8 +158,31 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
     free_stack(attrib->stack, attrib->stacksize, attrib->guardsize);
 }
 
-static int start_thread(void *arg) {
-  auto *start_args = reinterpret_cast<StartArgs *>(arg);
+[[gnu::always_inline]] LIBC_INLINE uintptr_t get_start_args_addr() {
+// NOTE: For __builtin_frame_address to work reliably across compilers,
+// architectures and various optimization levels, the TU including this file
+// should be compiled with -fno-omit-frame-pointer.
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0))
+         // The x86_64 call instruction pushes resume address on to the stack.
+         // Next, The x86_64 SysV ABI requires that the frame pointer be pushed
+         // on to the stack. So, we have to step past two 64-bit values to get
+         // to the start args.
+         + sizeof(uintptr_t) * 2;
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+  // The frame pointer after cloning the new thread in the Thread::run method
+  // is set to the stack pointer where start args are stored. So, we fetch
+  // from there.
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(1));
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+  // The current frame pointer is the previous stack pointer where the start
+  // args are stored.
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
+#endif
+}
+
+[[gnu::noinline]] void start_thread() {
+  auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
 
   if (attrib->style == ThreadStyle::POSIX) {
@@ -156,7 +192,6 @@ static int start_thread(void *arg) {
     ThreadReturnValue retval = start_args->runner.stdc_runner(start_args->arg);
     thread_exit(retval, ThreadStyle::STDC);
   }
-  return 0;
 }
 
 int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
@@ -205,11 +240,14 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   init_tls(tls);
 
   // When the new thread is spawned by the kernel, the new thread gets the
-  // stack we pass to the clone syscall. Thread initialization structures
-  // (StartArgs, ThreadAttributes, and the clear_tid Futex) are allocated on
-  // the new thread's stack memory so their lifetime is managed with the stack
-  // without requiring heap allocation. A pointer to StartArgs is passed
-  // directly to start_thread via the clone syscall wrapper's argument.
+  // stack we pass to the clone syscall. However, this stack is empty and does
+  // not have any local vars present in this function. Hence, one cannot
+  // pass arguments to the thread start function, or use any local vars from
+  // here. So, we pack them into the new stack from where the thread can sniff
+  // them out.
+  //
+  // Likewise, the actual thread state information is also stored on the
+  // stack memory.
 
   static constexpr size_t INTERNAL_STACK_DATA_SIZE =
       sizeof(StartArgs) + sizeof(ThreadAttributes) + sizeof(Futex);
@@ -260,15 +298,48 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 
   get_tcb(tls.tp)->attrib = attrib;
 
-  auto clone_result = linux_syscalls::clone(
-      start_thread, reinterpret_cast<void *>(adjusted_stack),
-      CLONE_SYSCALL_FLAGS, start_args, &attrib->tid,
-      reinterpret_cast<void *>(tls.tp),
-      reinterpret_cast<pid_t *>(&clear_tid->val));
+  // The clone syscall takes arguments in an architecture specific order.
+  // Also, we want the result of the syscall to be in a register as the child
+  // thread gets a completely different stack after it is created. The stack
+  // variables from this function will not be availalbe to the child thread.
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+  long register clone_result asm(CLONE_RESULT_REGISTER);
+  clone_result = LIBC_NAMESPACE::syscall_impl<long>(
+      SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
+      &attrib->tid,    // The address where the child tid is written
+      &clear_tid->val, // The futex where the child thread status is signalled
+      tls.tp           // The thread pointer value for the new thread.
+  );
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
+    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+  long register clone_result asm(CLONE_RESULT_REGISTER);
+  clone_result = LIBC_NAMESPACE::syscall_impl<long>(
+      SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
+      &attrib->tid,   // The address where the child tid is written
+      tls.tp,         // The thread pointer value for the new thread.
+      &clear_tid->val // The futex where the child thread status is signalled
+  );
+#else
+#error "Unsupported architecture for the clone syscall."
+#endif
 
-  if (!clone_result.has_value()) {
+  if (clone_result == 0) {
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+    // We set the frame pointer to be the same as the "sp" so that start args
+    // can be sniffed out from start_thread.
+#ifdef __clang__
+    // GCC does not currently implement __arm_wsr64/__arm_rsr64.
+    __arm_wsr64("x29", __arm_rsr64("sp"));
+#else
+    asm volatile("mov x29, sp");
+#endif
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+    asm volatile("mv fp, sp");
+#endif
+    start_thread();
+  } else if (clone_result < 0) {
     cleanup_thread_resources(attrib);
-    return clone_result.error();
+    return static_cast<int>(-clone_result);
   }
 
   return 0;
