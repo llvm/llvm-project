@@ -88,6 +88,11 @@ int main(int, char**) {
         }
       });
     }
+
+    writer_threads.clear();
+    reader_threads.clear();
+    auto glb = global_ptr.load();
+    delete glb;
   }
 
   return 0;

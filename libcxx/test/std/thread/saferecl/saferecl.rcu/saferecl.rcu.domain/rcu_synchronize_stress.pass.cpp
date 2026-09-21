@@ -50,7 +50,7 @@ int main(int, char**) {
 
     std::vector<std::jthread> sync_threads;
     for (size_t i = 0; i < num_sync_threads; ++i) {
-      sync_threads.push_back(support::make_test_jthread([&](std::stop_token st) {
+      sync_threads.push_back(support::make_test_jthread([&, i](std::stop_token st) {
         while (!st.stop_requested()) {
           std::array<int, num_reader_threads> pre_sync_reader_count{};
           for (size_t j = 0; j < num_reader_threads; ++j) {
