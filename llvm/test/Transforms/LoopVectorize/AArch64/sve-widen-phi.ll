@@ -110,8 +110,7 @@ define void @widen_ptr_phi_unrolled(ptr noalias nocapture %a, ptr noalias nocapt
 ; CHECK-EPI-TF:       vector.body:
 ; CHECK-EPI-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-EPI-TF-NEXT:    [[TMP6:%.*]] = shl i64 [[INDEX]], 3
-; CHECK-EPI-TF-NEXT:    [[TMP7:%.*]] = add i64 [[TMP3]], 0
-; CHECK-EPI-TF-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 8
+; CHECK-EPI-TF-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP3]], 8
 ; CHECK-EPI-TF-NEXT:    [[TMP9:%.*]] = add i64 [[TMP6]], [[TMP8]]
 ; CHECK-EPI-TF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[C]], i64 [[TMP6]]
 ; CHECK-EPI-TF-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[C]], i64 [[TMP9]]
