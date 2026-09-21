@@ -226,8 +226,8 @@ specified, allowing any of the following inputs:
 ```
 compiler -f          # No value, 'Force' == true
 compiler -f=true     # Value specified, 'Force' == true
-compiler -f=TRUE     # Value specified, 'Force' == true
-compiler -f=FALSE    # Value specified, 'Force' == false
+compiler -f=1        # Value specified, 'Force' == true
+compiler -f=false    # Value specified, 'Force' == false
 ```
 
 ... you get the idea.  The {ref}`bool parser <bool parser>` just turns the string values into
@@ -922,12 +922,12 @@ cl::opt<bool> Quiet("quiet");
   defaults to the value created by the default constructor for the
   type.
 
-```{warning}
+:::{warning}
 If you specify both **cl::init** and **cl::location** for an option, you
 must specify **cl::location** first, so that when the command-line parser
 sees **cl::init**, it knows where to put the initial value. (You will get an
 error at runtime if you don't put them in the right order.)
-```
+:::
 
 (cl::location)=
 
@@ -960,16 +960,6 @@ error at runtime if you don't put them in the right order.)
 
   You will get a compile time error if you try to use cl::values with a parser
   that does not support it.
-
-(cl::multi_val)=
-
-* The **cl::multi_val** attribute specifies that this option takes has multiple
-  values (example: `-sectalign segname sectname sectvalue`). This attribute
-  takes one unsigned argument - the number of values for the option. This
-  attribute is valid only on `cl::list` options (and will fail with compile
-  error if you try to use it with other option types). It is allowed to use all
-  of the usual modifiers on multi-valued options (besides
-  `cl::ValueDisallowed`, obviously).
 
 (cl::cat)=
 
@@ -1249,14 +1239,6 @@ specify boolean properties that modify the option.
   be applied to the "`-pos1`" option and the "`-bork`" string to be applied
   to the "`-pos2`" option.
 
-(cl::Sink)=
-
-* The **cl::Sink** modifier is used to handle unknown options. If there is at
-  least one option with `cl::Sink` modifier specified, the parser passes
-  unrecognized option strings to it as values instead of signaling an error. As
-  with `cl::CommaSeparated`, this modifier only makes sense with a {ref}`cl::list <cl::list>`
-  option.
-
 (response files)=
 
 #### Response files
@@ -1515,8 +1497,8 @@ work with new data types and new ways of interpreting the same data.  See the
 (bool parser)=
 
 * The **parser<bool> specialization** is used to convert boolean strings to a
-  boolean value.  Currently accepted strings are "`true`", "`TRUE`",
-  "`True`", "`1`", "`false`", "`FALSE`", "`False`", and "`0`".
+  boolean value.  Currently accepted strings are "`true`", "`1`",
+  "`false`", and "`0`".
 
 * The **parser<boolOrDefault> specialization** is used for cases where the value
   is boolean, but we also need to know whether the option was specified at all.
@@ -1695,14 +1677,14 @@ library. Examples of this include the `llvm::DebugFlag` exported by the
 `lib/Support/Debug.cpp` file and the `llvm::TimePassesIsEnabled` flag
 exported by the `lib/IR/PassManager.cpp` file.
 
-```{todo}
+:::{todo}
 TODO: complete this section
-```
+:::
 
 (dynamically loaded options)=
 
 ### Dynamically adding command line options
 
-```{todo}
+:::{todo}
 TODO: fill in this section
-```
+:::

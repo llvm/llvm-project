@@ -8,11 +8,21 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaProfileCompliance.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
 
+// Building this ~5,000-line generated initializer map under MemorySanitizer
+// leads to extreme compile times (>3.5 minutes) during InstCombine and greedy
+// register allocation due to shadow/origin instrumentation overhead. Disable
+// optimization under MSan to keep build times manageable.
+#if LLVM_MEMORY_SANITIZER_BUILD
+__attribute__((optnone))
+#else
+LLVM_ATTRIBUTE_MINSIZE
+#endif
 TosaProfileCompliance::TosaProfileCompliance() {
   const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
   const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};

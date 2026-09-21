@@ -23,6 +23,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DroppedVariableStatsIR.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
@@ -68,8 +69,8 @@ private:
           IRName{IRName}, PassID(PassID) {}
   };
 
-  void printBeforePass(StringRef PassID, Any IR);
-  void printAfterPass(StringRef PassID, Any IR);
+  void printBeforePass(StringRef PassID, IRUnitRef IR);
+  void printAfterPass(StringRef PassID, IRUnitRef IR);
   void printAfterPassInvalidated(StringRef PassID);
 
   bool shouldPrintBeforePass(StringRef PassID);
@@ -80,7 +81,8 @@ private:
   bool shouldPrintBeforeSomePassNumber();
   bool shouldPrintAfterSomePassNumber();
 
-  void pushPassRunDescriptor(StringRef PassID, Any IR, unsigned PassNumber);
+  void pushPassRunDescriptor(StringRef PassID, IRUnitRef IR,
+                             unsigned PassNumber);
   PassRunDescriptor popPassRunDescriptor(StringRef PassID);
 
   enum class IRDumpFileSuffixType {
@@ -114,7 +116,7 @@ public:
 private:
   bool DebugLogging;
   ExtendedIRContext *IRContext = nullptr;
-  bool shouldRun(StringRef PassID, Any IR);
+  bool shouldRun(StringRef PassID, IRUnitRef IR);
 };
 
 class OptPassGateInstrumentation {
@@ -122,7 +124,7 @@ class OptPassGateInstrumentation {
   bool HasWrittenIR = false;
 public:
   OptPassGateInstrumentation(LLVMContext &Context) : Context(Context) {}
-  LLVM_ABI bool shouldRun(StringRef PassName, Any IR);
+  LLVM_ABI bool shouldRun(StringRef PassName, IRUnitRef IR);
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
                                   ExtendedIRContext *IRContext = nullptr);
 
@@ -215,7 +217,7 @@ class ExtendedIRTraits {
   ExtendedIRTraits& operator=(ExtendedIRTraits&&) = delete;
 
   virtual ~ExtendedIRTraits() = default;
-  virtual std::optional<std::string> getIRName(Any IR) const = 0;
+  virtual std::optional<std::string> getIRName(IRUnitRef IR) const = 0;
 };
 
 struct ExtendedIRContext {
@@ -258,9 +260,9 @@ public:
 
   // Determine if this pass/IR is interesting and if so, save the IR
   // otherwise it is left on the stack without data.
-  void saveIRBeforePass(Any IR, StringRef PassID, StringRef PassName);
+  void saveIRBeforePass(IRUnitRef IR, StringRef PassID, StringRef PassName);
   // Compare the IR from before the pass after the pass.
-  void handleIRAfterPass(Any IR, StringRef PassID, StringRef PassName);
+  void handleIRAfterPass(IRUnitRef IR, StringRef PassID, StringRef PassName);
   // Handle the situation where a pass is invalidated.
   void handleInvalidatedPass(StringRef PassID);
 
@@ -269,16 +271,16 @@ protected:
   void registerRequiredCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Called on the first IR processed.
-  virtual void handleInitialIR(Any IR) = 0;
+  virtual void handleInitialIR(IRUnitRef IR) = 0;
   // Called before and after a pass to get the representation of the IR.
-  virtual void generateIRRepresentation(Any IR, StringRef PassID,
+  virtual void generateIRRepresentation(IRUnitRef IR, StringRef PassID,
                                         IRUnitT &Output) = 0;
   // Called when the pass is not iteresting.
   virtual void omitAfter(StringRef PassID, std::string &Name) = 0;
   // Called when an interesting IR has changed.
   virtual void handleAfter(StringRef PassID, std::string &Name,
                            const IRUnitT &Before, const IRUnitT &After,
-                           Any) = 0;
+                           IRUnitRef) = 0;
   // Called when an interesting pass is invalidated.
   virtual void handleInvalidated(StringRef PassID) = 0;
   // Called when the IR or pass is not interesting.
@@ -286,8 +288,13 @@ protected:
   // Called when an ignored pass is encountered.
   virtual void handleIgnored(StringRef PassID, std::string &Name) = 0;
 
-  // Stack of IRs before passes.
-  std::vector<IRUnitT> BeforeStack;
+  struct BeforeIR {
+    IRUnitT Data;
+    bool IsInteresting = false;
+  };
+
+  // Stack of IRs before passes and whether they matched the filters.
+  std::vector<BeforeIR> BeforeStack;
   // Is this the first IR seen?
   bool InitialIR = true;
 
@@ -306,7 +313,7 @@ protected:
   TextChangeReporter(bool Verbose);
 
   // Print a module dump of the first IR that is changed.
-  void handleInitialIR(Any IR) override;
+  void handleInitialIR(IRUnitRef IR) override;
   // Report that the IR was omitted because it did not change.
   void omitAfter(StringRef PassID, std::string &Name) override;
   // Report that the pass was invalidated.
@@ -334,12 +341,12 @@ public:
 
 protected:
   // Called before and after a pass to get the representation of the IR.
-  void generateIRRepresentation(Any IR, StringRef PassID,
+  void generateIRRepresentation(IRUnitRef IR, StringRef PassID,
                                 std::string &Output) override;
   // Called when an interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
-                   Any) override;
+                   IRUnitRef) override;
 };
 
 class LLVM_ABI IRChangedTester : public IRChangedPrinter {
@@ -352,7 +359,7 @@ protected:
   void handleIR(const std::string &IR, StringRef PassID);
 
   // Check initial IR
-  void handleInitialIR(Any IR) override;
+  void handleInitialIR(IRUnitRef IR) override;
   // Do nothing.
   void omitAfter(StringRef PassID, std::string &Name) override;
   // Do nothing.
@@ -365,7 +372,7 @@ protected:
   // Call test as interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
-                   Any) override;
+                   IRUnitRef) override;
 };
 
 // Information that needs to be saved for a basic block in order to compare
@@ -471,7 +478,7 @@ public:
           CompareFunc);
 
   // Analyze \p IR and build the IR representation in \p Data.
-  static void analyzeIR(Any IR, IRDataT<T> &Data);
+  static void analyzeIR(IRUnitRef IR, IRDataT<T> &Data);
 
 protected:
   // Generate the data for \p F into \p Data.
@@ -499,13 +506,13 @@ public:
 
 protected:
   // Create a representation of the IR.
-  void generateIRRepresentation(Any IR, StringRef PassID,
+  void generateIRRepresentation(IRUnitRef IR, StringRef PassID,
                                 IRDataT<EmptyData> &Output) override;
 
   // Called when an interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const IRDataT<EmptyData> &Before,
-                   const IRDataT<EmptyData> &After, Any) override;
+                   const IRDataT<EmptyData> &After, IRUnitRef) override;
 
   void handleFunctionCompare(StringRef Name, StringRef Prefix, StringRef PassID,
                              StringRef Divider, bool InModule, unsigned Minor,
@@ -539,7 +546,7 @@ public:
 
 private:
   // Implementation of pass instrumentation callbacks.
-  void runBeforePass(StringRef PassID, Any IR);
+  void runBeforePass(StringRef PassID, IRUnitRef IR);
   void runAfterPass();
 
   ExtendedIRContext *IRContext = nullptr;
@@ -590,16 +597,16 @@ protected:
   bool initializeHTML();
 
   // Called on the first IR processed.
-  void handleInitialIR(Any IR) override;
+  void handleInitialIR(IRUnitRef IR) override;
   // Called before and after a pass to get the representation of the IR.
-  void generateIRRepresentation(Any IR, StringRef PassID,
+  void generateIRRepresentation(IRUnitRef IR, StringRef PassID,
                                 IRDataT<DCData> &Output) override;
   // Called when the pass is not iteresting.
   void omitAfter(StringRef PassID, std::string &Name) override;
   // Called when an interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const IRDataT<DCData> &Before, const IRDataT<DCData> &After,
-                   Any) override;
+                   IRUnitRef) override;
   // Called when an interesting pass is invalidated.
   void handleInvalidated(StringRef PassID) override;
   // Called when the IR or pass is not interesting.

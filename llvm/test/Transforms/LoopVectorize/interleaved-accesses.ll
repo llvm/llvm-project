@@ -574,10 +574,10 @@ define void @load_gap_reverse(ptr noalias nocapture %P1, ptr noalias nocapture %
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i64> poison, i64 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP30]], i64 [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i64> poison, i64 [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP14]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP30]], i64 [[TMP15]], i64 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub nsw <4 x i64> [[TMP19]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP21]], ptr [[TMP4]], align 8

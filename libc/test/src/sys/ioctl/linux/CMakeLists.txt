@@ -1,6 +1,6 @@
 add_custom_target(libc_sys_ioctl_unittests)
 
-add_libc_unittest(
+add_libc_test(
   ioctl_test
   SUITE
     libc_sys_ioctl_unittests

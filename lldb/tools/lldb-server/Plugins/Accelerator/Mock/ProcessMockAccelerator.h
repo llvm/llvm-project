@@ -30,6 +30,10 @@ public:
 
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
+
+    Extension GetSupportedExtensions() const override {
+      return Extension::address_spaces;
+    }
   };
 
   ProcessMockAccelerator(lldb::pid_t pid, NativeDelegate &delegate);
@@ -40,10 +44,10 @@ public:
   Status Signal(int signo) override;
   Status Kill() override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   lldb::addr_t GetSharedLibraryInfoAddress() override;
   size_t UpdateThreads() override;
@@ -59,6 +63,8 @@ public:
                                  FileSpec &file_spec) override;
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
+
+  std::vector<AddressSpaceInfo> GetAddressSpaces() override;
 
 private:
   mutable ArchSpec m_arch;

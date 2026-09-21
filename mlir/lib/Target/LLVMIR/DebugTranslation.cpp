@@ -138,11 +138,24 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
       /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
 }
 
+static llvm::DISourceLanguageName getSourceLanguage(DICompileUnitAttr attr) {
+  DISourceLanguageNameAttr sourceLanguage = attr.getSourceLanguage();
+  // A DW_LNAME value selects the versioned source-language representation;
+  // otherwise, the value is an unversioned DW_LANG value.
+  if (sourceLanguage.getName())
+    return llvm::DISourceLanguageName(
+        static_cast<uint16_t>(sourceLanguage.getName()),
+        *sourceLanguage.getVersion(),
+        static_cast<uint16_t>(sourceLanguage.getDialect()));
+  return llvm::DISourceLanguageName(
+      static_cast<uint16_t>(sourceLanguage.getLanguage()),
+      static_cast<uint16_t>(sourceLanguage.getDialect()));
+}
+
 llvm::TempDICompileUnit
 DebugTranslation::translateTemporaryImpl(DICompileUnitAttr attr) {
   return llvm::DICompileUnit::getTemporary(
-      llvmCtx,
-      static_cast<llvm::DISourceLanguageName>(attr.getSourceLanguage()),
+      llvmCtx, getSourceLanguage(attr),
       /*File=*/nullptr, "", attr.getIsOptimized(),
       /*Flags=*/"", /*RuntimeVersion=*/0,
       /*splitDebugFileName=*/"",
@@ -166,7 +179,7 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
 
   llvm::DIBuilder builder(llvmModule);
   llvm::DICompileUnit *cu = builder.createCompileUnit(
-      attr.getSourceLanguage(), translate(attr.getFile()),
+      getSourceLanguage(attr), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
       /*Flags=*/"", /*RV=*/0,

@@ -96,9 +96,10 @@ private:
   /// registers are created.
   void MRI_NoteNewVirtualRegister(Register VReg) override;
 
-  /// Check if MachineOperand \p MO is a last use/kill either in the
+  /// Check if operand \p MO of \p MI is a last use/kill either in the
   /// main live range of \p LI or in one of the matching subregister ranges.
-  bool useIsKill(const LiveInterval &LI, const MachineOperand &MO) const;
+  bool useIsKill(const LiveInterval &LI, const MachineInstr &MI,
+                 const MachineOperand &MO) const;
 
   /// Create a new empty interval based on OldReg.
   LiveInterval &createEmptyIntervalFrom(Register OldReg, bool createSubRanges);
