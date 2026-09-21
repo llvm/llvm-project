@@ -155,6 +155,27 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   theModule->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
                      builder.getI32IntegerAttr(target.getIntWidth()));
 
+  // Serialize the lowering-relevant LangOptions onto the ModuleOp so a reloaded
+  // .cir is self-describing and lowers the same way it was compiled, without a
+  // live clang::LangOptions. Set here (like the triple) rather than in
+  // release() so it is present even when codegen bails on an error, keeping it
+  // a hard invariant that post-CIRGen lowering can rely on. See
+  // #cir.lowering_lang_options.
+  theModule->setAttr(
+      cir::CIRDialect::getLoweringLangOptionsAttrName(),
+      cir::LoweringLangOptionsAttr::get(
+          &mlirContext,
+          /*exceptions=*/langOpts.Exceptions,
+          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
+          /*cuda=*/langOpts.CUDA,
+          /*cuda_is_device=*/langOpts.CUDAIsDevice,
+          /*hip=*/langOpts.HIP,
+          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
+          /*openmp=*/langOpts.OpenMP != 0,
+          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
+          /*clang_abi_compat=*/
+          static_cast<int32_t>(langOpts.getClangABICompat())));
+
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
                        cir::OptInfoAttr::get(&mlirContext,
@@ -3972,24 +3993,6 @@ void CIRGenModule::release() {
                          builder.getStringAttr(fnName));
     }
   }
-
-  // Serialize the lowering-relevant LangOptions onto the ModuleOp,
-  // unconditionally, so a reloaded .cir module is self-describing. See
-  // #cir.lowering_lang_options.
-  theModule->setAttr(
-      cir::CIRDialect::getLoweringLangOptionsAttrName(),
-      cir::LoweringLangOptionsAttr::get(
-          &getMLIRContext(),
-          /*exceptions=*/langOpts.Exceptions,
-          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
-          /*cuda=*/langOpts.CUDA,
-          /*cuda_is_device=*/langOpts.CUDAIsDevice,
-          /*hip=*/langOpts.HIP,
-          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
-          /*openmp=*/langOpts.OpenMP != 0,
-          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
-          /*clang_abi_compat=*/
-          static_cast<int32_t>(langOpts.getClangABICompat())));
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.
