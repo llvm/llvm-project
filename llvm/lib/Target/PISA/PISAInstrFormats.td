@@ -639,8 +639,8 @@ multiclass AtomicScopeControlDef<string mnemonic, bits<8> value> {
   def EnumName : AtomicScopeControlEntry<entry, mnemonic, value>;
 }
 
-// Must be in sync with llvm::pisa::MemoryScope definitions in
-// llvm/include/llvm/IR/PISAIntrinsicUtils.h
+// Values match the ABI-sensitive llvm::AtomicScope definitions in
+// llvm/include/llvm/TargetParser/AtomicScope.h.
 defm NONE      : AtomicScopeControlDef<"", AtomicScopeControlDefault>;
 defm SYSTEM    : AtomicScopeControlDef<"system",    0>;
 defm GPU       : AtomicScopeControlDef<"gpu",       1>;

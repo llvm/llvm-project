@@ -142,10 +142,10 @@ void PISAInstPrinter::printGlobalVariableOpnd(const MCInst *MCI,
 void PISAInstPrinter::printMemScopeOpnd(const MCInst *MCI, unsigned OpNo,
                                         raw_ostream &OS) {
   static const char *MemScopeStrs[] = {
-      ".system",    // pisa::MemoryScope::system
-      ".gpu",       // pisa::MemoryScope::gpu
-      ".workgroup", // pisa::MemoryScope::workgroup
-      ".subgroup",  // pisa::MemoryScope::subgroup
+      ".system",    // llvm::AtomicScope::System
+      ".gpu",       // llvm::AtomicScope::Device
+      ".workgroup", // llvm::AtomicScope::Workgroup
+      ".subgroup",  // llvm::AtomicScope::Wavefront
   };
   const MCOperand &MCOp = MCI->getOperand(OpNo);
   const unsigned Scope = MCOp.getImm();
