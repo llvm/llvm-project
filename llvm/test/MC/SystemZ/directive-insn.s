@@ -239,3 +239,58 @@ label.autogen_ril_c:
 
 #CHECK: e3 12 34 56 78 16      llgf %r1, 492630(%r2,%r3)
       .insn rxy_a,0xe30000000016,%r1,492630(%r2,%r3)
+
+# Test mii with label targets to exercise PCRel12 and PCRel24 fixups.
+# Exact target addresses depend on layout; just verify the opcode bytes.
+#CHECK: c5 00
+      .insn mii,0xc50000000000,0,label.mii.ri2,label.mii.ri3
+      .insn e,0x0101
+      .insn e,0x0101
+label.mii.ri2:
+      .insn e,0x0101
+      .insn e,0x0101
+      .insn e,0x0101
+      .insn e,0x0101
+label.mii.ri3:
+
+# Test optional trailing operands (short-form invocations).
+# Where a trailing operand is omitted it defaults to 0.
+
+#CHECK: 04 10                  spm %r1
+      .insn rr,0x0400,%r1
+
+#CHECK: b3 8c 00 40            efpc %r4
+      .insn rre,0xb38c0000,%r4
+
+#CHECK: b9 28 00 00            pckmo
+      .insn rre,0xb9280000
+
+#CHECK: b3 d2 30 12            adtr %f1, %f2, %f3
+      .insn rrf_a,0xb3d20000,%f1,%f2,%f3
+
+#CHECK: b3 d2 00 12            adtr %f1, %f2, %f0
+      .insn rrf_a,0xb3d20000,%f1,%f2
+
+#CHECK: b3 f6 20 13            iedtr %f1, %f2, %r3
+      .insn rrf_b,0xb3f60000,%f1,%f2,%r3
+
+#CHECK: b9 72 00 12            crt %r1, %r2, 0
+      .insn rrf_c,0xb9720000,%r1,%r2
+
+#CHECK: b3 d7 10 12            fidtr %f1, 1, %f2, 0
+      .insn rrf_e,0xb3d70000,%f1,1,%f2
+
+#CHECK: 86 10 30 00            bxh %r1, %r0, 0(%r3)
+      .insn rs_a,0x86000000,%r1,0(%r3)
+
+#CHECK: ed 13 f0 a0 00 19      cdb %f1, 160(%r3,%r15)
+      .insn rxe,0xed0000000019,%f1,160(%r3,%r15)
+
+#CHECK: b2 fc 00 00            tabort 0
+      .insn s,0xb2fc0000
+
+#CHECK: 91 00 f0 a0            tm 160(%r15), 0
+      .insn si,0x91000000,160(%r15)
+
+#CHECK: eb 00 fc de ab 51      tmy -344866(%r15), 0
+      .insn siy,0xeb0000000051,-344866(%r15)

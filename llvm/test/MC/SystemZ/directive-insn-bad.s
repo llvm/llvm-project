@@ -111,3 +111,19 @@
 # CHECK: error: unexpected operand type
 # CHECK: .insn rsl_a,0xeb00000000c0,4096(2,%r2)
         .insn rsl_a,0xeb00000000c0,4096(2,%r2)     # 12-bit displacement in BDL address, value too large (max 4095)
+
+# Test "too many operands" for a format that has optional-operand variants.
+# 's' has BD2Opt (enc only) and the full form (enc + BD2).
+# Supplying a third operand after a valid BD2 must be rejected.
+
+# CHECK: error: too many operands to .insn directive
+# CHECK: .insn s,0xb2fc0000,160(%r15),0
+        .insn s,0xb2fc0000,160(%r15),0
+
+# Test "too many operands" for an optional-operand vector format.
+# 'vri_a' has M3Opt (enc,V1,I2) and the full form (enc,V1,I2,M3).
+# Supplying a fifth operand must be rejected.
+
+# CHECK: error: too many operands to .insn directive
+# CHECK: .insn vri_a,0xe70000000044,%v1,9029,0,1
+        .insn vri_a,0xe70000000044,%v1,9029,0,1

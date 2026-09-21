@@ -31,3 +31,14 @@ label.START:
 #CHECK: e6 01 20 30 00 77      vcp %v1, %v2, 3
       .insn vrr_h,0xe60000000077,%v1,%v2,3
 
+# Test optional trailing operands (short-form invocations for z14 formats).
+# Where a trailing operand is omitted it defaults to 0.
+
+#CHECK: e6 0f 00 00 00 5f      vtp %v15
+      .insn vrr_g,0xe6000000005f,%v15
+
+#CHECK: e6 01 20 00 00 77      vcp %v1, %v2, 0
+      .insn vrr_h,0xe60000000077,%v1,%v2
+
+#CHECK: e6 12 00 30 00 50      vcvb %r1, %v2, 3
+      .insn vrr_i,0xe60000000050,%r1,%v2,3
