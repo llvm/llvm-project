@@ -1503,21 +1503,10 @@ public:
   /// Returns nullptr if the indices cannot be converted to ptradd form.
   LLVM_ABI static Constant *
   getGetElementPtr(const DataLayout &DL, Type *Ty, Constant *C,
-                   ArrayRef<Value *> IdxList,
-                   GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
-                   std::optional<ConstantRange> InRange = std::nullopt,
-                   Type *OnlyIfReducedTy = nullptr);
-
-  static Constant *
-  getGetElementPtr(const DataLayout &DL, Type *Ty, Constant *C,
                    ArrayRef<Constant *> IdxList,
                    GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
                    std::optional<ConstantRange> InRange = std::nullopt,
-                   Type *OnlyIfReducedTy = nullptr) {
-    return getGetElementPtr(
-        DL, Ty, C, ArrayRef((Value *const *)IdxList.data(), IdxList.size()), NW,
-        InRange, OnlyIfReducedTy);
-  }
+                   Type *OnlyIfReducedTy = nullptr);
 
   /// Create a getelementptr i8, ptr, offset constant expression.
   static Constant *

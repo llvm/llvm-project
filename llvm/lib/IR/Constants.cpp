@@ -2711,22 +2711,25 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
 }
 
 Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
-                                         Constant *C, ArrayRef<Value *> Idxs,
+                                         Constant *C, ArrayRef<Constant *> Idxs,
                                          GEPNoWrapFlags NW,
                                          std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   // Handle already canonical GEP.
-  if (Ty->isIntegerTy(8))
-    return getPtrAdd(C, cast<Constant>(Idxs[0]), NW, InRange, OnlyIfReducedTy);
+  if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
+    return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
 
+  // Some API's require an ArrayRef of Value * instead of Constant *.
+  ArrayRef<Value *> ValIdxs =
+      ArrayRef((Value *const *)Idxs.data(), Idxs.size());
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
   assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
 
-  Type *RetTy = GetElementPtrInst::getGEPReturnType(C, Idxs);
+  Type *RetTy = GetElementPtrInst::getGEPReturnType(C, ValIdxs);
   Type *IdxTy = DL.getIndexType(RetTy);
 
   Constant *Offset = Constant::getNullValue(IdxTy);
-  auto GTI = gep_type_begin(Ty, Idxs), GTE = gep_type_end(Ty, Idxs);
+  auto GTI = gep_type_begin(Ty, ValIdxs), GTE = gep_type_end(Ty, ValIdxs);
   for (; GTI != GTE; ++GTI) {
     auto *Idx = cast<Constant>(GTI.getOperand());
     if (Idx->isNullValue())
@@ -2753,7 +2756,7 @@ Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
 
     // Convert to correct type.
     if (Idx->getType() != IdxTy) {
-      Idx = ConstantFoldCastInstruction(Idx->getType()->getScalarSizeInBits() >
+      Idx = ConstantFoldCastInstruction(Idx->getType()->getScalarSizeInBits() <
                                                 IdxTy->getScalarSizeInBits()
                                             ? Instruction::SExt
                                             : Instruction::Trunc,
