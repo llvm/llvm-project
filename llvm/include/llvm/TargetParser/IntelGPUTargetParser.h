@@ -28,15 +28,15 @@ namespace IntelGPU {
 /// compatibility names that stand for a whole product line.
 enum GPUKind : uint8_t {
   GK_NONE = 0,
-#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX) \
-  GK_##KIND,
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_SUFFIX) GK_##KIND,
 #define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX) GK_##KIND,
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 };
 
 /// \return the device name that \p GPUIPVersion identifies, as reported by the
 /// driver, e.g. "xe-pvc". If the table lists no such device, return an empty
-/// string. The revision is ignored: every stepping of a release is one device.
+/// string. Only the major and minor versions are looked at, so every revision
+/// of a device resolves to the same name.
 /// If several rows match, the first one in IntelGPUTargetParser.def wins.
 LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 

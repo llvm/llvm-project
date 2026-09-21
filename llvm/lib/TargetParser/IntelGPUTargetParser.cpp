@@ -20,43 +20,40 @@ using namespace IntelGPU;
 //
 //    31           22 21      14 13       6 5        0
 //   +---------------+----------+----------+----------+
-//   |  architecture |  release | reserved | revision |
+//   |     major     |   minor  | reserved | revision |
 //   +---------------+----------+----------+----------+
 //        10 bits      8 bits     8 bits     6 bits
 //
 // The reserved bits carry no information.
-static constexpr uint32_t GPUIPArchitectureShift = 22;
-static constexpr uint32_t GPUIPReleaseShift = 14;
-static constexpr uint32_t GPUIPReleaseMask = 0xff;
+static constexpr uint32_t GPUIPMajorShift = 22;
+static constexpr uint32_t GPUIPMinorShift = 14;
+static constexpr uint32_t GPUIPMinorMask = 0xff;
 static constexpr uint32_t GPUIPRevisionMask = 0x3f;
 
-// The bits that identify a device: the architecture and the release. Neither
-// the revision nor the reserved bits take part in the lookup, because every
-// stepping of a release is one device as far as the compiler is concerned.
-static constexpr uint32_t GPUIPDeviceMask = ~0u << GPUIPReleaseShift;
+// The bits that identify a device: the major and the minor version. Neither the
+// revision nor the reserved bits take part in the lookup, because every
+// revision of a device is one device as far as the compiler is concerned.
+static constexpr uint32_t GPUIPDeviceMask = ~0u << GPUIPMinorShift;
 
-// Pack an architecture and a release the way a GPU IP version does, so that a
+// Pack a major and a minor version the way a GPU IP version does, so that a
 // row of the table can be compared against a reported version as it is.
-static constexpr uint32_t packDevice(uint32_t Architecture, uint32_t Release) {
-  return (Architecture << GPUIPArchitectureShift) |
-         (Release << GPUIPReleaseShift);
+static constexpr uint32_t packDevice(uint32_t Major, uint32_t Minor) {
+  return (Major << GPUIPMajorShift) | (Minor << GPUIPMinorShift);
 }
 
 StringRef llvm::IntelGPU::getArchName(uint32_t GPUIPVersion) {
   const uint32_t Device = GPUIPVersion & GPUIPDeviceMask;
-#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX) \
-  if (Device == packDevice(ARCHITECTURE, RELEASE))                             \
+#define INTEL_GPU(NAME, KIND, MAJOR, MINOR, IGCA_TARGET, IGCA_SUFFIX)          \
+  if (Device == packDevice(MAJOR, MINOR))                                      \
     return NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
   return "";
 }
 
 std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
-  const uint32_t Architecture = GPUIPVersion >> GPUIPArchitectureShift;
-  const uint32_t Release =
-      (GPUIPVersion >> GPUIPReleaseShift) & GPUIPReleaseMask;
+  const uint32_t Major = GPUIPVersion >> GPUIPMajorShift;
+  const uint32_t Minor = (GPUIPVersion >> GPUIPMinorShift) & GPUIPMinorMask;
   const uint32_t Revision = GPUIPVersion & GPUIPRevisionMask;
-  return ("xe_" + Twine(Architecture) + "." + Twine(Release) + "." +
-          Twine(Revision))
+  return ("xe_" + Twine(Major) + "." + Twine(Minor) + "." + Twine(Revision))
       .str();
 }

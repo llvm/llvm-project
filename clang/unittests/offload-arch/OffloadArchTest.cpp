@@ -250,9 +250,9 @@ TEST(KFDTopology, GFX1250NonA0IsPrintedPlain) {
 
 namespace {
 // Build a GPU IP version the way the Level Zero driver reports it.
-constexpr uint32_t gpuIPVersion(uint32_t Architecture, uint32_t Release,
+constexpr uint32_t gpuIPVersion(uint32_t Major, uint32_t Minor,
                                 uint32_t Revision) {
-  return (Architecture << 22) | (Release << 14) | Revision;
+  return (Major << 22) | (Minor << 14) | Revision;
 }
 } // namespace
 
@@ -263,15 +263,15 @@ TEST(IntelGPUArchName, KnownArchitecturesGetAFriendlyName) {
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 0, 0)), "xe-tgllp");
 }
 
-// When several devices share an architecture and a release, the first one
-// listed in IntelGPUTargetParser.def names the whole group.
+// When several devices share a major and a minor version, the first one listed
+// in IntelGPUTargetParser.def names the whole group.
 TEST(IntelGPUArchName, FirstNameOfAGroupWins) {
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(30, 5, 0)), "xe-nvl-u");
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 55, 0)), "xe-acm-g10");
 }
 
-// The revision is not part of the lookup: every stepping of an architecture
-// shares one name.
+// Devices with the same major and minor versions but different revisions are
+// the same device.
 TEST(IntelGPUArchName, RevisionDoesNotAffectTheName) {
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 0)), "xe-pvc");
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 63)), "xe-pvc");
