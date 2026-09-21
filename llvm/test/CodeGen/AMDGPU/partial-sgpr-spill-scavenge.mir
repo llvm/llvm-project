@@ -1,0 +1,90 @@
+# RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx900 -amdgpu-spill-sgpr-to-vgpr=false -start-before=si-lower-sgpr-spills -stop-after=prolog-epilog -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,W64
+# RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-spill-sgpr-to-vgpr=false -start-before=si-lower-sgpr-spills -stop-after=prolog-epilog -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,W32
+
+# A partial spill must preserve the other words when no SGPR can save EXEC.
+# Keep the allocatable SGPRs (including VCC_HI in wave32) live across the spill.
+# The second function exhausts the VGPRs too, requiring both active and inactive
+# lanes to be restored.
+# Hand-written checks focus on this preservation sequence and omit the long
+# register-pressure operands.
+
+--- |
+  define amdgpu_kernel void @no_sgpr() #0 { ret void }
+  define amdgpu_kernel void @no_sgpr_or_vgpr() #1 { ret void }
+  attributes #0 = { "amdgpu-num-sgpr"="40" }
+  attributes #1 = { "amdgpu-num-sgpr"="40" "amdgpu-num-vgpr"="1" }
+...
+---
+name: no_sgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  scratchRSrcReg: '$sgpr96_sgpr97_sgpr98_sgpr99'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    liveins: $vcc, $vcc_hi, $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr32, $sgpr33, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $sgpr39
+    ; CHECK-LABEL: name: no_sgpr
+    ; CHECK: $sgpr20 = S_MOV_B32 104
+    ; W64-NEXT: [[EXEC:\$exec]] = [[NOT:S_NOT_B64]] [[EXEC]], implicit-def dead $scc, implicit-def $vgpr0
+    ; W32-NEXT: [[EXEC:\$exec_lo]] = [[NOT:S_NOT_B32]] [[EXEC]], implicit-def dead $scc, implicit-def $vgpr0
+    ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, 0, 16, 0, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr20, 3, $vgpr0
+    ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, 0, 16, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc, implicit killed $vgpr0
+    ; CHECK-NEXT: S_ENDPGM 0
+
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr20 = S_MOV_B32 104
+    SI_SPILL_S32_SAVE_partial $sgpr20, %stack.0, 12, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0 + 12)
+    S_ENDPGM 0, implicit $vcc, implicit $vcc_hi, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr28, implicit $sgpr29, implicit $sgpr30, implicit $sgpr31, implicit $sgpr32, implicit $sgpr33, implicit $sgpr34, implicit $sgpr35, implicit $sgpr36, implicit $sgpr37, implicit $sgpr38, implicit $sgpr39
+...
+---
+name: no_sgpr_or_vgpr
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  scratchRSrcReg: '$sgpr96_sgpr97_sgpr98_sgpr99'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    liveins: $vcc, $vcc_hi, $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr32, $sgpr33, $sgpr34, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $sgpr39, $vgpr0
+    ; CHECK-LABEL: name: no_sgpr_or_vgpr
+    ; CHECK: $sgpr20 = S_MOV_B32 104
+    ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, 0, 16, 0, 0, implicit $exec
+    ; W64-NEXT: [[EXEC:\$exec]] = [[NOT:S_NOT_B64]] [[EXEC]], implicit-def dead $scc
+    ; W32-NEXT: [[EXEC:\$exec_lo]] = [[NOT:S_NOT_B32]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, 0, 16, 0, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr20, 3, $vgpr0
+    ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, 0, 16, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[EXEC]] = [[NOT]] [[EXEC]], implicit-def dead $scc
+    ; CHECK-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, 0, 16, 0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr20 = S_MOV_B32 104
+    SI_SPILL_S32_SAVE_partial $sgpr20, %stack.0, 12, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.0 + 12)
+    S_ENDPGM 0, implicit $vcc, implicit $vcc_hi, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr28, implicit $sgpr29, implicit $sgpr30, implicit $sgpr31, implicit $sgpr32, implicit $sgpr33, implicit $sgpr34, implicit $sgpr35, implicit $sgpr36, implicit $sgpr37, implicit $sgpr38, implicit $sgpr39, implicit $vgpr0
+...

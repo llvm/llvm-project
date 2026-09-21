@@ -1,0 +1,353 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=si-lower-sgpr-spills -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,OPT
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=liveintervals,si-lower-sgpr-spills -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,OPT
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -run-pass=liveintervals,si-lower-sgpr-spills -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,OPT
+
+# These narrow checks isolate the optional word store; other lane
+# instructions are shared with ordinary spill-lowering tests.
+# A reload proves the current value of a slot word. Copies retain that
+# proof; changes to the source or slot word invalidate it. Keep the proof
+# inside one block and stop at unknown memory effects.
+# CHECK-LABEL: name: same_word
+# OPT-NOT: SI_SPILL_S32_TO_VGPR killed $sgpr5,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: copied_high_word
+# OPT-NOT: SI_SPILL_S32_TO_VGPR killed $sgpr9,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: other_word_changed
+# OPT-NOT: SI_SPILL_S32_TO_VGPR killed $sgpr5,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: source_changed
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr4, 0,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: source_alias_changed
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: slot_word_changed
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: slot_fully_changed
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: wrong_word
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr4, 2,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: different_slot
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: unknown_store
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: volatile_store
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: volatile_reload
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+# CHECK-LABEL: name: cross_block
+# CHECK: SI_SPILL_S32_TO_VGPR killed $sgpr5, 1,
+# CHECK: S_ENDPGM
+--- |
+  define amdgpu_kernel void @same_word() { ret void }
+  define amdgpu_kernel void @copied_high_word() { ret void }
+  define amdgpu_kernel void @other_word_changed() { ret void }
+  define amdgpu_kernel void @source_changed() { ret void }
+  define amdgpu_kernel void @source_alias_changed() { ret void }
+  define amdgpu_kernel void @slot_word_changed() { ret void }
+  define amdgpu_kernel void @slot_fully_changed() { ret void }
+  define amdgpu_kernel void @wrong_word() { ret void }
+  define amdgpu_kernel void @different_slot() { ret void }
+  define amdgpu_kernel void @unknown_store() { ret void }
+  define amdgpu_kernel void @volatile_store() { ret void }
+  define amdgpu_kernel void @volatile_reload() { ret void }
+  define amdgpu_kernel void @cross_block() { ret void }
+...
+---
+name: same_word
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: copied_high_word
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr8_sgpr9 = COPY $sgpr6_sgpr7
+    SI_SPILL_S32_SAVE_partial killed $sgpr9, %stack.0, 12, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: other_word_changed
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr20 = S_MOV_B32 101
+    SI_SPILL_S32_SAVE_partial killed $sgpr20, %stack.0, 12, implicit $exec, implicit $sgpr32
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: source_changed
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4 = S_ADD_U32 $sgpr4, 1, implicit-def dead $scc
+    SI_SPILL_S32_SAVE_partial killed $sgpr4, %stack.0, 0, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: source_alias_changed
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5 = S_MOV_B64 0
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: slot_word_changed
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr20 = S_MOV_B32 101
+    SI_SPILL_S32_SAVE_partial killed $sgpr20, %stack.0, 4, implicit $exec, implicit $sgpr32
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: slot_fully_changed
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr17 = S_MOV_B32 101
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: wrong_word
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    SI_SPILL_S32_SAVE_partial killed $sgpr4, %stack.0, 8, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: different_slot
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+  - { id: 1, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr17 = S_MOV_B32 201
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.1, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.1, implicit $exec, implicit $sgpr32
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: unknown_store
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    INLINEASM &"", 25
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: volatile_store
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32 :: (volatile store (s32) into %stack.0 + 4, addrspace 5)
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: volatile_reload
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (volatile load (s128) from %stack.0, align 4, addrspace 5)
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...
+---
+name: cross_block
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 16, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  hasSpilledSGPRs: true
+body: |
+  bb.0:
+    $sgpr16 = S_MOV_B32 11
+    $sgpr17 = S_MOV_B32 21
+    $sgpr18 = S_MOV_B32 31
+    $sgpr19 = S_MOV_B32 41
+    SI_SPILL_S128_SAVE $sgpr16_sgpr17_sgpr18_sgpr19, %stack.0, implicit $exec, implicit $sgpr32
+    $sgpr4_sgpr5_sgpr6_sgpr7 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $sgpr5
+    SI_SPILL_S32_SAVE_partial killed $sgpr5, %stack.0, 4, implicit $exec, implicit $sgpr32
+    $sgpr24_sgpr25_sgpr26_sgpr27 = SI_SPILL_S128_RESTORE %stack.0, implicit $exec, implicit $sgpr32
+    S_ENDPGM 0, implicit $sgpr24_sgpr25_sgpr26_sgpr27
+...

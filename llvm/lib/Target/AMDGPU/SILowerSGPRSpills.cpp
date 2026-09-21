@@ -21,16 +21,22 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIPreAllocateWWMRegs.h"
 #include "SISpillUtils.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/InitializePasses.h"
+#include <optional>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-lower-sgpr-spills"
+
+STATISTIC(NumPartialSpillsRemoved,
+          "Number of unchanged partial SGPR spills removed");
 
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
@@ -68,6 +74,8 @@ private:
   MBBVector RestoreBlocks;
 
   MachineBasicBlock *getCycleDomBB(CycleRef C);
+  bool isUnchangedPartialSpill(const MachineInstr &Store) const;
+  bool removeRedundantPartialSpills(MachineFunction &MF);
 
 public:
   SILowerSGPRSpills(LiveIntervals *LIS, SlotIndexes *Indexes,
@@ -445,6 +453,109 @@ bool SILowerSGPRSpillsLegacy::runOnMachineFunction(MachineFunction &MF) {
   return SILowerSGPRSpills(LIS, Indexes, MDT, MCI).run(MF);
 }
 
+// A partial store is redundant if its value came from the same slot word.
+// Trace physical copies back to a matching reload within this block,
+// stopping at clobbers or possible memory interference. Bound the search
+// to limit compile time; stack liveness alone does not prove redundancy.
+bool SILowerSGPRSpills::isUnchangedPartialSpill(
+    const MachineInstr &Store) const {
+  auto HasVolatileOrAtomicAccess = [](const MachineInstr &MI) {
+    return llvm::any_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+      return MMO->isVolatile() || MMO->isAtomic();
+    });
+  };
+  const MachineOperand &Data = Store.getOperand(0);
+  if (!Data.getReg().isPhysical() || Data.getSubReg() || Data.isUndef() ||
+      !AMDGPU::SGPR_32RegClass.contains(Data.getReg()) ||
+      HasVolatileOrAtomicAccess(Store))
+    return false;
+  MCRegister Reg = Data.getReg();
+  int FI = TII->getNamedOperand(Store, AMDGPU::OpName::addr)->getIndex();
+  int64_t Offset =
+      TII->getNamedOperand(Store, AMDGPU::OpName::offset)->getImm();
+  unsigned Visited = 0;
+  auto I = Store.getIterator();
+  while (I != Store.getParent()->instr_begin()) {
+    const MachineInstr &MI = *--I;
+    if (MI.isDebugInstr())
+      continue;
+    if (++Visited > 64 || MI.isBundled() || MI.isCall() ||
+        HasVolatileOrAtomicAccess(MI) ||
+        llvm::any_of(MI.operands(),
+                     [](const MachineOperand &MO) { return MO.isRegMask(); }))
+      return false;
+
+    if (TII->isSGPRSpill(MI)) {
+      int OtherFI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
+      if (MI.mayStore() && OtherFI == FI) {
+        if (MI.getOpcode() != AMDGPU::SI_SPILL_S32_SAVE_partial ||
+            TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm() ==
+                Offset)
+          return false;
+      }
+      if (MI.mayLoad() && MI.modifiesRegister(Reg, TRI)) {
+        TypeSize Bytes = TypeSize::getZero();
+        Register Loaded = TII->isLoadFromStackSlot(MI, OtherFI, Bytes);
+        if (OtherFI != FI || !Loaded.isPhysical() ||
+            MI.getOperand(0).getSubReg())
+          return false;
+        unsigned Sub = Loaded == Reg ? 0 : TRI->getSubRegIndex(Loaded, Reg);
+        if (Loaded != Reg && !Sub)
+          return false;
+        unsigned LoadedOffset = Sub ? TRI->getSubRegIdxOffset(Sub) / 8 : 0;
+        return Offset == LoadedOffset &&
+               Bytes == TypeSize::getFixed(TRI->getSpillSize(
+                            *TRI->getPhysRegBaseClass(Loaded)));
+      }
+    } else if (MI.mayStore() || MI.hasUnmodeledSideEffects()) {
+      return false;
+    }
+
+    if (!MI.modifiesRegister(Reg, TRI))
+      continue;
+    std::optional<DestSourcePair> Copy = TII->isCopyInstr(MI);
+    if (!Copy || !Copy->Source->isReg() || Copy->Source->isUndef() ||
+        Copy->Source->getSubReg() || Copy->Destination->getSubReg() ||
+        !Copy->Source->getReg().isPhysical() ||
+        !Copy->Destination->getReg().isPhysical())
+      return false;
+    MCRegister Dst = Copy->Destination->getReg();
+    unsigned Sub = Dst == Reg ? 0 : TRI->getSubRegIndex(Dst, Reg);
+    if (Dst != Reg && !Sub)
+      return false;
+    Reg = Sub ? TRI->getSubReg(Copy->Source->getReg(), Sub)
+              : Copy->Source->getReg().asMCReg();
+    if (!AMDGPU::SGPR_32RegClass.contains(Reg))
+      return false;
+  }
+  return false;
+}
+
+bool SILowerSGPRSpills::removeRedundantPartialSpills(MachineFunction &MF) {
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      if (MI.getOpcode() != AMDGPU::SI_SPILL_S32_SAVE_partial ||
+          MI.isBundled() || !isUnchangedPartialSpill(MI))
+        continue;
+      LLVM_DEBUG(dbgs() << "Removing unchanged partial spill: " << MI);
+      // Removing a physical use can shorten cached register-unit intervals.
+      if (LIS) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (MO.isReg() && MO.getReg().isPhysical())
+            LIS->removeAllRegUnitsForPhysReg(MO.getReg());
+        }
+      }
+      if (Indexes)
+        Indexes->removeMachineInstrFromMaps(MI);
+      MI.eraseFromParent();
+      ++NumPartialSpillsRemoved;
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
 bool SILowerSGPRSpills::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -468,7 +579,7 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     return false;
   }
 
-  bool MadeChange = false;
+  bool MadeChange = removeRedundantPartialSpills(MF);
   bool SpilledToVirtVGPRLanes = false;
 
   // TODO: CSR VGPRs will never be spilled to AGPRs. These can probably be

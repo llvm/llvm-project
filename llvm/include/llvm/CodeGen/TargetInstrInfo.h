@@ -1224,6 +1224,29 @@ public:
                      "TargetInstrInfo::storeRegToStackSlot!");
   }
 
+  /// Whether RC supports lane-selective ordinary spills. Targets opt in by
+  /// register class so callers can protect shared spill slots before splitting.
+  /// Unsupported classes retain the existing full-register spill policy.
+  /// The emission hook may still reject a particular lane mask without
+  /// mutation.
+  virtual bool supportsPartialSpill(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
+  /// Store only Lanes of SrcReg in the ordinary full-register spill layout.
+  /// The other parts of FrameIndex must be preserved. Return false without
+  /// modifying the function if the selected lanes cannot be stored directly.
+  /// Lanes describes target subregister lanes, not byte offsets. This hook is
+  /// for ordinary spills, not callee-save/unwind operations.
+  virtual bool storeRegToStackSlotPartial(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MI,
+                                          Register SrcReg, bool IsKill,
+                                          int FrameIndex,
+                                          const TargetRegisterClass *RC,
+                                          LaneBitmask Lanes) const {
+    return false;
+  }
+
   /// Load the specified register of the given register class from the specified
   /// stack frame index. The load instruction is to be added to the given
   /// machine basic block before the specified machine instruction. If \p

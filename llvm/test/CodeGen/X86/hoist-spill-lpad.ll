@@ -1,3 +1,4 @@
+; RUN: llc -enable-partial-spills -verify-machineinstrs -verify-regalloc < %s | FileCheck %s
 ; RUN: llc < %s | FileCheck %s
 ;
 ; PR27612. The following spill is hoisted from two locations: the fall
