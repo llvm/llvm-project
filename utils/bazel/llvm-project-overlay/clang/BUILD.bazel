@@ -1114,13 +1114,13 @@ cc_library(
         "lib/AST/*.cpp",
         "lib/AST/*.h",
         "lib/AST/ByteCode/*.cpp",
-        "lib/AST/ByteCode/*.h",
     ]) + [
         "lib/AST/AttrDocTable.inc",
         "lib/AST/ByteCode/Opcodes.inc",
     ],
     hdrs = glob([
         "include/clang/AST/*.h",
+        "lib/AST/ByteCode/*.h",
     ]),
     copts = [
         # FIXME: This is necessary to allow "file relative" include paths from
