@@ -123,19 +123,19 @@ def int_pisa_activemask          : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty],
 
 def int_pisa_dp4a_uu : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
-                           [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>,
+                           [IntrNoMem, ImmArg<ArgIndex<3>>,
                             SaturationArgInfo<ArgIndex<3>>]>;
 def int_pisa_dp4a_us : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
-                           [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>,
+                           [IntrNoMem, ImmArg<ArgIndex<3>>,
                             SaturationArgInfo<ArgIndex<3>>]>;
 def int_pisa_dp4a_su : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
-                           [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>,
+                           [IntrNoMem, ImmArg<ArgIndex<3>>,
                             SaturationArgInfo<ArgIndex<3>>]>;
 def int_pisa_dp4a_ss : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
                            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
-                           [IntrNoMem, IntrWillReturn, ImmArg<ArgIndex<3>>,
+                           [IntrNoMem, ImmArg<ArgIndex<3>>,
                             SaturationArgInfo<ArgIndex<3>>]>;
 
 def int_pisa_smad : PISADefaultAttrsIntrinsic<[llvm_anyint_ty],
