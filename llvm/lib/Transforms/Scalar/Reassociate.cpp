@@ -2256,8 +2256,8 @@ Instruction *ReassociatePass::canonicalizeNegFPConstantsForOp(Instruction *I,
     SmallVector<uint64_t, 1> NegOps{dwarf::DW_OP_neg};
     for (DbgVariableRecord *DVR : DPUsers) {
       DIExpression *NewExpr = DVR->getExpression();
-      for (unsigned Idx = 0, N = DVR->getNumVariableLocationOps();
-           Idx < N; ++Idx) {
+      for (unsigned Idx = 0, N = DVR->getNumVariableLocationOps(); Idx < N;
+           ++Idx) {
         if (DVR->getVariableLocationOp(Idx) == Negatible)
           NewExpr = DIExpression::appendOpsToArg(NewExpr, NegOps, Idx,
                                                  /*StackValue=*/true);
