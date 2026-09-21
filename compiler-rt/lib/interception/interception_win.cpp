@@ -270,6 +270,22 @@ static bool ChangeMemoryProtection(
 
 static bool RestoreMemoryProtection(
     uptr address, uptr size, DWORD old_protection) {
+  // Writing to an executable copy-on-write image page makes the page private
+  // and leaves it PAGE_EXECUTE_READWRITE. Restoring
+  // PAGE_EXECUTE_WRITECOPY can fail, so retain the equivalent protection for
+  // the private page.
+  if ((old_protection & PAGE_EXECUTE_WRITECOPY) != 0)
+    return true;
+
+  if ((old_protection & PAGE_WRITECOPY) != 0) {
+    // A non-executable copy-on-write page is also private after the write.
+    // Replace copy-on-write with ordinary write access while preserving the
+    // applicable protection modifiers.
+    const DWORD modifiers =
+        old_protection & (PAGE_GUARD | PAGE_NOCACHE | PAGE_WRITECOMBINE);
+    old_protection = PAGE_READWRITE | modifiers;
+  }
+
   DWORD unused;
   return ::VirtualProtect((void*)address, size,
                           old_protection,
