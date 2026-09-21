@@ -244,7 +244,7 @@ def Atan2F16F128 : Builtin, F16F128MathTemplate {
 
 def CopysignF16 : Builtin {
   let Spellings = ["__builtin_copysignf16"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
   let Prototype = "__fp16(__fp16, __fp16)";
 }
 
@@ -4053,7 +4053,7 @@ def Atan2 : FPMathTemplate, LibBuiltin<"math.h"> {
 
 def Copysign : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["copysign"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
 }
