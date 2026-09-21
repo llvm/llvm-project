@@ -202,6 +202,8 @@ std::error_code makeLongFormPath(const Twine &Path8,
 
 namespace fs {
 
+const file_t::value_type file_t::Invalid = INVALID_HANDLE_VALUE;
+
 std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
   auto BypassSandbox = sandbox::scopedDisable();
 
