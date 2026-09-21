@@ -822,12 +822,14 @@ template <class LP> void Writer::createLoadCommands() {
     seg->index = segIndex++;
   }
 
-  if (config->emitChainedFixups) {
-    in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
-    in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
-  } else {
-    in.header->addLoadCommand(make<LCDyldInfo>(
-        in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
+  if (!config->staticLink) {
+    if (config->emitChainedFixups) {
+      in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
+      in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
+    } else {
+      in.header->addLoadCommand(make<LCDyldInfo>(
+          in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
+    }
   }
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(
@@ -841,7 +843,8 @@ template <class LP> void Writer::createLoadCommands() {
 
   switch (config->outputType) {
   case MH_EXECUTE:
-    in.header->addLoadCommand(make<LCLoadDylinker>());
+    if (!config->staticLink)
+      in.header->addLoadCommand(make<LCLoadDylinker>());
     break;
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,

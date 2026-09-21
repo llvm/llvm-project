@@ -257,7 +257,6 @@ def dynamic : Flag<["-"], "dynamic">,
     Group<grp_kind>;
 def static : Flag<["-"], "static">,
     HelpText<"Link statically">,
-    Flags<[HelpHidden]>,
     Group<grp_kind>;
 def preload : Flag<["-"], "preload">,
     HelpText<"Produce an unsegmented binary for embedded systems">,

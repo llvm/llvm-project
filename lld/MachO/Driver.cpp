@@ -1821,6 +1821,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config = std::make_unique<Configuration>();
   symtab = std::make_unique<SymbolTable>();
   config->outputType = getOutputType(args);
+  if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
+    config->staticLink = arg->getOption().matches(OPT_static);
   target = createTargetInfo(args);
   depTracker = std::make_unique<DependencyTracker>(
       args.getLastArgValue(OPT_dependency_info));
@@ -2027,9 +2029,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_function_starts, OPT_no_function_starts, true);
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
-  config->emitChainedFixups = shouldEmitChainedFixups(args);
+  config->emitChainedFixups =
+      !config->staticLink && shouldEmitChainedFixups(args);
   config->emitInitOffsets =
-      config->emitChainedFixups || args.hasArg(OPT_init_offsets);
+      !config->staticLink &&
+      (config->emitChainedFixups || args.hasArg(OPT_init_offsets));
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
@@ -2226,9 +2230,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       config->markDeadStrippableDylib = true;
   }
 
-  if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
-    config->staticLink = (arg->getOption().getID() == OPT_static);
-
   if (const Arg *arg =
           args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace))
     config->namespaceKind = arg->getOption().getID() == OPT_twolevel_namespace
@@ -2375,7 +2376,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   config->adhocCodesign = args.hasFlag(
       OPT_adhoc_codesign, OPT_no_adhoc_codesign,
-      shouldAdhocSignByDefault(config->arch(), config->platform()));
+      !config->staticLink &&
+          shouldAdhocSignByDefault(config->arch(), config->platform()));
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion(), ctx->e.errs());
