@@ -15,9 +15,9 @@ define i32 @vec_struct_test(i32 %i, ptr nocapture readonly byval(%struct.vec_str
   ; 32BIT: bb.0.entry:
   ; 32BIT-NEXT:   liveins: $r3, $r5, $r6, $r7, $r8
   ; 32BIT-NEXT: {{  $}}
-  ; 32BIT-NEXT:   STW killed renamable $r7, 8, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 8, align 8)
-  ; 32BIT-NEXT:   STW killed renamable $r6, 4, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 4)
   ; 32BIT-NEXT:   STW renamable $r5, 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0, align 16)
+  ; 32BIT-NEXT:   STW killed renamable $r6, 4, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 4)
+  ; 32BIT-NEXT:   STW killed renamable $r7, 8, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 8, align 8)
   ; 32BIT-NEXT:   STW killed renamable $r8, 12, %fixed-stack.0 :: (store (s32) into %fixed-stack.0 + 12)
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r5, killed renamable $r3
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3

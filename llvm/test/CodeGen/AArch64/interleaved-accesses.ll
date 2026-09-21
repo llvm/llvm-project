@@ -1051,12 +1051,12 @@ define void @store_general_mask_factor4_undefmid(ptr %ptr, <32 x i32> %v0, <32 x
 ; NEON-IADISABLED-LABEL: store_general_mask_factor4_undefmid:
 ; NEON-IADISABLED:       // %bb.0:
 ; NEON-IADISABLED-NEXT:    zip1 v0.4s, v1.4s, v2.4s
-; NEON-IADISABLED-NEXT:    ldr q3, [sp]
-; NEON-IADISABLED-NEXT:    uzp1 v3.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    ldr s3, [sp]
 ; NEON-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; NEON-IADISABLED-NEXT:    mov v3.s[3], v2.s[0]
+; NEON-IADISABLED-NEXT:    uzp1 v1.4s, v1.4s, v3.4s
 ; NEON-IADISABLED-NEXT:    mov v0.s[1], v4.s[1]
-; NEON-IADISABLED-NEXT:    stp q3, q0, [x0]
+; NEON-IADISABLED-NEXT:    mov v1.s[3], v2.s[0]
+; NEON-IADISABLED-NEXT:    stp q1, q0, [x0]
 ; NEON-IADISABLED-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_general_mask_factor4_undefmid:
@@ -2110,9 +2110,10 @@ define <4 x i1> @load_large_vector(ptr %p) {
 ;
 ; NEON-IADISABLED-LABEL: load_large_vector:
 ; NEON-IADISABLED:       // %bb.0:
-; NEON-IADISABLED-NEXT:    ldp q1, q2, [x0, #32]
+; NEON-IADISABLED-NEXT:    ldr d0, [x0, #80]
+; NEON-IADISABLED-NEXT:    ldr d1, [x0, #32]
 ; NEON-IADISABLED-NEXT:    add x8, x0, #24
-; NEON-IADISABLED-NEXT:    ldr q0, [x0, #80]
+; NEON-IADISABLED-NEXT:    ldr q2, [x0, #48]
 ; NEON-IADISABLED-NEXT:    ldr q3, [x0]
 ; NEON-IADISABLED-NEXT:    add x9, x0, #72
 ; NEON-IADISABLED-NEXT:    ext v1.16b, v3.16b, v1.16b, #8

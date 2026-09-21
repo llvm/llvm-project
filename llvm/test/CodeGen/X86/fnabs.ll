@@ -10,7 +10,8 @@
 define float @scalar_no_abs(float %a) {
 ; AVX-LABEL: scalar_no_abs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: scalar_no_abs:
@@ -25,8 +26,10 @@ define float @scalar_no_abs(float %a) {
 define float @scalar_uses_abs(float %a) {
 ; AVX-LABEL: scalar_uses_abs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vmovss {{.*#+}} xmm2 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; AVX-NEXT:    vorps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;

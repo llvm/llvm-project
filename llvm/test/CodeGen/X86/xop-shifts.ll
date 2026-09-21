@@ -8,9 +8,12 @@
 define <16 x i8> @demandedelts_vpshab(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: demandedelts_vpshab:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpinsrb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
+; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshab %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <16 x i8> %a0, <16 x i8> undef, <16 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %shift = call <16 x i8> @llvm.x86.xop.vpshab(<16 x i8> %shuffle, <16 x i8> %a1)

@@ -242,7 +242,7 @@ define <8 x i32> @splat_v8i32_pgso(<8 x i32> %x) !prof !14 {
 define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 ; AVX-LABEL: splat_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v8i16:
@@ -257,7 +257,7 @@ define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 define <8 x i16> @splat_v8i16_pgso(<8 x i16> %x) !prof !14 {
 ; AVX-LABEL: splat_v8i16_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v8i16_pgso:
@@ -312,7 +312,7 @@ define <16 x i16> @splat_v16i16_pgso(<16 x i16> %x) !prof !14 {
 define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 ; AVX-LABEL: splat_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v16i8:
@@ -327,7 +327,7 @@ define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 define <16 x i8> @splat_v16i8_pgso(<16 x i8> %x) !prof !14 {
 ; AVX-LABEL: splat_v16i8_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v16i8_pgso:
@@ -388,13 +388,13 @@ define <8 x i64> @pr23259() #1 {
 ; AVX-LABEL: pr23259:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = mem[0,1],xmm1[2,3]
+; AVX-NEXT:    vpinsrq $0, A+16(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: pr23259:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovaps A+16(%rip), %xmm0
+; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2,3,4,5,6,7]
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
 ; AVX2-NEXT:    retq

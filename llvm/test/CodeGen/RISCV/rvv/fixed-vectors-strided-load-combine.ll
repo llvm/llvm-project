@@ -708,10 +708,9 @@ define <33 x i32> @concat_loads_of_fixed_stack_args(<33 x i32> %a, <33 x i32> %b
 ; RV32-NEXT:    vle32.v v16, (a1)
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    addi a1, sp, 168
+; RV32-NEXT:    lw a1, 168(sp)
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a1)
-; RV32-NEXT:    vadd.vv v8, v16, v8
+; RV32-NEXT:    vadd.vx v8, v16, a1
 ; RV32-NEXT:    addi a0, a0, 128
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    ret

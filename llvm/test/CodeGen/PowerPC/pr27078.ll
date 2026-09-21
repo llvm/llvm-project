@@ -4,19 +4,21 @@
 define <4 x float> @bar(ptr %p, ptr %q) {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, 16
-; CHECK-NEXT:    lxvw4x 1, 0, 3
-; CHECK-NEXT:    lxvw4x 3, 0, 4
-; CHECK-NEXT:    xvsubsp 35, 3, 1
-; CHECK-NEXT:    lxvw4x 0, 3, 5
-; CHECK-NEXT:    lxvw4x 2, 4, 5
+; CHECK-NEXT:    li 5, 24
+; CHECK-NEXT:    lxvw4x 1, 0, 4
+; CHECK-NEXT:    lfiwzx 0, 3, 5
+; CHECK-NEXT:    xxmrghw 34, 0, 0
+; CHECK-NEXT:    lfiwzx 0, 4, 5
 ; CHECK-NEXT:    addis 5, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi 5, 5, .LCPI0_0@toc@l
 ; CHECK-NEXT:    lxvw4x 36, 0, 5
-; CHECK-NEXT:    li 5, 32
-; CHECK-NEXT:    xvsubsp 34, 2, 0
-; CHECK-NEXT:    lxvw4x 0, 3, 5
-; CHECK-NEXT:    lxvw4x 1, 4, 5
+; CHECK-NEXT:    li 5, 36
+; CHECK-NEXT:    xxmrghw 35, 0, 0
+; CHECK-NEXT:    lxvw4x 0, 0, 3
+; CHECK-NEXT:    xvsubsp 34, 35, 34
+; CHECK-NEXT:    xvsubsp 35, 1, 0
+; CHECK-NEXT:    lfiwzx 0, 3, 5
+; CHECK-NEXT:    lfiwzx 1, 4, 5
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_1@toc@l
 ; CHECK-NEXT:    vperm 2, 3, 2, 4

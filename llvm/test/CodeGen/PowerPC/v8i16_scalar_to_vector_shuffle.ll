@@ -339,9 +339,11 @@ define void @test_none_v4i32(ptr %ptr, ptr %ptr2, i8 %v3) local_unnamed_addr #0 
 ; CHECK-AIX-32-P9-LABEL: test_none_v4i32:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    lxsiwzx v2, 0, r3
-; CHECK-AIX-32-P9-NEXT:    lwz r3, L..C2(r2) # %const.0
 ; CHECK-AIX-32-P9-NEXT:    stb r5, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v3, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    lwz r3, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f0, r3
+; CHECK-AIX-32-P9-NEXT:    lwz r3, L..C2(r2) # %const.0
+; CHECK-AIX-32-P9-NEXT:    xxinsertw v3, vs0, 0
 ; CHECK-AIX-32-P9-NEXT:    lxv v4, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    vmrghh v3, v3, v3
 ; CHECK-AIX-32-P9-NEXT:    vperm v2, v2, v3, v4
