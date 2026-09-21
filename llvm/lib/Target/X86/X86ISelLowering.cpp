@@ -42806,38 +42806,19 @@ static SDValue combineX86ShufflesRecursively(SDValue Op, SelectionDAG &DAG,
       SDLoc(Op), Subtarget);
 }
 
-/// Get the PSHUF-style mask from PSHUF node.
-///
-/// This is a very minor wrapper around getTargetShuffleMask to easy forming v4
-/// PSHUF-style masks that can be reused with such instructions.
+/// Get the raw PSHUF-style mask[4] from PSHUF node.
 static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
-  MVT VT = N.getSimpleValueType();
   SmallVector<int, 4> Mask;
-  SmallVector<SDValue, 2> Ops;
-  bool HaveMask = getTargetShuffleMask(N, false, Ops, Mask);
-  (void)HaveMask;
-  assert(HaveMask);
-
-  // If we have more than 128-bits, only the low 128-bits of shuffle mask
-  // matter. Check that the upper masks are repeats and remove them.
-  if (VT.getSizeInBits() > 128) {
-    int LaneElts = 128 / VT.getScalarSizeInBits();
-#ifndef NDEBUG
-    for (int i = 1, NumLanes = VT.getSizeInBits() / 128; i < NumLanes; ++i)
-      for (int j = 0; j < LaneElts; ++j)
-        assert(Mask[j] == Mask[i * LaneElts + j] - (LaneElts * i) &&
-               "Mask doesn't repeat in high 128-bit lanes!");
-#endif
-    Mask.resize(LaneElts);
-  }
-
   switch (N.getOpcode()) {
   case X86ISD::PSHUFD:
+    DecodePSHUFMask(4, 32, N.getConstantOperandVal(1), Mask);
     return Mask;
   case X86ISD::PSHUFLW:
+    DecodePSHUFLWMask(8, N.getConstantOperandVal(1), Mask);
     Mask.resize(4);
     return Mask;
   case X86ISD::PSHUFHW:
+    DecodePSHUFHWMask(8, N.getConstantOperandVal(1), Mask);
     Mask.erase(Mask.begin(), Mask.begin() + 4);
     for (int &M : Mask)
       M -= 4;
@@ -50298,7 +50279,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
         !Subtarget.canUseCMOV() || hasFPCMov(CC)) {
       SDValue Ops[] = {FalseOp, TrueOp, DAG.getTargetConstant(CC, DL, MVT::i8),
                        Flags};
-      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
     }
   }
 
@@ -50418,7 +50399,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       if (CC == X86::COND_E && CmpAgainst == dyn_cast<ConstantSDNode>(TrueOp)) {
         SDValue Ops[] = {FalseOp, Cond.getOperand(0),
                          DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
-        return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+        return DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
       }
     }
   }
@@ -50478,10 +50459,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
 
       SDValue LOps[] = {FalseOp, TrueOp,
                         DAG.getTargetConstant(CC0, DL, MVT::i8), Flags};
-      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, VT, LOps);
+      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, VT, LOps, N->getFlags());
       SDValue Ops[] = {LCMOV, TrueOp, DAG.getTargetConstant(CC1, DL, MVT::i8),
                        Flags};
-      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
       return CMOV;
     }
   }
@@ -50522,8 +50503,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // This should constant fold.
       SDValue Diff = DAG.getNode(ISD::SUB, DL, VT, Const, Add.getOperand(1));
       SDValue CMov =
-          DAG.getNode(X86ISD::CMOV, DL, VT, Diff, Add.getOperand(0),
-                      DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond);
+          DAG.getNode(X86ISD::CMOV, DL, VT,
+                      {Diff, Add.getOperand(0),
+                       DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond},
+                      N->getFlags());
       return DAG.getNode(ISD::ADD, DL, VT, CMov, Add.getOperand(1));
     }
   }
