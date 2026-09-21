@@ -55,6 +55,11 @@ static cl::opt<std::string> InteractiveChannelBaseName(
 
 using CompiledModelType = NoopSavedModelImpl;
 
+static bool hasReleaseModePriorityModel() {
+  return isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
+         !InteractiveChannelBaseName.empty();
+}
+
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TFLITE
 #include "RegAllocScore.h"
@@ -312,8 +317,7 @@ private:
 
 RegAllocPriorityAdvisorAnalysisLegacy *
 llvm::createReleaseModePriorityAdvisorAnalysis() {
-  return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
-                 !InteractiveChannelBaseName.empty()
+  return hasReleaseModePriorityModel()
              ? new ReleaseModePriorityAdvisorAnalysisLegacy()
              : nullptr;
 }
@@ -411,5 +415,7 @@ llvm::createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx) {
 
 RegAllocPriorityAdvisorProvider *
 llvm::createReleaseModePriorityAdvisorProvider() {
-  return new ReleaseModePriorityAdvisorProvider();
+  return hasReleaseModePriorityModel()
+             ? new ReleaseModePriorityAdvisorProvider()
+             : nullptr;
 }

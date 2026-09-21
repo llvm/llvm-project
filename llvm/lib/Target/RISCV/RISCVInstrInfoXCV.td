@@ -519,16 +519,23 @@ let Predicates = [HasVendorXCVsimd, IsRV32] in {
 
   // 0b10110xx: UNDEF
 
-  def CV_EXTRACT_H :    CVSIMDRU<0b10111, 0, 0b000, "cv.extract.h">;
-  def CV_EXTRACT_B :    CVSIMDRU<0b10111, 0, 0b001, "cv.extract.b">;
-  def CV_EXTRACTU_H :   CVSIMDRU<0b10111, 0, 0b010, "cv.extractu.h">;
-  def CV_EXTRACTU_B :   CVSIMDRU<0b10111, 0, 0b011, "cv.extractu.b">;
-  def CV_INSERT_H :     CVSIMDRUWb<0b10111, 0, 0b100, "cv.insert.h">;
-  def CV_INSERT_B :     CVSIMDRUWb<0b10111, 0, 0b101, "cv.insert.b">;
+  def CV_EXTRACT_H :
+      CVSIMDRI<0b10111, 0, 0b000, "cv.extract.h", uimm1>;
+  def CV_EXTRACT_B :
+      CVSIMDRI<0b10111, 0, 0b001, "cv.extract.b", uimm2>;
+  def CV_EXTRACTU_H :
+      CVSIMDRI<0b10111, 0, 0b010, "cv.extractu.h", uimm1>;
+  def CV_EXTRACTU_B :
+      CVSIMDRI<0b10111, 0, 0b011, "cv.extractu.b", uimm2>;
+  def CV_INSERT_H :
+      CVSIMDRIWb<0b10111, 0, 0b100, "cv.insert.h", uimm1>;
+  def CV_INSERT_B :
+      CVSIMDRIWb<0b10111, 0, 0b101, "cv.insert.b", uimm2>;
 
   def CV_SHUFFLE_H :    CVSIMDRR<0b11000, 0, 0, 0b000, "cv.shuffle.h">;
   def CV_SHUFFLE_B :    CVSIMDRR<0b11000, 0, 0, 0b001, "cv.shuffle.b">;
-  def CV_SHUFFLE_SCI_H :   CVSIMDRU<0b11000, 0, 0b110, "cv.shuffle.sci.h">;
+  def CV_SHUFFLE_SCI_H :
+      CVSIMDRI<0b11000, 0, 0b110, "cv.shuffle.sci.h", uimm2>;
   def CV_SHUFFLEI0_SCI_B : CVSIMDRU<0b11000, 0, 0b111, "cv.shufflei0.sci.b">;
 
   def CV_SHUFFLEI1_SCI_B : CVSIMDRU<0b11001, 0, 0b111, "cv.shufflei1.sci.b">;
