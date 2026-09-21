@@ -969,6 +969,12 @@ def CIR_FastMathFlags : CIR_I32BitEnum<
   CIR_FMFnone, CIR_FMFnnan, CIR_FMFninf, CIR_FMFnsz, CIR_FMFarcp,
   CIR_FMFcontract, CIR_FMFafn, CIR_FMFreassoc, CIR_FMFfast
 ]> {
+  let description = [{
+    Describes fast-math flags for CIR operations. This attribute is shared by
+    operations with floating-point semantics and is not specific to LLVM intrinsic
+    calls.
+  }];
+
   let separator = ", ";
   let printBitEnumPrimaryGroups = 1;
 }

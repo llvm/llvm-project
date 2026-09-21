@@ -35,4 +35,12 @@ module {
     %0 = cir.call_llvm_intrinsic "vector.reduce.fadd" %arg0, %arg1 : (!f32, !v4f32) -> !f32 {fastmath_flags = #cir.fastmath<reassoc>}
     cir.return %0 : !f32
   }
+
+  // CHECK-LABEL: llvm.func @fastmath_fast_group
+  // CHECK:         llvm.call_intrinsic "llvm.vector.reduce.fadd"(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<fast>} : (f32, vector<4xf32>) -> f32
+  // CHECK:         llvm.return
+  cir.func @fastmath_fast_group(%arg0: !f32, %arg1: !v4f32) -> !f32 {
+    %0 = cir.call_llvm_intrinsic "vector.reduce.fadd" %arg0, %arg1 : (!f32, !v4f32) -> !f32 {fastmath_flags = #cir.fastmath<fast>}
+    cir.return %0 : !f32
+  }
 }
