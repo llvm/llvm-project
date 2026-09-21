@@ -22328,17 +22328,9 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  // Check Masks.
-  auto isAllSetMask = [&](SDValue V, SDValue VL) -> bool {
-    using namespace SDPatternMatch;
-    SDValue VMSet;
-    return sd_match(V, m_Node(RISCVISD::VMSET_VL, m_Value(VMSet))) &&
-           (isVLMax(VMSet) || KnownBits::uge(DAG.computeKnownBits(VMSet),
-                                             DAG.computeKnownBits(VL))
-                                  .value_or(false));
-  };
-  if (!isAllSetMask(SlideDownMask, SlideDownVL) ||
-      !isAllSetMask(SlideUpMask, SlideUpVL))
+  // Check if they are both all-ones masks.
+  if (SlideDownMask.getOpcode() != RISCVISD::VMSET_VL ||
+      SlideUpMask.getOpcode() != RISCVISD::VMSET_VL)
     return SDValue();
 
   return SlideDownVal;
