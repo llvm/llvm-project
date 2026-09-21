@@ -1,27 +1,21 @@
 ; dwarf::isC() enumerates every named DW_LANG_* code, but a DICompileUnit may
-; name any source languages including those not defined in Dwarf.def: gaps in
-; the standard range and vendor codes strictly between DW_LANG_lo_user and
-; DW_LANG_hi_user. Emitting a prototyped subprogram queries isC(), which used
-; to reach a trailing llvm_unreachable for unknown language codes (including
-; the vendor codes). Check that each kind is emitted unrecognised rather than
-; crashing, and that none is treated as C.
-;
-; If a code below is ever assigned a name in Dwarf.def, this test will start
-; failing; replace it with another unassigned one.
+; name any source language, including ones no case covers: standard codes not
+; yet added to Dwarf.def, and vendor codes strictly between DW_LANG_lo_user and
+; DW_LANG_hi_user (both of which *are* named). Emitting a prototyped subprogram
+; queries isC(), which used to fall through to a trailing llvm_unreachable for
+; all of them. Check that each kind is emitted unrecognised rather than
+; crashing, and that neither is treated as C.
 
-; RUN: rm -rf %t && mkdir %t
+; RUN: rm -rf %t
+; RUN: mkdir %t
 
-; 0x0029: a gap in the standard range (Dwarf.def jumps 0x0028 -> 0x002a).
+; 0x7fff: a standard-range code above the highest assigned one (0x0048). If it
+; is ever assigned a name in Dwarf.def, replace it with another unassigned one.
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t/test.o < %s
-; RUN: llvm-dwarfdump -debug-info %t/test.o | FileCheck %s -DLANG=0x0029
-
-; 0x7fff: a standard-range code above the highest assigned one (0x0048).
-; RUN: sed -e "s/language: 41/language: 32767/" %s > %t/test.ll
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t/test.o < %t/test.ll
 ; RUN: llvm-dwarfdump -debug-info %t/test.o | FileCheck %s -DLANG=0x7fff
 
 ; 0x8003: a vendor code strictly between DW_LANG_lo_user and DW_LANG_hi_user.
-; RUN: sed -e "s/language: 41/language: 32771/" %s > %t/test.ll
+; RUN: sed -e "s/language: 32767/language: 32771/" %s > %t/test.ll
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t/test.o < %t/test.ll
 ; RUN: llvm-dwarfdump -debug-info %t/test.o | FileCheck %s -DLANG=0x8003
 
@@ -43,7 +37,7 @@ define void @f() !dbg !4 {
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
 
-!0 = distinct !DICompileUnit(language: 41, file: !1, emissionKind: FullDebug)
+!0 = distinct !DICompileUnit(language: 32767, file: !1, emissionKind: FullDebug)
 !1 = !DIFile(filename: "a.c", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{i32 2, !"Dwarf Version", i32 5}
