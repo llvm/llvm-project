@@ -1904,8 +1904,6 @@ static mlir::Value convertToIndexTy(mlir::ConversionPatternRewriter &rewriter,
         mlir::LLVM::ConstantOp::create(rewriter, index.getLoc(),
                                        index.getType(), 0),
         index);
-    // TODO: ensure sub is trivially dead now.
-    rewriter.eraseOp(sub);
   }
 
   return index;
