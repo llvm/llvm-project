@@ -1,5 +1,5 @@
 # RUN: not --crash llc -mtriple=x86_64 \
-# RUN:   -mattr=+ssse3,+avx,+tbm,+amx-tile,+egpr -run-pass=none -filetype=null %s \
+# RUN:   -mattr=+sse4.2,+avx,+tbm,+amx-tile,+egpr -run-pass=none -filetype=null %s \
 # RUN:   2>&1 | FileCheck %s -implicit-check-not="Bad machine code"
 
 # The *_norex2 operands resolve to the *_NOREX2 register classes in the
@@ -59,4 +59,18 @@ body: |
 
     ; MOV32rm is EGPR-capable, so an EGPR def is accepted.
     renamable $r19d = MOV32rm renamable $rdi, 1, $noreg, 0, $noreg
+
+    ; PMULLD is an SSE4.1 T8 instruction with no EVEX form, so its address
+    ; base cannot be an EGPR.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $xmm0 = PMULLDrm renamable $xmm0{{.*}} renamable $r16
+    ; CHECK: $r16 is not a GR64_NOREX2 register.
+    renamable $xmm0 = PMULLDrm renamable $xmm0, renamable $r16, 1, $noreg, 0, $noreg
+
+    ; PEXTRD writes its result to a GPR that cannot be an EGPR in the legacy
+    ; encoding.
+    ; CHECK: *** Bad machine code: Illegal physical register for instruction ***
+    ; CHECK: - instruction: renamable $r20d = PEXTRDrri
+    ; CHECK: $r20d is not a GR32_NOREX2 register.
+    renamable $r20d = PEXTRDrri renamable $xmm0, 1
 ...

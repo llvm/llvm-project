@@ -69,12 +69,12 @@ static const Record *getRegClassByHwModeRepresentative(const Record *Rec) {
 }
 
 unsigned X86Disassembler::getRegOperandSize(const Record *RegRec) {
+  if (RegRec->isSubClassOf("RegisterOperand"))
+    RegRec = RegRec->getValueAsDef("RegClass");
   if (RegRec->isSubClassOf("RegClassByHwMode"))
     RegRec = getRegClassByHwModeRepresentative(RegRec);
   if (RegRec->isSubClassOf("RegisterClass"))
     return RegRec->getValueAsInt("Alignment");
-  if (RegRec->isSubClassOf("RegisterOperand"))
-    return RegRec->getValueAsDef("RegClass")->getValueAsInt("Alignment");
 
   llvm_unreachable("Register operand's size not known!");
 }
@@ -1044,7 +1044,7 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("i32imm", TYPE_IMM)
           .Case("i32i8imm", TYPE_IMM)
           .Case("GR32", TYPE_R32)
-          .Case("GR32orGR64", TYPE_R32)
+          .Cases({"GR32orGR64", "GR32orGR64_norex2"}, TYPE_R32)
           .Cases({"i64mem", "i64mem_norex2"}, TYPE_M)
           .Case("i64i32imm", TYPE_IMM)
           .Case("i64i8imm", TYPE_IMM)
@@ -1059,8 +1059,8 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("GR8", TYPE_R8)
           .Case("VR128", TYPE_XMM)
           .Case("VR128X", TYPE_XMM)
-          .Case("f128mem", TYPE_M)
-          .Case("f256mem", TYPE_M)
+          .Cases({"f128mem", "f128mem_norex2"}, TYPE_M)
+          .Cases({"f256mem", "f256mem_norex2"}, TYPE_M)
           .Case("f512mem", TYPE_M)
           .Case("FR128", TYPE_XMM)
           .Case("FR64", TYPE_XMM)
@@ -1146,10 +1146,10 @@ OperandType RecognizableInstr::typeFromString(StringRef Str, bool hasREX_W,
           .Case("VK4Pair", TYPE_VK_PAIR)
           .Case("VK8Pair", TYPE_VK_PAIR)
           .Case("VK16Pair", TYPE_VK_PAIR)
-          .Case("vx32mem", TYPE_MVSIBX)
-          .Case("vx64mem", TYPE_MVSIBX)
-          .Case("vy32mem", TYPE_MVSIBY)
-          .Case("vy64mem", TYPE_MVSIBY)
+          .Cases({"vx32mem", "vx32mem_norex2"}, TYPE_MVSIBX)
+          .Cases({"vx64mem", "vx64mem_norex2"}, TYPE_MVSIBX)
+          .Cases({"vy32mem", "vy32mem_norex2"}, TYPE_MVSIBY)
+          .Cases({"vy64mem", "vy64mem_norex2"}, TYPE_MVSIBY)
           .Case("vx32xmem", TYPE_MVSIBX)
           .Case("vx64xmem", TYPE_MVSIBX)
           .Case("vy32xmem", TYPE_MVSIBY)
@@ -1226,7 +1226,7 @@ RecognizableInstr::rmRegisterEncodingFromString(StringRef Str, uint8_t OpSize) {
           .Case("GR16", ENCODING_RM)
           .Case("GR16orGR32orGR64", ENCODING_RM)
           .Case("GR32", ENCODING_RM)
-          .Case("GR32orGR64", ENCODING_RM)
+          .Cases({"GR32orGR64", "GR32orGR64_norex2"}, ENCODING_RM)
           .Case("GR64", ENCODING_RM)
           .Case("GR8", ENCODING_RM)
           .Case("VR128", ENCODING_RM)
@@ -1267,7 +1267,7 @@ RecognizableInstr::roRegisterEncodingFromString(StringRef Str, uint8_t OpSize) {
           .Case("GR16", ENCODING_REG)
           .Case("GR16orGR32orGR64", ENCODING_REG)
           .Case("GR32", ENCODING_REG)
-          .Case("GR32orGR64", ENCODING_REG)
+          .Cases({"GR32orGR64", "GR32orGR64_norex2"}, ENCODING_REG)
           .Case("GR64", ENCODING_REG)
           .Case("GR8", ENCODING_REG)
           .Case("VR128", ENCODING_REG)
@@ -1391,8 +1391,8 @@ OperandEncoding RecognizableInstr::memoryEncodingFromString(StringRef Str,
           .Case("shmem", ENCODING_RM)
           .Cases({"ssmem", "ssmem_norex2"}, ENCODING_RM)
           .Cases({"sdmem", "sdmem_norex2"}, ENCODING_RM)
-          .Case("f128mem", ENCODING_RM)
-          .Case("f256mem", ENCODING_RM)
+          .Cases({"f128mem", "f128mem_norex2"}, ENCODING_RM)
+          .Cases({"f256mem", "f256mem_norex2"}, ENCODING_RM)
           .Case("f512mem", ENCODING_RM)
           .Cases({"f64mem", "f64mem_norex2"}, ENCODING_RM)
           .Cases({"f32mem", "f32mem_norex2"}, ENCODING_RM)
@@ -1411,10 +1411,10 @@ OperandEncoding RecognizableInstr::memoryEncodingFromString(StringRef Str,
           .Cases({"anymem", "anymem_norex2"}, ENCODING_RM)
           .Cases({"opaquemem", "opaquemem_norex2"}, ENCODING_RM)
           .Cases({"sibmem", "sibmem_norex2"}, ENCODING_SIB)
-          .Case("vx32mem", ENCODING_VSIB)
-          .Case("vx64mem", ENCODING_VSIB)
-          .Case("vy32mem", ENCODING_VSIB)
-          .Case("vy64mem", ENCODING_VSIB)
+          .Cases({"vx32mem", "vx32mem_norex2"}, ENCODING_VSIB)
+          .Cases({"vx64mem", "vx64mem_norex2"}, ENCODING_VSIB)
+          .Cases({"vy32mem", "vy32mem_norex2"}, ENCODING_VSIB)
+          .Cases({"vy64mem", "vy64mem_norex2"}, ENCODING_VSIB)
           .Case("vx32xmem", ENCODING_VSIB)
           .Case("vx64xmem", ENCODING_VSIB)
           .Case("vy32xmem", ENCODING_VSIB)

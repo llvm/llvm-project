@@ -109,6 +109,14 @@ class X86MemOperandNoRex2<string printMethod,
                        SEGMENT_REG);
 }
 
+// A gather mem operand whose base register cannot be an EGPR (the index is a
+// vector register). Used by VEX gathers, which have no in-place EVEX form.
+class X86VMemOperandNoRex2<RegisterClass RC, string printMethod,
+                           AsmOperandClass parserMatchClass, int size = 0>
+    : X86MemOperand<printMethod, parserMatchClass, size> {
+  let MIOperandInfo = (ops ptr_rc_norex2, i8imm, RC, i32imm, SEGMENT_REG);
+}
+
 def anymem : X86MemOperand<"printMemReference">;
 
 // FIXME: Right now we allow any size during parsing, but we might want to
@@ -143,6 +151,12 @@ def vx64mem  : X86VMemOperand<VR128,  "printqwordmem",  X86Mem64_RC128Operand, 6
 def vy32mem  : X86VMemOperand<VR256,  "printdwordmem",  X86Mem32_RC256Operand, 32>;
 def vy64mem  : X86VMemOperand<VR256,  "printqwordmem",  X86Mem64_RC256Operand, 64>;
 
+// norex2 gather mem operands, for VEX gathers (no in-place EVEX form).
+def vx32mem_norex2 : X86VMemOperandNoRex2<VR128, "printdwordmem", X86Mem32_RC128Operand, 32>;
+def vx64mem_norex2 : X86VMemOperandNoRex2<VR128, "printqwordmem", X86Mem64_RC128Operand, 64>;
+def vy32mem_norex2 : X86VMemOperandNoRex2<VR256, "printdwordmem", X86Mem32_RC256Operand, 32>;
+def vy64mem_norex2 : X86VMemOperandNoRex2<VR256, "printqwordmem", X86Mem64_RC256Operand, 64>;
+
 def vx32xmem  : X86VMemOperand<VR128X, "printdwordmem",  X86Mem32_RC128XOperand, 32>;
 def vx64xmem  : X86VMemOperand<VR128X, "printqwordmem",  X86Mem64_RC128XOperand, 64>;
 def vy32xmem  : X86VMemOperand<VR256X, "printdwordmem",  X86Mem32_RC256XOperand, 32>;
@@ -167,6 +181,8 @@ def i256mem_norex2 : X86MemOperandNoRex2<"printymmwordmem", X86Mem256AsmOperand,
 def f32mem_norex2  : X86MemOperandNoRex2<"printdwordmem",  X86Mem32AsmOperand, 32>;
 def f64mem_norex2  : X86MemOperandNoRex2<"printqwordmem",  X86Mem64AsmOperand, 64>;
 def f80mem_norex2  : X86MemOperandNoRex2<"printtbytemem",  X86Mem80AsmOperand, 80>;
+def f128mem_norex2 : X86MemOperandNoRex2<"printxmmwordmem", X86Mem128AsmOperand, 128>;
+def f256mem_norex2 : X86MemOperandNoRex2<"printymmwordmem", X86Mem256AsmOperand, 256>;
 def ssmem_norex2   : X86MemOperandNoRex2<"printdwordmem", X86Mem32AsmOperand>;
 def sdmem_norex2   : X86MemOperandNoRex2<"printqwordmem", X86Mem64AsmOperand>;
 
@@ -405,6 +421,10 @@ def X86GR32orGR64AsmOperand : AsmOperandClass {
   let Name = "GR32orGR64";
 }
 def GR32orGR64 : RegisterOperand<GR32> {
+  let ParserMatchClass = X86GR32orGR64AsmOperand;
+}
+// A GR32orGR64 for instructions that cannot encode an EGPR.
+def GR32orGR64_norex2 : RegisterOperand<gr32_norex2> {
   let ParserMatchClass = X86GR32orGR64AsmOperand;
 }
 
