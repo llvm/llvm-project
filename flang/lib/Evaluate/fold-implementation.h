@@ -1243,6 +1243,7 @@ Expr<T> FoldMINorMAX(
 template <typename T>
 Expr<T> RewriteSpecificMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef) {
+  const int kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
   auto &intrinsic{DEREF(std::get_if<SpecificIntrinsic>(&funcRef.proc().u))};
   // Rewrite MAX1(args) to INT(MAX(args)) and fold. Same logic for MIN1.
@@ -1272,9 +1273,9 @@ Expr<T> RewriteSpecificMINorMAX(
   intrinsic.characteristics.value().functionResult.value().SetType(*resultType);
   auto insertConversion{[&](const auto &x) -> Expr<T> {
     using TR = ResultType<decltype(x)>;
-    const int kind{x.kind()};
+    const int rKind{x.kind()};
     FunctionRef<TR> maxRef{
-        kind, ProcedureDesignator{funcRef.proc()}, ActualArguments{args}};
+        rKind, ProcedureDesignator{funcRef.proc()}, ActualArguments{args}};
     return Fold(
         context, ConvertToType<T>(kind, AsCategoryExpr(std::move(maxRef))));
   }};
@@ -2140,7 +2141,8 @@ Expr<TO> FoldOperation(
             if (auto *innerConv{
                     std::get_if<Convert<Operand, TO::category>>(&kindExpr.u)}) {
               // Conversion of conversion of same category & kind
-              if (auto *x{std::get_if<Expr<TO>>(&innerConv->left().u)}) {
+              if (auto *x{std::get_if<Expr<TO>>(&innerConv->left().u)};
+                  x && x->kind() == toKind) {
                 if (TO::category == TypeCategory::Logical ||
                     toKind <= operandKind) {
                   return std::move(*x); // no-op Logical or Integer

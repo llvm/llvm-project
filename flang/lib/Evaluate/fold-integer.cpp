@@ -295,7 +295,7 @@ Expr<Type<TypeCategory::Integer>> COBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer>;
   const int kind{funcRef.kind()};
   ActualArguments &args{funcRef.arguments()};
-  if (const Symbol * coarray{UnwrapWholeSymbolOrComponentDataRef(args[0])}) {
+  if (const Symbol *coarray{UnwrapWholeSymbolOrComponentDataRef(args[0])}) {
     std::optional<int> dim;
     if (funcRef.Rank() == 0) {
       // Optional DIM= argument is present: result is scalar.
@@ -459,7 +459,7 @@ public:
           value.reset();
         }
         for (ConstantSubscript k{0}; k < dimLength;
-             ++k, ++at[zbDim], mask && ++maskAt[zbDim]) {
+            ++k, ++at[zbDim], mask && ++maskAt[zbDim]) {
           if ((!mask || mask->At(maskAt).IsTrue()) &&
               IsHit(array->At(at), value, relation, back)) {
             hit = at[zbDim];
@@ -486,7 +486,7 @@ public:
       ConstantSubscript n{GetSize(array->shape())};
       resultIndices = ConstantSubscripts(array->Rank(), 0);
       for (ConstantSubscript j{0}; j < n; ++j, array->IncrementSubscripts(at),
-           mask && mask->IncrementSubscripts(maskAt)) {
+          mask && mask->IncrementSubscripts(maskAt)) {
         if ((!mask || mask->At(maskAt).IsTrue()) &&
             IsHit(array->At(at), value, relation, back)) {
           resultIndices = at;
@@ -1347,16 +1347,16 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
     }
     return FoldElementalIntrinsic<T, T, T>(kind, {kind, kind}, context,
         std::move(funcRef),
-        ScalarFuncWithContext<T, T, T>([badPConst](FoldingContext &context,
-                                           const Scalar<T> &x,
-                                           const Scalar<T> &y) -> Scalar<T> {
-          auto result{x.MODULO(y)};
-          if (!badPConst && result.overflow) {
-            context.Warn(common::UsageWarning::FoldingException,
-                "modulo() folding overflowed"_warn_en_US);
-          }
-          return result.value;
-        }));
+        ScalarFuncWithContext<T, T, T>(
+            [badPConst](FoldingContext &context, const Scalar<T> &x,
+                const Scalar<T> &y) -> Scalar<T> {
+              auto result{x.MODULO(y)};
+              if (!badPConst && result.overflow) {
+                context.Warn(common::UsageWarning::FoldingException,
+                    "modulo() folding overflowed"_warn_en_US);
+              }
+              return result.value;
+            }));
   } else if (name == "precision") {
     if (const auto *cx{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
       return MakeConstantExpr<T>(kind,
@@ -1530,7 +1530,7 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
       auto realBytes{
           context.targetCharacteristics().GetByteSize(TypeCategory::Real,
               context.defaults().GetDefaultKind(TypeCategory::Real))};
-      return Expr<T>{8 * std::min(intBytes, realBytes)};
+      return MakeConstantExpr<T>(kind, 8 * std::min(intBytes, realBytes));
     }
   }
   return Expr<T>{std::move(funcRef)};
@@ -1587,10 +1587,9 @@ Expr<TypeParamInquiry::Result> FoldOperation(
   if (base) {
     // Handling "designator%typeParam".  Get the value of the type parameter
     // from the instantiation of the base
-    if (const semantics::DeclTypeSpec *
-        declType{base->GetLastSymbol().GetType()}) {
-      if (const semantics::ParamValue *
-          paramValue{
+    if (const semantics::DeclTypeSpec *declType{
+            base->GetLastSymbol().GetType()}) {
+      if (const semantics::ParamValue *paramValue{
               declType->derivedTypeSpec().FindParameter(parameterName)}) {
         const semantics::MaybeIntExpr &paramExpr{paramValue->GetExplicit()};
         if (paramExpr && IsConstantExpr(*paramExpr, &context)) {
@@ -1607,7 +1606,7 @@ Expr<TypeParamInquiry::Result> FoldOperation(
     if (const auto *pdt{context.pdtInstance()}) {
       auto restorer{context.WithoutPDTInstance()}; // don't loop
       bool isLen{false};
-      if (const semantics::Scope * scope{pdt->scope()}) {
+      if (const semantics::Scope *scope{pdt->scope()}) {
         auto iter{scope->find(parameterName)};
         if (iter != scope->end()) {
           const Symbol &symbol{*iter->second};
