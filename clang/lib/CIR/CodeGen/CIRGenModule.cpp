@@ -3973,6 +3973,24 @@ void CIRGenModule::release() {
     }
   }
 
+  // Serialize the lowering-relevant LangOptions onto the ModuleOp,
+  // unconditionally, so a reloaded .cir module is self-describing. See
+  // #cir.lowering_lang_options.
+  theModule->setAttr(
+      cir::CIRDialect::getLoweringLangOptionsAttrName(),
+      cir::LoweringLangOptionsAttr::get(
+          &getMLIRContext(),
+          /*exceptions=*/langOpts.Exceptions,
+          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
+          /*cuda=*/langOpts.CUDA,
+          /*cuda_is_device=*/langOpts.CUDAIsDevice,
+          /*hip=*/langOpts.HIP,
+          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
+          /*openmp=*/langOpts.OpenMP != 0,
+          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
+          /*clang_abi_compat=*/
+          static_cast<int32_t>(langOpts.getClangABICompat())));
+
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.
   assert(!cir::MissingFeatures::checkAliases());
