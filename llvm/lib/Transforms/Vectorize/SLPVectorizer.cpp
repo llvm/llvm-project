@@ -726,18 +726,18 @@ public:
   /// computation.
   unsigned getTreeSizeExcludingGathers() const {
     unsigned Cnt = 0;
-    SmallDenseSet<unsigned> GatherTreeNodes;
+    SmallBitVector GatherTreeNodes(VectorizableTree.size(), false);
     for (unsigned NodeIdx : seq<unsigned>(VectorizableTree.size())) {
       auto &TE = VectorizableTree[NodeIdx];
       if (DeletedNodes.contains(TE.get()))
         continue;
       auto IsGather = [&](TreeEntry *TE) {
         return TE->isGather() || TransformedToGatherNodes.contains(TE) ||
-               GatherTreeNodes.contains(TE->Idx);
+               GatherTreeNodes.test(TE->Idx);
       };
       if (IsGather(TE.get()) || (!TE->UserTreeIndex.UserTE && NodeIdx != 0) ||
           (TE->UserTreeIndex.UserTE && (IsGather(TE->UserTreeIndex.UserTE)))) {
-        GatherTreeNodes.insert(NodeIdx);
+        GatherTreeNodes.set(NodeIdx);
         continue;
       }
       ++Cnt;
