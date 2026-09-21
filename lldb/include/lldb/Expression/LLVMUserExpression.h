@@ -113,8 +113,8 @@ protected:
   Materializer::DematerializerSP m_dematerializer_sp; ///< The dematerializer.
 
 private:
-  // Allocate the interpreter's private, host-only stack, if one has not been
-  // allocated already. Idempotent.
+  /// Allocate the interpreter's private, host-only stack, if one has not been
+  /// allocated already. Idempotent.
   bool AllocateInterpreterStackFrame(DiagnosticManager &diagnostic_manager,
                                      Target &target, Process *process);
 
