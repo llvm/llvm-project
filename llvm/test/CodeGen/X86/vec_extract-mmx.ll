@@ -118,9 +118,9 @@ define i32 @test4(<1 x i64> %a) nounwind {
 ;
 ; X64-LABEL: test4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X64-NEXT:    movd %xmm0, %eax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %tmp0 = bitcast <1 x i64> %a to <2 x i32>
   %tmp1 = extractelement <2 x i32> %tmp0, i32 1

@@ -13,16 +13,10 @@ define i32 @t(ptr %val) nounwind  {
 ; X86-SSE2-NEXT:    movl 8(%eax), %eax
 ; X86-SSE2-NEXT:    retl
 ;
-; X64-SSSE3-LABEL: t:
-; X64-SSSE3:       # %bb.0:
-; X64-SSSE3-NEXT:    movl 8(%rdi), %eax
-; X64-SSSE3-NEXT:    retq
-;
-; X64-AVX-LABEL: t:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X64-AVX-NEXT:    vextractps $2, %xmm0, %eax
-; X64-AVX-NEXT:    retq
+; X64-LABEL: t:
+; X64:       # %bb.0:
+; X64-NEXT:    movl 8(%rdi), %eax
+; X64-NEXT:    retq
   %tmp2 = load <2 x i64>, ptr %val, align 16		; <<2 x i64>> [#uses=1]
   %tmp3 = bitcast <2 x i64> %tmp2 to <4 x i32>		; <<4 x i32>> [#uses=1]
   %tmp4 = extractelement <4 x i32> %tmp3, i32 2		; <i32> [#uses=1]

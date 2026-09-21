@@ -141,35 +141,28 @@ define amdgpu_kernel void @v2i16_to_v4i8(ptr addrspace(1) %out, ptr addrspace(1)
 define amdgpu_kernel void @v4i16_extract_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
 ; EG-LABEL: v4i16_extract_i8:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 17, @11, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT MSKOR T5.XW, T6.X
+; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @6
+; EG-NEXT:    ALU 11, @9, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_16 T6.X, T5.X, 6, #1
-; EG-NEXT:     VTX_READ_16 T5.X, T5.X, 4, #1
-; EG-NEXT:    ALU clause starting at 10:
-; EG-NEXT:     MOV * T5.X, KC0[2].Z,
-; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     LSHL * T0.W, T6.X, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, PV.W, T5.X,
-; EG-NEXT:     MOV * T3.X, PV.W,
-; EG-NEXT:     MOV T0.Y, PV.X,
+; EG-NEXT:     VTX_READ_16 T0.X, T0.X, 4, #1
+; EG-NEXT:    ALU clause starting at 8:
+; EG-NEXT:     MOV * T0.X, KC0[2].Z,
+; EG-NEXT:    ALU clause starting at 9:
 ; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     MOV * T1.W, literal.y,
+; EG-NEXT:     LSHR * T1.W, T0.X, literal.y,
 ; EG-NEXT:    3(4.203895e-45), 8(1.121039e-44)
-; EG-NEXT:     BFE_UINT T1.W, PV.Y, literal.x, PS,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
-; EG-NEXT:    8(1.121039e-44), 3(4.203895e-45)
-; EG-NEXT:     LSHL T5.X, PV.W, PS,
-; EG-NEXT:     LSHL * T5.W, literal.x, PS,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
+; EG-NEXT:     LSHL T0.X, T1.W, PV.W,
+; EG-NEXT:     LSHL * T0.W, literal.x, PV.W,
 ; EG-NEXT:    255(3.573311e-43), 0(0.000000e+00)
-; EG-NEXT:     MOV T5.Y, 0.0,
-; EG-NEXT:     MOV * T5.Z, 0.0,
-; EG-NEXT:     LSHR * T6.X, KC0[2].Y, literal.x,
+; EG-NEXT:     MOV T0.Y, 0.0,
+; EG-NEXT:     MOV * T0.Z, 0.0,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %load = load <4 x i16>, ptr  addrspace(1) %in, align 2
   %bc = bitcast <4 x i16> %load to <8 x i8>
