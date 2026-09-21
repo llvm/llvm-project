@@ -6361,35 +6361,20 @@ struct GEPOffsetAndOverflow {
   llvm::Value *OffsetOverflows;
 };
 
-/// Evaluate given GEPVal, which is either an inbounds GEP, or a constant,
-/// and compute the total offset it applies from it's base pointer BasePtr.
+/// Compute the total offset in bytes that indexing BasePtr with ElemTy and
+/// IdxList applies, using checked arithmetic.
 /// Returns offset in bytes and a boolean flag whether an overflow happened
 /// during evaluation.
-static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
-                                                 llvm::LLVMContext &VMContext,
-                                                 CodeGenModule &CGM,
-                                                 CGBuilderTy &Builder) {
+static GEPOffsetAndOverflow
+EmitGEPOffsetInBytes(Value *BasePtr, llvm::Type *ElemTy,
+                     ArrayRef<Value *> IdxList, llvm::LLVMContext &VMContext,
+                     CodeGenModule &CGM, CGBuilderTy &Builder) {
   const auto &DL = CGM.getDataLayout();
 
   // The total (signed) byte offset for the GEP.
   llvm::Value *TotalOffset = nullptr;
 
-  // Was the GEP already reduced to a constant?
-  if (isa<llvm::Constant>(GEPVal)) {
-    // Compute the offset by casting both pointers to integers and subtracting:
-    // GEPVal = BasePtr + ptr(Offset) <--> Offset = int(GEPVal) - int(BasePtr)
-    Value *BasePtr_int = Builder.CreatePtrToAddr(BasePtr);
-    Value *GEPVal_int = Builder.CreatePtrToAddr(GEPVal);
-    TotalOffset = Builder.CreateSub(GEPVal_int, BasePtr_int);
-    return {TotalOffset, /*OffsetOverflows=*/Builder.getFalse()};
-  }
-
-  auto *GEP = cast<llvm::GEPOperator>(GEPVal);
-  assert(GEP->getPointerOperand() == BasePtr &&
-         "BasePtr must be the base of the GEP.");
-  assert(GEP->isInBounds() && "Expected inbounds GEP");
-
-  auto *IntPtrTy = DL.getAddressType(GEP->getPointerOperandType());
+  auto *IntPtrTy = DL.getAddressType(BasePtr->getType());
 
   // Grab references to the signed add/mul overflow intrinsics for intptr_t.
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
@@ -6427,7 +6412,8 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
   };
 
   // Determine the total byte offset by looking at each GEP operand.
-  for (auto GTI = llvm::gep_type_begin(GEP), GTE = llvm::gep_type_end(GEP);
+  for (auto GTI = llvm::gep_type_begin(ElemTy, IdxList),
+            GTE = llvm::gep_type_end(ElemTy, IdxList);
        GTI != GTE; ++GTI) {
     llvm::Value *LocalOffset;
     auto *Index = GTI.getOperand();
@@ -6493,8 +6479,8 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   llvm::Type *IntPtrTy = DL.getAddressType(PtrTy);
 
-  GEPOffsetAndOverflow EvaluatedGEP =
-      EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
+  GEPOffsetAndOverflow EvaluatedGEP = EmitGEPOffsetInBytes(
+      Ptr, ElemTy, IdxList, getLLVMContext(), CGM, Builder);
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
