@@ -2906,7 +2906,8 @@ static void emitMatchRegisterName(const CodeGenTarget &Target,
                                             "::" + Reg.getName().str() + ';');
   }
 
-  OS << "static MCRegister MatchRegisterName(StringRef Name) {\n";
+  OS << "[[maybe_unused]] static MCRegister MatchRegisterName(StringRef Name) "
+        "{\n";
 
   bool IgnoreDuplicates =
       AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
@@ -2920,30 +2921,52 @@ static void emitMatchRegisterName(const CodeGenTarget &Target,
 /// specific register enum.
 static void emitMatchRegisterAltName(const CodeGenTarget &Target,
                                      const Record *AsmParser, raw_ostream &OS) {
-  // Construct the match list.
-  std::vector<StringMatcher::StringPair> Matches;
   const auto &Regs = Target.getRegBank().getRegisters();
   std::string Namespace =
       Regs.front().TheDef->getValueAsString("Namespace").str();
-  for (const CodeGenRegister &Reg : Regs) {
-    for (StringRef AltName : Reg.TheDef->getValueAsListOfStrings("AltNames")) {
-      AltName = AltName.trim();
-
-      // don't handle empty alternative names
-      if (AltName.empty())
-        continue;
-
-      Matches.emplace_back(AltName.str(), "return " + Namespace +
-                                              "::" + Reg.getName().str() + ';');
-    }
-  }
-
-  OS << "static MCRegister MatchRegisterAltName(StringRef Name) {\n";
-
+  bool WithIndex =
+      AsmParser->getValueAsBit("ShouldEmitMatchRegisterAltNameWithIndex");
   bool IgnoreDuplicates =
       AsmParser->getValueAsBit("AllowDuplicateRegisterNames");
-  StringMatcher("Name", Matches, OS).Emit(0, IgnoreDuplicates);
 
+  auto EmitMatches = [&](const Record *AltIdx, unsigned Indent) {
+    std::vector<StringMatcher::StringPair> Matches;
+    for (const CodeGenRegister &Reg : Regs) {
+      auto AltNames = Reg.TheDef->getValueAsListOfStrings("AltNames");
+      auto AltIndices = Reg.TheDef->getValueAsListOfDefs("RegAltNameIndices");
+      for (auto [I, AltName] : enumerate(AltNames)) {
+        if (AltIdx && (I >= AltIndices.size() || AltIndices[I] != AltIdx))
+          continue;
+        AltName = AltName.trim();
+        if (AltName.empty())
+          continue;
+        Matches.emplace_back(AltName.str(), "return " + Namespace + "::" +
+                                                Reg.getName().str() + ';');
+      }
+    }
+    StringMatcher("Name", Matches, OS).Emit(Indent, IgnoreDuplicates);
+  };
+
+  OS << "[[maybe_unused]] static MCRegister MatchRegisterAltName(StringRef "
+        "Name";
+  if (WithIndex)
+    OS << ", unsigned AltIdx";
+  OS << ") {\n";
+
+  if (WithIndex) {
+    OS << "  switch (AltIdx) {\n"
+          "  default: break;\n";
+    for (const Record *AltIdx : Target.getRegAltNameIndices()) {
+      if (AltIdx->getName() == "NoRegAltName")
+        continue;
+      OS << "  case " << Namespace << "::" << AltIdx->getName() << ": {\n";
+      EmitMatches(AltIdx, 1);
+      OS << "    break;\n  }\n";
+    }
+    OS << "  }\n";
+  } else {
+    EmitMatches(nullptr, 0);
+  }
   OS << "  return " << Namespace << "::NoRegister;\n";
   OS << "}\n\n";
 }
@@ -3634,11 +3657,11 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
       Info.SubtargetFeatures, OS);
 
   // Emit the function to match a register name to number.
-  // This should be omitted for Mips target
   if (AsmParser->getValueAsBit("ShouldEmitMatchRegisterName"))
     emitMatchRegisterName(Target, AsmParser, OS);
 
-  if (AsmParser->getValueAsBit("ShouldEmitMatchRegisterAltName"))
+  if (AsmParser->getValueAsBit("ShouldEmitMatchRegisterAltName") ||
+      AsmParser->getValueAsBit("ShouldEmitMatchRegisterAltNameWithIndex"))
     emitMatchRegisterAltName(Target, AsmParser, OS);
 
   OS << "#endif // GET_REGISTER_MATCHER\n\n";

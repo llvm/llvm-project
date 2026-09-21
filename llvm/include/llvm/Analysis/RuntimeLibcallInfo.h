@@ -22,11 +22,9 @@ public:
   using Result = RTLIB::RuntimeLibcallsInfo;
 
   RuntimeLibraryAnalysis() = default;
-  RuntimeLibraryAnalysis(ExceptionHandling ExceptionModel,
-                         StringRef ABIName = "",
+  RuntimeLibraryAnalysis(StringRef ABIName,
                          VectorLibrary VecLib = VectorLibrary::NoLibrary)
-      : ExceptionModel(ExceptionModel), ABIName(ABIName.str()), VecLib(VecLib) {
-  }
+      : ABIName(ABIName.str()), VecLib(VecLib) {}
 
   RTLIB::RuntimeLibcallsInfo run(const Module &M, ModuleAnalysisManager &);
 
@@ -37,7 +35,6 @@ private:
   // FIXME: These are TargetOptions values that are not yet represented in the
   // IR, copied here so run() can forward them to the RuntimeLibcallsInfo Module
   // constructor. Delete each one as they are migrated to module flags.
-  ExceptionHandling ExceptionModel = ExceptionHandling::None;
   std::string ABIName;
   VectorLibrary VecLib = VectorLibrary::NoLibrary;
 };
@@ -49,8 +46,7 @@ class LLVM_ABI RuntimeLibraryInfoWrapper : public ImmutablePass {
 public:
   static char ID;
   RuntimeLibraryInfoWrapper();
-  RuntimeLibraryInfoWrapper(ExceptionHandling ExceptionModel,
-                            StringRef ABIName = "",
+  RuntimeLibraryInfoWrapper(StringRef ABIName,
                             VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   const RTLIB::RuntimeLibcallsInfo &getRTLCI(const Module &M) {

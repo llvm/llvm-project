@@ -875,9 +875,10 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
   // Output name of the function.
   FunctionEncodingMangler.disableDerivedAbiTags();
 
-  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState EncodingSaved =
+      FunctionEncodingMangler.FunctionTypeDepth.push();
   FunctionEncodingMangler.mangleNameWithAbiTags(FD);
-  FunctionTypeDepth.pop(Saved);
+  FunctionEncodingMangler.FunctionTypeDepth.pop(EncodingSaved);
 
   // Remember length of the function name in the buffer.
   size_t EncodingPositionStart = FunctionEncodingStream.str().size();
@@ -895,7 +896,7 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
       AdditionalAbiTags.end());
 
   // Output name with implicit tags and function encoding from temporary buffer.
-  Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
   mangleNameWithAbiTags(FD, AdditionalAbiTags);
   FunctionTypeDepth.pop(Saved);
   Out << FunctionEncodingStream.str().substr(EncodingPositionStart);
@@ -2867,7 +2868,8 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         ASString = "CLgeneric";
         break;
       //  <SYCL-addrspace> ::= "SY" [ "global" | "local" | "private" |
-      //                              "device" | "host" ]
+      //                              "generic" | "constant" | "device" | "host"
+      //                              ]
       case LangAS::sycl_global:
         ASString = "SYglobal";
         break;
@@ -2882,6 +2884,12 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         break;
       case LangAS::sycl_private:
         ASString = "SYprivate";
+        break;
+      case LangAS::sycl_generic:
+        ASString = "SYgeneric";
+        break;
+      case LangAS::sycl_constant:
+        ASString = "SYconstant";
         break;
       //  <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
       case LangAS::cuda_device:
