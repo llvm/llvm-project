@@ -48,17 +48,17 @@ def extra_commute_fconstant_to_rhs : GICombineRule<
 def extra_commute_intrinsic_iconstant_to_rhs : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_INTRINSIC):$root, [{
-    auto IntrinsicID = cast<GIntrinsic>(*${root}).getIntrinsicID();
-    auto isFloatArg = false;
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*${root}).getIntrinsicID();
+    bool IsFloatArg = false;
     switch (IntrinsicID) {
       default:
         return false;
       case Intrinsic::pisa_fadd:
       case Intrinsic::pisa_fmul:
-        isFloatArg = true;
+        IsFloatArg = true;
         break;
     }
-    return isFloatArg ?
+    return IsFloatArg ?
           (getFConstantVRegValWithLookThrough(${root}->getOperand(2).getReg(), MRI).has_value() &&
             !getFConstantVRegValWithLookThrough(${root}->getOperand(3).getReg(), MRI).has_value()) :
           (getIConstantVRegVal(${root}->getOperand(2).getReg(), MRI).has_value() &&
@@ -80,11 +80,16 @@ def extra_remove_redundant_constant : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND, G_OR):$root,
     [{
-      auto C1 = getIConstantVRegValWithLookThrough(${root}->getOperand(2).getReg(), MRI);
+      std::optional<ValueAndVReg> C1 =
+          getIConstantVRegValWithLookThrough(
+              ${root}->getOperand(2).getReg(), MRI);
       if (C1.has_value()) {
-        auto *DefMI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+        MachineInstr *DefMI =
+            getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
         if (DefMI && (${root}->getOpcode() == DefMI->getOpcode())) {
-          auto C2 = getIConstantVRegValWithLookThrough(DefMI->getOperand(2).getReg(), MRI);
+          std::optional<ValueAndVReg> C2 =
+              getIConstantVRegValWithLookThrough(
+                  DefMI->getOperand(2).getReg(), MRI);
           if (C2.has_value()) {
             ${matchinfo} = DefMI->getOperand(0).getReg();
             return C1->Value == C2->Value;
@@ -110,13 +115,15 @@ def build_vector_with_constants : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_BUILD_VECTOR):$root,
     [{
-      auto Type = MRI.getType(${root}->getOperand(0).getReg());
+      LLT Type = MRI.getType(${root}->getOperand(0).getReg());
       if (Type.isPointerVector())
         return false;
-      auto Size = Type.getSizeInBits();
+      TypeSize Size = Type.getSizeInBits();
       if ((Size <= 64) && isPowerOf2_32(Size)) {
         for (unsigned I=1; I < ${root}->getNumOperands(); I++) {
-          auto C = getAnyConstantVRegValWithLookThrough(${root}->getOperand(I).getReg(), MRI);
+          std::optional<ValueAndVReg> C =
+              getAnyConstantVRegValWithLookThrough(
+                  ${root}->getOperand(I).getReg(), MRI);
           if (!C.has_value()) {
               return false;
           }
@@ -138,10 +145,11 @@ def truncated_load : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_TRUNC):$root,
     [{
-      auto *DefMI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
-      auto Type = MRI.getType(DefMI->getOperand(0).getReg());
-      auto Size = Type.getSizeInBits();
-      auto IsVector = Type.isVector();
+      MachineInstr *DefMI =
+          getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+      LLT Type = MRI.getType(DefMI->getOperand(0).getReg());
+      TypeSize Size = Type.getSizeInBits();
+      bool IsVector = Type.isVector();
       return !isPowerOf2_32(Size) && !IsVector && (DefMI->getOpcode() == TargetOpcode::G_LOAD);
     }]),
   (apply
@@ -314,12 +322,17 @@ def const_and_trunc_to_copy : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_TRUNC):$root,
     [{
-      auto *AndMI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+      MachineInstr *AndMI =
+          getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
       if (AndMI->getOpcode() == TargetOpcode::G_AND) {
-        auto C1 = getIConstantVRegValWithLookThrough(AndMI->getOperand(1).getReg(), MRI);
-        auto C2 = getIConstantVRegValWithLookThrough(AndMI->getOperand(2).getReg(), MRI);
+        std::optional<ValueAndVReg> C1 =
+            getIConstantVRegValWithLookThrough(
+                AndMI->getOperand(1).getReg(), MRI);
+        std::optional<ValueAndVReg> C2 =
+            getIConstantVRegValWithLookThrough(
+                AndMI->getOperand(2).getReg(), MRI);
         if (C1.has_value() && C2.has_value()) {
-          auto Value = C1->Value & C2->Value;
+          APInt Value = C1->Value & C2->Value;
           return (Value.getZExtValue() >> MRI.getType(${root}->getOperand(0).getReg()).getSizeInBits()) == 0;
         }
       }
@@ -327,10 +340,17 @@ def const_and_trunc_to_copy : GICombineRule<
     }]),
   (apply
     [{ 
-      auto *AndMI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
-      auto C1 = getIConstantVRegValWithLookThrough(AndMI->getOperand(1).getReg(), MRI);
-      auto C2 = getIConstantVRegValWithLookThrough(AndMI->getOperand(2).getReg(), MRI);
-      auto Value = (C1->Value & C2->Value).trunc(MRI.getType(${root}->getOperand(0).getReg()).getSizeInBits());
+      MachineInstr *AndMI =
+          getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+      std::optional<ValueAndVReg> C1 =
+          getIConstantVRegValWithLookThrough(
+              AndMI->getOperand(1).getReg(), MRI);
+      std::optional<ValueAndVReg> C2 =
+          getIConstantVRegValWithLookThrough(
+              AndMI->getOperand(2).getReg(), MRI);
+      APInt Value = (C1->Value & C2->Value)
+                        .trunc(MRI.getType(${root}->getOperand(0).getReg())
+                                   .getSizeInBits());
       Helper.replaceInstWithConstant(*${root}, Value);
     }])
 >;
@@ -352,7 +372,8 @@ def extract_subvector_to_extract_elt : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
     [{
-      auto *SubvectorMI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+      MachineInstr *SubvectorMI =
+          getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
       if (!SubvectorMI) {
         return false;
       }
@@ -363,7 +384,9 @@ def extract_subvector_to_extract_elt : GICombineRule<
        // Skip to avoid needing to generate add instruction for index adjustment.
        return false;
       }
-      auto C = getIConstantVRegValWithLookThrough(${root}->getOperand(2).getReg(), MRI);
+      std::optional<ValueAndVReg> C =
+          getIConstantVRegValWithLookThrough(
+              ${root}->getOperand(2).getReg(), MRI);
       if (!C.has_value()){
         if (SubvectorMI->getOperand(2).getImm() != 0){
         // Skip to avoid needing to generate add instruction for index adjustment.
@@ -375,11 +398,14 @@ def extract_subvector_to_extract_elt : GICombineRule<
     }]),
   (apply
     [{
-      auto *SubvectorMI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+      MachineInstr *SubvectorMI =
+          getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
       Register SrcReg = SubvectorMI->getOperand(1).getReg();
       Register IdxReg = ${root}->getOperand(2).getReg();
       Register DstReg = ${root}->getOperand(0).getReg();
-      auto C = getIConstantVRegValWithLookThrough(${root}->getOperand(2).getReg(), MRI);
+      std::optional<ValueAndVReg> C =
+          getIConstantVRegValWithLookThrough(
+              ${root}->getOperand(2).getReg(), MRI);
       if (C.has_value() && SubvectorMI->getOperand(2).isImm()){
         uint64_t NewIdx = C->Value.getZExtValue() + SubvectorMI->getOperand(2).getImm();
         B.buildExtractVectorElementConstant(DstReg, SrcReg, NewIdx);
@@ -471,19 +497,27 @@ def build_vector_extract_to_copy : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
     [{
-      auto *BuildMI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+      MachineInstr *BuildMI =
+          getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
       if (BuildMI->getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
-        auto C = getIConstantVRegValWithLookThrough(${root}->getOperand(2).getReg(), MRI);
+        std::optional<ValueAndVReg> C =
+            getIConstantVRegValWithLookThrough(
+                ${root}->getOperand(2).getReg(), MRI);
         return C.has_value();
       }
       return false;
     }]),
   (apply
     [{ 
-      auto [BuildMI, RegIdx] = PISA::getDefIgnoringBitcasts(${root}->getOperand(1).getReg(), MRI);
-      auto C = getIConstantVRegValWithLookThrough(${root}->getOperand(2).getReg(), MRI);
-      auto DstReg = ${root}->getOperand(0).getReg();
-      auto OpndReg = BuildMI->getOperand(C->Value.getZExtValue() + 1).getReg();
+      MachineInstr *BuildMI =
+          std::get<0>(PISA::getDefIgnoringBitcasts(
+              ${root}->getOperand(1).getReg(), MRI));
+      std::optional<ValueAndVReg> C =
+          getIConstantVRegValWithLookThrough(
+              ${root}->getOperand(2).getReg(), MRI);
+      Register DstReg = ${root}->getOperand(0).getReg();
+      Register OpndReg =
+          BuildMI->getOperand(C->Value.getZExtValue() + 1).getReg();
       if (DstReg != OpndReg)
         B.buildCopy(DstReg, OpndReg);
       ${root}->eraseFromParent();
@@ -499,8 +533,10 @@ def shifts_of_constants : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_SHL, G_LSHR, G_ASHR):$root,
     [{
-      auto *Src0MI = getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
-      auto *Src1MI = getDefIgnoringCopies(${root}->getOperand(2).getReg(), MRI);
+      MachineInstr *Src0MI =
+          getDefIgnoringCopies(${root}->getOperand(1).getReg(), MRI);
+      MachineInstr *Src1MI =
+          getDefIgnoringCopies(${root}->getOperand(2).getReg(), MRI);
       return (Src0MI->getOpcode() == TargetOpcode::G_CONSTANT)
         &&  (Src1MI->getOpcode() == TargetOpcode::G_CONSTANT);
     }]),
@@ -558,9 +594,9 @@ def redundant_bitcasts : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_BITCAST):$root,
     [{
-      auto DstReg = ${root}->getOperand(0).getReg();
-      auto SrcReg = ${root}->getOperand(1).getReg();
-      auto *SrcMI = getDefIgnoringCopies(SrcReg, MRI);
+      Register DstReg = ${root}->getOperand(0).getReg();
+      Register SrcReg = ${root}->getOperand(1).getReg();
+      MachineInstr *SrcMI = getDefIgnoringCopies(SrcReg, MRI);
       // do not remove casts between integers and floating point
       if (MRI.getType(DstReg).getScalarType().isFloat() != MRI.getType(SrcReg).getScalarType().isFloat())
         return false;
@@ -570,10 +606,10 @@ def redundant_bitcasts : GICombineRule<
     }]),
   (apply
     [{
-      auto DstReg = ${root}->getOperand(0).getReg();
-      auto SrcReg = ${root}->getOperand(1).getReg();
-      auto *SrcMI = getDefIgnoringCopies(SrcReg, MRI);
-      auto OrigSrcReg = SrcMI->getOperand(1).getReg();
+      Register DstReg = ${root}->getOperand(0).getReg();
+      Register SrcReg = ${root}->getOperand(1).getReg();
+      MachineInstr *SrcMI = getDefIgnoringCopies(SrcReg, MRI);
+      Register OrigSrcReg = SrcMI->getOperand(1).getReg();
       if (MRI.getType(DstReg) == MRI.getType(OrigSrcReg))
         B.buildCopy(DstReg, OrigSrcReg);
       else
@@ -604,9 +640,9 @@ def p2i_to_i2p_fixed: GICombineRule<
   (match (G_PTRTOINT $int, $ptr),
          (G_INTTOPTR $dst, $int):$root,
     [{
-      auto PTy = MRI.getType(${ptr}.getReg());
-      auto TTy = MRI.getType(${int}.getReg());
-      auto DTy = MRI.getType(${dst}.getReg());
+      LLT PTy = MRI.getType(${ptr}.getReg());
+      LLT TTy = MRI.getType(${int}.getReg());
+      LLT DTy = MRI.getType(${dst}.getReg());
       if (PTy.getScalarSizeInBits() != TTy.getScalarSizeInBits())
         return false;
       if (TTy.getScalarSizeInBits() != DTy.getScalarSizeInBits())

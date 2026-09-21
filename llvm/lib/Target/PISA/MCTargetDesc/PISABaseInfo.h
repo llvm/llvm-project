@@ -24,11 +24,12 @@ std::string getPISAStringOperand(const InstType &MI, unsigned StartIndex) {
   const unsigned NumOps = MI.getNumOperands();
   bool IsFinished = false;
   for (unsigned I = StartIndex; I < NumOps && !IsFinished; ++I) {
-    const auto &Op = MI.getOperand(I);
-    if (!Op.isImm()) // Stop if we hit a register operand.
+    if (!MI.getOperand(I).isImm()) // Stop if we hit a register operand.
       break;
-    assert((Op.getImm() >> 32) == 0 && "Imm operand should be i32 word");
-    const uint32_t Imm = Op.getImm(); // Each i32 word is up to 4 characters.
+    assert((MI.getOperand(I).getImm() >> 32) == 0 &&
+           "Imm operand should be i32 word");
+    const uint32_t Imm =
+        MI.getOperand(I).getImm(); // Each i32 word is up to 4 characters.
     for (unsigned ShiftAmount = 0; ShiftAmount < 32; ShiftAmount += 8) {
       char C = (Imm >> ShiftAmount) & 0xff;
       if (C == 0) { // Stop if we hit a null-terminator character.
