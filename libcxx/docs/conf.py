@@ -16,6 +16,15 @@ from datetime import date
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
 globals().update(common_conf(tags, markdown=Markdown.ALWAYS))
+myst_enable_extensions += ["substitution"]
+myst_substitutions = {
+    "Complete": "{complete}`Complete`",
+    "InProgress": "{inprogress}`In Progress`",
+    "NotStarted": "{notstarted}`Not Started`",
+    "NothingToDo": "{nothingtodo}`Nothing To Do`",
+    "Partial": "{partial}`Partial`",
+    "Review": "{inreview}`Review`",
+}
 
 # -- General configuration -----------------------------------------------------
 
