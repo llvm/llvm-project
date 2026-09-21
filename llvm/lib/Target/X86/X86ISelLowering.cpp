@@ -3383,7 +3383,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesenc128kl:
     case Intrinsic::x86_aesdec128kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(1);
+      Info.setPointerOperand(I, 1);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 48);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3392,7 +3392,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesenc256kl:
     case Intrinsic::x86_aesdec256kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(1);
+      Info.setPointerOperand(I, 1);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 64);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3401,7 +3401,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesencwide128kl:
     case Intrinsic::x86_aesdecwide128kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 48);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3410,7 +3410,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesencwide256kl:
     case Intrinsic::x86_aesdecwide256kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 64);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3422,7 +3422,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_atomic_btc:
     case Intrinsic::x86_atomic_btr: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       unsigned Size = I.getType()->getScalarSizeInBits();
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), Size);
       Info.align = Align(Size);
@@ -3435,7 +3435,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_atomic_btc_rm:
     case Intrinsic::x86_atomic_btr_rm: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       unsigned Size = I.getArgOperand(1)->getType()->getScalarSizeInBits();
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), Size);
       Info.align = Align(Size);
@@ -3458,7 +3458,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_atomic_and_cc:
     case Intrinsic::x86_atomic_xor_cc: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       unsigned Size = I.getArgOperand(1)->getType()->getScalarSizeInBits();
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), Size);
       Info.align = Align(Size);
@@ -3476,7 +3476,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
   case TRUNCATE_TO_MEM_VI16:
   case TRUNCATE_TO_MEM_VI32: {
     Info.opc = ISD::INTRINSIC_VOID;
-    Info.ptrVal = I.getArgOperand(0);
+    Info.setPointerOperand(I, 0);
     MVT VT  = MVT::getVT(I.getArgOperand(1)->getType());
     MVT ScalarVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
     if (IntrData->Type == TRUNCATE_TO_MEM_VI8)

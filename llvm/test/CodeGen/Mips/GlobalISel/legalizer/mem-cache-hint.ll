@@ -9,13 +9,13 @@ define void @split_load_store(ptr %src, ptr %dst) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.src)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.src, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[COPY1]](p0) :: (store (s16) into %ir.dst, align 4)
+  ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[COPY1]](p0) :: (store (s16) into %ir.dst, align 4, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
-  ; CHECK-NEXT:   G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.dst + 2, align 2, basealign 4)
+  ; CHECK-NEXT:   G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.dst + 2, align 2, basealign 4, !mem.cache_hint !1)
   ; CHECK-NEXT:   RetRA
   %value = load i24, ptr %src, align 4, !mem.cache_hint !0
   store i24 %value, ptr %dst, align 4, !mem.cache_hint !1

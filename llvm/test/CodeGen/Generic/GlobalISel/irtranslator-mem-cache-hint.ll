@@ -11,8 +11,8 @@ define i32 @load_store(ptr %p, i32 %v) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p)
-  ; CHECK-NEXT:   G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.p)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p, !mem.cache_hint !1)
+  ; CHECK-NEXT:   G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.p, !mem.cache_hint !3)
   ; CHECK-NEXT:   $eax = COPY [[LOAD]](s32)
   ; CHECK-NEXT:   RET 0, implicit $eax
   %load = load i32, ptr %p, align 4, !mem.cache_hint !0
@@ -27,10 +27,10 @@ define i32 @atomics(ptr %p, i32 %v) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $esi
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load monotonic (s32) from %ir.p)
-  ; CHECK-NEXT:   G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store release (s32) into %ir.p)
-  ; CHECK-NEXT:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[COPY1]] :: (load store monotonic (s32) on %ir.p)
-  ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[ATOMICRMW_ADD]], [[COPY1]] :: (load store seq_cst monotonic (s32) on %ir.p)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load monotonic (s32) from %ir.p, !mem.cache_hint !1)
+  ; CHECK-NEXT:   G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store release (s32) into %ir.p, !mem.cache_hint !3)
+  ; CHECK-NEXT:   [[ATOMICRMW_ADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_ADD [[COPY]](p0), [[COPY1]] :: (load store monotonic (s32) on %ir.p, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p0), [[ATOMICRMW_ADD]], [[COPY1]] :: (load store seq_cst monotonic (s32) on %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   $eax = COPY [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32)
   ; CHECK-NEXT:   RET 0, implicit $eax
   %load = load atomic i32, ptr %p monotonic, align 4, !mem.cache_hint !0
@@ -47,7 +47,7 @@ define i32 @target_memory_intrinsic(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.x86.atomic.bts), [[COPY]](p0), 1 :: (volatile load store (s32) on %ir.p, align 32)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.x86.atomic.bts), [[COPY]](p0), 1 :: (volatile load store (s32) on %ir.p, align 32, !mem.cache_hint !1)
   ; CHECK-NEXT:   $eax = COPY [[INT]](s32)
   ; CHECK-NEXT:   RET 0, implicit $eax
   %old = call i32 @llvm.x86.atomic.bts.i32(ptr %p, i8 1), !mem.cache_hint !0
@@ -63,9 +63,9 @@ define void @memory_intrinsics(ptr %dst, ptr %src) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $rsi
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-  ; CHECK-NEXT:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.dst, align 4), (load (s8) from %ir.src, align 4)
-  ; CHECK-NEXT:   G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.dst, align 4), (load (s8) from %ir.src, align 4)
-  ; CHECK-NEXT:   G_MEMSET [[COPY]](p0), [[C1]](s8), [[C]](s64), 0 :: (store (s8) into %ir.dst, align 4)
+  ; CHECK-NEXT:   G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.dst, align 4, !mem.cache_hint !3), (load (s8) from %ir.src, align 4, !mem.cache_hint !1)
+  ; CHECK-NEXT:   G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.dst, align 4, !mem.cache_hint !3), (load (s8) from %ir.src, align 4, !mem.cache_hint !1)
+  ; CHECK-NEXT:   G_MEMSET [[COPY]](p0), [[C1]](s8), [[C]](s64), 0 :: (store (s8) into %ir.dst, align 4, !mem.cache_hint !3)
   ; CHECK-NEXT:   RET 0
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 32, i1 false), !mem.cache_hint !2
   call void @llvm.memmove.p0.p0.i64(ptr align 4 %dst, ptr align 4 %src, i64 32, i1 false), !mem.cache_hint !2
