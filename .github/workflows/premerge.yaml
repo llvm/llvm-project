@@ -66,6 +66,7 @@ jobs:
         run: |
           for p in Linux Windows Darwin; do
             echo $p-values=$(python3 .ci/compute_projects.py $p < /tmp/changed_files.txt) >> $GITHUB_OUTPUT
+            python3 .ci/compute_projects.py $p < /tmp/changed_files.txt
           done
 
 #          echo "Building projects: ${projects_to_build}"
