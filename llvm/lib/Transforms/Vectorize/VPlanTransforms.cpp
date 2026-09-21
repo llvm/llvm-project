@@ -3340,10 +3340,11 @@ bool VPlanTransforms::handleUncountableEarlyExits(
 
     // Add phis so there's a def of CondToEarlyExit on every path leading to the
     // latch. The condition is false on paths that didn't go through
-    // EarlyExitingVPBB. EarlyExitingVPBB may be the same as HeaderVPBB, so
-    // assign in order.
-    DenseMap<VPBasicBlock *, VPValue *> Defs = {{HeaderVPBB, Plan.getFalse()}};
-    Defs[EarlyExitingVPBB] = CondToEarlyExit;
+    // EarlyExitingVPBB.
+    DenseMap<VPBasicBlock *, VPValue *> Defs = {
+        {EarlyExitingVPBB, CondToEarlyExit}};
+    if (HeaderVPBB != EarlyExitingVPBB)
+      Defs[HeaderVPBB] = Plan.getFalse();
     CondToEarlyExit = vputils::reconstructSSA(LatchVPBB, Defs);
 
     Exits.push_back({
@@ -3485,14 +3486,14 @@ bool VPlanTransforms::handleUncountableEarlyExits(
       VPValue *NewIncoming = IncomingVal;
       if (!isa<VPIRValue>(IncomingVal)) {
         // Add phis so IncomingVal is defined on all paths to the latch.
-        DenseMap<VPBasicBlock *, VPValue *> Defs = {
-            {HeaderVPBB, Plan.getPoison(IncomingVal->getScalarType())}};
         assert(IncomingVal->hasDefiningRecipe() &&
                "Non-live-in IncomingVal without a recipe?");
         VPBasicBlock *DefVPBB = IncomingVal->getDefiningRecipe()->getParent();
         assert(VPDT.dominates(HeaderVPBB, DefVPBB) &&
                "IncomingVal defined outside of vector body?");
-        Defs[DefVPBB] = IncomingVal;
+        DenseMap<VPBasicBlock *, VPValue *> Defs = {{DefVPBB, IncomingVal}};
+        if (HeaderVPBB != DefVPBB)
+          Defs[HeaderVPBB] = Plan.getPoison(IncomingVal->getScalarType());
         IncomingVal = vputils::reconstructSSA(LatchVPBB, Defs);
 
         VPBuilder EarlyExitBuilder(VectorEarlyExitVPBB);
