@@ -25,7 +25,7 @@
 #  include "emplace_constructible.h"
 #endif
 
-// TODO: Investigate how to run heavy test() during constant evaluation.
+// TODO: Investigate how to run heavy basic_test() during constant evaluation.
 
 template <class C>
 /*TEST_CONSTEXPR_CXX26*/ C make(int size, int start = 0) {
@@ -113,7 +113,7 @@ template <class C>
 }
 
 template <class It>
-/*TEST_CONSTEXPR_CXX26*/ void test_emplacable_concept() {
+TEST_CONSTEXPR_CXX26 void test_emplacable_concept() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -146,29 +146,24 @@ TEST_CONSTEXPR_CXX26 void test_iterators() {
   test_emplacable_concept<int*>();
 }
 
-/*TEST_CONSTEXPR_CXX26*/ bool test() {
-  basic_test();
+TEST_CONSTEXPR_CXX26 bool test() {
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    basic_test();
   test_iterators();
-  return true;
-}
-
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
-  int input[] = {1, 2, 3};
-  std::deque<int> d;
-  d.assign(input, input + 3);
-  assert(d.size() == 3);
-  assert(std::equal(d.begin(), d.end(), std::begin(input)));
-
-  test_iterators();
-
+  {
+    int input[] = {1, 2, 3};
+    std::deque<int> d;
+    d.assign(input, input + 3);
+    assert(d.size() == 3);
+    assert(std::equal(d.begin(), d.end(), std::begin(input)));
+  }
   return true;
 }
 
 int main(int, char**) {
   test();
-  test_constexpr();
 #if TEST_STD_VER >= 26
-  static_assert(test_constexpr());
+  static_assert(test());
 #endif
   return 0;
 }
