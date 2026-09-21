@@ -40,12 +40,16 @@ LIBC_INLINE float16 log1pf16(float16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
-  constexpr size_t N_LOG1PF16_EXCEPTS = 9;
+  constexpr size_t N_LOG1PF16_EXCEPTS = 11;
   constexpr fputil::ExceptValues<float16, N_LOG1PF16_EXCEPTS> LOG1PF16_EXCEPTS =
       {{
           // (input, RZ output, RU offset, RD offset, RN offset)
           // x = 0x1.f24p-7, log1pf16(x) = 0x1.ee4p-7 (RZ)
           {0x23C9U, 0x23B9U, 1U, 0U, 1U},
+          // x = 0x1.04cp-3, log1pf16(x) = 0x1.eacp-4 (RZ)
+          {0x3013U, 0x2FABU, 1U, 0U, 1U},
+          // x = 0x1.6c4p-3, log1pf16(x) = 0x1.4fp-3 (RZ)
+          {0x31B1U, 0x313CU, 1U, 0U, 1U},
           // x = 0x1.6ccp-2, log1pf16(x) = 0x1.38p-2 (RZ)
           {0x35B3U, 0x34E0U, 1U, 0U, 0U},
           // x = 0x1.988p0, log1pf16(x) = 0x1.e84p-1 (RZ)
