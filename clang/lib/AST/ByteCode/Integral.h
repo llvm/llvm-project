@@ -108,7 +108,7 @@ public:
 
   /// Constructs an integral from another integral.
   template <unsigned SrcBits, bool SrcSign>
-  explicit Integral(Integral<SrcBits, SrcSign> V) : Kind(V.Kind), V(V) {}
+  explicit Integral(Integral<SrcBits, SrcSign> V) : V(V), Kind(V.Kind) {}
 
   /// Pointer integral of the given kind.
   explicit Integral(IntegralKind Kind, const void *P, OffsetT Offset = 0)

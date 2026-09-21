@@ -21,15 +21,28 @@
 namespace clang {
 namespace interp {
 
-template <class T>
-struct datasizeof_impl {
+template <class T> struct datasizeof_impl {
   LLVM_NO_UNIQUE_ADDRESS T v;
   char first_padding_byte;
 };
 
-template <class T>
-constexpr size_t datasizeof_v = offsetof(datasizeof_impl<T>, first_padding_byte);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+// Clang and GCC complain that `offsetof` isn't allowed on non-standard-layout
+// types. However, it works just fine.
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
 
+// `datasizeof_v` is the size of a struct ignoring padding bytes.
+template <class T>
+constexpr size_t datasizeof_v =
+    offsetof(datasizeof_impl<T>, first_padding_byte);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+// Insert artificial padding into a struct to position members at a specific
+// offset. Needs to be used with LLVM_NO_UNIQUE_ADDRESS
 template <size_t N> struct Padding {
   char padding[N];
 };
@@ -44,25 +57,30 @@ public:
   /// Destroys the stack, freeing up storage.
   ~InterpStack();
 
+  // StackFrame<T> is the actual object stored on the InterpStack for a given T.
+  // It automatically aligns the objects appropriately and saves the type of the
+  // object in the last byte of the allocation to allow retrieving type
+  // information when unwinding the stack. If available, it uses tail padding in
+  // the objects to store the type information to reduce the memory footprint.
   template <class T> struct alignas(void *) StackFrame {
     static_assert(alignof(T) <= alignof(void *),
                   "Unexpected overaligned object");
 
     template <class... Args>
     StackFrame(Args &&...args)
-        : v(std::forward<Args>(args)...), type(toPrimType<T>()) {}
+        : V(std::forward<Args>(args)...), type(toPrimType<T>()) {}
 
     static constexpr size_t getPaddingSize() {
-      if constexpr (sizeof(T) < sizeof(void*))
-        return sizeof(void*) - datasizeof_v<T> - 1;
+      if constexpr (sizeof(T) < sizeof(void *))
+        return sizeof(void *) - datasizeof_v<T> - 1;
       else if constexpr (sizeof(T) == datasizeof_v<T>)
-        return sizeof(void*) - 1;
+        return sizeof(void *) - 1;
       else
         return sizeof(T) - datasizeof_v<T> - 1;
     }
 
-    LLVM_NO_UNIQUE_ADDRESS T v;
-    LLVM_NO_UNIQUE_ADDRESS Padding<getPaddingSize()> padding;
+    LLVM_NO_UNIQUE_ADDRESS T V;
+    LLVM_NO_UNIQUE_ADDRESS Padding<getPaddingSize()> P;
     PrimType type;
   };
 
@@ -74,7 +92,7 @@ public:
 
   /// Returns the value from the top of the stack and removes it.
   template <typename T> T pop() {
-    assert(getNextObjectType() == toPrimType<T>());
+    assert(getTopFrameType() == toPrimType<T>());
     T *Ptr = &peekInternal<T>();
     T Value = std::move(*Ptr);
     shrink(sizeof(StackFrame<T>));
@@ -83,7 +101,7 @@ public:
 
   /// Discards the top value from the stack.
   template <typename T> void discard() {
-    assert(getNextObjectType() == toPrimType<T>());
+    assert(getTopFrameType() == toPrimType<T>());
     T *Ptr = &peekInternal<T>();
     if constexpr (!std::is_trivially_destructible_v<T>) {
       Ptr->~T();
@@ -94,7 +112,7 @@ public:
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {
-    assert(getNextObjectType() == toPrimType<T>());
+    assert(getTopFrameType() == toPrimType<T>());
     return peekInternal<T>();
   }
 
@@ -120,13 +138,13 @@ public:
   void dump() const;
 
 private:
-  PrimType getNextObjectType() const {
+  PrimType getTopFrameType() const {
     return *static_cast<PrimType *>(peekData(1));
   }
 
   /// Like the public peek(), but without the debug type checks.
   template <typename T> T &peekInternal() const {
-    return static_cast<StackFrame<T> *>(peekData(sizeof(StackFrame<T>)))->v;
+    return static_cast<StackFrame<T> *>(peekData(sizeof(StackFrame<T>)))->V;
   }
 
   /// Grows the stack to accommodate a value and returns a pointer to it.

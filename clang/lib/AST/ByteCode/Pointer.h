@@ -535,26 +535,26 @@ enum class Storage { Int, Block, Fn, Typeid, String, Opaque };
 /// \endverbatim
 class Pointer {
 public:
-  Pointer() : StorageKind(Storage::Int), Int{nullptr, 0} {}
+  Pointer() : Int{nullptr, 0}, StorageKind(Storage::Int) {}
   Pointer(IntPointer &&IntPtr)
-      : StorageKind(Storage::Int), Int(std::move(IntPtr)) {}
+      : Int(std::move(IntPtr)), StorageKind(Storage::Int) {}
   Pointer(Block *B);
   Pointer(Block *B, uint64_t BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
   Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Int), Int{Ty, Address} {}
+      : Offset(Offset), Int{Ty, Address}, StorageKind(Storage::Int) {}
   Pointer(const Function *F, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Fn), Fn{F} {}
+      : Offset(Offset), Fn{F}, StorageKind(Storage::Fn) {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Typeid) {
     Typeid.TypePtr = TypePtr;
     Typeid.TypeInfoType = TypeInfoType;
   }
   Pointer(const Expr *Base, unsigned Id)
-      : Offset(0), StorageKind(Storage::String), Str{Base, Id} {}
+      : Offset(0), Str{Base, Id}, StorageKind(Storage::String) {}
   Pointer(StringPointer Str, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::String), Str(Str) {}
+      : Offset(Offset), Str(Str), StorageKind(Storage::String) {}
 
   Pointer(DeclOrExpr DOE, bool ConstexprUnknown = false)
       : Offset(0), StorageKind(Storage::Opaque) {
@@ -564,7 +564,7 @@ public:
     Opaque.PathLength = 0;
   }
   Pointer(OpaquePointer OP, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Opaque), Opaque(OP) {}
+      : Offset(Offset), Opaque(OP), StorageKind(Storage::Opaque) {}
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   explicit Pointer(PtrView V) : Pointer(V.Pointee, V.Base, V.Offset) {}

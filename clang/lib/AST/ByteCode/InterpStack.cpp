@@ -27,19 +27,31 @@ InterpStack::~InterpStack() {
     std::free(Chunk);
 
 #if __has_cpp_attribute(no_unique_address)
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+// Clang and GCC complain that `offsetof` isn't allowed on non-standard-layout
+// types. However, it works just fine.
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
   TYPE_SWITCH(PrimType(), {
     using Frame = StackFrame<T>;
     static_assert(offsetof(Frame, type) == sizeof(Frame) - 1);
+    // Currently we don't need to use extra memory to store the type information
+    // for any PrimType on 64 bit platforms. Nothing breaks if this changes, but
+    // it would result in 8 extra bytes used just for the type information.
     static_assert(sizeof(void *) != 8 || sizeof(Frame) == sizeof(T) ||
                   sizeof(T) < sizeof(void *));
   });
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #endif
 }
 
 // We keep the last chunk around to reuse.
 void InterpStack::clear() {
   while (!empty()) {
-    TYPE_SWITCH(getNextObjectType(), { this->discard<T>(); });
+    TYPE_SWITCH(getTopFrameType(), { this->discard<T>(); });
   }
 }
 
@@ -51,7 +63,7 @@ void InterpStack::clearTo(size_t NewSize) {
 
   assert(NewSize <= size());
   while (size() != NewSize)
-    TYPE_SWITCH(getNextObjectType(), { this->discard<T>(); });
+    TYPE_SWITCH(getTopFrameType(), { this->discard<T>(); });
 
   // Note: discard() above already removed the types from ItemTypes.
   assert(size() == NewSize);
@@ -99,6 +111,8 @@ void InterpStack::shrink(size_t Size) {
 }
 
 void InterpStack::dump() const {
+  llvm::errs() << "Size: " << size() << '\n';
+
   size_t Index = 0;
   size_t Offset = 0;
 
@@ -122,5 +136,5 @@ void InterpStack::dump() const {
 void InterpStack::discardSlow() {
   assert(!empty());
 
-  TYPE_SWITCH(getNextObjectType(), { discard<T>(); });
+  TYPE_SWITCH(getTopFrameType(), { discard<T>(); });
 }
