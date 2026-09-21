@@ -22,14 +22,18 @@
 // CHECK: FunctionDecl {{.+}} imported in SliceGroupsExact sliceGroupExactProbe
 
 // The broad lookup's two slices share one group.
-// CHECK: SwiftVersionedAdditionAttr {{.+}} Implicit 0 0{{$}}
+// CHECK: SwiftVersionedSliceAttr {{.+}} Implicit 0 0{{$}}
+// CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 0 0{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "broadUnversioned(_:)"
+// CHECK-NEXT: SwiftVersionedSliceAttr {{.+}} Implicit 3.0 0{{$}}
 // CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 0{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "broadV3(_:)"
 
 // The exact lookup's two slices share a different group. The trailing 1 is the
 // assertion: it must not be 0, or the two competitions have been pooled.
+// CHECK-NEXT: SwiftVersionedSliceAttr {{.+}} Implicit 0 1{{$}}
 // CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 0 1{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "exactUnversioned(_:)"
+// CHECK-NEXT: SwiftVersionedSliceAttr {{.+}} Implicit 3.0 1{{$}}
 // CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 1{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "exactV3(_:)"
