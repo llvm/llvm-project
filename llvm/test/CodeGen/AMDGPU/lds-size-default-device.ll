@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d < %s | FileCheck %s --check-prefixes=CHECK,MESA
-; RUN: llc -mtriple=amdgcn-amd-amdpal < %s | FileCheck %s --check-prefixes=CHECK,PAL
-; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck %s --check-prefixes=CHECK,HSA
+; RUN: llc -mtriple=amdgpu-mesa-mesa3d < %s | FileCheck %s --check-prefixes=CHECK,MESA
+; RUN: llc -mtriple=amdgpu-amd-amdpal < %s | FileCheck %s --check-prefixes=CHECK,PAL
+; RUN: llc -mtriple=amdgpu-amd-amdhsa < %s | FileCheck %s --check-prefixes=CHECK,HSA
 
 ; The legacy generic and generic-hsa targets have no LDS encoding granularity
 ; feature. Code generation still uses its default 256-byte encoding granule,
