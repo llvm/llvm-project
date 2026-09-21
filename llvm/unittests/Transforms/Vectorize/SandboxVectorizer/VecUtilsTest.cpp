@@ -429,7 +429,7 @@ TEST_F(VecUtilsTest, GetWideType) {
 
 TEST_F(VecUtilsTest, GetCombinedVectorTypeFor) {
   parseIR(R"IR(
-define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, <2 x i8> %v2xi8, <2 x i16> %v2xi16) {
+define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, i64 %i64, float %f32, double %f64, <2 x i8> %v2xi8, <2 x i16> %v2xi16, half %f16, bfloat %bf16, <2 x float> %v2xf32, <2 x i32> %v2xi32) {
   store i8 %i8, ptr %ptr
   store i16 %i16, ptr %ptr
   store i32 %i32, ptr %ptr
@@ -437,6 +437,12 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
   store double %f64, ptr %ptr
   store <2 x i8> %v2xi8, ptr %ptr
   store <2 x i16> %v2xi16, ptr %ptr
+  store i64 %i64, ptr %ptr
+  store ptr %ptr, ptr %ptr
+  store half %f16, ptr %ptr
+  store bfloat %bf16, ptr %ptr
+  store <2 x float> %v2xf32, ptr %ptr
+  store <2 x i32> %v2xi32, ptr %ptr
   ret void
 }
 )IR");
@@ -454,10 +460,19 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
   auto *Store_f64 = &*It++;
   auto *Store_2xi8 = &*It++;
   auto *Store_2xi16 = &*It++;
+  auto *Store_i64 = &*It++;
+  auto *Store_ptr = &*It++;
+  auto *Store_f16 = &*It++;
+  auto *Store_bf16 = &*It++;
+  auto *Store_2xf32 = &*It++;
+  auto *Store_2xi32 = &*It++;
 
   auto *I8Ty = sandboxir::IntegerType::get(Ctx, 8);
   auto *I16Ty = sandboxir::IntegerType::get(Ctx, 16);
-  auto *F32Ty = sandboxir::Type::getFloatTy(Ctx);
+  auto *I32Ty = sandboxir::IntegerType::get(Ctx, 32);
+  auto *I64Ty = sandboxir::IntegerType::get(Ctx, 64);
+  auto *F32Ty = sandboxir::Utils::getExpectedType(Store_f32);
+  auto *PtrTy = sandboxir::Utils::getExpectedType(Store_ptr);
 
   // Check same type.
   EXPECT_EQ(
@@ -466,6 +481,20 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
   EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
                 {Store_2xi8, Store_2xi8}, DL),
             sandboxir::FixedVectorType::get(I8Ty, 4));
+  // Non-integer element types are kept as long as they are all the same.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f32}, DL),
+      sandboxir::FixedVectorType::get(F32Ty, 2));
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_ptr, Store_ptr}, DL),
+      sandboxir::FixedVectorType::get(PtrTy, 2));
+  // Only the element type has to match, not the type itself.
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_2xf32, Store_f32}, DL),
+            sandboxir::FixedVectorType::get(F32Ty, 3));
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_2xi8, Store_i8}, DL),
+      sandboxir::FixedVectorType::get(I8Ty, 3));
 
   // Check different types, power-of-two.
   EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
@@ -478,10 +507,11 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
                 {Store_2xi8, Store_2xi8, Store_2xi16}, DL),
             sandboxir::FixedVectorType::get(I8Ty, 8));
 
-  // Check different types non-power-of-two.
+  // Check different types non-power-of-two. Element types that are not all
+  // the same combine into an integer element type.
   EXPECT_EQ(
       sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f32, Store_f64}, DL),
-      sandboxir::FixedVectorType::get(F32Ty, 3));
+      sandboxir::FixedVectorType::get(I32Ty, 3));
   EXPECT_EQ(
       sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_i16}, DL),
       sandboxir::FixedVectorType::get(I16Ty, 3));
@@ -492,19 +522,33 @@ define void @foo(ptr %ptr, i8 %i8, i16 %i16, i32 %i32, float %f32, double %f64, 
                 {Store_i8, Store_i16, Store_2xi8}, DL),
             sandboxir::FixedVectorType::get(I8Ty, 5));
 
-  // Mix float and integer.
-  {
-    auto *CVTy = sandboxir::VecUtils::getCombinedVectorTypeFor(
-        {Store_i32, Store_f32}, DL);
-    EXPECT_EQ(cast<sandboxir::FixedVectorType>(CVTy)->getNumElements(), 2u);
-    EXPECT_EQ(CVTy->getScalarSizeInBits(), 32u);
-  }
-  {
-    auto *CVTy = sandboxir::VecUtils::getCombinedVectorTypeFor(
-        {Store_f32, Store_2xi8}, DL);
-    EXPECT_EQ(cast<sandboxir::FixedVectorType>(CVTy)->getNumElements(), 6u);
-    EXPECT_EQ(CVTy->getScalarSizeInBits(), 8u);
-  }
+  // Mix float and integer: the element type is an integer of the narrowest
+  // element's width.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_i32, Store_f32}, DL),
+      sandboxir::FixedVectorType::get(I32Ty, 2));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_f32, Store_2xi8}, DL),
+            sandboxir::FixedVectorType::get(I8Ty, 6));
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_2xf32, Store_2xi32}, DL),
+            sandboxir::FixedVectorType::get(I32Ty, 4));
+  // Same width but different types, so still an integer element type.
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_f16, Store_bf16}, DL),
+            sandboxir::FixedVectorType::get(I16Ty, 2));
+
+  // Mix pointer and integer, and pointer and float.
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_ptr, Store_i64}, DL),
+      sandboxir::FixedVectorType::get(I64Ty, 2));
+  EXPECT_EQ(
+      sandboxir::VecUtils::getCombinedVectorTypeFor({Store_f64, Store_ptr}, DL),
+      sandboxir::FixedVectorType::get(I64Ty, 2));
+  // The narrowest element sets the element width, here the i32 of the vector.
+  EXPECT_EQ(sandboxir::VecUtils::getCombinedVectorTypeFor(
+                {Store_ptr, Store_ptr, Store_2xi32}, DL),
+            sandboxir::FixedVectorType::get(I32Ty, 6));
 }
 
 TEST_F(VecUtilsTest, GetLowest) {
