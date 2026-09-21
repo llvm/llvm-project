@@ -295,9 +295,10 @@ body:             |
 
 ---
 # As above, but with a non-zero offset and with SCC dead after the frame index
-# user: S_CSELECT_B32 is its last read. FrameReg is still restored with the
-# S_ADDC_U32/S_BITCMP1_B32/S_BITSET0_B32 sequence that preserves SCC, even
-# though nothing after MI reads it.
+# user: S_CSELECT_B32 is its last read. Restoring FrameReg can therefore fold
+# the offset back with a plain S_ADD_I32 and clobber SCC freely, instead of the
+# S_ADDC_U32/S_BITCMP1_B32/S_BITSET0_B32 sequence needed when SCC has a later
+# use.
 name:            scc_live_into_dead_after_scalar_frame_index_no_free_sgpr_nonzero_offset
 tracksRegLiveness: true
 stack:
@@ -329,9 +330,7 @@ body:             |
   ; CHECK-NEXT:   $sgpr32 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   renamable $vcc_lo = S_CSELECT_B32 $sgpr32, renamable $sgpr97, implicit $scc
   ; CHECK-NEXT:   $sgpr32 = S_MUL_I32 $sgpr32, 64
-  ; CHECK-NEXT:   $sgpr32 = S_ADDC_U32 $sgpr32, -4096, implicit-def $scc, implicit $scc
-  ; CHECK-NEXT:   S_BITCMP1_B32 $sgpr32, 0, implicit-def $scc
-  ; CHECK-NEXT:   $sgpr32 = S_BITSET0_B32 0, $sgpr32
+  ; CHECK-NEXT:   $sgpr32 = S_ADD_I32 $sgpr32, -4096, implicit-def $scc
   ; CHECK-NEXT:   S_NOP 0, implicit killed $sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19, implicit killed $sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31_sgpr32_sgpr33_sgpr34_sgpr35, implicit killed $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51, implicit killed $sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, implicit killed $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83, implicit killed $sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit killed $sgpr96_sgpr97_sgpr98_sgpr99
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}

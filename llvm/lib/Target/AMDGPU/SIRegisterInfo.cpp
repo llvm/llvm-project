@@ -3409,6 +3409,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // In an entry function/kernel the offset is already swizzled.
       bool IsSALU = isSGPRClass(TII->getRegClass(MI->getDesc(), FIOperandNum));
       bool LiveSCC = isSCCLiveInto(*RS, *MI);
+      // The scavenger is positioned at the liveness state immediately after MI,
+      // so we need only check if SCC is used.
+      bool SCCLiveAfterMI = RS->isRegUsed(AMDGPU::SCC);
       const TargetRegisterClass *RC = IsSALU && !LiveSCC
                                           ? &AMDGPU::SReg_32RegClass
                                           : &AMDGPU::VGPR_32RegClass;
@@ -3659,9 +3662,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (Offset) {
           int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
-          bool SCCLiveAfterMI = MI->definesRegister(AMDGPU::SCC, this)
-                                    ? !MI->registerDefIsDead(AMDGPU::SCC, this)
-                                    : LiveSCC;
           if (!SCCLiveAfterMI) {
             BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), FrameReg)
                 .addReg(FrameReg)
