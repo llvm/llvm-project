@@ -530,7 +530,6 @@ static void buildDefCFAReg(MachineBasicBlock &MBB,
 
 void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
-  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   const SystemZSubtarget &STI = MF.getSubtarget<SystemZSubtarget>();
   const SystemZTargetLowering &TLI = *STI.getTargetLowering();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
@@ -720,18 +719,31 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
 void SystemZELFFrameLowering::emitEpilogue(MachineFunction &MF,
                                            MachineBasicBlock &MBB) const {
-  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   auto *ZII =
       static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
 
+  // A shrink-wrapped epilogue can be inserted into a block without a return
+  // instruction. Insert before the first terminator, or after the
+  // non-debug instruction when the block has no terminator.
+  MachineBasicBlock::iterator MBBI = MBB.end();
+  DebugLoc DL;
+  if (!MBB.empty()) {
+    MBBI = MBB.getFirstTerminator();
+    if (MBBI == MBB.end())
+      MBBI = MBB.getLastNonDebugInstr();
+
+    if (MBBI != MBB.end()) {
+      DL = MBBI->getDebugLoc();
+      if (!MBBI->isTerminator())
+        MBBI = std::next(MBBI);
+    }
+  }
+
   // See SystemZELFFrameLowering::emitPrologue
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
-
-  // Skip the return instruction.
-  assert(MBBI->isReturn() && "Can only insert epilogue into returning blocks");
 
   uint64_t StackSize = MFFrame.getStackSize();
   if (ZFI->getRestoreGPRRegs().LowGPR) {
@@ -741,7 +753,6 @@ void SystemZELFFrameLowering::emitEpilogue(MachineFunction &MF,
       llvm_unreachable("Expected to see callee-save register restore code");
 
     unsigned AddrOpNo = 2;
-    DebugLoc DL = MBBI->getDebugLoc();
     uint64_t Offset = StackSize + MBBI->getOperand(AddrOpNo + 1).getImm();
     unsigned NewOpcode = ZII->getOpcodeForOffset(Opcode, Offset);
 
@@ -759,7 +770,6 @@ void SystemZELFFrameLowering::emitEpilogue(MachineFunction &MF,
     MBBI->setDesc(ZII->get(NewOpcode));
     MBBI->getOperand(AddrOpNo + 1).ChangeToImmediate(Offset);
   } else if (StackSize) {
-    DebugLoc DL = MBBI->getDebugLoc();
     emitIncrement(MBB, MBBI, DL, SystemZ::R15D, StackSize, ZII);
   }
 }
