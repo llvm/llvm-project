@@ -41,15 +41,11 @@ using namespace llvm;
 
 namespace WebAssembly {
 extern cl::opt<bool> WasmDisableExplicitLocals;
-extern cl::opt<bool> WasmEnableEH;
-extern cl::opt<bool> WasmEnableEmEH;
 extern cl::opt<bool> WasmEnableEmSjLj;
 extern cl::opt<bool> WasmEnableSjLj;
 } // namespace WebAssembly
 
 using llvm::WebAssembly::WasmDisableExplicitLocals;
-using llvm::WebAssembly::WasmEnableEH;
-using llvm::WebAssembly::WasmEnableEmEH;
 using llvm::WebAssembly::WasmEnableEmSjLj;
 using llvm::WebAssembly::WasmEnableSjLj;
 
@@ -127,10 +123,9 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  bool EnableEmEH =
-      TM.Options.ExceptionModel == ExceptionHandling::Emscripten ||
-      WasmEnableEmEH;
-  if (!EnableEmEH && !WasmEnableEH) {
+  bool EnableEmEH = TM.Options.ExceptionModel == ExceptionHandling::Emscripten;
+  bool EnableWasmEH = TM.Options.ExceptionModel == ExceptionHandling::Wasm;
+  if (!EnableEmEH && !EnableWasmEH) {
     addFunctionPass(LowerInvokePass(), PMW);
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.

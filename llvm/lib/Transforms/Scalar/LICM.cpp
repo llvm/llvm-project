@@ -128,10 +128,6 @@ static cl::opt<bool> ControlFlowHoisting(
     "licm-control-flow-hoisting", cl::Hidden, cl::init(false),
     cl::desc("Enable control flow (and PHI) hoisting in LICM"));
 
-static cl::opt<bool>
-    SingleThread("licm-force-thread-model-single", cl::Hidden, cl::init(false),
-                 cl::desc("Force thread model single in LICM pass"));
-
 static cl::opt<uint32_t> MaxNumUsesTraversed(
     "licm-max-num-uses-traversed", cl::Hidden, cl::init(8),
     cl::desc("Max num uses visited for identifying load "
@@ -1999,13 +1995,17 @@ bool isNotVisibleOnUnwindInLoop(const Value *Object, const Loop *L,
          isNotCapturedBeforeOrInLoop(Object, L, DT);
 }
 
-bool isThreadLocalObject(const Value *Object, const Loop *L, DominatorTree *DT,
-                         TargetTransformInfo *TTI) {
+bool isThreadLocalObject(const Value *Object, const Loop *L,
+                         DominatorTree *DT) {
   // The object must be function-local to start with, and then not captured
   // before/in the loop.
-  return (isIdentifiedFunctionLocal(Object) &&
-          isNotCapturedBeforeOrInLoop(Object, L, DT)) ||
-         (TTI->isSingleThreaded() || SingleThread);
+  if (isIdentifiedFunctionLocal(Object) &&
+      isNotCapturedBeforeOrInLoop(Object, L, DT))
+    return true;
+
+  // In a single-threaded environment, all objects are effectively thread-local.
+  const Module *M = L->getHeader()->getModule();
+  return M->getThreadModel() == ThreadModel::Single;
 }
 
 } // namespace
@@ -2254,7 +2254,7 @@ bool llvm::promoteLoopAccessesToScalars(
         (!ExplicitlyDereferenceableOnly ||
          isDereferenceablePointer(SomePtr, AccessTy, MDL,
                                   /*IgnoreFree=*/true)) &&
-        isThreadLocalObject(Object, CurLoop, DT, TTI))
+        isThreadLocalObject(Object, CurLoop, DT))
       StoreSafety = StoreSafe;
   }
 

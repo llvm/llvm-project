@@ -572,6 +572,15 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkTaskReductionByref(op, result);
       })
       .Case([&](omp::TaskwaitOp op) { checkNowait(op, result); })
+      .Case([&](omp::DispatchOp op) {
+        // OpenMP 5.1 dispatch creates an explicit task; nowait controls whether
+        // it is included. Diagnose unsupported asynchronous tasking before 5.2,
+        // where the nowait property has no effect on dispatch.
+        int64_t version = omp::getOpenMPVersionAttribute(
+            op->getParentOfType<ModuleOp>(), /*fallback=*/51);
+        if (version < 52)
+          checkNowait(op, result);
+      })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
@@ -870,6 +879,24 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_spread;
   }
   llvm_unreachable("Unknown ClauseProcBindKind kind");
+}
+
+/// Convert 'dispatch' operation into LLVM IR.
+static LogicalResult
+convertOmpDispatch(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  auto dispatchOp = cast<omp::DispatchOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  auto &region = dispatchOp.getRegion();
+  auto result = convertOmpOpRegions(region, "omp.dispatch.region", builder,
+                                    moduleTranslation);
+  if (!result)
+    return handleError(result.takeError(), opInst);
+  builder.SetInsertPoint(*result);
+  return success();
 }
 
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
@@ -2856,7 +2883,8 @@ void TaskContextStructManager::generateTaskContextStruct() {
   llvm::DataLayout dataLayout =
       builder.GetInsertBlock()->getModule()->getDataLayout();
   llvm::Type *intPtrTy = builder.getIntPtrTy(dataLayout);
-  llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(structTy);
+  llvm::Value *allocSize =
+      builder.CreateTypeSize(intPtrTy, dataLayout.getTypeAllocSize(structTy));
 
   // Heap allocate the structure
   structPtr = builder.CreateMalloc(intPtrTy, allocSize,
@@ -3176,7 +3204,10 @@ buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
 
   // Heap-allocate the kmp_depend_info array so we don't risk
   // dynamic-sized alloca outside the entry block (e.g. inside loops).
-  llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(dependInfoTy);
+  llvm::DataLayout dataLayout =
+      builder.GetInsertBlock()->getModule()->getDataLayout();
+  llvm::Value *allocSize = builder.CreateTypeSize(
+      ompBuilder.SizeTy, dataLayout.getTypeAllocSize(dependInfoTy));
   llvm::Value *depArray =
       builder.CreateMalloc(ompBuilder.SizeTy, allocSize, totalCount,
                            /*MallocF=*/nullptr, ".dep.arr.addr");
@@ -8074,9 +8105,10 @@ static void mapParentWithMembers(
         // (e.g. if lowAddr happens to be the first member), which isn't
         // correct, even if the runtimes is sometimes fine with it so, in these
         // scenarios we select the types size instead.
+        llvm::DataLayout dataLayout = builder.GetInsertBlock()->getDataLayout();
         auto sizeSel = builder.CreateSelect(
             builder.CreateICmpNE(builder.getInt64(0), sizeCalc), sizeCalc,
-            isPtrMap ? llvm::ConstantExpr::getSizeOf(builder.getPtrTy())
+            isPtrMap ? builder.getInt64(dataLayout.getPointerSize())
                      : mapData.Sizes[mapDataOverlapIdx]);
         combinedInfo.Sizes.emplace_back(sizeSel);
         lowAddr = builder.CreateConstGEP1_32(
@@ -9981,9 +10013,12 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // For indirectly-accessed global pointers, we rely on "internal"
         // linkage to optimize out the unneeded full-variable storage later,
         // since we can't prevent the LLVM dialect from generating globals
-        // without also breaking target lowering.
+        // without also breaking target lowering. However, We can only do
+        // this for definiions, as global variable declarations must have
+        // external or weak linkage.
         if (refPtr) {
-          gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
+          if (!gVar->isDeclaration())
+            gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
 
           // Register the (original global, reference pointer) pair so that the
           // OpenMPIRBuilder can rewrite uses of the original global during
@@ -10605,6 +10640,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::ParallelOp op) {
             return convertOmpParallel(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::DispatchOp) {
+            return convertOmpDispatch(*op, builder, moduleTranslation);
           })
           .Case([&](omp::MaskedOp) {
             return convertOmpMasked(*op, builder, moduleTranslation);
