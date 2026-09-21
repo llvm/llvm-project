@@ -210,6 +210,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed false positives when the pointee is written through a pointer
     assignment, such as `*(p = q) = 0`.
 
+  - No longer diagnoses variables declared with `decltype(auto)`, where the
+    suggested `const` does not compile.
+
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
@@ -225,9 +228,17 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Fixed a crash in {doc}`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
+  malformed code with nested classes and ambiguous initializer.
+
 - Fixed a crash in {doc}`modernize-use-noexcept
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
   code with an unparsed exception specification.
+
+- Extend {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
+  `std::nullptr_t` from `<cstdef>`.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer

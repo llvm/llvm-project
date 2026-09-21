@@ -3389,6 +3389,7 @@ cc_library(
         ":codegen",
         ":frontend",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:IPO",
         "//llvm:Linker",
         "//llvm:Support",
