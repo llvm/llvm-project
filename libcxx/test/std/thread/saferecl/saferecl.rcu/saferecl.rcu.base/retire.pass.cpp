@@ -196,7 +196,7 @@ int main(int, char**) {
     dom.unlock();
   }
   {
-    // multiple reader and writer threads
+    // multiple reader and writer threads with writer protected
     constexpr int num_readers = 4;
     constexpr int num_writers = 3;
     std::latch unlock_latch(num_writers);
