@@ -719,6 +719,11 @@ public:
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
 
+  /// Returns the size of the current tree, stopping at gathers
+  /// For instance, even though we continue adding tree entries after
+  /// a split node, this function stops counting at the split node
+  /// since it is a gather. This matches the behavior of MinBWs
+  /// computation.
   unsigned getTreeSizeExcludingGathers() const {
     unsigned Cnt = 0;
     SmallDenseSet<unsigned> GatherTreeNodes;
