@@ -1113,6 +1113,12 @@ class CursorKind(BaseEnumeration):
     # Represents a C++26 pack indexing expression.
     PACK_INDEXING_EXPR = 156
 
+    # OpenMP 6.0 [5.2.1] 'omp_num_args [+/- logical_offset]' bound expression.
+    OMP_NUM_ARGS_EXPR = 157
+
+    # OpenMP 6.0 [5.2.1] parameter range 'lb:ub' expression.
+    OMP_ARGUMENT_RANGE_EXPR = 158
+
     # A statement whose specific kind is not exposed via this interface.
     #
     # Unexposed statements have the same operations as any other kind of
