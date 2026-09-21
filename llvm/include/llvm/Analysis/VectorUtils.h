@@ -229,6 +229,26 @@ LLVM_ABI bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
 LLVM_ABI bool isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
                                 std::array<std::pair<int, int>, 2> &SrcInfo);
 
+/// Given a shuffle which can be represented as a pair of two slides, return
+/// true if it is a pair-even idiom and set \p Factor to its pairing factor.
+/// The mappings in \p SrcInfo may be in either order.
+/// Pair-even is:
+///   Input 0: a0 a1 a2 a3
+///   Input 1: b0 b1 b2 b3
+///   Result:  a0 b0 a2 b2
+LLVM_ABI bool isPairEvenShuffleMask(std::array<std::pair<int, int>, 2> SrcInfo,
+                                    ArrayRef<int> Mask, unsigned &Factor);
+
+/// Given a shuffle which can be represented as a pair of two slides, return
+/// true if it is a pair-odd idiom and set \p Factor to its pairing factor.
+/// The mappings in \p SrcInfo may be in either order.
+/// Pair-odd is:
+///   Input 0: a0 a1 a2 a3
+///   Input 1: b0 b1 b2 b3
+///   Result:  a1 b1 a3 b3
+LLVM_ABI bool isPairOddShuffleMask(std::array<std::pair<int, int>, 2> SrcInfo,
+                                   ArrayRef<int> Mask, unsigned &Factor);
+
 /// Replace each shuffle mask index with the scaled sequential indices for an
 /// equivalent mask of narrowed elements. Mask elements that are less than 0
 /// (sentinel values) are repeated in the output mask.

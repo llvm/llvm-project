@@ -513,6 +513,47 @@ bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
   return SrcInfo[0].first != -1;
 }
 
+static bool
+isAlternatingShuffleMask(const std::array<std::pair<int, int>, 2> &SrcInfo,
+                         ArrayRef<int> Mask, unsigned Factor,
+                         bool RequiredPolarity) {
+  int NumElts = Mask.size();
+  for (const auto &[Idx, M] : enumerate(Mask)) {
+    if (M < 0)
+      continue;
+    int Src = M >= NumElts;
+    int Diff = static_cast<int>(Idx) - (M % NumElts);
+    bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
+    assert(C != (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
+           "Must match exactly one of the two slides");
+    if (RequiredPolarity != (C == (Idx / Factor) % 2))
+      return false;
+  }
+  return true;
+}
+
+bool llvm::isPairEvenShuffleMask(std::array<std::pair<int, int>, 2> SrcInfo,
+                                 ArrayRef<int> Mask, unsigned &Factor) {
+  if (SrcInfo[1].second == 0)
+    std::swap(SrcInfo[0], SrcInfo[1]);
+
+  Factor = SrcInfo[1].second;
+  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
+         Mask.size() % Factor == 0 &&
+         isAlternatingShuffleMask(SrcInfo, Mask, Factor, true);
+}
+
+bool llvm::isPairOddShuffleMask(std::array<std::pair<int, int>, 2> SrcInfo,
+                                ArrayRef<int> Mask, unsigned &Factor) {
+  if (SrcInfo[1].second == 0)
+    std::swap(SrcInfo[0], SrcInfo[1]);
+
+  Factor = -SrcInfo[1].second;
+  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
+         Mask.size() % Factor == 0 &&
+         isAlternatingShuffleMask(SrcInfo, Mask, Factor, false);
+}
+
 void llvm::narrowShuffleMaskElts(int Scale, ArrayRef<int> Mask,
                                  SmallVectorImpl<int> &ScaledMask) {
   assert(Scale > 0 && "Unexpected scaling factor");

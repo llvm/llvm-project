@@ -72,6 +72,12 @@ class RISCVTTIImpl final : public BasicTTIImplBase<RISCVTTIImpl> {
   InstructionCost getSlideCost(FixedVectorType *Tp, ArrayRef<int> Mask,
                                TTI::TargetCostKind CostKind) const;
 
+  /// If a fixed-length shuffle can be lowered to a vzip.vv instruction,
+  /// return its cost.
+  InstructionCost getVZIPCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                              VectorType *SrcTy, ArrayRef<int> Mask,
+                              TTI::TargetCostKind CostKind) const;
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
