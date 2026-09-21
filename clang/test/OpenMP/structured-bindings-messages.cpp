@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -std=c++20 -triple x86_64-pc-linux-gnu -fopenmp \
-// RUN: -fsyntax-only %s 
+// RUN: -fsyntax-only %s
 
 namespace std {
   typedef unsigned long size_t;
@@ -544,7 +544,7 @@ void test_capture_binding_in_lambda() {
   Point p{1, 2};
   auto [a, b] = p;
   [&] {
-    // expected-error@+2{{capturing in a lambda on structured bindings is not yet supported}}
+    // expected-error@+1{{capturing in a lambda or block on structured bindings is not yet supported}}
 #pragma omp target map(tofrom: a)
     { a++; }
   }();

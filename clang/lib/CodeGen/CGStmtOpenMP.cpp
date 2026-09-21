@@ -1208,6 +1208,23 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
         // Check if this binding is also lastprivate.
         bool ThisFirstprivateIsLastprivate =
             Lastprivates.count(BD->getCanonicalDecl()) > 0;
+        const auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
+        // If the decomposition is captured by copy, the captured field is
+        // already a private copy; map the binding to its member directly.
+        if (!MustEmitFirstprivateCopy && !ThisFirstprivateIsLastprivate) {
+          if (const FieldDecl *FD = CapturedStmtInfo->lookup(DD)) {
+            if (!FD->getType()->isReferenceType()) {
+              bool IsRegistered = PrivateScope.addPrivate(
+                  BD, EmitOMPCapturedBindingLValue(BD).getAddress());
+              assert(IsRegistered &&
+                     "firstprivate var already registered as firstprivate");
+              (void)IsRegistered;
+              ++IRef;
+              ++InitsRef;
+              continue;
+            }
+          }
+        }
         const auto *VDInit =
             cast<VarDecl>(cast<DeclRefExpr>(*InitsRef)->getDecl());
         Address OriginalAddr =

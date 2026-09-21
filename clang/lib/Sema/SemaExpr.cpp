@@ -19578,8 +19578,10 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   bool IsBlock = isa<BlockScopeInfo>(CSI);
   bool IsLambda = isa<LambdaScopeInfo>(CSI);
 
-  // Reject bindings referenced from a lambda that wraps an OpenMP region.
-  if (IsLambda && S.getLangOpts().OpenMP && isa<DecompositionDecl>(Var)) {
+  // Reject bindings referenced from a lambda or block that wraps an OpenMP
+  // region.
+  if ((IsLambda || IsBlock) && S.getLangOpts().OpenMP &&
+      isa<DecompositionDecl>(Var)) {
     if (Diagnose)
       S.Diag(Loc, diag::err_omp_unsupported_on_binding) << 3;
     return false;

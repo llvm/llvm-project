@@ -4331,7 +4331,10 @@ public:
       if (BD && !DVar.RefExpr)
         DVar = Stack->getTopDSA(VD, /*FromParent=*/false);
       // Check if the variable has explicit DSA set and stop analysis if it so.
-      if (DVar.RefExpr || !ImplicitDeclarations.insert(VD).second)
+      if (DVar.RefExpr ||
+          !ImplicitDeclarations
+               .insert(cast<ValueDecl>(LookupDecl->getCanonicalDecl()))
+               .second)
         return;
 
       // Skip internally declared static variables.
@@ -4365,7 +4368,8 @@ public:
           InheritedDSA = DVar.CKind == OMPC_unknown;
         }
         if (InheritedDSA)
-          VarsWithInheritedDSA[VD] = E;
+          VarsWithInheritedDSA[cast<ValueDecl>(
+              LookupDecl->getCanonicalDecl())] = E;
         if (Stack->getDefaultDSA() == DSA_none)
           return;
       }
@@ -4399,7 +4403,8 @@ public:
                     auto ME = MapExprComponents.rend();
                     return MI != ME && MI->getAssociatedDeclaration() == VD;
                   })) {
-            VarsWithInheritedDSA[VD] = E;
+            VarsWithInheritedDSA[cast<ValueDecl>(
+                LookupDecl->getCanonicalDecl())] = E;
             return;
           }
         }
@@ -23544,13 +23549,13 @@ public:
         // The structured binding creates a copy (if initialized from a
         // variable) or holds the only storage (if initialized from a prvalue).
         // Using DD ensures map clauses reference the correct storage.
-        DeclarationNameInfo BaseNameInfo(DD->getDeclName(), DRE->getLocation());
-        Expr *BaseExpr = DeclRefExpr::Create(
-            SemaRef.Context, DRE->getQualifierLoc(),
-            DRE->getTemplateKeywordLoc(), DD,
-            /*RefersToEnclosingVariableOrCapture=*/false, BaseNameInfo,
-            DD->getType().getNonReferenceType(), DRE->getValueKind(), nullptr,
-            /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+        Expr *BaseExpr =
+            SemaRef
+                .BuildDeclarationNameExpr(
+                    CXXScopeSpec(),
+                    DeclarationNameInfo(DD->getDeclName(), DRE->getLocation()),
+                    DD)
+                .get();
 
         // Create member expression: base.member.
         E = MemberExpr::Create(
@@ -23565,13 +23570,13 @@ public:
         return Visit(E);
       }
       if (auto *ASE = dyn_cast_or_null<ArraySubscriptExpr>(BindingExpr)) {
-        DeclarationNameInfo BaseNameInfo(DD->getDeclName(), DRE->getLocation());
-        Expr *BaseExpr = DeclRefExpr::Create(
-            SemaRef.Context, DRE->getQualifierLoc(),
-            DRE->getTemplateKeywordLoc(), DD,
-            /*RefersToEnclosingVariableOrCapture=*/false, BaseNameInfo,
-            DD->getType().getNonReferenceType(), DRE->getValueKind(), nullptr,
-            /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
+        Expr *BaseExpr =
+            SemaRef
+                .BuildDeclarationNameExpr(
+                    CXXScopeSpec(),
+                    DeclarationNameInfo(DD->getDeclName(), DRE->getLocation()),
+                    DD)
+                .get();
         E = new (SemaRef.Context) ArraySubscriptExpr(
             BaseExpr, ASE->getIdx(), ASE->getType(), ASE->getValueKind(),
             ASE->getObjectKind(), ASE->getRBracketLoc());
