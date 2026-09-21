@@ -281,7 +281,10 @@ struct OffloadContext {
 bool isTracingEnabled() {
   return isOffloadInitialized() && OffloadContext::get().TracingEnabled;
 }
-bool isValidationEnabled() { return OffloadContext::get().ValidationEnabled; }
+// If the context is uninited, then we assume validation is enabled
+bool isValidationEnabled() {
+  return !isOffloadInitialized() || OffloadContext::get().ValidationEnabled;
+}
 bool isOffloadInitialized() { return OffloadContextVal != nullptr; }
 
 template <typename HandleT> Error olDestroy(HandleT Handle) {
@@ -307,24 +310,40 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
 
+// Lazily-created, not-yet-initialized platform instances, one per supported
+// plugin. These are constructed at most once per process: `olInit` consumes
+// them (moving out the ones it needs) rather than creating fresh instances,
+// and repeated calls to `olIterateCompatiblePlatforms` before `olInit` reuse
+// the same instances instead of recreating the plugins each time.
+SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> &
+getUninitializedPlatforms() {
+  static std::mutex Mutex;
+  static SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms;
+
+  std::lock_guard<std::mutex> Lock(Mutex);
+  if (Platforms.empty()) {
+#define PLUGIN_TARGET(Name)                                                    \
+  Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(                 \
+      std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),                 \
+      pluginNameToBackend(#Name)));
+#include "Shared/Targets.def"
+  }
+  return Platforms;
+}
+
 Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   SmallSet<ol_platform_backend_t, 0> Requested;
   if (InitArgs && InitArgs->NumPlatforms > 0)
     for (uint32_t I = 0; I < InitArgs->NumPlatforms; I++)
       Requested.insert(InitArgs->Platforms[I]);
 
-  // Attempt to create an instance of each supported plugin, skipping
-  // unrequested backends. The host plugin is always created.
-#define PLUGIN_TARGET(Name)                                                    \
-  do {                                                                         \
-    auto Backend = pluginNameToBackend(#Name);                                 \
-    if (Requested.empty() || Backend == OL_PLATFORM_BACKEND_HOST ||            \
-        Requested.contains(Backend)) {                                         \
-      Context.Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(     \
-          std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
-    }                                                                          \
-  } while (false);
-#include "Shared/Targets.def"
+  for (auto &Platform : getUninitializedPlatforms()) {
+    if (Requested.empty() ||
+        Platform->BackendType == OL_PLATFORM_BACKEND_HOST ||
+        Requested.contains(Platform->BackendType))
+      Context.Platforms.push_back(std::move(Platform));
+  }
+  getUninitializedPlatforms().clear();
 
   // Eagerly initialize all of the plugins and devices. We need to make sure
   // that the platform is initialized at a consistent point to maintain the
@@ -613,6 +632,21 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
     }
   }
 
+  return Error::success();
+}
+
+Error olIterateCompatiblePlatforms_impl(const void *ImageData, size_t ImageSize,
+                                        ol_platform_iterate_cb_t Callback,
+                                        void *UserData) {
+  StringRef Buffer(reinterpret_cast<const char *>(ImageData), ImageSize);
+
+  auto &Platforms = isOffloadInitialized() ? OffloadContext::get().Platforms
+                                           : getUninitializedPlatforms();
+  for (auto &Platform : Platforms) {
+    if (Platform->Plugin && Platform->Plugin->isPluginCompatible(Buffer) &&
+        Callback(Platform.get(), UserData))
+      return Error::success();
+  }
   return Error::success();
 }
 

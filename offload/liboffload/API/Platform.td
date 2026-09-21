@@ -97,3 +97,36 @@ def olPlatformRegisterRPCCallback : Function {
                       "RPC callback function pointer", PARAM_IN>];
   let returns = [Return<"OL_ERRC_INVALID_PLATFORM">, Return<"OL_ERRC_SUCCESS">];
 }
+
+def ol_platform_iterate_cb_t : FptrTypedef {
+  let desc = "User-provided function to be used with `olIterateCompatiblePlatforms`";
+  let params = [
+    Param<"ol_platform_handle_t", "Platform", "the platform handle of the current iteration", PARAM_IN>,
+    Param<"void*", "UserData", "optional user data", PARAM_IN_OPTIONAL>
+  ];
+  let return = "bool";
+}
+
+def olIterateCompatiblePlatforms : Function {
+  let desc = "Iterates over all available platforms that are compatible with "
+             "the given binary image, calling the callback for each.";
+  let requires_init = 0;
+  let details = [
+    "If the user-provided callback returns `false`, the iteration is stopped.",
+    "This function may be called before `olInit`.",
+    "If called before `olInit`, the platform handles passed to the callback "
+    "are only valid for the duration of the callback and must not be used "
+    "afterwards or passed to any other Offload API."
+  ];
+  let params = [
+    Param<"const void*", "ImageData", "pointer to the binary image data", PARAM_IN>,
+    Param<"size_t", "ImageSize", "size of the binary image in bytes", PARAM_IN>,
+    Param<"ol_platform_iterate_cb_t", "Callback", "User-provided function called for each compatible platform", PARAM_IN>,
+    Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_BINARY", [
+      "If the buffer described by `ImageData` and `ImageSize` is not a valid binary image."
+    ]>
+  ];
+}

@@ -180,6 +180,17 @@ ol_device_handle_t TestEnvironment::getHostDevice() {
 // TODO: Allow overriding via cmd line arg
 const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
 
+static std::optional<std::string>
+getFileExtensionForBackend(ol_platform_backend_t Backend) {
+  if (Backend == OL_PLATFORM_BACKEND_AMDGPU)
+    return ".amdgpu.bin";
+  if (Backend == OL_PLATFORM_BACKEND_CUDA)
+    return ".nvptx64.bin";
+  if (Backend == OL_PLATFORM_BACKEND_LEVEL_ZERO)
+    return ".spirv64.bin";
+  return std::nullopt;
+}
+
 bool TestEnvironment::loadDeviceBinary(
     const std::string &BinaryName, ol_device_handle_t Device,
     std::unique_ptr<MemoryBuffer> &BinaryOut,
@@ -193,20 +204,14 @@ bool TestEnvironment::loadDeviceBinary(
 
   ol_platform_backend_t Backend = OverrideBackend.value_or(DeviceBackend);
 
-  std::string FileExtension;
-  if (Backend == OL_PLATFORM_BACKEND_AMDGPU) {
-    FileExtension = ".amdgpu.bin";
-  } else if (Backend == OL_PLATFORM_BACKEND_CUDA) {
-    FileExtension = ".nvptx64.bin";
-  } else if (Backend == OL_PLATFORM_BACKEND_LEVEL_ZERO) {
-    FileExtension = ".spirv64.bin";
-  } else {
+  auto FileExtension = getFileExtensionForBackend(Backend);
+  if (!FileExtension) {
     errs() << "Unsupported platform type for a device binary test.\n";
     return false;
   }
 
   std::string SourcePath =
-      DeviceBinsDirectory + "/" + BinaryName + FileExtension;
+      DeviceBinsDirectory + "/" + BinaryName + *FileExtension;
 
   auto SourceFile = MemoryBuffer::getFile(SourcePath, false, false);
   if (!SourceFile) {
@@ -216,4 +221,18 @@ bool TestEnvironment::loadDeviceBinary(
 
   BinaryOut = std::move(SourceFile.get());
   return true;
+}
+
+bool TestEnvironment::loadAnyDeviceBinary(
+    const std::string &BinaryName, std::unique_ptr<MemoryBuffer> &BinaryOut) {
+  for (auto Backend : {OL_PLATFORM_BACKEND_AMDGPU, OL_PLATFORM_BACKEND_CUDA,
+                       OL_PLATFORM_BACKEND_LEVEL_ZERO}) {
+    std::string SourcePath = DeviceBinsDirectory + "/" + BinaryName +
+                             *getFileExtensionForBackend(Backend);
+    if (auto SourceFile = MemoryBuffer::getFile(SourcePath, false, false)) {
+      BinaryOut = std::move(SourceFile.get());
+      return true;
+    }
+  }
+  return false;
 }
