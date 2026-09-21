@@ -7097,8 +7097,6 @@ llvm::StringRef TypeSystemClang::GetPropertyBackingStorageName(
 
   CompilerType compiler_type(weak_from_this(), type);
 
-  // Callers will usually hand us an object pointer (e.g. `Foo *`); strip it
-  // to get at the interface itself.
   CompilerType class_type;
   if (IsObjCObjectPointerType(compiler_type, &class_type))
     compiler_type = class_type;

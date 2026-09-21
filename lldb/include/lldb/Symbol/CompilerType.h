@@ -485,7 +485,6 @@ public:
 
   CompilerType GetDirectNestedTypeWithName(llvm::StringRef name) const;
 
-  /// See TypeSystem::GetPropertyBackingStorageName.
   llvm::StringRef
   GetPropertyBackingStorageName(llvm::StringRef property_name) const;
 

@@ -25,7 +25,6 @@
 @implementation C
 @synthesize declaredBacking = _customDeclaredIvar;
 @synthesize undeclaredBacking = _customUndeclaredIvar;
-// implicitBacking: no @synthesize -> compiler auto-creates _implicitBacking.
 @end
 
 int main(int argc, char **argv) {
