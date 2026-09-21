@@ -1555,6 +1555,17 @@ void SystemZXPLINKFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+bool SystemZELFFrameLowering::canUseAsPrologue(
+    const MachineBasicBlock &MBB) const {
+  const MachineFunction &MF = *MBB.getParent();
+
+  // Keep the varargs prologue in the entry block so incoming GPRs are saved
+  // before they can be clobbered.
+  if (MF.getFunction().isVarArg())
+    return &MBB == &MF.front();
+  return true;
+}
+
 // Determines the size of the frame, and creates the deferred spill objects.
 void SystemZXPLINKFrameLowering::determineFrameLayout(
     MachineFunction &MF) const {

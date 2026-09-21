@@ -118,6 +118,8 @@ public:
   // Get or create the frame index of where the old frame pointer is stored.
   int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const override;
 
+  bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };

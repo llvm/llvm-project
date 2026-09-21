@@ -85,13 +85,13 @@ define void @va_fpr(double %a, double %b, double %c, double %d,
 ;
 ; SW-LABEL: va_fpr:
 ; SW:       # %bb.0:
+; SW-NEXT:    stmg %r3, %r15, 24(%r15)
+; SW-NEXT:    aghi %r15, -168
 ; SW-NEXT:    #APP
 ; SW-NEXT:    lghi %r3, 0
 ; SW-NEXT:    #NO_APP
-; SW-NEXT:    cibe %r2, 0, 0(%r14)
-; SW-NEXT:  .LBB1_1: # %call
-; SW-NEXT:    stmg %r3, %r15, 24(%r15)
-; SW-NEXT:    aghi %r15, -168
+; SW-NEXT:    cije %r2, 0, .LBB1_2
+; SW-NEXT:  # %bb.1: # %call
 ; SW-NEXT:    la %r0, 168(%r15)
 ; SW-NEXT:    stg %r0, 184(%r15)
 ; SW-NEXT:    la %r0, 328(%r15)
@@ -100,6 +100,7 @@ define void @va_fpr(double %a, double %b, double %c, double %d,
 ; SW-NEXT:    la %r2, 160(%r15)
 ; SW-NEXT:    mvghi 160(%r15), 1
 ; SW-NEXT:    brasl %r14, take@PLT
+; SW-NEXT:  .LBB1_2: # %ret
 ; SW-NEXT:    lmg %r6, %r15, 216(%r15)
 ; SW-NEXT:    br %r14
                     i32 %n, ...) nounwind {
