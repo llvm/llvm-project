@@ -343,7 +343,6 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
          << Arg->getSourceRange();
 }
 
-// Check if the VUNPACKB immediate encoding is legal.
 bool SemaX86::CheckBuiltinVUnpackBImm(CallExpr *TheCall) {
   const unsigned ArgNum = 1;
 

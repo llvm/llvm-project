@@ -1,4 +1,4 @@
-/*===------------ avx10_2_v2auxintrin.h - AVX10_2_V2AUX -------------------===
+/*===---------------- avx10v2auxintrin.h - AVX10V2AUX ---------------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -7,14 +7,13 @@
  *===-----------------------------------------------------------------------===
  */
 #ifndef __IMMINTRIN_H
-#error                                                                         \
-    "Never use <avx10_2_v2auxintrin.h> directly; include <immintrin.h> instead."
+#error "Never use <avx10v2auxintrin.h> directly; include <immintrin.h> instead."
 #endif // __IMMINTRIN_H
 
 #ifdef __SSE2__
 
-#ifndef __AVX10_2_V2AUXINTRIN_H
-#define __AVX10_2_V2AUXINTRIN_H
+#ifndef __AVX10V2AUXINTRIN_H
+#define __AVX10V2AUXINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS128                                                  \
@@ -38,7 +37,8 @@
 ///    A 128-bit vector of [16 x i8]. The lower 4 bytes contain the converted
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtps_bf8(__m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8_128((__v4sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2bf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -83,8 +83,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_bf8(__m128i __W,
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtps_bf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm_cvtps_bf8(__A), (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -101,7 +101,8 @@ _mm_maskz_cvtps_bf8(__mmask8 __U, __m128 __A) {
 ///    A 128-bit vector of [16 x i8]. The lower 8 bytes contain the converted
 ///    values; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvtps_bf8(__m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8_256((__v8sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2bf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -145,9 +146,8 @@ _mm256_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtps_bf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm256_cvtps_bf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -163,7 +163,8 @@ _mm256_maskz_cvtps_bf8(__mmask8 __U, __m256 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ps_bf8(__m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8s_128((__v4sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -207,9 +208,8 @@ _mm_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_ps_bf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm_cvts_ps_bf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -225,7 +225,8 @@ _mm_maskz_cvts_ps_bf8(__mmask8 __U, __m128 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvts_ps_bf8(__m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8s_256((__v8sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -269,9 +270,8 @@ _mm256_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_ps_bf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm256_cvts_ps_bf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2bf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -287,7 +287,8 @@ _mm256_maskz_cvts_ps_bf8(__mmask8 __U, __m256 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtps_hf8(__m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8_128((__v4sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2hf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -332,8 +333,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_hf8(__m128i __W,
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtps_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm_cvtps_hf8(__A), (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -349,7 +350,8 @@ _mm_maskz_cvtps_hf8(__mmask8 __U, __m128 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvtps_hf8(__m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8_256((__v8sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2hf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -393,9 +395,8 @@ _mm256_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtps_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm256_cvtps_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -411,7 +412,8 @@ _mm256_maskz_cvtps_hf8(__mmask8 __U, __m256 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_ps_hf8(__m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8s_128((__v4sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -455,9 +457,8 @@ _mm_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_ps_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm_cvts_ps_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -473,7 +474,8 @@ _mm_maskz_cvts_ps_hf8(__mmask8 __U, __m128 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvts_ps_hf8(__m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8s_256((__v8sf)__A);
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -517,9 +519,8 @@ _mm256_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_ps_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm256_cvts_ps_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtps2hf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -535,7 +536,8 @@ _mm256_maskz_cvts_ps_hf8(__mmask8 __U, __m256 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtrops_hf8(__m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8_128((__v4sf)__A);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -579,9 +581,8 @@ _mm_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtrops_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm_cvtrops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -597,7 +598,8 @@ _mm_maskz_cvtrops_hf8(__mmask8 __U, __m128 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_cvtrops_hf8(__m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8_256((__v8sf)__A);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -641,9 +643,8 @@ _mm256_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtrops_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm256_cvtrops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -659,7 +660,8 @@ _mm256_maskz_cvtrops_hf8(__mmask8 __U, __m256 __A) {
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvts_rops_hf8(__m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8s_128((__v4sf)__A);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -703,9 +705,8 @@ _mm_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_rops_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm_cvts_rops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_128_mask(
+      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -722,7 +723,8 @@ _mm_maskz_cvts_rops_hf8(__mmask8 __U, __m128 __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvts_rops_hf8(__m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8s_256((__v8sf)__A);
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -766,9 +768,8 @@ _mm256_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_rops_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
-                                             (__v16qi)_mm256_cvts_rops_hf8(__A),
-                                             (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtrops2hf8s_256_mask(
+      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -787,7 +788,8 @@ _mm256_maskz_cvts_rops_hf8(__mmask8 __U, __m256 __A) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbiasps_bf8(__m128i __A,
                                                                   __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128((__v4si)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -835,9 +837,8 @@ _mm_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtbiasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm_cvtbiasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -856,7 +857,8 @@ _mm_maskz_cvtbiasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtbiasps_bf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256((__v8si)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -904,9 +906,8 @@ _mm256_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtbiasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm256_cvtbiasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -925,7 +926,8 @@ _mm256_maskz_cvtbiasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvts_biasps_bf8(__m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128((__v4si)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -973,9 +975,8 @@ _mm_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_biasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm_cvts_biasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -994,7 +995,8 @@ _mm_maskz_cvts_biasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvts_biasps_bf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256((__v8si)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1042,9 +1044,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_bf8(
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_biasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm256_cvts_biasps_bf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1063,7 +1064,8 @@ _mm256_maskz_cvts_biasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbiasps_hf8(__m128i __A,
                                                                   __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128((__v4si)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1111,9 +1113,8 @@ _mm_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtbiasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm_cvtbiasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1132,7 +1133,8 @@ _mm_maskz_cvtbiasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtbiasps_hf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256((__v8si)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1180,9 +1182,8 @@ _mm256_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtbiasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm256_cvtbiasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1201,7 +1202,8 @@ _mm256_maskz_cvtbiasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvts_biasps_hf8(__m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128((__v4si)__A, (__v4sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1249,9 +1251,8 @@ _mm_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_biasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm_cvts_biasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128_mask(
+      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1270,7 +1271,8 @@ _mm_maskz_cvts_biasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
 ///    A 128-bit vector of [16 x i8] containing the converted values.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvts_biasps_hf8(__m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256((__v8si)__A, (__v8sf)__B);
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1318,9 +1320,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_hf8(
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_biasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_selectb_128(
-      (__mmask8)__U, (__v16qi)_mm256_cvts_biasps_hf8(__A, __B),
-      (__v16qi)_mm_setzero_si128());
+  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256_mask(
+      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
 }
 
 /// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
@@ -2398,5 +2399,5 @@ _mm256_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask8 __M, __m256i __A) {
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
 
-#endif // __AVX10_2_V2AUXINTRIN_H
+#endif // __AVX10V2AUXINTRIN_H
 #endif // __SSE2__

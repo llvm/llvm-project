@@ -24,6 +24,43 @@
 // CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x39,0x07]
           vcvtps2bf8 xmm0, xmmword ptr [rdi]
 
+// CHECK: vcvtps2bf8 xmm0 {k1}, zmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xb5,0x7e,0x49,0x39,0x84,0xf5,0x00,0x00,0x00,0x10]
+          vcvtps2bf8 xmm0 {k1}, zmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vcvtps2bf8 xmm0 {k1}, ymmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xb5,0x7e,0x29,0x39,0x84,0xf5,0x00,0x00,0x00,0x10]
+          vcvtps2bf8 xmm0 {k1}, ymmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vcvtps2bf8 xmm0 {k1}, xmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xb5,0x7e,0x09,0x39,0x84,0xf5,0x00,0x00,0x00,0x10]
+          vcvtps2bf8 xmm0 {k1}, xmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vcvtps2bf8 xmm0, zmmword ptr [rcx + 8128]
+// CHECK: encoding: [0x62,0xf5,0x7e,0x48,0x39,0x41,0x7f]
+          vcvtps2bf8 xmm0, zmmword ptr [rcx + 8128]
+
+// CHECK: vcvtps2bf8 xmm0, ymmword ptr [rcx + 4064]
+// CHECK: encoding: [0x62,0xf5,0x7e,0x28,0x39,0x41,0x7f]
+          vcvtps2bf8 xmm0, ymmword ptr [rcx + 4064]
+
+// CHECK: vcvtps2bf8 xmm0, xmmword ptr [rcx + 2032]
+// CHECK: encoding: [0x62,0xf5,0x7e,0x08,0x39,0x41,0x7f]
+          vcvtps2bf8 xmm0, xmmword ptr [rcx + 2032]
+
+// CHECK: vcvtps2bf8 xmm0 {k1} {z}, dword ptr [rdx - 512]{1to16}
+// CHECK: encoding: [0x62,0xf5,0x7e,0xd9,0x39,0x42,0x80]
+          vcvtps2bf8 xmm0 {k1} {z}, dword ptr [rdx - 512]{1to16}
+
+// CHECK: vcvtps2bf8 xmm0 {k1} {z}, dword ptr [rdx - 512]{1to8}
+// CHECK: encoding: [0x62,0xf5,0x7e,0xb9,0x39,0x42,0x80]
+          vcvtps2bf8 xmm0 {k1} {z}, dword ptr [rdx - 512]{1to8}
+
+// CHECK: vcvtps2bf8 xmm0 {k1} {z}, dword ptr [rdx - 512]{1to4}
+// CHECK: encoding: [0x62,0xf5,0x7e,0x99,0x39,0x42,0x80]
+          vcvtps2bf8 xmm0 {k1} {z}, dword ptr [rdx - 512]{1to4}
+
+
 // CHECK: vcvtps2bf8 xmm0 {k1}, zmm1
 // CHECK: encoding: [0x62,0xf5,0x7e,0x49,0x39,0xc1]
           vcvtps2bf8 xmm0 {k1}, zmm1
@@ -287,6 +324,43 @@
 // CHECK: vcvtbiasps2bf8 xmm0, xmm1, xmmword ptr [rdi]
 // CHECK: encoding: [0x62,0xf5,0x74,0x08,0x39,0x07]
           vcvtbiasps2bf8 xmm0, xmm1, xmmword ptr [rdi]
+
+// CHECK: vcvtbiasps2bf8 xmm0 {k1}, zmm1, zmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xb5,0x74,0x49,0x39,0x84,0xf5,0x00,0x00,0x00,0x10]
+          vcvtbiasps2bf8 xmm0 {k1}, zmm1, zmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vcvtbiasps2bf8 xmm0 {k1}, ymm1, ymmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xb5,0x74,0x29,0x39,0x84,0xf5,0x00,0x00,0x00,0x10]
+          vcvtbiasps2bf8 xmm0 {k1}, ymm1, ymmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vcvtbiasps2bf8 xmm0 {k1}, xmm1, xmmword ptr [rbp + 8*r14 + 268435456]
+// CHECK: encoding: [0x62,0xb5,0x74,0x09,0x39,0x84,0xf5,0x00,0x00,0x00,0x10]
+          vcvtbiasps2bf8 xmm0 {k1}, xmm1, xmmword ptr [rbp + 8*r14 + 268435456]
+
+// CHECK: vcvtbiasps2bf8 xmm0, zmm1, zmmword ptr [rcx + 8128]
+// CHECK: encoding: [0x62,0xf5,0x74,0x48,0x39,0x41,0x7f]
+          vcvtbiasps2bf8 xmm0, zmm1, zmmword ptr [rcx + 8128]
+
+// CHECK: vcvtbiasps2bf8 xmm0, ymm1, ymmword ptr [rcx + 4064]
+// CHECK: encoding: [0x62,0xf5,0x74,0x28,0x39,0x41,0x7f]
+          vcvtbiasps2bf8 xmm0, ymm1, ymmword ptr [rcx + 4064]
+
+// CHECK: vcvtbiasps2bf8 xmm0, xmm1, xmmword ptr [rcx + 2032]
+// CHECK: encoding: [0x62,0xf5,0x74,0x08,0x39,0x41,0x7f]
+          vcvtbiasps2bf8 xmm0, xmm1, xmmword ptr [rcx + 2032]
+
+// CHECK: vcvtbiasps2bf8 xmm0 {k1} {z}, zmm1, dword ptr [rdx - 512]{1to16}
+// CHECK: encoding: [0x62,0xf5,0x74,0xd9,0x39,0x42,0x80]
+          vcvtbiasps2bf8 xmm0 {k1} {z}, zmm1, dword ptr [rdx - 512]{1to16}
+
+// CHECK: vcvtbiasps2bf8 xmm0 {k1} {z}, ymm1, dword ptr [rdx - 512]{1to8}
+// CHECK: encoding: [0x62,0xf5,0x74,0xb9,0x39,0x42,0x80]
+          vcvtbiasps2bf8 xmm0 {k1} {z}, ymm1, dword ptr [rdx - 512]{1to8}
+
+// CHECK: vcvtbiasps2bf8 xmm0 {k1} {z}, xmm1, dword ptr [rdx - 512]{1to4}
+// CHECK: encoding: [0x62,0xf5,0x74,0x99,0x39,0x42,0x80]
+          vcvtbiasps2bf8 xmm0 {k1} {z}, xmm1, dword ptr [rdx - 512]{1to4}
+
 
 // CHECK: vcvtbiasps2bf8 xmm0 {k1}, zmm1, zmm2
 // CHECK: encoding: [0x62,0xf5,0x74,0x49,0x39,0xc2]

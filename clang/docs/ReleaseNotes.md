@@ -632,7 +632,7 @@ features cannot lower the translation-unit ABI level;
 
 #### X86 Support
 
-- Support ISA of `AVX10_V2_AUX` (`-mavx10v2aux`).
+- Support `AVX10_V2_AUX` ISA (`-mavx10v2aux`).
 
 #### Arm and AArch64 Support
 

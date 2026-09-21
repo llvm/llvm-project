@@ -1,4 +1,4 @@
-/*===--------- avx10_2_512v2auxintrin.h - AVX10_2_512V2AUX ---------------===
+/*===------------- avx10v2aux_512intrin.h - AVX10V2AUX 512 ----------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -8,13 +8,13 @@
  */
 #ifndef __IMMINTRIN_H
 #error                                                                         \
-    "Never use <avx10_2_512v2auxintrin.h> directly; include <immintrin.h> instead."
+    "Never use <avx10v2aux_512intrin.h> directly; include <immintrin.h> instead."
 #endif // __IMMINTRIN_H
 
 #ifdef __SSE2__
 
-#ifndef __AVX10_2_512V2AUXINTRIN_H
-#define __AVX10_2_512V2AUXINTRIN_H
+#ifndef __AVX10V2AUX_512INTRIN_H
+#define __AVX10V2AUX_512INTRIN_H
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS512                                                  \
@@ -1167,5 +1167,5 @@ _mm512_mask_cvtss_epi32_storeu_epi8(void *__P, __mmask16 __M, __m512i __A) {
 
 #undef __DEFAULT_FN_ATTRS512
 
-#endif // __AVX10_2_512V2AUXINTRIN_H
+#endif // __AVX10V2AUX_512INTRIN_H
 #endif // __SSE2__

@@ -39,29 +39,29 @@ __m512i test_mm512_maskz_unpack_epi8(__mmask64 __U, __m512i __A) {
 }
 
 __m128i test_mm_unpack_epi8_reserved_size0(__m128i __A) {
-  return _mm_unpack_epi8(__A, 1); // expected-error {{argument value 1 is a reserved VUNPACKB immediate}}
+  return _mm_unpack_epi8(__A, 1); // expected-error {{argument value 1 is a reserved VUNPACKB encoding of size (bits [4:2]) and start (bits [1:0])}}
 }
 
 __m256i test_mm256_unpack_epi8_reserved_size0(__m256i __A) {
-  return _mm256_unpack_epi8(__A, 2); // expected-error {{argument value 2 is a reserved VUNPACKB immediate}}
+  return _mm256_unpack_epi8(__A, 2); // expected-error {{argument value 2 is a reserved VUNPACKB encoding of size (bits [4:2]) and start (bits [1:0])}}
 }
 
 __m512i test_mm512_unpack_epi8_reserved_size0(__m512i __A) {
-  return _mm512_unpack_epi8(__A, 3); // expected-error {{argument value 3 is a reserved VUNPACKB immediate}}
+  return _mm512_unpack_epi8(__A, 3); // expected-error {{argument value 3 is a reserved VUNPACKB encoding of size (bits [4:2]) and start (bits [1:0])}}
 }
 
 __m128i test_mm_unpack_epi8_reserved_size1(__m128i __A) {
-  return _mm_unpack_epi8(__A, _MM_UNPACKB_SIZE(1)); // expected-error {{argument value 4 is a reserved VUNPACKB immediate}}
+  return _mm_unpack_epi8(__A, _MM_UNPACKB_SIZE(1)); // expected-error {{argument value 4 is a reserved VUNPACKB encoding of size (bits [4:2]) and start (bits [1:0])}}
 }
 
 __m128i test_mm_unpack_epi8_reserved_start(__m128i __A) {
-  return _mm_unpack_epi8(__A, _MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(3)); // expected-error {{argument value 19 is a reserved VUNPACKB immediate}}
+  return _mm_unpack_epi8(__A, _MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(3)); // expected-error {{argument value 19 is a reserved VUNPACKB encoding of size (bits [4:2]) and start (bits [1:0])}}
 }
 
 __m128i test_mm_unpack_epi8_reserved_size5_start(__m128i __A) {
-  return _mm_unpack_epi8(__A, _MM_UNPACKB_SIZE(5) | _MM_UNPACKB_START(1)); // expected-error {{argument value 21 is a reserved VUNPACKB immediate}}
+  return _mm_unpack_epi8(__A, _MM_UNPACKB_SIZE(5) | _MM_UNPACKB_START(1)); // expected-error {{argument value 21 is a reserved VUNPACKB encoding of size (bits [4:2]) and start (bits [1:0])}}
 }
 
 __m128i test_mm_mask_unpack_epi8_reserved(__m128i __W, __mmask16 __U, __m128i __A) {
-  return _mm_mask_unpack_epi8(__W, __U, __A, 0); // expected-error {{argument value 0 is a reserved VUNPACKB immediate}}
+  return _mm_mask_unpack_epi8(__W, __U, __A, 0); // expected-error {{argument value 0 is a reserved VUNPACKB encoding of size (bits [4:2]) and start (bits [1:0])}}
 }

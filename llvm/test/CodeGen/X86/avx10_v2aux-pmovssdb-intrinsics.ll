@@ -126,6 +126,7 @@ define <16 x i8> @test_int_x86_avx10_mask_pmovssdb_512(<16 x i32> %a, <16 x i8> 
   ret <16 x i8> %add2
 }
 
+; Negative tests: VPMOVSSDB source loads must not fold.
 define <16 x i8> @test_int_x86_avx10_pmovssdb_mem_128(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_pmovssdb_mem_128:
 ; X64:       # %bb.0:

@@ -7,7 +7,7 @@
 
 __m128i test_mm_cvtps_bf8(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2bf8128(<4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvtps_bf8(__A);
 }
 
@@ -19,15 +19,14 @@ __m128i test_mm_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvtps_bf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvtps_bf8(__U, __A);
 }
 
 __m128i test_mm256_cvtps_bf8(__m256 __A) {
   // CHECK-LABEL: @test_mm256_cvtps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2bf8256(<8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvtps_bf8(__A);
 }
 
@@ -39,9 +38,8 @@ __m128i test_mm256_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvtps_bf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvtps_bf8(__U, __A);
 }
 
@@ -68,7 +66,7 @@ __m128i test_mm512_maskz_cvtps_bf8(__mmask16 __U, __m512 __A) {
 
 __m128i test_mm_cvts_ps_bf8(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvts_ps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2bf8s128(<4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvts_ps_bf8(__A);
 }
 
@@ -80,15 +78,14 @@ __m128i test_mm_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvts_ps_bf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvts_ps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8s128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvts_ps_bf8(__U, __A);
 }
 
 __m128i test_mm256_cvts_ps_bf8(__m256 __A) {
   // CHECK-LABEL: @test_mm256_cvts_ps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2bf8s256(<8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvts_ps_bf8(__A);
 }
 
@@ -100,9 +97,8 @@ __m128i test_mm256_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvts_ps_bf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_ps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8s256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvts_ps_bf8(__U, __A);
 }
 
@@ -129,7 +125,7 @@ __m128i test_mm512_maskz_cvts_ps_bf8(__mmask16 __U, __m512 __A) {
 
 __m128i test_mm_cvtps_hf8(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2hf8128(<4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvtps_hf8(__A);
 }
 
@@ -141,15 +137,14 @@ __m128i test_mm_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvtps_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvtps_hf8(__U, __A);
 }
 
 __m128i test_mm256_cvtps_hf8(__m256 __A) {
   // CHECK-LABEL: @test_mm256_cvtps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2hf8256(<8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvtps_hf8(__A);
 }
 
@@ -161,9 +156,8 @@ __m128i test_mm256_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvtps_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvtps_hf8(__U, __A);
 }
 
@@ -190,7 +184,7 @@ __m128i test_mm512_maskz_cvtps_hf8(__mmask16 __U, __m512 __A) {
 
 __m128i test_mm_cvts_ps_hf8(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvts_ps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2hf8s128(<4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvts_ps_hf8(__A);
 }
 
@@ -202,15 +196,14 @@ __m128i test_mm_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvts_ps_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvts_ps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8s128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvts_ps_hf8(__U, __A);
 }
 
 __m128i test_mm256_cvts_ps_hf8(__m256 __A) {
   // CHECK-LABEL: @test_mm256_cvts_ps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtps2hf8s256(<8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvts_ps_hf8(__A);
 }
 
@@ -222,9 +215,8 @@ __m128i test_mm256_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvts_ps_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_ps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8s256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvts_ps_hf8(__U, __A);
 }
 
@@ -251,7 +243,7 @@ __m128i test_mm512_maskz_cvts_ps_hf8(__mmask16 __U, __m512 __A) {
 
 __m128i test_mm_cvtrops_hf8(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvtrops_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8128(<4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvtrops_hf8(__A);
 }
 
@@ -263,15 +255,14 @@ __m128i test_mm_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvtrops_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtrops_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvtrops_hf8(__U, __A);
 }
 
 __m128i test_mm256_cvtrops_hf8(__m256 __A) {
   // CHECK-LABEL: @test_mm256_cvtrops_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8256(<8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvtrops_hf8(__A);
 }
 
@@ -283,9 +274,8 @@ __m128i test_mm256_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvtrops_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtrops_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvtrops_hf8(__U, __A);
 }
 
@@ -312,7 +302,7 @@ __m128i test_mm512_maskz_cvtrops_hf8(__mmask16 __U, __m512 __A) {
 
 __m128i test_mm_cvts_rops_hf8(__m128 __A) {
   // CHECK-LABEL: @test_mm_cvts_rops_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8s128(<4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvts_rops_hf8(__A);
 }
 
@@ -324,15 +314,14 @@ __m128i test_mm_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvts_rops_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvts_rops_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8s128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvts_rops_hf8(__U, __A);
 }
 
 __m128i test_mm256_cvts_rops_hf8(__m256 __A) {
   // CHECK-LABEL: @test_mm256_cvts_rops_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8s256(<8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvts_rops_hf8(__A);
 }
 
@@ -344,9 +333,8 @@ __m128i test_mm256_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvts_rops_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_rops_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8s256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvts_rops_hf8(__U, __A);
 }
 
@@ -373,7 +361,7 @@ __m128i test_mm512_maskz_cvts_rops_hf8(__mmask16 __U, __m512 __A) {
 
 __m128i test_mm_cvtbiasps_bf8(__m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_cvtbiasps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvtbiasps_bf8(__A, __B);
 }
 
@@ -385,15 +373,14 @@ __m128i test_mm_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m12
 
 __m128i test_mm_maskz_cvtbiasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvtbiasps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvtbiasps_bf8(__U, __A, __B);
 }
 
 __m128i test_mm256_cvtbiasps_bf8(__m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_cvtbiasps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvtbiasps_bf8(__A, __B);
 }
 
@@ -405,9 +392,8 @@ __m128i test_mm256_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, __
 
 __m128i test_mm256_maskz_cvtbiasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvtbiasps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvtbiasps_bf8(__U, __A, __B);
 }
 
@@ -434,7 +420,7 @@ __m128i test_mm512_maskz_cvtbiasps_bf8(__mmask16 __U, __m512i __A, __m512 __B) {
 
 __m128i test_mm_cvts_biasps_bf8(__m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_cvts_biasps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvts_biasps_bf8(__A, __B);
 }
 
@@ -446,15 +432,14 @@ __m128i test_mm_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m
 
 __m128i test_mm_maskz_cvts_biasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvts_biasps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvts_biasps_bf8(__U, __A, __B);
 }
 
 __m128i test_mm256_cvts_biasps_bf8(__m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_cvts_biasps_bf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvts_biasps_bf8(__A, __B);
 }
 
@@ -466,9 +451,8 @@ __m128i test_mm256_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, 
 
 __m128i test_mm256_maskz_cvts_biasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_biasps_bf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvts_biasps_bf8(__U, __A, __B);
 }
 
@@ -495,7 +479,7 @@ __m128i test_mm512_maskz_cvts_biasps_bf8(__mmask16 __U, __m512i __A, __m512 __B)
 
 __m128i test_mm_cvtbiasps_hf8(__m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_cvtbiasps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvtbiasps_hf8(__A, __B);
 }
 
@@ -507,15 +491,14 @@ __m128i test_mm_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m12
 
 __m128i test_mm_maskz_cvtbiasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvtbiasps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvtbiasps_hf8(__U, __A, __B);
 }
 
 __m128i test_mm256_cvtbiasps_hf8(__m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_cvtbiasps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvtbiasps_hf8(__A, __B);
 }
 
@@ -527,9 +510,8 @@ __m128i test_mm256_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, __
 
 __m128i test_mm256_maskz_cvtbiasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvtbiasps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvtbiasps_hf8(__U, __A, __B);
 }
 
@@ -556,7 +538,7 @@ __m128i test_mm512_maskz_cvtbiasps_hf8(__mmask16 __U, __m512i __A, __m512 __B) {
 
 __m128i test_mm_cvts_biasps_hf8(__m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_cvts_biasps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm_cvts_biasps_hf8(__A, __B);
 }
 
@@ -568,15 +550,14 @@ __m128i test_mm_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m
 
 __m128i test_mm_maskz_cvts_biasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvts_biasps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm_maskz_cvts_biasps_hf8(__U, __A, __B);
 }
 
 __m128i test_mm256_cvts_biasps_hf8(__m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_cvts_biasps_hf8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 -1)
   return _mm256_cvts_biasps_hf8(__A, __B);
 }
 
@@ -588,9 +569,8 @@ __m128i test_mm256_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, 
 
 __m128i test_mm256_maskz_cvts_biasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_biasps_hf8(
-  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
+  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
   return _mm256_maskz_cvts_biasps_hf8(__U, __A, __B);
 }
 
