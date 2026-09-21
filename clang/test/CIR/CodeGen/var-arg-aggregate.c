@@ -85,12 +85,12 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR:     %[[REG_SAVE_B:.+]] = cir.cast bitcast %[[REG_SAVE]] : !cir.ptr<!void> -> !cir.ptr<!u8i>
 // CIR:     %[[FP_ADDR:.+]] = cir.ptr_stride %[[REG_SAVE_B]], %[[FP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
 // CIR:     %[[FP_ADDR_V:.+]] = cir.cast bitcast %[[FP_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vector<2 x !cir.float>>
-// CIR:     %[[SSE_VAL:.+]] = cir.load align(16) %[[FP_ADDR_V]] : !cir.ptr<!cir.vector<2 x !cir.float>>, !cir.vector<2 x !cir.float>
+// CIR:     %[[SSE_VAL:.+]] = cir.load %[[FP_ADDR_V]] : !cir.ptr<!cir.vector<2 x !cir.float>>, !cir.vector<2 x !cir.float>
 // CIR:     %[[TMP_SSE:.+]] = cir.get_member %[[REG_TMP]][0] {{.*}} -> !cir.ptr<!cir.vector<2 x !cir.float>>
 // CIR:     cir.store %[[SSE_VAL]], %[[TMP_SSE]] : !cir.vector<2 x !cir.float>, !cir.ptr<!cir.vector<2 x !cir.float>>
 // CIR:     %[[GP_ADDR:.+]] = cir.ptr_stride %[[REG_SAVE_B]], %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
 // CIR:     %[[GP_ADDR_V:.+]] = cir.cast bitcast %[[GP_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!u32i>
-// CIR:     %[[INT_VAL:.+]] = cir.load align(8) %[[GP_ADDR_V]] : !cir.ptr<!u32i>, !u32i
+// CIR:     %[[INT_VAL:.+]] = cir.load %[[GP_ADDR_V]] : !cir.ptr<!u32i>, !u32i
 // CIR:     %[[TMP_INT:.+]] = cir.get_member %[[REG_TMP]][1] {{.*}} -> !cir.ptr<!u32i>
 // CIR:     cir.store %[[INT_VAL]], %[[TMP_INT]] : !u32i, !cir.ptr<!u32i>
 // CIR:     %[[REG_TMP_B:.+]] = cir.cast bitcast %[[REG_TMP]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}> -> !cir.ptr<!u8i>
@@ -208,14 +208,12 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // LLVM: [[REG_BB]]:
 // LLVMCIR: %[[REG_SAVE:.+]] = load ptr, ptr %{{.*}}, align 8
 // OGCG:    %[[REG_SAVE:.+]] = load ptr, ptr %{{.*}}, align 16
-// LLVMCIR: %[[SSE_VAL:.+]] = load <2 x float>, ptr %{{.+}}, align 16
-// OGCG:    %[[SSE_VAL:.+]] = load <2 x float>, ptr %{{.+}}, align 8
+// LLVM:   %[[SSE_VAL:.+]] = load <2 x float>, ptr %{{.+}}, align 8
 // LLVMCIR: %[[SSE_DST:.+]] = getelementptr inbounds nuw { <2 x float>, i32 }, ptr %[[REG_TMP]], i32 0, i32 0
 // LLVMCIR: store <2 x float> %[[SSE_VAL]], ptr %[[SSE_DST]], align 8
 // OGCG:    %[[SSE_DST:.+]] = getelementptr inbounds nuw { <2 x float>, i32 }, ptr %[[REG_TMP]], i32 0, i32 0
 // OGCG:    store <2 x float> %[[SSE_VAL]], ptr %[[SSE_DST]], align 4
-// LLVMCIR: %[[INT_VAL:.+]] = load i32, ptr %{{.+}}, align 8
-// OGCG:    %[[INT_VAL:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM:   %[[INT_VAL:.+]] = load i32, ptr %{{.+}}, align 4
 // LLVM:   store i32 %[[INT_VAL]], ptr %{{.*}}, align 4
 // LLVM:   %[[GP_NEXT:.+]] = add i32 %[[GP_OFFSET]], 8
 // LLVMCIR: store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align 4
@@ -335,12 +333,12 @@ struct RevMixed varargs_aggregate_mixed_pair_rev(int count, ...) {
 // CIR:     %[[REG_SAVE_B:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!void> -> !cir.ptr<!u8i>
 // CIR:     %[[LO_ADDR:.+]] = cir.ptr_stride %[[REG_SAVE_B]], %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
 // CIR:     %[[LO_ADDR_V:.+]] = cir.cast bitcast %[[LO_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR:     %[[LO_VAL:.+]] = cir.load align(8) %[[LO_ADDR_V]] : !cir.ptr<!s64i>, !s64i
+// CIR:     %[[LO_VAL:.+]] = cir.load %[[LO_ADDR_V]] : !cir.ptr<!s64i>, !s64i
 // CIR:     %[[TMP_LO:.+]] = cir.get_member %[[REG_TMP]][0] {{.*}} -> !cir.ptr<!s64i>
 // CIR:     cir.store %[[LO_VAL]], %[[TMP_LO]] : !s64i, !cir.ptr<!s64i>
 // CIR:     %[[HI_ADDR:.+]] = cir.ptr_stride %[[REG_SAVE_B]], %[[FP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
 // CIR:     %[[HI_ADDR_V:.+]] = cir.cast bitcast %[[HI_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.double>
-// CIR:     %[[HI_VAL:.+]] = cir.load align(16) %[[HI_ADDR_V]] : !cir.ptr<!cir.double>, !cir.double
+// CIR:     %[[HI_VAL:.+]] = cir.load %[[HI_ADDR_V]] : !cir.ptr<!cir.double>, !cir.double
 // CIR:     %[[TMP_HI:.+]] = cir.get_member %[[REG_TMP]][1] {{.*}} -> !cir.ptr<!cir.double>
 // CIR:     cir.store %[[HI_VAL]], %[[TMP_HI]] : !cir.double, !cir.ptr<!cir.double>
 // CIR:     %[[REG_TMP_B:.+]] = cir.cast bitcast %[[REG_TMP]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}> -> !cir.ptr<!u8i>
@@ -364,7 +362,7 @@ struct RevMixed varargs_aggregate_mixed_pair_rev(int count, ...) {
 // LLVMCIR: store i64 %[[LO_VAL]], ptr %{{.+}}, align 8
 // LLVMCIR: %[[FP64:.+]] = zext i32 %[[FP_OFFSET]] to i64
 // LLVMCIR: %[[HI_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i64 %[[FP64]]
-// LLVMCIR: %[[HI_VAL:.+]] = load double, ptr %[[HI_ADDR]], align 16
+// LLVMCIR: %[[HI_VAL:.+]] = load double, ptr %[[HI_ADDR]], align 8
 // LLVMCIR: store double %[[HI_VAL]], ptr %{{.+}}, align 8
 // OGCG:    %[[LO_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i32 %[[GP_OFFSET]]
 // OGCG:    %[[HI_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i32 %[[FP_OFFSET]]

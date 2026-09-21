@@ -1680,6 +1680,10 @@ void reassembleRegisterPair(CIRBaseBuilderTy &b, mlir::Location loc,
                             const std::array<bool, 2> &pairIsSse,
                             mlir::Value regSaveArea, mlir::Value regPairTemp) {
   auto pairTy = mlir::cast<cir::RecordType>(ac.coercedType);
+  // Both halves of an all-SSE pair sit in 16-byte slots, which classic
+  // CodeGen tells the load about.  It leaves a mixed pair to the element's
+  // own alignment, so match that rather than claiming the slot there.
+  bool bothSse = pairIsSse[0] && pairIsSse[1];
   // Track how many of each class came before, since a slot is reached from
   // its class's own cursor.
   unsigned seenOfClass[2] = {0, 0};
@@ -1696,9 +1700,9 @@ void reassembleRegisterPair(CIRBaseBuilderTy &b, mlir::Location loc,
     }
     mlir::Value src = b.createPtrStride(loc, regSaveArea, off);
     mlir::Type elemTy = pairTy.getElementType(i);
-    // A slot is aligned to its own size.
-    mlir::Value val =
-        b.createAlignedLoad(loc, b.createPtrBitcast(src, elemTy), regSize);
+    mlir::Value elemPtr = b.createPtrBitcast(src, elemTy);
+    mlir::Value val = bothSse ? b.createAlignedLoad(loc, elemPtr, 16)
+                              : b.createLoad(loc, elemPtr);
     b.createStore(
         loc, val,
         b.createGetMember(loc, b.getPointerTo(elemTy), regPairTemp, "", i));
