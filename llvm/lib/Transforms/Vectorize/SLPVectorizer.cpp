@@ -4260,6 +4260,8 @@ private:
 
   friend struct GraphTraits<BoUpSLP *>;
   friend struct DOTGraphTraits<BoUpSLP *>;
+  // Reduction costing inspects the tree entries of the reduced values.
+  friend class HorizontalReduction;
 
   /// Contains all scheduling data for a basic block.
   /// It does not schedules instructions, which are not memory read/write
@@ -29946,7 +29948,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   return Changed;
 }
 
-namespace {
+namespace llvm::slpvectorizer {
 
 /// Model horizontal reductions.
 ///
@@ -32689,6 +32691,99 @@ private:
                   cast<VectorType>(getWidenedType(RType, ReduxWidth)), FMF,
                   CostKind);
             }
+            // reduce.add(mul(ext(A), ext(B))) lowers to a single dot-product
+            // reduction (e.g. UDOT/SDOT) where the target supports it. Prefer
+            // that fused cost when it is cheaper. The extends and the multiply
+            // are already counted in the tree cost, so subtract them here to
+            // avoid double counting (mirrors the FMA handling below).
+            if (RdxKind == RecurKind::Add && !ReducedVals.empty()) {
+              Type *SrcElemTy = nullptr;
+              bool IsZExt = true;
+              bool SameOperands = true;
+              // Match one reduced lane as mul(ext(a), ext(b)) where both
+              // factors use the same widening extend. Reports the extend
+              // signedness, the pre-extension scalar type, and whether both
+              // factors are the same extend value (a single extend column).
+              auto MatchMulAccLane = [](Value *V, bool &ZExt, Type *&SrcTy,
+                                        bool &SharedExt) {
+                Value *E0, *E1, *A, *B;
+                if (match(V,
+                          m_Mul(m_CombineAnd(m_Value(E0), m_ZExt(m_Value(A))),
+                                m_CombineAnd(m_Value(E1), m_ZExt(m_Value(B))))))
+                  ZExt = true;
+                else if (match(V, m_Mul(m_CombineAnd(m_Value(E0),
+                                                     m_SExt(m_Value(A))),
+                                        m_CombineAnd(m_Value(E1),
+                                                     m_SExt(m_Value(B))))))
+                  ZExt = false;
+                else
+                  return false;
+                if (A->getType() != B->getType())
+                  return false;
+                SrcTy = A->getType()->getScalarType();
+                SharedExt = E0 == E1;
+                return true;
+              };
+              bool IsMulAcc = all_of(ReducedVals, [&](Value *RdxVal) {
+                bool ThisZExt;
+                Type *ThisSrcTy;
+                bool SharedExt;
+                if (!MatchMulAccLane(RdxVal, ThisZExt, ThisSrcTy, SharedExt))
+                  return false;
+                if (!SharedExt)
+                  SameOperands = false;
+                if (!SrcElemTy) {
+                  SrcElemTy = ThisSrcTy;
+                  IsZExt = ThisZExt;
+                  return true;
+                }
+                return SrcElemTy == ThisSrcTy && IsZExt == ThisZExt;
+              });
+              // Only fuse when the multiply factors are vectorized as the
+              // root non-gather tree entry; otherwise the dot-product does not
+              // form and the fused cost would not apply.
+              ArrayRef MulTEs = R.getTreeEntries(ReducedVals.front());
+              auto MulTEIt = find_if(MulTEs, [](const auto *TE) {
+                return TE->Idx == 0 && !TE->isGather();
+              });
+              if (IsMulAcc && SrcElemTy && MulTEIt != MulTEs.end()) {
+                const auto *MulTE = *MulTEIt;
+                auto *SrcVecTy =
+                    cast<VectorType>(getWidenedType(SrcElemTy, ReduxWidth));
+                InstructionCost RedCost = TTI->getMulAccReductionCost(
+                    IsZExt, RdxOpcode, RedTy, SrcVecTy, CostKind);
+                if (RedCost.isValid()) {
+                  auto *Mul = cast<Instruction>(ReducedVals.front());
+                  auto *Ext0 = cast<Instruction>(Mul->getOperand(0));
+                  auto *Ext1 = cast<Instruction>(Mul->getOperand(1));
+                  // Cast context of an extend comes from its operand node when
+                  // the extend is itself a single vectorized entry.
+                  auto GetExtCCH = [&](Instruction *Ext) {
+                    if (ArrayRef ExtTEs = R.getTreeEntries(Ext);
+                        ExtTEs.size() == 1)
+                      return R.getCastContextHint(
+                          *R.getOperandEntry(ExtTEs.front(), 0));
+                    return TTI::getCastContextHint(Ext);
+                  };
+                  // Operand info from the multiply's tree-entry operands so it
+                  // reflects all lanes, not a single scalar.
+                  InstructionCost MulCost = TTI->getArithmeticInstrCost(
+                      Instruction::Mul, VectorTy, CostKind,
+                      R.getOperandInfo(MulTE->getOperand(0)),
+                      R.getOperandInfo(MulTE->getOperand(1)));
+                  InstructionCost TreeExtCost = TTI->getCastInstrCost(
+                      Ext0->getOpcode(), VectorTy, SrcVecTy, GetExtCCH(Ext0),
+                      CostKind);
+                  if (!SameOperands)
+                    TreeExtCost += TTI->getCastInstrCost(
+                        Ext1->getOpcode(), VectorTy, SrcVecTy, GetExtCCH(Ext1),
+                        CostKind);
+                  InstructionCost MulAccCost = RedCost - MulCost - TreeExtCost;
+                  if (MulAccCost < VectorCost)
+                    VectorCost = MulAccCost;
+                }
+              }
+            }
           }
         } else {
           Type *RedTy = VectorTy->getElementType();
@@ -33242,7 +33337,7 @@ private:
     return nullptr;
   }
 };
-} // end anonymous namespace
+} // namespace llvm::slpvectorizer
 
 /// Gets recurrence kind from the specified value.
 static RecurKind getRdxKind(Value *V) {
