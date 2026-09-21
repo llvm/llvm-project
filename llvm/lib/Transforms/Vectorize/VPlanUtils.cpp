@@ -217,7 +217,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     });
   // A SDiv with non-negative operands is equivalent to an UDiv.
   if (match(V, m_SDiv(m_VPValue(LHSVal), m_VPValue(RHSVal)))) {
-    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) -> SCEVUse {
       if (!SE.isKnownNonNegative(Ops[0]) || !SE.isKnownNonNegative(Ops[1]))
         return SE.getCouldNotCompute();
       return SE.getUDivExpr(Ops[0], Ops[1]);
