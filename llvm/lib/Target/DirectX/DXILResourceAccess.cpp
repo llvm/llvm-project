@@ -472,9 +472,17 @@ static void createBufferAtomicCompareExchange(IntrinsicInst *II,
 }
 
 // `cmpxchg` operands are always integers, so unlike atomicrmw there is no
-// float element type to convert here.
+// float element type to convert here. The element type must be scalar.
 static void createTextureAtomicCompareExchange(IntrinsicInst *II,
-                                               AtomicCmpXchgInst *AI) {
+                                               AtomicCmpXchgInst *AI,
+                                               dxil::ResourceTypeInfo &RTI) {
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  if (!ContainedType->isIntegerTy() && !ContainedType->isFloatingPointTy()) {
+    reportFatalUsageError("DXIL cmpxchg requires a texture resource with a "
+                          "scalar element type");
+    return;
+  }
+
   IRBuilder<> Builder(AI);
 
   emitAtomicCompareExchange(Builder, AI, II->getOperand(0),
@@ -530,7 +538,7 @@ static void createAtomicCompareExchangeIntrinsic(IntrinsicInst *II,
   case dxil::ResourceKind::Texture3D:
   case dxil::ResourceKind::Texture1DArray:
   case dxil::ResourceKind::Texture2DArray:
-    return createTextureAtomicCompareExchange(II, AI);
+    return createTextureAtomicCompareExchange(II, AI, RTI);
   case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture2DMSArray:
   case dxil::ResourceKind::TextureCube:
