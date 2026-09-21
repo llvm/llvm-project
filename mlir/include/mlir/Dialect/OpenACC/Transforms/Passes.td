@@ -180,7 +180,18 @@ def ACCDeclareCtorDtorConversion
     Option<"priority", "priority", "int32_t", /*default=*/"102",
            "Priority for ACC declare global constructors and destructors">,
     Option<"generateDtors", "generate-dtors", "bool", /*default=*/"true",
-           "Generate LLVM destructor functions and register them globally">
+           "Generate LLVM destructor functions and register them globally">,
+    ListOption<"extraConstructors", "extra-constructors",
+               "std::pair<std::string, bool>",
+               "Extra functions to declare and call from an OpenACC "
+               "constructor. Entries use <name>:<if-main>, where if-main is "
+               "true to call the function only when the module contains "
+               "program-entry-name.">,
+    Option<"programEntryName", "program-entry-name", "std::string",
+           /*default=*/"",
+           "Symbol name of the program entry point. Extra constructors with "
+           "if-main=true are emitted only when this symbol is present. Empty "
+           "means if-main constructors are never emitted.">
   ];
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }

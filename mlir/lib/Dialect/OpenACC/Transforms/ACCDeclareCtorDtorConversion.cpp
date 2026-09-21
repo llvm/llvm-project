@@ -17,6 +17,46 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
+
+#include <string>
+#include <utility>
+
+namespace llvm::cl {
+template <>
+class parser<std::pair<std::string, bool>>
+    : public basic_parser<std::pair<std::string, bool>> {
+public:
+  parser(Option &option) : basic_parser(option) {}
+
+  bool parse(Option &option, StringRef argName, StringRef arg,
+             std::pair<std::string, bool> &value) {
+    auto [name, flagStr] = arg.rsplit(':');
+    if (name.empty() || flagStr.empty())
+      return option.error("expected <name>:<bool>", argName);
+
+    bool ifMain = false;
+    if (flagStr.equals_insensitive("true") || flagStr == "1")
+      ifMain = true;
+    else if (flagStr.equals_insensitive("false") || flagStr == "0")
+      ifMain = false;
+    else
+      return option.error("invalid boolean in extra constructor mapping",
+                          argName);
+
+    value = {name.str(), ifMain};
+    return false;
+  }
+
+  StringRef getValueName() const override { return "name:bool"; }
+
+  static void print(raw_ostream &os,
+                    const std::pair<std::string, bool> &value) {
+    os << value.first << ':' << (value.second ? "true" : "false");
+  }
+};
+} // namespace llvm::cl
 
 namespace mlir {
 namespace acc {
@@ -117,6 +157,36 @@ static LLVM::LLVMFuncOp createLLVMFunctionFromRegion(StringRef symName,
   return newFunc;
 }
 
+static constexpr llvm::StringRef kExtraCtorName{"__openaccExtraConstructor"};
+
+/// Declare extra runtime functions and call them from a defined llvm.func
+/// registered in llvm.mlir.global_ctors. The extra functions themselves stay
+/// declarations: llvm.mlir.global_ctors requires a function with a body.
+static LLVM::LLVMFuncOp
+createExtraConstructorCaller(ModuleOp mod, OpBuilder &builder,
+                             ArrayRef<std::string> extraNames) {
+  auto llvmVoidTy = LLVM::LLVMVoidType::get(mod.getContext());
+  auto funcTy = LLVM::LLVMFunctionType::get(llvmVoidTy, {}, /*isVarArg=*/false);
+
+  builder.setInsertionPointToEnd(mod.getBody());
+  for (const std::string &name : extraNames) {
+    if (mod.lookupSymbol<LLVM::LLVMFuncOp>(name))
+      continue;
+    auto decl = LLVM::LLVMFuncOp::create(builder, mod.getLoc(), name, funcTy);
+    decl.setVisibility(SymbolTable::Visibility::Private);
+  }
+
+  auto wrapper = LLVM::LLVMFuncOp::create(builder, mod.getLoc(), kExtraCtorName,
+                                          funcTy, LLVM::Linkage::Internal);
+  Block *entry = wrapper.addEntryBlock(builder);
+  builder.setInsertionPointToStart(entry);
+  for (const std::string &name : extraNames)
+    LLVM::CallOp::create(builder, mod.getLoc(), funcTy,
+                         FlatSymbolRefAttr::get(mod.getContext(), name));
+  LLVM::ReturnOp::create(builder, mod.getLoc(), ValueRange{});
+  return wrapper;
+}
+
 struct ACCDeclareCtorDtorConversion
     : public acc::impl::ACCDeclareCtorDtorConversionBase<
           ACCDeclareCtorDtorConversion> {
@@ -166,6 +236,23 @@ struct ACCDeclareCtorDtorConversion
       }
       worklist.push_back(op.getOperation());
     });
+
+    bool hasProgramEntry =
+        !programEntryName.empty() &&
+        static_cast<bool>(mod.lookupSymbol(programEntryName));
+    SmallVector<std::string, 4> extraNames;
+    for (const auto &[funcName, ifMain] : extraConstructors) {
+      if (!ifMain || hasProgramEntry)
+        extraNames.push_back(funcName);
+    }
+    if (!extraNames.empty()) {
+      LLVM::LLVMFuncOp extraCtor =
+          createExtraConstructorCaller(mod, builder, extraNames);
+      allCtors.push_back(
+          FlatSymbolRefAttr::get(mod.getContext(), extraCtor.getSymName()));
+      ctorPriorities.push_back(priority);
+      ctorData.push_back(LLVM::ZeroAttr::get(builder.getContext()));
+    }
 
     if (allCtors.size() > existingCtorCount)
       replaceGlobalCtors(mod, builder, allCtors, ctorPriorities, ctorData,
