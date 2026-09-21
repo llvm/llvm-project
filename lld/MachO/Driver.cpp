@@ -2279,6 +2279,34 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         validName(arg->getValue(1));
   }
 
+  auto parseAddress = [&](const Arg *arg, unsigned valueIndex) {
+    uint64_t address = 0;
+    StringRef value = arg->getValue(valueIndex);
+    if (!llvm::to_integer(value, address, 0))
+      error(arg->getSpelling() + ": failed to parse '" + value +
+            "' as an address");
+    return address;
+  };
+
+  if (const Arg *arg = args.getLastArg(OPT_image_base)) {
+    config->imageBase = parseAddress(arg, 0);
+    uint64_t aligned = alignTo(config->imageBase, target->getPageSize());
+    if (aligned != config->imageBase) {
+      warn("-image_base: address is not page aligned; rounding up to 0x" +
+           Twine::utohexstr(aligned));
+      config->imageBase = aligned;
+    }
+  }
+
+  for (const Arg *arg : args.filtered(OPT_segaddr)) {
+    StringRef segName = validName(arg->getValue(0));
+    uint64_t address = parseAddress(arg, 1);
+    if (!isAligned(Align(4096), address))
+      error("-segaddr: address for segment " + segName +
+            " is not 4KiB aligned");
+    config->segmentAddresses[segName] = address;
+  }
+
   config->sectionAlignments = parseSectAlign(args);
 
   for (const Arg *arg : args.filtered(OPT_segprot)) {

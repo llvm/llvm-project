@@ -157,6 +157,7 @@ struct Configuration {
   uint32_t timeTraceGranularity = 500;
   unsigned optimize;
   std::string progName;
+  uint64_t imageBase = 0;
 
   // For `clang -arch arm64 -arch x86_64`, clang will:
   // 1. invoke the linker twice, to write one temporary output per arch
@@ -217,6 +218,7 @@ struct Configuration {
   // so use a vector instead of a map.
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
+  llvm::DenseMap<llvm::StringRef, uint64_t> segmentAddresses;
   bool ltoDebugPassManager = false;
   bool emitLLVM = false;
   llvm::StringRef codegenDataGeneratePath;
