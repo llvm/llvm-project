@@ -3802,6 +3802,10 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 // augmentation string.
 def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
+// Pseudo instruction to tell the streamer to emit an 'N' character into the
+// augmentation string.
+def EMITPAUTH : Pseudo<(outs), (ins), []>, Sched<[]> {}
+
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
 // This gets lowered to an instruction sequence which takes 16 bytes
