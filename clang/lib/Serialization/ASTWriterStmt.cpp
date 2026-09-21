@@ -998,6 +998,23 @@ void ASTStmtWriter::VisitOMPIteratorExpr(OMPIteratorExpr *E) {
   Code = serialization::EXPR_OMP_ITERATOR;
 }
 
+void ASTStmtWriter::VisitOMPNumArgsExpr(OMPNumArgsExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getOffset());
+  Record.AddSourceLocation(E->getNumArgsLoc());
+  Record.AddSourceLocation(E->getOperatorLoc());
+  Record.push_back(E->isSubtraction() ? 1 : 0);
+  Code = serialization::EXPR_OMP_NUM_ARGS;
+}
+
+void ASTStmtWriter::VisitOMPArgumentRangeExpr(OMPArgumentRangeExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getLowerBound());
+  Record.AddStmt(E->getUpperBound());
+  Record.AddSourceLocation(E->getColonLoc());
+  Code = serialization::EXPR_OMP_ARGUMENT_RANGE;
+}
+
 void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   VisitExpr(E);
 

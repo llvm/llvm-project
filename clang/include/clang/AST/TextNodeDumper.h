@@ -328,6 +328,7 @@ public:
   void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node);
   void VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *Node);
   void VisitOMPIteratorExpr(const OMPIteratorExpr *Node);
+  void VisitOMPNumArgsExpr(const OMPNumArgsExpr *Node);
   void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *Node);
   void VisitRequiresExpr(const RequiresExpr *Node);
 

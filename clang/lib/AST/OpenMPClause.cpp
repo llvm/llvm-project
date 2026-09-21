@@ -3269,3 +3269,91 @@ bool TargetOMPContext::matchesISATrait(StringRef RawString) const {
     DiagUnknownTrait(RawString);
   return false;
 }
+
+/// Evaluate one bound of an 'adjust_args' parameter range: either an
+/// 'omp_num_args [+- logical_offset]' expression, or a plain constant integer
+/// expression. Returns false if the bound is dependent or not constant.
+static bool evalOMPAdjustArgsBound(const Expr *Bound, unsigned NumArgs,
+                                   const ASTContext &Ctx, int64_t &Result) {
+  Bound = Bound->IgnoreParenImpCasts();
+  if (const auto *NumArgsExpr = dyn_cast<OMPNumArgsExpr>(Bound)) {
+    int64_t Offset = 0;
+    if (const Expr *OffsetExpr = NumArgsExpr->getOffset()) {
+      if (OffsetExpr->isValueDependent())
+        return false;
+      std::optional<llvm::APSInt> Val =
+          OffsetExpr->getIntegerConstantExpr(Ctx);
+      if (!Val)
+        return false;
+      Offset = Val->getExtValue();
+    }
+    Result = static_cast<int64_t>(NumArgs) +
+             (NumArgsExpr->isSubtraction() ? -Offset : Offset);
+    return true;
+  }
+  if (Bound->isValueDependent())
+    return false;
+  std::optional<llvm::APSInt> Val = Bound->getIntegerConstantExpr(Ctx);
+  if (!Val)
+    return false;
+  Result = Val->getExtValue();
+  return true;
+}
+
+bool clang::resolveOMPAdjustArgsItem(const Expr *Item, const FunctionDecl *FD,
+                                     unsigned NumArgs, const ASTContext &Ctx,
+                                     SmallVectorImpl<unsigned> &Positions) {
+  auto AppendIfInRange = [&](int64_t Pos) {
+    if (Pos >= 1 && Pos <= static_cast<int64_t>(NumArgs))
+      Positions.push_back(static_cast<unsigned>(Pos));
+  };
+
+  // A named parameter list item.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Item)) {
+    const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+    if (!PVD)
+      return false;
+    unsigned Index = PVD->getFunctionScopeIndex();
+    if (FD->getNumParams() > Index &&
+        FD->getParamDecl(Index)->getCanonicalDecl() ==
+            PVD->getCanonicalDecl())
+      AppendIfInRange(static_cast<int64_t>(Index) + 1);
+    return true;
+  }
+
+  // A parameter range 'lb:ub'. An omitted lb defaults to 1, an omitted ub to
+  // 'NumArgs' (OpenMP 6.0 [5.2.1] p163).
+  if (const auto *Range = dyn_cast<OMPArgumentRangeExpr>(Item)) {
+    int64_t Lower = 1;
+    if (const Expr *LB = Range->getLowerBound()) {
+      if (!evalOMPAdjustArgsBound(LB, NumArgs, Ctx, Lower))
+        return false;
+    }
+    int64_t Upper = NumArgs;
+    if (const Expr *UB = Range->getUpperBound()) {
+      if (!evalOMPAdjustArgsBound(UB, NumArgs, Ctx, Upper))
+        return false;
+    }
+    // Clamp before looping, not just inside it: an out-of-range literal bound
+    // (e.g. 'omp_num_args-1:9223372036854775807') must not turn this into an
+    // unbounded loop.
+    Lower = std::max<int64_t>(Lower, 1);
+    Upper = std::min<int64_t>(Upper, NumArgs);
+    for (int64_t Pos = Lower; Pos <= Upper; ++Pos)
+      AppendIfInRange(Pos);
+    return true;
+  }
+
+  // The position of a parameter, given as a constant integer expression.
+  if (Item->getType()->isIntegerType()) {
+    if (Item->isValueDependent())
+      return false;
+    std::optional<llvm::APSInt> Val = Item->getIntegerConstantExpr(Ctx);
+    if (!Val)
+      return false;
+    AppendIfInRange(Val->getExtValue());
+    return true;
+  }
+
+  return false;
+}

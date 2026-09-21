@@ -1491,6 +1491,19 @@ public:
                                   SourceLocation LLoc, SourceLocation RLoc,
                                   ArrayRef<OMPIteratorData> Data);
 
+  /// Called on a well-formed 'omp_num_args' expression appearing as a bound of
+  /// an 'adjust_args' parameter range. \a Offset is null if no logical offset
+  /// was written, in which case \a OpLoc is invalid.
+  ExprResult ActOnOMPNumArgsExpr(SourceLocation NumArgsLoc,
+                                 SourceLocation OpLoc, bool IsSubtraction,
+                                 Expr *Offset);
+
+  /// Called on a well-formed 'adjust_args' parameter range 'lb:ub'. Either
+  /// bound may be null, meaning 1 for \a LowerBound and 'omp_num_args' for
+  /// \a UpperBound.
+  ExprResult ActOnOMPArgumentRangeExpr(Expr *LowerBound, SourceLocation ColonLoc,
+                                       Expr *UpperBound);
+
   ExprResult ActOnOpenMPDimsModifier(OpenMPClauseKind Kind, int Modifier,
                                      Expr *ModifierExpr,
                                      SourceLocation ModifierLoc,

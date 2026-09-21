@@ -2051,6 +2051,12 @@ void TextNodeDumper::VisitOMPIteratorExpr(const OMPIteratorExpr *Node) {
   }
 }
 
+void TextNodeDumper::VisitOMPNumArgsExpr(const OMPNumArgsExpr *Node) {
+  // The offset itself is dumped as a child; only its sign needs printing.
+  if (Node->getOffset())
+    OS << " '" << (Node->isSubtraction() ? '-' : '+') << "'";
+}
+
 void TextNodeDumper::VisitConceptSpecializationExpr(
     const ConceptSpecializationExpr *Node) {
   OS << " ";

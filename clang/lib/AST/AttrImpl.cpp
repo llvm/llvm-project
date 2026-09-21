@@ -14,6 +14,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/Type.h"
 #include <optional>
 #include <type_traits>
@@ -209,12 +210,20 @@ void OMPDeclareVariantAttr::printPrettyPragma(
   OS << " match(" << traitInfos << ")";
 
   auto PrintExprs = [&OS, &Policy](Expr **Begin, Expr **End) {
-    for (Expr **I = Begin; I != End; ++I) {
-      assert(*I && "Expected non-null Stmt");
-      if (I != Begin)
-        OS << ",";
-      (*I)->printPretty(OS, nullptr, Policy);
+    if (Begin != End) {
+      if (const auto *Range = dyn_cast<OMPArgumentRangeExpr>(*Begin);
+          Range && !Range->getLowerBound())
+        // A first item with an omitted lower bound starts with ':', which
+        // would form a '::' token together with the adjust-op separator.
+        OS << " ";
     }
+    llvm::interleave(
+        Begin, End,
+        [&](Expr *E) {
+          assert(E && "Expected non-null Stmt");
+          E->printPretty(OS, nullptr, Policy);
+        },
+        [&OS] { OS << ","; });
   };
   if (adjustArgsNothing_size()) {
     OS << " adjust_args(nothing:";

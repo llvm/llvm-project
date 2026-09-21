@@ -10566,6 +10566,29 @@ public:
   OMPXBareClause() = default;
 };
 
+/// Resolve one 'adjust_args' parameter-list item to the 1-based argument
+/// positions it identifies (OpenMP 6.0 [5.2.1] p162).
+///
+/// \param Item     A named item (\c DeclRefExpr to a \c ParmVarDecl of \p FD),
+///                 a positional item (a constant integer expression), or an
+///                 \c OMPArgumentRangeExpr. Callers pass IgnoreParenImpCasts().
+/// \param FD       The base function the OMPDeclareVariantAttr is attached to.
+/// \param NumArgs  The value of 'omp_num_args' at the point of resolution:
+///                 \c max(FD->getNumParams(), Call->getNumArgs()) at a call
+///                 site, or \c FD->getNumParams() with no call site available
+///                 (OpenMP 6.0 [20.1] p534).
+/// \param Positions Resolved positions are appended here, ascending. Positions
+///                 outside [1, NumArgs] are silently dropped
+///                 (OpenMP 6.0 [9.6.2] p332 L1-2).
+/// \returns false if \p Item is not a resolvable item shape, or if a bound is
+///          dependent or not a constant expression.
+///
+/// Emits no diagnostics: it lives in the AST library so it can later be
+/// shared with CodeGen. Sema diagnoses separately, before calling this.
+bool resolveOMPAdjustArgsItem(const Expr *Item, const FunctionDecl *FD,
+                              unsigned NumArgs, const ASTContext &Ctx,
+                              SmallVectorImpl<unsigned> &Positions);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

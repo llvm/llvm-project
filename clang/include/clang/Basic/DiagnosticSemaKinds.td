@@ -12815,6 +12815,9 @@ def err_omp_instantiation_not_supported
     : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
+def err_omp_adjust_args_invalid_item : Error<
+  "expected a parameter name, a parameter position, or a parameter range in "
+  "'adjust_args' clause">;
 def err_omp_clause_requires_dispatch_construct : Error<
   "'%0' clause requires 'dispatch' context selector">;
 def err_omp_append_args_with_varargs : Error<

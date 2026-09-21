@@ -2954,6 +2954,8 @@ DEF_TRAVERSE_STMT(MatrixSubscriptExpr, {})
 DEF_TRAVERSE_STMT(ArraySectionExpr, {})
 DEF_TRAVERSE_STMT(OMPArrayShapingExpr, {})
 DEF_TRAVERSE_STMT(OMPIteratorExpr, {})
+DEF_TRAVERSE_STMT(OMPNumArgsExpr, {})
+DEF_TRAVERSE_STMT(OMPArgumentRangeExpr, {})
 
 DEF_TRAVERSE_STMT(BlockExpr, {
   TRY_TO(TraverseDecl(S->getBlockDecl()));

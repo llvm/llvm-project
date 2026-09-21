@@ -7053,6 +7053,17 @@ public:
   bool ParseOpenMPReservedLocator(OpenMPClauseKind Kind,
                                   SemaOpenMP::OpenMPVarListDataTy &Data,
                                   const LangOptions &LangOpts);
+
+  /// Parses one bound of an OpenMP 6.0 'adjust_args' parameter range, which may
+  /// be 'omp_num_args' with an optional logical offset, or the whole
+  /// parameter-list item when no range colon follows it.
+  ExprResult ParseOpenMPAdjustArgsBound();
+
+  /// Parses an OpenMP 6.0 'adjust_args' parameter list, whose items may be
+  /// parameter names, positions, or ranges with optional bounds.
+  /// Returns true on error.
+  bool ParseOpenMPAdjustArgsList(SmallVectorImpl<Expr *> &Vars);
+
   /// Parses clauses with list.
   bool ParseOpenMPVarList(OpenMPDirectiveKind DKind, OpenMPClauseKind Kind,
                           SmallVectorImpl<Expr *> &Vars,

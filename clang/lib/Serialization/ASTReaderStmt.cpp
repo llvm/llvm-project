@@ -1063,6 +1063,21 @@ void ASTStmtReader::VisitOMPIteratorExpr(OMPIteratorExpr *E) {
   }
 }
 
+void ASTStmtReader::VisitOMPNumArgsExpr(OMPNumArgsExpr *E) {
+  VisitExpr(E);
+  E->setOffset(Record.readSubExpr());
+  E->setNumArgsLoc(readSourceLocation());
+  E->setOperatorLoc(readSourceLocation());
+  E->setIsSubtraction(Record.readInt() != 0);
+}
+
+void ASTStmtReader::VisitOMPArgumentRangeExpr(OMPArgumentRangeExpr *E) {
+  VisitExpr(E);
+  E->setLowerBound(Record.readSubExpr());
+  E->setUpperBound(Record.readSubExpr());
+  E->setColonLoc(readSourceLocation());
+}
+
 void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   VisitExpr(E);
 
@@ -3393,6 +3408,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_OMP_ITERATOR:
       S = OMPIteratorExpr::CreateEmpty(Context,
                                        Record[ASTStmtReader::NumExprFields]);
+      break;
+
+    case EXPR_OMP_NUM_ARGS:
+      S = new (Context) OMPNumArgsExpr(Empty);
+      break;
+
+    case EXPR_OMP_ARGUMENT_RANGE:
+      S = new (Context) OMPArgumentRangeExpr(Empty);
       break;
 
     case EXPR_CALL: {
