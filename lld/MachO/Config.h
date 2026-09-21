@@ -224,6 +224,7 @@ struct Configuration {
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool warnMissingSubsectionsViaSymbols = false;
   bool disableVerify;
   bool separateCstringLiteralSections;
   bool tailMergeStrings;

@@ -10,4 +10,4 @@
 
 #include "src/math/nextupf128.h"
 
-LIST_NEXTUP_TESTS(float128, LIBC_NAMESPACE::nextupf128)
+LIST_NEXTUP_TESTS(Nextupf128, float128, LIBC_NAMESPACE::nextupf128)

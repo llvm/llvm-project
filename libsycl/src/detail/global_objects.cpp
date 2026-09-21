@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <detail/context_impl.hpp>
 #include <detail/global_objects.hpp>
 #include <detail/platform_impl.hpp>
 #include <detail/program_manager.hpp>
@@ -15,6 +16,9 @@
 #  include <windows.h>
 #endif
 
+#include <cassert>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -40,6 +44,10 @@ struct StaticVarShutdownHandler {
 };
 
 void registerStaticVarShutdownHandler() {
+  // Touch the program manager singleton first: static objects are destroyed in
+  // reverse order of construction, so this guarantees it is still alive when
+  // ~StaticVarShutdownHandler() calls releaseResources() on it.
+  std::ignore = ProgramAndKernelManager::getInstance();
   static StaticVarShutdownHandler handler{};
 }
 
@@ -62,9 +70,12 @@ InstanceWithLock<AsyncExceptionsContainer> &getAsyncExceptionList() {
 
 void recordAsyncException(const std::shared_ptr<QueueImpl> &QueuePtr,
                           const std::exception_ptr &ExceptionPtr) {
+  assert(QueuePtr && "Queue impl ptr can't be nullptr");
+  AsyncExceptionKey Key{QueuePtr, QueuePtr->getContextWeakPtr()};
+
   auto &[AsyncExceptions, AsyncExceptionsMutex] = getAsyncExceptionList();
   std::lock_guard<SpinLock> Lock(AsyncExceptionsMutex);
-  addAsyncException(AsyncExceptions[QueuePtr], ExceptionPtr);
+  addAsyncException(AsyncExceptions[std::move(Key)], ExceptionPtr);
 }
 
 void flushAsyncExceptions() {
@@ -81,13 +92,27 @@ void flushAsyncExceptions() {
     if (Exceptions.size() == 0)
       continue;
 
-    if (std::shared_ptr<QueueImpl> Queue = EntryKey.lock();
+    // SYCL 2020 4.13.1.3. Priorities of async handlers: the handler the queue
+    // was constructed with comes first, the handler of the context enclosing
+    // the queue comes next.
+    const auto &[WeakQueue, WeakContext] = EntryKey;
+
+    if (std::shared_ptr<QueueImpl> Queue = WeakQueue.lock();
         Queue && Queue->getAsyncHandler()) {
       Queue->getAsyncHandler()(std::move(Exceptions));
       continue;
     }
 
-    // If the queue is dead, use the default handler.
+    if (std::shared_ptr<ContextImpl> Context = WeakContext.lock();
+        Context && Context->get_async_handler()) {
+      Context->get_async_handler()(std::move(Exceptions));
+      continue;
+    }
+
+    // Neither the queue nor the context has a handler, or both of them are
+    // dead. A context constructed without an async_handler is given the default
+    // one at construction, so there is no need for a context to carry an empty
+    // handler: leaving it empty would end up here with an identical result.
     defaultAsyncHandler(std::move(Exceptions));
   }
 }
