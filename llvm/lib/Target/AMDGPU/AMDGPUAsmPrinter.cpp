@@ -1345,7 +1345,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (WaveDispatchNumVGPR) {
     ProgInfo.NumArchVGPR = AMDGPUMCExpr::createMax(
-        {ProgInfo.NumVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
+        {ProgInfo.NumArchVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
 
     ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
