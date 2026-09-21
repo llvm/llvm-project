@@ -18933,6 +18933,11 @@ CreateNewDecl:
   if (!Invalid && SearchDC->isRecord())
     SetMemberAccessSpecifier(New, PrevDecl, AS);
 
+  // FIXME: An elaborated-type-specifier referring to an existing tag should
+  // ideally not introduce a redeclaration. ActOnTag currently creates one, so
+  // avoid diagnosing it as a redeclaration across module boundaries.
+  //
+  // See https://github.com/llvm/llvm-project/pull/194546 for full background.
   if (PrevDecl && TUK != TagUseKind::Reference)
     CheckRedeclarationInModule(New, PrevDecl);
 
