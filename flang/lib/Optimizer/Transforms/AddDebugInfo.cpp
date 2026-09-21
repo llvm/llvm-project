@@ -146,13 +146,17 @@ private:
                            fir::cg::XDeclareOp typeGenDeclOp);
 };
 
+/// Whether \p loc already carries debug information of type \c AttrT, fused
+/// onto it by this pass. A location is fused for unrelated reasons too, most
+/// notably one that came from an INCLUDE'd file, so what the fusion holds has
+/// to be examined rather than the fusion merely detected. Each caller names
+/// the attribute it would attach itself, so nothing here needs updating when
+/// another kind of debug information is generated elsewhere. Only the
+/// outermost fusion is examined, because that is the one this pass adds.
+template <typename AttrT>
 bool debugInfoIsAlreadySet(mlir::Location loc) {
-  if (mlir::isa<mlir::FusedLoc>(loc)) {
-    if (loc->findInstanceOf<mlir::FusedLocWith<fir::LocationKindAttr>>())
-      return false;
-    return true;
-  }
-  return false;
+  auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(loc);
+  return fusedLoc && mlir::isa_and_present<AttrT>(fusedLoc.getMetadata());
 }
 
 // Generates the name for the artificial DISubprogram that we are going to
@@ -566,7 +570,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
                                       fir::DebugTypeGenerator &typeGen,
                                       mlir::SymbolTable *symbolTable,
                                       fir::cg::XDeclareOp declOp) {
-  if (debugInfoIsAlreadySet(globalOp.getLoc()))
+  // A global is described by an array of DIGlobalVariableExpressionAttr.
+  if (debugInfoIsAlreadySet<mlir::ArrayAttr>(globalOp.getLoc()))
     return;
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
@@ -644,8 +649,9 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
                                     mlir::SymbolTable *symbolTable) {
   mlir::Location l = funcOp->getLoc();
   // If fused location has already been created then nothing to do
-  // Otherwise, create a fused location.
-  if (debugInfoIsAlreadySet(l))
+  // Otherwise, create a fused location. A function is described by a
+  // DISubprogramAttr.
+  if (debugInfoIsAlreadySet<mlir::LLVM::DISubprogramAttr>(l))
     return;
 
   mlir::MLIRContext *context = &getContext();
@@ -656,7 +662,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
                         ? llvm::dwarf::getCallingConvention("DW_CC_program")
                         : llvm::dwarf::getCallingConvention("DW_CC_normal");
 
-  if (auto funcLoc = mlir::dyn_cast<mlir::FileLineColLoc>(l)) {
+  if (auto funcLoc = l->findInstanceOf<mlir::FileLineColLoc>()) {
     fileName = llvm::sys::path::filename(funcLoc.getFilename().getValue());
     filePath = llvm::sys::path::parent_path(funcLoc.getFilename().getValue());
   }

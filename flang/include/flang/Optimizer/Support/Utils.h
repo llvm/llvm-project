@@ -32,10 +32,12 @@
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 namespace fir {
-/// Return the line of a location, or 1 if it does not carry one.
+/// Return the line of a location, or 1 if it does not carry one. The location
+/// can be a fused one, e.g. for something read from an INCLUDE'd file, so
+/// search it rather than expecting a bare FileLineColLoc.
 inline uint32_t getLineFromLoc(mlir::Location loc) {
   uint32_t line = 1;
-  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>())
     line = fileLoc.getLine();
   return line;
 }
