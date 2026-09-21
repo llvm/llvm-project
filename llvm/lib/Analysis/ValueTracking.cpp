@@ -771,6 +771,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     return false;
   if (pred_empty(CtxBB))
     return false;
+
   // Note: CtxBB is NOT pre-inserted into Visited to ensure that loop
   // backedges returning to CtxBB are enqueued and checked correctly.
   SmallVector<const BasicBlock *, 16> Worklist(predecessors(CtxBB));
@@ -779,6 +780,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     const BasicBlock *CurBB = Worklist.pop_back_val();
     if (!Visited.insert(CurBB).second)
       continue;
+
     if (CurBB == AssumeBB) {
       if (!hasNoFreeInRange(Assume->getIterator(), AssumeBB->end(), NumChecked))
         return false;
@@ -786,8 +788,10 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     }
     assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
            "Blocks between Assume and CtxI must be dominated by AssumeBB");
+
     if (pred_empty(CurBB))
       return false;
+
     // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
     // instructions from CtxIter to the end of CtxBB (instructions before
     // CtxIter were checked above). Otherwise, check the entire block.
