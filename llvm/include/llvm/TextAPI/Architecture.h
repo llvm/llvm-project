@@ -26,10 +26,27 @@ namespace MachO {
 
 /// Defines the architecture slices that are supported by Text-based Stub files.
 enum Architecture : uint8_t {
-#define ARCHINFO(Arch, Name, Type, SubType, NumBits) AK_##Arch,
-#include "llvm/TextAPI/Architecture.def"
-#undef ARCHINFO
-  AK_unknown, // this has to go last.
+  AK_i386,
+  AK_x86_64,
+  AK_x86_64h,
+  AK_armv4t,
+  AK_armv6,
+  AK_armv5,
+  AK_armv7,
+  AK_armv7s,
+  AK_armv7k,
+  AK_armv6m,
+  AK_armv7m,
+  AK_armv7em,
+  AK_armv8m_main,
+  AK_armv8m_base,
+  AK_armv8_1m_main,
+  AK_arm64,
+  AK_arm64e,
+  AK_arm64_32,
+  AK_riscv32,
+  AK_unknown,
+  AK_arm64e_x1,
 };
 
 /// Convert a CPU Type and Subtype pair to an architecture slice.

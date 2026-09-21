@@ -156,7 +156,6 @@ public:
     ARMSubArch_v4t,
 
     AArch64SubArch_arm64e,
-    AArch64SubArch_arm64e_x1,
     AArch64SubArch_arm64ec,
     AArch64SubArch_lfi,
 
@@ -274,7 +273,9 @@ public:
     AMDGPUSubArch13,
     AMDGPUSubArch1310,
     FirstAMDGPUSubArch = AMDGPUSubArch6,
-    LastAMDGPUSubArch = AMDGPUSubArch1310
+    LastAMDGPUSubArch = AMDGPUSubArch1310,
+
+    AArch64SubArch_arm64e_x1
   };
   enum VendorType {
     UnknownVendor,
