@@ -304,12 +304,7 @@ public:
       bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
           nullptr,
-      bool LookThroughIntToPtr = false) {
-    return const_cast<Value *>(
-        static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
-            DL, Offset, AllowNonInbounds, AllowInvariantGroup, ExternalAnalysis,
-            LookThroughIntToPtr));
-  }
+      bool LookThroughIntToPtr = false);
 
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
