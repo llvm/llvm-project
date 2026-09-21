@@ -74,17 +74,33 @@ def node_5b : SDNode<"MyTargetISD::NODE_5", SDTypeProfile<0, 0, []>, [SDNPHasCha
 // CHECK-NEXT:    "MyTargetISD::COMPAT\0"
 // CHECK-NEXT:    ;
 
+// CHECK:       static const SDNodeDesc MyTargetSDNodeDescs[] = {
+// CHECK-NEXT:      {1, 0, 0}, // COMPAT
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  #ifndef NDEBUG
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
 // CHECK-NEXT:    /* dummy */ {SDTCisVT, 0, 0, 0, MVT::INVALID_SIMPLE_VALUE_TYPE}
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
-// CHECK-NEXT:      {1, -1, 0, 0, 0, 1, 0, 0}, // COMPAT
+// CHECK-NEXT:  static const SDNodeVerifyDesc MyTargetSDNodeVerifyDescs[] = {
+// CHECK-NEXT:      {1, -1, 0, 0, 0}, // COMPAT
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
+// CHECK-NEXT:  static const SDNodeVerifyInfo MyTargetSDNodeVerifyInfo = {
+// CHECK-NEXT:      MyTargetSDNodeVerifyDescs, MyTargetVTByHwModeTable,
+// CHECK-NEXT:      MyTargetSDTypeConstraints};
+// CHECK-NEXT:  #endif // NDEBUG
+// CHECK-EMPTY:
+// CHECK-NEXT:  #ifndef NDEBUG
 // CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
 // CHECK-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs, MyTargetSDNodeNames,
-// CHECK-NEXT:      MyTargetVTByHwModeTable, MyTargetSDTypeConstraints);
+// CHECK-NEXT:      &MyTargetSDNodeVerifyInfo);
+// CHECK-NEXT:  #else
+// CHECK-NEXT:  static const SDNodeInfo MyTargetGenSDNodeInfo(
+// CHECK-NEXT:      /*NumOpcodes=*/1, MyTargetSDNodeDescs, MyTargetSDNodeNames,
+// CHECK-NEXT:      nullptr);
+// CHECK-NEXT:  #endif // NDEBUG
 
 def compat_a : SDNode<"MyTargetISD::COMPAT", SDTypeProfile<1, -1, []>>;
 def compat_b : SDNode<"MyTargetISD::COMPAT", SDTypeProfile<1, -1, [SDTCisVT<0, untyped>]>>;

@@ -226,7 +226,7 @@ public:
 
   bool isTargetMemoryOpcode(unsigned Opcode) const override {
     if (GenNodeInfo.hasDesc(Opcode))
-      return GenNodeInfo.getDesc(Opcode).hasProperty(SDNPMemOperand);
+      return GenNodeInfo.getDesc(Opcode).hasFlag(SDNFIsMemOperand);
     return false;
   }
 
