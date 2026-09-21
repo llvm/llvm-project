@@ -48,7 +48,7 @@ def __lldb_init_module(debugger, dict):
         debugger,
         "^std::__[[:alnum:]]+::vector<.+>$",
         "LibCxxStdVectorSyntheticFrontendCreator",
-        "--wants-dereference",
+        "--requires-dereference true",
     )
 
     # Enables registered formatters in LLDB. The builtin LLDB formatters are registered in the `cplusplus` category.

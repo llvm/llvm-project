@@ -80,6 +80,18 @@ class MapIterator:
     def value(self):
         return self.m_entry.get_entry()
 
+    def copy(self):
+        """
+        Returns an independent copy positioned at the same entry.
+
+        Iterators are cached per index and advanced in place, so a caller that
+        resumes from a cached iterator must work on a copy to avoid moving the
+        entry that the cache still describes.
+        """
+        other = MapIterator(self.m_entry.get_entry(), self.m_max_depth)
+        other.m_error = self.m_error
+        return other
+
     def advance(self, count):
         """Advance the iterator by count steps and return the entry."""
         if self.m_error:
@@ -227,15 +239,6 @@ class LibcxxStdMapSyntheticProvider:
         self.m_count = node_sp.GetValueAsUnsigned(0)
         return self.m_count
 
-    def get_child_index(self, name):
-        """Get the index of a child with the given name (e.g., "[0]" -> 0)."""
-        try:
-            if name.startswith("[") and name.endswith("]"):
-                return int(name[1:-1])
-        except ValueError:
-            pass
-        return None
-
     def get_child_at_index(self, index):
         num_children = self.num_children()
         if index >= num_children:
@@ -311,7 +314,7 @@ class LibcxxStdMapSyntheticProvider:
             # If we have already created the iterator for the previous
             # index, we can start from there and advance by 1.
             if idx - 1 in self.m_iterators:
-                iterator = self.m_iterators[idx - 1]
+                iterator = self.m_iterators[idx - 1].copy()
                 advance_by = 1
 
         iterated_sp = iterator.advance(advance_by)
