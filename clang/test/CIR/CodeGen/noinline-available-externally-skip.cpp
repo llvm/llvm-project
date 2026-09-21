@@ -28,7 +28,7 @@ public:
 
   // ONLY defined in O2:
   // CIRO0-DAG: cir.func private @_ZNK6HolderIiE4showEv{{.*}}attributes {{{.*}}}{{[^{]*}}{{$}}
-  // CIRO2-DAG: cir.func available_externally @_ZNK6HolderIiE4showEv{{.*}}attributes {{{.*}}} {
+  // CIRO2-DAG: cir.func {{.*}}available_externally @_ZNK6HolderIiE4showEv{{.*}}attributes {{{.*}}} {
   // LLVMO0-DAG: declare void @_ZNK6HolderIiE4showEv
   // LLVMO2-DAG: define available_externally void @_ZNK6HolderIiE4showEv
   void show() const {}
