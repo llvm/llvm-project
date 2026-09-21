@@ -2992,6 +2992,16 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
       FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
                      sizeTy, intTy, intTy},
                     voidTy));
+  // void __cudaRegisterSurface(void **fatbinHandle,
+  //                            const struct surfaceReference *hostVar,
+  //                            const void **deviceAddress,
+  //                            const char *deviceName,
+  //                            int type, int ext);
+  FuncOp cudaRegisterSurface = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterSurface"), loc,
+      FuncType::get(
+          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy},
+          voidTy));
 
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
@@ -3008,15 +3018,6 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
 
   for (auto &[global, regAttr] : cudaDeviceVars) {
-    switch (regAttr.getKind()) {
-    case cir::CUDADeviceVarKind::Variable:
-      break;
-    case cir::CUDADeviceVarKind::Surface:
-      llvm_unreachable("Surface registration NYI");
-    case cir::CUDADeviceVarKind::Texture:
-      llvm_unreachable("Texture registration NYI");
-    }
-
     if (regAttr.getIsManaged())
       llvm_unreachable("Managed variable registration NYI");
 
@@ -3028,15 +3029,36 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
 
     auto isExtern = ConstantOp::create(
         builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
-    llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
-    auto varSize = ConstantOp::create(
-        builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
-    auto isConstant = ConstantOp::create(
-        builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
-    auto normalized = ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
-    builder.createCallOp(loc, cudaRegisterVar,
-                         {fatbinHandle, hostVar, deviceName, deviceName,
-                          isExtern, varSize, isConstant, normalized});
+
+    switch (regAttr.getKind()) {
+    case cir::CUDADeviceVarKind::Variable: {
+      llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
+      auto varSize = ConstantOp::create(
+          builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+      auto isConstant = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
+      auto normalized =
+          ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
+
+      builder.createCallOp(loc, cudaRegisterVar,
+                           {fatbinHandle, hostVar, deviceName, deviceName,
+                            isExtern, varSize, isConstant, normalized});
+      break;
+    }
+
+    case cir::CUDADeviceVarKind::Surface: {
+      auto surfaceType = ConstantOp::create(
+          builder, loc, IntAttr::get(intTy, regAttr.getSurfaceType()));
+
+      builder.createCallOp(loc, cudaRegisterSurface,
+                           {fatbinHandle, hostVar, deviceName, deviceName,
+                            surfaceType, isExtern});
+      break;
+    }
+
+    case cir::CUDADeviceVarKind::Texture:
+      llvm_unreachable("Texture registration NYI");
+    }
   }
 }
 

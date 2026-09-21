@@ -93,7 +93,8 @@ public:
                      builder.getContext(),
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
-                     vd->hasAttr<HIPManagedAttr>()));
+                     vd->hasAttr<HIPManagedAttr>(),
+                     /*surfaceType=*/0));
     deviceVars.push_back({
         var,
         vd,
@@ -101,8 +102,8 @@ public:
     });
   }
 
-  void registerDeviceSurf(const VarDecl *vd, cir::GlobalOp &var,
-                          bool isExtern) {
+  void registerDeviceSurf(const VarDecl *vd, cir::GlobalOp &var, bool isExtern,
+                          int32_t surfaceType) {
     auto &builder = cgm.getBuilder();
 
     var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
@@ -111,7 +112,7 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Surface, isExtern,
                      /*isConstant=*/false,
-                     /*isManaged=*/false));
+                     /*isManaged=*/false, surfaceType));
 
     deviceVars.push_back({
         var,
@@ -129,7 +130,8 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Texture, isExtern,
                      /*isConstant=*/false,
-                     /*isManaged=*/false));
+                     /*isManaged=*/false,
+                     /*surfaceType=*/0));
 
     deviceVars.push_back({
         var,
@@ -430,14 +432,11 @@ void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
   // counterparts. It's not clear yet whether it's nvcc's bug or
   // a feature, but we've got to do the same for compatibility.
   if (d->hasAttr<CUDADeviceAttr>() || d->hasAttr<CUDAConstantAttr>() ||
-      d->hasAttr<CUDASharedAttr>()) {
+      d->hasAttr<CUDASharedAttr>() ||
+      d->getType()->isCUDADeviceBuiltinSurfaceType() ||
+      d->getType()->isCUDADeviceBuiltinTextureType()) {
     linkage = cir::GlobalLinkageKind::InternalLinkage;
   }
-
-  if (d->getType()->isCUDADeviceBuiltinSurfaceType() ||
-      d->getType()->isCUDADeviceBuiltinTextureType())
-    cgm.errorNYI(d->getSourceRange(),
-                 "internalizeDeviceSideVar: CUDA Surface/Texture support");
 }
 
 std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
@@ -498,8 +497,19 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
   } else if (vd->getType()->isCUDADeviceBuiltinSurfaceType()) {
     // Builtin surfaces and their template arguments are also registered
     // with CUDA runtime.
+    const auto *td = cast<ClassTemplateSpecializationDecl>(
+        vd->getType()->castAsCXXRecordDecl());
+    const TemplateArgumentList &args = td->getTemplateArgs();
+
+    assert(args.size() == 2 &&
+           "Unexpected number of template arguments of CUDA device "
+           "builtin surface type.");
+
+    auto surfaceType = args[1].getAsIntegral();
+
     if (!vd->hasExternalStorage())
-      registerDeviceSurf(vd, var, !vd->hasDefinition());
+      registerDeviceSurf(vd, var, !vd->hasDefinition(),
+                         surfaceType.getSExtValue());
 
   } else if (vd->getType()->isCUDADeviceBuiltinTextureType()) {
     // Builtin textures and their template arguments are also registered

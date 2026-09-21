@@ -89,7 +89,8 @@ def CIR_CUDAVarRegistrationInfoAttr : CIR_Attr<"CUDAVarRegistrationInfo", "cu.va
     // handleVarRegistration via hasAttr<HIPManagedAttr>().
     "bool":$isExtern,
     "bool":$isConstant,
-    "bool":$isManaged
+    "bool":$isManaged,
+    "int32_t":$surfaceType
   );
 
   let hasCustomAssemblyFormat = 1;

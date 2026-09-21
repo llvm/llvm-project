@@ -519,6 +519,8 @@ void CUDAVarRegistrationInfoAttr::print(AsmPrinter &p) const {
     p << ", constant";
   if (getIsManaged())
     p << ", managed";
+  if (getKind() == CUDADeviceVarKind::Surface)
+    p << ", surface_type = " << getSurfaceType();
   p << ">";
 }
 
@@ -553,6 +555,7 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   bool isExtern = false;
   bool isConstant = false;
   bool isManaged = false;
+  int32_t surfaceType = 0;
 
   while (parser.parseOptionalGreater().failed()) {
     if (parser.parseComma())
@@ -568,14 +571,17 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
       isConstant = true;
     else if (flag == "managed")
       isManaged = true;
-    else {
+    else if (flag == "surface_type") {
+      if (parser.parseEqual() || parser.parseInteger(surfaceType))
+        return {};
+    } else {
       parser.emitError(parser.getCurrentLocation(), "unknown flag: ") << flag;
       return {};
     }
   }
 
   return get(parser.getContext(), deviceSideName, *kind, isExtern, isConstant,
-             isManaged);
+             isManaged, surfaceType);
 }
 
 //===----------------------------------------------------------------------===//
