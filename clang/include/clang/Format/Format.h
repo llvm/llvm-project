@@ -3745,11 +3745,21 @@ struct FormatStyle {
   ///
   /// \code
   ///   KeepEmptyLines:
+  ///     AtEndOfBlock: false
   ///     AtEndOfFile: false
   ///     AtStartOfBlock: false
   ///     AtStartOfFile: false
   /// \endcode
   struct KeepEmptyLinesStyle {
+    /// Keep empty lines at end of a block.
+    /// \code
+    ///    true:                                  false:
+    ///    if (foo) {                     vs.     if (foo) {
+    ///      bar();                                 bar();
+    ///                                           }
+    ///    }
+    /// \endcode
+    bool AtEndOfBlock;
     /// Keep empty lines at end of file.
     bool AtEndOfFile;
     /// Keep empty lines at start of a block.
@@ -3764,7 +3774,8 @@ struct FormatStyle {
     /// Keep empty lines at start of file.
     bool AtStartOfFile;
     bool operator==(const KeepEmptyLinesStyle &R) const {
-      return AtEndOfFile == R.AtEndOfFile &&
+      return AtEndOfBlock == R.AtEndOfBlock &&
+             AtEndOfFile == R.AtEndOfFile &&
              AtStartOfBlock == R.AtStartOfBlock &&
              AtStartOfFile == R.AtStartOfFile;
     }

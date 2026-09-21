@@ -254,6 +254,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyFunction);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyRecord);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, SplitEmptyNamespace);
+  CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfBlock);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfFile);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfBlock);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfFile);
