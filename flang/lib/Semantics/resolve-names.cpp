@@ -1341,7 +1341,7 @@ private:
       const parser::TypeParamValue &, common::TypeParamAttr attr);
   Attrs HandleSaveName(const SourceName &, Attrs);
   void AddSaveName(std::set<SourceName> &, const SourceName &);
-  bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
+  bool HandleSpecificIntrinsicFunction(const parser::Name &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
@@ -7601,6 +7601,20 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   if (OkToAddComponent(name)) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
     SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+
+    // Implicitely attribute allocatable/pointer components with `managed`
+    // memory if CUDA and `-gpu=mem:managed` are enabled.
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+          !object->cudaDataAttr() &&
+          context().languageFeatures().IsEnabled(
+              common::LanguageFeature::CUDA) &&
+          context().languageFeatures().IsEnabled(
+              common::LanguageFeature::CudaManaged)) {
+        object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        object->set_cudaDataAttrIsImplicit();
+      }
+    }
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
         Initialization(name, *init, /*inComponentDecl=*/true);
@@ -8331,10 +8345,13 @@ Symbol &DeclarationVisitor::MakeCommonBlockSymbol(
 }
 
 bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
-  return FindSymbol(name) || HandleUnrestrictedSpecificIntrinsicFunction(name);
+  return FindSymbol(name) || HandleSpecificIntrinsicFunction(name);
 }
 
-bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
+// Create a symbol for a specific intrinsic function. Unrestricted names
+// receive their result type here; restricted names are kept typeless so
+// that later semantic checks can diagnose their invalid use.
+bool DeclarationVisitor::HandleSpecificIntrinsicFunction(
     const parser::Name &name) {
   if (auto interface{context().intrinsics().IsSpecificIntrinsicFunction(
           name.source.ToString())}) {
@@ -8343,17 +8360,19 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
     // INTRINSIC flag will cause this symbol to have a complete interface
     // recreated for it later on demand, but capturing its result type here
     // will make GetType() return a correct result without having to
-    // probe the intrinsics table again.
+    // probe the intrinsics table again.  Restricted specific intrinsic
+    // function names are also resolved here so that their use can be
+    // diagnosed later, but they do not need a result type.
     Symbol &symbol{MakeSymbol(InclusiveScope(), name.source, Attrs{})};
     SetImplicitAttr(symbol, Attr::INTRINSIC);
-    CHECK(interface->functionResult.has_value());
-    evaluate::DynamicType dyType{
-        DEREF(interface->functionResult->GetTypeAndShape()).type()};
-    CHECK(common::IsNumericTypeCategory(dyType.category()));
-    const DeclTypeSpec &typeSpec{
-        MakeNumericType(dyType.category(), dyType.kind())};
     ProcEntityDetails details;
-    details.set_type(typeSpec);
+    if (!interface->isRestrictedSpecific) {
+      CHECK(interface->functionResult.has_value());
+      evaluate::DynamicType dyType{
+          DEREF(interface->functionResult->GetTypeAndShape()).type()};
+      CHECK(common::IsNumericTypeCategory(dyType.category()));
+      details.set_type(MakeNumericType(dyType.category(), dyType.kind()));
+    }
     symbol.set_details(std::move(details));
     symbol.set(Symbol::Flag::Function);
     if (interface->IsElemental()) {

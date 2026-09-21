@@ -16,11 +16,11 @@
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/Error.h"
-#include "orc-rt/support/ExecutorAddress.h"
 #include "orc-rt/support/WrapperFunction.h"
 
 #include <cstdint>
 #include <unordered_map>
+#include <utility>
 
 namespace orc_rt {
 
@@ -46,6 +46,16 @@ protected:
     Result,
     Call,
     LastOpcode = Call
+  };
+
+  /// The kind of result a result message carries, sent in its tag field.
+  ///
+  /// On-the-wire values, shared with LLVM's SimpleRemoteEPCResultKind: do not
+  /// renumber or reorder.
+  enum class ResultKind : uint64_t {
+    Value,
+    OutOfBandError,
+    LastResultKind = OutOfBandError
   };
 
   /// The name of Op, for logging.
@@ -76,6 +86,19 @@ protected:
   /// session, so both are reported the same way.
   static Error decodeHangup(WrapperFunctionBuffer Payload);
 
+  /// Encodes ResultBytes as the kind and payload of a result message.
+  ///
+  /// Ordinary values yield ResultKind::Value, and the payload passes through
+  /// unmodified. Out-of-band error values yield ResultKind::OutOfBandError, and
+  /// the out-of-band error message is re-encoded as an SPSString.
+  static std::pair<ResultKind, WrapperFunctionBuffer>
+  encodeResult(WrapperFunctionBuffer ResultBytes);
+
+  /// Decodes a result message produced by encodeResult, returning the result to
+  /// complete the pending call with.
+  static WrapperFunctionBuffer decodeResult(ResultKind Kind,
+                                            WrapperFunctionBuffer Payload);
+
   /// Registers OnComplete and returns the sequence number to send its call
   /// under.
   ///
@@ -97,9 +120,9 @@ protected:
   /// group is still open, or the handlers are dropped rather than dispatched.
   PendingCallsMap takeAllCalls();
 
-  /// Acts on one de-framed message. OpC is the raw wire opcode: this validates
-  /// it along with the header semantics each opcode requires, so a transport
-  /// need only deliver the fields and payload intact.
+  /// Acts on one de-framed message. OpC and Tag are raw wire values: this
+  /// validates them along with the header semantics each opcode requires, so a
+  /// transport need only deliver the fields and payload intact.
   ///
   /// Every error returned is terminal: stop reading and end the session with
   /// it. Action::End means the controller hung up cleanly.
@@ -110,7 +133,7 @@ protected:
   ///
   /// Calls must be serialized with one another, and must all complete before
   /// the Session is notified, since a Result completes a pending call.
-  Expected<Action> handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
+  Expected<Action> handleMessage(uint64_t OpC, uint64_t SeqNo, uint64_t Tag,
                                  WrapperFunctionBuffer Payload);
 
   /// Removes the handler for SeqNo, or returns a null handler if there is none.
@@ -121,9 +144,11 @@ protected:
   virtual OnControllerCallReturn takePendingCall(uint64_t SeqNo) = 0;
 
 private:
-  /// Completes the pending call SeqNo with ResultBytes. Fails if no such call
-  /// is outstanding, which means the peer answered a call that was never made.
-  Error handleResult(uint64_t SeqNo, WrapperFunctionBuffer ResultBytes);
+  /// Completes the pending call SeqNo with the result carried by Kind and
+  /// ResultBytes. Fails if no such call is outstanding, which means the peer
+  /// answered a call that was never made.
+  Error handleResult(uint64_t SeqNo, ResultKind Kind,
+                     WrapperFunctionBuffer ResultBytes);
 
   // Guarded by the transport's lock. See the class comment.
   uint64_t NextSeqNo = 1;

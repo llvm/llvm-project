@@ -64,7 +64,8 @@ getDataLayout(mlir::LLVM::TargetAttrInterface attr) {
     LDBG() << "Failed to retrieve the target machine for data layout.\n";
     return failure();
   }
-  return (targetMachine.value())->createDataLayout();
+  return llvm::DataLayout(
+      (targetMachine.value())->getTargetTriple().computeDataLayout());
 }
 
 } // namespace detail

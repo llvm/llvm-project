@@ -391,7 +391,7 @@ TEST_F(MemoryTest, TestCachePartition) {
   ASSERT_TRUE(proc.GetProcess());
   DummyProcess *process = proc.GetProcess();
   TestMemoryCache mem_cache(*process);
-  const lldb::addr_t line = process->GetMemoryCacheLineSize();
+  const uint32_t line = process->GetMemoryCacheLineSize();
   ASSERT_EQ(line, 512u);
 
   auto add = [&](lldb::addr_t addr, size_t size, uint8_t fill) {
