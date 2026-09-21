@@ -7,8 +7,9 @@ define void @const_i8_store() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [1 x i32], align 4
@@ -27,8 +28,9 @@ define void @const_add_i8_store() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 4, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [1 x i32], align 4
@@ -50,8 +52,9 @@ define void @var_i8_store(i1 %cmp.i8) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[CMP_I8]], i32 1, i32 2
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 255
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [1 x i32], align 4
@@ -71,15 +74,20 @@ define void @conflicting_cast(i1 %cmp.i8) {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[CMP_I8]], i32 1, i32 2
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i16
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i16, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[GEP1]], align 2
+; CHECK-NEXT:    store i16 [[TMP7]], ptr [[GEP1]], align 2
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[ACCUM_I_FLAT]], i32 1
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[GEP2]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
+; CHECK-NEXT:    store i16 [[TMP7]], ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 255
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 1
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[GEP3]], align 4
+; CHECK-NEXT:    store i32 [[TMP9]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [2 x i32], align 4
@@ -96,4 +104,22 @@ define void @conflicting_cast(i1 %cmp.i8) {
   %gep3 = getelementptr i32, ptr %accum.i.flat, i32 1
   store i32 %z2, ptr %gep3, align 4
   ret void
+}
+
+define i16 @signed_i8_load() {
+; CHECK-LABEL: define i16 @signed_i8_load() {
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    store i16 255, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 24
+; CHECK-NEXT:    [[TMP5:%.*]] = ashr i32 [[TMP4]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i16
+; CHECK-NEXT:    ret i16 [[TMP6]]
+;
+  %slot = alloca i8, align 2
+  store i8 -1, ptr %slot, align 2
+  %value = load i8, ptr %slot, align 2
+  %result = sext i8 %value to i16
+  ret i16 %result
 }
