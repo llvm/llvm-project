@@ -799,7 +799,7 @@ static void addGotAuthEntry(Ctx &ctx, Symbol &sym) {
   }
 
   // Signed GOT requires dynamic relocation unless the symbol is
-  // non-preemptible and undefined weak.
+  // non-preemptible and undefined.
   if (!sym.isUndefined())
     ctx.in.relaDyn->addReloc(
         {R_AARCH64_AUTH_RELATIVE, ctx.in.got.get(), off, false, sym, 0, R_ABS});

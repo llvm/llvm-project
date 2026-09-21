@@ -673,13 +673,9 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_AUTH_ABS64:
     if (rel.sym->isUndefined() && !rel.sym->isPreemptible) {
-      // Undefined weak non-preemptible symbols are statically resolved to the
+      // Undefined non-preemptible symbols are statically resolved to the
       // addend. No dynamic relocation and corresponding signing schema encoding
       // is needed.
-      //
-      // Note: at this point, binding of undefined weak non-preemptible symbols
-      // has already been changed from weak to local by computeBinding call, so
-      // just check against isUndefined().
       write64(ctx, loc, val);
     } else {
       // This is used for the addend of a .relr.auth.dyn entry,
@@ -876,7 +872,7 @@ void AArch64::relaxAuthTlsDescForNonPreemptibleUndefined(
     return;
   default:
     llvm_unreachable("unsupported relocation for non-preemptible undefined "
-                     "weak AUTH TLSDESC relaxation");
+                     "AUTH TLSDESC relaxation");
   }
 }
 
