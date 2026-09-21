@@ -997,24 +997,23 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
       return Err;
 
     if (!SPIRVDumpDir.empty() && !DryRun) {
-      // The dumped file doesn't get the unique suffix that createTempFile()
-      // adds, so index it explicitly to avoid one split's dump overwriting
-      // another's.
       SmallString<128> DumpFile(SPIRVDumpDir);
-      sys::path::append(DumpFile, Stem + "_" + Twine(I) + OutputFileNameExt);
+      sys::path::append(DumpFile, sys::path::filename(CodeGenFile));
       if (std::error_code EC = sys::fs::copy_file(CodeGenFile, DumpFile))
         return createFileError(DumpFile, EC);
     }
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
-      auto AOTFileOrErr = createTempFile(Args, Stem, "out");
-      if (!AOTFileOrErr)
-        return AOTFileOrErr.takeError();
-      StringRef AOTFile = *AOTFileOrErr;
-      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
+      // Reuse CodeGenFile's unique name so the AOT output can be correlated
+      // with the SPIR-V file it was compiled from.
+      SmallString<128> AOTFile(CodeGenFile);
+      sys::path::replace_extension(AOTFile, "out");
+      TempFiles.push_back(AOTFile);
+      StringRef AOTFileRef = TempFiles.back();
+      if (Error Err = runAOTCompile(CodeGenFile, AOTFileRef, Args))
         return Err;
-      SplitModules[I].ModuleFilePath = AOTFile;
+      SplitModules[I].ModuleFilePath = AOTFileRef;
     }
   }
 
