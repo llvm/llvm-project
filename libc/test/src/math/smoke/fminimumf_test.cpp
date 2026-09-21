@@ -10,4 +10,4 @@
 
 #include "src/math/fminimumf.h"
 
-LIST_FMINIMUM_TESTS(float, LIBC_NAMESPACE::fminimumf)
+LIST_FMINIMUM_TESTS(Fminimumf, float, LIBC_NAMESPACE::fminimumf)

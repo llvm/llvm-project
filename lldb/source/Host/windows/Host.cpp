@@ -217,7 +217,8 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
   return HostThread();
 }
 
-Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
+Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info,
+                                  const Timeout<std::micro> &timeout) {
   Status error;
   if (launch_info.GetFlags().Test(eLaunchFlagShellExpandArguments)) {
     FileSpec expand_tool_spec = HostInfo::GetSupportExeDir();
@@ -244,9 +245,9 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     int status;
     std::string output;
     std::string command = expand_command.GetString().str();
-    Status e = RunShellCommand(
-        command.c_str(), launch_info.GetWorkingDirectory(), &status, nullptr,
-        &output, nullptr, std::chrono::seconds(10));
+    Status e =
+        RunShellCommand(command.c_str(), launch_info.GetWorkingDirectory(),
+                        &status, nullptr, &output, nullptr, timeout);
 
     if (e.Fail())
       return e;
