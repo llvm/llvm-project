@@ -42,7 +42,7 @@ jobs:
       Linux-values: ${{ steps.vars.outputs.Linux-values }}
       Windows-values: ${{ steps.vars.outputs.Windows-values }}
       Darwin-values: ${{ steps.vars.outputs.Darwin-values }}
-      
+
     steps:
       - name: Checkout LLVM (sparse)
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -61,25 +61,14 @@ jobs:
           else
             gh api "repos/${REPO}/compare/${{ github.event.before }}...${{ github.event.after }}" --paginate --jq '.files[].filename' > /tmp/changed_files.txt
           fi
+          cat /tmp/changed_files.txt
       - name: Compute Projects
         id: vars
         run: |
-          cat /tmp/changed_files.txt
           for p in Linux Windows Darwin; do
             echo $p-values=$(python3 .ci/compute_projects.py $p < /tmp/changed_files.txt) >> $GITHUB_OUTPUT
-            python3 .ci/compute_projects.py $p < /tmp/changed_files.txt
           done
 
-#          echo "Building projects: ${projects_to_build}"
-#          echo "Running project checks targets: ${project_check_targets}"
-#          echo "Building runtimes: ${runtimes_to_build}"
-#          echo "Running runtimes checks targets: ${runtimes_check_targets}"
-#          echo "Running runtimes checks requiring reconfiguring targets: ${runtimes_check_targets_needs_reconfig}"
-
-#          echo "macos-projects=${projects_to_build}" >> $GITHUB_OUTPUT
-#          echo "macos-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
-#          echo "macos-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
-#          echo "macos-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
   premerge-checks-linux:
     name: Build and Test Linux
     needs: premerge-compute
