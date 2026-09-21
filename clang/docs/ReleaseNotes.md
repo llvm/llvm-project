@@ -547,8 +547,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
-- Fixed a crash in code generation and silently dropped side effects when the last statement of a GNU statement
-  expression is a declaration that declares nothing, such as `({ f(); __typeof__(x); })`. (#GH215454)
+- A declaration that declares nothing, such as `int;` or `__typeof__(x);`, used as a statement was treated as an
+  error without any diagnostic. This silently dropped the enclosing statement expression or `if` statement, and
+  could crash code generation when such a statement expression was used as an `if` condition. (#GH215454)
 
 #### Bug Fixes to Compiler Builtins
 

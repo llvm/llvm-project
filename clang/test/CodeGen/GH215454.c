@@ -1,9 +1,10 @@
 // RUN: %clang_cc1 -std=gnu99 -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -std=gnu99 -verify -emit-llvm-only -fno-recovery-ast %s
 // RUN: %clang_cc1 -std=gnu99 -DCODEGEN -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
-// A declaration that declares nothing as the last statement of a statement
-// expression made the whole statement expression invalid without an error,
-// which dropped the call below or crashed CodeGen on a RecoveryExpr.
+// A declaration that declares nothing made the enclosing statement expression
+// invalid without an error: the call below was dropped, and as an 'if'
+// condition CodeGen crashed on a RecoveryExpr.
 
 void foo(void);
 

@@ -231,7 +231,12 @@ Retry:
                                    GNUAttrs.Range.getBegin());
       } else if (GNUAttrs.Range.getBegin().isValid())
         DeclStart = GNUAttrs.Range.getBegin();
-      return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
+      StmtResult R = Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
+      // A declaration that declares nothing (`int;`) still occupies the
+      // statement position; unlike a pragma, ParseStatement() must not skip it.
+      if (R.isUnset())
+        return Actions.ActOnNullStmt(PrevTokLocation);
+      return R;
     }
 
     if (Tok.is(tok::r_brace)) {
@@ -1185,7 +1190,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       ParsedStmtContext::Compound |
       (isStmtExpr ? ParsedStmtContext::InStmtExpr : ParsedStmtContext());
 
-  bool LastIsInvalid = false;
+  bool LastIsError = false;
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
     if (Tok.is(tok::annot_pragma_unused)) {
@@ -1222,6 +1227,9 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
         DeclGroupPtrTy Res = ParseDeclaration(DeclaratorContext::Block, DeclEnd,
                                               attrs, DeclSpecAttrs);
         R = Actions.ActOnDeclStmt(Res, DeclStart, DeclEnd);
+        // See ParseStatementOrDeclarationAfterAttributes.
+        if (R.isUnset())
+          R = Actions.ActOnNullStmt(PrevTokLocation);
       } else {
         // Otherwise this was a unary __extension__ marker.
         ExprResult Res(ParseExpressionWithLeadingExtension(ExtLoc));
@@ -1242,16 +1250,14 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 
     if (R.isUsable())
       Stmts.push_back(R.get());
-    LastIsInvalid = R.isInvalid();
+    LastIsError = R.isInvalid();
   }
-  // The last statement of a statement expression is its value and was already
-  // copy-initialized when parsed. If it was dropped, the statement now at the
-  // end must not become the value, so replace the dropped one with a null
-  // statement. Don't return StmtError here: an invalid statement does not
-  // imply an error was diagnosed (e.g. `__typeof__(x);` only warns), and an
-  // undiagnosed ExprError silently drops the statement expression.
-  if (isStmtExpr && LastIsInvalid)
-    Stmts.push_back(Actions.ActOnNullStmt(PrevTokLocation).get());
+  // StmtExpr needs to do copy initialization for last statement.
+  // If last statement is invalid, the last statement in `Stmts` will be
+  // incorrect. Then the whole compound statement should also be marked as
+  // invalid to prevent subsequent errors.
+  if (isStmtExpr && LastIsError && !Stmts.empty())
+    return StmtError();
 
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using
