@@ -20,10 +20,13 @@ def LLVM_Dialect : Dialect {
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   let discardableAttrs = (ins
     /// Attribute encoding size and type of GPU workgroup attributions.
-    "WorkgroupAttributionAttr":$workgroup_attribution
+    "WorkgroupAttributionAttr":$workgroup_attribution,
+    /// Loop metadata attached to operations that do not declare it inherently.
+    "LoopAnnotationAttr":$loop_annotation
   );
 
   let extraClassDeclaration = [{

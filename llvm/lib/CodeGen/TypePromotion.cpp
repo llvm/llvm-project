@@ -243,7 +243,7 @@ bool TypePromotionImpl::isSource(Value *V) {
   else if (isa<LoadInst>(V))
     return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
-    return Call->hasABIRetAttr(Attribute::AttrKind::ZExt);
+    return Call->hasRetAttr(Attribute::AttrKind::ZExt);
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
     return EqualTypeSize(Trunc);
   return false;
@@ -534,8 +534,18 @@ void IRPromoter::PromoteTree() {
       }
     }
 
-    // Mutate the result type, unless this is an icmp, switch, or trunc to i1.
-    if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I) && !isTruncToI1(I)) {
+    // A trunc to i1 keeps its type while its operand is zero extended.
+    // Drop nsw if nuw is not also set since we might zero-extend an all-ones
+    // operand. nuw still holds, as does nuw nsw, which implies a zero operand.
+    if (isTruncToI1(I)) {
+      auto *Trunc = cast<TruncInst>(I);
+      if (!Trunc->hasNoUnsignedWrap())
+        Trunc->setHasNoSignedWrap(false);
+      continue;
+    }
+
+    // Mutate the result type, unless this is an icmp or switch.
+    if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I)) {
       I->mutateType(ExtTy);
       Promoted.insert(I);
     }
@@ -774,7 +784,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
       // can still be sinks.
       auto *Call = cast<CallInst>(I);
       return isSupportedType(Call) &&
-             Call->hasABIRetAttr(Attribute::AttrKind::ZExt);
+             Call->hasRetAttr(Attribute::AttrKind::ZExt);
     }
     }
   } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {

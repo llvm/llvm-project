@@ -118,6 +118,12 @@ ol_result_t olMemcpy(ol_queue_handle_t Queue, void *DstPtr,
                                             SrcDevice, Size);
 }
 
+ol_result_t olMemFill(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
+                      const void *PatternPtr, size_t FillSize) {
+  return mock::getMockLiboffload().olMemFill(Queue, Ptr, PatternSize,
+                                             PatternPtr, FillSize);
+}
+
 ol_result_t olMemPrefetch(ol_queue_handle_t Queue, size_t Count,
                           const void **Mems, const size_t *Sizes,
                           ol_mem_migration_flags_t Flags) {
@@ -153,4 +159,17 @@ ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 
 ol_result_t olDestroyEvent(ol_event_handle_t Event) {
   return mock::getMockLiboffload().olDestroyEvent(Event);
+}
+
+ol_result_t olMemAllocAligned(ol_device_handle_t Device,
+                              ol_alloc_type_t AllocType, size_t Size,
+                              size_t Alignment, void **OutPtr) {
+  return mock::getMockLiboffload().olMemAllocAligned(Device, AllocType, Size,
+                                                     Alignment, OutPtr);
+}
+
+ol_result_t olMemAllocAlignedHost(ol_device_handle_t Device, size_t Size,
+                                  size_t Alignment, void **OutPtr) {
+  return mock::getMockLiboffload().olMemAllocAlignedHost(Device, Size,
+                                                         Alignment, OutPtr);
 }
