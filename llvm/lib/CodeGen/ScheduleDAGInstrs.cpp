@@ -128,49 +128,44 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
-  auto AllMMOsOkay = [&]() {
-    for (const MachineMemOperand *MMO : MI->memoperands()) {
-      // TODO: Figure out whether isAtomic is really necessary (see D57601).
-      if (MMO->isVolatile() || MMO->isAtomic())
-        return false;
+  bool AllObjectsIdentified = true;
 
-      if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
-        // Function that contain tail calls don't have unique PseudoSourceValue
-        // objects. Two PseudoSourceValues might refer to the same or
-        // overlapping locations. The client code calling this function assumes
-        // this is not the case. So return a conservative answer of no known
-        // object.
-        if (MFI.hasTailCall())
-          return false;
-
-        // For now, ignore PseudoSourceValues which may alias LLVM IR values
-        // because the code that uses this function has no way to cope with
-        // such aliases.
-        if (PSV->isAliased(&MFI))
-          return false;
-
-        Objects.push_back(PSV);
-      } else if (const Value *V = MMO->getValue()) {
-        SmallVector<Value *, 4> Objs;
-        if (!getUnderlyingObjectsForCodeGen(V, Objs))
-          return false;
-
-        for (Value *V : Objs) {
-          assert(isIdentifiedObject(V));
-          Objects.push_back(V);
-        }
-      } else
-        return false;
+  for (const MachineMemOperand *MMO : MI->memoperands()) {
+    // TODO: Figure out whether isAtomic is really necessary (see D57601).
+    if (MMO->isVolatile() || MMO->isAtomic()) {
+      AllObjectsIdentified = false;
+      continue;
     }
-    return true;
-  };
 
-  if (!AllMMOsOkay()) {
-    Objects.clear();
-    return false;
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+      // Function that contain tail calls don't have unique PseudoSourceValue
+      // objects. Two PseudoSourceValues might refer to the same or
+      // overlapping locations. The client code calling this function assumes
+      // this is not the case. So return a conservative answer of no known
+      // object.
+      if (MFI.hasTailCall())
+        AllObjectsIdentified = false;
+
+      // For now, ignore PseudoSourceValues which may alias LLVM IR values
+      // because the code that uses this function has no way to cope with
+      // such aliases.
+      if (PSV->isAliased(&MFI))
+        AllObjectsIdentified = false;
+
+      Objects.push_back(PSV);
+    } else if (const Value *V = MMO->getValue()) {
+      SmallVector<Value *, 4> Objs;
+      AllObjectsIdentified &= getUnderlyingObjectsForCodeGen(V, Objs);
+
+      for (Value *V : Objs) {
+        assert(!AllObjectsIdentified || isIdentifiedObject(V));
+        Objects.push_back(V);
+      }
+    } else
+      AllObjectsIdentified = false;
   }
 
-  return true;
+  return AllObjectsIdentified;
 }
 
 void ScheduleDAGInstrs::startBlock(MachineBasicBlock *bb) {
@@ -926,11 +921,11 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     // empty, or filled with the Values of memory locations which this
     // SU depends on.
     UnderlyingObjectsVector Objs;
-    bool ObjsFound = getUnderlyingObjectsForInstr(&MI, MFI, Objs,
-                                                  MF.getDataLayout());
+    bool ObjsIdentified =
+        getUnderlyingObjectsForInstr(&MI, MFI, Objs, MF.getDataLayout());
 
     if (MI.mayStore()) {
-      if (!ObjsFound) {
+      if (!ObjsIdentified) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
         addChainDependencies(SU, Loads);
@@ -956,7 +951,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
         addChainDependencies(SU, Stores, UnknownValue);
       }
     } else { // SU is a load.
-      if (!ObjsFound) {
+      if (!ObjsIdentified) {
         // An unknown load depends on all stores.
         addChainDependencies(SU, Stores);
 
