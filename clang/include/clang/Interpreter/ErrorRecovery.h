@@ -17,9 +17,6 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/Sema/Sema.h"
-
-#include "llvm/ADT/DenseMap.h"
 
 namespace clang {
 class ASTContext;
@@ -562,16 +559,12 @@ public:
     return nullptr;
   }
 
-  /// Pure removal: drop every entry with ID >= \p ID (LIFO). Never
-  /// restores anything -- callers must read mostRecent()/getPrevious()
-  /// themselves first if they need the value about to be dropped.
+  /// removal: drop every entry with ID >= \p ID.
   void removeFrom(PTUID ID) {
     while (!History.empty() && History.back().ID >= ID)
       History.pop_back(); // no delete.
   }
 };
-
-// struct UnusedTrait {};
 
 using RecordDeclDefinitionDataChain = StateAwareChain<DefinitionDataFootprint>;
 using SpecializationChain = StateAwareChain<SpecializationFootprint>;
@@ -630,6 +623,7 @@ public:
   }
 
   bool isFromThisPTU(const ASTContext &Ctx, const void *Ptr, PTUID ID) const {
+    assert(ID < CheckpointBeforePTU.size());
     return Ctx.getAllocator().isAfterCheckpoint(Ptr, CheckpointBeforePTU[ID]);
   }
 
@@ -701,6 +695,22 @@ public:
       Log.erase(O);
   }
 
+  /// Same trim-then-erase-if-empty as removeFrom(ID), scoped to one owner
+  /// instead of sweeping the whole Log -- for callers that already know
+  /// exactly which owners this PTU touched (see PTUStateInfo's
+  /// TouchedFunctionTypeOwners/TouchedTagdeclOwners) and don't need to
+  /// rediscover that by walking every owner ever logged.
+  void removeFromOwner(const OwnerT *Owner, PTUID ID) {
+    auto It = Log.find(Owner);
+    if (It == Log.end())
+      return;
+    auto &Entries = It->second;
+    while (!Entries.empty() && Entries.back().ID >= ID)
+      Entries.pop_back();
+    if (Entries.empty())
+      Log.erase(It);
+  }
+
   void forget(const OwnerT *Owner) { Log.erase(Owner); }
 };
 
@@ -763,19 +773,39 @@ struct PTUStateInfo {
   /// here touched info mean other this belongs to other PTUs;
   llvm::SmallPtrSet<const DeclContext *, 4> TouchedDC;
 
+  /// Exactly the decls this PTU's own commit() pushed a footprint-chain
+  /// entry for (DefinitionData/Specialization/MemberSpecialization, via
+  /// chainFor()/memberSpecChainFor()), keyed on the canonical decl the
+  /// same way those accessors are. Lets undo walk only what this PTU
+  /// actually touched instead of sweeping every decl ever tracked across
+  /// every PTU -- the exact opposite of commit(), scoped the same way
+  /// commit() itself is scoped.
+  llvm::SmallPtrSet<const Decl *, 8> TouchedFootprintDecls;
+
+  /// Same idea for the two FieldMutationChain logs (FunctionTypeMutations,
+  /// TagdeclInfos), which are keyed by owner rather than living in
+  /// LinkedDecls -- kept as two separate sets since the owner types
+  /// (FunctionDecl vs TagDecl) differ.
+  llvm::SmallPtrSet<const FunctionDecl *, 4> TouchedFunctionTypeOwners;
+  llvm::SmallPtrSet<const TagDecl *, 4> TouchedTagdeclOwners;
+
+  explicit PTUStateInfo(PTUID ID) : ID(ID) {}
+
   template <typename KindT>
   void noteMutated(const Decl *D, DeclShape S, KindT K) {
     if (!D->isDefinedOutsideFunctionOrMethod())
       return;
     auto [It, Inserted] = Mutations.try_emplace(D);
     if (Inserted) {
-      assert(It->second.S == S && "same decl noted under two different shapes");
       It->second.S = S;
     }
+
+    assert(It->second.S == S && "same decl noted under two different shapes");
+
     It->second.add(K);
   }
 
-  void verifyMutations();
+  void verifyMutations(PTUMutationActions &Actions);
 
   // False until this PTU is actually committed.
   // PTUMutationActions uses this to decide what "undo" should do:
@@ -822,11 +852,10 @@ public:
       Active.erase(It);
   }
 
-  // Call at commit(ID) time. OnConfirmed is invoked as
+  // Call at commit(ID) time. PTUMutationActions is invoked as
   // (const Decl *D, DeclShape S, uint32_t ConfirmedKinds) for every decl
   // that had something newly confirmed this sweep.
-  template <typename OnConfirmedFn>
-  void sweep(PTUID ID, OnConfirmedFn &&OnConfirmed);
+  void sweep(PTUMutationActions &Act);
 };
 
 //===----------------------------------------------------------------------===//
@@ -1028,10 +1057,9 @@ private:
   ASTContext &Ctx;
   LangMode Mode;
   PTUID NextID = 0;
-  PTUID CurID = NextID;
   PTUCheckpointLedger PTUSlabCheckpoints;
 
-  mutable llvm::DenseMap<PTUID, PTUStateInfo> PTUStateInfos;
+  mutable std::vector<PTUStateInfo> PTUStack;
 
   // Stores all declaration footprint state in one map instead of maintaining
   // separate maps for each declaration/specialization kind. The generator
@@ -1048,77 +1076,88 @@ private:
 
   friend class PTUMutationActions;
 
-  SweepTracker &getHiddenMutationTracker() { return HiddenMutationTracker; }
+  void noteFunctionTypeMutation(PTUID ID, const FunctionDecl *Owner,
+                                QualType OldValue) {
+    FunctionTypeMutations.noteMutation(ID, Owner, OldValue);
+    current().TouchedFunctionTypeOwners.insert(Owner);
+  }
+  void noteTagDeclTypeMutation(PTUID ID, const TagDecl *Owner,
+                               const Type *OldValue) {
+    TagdeclInfos.noteMutation(ID, Owner, OldValue);
+    current().TouchedTagdeclOwners.insert(Owner);
+  }
 
   /// Get-or-create the CXXClassDeclNode backing Canon, acquiring one from
   /// the generator on first use. The only place a CXXClassDeclNode is
   /// created for this map.
-  CXXClassDeclNode &recordNodeFor(const CXXRecordDecl *Canon) const {
-    DeclLinkedState &Info = LinkedDecls[Canon];
+  template <typename NodeT, typename AcquireFn>
+  NodeT &nodeFor(const Decl *D, AcquireFn Acquire) {
+    current().TouchedFootprintDecls.insert(D);
+    DeclLinkedState &Info = LinkedDecls[D];
     if (Info.isNull())
-      Info = Generator.acquireRecordNode();
-    return *cast<CXXClassDeclNode *>(Info);
+      Info = (Generator.*Acquire)();
+    return *cast<NodeT *>(Info);
   }
-  VarDeclNode &varNodeFor(const VarDecl *Canon) const {
-    DeclLinkedState &Info = LinkedDecls[Canon];
-    if (Info.isNull())
-      Info = Generator.acquireVarNode();
-    return *cast<VarDeclNode *>(Info);
+
+  template <typename NodeT> NodeT *lookupNode(const Decl *D) const {
+    auto It = LinkedDecls.find(D);
+    if (It == LinkedDecls.end() || It->second.isNull())
+      return nullptr;
+    return dyn_cast<NodeT *>(It->second);
   }
-  FunctionDeclNode &functionNodeFor(const FunctionDecl *Canon) const {
-    DeclLinkedState &Info = LinkedDecls[Canon];
-    if (Info.isNull())
-      Info = Generator.acquireFunctionNode();
-    return *cast<FunctionDeclNode *>(Info);
+
+  CXXClassDeclNode &recordNodeFor(const CXXRecordDecl *RD) {
+    return nodeFor<CXXClassDeclNode>(
+        RD, &LinkedDeclNodeGenerator::acquireRecordNode);
   }
-  EnumDeclNode &enumNodeFor(const EnumDecl *Canon) const {
-    DeclLinkedState &Info = LinkedDecls[Canon];
-    if (Info.isNull())
-      Info = Generator.acquireEnumNode();
-    return *cast<EnumDeclNode *>(Info);
+  VarDeclNode &varNodeFor(const VarDecl *VD) {
+    return nodeFor<VarDeclNode>(VD, &LinkedDeclNodeGenerator::acquireVarNode);
+  }
+  FunctionDeclNode &functionNodeFor(const FunctionDecl *FD) {
+    return nodeFor<FunctionDeclNode>(
+        FD, &LinkedDeclNodeGenerator::acquireFunctionNode);
+  }
+  EnumDeclNode &enumNodeFor(const EnumDecl *ED) {
+    return nodeFor<EnumDeclNode>(ED, &LinkedDeclNodeGenerator::acquireEnumNode);
+  }
+
+  template <typename WantT, typename NodeT, typename AcquireFn>
+  WantT &specChain(NodeT &Node, AcquireFn Acquire) {
+    if (auto *C = Node.Spec.template dyn_cast<WantT *>())
+      return *C;
+    assert(Node.Spec.isNull() && "node already holds the other Spec kind");
+    auto *C = (Generator.*Acquire)();
+    Node.Spec = C;
+    return *C;
   }
 
   RecordDeclDefinitionDataChain &chainFor(const CXXRecordDecl *RD) {
-    CXXClassDeclNode &Node = recordNodeFor(RD->getCanonicalDecl());
+    CXXClassDeclNode &Node = recordNodeFor(RD);
     if (!Node.DefData)
       Node.DefData = Generator.acquireDefDataChain();
     return *Node.DefData;
   }
 
-  SpecializationChain &chainFor(const ClassTemplateSpecializationDecl *Spec) {
-    CXXClassDeclNode &Node = recordNodeFor(
-        cast<ClassTemplateSpecializationDecl>(Spec->getCanonicalDecl()));
-    auto *Chain = Node.Spec.dyn_cast<SpecializationChain *>();
-    if (!Chain) {
-      Chain = Generator.acquireClassSpecChain();
-      Node.Spec = Chain;
-    }
-    return *Chain;
+  SpecializationChain &chainFor(const ClassTemplateSpecializationDecl *S) {
+    return specChain<SpecializationChain>(
+        recordNodeFor(cast<CXXRecordDecl>(S)),
+        &LinkedDeclNodeGenerator::acquireClassSpecChain);
   }
 
-  VarSpecializationChain &chainFor(const VarTemplateSpecializationDecl *Spec) {
-    VarDeclNode &Node = varNodeFor(
-        cast<VarTemplateSpecializationDecl>(Spec->getCanonicalDecl()));
-    auto *Chain = Node.Spec.dyn_cast<VarSpecializationChain *>();
-    if (!Chain) {
-      Chain = Generator.acquireVarSpecChain();
-      Node.Spec = Chain;
-    }
-    return *Chain;
+  VarSpecializationChain &chainFor(const VarTemplateSpecializationDecl *S) {
+    return specChain<VarSpecializationChain>(
+        varNodeFor(cast<VarDecl>(S)),
+        &LinkedDeclNodeGenerator::acquireVarSpecChain);
   }
 
-  FunctionSpecializationChain &chainFor(const FunctionDecl *FD) {
-    FunctionDeclNode &Node = functionNodeFor(FD->getCanonicalDecl());
-    auto *Chain = Node.Spec.dyn_cast<FunctionSpecializationChain *>();
-    if (!Chain) {
-      Chain = Generator.acquireFunctionSpecChain();
-      Node.Spec = Chain;
-    }
-    return *Chain;
+  FunctionSpecializationChain &chainFor(const FunctionDecl *S) {
+    return specChain<FunctionSpecializationChain>(
+        functionNodeFor(cast<FunctionDecl>(S)),
+        &LinkedDeclNodeGenerator::acquireFunctionSpecChain);
   }
 
   MemberSpecializationChain &memberSpecChainFor(const FunctionDecl *FD) {
-    FunctionDeclNode &Node = functionNodeFor(FD->getCanonicalDecl());
+    FunctionDeclNode &Node = functionNodeFor(FD);
     auto *Chain = Node.Spec.dyn_cast<MemberSpecializationChain *>();
     if (!Chain) {
       Chain = Generator.acquireMemberSpecChain();
@@ -1127,7 +1166,7 @@ private:
     return *Chain;
   }
   MemberSpecializationChain &memberSpecChainFor(const VarDecl *VD) {
-    VarDeclNode &Node = varNodeFor(VD->getCanonicalDecl());
+    VarDeclNode &Node = varNodeFor(VD);
     auto *Chain = Node.Spec.dyn_cast<MemberSpecializationChain *>();
     if (!Chain) {
       Chain = Generator.acquireMemberSpecChain();
@@ -1136,7 +1175,7 @@ private:
     return *Chain;
   }
   MemberSpecializationChain &memberSpecChainFor(const CXXRecordDecl *RD) {
-    CXXClassDeclNode &Node = recordNodeFor(RD->getCanonicalDecl());
+    CXXClassDeclNode &Node = recordNodeFor(RD);
     auto *Chain = Node.Spec.dyn_cast<MemberSpecializationChain *>();
     if (!Chain) {
       Chain = Generator.acquireMemberSpecChain();
@@ -1145,86 +1184,103 @@ private:
     return *Chain;
   }
   MemberSpecializationChain &memberSpecChainFor(const EnumDecl *ED) {
-    EnumDeclNode &Node = enumNodeFor(ED->getCanonicalDecl());
+    EnumDeclNode &Node = enumNodeFor(ED);
     if (!Node.MemberSpec)
       Node.MemberSpec = Generator.acquireMemberSpecChain();
     return *Node.MemberSpec;
   }
 
-  RecordDeclDefinitionDataChain *getChainFor(const CXXRecordDecl *RD) const {
-    CXXClassDeclNode &Node = recordNodeFor(RD->getCanonicalDecl());
-    return Node.DefData;
+  const RecordDeclDefinitionDataChain *
+  getChainFor(const CXXRecordDecl *RD) const {
+    CXXClassDeclNode *N = lookupNode<CXXClassDeclNode>(RD);
+    return N ? N->DefData : nullptr;
+  }
+  const SpecializationChain *
+  getChainFor(const ClassTemplateSpecializationDecl *S) const {
+    CXXClassDeclNode *N = lookupNode<CXXClassDeclNode>(S);
+    return N ? N->Spec.dyn_cast<SpecializationChain *>() : nullptr;
   }
 
-  SpecializationChain *
-  getChainFor(const ClassTemplateSpecializationDecl *Spec) const {
-    CXXClassDeclNode &Node = recordNodeFor(
-        cast<ClassTemplateSpecializationDecl>(Spec->getCanonicalDecl()));
-    return Node.Spec.dyn_cast<SpecializationChain *>();
-  }
-
-  VarSpecializationChain *
+  const VarSpecializationChain *
   getChainFor(const VarTemplateSpecializationDecl *Spec) const {
-    VarDeclNode &Node = varNodeFor(
-        cast<VarTemplateSpecializationDecl>(Spec->getCanonicalDecl()));
-    return Node.Spec.dyn_cast<VarSpecializationChain *>();
+    VarDeclNode *N = lookupNode<VarDeclNode>(Spec);
+    return N ? N->Spec.dyn_cast<VarSpecializationChain *>() : nullptr;
   }
 
-  FunctionSpecializationChain *getChainFor(const FunctionDecl *FD) const {
-    FunctionDeclNode &Node = functionNodeFor(FD->getCanonicalDecl());
-    return Node.Spec.dyn_cast<FunctionSpecializationChain *>();
+  const FunctionSpecializationChain *
+  getChainFor(const FunctionDecl *Spec) const {
+    FunctionDeclNode *N = lookupNode<FunctionDeclNode>(Spec);
+    return N ? N->Spec.dyn_cast<FunctionSpecializationChain *>() : nullptr;
   }
 
-  MemberSpecializationChain *
+  const MemberSpecializationChain *
   getMemberSpecChainFor(const FunctionDecl *FD) const {
-    FunctionDeclNode &Node = functionNodeFor(FD->getCanonicalDecl());
-    return Node.Spec.dyn_cast<MemberSpecializationChain *>();
+    FunctionDeclNode *N = lookupNode<FunctionDeclNode>(FD);
+    return N ? N->Spec.dyn_cast<MemberSpecializationChain *>() : nullptr;
   }
-  MemberSpecializationChain *getMemberSpecChainFor(const VarDecl *VD) const {
-    VarDeclNode &Node = varNodeFor(VD->getCanonicalDecl());
-    return Node.Spec.dyn_cast<MemberSpecializationChain *>();
+
+  const MemberSpecializationChain *
+  getMemberSpecChainFor(const VarDecl *VD) const {
+    VarDeclNode *N = lookupNode<VarDeclNode>(VD);
+    return N ? N->Spec.dyn_cast<MemberSpecializationChain *>() : nullptr;
   }
-  MemberSpecializationChain *
+
+  const MemberSpecializationChain *
   getMemberSpecChainFor(const CXXRecordDecl *RD) const {
-    CXXClassDeclNode &Node = recordNodeFor(RD->getCanonicalDecl());
-    return Node.Spec.dyn_cast<MemberSpecializationChain *>();
+    CXXClassDeclNode *N = lookupNode<CXXClassDeclNode>(RD);
+    return N ? N->Spec.dyn_cast<MemberSpecializationChain *>() : nullptr;
   }
-  MemberSpecializationChain *getMemberSpecChainFor(const EnumDecl *ED) const {
-    EnumDeclNode &Node = enumNodeFor(ED->getCanonicalDecl());
-    return Node.MemberSpec;
+
+  const MemberSpecializationChain *
+  getMemberSpecChainFor(const EnumDecl *ED) const {
+    EnumDeclNode *N = lookupNode<EnumDeclNode>(ED);
+    return N ? N->MemberSpec : nullptr;
   }
 
 public:
   IncrementalStateTracker(ASTContext &Ctx, LangMode M) : Ctx(Ctx), Mode(M) {}
 
-  void beginPTU(llvm::SlabCheckPoint CP) {
-    CurID = NextID;
-    PTUSlabCheckpoints.recordCheckpoint(CurID, CP);
-    PTUStateInfos.try_emplace(CurID, PTUStateInfo{CurID});
-    ++NextID;
-  }
-
-  PTUCheckpointLedger &getPTUSlabCheckpoints() { return PTUSlabCheckpoints; }
-
-  bool isFromThisPTU(const void *Ptr, PTUID ID) {
-    return PTUSlabCheckpoints.isFromThisPTU(Ctx, Ptr, ID);
-  }
+  LangMode getMode() const { return Mode; }
 
   PTUStateInfo &current() const {
-    assert(NextID > 0 && "no PTU has been started");
-    auto It = PTUStateInfos.find(CurID);
-    assert(It != PTUStateInfos.end());
-    return It->second;
+    assert(!PTUStack.empty() && "no PTU has been started");
+    return PTUStack.back();
   }
+
+  PTUID currentID() const { return current().ID; }
+  bool hasOpenPTU() const { return !PTUStack.empty(); }
+
+  void beginPTU(llvm::SlabCheckPoint CP) {
+    PTUID ID = NextID++;
+    PTUSlabCheckpoints.recordCheckpoint(ID, CP);
+    PTUStack.emplace_back(ID);
+  }
+
+  bool isFromThisPTU(const void *Ptr, PTUID ID) const {
+    return PTUSlabCheckpoints.isFromThisPTU(Ctx, Ptr, ID);
+  }
+  bool isFromCurrentPTU(const void *Ptr) const {
+    return isFromThisPTU(Ptr, currentID());
+  }
+
+  SweepTracker &getHiddenMutationTracker() { return HiddenMutationTracker; }
+  PTUCheckpointLedger &getPTUSlabCheckpoints() { return PTUSlabCheckpoints; }
 
   void undoLastEntries();
 
 private:
-  template <typename ChainT>
-  static bool rollbackChainField(ChainT *&Field, PTUID ID,
-                                 LinkedDeclNodeGenerator &Gen);
+  void popCurrentPTU() {
+    PTUID ID = currentID();
+    PTUStack.pop_back();
+    PTUSlabCheckpoints.undoFrom(ID);
+    NextID = ID;
+  }
 
-  static bool rollbackRecordSpec(
+  template <typename ChainT>
+  static bool removeChainField(ChainT *&Field, PTUID ID,
+                               LinkedDeclNodeGenerator &Gen);
+
+  static bool removeRecordSpec(
       llvm::PointerUnion<SpecializationChain *, MemberSpecializationChain *>
           &Spec,
       PTUID ID, LinkedDeclNodeGenerator &Gen);
@@ -1285,34 +1341,12 @@ public:
   void commitEnumFamily(PTUID ID, const EnumDecl *ED, MutationRecord &Rec,
                         bool IsNew);
 
-  // static DeclShape classifyShape(const Decl *D);
-
-  // class DeclStateCommitProxy;
-
-  // class DeclStateRestoreProxy;
-
   template <typename DeclStateProxyT>
   void walkDecls(const DeclContext *DC, DeclStateProxyT &Proxy);
 
   // static uint32_t classifyPossibleKinds(DeclShape S, const Decl *D);
 
-  /// Given a Decl already known to be DeclShape S with FlaggedKinds set
-  /// (more than one bit at once is the normal case, not an edge case --
-  /// a single FunctionDecl can be MSI-backed AND have an unresolved
-  /// exception spec at the same time), returns the subset of
-  /// FlaggedKinds that actually differ from the last recorded snapshot.
-  /// Real chain access, not a guess: builds a fresh footprint the same
-  /// way commit() does and compares it against chainFor/
-  /// memberSpecChainFor's mostRecent() via the same operator== every
-  /// StateAwareChain already uses for its own dedup. A bit with no
-  /// chain anywhere in this file (DeducedReturnType has none -- see its
-  /// own listener override's comment; TypeForDeclChanged/
-  /// EvaluatedValueCached likewise) is never returned as verified --
-  /// there is nothing to compare it against, so it cannot be confirmed,
-  /// full stop, not assumed either way.
-  // static uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t
-  // FlaggedKinds,
-  //                            PTUID ID);
+  uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t FlaggedKinds);
 
   void commitLevel1(PTUID ID, const Decl *D, MutationRecord &Rec,
                     bool IsNew = false);
