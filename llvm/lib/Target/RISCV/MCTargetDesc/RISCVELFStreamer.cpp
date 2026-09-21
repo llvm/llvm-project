@@ -236,9 +236,9 @@ void RISCVELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // default constructor by DenseMap::lookup.  The last ISA suffix emitted in
   // each section is also preserved so that re-entering a section only emits a
   // new "$x<ISA>" symbol when the active ISA has actually changed.
-  const MCSection *Prev = getPreviousSection().first;
-  LastMappingSymbols[Prev] = LastEMS;
-  LastEmittedArchInSection[Prev] = LastEmittedArch;
+  const MCSection *Cur = getCurrentSection().first;
+  LastMappingSymbols[Cur] = LastEMS;
+  LastEmittedArchInSection[Cur] = LastEmittedArch;
   LastEMS = LastMappingSymbols.lookup(Section);
   auto It = LastEmittedArchInSection.find(Section);
   LastEmittedArch = It != LastEmittedArchInSection.end() ? It->second : "";
