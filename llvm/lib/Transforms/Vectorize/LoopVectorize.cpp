@@ -6655,6 +6655,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(HeaderVPBB))) {
+    // All types but VPInstructions are already widened and don't need extra
+    // processing. We process VPInstructions below.
     assert(
         all_of(
             make_range(VPBB->getFirstNonPhi(), VPBB->end()),
@@ -6671,8 +6673,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
           vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
-      // We cannot handle VPInstructions without underlying values, as we would
-      // not be able to create a Replicate without it.
+      // Only VPInstrutions with an underlying value need to be processed.
       if (!VPI.getUnderlyingValue())
         continue;
 
