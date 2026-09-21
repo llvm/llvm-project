@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../ConnectionUtils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
+#include "llvm/ExecutionEngine/Orc/Shared/ConnectionSpec.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -27,14 +29,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <sstream>
-
-#ifdef LLVM_ON_UNIX
-
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-#endif
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -57,62 +51,12 @@ void printErrorAndExit(Twine ErrMsg) {
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "[test-jitloadergdb] filedescs=<infd>,<outfd> [args...]\n"
+         << "[test-jitloadergdb] fd=<sockfd> [args...]\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "[test-jitloadergdb] listen=<host>:<port> [args...]\n";
+         << "[test-jitloadergdb] tcp:connect=<host>:<port> [args...]\n"
+         << "  llvm-jitlink-executor " << DebugOption
+         << "[test-jitloadergdb] tcp:listen=<host>:<port> [args...]\n";
   exit(1);
-}
-
-int openListener(std::string Host, std::string PortStr) {
-#ifndef LLVM_ON_UNIX
-  // FIXME: Add TCP support for Windows.
-  printErrorAndExit("listen option not supported");
-  return 0;
-#else
-  addrinfo Hints{};
-  Hints.ai_family = AF_INET;
-  Hints.ai_socktype = SOCK_STREAM;
-  Hints.ai_flags = AI_PASSIVE;
-
-  addrinfo *AI;
-  if (int EC = getaddrinfo(nullptr, PortStr.c_str(), &Hints, &AI)) {
-    errs() << "Error setting up bind address: " << gai_strerror(EC) << "\n";
-    exit(1);
-  }
-
-  // Create a socket from first addrinfo structure returned by getaddrinfo.
-  int SockFD;
-  if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0) {
-    errs() << "Error creating socket: " << std::strerror(errno) << "\n";
-    exit(1);
-  }
-
-  // Avoid "Address already in use" errors.
-  const int Yes = 1;
-  if (setsockopt(SockFD, SOL_SOCKET, SO_REUSEADDR, &Yes, sizeof(int)) == -1) {
-    errs() << "Error calling setsockopt: " << std::strerror(errno) << "\n";
-    exit(1);
-  }
-
-  // Bind the socket to the desired port.
-  if (bind(SockFD, AI->ai_addr, AI->ai_addrlen) < 0) {
-    errs() << "Error on binding: " << std::strerror(errno) << "\n";
-    exit(1);
-  }
-
-  // Listen for incomming connections.
-  static constexpr int ConnectionQueueLen = 1;
-  listen(SockFD, ConnectionQueueLen);
-
-#if defined(_AIX)
-  assert(Hi_32(AI->ai_addrlen) == 0 && "Field is a size_t on 64-bit AIX");
-  socklen_t AddrLen = Lo_32(AI->ai_addrlen);
-  return accept(SockFD, AI->ai_addr, &AddrLen);
-#else
-  return accept(SockFD, AI->ai_addr, &AI->ai_addrlen);
-#endif
-
-#endif // LLVM_ON_UNIX
 }
 
 #if LLVM_ENABLE_THREADS
@@ -130,14 +74,120 @@ static void *findLastDebugDescriptorEntryPtr() {
 
 #endif
 
+Expected<std::unique_ptr<SimpleRemoteEPCServer>> createServerWithFD(int FD) {
+#if LLVM_ENABLE_THREADS
+  return SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
+      [](SimpleRemoteEPCServer::Setup &S) -> Error {
+        S.setDispatcher(
+            std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>());
+        S.bootstrapSymbols() = SimpleRemoteEPCServer::defaultBootstrapSymbols();
+        addDefaultBootstrapValuesForHostProcess(S.bootstrapMap(),
+                                                S.bootstrapSymbols());
+#ifdef __APPLE__
+        if (UnwindInfoManager::TryEnable())
+          UnwindInfoManager::addBootstrapSymbols(S.bootstrapSymbols());
+#endif // __APPLE__
+        S.services().push_back(
+            std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
+        S.services().push_back(
+            std::make_unique<
+                rt_bootstrap::ExecutorSharedMemoryMapperService>());
+        return Error::success();
+      },
+      FD, FD);
+#else
+  llvm_unreachable("Not available on LLVM_ENABLE_THREADS=Off builds");
+#endif // !LLVM_ENABLE_THREADS
+}
+
+Expected<std::unique_ptr<SimpleRemoteEPCServer>>
+connectWithFD(const ConnectionSpec &CS) {
+  int FD;
+  if (CS.getDescriptor().getAsInteger(10, FD))
+    return make_error<StringError>(
+        "In " + CS.str() + ", " + CS.getDescriptor() + " is not an integer",
+        inconvertibleErrorCode());
+
+  return createServerWithFD(FD);
+}
+
+Expected<std::unique_ptr<SimpleRemoteEPCServer>>
+connectWithTCPConnect(const ConnectionSpec &CS) {
+#ifndef LLVM_ON_UNIX
+  return make_error<StringError>("TCP connection not supported",
+                                 inconvertibleErrorCode());
+#else
+  auto [Host, PortStr] = CS.getDescriptor().split(':');
+  if (Host.empty() || PortStr.empty())
+    return make_error<StringError>("In " + CS.str() +
+                                       ", expected <host>:<port>",
+                                   inconvertibleErrorCode());
+
+  auto SockFD = connectTCPSocket(Host, PortStr);
+  if (!SockFD)
+    return make_error<StringError>("In " + CS.str() + ", " +
+                                       toString(SockFD.takeError()),
+                                   inconvertibleErrorCode());
+
+  return createServerWithFD(*SockFD);
+#endif // LLVM_ON_UNIX
+}
+
+Expected<std::unique_ptr<SimpleRemoteEPCServer>>
+connectWithTCPListen(const ConnectionSpec &CS) {
+#ifndef LLVM_ON_UNIX
+  return make_error<StringError>("TCP connection not supported",
+                                 inconvertibleErrorCode());
+#else
+  auto [Host, PortStr] = CS.getDescriptor().split(':');
+
+  auto ListenFD = listenTCPSocket(Host, PortStr);
+  if (!ListenFD)
+    return make_error<StringError>("In " + CS.str() + ", " +
+                                       toString(ListenFD.takeError()),
+                                   inconvertibleErrorCode());
+
+  auto SockFD = acceptTCPConnection(*ListenFD);
+  if (!SockFD)
+    return make_error<StringError>("In " + CS.str() + ", " +
+                                       toString(SockFD.takeError()),
+                                   inconvertibleErrorCode());
+
+  return createServerWithFD(*SockFD);
+#endif // LLVM_ON_UNIX
+}
+
+Expected<std::unique_ptr<SimpleRemoteEPCServer>>
+connectWithTCP(const ConnectionSpec &CS) {
+  if (CS.getAction() == "connect")
+    return connectWithTCPConnect(CS);
+  if (CS.getAction() == "listen")
+    return connectWithTCPListen(CS);
+
+  return make_error<StringError>("In " + CS.str() + ", unrecognized action \"" +
+                                     CS.getAction() + "\"",
+                                 inconvertibleErrorCode());
+}
+
+Expected<std::unique_ptr<SimpleRemoteEPCServer>>
+createServer(const ConnectionSpec &CS) {
+  if (CS.getTransport() == "fd")
+    return connectWithFD(CS);
+  if (CS.getTransport() == "tcp")
+    return connectWithTCP(CS);
+
+  return make_error<StringError>("In " + CS.str() +
+                                     ", unrecognized transport \"" +
+                                     CS.getTransport() + "\"",
+                                 inconvertibleErrorCode());
+}
+
 int main(int argc, char *argv[]) {
 #if LLVM_ENABLE_THREADS
 
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   unsigned FirstProgramArg = 1;
-  int InFD = 0;
-  int OutFD = 0;
 
   if (argc < 2)
     printErrorAndExit("insufficient arguments");
@@ -160,48 +210,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "__jit_debug_descriptor.last_entry = 0x%016" PRIx64 "\n",
             pointerToJITTargetAddress(findLastDebugDescriptorEntryPtr()));
 
-  StringRef SpecifierType, Specifier;
-  std::tie(SpecifierType, Specifier) = NextArg.split('=');
-  if (SpecifierType == "filedescs") {
-    StringRef FD1Str, FD2Str;
-    std::tie(FD1Str, FD2Str) = Specifier.split(',');
-    if (FD1Str.getAsInteger(10, InFD))
-      printErrorAndExit(FD1Str + " is not a valid file descriptor");
-    if (FD2Str.getAsInteger(10, OutFD))
-      printErrorAndExit(FD2Str + " is not a valid file descriptor");
-  } else if (SpecifierType == "listen") {
-    StringRef Host, PortStr;
-    std::tie(Host, PortStr) = Specifier.split(':');
-
-    int Port = 0;
-    if (PortStr.getAsInteger(10, Port))
-      printErrorAndExit("port number '" + PortStr + "' is not a valid integer");
-
-    InFD = OutFD = openListener(Host.str(), PortStr.str());
-  } else
-    printErrorAndExit("invalid specifier type \"" + SpecifierType + "\"");
-
-  auto Server =
-      ExitOnErr(SimpleRemoteEPCServer::Create<FDSimpleRemoteEPCTransport>(
-          [](SimpleRemoteEPCServer::Setup &S) -> Error {
-            S.setDispatcher(
-                std::make_unique<SimpleRemoteEPCServer::ThreadDispatcher>());
-            S.bootstrapSymbols() =
-                SimpleRemoteEPCServer::defaultBootstrapSymbols();
-            addDefaultBootstrapValuesForHostProcess(S.bootstrapMap(),
-                                                    S.bootstrapSymbols());
-#ifdef __APPLE__
-            if (UnwindInfoManager::TryEnable())
-              UnwindInfoManager::addBootstrapSymbols(S.bootstrapSymbols());
-#endif // __APPLE__
-            S.services().push_back(
-                std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
-            S.services().push_back(
-                std::make_unique<
-                    rt_bootstrap::ExecutorSharedMemoryMapperService>());
-            return Error::success();
-          },
-          InFD, OutFD));
+  auto ConnSpec = ExitOnErr(ConnectionSpec::parse(NextArg));
+  auto Server = ExitOnErr(createServer(ConnSpec));
 
   ExitOnErr(Server->waitForDisconnect());
 

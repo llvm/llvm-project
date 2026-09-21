@@ -754,13 +754,16 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
+static Instruction *getHandleOperand(Instruction *AI) {
   if (auto *LI = dyn_cast<LoadInst>(AI))
     return dyn_cast<Instruction>(LI->getPointerOperand());
   if (auto *SI = dyn_cast<StoreInst>(AI))
     return dyn_cast<Instruction>(SI->getPointerOperand());
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(AI))
     return dyn_cast<Instruction>(RMWI->getPointerOperand());
+  if (auto *II = dyn_cast<IntrinsicInst>(AI))
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_updatecounter)
+      return dyn_cast<Instruction>(II->getArgOperand(0));
 
   return nullptr;
 }
@@ -938,8 +941,9 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
                          SmallSetVector<Instruction *, 16> &DeadInsts,
                          SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts, VisitedPhis);
-  assert(AccessIdx.hasGetPtrIdx() && AccessIdx.hasHandleIdx() &&
-         "Couldn't retrieve indices. This is guaranteed by getAccessIndices");
+  assert(AccessIdx.hasHandleIdx() &&
+         "Couldn't retrieve handle index. This is guaranteed by "
+         "getAccessIndices");
 
   IRBuilder<> Builder(Ptr);
   if (isa<PHINode>(Ptr))
@@ -948,11 +952,20 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);
 
-  auto *GetPtr =
-      Builder.CreateIntrinsic(Ptr->getType(), Intrinsic::dx_resource_getpointer,
-                              {Handle, AccessIdx.GetPtrIdx});
+  if (Ptr->getType()->isPointerTy()) {
+    assert(AccessIdx.hasGetPtrIdx() &&
+           "Couldn't retrieve getpointer index. This is guaranteed by "
+           "getAccessIndices");
+    auto *GetPtr = Builder.CreateIntrinsic(Ptr->getType(),
+                                           Intrinsic::dx_resource_getpointer,
+                                           {Handle, AccessIdx.GetPtrIdx});
+    Ptr->replaceAllUsesWith(GetPtr);
+  } else {
+    assert(Ptr->getType()->isTargetExtTy() && !AccessIdx.hasGetPtrIdx() &&
+           "Unexpected resource access operand type");
+    Ptr->replaceAllUsesWith(Handle);
+  }
 
-  Ptr->replaceAllUsesWith(GetPtr);
   DeadInsts.insert(Ptr);
 }
 
@@ -972,8 +985,8 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
-      if (auto *PtrOp = getStoreLoadPointerOperand(&I)) {
-        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
+      if (auto *HandleOp = getHandleOperand(&I)) {
+        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(HandleOp);
         unsigned NumHandles = Handles.size();
         if (NumHandles <= 1)
           continue; // Legal, no-replacement required
@@ -989,7 +1002,7 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           continue;
         }
 
-        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts, VisitedPhis);
+        replaceHandleWithIndices(HandleOp, Handles[0], DeadInsts, VisitedPhis);
       }
     }
   }

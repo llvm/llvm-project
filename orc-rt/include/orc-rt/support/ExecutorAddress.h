@@ -225,7 +225,7 @@ struct ExecutorAddrRange {
 
 // Make ExecutorAddr hashable.
 template <> struct std::hash<orc_rt::ExecutorAddr> {
-  constexpr size_t operator()(const orc_rt::ExecutorAddr &A) const noexcept {
+  size_t operator()(const orc_rt::ExecutorAddr &A) const noexcept {
     return std::hash<uint64_t>()(A.getValue());
   }
 };

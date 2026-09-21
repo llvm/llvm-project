@@ -629,6 +629,18 @@ std::unique_ptr<VPlan> VPlanTransforms::buildVPlan0(
   return VPlan0;
 }
 
+void VPlanTransforms::recordExecutionFrequencies(VPlan &Plan) {
+  VPBasicBlock *Header = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan).first;
+  SmallVector<VPBasicBlock *> Blocks = vp_rpo_plain_cfg_loop_body(Header);
+  auto Frequencies = vputils::computeExecutionFrequencies(Blocks);
+  LLVMContext &Ctx = Plan.getContext();
+  for (VPBasicBlock *VPBB : Blocks) {
+    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB))
+      VPI.setExecutionFrequency(Freq, Ctx);
+  }
+}
+
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
 /// for \p Phi based on \p IndDesc.
 static VPHeaderPHIRecipe *
@@ -1017,12 +1029,12 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
   // Collect which wide IVs have predicates and add them to PSE.
   auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
   SmallPtrSet<VPWidenInductionRecipe *, 4> PredicatedIVs;
-  for (auto &R : HeaderVPBB->phis()) {
-    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&R);
-    if (!WideIV || WideIV->getNoWrapPredicates().empty())
+  for (VPWidenInductionRecipe &WideIV :
+       make_isa_range<VPWidenInductionRecipe>(HeaderVPBB->phis())) {
+    if (WideIV.getNoWrapPredicates().empty())
       continue;
-    PredicatedIVs.insert(WideIV);
-    for (const auto *P : WideIV->getNoWrapPredicates())
+    PredicatedIVs.insert(&WideIV);
+    for (const auto *P : WideIV.getNoWrapPredicates())
       PSE.addPredicate(*P);
   }
 
@@ -1200,9 +1212,9 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
       CurrentLink->replaceAllUsesWith(RedRecipe);
       // Move any store recipes using the RedRecipe that appear before it in the
       // same block to just after the RedRecipe.
-      for (VPUser *U : make_early_inc_range(RedRecipe->users())) {
-        auto *UserR = dyn_cast<VPRecipeBase>(U);
-        if (!UserR || UserR->getParent() != LinkVPBB)
+      for (VPRecipeBase *UserR : make_early_inc_range(
+               make_isa_range<VPRecipeBase>(RedRecipe->users()))) {
+        if (UserR->getParent() != LinkVPBB)
           continue;
         if (!match(UserR, m_VPInstruction<Instruction::Store>()))
           continue;
@@ -1683,6 +1695,17 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     }
   }
 
+  // Freeze MinOrMaxOps since:
+  // * multiple uses are introduced and the value may be undef
+  // * they feed into a branch condition, so block poison propagation to
+  //   prevent immediate UB
+  for (auto &[Phi, MinOrMaxOp] : MinOrMaxNumReductionsToHandle) {
+    VPRecipeBase *MinOrMaxR = Phi->getBackedgeValue()->getDefiningRecipe();
+    VPInstruction *Freeze = VPBuilder(MinOrMaxR).createFreeze(MinOrMaxOp);
+    MinOrMaxR->replaceUsesOfWith(MinOrMaxOp, Freeze);
+    MinOrMaxOp = Freeze;
+  }
+
   VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   VPValue *AllNaNLanes = nullptr;
@@ -1793,12 +1816,11 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
   SmallVector<VPReductionPHIRecipe *, 4> Phis;
-  for (VPRecipeBase &Phi :
-       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
-    if (PhiR && RecurrenceDescriptor::isFindLastRecurrenceKind(
-                    PhiR->getRecurrenceKind()))
-      Phis.push_back(PhiR);
+  for (VPReductionPHIRecipe &PhiR : make_isa_range<VPReductionPHIRecipe>(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            PhiR.getRecurrenceKind()))
+      Phis.push_back(&PhiR);
   }
 
   if (Phis.empty())
@@ -1874,7 +1896,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     if (HeaderMask)
       Cond = Builder.createLogicalAnd(HeaderMask, Cond);
 
-    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+    VPValue *AnyOf =
+        Builder.createNaryOp(VPInstruction::AnyOf, Builder.createFreeze(Cond));
+    // FIXME: The Cond here needs to be frozen too.
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addIncoming(MaskSelect);
 

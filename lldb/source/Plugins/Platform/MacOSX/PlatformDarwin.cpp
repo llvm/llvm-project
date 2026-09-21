@@ -60,7 +60,6 @@ using namespace lldb_private;
 
 #define OPTTABLE_STR_TABLE_CODE
 #include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
 static Status ExceptionMaskValidator(const char *string, void *unused) {
   Status error;

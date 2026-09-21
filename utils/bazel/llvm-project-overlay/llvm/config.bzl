@@ -64,11 +64,6 @@ emscripten_defines = [
     "HAVE_UNISTD_H=1",
 ]
 
-fenv_defines = [
-    "HAVE_DECL_FE_ALL_EXCEPT=1",
-    "HAVE_DECL_FE_INEXACT=1",
-]
-
 backtrace_defines = select({
     "@platforms//os:emscripten": [],
     "@platforms//os:windows": [],
@@ -84,14 +79,14 @@ mallinfo_defines = select({
     "//conditions:default": [],
 })
 
-linux_defines = posix_so_defines + fenv_defines + [
+linux_defines = posix_so_defines + [
     "_GNU_SOURCE",
     "HAVE_GETAUXVAL=1",
     "HAVE_SBRK=1",
     "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
 ]
 
-macos_defines = posix_defines + fenv_defines + [
+macos_defines = posix_defines + [
     "HAVE_CRASHREPORTER_INFO=1",
     "HAVE_MACH_MACH_H=1",
     "HAVE_MALLOC_MALLOC_H=1",
@@ -125,13 +120,13 @@ win32_defines = [
     r'LTDL_SHLIB_EXT=\".dll\"',
     r'LLVM_PLUGIN_EXT=\".dll\"',
     "LLVM_ENABLE_THREADS=1",
-] + fenv_defines
+]
 
 # TODO: We should switch to platforms-based config settings to make this easier
 # to express.
 os_defines = select({
     "@platforms//os:emscripten": emscripten_defines,
-    "@platforms//os:freebsd": posix_so_defines + fenv_defines,
+    "@platforms//os:freebsd": posix_so_defines,
     "@platforms//os:macos": macos_defines,
     "@platforms//os:windows": win32_defines,
     "//conditions:default": linux_defines,
