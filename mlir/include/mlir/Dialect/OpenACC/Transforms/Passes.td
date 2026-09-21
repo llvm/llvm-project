@@ -181,15 +181,20 @@ def ACCDeclareCtorDtorConversion
            "Priority for ACC declare global constructors and destructors">,
     Option<"generateDtors", "generate-dtors", "bool", /*default=*/"true",
            "Generate LLVM destructor functions and register them globally">,
-    ListOption<"extraConstructors", "extra-constructors",
-               "std::pair<std::string, bool>",
+    Option<"extraCtorName", "extra-ctor-name", "std::string",
+           /*default=*/"\"acc.extra_ctor\"",
+           "Name of the extra constructor function added to global ctors.">,
+    ListOption<"extraConstructors", "extra-constructors", "std::string",
                "Extra functions to declare and call from an OpenACC "
-               "constructor. Entries use <name>:<if-main>, where if-main is "
-               "true to call the function only when the module contains "
-               "program-entry-name.">,
-    Option<"programEntryName", "program-entry-name", "std::string",
+               "constructor.">,
+    ListOption<"entryOnlyConstructors", "entry-only-constructors",
+               "std::string",
+               "Extra functions to declare and call from an OpenACC "
+               "constructor when the entry-point-name is defined and present "
+               "in the module">,
+    Option<"entryPointName", "entry-point-name", "std::string",
            /*default=*/"",
-           "Symbol name of the program entry point. Extra constructors with "
+           "Symbol name of the entry point. Extra constructors with "
            "if-main=true are emitted only when this symbol is present. Empty "
            "means if-main constructors are never emitted.">
   ];
