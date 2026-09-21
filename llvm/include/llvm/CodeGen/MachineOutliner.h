@@ -103,7 +103,8 @@ private:
     InSeqWasSet = true;
     InSeq.init(TRI);
     for (auto &MI : *this)
-      InSeq.accumulate(MI);
+      if (!MI.isDebugInstr())
+        InSeq.accumulate(MI);
   }
 
 public:

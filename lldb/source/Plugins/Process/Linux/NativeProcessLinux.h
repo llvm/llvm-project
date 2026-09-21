@@ -9,9 +9,10 @@
 #ifndef liblldb_NativeProcessLinux_H_
 #define liblldb_NativeProcessLinux_H_
 
-#include <csignal>
-#include <unordered_set>
-
+#include "Plugins/Process/Linux/IntelPTCollector.h"
+#include "Plugins/Process/Linux/NativeThreadLinux.h"
+#include "Plugins/Process/POSIX/NativeProcessELF.h"
+#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/linux/Support.h"
@@ -22,10 +23,8 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
-#include "IntelPTCollector.h"
-#include "NativeThreadLinux.h"
-#include "Plugins/Process/POSIX/NativeProcessELF.h"
-#include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
+#include <csignal>
+#include <unordered_set>
 
 namespace lldb_private {
 class Status;

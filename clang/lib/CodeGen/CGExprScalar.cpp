@@ -4106,17 +4106,42 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     // the loaded integer to double, performing FP arithmetics, and truncation
     // back as a single atomic operation. Integer promotion is still
     // semantically safe.
-    bool CanEmitAtomicRMW =
-        !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
-        ResultTy->isIntegerType() &&
-        !(AtomicValueTy->isUnsignedIntegerType() &&
-          CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
-        CGF.getLangOpts().getSignedOverflowBehavior() !=
-            LangOptions::SOB_Trapping;
+    bool CanEmitAtomicRMW;
+    if (AtomicValueTy->isFloatingType()) {
+      llvm::Type *IRTy = CGF.ConvertType(AtomicValueTy);
+      uint64_t StoreBits = CGF.CGM.getDataLayout().getTypeStoreSizeInBits(IRTy);
+      // Floating atomicrmw operations cannot model constrained FP semantics.
+      CanEmitAtomicRMW =
+          !OpInfo.FPFeatures.isFPConstrained() &&
+          CGF.getContext().hasSameUnqualifiedType(AtomicValueTy, ResultTy) &&
+          llvm::isPowerOf2_64(StoreBits);
+    } else {
+      CanEmitAtomicRMW =
+          !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+          ResultTy->isIntegerType() &&
+          !(AtomicValueTy->isUnsignedIntegerType() &&
+            CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
+          CGF.getLangOpts().getSignedOverflowBehavior() !=
+              LangOptions::SOB_Trapping;
+    }
     if (CanEmitAtomicRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
-      switch (OpInfo.Opcode) {
+      if (AtomicValueTy->isFloatingType()) {
+        switch (OpInfo.Opcode) {
+        case BO_AddAssign:
+          AtomicOp = llvm::AtomicRMWInst::FAdd;
+          Op = llvm::Instruction::FAdd;
+          break;
+        case BO_SubAssign:
+          AtomicOp = llvm::AtomicRMWInst::FSub;
+          Op = llvm::Instruction::FSub;
+          break;
+        default:
+          break;
+        }
+      } else {
+        switch (OpInfo.Opcode) {
         // We don't have atomicrmw operands for *, %, /, <<, >>
         case BO_MulAssign: case BO_DivAssign:
         case BO_RemAssign:
@@ -4145,6 +4170,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
           break;
         default:
           llvm_unreachable("Invalid compound assignment type");
+        }
       }
       if (AtomicOp != llvm::AtomicRMWInst::BAD_BINOP) {
         llvm::Value *Amt = CGF.EmitToMemory(
@@ -6352,10 +6378,8 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
   if (isa<llvm::Constant>(GEPVal)) {
     // Compute the offset by casting both pointers to integers and subtracting:
     // GEPVal = BasePtr + ptr(Offset) <--> Offset = int(GEPVal) - int(BasePtr)
-    Value *BasePtr_int =
-        Builder.CreatePtrToInt(BasePtr, DL.getIntPtrType(BasePtr->getType()));
-    Value *GEPVal_int =
-        Builder.CreatePtrToInt(GEPVal, DL.getIntPtrType(GEPVal->getType()));
+    Value *BasePtr_int = Builder.CreatePtrToAddr(BasePtr);
+    Value *GEPVal_int = Builder.CreatePtrToAddr(GEPVal);
     TotalOffset = Builder.CreateSub(GEPVal_int, BasePtr_int);
     return {TotalOffset, /*OffsetOverflows=*/Builder.getFalse()};
   }
@@ -6365,7 +6389,7 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
          "BasePtr must be the base of the GEP.");
   assert(GEP->isInBounds() && "Expected inbounds GEP");
 
-  auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
+  auto *IntPtrTy = DL.getAddressType(GEP->getPointerOperandType());
 
   // Grab references to the signed add/mul overflow intrinsics for intptr_t.
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
@@ -6467,7 +6491,7 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   auto CheckOrdinal = SanitizerKind::SO_PointerOverflow;
   auto CheckHandler = SanitizerHandler::PointerOverflow;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
-  llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
+  llvm::Type *IntPtrTy = DL.getAddressType(PtrTy);
 
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
@@ -6482,7 +6506,7 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
 
   // Now that we've computed the total offset, add it to the base pointer (with
   // wrapping semantics).
-  auto *IntPtr = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+  auto *IntPtr = Builder.CreatePtrToAddr(Ptr);
   auto *ComputedGEP = Builder.CreateAdd(IntPtr, EvaluatedGEP.TotalOffset);
 
   llvm::SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>,

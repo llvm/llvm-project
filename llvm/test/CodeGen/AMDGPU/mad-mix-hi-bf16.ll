@@ -18,6 +18,22 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo(bfloat %src0,
   ret <2 x bfloat> %vec.result
 }
 
+define <2 x bfloat> @v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_poisonlo(half %src0, bfloat %src1, bfloat %src2) #0 {
+; GFX1250-LABEL: v_mad_mixhi_bf16_f16lo_bf16lo_bf16lo_poisonlo:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_fma_mixhi_bf16 v0, v0, v1, v2 op_sel_hi:[0,1,1]
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %src0.ext = fpext half %src0 to float
+  %src1.ext = fpext bfloat %src1 to float
+  %src2.ext = fpext bfloat %src2 to float
+  %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
+  %cvt.result = fptrunc float %result to bfloat
+  %vec.result = insertelement <2 x bfloat> poison, bfloat %cvt.result, i32 1
+  ret <2 x bfloat> %vec.result
+}
+
 define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_constlo(bfloat %src0, bfloat %src1, bfloat %src2) #0 {
 ; GFX1250-FAKE16-LABEL: v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_constlo:
 ; GFX1250-FAKE16:       ; %bb.0:
@@ -192,6 +208,94 @@ define <2 x bfloat> @v_mad_mixhi_bf16_bf16lo_bf16lo_bf16lo_undeflo_clamp_postcvt
   %max = call bfloat @llvm.maxnum.bf16(bfloat %cvt.result, bfloat 0.0)
   %clamp = call bfloat @llvm.minnum.bf16(bfloat %max, bfloat 1.0)
   %vec.result = insertelement <2 x bfloat> undef, bfloat %clamp, i32 1
+  ret <2 x bfloat> %vec.result
+}
+
+define <2 x bfloat> @mixhi_fptrunc_fadd(float %a, float %b, bfloat %lo) #0 {
+; GFX1250-FAKE16-LABEL: mixhi_fptrunc_fadd:
+; GFX1250-FAKE16:       ; %bb.0: ; %.entry
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX1250-FAKE16-NEXT:    v_perm_b32 v0, v0, v2, 0x5040100
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: mixhi_fptrunc_fadd:
+; GFX1250-REAL16:       ; %bb.0: ; %.entry
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+.entry:
+  %add = fadd float %a, %b
+  %trunc = fptrunc float %add to bfloat
+  %vec = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
+  %vec.result = insertelement <2 x bfloat> %vec, bfloat %trunc, i32 1
+  ret <2 x bfloat> %vec.result
+}
+
+define <2 x bfloat> @mixhi_fptrunc_fadd_f16_src(half %a, float %b, bfloat %lo) #0 {
+; GFX1250-FAKE16-LABEL: mixhi_fptrunc_fadd_f16_src:
+; GFX1250-FAKE16:       ; %bb.0: ; %.entry
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_fma_mix_f32 v0, v0, 1.0, v1 op_sel_hi:[1,1,0]
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX1250-FAKE16-NEXT:    v_perm_b32 v0, v0, v2, 0x5040100
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: mixhi_fptrunc_fadd_f16_src:
+; GFX1250-REAL16:       ; %bb.0: ; %.entry
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_fma_mix_f32 v0, v0, 1.0, v1 op_sel_hi:[1,1,0]
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+.entry:
+  %a.ext = fpext half %a to float
+  %add = fadd float %a.ext, %b
+  %trunc = fptrunc float %add to bfloat
+  %vec = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
+  %vec.result = insertelement <2 x bfloat> %vec, bfloat %trunc, i32 1
+  ret <2 x bfloat> %vec.result
+}
+
+define <2 x bfloat> @mixhi_fptrunc_fsub(float %a, float %b, bfloat %lo) #0 {
+; GFX1250-FAKE16-LABEL: mixhi_fptrunc_fsub:
+; GFX1250-FAKE16:       ; %bb.0: ; %.entry
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX1250-FAKE16-NEXT:    v_perm_b32 v0, v0, v2, 0x5040100
+; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-REAL16-LABEL: mixhi_fptrunc_fsub:
+; GFX1250-REAL16:       ; %bb.0: ; %.entry
+; GFX1250-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-REAL16-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-REAL16-NEXT:    v_cvt_pk_bf16_f32 v1, v0, s0
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, v2.l
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+.entry:
+  %sub = fsub float %a, %b
+  %trunc = fptrunc float %sub to bfloat
+  %vec = insertelement <2 x bfloat> poison, bfloat %lo, i32 0
+  %vec.result = insertelement <2 x bfloat> %vec, bfloat %trunc, i32 1
   ret <2 x bfloat> %vec.result
 }
 

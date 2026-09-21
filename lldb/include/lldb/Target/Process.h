@@ -46,6 +46,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
@@ -87,6 +88,9 @@ public:
   ~ProcessProperties() override;
 
   bool GetDisableMemoryCache() const;
+#ifndef NDEBUG
+  bool GetVerifyMemoryReads() const;
+#endif
   uint64_t GetMemoryCacheLineSize() const;
   Args GetExtraStartupCommands() const;
   void SetExtraStartupCommands(const Args &args);
@@ -123,6 +127,9 @@ public:
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
   std::unique_ptr<ProcessExperimentalProperties> m_experimental_properties_up;
+
+private:
+  OptionValueProperties *GetExperimentalProperties() const;
 };
 
 // ProcessAttachInfo
@@ -1683,52 +1690,6 @@ public:
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
 
-  // Callback definition for read Memory in chunks
-  //
-  // Status, the status returned from ReadMemoryFromInferior
-  // addr_t, the bytes_addr, start + bytes read so far.
-  // void*, pointer to the bytes read
-  // bytes_size, the count of bytes read for this chunk
-  typedef std::function<IterationAction(
-      lldb_private::Status &error, lldb::addr_t bytes_addr, const void *bytes,
-      lldb::offset_t bytes_size)>
-      ReadMemoryChunkCallback;
-
-  /// Read of memory from a process in discrete chunks, terminating
-  /// either when all bytes are read, or the supplied callback returns
-  /// IterationAction::Stop
-  ///
-  /// \param[in] vm_addr
-  ///     A virtual load address that indicates where to start reading
-  ///     memory from.
-  ///
-  /// \param[in] buf
-  ///    If NULL, a buffer of \a chunk_size will be created and used for the
-  ///    callback. If non NULL, this buffer must be at least \a chunk_size bytes
-  ///    and will be used for storing chunked memory reads.
-  ///
-  /// \param[in] chunk_size
-  ///     The minimum size of the byte buffer, and the chunk size of memory
-  ///     to read.
-  ///
-  /// \param[in] total_size
-  ///     The total number of bytes to read.
-  ///
-  /// \param[in] callback
-  ///     The callback to invoke when a chunk is read from memory.
-  ///
-  /// \return
-  ///     The number of bytes that were actually read into \a buf and
-  ///     written to the provided callback.
-  ///     If the returned number is greater than zero, yet less than \a
-  ///     size, then this function will get called again with \a
-  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
-  ///     returned in the case of an error.
-  lldb::offset_t ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
-                                    lldb::addr_t chunk_size,
-                                    lldb::offset_t total_size,
-                                    ReadMemoryChunkCallback callback);
-
   /// Read a NULL terminated C string from memory
   ///
   /// This function will read a cache page at a time until the NULL
@@ -1783,7 +1744,7 @@ public:
   int64_t ReadSignedIntegerFromMemory(lldb::addr_t load_addr, size_t byte_size,
                                       int64_t fail_value, Status &error);
 
-  lldb::addr_t ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error);
+  llvm::Expected<lldb::addr_t> ReadPointerFromMemory(lldb::addr_t vm_addr);
 
   /// Use Process::ReadMemoryRanges to efficiently read multiple pointers from
   /// memory at once.
@@ -2058,6 +2019,12 @@ public:
   ///     An error value.
   virtual Status
   GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list);
+
+  llvm::Expected<AddressSpaceInfo>
+  GetAddressSpaceInfo(llvm::StringRef address_space_name);
+
+  llvm::Expected<AddressSpaceInfo>
+  GetAddressSpaceInfo(lldb::addr_space_t address_space_id);
 
   /// Get the number of watchpoints supported by this target.
   ///
@@ -3517,6 +3484,9 @@ protected:
   ThreadList
       m_extended_thread_list; ///< Constituent for extended threads that may be
                               /// generated, cleared on natural stops
+  /// A list of address spaces for this process. Empty for single address space
+  /// processes.
+  std::vector<AddressSpaceInfo> m_address_spaces;
   lldb::RunDirection m_base_direction; ///< ThreadPlanBase run direction
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
                                       ///extended_thread_list was last updated
@@ -3642,8 +3612,12 @@ protected:
 
   llvm::Error FlushDelayedBreakpoints();
 
-  size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
-                                           uint8_t *buf) const;
+  void RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
+                                         uint8_t *buf) const;
+
+  /// Cache memory, restoring the original bytes under any breakpoint.
+  void AddCacheData(lldb::addr_t addr,
+                    const lldb::WritableDataBufferSP &data_buffer_sp);
 
   void SynchronouslyNotifyStateChanged(lldb::StateType state);
 
@@ -3733,6 +3707,13 @@ protected:
 
 private:
   Status DestroyImpl(bool force_kill);
+
+#ifndef NDEBUG
+  /// Re-read \a size bytes at \a addr and assert they match the cache.
+  void VerifyMemoryRead(lldb::addr_t addr, const void *cache_buf,
+                        size_t cache_bytes_read, size_t size,
+                        const Status &cache_error);
+#endif
 
   /// This is the part of the event handling that for a process event. It
   /// decides what to do with the event and returns true if the event needs to

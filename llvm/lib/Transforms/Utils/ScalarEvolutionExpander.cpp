@@ -497,8 +497,8 @@ class LoopCompare {
 public:
   explicit LoopCompare(DominatorTree &dt) : DT(dt) {}
 
-  bool operator()(std::pair<const Loop *, const SCEV *> LHS,
-                  std::pair<const Loop *, const SCEV *> RHS) const {
+  bool operator()(std::pair<const Loop *, SCEVUse> LHS,
+                  std::pair<const Loop *, SCEVUse> RHS) const {
     // Keep pointer operands sorted at the end.
     if (LHS.second->getType()->isPointerTy() !=
         RHS.second->getType()->isPointerTy())
@@ -551,8 +551,8 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   // Iterate in reverse so that constants are emitted last, all else equal, and
   // so that pointer operands are inserted first, which the code below relies on
   // to form more involved GEPs.
-  SmallVector<std::pair<const Loop *, const SCEV *>, 8> OpsAndLoops;
-  for (const SCEV *Op : reverse(S->operands()))
+  SmallVector<std::pair<const Loop *, SCEVUse>, 8> OpsAndLoops;
+  for (SCEVUse Op : reverse(S->operands()))
     OpsAndLoops.push_back(std::make_pair(getRelevantLoop(Op), Op));
 
   // Sort by loop. Use a stable sort so that constants follow non-constants and
@@ -564,7 +564,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   Value *Sum = nullptr;
   for (auto I = OpsAndLoops.begin(), E = OpsAndLoops.end(); I != E;) {
     const Loop *CurLoop = I->first;
-    const SCEV *Op = I->second;
+    SCEVUse Op = I->second;
     if (!Sum) {
       // This is the first operand. Just expand it.
       Sum = expand(Op);
@@ -1666,6 +1666,19 @@ Value *SCEVExpander::FindValueInExprValueMap(
   return nullptr;
 }
 
+Value *SCEVExpander::findExistingExpansionAndDropPoisonFlags(
+    SCEVUse S, const Instruction *InsertPt) {
+  SmallVector<Instruction *> DropPoisonGeneratingInsts;
+  Value *V = FindValueInExprValueMap(S, InsertPt, DropPoisonGeneratingInsts);
+  if (!V)
+    return nullptr;
+  for (Instruction *I : DropPoisonGeneratingInsts) {
+    rememberFlags(I);
+    dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
+  }
+  return V;
+}
+
 // The expansion of SCEV will either reuse a previous Value in ExprValueMap,
 // or expand the SCEV literally. Specifically, if the expansion is in LSRMode,
 // and the SCEV contains any sub scAddRecExpr type SCEV, it will be expanded
@@ -1733,23 +1746,17 @@ Value *SCEVExpander::expand(SCEVUse S) {
   Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
 
   // Expand the expression into instructions.
-  SmallVector<Instruction *> DropPoisonGeneratingInsts;
-  Value *V = FindValueInExprValueMap(S, &*InsertPt, DropPoisonGeneratingInsts);
+  Value *V = findExistingExpansionAndDropPoisonFlags(S, &*InsertPt);
   BasicBlock::iterator CacheAt = InsertPt;
   if (!V && InsertPt != OrigInsertPt && PostIncLoops.empty()) {
     // Hoisting the insertion point can move it above a value that already
     // computes S. Such a value is still usable: it only has to dominate the
     // point we were asked to expand at, which is where the result is used.
-    V = FindValueInExprValueMap(S, &*OrigInsertPt, DropPoisonGeneratingInsts);
+    V = findExistingExpansionAndDropPoisonFlags(S, &*OrigInsertPt);
     if (V)
       CacheAt = OrigInsertPt;
   }
-  if (V) {
-    for (Instruction *I : DropPoisonGeneratingInsts) {
-      rememberFlags(I);
-      dropPoisonGeneratingAnnotationsAndReinfer(SE, I);
-    }
-  } else {
+  if (!V) {
     V = visit(S);
     V = fixupLCSSAFormFor(V);
   }

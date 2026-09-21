@@ -1864,6 +1864,18 @@ private:
   using detect_has_print_properties =
       llvm::is_detected<has_print_properties, T>;
 
+  /// Trait to check if T provides a generated printer for the key-value
+  /// spelling of `prop-dict`.
+  template <typename T, typename... Args>
+  using has_print_properties_as_key_value_list =
+      decltype(T::_odsPrintPropertiesAsKeyValueList(
+          std::declval<MLIRContext *>(), std::declval<OpAsmPrinter &>(),
+          std::declval<const typename PropertiesSelector<T>::type &>(),
+          std::declval<ArrayRef<StringRef>>()));
+  template <typename T>
+  using detect_has_print_properties_as_key_value_list =
+      llvm::is_detected<has_print_properties_as_key_value_list, T>;
+
   /// Trait to check if parseProperties(OpAsmParser, T) exist
   template <typename T, typename... Args>
   using has_parse_properties = decltype(parseProperties(
@@ -1925,10 +1937,14 @@ private:
     return detail::InterfaceMap::template get<Traits<ConcreteType>...>();
   }
 
-  /// Return the internal implementations of each of the OperationName
-  /// hooks.
-  /// Implementation of `FoldHookFn` OperationName hook.
-  static OperationName::FoldHookFn getFoldHookFn() {
+  using FoldHookFn = LogicalResult (*)(Operation *, ArrayRef<Attribute>,
+                                       SmallVectorImpl<OpFoldResult> &);
+  using HasTraitFn = bool (*)(TypeID);
+  using PrintAssemblyFn = void (*)(Operation *, OpAsmPrinter &, StringRef);
+  using VerifyInvariantsFn = LogicalResult (*)(Operation *);
+
+  /// Return the internal implementations of each of the OperationName hooks.
+  static FoldHookFn getFoldHookFn() {
     // If the operation is single result and defines a `fold` method.
     if constexpr (llvm::is_one_of<OpTrait::OneResult<ConcreteType>,
                                   Traits<ConcreteType>...>::value &&
@@ -2001,13 +2017,11 @@ private:
     return result;
   }
 
-  /// Implementation of `GetHasTraitFn`
-  static OperationName::HasTraitFn getHasTraitFn() {
+  static HasTraitFn getHasTraitFn() {
     return
         [](TypeID id) { return op_definition_impl::hasTrait<Traits...>(id); };
   }
-  /// Implementation of `PrintAssemblyFn` OperationName hook.
-  static OperationName::PrintAssemblyFn getPrintAssemblyFn() {
+  static PrintAssemblyFn getPrintAssemblyFn() {
     if constexpr (detect_has_print<ConcreteType>::value)
       return [](Operation *op, OpAsmPrinter &p, StringRef defaultDialect) {
         OpState::printOpName(op, p, defaultDialect);
@@ -2036,15 +2050,19 @@ public:
                                         InferredProperties<T> &properties) {}
 
   /// Print the operation properties with names not included within
-  /// 'elidedProps'. Unless overridden, this method will try to dispatch to a
-  /// `printProperties` free-function if it exists, and otherwise by converting
-  /// the properties to an Attribute.
+  /// 'elidedProps'. Unless overridden, this method first tries to dispatch to a
+  /// `printProperties` free-function, then to the generated per-field printer,
+  /// and finally converts the properties to an Attribute.
   template <typename T>
   static void printProperties(MLIRContext *ctx, OpAsmPrinter &p,
                               const T &properties,
                               ArrayRef<StringRef> elidedProps = {}) {
     if constexpr (detect_has_print_properties<T>::value)
       return printProperties(p, properties, elidedProps);
+    if constexpr (detect_has_print_properties_as_key_value_list<
+                      ConcreteType>::value)
+      return ConcreteType::_odsPrintPropertiesAsKeyValueList(ctx, p, properties,
+                                                             elidedProps);
     genericPrintProperties(
         p, ConcreteType::getPropertiesAsAttr(ctx, properties), elidedProps);
   }
@@ -2104,8 +2122,8 @@ private:
         failed(op_definition_impl::verifyTraits<Traits<ConcreteType>...>(op)) ||
         failed(cast<ConcreteType>(op).verify()));
   }
-  static OperationName::VerifyInvariantsFn getVerifyInvariantsFn() {
-    return static_cast<LogicalResult (*)(Operation *)>(&verifyInvariants);
+  static VerifyInvariantsFn getVerifyInvariantsFn() {
+    return &verifyInvariants;
   }
   /// Implementation of `VerifyRegionInvariantsFn` OperationName hook.
   static LogicalResult verifyRegionInvariants(Operation *op) {
@@ -2116,8 +2134,8 @@ private:
             op)) ||
         failed(cast<ConcreteType>(op).verifyRegions()));
   }
-  static OperationName::VerifyRegionInvariantsFn getVerifyRegionInvariantsFn() {
-    return static_cast<LogicalResult (*)(Operation *)>(&verifyRegionInvariants);
+  static VerifyInvariantsFn getVerifyRegionInvariantsFn() {
+    return &verifyRegionInvariants;
   }
 
   static constexpr bool hasNoDataMembers() {

@@ -39,6 +39,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -816,20 +817,20 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
   llvm::Value *Size;
   llvm::Value *SizeInChars;
   auto *ElemType = OrigAddresses[N].first.getAddress().getElementType();
-  auto *ElemSizeOf = llvm::ConstantExpr::getSizeOf(ElemType);
+  auto *ElemSizeOf = llvm::ConstantInt::get(
+      CGF.SizeTy, CGF.CGM.getDataLayout().getTypeAllocSize(ElemType));
   if (AsArraySection) {
-    Size = CGF.Builder.CreatePtrDiff(ElemType,
-                                     OrigAddresses[N].second.getPointer(CGF),
-                                     OrigAddresses[N].first.getPointer(CGF));
-    Size = CGF.Builder.CreateZExtOrTrunc(Size, ElemSizeOf->getType());
-    Size = CGF.Builder.CreateNUWAdd(
-        Size, llvm::ConstantInt::get(Size->getType(), /*V=*/1));
-    SizeInChars = CGF.Builder.CreateNUWMul(Size, ElemSizeOf);
+    SizeInChars =
+        CGF.Builder.CreatePtrDiff(OrigAddresses[N].second.getPointer(CGF),
+                                  OrigAddresses[N].first.getPointer(CGF));
+    SizeInChars = CGF.Builder.CreateNUWAdd(SizeInChars, ElemSizeOf);
   } else {
     SizeInChars =
         CGF.getTypeSize(OrigAddresses[N].first.getType().getNonReferenceType());
-    Size = CGF.Builder.CreateExactUDiv(SizeInChars, ElemSizeOf);
   }
+  Size = ElemSizeOf->isOne()
+             ? SizeInChars
+             : CGF.Builder.CreateExactUDiv(SizeInChars, ElemSizeOf);
   Sizes.emplace_back(SizeInChars, Size);
   CodeGenFunction::OpaqueValueMapping OpaqueMap(
       CGF,
@@ -1286,9 +1287,14 @@ llvm::Function *CGOpenMPRuntime::emitTeamsOutlinedFunction(
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
     const RegionCodeGenTy &CodeGen) {
   const CapturedStmt *CS = D.getCapturedStmt(OMPD_teams);
-  return emitParallelOrTeamsOutlinedFunction(
+  llvm::Function *OutlinedFn = emitParallelOrTeamsOutlinedFunction(
       CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(CGF),
       CodeGen);
+  // A teams body is called once per team and is not handed back to the runtime
+  // as a callback, so unlike a parallel body it cannot be re-entered while a
+  // call to it is live.
+  OutlinedFn->setDoesNotRecurse();
+  return OutlinedFn;
 }
 
 llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
@@ -1416,7 +1422,7 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
   // the clang invariants used below might be broken.
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     SmallString<128> Buffer;
-    OMPBuilder.updateToLocation(CGF.Builder.saveIP());
+    OMPBuilder.updateToLocation(CGF.Builder);
     uint32_t SrcLocStrSize;
     auto *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(
         getIdentStringFromSourceLocation(CGF, Loc, Buffer), SrcLocStrSize);
@@ -6250,11 +6256,14 @@ namespace {
 /// Cleanup action for uses_allocators support.
 class OMPUsesAllocatorsActionTy final : public PrePostActionTy {
   ArrayRef<std::pair<const Expr *, const Expr *>> Allocators;
+  const OMPExecutableDirective &D;
+  bool IsOffloadEntry;
 
 public:
   OMPUsesAllocatorsActionTy(
-      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators)
-      : Allocators(Allocators) {}
+      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators,
+      const OMPExecutableDirective &D, bool IsOffloadEntry)
+      : Allocators(Allocators), D(D), IsOffloadEntry(IsOffloadEntry) {}
   void Enter(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
       return;
@@ -6262,6 +6271,12 @@ public:
       CGF.CGM.getOpenMPRuntime().emitUsesAllocatorsInit(
           CGF, AllocatorData.first, AllocatorData.second);
     }
+    // This kernel does not go through the device-side runtime
+    // init/deinit sequence (that is GPU-only), but the runtime still
+    // needs a '<kernel>_kernel_environment' global to know how the
+    // kernel was configured, so emit it directly here.
+    if (IsOffloadEntry)
+      CGF.CGM.getOpenMPRuntime().emitHostKernelEnvironment(D, CGF);
   }
   void Exit(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
@@ -6273,6 +6288,14 @@ public:
   }
 };
 } // namespace
+
+void CGOpenMPRuntime::emitHostKernelEnvironment(const OMPExecutableDirective &D,
+                                                CodeGenFunction &CGF) {
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
+  OMPBuilder.emitKernelEnvironment(CGF.Builder, Attrs);
+}
 
 void CGOpenMPRuntime::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
@@ -6289,7 +6312,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
       Allocators.emplace_back(D.Allocator, D.AllocatorTraits);
     }
   }
-  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators);
+  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators, D, IsOffloadEntry);
   CodeGen.setAction(UsesAllocatorAction);
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
@@ -6413,6 +6436,10 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   if (!OutlinedFn)
     return;
+
+  // A target body is entered once, from the kernel, and never re-entered by
+  // the runtime, so it cannot occur in a cycle.
+  OutlinedFn->setDoesNotRecurse();
 
   CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
 
@@ -6648,6 +6675,20 @@ llvm::Value *CGOpenMPRuntime::emitNumTeamsForTargetDirective(
   return llvm::ConstantInt::getSigned(CGF.Int32Ty, MinNT);
 }
 
+/// Merge the thread count upper bound \p Val into \p UpperBound.
+///
+/// \p UpperBound is -1 while no thread limiting clause has been seen, 0 once
+/// one has been seen whose value is not known at compile time, and otherwise
+/// the smallest constant bound found so far.
+///
+/// Thread limiting clauses compose by taking the minimum, so a constant bound
+/// stays valid whatever the clauses that are not compile time constants
+/// evaluate to. That makes it correct to replace the 0 marker with \p Val, and
+/// necessary to keep a clause from raising a smaller bound found earlier.
+static void mergeThreadCountUpperBound(int32_t &UpperBound, int32_t Val) {
+  UpperBound = UpperBound > 0 ? std::min(UpperBound, Val) : Val;
+}
+
 /// Check for a num threads constant value (stored in \p DefaultVal), or
 /// expression (stored in \p E). If the value is conditional (via an if-clause),
 /// store the condition in \p CondVal. If \p E, and \p CondVal respectively, are
@@ -6708,14 +6749,11 @@ static void getNumThreads(CodeGenFunction &CGF, const CapturedStmt *CS,
       CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
       const auto *NumThreadsClause =
           Dir->getSingleClause<OMPNumThreadsClause>();
-      const Expr *NTExpr = NumThreadsClause->getNumThreads();
+      const Expr *NTExpr = NumThreadsClause->getNumThreads().front();
       if (NTExpr->isIntegerConstantExpr(CGF.getContext()))
         if (auto Constant = NTExpr->getIntegerConstantExpr(CGF.getContext()))
-          UpperBound =
-              UpperBound
-                  ? Constant->getZExtValue()
-                  : std::min(UpperBound,
-                             static_cast<int32_t>(Constant->getZExtValue()));
+          mergeThreadCountUpperBound(
+              UpperBound, static_cast<int32_t>(Constant->getZExtValue()));
       // If we haven't found a upper bound, remember we saw a thread limiting
       // clause.
       if (UpperBound == -1)
@@ -6759,9 +6797,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   auto CheckForConstExpr = [&](const Expr *E, const Expr **EPtr) {
     if (E->isIntegerConstantExpr(CGF.getContext())) {
       if (auto Constant = E->getIntegerConstantExpr(CGF.getContext()))
-        UpperBound = UpperBound ? Constant->getZExtValue()
-                                : std::min(UpperBound,
-                                           int32_t(Constant->getZExtValue()));
+        mergeThreadCountUpperBound(
+            UpperBound, static_cast<int32_t>(Constant->getZExtValue()));
     }
     // If we haven't found a upper bound, remember we saw a thread limiting
     // clause.
@@ -6816,6 +6853,17 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       if (isOpenMPTeamsDirective(Dir->getDirectiveKind()) &&
           !isOpenMPDistributeDirective(Dir->getDirectiveKind())) {
         CS = Dir->getInnermostCapturedStmt();
+        // Now that the 'teams' level has been peeled off, the remainder is
+        // shaped like a 'target teams' region, so pick up the num_threads of
+        // the directive nested in it the same way the OMPD_target_teams case
+        // below does. Without this the upper bound of a construct written as
+        // 'target' / 'teams' / 'distribute parallel for' would stay at the
+        // default, while every combined spelling of the same construct honors
+        // the clause. Only the bound is taken here: passing null for the
+        // expression and the condition keeps this from emitting anything, so
+        // the value the host passes to the kernel launch is left as it was.
+        getNumThreads(CGF, CS, /*E=*/nullptr, UpperBound, UpperBoundOnly,
+                      /*CondVal=*/nullptr);
         const Stmt *Child = CGOpenMPRuntime::getSingleCompoundChild(
             CGF.getContext(), CS->getCapturedStmt());
         Dir = dyn_cast_or_null<OMPExecutableDirective>(Child);
@@ -6894,8 +6942,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
     if (D.hasClausesOfKind<OMPNumThreadsClause>()) {
       CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
       const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
-      CheckForConstExpr(NumThreadsClause->getNumThreads(), nullptr);
-      return NumThreadsClause->getNumThreads();
+      CheckForConstExpr(NumThreadsClause->getNumThreads().front(), nullptr);
+      return NumThreadsClause->getNumThreads().front();
     }
     return NT;
   }
@@ -11780,7 +11828,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
                          CGF.AllocaInsertPt->getIterator());
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
-  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
+  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CGF.Builder);
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createTargetData(
           OmpLoc, AllocaIP, CodeGenIP, /*DeallocBlocks=*/{}, DeviceID,

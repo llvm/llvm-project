@@ -55,13 +55,13 @@ let cppNamespace = "::cir" in {
                       "std::optional<cir::InlineKind>", "getInlineKind", 
                       (ins), [{}], 
                       /*defaultImplementation=*/[{
-                        $_op.getInlineKind();
+                        return $_op.getInlineKind();
                       }]>,
       InterfaceMethod<[{"Get the inline-kind attribute name"}], 
                       "mlir::StringAttr", "getInlineKindAttrName",
                       (ins), [{}],
                       /*defaultImplementation=*/[{
-                        $_op.getInlineKindAttrName();
+                        return $_op.getInlineKindAttrName();
                       }]>,
     ];
   }

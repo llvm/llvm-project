@@ -419,6 +419,8 @@ class raw_ostream;
         if (I == B)
           return getMBBStartIdx(MBB);
         --I;
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
@@ -436,6 +438,8 @@ class raw_ostream;
         ++I;
         if (I == E)
           return getMBBEndIdx(MBB);
+        if (I->isDebugInstr())
+          continue;
         Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
@@ -624,6 +628,11 @@ class raw_ostream;
       renumberIndexes(newItr);
       llvm::sort(idx2MBBMap, less_first());
     }
+
+    /// Inverse of insertMBBInMaps: merge \p MBB's slot range into its layout
+    /// predecessor and drop it from the maps. Call before erasing \p MBB and
+    /// after its instructions have been removed from the maps.
+    LLVM_ABI void removeMBBFromMaps(MachineBasicBlock &MBB);
 
     /// Renumber all indexes using the default instruction distance.
     LLVM_ABI void packIndexes();
