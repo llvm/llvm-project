@@ -1,13 +1,10 @@
-! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenmp -o - %s | FileCheck %s --implicit-check-not=scf.execute_region
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenmp -o - %s | FileCheck %s
 
 ! A DO associated with an OpenMP loop directive is lowered by the directive's
-! own code-gen. Such a DO must never be folded into an
-! scf.execute_region, even when wrapping is enabled and the loop is
-! unstructured -- here the IF-guarded CYCLE makes it so. The body's blocks
-! stay flat inside omp.loop_nest.
-!
-! --implicit-check-not on the RUN line asserts that no wrapping takes place
-! anywhere in the output.
+! own code-gen, which never reaches genFIR(DoConstruct) where a plain loop's
+! body is wrapped. The body is wrapped at the directive's own body-lowering
+! site instead, so a loop whose branching is confined to its body -- here an
+! IF-guarded CYCLE -- keeps its structured form inside omp.loop_nest.
 
 subroutine repro_final(x, y, n)
   implicit none
@@ -27,26 +24,29 @@ subroutine repro_final(x, y, n)
 
 end subroutine repro_final
 
+! The CYCLE targets the EndDoStmt, which inside the wrap is the region's yield
+! block -- so it leaves the region instead of branching to a block outside it.
 ! CHECK-LABEL: func.func @_QPrepro_final(
 ! CHECK:         omp.wsloop
 ! CHECK:           omp.loop_nest
 ! CHECK:             hlfir.assign
-! CHECK:             cf.br ^bb[[TEST:[0-9]+]]
-! CHECK:           ^bb[[TEST]]:
-! CHECK:             arith.cmpf ogt
-! CHECK:             cf.cond_br %{{[0-9]+}}, ^bb[[CYCLE:[0-9]+]], ^bb[[BODY:[0-9]+]]
-! CHECK:           ^bb[[CYCLE]]:
-! CHECK:             hlfir.assign
-! CHECK:             cf.br ^bb[[EXIT:[0-9]+]]
-! CHECK:           ^bb[[BODY]]:
-! CHECK:             hlfir.assign
-! CHECK:             cf.br ^bb[[EXIT]]
-! CHECK:           ^bb[[EXIT]]:
+! CHECK:             scf.execute_region no_inline {
+! CHECK:             ^bb[[TEST:[0-9]+]]:
+! CHECK:               arith.cmpf ogt
+! CHECK:               cf.cond_br %{{[0-9]+}}, ^bb[[CYCLE:[0-9]+]], ^bb[[BODY:[0-9]+]]
+! CHECK:             ^bb[[CYCLE]]:
+! CHECK:               hlfir.assign
+! CHECK:               cf.br ^bb[[EXIT:[0-9]+]]
+! CHECK:             ^bb[[BODY]]:
+! CHECK:               hlfir.assign
+! CHECK:               cf.br ^bb[[EXIT]]
+! CHECK:             ^bb[[EXIT]]:
+! CHECK:               scf.yield
 ! CHECK:             omp.yield
 
-! COLLAPSE(n) and ORDERED(n) both associate n loops with the directive, and
-! the loop transforming directives (TILE, INTERCHANGE, ...) associate as many
-! as their arguments describe. None of the associated loops may be wrapped.
+! COLLAPSE(n) and ORDERED(n) both associate n loops with the directive. The
+! associated loops are collapsed into a single omp.loop_nest, and the wrap goes
+! around the innermost body it encloses.
 
 subroutine collapse_case(x, y, n)
   implicit none
@@ -68,12 +68,14 @@ subroutine collapse_case(x, y, n)
 
 end subroutine collapse_case
 
-! Both loops are associated with the directive, so the body stays flat inside
-! omp.loop_nest.
+! Both loops are associated with the directive, so one wrap covers the body of
+! the collapsed nest.
 ! CHECK-LABEL: func.func @_QPcollapse_case(
 ! CHECK:         omp.wsloop
 ! CHECK:           omp.loop_nest ({{.*}}) {{.*}} collapse(2) {
-! CHECK:             cf.cond_br
+! CHECK:             scf.execute_region no_inline {
+! CHECK:               cf.cond_br
+! CHECK:               scf.yield
 ! CHECK:             omp.yield
 
 subroutine ordered_case(x, y, n)
@@ -96,12 +98,16 @@ subroutine ordered_case(x, y, n)
 
 end subroutine ordered_case
 
-! ORDERED(2) associates the inner loop with the directive as well, so it is
-! not wrapped either.
+! ORDERED(2) keeps the inner loop as a loop of its own inside the nest, so the
+! outer body and the inner body each get a wrap.
 ! CHECK-LABEL: func.func @_QPordered_case(
 ! CHECK:         omp.wsloop ordered(2)
 ! CHECK:           omp.loop_nest
-! CHECK:             cf.cond_br
+! CHECK:             scf.execute_region no_inline {
+! CHECK:               scf.execute_region no_inline {
+! CHECK:                 cf.cond_br
+! CHECK:                 scf.yield
+! CHECK:               scf.yield
 ! CHECK:             omp.yield
 
 ! A TILE case belongs here too, since the SIZES arguments decide how many

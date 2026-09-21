@@ -356,16 +356,20 @@ struct Evaluation : EvaluationVariant {
     controlFlow = std::min(controlFlow, kind);
   }
 
-  /// True when control flow is not fully structured, category (c) included.
-  /// Existing consumers ask this to decide whether raw blocks are needed, and
-  /// a category (c) construct still needs them until its body is wrapped, so
-  /// it must answer true here. Use hasUnstructuredInternals() to single out
-  /// category (c) itself.
-  bool isUnstructured() const { return controlFlow != ControlFlow::Structured; }
+  /// True only for fully unstructured control flow, which is lowered as raw
+  /// CFG blocks.
+  bool isUnstructured() const {
+    return controlFlow == ControlFlow::Unstructured;
+  }
 
   bool hasUnstructuredInternals() const {
     return controlFlow == ControlFlow::StructuredWithUnstructuredInternals;
   }
+
+  /// True when this construct is lowered structurally, yet its body holds
+  /// unstructured control flow that has to be folded into an
+  /// scf.execute_region.
+  bool lowerBodyAsWrappedRegion() const;
 
   bool lowerAsStructured() const;
   bool lowerAsUnstructured() const;
