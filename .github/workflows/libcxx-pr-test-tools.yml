@@ -47,6 +47,7 @@ jobs:
       - name: Print stuff
         shell: bash
         run: |
+          pwd
           ls
 
       - name: Set up Python dependencies
