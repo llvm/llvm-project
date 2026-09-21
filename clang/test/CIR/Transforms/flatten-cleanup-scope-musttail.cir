@@ -1,0 +1,219 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+
+cir.func private @Bar(!s32i) -> !s32i
+cir.func private @VoidBar(!s32i)
+cir.func private @Other(!s32i) -> !s32i
+
+// int VlaScope(int x) {
+//   int vla[x];
+//   [[clang::musttail]] return Bar(x);
+// }
+cir.func @test_musttail_skips_stack_restore(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+  %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+  %2 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!u8i>>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  %4 = cir.cast integral %3 : !s32i -> !u64i
+  %5 = cir.stacksave : !cir.ptr<!u8i>
+  cir.store %5, %2 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+  cir.cleanup.scope {
+    %6 = cir.alloca "vla" align(16) size(%4) : !cir.ptr<!s32i>
+    %7 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %8 = cir.call @Bar(%7) musttail : (!s32i) -> !s32i
+    cir.return %8 : !s32i
+  ^bb1:  // no predecessors
+    %9 = cir.const #cir.undef : !s32i
+    cir.store %9, %1 : !s32i, !cir.ptr<!s32i>
+    %10 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %10 : !s32i
+  ^bb2:  // no predecessors
+    cir.yield
+  } cleanup normal {
+    %6 = cir.load %2 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.stackrestore %6 : !cir.ptr<!u8i>
+    cir.yield
+  }
+  cir.unreachable
+}
+
+// CHECK-LABEL: cir.func @test_musttail_skips_stack_restore
+// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
+// CHECK:         %[[SAVED:.*]] = cir.alloca "saved_stack"
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[TAIL_ARG:.*]] = cir.load
+// CHECK-NEXT:    %[[TAIL_RET:.*]] = cir.call @Bar(%[[TAIL_ARG]]) musttail
+// CHECK-NEXT:    cir.return %[[TAIL_RET]] : !s32i
+
+// The two unreachable exits still route through the cleanup and its dispatch.
+// CHECK:         cir.store %{{.*}}, %[[DEST_SLOT]] :
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:         cir.store %{{.*}}, %[[DEST_SLOT]] :
+// CHECK:         cir.br ^[[CLEANUP]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         %[[STACK:.*]] = cir.load %[[SAVED]]
+// CHECK:         cir.stackrestore %[[STACK]]
+// CHECK:         cir.switch.flat %{{.*}} : !s32i
+
+cir.func @test_musttail_only_exit(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+  %1 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!u8i>>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %2 = cir.stacksave : !cir.ptr<!u8i>
+  cir.store %2, %1 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+  cir.cleanup.scope {
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %4 = cir.call @Bar(%3) musttail : (!s32i) -> !s32i
+    cir.return %4 : !s32i
+  } cleanup normal {
+    %3 = cir.load %1 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.stackrestore %3 : !cir.ptr<!u8i>
+    cir.yield
+  }
+  cir.unreachable
+}
+
+// CHECK-LABEL: cir.func @test_musttail_only_exit
+// CHECK-NOT:     __cleanup_dest_slot
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[TAIL_ARG:.*]] = cir.load
+// CHECK-NEXT:    %[[TAIL_RET:.*]] = cir.call @Bar(%[[TAIL_ARG]]) musttail
+// CHECK-NEXT:    cir.return %[[TAIL_RET]] : !s32i
+// CHECK-NOT:     cir.stackrestore
+// CHECK-NOT:     cir.switch.flat
+
+// void VlaVoid(int x) {
+//   int vla[x];
+//   [[clang::musttail]] return VoidBar(x);
+// }
+cir.func @test_musttail_void(%arg0: !s32i) {
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+  %1 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!u8i>>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %2 = cir.stacksave : !cir.ptr<!u8i>
+  cir.store %2, %1 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+  cir.cleanup.scope {
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.call @VoidBar(%3) musttail : (!s32i) -> ()
+    cir.return
+  ^bb1:  // no predecessors
+    cir.return
+  ^bb2:  // no predecessors
+    cir.yield
+  } cleanup normal {
+    %3 = cir.load %1 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.stackrestore %3 : !cir.ptr<!u8i>
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_musttail_void
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         %[[TAIL_ARG:.*]] = cir.load
+// CHECK-NEXT:    cir.call @VoidBar(%[[TAIL_ARG]]) musttail
+// CHECK-NEXT:    cir.return
+
+// This is now unreachable.
+// CHECK:         cir.stackrestore
+
+// int VlaConditional(int x) {
+//   int vla[x];
+//   if (x)
+//     [[clang::musttail]] return Bar(x);
+//   return 0;
+// }
+cir.func @test_musttail_beside_normal_return(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+  %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+  %2 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!u8i>>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  %4 = cir.cast integral %3 : !s32i -> !u64i
+  %5 = cir.stacksave : !cir.ptr<!u8i>
+  cir.store %5, %2 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+  cir.cleanup.scope {
+    %6 = cir.alloca "vla" align(16) size(%4) : !cir.ptr<!s32i>
+    %7 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %8 = cir.cast int_to_bool %7 : !s32i -> !cir.bool
+    cir.brcond %8 ^bb_tail, ^bb_normal
+  ^bb_tail:
+    %9 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %10 = cir.call @Bar(%9) musttail : (!s32i) -> !s32i
+    cir.return %10 : !s32i
+  ^bb_normal:
+    %11 = cir.const #cir.int<0> : !s32i
+    cir.store %11, %1 : !s32i, !cir.ptr<!s32i>
+    %12 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %12 : !s32i
+  } cleanup normal {
+    %6 = cir.load %2 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.stackrestore %6 : !cir.ptr<!u8i>
+    cir.yield
+  }
+  cir.unreachable
+}
+
+// CHECK-LABEL: cir.func @test_musttail_beside_normal_return
+// CHECK:         %[[SAVED:.*]] = cir.alloca "saved_stack"
+// CHECK:         cir.brcond %{{.*}} ^[[TAIL:bb[0-9]+]], ^[[NORMAL:bb[0-9]+]]
+// CHECK:       ^[[TAIL]]:
+// CHECK:         %[[TAIL_ARG:.*]] = cir.load
+// CHECK-NEXT:    %[[TAIL_RET:.*]] = cir.call @Bar(%[[TAIL_ARG]]) musttail
+// CHECK-NEXT:    cir.return %[[TAIL_RET]] : !s32i
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         %[[STACK:.*]] = cir.load %[[SAVED]]
+// CHECK:         cir.stackrestore %[[STACK]]
+// CHECK-NOT:     cir.switch.flat
+
+// int LifetimeScope(int x) {
+//   int local = Other(x);
+//   [[clang::musttail]] return Bar(local);
+// }
+//
+cir.func @test_musttail_in_eh_cleanup(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+  %1 = cir.alloca "local" align(4) init : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.lifetime.start %1 : !cir.ptr<!s32i>
+  cir.cleanup.scope {
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %3 = cir.call @Other(%2) : (!s32i) -> !s32i
+    cir.store %3, %1 : !s32i, !cir.ptr<!s32i>
+    %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    %5 = cir.call @Bar(%4) musttail : (!s32i) -> !s32i
+    cir.return %5 : !s32i
+  } cleanup all {
+    cir.lifetime.end %1 : !cir.ptr<!s32i>
+    cir.yield
+  }
+  cir.unreachable
+}
+
+// CHECK-LABEL: cir.func @test_musttail_in_eh_cleanup
+// CHECK:         %[[LOCAL:.*]] = cir.alloca "local"
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.try_call @Other(%{{.*}}) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         %[[TAIL_ARG:.*]] = cir.load %[[LOCAL]]
+// CHECK-NEXT:    %[[TAIL_RET:.*]] = cir.call @Bar(%[[TAIL_ARG]]) musttail
+// CHECK-NEXT:    cir.return %[[TAIL_RET]] : !s32i
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[TOKEN:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[TOKEN]] : !cir.eh_token)
+// CHECK:       ^[[EH_CLEANUP]](%[[EH_TOKEN:.*]]: !cir.eh_token):
+// CHECK:         cir.begin_cleanup %[[EH_TOKEN]]
+// CHECK:         cir.lifetime.end %[[LOCAL]]
+// CHECK:         cir.end_cleanup
+// CHECK:         cir.resume %[[EH_TOKEN]]

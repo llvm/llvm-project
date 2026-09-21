@@ -10633,31 +10633,35 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall && !IsSibCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
 
+    // In general, neither NumBytes nor NumReusableBytes is guaranteed to be
+    // aligned, so we round NumBytes up to the same residue mod StackAlign as
+    // NumReusableBytes, which keeps their difference (FPDiff) a multiple of
+    // StackAlign, and therefore preserve the required stack alignment going
+    // into the callee.  When the callee's convention can guarantee TCO,
+    // LowerFormalArguments will have force-aligned the stack arg area for us
+    // already, so we can count on our own alignment of NumBytes below to result
+    // in an aligned FPDiff.
+    assert((!DoesCalleeRestoreStack(CallConv, TailCallOpt) ||
+            isAligned(StackAlign, NumReusableBytes)) &&
+           "expected LowerFormalArguments to force-align stack arg area");
+    NumBytes += offsetToAlignment(NumBytes - NumReusableBytes, StackAlign);
+
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
     // can actually shrink the stack.
     FPDiff = NumReusableBytes - NumBytes;
-
-    // Since callee will pop the argument stack as a tail call, we must keep the
-    // popped size aligned to the stack alignment. Either or both of NumBytes
-    // and NumReusableBytes may not have been aligned, so we further increase by
-    // the amount needed to keep FPDiff aligned, and therefore preserve the
-    // required alignment going into the callee.
-    uint64_t Realign = offsetToAlignment(FPDiff, StackAlign);
-    FPDiff -= Realign;
-    NumBytes += Realign;
 
     // Update the required reserved area if this is the tail call requiring the
     // most argument stack space.
     if (FPDiff < 0 && FuncInfo->getTailCallReservedStack() < (unsigned)-FPDiff)
       FuncInfo->setTailCallReservedStack(-FPDiff);
 
-    // The stack pointer must be 16-byte aligned at all times it's used for a
-    // memory operation, which in practice means at *all* times and in
+    // The stack pointer must be at least 16-byte aligned at all times it's used
+    // for a memory operation, which in practice means at *all* times and in
     // particular across call boundaries. Therefore our own arguments started at
-    // a 16-byte aligned SP and the delta applied for the tail call should
-    // satisfy the same constraint.
-    assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
+    // an aligned SP and the delta applied for the tail call should satisfy the
+    // same constraint.
+    assert(isAligned(StackAlign, FPDiff) && "unaligned stack on tail call");
   }
 
   auto DescribeCallsite =
@@ -11204,8 +11208,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       MF.getFunction().getParent()->getModuleFlag("import-call-optimization"))
     DAG.addCalledGlobal(Chain.getNode(), CalledGlobal, OpFlags);
 
-  uint64_t CalleePopBytes =
-      DoesCalleeRestoreStack(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
+  uint64_t CalleePopBytes = DoesCalleeRestoreStack(CallConv, TailCallOpt)
+                                ? alignTo(NumBytes, StackAlign)
+                                : 0;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);
@@ -30288,7 +30293,8 @@ static SDValue performSelectCombine(SDNode *N,
 }
 
 static SDValue performDUPCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI) {
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
@@ -30312,6 +30318,15 @@ static SDValue performDUPCombine(SDNode *N,
     //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
     //   v4i32 = DUPLANE32 (v4i32), 0
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
+      if (!Subtarget->noPredicatedLD1R() &&
+          Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
+          VT.getScalarType().isInteger() &&
+          VT.getScalarType() != LD->getMemoryVT().getScalarType()) {
+        EVT ScalableVT = getContainerForFixedLengthVector(DCI.DAG, VT);
+        SDValue SplatNode =
+            DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
+        return convertFromScalableVector(DCI.DAG, VT, SplatNode);
+      }
       ISD::LoadExtType ExtType = LD->getExtensionType();
       EVT MemVT = LD->getMemoryVT();
       EVT ElemVT = VT.getVectorElementType();
@@ -31810,7 +31825,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::DUPLANE16:
   case AArch64ISD::DUPLANE32:
   case AArch64ISD::DUPLANE64:
-    return performDUPCombine(N, DCI);
+    return performDUPCombine(N, DCI, Subtarget);
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:
@@ -33396,6 +33411,55 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   CI->addParamAttr(1, Attribute::get(Builder.getContext(),
                                      Attribute::ElementType, Val->getType()));
   return CI;
+}
+
+Value *AArch64TargetLowering::emitCanLoadSpeculatively(
+    IRBuilderBase &Builder, Value *Ptr, Value *SizeInBytes) const {
+  // Conservatively only allow speculation for address space 0.
+  if (Ptr->getType()->getPointerAddressSpace() != 0)
+    return nullptr;
+  // For power-of-2 sizes <= 16, emit alignment check: (ptr & (size - 1)) == 0.
+  // If the pointer is aligned to at least 'size' bytes, loading 'size' bytes
+  // cannot cross a page boundary, so it's safe to speculate.
+  // The 16-byte limit ensures correctness with MTE (memory tagging), since
+  // MTE uses 16-byte tag granules.
+  //
+  // The alignment check only works for power-of-2 sizes. For non-power-of-2
+  // sizes, we conservatively return false.
+  constexpr uint64_t MTETagGranuleInBytes = 16;
+
+  if (auto *ConstSize = dyn_cast<ConstantInt>(SizeInBytes)) {
+    uint64_t Size = ConstSize->getZExtValue();
+    // For non-power-of-2 or constant sizes > 16, return nullptr (default
+    // false).
+    if (!isPowerOf2_64(Size) || Size > MTETagGranuleInBytes)
+      return nullptr;
+
+    // Power-of-2 constant size <= 16: use fast alignment check.
+    Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
+    return Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, Size - 1));
+  }
+
+  // Check size <= 16 and alignment. A runtime power-of-2 test is omitted
+  // because the intrinsic's result is poison for non-power-of-2 sizes.
+  Value *SizeLE16 = Builder.CreateICmpULE(
+      SizeInBytes,
+      ConstantInt::get(SizeInBytes->getType(), MTETagGranuleInBytes));
+
+  // Narrow only after the comparison above, so that a size exceeding the
+  // address width is not truncated into the accepted range.
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Type *AddrTy = DL.getAddressType(Ptr->getType());
+  Value *SizeAddr = Builder.CreateZExtOrTrunc(SizeInBytes, AddrTy);
+
+  // alignment check: (ptr & (size - 1)) == 0
+  Value *SizeMinusOne =
+      Builder.CreateSub(SizeAddr, ConstantInt::get(AddrTy, 1));
+  Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
+  Value *AlignCheck =
+      Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, SizeMinusOne));
+
+  return Builder.CreateAnd(SizeLE16, AlignCheck);
 }
 
 bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(

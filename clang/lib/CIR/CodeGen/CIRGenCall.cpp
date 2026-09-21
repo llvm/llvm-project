@@ -13,6 +13,7 @@
 
 #include "CIRGenCall.h"
 #include "CIRGenCXXABI.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -1430,14 +1431,20 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       return getUndefRValue(retTy);
     }
 
-    // Musttail is required to return immediately. Classic codegen does some
-    // work here to go through the exception handling scopes to put them before
-    // the call (it seems?) since musttail must be the last op before the
-    // return.  For now, skip this so we an do it later.
-    if (ehStack.stable_begin() != prologueCleanupDepth) {
-      cgm.errorNYI(mustTailCall->getBeginLoc(),
-                   "musttail call that skips cleanups");
-      return getUndefRValue(retTy);
+    // Musttail is required to return immediately, so no cleanup can run
+    // between the call and the return. Cleanups that the return makes
+    // unnecessary are simply skipped. Anything else cannot be expressed.
+    assert(!cir::MissingFeatures::dynamicExceptionSpec());
+    assert(!cir::MissingFeatures::fakeUseCleanup());
+    for (EHScopeStack::iterator it = ehStack.begin(),
+                                end = ehStack.find(prologueCleanupDepth);
+         it != end; ++it) {
+      auto *cleanupScope = dyn_cast<EHCleanupScope>(&*it);
+      if (!cleanupScope ||
+          !cleanupScope->getCleanup()->isRedundantBeforeReturn()) {
+        cgm.errorUnsupported(mustTailCall, "tail call skipping over cleanups");
+        return getUndefRValue(retTy);
+      }
     }
 
     theCall->setAttr(cir::CIRDialect::getMustTailAttrName(),
