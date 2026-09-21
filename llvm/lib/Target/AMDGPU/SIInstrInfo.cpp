@@ -2753,7 +2753,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     // Look for a single use of the register that is also a subreg.
     Register RegToFind = Orig.getOperand(0).getReg();
     MachineOperand *UseMO = nullptr;
-    for (MachineOperand& CandMO : MRI.use_nodbg_operands(RegToFind)) {
+    for (MachineOperand &CandMO : MRI.use_nodbg_operands(RegToFind)) {
       if (CandMO.isDef() || UseMO) {
         UseMO = nullptr;
         break;
