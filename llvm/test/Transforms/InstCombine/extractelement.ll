@@ -427,13 +427,19 @@ define i8 @bitcast_scalar_illegal_type_index1(i128 %x) {
   ret i8 %r
 }
 
-; negative test - can't use shift/trunc on FP
+; Extracting the least-significant integer element of a scalar FP value only
+; requires a scalar bitcast and truncation.
 
 define i8 @bitcast_fp_index0(float %x) {
-; ANY-LABEL: @bitcast_fp_index0(
-; ANY-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <4 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 0
-; ANY-NEXT:    ret i8 [[R]]
+; ANYLE-LABEL: @bitcast_fp_index0(
+; ANYLE-NEXT:    [[TMP1:%.*]] = bitcast float [[X:%.*]] to i32
+; ANYLE-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i8
+; ANYLE-NEXT:    ret i8 [[R]]
+;
+; ANYBE-LABEL: @bitcast_fp_index0(
+; ANYBE-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <4 x i8>
+; ANYBE-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 0
+; ANYBE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast float %x to <4 x i8>
   %r = extractelement <4 x i8> %v, i8 0
@@ -441,10 +447,15 @@ define i8 @bitcast_fp_index0(float %x) {
 }
 
 define i1 @bitcast_fp_i1_index0(float %x) {
-; ANY-LABEL: @bitcast_fp_i1_index0(
-; ANY-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <32 x i1>
-; ANY-NEXT:    [[R:%.*]] = extractelement <32 x i1> [[V]], i64 0
-; ANY-NEXT:    ret i1 [[R]]
+; ANYLE-LABEL: @bitcast_fp_i1_index0(
+; ANYLE-NEXT:    [[TMP1:%.*]] = bitcast float [[X:%.*]] to i32
+; ANYLE-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i1
+; ANYLE-NEXT:    ret i1 [[R]]
+;
+; ANYBE-LABEL: @bitcast_fp_i1_index0(
+; ANYBE-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <32 x i1>
+; ANYBE-NEXT:    [[R:%.*]] = extractelement <32 x i1> [[V]], i64 0
+; ANYBE-NEXT:    ret i1 [[R]]
 ;
   %v = bitcast float %x to <32 x i1>
   %r = extractelement <32 x i1> %v, i64 0
@@ -452,10 +463,15 @@ define i1 @bitcast_fp_i1_index0(float %x) {
 }
 
 define i8 @bitcast_fp_index3(float %x) {
-; ANY-LABEL: @bitcast_fp_index3(
-; ANY-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <4 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 3
-; ANY-NEXT:    ret i8 [[R]]
+; ANYLE-LABEL: @bitcast_fp_index3(
+; ANYLE-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <4 x i8>
+; ANYLE-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 3
+; ANYLE-NEXT:    ret i8 [[R]]
+;
+; ANYBE-LABEL: @bitcast_fp_index3(
+; ANYBE-NEXT:    [[TMP1:%.*]] = bitcast float [[X:%.*]] to i32
+; ANYBE-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i8
+; ANYBE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast float %x to <4 x i8>
   %r = extractelement <4 x i8> %v, i64 3
@@ -476,10 +492,15 @@ define i8 @bitcast_fp_index1(float %x) {
 }
 
 define i8 @bitcast_half_index0(half %x) {
-; ANY-LABEL: @bitcast_half_index0(
-; ANY-NEXT:    [[V:%.*]] = bitcast half [[X:%.*]] to <2 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <2 x i8> [[V]], i64 0
-; ANY-NEXT:    ret i8 [[R]]
+; ANYLE-LABEL: @bitcast_half_index0(
+; ANYLE-NEXT:    [[TMP1:%.*]] = bitcast half [[X:%.*]] to i16
+; ANYLE-NEXT:    [[R:%.*]] = trunc i16 [[TMP1]] to i8
+; ANYLE-NEXT:    ret i8 [[R]]
+;
+; ANYBE-LABEL: @bitcast_half_index0(
+; ANYBE-NEXT:    [[V:%.*]] = bitcast half [[X:%.*]] to <2 x i8>
+; ANYBE-NEXT:    [[R:%.*]] = extractelement <2 x i8> [[V]], i64 0
+; ANYBE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast half %x to <2 x i8>
   %r = extractelement <2 x i8> %v, i64 0
@@ -487,10 +508,15 @@ define i8 @bitcast_half_index0(half %x) {
 }
 
 define i8 @bitcast_bfloat_index1(bfloat %x) {
-; ANY-LABEL: @bitcast_bfloat_index1(
-; ANY-NEXT:    [[V:%.*]] = bitcast bfloat [[X:%.*]] to <2 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <2 x i8> [[V]], i64 1
-; ANY-NEXT:    ret i8 [[R]]
+; ANYLE-LABEL: @bitcast_bfloat_index1(
+; ANYLE-NEXT:    [[V:%.*]] = bitcast bfloat [[X:%.*]] to <2 x i8>
+; ANYLE-NEXT:    [[R:%.*]] = extractelement <2 x i8> [[V]], i64 1
+; ANYLE-NEXT:    ret i8 [[R]]
+;
+; ANYBE-LABEL: @bitcast_bfloat_index1(
+; ANYBE-NEXT:    [[TMP1:%.*]] = bitcast bfloat [[X:%.*]] to i16
+; ANYBE-NEXT:    [[R:%.*]] = trunc i16 [[TMP1]] to i8
+; ANYBE-NEXT:    ret i8 [[R]]
 ;
   %v = bitcast bfloat %x to <2 x i8>
   %r = extractelement <2 x i8> %v, i64 1
@@ -498,23 +524,43 @@ define i8 @bitcast_bfloat_index1(bfloat %x) {
 }
 
 define i32 @bitcast_double_index1(double %x) {
-; ANY-LABEL: @bitcast_double_index1(
-; ANY-NEXT:    [[V:%.*]] = bitcast double [[X:%.*]] to <2 x i32>
-; ANY-NEXT:    [[R:%.*]] = extractelement <2 x i32> [[V]], i64 1
-; ANY-NEXT:    ret i32 [[R]]
+; ANYLE-LABEL: @bitcast_double_index1(
+; ANYLE-NEXT:    [[V:%.*]] = bitcast double [[X:%.*]] to <2 x i32>
+; ANYLE-NEXT:    [[R:%.*]] = extractelement <2 x i32> [[V]], i64 1
+; ANYLE-NEXT:    ret i32 [[R]]
+;
+; BE64-LABEL: @bitcast_double_index1(
+; BE64-NEXT:    [[TMP1:%.*]] = bitcast double [[X:%.*]] to i64
+; BE64-NEXT:    [[R:%.*]] = trunc i64 [[TMP1]] to i32
+; BE64-NEXT:    ret i32 [[R]]
+;
+; BE128-LABEL: @bitcast_double_index1(
+; BE128-NEXT:    [[V:%.*]] = bitcast double [[X:%.*]] to <2 x i32>
+; BE128-NEXT:    [[R:%.*]] = extractelement <2 x i32> [[V]], i64 1
+; BE128-NEXT:    ret i32 [[R]]
 ;
   %v = bitcast double %x to <2 x i32>
   %r = extractelement <2 x i32> %v, i64 1
   ret i32 %r
 }
 
-; A truncation does not require the source integer width to be legal.
+; Avoid introducing an undesirable integer type for the source bitcast.
 
 define i32 @bitcast_fp128_index0(fp128 %x) {
-; ANY-LABEL: @bitcast_fp128_index0(
-; ANY-NEXT:    [[V:%.*]] = bitcast fp128 [[X:%.*]] to <4 x i32>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[V]], i64 0
-; ANY-NEXT:    ret i32 [[R]]
+; LE64-LABEL: @bitcast_fp128_index0(
+; LE64-NEXT:    [[V:%.*]] = bitcast fp128 [[X:%.*]] to <4 x i32>
+; LE64-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[V]], i64 0
+; LE64-NEXT:    ret i32 [[R]]
+;
+; LE128-LABEL: @bitcast_fp128_index0(
+; LE128-NEXT:    [[TMP1:%.*]] = bitcast fp128 [[X:%.*]] to i128
+; LE128-NEXT:    [[R:%.*]] = trunc i128 [[TMP1]] to i32
+; LE128-NEXT:    ret i32 [[R]]
+;
+; ANYBE-LABEL: @bitcast_fp128_index0(
+; ANYBE-NEXT:    [[V:%.*]] = bitcast fp128 [[X:%.*]] to <4 x i32>
+; ANYBE-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[V]], i64 0
+; ANYBE-NEXT:    ret i32 [[R]]
 ;
   %v = bitcast fp128 %x to <4 x i32>
   %r = extractelement <4 x i32> %v, i64 0
@@ -536,8 +582,7 @@ define i5 @bitcast_fp80_index0(x86_fp80 %x) {
 
 define i32 @bitcast_fp_single_element(float %x) {
 ; ANY-LABEL: @bitcast_fp_single_element(
-; ANY-NEXT:    [[V:%.*]] = bitcast float [[X:%.*]] to <1 x i32>
-; ANY-NEXT:    [[R:%.*]] = extractelement <1 x i32> [[V]], i64 0
+; ANY-NEXT:    [[R:%.*]] = bitcast float [[X:%.*]] to i32
 ; ANY-NEXT:    ret i32 [[R]]
 ;
   %v = bitcast float %x to <1 x i32>
@@ -589,11 +634,17 @@ declare void @use_f32(float)
 ; Only the vector bitcast must have one use, not its scalar source.
 
 define i8 @bitcast_fp_source_multiple_uses(float %x) {
-; ANY-LABEL: @bitcast_fp_source_multiple_uses(
-; ANY-NEXT:    call void @use_f32(float [[X:%.*]])
-; ANY-NEXT:    [[V:%.*]] = bitcast float [[X]] to <4 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 0
-; ANY-NEXT:    ret i8 [[R]]
+; ANYLE-LABEL: @bitcast_fp_source_multiple_uses(
+; ANYLE-NEXT:    call void @use_f32(float [[X:%.*]])
+; ANYLE-NEXT:    [[TMP1:%.*]] = bitcast float [[X]] to i32
+; ANYLE-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i8
+; ANYLE-NEXT:    ret i8 [[R]]
+;
+; ANYBE-LABEL: @bitcast_fp_source_multiple_uses(
+; ANYBE-NEXT:    call void @use_f32(float [[X:%.*]])
+; ANYBE-NEXT:    [[V:%.*]] = bitcast float [[X]] to <4 x i8>
+; ANYBE-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 0
+; ANYBE-NEXT:    ret i8 [[R]]
 ;
   call void @use_f32(float %x)
   %v = bitcast float %x to <4 x i8>
@@ -602,11 +653,17 @@ define i8 @bitcast_fp_source_multiple_uses(float %x) {
 }
 
 define i8 @bitcast_fp_frozen_scalar(float %x) {
-; ANY-LABEL: @bitcast_fp_frozen_scalar(
-; ANY-NEXT:    [[F:%.*]] = freeze float [[X:%.*]]
-; ANY-NEXT:    [[V:%.*]] = bitcast float [[F]] to <4 x i8>
-; ANY-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 0
-; ANY-NEXT:    ret i8 [[R]]
+; ANYLE-LABEL: @bitcast_fp_frozen_scalar(
+; ANYLE-NEXT:    [[F:%.*]] = freeze float [[X:%.*]]
+; ANYLE-NEXT:    [[TMP1:%.*]] = bitcast float [[F]] to i32
+; ANYLE-NEXT:    [[R:%.*]] = trunc i32 [[TMP1]] to i8
+; ANYLE-NEXT:    ret i8 [[R]]
+;
+; ANYBE-LABEL: @bitcast_fp_frozen_scalar(
+; ANYBE-NEXT:    [[F:%.*]] = freeze float [[X:%.*]]
+; ANYBE-NEXT:    [[V:%.*]] = bitcast float [[F]] to <4 x i8>
+; ANYBE-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[V]], i64 0
+; ANYBE-NEXT:    ret i8 [[R]]
 ;
   %f = freeze float %x
   %v = bitcast float %f to <4 x i8>

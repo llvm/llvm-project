@@ -207,11 +207,13 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
   unsigned DestWidth = DestTy->getPrimitiveSizeInBits();
   bool IsBigEndian = DL.isBigEndian();
 
-  // If we are casting an integer to vector and extracting a portion, that is
-  // a shift-right and truncate.
-  if (X->getType()->isIntegerTy()) {
+  // If we are casting a scalar to vector and extracting a portion, convert to
+  // a scalar shift and truncation.
+  bool IsFP = X->getType()->isFloatingPointTy();
+  if (X->getType()->isIntegerTy() || IsFP) {
     assert(isa<FixedVectorType>(Ext.getVectorOperand()->getType()) &&
-           "Expected fixed vector type for bitcast from scalar integer");
+           "Expected fixed vector type for bitcast from scalar");
+    unsigned SrcWidth = X->getType()->getPrimitiveSizeInBits();
 
     // Big endian requires adjusting the extract index since MSB is at index 0.
     // LittleEndian: extelt (bitcast i32 X to v4i8), 0 -> trunc i32 X to i8
@@ -219,9 +221,22 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     if (IsBigEndian)
       ExtIndexC = NumElts.getKnownMinValue() - 1 - ExtIndexC;
     unsigned ShiftAmountC = ExtIndexC * DestWidth;
-    if ((!ShiftAmountC ||
-         isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) &&
+
+    // An FP source needs an integer bitcast. Avoid adding a shift or a result
+    // bitcast, which would increase the instruction count.
+    if (IsFP && (ShiftAmountC || !DestTy->isIntegerTy()))
+      return nullptr;
+
+    if ((!ShiftAmountC || isDesirableIntType(SrcWidth)) &&
         Ext.getVectorOperand()->hasOneUse()) {
+      if (SrcWidth == DestWidth)
+        return new BitCastInst(X, DestTy);
+      if (IsFP) {
+        // Do not introduce an undesirable integer type for the source bitcast.
+        if (!isDesirableIntType(SrcWidth))
+          return nullptr;
+        X = Builder.CreateBitCast(X, Builder.getIntNTy(SrcWidth));
+      }
       if (ShiftAmountC)
         X = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
       if (DestTy->isFloatingPointTy()) {
