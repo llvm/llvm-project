@@ -7,8 +7,6 @@ from lldb.
 The throttling check is covered by `lldb/unittests/DAP/ProgressEventTest.cpp`.
 """
 
-import os
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
 from lldbsuite.test.tools.lldb_dap.types import *

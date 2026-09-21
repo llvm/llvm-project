@@ -56,12 +56,14 @@ TEST(ProtocolEventsTest, ProgressStartEventBody) {
   EXPECT_EQ(PrettyPrint(*expected_body), PrettyPrint(body));
 
   body.message = "foo.cpp";
+  body.requestId = 30;
   body.percentage = 25;
   body.cancellable = true;
   expected_body = parse(R"({
     "progressId": "1",
     "title": "Parsing symbols",
     "message": "foo.cpp",
+    "requestId": 30,
     "percentage": 25,
     "cancellable": true
   })");

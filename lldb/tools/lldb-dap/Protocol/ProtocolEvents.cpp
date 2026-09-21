@@ -119,6 +119,8 @@ llvm::json::Value toJSON(const ProgressStartEventBody &PSB) {
                             {"title", PSB.title}};
   if (PSB.message)
     Result.insert({"message", *PSB.message});
+  if (PSB.requestId)
+    Result.insert({"requestId", *PSB.requestId});
   if (PSB.percentage)
     Result.insert({"percentage", *PSB.percentage});
   if (PSB.cancellable)

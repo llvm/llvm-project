@@ -201,6 +201,13 @@ struct ProgressStartEventBody {
   /// More detailed progress message.
   std::optional<String> message;
 
+  /// The request ID that this progress report is related to. If specified a
+  /// debug adapter is expected to emit progress events for the long running
+  /// request until the request has been either completed or cancelled.  If the
+  /// request ID is omitted, the progress report is assumed to be related to
+  /// some general activity of the debug adapter.
+  std::optional<uint32_t> requestId;
+
   /// Progress percentage to display (value range: 0 to 100). If omitted no
   /// percentage is shown.
   std::optional<uint32_t> percentage;

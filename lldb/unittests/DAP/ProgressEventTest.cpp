@@ -92,7 +92,7 @@ class ProgressEventReporterTest : public ::testing::Test {
 protected:
   ProgressEventReporter::TimePoint now{std::chrono::seconds(0)};
   std::vector<Event> sent_events;
-  protocol::Id seq_id;
+  protocol::Id seq_id = 0;
 
   ProgressEventReporter m_reporter{[this](Event e) {
     e.seq = ++seq_id;
