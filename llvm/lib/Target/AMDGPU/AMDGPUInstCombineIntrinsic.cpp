@@ -1968,6 +1968,44 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Result = scalbn(Result, Scale, RoundingMode::NearestTiesToEven);
     return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Result));
   }
+  case Intrinsic::amdgcn_sdot2:
+  case Intrinsic::amdgcn_udot2:
+  case Intrinsic::amdgcn_sdot4:
+  case Intrinsic::amdgcn_udot4:
+  case Intrinsic::amdgcn_sdot8:
+  case Intrinsic::amdgcn_udot8: {
+    if (!match(II.getArgOperand(3), m_Zero()) || !II.hasOneUse())
+      break;
+
+    const APInt *Acc;
+    if (!match(II.getArgOperand(2), m_APInt(Acc)))
+      break;
+
+    auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
+    if (!AccumUser)
+      break;
+
+    unsigned Opcode = AccumUser->getOpcode();
+    if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
+      break;
+
+    // C - dot cannot be folded without negating the dot product.
+    if (Opcode == Instruction::Sub && AccumUser->getOperand(0) != &II)
+      break;
+
+    const APInt *AccumDelta;
+    Value *ConstOp =
+        AccumUser->getOperand(AccumUser->getOperand(0) == &II ? 1 : 0);
+    if (!match(ConstOp, m_APInt(AccumDelta)))
+      break;
+
+    Constant *NewAcc = ConstantInt::get(II.getType(), Opcode == Instruction::Add
+                                                          ? *Acc + *AccumDelta
+                                                          : *Acc - *AccumDelta);
+    IC.replaceInstUsesWith(*AccumUser, &II);
+    IC.eraseInstFromFunction(*AccumUser);
+    return IC.replaceOperand(II, 2, NewAcc);
+  }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
