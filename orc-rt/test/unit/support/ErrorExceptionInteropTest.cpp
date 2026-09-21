@@ -166,9 +166,9 @@ TEST(ErrorExceptionInteropTest, ThrowErrorAndCatchAsException) {
     try {
       auto E = make_error<CustomError>();
       E.throwOnFailure();
-    } catch (CustomError &E) {
+    } catch (CustomError &) {
       HandlerRan = true;
-    } catch (ErrorInfoBase &E) {
+    } catch (ErrorInfoBase &) {
       ADD_FAILURE() << "Failed to downcase error to dynamic type";
     } catch (...) {
       ADD_FAILURE() << "Caught unexpected error type";

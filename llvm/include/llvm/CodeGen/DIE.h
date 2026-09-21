@@ -194,7 +194,6 @@ public:
   }
 
   uint64_t getValue() const { return Integer; }
-  void setValue(uint64_t Val) { Integer = Val; }
 
   LLVM_ABI void emitValue(const AsmPrinter *Asm, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
@@ -211,9 +210,6 @@ class DIEExpr {
 public:
   explicit DIEExpr(const MCExpr *E) : Expr(E) {}
 
-  /// Get MCExpr.
-  const MCExpr *getValue() const { return Expr; }
-
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,
                            dwarf::Form Form) const;
@@ -228,9 +224,6 @@ class DIELabel {
 
 public:
   explicit DIELabel(const MCSymbol *L) : Label(L) {}
-
-  /// Get MCSymbol.
-  const MCSymbol *getValue() const { return Label; }
 
   LLVM_ABI void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
   LLVM_ABI unsigned sizeOf(const dwarf::FormParams &FormParams,

@@ -103,7 +103,7 @@ enum ID {
 
 class LinkerOptTable : public opt::OptTable {
 public:
-  LinkerOptTable() : opt::OptTable(OptionTables) {}
+  LinkerOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -640,7 +640,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
 
   // Set data layout if needed.
   if (M->getDataLayout().isDefault())
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TargetTriple.computeDataLayout());
 
   // Open output file for writing.
   int FD = -1;

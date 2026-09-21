@@ -45,7 +45,7 @@ using namespace llvm::opt;
 
 class DllOptTable : public opt::OptTable {
 public:
-  DllOptTable() : opt::OptTable(OptionTables, false) {}
+  DllOptTable() : opt::OptTable(optionTables(), false) {}
 };
 
 // Opens a file. Path has to be resolved already.

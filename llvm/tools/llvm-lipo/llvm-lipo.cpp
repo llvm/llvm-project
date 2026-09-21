@@ -77,7 +77,7 @@ using namespace llvm::opt;
 
 class LipoOptTable : public opt::OptTable {
 public:
-  LipoOptTable() : opt::OptTable(lipo::OptionTables) {}
+  LipoOptTable() : opt::OptTable(lipo::optionTables()) {}
 };
 
 enum class LipoAction {

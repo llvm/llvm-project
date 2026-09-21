@@ -16,7 +16,6 @@
 #include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/Error.h"
-#include "orc-rt/support/ExecutorAddress.h"
 #include "orc-rt/support/WrapperFunction.h"
 
 #include <cstdint>
@@ -121,9 +120,9 @@ protected:
   /// group is still open, or the handlers are dropped rather than dispatched.
   PendingCallsMap takeAllCalls();
 
-  /// Acts on one de-framed message. OpC is the raw wire opcode: this validates
-  /// it along with the header semantics each opcode requires, so a transport
-  /// need only deliver the fields and payload intact.
+  /// Acts on one de-framed message. OpC and Tag are raw wire values: this
+  /// validates them along with the header semantics each opcode requires, so a
+  /// transport need only deliver the fields and payload intact.
   ///
   /// Every error returned is terminal: stop reading and end the session with
   /// it. Action::End means the controller hung up cleanly.
@@ -134,7 +133,7 @@ protected:
   ///
   /// Calls must be serialized with one another, and must all complete before
   /// the Session is notified, since a Result completes a pending call.
-  Expected<Action> handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
+  Expected<Action> handleMessage(uint64_t OpC, uint64_t SeqNo, uint64_t Tag,
                                  WrapperFunctionBuffer Payload);
 
   /// Removes the handler for SeqNo, or returns a null handler if there is none.
