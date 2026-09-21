@@ -203,4 +203,69 @@ TEST(SymbolOpInterface, Visibility) {
       symOp->hasAttr(SymbolOpInterface::getDefaultVisibilityAttrName()));
 }
 
+TEST(SymbolUserMap, AllUsesVisible) {
+  DialectRegistry registry;
+  ::test::registerTestDialect(registry);
+  MLIRContext context(registry);
+
+  constexpr static StringLiteral kInput = R"MLIR(
+    module @root {
+      module @exposed {
+        "test.symbol"() <{sym_name = "public"}> : () -> ()
+        "test.symbol"() <{sym_name = "private", sym_visibility = "private"}> : () -> ()
+        "test.symbol"() <{sym_name = "nested", sym_visibility = "nested"}> : () -> ()
+        "test.symbol"() <{sym_name = "local_user"}> {use = @nested} : () -> ()
+        module @child attributes {sym_visibility = "nested"} {
+          "test.symbol"() <{sym_name = "leaf", sym_visibility = "nested"}> : () -> ()
+        }
+        module @hidden attributes {sym_visibility = "private"} {
+          "test.symbol"() <{sym_name = "leaf", sym_visibility = "nested"}> : () -> ()
+        }
+      }
+      "test.symbol"() <{sym_name = "outside", sym_visibility = "private"}>
+          {use = @exposed::@nested} : () -> ()
+    }
+  )MLIR";
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(kInput, &context);
+  ASSERT_TRUE(module);
+  SymbolTableCollection tables;
+  Operation *exposed = SymbolTable::lookupSymbolIn(*module, "exposed");
+  Operation *publicSymbol = SymbolTable::lookupSymbolIn(exposed, "public");
+  Operation *privateSymbol = SymbolTable::lookupSymbolIn(exposed, "private");
+  Operation *nested = SymbolTable::lookupSymbolIn(exposed, "nested");
+  Operation *localUser = SymbolTable::lookupSymbolIn(exposed, "local_user");
+  Operation *outside = SymbolTable::lookupSymbolIn(*module, "outside");
+  Operation *child = SymbolTable::lookupSymbolIn(exposed, "child");
+  Operation *childLeaf = SymbolTable::lookupSymbolIn(child, "leaf");
+  Operation *hidden = SymbolTable::lookupSymbolIn(exposed, "hidden");
+  Operation *hiddenLeaf = SymbolTable::lookupSymbolIn(hidden, "leaf");
+
+  // A detached, named root contains all IR users. Public symbols can still have
+  // users outside the IR.
+  SymbolUserMap wholeMap(tables, *module);
+  EXPECT_FALSE(wholeMap.areAllUsesVisible(publicSymbol));
+  EXPECT_TRUE(wholeMap.areAllUsesVisible(privateSymbol));
+  EXPECT_TRUE(wholeMap.areAllUsesVisible(nested));
+  EXPECT_TRUE(wholeMap.areAllUsesVisible(childLeaf));
+  EXPECT_TRUE(wholeMap.areAllUsesVisible(hiddenLeaf));
+  EXPECT_EQ(wholeMap.getUsers(nested).size(), 2u);
+
+  // A map of an exposed table omits outside users, even with local users.
+  SymbolUserMap exposedMap(tables, exposed);
+  EXPECT_FALSE(exposedMap.areAllUsesVisible(publicSymbol));
+  EXPECT_TRUE(exposedMap.areAllUsesVisible(privateSymbol));
+  EXPECT_FALSE(exposedMap.areAllUsesVisible(nested));
+  ASSERT_EQ(exposedMap.getUsers(nested).size(), 1u);
+  EXPECT_EQ(exposedMap.getUsers(nested).front(), localUser);
+  EXPECT_FALSE(exposedMap.areAllUsesVisible(childLeaf));
+  EXPECT_TRUE(exposedMap.useEmpty(childLeaf));
+  EXPECT_TRUE(exposedMap.areAllUsesVisible(hiddenLeaf));
+  EXPECT_FALSE(exposedMap.areAllUsesVisible(outside));
+  EXPECT_FALSE(exposedMap.areAllUsesVisible(exposed));
+
+  // A private table hides its nested symbols even when it is the map root.
+  SymbolUserMap hiddenMap(tables, hidden);
+  EXPECT_TRUE(hiddenMap.areAllUsesVisible(hiddenLeaf));
+}
+
 } // namespace
