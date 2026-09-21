@@ -179,16 +179,15 @@ define i32 @extract_last_active_v4i32_no_default(<4 x i32> %a, <4 x i1> %c) noun
 define i32 @extract_last_active_v2i32(<2 x i32> %a, <2 x i1> %c) nounwind {
 ; SSE2-LABEL: extract_last_active_v2i32:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    psllq $63, %xmm1
 ; SSE2-NEXT:    movmskpd %xmm1, %ecx
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    cmpl $1, %ecx
 ; SSE2-NEXT:    sbbl %eax, %eax
-; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    psrld $31, %xmm0
 ; SSE2-NEXT:    movq %xmm0, %rcx
-; SSE2-NEXT:    movl %ecx, %ecx
 ; SSE2-NEXT:    orl -24(%rsp,%rcx,4), %eax
 ; SSE2-NEXT:    retq
 ;
