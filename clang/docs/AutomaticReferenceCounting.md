@@ -65,9 +65,6 @@
 
 # Objective-C Automatic Reference Counting (ARC)
 
-```{contents}
-:local: true
-```
 
 (arc.meta)=
 

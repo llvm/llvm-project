@@ -48,6 +48,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
@@ -382,6 +383,29 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   return false;
 }
 
+static void initializeCommonABICompatInfo(llvm::abi::ABICompatInfo &CompatInfo,
+                                          const LangOptions::ClangABI Compat) {
+  CompatInfo.IsMatrixHA = Compat > LangOptions::ClangABI::Ver23;
+}
+
+static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
+                                       const llvm::Triple &T,
+                                       const LangOptions::ClangABI Compat) {
+  initializeCommonABICompatInfo(CompatInfo, Compat);
+  CompatInfo.ClassifyIntegerMMXAsSSE = Compat > LangOptions::ClangABI::Ver3_8 &&
+                                       !T.isOSDarwin() && !T.isPS() &&
+                                       !T.isOSFreeBSD();
+  CompatInfo.HonorsRevision98 = !T.isOSDarwin();
+  CompatInfo.PassInt128VectorsInMem =
+      Compat > LangOptions::ClangABI::Ver9 && (T.isOSLinux() || T.isOSNetBSD());
+  // Clang <= 20.0 did not do this, and PlayStation does not do this.
+  CompatInfo.ReturnCXXRecordGreaterThan128InMem =
+      Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
+  CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+  CompatInfo.ClassifyUnnamedBitFields =
+      Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+}
+
 const llvm::abi::TargetInfo &
 CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   if (TheLLVMABITargetInfo)
@@ -396,20 +420,31 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be: {
+    llvm::abi::AArch64ABIOptions Opts;
     StringRef ABI = getTarget().getABI();
-    llvm::abi::AArch64ABIKind Kind = llvm::abi::AArch64ABIKind::AAPCS;
     if (ABI == "darwinpcs")
-      Kind = llvm::abi::AArch64ABIKind::DarwinPCS;
+      Opts.Kind = llvm::abi::AArch64ABIKind::DarwinPCS;
     else if (T.isOSWindows())
-      Kind = llvm::abi::AArch64ABIKind::Win64;
+      Opts.Kind = llvm::abi::AArch64ABIKind::Win64;
     else if (ABI == "aapcs-soft")
-      Kind = llvm::abi::AArch64ABIKind::AAPCSSoft;
-    TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Kind);
+      Opts.Kind = llvm::abi::AArch64ABIKind::AAPCSSoft;
+    else
+      Opts.Kind = llvm::abi::AArch64ABIKind::AAPCS;
+
+    Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
+    Opts.IsCXX = getLangOpts().CPlusPlus;
+    Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+
+    initializeCommonABICompatInfo(Opts.CompatInfo,
+                                  getLangOpts().getClangABICompat());
+
+    TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
 
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
+    // BPF targets do not require any ABI compatibility information.
     TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
     return *TheLLVMABITargetInfo;
 
@@ -420,19 +455,9 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
                         : llvm::abi::X86AVXABILevel::None;
 
-    llvm::abi::ABICompatInfo CompatInfo;
-    LangOptions::ClangABI Compat = getLangOpts().getClangABICompat();
-    CompatInfo.ClassifyIntegerMMXAsSSE =
-        Compat > LangOptions::ClangABI::Ver3_8 && !T.isOSDarwin() &&
-        !T.isPS() && !T.isOSFreeBSD();
-    CompatInfo.HonorsRevision98 = !T.isOSDarwin();
-    CompatInfo.PassInt128VectorsInMem = Compat > LangOptions::ClangABI::Ver9 &&
-                                        (T.isOSLinux() || T.isOSNetBSD());
-    // Clang <= 20.0 did not do this, and PlayStation does not do this.
-    CompatInfo.ReturnCXXRecordGreaterThan128InMem =
-        Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
-    CompatInfo.Clang11Compat =
-        Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+    llvm::abi::X86ABICompatInfo CompatInfo;
+    initializeX86ABICompatInfo(CompatInfo, T,
+                               getLangOpts().getClangABICompat());
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 
@@ -1431,6 +1456,15 @@ void CodeGenModule::Release() {
                             llvm::FloatABI::getABITypeName(FloatABI)));
   }
 
+  // Record the thread model as a module flag when it differs from the target
+  // default.
+  llvm::ThreadModel ThreadModel =
+      LangOpts.getThreadModel() == LangOptions::ThreadModelKind::Single
+          ? llvm::ThreadModel::Single
+          : llvm::ThreadModel::POSIX;
+  if (ThreadModel != getTriple().getDefaultThreadModel())
+    getModule().setThreadModel(ThreadModel);
+
   if (getTypes().isLongDoubleReferenced()) {
     const llvm::fltSemantics *flt = &getTarget().getLongDoubleFormat();
 
@@ -1448,6 +1482,19 @@ void CodeGenModule::Release() {
 
     if (Format)
       getModule().setLongDoubleFormat(*Format);
+  }
+
+  // Record the exception model as a module flag whenever it was specified, so
+  // that the flag's absence unambiguously means unspecified regardless of the
+  // target default. In the absence of a custom module flag merging behavior, an
+  // explicit non-default model could silently merge with a defaulted module.
+  llvm::ExceptionHandling ExceptionModel =
+      CodeGenOptions::toExceptionHandling(CodeGenOpts.getExceptionHandling());
+  if (ExceptionModel != llvm::ExceptionHandling::Default) {
+    getModule().addModuleFlag(
+        llvm::Module::Error, "exception-model",
+        llvm::MDString::get(getLLVMContext(),
+                            llvm::getExceptionModelName(ExceptionModel)));
   }
 
   if (getTriple().isOSzOS()) {
@@ -1483,11 +1530,11 @@ void CodeGenModule::Release() {
   llvm::Triple T = Context.getTargetInfo().getTriple();
 
   // TODO: This should probably be just generally emitted for non-empty ABI
-  // names. LoongArch actively consumes the flag, but it is excluded here.
-  // Other targets have no apparent need for the ABI name, but set a non-empty
-  // value.
+  // names. Other targets have no apparent need for the ABI name, but set a
+  // non-empty value.
   if (StringRef ABIStr = Target.getABI();
-      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV())) {
+      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV() ||
+                          T.isPPC() || T.isLoongArch())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }
@@ -2011,7 +2058,9 @@ void CodeGenModule::EmitOpenCLMetadata() {
   // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
   // opencl.ocl.version named metadata node.
   // C++ for OpenCL has a distinct mapping for versions compatible with OpenCL.
-  auto CLVersion = LangOpts.getOpenCLCompatibleVersion();
+  // CUDA and HIP use OpenCL 2.0 metadata when targeting SPIR-V.
+  unsigned CLVersion =
+      LangOpts.OpenCL ? LangOpts.getOpenCLCompatibleVersion() : 200;
 
   auto EmitVersion = [this](StringRef MDName, int Version) {
     llvm::Metadata *OCLVerElts[] = {
@@ -3073,26 +3122,6 @@ void CodeGenModule::GenKernelArgMetadata(llvm::Function *Fn,
                     llvm::MDNode::get(VMContext, argNames));
 }
 
-/// Determines whether the language options require us to model
-/// unwind exceptions.  We treat -fexceptions as mandating this
-/// except under the fragile ObjC ABI with only ObjC exceptions
-/// enabled.  This means, for example, that C with -fexceptions
-/// enables this.
-static bool hasUnwindExceptions(const LangOptions &LangOpts) {
-  // If exceptions are completely disabled, obviously this is false.
-  if (!LangOpts.Exceptions) return false;
-
-  // If C++ exceptions are enabled, this is true.
-  if (LangOpts.CXXExceptions) return true;
-
-  // If ObjC exceptions are enabled, this depends on the ABI.
-  if (LangOpts.ObjCExceptions) {
-    return LangOpts.ObjCRuntime.hasUnwindExceptions();
-  }
-
-  return true;
-}
-
 static bool requiresMemberFunctionPointerTypeMetadata(CodeGenModule &CGM,
                                                       const CXXMethodDecl *MD) {
   // Check that the type metadata can ever actually be used by a call.
@@ -3135,7 +3164,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute("stack-probe-size",
                    std::to_string(CodeGenOpts.StackProbeSize));
 
-  if (!hasUnwindExceptions(LangOpts))
+  if (!CodeGenUtils::hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
 
   if (std::optional<llvm::Attribute::AttrKind> Attr =
@@ -3331,6 +3360,30 @@ void CodeGenModule::addSYCLModuleIdAttr(llvm::Function *Fn) {
   Fn->addFnAttr("sycl-module-id", getModule().getModuleIdentifier());
 }
 
+// Construct a GlobalDecl suitable for linkage queries.
+// GlobalDecl(FunctionDecl *) asserts for constructors and destructors because
+// they require an explicit ctor/dtor variant. Use the complete variant since
+// the variant does not affect linkage.
+static GlobalDecl getGlobalDeclForLinkage(const FunctionDecl *FD) {
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(FD))
+    return GlobalDecl(CD, Ctor_Complete);
+  if (const auto *DD = dyn_cast<CXXDestructorDecl>(FD))
+    return GlobalDecl(DD, Dtor_Complete);
+  return GlobalDecl(FD);
+}
+
+// Returns true if FD should be kept in the object file when
+// -fkeep-inline-functions is enabled.
+static bool shouldKeepInlineFunction(llvm::GlobalValue::LinkageTypes Linkage,
+                                     const FunctionDecl *FD) {
+  // Keep inline function definitions that are available in the current
+  // translation unit. Exclude available_externally definitions, which are
+  // inlining hints whose authoritative definition is expected to be emitted by
+  // another translation unit.
+  return FD->isInlined() &&
+         Linkage != llvm::GlobalValue::AvailableExternallyLinkage;
+}
+
 void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
   const Decl *D = GD.getDecl();
   if (isa_and_nonnull<NamedDecl>(D))
@@ -3349,6 +3402,11 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
        (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
         VD->getType().isConstQualified())))
     addUsedOrCompilerUsedGlobal(GV);
+
+  if (CodeGenOpts.KeepInlineFunctions)
+    if (const auto *FD = dyn_cast_if_present<FunctionDecl>(D))
+      if (shouldKeepInlineFunction(getFunctionLinkage(GD), FD))
+        addUsedOrCompilerUsedGlobal(GV);
 }
 
 /// Get the feature delta from the default feature map for the given target CPU.
@@ -3575,11 +3633,33 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                        /*IgnoreAssumeLikeCalls=*/true,
                                        /*IgnoreLLVMUsed=*/false)) {
+    const FunctionDecl *Def = nullptr;
+    bool HasBody = FD->hasBody(Def);
+    if (!HasBody || !Def)
+      Def = FD;
+
+    QualType QT = Def->getType();
+    if (const auto *FNPT = QT->getAs<FunctionNoProtoType>()) {
+      // If there is no definition available in this TU for an unprototyped
+      // function declaration, skip generating incomplete callgraph metadata.
+      if (!HasBody && !Def->isThisDeclarationADefinition())
+        return;
+
+      // Reconstruct a prototype from the parameter declarations in the
+      // definition AST, applying C default argument promotions (e.g.,
+      // short -> int, float -> double). This ensures definition-side
+      // type metadata matches the promoted signatures computed at indirect
+      // call sites in CGCall.cpp (see CodeGenFunction::EmitCall).
+      SmallVector<QualType, 8> ParamTypes;
+      for (const ParmVarDecl *P : Def->parameters())
+        ParamTypes.push_back(P->getType());
+      QT = ReconstructCallGraphPrototype(FNPT, ParamTypes);
+    }
+
     F->addMetadata(
         llvm::LLVMContext::MD_callgraph,
-        *llvm::MDTuple::get(
-            getLLVMContext(),
-            {CreateMetadataIdentifierForCallGraphType(FD->getType())}));
+        *llvm::MDTuple::get(getLLVMContext(),
+                            {CreateMetadataIdentifierForCallGraphType(QT)}));
   }
 }
 
@@ -4445,6 +4525,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
        (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
         VD->getType().isConstQualified())))
     return true;
+
+  if (CodeGenOpts.KeepInlineFunctions)
+    if (const auto *FD = dyn_cast<FunctionDecl>(Global))
+      if (shouldKeepInlineFunction(
+              getFunctionLinkage(getGlobalDeclForLinkage(FD)), FD))
+        return true;
 
   return getContext().DeclMustBeEmitted(Global);
 }
@@ -8748,8 +8834,41 @@ llvm::Metadata *CodeGenModule::CreateMetadataIdentifierGeneralized(QualType T) {
                                       ".generalized", /*ForceString=*/false);
 }
 
+// Applies C default argument promotions to a parameter type.
+//
+// FIXME: The canonical source of truth for C default argument promotion is
+// Sema::DefaultArgumentPromotion (SemaExpr.cpp), which operates on Expr*.
+// Because CodeGen only has type information (QualType from ParmVarDecl or
+// CallArg) and cannot invoke Sema without dummy expressions, we mirror the
+// promotion rules here. In the long term, this type-based logic should be
+// unified with Sema (for example, by extracting a shared type-level promotion
+// helper in ASTContext).
+QualType CodeGenModule::GetCallGraphPromotedType(QualType Ty) const {
+  if (Context.isPromotableIntegerType(Ty))
+    return Context.getPromotedIntegerType(Ty);
+  if (const auto *BT = Ty->getAs<BuiltinType>()) {
+    if (BT->getKind() == BuiltinType::Float ||
+        BT->getKind() == BuiltinType::Half)
+      return Context.DoubleTy;
+  }
+  return Ty;
+}
+
+QualType CodeGenModule::ReconstructCallGraphPrototype(
+    const FunctionNoProtoType *FNPT, ArrayRef<QualType> ParamTypes) const {
+  SmallVector<QualType, 8> PromotedParamTypes;
+  PromotedParamTypes.reserve(ParamTypes.size());
+  for (QualType PT : ParamTypes)
+    PromotedParamTypes.push_back(GetCallGraphPromotedType(PT));
+  FunctionProtoType::ExtProtoInfo EPI;
+  return Context.getFunctionType(FNPT->getReturnType(), PromotedParamTypes,
+                                 EPI);
+}
+
 llvm::Metadata *
 CodeGenModule::CreateMetadataIdentifierForCallGraphType(QualType T) {
+  if (auto *FNPT = T->getAs<FunctionNoProtoType>())
+    T = ReconstructCallGraphPrototype(FNPT, {});
   return CreateMetadataIdentifierImpl(T, CallGraphMetadataIdMap, "",
                                       /*ForceString=*/true);
 }

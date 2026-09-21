@@ -2110,7 +2110,8 @@ DeclResult Sema::CheckClassTemplate(
           PrevDecl = (*Previous.begin())->getUnderlyingDecl();
       }
     }
-  } else if (PrevDecl && !isDeclInScope(Previous.getRepresentativeDecl(),
+  } else if (PrevDecl &&
+             !isTagRedeclarationInScope(Previous.getRepresentativeDecl(),
                                         SemanticContext, S, SS.isValid()))
     PrevDecl = PrevClassTemplate = nullptr;
 
@@ -10594,10 +10595,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                false, TypeResult(), /*IsTypeSpecifier*/ false,
                /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
-  assert(!IsDependent && "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
     return true;
+
+  assert(!IsDependent &&
+         "explicit instantiation of dependent name not yet handled");
 
   TagDecl *Tag = cast<TagDecl>(TagD);
   assert(!Tag->isEnum() && "shouldn't see enumerations here");

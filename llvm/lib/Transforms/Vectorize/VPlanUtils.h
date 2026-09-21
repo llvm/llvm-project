@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -45,6 +47,13 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 const SCEV *getSCEVExprForVPValue(const VPValue *V,
                                   PredicatedScalarEvolution &PSE,
                                   const Loop *L = nullptr);
+
+/// If the pointer operand \p Addr of a memory access is an affine AddRec
+/// w.r.t. \p L with a constant stride, return the stride in units of
+/// \p AccessTy. Otherwise return std::nullopt.
+std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                         PredicatedScalarEvolution &PSE,
+                                         const Loop *L);
 
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
@@ -221,6 +230,32 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
 
+/// Insert phis to reconstruct SSA for a single value starting from \p VPBB. \p
+/// Defs is a map of definitions at specific blocks. Returns the
+/// reconstructed value at VPBB. Use if the CFG has been modified such that a
+/// def no longer dominates all its uses. Every block leading to VPBB must be
+/// reachable from the entry and the plan must be plain-CFG (not contain any
+/// regions).
+LLVM_ABI_FOR_TEST VPValue *
+reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
+
+/// Denominator of the frequencies computed by computeExecutionFrequencies, i.e.
+/// the frequency of a block that always executes. Wider than
+/// BranchProbability's 31-bit one, which truncates rarely executed blocks to 0.
+inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
+
+/// Returns \p Freq as a BranchProbability, relative to AlwaysExecutesFreq.
+BranchProbability getExecutionProbability(BlockFrequency Freq);
+
+/// Computes for each block in \p Blocks, which must be in reverse post-order,
+/// the frequency with which it executes relative to the first (header) block,
+/// and whether that frequency was composed using any estimated branch weights.
+/// The frequency of a block is the sum over its incoming edges, or std::nullopt
+/// if any edge on a path reaching it lacks branch weights. Edges to blocks
+/// outside \p Blocks are ignored.
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.
@@ -298,11 +333,8 @@ public:
     assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      Pred->replaceSuccessor(BlockPtr, NewBlock);
-      NewBlock->appendPredecessor(Pred);
-    }
-    BlockPtr->clearPredecessors();
+    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors()))
+      replaceSuccessor(Pred, BlockPtr, NewBlock);
     connectBlocks(NewBlock, BlockPtr);
   }
 
@@ -354,12 +386,24 @@ public:
     To->removePredecessor(From);
   }
 
+  /// Redirect the edge from \p From to \p OldSucc to \p NewSucc, keeping \p
+  /// From's successor order. \p From is removed from \p OldSucc's predecessors
+  /// and appended to \p NewSucc's.
+  static void replaceSuccessor(VPBlockBase *From, VPBlockBase *OldSucc,
+                               VPBlockBase *NewSucc) {
+    From->replaceSuccessor(OldSucc, NewSucc);
+    OldSucc->removePredecessor(From);
+    NewSucc->appendPredecessor(From);
+  }
+
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
-    for (auto *Pred : to_vector(Old->getPredecessors()))
+    auto Preds = to_vector(Old->getPredecessors());
+    auto Succs = to_vector(Old->getSuccessors());
+    for (auto *Pred : Preds)
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors()))
+    for (auto *Succ : Succs)
       Succ->replacePredecessor(Old, New);
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
@@ -385,18 +429,7 @@ public:
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-
-    // We need the pointee range over (const) BlocktTy & instead of (const)
-    // BlockTy * for filter_range to work properly.
-    auto Filter =
-        make_filter_range(make_pointee_range(Range),
-                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
-      return cast<BlockTy>(&Block);
-    });
+    return make_isa_range<BlockTy>(std::forward<T>(Range));
   }
 
   /// Return an iterator range over \p Range with each block cast to \p

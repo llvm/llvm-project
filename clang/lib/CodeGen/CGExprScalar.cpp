@@ -5008,11 +5008,21 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
   // Otherwise, this is a pointer subtraction.
 
-  // Do the raw subtraction part.
-  llvm::Value *LHS =
-      Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
-  llvm::Value *RHS =
-      Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  // Do the raw subtraction part. When pointer overflow is defined, use ptrtoint
+  // as the pointer difference can be used to obtain the pointer without basing
+  // it on one of the pointers (e.g. via -(nullptr - ptr)).
+  Value *LHS, *RHS;
+  if (CGF.getLangOpts().PointerOverflowDefined) {
+    LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+    RHS = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  } else {
+    LHS = Builder.CreatePtrToAddr(op.LHS, "sub.ptr.lhs.cast");
+    RHS = Builder.CreatePtrToAddr(op.RHS, "sub.ptr.rhs.cast");
+    if (LHS->getType() != CGF.PtrDiffTy)
+      LHS = Builder.CreateZExtOrTrunc(LHS, CGF.PtrDiffTy, "sub.ptr.lhs.ext");
+    if (RHS->getType() != CGF.PtrDiffTy)
+      RHS = Builder.CreateZExtOrTrunc(RHS, CGF.PtrDiffTy, "sub.ptr.lhs.ext");
+  }
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
@@ -6368,10 +6378,8 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
   if (isa<llvm::Constant>(GEPVal)) {
     // Compute the offset by casting both pointers to integers and subtracting:
     // GEPVal = BasePtr + ptr(Offset) <--> Offset = int(GEPVal) - int(BasePtr)
-    Value *BasePtr_int =
-        Builder.CreatePtrToInt(BasePtr, DL.getIntPtrType(BasePtr->getType()));
-    Value *GEPVal_int =
-        Builder.CreatePtrToInt(GEPVal, DL.getIntPtrType(GEPVal->getType()));
+    Value *BasePtr_int = Builder.CreatePtrToAddr(BasePtr);
+    Value *GEPVal_int = Builder.CreatePtrToAddr(GEPVal);
     TotalOffset = Builder.CreateSub(GEPVal_int, BasePtr_int);
     return {TotalOffset, /*OffsetOverflows=*/Builder.getFalse()};
   }
@@ -6381,7 +6389,7 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
          "BasePtr must be the base of the GEP.");
   assert(GEP->isInBounds() && "Expected inbounds GEP");
 
-  auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
+  auto *IntPtrTy = DL.getAddressType(GEP->getPointerOperandType());
 
   // Grab references to the signed add/mul overflow intrinsics for intptr_t.
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
@@ -6483,7 +6491,7 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   auto CheckOrdinal = SanitizerKind::SO_PointerOverflow;
   auto CheckHandler = SanitizerHandler::PointerOverflow;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
-  llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
+  llvm::Type *IntPtrTy = DL.getAddressType(PtrTy);
 
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
@@ -6498,7 +6506,7 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
 
   // Now that we've computed the total offset, add it to the base pointer (with
   // wrapping semantics).
-  auto *IntPtr = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+  auto *IntPtr = Builder.CreatePtrToAddr(Ptr);
   auto *ComputedGEP = Builder.CreateAdd(IntPtr, EvaluatedGEP.TotalOffset);
 
   llvm::SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>,

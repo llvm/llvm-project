@@ -244,6 +244,7 @@ set(files
   __bit/invert_if.h
   __bit/popcount.h
   __bit/rotate.h
+  __bit/shift.h
   __bit_reference
   __charconv/chars_format.h
   __charconv/from_chars_floating_point.h
@@ -397,11 +398,11 @@ set(files
   __flat_set/ra_iterator.h
   __flat_set/utils.h
   __format/buffer.h
-  __format/concepts.h
   __format/container_adaptor.h
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_char_type.h
   __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
@@ -412,6 +413,7 @@ set(files
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
+  __format/formattable.h
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_bool_impl.h
@@ -536,6 +538,7 @@ set(files
   __iterator/size.h
   __iterator/sortable.h
   __iterator/static_bounded_iter.h
+  __iterator/static_packed_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale_dir/check_grouping.h
@@ -543,7 +546,6 @@ set(files
   __locale_dir/collate.h
   __locale_dir/ctype.h
   __locale_dir/ctype_base.h
-  __locale_dir/get_c_locale.h
   __locale_dir/locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
@@ -556,6 +558,7 @@ set(files
   __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
+  __locale_dir/support/default/get_c_locale.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
@@ -699,7 +702,10 @@ set(files
   __pstl/cpu_algos/find_end.h
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
+  __pstl/cpu_algos/is_heap_until.h
   __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/min_element.h
+  __pstl/cpu_algos/minmax_element.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
   __pstl/cpu_algos/search.h
@@ -707,6 +713,7 @@ set(files
   __pstl/cpu_algos/stable_sort.h
   __pstl/cpu_algos/transform.h
   __pstl/cpu_algos/transform_reduce.h
+  __pstl/cpu_algos/uninitialized_algorithms.h
   __pstl/dispatch.h
   __pstl/handle_exception.h
   __random/bernoulli_distribution.h
@@ -958,6 +965,7 @@ set(files
   __undef_macros
   __utility/as_const.h
   __utility/as_lvalue.h
+  __utility/assume.h
   __utility/auto_cast.h
   __utility/cmp.h
   __utility/constant_wrapper.h

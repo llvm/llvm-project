@@ -54,7 +54,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1006,11 +1005,12 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
       return;
     }
     unsigned NewOpc = Hexagon::L4_return;
-    MachineInstr *NewI = BuildMI(MBB, RetI, dl, HII.get(NewOpc))
-      .addDef(Hexagon::D15)
-      .addReg(Hexagon::R30);
-    // Transfer the function live-out registers.
-    NewI->copyImplicitOps(MF, *RetI);
+    MachineInstrBuilder NewI = BuildMI(MBB, RetI, dl, HII.get(NewOpc))
+                                   .addDef(Hexagon::D15)
+                                   .addReg(Hexagon::R30);
+    // Avoid duplicating the pc implicit-def.
+    for (const MachineOperand &MO : drop_begin(RetI->implicit_operands()))
+      NewI.add(MO);
     MBB.erase(RetI);
   } else {
     // L2_deallocframe instruction after it.
@@ -1465,8 +1465,7 @@ bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // gated on stack size: the user/ABI-requested frame pointer is needed
   // regardless of whether the function currently has a stack frame.
   // Every other target checks DisableFramePointerElim unconditionally.
-  const TargetMachine &TM = MF.getTarget();
-  if (TM.Options.DisableFramePointerElim(MF) || !EliminateFramePointer)
+  if (MF.disableFramePointerElim() || !EliminateFramePointer)
     return true;
 
   if (MFI.getStackSize() > 0) {

@@ -29,6 +29,7 @@
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__memory/uninitialized_algorithms.h>
 #include <__optional/comparison.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
@@ -64,6 +65,10 @@ namespace __pstl {
 // ------------------
 // No other algorithms based on find_end
 //
+// is_heap_until family
+// --------------
+// - is_heap
+//
 // find_if family
 // --------------
 // - find
@@ -73,6 +78,14 @@ namespace __pstl {
 // - none_of
 // - is_partitioned
 // - find_first_of
+//
+// min_element family
+// ---------------
+// - max_element
+//
+// minmax_element family
+// -------------------
+// No other algorithms based on minmax_element
 //
 // mismatch family
 // ---------------
@@ -138,6 +151,14 @@ namespace __pstl {
 // - replace_copy_if
 // - reverse_copy
 // - rotate_copy
+//
+// uninitialized_copy family
+// -------------------------------------
+// - uninitialized_copy_n
+//
+// uninitialized_move family
+// -------------------------------------
+// - uninitialized_move_n
 //
 
 //////////////////////////////////////////////////////////////
@@ -251,6 +272,26 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
 };
 
 //////////////////////////////////////////////////////////////
+// min_element family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __max_element<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Compare>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
+    using _MinElement = __dispatch<__min_element, __current_configuration, _ExecutionPolicy>;
+    using _Ref        = __iterator_reference<_ForwardIterator>;
+    // Express max_element via min_element by replacing the comparison
+    // "lhs OP rhs" with "rhs OP lhs".
+    return _MinElement()(
+        __policy, std::move(__first), std::move(__last), [__comp = std::move(__comp)](_Ref __lhs, _Ref __rhs) {
+          return __comp(__rhs, __lhs);
+        });
+  }
+};
+
+//////////////////////////////////////////////////////////////
 // mismatch family
 //////////////////////////////////////////////////////////////
 
@@ -348,6 +389,20 @@ struct __adjacent_find<__default_backend_tag, _ExecutionPolicy> {
       // Currently anything outside bidirectional iterators has to be processed serially
       return std::adjacent_find(std::move(__first), std::move(__last), std::move(__predicate));
     }
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_heap<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _RandomAccessIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool> operator()(
+      _Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) const noexcept {
+    using _IsHeapUntil = __dispatch<__is_heap_until, __current_configuration, _ExecutionPolicy>;
+    auto __res         = _IsHeapUntil()(__policy, std::move(__first), __last, std::forward<_Comp>(__comp));
+    if (!__res) {
+      return nullopt; // Failed to run the algorithm, propagate the error.
+    }
+    return *__res == __last; // is_heap_until returns the last iterator when no heap violations are found in the range.
   }
 };
 
@@ -857,6 +912,49 @@ struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
         std::move(__first1),
         std::move(__result),
         std::forward<_BinaryOperation>(__op));
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// uninitialized_copy family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __uninitialized_copy_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _Size, class _ForwardIterator>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) const noexcept {
+    if constexpr (__has_random_access_iterator_category_or_concept<_InputIterator>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      using _UninitializedCopy = __dispatch<__uninitialized_copy, __current_configuration, _ExecutionPolicy>;
+      _InputIterator __last    = __first + __n;
+      return _UninitializedCopy()(__policy, std::move(__first), std::move(__last), std::move(__result));
+    } else {
+      return std::uninitialized_copy_n(std::move(__first), __n, std::move(__result));
+    }
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// uninitialized_move family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __uninitialized_move_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _Size, class _ForwardIterator>
+  optional<pair<_InputIterator, _ForwardIterator>>
+  operator()(_Policy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) const noexcept {
+    if constexpr (__has_random_access_iterator_category_or_concept<_InputIterator>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      using _UninitializedMove = __dispatch<__uninitialized_move, __current_configuration, _ExecutionPolicy>;
+      _InputIterator __last    = __first + __n;
+      auto __res               = _UninitializedMove()(__policy, std::move(__first), __last, std::move(__result));
+      if (!__res)
+        return nullopt; // Failed to run the parallel algorithm, propagate the failure
+      return pair{__last, *__res};
+    } else {
+      return std::uninitialized_move_n(std::move(__first), __n, std::move(__result));
+    }
   }
 };
 

@@ -632,7 +632,6 @@ static llvm::Function *emitOutlinedFunctionPrologue(
 
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   // Always inline the outlined function if optimizations are enabled.
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
@@ -745,7 +744,6 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, Loc, Loc);
   Address ContextAddr = CGF.GetAddrOfLocalVar(CD->getContextParam());
@@ -3283,7 +3281,8 @@ void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
     } else if (auto *PartialClause = S.getSingleClause<OMPPartialClause>()) {
       uint64_t Factor = 0;
       if (Expr *FactorExpr = PartialClause->getFactor()) {
-        Factor = FactorExpr->EvaluateKnownConstInt(getContext()).getZExtValue();
+        Factor =
+            FactorExpr->EvaluateKnownConstInt(getContext()).getLimitedValue();
         assert(Factor >= 1 && "Only positive factors are valid");
       }
       OMPBuilder.unrollLoopPartial(DL, CLI, Factor,
@@ -3312,7 +3311,7 @@ void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
   } else if (auto *PartialClause = S.getSingleClause<OMPPartialClause>()) {
     if (Expr *FactorExpr = PartialClause->getFactor()) {
       uint64_t Factor =
-          FactorExpr->EvaluateKnownConstInt(getContext()).getZExtValue();
+          FactorExpr->EvaluateKnownConstInt(getContext()).getLimitedValue();
       assert(Factor >= 1 && "Only positive factors are valid");
       LoopStack.setUnrollCount(Factor);
     }
