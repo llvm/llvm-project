@@ -34,18 +34,11 @@ class SetWatchpointAPITestCase(TestBase):
     @expectedFailureAll(archs=["s390x"])
     def test_local_variable_watchpoint_scoped_to_frame(self):
         """Test watchpoint on a frame local variable only triggers when in the frame scope."""
-        local_line = line_number(self.source, "// local_value_breakpoint")
-        exe = self.getBuildArtifact("a.out")
-
-        target: lldb.SBTarget = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation(self.source, local_line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-        self.assertEqual(breakpoint.GetNumLocations(), 1)
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// local_value_breakpoint", lldb.SBFileSpec(self.source, False)
+        )
         self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(thread, "Stopped at breakpoint inside watch_local()")
         frame = thread.GetSelectedFrame()
@@ -71,9 +64,7 @@ class SetWatchpointAPITestCase(TestBase):
         # Verify the process does not stop again after continuing.
         error = process.Continue()
         self.assertTrue(error)
-        if process.state != lldb.eStateExited:
-            process_state = lldbutil.state_type_to_str(process.state)
-            self.fail(f"Process did not run to completion, {process_state=}")
+        self.assertState(process.state, lldb.eStateExited)
 
     def _test_watch_val(self, variable_watchpoint):
         target, process, thread, _ = lldbutil.run_to_line_breakpoint(
