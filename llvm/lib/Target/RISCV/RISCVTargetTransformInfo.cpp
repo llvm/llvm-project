@@ -3491,7 +3491,7 @@ bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
 bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
                                            Align Alignment) const {
   auto *VTy = dyn_cast<VectorType>(DataTy);
-  if (!VTy || VTy->isScalableTy())
+  if (!VTy)
     return false;
 
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
@@ -3499,7 +3499,7 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 
   // FIXME: If it is an i8 vector and the element count exceeds 256, we should
   // scalarize these types with LMUL >= maximum fixed-length LMUL.
-  if (VTy->getElementType()->isIntegerTy(8))
+  if (isa<FixedVectorType>(VTy) && VTy->getElementType()->isIntegerTy(8))
     if (VTy->getElementCount().getFixedValue() > 256)
       return VTy->getPrimitiveSizeInBits() / ST->getRealMinVLen() <
              ST->getMaxLMULForFixedLengthVectors();
@@ -3508,8 +3508,7 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 
 bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
                                               Align Alignment) const {
-  auto *VTy = dyn_cast<VectorType>(DataTy);
-  if (!VTy || VTy->isScalableTy())
+  if (!isa<VectorType>(DataTy))
     return false;
 
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
