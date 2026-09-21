@@ -225,11 +225,27 @@ static cl::opt<bool> EnableSRLTSubregToRegMitigation(
              "super-regs when using Subreg Liveness Tracking"),
     cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnableSVEShuffleOpt(
+enum class EnableVectorPass { Never, Always, AfterLoopVec };
+
+static cl::opt<EnableVectorPass>
+createVectorPassOption(StringRef Name, StringRef Desc,
+                       EnableVectorPass Default) {
+  return cl::opt<EnableVectorPass>(
+      Name, cl::desc(Desc), cl::Hidden, cl::ValueOptional, cl::init(Default),
+      cl::values(
+          clEnumValN(EnableVectorPass::Always, "always",
+                     "always enable the pass"),
+          clEnumValN(EnableVectorPass::AfterLoopVec, "after-loop-vec",
+                     "enable the pass after (successful) loop vectorization"),
+          clEnumValN(EnableVectorPass::Never, "never",
+                     "never enable the pass")));
+}
+
+static cl::opt<EnableVectorPass> EnableSVEShuffleOpt = createVectorPassOption(
     "aarch64-enable-sve-shuffle-opts",
-    cl::desc("Enable pattern matching of shuffles that could make use of SVE "
-             "instructions like tbl or the bottom/top variants"),
-    cl::init(true), cl::Hidden);
+    "Enable pattern matching of shuffles that could make use of SVE "
+    "instructions like tbl or the bottom/top variants",
+    /*Default=*/EnableVectorPass::AfterLoopVec);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
@@ -640,6 +656,21 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         [](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           PM.addPass(LowerIFuncPass());
         });
+
+  PB.registerExtraVectorizerPassesEPCallback(
+      [TM = this](FunctionPassManager &FPM, OptimizationLevel Level) {
+        // Try to use tbl in place of other shuffling operations if doing so
+        // would reduce the total number of instructions. Shuffle masks for big
+        // endian may be different, so require a little endian target.
+        LoopPassManager LPM;
+        if (Level >= OptimizationLevel::O2 &&
+            EnableSVEShuffleOpt == EnableVectorPass::AfterLoopVec &&
+            TM->getTargetTriple().isLittleEndian())
+          LPM.addPass(AArch64SVEShuffleOptsPass(*TM));
+
+        if (!LPM.isEmpty())
+          FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
+      });
 }
 
 TargetTransformInfo
@@ -707,7 +738,8 @@ void AArch64PassConfig::addIRPasses() {
   // Try to use tbl in place of other shuffling operations if doing so would
   // reduce the total number of instructions. Shuffle masks for big endian may
   // be different, so require a little endian target.
-  if (getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt &&
+  if (getOptLevel() >= CodeGenOptLevel::Default &&
+      EnableSVEShuffleOpt == EnableVectorPass::Always &&
       TM->getTargetTriple().isLittleEndian())
     addPass(createSVEShuffleOptsPass());
 

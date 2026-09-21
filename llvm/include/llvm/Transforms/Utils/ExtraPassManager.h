@@ -71,6 +71,10 @@ public:
     PA.abandon<MarkerTy>();
     return PA;
   }
+
+  bool isEmpty() const { return InnerFPM.isEmpty(); }
+
+  FunctionPassManager &getFunctionPassManager() { return InnerFPM; }
 };
 
 /// A pass manager to run a set of extra loop passes if the MarkerTy analysis is
