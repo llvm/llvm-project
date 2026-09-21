@@ -14,16 +14,17 @@ define i32 @a(i32 %x, ptr nocapture readonly %y, ptr nocapture readonly %z) {
 ; CHECK-NEXT:  .LBB0_5: // %vector.body
 ; CHECK-EXPLICIT:    .p2align 5, , 8
 ; CHECK-IMPLICIT:    .p2align 5
-; CHECK-NEXT:  .LBB0_8: // %for.body
+; CHECK-NEXT:  .LBB0_7: // %for.body
 ; CHECK-OBJ;Disassembly of section .text:
-; CHECK-OBJ:               88: 8b0a002a      add
-; CHECK-OBJ-IMPLICIT-NEXT: 8c: d503201f      nop
-; CHECK-OBJ-IMPLICIT-NEXT: 90: d503201f      nop
-; CHECK-OBJ-IMPLICIT-NEXT: 94: d503201f      nop
-; CHECK-OBJ-IMPLICIT-NEXT: 98: d503201f      nop
-; CHECK-OBJ-IMPLICIT-NEXT: 9c: d503201f      nop
-; CHECK-OBJ-IMPLICIT-NEXT: a0: b840454b      ldr
-; CHECK-OBJ-EXPLICIT-NEXT: 8c: b840454b      ldr
+; CHECK-OBJ:               44: 9100402d      add
+; CHECK-OBJ-IMPLICIT-NEXT: 48: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 4c: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 50: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 54: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 58: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 5c: d503201f      nop
+; CHECK-OBJ-IMPLICIT-NEXT: 60: 3cea6822      ldr
+; CHECK-OBJ-EXPLICIT-NEXT: 48: 3cea6822      ldr
 entry:
   %cmp10 = icmp sgt i32 %x, 0
   br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup

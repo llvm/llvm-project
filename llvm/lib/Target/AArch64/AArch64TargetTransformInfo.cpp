@@ -7472,15 +7472,15 @@ bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(
 bool AArch64TTIImpl::isLSRCostLess(
     const TargetTransformInfo::LSRCost &C1,
     const TargetTransformInfo::LSRCost &C2) const {
-  // AArch64 specific here is adding the number of instructions to the
-  // comparison (though not as the first consideration, as some targets do)
-  // along with changing the priority of the base additions.
-  // TODO: Maybe a more nuanced tradeoff between instruction count
-  // and number of registers? To be investigated at a later date.
+  // Prioritize the Insns cost, as that's the combined cost we expect to incur
+  // in each iteration through the loop. After that we want to minimize NumRegs
+  // in order to minimize the number of registers we need to save / restore, and
+  // also to minimize the number of spills (though the estimated spills due to
+  // registers used is also captured in the Insns cost).
   if (EnableLSRCostOpt)
-    return std::tie(C1.NumRegs, C1.Insns, C1.NumBaseAdds, C1.AddRecCost,
+    return std::tie(C1.Insns, C1.NumRegs, C1.NumBaseAdds, C1.AddRecCost,
                     C1.NumIVMuls, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
-           std::tie(C2.NumRegs, C2.Insns, C2.NumBaseAdds, C2.AddRecCost,
+           std::tie(C2.Insns, C2.NumRegs, C2.NumBaseAdds, C2.AddRecCost,
                     C2.NumIVMuls, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 
   return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);

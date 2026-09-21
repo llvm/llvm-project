@@ -171,18 +171,21 @@ exit:
 define i32 @test9(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    cmp w2, #1
 ; CHECK-NEXT:    b.lt .LBB8_3
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov w9, #1024 // =0x400
-; CHECK-NEXT:    mov w8, w2
-; CHECK-NEXT:    movk w9, #32, lsl #16
+; CHECK-NEXT:    ubfiz x9, x2, #2, #32
+; CHECK-NEXT:    mov w10, #1024 // =0x400
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    movk w10, #32, lsl #16
 ; CHECK-NEXT:  .LBB8_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w10, [x1], #4
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    and w10, w10, w9
-; CHECK-NEXT:    str w10, [x0], #4
+; CHECK-NEXT:    ldr w11, [x1, x8]
+; CHECK-NEXT:    and w11, w11, w10
+; CHECK-NEXT:    str w11, [x0, x8]
+; CHECK-NEXT:    add x8, x8, #4
+; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    b.ne .LBB8_2
 ; CHECK-NEXT:  .LBB8_3: // %for.cond.cleanup
 ; CHECK-NEXT:    mov w0, wzr

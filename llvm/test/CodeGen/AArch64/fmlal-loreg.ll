@@ -42,12 +42,14 @@ define void @loop(ptr %out_tile, ptr %lhs_panel, ptr %rhs_panel, i32 noundef %K,
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov w8, w3
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w9, w3
 ; CHECK-NEXT:  .LBB1_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q2, [x1], #2
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    ldr q3, [x2], #2
+; CHECK-NEXT:    ldr q2, [x1, x8]
+; CHECK-NEXT:    ldr q3, [x2, x8]
+; CHECK-NEXT:    subs x9, x9, #1
+; CHECK-NEXT:    add x8, x8, #2
 ; CHECK-NEXT:    fmlal v0.4s, v3.4h, v2.h[0]
 ; CHECK-NEXT:    fmlal2 v1.4s, v3.4h, v2.h[0]
 ; CHECK-NEXT:    b.ne .LBB1_1

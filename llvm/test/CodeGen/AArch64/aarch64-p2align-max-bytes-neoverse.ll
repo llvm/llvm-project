@@ -20,7 +20,7 @@ define i32 @a(i32 %x, ptr nocapture readonly %y, ptr nocapture readonly %z) {
 ; CHECK-DEFAULT:    .p2align 5
 ; CHECK-8:          .p2align 4, , 8
 ; CHECK-16:         .p2align 5, , 16
-; CHECK-NEXT:       .LBB0_8: // %for.body
+; CHECK-NEXT:       .LBB0_7: // %for.body
 entry:
   %cmp10 = icmp sgt i32 %x, 0
   br i1 %cmp10, label %for.body.preheader, label %for.cond.cleanup
