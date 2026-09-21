@@ -82,42 +82,56 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   return LoadInst::create(Ty, LdPtr, LdAlign, LdWhereIt, *Ctx, "VecIinitL");
 }
 
-/// Reinterprets the bits of \p C as \p DestTy, which must have the same size
-/// in \p DL. Goes through an integer of that size using ptrtoint / inttoptr /
-/// bitcast. \Returns nullptr if the result does not fold to a constant or if a
-/// non-integral pointer is involved.
-static Constant *reinterpretConstant(Constant *C, Type *DestTy,
-                                     BBIterator WhereIt, Context &Ctx,
-                                     const DataLayout &DL) {
-  Type *SrcTy = C->getType();
+/// \returns an integer type with the same layout as \p Ty: iN for scalars,
+/// <N x iM> for vectors.
+static Type *getIntTypeFor(Type *Ty, Context &Ctx, const DataLayout &DL) {
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+    auto *ElmIntTy =
+        IntegerType::get(Ctx, Utils::getNumBits(VecTy->getElementType(), DL));
+    return FixedVectorType::get(ElmIntTy, VecTy->getNumElements());
+  }
+  return IntegerType::get(Ctx, Utils::getNumBits(Ty, DL));
+}
+
+/// Reinterprets the bits of \p V as \p DestTy, which must have the same size
+/// in \p DL. Pointers only convert with ptrtoint / inttoptr, so those go
+/// through an integer of matching layout, everything else through a bitcast.
+/// Casts of constants fold, so nothing is inserted at \p WhereIt for those.
+/// \returns nullptr if a non-integral pointer is involved.
+static Value *reinterpretValue(Value *V, Type *DestTy, BBIterator WhereIt,
+                               Context &Ctx, const DataLayout &DL) {
+  Type *SrcTy = V->getType();
   if (SrcTy == DestTy)
-    return C;
+    return V;
   auto IsNonIntegralPtr = [&DL](Type *Ty) {
-    return Ty->isPointerTy() &&
-           DL.isNonIntegralAddressSpace(Ty->getPointerAddressSpace());
+    Type *ScalarTy = Ty->getScalarType();
+    return ScalarTy->isPointerTy() &&
+           DL.isNonIntegralAddressSpace(ScalarTy->getPointerAddressSpace());
   };
   if (IsNonIntegralPtr(SrcTy) || IsNonIntegralPtr(DestTy))
     return nullptr;
-  auto Cast = [&](Constant *V, Type *To,
-                  Instruction::Opcode Opc) -> Constant * {
-    if (V == nullptr)
-      return nullptr;
-    // Casts of constants fold, so nothing is inserted at WhereIt.
-    return dyn_cast<Constant>(
-        CastInst::create(To, Opc, V, WhereIt, Ctx, "VCast"));
+  auto Cast = [&](Value *Op, Type *To, Instruction::Opcode Opc) -> Value * {
+    if (Op == nullptr || Op->getType() == To)
+      return Op;
+    return CastInst::create(To, Opc, Op, WhereIt, Ctx, "VCast");
   };
-  Constant *AsInt = C;
-  if (!SrcTy->isIntegerTy()) {
-    Type *IntTy = IntegerType::get(Ctx, Utils::getNumBits(SrcTy, DL));
-    AsInt = Cast(C, IntTy,
-                 SrcTy->isPointerTy() ? Instruction::Opcode::PtrToInt
-                                      : Instruction::Opcode::BitCast);
-  }
-  if (DestTy->isIntegerTy())
-    return AsInt;
-  return Cast(AsInt, DestTy,
-              DestTy->isPointerTy() ? Instruction::Opcode::IntToPtr
-                                    : Instruction::Opcode::BitCast);
+  Value *AsInt = V;
+  if (SrcTy->getScalarType()->isPointerTy())
+    AsInt =
+        Cast(V, getIntTypeFor(SrcTy, Ctx, DL), Instruction::Opcode::PtrToInt);
+  if (!DestTy->getScalarType()->isPointerTy())
+    return Cast(AsInt, DestTy, Instruction::Opcode::BitCast);
+  AsInt =
+      Cast(AsInt, getIntTypeFor(DestTy, Ctx, DL), Instruction::Opcode::BitCast);
+  return Cast(AsInt, DestTy, Instruction::Opcode::IntToPtr);
+}
+
+/// reinterpretValue() for constants, which fold to a constant or not at all.
+static Constant *reinterpretConstant(Constant *C, Type *DestTy,
+                                     BBIterator WhereIt, Context &Ctx,
+                                     const DataLayout &DL) {
+  return dyn_cast_or_null<Constant>(
+      reinterpretValue(C, DestTy, WhereIt, Ctx, DL));
 }
 
 Value *LoadStoreVec::createConstantVector(ArrayRef<Value *> Operands,
