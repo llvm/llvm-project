@@ -143,6 +143,7 @@ namespace detail {
 class IEEEFloat;
 class DoubleAPFloat;
 } // namespace detail
+using FloatRepr = detail::IEEEFloat;
 
 // This is the common type definitions shared by APFloat and its internal
 // implementation classes. This struct should not define any non-static data
@@ -709,6 +710,8 @@ private:
   integerPart *significandParts();
   const integerPart *significandParts() const;
   LLVM_ABI unsigned int partCount() const;
+  template<const fltSemantics& S>
+  static unsigned int partCountForSemantic();
 
   /// @}
 
@@ -777,49 +780,16 @@ private:
 
   /// @}
 
+  template<const fltSemantics& S>
+  friend APInt bitcastForSemantics(const FloatRepr& R);
+
   template <const fltSemantics &S> APInt convertIEEEFloatToAPInt() const;
-  APInt convertHalfAPFloatToAPInt() const;
-  APInt convertBFloatAPFloatToAPInt() const;
-  APInt convertFloatAPFloatToAPInt() const;
-  APInt convertDoubleAPFloatToAPInt() const;
-  APInt convertQuadrupleAPFloatToAPInt() const;
-  APInt convertF80LongDoubleAPFloatToAPInt() const;
-  APInt convertPPCDoubleDoubleLegacyAPFloatToAPInt() const;
-  APInt convertFloat8E5M2APFloatToAPInt() const;
-  APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
-  APInt convertFloat8E4M3APFloatToAPInt() const;
-  APInt convertFloat8E4M3FNAPFloatToAPInt() const;
-  APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
-  APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
-  APInt convertFloat8E3M4APFloatToAPInt() const;
-  APInt convertFloatTF32APFloatToAPInt() const;
-  APInt convertFloat8E8M0FNUAPFloatToAPInt() const;
-  APInt convertFloat8E5M3FNUAPFloatToAPInt() const;
-  APInt convertFloat6E3M2FNAPFloatToAPInt() const;
-  APInt convertFloat6E2M3FNAPFloatToAPInt() const;
-  APInt convertFloat4E2M1FNAPFloatToAPInt() const;
+
+  template<const fltSemantics& S>
+  friend void initFromAPIntForSemantics(FloatRepr&, const APInt&);
+
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
-  void initFromHalfAPInt(const APInt &api);
-  void initFromBFloatAPInt(const APInt &api);
-  void initFromFloatAPInt(const APInt &api);
-  void initFromDoubleAPInt(const APInt &api);
-  void initFromQuadrupleAPInt(const APInt &api);
-  void initFromF80LongDoubleAPInt(const APInt &api);
-  void initFromPPCDoubleDoubleLegacyAPInt(const APInt &api);
-  void initFromFloat8E5M2APInt(const APInt &api);
-  void initFromFloat8E5M2FNUZAPInt(const APInt &api);
-  void initFromFloat8E4M3APInt(const APInt &api);
-  void initFromFloat8E4M3FNAPInt(const APInt &api);
-  void initFromFloat8E4M3FNUZAPInt(const APInt &api);
-  void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
-  void initFromFloat8E3M4APInt(const APInt &api);
-  void initFromFloatTF32APInt(const APInt &api);
-  void initFromFloat8E8M0FNUAPInt(const APInt &api);
-  void initFromFloat8E5M3FNUAPInt(const APInt &api);
-  void initFromFloat6E3M2FNAPInt(const APInt &api);
-  void initFromFloat6E2M3FNAPInt(const APInt &api);
-  void initFromFloat4E2M1FNAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
