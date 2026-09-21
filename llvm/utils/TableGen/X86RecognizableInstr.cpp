@@ -42,7 +42,8 @@ std::string X86Disassembler::getMnemonic(const CodeGenInstruction *I,
 }
 
 bool X86Disassembler::isRegisterOperand(const Record *Rec) {
-  return Rec->isSubClassOf("RegisterClass") ||
+  // RegisterClassLike covers both RegisterClass and RegClassByHwMode.
+  return Rec->isSubClassOf("RegisterClassLike") ||
          Rec->isSubClassOf("RegisterOperand");
 }
 
