@@ -3865,6 +3865,73 @@ def VFork : LibBuiltin<"unistd.h"> {
   let Prototype = "pid_t()";
 }
 
+// Except for getcwd, these unistd I/O signatures vary across targets (ssize_t,
+// off_t and count types). Require a declaration rather than synthesizing a
+// prototype for those functions.
+
+def Read : LibBuiltin<"unistd.h"> {
+  let Spellings = ["read"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void*, size_t); return and count types are target-specific
+  let Prototype = "";
+}
+
+def Write : LibBuiltin<"unistd.h"> {
+  let Spellings = ["write"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void const*, size_t); return and count types are target-specific
+  let Prototype = "";
+}
+
+def PRead : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pread"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void*, size_t, off_t); ssize_t and off_t are target-specific
+  let Prototype = "";
+}
+
+def PRead64 : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pread64"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void*, size_t, off64_t); ssize_t and off64_t are target-specific
+  let Prototype = "";
+}
+
+def PWrite : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pwrite"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void const*, size_t, off_t);
+  // ssize_t and off_t are target-specific
+  let Prototype = "";
+}
+
+def PWrite64 : LibBuiltin<"unistd.h"> {
+  let Spellings = ["pwrite64"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, void const*, size_t, off64_t);
+  // ssize_t and off64_t are target-specific
+  let Prototype = "";
+}
+
+def ReadLink : LibBuiltin<"unistd.h"> {
+  let Spellings = ["readlink"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(char const*, char*, size_t); ssize_t is target-specific
+  let Prototype = "";
+}
+
+def ReadLinkAt : LibBuiltin<"unistd.h"> {
+  let Spellings = ["readlinkat"];
+  let Attributes = [IgnoreSignature];
+  // ssize_t(int, char const*, char*, size_t); ssize_t is target-specific
+  let Prototype = "";
+}
+
+def GetCwd : LibBuiltin<"unistd.h"> {
+  let Spellings = ["getcwd"];
+  let Prototype = "char*(char*, size_t)";
+}
+
 // POSIX sys/stat.h
 
 def Umask : LibBuiltin<"sys/stat.h"> {
