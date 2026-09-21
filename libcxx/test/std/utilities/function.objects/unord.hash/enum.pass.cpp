@@ -19,6 +19,7 @@
 #include <limits>
 #include <type_traits>
 
+#include "constexpr_hash.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
@@ -33,17 +34,16 @@ enum class EightBitColors : std::uint8_t { red, orange, yellow, green, blue, ind
 
 enum Fruits { apple, pear, grape, mango, cantaloupe };
 
-template <class T>
-void
-test()
-{
+template <class T, template <class> typename THash>
+TEST_CONSTEXPR_CXX26 void test() {
 #if TEST_STD_VER >= 11
     test_hash_disabled<const T>();
     test_hash_disabled<volatile T>();
     test_hash_disabled<const volatile T>();
 #endif
 
-    typedef std::hash<T> H;
+    // typedef std::hash<T> H;
+    typedef THash<T> H;
 #if TEST_STD_VER <= 17
     static_assert((std::is_same<typename H::argument_type, T>::value), "");
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
@@ -52,7 +52,8 @@ test()
     typedef typename std::underlying_type<T>::type under_type;
 
     H h1;
-    std::hash<under_type> h2;
+    // std::hash<under_type> h2;
+    THash<under_type> h2;
     for (int i = 0; i <= 5; ++i)
     {
         T t(static_cast<T> (i));
@@ -62,16 +63,26 @@ test()
     }
 }
 
-int main(int, char**)
-{
-    test<Cardinals>();
+template <template <typename> typename THash >
+TEST_CONSTEXPR_CXX26 bool test_with_hash() {
+  test<Cardinals, THash>();
 
-    test<Colors>();
-    test<ShortColors>();
-    test<LongColors>();
-    test<EightBitColors>();
+  test<Colors, THash>();
+  test<ShortColors, THash>();
+  test<LongColors, THash>();
+  test<EightBitColors, THash>();
 
-    test<Fruits>();
+  test<Fruits, THash>();
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test_with_hash<std::hash>());
+
+#if TEST_STD_VER >= 26
+  static_assert(test_with_hash<support::constexpr_hash>());
+#endif
 
   return 0;
 }
