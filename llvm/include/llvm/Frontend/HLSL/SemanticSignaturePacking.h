@@ -106,13 +106,20 @@ packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
 /// Sorts eligible signature elements using the optimized ordering and then
-/// packs them with the prefix-stable packing algorithm.
+/// packs them with the prefix-stable packing algorithm. Like prefix-stable
+/// packing, this is not valid for vertex inputs or pixel outputs.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
 ///
 /// Returns one past the highest allocated row, or zero if no elements were
 /// allocated. For geometry outputs this is the maximum extent of any stream,
 /// not the sum of their extents.
+///
+/// Elements remains in its original signature order. On failure, elements
+/// packed before the failing element in optimized order keep their assigned
+/// locations; the failing element and those after it in that order retain the
+/// unallocated row and column sentinels. The returned SignaturePackingError
+/// identifies the failing element by its index in the original Elements array.
 LLVM_ABI Expected<unsigned>
 packSignatureOptimized(MutableArrayRef<SemanticSignatureElement> Elements,
                        Triple::EnvironmentType ShaderStage, IOType IOTy,

@@ -115,7 +115,8 @@ getOptimizedPackingPriority(const SemanticSignatureElement &Element,
       getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
   assert((Interpretation != SemanticInterpretation::Invalid &&
           Interpretation != SemanticInterpretation::Target) &&
-         "unexpected semantic interpretation for optimized packing");
+         "unexpected semantic interpretation for optimized packing, "
+         "should have been diagnosed by Sema");
 
   if (Element.Cols == MaxSignatureCols &&
       (Interpretation == SemanticInterpretation::Arbitrary ||
@@ -584,6 +585,10 @@ Expected<unsigned> llvm::hlsl::packSignatureOptimized(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy,
     bool UseNative16BitTypes) {
+  assert(!(ShaderStage == Triple::Vertex && IOTy == IOType::In) &&
+         !(ShaderStage == Triple::Pixel && IOTy == IOType::Out) &&
+         "optimized packing is not valid for vertex inputs or pixel outputs");
+
   SmallVector<unsigned> SortedIndices;
   SortedIndices.reserve(Elements.size());
   for (unsigned Index = 0; Index != Elements.size(); ++Index)
