@@ -101,6 +101,12 @@ public:
   bool relaxOnce(int pass) const override;
 
 private:
+  struct RelaxCandidateSection {
+    InputSection *sec;
+    SmallVector<uint32_t, 2> relocs;
+  };
+  mutable SmallVector<RelaxCandidateSection, 0> relaxableSections;
+
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -374,10 +380,13 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     // GOT relocations:
     case R_AARCH64_ADR_GOT_PAGE:
       if (ctx.arg.relax && (sec.flags & SHF_EXECINSTR) &&
-          !unsafeToRelaxAdrpLdr.contains(&sym))
+          !unsafeToRelaxAdrpLdr.contains(&sym)) {
         expr = RE_AARCH64_RELAX_GOT_PAGE_PC;
-      else
+        // We may end up needing this GOT later if we can't relax this.
+        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      } else {
         expr = RE_AARCH64_GOT_PAGE_PC;
+      }
       break;
     case R_AARCH64_LD64_GOT_LO12_NC:
       if (ctx.arg.relax && (sec.flags & SHF_EXECINSTR) &&
@@ -1201,34 +1210,70 @@ void AArch64::applyBranchToBranchOpt() const {
 }
 
 bool AArch64::relaxOnce(int pass) const {
-  if (!ctx.arg.relax)
+  if (!ctx.arg.relax || !ctx.in.got->hasGotOffRel)
     return false;
 
-  SmallVector<InputSection *, 0> storage;
+  auto [minVA, maxVA] = getOutputSectionVaRange();
+  // In -pie/-shared, GOT references to absolute symbols cannot be relaxed, so
+  // all relaxed symbols are defined in output sections. If the address span is
+  // under 4 GiB, ADRP relocations cannot overflow.
+  if (isUInt<32>(maxVA - minVA) && ctx.arg.isPic)
+    return false;
+
   bool changed = false;
-  for (OutputSection *osec : ctx.outputSections) {
-    if (!(osec->flags & SHF_EXECINSTR))
-      continue;
-    for (InputSection *sec : getInputSections(*osec, storage)) {
-      for (size_t i = 0, e = sec->relocs().size(); i != e; ++i) {
-        Relocation &rel = sec->relocs()[i];
-        if (rel.expr != RE_AARCH64_RELAX_GOT_PAGE_PC)
-          continue;
-        int64_t val = getAArch64Page(rel.sym->getVA(ctx, rel.addend)) -
-                      getAArch64Page(sec->getOutputSection()->addr +
-                                     sec->outSecOff + rel.offset);
-        if (val == llvm::SignExtend64(val, 33))
-          continue;
-        if (rel.sym->auxIdx == 0) {
-          rel.sym->allocateAux(ctx);
-          addGotEntry(ctx, *rel.sym);
-          changed = true;
-        }
-        rel.expr = RE_AARCH64_GOT_PAGE_PC;
-        if (i + 1 < e && sec->relocs()[i + 1].expr == RE_AARCH64_RELAX_GOT_LO12)
-          sec->relocs()[i + 1].expr = R_GOT;
+  auto isOutOfRange = [&](const InputSection *sec, const Relocation &rel) {
+    int64_t val = getAArch64Page(rel.sym->getVA(ctx, rel.addend)) -
+                  getAArch64Page(sec->getOutputSection()->addr +
+                                 sec->outSecOff + rel.offset);
+    return val != llvm::SignExtend64(val, 33);
+  };
+
+  if (pass == 0) {
+    // Collect the sections containing relaxable relocations. Later passes only
+    // revisit these sections, and reverted relocations are pruned below, so
+    // the work per pass shrinks monotonically.
+    relaxableSections.clear();
+    SmallVector<InputSection *, 0> storage;
+    for (OutputSection *osec : ctx.outputSections) {
+      if (!(osec->flags & SHF_EXECINSTR))
+        continue;
+      for (InputSection *sec : getInputSections(*osec, storage)) {
+        SmallVector<uint32_t, 2> relocs;
+        for (size_t i = 0, e = sec->relocs().size(); i != e; ++i)
+          if (sec->relocs()[i].expr == RE_AARCH64_RELAX_GOT_PAGE_PC)
+            relocs.push_back(i);
+        if (!relocs.empty())
+          relaxableSections.push_back({sec, std::move(relocs)});
       }
     }
+  }
+
+  // Relaxation is all-or-nothing per symbol within a section (see
+  // findUnsafeAdrpLdr), so if any pair is out of range, revert every pair for
+  // that symbol in the section.
+  SmallPtrSet<Symbol *, 4> outOfRange;
+  for (RelaxCandidateSection &cs : relaxableSections) {
+    MutableArrayRef<Relocation> rels = cs.sec->relocs();
+    outOfRange.clear();
+    for (uint32_t i : cs.relocs)
+      if (isOutOfRange(cs.sec, rels[i]))
+        outOfRange.insert(rels[i].sym);
+    if (outOfRange.empty())
+      continue;
+    llvm::erase_if(cs.relocs, [&](uint32_t i) {
+      Relocation &rel = rels[i];
+      if (!outOfRange.contains(rel.sym))
+        return false;
+      if (rel.sym->auxIdx == 0) {
+        rel.sym->allocateAux(ctx);
+        addGotEntry(ctx, *rel.sym);
+        changed = true;
+      }
+      rel.expr = RE_AARCH64_GOT_PAGE_PC;
+      if (i + 1 < rels.size() && rels[i + 1].expr == RE_AARCH64_RELAX_GOT_LO12)
+        rels[i + 1].expr = R_GOT;
+      return true;
+    });
   }
   return changed;
 }

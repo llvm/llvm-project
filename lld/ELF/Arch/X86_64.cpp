@@ -505,13 +505,7 @@ void X86_64::relaxCFIJumpTables() const {
 }
 
 bool X86_64::relaxOnce(int pass) const {
-  uint64_t minVA = UINT64_MAX, maxVA = 0;
-  for (OutputSection *osec : ctx.outputSections) {
-    if (!(osec->flags & SHF_ALLOC))
-      continue;
-    minVA = std::min(minVA, osec->addr);
-    maxVA = std::max(maxVA, osec->addr + osec->size);
-  }
+  auto [minVA, maxVA] = getOutputSectionVaRange();
   // If the max VA is under 2^31, GOTPCRELX relocations cannot overflow. In
   // -pie/-shared, the condition can be relaxed to test the max VA difference as
   // there is no R_RELAX_GOT_PC_NOPIC.

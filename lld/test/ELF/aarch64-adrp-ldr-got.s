@@ -4,7 +4,9 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/a.s -o %t/a.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/unpaired.s -o %t/unpaired.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/lone-ldr.s -o %t/lone-ldr.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %t/lone-adrp-ldr.s -o %t/lone-adrp-ldr.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/all-or-nothing.s -o %t/all-or-nothing.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 %t/all-or-nothing-out-of-range.s -o %t/all-or-nothing-out-of-range.o
 
 # RUN: ld.lld %t/a.o -T %t/out-of-adr-range.t -o %t/a
 # RUN: llvm-objdump --no-show-raw-insn -d %t/a | FileCheck %s
@@ -97,6 +99,15 @@
 
 # LONE-LDR:         ldr	   x0
 
+## A relaxable ADRP+LDR pair where no other GOT entries exist.
+## When out of range, the GOT entry is restored in relaxOnce and .got must be
+## retained even though it had 0 entries during removeUnusedSyntheticSections.
+# RUN: ld.lld %t/lone-adrp-ldr.o -T %t/out-of-range.t -o %t/lone-out-of-range
+# RUN: llvm-readelf -x .got %t/lone-out-of-range | FileCheck --check-prefix=LONE-OUT-OF-RANGE %s
+
+# LONE-OUT-OF-RANGE:      Hex dump of section '.got':
+# LONE-OUT-OF-RANGE-NEXT: 0x{{[0-9a-f]+}} 00100000 00000000
+
 ## Make sure that relaxation is not applied if not all adrp+ldr pairs for
 ## a given symbol can be relaxed. This is not legal, because there may be
 ## a branch destination between the adrp and ldr instructions. We can still
@@ -116,6 +127,25 @@
 # ALL-OR-NOTHING-LABEL: <foo>:
 # ALL-OR-NOTHING: nop
 # ALL-OR-NOTHING: adr    x1
+
+## Make sure that relaxation is not applied if not all adrp+ldr pairs for
+## a given symbol can be relaxed, even when the failure is due to one pair
+## being out of range (>4GB) while another pair is in range (<=4GB).
+# RUN: ld.lld %t/all-or-nothing-out-of-range.o -T %t/all-or-nothing-out-of-range.t -o %t/all-or-nothing-out-of-range
+# RUN: llvm-objdump --no-show-raw-insn -d %t/all-or-nothing-out-of-range | \
+# RUN:   FileCheck --check-prefix=ALL-OR-NOTHING-OUT-OF-RANGE %s
+# RUN: llvm-readelf -x .got %t/all-or-nothing-out-of-range | FileCheck --check-prefix=ALL-OR-NOTHING-OUT-OF-RANGE-GOT %s
+
+# ALL-OR-NOTHING-OUT-OF-RANGE-LABEL: <_start>:
+# ALL-OR-NOTHING-OUT-OF-RANGE-NEXT:  adrp   x1
+# ALL-OR-NOTHING-OUT-OF-RANGE-NEXT:  ldr    x1
+# ALL-OR-NOTHING-OUT-OF-RANGE-NEXT:  b      0x{{[0-9a-f]+}} <_start+0x2010>
+# ALL-OR-NOTHING-OUT-OF-RANGE:       adrp   x1
+# ALL-OR-NOTHING-OUT-OF-RANGE-NEXT:  ldr    x1
+# ALL-OR-NOTHING-OUT-OF-RANGE-NOT:   add    x1, x1
+
+# ALL-OR-NOTHING-OUT-OF-RANGE-GOT:      Hex dump of section '.got':
+# ALL-OR-NOTHING-OUT-OF-RANGE-GOT-NEXT: 0x{{[0-9a-f]+}} 00100000 00000000
 
 ## This linker script ensures that .rodata and .text are sufficiently (>1M)
 ## far apart so that the adrp + ldr pair cannot be relaxed to adr + nop.
@@ -139,6 +169,14 @@ SECTIONS {
 SECTIONS {
  .rodata 0x1000: { *(.rodata) }
  .text   0x100002000: { *(.text) }
+}
+
+## This linker script ensures that the first pair in .text is within 4GB
+## of .rodata while the second pair in the same section is out of range (>4GB).
+#--- all-or-nothing-out-of-range.t
+SECTIONS {
+ .rodata 0x1000: { *(.rodata) }
+ .text   0x100000000: { *(.text) }
 }
 
 #--- a.s
@@ -225,4 +263,33 @@ _start:
 .global foo
 foo:
   adrp    x1, :got:x
+  ldr     x1, [x1, #:got_lo12:x]
+
+#--- lone-adrp-ldr.s
+.rodata
+.globl x
+.hidden x
+x:
+.word 10
+.text
+.global _start
+_start:
+  adrp    x1, :got:x
+  ldr     x1, [x1, #:got_lo12:x]
+
+#--- all-or-nothing-out-of-range.s
+.rodata
+.globl x
+.hidden x
+x:
+.word 10
+.text
+.global _start
+_start:
+  adrp    x1, :got:x
+  ldr     x1, [x1, #:got_lo12:x]
+  b       .L1
+  .space  0x2000
+  adrp    x1, :got:x
+.L1:
   ldr     x1, [x1, #:got_lo12:x]
