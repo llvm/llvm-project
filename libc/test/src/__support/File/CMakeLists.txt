@@ -39,9 +39,23 @@ add_libc_test(
   SRCS
     platform_file_test.cpp
   DEPENDS
+    libc.src.__support.error_or
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.include.stdio
+)
+
+add_libc_test(
+  scan_impl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    scan_impl_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.File.scan_impl
+    libc.src.__support.File.dir
+    libc.src.__support.File.platform_dir
 )
 
 set(platform_stream_targets "platform_stdout;platform_stdin;platform_stderr")

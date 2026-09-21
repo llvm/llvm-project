@@ -37,6 +37,13 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
   DirType *dir = res_open.value();
 
   cpp::vector<struct dirent *> entries;
+
+  auto free_entries = [&entries]() {
+    for (struct dirent *entry : entries) {
+      ::free(entry);
+    }
+  };
+
   int saved_errno = 0;
 
   while (true) {
@@ -63,6 +70,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
     struct dirent *new_entry = static_cast<struct dirent *>(::malloc(reclen));
     if (new_entry == nullptr) {
       saved_errno = ENOMEM;
+      break;
     }
     inline_memcpy(new_entry, entry, reclen);
 
@@ -77,18 +85,17 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
   // POSIX-defined error codes for scandir.
   dir->close();
 
+  if (saved_errno != 0) {
+    free_entries();
+    return LIBC_NAMESPACE::Error(saved_errno);
+  }
+
   struct dirent **result = static_cast<struct dirent **>(
       ::malloc(entries.size() * sizeof(struct dirent *)));
 
   if (result == nullptr) {
-    saved_errno = ENOMEM;
-  }
-
-  if (saved_errno != 0) {
-    for (struct dirent *entry : entries) {
-      ::free(entry);
-    }
-    return LIBC_NAMESPACE::Error(saved_errno);
+    free_entries();
+    return LIBC_NAMESPACE::Error(ENOMEM);
   }
 
   if (compare != nullptr) {
