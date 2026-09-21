@@ -66,7 +66,7 @@ define i32 @sdot2_const_nonzero(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[DOT]], 9
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %dot = call i32 @llvm.amdgcn.sdot2(<2 x i16> <i16 1, i16 1>, <2 x i16> <i16 2, i16 2>, i32 7, i1 false)
+  %dot = call i32 @llvm.amdgcn.sdot2(<2 x i16> splat (i16 1), <2 x i16> splat (i16 2), i32 7, i1 false)
   %r = add i32 %dot, 9
   ret i32 %r
 }
@@ -174,7 +174,7 @@ define i32 @udot2_const_nonzero(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[DOT]], 9
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %dot = call i32 @llvm.amdgcn.udot2(<2 x i16> <i16 1, i16 1>, <2 x i16> <i16 2, i16 2>, i32 7, i1 false)
+  %dot = call i32 @llvm.amdgcn.udot2(<2 x i16> splat (i16 1), <2 x i16> splat (i16 2), i32 7, i1 false)
   %r = add i32 %dot, 9
   ret i32 %r
 }
