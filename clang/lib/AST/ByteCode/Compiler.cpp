@@ -268,7 +268,9 @@ template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
       : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
-    Ctx->InitStackActive = Active;
+    // An explicit initializer nested in a default member initializer still
+    // needs the surrounding default initializer's `this` reconstruction.
+    Ctx->InitStackActive = OldValue || Active;
     if (Active)
       Ctx->InitStack.push_back(InitLink::DIE());
   }
@@ -776,7 +778,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
         return this->emitFnPtrCast(E);
       }
       if (FromT == PT_Ptr)
-        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), E);
+        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(),
+                                    E->getType().getTypePtr(), E);
       return true;
     }
 
@@ -1210,9 +1213,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     const Record *R = this->getRecord(E->getType());
     assert(R);
     const Record::Field *RF = R->getField(UnionField);
-    QualType FieldType = RF->Decl->getType();
 
-    if (OptPrimType PT = classify(FieldType)) {
+    if (OptPrimType PT = RF->T) {
       if (!this->visit(SubExpr))
         return false;
       if (RF->isBitField())
@@ -2316,22 +2318,36 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->emitInvalid(E);
   }
 
-  // Handle discarding first.
-  if (DiscardResult) {
-    for (const Expr *Init : Inits) {
-      if (!this->discard(Init))
-        return false;
-    }
-    return true;
-  }
-
-  // Primitive values.
+  // Primitive values. A discarded one can simply discard each initializer;
+  // there is no object to establish.
   if (OptPrimType T = classify(QT)) {
-    assert(!DiscardResult);
+    if (DiscardResult) {
+      for (const Expr *Init : Inits) {
+        if (!this->discard(Init))
+          return false;
+      }
+      return true;
+    }
     if (Inits.size() == 0)
       return this->visitZeroInitializer(*T, QT, E);
     assert(Inits.size() == 1);
     return this->delegate(Inits[0]);
+  }
+
+  assert(!canClassify(E->getType()));
+
+  // A composite prvalue needs somewhere to live even when it is discarded: a
+  // default member initializer may read subobjects initialized earlier in this
+  // same list, so those have to actually be written and `this` has to denote
+  // the object. Materialize one and initialize into it.
+  if (DiscardResult && !Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+    InitLinkScope<Emitter> ILS2(this, InitLink::Temp(*LocalIndex));
+    return this->visitInitializerPop(E);
   }
 
   if (QT->isRecordType()) {
@@ -2904,8 +2920,12 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return this->discard(Base);
 
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
-    // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable.
+    // If the member is a VarDecl, this is a static variable.
+    // We need to try to lazily evaluate its initializer here since the
+    // variable might've been deserialized and not registered
+    // as a global variable yet.
+    if (VD->getInit() && !VD->getInit()->isValueDependent())
+      VD->evaluateValue();
     if (auto GlobalIndex = P.getGlobal(VD)) {
       if (!this->emitGetPtrGlobal(*GlobalIndex, E))
         return false;
@@ -3695,11 +3715,11 @@ bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
     if (!R || R->getNumFields() == 0)
       return false;
     const Record::Field *Field = R->getField(0U);
-    PrimType FieldT = classifyPrim(Field->Decl->getType());
-    if (!this->emitConst(CmpInfo.getValueInfo(Result)->getIntValue(), FieldT,
+    assert(Field->T);
+    if (!this->emitConst(CmpInfo.getValueInfo(Result)->getIntValue(), *Field->T,
                          E))
       return false;
-    return this->emitInitField(FieldT, Field->Offset, E);
+    return this->emitInitField(*Field->T, Field->Offset, E);
   }
 
   PrimType T = classifyPrim(E->getType());
@@ -3883,6 +3903,16 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
         return true;
     }
 
+    // Trivial default constructors might never be implicitly defined by the
+    // AST, so we need to special-case them here.
+    if (Ctor->isTrivial() && Ctor->isDefaultConstructor()) {
+      if (!this->emitDefaultInit(Ctor, E))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
+    }
+
     // Avoid materializing a temporary for an elidable copy/move constructor.
     if (!ZeroInit && E->isElidable()) {
       const Expr *SrcObj = E->getArg(0);
@@ -4027,11 +4057,9 @@ bool Compiler<Emitter>::VisitSourceLocExpr(const SourceLocExpr *E) {
     const Record::Field *F = R->getField(I);
     const APValue &FieldValue = V.getStructField(I);
 
-    PrimType FieldT = classifyPrim(F->Decl->getType());
-
-    if (!this->visitAPValue(FieldValue, FieldT, E))
+    if (!this->visitAPValue(FieldValue, *F->T, E))
       return false;
-    if (!this->emitInitField(FieldT, F->Offset, E))
+    if (!this->emitInitField(*F->T, F->Offset, E))
       return false;
   }
 
@@ -4849,7 +4877,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
   if (!this->emitInitFieldPtr(R->getField(0u)->Offset, E))
     return false;
 
-  PrimType SecondFieldT = classifyPrim(R->getField(1u)->Decl->getType());
+  PrimType SecondFieldT = *R->getField(1u)->T;
   if (isIntegerOrBoolType(SecondFieldT)) {
     if (!this->emitConst(ArrayType->getSize(), SecondFieldT, E))
       return false;
@@ -5946,7 +5974,7 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       const Record::Field *RF = R->getField(I);
       QualType FieldType = RF->Decl->getType();
       // Fields.
-      if (OptPrimType PT = classify(FieldType)) {
+      if (OptPrimType PT = RF->T) {
         if (!this->visitAPValue(F, *PT, Info))
           return false;
         if (!this->emitInitField(*PT, RF->Offset, Info))
@@ -5995,7 +6023,7 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     const Record::Field *RF = R->getField(UnionField);
     QualType FieldType = RF->Decl->getType();
 
-    if (OptPrimType PT = classify(FieldType)) {
+    if (OptPrimType PT = RF->T) {
       if (!this->visitAPValue(F, *PT, Info))
         return false;
       if (RF->isBitField())
@@ -6046,6 +6074,25 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   // TODO: Other types.
 
   return false;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
+  if (P.getGlobal(VD))
+    return true;
+
+  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  if (!GlobalIndex) {
+    llvm_unreachable("Why didn't that work?");
+  }
+
+  assert(canClassify(VD->getType()) &&
+         "registerRedecl should only be called with primitive values");
+
+  PrimType T = classifyPrim(VD->getType());
+  if (!visitAPValue(Val, T, VD))
+    return false;
+  return this->emitInitGlobal(T, *GlobalIndex, {});
 }
 
 template <class Emitter>
@@ -6145,6 +6192,15 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   return true;
 }
 
+static bool isTrivialMemoryOperation(const CXXMethodDecl *MD) {
+  if (!MD || !MD->isDefaulted())
+    return false;
+  if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
+    return false;
+  return MD->getParent()->isUnion() ||
+         (MD->isTrivial() && isReadByLvalueToRvalueConversion(MD->getParent()));
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   if (E->containsErrors())
@@ -6177,6 +6233,35 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   LocalScope<Emitter> CallScope(this, ScopeKind::Call);
+  ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
+  bool ActivateLHS = false;
+
+  // Emit a special op for trivial copy/move operators.
+  if (isTrivialMemoryOperation(dyn_cast_if_present<CXXMethodDecl>(FuncDecl))) {
+    const Function *Func = getFunction(FuncDecl);
+    if (!Func)
+      return false;
+
+    if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
+        OCE && OCE->isAssignmentOp()) {
+      const CXXRecordDecl *LHSRecord = Args[0]->getType()->getAsCXXRecordDecl();
+      ActivateLHS = LHSRecord && LHSRecord->hasTrivialDefaultConstructor();
+    }
+    if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(E))
+      if (!this->visit(MCE->getImplicitObjectArgument()))
+        return false;
+
+    if (!this->visitCallArgs(Args, FuncDecl, /*ActivateLHS=*/ActivateLHS,
+                             isa<CXXOperatorCallExpr>(E)))
+      return false;
+
+    if (!this->emitTrivialCopy(ActivateLHS, Func, E))
+      return false;
+
+    if (!DiscardResult)
+      return CallScope.destroyLocals();
+    return this->emitPopPtr(E) && CallScope.destroyLocals();
+  }
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   OptPrimType T = classify(ReturnType);
@@ -6205,11 +6290,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
-  ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
   const Expr *ReversedArgs[2];
-
   bool IsAssignmentOperatorCall = false;
-  bool ActivateLHS = false;
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
       OCE && OCE->isAssignmentOp()) {
     // Just like with regular assignments, we need to special-case assignment
@@ -6223,6 +6305,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     ReversedArgs[1] = Args[0];
     Args = ReversedArgs;
   }
+
   // Calling a static operator will still
   // pass the instance, but we don't need it.
   // Discard it here.
@@ -7938,12 +8021,18 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // check), so that e.g. '&*(int *)0' is not rejected.
     if (!Ctx.getLangOpts().CPlusPlus) {
       const Expr *Sub = SubExpr->IgnoreParens();
+
       if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
-          Deref && Deref->getOpcode() == UO_Deref)
-        return this->delegate(Deref->getSubExpr());
+          Deref && Deref->getOpcode() == UO_Deref) {
+        if (DiscardResult)
+          return this->discard(Deref->getSubExpr());
+        return this->visit(Deref->getSubExpr()) && this->emitAddrOf(E);
+      }
     }
     // We should already have a pointer when we get here.
-    return this->delegate(SubExpr);
+    if (DiscardResult)
+      return this->discard(SubExpr);
+    return this->delegate(SubExpr) && this->emitAddrOf(E);
   case UO_Deref: // *x
     if (DiscardResult)
       return this->discard(SubExpr);
@@ -8731,25 +8820,7 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
-
-  if (ToLValue) {
-    if (const auto *VD = D.asValueDecl())
-      return this->emitGetOpaquePtr(VD, CU, E);
-  }
-
-  unsigned DummyID = P.getOrCreateDummy(D, CU);
-  if (!this->emitGetPtrGlobal(DummyID, E))
-    return false;
-  if (E->getType()->isVoidType())
-    return true;
-
-  // Convert the dummy pointer to another pointer type if we have to.
-  if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
-    if (isPtrType(PT))
-      return this->emitDecayPtr(PT_Ptr, PT, E);
-    return false;
-  }
-  return true;
+  return this->emitGetOpaquePtr(D, CU, E);
 }
 
 template <class Emitter>
@@ -8926,7 +8997,7 @@ bool Compiler<Emitter>::emitHLSLAggregateSplat(PrimType SrcT,
         continue;
 
       QualType FieldType = F.Decl->getType();
-      if (OptPrimType FieldT = classify(FieldType)) {
+      if (OptPrimType FieldT = F.T) {
         if (!this->emitGetLocal(SrcT, SrcOffset, E))
           return false;
         if (!this->emitPrimCast(SrcT, *FieldT, FieldType, E))
@@ -9114,7 +9185,7 @@ bool Compiler<Emitter>::emitHLSLFlattenAggregate(
       if (!this->emitGetPtrFieldPop(F.Offset, E))
         return false;
 
-      if (OptPrimType FieldT = classify(FieldType)) {
+      if (OptPrimType FieldT = F.T) {
         if (!this->emitLoadPop(*FieldT, E))
           return false;
         if (!saveToLocal(*FieldT))
@@ -9227,7 +9298,7 @@ bool Compiler<Emitter>::emitHLSLConstructAggregate(
         continue;
 
       QualType FieldType = F.Decl->getType();
-      if (OptPrimType FieldT = classify(FieldType)) {
+      if (OptPrimType FieldT = F.T) {
         if (!loadAndCast(*FieldT, FieldType))
           return false;
         if (F.isBitField()) {

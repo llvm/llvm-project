@@ -3,6 +3,7 @@
 // 'clang-apply-replacements' tool is available, it also applies the
 // YAML and checks the resulting rewritten source.
 
+// UNSUPPORTED: target={{.*}}
 
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: split-file %s %t

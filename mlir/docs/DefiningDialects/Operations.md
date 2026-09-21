@@ -540,16 +540,20 @@ the same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
 
 For operations with non-empty properties, the aggregate builder that takes a
-mixed `attributes` array partitions the array using the operation's statically
-known inherent-attribute and property names. It converts that subset into
-`Properties` and places only the remaining discardable attributes in
-`OperationState::attributes`. Defaults and result-type inference therefore
-observe the populated properties before the operation is created. Operations
-with empty properties retain the ordinary aggregate attribute builder.
+mixed `attributes` array is deprecated. Use the overload that takes a typed
+`Properties` structure and a separate `discardableAttributes` array instead.
+The deprecated overload remains available for compatibility: it partitions the
+mixed array using the operation's statically known inherent-attribute and
+property names, converts that subset into `Properties`, and places only the
+remaining discardable attributes in `OperationState::attributes`. Defaults and
+result-type inference therefore observe the populated properties before the
+operation is created. Operations with empty properties retain the ordinary
+aggregate attribute builder without a deprecation.
 
 This applies to all aggregate builder variants, including builders with
 explicit or inferred result types and builders that derive result types from
-operands or the first attribute.
+operands or the first attribute. The overload taking `Properties` and
+`discardableAttributes` is not deprecated.
 
 The third and fourth forms are good for use in manually written code, given that
 they provide better guarantee via signatures.

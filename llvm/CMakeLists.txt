@@ -144,8 +144,10 @@ set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;cross-project-tests;lld;lldb
 set(LLVM_EXTRA_PROJECTS "flang" "libc" "compiler-rt")
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
-set(LLVM_ENABLE_PROJECTS "" CACHE STRING
+set(LLVM_REQUESTED_PROJECTS "${LLVM_ENABLE_PROJECTS}")
+set(LLVM_ENABLE_PROJECTS "${LLVM_REQUESTED_PROJECTS}" CACHE STRING
     "Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
+set(LLVM_ENABLE_PROJECTS "${LLVM_REQUESTED_PROJECTS}")
 # Make sure expansion happens first to not handle "all" in rest of the checks.
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
@@ -165,6 +167,8 @@ foreach(proj ${LLVM_ENABLE_PROJECTS})
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
   endif()
 endforeach()
+
+set(LLVM_DEPENDENCY_ONLY_PROJECTS)
 
 # Select the runtimes to build
 #
@@ -187,11 +191,18 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling MLIR as a dependency to flang")
     list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+    list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "mlir")
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling clang as a dependency to flang")
     list(APPEND LLVM_ENABLE_PROJECTS "clang")
+    # LLDB also consumes Clang libraries, and clang-tools-extra is nested under
+    # Clang. Keep their existing build and install behavior.
+    if(NOT "lldb" IN_LIST LLVM_ENABLE_PROJECTS AND
+       NOT "clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS)
+      list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "clang")
+    endif()
   endif()
 
   option(FLANG_ENABLE_FLANG_RT "Implicitly add LLVM_ENABLE_RUNTIMES=flang-rt when compiling Flang" ON)
@@ -207,6 +218,13 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
 endif ()
+
+if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
+    NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(STATUS "Enabling MLIR as a dependency of ClangIR")
+  list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+  list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "mlir")
+endif()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
@@ -293,7 +311,16 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
     string(TOUPPER "${proj}" upper_proj)
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
-      message(STATUS "${proj} project is enabled")
+      if ("${proj}" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+        message(STATUS "${proj} project is enabled as a dependency")
+        # Do not cache this default: explicitly enabling the project on a later
+        # configure should restore its normal test defaults.
+        if(NOT DEFINED ${upper_proj}_INCLUDE_TESTS)
+          set(${upper_proj}_INCLUDE_TESTS OFF)
+        endif()
+      else()
+        message(STATUS "${proj} project is enabled")
+      endif()
       set(SHOULD_ENABLE_PROJECT TRUE)
       set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
       if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
@@ -487,6 +514,7 @@ if(WIN32 AND NOT UNIX)
     set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
     set(CPACK_NSIS_MODIFY_PATH "ON")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL "ON")
+    set(CPACK_NSIS_MANIFEST_DPI_AWARE "ON")
     if( CMAKE_CL_64 )
       if(NOT DEFINED CPACK_NSIS_INSTALL_ROOT)
         set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
@@ -503,6 +531,21 @@ if(WIN32 AND NOT UNIX)
     # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
     # use LZMA the way the NSIS generator does.
     set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
+    # Make the LLVM installation available for all users.  CPack only gained
+    # CPACK_WIX_INSTALL_SCOPE in CMake 3.29, so inject the equivalent ALLUSERS
+    # property when packaging with an older CMake supported by LLVM.
+    # TODO: remove after transition to CMake 3.31.
+    if(CMAKE_VERSION VERSION_LESS "3.29")
+      list(APPEND CPACK_WIX_PATCH_FILE
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/WiXPerMachinePatch.xml")
+    else()
+      set(CPACK_WIX_INSTALL_SCOPE "perMachine")
+    endif()
+    # Permanent WiX UpgradeCode for official LLVM MSI packages. Windows Installer
+    # uses this value to recognize related releases and remove an older LLVM
+    # installation during an upgrade. It must remain identical across all future
+    # releases and release branches. DO NOT regenerate or change this GUID.
+    set(CPACK_WIX_UPGRADE_GUID "B08613CD-8BD0-4FB6-8937-621936604DE3")
   endif()
 endif()
 include(CPack)
