@@ -3499,10 +3499,20 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 
   // FIXME: If it is an i8 vector and the element count exceeds 256, we should
   // scalarize these types with LMUL >= maximum fixed-length LMUL.
-  if (isa<FixedVectorType>(VTy) && VTy->getElementType()->isIntegerTy(8))
-    if (VTy->getElementCount().getFixedValue() > 256)
-      return VTy->getPrimitiveSizeInBits() / ST->getRealMinVLen() <
-             ST->getMaxLMULForFixedLengthVectors();
+  if (VTy->getElementType()->isIntegerTy(8)) {
+    uint64_t MaxEltCount = VTy->getElementCount().getKnownMinValue();
+    if (VTy->isScalableTy())
+      MaxEltCount *= ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
+    if (MaxEltCount > 256) {
+      uint64_t LMUL;
+      if (VTy->isScalableTy())
+        LMUL = VTy->getPrimitiveSizeInBits().getKnownMinValue() /
+               RISCV::RVVBitsPerBlock;
+      else
+        LMUL = VTy->getPrimitiveSizeInBits() / ST->getRealMinVLen();
+      return LMUL < ST->getMaxLMULForFixedLengthVectors();
+    }
+  }
   return true;
 }
 

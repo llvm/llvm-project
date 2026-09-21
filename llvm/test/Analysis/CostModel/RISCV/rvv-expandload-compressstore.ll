@@ -24,6 +24,7 @@ define void @expand_load() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %t18 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64.p0(ptr align 8 poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %t19 = call <vscale x 8 x i64> @llvm.masked.expandload.nxv8i64.p0(ptr align 8 poison, <vscale x 8 x i1> poison, <vscale x 8 x i64> poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %t20 = call <vscale x 16 x i64> @llvm.masked.expandload.nxv16i64.p0(ptr align 8 poison, <vscale x 16 x i1> poison, <vscale x 16 x i64> poison)
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %t21 = call <vscale x 64 x i8> @llvm.masked.expandload.nxv64i8.p0(ptr poison, <vscale x 64 x i1> poison, <vscale x 64 x i8> poison)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'expand_load'
@@ -47,6 +48,7 @@ define void @expand_load() {
 ; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t18 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64.p0(ptr align 8 poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
 ; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t19 = call <vscale x 8 x i64> @llvm.masked.expandload.nxv8i64.p0(ptr align 8 poison, <vscale x 8 x i1> poison, <vscale x 8 x i64> poison)
 ; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t20 = call <vscale x 16 x i64> @llvm.masked.expandload.nxv16i64.p0(ptr align 8 poison, <vscale x 16 x i1> poison, <vscale x 16 x i64> poison)
+; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %t21 = call <vscale x 64 x i8> @llvm.masked.expandload.nxv64i8.p0(ptr poison, <vscale x 64 x i1> poison, <vscale x 64 x i8> poison)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %t1 = call <2 x i8> @llvm.masked.expandload.v2i8.p0(ptr poison, <2 x i1> poison, <2 x i8> poison)
@@ -69,6 +71,9 @@ define void @expand_load() {
   %t18 = call <vscale x 4 x i64> @llvm.masked.expandload.nxv4i64.p0(ptr align(8) poison, <vscale x 4 x i1> poison, <vscale x 4 x i64> poison)
   %t19 = call <vscale x 8 x i64> @llvm.masked.expandload.nxv8i64.p0(ptr align(8) poison, <vscale x 8 x i1> poison, <vscale x 8 x i64> poison)
   %t20 = call <vscale x 16 x i64> @llvm.masked.expandload.nxv16i64.p0(ptr align(8) poison, <vscale x 16 x i1> poison, <vscale x 16 x i64> poison)
+
+  ; Can't lower this yet as it needs splitting. Should return an invalid cost
+  %t21 = call <vscale x 64 x i8> @llvm.masked.expandload(ptr poison, <vscale x 64 x i1> poison, <vscale x 64 x i8> poison)
   ret void
 }
 
