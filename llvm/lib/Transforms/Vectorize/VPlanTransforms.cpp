@@ -3514,10 +3514,11 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // latch:
   //   ...
   //   EMIT vp<%combined> = logical-or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
+  //   EMIT vp<%combined.freeze> = freeze vp<%combined>
   //   ...
   //
   // vector.early.exit.check:
-  //   EMIT vp<%first.lane> = first-active-lane vp<%combined>
+  //   EMIT vp<%first.lane> = first-active-lane vp<%combined.freeze>
   //   EMIT vp<%at.cond.0> = extract-lane vp<%first.lane>, vp<%cond.0>
   //   EMIT branch-on-cond vp<%at.cond.0>
   // Successor(s): vector.early.exit.0, vector.early.exit.check.0
