@@ -7783,15 +7783,20 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
 
   BasicBlock *ScalarPH =
       cast<VPIRBasicBlock>(EpiPlan.getScalarPreheader())->getIRBasicBlock();
-  // With a tail-folded epilogue there is no scalar remainder to bail
-  // to, even a trip count too small for the epilogue VF is handled safely by
-  // the masked epilogue vector loop, so skip straight to its preheader.
-  RedirectEdge(EPI.EpilogueIterationCountCheck,
-               IsEpilogueTfEnabled ? VecEpiloguePreHeader : ScalarPH);
-
-  // Adjust the terminators of runtime check blocks and phis using them.
   BasicBlock *SCEVCheckBlock = Checks.getSCEVChecks().second;
   BasicBlock *MemCheckBlock = Checks.getMemRuntimeChecks().second;
+  bool JumpToScalarPH =
+      (!IsEpilogueTfEnabled || SCEVCheckBlock || MemCheckBlock);
+  // With tail-folding, the epilogue vector loop itself safely handles any
+  // trip count (including one smaller than the epilogue VF), so there's no
+  // need for a scalar remainder and we can jump straight to the epilogue
+  // preheader. The exception is when a SCEV or memory runtime check is
+  // present: those can fail at runtime regardless of tail-folding, so the
+  // scalar loop must still be kept as a fallback.
+  RedirectEdge(EPI.EpilogueIterationCountCheck,
+               JumpToScalarPH ? ScalarPH : VecEpiloguePreHeader);
+
+  // Adjust the terminators of runtime check blocks and phis using them.
   if (SCEVCheckBlock)
     RedirectEdge(SCEVCheckBlock, ScalarPH);
   if (MemCheckBlock)
@@ -7829,7 +7834,7 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
     // TODO: revisit for reduction phis, whose resume value on this bypass
     // edge may need dedicated handling rather than reusing the value already
     // present here.
-    if (!IsEpilogueTfEnabled)
+    if (JumpToScalarPH)
       Phi->removeIncomingValue(EPI.EpilogueIterationCountCheck);
   }
 
