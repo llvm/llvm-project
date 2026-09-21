@@ -45,10 +45,10 @@ jobs:
                 -D CMAKE_CXX_COMPILER=clang++ \
                 -D LLVM_ENABLE_PROJECTS=clang \
                 -D LLVM_TARGETS_TO_BUILD="host" \
-                -D LLVM_INCLUDE_TESTS=OFF \
                 -D LLVM_INCLUDE_BENCHMARKS=OFF \
                 -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+                -D LLVM_LINK_LLVM_DYLIB=ON \
                 -G Ninja
 
           # Build the generated-header prerequisites that idt needs to parse
@@ -73,6 +73,7 @@ jobs:
                   print $1
                 }')
           ninja -C "$BUILD_DIR" $TABLEGEN_TARGETS
+          ninja -C "$BUILD_DIR" check-llvm
 
       - name: Run ids check
         env:
