@@ -46,6 +46,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <variant>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -1790,25 +1791,31 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
   return false;
 }
 
+// Exit values of an instruction's loop-variant operands, indexed by operand
+// number.
+using OperandExitValueList = SmallVector<std::pair<unsigned, SCEVUse>, 2>;
+using ExpansionValue = std::variant<SCEVUse, OperandExitValueList>;
+
 // Collect information about PHI nodes which can be transformed in
 // rewriteLoopExitValues.
 struct RewritePhi {
-  PHINode *PN;               // For which PHI node is this replacement?
-  unsigned Ith;              // For which incoming value?
-  SCEVUse ExpansionSCEV;     // The SCEV of the incoming value we are rewriting.
-  Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
-  bool HighCost;               // Is this expansion a high-cost?
+  PHINode *PN;                  // For which PHI node is this replacement?
+  unsigned Ith;                 // For which incoming value?
+  ExpansionValue ValueToExpand; // The incoming value or its varying operands.
+  Instruction *ExpansionPoint;  // Where we'd like to expand that SCEV?
+  bool HighCost;                // Is this expansion a high-cost?
 
-  RewritePhi(PHINode *P, unsigned I, SCEVUse Val, Instruction *ExpansionPt,
-             bool H)
-      : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
-        HighCost(H) {}
+  RewritePhi(PHINode *P, unsigned I, ExpansionValue Val,
+             Instruction *ExpansionPt, bool H)
+      : PN(P), Ith(I), ValueToExpand(std::move(Val)),
+        ExpansionPoint(ExpansionPt), HighCost(H) {}
 };
 
 // Check whether it is possible to delete the loop after rewriting exit
 // value. If it is possible, ignore ReplaceExitValue and do rewriting
 // aggressively.
-static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet) {
+static bool canLoopBeDeleted(Loop *L,
+                             SmallVector<RewritePhi, 8> &RewritePhiSet) {
   BasicBlock *Preheader = L->getLoopPreheader();
   // If there is no preheader, the loop will not be deleted.
   if (!Preheader)
@@ -1871,6 +1878,29 @@ static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
   if (Phi->getParent() != L->getHeader())
     return false;
   return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
+}
+
+static bool collectOperandExitValues(Instruction *Inst, Loop *L,
+                                     BasicBlock *Preheader, ScalarEvolution *SE,
+                                     SCEVExpander &Rewriter,
+                                     OperandExitValueList &ExitValues) {
+  if (!Preheader || !isa<ICmpInst>(Inst))
+    return false;
+
+  for (const auto &[Idx, Op] : enumerate(Inst->operands())) {
+    // Operands defined outside the loop already dominate the preheader.
+    if (L->isLoopInvariant(Op))
+      continue;
+    if (!SE->isSCEVable(Op->getType()))
+      return false;
+    SCEVUse ExitValue = SE->getSCEVAtScope(Op, L->getParentLoop());
+    if (isa<SCEVCouldNotCompute>(ExitValue) ||
+        !SE->isLoopInvariant(ExitValue, L) ||
+        !Rewriter.isSafeToExpandAt(ExitValue, Preheader->getTerminator()))
+      return false;
+    ExitValues.emplace_back(Idx, ExitValue);
+  }
+  return !ExitValues.empty();
 }
 
 int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
@@ -1971,6 +2001,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // expression reuse by the SCEVExpander), but resort to per-exit
         // evaluation if that fails.
         SCEVUse ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
+        OperandExitValueList OperandExitValues;
         if (isa<SCEVCouldNotCompute>(ExitValue) ||
             !SE->isLoopInvariant(ExitValue, L) ||
             !Rewriter.isSafeToExpand(ExitValue)) {
@@ -1979,14 +2010,15 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
           // most SCEV expressions and other recurrence types (e.g. shift
           // recurrences).  Is there existing code we can reuse?
           const SCEV *ExitCount = SE->getExitCount(L, PN->getIncomingBlock(i));
-          if (isa<SCEVCouldNotCompute>(ExitCount))
-            continue;
-          if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Inst)))
-            if (AddRec->getLoop() == L)
-              ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
-          if (isa<SCEVCouldNotCompute>(ExitValue) ||
-              !SE->isLoopInvariant(ExitValue, L) ||
-              !Rewriter.isSafeToExpand(ExitValue))
+          if (!isa<SCEVCouldNotCompute>(ExitCount))
+            if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Inst)))
+              if (AddRec->getLoop() == L)
+                ExitValue = AddRec->evaluateAtIteration(ExitCount, *SE);
+          if ((isa<SCEVCouldNotCompute>(ExitValue) ||
+               !SE->isLoopInvariant(ExitValue, L) ||
+               !Rewriter.isSafeToExpand(ExitValue)) &&
+              !collectOperandExitValues(Inst, L, L->getLoopPreheader(), SE,
+                                        Rewriter, OperandExitValues))
             continue;
         }
 
@@ -2000,8 +2032,10 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
           continue;
 
         // Check if expansions of this SCEV would count as being high cost.
-        bool HighCost = Rewriter.isHighCostExpansion(
-            ExitValue.getPointer(), L, SCEVCheapExpansionBudget, TTI, Inst);
+        bool HighCost =
+            OperandExitValues.empty() &&
+            Rewriter.isHighCostExpansion(ExitValue.getPointer(), L,
+                                         SCEVCheapExpansionBudget, TTI, Inst);
 
         // Note that we must not perform expansions until after
         // we query *all* the costs, because if we perform temporary expansion
@@ -2013,7 +2047,13 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         Instruction *InsertPt =
           (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
           &*Inst->getParent()->getFirstInsertionPt() : Inst;
-        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
+        if (!OperandExitValues.empty())
+          InsertPt = L->getLoopPreheader()->getTerminator();
+        if (OperandExitValues.empty())
+          RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
+        else
+          RewritePhiSet.emplace_back(PN, i, std::move(OperandExitValues),
+                                     InsertPt, false);
       }
     }
   }
@@ -2030,6 +2070,12 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   for (const RewritePhi &Phi : RewritePhiSet) {
     PHINode *PN = Phi.PN;
 
+    // Only clone an instruction when doing so allows the loop to be deleted.
+    const auto *OperandExitValues =
+        std::get_if<OperandExitValueList>(&Phi.ValueToExpand);
+    if (OperandExitValues && !LoopCanBeDel)
+      continue;
+
     // Only do the rewrite when the ExitValue can be expanded cheaply.
     // If LoopCanBeDel is true, rewrite exit value aggressively.
     if ((ReplaceExitValue == OnlyCheapRepl ||
@@ -2037,12 +2083,25 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         !LoopCanBeDel && Phi.HighCost)
       continue;
 
-    Value *ExitVal = Rewriter.expandCodeFor(
-        Phi.ExpansionSCEV, Phi.PN->getType(), Phi.ExpansionPoint);
+    Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
+    Value *ExitVal;
+    if (!OperandExitValues) {
+      ExitVal = Rewriter.expandCodeFor(std::get<SCEVUse>(Phi.ValueToExpand),
+                                       Phi.PN->getType(), Phi.ExpansionPoint);
+    } else {
+      Instruction *Clone = Inst->clone();
+      Clone->setName(Inst->getName() + ".exit");
+      for (auto [Idx, ExitSCEV] : *OperandExitValues)
+        Clone->setOperand(Idx, Rewriter.expandCodeFor(
+                                   ExitSCEV, Inst->getOperand(Idx)->getType(),
+                                   Phi.ExpansionPoint));
+      Clone->insertBefore(Phi.ExpansionPoint->getIterator());
+      ExitVal = Clone;
+    }
 
     LLVM_DEBUG(dbgs() << "rewriteLoopExitValues: AfterLoopVal = " << *ExitVal
                       << '\n'
-                      << "  LoopVal = " << *(Phi.ExpansionPoint) << "\n");
+                      << "  LoopVal = " << *Inst << "\n");
 
 #ifndef NDEBUG
     // If we reuse an instruction from a loop which is neither L nor one of
@@ -2055,7 +2114,6 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 #endif
 
     NumReplaced++;
-    Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
     PN->setIncomingValue(Phi.Ith, ExitVal);
     // It's necessary to tell ScalarEvolution about this explicitly so that
     // it can walk the def-use list and forget all SCEVs, as it may not be
