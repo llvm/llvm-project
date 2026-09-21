@@ -36,7 +36,6 @@ macros = {
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
     "_LIBCPP_PSTL_BACKEND_STD_THREAD": "libcpp-pstl-backend-std-thread",
     "_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE": "libcpp-abi-use-small-deque-block-size",
-    "_LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE": "libcpp-abi-vectorized-mersenne-twister-engine",
 }
 for macro, feature in macros.items():
     features.append(

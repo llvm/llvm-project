@@ -821,10 +821,11 @@ define float @v_fdot2_dual_sgpr_src0_y(<2 x half> %a, <2 x half> %b, float %c, <
 ; GFX10:    v_dot2c_f32_f16 v5, s16, v3
 ; GFX10:    v_add_f32_e32 v0, v2, v5
 ;
-; GFX11PLUS-LABEL: v_fdot2_dual_sgpr_src0_y:
-; GFX11PLUS:  ; %bb.0:
-; GFX11PLUS:    v_dual_dot2acc_f32_f16 v2, v0, v1 :: v_dual_dot2acc_f32_f16 v5, s0, v3
-; GFX11PLUS:    v_add_f32_e32 v0, v2, v5
+; GFX11-LABEL: v_fdot2_dual_sgpr_src0_y:
+; GFX11:  ; %bb.0:
+; GFX11:    v_dot2acc_f32_f16 v2, v0, v1
+; GFX11:    v_dot2acc_f32_f16 v5, s0, v3
+; GFX11:    v_add_f32_e32 v0, v2, v5
   %r0 = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
   %r1 = call float @llvm.amdgcn.fdot2(<2 x half> %d, <2 x half> %e, float %f, i1 false)
   %r = fadd float %r0, %r1
@@ -852,7 +853,8 @@ define float @v_fdot2_dual_sgpr_src1_y(<2 x half> %a, <2 x half> %b, float %c, <
 ;
 ; GFX11-LABEL: v_fdot2_dual_sgpr_src1_y:
 ; GFX11:  ; %bb.0:
-; GFX11:    v_dual_dot2acc_f32_f16 v2, v0, v1 :: v_dual_dot2acc_f32_f16 v5, s0, v3
+; GFX11:    v_dot2acc_f32_f16 v2, v0, v1
+; GFX11:    v_dot2acc_f32_f16 v5, s0, v3
 ; GFX11:    v_add_f32_e32 v0, v2, v5
 ;
 ; GFX1170-GFX12-LABEL: v_fdot2_dual_sgpr_src1_y:

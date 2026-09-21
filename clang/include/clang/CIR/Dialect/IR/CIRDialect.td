@@ -53,6 +53,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getStrictFPAttrName() { return "strictfp"; }
     static llvm::StringRef getNoDuplicatesAttrName() { return "noduplicate"; }
     static llvm::StringRef getConvergentAttrName() { return "convergent"; }
+    static llvm::StringRef getNoRecurseAttrName() { return "norecurse"; }
+    static llvm::StringRef getMustProgressAttrName() { return "mustprogress"; }
+    static llvm::StringRef getSYCLModuleIdAttrName() { return "sycl-module-id"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
@@ -93,6 +96,10 @@ def CIR_Dialect : Dialect {
     // Mangled symbol name of the C++20 named-module initializer function,
     // precomputed by CIRGen so later passes don't need a live ASTContext.
     static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
+    // LangOptions facts that post-CIRGen lowering consumes, serialized by
+    // CIRGen so a reloaded .cir module is self-describing without a live
+    // clang::LangOptions. See #cir.lowering_lang_options.
+    static llvm::StringRef getLoweringLangOptionsAttrName() { return "cir.lowering_lang_options"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 

@@ -48,6 +48,7 @@
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
+#include <__pstl/cpu_algos/uninitialized_algorithms.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -446,6 +447,14 @@ struct __any_of<__std_thread_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __fill<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_fill<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_copy<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_uninitialized_copy<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __uninitialized_move<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_uninitialized_move<__std_thread_backend_tag, _ExecutionPolicy> {};
 
 } // namespace __pstl
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

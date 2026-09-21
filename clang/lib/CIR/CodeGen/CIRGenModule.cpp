@@ -65,6 +65,8 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::AppleARM64:
   case TargetCXXABI::GenericARM:
     return CreateCIRGenItaniumCXXABI(cgm);
+  case TargetCXXABI::Microsoft:
+    return CreateCIRGenMicrosoftCXXABI(cgm);
 
   case TargetCXXABI::Fuchsia:
   case TargetCXXABI::iOS:
@@ -72,7 +74,6 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::GenericMIPS:
   case TargetCXXABI::WebAssembly:
   case TargetCXXABI::XL:
-  case TargetCXXABI::Microsoft:
     cgm.errorNYI("createCXXABI: C++ ABI kind");
     return nullptr;
   }
@@ -1705,6 +1706,20 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (fd->isInlineBuiltinDeclaration())
     return true;
 
+  if (codeGenOpts.OptimizationLevel == 0 && !fd->hasAttr<AlwaysInlineAttr>())
+    return false;
+
+  // We don't import function bodies from other named module units since that
+  // behavior may break ABI compatibility of the current unit.
+  if (const Module *m = fd->getOwningModule();
+      m && m->getTopLevelModule()->isNamedModule() &&
+      getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
+    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+  }
+
+  if (fd->hasAttr<NoInlineAttr>())
+    return false;
+
   // PR9614 / glibc btowc workaround: an available_externally function whose
   // body just calls itself (via asm label or __builtin_* lowering on the
   // same name) is not a valid stand-in for the real implementation.  Drop
@@ -2344,8 +2359,9 @@ LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
 
   if (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice)
     assert(!cir::MissingFeatures::openMP());
+
   if (getLangOpts().SYCLIsDevice)
-    errorNYI("SYCL temp address space");
+    return LangAS::Default;
 
   return LangAS::Default;
 }
@@ -3379,6 +3395,29 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   }
 
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
+
+  std::optional<uint64_t> explicitAlignment;
+  if (unsigned alignment =
+          decl->getMaxAlignment() / getASTContext().getCharWidth())
+    explicitAlignment = alignment;
+  else if (langOpts.FunctionAlignment)
+    explicitAlignment = 1ull << langOpts.FunctionAlignment;
+
+  if (explicitAlignment) {
+    f.setAlignment(*explicitAlignment);
+    f.setPreferredAlignment(*explicitAlignment);
+  } else if (langOpts.PreferredFunctionAlignment) {
+    f.setPreferredAlignment(langOpts.PreferredFunctionAlignment);
+  }
+
+  // Some C++ ABIs require 2-byte alignment for member functions, in order to
+  // reserve a bit for differentiating between virtual and non-virtual member
+  // functions. If the current target's C++ ABI requires this and this is a
+  // member function, set its alignment accordingly.
+  if (getTarget().getCXXABI().areMemberFunctionsAligned()) {
+    if (isa<CXXMethodDecl>(decl) && f.getAlignment().value_or(1) < 2)
+      f.setAlignment(2);
+  }
 }
 
 // Maps an AST address space to the OpenCL logical address space kind recorded
@@ -3933,6 +3972,24 @@ void CIRGenModule::release() {
                          builder.getStringAttr(fnName));
     }
   }
+
+  // Serialize the lowering-relevant LangOptions onto the ModuleOp,
+  // unconditionally, so a reloaded .cir module is self-describing. See
+  // #cir.lowering_lang_options.
+  theModule->setAttr(
+      cir::CIRDialect::getLoweringLangOptionsAttrName(),
+      cir::LoweringLangOptionsAttr::get(
+          &getMLIRContext(),
+          /*exceptions=*/langOpts.Exceptions,
+          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
+          /*cuda=*/langOpts.CUDA,
+          /*cuda_is_device=*/langOpts.CUDAIsDevice,
+          /*hip=*/langOpts.HIP,
+          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
+          /*openmp=*/langOpts.OpenMP != 0,
+          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
+          /*clang_abi_compat=*/
+          static_cast<int32_t>(langOpts.getClangABICompat())));
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.

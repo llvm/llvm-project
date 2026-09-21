@@ -184,6 +184,13 @@ functions:
     return_type: char *
     arguments:
       - type: char *
+  - name: mkostemp
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
+      - type: int
   - name: mkstemp
     standards:
       - posix
