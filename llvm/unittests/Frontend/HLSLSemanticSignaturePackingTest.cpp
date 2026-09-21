@@ -2401,9 +2401,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, PackingPreservesElementMetadata) {
 TEST_F(HLSLSemanticSignaturePackingTest, OptimizedUsesSignatureIDToBreakTies) {
   TestConfig Config(Triple::Vertex, IOType::Out, {});
   for (unsigned I = 0; I != 3; ++I)
-    Config.Elements.push_back(
-        {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
-         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear});
+    Config.Elements.push_back({dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1,
+                               /*Cols=*/1, dxil::ElementType::F32,
+                               dxbc::PSV::InterpolationMode::Linear});
   SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
   Elements[0].SigId = 2;
   Elements[1].SigId = 0;
