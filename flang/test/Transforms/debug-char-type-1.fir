@@ -18,9 +18,9 @@ module {
 }
 #loc1 = loc("string.f90":1:1)
 
-// CHECK-DAG: #[[TY1:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 320, encoding = DW_ATE_ASCII>
+// CHECK-DAG: #[[TY1:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 320, encoding = DW_ATE_ASCII, charType = #{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str1"{{.*}}type = #[[TY1]]{{.*}}>
-// CHECK-DAG: #[[TY2:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 640, encoding = DW_ATE_UCS>
+// CHECK-DAG: #[[TY2:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "", sizeInBits = 640, encoding = DW_ATE_UCS, charType = #{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str2"{{.*}}type = #[[TY2]]{{.*}}>
-// CHECK-DAG: #[[TY3:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type{{.*}}stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, encoding = DW_ATE_ASCII>
+// CHECK-DAG: #[[TY3:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type{{.*}}stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, encoding = DW_ATE_ASCII, charType = #{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "str3"{{.*}}type = #[[TY3]]{{.*}}>
