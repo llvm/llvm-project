@@ -5,86 +5,86 @@
 ; RUN:     < %s | FileCheck %s
 
 
-define void @ld2q(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b) {
+define void @ld2q(ptr noalias %a, ptr %b) {
 ; CHECK-LABEL: define void @ld2q(
-; CHECK-SAME: ptr noalias noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]]) {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds [16 x i16], ptr [[B]], i64 [[INDVARS_IV]], i64 0
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds [16 x i16], ptr [[B]], i64 [[IV]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[ARRAYIDX0]], align 16
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [16 x i16], ptr [[B]], i64 [[INDVARS_IV]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [16 x i16], ptr [[B]], i64 [[IV]], i64 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[ARRAYIDX1]], align 16
 ; CHECK-NEXT:    [[RESULT:%.*]] = add <8 x i16> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    store <8 x i16> [[RESULT]], ptr [[ARRAYIDX2]], align 16
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
-
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx0 = getelementptr inbounds [16 x i16], ptr %b, i64 %indvars.iv, i64 0
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx0 = getelementptr inbounds [16 x i16], ptr %b, i64 %iv, i64 0
   %0 = load <8 x i16>, ptr %arrayidx0, align 16
-  %arrayidx1 = getelementptr inbounds [16 x i16], ptr %b, i64 %indvars.iv, i64 8
+  %arrayidx1 = getelementptr inbounds [16 x i16], ptr %b, i64 %iv, i64 8
   %1 = load <8 x i16>, ptr %arrayidx1, align 16
   %result = add <8 x i16> %0, %1
-  %arrayidx2 = getelementptr inbounds <8 x i16>, ptr %a, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds <8 x i16>, ptr %a, i64 %iv
   store <8 x i16> %result, ptr %arrayidx2, align 16
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
 }
 
-define void @st2q(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b) {
+define void @st2q(ptr noalias %a, ptr %b) {
 ; CHECK-LABEL: define void @st2q(
-; CHECK-SAME: ptr noalias noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]]) {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX_IN:%.*]] = getelementptr inbounds <8 x i16>, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x i16>, ptr [[ARRAYIDX_IN]], align 16
-; CHECK-NEXT:    [[V0:%.*]] = add <8 x i16> [[TMP9]], splat (i16 1)
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ARRAYIDX_IN:%.*]] = getelementptr inbounds <8 x i16>, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[ARRAYIDX_IN]], align 16
+; CHECK-NEXT:    [[V0:%.*]] = add <8 x i16> [[TMP0]], splat (i16 1)
 ; CHECK-NEXT:    [[V1:%.*]] = add <8 x i16> [[V0]], splat (i16 1)
-; CHECK-NEXT:    [[ARRAYIDX_OUT0:%.*]] = getelementptr inbounds [16 x i16], ptr [[A]], i64 [[INDVARS_IV]], i64 0
+; CHECK-NEXT:    [[ARRAYIDX_OUT0:%.*]] = getelementptr inbounds [16 x i16], ptr [[A]], i64 [[IV]], i64 0
 ; CHECK-NEXT:    store <8 x i16> [[V0]], ptr [[ARRAYIDX_OUT0]], align 16
-; CHECK-NEXT:    [[ARRAYIDX_OUT1:%.*]] = getelementptr inbounds [16 x i16], ptr [[A]], i64 [[INDVARS_IV]], i64 8
+; CHECK-NEXT:    [[ARRAYIDX_OUT1:%.*]] = getelementptr inbounds [16 x i16], ptr [[A]], i64 [[IV]], i64 8
 ; CHECK-NEXT:    store <8 x i16> [[V1]], ptr [[ARRAYIDX_OUT1]], align 16
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
-
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx.in = getelementptr inbounds <8 x i16>, ptr %b, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx.in = getelementptr inbounds <8 x i16>, ptr %b, i64 %iv
   %0 = load <8 x i16>, ptr %arrayidx.in, align 16
   %v0 = add <8 x i16> %0, splat (i16 1)
   %v1 = add <8 x i16> %v0, splat (i16 1)
 
-  %arrayidx.out0 = getelementptr inbounds [16 x i16], ptr %a, i64 %indvars.iv, i64 0
+  %arrayidx.out0 = getelementptr inbounds [16 x i16], ptr %a, i64 %iv, i64 0
   store <8 x i16> %v0, ptr %arrayidx.out0, align 16
-  %arrayidx.out1 = getelementptr inbounds [16 x i16], ptr %a, i64 %indvars.iv, i64 8
+  %arrayidx.out1 = getelementptr inbounds [16 x i16], ptr %a, i64 %iv, i64 8
   store <8 x i16> %v1, ptr %arrayidx.out1, align 16
 
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
 }

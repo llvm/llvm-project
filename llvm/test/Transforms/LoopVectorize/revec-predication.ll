@@ -50,14 +50,12 @@ exit:
   ret void
 }
 
-define void @predicated_load_uniform_cond(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b, ptr nocapture noundef readonly %c, i1 %cond) {
+define void @predicated_load_uniform_cond(ptr noalias %a, ptr %b, ptr %c, i1 %cond) {
 ; CHECK-LABEL: define void @predicated_load_uniform_cond(
-; CHECK-SAME: ptr noalias noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]], i1 [[COND:%.*]]) {
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[ARRAYIDX0]], align 16
@@ -67,21 +65,20 @@ define void @predicated_load_uniform_cond(ptr noalias nocapture noundef writeonl
 ; CHECK-NEXT:    [[PRED_1:%.*]] = load <8 x i16>, ptr [[ARRAYIDX1]], align 16
 ; CHECK-NEXT:    br label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x i16> [ zeroinitializer, %[[FOR_BODY]] ], [ [[PRED_1]], %[[IF_THEN]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x i16> [ zeroinitializer, %[[LOOP]] ], [ [[PRED_1]], %[[IF_THEN]] ]
 ; CHECK-NEXT:    [[RESULT:%.*]] = add <8 x i16> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store <8 x i16> [[RESULT]], ptr [[ARRAYIDX2]], align 16
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
-
-for.body:                                         ; preds = %entry, %for.inc
+loop:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
   %arrayidx0 = getelementptr inbounds <8 x i16>, ptr %b, i64 %indvars.iv
   %0 = load <8 x i16>, ptr %arrayidx0, align 16
@@ -93,11 +90,14 @@ if.then:
   br label %for.inc
 
 for.inc:
-  %1 = phi <8 x i16> [ zeroinitializer, %for.body ], [ %pred.1, %if.then ]
+  %1 = phi <8 x i16> [ zeroinitializer, %loop ], [ %pred.1, %if.then ]
   %result = add <8 x i16> %0, %1
   %arrayidx2 = getelementptr inbounds <8 x i16>, ptr %a, i64 %indvars.iv
   store <8 x i16> %result, ptr %arrayidx2, align 16
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
 }

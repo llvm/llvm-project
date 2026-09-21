@@ -40,53 +40,51 @@ exit:
   ret void
 }
 
-define void @gather_128(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b, i64 %stride) {
+define void @gather_128(ptr noalias %a, ptr %b, i64 %stride) {
 ; CHECK-LABEL: define void @gather_128(
-; CHECK-SAME: ptr noalias noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i64 [[STRIDE:%.*]]) {
-; CHECK-NEXT:  [[VECTOR_PH:.*]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET:%.*]] = mul i64 [[INDEX]], [[STRIDE]]
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], i64 [[STRIDE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OFFSET:%.*]] = mul i64 [[IV]], [[STRIDE]]
 ; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[OFFSET]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[ARRAYIDX0]], align 16
 ; CHECK-NEXT:    [[RESULT:%.*]] = add <8 x i16> [[TMP0]], splat (i16 1)
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds <8 x i16>, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    store <8 x i16> [[RESULT]], ptr [[TMP6]], align 16
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[VECTOR_BODY]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store <8 x i16> [[RESULT]], ptr [[ARRAYIDX2]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
-
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %offset = mul i64 %indvars.iv, %stride
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %offset = mul i64 %iv, %stride
   %arrayidx0 = getelementptr inbounds i16, ptr %b, i64 %offset
   %0 = load <8 x i16>, ptr %arrayidx0, align 16
   %result = add <8 x i16> %0, splat (i16 1)
-  %arrayidx2 = getelementptr inbounds <8 x i16>, ptr %a, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds <8 x i16>, ptr %a, i64 %iv
   store <8 x i16> %result, ptr %arrayidx2, align 16
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
 }
 
 
 
-define void @scatter_128(ptr noalias nocapture noundef writeonly %a, ptr nocapture noundef readonly %b, i64 %stride) {
+define void @scatter_128(ptr noalias %a, ptr %b, i64 %stride) {
 ; CHECK-LABEL: define void @scatter_128(
-; CHECK-SAME: ptr noalias noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], i64 [[STRIDE:%.*]]) {
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], i64 [[STRIDE:%.*]]) {
 ; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    ret void
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i16>, ptr [[B]], i64 [[INDEX]]
@@ -97,23 +95,25 @@ define void @scatter_128(ptr noalias nocapture noundef writeonly %a, ptr nocaptu
 ; CHECK-NEXT:    store <8 x i16> [[RESULT]], ptr [[ARRAYIDX2]], align 16
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[VECTOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[FOR_COND_CLEANUP]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
-  ret void
-
-for.body:                                         ; preds = %entry, %for.body
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx0 = getelementptr inbounds <8 x i16>, ptr %b, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx0 = getelementptr inbounds <8 x i16>, ptr %b, i64 %iv
   %0 = load <8 x i16>, ptr %arrayidx0, align 16
   %result = add <8 x i16> %0, splat (i16 1)
-  %offset = mul i64 %indvars.iv, %stride
+  %offset = mul i64 %iv, %stride
   %arrayidx2 = getelementptr inbounds i16, ptr %a, i64 %offset
   store <8 x i16> %result, ptr %arrayidx2, align 16
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret void
 }
