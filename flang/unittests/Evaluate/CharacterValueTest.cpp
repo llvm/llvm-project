@@ -626,8 +626,8 @@ TEST_P(CharacterValueKind, FindFirstNotOfSet) {
   EXPECT_EQ(CharacterValue::npos, nullstate.find_first_not_of(a));
 
   // degenerate value handling
-  EXPECT_EQ(0, v.find_first_not_of(empty));
-  EXPECT_EQ(0, v.find_first_not_of(nullstate));
+  EXPECT_EQ(0u, v.find_first_not_of(empty));
+  EXPECT_EQ(0u, v.find_first_not_of(nullstate));
   EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(v));
   EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(empty));
   EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(nullstate));
@@ -653,8 +653,8 @@ TEST_P(CharacterValueKind, FindLastNotOfSet) {
   EXPECT_EQ(CharacterValue::npos, nullstate.find_last_not_of(a));
 
   // degenerate value handling
-  EXPECT_EQ(4, v.find_last_not_of(empty));
-  EXPECT_EQ(4, v.find_last_not_of(nullstate));
+  EXPECT_EQ(4u, v.find_last_not_of(empty));
+  EXPECT_EQ(4u, v.find_last_not_of(nullstate));
   EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(v));
   EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(empty));
   EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(nullstate));
