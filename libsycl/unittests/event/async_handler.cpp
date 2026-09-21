@@ -11,6 +11,7 @@
 #include <detail/event_impl.hpp>
 #include <detail/global_objects.hpp>
 
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/event.hpp>
@@ -36,6 +37,25 @@ using EventImplPtr = std::shared_ptr<detail::EventImpl>;
 EventImplPtr createEventImplWithHandle(detail::PlatformImpl &PlatformImpl) {
   ol_event_handle_t Handle = mock::createDummyHandle<ol_event_handle_t>();
   return detail::EventImpl::createEventWithHandle(Handle, PlatformImpl, {});
+}
+
+async_handler makeRecordingHandler(std::vector<std::string> &Messages) {
+  return [&Messages](exception_list Exceptions) {
+    for (const auto &ExceptionPtr : Exceptions) {
+      try {
+        std::rethrow_exception(ExceptionPtr);
+      } catch (const sycl::exception &E) {
+        Messages.emplace_back(E.what());
+      } catch (...) {
+        ADD_FAILURE() << "Unexpected exception type in async_handler";
+      }
+    }
+  };
+}
+
+std::exception_ptr makeRuntimeException(const char *Message) {
+  return std::make_exception_ptr(
+      exception(make_error_code(errc::runtime), Message));
 }
 
 template <typename FlushAction>
@@ -125,7 +145,105 @@ TEST(EventAsyncHandler, QueueThrowAsynchronous) {
                              });
 }
 
-TEST(EventAsyncHandler, DeadQueueFallsBackToDefaultAsyncHandler) {
+TEST(EventAsyncHandler, QueueInheritsContextAsyncHandler) {
+  mock::MockWrapper Mock;
+  std::vector<std::string> ContextMessages;
+
+  device Device;
+  context Ctx(Device, makeRecordingHandler(ContextMessages));
+  queue Q(Ctx, Device);
+
+  detail::recordAsyncException(detail::getSyclObjImpl(Q),
+                               makeRuntimeException("inherited handler error"));
+  Q.throw_asynchronous();
+
+  EXPECT_THAT(ContextMessages,
+              ElementsAre(HasSubstr("inherited handler error")));
+}
+
+TEST(EventAsyncHandler, QueueHandlerHasPriorityOverContextHandler) {
+  mock::MockWrapper Mock;
+  std::vector<std::string> QueueMessages;
+  std::vector<std::string> ContextMessages;
+
+  device Device;
+  context Ctx(Device, makeRecordingHandler(ContextMessages));
+  queue Q(Ctx, Device, makeRecordingHandler(QueueMessages));
+
+  detail::recordAsyncException(detail::getSyclObjImpl(Q),
+                               makeRuntimeException("queue handler error"));
+  Q.throw_asynchronous();
+
+  EXPECT_THAT(QueueMessages, ElementsAre(HasSubstr("queue handler error")));
+  EXPECT_THAT(ContextMessages, IsEmpty());
+}
+
+TEST(EventAsyncHandler, DeadQueueReportsThroughContextHandler) {
+  mock::MockWrapper Mock;
+  std::vector<std::string> QueueMessages;
+  std::vector<std::string> ContextMessages;
+
+  device Device;
+  context Ctx(Device, makeRecordingHandler(ContextMessages));
+  {
+    queue Q(Ctx, Device, makeRecordingHandler(QueueMessages));
+    detail::recordAsyncException(detail::getSyclObjImpl(Q),
+                                 makeRuntimeException("dead queue error"));
+  }
+
+  detail::flushAsyncExceptions();
+
+  EXPECT_THAT(ContextMessages, ElementsAre(HasSubstr("dead queue error")));
+  EXPECT_THAT(QueueMessages, IsEmpty());
+}
+
+TEST(EventAsyncHandler, ExceptionsAreGroupedPerQueueAndContext) {
+  mock::MockWrapper Mock;
+  std::vector<std::string> FirstMessages;
+  std::vector<std::string> SecondMessages;
+
+  device Device;
+  context FirstCtx(Device, makeRecordingHandler(FirstMessages));
+  context SecondCtx(Device, makeRecordingHandler(SecondMessages));
+  queue FirstQ(FirstCtx, Device);
+  queue SecondQ(SecondCtx, Device);
+
+  detail::recordAsyncException(detail::getSyclObjImpl(FirstQ),
+                               makeRuntimeException("first queue error"));
+  detail::recordAsyncException(detail::getSyclObjImpl(SecondQ),
+                               makeRuntimeException("second queue error"));
+
+  detail::flushAsyncExceptions();
+
+  EXPECT_THAT(FirstMessages, ElementsAre(HasSubstr("first queue error")));
+  EXPECT_THAT(SecondMessages, ElementsAre(HasSubstr("second queue error")));
+}
+
+TEST(EventAsyncHandler, DeadQueueAndContextFallBackToDefaultAsyncHandler) {
+// EXPECT_DEATH is not supported on Windows.
+#if GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH(
+      {
+        mock::MockWrapper Mock;
+        std::vector<std::string> ContextMessages;
+        {
+          device Device;
+          context Ctx(Device, makeRecordingHandler(ContextMessages));
+          queue Q(Ctx, Device);
+          detail::recordAsyncException(
+              detail::getSyclObjImpl(Q),
+              makeRuntimeException("dead context async error"));
+        }
+
+        detail::flushAsyncExceptions();
+      },
+      "Default async_handler caught exceptions:\n\tdead context async error");
+#else
+  GTEST_SKIP() << "Death tests are not supported on this platform";
+#endif
+}
+
+TEST(EventAsyncHandler, DeadQueueReportsThroughDefaultContextHandler) {
 // EXPECT_DEATH is not supported on Windows.
 #if GTEST_HAS_DEATH_TEST
   EXPECT_DEATH(

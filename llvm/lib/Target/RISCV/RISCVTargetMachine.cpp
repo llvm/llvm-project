@@ -173,10 +173,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
-          Options, getEffectiveRelocModel(TT, RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
+                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(createTLOF(TT)) {
   initAsmInfo();
 

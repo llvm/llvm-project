@@ -1873,6 +1873,39 @@ def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
 }
 
 //===----------------------------------------------------------------------===//
+// EhFilterAttr & EhUnexpectedAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_EhFilterAttr : CIR_Attr<"EhFilter", "eh_filter"> {
+  let summary = "Dynamic exception specification filter handler";
+  let description = [{
+    Identifies the handler of a `cir.try` operation that is reached when the
+    in-flight exception is permitted by the dynamic exception specification of
+    the enclosing function. The attribute carries the list of type info symbols
+    naming the permitted types. An empty list represents `throw()`, which
+    permits nothing.
+  }];
+
+  let parameters = (ins "mlir::ArrayAttr":$permitted_types);
+  let assemblyFormat = [{ `<` $permitted_types `>` }];
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+// Represents the region reached when an exception violates the dynamic
+// exception specification of the enclosing function.
+def CIR_EhUnexpectedAttr : CIR_UnitAttr<"EhUnexpected", "eh_unexpected"> {
+  let summary = "Dynamic exception specification unexpected exception handler";
+  let description = [{
+    Identifies the handler of a `cir.try` operation that is reached when the
+    in-flight exception is not permitted by the dynamic exception specification
+    of the enclosing function.
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // CIR_BlockAddrInfoAttr
 //===----------------------------------------------------------------------===//
 
@@ -2209,6 +2242,59 @@ def CIR_StaticLocalInfoAttr
 
   let assemblyFormat = [{
     `<` struct($local, $tls, $is_inline, $tsk) `>`
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// LoweringLangOptionsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_LoweringLangOptionsAttr
+    : CIR_Attr<"LoweringLangOptions", "lowering_lang_options"> {
+  let summary = "LangOptions facts that post-CIRGen lowering consumes";
+  let description = [{
+    Serializes the subset of `clang::LangOptions` that post-CIRGen lowering
+    reads, as plain data, so a reloaded `.cir` module lowers the same way it
+    was compiled without a live `clang::LangOptions`. Only LangOpts flags with
+    no triple/module representation live here; target-derived facts (size_t
+    width, CXXABI, fp formats, etc.) are rebuilt from `cir.triple` instead.
+
+    Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `gpu_rdc`,
+    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
+    `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
+    `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
+    `ClangABI` gains an enumerator every Clang release (see
+    `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
+    single toolchain.
+
+    Example:
+    ```
+    module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
+      exceptions = false, threadsafe_statics = true, cuda = false,
+      cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
+      openmp_is_target_device = false, clang_abi_compat = 17>} { }
+    ```
+  }];
+
+  let parameters = (ins
+    "bool":$exceptions,
+    "bool":$threadsafe_statics,
+    "bool":$cuda,
+    "bool":$cuda_is_device,
+    "bool":$hip,
+    "bool":$gpu_rdc,
+    "bool":$openmp,
+    "bool":$openmp_is_target_device,
+    "int32_t":$clang_abi_compat
+  );
+
+  let assemblyFormat = [{
+    `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
+               $gpu_rdc, $openmp, $openmp_is_target_device,
+               $clang_abi_compat) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

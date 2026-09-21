@@ -404,6 +404,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitALU[0] available @1c
 # CHECK-NEXT: Queue BotQ.P:
 # CHECK-NEXT: Queue BotQ.A: 0
+# CHECK-NEXT: Pick Bot Cand SU(0) ONLY1      [pre-RA]
 # CHECK-NEXT: Scheduling SU(0) $x3 = ADDXrr $x0, $x0
 # CHECK-NEXT:   Ready @1c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u

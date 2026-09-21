@@ -15,6 +15,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include <optional>
+#include <utility>
 
 namespace clang {
 
@@ -22,24 +23,35 @@ bool isSafePtr(clang::CXXRecordDecl *Decl) {
   return isRefCounted(Decl) || isCheckedPtr(Decl);
 }
 
-bool tryToFindPtrOrigin(
+static bool tryToFindPtrOriginImpl(
     const Expr *E, bool StopAtFirstRefCountedObj,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
-    std::function<bool(const clang::Expr *, bool)> callback) {
+    std::function<bool(const clang::Expr *, bool /*IsSafe*/,
+                       bool /*OriginDependsOnFullExpressionTemporary*/)>
+        callback,
+    bool OriginDependsOnFullExpressionTemporary) {
   while (E) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
         auto QT = VD->getType();
         auto IsImmortal = safeGetName(VD) == "NSApp";
         if (VD->hasGlobalStorage() && (IsImmortal || QT.isConstQualified()))
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
         if (VD->hasGlobalStorage() && isSafeGlobalDecl(VD))
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
       }
     }
+    if (auto *Cleanups = dyn_cast<ExprWithCleanups>(E)) {
+      E = Cleanups->getSubExpr();
+      continue;
+    }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
+      if (tempExpr->getStorageDuration() == SD_FullExpression)
+        OriginDependsOnFullExpressionTemporary = true;
       E = tempExpr->getSubExpr();
       continue;
     }
@@ -50,13 +62,15 @@ bool tryToFindPtrOrigin(
     if (auto *tempExpr = dyn_cast<CXXConstructExpr>(E)) {
       if (auto *C = tempExpr->getConstructor()) {
         if (auto *Class = C->getParent(); Class && isSafePtr(Class))
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
         break;
       }
     }
     if (auto *TempExpr = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
       if (isSafePtrType(TempExpr->getTypeAsWritten()))
-        return callback(TempExpr, true);
+        return callback(TempExpr, /*IsSafe=*/true,
+                        OriginDependsOnFullExpressionTemporary);
     }
     if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
       if (auto *RF = POE->getResultExpr()) {
@@ -73,22 +87,26 @@ bool tryToFindPtrOrigin(
       continue;
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
-      return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
-                                callback) &&
-             tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
-                                callback);
+      return tryToFindPtrOriginImpl(Expr->getTrueExpr(),
+                                    StopAtFirstRefCountedObj, isSafePtr,
+                                    isSafePtrType, isSafeGlobalDecl, callback,
+                                    OriginDependsOnFullExpressionTemporary) &&
+             tryToFindPtrOriginImpl(Expr->getFalseExpr(),
+                                    StopAtFirstRefCountedObj, isSafePtr,
+                                    isSafePtrType, isSafeGlobalDecl, callback,
+                                    OriginDependsOnFullExpressionTemporary);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
         if (auto *ConversionFunc =
                 dyn_cast_or_null<FunctionDecl>(cast->getConversionFunction())) {
           if (isCtorOfSafePtr(ConversionFunc))
-            return callback(E, true);
+            return callback(E, /*IsSafe=*/true,
+                            OriginDependsOnFullExpressionTemporary);
         }
         if (isa<CXXFunctionalCastExpr>(E) && isSafePtrType(cast->getType()))
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
       }
       // FIXME: This can give false "origin" that would lead to false negatives
       // in checkers. See https://reviews.llvm.org/D37023 for reference.
@@ -100,26 +118,28 @@ bool tryToFindPtrOrigin(
         if (Callee->hasAttr<CFReturnsRetainedAttr>() ||
             Callee->hasAttr<NSReturnsRetainedAttr>() ||
             Callee->hasAttr<NSReturnsAutoreleasedAttr>()) {
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
         }
       }
 
       if (isSafePtrType(call->getType()))
-        return callback(E, true);
+        return callback(E, /*IsSafe=*/true,
+                        OriginDependsOnFullExpressionTemporary);
 
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
           if (IsGetterOfRefCt && *IsGetterOfRefCt) {
-            E = memberCall->getImplicitObjectArgument()->IgnoreParenCasts();
-            if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-              if (auto *Decl = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-                if (Decl->isLocalVarDeclOrParm()) {
-                  if (StopAtFirstRefCountedObj)
-                    return callback(E, true);
-                }
-              }
+            E = memberCall->getImplicitObjectArgument();
+            if (StopAtFirstRefCountedObj) {
+              return callback(E, /*IsSafe=*/true,
+                              OriginDependsOnFullExpressionTemporary);
             }
+            continue;
+          }
+          if (isGetterOfUniquePtr(decl)) {
+            E = memberCall->getImplicitObjectArgument();
             continue;
           }
         }
@@ -143,7 +163,8 @@ bool tryToFindPtrOrigin(
       if (auto *callee = call->getDirectCallee()) {
         if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
-            return callback(E, true);
+            return callback(E, /*IsSafe=*/true,
+                            OriginDependsOnFullExpressionTemporary);
 
           E = call->getArg(0);
           continue;
@@ -155,10 +176,12 @@ bool tryToFindPtrOrigin(
         }
 
         if (isSafePtrType(callee->getReturnType()))
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
 
         if (isSingleton(callee))
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
 
         if (callee->isInStdNamespace() && safeGetName(callee) == "forward") {
           E = call->getArg(0);
@@ -175,11 +198,13 @@ bool tryToFindPtrOrigin(
             Name == "NSStringFromSelector" || Name == "NSSelectorFromString" ||
             Name == "NSStringFromClass" || Name == "NSClassFromString" ||
             Name == "NSStringFromProtocol" || Name == "NSProtocolFromString")
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
       } else if (auto *CalleeE = call->getCallee()) {
         if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
           if (isSingleton(E->getFoundDecl()))
-            return callback(E, true);
+            return callback(E, /*IsSafe=*/true,
+                            OriginDependsOnFullExpressionTemporary);
         }
 
         if (auto *MemberExpr = dyn_cast<CXXDependentScopeMemberExpr>(CalleeE)) {
@@ -187,7 +212,8 @@ bool tryToFindPtrOrigin(
           auto MemberName = MemberExpr->getMember().getAsString();
           bool IsGetter = MemberName == "get" || MemberName == "ptr";
           if (Base && isSafePtrType(Base->getType()) && IsGetter)
-            return callback(E, true);
+            return callback(E, /*IsSafe=*/true,
+                            OriginDependsOnFullExpressionTemporary);
         }
       }
 
@@ -202,7 +228,8 @@ bool tryToFindPtrOrigin(
               if (auto *RD = dyn_cast<RecordType>(SubstType)) {
                 if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getDecl()))
                   if (isSafePtr(CXX))
-                    return callback(E, true);
+                    return callback(E, /*IsSafe=*/true,
+                                    OriginDependsOnFullExpressionTemporary);
               }
             }
           }
@@ -212,24 +239,28 @@ bool tryToFindPtrOrigin(
     if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
       if (auto *Method = ObjCMsgExpr->getMethodDecl()) {
         if (isSafePtrType(Method->getReturnType()))
-          return callback(E, true);
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary);
       }
-      if (ObjCMsgExpr->isClassMessage())
-        return callback(E, true);
       auto Selector = ObjCMsgExpr->getSelector();
       auto NameForFirstSlot = Selector.getNameForSlot(0);
       if ((NameForFirstSlot == "class" || NameForFirstSlot == "superclass") &&
           !Selector.getNumArgs())
-        return callback(E, true);
+        return callback(E, /*IsSafe=*/true,
+                        OriginDependsOnFullExpressionTemporary);
     }
     if (auto *ObjCProtocol = dyn_cast<ObjCProtocolExpr>(E))
-      return callback(ObjCProtocol, true);
+      return callback(ObjCProtocol, /*IsSafe=*/true,
+                      OriginDependsOnFullExpressionTemporary);
     if (auto *ObjCDict = dyn_cast<ObjCDictionaryLiteral>(E))
-      return callback(ObjCDict, true);
+      return callback(ObjCDict, /*IsSafe=*/true,
+                      OriginDependsOnFullExpressionTemporary);
     if (auto *ObjCArray = dyn_cast<ObjCArrayLiteral>(E))
-      return callback(ObjCArray, true);
+      return callback(ObjCArray, /*IsSafe=*/true,
+                      OriginDependsOnFullExpressionTemporary);
     if (auto *ObjCStr = dyn_cast<ObjCStringLiteral>(E))
-      return callback(ObjCStr, true);
+      return callback(ObjCStr, /*IsSafe=*/true,
+                      OriginDependsOnFullExpressionTemporary);
     if (auto *unaryOp = dyn_cast<UnaryOperator>(E)) {
       // FIXME: Currently accepts ANY unary operator. Is it OK?
       E = unaryOp->getSubExpr();
@@ -237,14 +268,30 @@ bool tryToFindPtrOrigin(
     }
     if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
       if (StopAtFirstRefCountedObj)
-        return callback(BoxedExpr, true);
+        return callback(BoxedExpr, /*IsSafe=*/true,
+                        OriginDependsOnFullExpressionTemporary);
       E = BoxedExpr->getSubExpr();
       continue;
     }
     break;
   }
   // Some other expression.
-  return callback(E, false);
+  return callback(E, /*IsSafe=*/false, OriginDependsOnFullExpressionTemporary);
+}
+
+bool tryToFindPtrOrigin(
+    const Expr *E, bool StopAtFirstRefCountedObj,
+    std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
+    std::function<bool(const clang::QualType)> isSafePtrType,
+    std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
+    std::function<bool(const clang::Expr *, bool /*IsSafe*/,
+                       bool /*OriginDependsOnFullExpressionTemporary*/)>
+        callback) {
+  return tryToFindPtrOriginImpl(
+      E, StopAtFirstRefCountedObj, std::move(isSafePtr),
+      std::move(isSafePtrType), std::move(isSafeGlobalDecl),
+      std::move(callback),
+      /*OriginDependsOnFullExpressionTemporary=*/false);
 }
 
 bool isASafeCallArg(const Expr *E) {

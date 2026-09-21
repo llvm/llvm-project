@@ -24,7 +24,8 @@ namespace cir {
 /// Map a target triple to the ABI target that drives CallConvLowering.
 /// Returns None for targets whose calling convention is not yet implemented.
 static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
-  if (triple.getArch() == llvm::Triple::x86_64)
+  // Windows is not supported.  UEFI shares its convention.
+  if (triple.getArch() == llvm::Triple::x86_64 && !triple.isOSWindowsOrUEFI())
     return CallConvTarget::X86_64;
   return CallConvTarget::None;
 }
@@ -53,12 +54,12 @@ static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext) {
 /// library, which is not what any target computes: Clang11Compat is false for a
 /// modern Linux target, so leaving it at the default classifies a union larger
 /// than an eightbyte as though every member spanned its size.
-static llvm::abi::ABICompatInfo
+static llvm::abi::X86ABICompatInfo
 getX86ABICompatInfo(const clang::ASTContext &astContext) {
   const llvm::Triple &triple = astContext.getTargetInfo().getTriple();
   const clang::LangOptions &langOpts = astContext.getLangOpts();
   clang::LangOptions::ClangABI compat = langOpts.getClangABICompat();
-  llvm::abi::ABICompatInfo abiCompat;
+  llvm::abi::X86ABICompatInfo abiCompat;
   abiCompat.HonorsRevision98 = !triple.isOSDarwin();
   abiCompat.ClassifyIntegerMMXAsSSE =
       compat > clang::LangOptions::ClangABI::Ver3_8 && !triple.isOSDarwin() &&
