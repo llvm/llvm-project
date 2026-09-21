@@ -3436,15 +3436,15 @@ static QualType sortBuiltinTemplatePack(ASTContext &Context,
   std::unique_ptr<MangleContext> MC(Context.createMangleContext());
   SmallVector<std::pair<std::string, TemplateArgument>> SortedArgs(
       InputArgs.size());
-  llvm::transform(
-      InputArgs, SortedArgs.begin(), [&](const TemplateArgument &Arg) {
-        assert(Arg.getKind() == TemplateArgument::Type);
-        std::string MangledName;
-        llvm::raw_string_ostream OS(MangledName);
-        MC->mangleCanonicalTypeName(Arg.getAsType(), OS);
-        return std::pair<std::string, TemplateArgument>(std::move(MangledName),
-                                                        Arg);
-      });
+  llvm::transform(InputArgs, SortedArgs.begin(),
+                  [&](const TemplateArgument &Arg) {
+                    assert(Arg.getKind() == TemplateArgument::Type);
+                    std::string MangledName;
+                    llvm::raw_string_ostream OS(MangledName);
+                    MC->mangleCanonicalTypeName(Arg.getAsType(), OS);
+                    return std::pair<std::string, TemplateArgument>(
+                        std::move(MangledName), Arg);
+                  });
   llvm::stable_sort(SortedArgs, llvm::less_first());
 
   auto OutArgs = llvm::to_vector(llvm::make_second_range(SortedArgs));
