@@ -9,9 +9,7 @@ define i1 @sadd_one_witness_slt(i64 %a, i64 %w) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[W:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i64 [[A]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[S:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[A]], i64 1)
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i64, i1 } [[S]], 1
-; CHECK-NEXT:    ret i1 [[O]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pre = icmp slt i64 %a, %w
   call void @llvm.assume(i1 %pre)
@@ -26,9 +24,7 @@ define i1 @sadd_negone_witness_sgt(i64 %a, i64 %w) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[W:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp sgt i64 [[A]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[S:%.*]] = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 [[A]], i64 -1)
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i64, i1 } [[S]], 1
-; CHECK-NEXT:    ret i1 [[O]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pre = icmp sgt i64 %a, %w
   call void @llvm.assume(i1 %pre)
@@ -77,7 +73,7 @@ define i64 @add_one_nsw_witness_slt(i64 %a, i64 %w) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[W:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i64 [[A]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[A]], 1
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %pre = icmp slt i64 %a, %w
@@ -91,7 +87,7 @@ define i32 @add_one_nsw_witness_slt_i32(i32 %a, i32 %w) {
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[W:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i32 [[A]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %pre = icmp slt i32 %a, %w
@@ -106,7 +102,7 @@ define i64 @sub_one_nsw_witness_sgt(i64 %a, i64 %w) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[W:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp sgt i64 [[A]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[A]], 1
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
   %pre = icmp sgt i64 %a, %w
@@ -120,7 +116,7 @@ define i64 @add_one_nuw_witness_ult(i64 %a, i64 %w) {
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[W:%.*]]) {
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i64 [[A]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i64 [[A]], 1
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %pre = icmp ult i64 %a, %w
@@ -137,7 +133,7 @@ define void @add_witness_slack_5(i8 %a, i8 %w) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nsw i8 [[A]], 4
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i8 [[OFF]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[A]], 5
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[A]], 5
 ; CHECK-NEXT:    call void @use(i8 [[ADD]])
 ; CHECK-NEXT:    ret void
 ;
@@ -175,9 +171,7 @@ define i1 @uadd_witness_slack_3(i8 %a, i8 %w) {
 ; CHECK-NEXT:    [[OFF:%.*]] = add nuw i8 [[A]], 2
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i8 [[OFF]], [[W]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[S:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[A]], i8 3)
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[S]], 1
-; CHECK-NEXT:    ret i1 [[O]]
+; CHECK-NEXT:    ret i1 false
 ;
   %off = add nuw i8 %a, 2
   %pre = icmp ult i8 %off, %w
@@ -211,7 +205,7 @@ define i64 @witness_narrower_than_op(i64 %a, i32 %w) {
 ; CHECK-NEXT:    [[SW:%.*]] = sext i32 [[W]] to i64
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp slt i64 [[A]], [[SW]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[A]], 1
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sw = sext i32 %w to i64
