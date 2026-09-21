@@ -10200,7 +10200,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   if (CollapseLoopCountExpr) {
     // Found 'collapse' clause - calculate collapse number.
     Expr::EvalResult Result;
-    if (!CollapseLoopCountExpr->isValueDependent() &&
+    if (!CollapseLoopCountExpr->isInstantiationDependent() &&
         CollapseLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext())) {
       NestedLoopCount = Result.Val.getInt().getLimitedValue();
 
@@ -10215,7 +10215,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   if (OrderedLoopCountExpr) {
     // Found 'ordered' clause - calculate collapse number.
     Expr::EvalResult EVResult;
-    if (!OrderedLoopCountExpr->isValueDependent() &&
+    if (!OrderedLoopCountExpr->isInstantiationDependent() &&
         OrderedLoopCountExpr->EvaluateAsInt(EVResult,
                                             SemaRef.getASTContext())) {
       llvm::APSInt Result = EVResult.Val.getInt();
