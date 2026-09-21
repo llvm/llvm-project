@@ -454,6 +454,59 @@ func.func @negative_contract_to_dot_matmat_scalable(%lhs: vector<[2]x2xf32>,
   return %res : vector<[2]x[2]xf32>
 }
 
+// Only the inner (N) dst dim is scalable; the outer (M) dim is still static
+// and gets peeled off by the progressive contraction lowering, but the
+// resulting per-row contraction still can't be unrolled and stays as
+// vector.contract.
+// CHECK-LABEL: @negative_contract_to_dot_matmat_inner_scalable
+// CHECK-SAME: %[[LHS:.+]]: vector<2x3xf32>, %[[RHS:.+]]: vector<3x[2]xf32>, %[[INIT:.+]]: vector<2x[2]xf32>
+//      CHECK: %[[LHS0:.+]] = vector.extract %[[LHS]][0] : vector<3xf32> from vector<2x3xf32>
+//      CHECK: %[[INIT0:.+]] = vector.extract %[[INIT]][0] : vector<[2]xf32> from vector<2x[2]xf32>
+//      CHECK: vector.contract {{.*}} %[[LHS0]], %[[RHS]], %[[INIT0]] : vector<3xf32>, vector<3x[2]xf32> into vector<[2]xf32>
+//      CHECK: %[[LHS1:.+]] = vector.extract %[[LHS]][1] : vector<3xf32> from vector<2x3xf32>
+//      CHECK: %[[INIT1:.+]] = vector.extract %[[INIT]][1] : vector<[2]xf32> from vector<2x[2]xf32>
+//      CHECK: vector.contract {{.*}} %[[LHS1]], %[[RHS]], %[[INIT1]] : vector<3xf32>, vector<3x[2]xf32> into vector<[2]xf32>
+func.func @negative_contract_to_dot_matmat_inner_scalable(%lhs: vector<2x3xf32>,
+                        %rhs: vector<3x[2]xf32>,
+                        %init: vector<2x[2]xf32>) -> vector<2x[2]xf32> {
+  %res = vector.contract #matmat_trait %lhs, %rhs, %init
+    : vector<2x3xf32>, vector<3x[2]xf32> into vector<2x[2]xf32>
+  return %res : vector<2x[2]xf32>
+}
+
+// Only the reduction (K) dim is scalable; vector.reduction handles that
+// natively without unrolling, so this still lowers.
+// CHECK-LABEL: func @contract_to_dot_matvec_scalable_reduction
+// CHECK-SAME: %[[A:.*0]]: vector<4x[8]xf32>,
+// CHECK-SAME: %[[B:.*1]]: vector<[8]xf32>,
+// CHECK-SAME: %[[C:.*2]]: vector<4xf32>
+// CHECK:      %[[R:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
+// CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : vector<[8]xf32> from vector<4x[8]xf32>
+// CHECK:      %[[T2:.*]] = arith.mulf %[[T0]], %[[B]] : vector<[8]xf32>
+// CHECK:      %[[T3:.*]] = vector.reduction <add>, %[[T2]] : vector<[8]xf32> into f32
+// CHECK:      %[[T4:.*]] = vector.insert %[[T3]], %[[R]] [0] : f32 into vector<4xf32>
+// CHECK:      %[[T5:.*]] = vector.extract %[[A]][1] : vector<[8]xf32> from vector<4x[8]xf32>
+// CHECK:      %[[T7:.*]] = arith.mulf %[[T5]], %[[B]] : vector<[8]xf32>
+// CHECK:      %[[T8:.*]] = vector.reduction <add>, %[[T7]] : vector<[8]xf32> into f32
+// CHECK:      %[[T9:.*]] = vector.insert %[[T8]], %[[T4]] [1] : f32 into vector<4xf32>
+// CHECK:      %[[T10:.*]] = vector.extract %[[A]][2] : vector<[8]xf32> from vector<4x[8]xf32>
+// CHECK:      %[[T12:.*]] = arith.mulf %[[T10]], %[[B]] : vector<[8]xf32>
+// CHECK:      %[[T13:.*]] = vector.reduction <add>, %[[T12]] : vector<[8]xf32> into f32
+// CHECK:      %[[T14:.*]] = vector.insert %[[T13]], %[[T9]] [2] : f32 into vector<4xf32>
+// CHECK:      %[[T15:.*]] = vector.extract %[[A]][3] : vector<[8]xf32> from vector<4x[8]xf32>
+// CHECK:      %[[T17:.*]] = arith.mulf %[[T15]], %[[B]] : vector<[8]xf32>
+// CHECK:      %[[T18:.*]] = vector.reduction <add>, %[[T17]] : vector<[8]xf32> into f32
+// CHECK:      %[[T19:.*]] = vector.insert %[[T18]], %[[T14]] [3] : f32 into vector<4xf32>
+// CHECK:      %[[T20:.*]] = arith.addf %[[T19]], %[[C]] : vector<4xf32>
+// CHECK:      return %[[T20]] : vector<4xf32>
+func.func @contract_to_dot_matvec_scalable_reduction(%arg0: vector<4x[8]xf32>,
+                        %arg1: vector<[8]xf32>,
+                        %arg2: vector<4xf32>) -> vector<4xf32> {
+  %0 = vector.contract #matvec_trait %arg0, %arg1, %arg2
+    : vector<4x[8]xf32>, vector<[8]xf32> into vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
