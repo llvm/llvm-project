@@ -340,26 +340,6 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
     Builder.SetCurrentDebugLocation(DL);
 }
 
-Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
-                                                       Value *WideValue,
-                                                       const VPLane &Lane) {
-  Value *ScalarInst = get(Def, Lane);
-  Value *LaneExpr = Lane.getAsRuntimeExpr(Builder, VF);
-  if (auto *StructTy = dyn_cast<StructType>(WideValue->getType())) {
-    // We must handle each element of a vectorized struct type.
-    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; I++) {
-      Value *ScalarValue = Builder.CreateExtractValue(ScalarInst, I);
-      Value *VectorValue = Builder.CreateExtractValue(WideValue, I);
-      VectorValue =
-          Builder.CreateInsertElement(VectorValue, ScalarValue, LaneExpr);
-      WideValue = Builder.CreateInsertValue(WideValue, VectorValue, I);
-    }
-  } else {
-    WideValue = Builder.CreateInsertElement(WideValue, ScalarInst, LaneExpr);
-  }
-  return WideValue;
-}
-
 void VPTransformState::fixupHeaderPhis() {
   for (VPBlockBase *VPB : vp_depth_first_shallow(Plan->getEntry())) {
     if (!VPBlockUtils::isHeader(VPB, VPDT))

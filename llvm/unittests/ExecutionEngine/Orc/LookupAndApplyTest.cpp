@@ -139,8 +139,8 @@ TEST(LookupAndApplyTest, MultiplePrepareFns) {
   ExecutorAddr A, B, C, D;
 
   // A composite prepare fn: contributes both names, records both results.
-  auto RecordBoth = [&C, &D](SymbolLookupSet &LS,
-                             ExecutionSession &ES) -> LookupApplyFn {
+  auto RecordBoth = [&C, &D](SymbolLookupSet &LS, ExecutionSession &ES,
+                             const Mangler &) -> LookupApplyFn {
     auto NA = ES.intern("addr_a");
     auto NB = ES.intern("addr_b");
     LS.add(NA);

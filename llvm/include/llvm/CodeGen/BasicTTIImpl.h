@@ -1226,9 +1226,7 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr,
-                 TTI::VectorInstrContext VIC =
-                     TTI::VectorInstrContext::None) const override {
+                 const Instruction *CxtI = nullptr) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(SrcTy))
@@ -2757,6 +2755,12 @@ public:
     case Intrinsic::clmul:
       ISD = ISD::CLMUL;
       break;
+    case Intrinsic::smulh:
+      ISD = ISD::MULHS;
+      break;
+    case Intrinsic::umulh:
+      ISD = ISD::MULHU;
+      break;
     case Intrinsic::masked_udiv:
     case Intrinsic::masked_sdiv:
     case Intrinsic::masked_urem:
@@ -3142,6 +3146,25 @@ public:
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
       return BW * PerBitCost;
+    }
+    case Intrinsic::smulh:
+    case Intrinsic::umulh: {
+      unsigned BW = RetTy->getScalarSizeInBits();
+      Type *WideTy = RetTy->getWithNewBitWidth(BW * 2);
+      bool IsSigned = IID == Intrinsic::smulh;
+      unsigned ExtOp = IsSigned ? Instruction::SExt : Instruction::ZExt;
+      InstructionCost Cost = 0;
+      Cost +=
+          2 * thisT()->getCastInstrCost(ExtOp, WideTy, RetTy,
+                                        TTI::CastContextHint::None, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Mul, WideTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          Instruction::LShr, WideTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None});
+      Cost += thisT()->getCastInstrCost(Instruction::Trunc, RetTy, WideTy,
+                                        TTI::CastContextHint::None, CostKind);
+      return Cost;
     }
     default:
       break;

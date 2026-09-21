@@ -2136,7 +2136,9 @@ def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 // out of the block it probes.
 def int_pseudoprobe : DefaultAttrsIntrinsic<[],
                         [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
-                        [IntrInaccessibleMemOnly]>;
+                        [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>,
+                         ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
+                         ImmArg<ArgIndex<3>>]>;
 
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]

@@ -414,9 +414,12 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // Mapped with no fields, an empty record reaches Ignore on its own.
         // The size still matters: past two eightbytes SysV says memory whatever
         // the content.
+        // TODO: AArch64 needs the unadjusted alignment. We'll need to add that
+        // to RecordLayoutAttr.
         if (recTy.isEmptyForABI())
           return tb.getRecordType(
-              /*Fields=*/{}, sizeBits, align, llvm::abi::StructPacking::Default,
+              /*Fields=*/{}, sizeBits, align, /*UnadjustedAlign=*/align,
+              llvm::abi::StructPacking::Default,
               /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
 
         SmallVector<llvm::abi::FieldInfo> fields;
@@ -493,6 +496,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                 mapCIRType(variantTy, typeMapper, dl, modOp)));
           }
           return tb.getUnionType(fields, sizeBits, align,
+                                 /*UnadjustedAlign=*/align,
                                  llvm::abi::StructPacking::Default, flags);
         }
 
@@ -527,7 +531,8 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         }
 
         return tb.getRecordType(
-            fields, sizeBits, align, llvm::abi::StructPacking::Default,
+            fields, sizeBits, align, /*UnadjustedAlign=*/align,
+            llvm::abi::StructPacking::Default,
             /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);
       })
       .Default([](mlir::Type) -> const llvm::abi::Type * {
@@ -544,9 +549,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// unpacked into the register(s) holding it, a scalar too wide for one register
 /// split into a tuple of them, a scalar the classifier widens to fill its
 /// eightbyte, and a value whose live bytes start partway into its storage
-/// because a leading eightbyte holds no field (getDirectOffset).  getDirect
-/// keeps canFlatten set so the rewriter can split a multi-field coerced
-/// struct into individual wire arguments.  Any other scalar passes in its
+/// because a leading eightbyte holds no field (getDirectOffset).  canFlatten
+/// follows the classifier's CanBeFlattened, so the rewriter splits a
+/// multi-field coerced struct into individual wire arguments unless the
+/// classifier asked to keep it intact.  Any other scalar passes in its
 /// natural CIR type, which a null coercion denotes.  A coercion this bridge
 /// cannot represent yields std::nullopt so the caller reports NYI rather than
 /// silently passing the value unchanged.
@@ -607,7 +613,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
       return ArgClassification::getDirect();
-    return ArgClassification::getDirect(coerced, offset);
+    ArgClassification classified =
+        ArgClassification::getDirect(coerced, offset);
+    classified.canFlatten = info.getCanBeFlattened();
+    return classified;
   }
   // An extended value is always read from byte 0 of its own storage, so
   // there is no offset to honor here.
@@ -794,7 +803,7 @@ struct CallConvLoweringPass
   using CallConvLoweringBase::CallConvLoweringBase;
 
   CallConvLoweringPass(const CallConvLoweringOptions &options,
-                       const llvm::abi::ABICompatInfo &x86AbiCompat)
+                       const llvm::abi::X86ABICompatInfo &x86AbiCompat)
       : CallConvLoweringBase(options), x86AbiCompat(x86AbiCompat) {}
 
   void runOnOperation() override;
@@ -803,7 +812,7 @@ struct CallConvLoweringPass
   /// compatibility version.  Carried outside the pass options because the
   /// struct has no command-line parser, so a cir-opt run gets the library
   /// defaults rather than a target's values.
-  llvm::abi::ABICompatInfo x86AbiCompat;
+  llvm::abi::X86ABICompatInfo x86AbiCompat;
 };
 
 /// Record on \p fc whether \p returnType is CIR's void.  The x86_64 classifier
@@ -1174,7 +1183,8 @@ std::unique_ptr<Pass> mlir::createCallConvLoweringPass() {
 
 std::unique_ptr<Pass> mlir::createCallConvLoweringPass(
     cir::CallConvTarget target, llvm::abi::X86AVXABILevel x86AvxAbiLevel,
-    bool allowsX86TargetAttrAvx, const llvm::abi::ABICompatInfo &x86AbiCompat) {
+    bool allowsX86TargetAttrAvx,
+    const llvm::abi::X86ABICompatInfo &x86AbiCompat) {
   CallConvLoweringOptions options;
   options.target = target;
   options.x86AvxAbiLevel = x86AvxAbiLevel;

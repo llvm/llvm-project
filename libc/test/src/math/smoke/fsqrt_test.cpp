@@ -10,4 +10,4 @@
 
 #include "src/math/fsqrt.h"
 
-LIST_NARROWING_SQRT_TESTS(float, double, LIBC_NAMESPACE::fsqrt)
+LIST_NARROWING_SQRT_TESTS(Fsqrt, float, double, LIBC_NAMESPACE::fsqrt)
