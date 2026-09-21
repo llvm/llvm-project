@@ -2705,8 +2705,8 @@ SDValue MipsTargetLowering::lowerEH_RETURN(SDValue Op, SelectionDAG &DAG)
 
   // Store stack offset in V1, store jump target in V0. Glue CopyToReg and
   // EH_RETURN nodes, so that instructions are emitted back-to-back.
-  unsigned OffsetReg = ABI.getReturnReg(1, ABI.ArePtrs64bit());
-  unsigned AddrReg = ABI.getReturnReg(0, ABI.ArePtrs64bit());
+  unsigned OffsetReg = ABI.getReturnRegPtr(1);
+  unsigned AddrReg = ABI.getReturnRegPtr(0);
   Chain = DAG.getCopyToReg(Chain, DL, OffsetReg, Offset, SDValue());
   Chain = DAG.getCopyToReg(Chain, DL, AddrReg, Handler, Chain.getValue(1));
   return DAG.getNode(MipsISD::EH_RETURN, DL, MVT::Other, Chain,
@@ -3053,11 +3053,13 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
   const MipsSubtarget &Subtarget = static_cast<const MipsSubtarget &>(
       State.getMachineFunction().getSubtarget());
 
-  ArrayRef<MCPhysReg> IntRegs = MipsABIInfo::O32().getArgRegs(false);
+  const MipsABIInfo &ABI = Subtarget.getABI();
+  ArrayRef<MCPhysReg> IntRegs = ABI.getArgRegs(false);
 
   static const MCPhysReg F32Regs[] = { Mips::F12, Mips::F14 };
 
-  static const MCPhysReg FloatVectorIntRegs[] = {Mips::A0, Mips::A2};
+  const MCPhysReg FloatVectorIntRegs[] = {ABI.getArgReg(0, false),
+                                          ABI.getArgReg(2, false)};
 
   // Do not process byval args here.
   if (ArgFlags.isByVal())
@@ -4101,7 +4103,7 @@ MipsTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       llvm_unreachable("sret virtual register not created in the entry block");
     SDValue Val =
         DAG.getCopyFromReg(Chain, DL, Reg, getPointerTy(DAG.getDataLayout()));
-    unsigned V0 = ABI.getReturnReg(0, ABI.ArePtrs64bit());
+    unsigned V0 = ABI.getReturnRegPtr(0);
 
     Chain = DAG.getCopyToReg(Chain, DL, V0, Val, Glue);
     Glue = Chain.getValue(1);

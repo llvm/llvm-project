@@ -197,7 +197,7 @@ unsigned MipsABIInfo::GetFramePtr() const {
 }
 
 unsigned MipsABIInfo::GetBasePtr() const {
-  return getSavedReg(7, ArePtrs64bit());
+  return getSavedRegPtr(7);
 }
 
 unsigned MipsABIInfo::GetGlobalPtr() const {
@@ -234,5 +234,5 @@ unsigned MipsABIInfo::GetGPRMoveOp() const {
 
 unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {
   assert(I < 4 && "Invalid EH data register");
-  return getArgReg(I, ArePtrs64bit());
+  return getArgRegPtr(I);
 }

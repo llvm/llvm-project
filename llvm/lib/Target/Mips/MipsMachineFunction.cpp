@@ -84,7 +84,7 @@ void MipsFunctionInfo::initGlobalBaseReg(MachineFunction &MF) {
   Register V0 = RegInfo.createVirtualRegister(RC);
   Register V1 = RegInfo.createVirtualRegister(RC);
 
-  MCRegister T9 = ABI.getTempReg(9, ABI.ArePtrs64bit());
+  MCRegister T9 = ABI.getTempRegPtr(9);
 
   if (ABI.IsN64()) {
     MF.getRegInfo().addLiveIn(T9);

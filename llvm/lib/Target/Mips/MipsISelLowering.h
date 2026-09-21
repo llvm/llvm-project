@@ -146,7 +146,7 @@ using TargetRegisterClass = MCRegisterClass;
     Register
     getExceptionPointerRegister(ExceptionHandling EH,
                                 const Constant *PersonalityFn) const override {
-      return ABI.getArgReg(0, ABI.ArePtrs64bit());
+      return ABI.getArgRegPtr(0);
     }
 
     /// If a physical register, this returns the register that receives the
@@ -154,7 +154,7 @@ using TargetRegisterClass = MCRegisterClass;
     Register
     getExceptionSelectorRegister(ExceptionHandling EH,
                                  const Constant *PersonalityFn) const override {
-      return ABI.getArgReg(1, ABI.ArePtrs64bit());
+      return ABI.getArgRegPtr(1);
     }
 
     bool isJumpTableRelative() const override {
