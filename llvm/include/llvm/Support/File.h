@@ -14,6 +14,8 @@
 #ifndef LLVM_SUPPORT_FILE_H
 #define LLVM_SUPPORT_FILE_H
 
+#include <cstdint>
+
 namespace llvm::sys::fs {
 
 /// This class wraps the platform specific file handle/descriptor type to
@@ -23,7 +25,7 @@ struct file_t {
   /// A Win32 HANDLE is a typedef of void*
   using value_type = void *;
   /// Value for an invalid file handle INVALID_FILE_HANDLE.
-  static constexpr value_type Invalid =
+  static const value_type Invalid =
       reinterpret_cast<void *>(static_cast<intptr_t>(-1));
 #else
   /// A file descriptor on UNIX.

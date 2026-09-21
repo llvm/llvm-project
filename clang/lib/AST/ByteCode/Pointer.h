@@ -49,6 +49,9 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isVolatile() const {
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
@@ -954,7 +957,7 @@ public:
   bool isVolatile() const {
     if (!isBlockPointer())
       return false;
-    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+    return view().isVolatile();
   }
 
   /// Returns the declaration ID.
