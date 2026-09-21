@@ -284,6 +284,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
+- `-Wfortify-source` now diagnoses destination buffer-size mismatches in calls to
+  `read`, `pread`, `pread64`, `readlink`, `readlinkat`, and `getcwd` when the buffer
+  size and byte count are statically known. `-Wstringop-overread` diagnoses source
+  buffer over-reads in `write`, `pwrite`, and `pwrite64`.
+
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
