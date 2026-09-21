@@ -165,8 +165,12 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
     const Function *F, wasm::WasmSignature *Sig, bool &InvokeDetected) {
   MCSymbolWasm *WasmSym = nullptr;
 
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  ExceptionHandling EM = F->getParent()->getExceptionModel();
+  if (EM == ExceptionHandling::Default)
+    EM = TM.getExceptionModel();
   const bool EnableEmEH =
-      WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj;
+      EM == ExceptionHandling::Emscripten || WebAssembly::WasmEnableEmSjLj;
   if (EnableEmEH && isEmscriptenInvokeName(F->getName())) {
     assert(Sig);
     InvokeDetected = true;
@@ -186,7 +190,27 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (GV->hasAttribute("wasm-import-module") ||
+      GV->hasAttribute("wasm-import-name")) {
+    if (!GV->isDeclaration()) {
+      OutContext.reportError(SMLoc(), "definition of global '" + GV->getName() +
+                                          "' cannot have import attribute");
+      return;
+    }
+    if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
+      OutContext.reportError(SMLoc(),
+                             "imported global '" + GV->getName() +
+                                 "' must be in a wasm variable address space");
+      return;
+    }
+  }
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
+    if (GV->hasAttribute("wasm-export-name")) {
+      auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(GV));
+      StringRef Name = GV->getAttribute("wasm-export-name").getValueAsString();
+      Sym->setExportName(OutContext.allocateString(Name));
+      getTargetStreamer()->emitExportName(Sym, Name);
+    }
     AsmPrinter::emitGlobalVariable(GV);
     return;
   }
@@ -200,7 +224,8 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     // coalesces features before isel, so use the TargetMachine's
     // module-wide subtarget to compute legal value types.
     auto &WasmTM = static_cast<const WebAssemblyTargetMachine &>(TM);
-    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl();
+    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl(
+        WasmTM.getTargetCPU(), WasmTM.getTargetFeatureString());
     const WebAssemblyTargetLowering &TLI = *ST->getTargetLowering();
     computeLegalValueVTs(TLI, GV->getParent()->getContext(),
                          GV->getDataLayout(), GlobalVT, VTs);
@@ -211,10 +236,30 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
   emitSymbolType(Sym);
+  if (GV->isDeclaration()) {
+    if (GV->hasAttribute("wasm-import-module")) {
+      StringRef ImportModule =
+          GV->getAttribute("wasm-import-module").getValueAsString();
+      Sym->setImportModule(OutContext.allocateString(ImportModule));
+      getTargetStreamer()->emitImportModule(Sym, ImportModule);
+    }
+    if (GV->hasAttribute("wasm-import-name")) {
+      StringRef ImportName =
+          GV->getAttribute("wasm-import-name").getValueAsString();
+      Sym->setImportName(OutContext.allocateString(ImportName));
+      getTargetStreamer()->emitImportName(Sym, ImportName);
+    }
+  }
   if (GV->hasInitializer()) {
     assert(getSymbolPreferLocal(*GV) == Sym);
     emitLinkage(GV, Sym);
     OutStreamer->emitLabel(Sym);
+    if (GV->hasAttribute("wasm-export-name")) {
+      StringRef ExportName =
+          GV->getAttribute("wasm-export-name").getValueAsString();
+      Sym->setExportName(OutContext.allocateString(ExportName));
+      getTargetStreamer()->emitExportName(Sym, ExportName);
+    }
     // TODO: Actually emit the initializer value.  Otherwise the global has the
     // default value for its type (0, ref.null, etc).
     OutStreamer->addBlankLine();
@@ -567,8 +612,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   // If we never compiled a single function, Subtarget is null.
   if (!Subtarget) {
     Subtarget = static_cast<WebAssemblyTargetMachine &>(TM).getSubtargetImpl(
-        std::string(TM.getTargetCPU()),
-        std::string(TM.getTargetFeatureString()));
+        TM.getTargetCPU(), TM.getTargetFeatureString());
   }
   for (const SubtargetFeatureKV &KV : Subtarget->getAllProcessorFeatures()) {
     EmitFeature(KV.key());

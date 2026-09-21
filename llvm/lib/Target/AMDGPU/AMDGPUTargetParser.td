@@ -6,42 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TargetParser metadata attached to processor records for the
-// -gen-amdgpu-target-def backend.
+// TargetParser metadata for the -gen-amdgpu-target-def backend.
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME: These duplicate real SubtargetFeatures and should be unified
-// (e.g. FEATURE_XNACK mirrors FeatureXNACK).
-class AMDGPUArchFeature<string spelling> {
-  string Spelling = spelling;
-}
-
-// R600-only.
-def R600_FEATURE_FMA : AMDGPUArchFeature<"R600_FEATURE_FMA">;
-
-// AMDGCN.
-def FEATURE_FAST_FMA_F32       : AMDGPUArchFeature<"FEATURE_FAST_FMA_F32">;
-def FEATURE_FAST_DENORMAL_F32  : AMDGPUArchFeature<"FEATURE_FAST_DENORMAL_F32">;
-def FEATURE_WAVE32             : AMDGPUArchFeature<"FEATURE_WAVE32">;
-def FEATURE_XNACK              : AMDGPUArchFeature<"FEATURE_XNACK">;
-def FEATURE_SRAMECC            : AMDGPUArchFeature<"FEATURE_SRAMECC">;
-def FEATURE_WGP                : AMDGPUArchFeature<"FEATURE_WGP">;
-def FEATURE_XNACK_ON_OFF_MODES : AMDGPUArchFeature<"FEATURE_XNACK_ON_OFF_MODES">;
-def FEATURE_SGPR_INIT_BUG      : AMDGPUArchFeature<"FEATURE_SGPR_INIT_BUG">;
+// A generic target may use this feature if at least one covered GPU has it.
+// These features participate in validation even when not frontend-visible.
+// Other frontend-visible features must be present on every covered GPU.
+// Implied features are checked according to their own classes.
+// This checks feature membership, not numeric ordering of feature values.
+class AMDGPUGenericAnyFeature<string name, string fieldName, string value,
+                              string description,
+                              list<SubtargetFeature> implies = [],
+                              InlineBehavior ib = InlineDefault>
+    : SubtargetFeature<name, fieldName, value, description, implies, ib>;
 
 // Marks a Processor/ProcessorModel record as a canonical GPU.
 //
 // \p isa is the ISA version [major, minor, stepping]. Empty for R600 (no AMDGCN
 // ISA version); required for AMDGCN GPUs. Not derivable from the name.
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
-
   list<int> IsaVersion = isa;
 
-  // List of targets which are compatible with this target. This
-  // should be used for a "gfxN-generic" targets only, and empty for
-  // individual GPUs.
+  // For a "gfxN-generic" target, this must contain at least one compatible
+  // concrete AMDGPU GPU. For individual GPUs and pseudo targets, it must be empty.
   list<Processor> CoveredGPUs = [];
 
   // A pseudo target ("generic"/"generic-hsa") that represents no

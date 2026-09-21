@@ -632,7 +632,6 @@ static llvm::Function *emitOutlinedFunctionPrologue(
 
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   // Always inline the outlined function if optimizations are enabled.
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
@@ -745,7 +744,6 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, Loc, Loc);
   Address ContextAddr = CGF.GetAddrOfLocalVar(CD->getContextParam());
@@ -8930,5 +8928,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
 }
 
 void CodeGenFunction::EmitOMPAssumeDirective(const OMPAssumeDirective &S) {
+  for (const auto *C : S.getClausesOfKind<OMPHoldsClause>()) {
+    const Expr *E = C->getExpr();
+    assert(E && "holds clause requires an expression");
+    if (!E->HasSideEffects(getContext()))
+      Builder.CreateAssumption(EvaluateExprAsBool(E));
+  }
   EmitStmt(S.getAssociatedStmt());
 }

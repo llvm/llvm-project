@@ -497,7 +497,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
                                            llvmBufferValType);
-    typename Intrinsic::Properties properties;
+    typename Intrinsic::Properties properties{};
     properties.aux = rewriter.getI32IntegerAttr(0);
     Operation *lowered =
         Intrinsic::create(rewriter, loc, resultTypes, args, properties);
@@ -666,6 +666,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
           /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
           /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
           /*is_align_stack=*/false, LLVM::TailCallKind::None,
+          /*convergent=*/false,
           /*asm_dialect=*/asmDialectAttr,
           /*operand_attrs=*/ArrayAttr());
     } else if (chipset.majorVersion < 12) {
@@ -2253,7 +2254,9 @@ struct TransposeLoadOpLowering
         if (numElements != 16)
           return emitNumElementsError(16, "gfx1250+");
         intrinsic =
-            ROCDL::DsLoadTr4_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+            ROCDL::DsLoadTr4_B64::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
                 .getResult();
         break;
       }
@@ -2261,7 +2264,9 @@ struct TransposeLoadOpLowering
         if (numElements != 16)
           return emitNumElementsError(16, "gfx1250+");
         intrinsic =
-            ROCDL::DsLoadTr6_B96::create(rewriter, loc, rocdlResultType, srcPtr)
+            ROCDL::DsLoadTr6_B96::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
                 .getResult();
         break;
       }
@@ -2269,15 +2274,18 @@ struct TransposeLoadOpLowering
         if (numElements != 8)
           return emitNumElementsError(8, "gfx1250+");
         intrinsic =
-            ROCDL::DsLoadTr8_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+            ROCDL::DsLoadTr8_B64::create(rewriter, loc, rocdlResultType, srcPtr,
+                                         /*alias_scopes=*/{},
+                                         /*noalias_scopes=*/{}, /*tbaa=*/{})
                 .getResult();
         break;
       }
       case 16: {
         if (numElements != 8)
           return emitNumElementsError(8, "gfx1250+");
-        intrinsic = ROCDL::DsLoadTr16_B128::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::DsLoadTr16_B128::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
@@ -2289,32 +2297,36 @@ struct TransposeLoadOpLowering
       case 4: {
         if (numElements != 16)
           return emitNumElementsError(16, "gfx950");
-        intrinsic = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr4_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
       case 6: {
         if (numElements != 16)
           return emitNumElementsError(16, "gfx950");
-        intrinsic = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr6_b96::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
       case 8: {
         if (numElements != 8)
           return emitNumElementsError(8, "gfx950");
-        intrinsic = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
-                                                   rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr8_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
       case 16: {
         if (numElements != 4)
           return emitNumElementsError(4, "gfx950");
-        intrinsic = ROCDL::ds_read_tr16_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr)
+        intrinsic = ROCDL::ds_read_tr16_b64::create(
+                        rewriter, loc, rocdlResultType, srcPtr,
+                        /*alias_scopes=*/{}, /*noalias_scopes=*/{}, /*tbaa=*/{})
                         .getResult();
         break;
       }
@@ -2376,8 +2388,9 @@ struct GlobalTransposeLoadOpLowering
       assert(numElements == 16);
       if (chipset < kGfx1250)
         return op.emitOpError("4-bit global_transpose_load requires gfx1250+");
-      auto rocdlOp = ROCDL::GlobalLoadTr4_B64::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr4_B64::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
@@ -2385,22 +2398,24 @@ struct GlobalTransposeLoadOpLowering
       assert(numElements == 16);
       if (chipset < kGfx1250)
         return op.emitOpError("6-bit global_transpose_load requires gfx1250+");
-      auto rocdlOp = ROCDL::GlobalLoadTr6_B96::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr6_B96::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 8: {
       assert(numElements == 8);
-      auto rocdlOp = ROCDL::GlobalLoadTr8_B64::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::GlobalLoadTr8_B64::create(
+          rewriter, loc, rocdlResultType, srcPtr, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 16: {
       assert(numElements == 8);
-      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadTr8_B128>(op, llvmResultType,
-                                                             srcPtr);
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadTr8_B128>(
+          op, llvmResultType, srcPtr, ArrayAttr{}, ArrayAttr{}, ArrayAttr{});
       break;
     }
     default:
@@ -3747,9 +3762,9 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
       : ConvertOpToLLVMPattern<DescriptorOp>(converter), chipset(chipset) {}
   Chipset chipset;
 
-  Value getDGroup0(OpAdaptor adaptor) const { return adaptor.getBase(); }
+  Value getDGroup0(OpAdaptor &adaptor) const { return adaptor.getBase(); }
 
-  Value setWorkgroupMask(DescriptorOp op, OpAdaptor adaptor,
+  Value setWorkgroupMask(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0) const {
     Value mask = op.getWorkgroupMask();
@@ -3763,7 +3778,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, extendedMask, 0);
   }
 
-  Value setDataSize(DescriptorOp op, OpAdaptor adaptor,
+  Value setDataSize(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr0, ArrayRef<Value> consts) const {
     unsigned elementTypeWidthInBits = op.getElementTypeWidth();
@@ -3774,7 +3789,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, size, 16);
   }
 
-  Value setAtomicBarrier(DescriptorOp op, OpAdaptor adaptor,
+  Value setAtomicBarrier(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
     if (!adaptor.getAtomicBarrierAddress())
@@ -3783,7 +3798,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 18);
   }
 
-  Value setIterateEnable(DescriptorOp op, OpAdaptor adaptor,
+  Value setIterateEnable(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr0, ArrayRef<Value> consts) const {
     if (!adaptor.getGlobalIncrement())
@@ -3794,7 +3809,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 19);
   }
 
-  Value setPadEnable(DescriptorOp op, OpAdaptor adaptor,
+  Value setPadEnable(DescriptorOp op, OpAdaptor &adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -3803,7 +3818,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 20);
   }
 
-  Value setEarlyTimeout(DescriptorOp op, OpAdaptor adaptor,
+  Value setEarlyTimeout(DescriptorOp op, OpAdaptor &adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getWorkgroupMask())
@@ -3812,7 +3827,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, consts[1], 21);
   }
 
-  Value setPadInterval(DescriptorOp op, OpAdaptor adaptor,
+  Value setPadInterval(DescriptorOp op, OpAdaptor &adaptor,
                        ConversionPatternRewriter &rewriter, Location loc,
                        Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -3833,7 +3848,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, padInterval, 22);
   }
 
-  Value setPadAmount(DescriptorOp op, OpAdaptor adaptor,
+  Value setPadAmount(DescriptorOp op, OpAdaptor &adaptor,
                      ConversionPatternRewriter &rewriter, Location loc,
                      Value sgpr0, ArrayRef<Value> consts) const {
     if (!op.getPadAmount())
@@ -3851,7 +3866,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, padAmount, 25);
   }
 
-  Value setAtomicBarrierAddress(DescriptorOp op, OpAdaptor adaptor,
+  Value setAtomicBarrierAddress(DescriptorOp op, OpAdaptor &adaptor,
                                 ConversionPatternRewriter &rewriter,
                                 Location loc, Value sgpr1,
                                 ArrayRef<Value> consts) const {
@@ -3881,7 +3896,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr1, atomicBarrierAddress, 32);
   }
 
-  std::pair<Value, Value> setTensorDimX(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDimX(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts, uint64_t dimX,
@@ -3917,7 +3932,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return {sgpr1, sgpr2};
   }
 
-  std::pair<Value, Value> setTensorDim0(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim0(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts) const {
@@ -3925,7 +3940,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                          48);
   }
 
-  std::pair<Value, Value> setTensorDim1(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim1(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr2, Value sgpr3,
                                         ArrayRef<Value> consts) const {
@@ -3933,7 +3948,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                          80);
   }
 
-  Value setTileDimX(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDimX(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr, ArrayRef<Value> consts, size_t dimX,
                     int64_t offset) const {
@@ -3965,19 +3980,19 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr, tileDimX, offset);
   }
 
-  Value setTileDim0(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim0(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr3, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr3, consts, 0, 112);
   }
 
-  Value setTileDim1(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim1(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr4, ArrayRef<Value> consts) const {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr4, consts, 1, 128);
   }
 
-  Value setValidIndices(DescriptorOp op, OpAdaptor adaptor,
+  Value setValidIndices(DescriptorOp op, OpAdaptor &adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr4, ArrayRef<Value> consts) const {
     auto type = cast<VectorType>(op.getIndices().getType());
@@ -3989,7 +4004,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr4, value, 128);
   }
 
-  Value setTileDim1OrValidIndices(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim1OrValidIndices(DescriptorOp op, OpAdaptor &adaptor,
                                   ConversionPatternRewriter &rewriter,
                                   Location loc, Value sgpr4,
                                   ArrayRef<Value> consts) const {
@@ -3998,7 +4013,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setTileDim1(op, adaptor, rewriter, loc, sgpr4, consts);
   }
 
-  Value setTileDim2(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim2(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr4, ArrayRef<Value> consts) const {
     // Value is ignored when in gather mode.
@@ -4008,7 +4023,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setTensorDimXStride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDimXStride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgprY, Value sgprZ, ArrayRef<Value> consts,
                       size_t dimX, int64_t offset) const {
@@ -4054,7 +4069,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setTensorDim0Stride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDim0Stride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     return setTensorDimXStride(op, adaptor, rewriter, loc, sgpr5, sgpr6, consts,
@@ -4062,7 +4077,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setTensorDim1Stride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDim1Stride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr5, Value sgpr6, ArrayRef<Value> consts) const {
     // Value is ignored when in gather mode.
@@ -4072,7 +4087,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                                1, 208);
   }
 
-  Value getDGroup1(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup1(DescriptorOp op, OpAdaptor &adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     Value sgprs[8];
@@ -4118,7 +4133,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup1;
   }
 
-  Value setTensorDimX(DescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDimX(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, ArrayRef<Value> consts, int64_t dimX,
                       int64_t offset) const {
@@ -4143,7 +4158,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr0, tensorDimX, offset);
   }
 
-  Value setTensorDim2(DescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDim2(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, ArrayRef<Value> consts) const {
     return setTensorDimX(op, adaptor, rewriter, loc, sgpr0, consts, 2, 0);
@@ -4158,7 +4173,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, accumulator, value, shift);
   }
 
-  Value setLDSAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
+  Value setLDSAddrIncrement(DescriptorOp op, OpAdaptor &adaptor,
                             ConversionPatternRewriter &rewriter, Location loc,
                             Value sgpr1, ArrayRef<Value> consts,
                             int64_t offset) const {
@@ -4167,7 +4182,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value>
-  setGlobalAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
+  setGlobalAddrIncrement(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          Value sgpr2, Value sgpr3, ArrayRef<Value> consts,
                          int64_t offset) const {
@@ -4185,7 +4200,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return {sgpr2, sgpr3};
   }
 
-  Value setTensorDim3OrLDSAddrIncrement(DescriptorOp op, OpAdaptor adaptor,
+  Value setTensorDim3OrLDSAddrIncrement(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1,
                                         ArrayRef<Value> consts) const {
@@ -4200,7 +4215,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
   }
 
   std::pair<Value, Value> setTensorDim2StrideOrGlobalAddrIncrement(
-      DescriptorOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter,
+      DescriptorOp op, OpAdaptor &adaptor, ConversionPatternRewriter &rewriter,
       Location loc, Value sgpr2, Value sgpr3, ArrayRef<Value> consts) const {
     Value globalIncrement = op.getGlobalIncrement();
     constexpr int32_t dim = 2;
@@ -4212,7 +4227,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                                   consts, offset);
   }
 
-  Value setIterateCount(DescriptorOp op, OpAdaptor adaptor,
+  Value setIterateCount(DescriptorOp op, OpAdaptor &adaptor,
                         ConversionPatternRewriter &rewriter, Location loc,
                         Value sgpr3, ArrayRef<Value> consts,
                         int32_t offset) const {
@@ -4230,7 +4245,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setValueAtOffset(rewriter, loc, sgpr3, iterationCount, offset);
   }
 
-  Value setTileDim3OrIterateCount(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim3OrIterateCount(DescriptorOp op, OpAdaptor &adaptor,
                                   ConversionPatternRewriter &rewriter,
                                   Location loc, Value sgpr3,
                                   ArrayRef<Value> consts) const {
@@ -4244,7 +4259,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setIterateCount(op, adaptor, rewriter, loc, sgpr3, consts, offset);
   }
 
-  Value getDGroup2(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup2(DescriptorOp op, OpAdaptor &adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     if constexpr (DescriptorOp::isGather())
@@ -4252,7 +4267,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return getDGroup2NonGather(op, adaptor, rewriter, loc, consts);
   }
 
-  Value getDGroup2NonGather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup2NonGather(DescriptorOp op, OpAdaptor &adaptor,
                             ConversionPatternRewriter &rewriter, Location loc,
                             ArrayRef<Value> consts) const {
     IntegerType i32 = rewriter.getI32Type();
@@ -4284,7 +4299,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup2;
   }
 
-  Value getGatherIndices(DescriptorOp op, OpAdaptor adaptor,
+  Value getGatherIndices(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          ArrayRef<Value> consts, bool firstHalf) const {
     IntegerType i32 = rewriter.getI32Type();
@@ -4315,7 +4330,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     SmallVector<Value> indicesI32Vector;
     if (elementType == i32) {
-      indicesI32Vector = indicesVector;
+      indicesI32Vector = std::move(indicesVector);
     } else {
       for (unsigned i = 0; i < targetSize; ++i) {
         Value index = indicesVector[i];
@@ -4329,7 +4344,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     SmallVector<Value> indicesToInsert;
     if (elementType == i32) {
-      indicesToInsert = indicesI32Vector;
+      indicesToInsert = std::move(indicesI32Vector);
     } else {
       unsigned size = indicesI32Vector.size() / 2;
       for (unsigned i = 0; i < size; ++i) {
@@ -4348,14 +4363,14 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup;
   }
 
-  Value getDGroup2Gather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup2Gather(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          ArrayRef<Value> consts) const {
     return getGatherIndices(op, adaptor, rewriter, loc, consts, true);
   }
 
   std::pair<Value, Value>
-  setTensorDim3Stride(DescriptorOp op, OpAdaptor adaptor,
+  setTensorDim3Stride(DescriptorOp op, OpAdaptor &adaptor,
                       ConversionPatternRewriter &rewriter, Location loc,
                       Value sgpr0, Value sgpr1, ArrayRef<Value> consts) const {
     constexpr int32_t dim = 3;
@@ -4364,7 +4379,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                                dim, offset);
   }
 
-  std::pair<Value, Value> setTensorDim4(DescriptorOp op, OpAdaptor adaptor,
+  std::pair<Value, Value> setTensorDim4(DescriptorOp op, OpAdaptor &adaptor,
                                         ConversionPatternRewriter &rewriter,
                                         Location loc, Value sgpr1, Value sgpr2,
                                         ArrayRef<Value> consts) const {
@@ -4374,7 +4389,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
                          offset);
   }
 
-  Value setTileDim4(DescriptorOp op, OpAdaptor adaptor,
+  Value setTileDim4(DescriptorOp op, OpAdaptor &adaptor,
                     ConversionPatternRewriter &rewriter, Location loc,
                     Value sgpr2, ArrayRef<Value> consts) const {
     constexpr int32_t dim = 4;
@@ -4382,7 +4397,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return setTileDimX(op, adaptor, rewriter, loc, sgpr2, consts, dim, offset);
   }
 
-  Value getDGroup3(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup3(DescriptorOp op, OpAdaptor &adaptor,
                    ConversionPatternRewriter &rewriter, Location loc,
                    ArrayRef<Value> consts) const {
     if constexpr (DescriptorOp::isGather())
@@ -4390,7 +4405,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return getDGroup3NonGather(op, adaptor, rewriter, loc, consts);
   }
 
-  Value getDGroup3NonGather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup3NonGather(DescriptorOp op, OpAdaptor &adaptor,
                             ConversionPatternRewriter &rewriter, Location loc,
                             ArrayRef<Value> consts) const {
     IntegerType i32 = rewriter.getI32Type();
@@ -4419,7 +4434,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
     return dgroup3;
   }
 
-  Value getDGroup3Gather(DescriptorOp op, OpAdaptor adaptor,
+  Value getDGroup3Gather(DescriptorOp op, OpAdaptor &adaptor,
                          ConversionPatternRewriter &rewriter, Location loc,
                          ArrayRef<Value> consts) const {
     return getGatherIndices(op, adaptor, rewriter, loc, consts, false);
@@ -4566,7 +4581,7 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
       });
   typeConverter.addConversion([](gpu::NamedBarrierType type) {
     return LLVM::LLVMPointerType::get(
-        type.getContext(), ROCDL::ROCDLDialect::kSharedMemoryAddressSpace);
+        type.getContext(), ROCDL::ROCDLDialect::kBarrierAddressSpace);
   });
 }
 

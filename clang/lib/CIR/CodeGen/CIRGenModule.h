@@ -140,6 +140,7 @@ private:
 
   void createCUDARuntime();
   void createOpenMPRuntime();
+  void setOpenCLVersionAttr(llvm::StringRef attrName, unsigned version);
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,
@@ -667,6 +668,8 @@ public:
   /// function declared with the sycl_kernel_entry_point attribute.
   void emitSYCLKernelCaller(const clang::FunctionDecl *kernelEntryPointFn,
                             clang::ASTContext &ctx);
+
+  void addSYCLModuleIdAttr(cir::FuncOp fn);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
@@ -877,9 +880,6 @@ public:
 
   static mlir::SymbolTable::Visibility
   getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind GLK);
-  static cir::VisibilityKind getGlobalVisibilityKindFromClangVisibility(
-      clang::VisibilityAttr::VisibilityType visibility);
-  cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
   cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,

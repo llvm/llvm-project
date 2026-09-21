@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_data(int cond) {
   // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{

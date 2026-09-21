@@ -109,7 +109,7 @@ define i1 @smulo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: smulo_not_i32:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    imull %esi, %edi
-; CHECK-NEXT:    setno %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -122,7 +122,7 @@ define i1 @smulo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK-LABEL: smulo_not_i64:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    imulq %rsi, %rdi
-; CHECK-NEXT:    setno %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
@@ -136,7 +136,7 @@ define i1 @umulo_not_i32(i32 %v1, i32 %v2) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mull %esi
-; CHECK-NEXT:    setno %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -150,7 +150,7 @@ define i1 @umulo_not_i64(i64 %v1, i64 %v2) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %rsi
-; CHECK-NEXT:    setno %al
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
 entry:
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)

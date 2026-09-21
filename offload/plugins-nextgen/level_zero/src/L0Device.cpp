@@ -432,12 +432,6 @@ const char *L0DeviceTy::getArchCStr() const {
   }
 }
 
-static const char *DriverVersionToStrTable[] = {
-    "1.0", "1.1", "1.2", "1.3",  "1.4",  "1.5", "1.6",
-    "1.7", "1.8", "1.9", "1.10", "1.11", "1.12"};
-constexpr size_t DriverVersionToStrTableSize =
-    sizeof(DriverVersionToStrTable) / sizeof(DriverVersionToStrTable[0]);
-
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
@@ -446,12 +440,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
-  auto DriverVersion = getDriverAPIVersion();
-  if (DriverVersion < DriverVersionToStrTableSize)
-    Info.add("Driver Version", DriverVersionToStrTable[DriverVersion], "",
-             DeviceInfo::DRIVER_VERSION);
-  else
-    Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
+  Info.add("Driver Version", L0Context.getDriverVersion(), "",
+           DeviceInfo::DRIVER_VERSION);
   Info.add("Device PCI ID", getPCIId());
   Info.add("Device UUID", getUuid().data());
   Info.add("Number of total EUs", getNumEUs(), "",

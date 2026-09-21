@@ -167,12 +167,12 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vv(<2 x bfloat> %a, <2 x bfloat> %b) 
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v2, 16, v2 :: v_dual_lshlrev_b32 v3, 16, v3
 ; GFX1250-NEXT:    v_dual_mul_f32 v0, v0, v1 :: v_dual_mul_f32 v1, v2, v3
 ; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
 ; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
+; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
@@ -245,12 +245,12 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vs(<2 x bfloat> %a, <2 x bfloat> inre
 ; GFX1250-NEXT:    v_dual_mul_f32 v0, s1, v0 :: v_dual_lshlrev_b32 v1, 16, v1
 ; GFX1250-NEXT:    v_mul_f32_e32 v1, s0, v1
 ; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
 ; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
@@ -409,12 +409,12 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vc(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
 ; GFX1250-NEXT:    v_dual_mul_f32 v0, 0.5, v0 :: v_dual_mul_f32 v1, 0.5, v1
 ; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
 ; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo
@@ -477,12 +477,12 @@ define amdgpu_ps <2 x bfloat> @fmul_v2bf16_vl(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    v_dual_lshlrev_b32 v0, 16, v0 :: v_dual_lshlrev_b32 v1, 16, v1
 ; GFX1250-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 0x42c80000, v1
 ; GFX1250-NEXT:    v_bfe_u32 v2, v0, 16, 1
-; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v0
 ; GFX1250-NEXT:    v_bfe_u32 v3, v1, 16, 1
 ; GFX1250-NEXT:    v_add3_u32 v2, v2, v0, 0x7fff
 ; GFX1250-NEXT:    v_or_b32_e32 v5, 0x400000, v1
 ; GFX1250-NEXT:    v_add3_u32 v3, v3, v1, 0x7fff
+; GFX1250-NEXT:    v_or_b32_e32 v4, 0x400000, v0
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
 ; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v0, v3, v5, vcc_lo

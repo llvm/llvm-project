@@ -78,15 +78,18 @@ struct RemoveEmptyKernelEnvironment
   }
 };
 
-static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
-                                                    PatternRewriter &rewriter,
-                                                    size_t numInput) {
+// Capture `hasStream` before erasing inputs because segment metadata is only
+// repaired at the end of the modification transaction.
+static void setComputeRegionInputOperandSegments(ComputeRegionOp op,
+                                                 PatternRewriter &rewriter,
+                                                 size_t numInput,
+                                                 bool hasStream) {
   const size_t numLaunch = op.getLaunchArgs().size();
   op->setInherentAttr(
       rewriter.getStringAttr(ComputeRegionOp::getOperandSegmentSizeAttr()),
       rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
                                      static_cast<int32_t>(numInput),
-                                     op.getStream() ? 1 : 0}));
+                                     hasStream ? 1 : 0}));
 }
 
 struct ComputeRegionRemoveDuplicateArgs
@@ -101,33 +104,42 @@ struct ComputeRegionRemoveDuplicateArgs
     assert(body->getNumArguments() == numLaunch + numInput &&
            "region args mismatch");
 
-    bool mergedAny = false;
-    while (true) {
-      bool merged = false;
-      for (size_t j = 1; j < numInput && !merged; ++j) {
-        for (size_t i = 0; i < j; ++i) {
-          if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
-              op->getOperand(static_cast<unsigned>(numLaunch + j)))
-            continue;
-          unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
-          unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
-          rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
-                                      body->getArgument(keepIdx));
-          body->eraseArgument(dropIdx);
-          op->eraseOperand(dropIdx);
-          --numInput;
-          merged = true;
-          mergedAny = true;
+    bool hasDuplicate = false;
+    for (size_t j = 1; j < numInput && !hasDuplicate; ++j)
+      for (size_t i = 0; i < j; ++i)
+        if (op->getOperand(static_cast<unsigned>(numLaunch + i)) ==
+            op->getOperand(static_cast<unsigned>(numLaunch + j))) {
+          hasDuplicate = true;
           break;
         }
-      }
-      if (!merged)
-        break;
-    }
-
-    if (!mergedAny)
+    if (!hasDuplicate)
       return failure();
-    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+
+    const bool hasStream = static_cast<bool>(op.getStream());
+    rewriter.modifyOpInPlace(op, [&] {
+      while (true) {
+        bool merged = false;
+        for (size_t j = 1; j < numInput && !merged; ++j) {
+          for (size_t i = 0; i < j; ++i) {
+            if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
+                op->getOperand(static_cast<unsigned>(numLaunch + j)))
+              continue;
+            unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
+            unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
+            rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
+                                        body->getArgument(keepIdx));
+            body->eraseArgument(dropIdx);
+            op->eraseOperand(dropIdx);
+            --numInput;
+            merged = true;
+            break;
+          }
+        }
+        if (!merged)
+          break;
+      }
+      setComputeRegionInputOperandSegments(op, rewriter, numInput, hasStream);
+    });
     return success();
   }
 };
@@ -144,21 +156,28 @@ struct ComputeRegionRemoveUnusedArgs
     assert(body->getNumArguments() == numLaunch + numInput &&
            "region args mismatch");
 
-    bool changed = false;
-    for (size_t k = numLaunch; k < numLaunch + numInput;) {
-      if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
-        ++k;
-        continue;
+    bool hasUnused = false;
+    for (size_t k = numLaunch; k < numLaunch + numInput; ++k)
+      if (body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+        hasUnused = true;
+        break;
       }
-      body->eraseArgument(static_cast<unsigned>(k));
-      op->eraseOperand(static_cast<unsigned>(k));
-      --numInput;
-      changed = true;
-    }
-
-    if (!changed)
+    if (!hasUnused)
       return failure();
-    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+
+    const bool hasStream = static_cast<bool>(op.getStream());
+    rewriter.modifyOpInPlace(op, [&] {
+      for (size_t k = numLaunch; k < numLaunch + numInput;) {
+        if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+          ++k;
+          continue;
+        }
+        body->eraseArgument(static_cast<unsigned>(k));
+        op->eraseOperand(static_cast<unsigned>(k));
+        --numInput;
+      }
+      setComputeRegionInputOperandSegments(op, rewriter, numInput, hasStream);
+    });
     return success();
   }
 };
@@ -896,6 +915,39 @@ LogicalResult PredicateRegionOp::verify() {
     return emitOpError("region cannot have any arguments");
   if (!getOperation()->getParentOfType<ComputeRegionOp>())
     return emitOpError("must be nested within an acc.compute_region operation");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MapInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MapInfoOp::verify() {
+  // A pointer-like var addresses the mapped object, so varType has to name that
+  // object rather than the address of it.
+  if (mlir::isa<acc::PointerLikeType>(getVar().getType()) &&
+      getVarType() == getVar().getType())
+    return emitOpError("varType must capture the element type of var");
+
+  // A descriptor operand is only meaningful together with the layout it
+  // follows. Without a kind, consumers have no way to interpret it.
+  if (getDesc() && getDescKind() == DataDescKind::none)
+    return emitOpError("desc requires a descKind other than none");
+
+  // Bounds count elements of the mapped object, which is the OpenACC
+  // descriptor layout, so it must be among the kinds named here.
+  if (!getBounds().empty() &&
+      !acc::bitEnumContainsAny(getDescKind(), DataDescKind::openacc))
+    return emitOpError("bounds require descKind openacc");
+
+  // Anything below -1 has no meaning: -1 states that the size is unknown at
+  // compile time and 0 defers it to bounds or to a descriptor.
+  if (getSize()) {
+    std::optional<int64_t> constantSize = getConstantIntValue(getSize());
+    if (constantSize && *constantSize < -1)
+      return emitOpError("size must be -1, 0, or a positive byte count");
+  }
+
   return success();
 }
 

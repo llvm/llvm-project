@@ -484,9 +484,9 @@ private:
 
   void postAllocationAction(const Allocation &alloc,
                             const fir::MutableBoxValue &box) {
-    if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
-      Fortran::lower::attachDeclarePostAllocAction(converter, builder,
-                                                   alloc.getSymbol());
+    auto &ult = alloc.getSymbol().GetUltimate();
+    if (ult.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+      Fortran::lower::attachDeclarePostAllocAction(converter, builder, ult);
   }
 
   void setPinnedToFalse() {
@@ -929,16 +929,18 @@ static void preDeallocationAction(Fortran::lower::AbstractConverter &converter,
                                   fir::FirOpBuilder &builder,
                                   mlir::Value beginOpValue,
                                   const Fortran::semantics::Symbol &sym) {
-  if (sym.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+  auto &ult = sym.GetUltimate();
+  if (ult.test(Fortran::semantics::Symbol::Flag::AccDeclare))
     Fortran::lower::attachDeclarePreDeallocAction(converter, builder,
-                                                  beginOpValue, sym);
+                                                  beginOpValue, ult);
 }
 
 static void postDeallocationAction(Fortran::lower::AbstractConverter &converter,
                                    fir::FirOpBuilder &builder,
                                    const Fortran::semantics::Symbol &sym) {
-  if (sym.test(Fortran::semantics::Symbol::Flag::AccDeclare))
-    Fortran::lower::attachDeclarePostDeallocAction(converter, builder, sym);
+  auto &ult = sym.GetUltimate();
+  if (ult.test(Fortran::semantics::Symbol::Flag::AccDeclare))
+    Fortran::lower::attachDeclarePostDeallocAction(converter, builder, ult);
 }
 
 static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
