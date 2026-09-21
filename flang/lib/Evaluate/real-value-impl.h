@@ -197,25 +197,28 @@ public:
   llvm::raw_ostream &AsFortran(
       llvm::raw_ostream &o, int kind, bool minimal = false) const;
 
-  template <typename V> static std::decay_t<V> AsWord(const RealValueImpl &y) {
-    using R = std::decay_t<V>;
-    if (y.IsNull()) {
-      return R{};
-    }
-
-    return y.withWord([](const auto &yv) -> R {
-      using YR = std::decay_t<decltype(yv)>;
-      if constexpr (std::is_same_v<YR, R>) {
-        return yv;
-      } else {
-        return R::Convert(yv).value;
-      }
-    });
-  }
-
   // Compile-time dispatchers to current/specified kind
 
-  template <typename F> static inline auto withWordProto(int kind, F &&f) {
+  /// Return a word of the requested type (value::Real<INT,PREC>). The current
+  /// stored word must match that type or we crash.
+  template <typename T> T GetWord() const {
+    // Null means default-initialized of the requested word (== 0.0)
+    if (IsNull()) {
+      // Immutable null constant since we return a reference
+      static const T null;
+      return null;
+    }
+
+    // std::get throws std::bad_variant_access, but we do not want to rely soley
+    // on exceptions here.
+    if (!std::holds_alternative<T>(storage_)) {
+      DIE("value does not store the requested kind");
+    }
+
+    return std::get<T>(storage_);
+  }
+
+  template <typename F> static inline auto WithWordProto(int kind, F &&f) {
     using namespace Fortran::evaluate::value;
     switch (kind) {
     case 2:
@@ -235,7 +238,7 @@ public:
     }
   }
 
-  template <typename F> auto withWord(F &&f) const {
+  template <typename F> auto WithWord(F &&f) const {
     switch (storage_.index()) {
     case 1:
       return f(std::get<1>(storage_));

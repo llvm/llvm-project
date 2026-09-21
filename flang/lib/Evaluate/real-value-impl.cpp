@@ -18,13 +18,12 @@
 namespace Fortran::evaluate::value {
 
 RealValueImpl::RealValueImpl(int kind, const Word &w) {
-  withWordProto(kind, [&](auto proto) {
-    using R = decltype(proto);
+  WithWordProto(kind, [&](auto proto) {
+    using R = std::decay_t<decltype(proto)>;
     if (w.IsNull()) {
       storage_ = R{};
     } else {
-      storage_ =
-          R{IntegerValueImpl::CoerceUnsigned<typename R::Word>(w.impl())};
+      storage_ = R{w.impl().GetWord<typename R::Word>()};
     }
   });
 }
@@ -64,7 +63,7 @@ RealValueImpl::RealValueImpl(int kind, double x) {
 
 RealValueImpl RealValueImpl::Zero(int kind) {
   RealValueImpl result;
-  withWordProto(kind, [&](auto proto) { result.storage_ = decltype(proto){}; });
+  WithWordProto(kind, [&](auto proto) { result.storage_ = decltype(proto){}; });
   return result;
 }
 
@@ -90,7 +89,7 @@ int RealValueImpl::kind() const {
     DIE("uninitialized value has not a defined kind");
   }
 
-  return withWord([](const auto &v) -> int {
+  return WithWord([](const auto &v) -> int {
     using R = std::decay_t<decltype(v)>;
     if constexpr (std::is_same_v<R, R3>) {
       return 3;
@@ -104,7 +103,7 @@ int RealValueImpl::bits() const {
     return 0;
   }
 
-  return withWord(
+  return WithWord(
       [](const auto &v) -> int { return std::decay_t<decltype(v)>::bits; });
 }
 
@@ -112,12 +111,12 @@ bool RealValueImpl::IsZero() const {
   if (IsNull()) {
     return true;
   }
-  return withWord([](const auto &v) { return v.IsZero(); });
+  return WithWord([](const auto &v) { return v.IsZero(); });
 }
 
 bool RealValueImpl::operator==(const RealValueImpl &y) const {
-  return withWord([&y](const auto &v1) -> bool {
-    return y.withWord([&v1](const auto &v2) -> bool {
+  return WithWord([&y](const auto &v1) -> bool {
+    return y.WithWord([&v1](const auto &v2) -> bool {
       if constexpr (std::is_same_v<std::decay_t<decltype(v1)>,
                         std::decay_t<decltype(v2)>>) {
         return v1 == v2;
@@ -128,52 +127,52 @@ bool RealValueImpl::operator==(const RealValueImpl &y) const {
 }
 
 int RealValueImpl::DIGITS(int kind) {
-  return withWordProto(kind, [](auto p) { return decltype(p)::DIGITS; });
+  return WithWordProto(kind, [](auto p) { return decltype(p)::DIGITS; });
 }
 
 int RealValueImpl::PRECISION(int kind) {
-  return withWordProto(kind, [](auto p) { return decltype(p)::PRECISION; });
+  return WithWordProto(kind, [](auto p) { return decltype(p)::PRECISION; });
 }
 
 int RealValueImpl::RANGE(int kind) {
-  return withWordProto(kind, [](auto p) { return decltype(p)::RANGE; });
+  return WithWordProto(kind, [](auto p) { return decltype(p)::RANGE; });
 }
 
 int RealValueImpl::MAXEXPONENT(int kind) {
-  return withWordProto(kind, [](auto p) { return decltype(p)::MAXEXPONENT; });
+  return WithWordProto(kind, [](auto p) { return decltype(p)::MAXEXPONENT; });
 }
 
 int RealValueImpl::MINEXPONENT(int kind) {
-  return withWordProto(kind, [](auto p) { return decltype(p)::MINEXPONENT; });
+  return WithWordProto(kind, [](auto p) { return decltype(p)::MINEXPONENT; });
 }
 
 RealValueImpl RealValueImpl::HUGE(int kind) {
-  return withWordProto(
+  return WithWordProto(
       kind, [](auto p) { return FromWord(decltype(p)::HUGE()); });
 }
 
 RealValueImpl RealValueImpl::EPSILON(int kind) {
-  return withWordProto(
+  return WithWordProto(
       kind, [](auto p) { return FromWord(decltype(p)::EPSILON()); });
 }
 
 RealValueImpl RealValueImpl::TINY(int kind) {
-  return withWordProto(
+  return WithWordProto(
       kind, [](auto p) { return FromWord(decltype(p)::TINY()); });
 }
 
 RealValueImpl RealValueImpl::NotANumber(int kind) {
-  return withWordProto(
+  return WithWordProto(
       kind, [](auto p) { return FromWord(decltype(p)::NotANumber()); });
 }
 
 RealValueImpl RealValueImpl::Infinity(int kind, bool negative) {
-  return withWordProto(kind,
+  return WithWordProto(kind,
       [negative](auto p) { return FromWord(decltype(p)::Infinity(negative)); });
 }
 
 RealValueImpl RealValueImpl::NegativeZero(int kind) {
-  return withWordProto(
+  return WithWordProto(
       kind, [](auto p) { return FromWord(decltype(p)::NegativeZero()); });
 }
 
@@ -181,55 +180,55 @@ bool RealValueImpl::IsNegative() const {
   if (IsNull()) {
     return false;
   }
-  return withWord([](const auto &v) { return v.IsNegative(); });
+  return WithWord([](const auto &v) { return v.IsNegative(); });
 }
 
 bool RealValueImpl::IsNotANumber() const {
   if (IsNull()) {
     return false;
   }
-  return withWord([](const auto &v) { return v.IsNotANumber(); });
+  return WithWord([](const auto &v) { return v.IsNotANumber(); });
 }
 
 bool RealValueImpl::IsSignalingNaN() const {
   if (IsNull()) {
     return false;
   }
-  return withWord([](const auto &v) { return v.IsSignalingNaN(); });
+  return WithWord([](const auto &v) { return v.IsSignalingNaN(); });
 }
 
 bool RealValueImpl::IsInfinite() const {
   if (IsNull()) {
     return false;
   }
-  return withWord([](const auto &v) { return v.IsInfinite(); });
+  return WithWord([](const auto &v) { return v.IsInfinite(); });
 }
 
 bool RealValueImpl::IsFinite() const {
   if (IsNull()) {
     return true;
   }
-  return withWord([](const auto &v) { return v.IsFinite(); });
+  return WithWord([](const auto &v) { return v.IsFinite(); });
 }
 
 bool RealValueImpl::IsNormal() const {
   if (IsNull()) {
     return true;
   }
-  return withWord([](const auto &v) { return v.IsNormal(); });
+  return WithWord([](const auto &v) { return v.IsNormal(); });
 }
 
 int RealValueImpl::Exponent() const {
   if (IsNull()) {
     return 0;
   }
-  return withWord([](const auto &v) { return v.Exponent(); });
+  return WithWord([](const auto &v) { return v.Exponent(); });
 }
 
 void RealValueImpl::StoreRawBytes(
     void *dst, size_t expectedSize, bool *changed) const {
   CHECK(bytesStored() == expectedSize);
-  withWord([=](const auto &v) {
+  WithWord([=](const auto &v) {
     auto data{v.RawBits()};
     CHECK(sizeof(data) == expectedSize);
     if (std::memcmp(dst, &data, sizeof(data))) {
@@ -245,7 +244,7 @@ IntegerValue RealValueImpl::RawBits() const {
     return {};
   }
 
-  return withWord([](const auto &v) {
+  return WithWord([](const auto &v) {
     IntegerValue result;
     result.impl() = IntegerValueImpl::FromWord(v.RawBits());
     return result;
@@ -256,9 +255,9 @@ Relation RealValueImpl::Compare(const RealValueImpl &y) const {
   if (IsNull()) {
     DIE("uncomparable value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return v.Compare(AsWord<R>(y));
+    return v.Compare(y.GetWord<R>());
   });
 }
 
@@ -266,23 +265,23 @@ RealValueImpl RealValueImpl::ABS() const {
   if (IsNull()) {
     return RealValueImpl{};
   }
-  return withWord([](const auto &v) { return FromWord(v.ABS()); });
+  return WithWord([](const auto &v) { return FromWord(v.ABS()); });
 }
 
 RealValueImpl RealValueImpl::Negate() const {
   if (IsNull()) {
     return RealValueImpl{};
   }
-  return withWord([](const auto &v) { return FromWord(v.Negate()); });
+  return WithWord([](const auto &v) { return FromWord(v.Negate()); });
 }
 
 RealValueImpl RealValueImpl::SIGN(const RealValueImpl &x) const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.SIGN(AsWord<R>(x)));
+    return FromWord(v.SIGN(x.GetWord<R>()));
   });
 }
 
@@ -290,7 +289,7 @@ RealValueImpl RealValueImpl::SetSign(bool toNegative) const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord(
+  return WithWord(
       [&](const auto &v) { return FromWord(v.SetSign(toNegative)); });
 }
 
@@ -298,7 +297,7 @@ RealValueImpl RealValueImpl::FlushSubnormalToZero() const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord(
+  return WithWord(
       [](const auto &v) { return FromWord(v.FlushSubnormalToZero()); });
 }
 
@@ -307,9 +306,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Add(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.Add(AsWord<R>(y), rounding));
+    return FromWord(v.Add(y.GetWord<R>(), rounding));
   });
 }
 
@@ -318,9 +317,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Subtract(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.Subtract(AsWord<R>(y), rounding));
+    return FromWord(v.Subtract(y.GetWord<R>(), rounding));
   });
 }
 
@@ -329,9 +328,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Multiply(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.Multiply(AsWord<R>(y), rounding));
+    return FromWord(v.Multiply(y.GetWord<R>(), rounding));
   });
 }
 
@@ -340,9 +339,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Divide(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.Divide(AsWord<R>(y), rounding));
+    return FromWord(v.Divide(y.GetWord<R>(), rounding));
   });
 }
 
@@ -350,7 +349,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::SQRT(Rounding rounding) const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) { return FromWord(v.SQRT(rounding)); });
+  return WithWord([&](const auto &v) { return FromWord(v.SQRT(rounding)); });
 }
 
 ValueWithRealFlags<RealValueImpl> RealValueImpl::HYPOT(
@@ -358,9 +357,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::HYPOT(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.HYPOT(AsWord<R>(y), rounding));
+    return FromWord(v.HYPOT(y.GetWord<R>(), rounding));
   });
 }
 
@@ -369,9 +368,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::MOD(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.MOD(AsWord<R>(y), rounding));
+    return FromWord(v.MOD(y.GetWord<R>(), rounding));
   });
 }
 
@@ -380,9 +379,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::MODULO(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.MODULO(AsWord<R>(y), rounding));
+    return FromWord(v.MODULO(y.GetWord<R>(), rounding));
   });
 }
 
@@ -391,9 +390,9 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::DIM(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    return FromWord(v.DIM(AsWord<R>(y), rounding));
+    return FromWord(v.DIM(y.GetWord<R>(), rounding));
   });
 }
 
@@ -401,35 +400,35 @@ RealValueImpl RealValueImpl::FRACTION() const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([](const auto &v) { return FromWord(v.FRACTION()); });
+  return WithWord([](const auto &v) { return FromWord(v.FRACTION()); });
 }
 
 RealValueImpl RealValueImpl::RRSPACING() const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([](const auto &v) { return FromWord(v.RRSPACING()); });
+  return WithWord([](const auto &v) { return FromWord(v.RRSPACING()); });
 }
 
 RealValueImpl RealValueImpl::SPACING() const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([](const auto &v) { return FromWord(v.SPACING()); });
+  return WithWord([](const auto &v) { return FromWord(v.SPACING()); });
 }
 
 RealValueImpl RealValueImpl::SET_EXPONENT(std::int64_t e) const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) { return FromWord(v.SET_EXPONENT(e)); });
+  return WithWord([&](const auto &v) { return FromWord(v.SET_EXPONENT(e)); });
 }
 
 ValueWithRealFlags<RealValueImpl> RealValueImpl::NEAREST(bool upward) const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) { return FromWord(v.NEAREST(upward)); });
+  return WithWord([&](const auto &v) { return FromWord(v.NEAREST(upward)); });
 }
 
 ValueWithRealFlags<RealValueImpl> RealValueImpl::ToWholeNumber(
@@ -437,7 +436,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::ToWholeNumber(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord(
+  return WithWord(
       [&](const auto &v) { return FromWord(v.ToWholeNumber(mode)); });
 }
 
@@ -446,7 +445,7 @@ ValueWithRealFlags<IntegerValue> RealValueImpl::ToInteger(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) -> ValueWithRealFlags<IntegerValue> {
+  return WithWord([&](const auto &v) -> ValueWithRealFlags<IntegerValue> {
     auto pick{[&](auto target) -> ValueWithRealFlags<IntegerValue> {
       using W = decltype(target);
       auto r{v.template ToInteger<W>(mode)};
@@ -477,7 +476,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::SCALE(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) -> ValueWithRealFlags<RealValueImpl> {
+  return WithWord([&](const auto &v) -> ValueWithRealFlags<RealValueImpl> {
     return FromWord(v.SCALE(Integer<64>{by.ToInt64()}, rounding));
   });
 }
@@ -488,10 +487,10 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::KahanSummation(
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([&](const auto &v) {
+  return WithWord([&](const auto &v) {
     using R = std::decay_t<decltype(v)>;
-    R corr{AsWord<R>(correction)};
-    auto r{v.KahanSummation(AsWord<R>(y), corr, rounding)};
+    R corr{correction.GetWord<R>()};
+    auto r{v.KahanSummation(y.GetWord<R>(), corr, rounding)};
     correction = FromWord(corr);
     return FromWord(r);
   });
@@ -501,7 +500,7 @@ IntegerValue RealValueImpl::EXPONENT() const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([](const auto &v) -> IntegerValue {
+  return WithWord([](const auto &v) -> IntegerValue {
     IntegerValue result;
     result.impl() =
         IntegerValueImpl::FromWord(v.template EXPONENT<Integer<32>>());
@@ -514,10 +513,10 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::FromInteger(
   if (n.IsNull()) {
     return ValueWithRealFlags<RealValueImpl>{};
   }
-  return withWordProto(
+  return WithWordProto(
       kind, [&](auto proto) -> ValueWithRealFlags<RealValueImpl> {
         using R = std::decay_t<decltype(proto)>;
-        auto r{n.impl().withWord([&](const auto &concrete) {
+        auto r{n.impl().WithWord([&](const auto &concrete) {
           return R::FromInteger(concrete, isUnsigned, rounding);
         })};
         return {FromWord(r.value), r.flags};
@@ -526,13 +525,13 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::FromInteger(
 
 ValueWithRealFlags<RealValueImpl> RealValueImpl::Convert(
     int kind, const RealValueImpl &from, Rounding rounding) {
-  return withWordProto(
+  return WithWordProto(
       kind, [&](auto proto) -> ValueWithRealFlags<RealValueImpl> {
         using R = decltype(proto);
         if (from.IsNull()) {
           return FromWord(R::Convert(R{}, rounding));
         }
-        return from.withWord(
+        return from.WithWord(
             [&](const auto &v) -> ValueWithRealFlags<RealValueImpl> {
               return FromWord(R::Convert(v, rounding));
             });
@@ -541,7 +540,7 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::Convert(
 
 ValueWithRealFlags<RealValueImpl> RealValueImpl::Read(
     int kind, const char *&pp, Rounding rounding) {
-  return withWordProto(
+  return WithWordProto(
       kind, [&](auto proto) -> ValueWithRealFlags<RealValueImpl> {
         auto r{decltype(proto)::Read(pp, rounding)};
         ValueWithRealFlags<RealValueImpl> result;
@@ -555,7 +554,7 @@ std::string RealValueImpl::DumpHexadecimal() const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return withWord([](const auto &v) { return v.DumpHexadecimal(); });
+  return WithWord([](const auto &v) { return v.DumpHexadecimal(); });
 }
 
 llvm::raw_ostream &RealValueImpl::AsFortran(
@@ -564,7 +563,7 @@ llvm::raw_ostream &RealValueImpl::AsFortran(
     o << "0";
     return o;
   }
-  withWord([&](const auto &v) {
+  WithWord([&](const auto &v) {
     v.AsFortran(o, kind, minimal);
     return 0;
   });

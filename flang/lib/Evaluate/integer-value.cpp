@@ -52,10 +52,6 @@ void IntegerValue::print(llvm::raw_ostream &os) const { impl().print(os); }
 LLVM_DUMP_METHOD void IntegerValue::dump() const { impl().dump(); }
 #endif
 
-bool IntegerValue::operator==(const IntegerValue &y) const {
-  return impl() == y.impl();
-}
-
 IntegerValue IntegerValue::MASKL(int kind, int places) {
   return FromImpl(IntegerValueImpl::MASKL(kind, places));
 }

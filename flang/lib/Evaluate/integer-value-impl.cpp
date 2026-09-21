@@ -13,7 +13,7 @@
 namespace Fortran::evaluate::value {
 
 IntegerValueImpl IntegerValueImpl::Zero(int kind) {
-  return withWordProto(kind, [](auto proto) {
+  return WithWordProto(kind, [](auto proto) {
     using T = decltype(proto);
     return FromWord(T{});
   });
@@ -23,7 +23,7 @@ IntegerValueImpl IntegerValueImpl::FromRawBytes(
     int kind, const void *raw, std::size_t expectedSize) {
   CHECK(expectedSize == IntegerValue::bytesStored(kind));
 
-  return withWordProto(kind, [&](auto proto) {
+  return WithWordProto(kind, [&](auto proto) {
     assert(IntegerValue::bytesStored(kind) == sizeof(proto));
     std::decay_t<decltype(proto)> t{};
     memcpy(&t, raw, sizeof(proto));
@@ -48,7 +48,7 @@ int IntegerValueImpl::kind() const {
         "width does not know its kind");
     return 0;
   }
-  return withWord(
+  return WithWord(
       [](const auto &x) -> int { return std::decay_t<decltype(x)>::bits / 8; });
 }
 
@@ -56,7 +56,7 @@ int IntegerValueImpl::bits() const {
   if (IsNull()) {
     return 0;
   }
-  return withWord(
+  return WithWord(
       [](const auto &x) -> int { return std::decay_t<decltype(x)>::bits; });
 }
 
@@ -64,46 +64,32 @@ bool IntegerValueImpl::IsZero() const {
   if (IsNull()) {
     return true; // uninitialized int representing 0 is zero
   }
-  return withWord([](const auto &x) { return x.IsZero(); });
-}
-
-bool IntegerValueImpl::operator==(const IntegerValueImpl &y) const {
-  if (IsNull() && y.IsNull()) {
-    return true;
-  }
-  if (IsNull() != y.IsNull() || bits() != y.bits()) {
-    DIE("uncomparable integers");
-    return false;
-  }
-  return withWord([&](const auto &x) -> bool {
-    using T = std::decay_t<decltype(x)>;
-    return x == std::get<T>(y.storage_);
-  });
+  return WithWord([](const auto &x) { return x.IsZero(); });
 }
 
 IntegerValueImpl IntegerValueImpl::MASKL(int kind, int places) {
-  return withWordProto(kind, [&](auto proto) {
+  return WithWordProto(kind, [&](auto proto) {
     using T = decltype(proto);
     return FromWord(T::MASKL(places));
   });
 }
 
 IntegerValueImpl IntegerValueImpl::MASKR(int kind, int places) {
-  return withWordProto(kind, [&](auto proto) {
+  return WithWordProto(kind, [&](auto proto) {
     using T = decltype(proto);
     return FromWord(T::MASKR(places));
   });
 }
 
 IntegerValueImpl IntegerValueImpl::HUGE(int kind) {
-  return withWordProto(kind, [&](auto proto) {
+  return WithWordProto(kind, [&](auto proto) {
     using T = decltype(proto);
     return FromWord(T::HUGE());
   });
 }
 
 IntegerValueImpl IntegerValueImpl::Least(int kind) {
-  return withWordProto(kind, [&](auto proto) {
+  return WithWordProto(kind, [&](auto proto) {
     using T = decltype(proto);
     return FromWord(T::Least());
   });
@@ -113,28 +99,28 @@ bool IntegerValueImpl::IsNegative() const {
   if (IsNull()) {
     return false; // uninitialized int representing 0 is not negative
   }
-  return withWord([](const auto &x) { return x.IsNegative(); });
+  return WithWord([](const auto &x) { return x.IsNegative(); });
 }
 
 std::uint64_t IntegerValueImpl::ToUInt64() const {
   if (IsNull()) {
     return 0;
   }
-  return withWord([](const auto &x) { return x.ToUInt64(); });
+  return WithWord([](const auto &x) { return x.ToUInt64(); });
 }
 
 std::int64_t IntegerValueImpl::ToInt64() const {
   if (IsNull()) {
     return 0;
   }
-  return withWord([](const auto &x) { return x.ToInt64(); });
+  return WithWord([](const auto &x) { return x.ToInt64(); });
 }
 
 Fortran::common::uint128_t IntegerValueImpl::ToUInt128() const {
   if (IsNull()) {
     return 0;
   }
-  return withWord([](const auto &x) {
+  return WithWord([](const auto &x) {
     return x.template ToUInt<Fortran::common::uint128_t>();
   });
 }
@@ -143,7 +129,7 @@ Fortran::common::int128_t IntegerValueImpl::ToInt128() const {
   if (IsNull()) {
     return 0;
   }
-  return withWord([](const auto &x) {
+  return WithWord([](const auto &x) {
     return x.template ToSInt<Fortran::common::int128_t,
         Fortran::common::uint128_t>();
   });
@@ -166,9 +152,9 @@ Ordering IntegerValueImpl::CompareSigned(const IntegerValueImpl &y) const {
     return CompareToZeroSigned();
   }
 
-  return withWord([&](const auto &x) -> Ordering {
+  return WithWord([&](const auto &x) -> Ordering {
     using T = std::decay_t<decltype(x)>;
-    return x.CompareSigned(Coerce<T>(y));
+    return x.CompareSigned(y.GetWord<T>());
   });
 }
 
@@ -182,9 +168,9 @@ Ordering IntegerValueImpl::CompareUnsigned(const IntegerValueImpl &y) const {
     return IsZero() ? Ordering::Equal : Ordering::Greater;
   }
 
-  return withWord([&](const auto &x) -> Ordering {
+  return WithWord([&](const auto &x) -> Ordering {
     using T = std::decay_t<decltype(x)>;
-    return x.CompareUnsigned(Coerce<T>(y));
+    return x.CompareUnsigned(y.GetWord<T>());
   });
 }
 
@@ -193,14 +179,14 @@ Ordering IntegerValueImpl::CompareToZeroSigned() const {
     DIE("uncomparable ints");
     return Ordering::Equal;
   }
-  return withWord([](const auto &x) { return x.CompareToZeroSigned(); });
+  return WithWord([](const auto &x) { return x.CompareToZeroSigned(); });
 }
 
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::Negate() const {
   if (IsNull()) {
     return ValueWithOverflow{}; // negation of uninitialized int 0 is zero
   }
-  return withWord([](const auto &x) -> ValueWithOverflow {
+  return WithWord([](const auto &x) -> ValueWithOverflow {
     auto r{x.Negate()};
     return {FromWord(r.value), r.overflow};
   });
@@ -210,7 +196,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ABS() const {
   if (IsNull()) {
     return ValueWithOverflow{}; // absolute of uninitialized int 0 is zero
   }
-  return withWord([](const auto &x) -> ValueWithOverflow {
+  return WithWord([](const auto &x) -> ValueWithOverflow {
     auto r{x.ABS()};
     return {FromWord(r.value), r.overflow};
   });
@@ -219,12 +205,12 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ABS() const {
 typename IntegerValueImpl::ValueWithCarry IntegerValueImpl::AddUnsigned(
     const IntegerValueImpl &y, bool carryIn) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return ValueWithCarry{};
   }
-  return withWord([&](const auto &x) -> ValueWithCarry {
+  return WithWord([&](const auto &x) -> ValueWithCarry {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.AddUnsigned(Coerce<T>(y), carryIn)};
+    auto r{x.AddUnsigned(y.GetWord<T>(), carryIn)};
     return {FromWord(r.value), r.carry};
   });
 }
@@ -235,9 +221,9 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::AddSigned(
     DIE("incompatible ints");
     return ValueWithOverflow{};
   }
-  return withWord([&](const auto &x) -> ValueWithOverflow {
+  return WithWord([&](const auto &x) -> ValueWithOverflow {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.AddSigned(Coerce<T>(y))};
+    auto r{x.AddSigned(y.GetWord<T>())};
     return {FromWord(r.value), r.overflow};
   });
 }
@@ -245,12 +231,12 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::AddSigned(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SubtractSigned(
     const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return ValueWithOverflow{};
   }
-  return withWord([&](const auto &x) -> ValueWithOverflow {
+  return WithWord([&](const auto &x) -> ValueWithOverflow {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.SubtractSigned(Coerce<T>(y))};
+    auto r{x.SubtractSigned(y.GetWord<T>())};
     return {FromWord(r.value), r.overflow};
   });
 }
@@ -258,7 +244,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SubtractSigned(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::DIM(
     const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return ValueWithOverflow{};
   }
   // DIM(X,Y) = MAX(X-Y, 0)
@@ -271,8 +257,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::DIM(
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SIGN(
     const IntegerValueImpl &sign) const {
   if (IsNull()) {
-    DIE("incomparable ints");
-    return ValueWithOverflow{};
+    return ValueWithOverflow{IntegerValueImpl{}, false};
   }
   bool toNegative{sign.IsNegative()};
   if (toNegative == IsNegative()) {
@@ -287,12 +272,12 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::SIGN(
 typename IntegerValueImpl::Product IntegerValueImpl::MultiplySigned(
     const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return Product{};
   }
-  return withWord([&](const auto &x) -> Product {
+  return WithWord([&](const auto &x) -> Product {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.MultiplySigned(Coerce<T>(y))};
+    auto r{x.MultiplySigned(y.GetWord<T>())};
     return {FromWord(r.upper), FromWord(r.lower),
         r.SignedMultiplicationOverflowed()};
   });
@@ -301,12 +286,12 @@ typename IntegerValueImpl::Product IntegerValueImpl::MultiplySigned(
 typename IntegerValueImpl::Product IntegerValueImpl::MultiplyUnsigned(
     const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return Product{};
   }
-  return withWord([&](const auto &x) -> Product {
+  return WithWord([&](const auto &x) -> Product {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.MultiplyUnsigned(Coerce<T>(y))};
+    auto r{x.MultiplyUnsigned(y.GetWord<T>())};
     return {FromWord(r.upper), FromWord(r.lower), false};
   });
 }
@@ -314,12 +299,12 @@ typename IntegerValueImpl::Product IntegerValueImpl::MultiplyUnsigned(
 typename IntegerValueImpl::QuotientWithRemainder IntegerValueImpl::DivideSigned(
     const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return QuotientWithRemainder{};
   }
-  return withWord([&](const auto &x) -> QuotientWithRemainder {
+  return WithWord([&](const auto &x) -> QuotientWithRemainder {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.DivideSigned(Coerce<T>(y))};
+    auto r{x.DivideSigned(y.GetWord<T>())};
     return {FromWord(r.quotient), FromWord(r.remainder), r.divisionByZero,
         r.overflow};
   });
@@ -328,12 +313,12 @@ typename IntegerValueImpl::QuotientWithRemainder IntegerValueImpl::DivideSigned(
 typename IntegerValueImpl::QuotientWithRemainder
 IntegerValueImpl::DivideUnsigned(const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return QuotientWithRemainder{};
   }
-  return withWord([&](const auto &x) -> QuotientWithRemainder {
+  return WithWord([&](const auto &x) -> QuotientWithRemainder {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.DivideUnsigned(Coerce<T>(y))};
+    auto r{x.DivideUnsigned(y.GetWord<T>())};
     return {FromWord(r.quotient), FromWord(r.remainder), r.divisionByZero,
         r.overflow};
   });
@@ -342,12 +327,12 @@ IntegerValueImpl::DivideUnsigned(const IntegerValueImpl &y) const {
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::MODULO(
     const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return ValueWithOverflow{};
   }
-  return withWord([&](const auto &x) -> ValueWithOverflow {
+  return WithWord([&](const auto &x) -> ValueWithOverflow {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.MODULO(Coerce<T>(y))};
+    auto r{x.MODULO(y.GetWord<T>())};
     return {FromWord(r.value), r.overflow};
   });
 }
@@ -355,32 +340,32 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::MODULO(
 typename IntegerValueImpl::PowerWithErrors IntegerValueImpl::Power(
     const IntegerValueImpl &e) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return PowerWithErrors{};
   }
-  return withWord([&](const auto &x) -> PowerWithErrors {
+  return WithWord([&](const auto &x) -> PowerWithErrors {
     using T = std::decay_t<decltype(x)>;
-    auto r{x.Power(Coerce<T>(e))};
+    auto r{x.Power(e.GetWord<T>())};
     return {FromWord(r.power), r.divisionByZero, r.overflow, r.zeroToZero};
   });
 }
 
 IntegerValueImpl IntegerValueImpl::NOT() const {
   if (IsNull()) {
-    DIE("incompatible ints");
+    DIE("incompatible int");
     return IntegerValueImpl{};
   }
-  return withWord([](const auto &x) { return FromWord(x.NOT()); });
+  return WithWord([](const auto &x) { return FromWord(x.NOT()); });
 }
 
 IntegerValueImpl IntegerValueImpl::IAND(const IntegerValueImpl &y) const {
   if (IsNull()) {
-    DIE("incomparable ints");
+    DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) {
+  return WithWord([&](const auto &x) {
     using T = std::decay_t<decltype(x)>;
-    return FromWord(x.IAND(Coerce<T>(y)));
+    return FromWord(x.IAND(y.GetWord<T>()));
   });
 }
 
@@ -389,9 +374,9 @@ IntegerValueImpl IntegerValueImpl::IOR(const IntegerValueImpl &y) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) {
+  return WithWord([&](const auto &x) {
     using T = std::decay_t<decltype(x)>;
-    return FromWord(x.IOR(Coerce<T>(y)));
+    return FromWord(x.IOR(y.GetWord<T>()));
   });
 }
 
@@ -400,9 +385,9 @@ IntegerValueImpl IntegerValueImpl::IEOR(const IntegerValueImpl &y) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) {
+  return WithWord([&](const auto &x) {
     using T = std::decay_t<decltype(x)>;
-    return FromWord(x.IEOR(Coerce<T>(y)));
+    return FromWord(x.IEOR(y.GetWord<T>()));
   });
 }
 
@@ -412,9 +397,9 @@ IntegerValueImpl IntegerValueImpl::MERGE_BITS(
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) {
+  return WithWord([&](const auto &x) {
     using T = std::decay_t<decltype(x)>;
-    return FromWord(x.MERGE_BITS(Coerce<T>(y), Coerce<T>(mask)));
+    return FromWord(x.MERGE_BITS(y.GetWord<T>(), mask.GetWord<T>()));
   });
 }
 
@@ -423,7 +408,7 @@ IntegerValueImpl IntegerValueImpl::SHIFTL(int count) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) { return FromWord(x.SHIFTL(count)); });
+  return WithWord([&](const auto &x) { return FromWord(x.SHIFTL(count)); });
 }
 
 IntegerValueImpl IntegerValueImpl::SHIFTR(int count) const {
@@ -431,7 +416,7 @@ IntegerValueImpl IntegerValueImpl::SHIFTR(int count) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) { return FromWord(x.SHIFTR(count)); });
+  return WithWord([&](const auto &x) { return FromWord(x.SHIFTR(count)); });
 }
 
 IntegerValueImpl IntegerValueImpl::SHIFTA(int count) const {
@@ -439,7 +424,7 @@ IntegerValueImpl IntegerValueImpl::SHIFTA(int count) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) { return FromWord(x.SHIFTA(count)); });
+  return WithWord([&](const auto &x) { return FromWord(x.SHIFTA(count)); });
 }
 
 IntegerValueImpl IntegerValueImpl::ISHFTC(int count, int size) const {
@@ -447,7 +432,7 @@ IntegerValueImpl IntegerValueImpl::ISHFTC(int count, int size) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) {
+  return WithWord([&](const auto &x) {
     using T = std::decay_t<decltype(x)>;
     return FromWord(x.ISHFTC(count, size <= 0 ? T::bits : size));
   });
@@ -458,7 +443,7 @@ IntegerValueImpl IntegerValueImpl::IBITS(int pos, int size) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) { return FromWord(x.IBITS(pos, size)); });
+  return WithWord([&](const auto &x) { return FromWord(x.IBITS(pos, size)); });
 }
 
 IntegerValueImpl IntegerValueImpl::IBSET(int pos) const {
@@ -466,7 +451,7 @@ IntegerValueImpl IntegerValueImpl::IBSET(int pos) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) { return FromWord(x.IBSET(pos)); });
+  return WithWord([&](const auto &x) { return FromWord(x.IBSET(pos)); });
 }
 
 IntegerValueImpl IntegerValueImpl::IBCLR(int pos) const {
@@ -474,7 +459,7 @@ IntegerValueImpl IntegerValueImpl::IBCLR(int pos) const {
     DIE("incompatible ints");
     return IntegerValueImpl{};
   }
-  return withWord([&](const auto &x) { return FromWord(x.IBCLR(pos)); });
+  return WithWord([&](const auto &x) { return FromWord(x.IBCLR(pos)); });
 }
 
 IntegerValueImpl IntegerValueImpl::DSHIFTL(
@@ -484,9 +469,9 @@ IntegerValueImpl IntegerValueImpl::DSHIFTL(
     return IntegerValueImpl{};
   }
   // DSHIFTL(I,J) shifts I:J left; the second argument is the right fill.
-  return withWord([&](const auto &x) {
+  return WithWord([&](const auto &x) {
     using T = std::decay_t<decltype(x)>;
-    return FromWord(x.SHIFTLWithFill(Coerce<T>(fill), count));
+    return FromWord(x.SHIFTLWithFill(fill.GetWord<T>(), count));
   });
 }
 
@@ -500,9 +485,9 @@ IntegerValueImpl IntegerValueImpl::DSHIFTR(
   // fill, and the receiver of the shift is v2 (mirrors value::Integer's
   // DSHIFTR, whose *this is the shifted operand and whose argument is the
   // fill).
-  return v2.withWord([&](const auto &x2) {
+  return v2.WithWord([&](const auto &x2) {
     using T = std::decay_t<decltype(x2)>;
-    return FromWord(x2.SHIFTRWithFill(Coerce<T>(*this), count));
+    return FromWord(x2.SHIFTRWithFill(GetWord<T>(), count));
   });
 }
 
@@ -510,7 +495,7 @@ bool IntegerValueImpl::BTEST(int pos) const {
   if (IsNull()) {
     return false; // uninitialized int representing 0 has no bits set
   }
-  return withWord([&](const auto &x) { return x.BTEST(pos); });
+  return WithWord([&](const auto &x) { return x.BTEST(pos); });
 }
 
 int IntegerValueImpl::LEADZ() const {
@@ -518,7 +503,7 @@ int IntegerValueImpl::LEADZ() const {
     DIE("incompatible ints");
     return 0;
   }
-  return withWord([](const auto &x) { return x.LEADZ(); });
+  return WithWord([](const auto &x) { return x.LEADZ(); });
 }
 
 int IntegerValueImpl::TRAILZ() const {
@@ -526,14 +511,14 @@ int IntegerValueImpl::TRAILZ() const {
     DIE("incompatible ints");
     return 0;
   }
-  return withWord([](const auto &x) { return x.TRAILZ(); });
+  return WithWord([](const auto &x) { return x.TRAILZ(); });
 }
 
 int IntegerValueImpl::POPCNT() const {
   if (IsNull()) {
     return 0; // uninitialized int representing 0 has no bits set
   }
-  return withWord([](const auto &x) { return x.POPCNT(); });
+  return WithWord([](const auto &x) { return x.POPCNT(); });
 }
 
 bool IntegerValueImpl::POPPAR() const {
@@ -541,7 +526,7 @@ bool IntegerValueImpl::POPPAR() const {
     DIE("incompatible ints");
     return false;
   }
-  return withWord([](const auto &x) { return x.POPPAR(); });
+  return WithWord([](const auto &x) { return x.POPPAR(); });
 }
 
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertSigned(
@@ -550,9 +535,9 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertSigned(
     // Now we know the kind
     return {Zero(toKind), false};
   }
-  return from.withWord([&](const auto &x) -> ValueWithOverflow {
+  return from.WithWord([&](const auto &x) -> ValueWithOverflow {
     using S = std::decay_t<decltype(x)>;
-    return withWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
+    return WithWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
       using T = decltype(proto);
       auto r{T::template ConvertSigned<S>(x)};
       return {FromWord(r.value), r.overflow};
@@ -566,9 +551,9 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertUnsigned(
     // Now we know the kind
     return {Zero(toKind), false};
   }
-  return from.withWord([&](const auto &x) -> ValueWithOverflow {
+  return from.WithWord([&](const auto &x) -> ValueWithOverflow {
     using S = std::decay_t<decltype(x)>;
-    return withWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
+    return WithWordProto(toKind, [&](auto proto) -> ValueWithOverflow {
       using T = decltype(proto);
       auto r{T::template ConvertUnsigned<S>(x)};
       return {FromWord(r.value), r.overflow};
@@ -578,7 +563,7 @@ typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::ConvertUnsigned(
 
 typename IntegerValueImpl::ValueWithOverflow IntegerValueImpl::Read(
     int kind, const char *&pp, int base, bool isSigned) {
-  return withWordProto(kind, [&](auto proto) -> ValueWithOverflow {
+  return WithWordProto(kind, [&](auto proto) -> ValueWithOverflow {
     using T = decltype(proto);
     auto r{T::Read(pp, base, isSigned)};
     return {FromWord(r.value), r.overflow};
@@ -589,28 +574,28 @@ std::string IntegerValueImpl::SignedDecimal() const {
   if (IsNull()) {
     return "0";
   }
-  return withWord([](const auto &x) { return x.SignedDecimal(); });
+  return WithWord([](const auto &x) { return x.SignedDecimal(); });
 }
 
 std::string IntegerValueImpl::UnsignedDecimal() const {
   if (IsNull()) {
     return "0";
   }
-  return withWord([](const auto &x) { return x.UnsignedDecimal(); });
+  return WithWord([](const auto &x) { return x.UnsignedDecimal(); });
 }
 
 std::string IntegerValueImpl::Hexadecimal() const {
   if (IsNull()) {
     return "0";
   }
-  return withWord([](const auto &x) { return x.Hexadecimal(); });
+  return WithWord([](const auto &x) { return x.Hexadecimal(); });
 }
 
 void IntegerValueImpl::StoreRawBytes(
     void *dst, size_t expectedSize, bool *changed) const {
   CHECK(expectedSize == bytesStored());
 
-  withWord([dst, changed, bytesStored = bytesStored()](auto w) {
+  WithWord([dst, changed, bytesStored = bytesStored()](auto w) {
     assert(bytesStored == sizeof(w));
 
     if (changed) {

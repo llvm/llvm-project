@@ -22,14 +22,14 @@ template <typename T>
 constexpr bool is_monostate = std::is_same_v<std::decay_t<T>, std::monostate>;
 
 CharacterValueImpl::CharacterValueImpl(int kind, std::size_t n, char32_t c) {
-  withCharProto(kind, [this, n, c](auto ct) {
+  WithCharProto(kind, [this, n, c](auto ct) {
     using CharT = std::decay_t<decltype(ct)>;
     storage_ = std::basic_string<CharT>(n, static_cast<CharT>(c));
   });
 }
 
 CharacterValueImpl CharacterValueImpl::Zero(int kind) {
-  return withCharProto(kind, [kind](auto c) {
+  return WithCharProto(kind, [kind](auto c) {
     using CharT = std::decay_t<decltype(c)>;
     return CharacterValueImpl{kind, std::basic_string<CharT>{}};
   });
@@ -37,7 +37,7 @@ CharacterValueImpl CharacterValueImpl::Zero(int kind) {
 
 CharacterValueImpl CharacterValueImpl::FromRawBytes(
     int kind, const void *raw, size_t size) {
-  return withCharProto(kind, [kind, raw, size](auto charProto) {
+  return WithCharProto(kind, [kind, raw, size](auto charProto) {
     using CharT = decltype(charProto);
     CHECK(size % sizeof(CharT) == 0);
     std::basic_string<CharT> s;
@@ -50,7 +50,7 @@ CharacterValueImpl CharacterValueImpl::FromRawBytes(
 
 void CharacterValueImpl::print(llvm::raw_ostream &os) const {
   os << kind() << '_';
-  withStdString(
+  WithBasicString(
       [&](const auto &s) { os << parser::QuoteCharacterLiteral(s, true); });
 }
 
@@ -60,6 +60,21 @@ LLVM_DUMP_METHOD void CharacterValueImpl::dump() const {
   llvm::errs() << '\n';
 }
 #endif
+
+int CharacterValueImpl::kind() const {
+  return common::visit(
+      common::visitors{
+          [](std::monostate) -> size_t {
+            DIE("operation on uninitialized CharacterValueImpl");
+          },
+          [](const auto &s) {
+            using StringT = std::decay_t<decltype(s)>;
+            using CharT = typename StringT::value_type;
+            return sizeof(CharT);
+          },
+      },
+      storage_);
+}
 
 std::size_t CharacterValueImpl::charSize() const {
   return common::visit(
@@ -179,7 +194,7 @@ bool CharacterValueImpl::operator==(const CharacterValueImpl &y) const {
 }
 
 void CharacterValueImpl::assign(int kind, std::size_t n, char32_t c) {
-  return withCharProto(kind, [this, n, c](auto ct) {
+  return WithCharProto(kind, [this, n, c](auto ct) {
     using CharT = decltype(ct);
     storage_ = std::basic_string<CharT>(n, static_cast<CharT>(c));
   });
@@ -331,8 +346,8 @@ CharacterValueImpl CharacterValueImpl::ToAscii(int kind) const {
     return Zero(kind);
   }
 
-  return withStdString([kind](const auto &s) -> CharacterValueImpl {
-    return withCharProto(kind, [&s](auto ct) -> CharacterValueImpl {
+  return WithBasicString([kind](const auto &s) -> CharacterValueImpl {
+    return WithCharProto(kind, [&s](auto ct) -> CharacterValueImpl {
       using CharT = std::decay_t<decltype(ct)>;
       using StringT = std::basic_string<CharT>;
 
@@ -422,23 +437,56 @@ CharacterValueImpl &CharacterValueImpl::operator+=(char32_t c) {
           DIE("operation not supported on uninitialized value");
         } else {
           using CharT = typename StringT::value_type;
-          s.push_back(c);
+          using UnsignedCharT = std::make_signed_t<CharT>;
+          s.push_back(static_cast<UnsignedCharT>(c));
         }
       },
       storage_);
   return *this;
 }
 
+std::size_t CharacterValueImpl::find(const CharacterValueImpl &pattern) const {
+  return common::visit(
+      [&pattern](const auto &s) -> std::size_t {
+        using XS = std::decay_t<decltype(s)>;
+
+        if constexpr (is_monostate<XS>) {
+          // Nothing to find in an empty string, unless the pattern is itself an
+          // empty string
+          return pattern.empty() ? 0 : std::string::npos;
+        } else {
+          return s.find(pattern.GetBasicString<typename XS::value_type>());
+        }
+      },
+      storage_);
+}
+
+std::size_t CharacterValueImpl::rfind(const CharacterValueImpl &pattern) const {
+  return common::visit(
+      [&pattern](const auto &s) -> std::size_t {
+        using XS = std::decay_t<decltype(s)>;
+
+        if constexpr (is_monostate<XS>) {
+          // Nothing to find in an empty string, unless the pattern is itself an
+          // empty string
+          return pattern.empty() ? 0 : std::string::npos;
+        } else {
+          return s.rfind(pattern.GetBasicString<typename XS::value_type>());
+        }
+      },
+      storage_);
+}
+
 std::size_t CharacterValueImpl::find_first_not_of(char32_t c) const {
   return common::visit(
       [c](const auto &s) -> std::size_t {
         using StringT = std::decay_t<decltype(s)>;
-        if constexpr (!is_monostate<StringT>) {
+        if constexpr (is_monostate<StringT>) {
+          // Nothing "not" found in empty string
+          return std::string::npos;
+        } else {
           using CharT = typename StringT::value_type;
           return s.find_first_not_of(static_cast<CharT>(c));
-        } else {
-          DIE("Unsupported combination of character kinds");
-          return std::string::npos;
         }
       },
       storage_);
@@ -448,12 +496,12 @@ std::size_t CharacterValueImpl::find_last_not_of(char32_t c) const {
   return common::visit(
       [c](const auto &s) -> std::size_t {
         using StringT = std::decay_t<decltype(s)>;
-        if constexpr (!is_monostate<StringT>) {
+        if constexpr (is_monostate<StringT>) {
+          // Nothing "not" found in empty string
+          return std::string::npos;
+        } else {
           using CharT = typename StringT::value_type;
           return s.find_last_not_of(static_cast<CharT>(c));
-        } else {
-          DIE("Unsupported combination of character kinds");
-          return std::string::npos;
         }
       },
       storage_);
@@ -462,122 +510,67 @@ std::size_t CharacterValueImpl::find_last_not_of(char32_t c) const {
 std::size_t CharacterValueImpl::find_first_not_of(
     const CharacterValueImpl &set) const {
   return common::visit(
-      [](const auto &s, const auto &p) -> std::size_t {
+      [&set](const auto &s) -> std::size_t {
         using XS = std::decay_t<decltype(s)>;
-        using XP = std::decay_t<decltype(p)>;
 
         if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<XS, XP>) {
-          return s.find_first_not_of(p);
         } else {
-          DIE("Unsupported combination of character kinds");
-          return std::string::npos;
+          return s.find_first_not_of(
+              set.GetBasicString<typename XS::value_type>());
         }
       },
-      storage_, set.storage_);
+      storage_);
 }
 
 std::size_t CharacterValueImpl::find_last_not_of(
     const CharacterValueImpl &set) const {
   return common::visit(
-      [](const auto &s, const auto &p) -> std::size_t {
+      [&set](const auto &s) -> std::size_t {
         using XS = std::decay_t<decltype(s)>;
-        using XP = std::decay_t<decltype(p)>;
 
         if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<XS, XP>) {
-          return s.find_last_not_of(p);
         } else {
-          DIE("Unsupported combination of character kinds");
-          return std::string::npos;
+          return s.find_last_not_of(
+              set.GetBasicString<typename XS::value_type>());
         }
       },
-      storage_, set.storage_);
-}
-
-std::size_t CharacterValueImpl::find(const CharacterValueImpl &pattern) const {
-  return common::visit(
-      [](const auto &s, const auto &p) -> std::size_t {
-        using XS = std::decay_t<decltype(s)>;
-        using XP = std::decay_t<decltype(p)>;
-
-        if constexpr (is_monostate<XP>) {
-          // Empty string always matches beginning
-          return 0;
-        } else if constexpr (is_monostate<XS>) {
-          // Nothing to find in an empty string, unless the pattern is itself an
-          // empty string
-          return p.empty() ? 0 : std::string::npos;
-        } else if constexpr (std::is_same_v<XS, XP>) {
-          return s.find(p);
-        } else {
-          DIE("Unsupported combination of character kinds");
-          return std::string::npos;
-        }
-      },
-      storage_, pattern.storage_);
-}
-
-std::size_t CharacterValueImpl::rfind(const CharacterValueImpl &pattern) const {
-  return common::visit(
-      [](const auto &s, const auto &p) -> std::size_t {
-        using XS = std::decay_t<decltype(s)>;
-        using XP = std::decay_t<decltype(p)>;
-
-        if constexpr (is_monostate<XS>) {
-          // Nothing to find in an empty string
-          return std::string::npos;
-        } else if constexpr (std::is_same_v<XS, XP>) {
-          return s.rfind(p);
-        }
-        DIE("Unsupported combination of character kinds");
-        return std::string::npos;
-      },
-      storage_, pattern.storage_);
+      storage_);
 }
 
 std::size_t CharacterValueImpl::find_first_of(
     const CharacterValueImpl &set) const {
   return common::visit(
-      [](const auto &s, const auto &p) -> std::size_t {
+      [&set](const auto &s) -> std::size_t {
         using XS = std::decay_t<decltype(s)>;
-        using XP = std::decay_t<decltype(p)>;
 
         if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<XS, XP>) {
-          return s.find_first_of(p);
         } else {
-          DIE("Unsupported combination of character kinds");
-          return std::string::npos;
+          return s.find_first_of(set.GetBasicString<typename XS::value_type>());
         }
       },
-      storage_, set.storage_);
+      storage_);
 }
 
 std::size_t CharacterValueImpl::find_last_of(
     const CharacterValueImpl &set) const {
   return common::visit(
-      [](const auto &s, const auto &p) -> std::size_t {
+      [&set](const auto &s) -> std::size_t {
         using XS = std::decay_t<decltype(s)>;
-        using XP = std::decay_t<decltype(p)>;
 
         if constexpr (is_monostate<XS>) {
           // Nothing to find in an empty string
           return std::string::npos;
-        } else if constexpr (std::is_same_v<XS, XP>) {
-          return s.find_last_of(p);
         } else {
-          DIE("Unsupported combination of character kinds");
-          return std::string::npos;
+          return s.find_last_of(set.GetBasicString<typename XS::value_type>());
         }
       },
-      storage_, set.storage_);
+      storage_);
 }
 
 void CharacterValueImpl::StoreRawBytes(
@@ -611,5 +604,32 @@ void CharacterValueImpl::StoreRawBytes(
       },
       storage_);
 }
+
+template <typename CharT, typename>
+const std::basic_string<CharT> &CharacterValueImpl::GetBasicString() const {
+  using StringT = std::basic_string<CharT>;
+
+  // Null can represent an empty string of any type
+  if (IsNull()) {
+    // Immutable null constant since we need to return a reference
+    static const StringT null;
+    return null;
+  }
+
+  // std::get throws std::bad_variant_access, but we do not want to rely soley
+  // on exceptions here
+  if (!std::holds_alternative<StringT>(storage_)) {
+    DIE("value does not store the requested kind");
+  }
+
+  return std::get<StringT>(storage_);
+}
+
+template const std::basic_string<char> &
+CharacterValueImpl::GetBasicString<char>() const;
+template const std::basic_string<char16_t> &
+CharacterValueImpl::GetBasicString<char16_t>() const;
+template const std::basic_string<char32_t> &
+CharacterValueImpl::GetBasicString<char32_t>() const;
 
 } // namespace Fortran::evaluate::value

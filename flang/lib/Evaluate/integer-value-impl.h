@@ -58,14 +58,14 @@ public:
   static IntegerValueImpl Zero(int kind);
 
   IntegerValueImpl(int kind, uint64_t v, bool isSigned) {
-    withWordProto(kind, [=](auto wordProto) {
+    WithWordProto(kind, [=](auto wordProto) {
       using T = decltype(wordProto);
       storage_ = isSigned ? T{static_cast<int64_t>(v)} : T{v};
     });
   }
 
   IntegerValueImpl(int kind, Fortran::common::uint128_t v) {
-    withWordProto(kind, [=](auto wordProto) {
+    WithWordProto(kind, [=](auto wordProto) {
       using T = decltype(wordProto);
       std::uint64_t lo{static_cast<std::uint64_t>(v)};
       std::uint64_t hi{static_cast<std::uint64_t>(v >> 64)};
@@ -106,16 +106,6 @@ public:
   }
 
   bool IsZero() const;
-
-  // Comparison operators
-  bool operator<(const IntegerValueImpl &y) const {
-    return CompareSigned(y) == Ordering::Less;
-  }
-  bool operator<=(const IntegerValueImpl &y) const { return !(y < *this); }
-  bool operator==(const IntegerValueImpl &y) const;
-  bool operator!=(const IntegerValueImpl &y) const { return !(*this == y); }
-  bool operator>=(const IntegerValueImpl &y) const { return !(*this < y); }
-  bool operator>(const IntegerValueImpl &y) const { return y < *this; }
 
   /// Left-justified mask (e.g., MASKL(1) has only its sign bit set)
   static IntegerValueImpl MASKL(int kind, int places);
@@ -202,50 +192,37 @@ public:
   std::string UnsignedDecimal() const;
   std::string Hexadecimal() const;
 
-  // y converted (sign-preserving) to T, so that binary operations operate on
-  // operands of equal width.  A monostate operand is treated as a zero of
-  // that width.
-  template <typename T> static T Coerce(const IntegerValueImpl &y) {
-    if (y.IsNull()) {
-      return T{};
-    }
-    return y.withWord([](const auto &yv) -> T {
-      using S = std::decay_t<decltype(yv)>;
-      if constexpr (std::is_same_v<S, T>) {
-        return yv;
-      } else {
-        return T::template ConvertSigned<S>(yv).value;
-      }
-    });
-  }
-
-  // Same as Coerce, but zero-extending rather than sign-extending.
-  template <typename T> static T CoerceUnsigned(const IntegerValueImpl &y) {
-    if (y.IsNull()) {
-      return T{};
-    }
-    return y.withWord([](const auto &yv) -> T {
-      using S = std::decay_t<decltype(yv)>;
-      if constexpr (std::is_same_v<S, T>) {
-        return yv;
-      } else {
-        return T::template ConvertUnsigned<S>(yv).value;
-      }
-    });
-  }
-
   void StoreRawBytes(void *dst, size_t size, bool *changed) const;
 
   // Compile-time dispatchers to current/specified kind
 
-  template <typename F>
-  auto withWordProto(F &&f) const
-      -> decltype(std::declval<F>()(std::declval<I64>())) {
-    return withWordProto(kind(), std::forward<F>(f));
+  /// Return a word of the requested type (value::Integer<BITS>). The current
+  /// stored word must match that type or we crash.
+  template <typename T> const T &GetWord() const {
+    // Null can represent any type
+    if (IsNull()) {
+      // Immutable null constant since we need to return a reference
+      static const T null;
+      return null;
+    }
+
+    // std::get throws std::bad_variant_access, but we do not want to rely soley
+    // on exceptions here.
+    if (!std::holds_alternative<T>(storage_)) {
+      DIE("value does not store the requested kind");
+    }
+
+    return std::get<T>(storage_);
   }
 
   template <typename F>
-  static auto withWordProto(int kind, F &&f)
+  auto WithWordProto(F &&f) const
+      -> decltype(std::declval<F>()(std::declval<I64>())) {
+    return WithWordProto(kind(), std::forward<F>(f));
+  }
+
+  template <typename F>
+  static auto WithWordProto(int kind, F &&f)
       -> decltype(std::declval<F>()(std::declval<I64>())) {
     switch (kind) {
     case 1:
@@ -267,7 +244,7 @@ public:
   }
 
   template <typename F>
-  auto withWord(F &&f) const -> decltype(f(std::declval<const I64 &>())) {
+  auto WithWord(F &&f) const -> decltype(f(std::declval<const I64 &>())) {
     return common::visit(
         common::visitors{
             [](std::monostate) -> decltype(f(std::declval<const I64 &>())) {

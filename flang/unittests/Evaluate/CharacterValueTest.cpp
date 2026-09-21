@@ -484,82 +484,129 @@ TEST_P(CharacterValueKind, Find) {
   CharacterValue abcabc{kind, "abcabc"};
   CharacterValue bc{kind, "bc"};
   CharacterValue abc{kind, "abc"};
-  CharacterValue empty{kind, ""};
   CharacterValue xyz{kind, "xyz"};
   CharacterValue a{kind, "a"};
+  CharacterValue empty{kind, ""};
   CharacterValue nullstate;
 
   EXPECT_EQ(1u, abcabc.find(bc));
   EXPECT_EQ(0u, abcabc.find(abc));
   EXPECT_EQ(CharacterValue::npos, abcabc.find(xyz));
 
-  // Find empty string at begnning
+  // degenerate value handling
   EXPECT_EQ(0u, abcabc.find(empty));
   EXPECT_EQ(0u, abcabc.find(nullstate));
+  EXPECT_EQ(CharacterValue::npos, empty.find(abc));
   EXPECT_EQ(0u, empty.find(empty));
+  EXPECT_EQ(0u, empty.find(nullstate));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find(abc));
   EXPECT_EQ(0u, nullstate.find(empty));
   EXPECT_EQ(0u, nullstate.find(nullstate));
-
-  // Nothing is ever found in a value of unknown kind
-  EXPECT_EQ(CharacterValue::npos, nullstate.find(a));
 }
 
 TEST_P(CharacterValueKind, RFind) {
   const int kind{GetParam()};
-  CharacterValue v{kind, "abcabc"};
+  CharacterValue abcabc{kind, "abcabc"};
   CharacterValue bc{kind, "bc"};
   CharacterValue abc{kind, "abc"};
   CharacterValue xyz{kind, "xyz"};
+  CharacterValue a{kind, "a"};
+  CharacterValue empty{kind, ""};
+  CharacterValue nullstate;
 
-  EXPECT_EQ(4u, v.rfind(bc));
-  EXPECT_EQ(3u, v.rfind(abc));
-  EXPECT_EQ(CharacterValue::npos, v.rfind(xyz));
+  EXPECT_EQ(4u, abcabc.rfind(bc));
+  EXPECT_EQ(3u, abcabc.rfind(abc));
+  EXPECT_EQ(CharacterValue::npos, abcabc.find(xyz));
+
+  // degenerate value handling
+  EXPECT_EQ(3u, abc.rfind(empty));
+  EXPECT_EQ(3u, abc.rfind(nullstate));
+  EXPECT_EQ(CharacterValue::npos, empty.rfind(abc));
+  EXPECT_EQ(0u, empty.rfind(empty));
+  EXPECT_EQ(0u, empty.rfind(nullstate));
+  EXPECT_EQ(CharacterValue::npos, nullstate.rfind(abc));
+  EXPECT_EQ(0u, nullstate.rfind(empty));
+  EXPECT_EQ(0u, nullstate.rfind(nullstate));
 }
 
 TEST_P(CharacterValueKind, FindFirstOf) {
   const int kind{GetParam()};
-  CharacterValue v{kind, "hello"};
+  CharacterValue hello{kind, "hello"};
   CharacterValue le{kind, "le"};
   CharacterValue h{kind, "he"};
   CharacterValue xyz{kind, "xyz"};
   CharacterValue empty{kind, ""};
+  CharacterValue nullstate;
 
-  EXPECT_EQ(1u, v.find_first_of(le));
-  EXPECT_EQ(0u, v.find_first_of(h));
-  EXPECT_EQ(CharacterValue::npos, v.find_first_of(xyz));
-  EXPECT_EQ(CharacterValue::npos, v.find_first_of(empty));
+  EXPECT_EQ(1u, hello.find_first_of(le));
+  EXPECT_EQ(0u, hello.find_first_of(h));
+  EXPECT_EQ(CharacterValue::npos, hello.find_first_of(xyz));
+
+  // degenerate value handling
+  EXPECT_EQ(CharacterValue::npos, hello.find_first_of(empty));
+  EXPECT_EQ(CharacterValue::npos, hello.find_first_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, empty.find_first_of(hello));
+  EXPECT_EQ(CharacterValue::npos, empty.find_first_of(empty));
+  EXPECT_EQ(CharacterValue::npos, empty.find_first_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_of(hello));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_of(empty));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_of(nullstate));
 }
 
 TEST_P(CharacterValueKind, FindLastOf) {
   const int kind{GetParam()};
-  CharacterValue v{kind, "hello"};
+  CharacterValue hello{kind, "hello"};
   CharacterValue le{kind, "le"};
   CharacterValue o{kind, "o"};
   CharacterValue xyz{kind, "xyz"};
+  CharacterValue empty{kind, ""};
+  CharacterValue nullstate;
 
-  EXPECT_EQ(3u, v.find_last_of(le));
-  EXPECT_EQ(4u, v.find_last_of(o));
-  EXPECT_EQ(CharacterValue::npos, v.find_last_of(xyz));
+  EXPECT_EQ(3u, hello.find_last_of(le));
+  EXPECT_EQ(4u, hello.find_last_of(o));
+  EXPECT_EQ(CharacterValue::npos, hello.find_last_of(xyz));
+
+  // degenerate value handling
+  EXPECT_EQ(CharacterValue::npos, hello.find_last_of(empty));
+  EXPECT_EQ(CharacterValue::npos, hello.find_last_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, empty.find_last_of(hello));
+  EXPECT_EQ(CharacterValue::npos, empty.find_last_of(empty));
+  EXPECT_EQ(CharacterValue::npos, empty.find_last_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_of(hello));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_of(empty));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_of(nullstate));
 }
 
 TEST_P(CharacterValueKind, FindFirstNotOfCharacter) {
   const int kind{GetParam()};
   CharacterValue aab{kind, "aab"};
   CharacterValue aaa{kind, "aaa"};
+  CharacterValue empty{kind, ""};
+  CharacterValue nullstate;
 
   EXPECT_EQ(2u, aab.find_first_not_of(U'a'));
   EXPECT_EQ(0u, aab.find_first_not_of(U'b'));
   EXPECT_EQ(CharacterValue::npos, aaa.find_first_not_of(U'a'));
+
+  // degenerate value handling
+  EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(U'a'));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_not_of(U'a'));
 }
 
 TEST_P(CharacterValueKind, FindLastNotOfCharacter) {
   const int kind{GetParam()};
   CharacterValue abb{kind, "abb"};
   CharacterValue bbb{kind, "bbb"};
+  CharacterValue empty{kind, ""};
+  CharacterValue nullstate;
 
   EXPECT_EQ(0u, abb.find_last_not_of(U'b'));
   EXPECT_EQ(2u, abb.find_last_not_of(U'a'));
   EXPECT_EQ(CharacterValue::npos, bbb.find_last_not_of(U'b'));
+
+  // degenerate value handling
+  EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(U'a'));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_not_of(U'a'));
 }
 
 TEST_P(CharacterValueKind, FindFirstNotOfSet) {
@@ -577,6 +624,16 @@ TEST_P(CharacterValueKind, FindFirstNotOfSet) {
   EXPECT_EQ(CharacterValue::npos, v.find_first_not_of(abc));
   EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(a));
   EXPECT_EQ(CharacterValue::npos, nullstate.find_first_not_of(a));
+
+  // degenerate value handling
+  EXPECT_EQ(0, v.find_first_not_of(empty));
+  EXPECT_EQ(0, v.find_first_not_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(v));
+  EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(empty));
+  EXPECT_EQ(CharacterValue::npos, empty.find_first_not_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_not_of(v));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_not_of(empty));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_first_not_of(nullstate));
 }
 
 TEST_P(CharacterValueKind, FindLastNotOfSet) {
@@ -594,6 +651,16 @@ TEST_P(CharacterValueKind, FindLastNotOfSet) {
   EXPECT_EQ(CharacterValue::npos, v.find_last_not_of(abc));
   EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(a));
   EXPECT_EQ(CharacterValue::npos, nullstate.find_last_not_of(a));
+
+  // degenerate value handling
+  EXPECT_EQ(4, v.find_last_not_of(empty));
+  EXPECT_EQ(4, v.find_last_not_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(v));
+  EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(empty));
+  EXPECT_EQ(CharacterValue::npos, empty.find_last_not_of(nullstate));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_not_of(v));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_not_of(empty));
+  EXPECT_EQ(CharacterValue::npos, nullstate.find_last_not_of(nullstate));
 }
 
 //===----------------------------------------------------------------------===//
