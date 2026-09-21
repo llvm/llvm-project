@@ -195,9 +195,8 @@ public:
     return IndirectAttr.AddrSpace;
   }
 
-  // ByVal is meaningful only for Indirect, since an aliased pointer is never
-  // copied.
   bool getIndirectByVal() const {
+    // Aliased pointers are never byval.
     assert(isIndirect() && "Invalid Kind!");
     return IndirectByVal;
   }
