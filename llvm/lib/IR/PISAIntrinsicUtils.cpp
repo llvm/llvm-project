@@ -24,9 +24,6 @@ void pisa::printRoundingMode(raw_ostream &OS, const Constant *ImmArgVal) {
   auto *CI = cast<ConstantInt>(ImmArgVal);
   int64_t Val = CI->getSExtValue();
   switch (static_cast<RoundingMode>(Val)) {
-  default:
-    // invalid/unsupported value, print nothing
-    break;
   case RoundingMode::TowardZero:
     OS << ".rz";
     break;
@@ -41,6 +38,8 @@ void pisa::printRoundingMode(raw_ostream &OS, const Constant *ImmArgVal) {
     break;
   case RoundingMode::NearestTiesToAway:
     OS << ".rna";
+    break;
+  case RoundingMode::Dynamic:
     break;
   case RoundingMode::Invalid:
     OS << "none";
