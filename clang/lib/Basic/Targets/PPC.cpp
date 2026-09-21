@@ -755,7 +755,7 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   }
 
   // Feature strings
-  if (!ParsedAttr.Features.empty()) {
+  if (ParsedAttr.Features.size() == 1) {
     StringRef Feature = ParsedAttr.Features[0];
     bool IsNegated = Feature.starts_with("-");
     // Remove leading '+' or '-'
@@ -765,7 +765,7 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     // Check if this is a negative category 3 feature (highest priority)
     // Sema guarantees there's only one such version on a target_clones.
     if (IsNegated && llvm::PPC::canDisableFeatureOnAIX(Feature))
-      Feature = "NEGATIVE-FEATURE";
+      return llvm::APInt(32, NEGATIVE_FEATURE_PRIORITY);
 
     // Regular feature priority (positive or negative category 2)
     int Priority = llvm::StringSwitch<int>(Feature)
