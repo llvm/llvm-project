@@ -25,6 +25,6 @@ PISAGlobalAddressMCExpr::PISAGlobalAddressMCExpr(const MCSymbol &Sym)
 
 void PISAGlobalAddressMCExpr::printImpl(raw_ostream &OS,
                                         const MCAsmInfo *MAI) const {
-  OS << "@";
+  OS << '@';
   PISAInstPrinter::printSymbolName(OS, Symbol->getName(), MAI);
 }
