@@ -12,9 +12,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef _LIBSYCL_SUPPRESS_EXTRA_WARNINGS
+#define _LIBSYCL_SUPPRESS_EXTRA_WARNINGS
+
 #define _LIBSYCL_DO_PRAGMA(x) _Pragma(#x)
 #define _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN                                 \
   _LIBSYCL_DO_PRAGMA(GCC diagnostic push)                                      \
   _LIBSYCL_DO_PRAGMA(GCC diagnostic ignored "-Wshadow")
 #define _LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END                                   \
   _LIBSYCL_DO_PRAGMA(GCC diagnostic pop)
+
+#endif // _LIBSYCL_SUPPRESS_EXTRA_WARNINGS
