@@ -107,8 +107,8 @@ jobs:
           projects_to_build: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).projects_to_build }}
           project_check_targets: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).project_check_targets }}
           runtimes_to_build: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).runtimes_to_build }}
-          runtimes_check_targets: ${{ fromJSON(needs.premerge-compute-outputs.Linux-values).runtimes_check_targets }}
-          runtimes_check_targets_needs_reconfig: ${{ fromJSON(needs.premerge-compute-outputs.Linux-values).runtimes_check_targets_needs_reconfig}}
+          runtimes_check_targets: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).runtimes_check_targets }}
+          runtimes_check_targets_needs_reconfig: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values).runtimes_check_targets_needs_reconfig}}
 
         run: |
           echo "Building projects: ${projects_to_build}"
