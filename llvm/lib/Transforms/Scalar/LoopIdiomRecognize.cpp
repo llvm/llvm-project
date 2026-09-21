@@ -1420,7 +1420,24 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     // the only user of TheLoad.
     if (!TheLoad->hasOneUse())
       return Changed;
+
     IgnoredInsts.insert(TheLoad);
+
+    std::optional<APInt> PtrDiff = SE->computeConstantDifference(
+        SE->getSCEV(DestPtr), SE->getSCEV(SourcePtr));
+    if (!TTI->isMemmoveProfitable(PtrDiff)) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE,
+                                        "LoopMayAccessUnalignedStore", TheStore)
+               << ore::NV("Inst", InstRemark) << " in "
+               << ore::NV("Function", TheStore->getFunction())
+               << " function will not be hoisted: "
+               << ore::NV("Reason",
+                          "The conversion is not profitable for the target");
+      });
+      return Changed;
+    }
+
     if (mayLoopAccessLocation(StoreBasePtr, ModRefInfo::ModRef, CurLoop,
                               BECount, StoreSizeSCEV, *AA, IgnoredInsts)) {
       ORE.emit([&]() {
