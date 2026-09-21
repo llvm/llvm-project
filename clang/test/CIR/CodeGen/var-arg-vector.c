@@ -28,6 +28,7 @@ v4f take_16(int count, ...) {
 // CIR:           %[[REG_SAVE_B:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!void> -> !cir.ptr<!u8i>
 // CIR:           %[[REG_ADDR:.+]] = cir.ptr_stride %[[REG_SAVE_B]], %[[FP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
 // CIR:           cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR:         }, false {
 // The overflow arm rounds the cursor up before reading, and both the read and
 // the advance start from the rounded pointer.
 // CIR:           %[[OVERFLOW_B:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!void> -> !cir.ptr<!u8i>
@@ -39,13 +40,15 @@ v4f take_16(int count, ...) {
 // CIR:           %[[MEM_NEXT:.+]] = cir.ptr_stride %[[ALIGNED]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
 // CIR:           cir.store %[[MEM_NEXT]], %{{.+}} : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:           cir.yield %[[ALIGNED]] : !cir.ptr<!u8i>
+// CIR:         }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:         %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vector<4 x !cir.float>>
-// CIR:         cir.load %[[RESULT_P]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR:         cir.load align(16) %[[RESULT_P]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 
 // LLVM-LABEL: define dso_local <4 x float> @take_16(i32 noundef %{{.*}}, ...)
-// LLVM:         %[[FP_OFFSET:.+]] = load i32, ptr %{{.*}}, align {{[0-9]+}}
+// LLVM:         %[[FP_OFFSET:.+]] = load i32, ptr %{{.*}}, align 4
 // LLVM:         icmp ule i32 %[[FP_OFFSET]], 160
-// LLVM:         %[[RSA:.+]] = load ptr, ptr %{{.+}}, align {{[0-9]+}}
+// LLVMCIR: %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 8
+// OGCG:    %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 16
 // LLVMCIR:      %[[FP64:.+]] = zext i32 %[[FP_OFFSET]] to i64
 // LLVMCIR:      %[[REG_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i64 %[[FP64]]
 // OGCG:         %[[REG_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i32 %[[FP_OFFSET]]
@@ -80,7 +83,7 @@ v8f take_32(int count, ...) {
 // CIR:         %[[MEM_NEXT:.+]] = cir.ptr_stride %[[ALIGNED]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
 // CIR:         cir.store %[[MEM_NEXT]], %{{.+}} : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:         %[[RESULT_P:.+]] = cir.cast bitcast %[[ALIGNED]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.vector<8 x !cir.float>>
-// CIR:         cir.load %[[RESULT_P]] : !cir.ptr<!cir.vector<8 x !cir.float>>, !cir.vector<8 x !cir.float>
+// CIR:         cir.load align(32) %[[RESULT_P]] : !cir.ptr<!cir.vector<8 x !cir.float>>, !cir.vector<8 x !cir.float>
 // CIR-NOT:     fp_offset
 // CIR:       cir.va_end
 

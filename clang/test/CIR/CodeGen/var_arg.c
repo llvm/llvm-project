@@ -49,7 +49,7 @@ int varargs(int count, ...) {
 // CIR:     cir.yield %[[OVERFLOW_B]] : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[VA_ARG_V:.+]] = cir.load align(4) %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[VA_ARG_V]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
@@ -98,7 +98,7 @@ int stdarg_start(int count, ...) {
 // CIR:     cir.yield %{{.+}} : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[VA_ARG_V:.+]] = cir.load align(4) %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[VA_ARG_V]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
@@ -166,7 +166,7 @@ int varargs_new(char *fmt, ...) {
 // CIR:     cir.yield %{{.+}} : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[VA_ARG_V:.+]] = cir.load align(4) %[[VA_ARG_B]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[VA_ARG_V]], %[[RES_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
@@ -259,6 +259,7 @@ double varargs_double(int count, ...) {
 // CIR:     %[[FP_NEXT:.+]] = cir.add %[[FP_OFFSET]], %[[STEP]] : !u32i
 // CIR:     cir.store %[[FP_NEXT]], %[[FP_OFFSET_P]] : !u32i, !cir.ptr<!u32i>
 // CIR:     cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR:   }, false {
 // The overflow arm reads at the cursor and advances it by the argument size.
 // CIR:     %[[OVERFLOW_P:.+]] = cir.get_member %{{.+}}[2] {name = "overflow_arg_area"} : !cir.ptr<!rec___va_list_tag> -> !cir.ptr<!cir.ptr<!void>>
 // CIR:     %[[OVERFLOW:.+]] = cir.load %[[OVERFLOW_P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
@@ -267,19 +268,21 @@ double varargs_double(int count, ...) {
 // CIR:     %[[MEM_NEXT:.+]] = cir.ptr_stride %[[OVERFLOW_B]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
 // CIR:     cir.store %[[MEM_NEXT]], %{{.+}} : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:     cir.yield %[[OVERFLOW_B]] : !cir.ptr<!u8i>
+// CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.double>
-// CIR:   cir.load %[[RESULT_P]] : !cir.ptr<!cir.double>, !cir.double
+// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!cir.double>, !cir.double
 
 // LLVM-LABEL: define dso_local double @varargs_double(
 // LLVM:   %[[FP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 1
-// LLVM:   %[[FP_OFFSET:.+]] = load i32, ptr %[[FP_OFFSET_P]], align {{[0-9]+}}
+// LLVM:   %[[FP_OFFSET:.+]] = load i32, ptr %[[FP_OFFSET_P]], align 4
 // LLVM:   icmp ule i32 %[[FP_OFFSET]], 160
-// LLVM:   %[[RSA:.+]] = load ptr, ptr %{{.+}}, align {{[0-9]+}}
+// LLVMCIR: %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 8
+// OGCG:    %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 16
 // LLVMCIR: %[[FP64:.+]] = zext i32 %[[FP_OFFSET]] to i64
 // LLVMCIR: %[[REG_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i64 %[[FP64]]
 // OGCG:    %[[REG_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i32 %[[FP_OFFSET]]
 // LLVM:   %[[FP_NEXT:.+]] = add i32 %[[FP_OFFSET]], 16
-// LLVM:   store i32 %[[FP_NEXT]], ptr %[[FP_OFFSET_P]], align {{[0-9]+}}
+// LLVM:   store i32 %[[FP_NEXT]], ptr %[[FP_OFFSET_P]], align 4
 // LLVM:   %[[OVERFLOW_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 2
 // LLVM:   %[[OVERFLOW:.+]] = load ptr, ptr %[[OVERFLOW_P]], align 8
 // LLVM:   %[[MEM_NEXT:.+]] = getelementptr i8, ptr %[[OVERFLOW]], i{{32|64}} 8
@@ -311,19 +314,23 @@ short varargs_short(int count, ...) {
 // CIR:     %[[GP_NEXT:.+]] = cir.add %[[GP_OFFSET]], %[[STEP]] : !u32i
 // CIR:     cir.store %[[GP_NEXT]], %[[GP_OFFSET_P]] : !u32i, !cir.ptr<!u32i>
 // CIR:     cir.yield %[[REG_ADDR]] : !cir.ptr<!u8i>
+// CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s16i>
-// CIR:   cir.load %[[RESULT_P]] : !cir.ptr<!s16i>, !s16i
+// CIR:   cir.load align(2) %[[RESULT_P]] : !cir.ptr<!s16i>, !s16i
 
 // LLVM-LABEL: define dso_local signext i16 @varargs_short(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 0
-// LLVM:   %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align {{[0-9]+}}
+// LLVMCIR: %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 4
+// OGCG:    %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 16
 // LLVM:   icmp ule i32 %[[GP_OFFSET]], 40
-// LLVM:   %[[RSA:.+]] = load ptr, ptr %{{.+}}, align {{[0-9]+}}
+// LLVMCIR: %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 8
+// OGCG:    %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 16
 // LLVMCIR: %[[GP64:.+]] = zext i32 %[[GP_OFFSET]] to i64
 // LLVMCIR: %[[REG_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i64 %[[GP64]]
 // OGCG:    %[[REG_ADDR:.+]] = getelementptr i8, ptr %[[RSA]], i32 %[[GP_OFFSET]]
 // LLVM:   %[[GP_NEXT:.+]] = add i32 %[[GP_OFFSET]], 8
-// LLVM:   store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align {{[0-9]+}}
+// LLVMCIR: store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align 4
+// OGCG:    store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align 16
 // LLVM:   %[[OVERFLOW:.+]] = load ptr, ptr %[[OVERFLOW_P:.+]], align 8
 // LLVM:   %[[MEM_NEXT:.+]] = getelementptr i8, ptr %[[OVERFLOW]], i{{32|64}} 8
 // LLVM:   store ptr %[[MEM_NEXT]], ptr %[[OVERFLOW_P]], align 8

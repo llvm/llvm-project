@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM,LLVMCIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 __int128 varargs_int128(int count, ...) {
   __builtin_va_list args;
@@ -38,15 +38,17 @@ __int128 varargs_int128(int count, ...) {
 // CIR:     cir.yield %{{.+}} : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!s128i>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!s128i>, !s128i
+// CIR:   %[[VA_ARG_V:.+]] = cir.load align(16) %[[VA_ARG_B]] : !cir.ptr<!s128i>, !s128i
 
 // LLVM-LABEL: define dso_local i128 @varargs_int128(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
-// LLVM:   %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align {{[0-9]+}}
+// LLVMCIR: %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 4
+// OGCG:    %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 16
 // LLVM:   %[[FITS_GP:.+]] = icmp ule i32 %[[GP_OFFSET]], 32
 // LLVM:   br i1 %[[FITS_GP]], label %[[REG_BB:.+]], label %[[MEM_BB:.+]]
 // LLVM: [[REG_BB]]:
-// LLVM:   %[[REG_SAVE:.+]] = load ptr, ptr %{{.*}}, align {{[0-9]+}}
+// LLVMCIR: %[[REG_SAVE:.+]] = load ptr, ptr %{{.*}}, align 8
+// OGCG:    %[[REG_SAVE:.+]] = load ptr, ptr %{{.*}}, align 16
 // LLVM:   %[[REG_ADDR:.+]] = getelementptr i8, ptr %[[REG_SAVE]], i{{32|64}} %{{.*}}
 // A GP register slot is only 8-byte aligned, so the value is copied to a
 // 16-byte-aligned temp before it is read as a whole.
@@ -54,7 +56,8 @@ __int128 varargs_int128(int count, ...) {
 // LLVMCIR: store i128 %[[VAL]], ptr %[[REG_TMP:.+]], align 16
 // OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[REG_TMP:.+]], ptr align 8 %[[REG_ADDR]], i64 16, i1 false)
 // LLVM:   %[[GP_NEXT:.+]] = add i32 %[[GP_OFFSET]], 16
-// LLVM:   store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align {{[0-9]+}}
+// LLVMCIR: store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align 4
+// OGCG:    store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align 16
 // LLVM:   br label %[[END_BB:.+]]
 // LLVM: [[MEM_BB]]:
 // The overflow arm rounds the cursor up to 16 as well, and both the advance

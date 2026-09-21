@@ -1527,6 +1527,16 @@ namespace {
 /// cursor fields are reached through `vaFields` by index: 0 gp_offset,
 /// 1 fp_offset, 2 overflow_arg_area, 3 reg_save_area.
 struct VAArgFetch {
+  VAArgFetch(mlir::Location loc, mlir::Value valist,
+             llvm::ArrayRef<mlir::Type> vaFields, mlir::Type resultTy,
+             const ArgClassification &ac, const mlir::DataLayout &dl,
+             mlir::ModuleOp module)
+      : loc(loc), valist(valist), vaFields(vaFields), resultTy(resultTy),
+        ac(ac), dl(dl), module(module) {
+    assert(vaFields.size() == 4 &&
+           "the x86-64 va_list is a four-field cursor, checked by the caller");
+  }
+
   mlir::Location loc;
   mlir::Value valist;
   llvm::ArrayRef<mlir::Type> vaFields;
@@ -1594,6 +1604,9 @@ uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp,
 mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
                                       mlir::Value bytePtr, uint64_t align,
                                       const mlir::DataLayout &dl) {
+  assert(mlir::cast<cir::PointerType>(bytePtr.getType()).getPointee() ==
+             b.getUIntNTy(8) &&
+         "the bump strides in bytes, so the pointee must be u8");
   assert(llvm::isPowerOf2_64(align) &&
          "mask rounding needs a power-of-two alignment");
   mlir::Value bumped =
@@ -1608,7 +1621,8 @@ mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
 
 /// Reads the argument's address out of the overflow area, which also advances
 /// the cursor past the argument.
-mlir::Value buildOverflowAddr(CIRBaseBuilderTy &b, const VAArgFetch &f) {
+mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
+                                        const VAArgFetch &f) {
   cir::IntType byteTy = b.getUIntNTy(8);
   mlir::Value overflowP = b.createGetMember(
       f.loc, b.getPointerTo(f.vaFields[2]), f.valist, "overflow_arg_area", 2);
@@ -1663,17 +1677,18 @@ RegisterCursor buildRegisterGate(CIRBaseBuilderTy &b, const VAArgFetch &f,
 void reassembleRegisterPair(CIRBaseBuilderTy &b, mlir::Location loc,
                             const ArgClassification &ac,
                             const RegisterCursor &cursor,
-                            llvm::ArrayRef<bool> pairIsSse,
+                            const std::array<bool, 2> &pairIsSse,
                             mlir::Value regSaveArea, mlir::Value regPairTemp) {
   auto pairTy = mlir::cast<cir::RecordType>(ac.coercedType);
-  // SSE slots sit 16 bytes apart within their own area, so track how many of
-  // each class came before.
+  // Track how many of each class came before, since a slot is reached from
+  // its class's own cursor.
   unsigned seenOfClass[2] = {0, 0};
   for (unsigned i = 0; i < 2; ++i) {
     bool isSse = pairIsSse[i];
     mlir::Value base = isSse ? cursor.fpOffset : cursor.gpOffset;
     unsigned regSize = isSse ? 16 : 8;
-    unsigned prior = seenOfClass[isSse]++;
+    unsigned prior = seenOfClass[isSse];
+    ++seenOfClass[isSse];
     mlir::Value off = base;
     if (prior) {
       off = b.createAdd(loc, base,
@@ -1681,7 +1696,9 @@ void reassembleRegisterPair(CIRBaseBuilderTy &b, mlir::Location loc,
     }
     mlir::Value src = b.createPtrStride(loc, regSaveArea, off);
     mlir::Type elemTy = pairTy.getElementType(i);
-    mlir::Value val = b.createLoad(loc, b.createPtrBitcast(src, elemTy));
+    // A slot is aligned to its own size.
+    mlir::Value val =
+        b.createAlignedLoad(loc, b.createPtrBitcast(src, elemTy), regSize);
     b.createStore(
         loc, val,
         b.createGetMember(loc, b.getPointerTo(elemTy), regPairTemp, "", i));
@@ -1703,10 +1720,10 @@ bool needsTempCopy(const VAArgFetch &f, unsigned neededInt,
   if (f.ac.coercedType &&
       (f.ac.directOffset || registerSlotSize(neededInt, neededSse) < tySize))
     return true;
-  // A GP register slot is only 8-byte aligned, so a wider-aligned GP-class
-  // fetch (e.g. __int128, align 16) is copied through a temp.  SSE slots are
-  // already 16-byte aligned and need no copy.
-  return !neededSse && argumentAreaAlign(f.resultTy, f.module, f.dl) > 8;
+  // A slot is only as aligned as its class, 8 for a GP register and 16 for an
+  // SSE one, so a fetch the ABI places more strictly is copied through a temp.
+  uint64_t slotAlign = neededSse ? 16 : 8;
+  return argumentAreaAlign(f.resultTy, f.module, f.dl) > slotAlign;
 }
 
 /// Copies what the registers carry into \p temp, which is the size of the
@@ -1819,7 +1836,7 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
 
   mlir::Value addr;
   if (neededInt == 0 && neededSse == 0) {
-    addr = buildOverflowAddr(builder, fetch);
+    addr = buildOverflowAddrAndAdvance(builder, fetch);
   } else {
     RegisterCursor cursor =
         buildRegisterGate(builder, fetch, neededInt, neededSse);
@@ -1886,13 +1903,16 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
                /*falseBuilder=*/
                [&](mlir::OpBuilder &ob, mlir::Location l) {
                  CIRBaseBuilderTy b(ob);
-                 cir::YieldOp::create(b, l, buildOverflowAddr(b, fetch));
+                 mlir::Value memAddr = buildOverflowAddrAndAdvance(b, fetch);
+                 cir::YieldOp::create(b, l, memAddr);
                })
                .getResult();
   }
 
+  // Every path above places the result at least this well aligned.
   mlir::Value result =
-      builder.createLoad(loc, builder.createPtrBitcast(addr, resultTy));
+      builder.createAlignedLoad(loc, builder.createPtrBitcast(addr, resultTy),
+                                argumentAreaAlign(resultTy, module, dl));
   op.getResult().replaceAllUsesWith(result);
   op->erase();
   return mlir::success();

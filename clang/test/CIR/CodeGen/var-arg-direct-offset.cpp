@@ -54,13 +54,15 @@ EmptyLow varargs_empty_low(int count, ...) {
 // CIR:     %[[YIELDED:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_EmptyLow> -> !cir.ptr<!u8i>
 // CIR:     cir.yield %[[YIELDED]] : !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_EmptyLow>
-// CIR:   cir.load %[[RESULT_P]] : !cir.ptr<!rec_EmptyLow>, !rec_EmptyLow
+// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!rec_EmptyLow>, !rec_EmptyLow
 
 // LLVM-LABEL: define dso_local i64 @_Z17varargs_empty_lowiz(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 0
-// LLVM:   %[[GP:.+]] = load i32, ptr %[[GP_P]], align {{4|16}}
+// LLVMCIR: %[[GP:.+]] = load i32, ptr %[[GP_P]], align 4
+// OGCG:    %[[GP:.+]] = load i32, ptr %[[GP_P]], align 16
 // LLVM:   %[[FITS:.+]] = icmp ule i32 %[[GP]], 40
-// LLVM:   %[[RSA:.+]] = load ptr, ptr %{{.+}}, align {{8|16}}
+// LLVMCIR: %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 8
+// OGCG:    %[[RSA:.+]] = load ptr, ptr %{{.+}}, align 16
 // LLVMCIR: %[[GP64:.+]] = zext i32 %[[GP]] to i64
 // LLVMCIR: %[[SLOT:.+]] = getelementptr i8, ptr %[[RSA]], i64 %[[GP64]]
 // OGCG:    %[[SLOT:.+]] = getelementptr i8, ptr %[[RSA]], i32 %[[GP]]
@@ -68,7 +70,8 @@ EmptyLow varargs_empty_low(int count, ...) {
 // LLVM:   %[[DST:.+]] = getelementptr i8, ptr %[[TEMP:.+]], i{{32|64}} 8
 // LLVM:   store i64 %[[VAL]], ptr %[[DST]], align 8
 // LLVM:   %[[BUMPED:.+]] = add i32 %[[GP]], 8
-// LLVM:   store i32 %[[BUMPED]], ptr %[[GP_P]], align {{4|16}}
+// LLVMCIR: store i32 %[[BUMPED]], ptr %[[GP_P]], align 4
+// OGCG:    store i32 %[[BUMPED]], ptr %[[GP_P]], align 16
 
 // The overflow area holds the whole record laid out normally, so the memory
 // path reads it from its base and the byte offset does not apply.
@@ -110,18 +113,22 @@ double varargs_empty_low_sse(int count, ...) {
 // CIR:     %[[YIELDED:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_EmptyLowSse> -> !cir.ptr<!u8i>
 // An SSE slot is 16 bytes, so the cursor advances by 16 rather than by 8.
 // CIR:     %[[STEP:.+]] = cir.const #cir.int<16> : !u32i
-// CIR:     cir.store %{{.+}}, %[[FP_P]] : !u32i, !cir.ptr<!u32i>
+// CIR:     %[[FP_NEXT:.+]] = cir.add %[[FP]], %[[STEP]] : !u32i
+// CIR:     cir.store %[[FP_NEXT]], %[[FP_P]] : !u32i, !cir.ptr<!u32i>
 // CIR:     cir.yield %[[YIELDED]] : !cir.ptr<!u8i>
+// CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
+// CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_EmptyLowSse>
+// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!rec_EmptyLowSse>, !rec_EmptyLowSse
 
 // LLVM-LABEL: define dso_local noundef double @_Z21varargs_empty_low_sseiz(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[FP_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 1
-// LLVM:   %[[FP:.+]] = load i32, ptr %[[FP_P]], align {{4|8|16}}
+// LLVM:   %[[FP:.+]] = load i32, ptr %[[FP_P]], align 4
 // LLVM:   %[[FITS:.+]] = icmp ule i32 %[[FP]], 160
 // LLVM:   %[[VAL:.+]] = load double, ptr %{{.+}}, align 8
 // LLVM:   %[[DST:.+]] = getelementptr i8, ptr %[[TEMP:.+]], i{{32|64}} 8
 // LLVM:   store double %[[VAL]], ptr %[[DST]], align 8
 // LLVM:   %[[BUMPED:.+]] = add i32 %[[FP]], 16
-// LLVM:   store i32 %[[BUMPED]], ptr %[[FP_P]], align {{4|8|16}}
+// LLVM:   store i32 %[[BUMPED]], ptr %[[FP_P]], align 4
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %{{.+}}, %{{.+}} ], [ %[[TEMP]], %{{.+}} ]
 // OGCG:    %[[ADDR:.+]] = phi ptr [ %[[TEMP]], %{{.+}} ], [ %{{.+}}, %{{.+}} ]
 // LLVMCIR: load %struct.EmptyLowSse, ptr %[[ADDR]], align 8
@@ -150,15 +157,16 @@ long varargs_tail_pad(int count, ...) {
 // CIR:     %[[YIELDED:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_TailPad> -> !cir.ptr<!u8i>
 // CIR:     cir.yield %[[YIELDED]] : !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_TailPad>
-// CIR:   cir.load %[[RESULT_P]] : !cir.ptr<!rec_TailPad>, !rec_TailPad
+// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!rec_TailPad>, !rec_TailPad
 
 // LLVM-LABEL: define dso_local noundef i64 @_Z16varargs_tail_padiz(i32 noundef %{{.*}}, ...)
-// LLVM:   %[[GP:.+]] = load i32, ptr %{{.+}}, align {{4|16}}
+// LLVMCIR: %[[GP:.+]] = load i32, ptr %{{.+}}, align 4
+// OGCG:    %[[GP:.+]] = load i32, ptr %{{.+}}, align 16
 // LLVM:   %[[FITS:.+]] = icmp ule i32 %[[GP]], 40
 // LLVM:   %[[VAL:.+]] = load i64, ptr %{{.+}}, align 8
 // The load is of the eightbyte the register holds, never of the whole record,
 // so no byte of the neighbouring slot reaches the result.
-// LLVM-NOT: load %struct.TailPad, ptr %[[RSA:.+]]
+// LLVM-NOT: load %struct.TailPad
 // LLVMCIR: store i64 %[[VAL]], ptr %[[TEMP:.+]], align 8
 // OGCG:    %[[DST:.+]] = getelementptr i8, ptr %[[TEMP:.+]], i32 0
 // OGCG:    store i64 %[[VAL]], ptr %[[DST]], align 8

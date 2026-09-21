@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM,LLVMCIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 long double varargs_long_double(int count, ...) {
   __builtin_va_list args;
@@ -29,7 +29,7 @@ long double varargs_long_double(int count, ...) {
 // CIR:   %[[OVERFLOW_NEXT:.+]] = cir.ptr_stride %[[ALIGNED]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
 // CIR:   cir.store %[[OVERFLOW_NEXT]], %{{.+}} : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[ALIGNED]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.long_double<!cir.f80>>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load %[[VA_ARG_B]] : !cir.ptr<!cir.long_double<!cir.f80>>, !cir.long_double<!cir.f80>
+// CIR:   %[[VA_ARG_V:.+]] = cir.load align(16) %[[VA_ARG_B]] : !cir.ptr<!cir.long_double<!cir.f80>>, !cir.long_double<!cir.f80>
 
 // LLVM-LABEL: define dso_local x86_fp80 @varargs_long_double(i32 noundef %{{.*}}, ...)
 // LLVM:   call void @llvm.va_start.p0(ptr %{{.*}})

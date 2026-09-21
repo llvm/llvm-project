@@ -955,7 +955,7 @@ void foo33(__builtin_va_list a) {
 // CIR:   cir.yield %{{.*}} : !cir.ptr<!u8i>
 // CIR: }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR: %[[COMPLEX_ADDR_B:.*]] = cir.cast bitcast %[[COMPLEX_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.complex<!cir.float>>
-// CIR: %[[COMPLEX:.*]] = cir.load %[[COMPLEX_ADDR_B]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: %[[COMPLEX:.*]] = cir.load align(4) %[[COMPLEX_ADDR_B]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca ptr, align 8
