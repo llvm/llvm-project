@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -internal-isystem %S/../../lib/Headers/openmp_wrappers -include __clang_openmp_device_functions.h -internal-isystem %S/../../lib/Headers/openmp_wrappers -internal-isystem %S/Inputs/include -x c++ -fopenmp -triple amdgpu-amd-amdhsa -aux-triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
 
 #ifdef __cplusplus
+#include <algorithm>
 #include <cmath>
 #else
 #include <math.h>
@@ -100,13 +101,13 @@
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-CPP-NEXT:    store double [[TMP0]], ptr [[__X_ADDR_ASCAST_I]], align 8
 // CHECK-CPP-NEXT:    [[TMP1:%.*]] = load double, ptr [[__X_ADDR_ASCAST_I]], align 8
-// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef double @__ocml_sin_f64(double noundef [[TMP1]]) #[[ATTR3:[0-9]+]]
+// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef double @__ocml_sin_f64(double noundef [[TMP1]]) #[[ATTR5:[0-9]+]]
 // CHECK-CPP-NEXT:    store double [[CALL_I]], ptr [[L1_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[TMP2:%.*]] = load double, ptr [[X_ADDR_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I5:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I4]] to ptr
 // CHECK-CPP-NEXT:    store double [[TMP2]], ptr [[__X_ADDR_ASCAST_I5]], align 8
 // CHECK-CPP-NEXT:    [[TMP3:%.*]] = load double, ptr [[__X_ADDR_ASCAST_I5]], align 8
-// CHECK-CPP-NEXT:    [[CALL_I6:%.*]] = call noundef double @__ocml_cos_f64(double noundef [[TMP3]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I6:%.*]] = call noundef double @__ocml_cos_f64(double noundef [[TMP3]]) #[[ATTR5]]
 // CHECK-CPP-NEXT:    store double [[CALL_I6]], ptr [[L2_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[TMP4:%.*]] = load double, ptr [[X_ADDR_ASCAST]], align 8
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I8:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I7]] to ptr
@@ -244,7 +245,7 @@ void test_math_f64(double x, double y, double z) {
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I14:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I13]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP1]], ptr [[__X_ADDR_ASCAST_I14]], align 4
 // CHECK-CPP-NEXT:    [[TMP2:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I14]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I15:%.*]] = call noundef float @__ocml_sin_f32(float noundef [[TMP2]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I15:%.*]] = call noundef float @__ocml_sin_f32(float noundef [[TMP2]]) #[[ATTR5]]
 // CHECK-CPP-NEXT:    store float [[CALL_I15]], ptr [[L1_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP3:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I5:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I4]] to ptr
@@ -253,7 +254,7 @@ void test_math_f64(double x, double y, double z) {
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I17:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I16]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP4]], ptr [[__X_ADDR_ASCAST_I17]], align 4
 // CHECK-CPP-NEXT:    [[TMP5:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I17]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef float @__ocml_cos_f32(float noundef [[TMP5]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef float @__ocml_cos_f32(float noundef [[TMP5]]) #[[ATTR5]]
 // CHECK-CPP-NEXT:    store float [[CALL_I]], ptr [[L2_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP6:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I8:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I7]] to ptr
@@ -384,13 +385,13 @@ void test_math_f32(float x, float y, float z) {
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP0]], ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-CPP-NEXT:    [[TMP1:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef float @__ocml_sin_f32(float noundef [[TMP1]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I:%.*]] = call noundef float @__ocml_sin_f32(float noundef [[TMP1]]) #[[ATTR5]]
 // CHECK-CPP-NEXT:    store float [[CALL_I]], ptr [[L1_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP2:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I5:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I4]] to ptr
 // CHECK-CPP-NEXT:    store float [[TMP2]], ptr [[__X_ADDR_ASCAST_I5]], align 4
 // CHECK-CPP-NEXT:    [[TMP3:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I5]], align 4
-// CHECK-CPP-NEXT:    [[CALL_I6:%.*]] = call noundef float @__ocml_cos_f32(float noundef [[TMP3]]) #[[ATTR3]]
+// CHECK-CPP-NEXT:    [[CALL_I6:%.*]] = call noundef float @__ocml_cos_f32(float noundef [[TMP3]]) #[[ATTR5]]
 // CHECK-CPP-NEXT:    store float [[CALL_I6]], ptr [[L2_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[TMP4:%.*]] = load float, ptr [[X_ADDR_ASCAST]], align 4
 // CHECK-CPP-NEXT:    [[__X_ADDR_ASCAST_I8:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I7]] to ptr
@@ -420,6 +421,46 @@ void test_math_f32_suffix(float x, float y, float z) {
   float l3 = fabsf(x);
   float l4 = fmaf(x, y, z);
 }
+
+#ifdef __cplusplus
+// The templated ::min and ::max in __clang_hip_math.h are a CUDA extension for
+// HIP. In OpenMP these unqualified calls must resolve to std without ambiguity.
+// CHECK-CPP-LABEL: @_Z12test_std_minll(
+// CHECK-CPP-NEXT:  entry:
+// CHECK-CPP-NEXT:    [[CLEANUP_DEST_SLOT:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-CPP-NEXT:    [[__A:%.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+// CHECK-CPP-NEXT:    [[__B:%.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+// CHECK-CPP-NEXT:    store i64 [[__A1:%.*]], ptr [[__A]], align 8
+// CHECK-CPP-NEXT:    store i64 [[__B2:%.*]], ptr [[__B]], align 8
+// CHECK-CPP-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) ptr @_ZSt3minIlERKT_S2_S2_(ptr noundef nonnull align 8 dereferenceable(8) [[__A]], ptr noundef nonnull align 8 dereferenceable(8) [[__B]]) #[[ATTR6:[0-9]+]]
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load i64, ptr [[CALL]], align 8
+// CHECK-CPP-NEXT:    call void @__kmpc_free_shared(ptr [[__B]], i64 8)
+// CHECK-CPP-NEXT:    call void @__kmpc_free_shared(ptr [[__A]], i64 8)
+// CHECK-CPP-NEXT:    ret i64 [[TMP0]]
+//
+long test_std_min(long __a, long __b) {
+  using namespace std;
+  return min(__a, __b);
+}
+
+// CHECK-CPP-LABEL: @_Z12test_std_maxll(
+// CHECK-CPP-NEXT:  entry:
+// CHECK-CPP-NEXT:    [[CLEANUP_DEST_SLOT:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-CPP-NEXT:    [[__A:%.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+// CHECK-CPP-NEXT:    [[__B:%.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+// CHECK-CPP-NEXT:    store i64 [[__A1:%.*]], ptr [[__A]], align 8
+// CHECK-CPP-NEXT:    store i64 [[__B2:%.*]], ptr [[__B]], align 8
+// CHECK-CPP-NEXT:    [[CALL:%.*]] = call noundef nonnull align 8 dereferenceable(8) ptr @_ZSt3maxIlERKT_S2_S2_(ptr noundef nonnull align 8 dereferenceable(8) [[__A]], ptr noundef nonnull align 8 dereferenceable(8) [[__B]]) #[[ATTR6]]
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load i64, ptr [[CALL]], align 8
+// CHECK-CPP-NEXT:    call void @__kmpc_free_shared(ptr [[__B]], i64 8)
+// CHECK-CPP-NEXT:    call void @__kmpc_free_shared(ptr [[__A]], i64 8)
+// CHECK-CPP-NEXT:    ret i64 [[TMP0]]
+//
+long test_std_max(long __a, long __b) {
+  using namespace std;
+  return max(__a, __b);
+}
+#endif
 
 #pragma omp end declare target
 //// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
