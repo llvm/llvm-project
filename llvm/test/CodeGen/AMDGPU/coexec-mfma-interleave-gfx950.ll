@@ -11,44 +11,43 @@ define amdgpu_kernel void @mfma_16x16_interleave(
 ; CHECK-LABEL: mfma_16x16_interleave:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CHECK-NEXT:    v_and_b32_e32 v14, 0x3ff, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v14
-; CHECK-NEXT:    v_mul_hi_i32_i24_e32 v15, -12, v14
-; CHECK-NEXT:    v_mul_i32_i24_e32 v14, -12, v14
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_lshl_add_u64 v[16:17], s[0:1], 0, v[0:1]
-; CHECK-NEXT:    global_load_dwordx4 v[2:5], v0, s[0:1]
-; CHECK-NEXT:    global_load_dwordx4 v[6:9], v0, s[0:1] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[10:13], v0, s[0:1] offset:32
-; CHECK-NEXT:    v_lshl_add_u64 v[18:19], v[16:17], 0, v[14:15]
-; CHECK-NEXT:    global_load_dwordx2 v[30:31], v[18:19], off offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[14:17], v[18:19], off
 ; CHECK-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
+; CHECK-NEXT:    v_and_b32_e32 v14, 0x3ff, v0
+; CHECK-NEXT:    v_mov_b32_e32 v29, 0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v28, 4, v14
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_lshl_add_u64 v[12:13], s[0:1], 0, v[28:29]
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v28, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v28, s[0:1] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v28, s[0:1] offset:32
+; CHECK-NEXT:    v_mad_i64_i32 v[16:17], s[0:1], v14, -12, v[12:13]
+; CHECK-NEXT:    global_load_dwordx2 v[30:31], v[16:17], off offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v[16:17], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[18:21], v[2:5], v[6:9], v[2:5]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[16:19], v[0:3], v[4:7], v[0:3]
 ; CHECK-NEXT:    s_add_i32 s0, s8, s9
-; CHECK-NEXT:    v_add_u32_e32 v22, v14, v15
-; CHECK-NEXT:    v_add_u32_e32 v23, v15, v16
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[26:29], v[2:5], v[6:9], v[6:9]
+; CHECK-NEXT:    v_add_u32_e32 v20, v12, v13
+; CHECK-NEXT:    v_add_u32_e32 v21, v13, v14
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[24:27], v[0:3], v[4:7], v[4:7]
 ; CHECK-NEXT:    s_add_i32 s1, s10, s11
-; CHECK-NEXT:    v_add_u32_e32 v24, v16, v17
-; CHECK-NEXT:    v_add_u32_e32 v25, v17, v30
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[2:5], v[2:5], v[6:9], v[10:13]
+; CHECK-NEXT:    v_add_u32_e32 v22, v14, v15
+; CHECK-NEXT:    v_add_u32_e32 v23, v15, v30
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[0:3], v[0:3], v[4:7], v[8:11]
 ; CHECK-NEXT:    s_add_i32 s2, s12, s13
-; CHECK-NEXT:    v_add_u32_e32 v6, v30, v31
-; CHECK-NEXT:    v_add_u32_e32 v7, v31, v14
+; CHECK-NEXT:    v_add_u32_e32 v4, v30, v31
+; CHECK-NEXT:    v_add_u32_e32 v5, v31, v12
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    v_mov_b32_e32 v8, s0
-; CHECK-NEXT:    v_mov_b32_e32 v9, s1
+; CHECK-NEXT:    global_store_dwordx4 v29, v[16:19], s[14:15]
+; CHECK-NEXT:    global_store_dwordx4 v29, v[24:27], s[14:15] offset:16
+; CHECK-NEXT:    s_nop 2
+; CHECK-NEXT:    global_store_dwordx4 v29, v[0:3], s[14:15] offset:32
+; CHECK-NEXT:    global_store_dwordx4 v29, v[20:23], s[14:15] offset:48
+; CHECK-NEXT:    v_mov_b32_e32 v6, s0
+; CHECK-NEXT:    v_mov_b32_e32 v7, s1
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
-; CHECK-NEXT:    global_store_dwordx4 v1, v[18:21], s[14:15]
-; CHECK-NEXT:    global_store_dwordx4 v1, v[26:29], s[14:15] offset:16
-; CHECK-NEXT:    global_store_dwordx4 v1, v[2:5], s[14:15] offset:32
-; CHECK-NEXT:    global_store_dwordx4 v1, v[22:25], s[14:15] offset:48
-; CHECK-NEXT:    global_store_dwordx4 v1, v[6:9], s[14:15] offset:64
-; CHECK-NEXT:    global_store_dword v1, v0, s[14:15] offset:80
+; CHECK-NEXT:    global_store_dwordx4 v29, v[4:7], s[14:15] offset:64
+; CHECK-NEXT:    global_store_dword v29, v0, s[14:15] offset:80
 ; CHECK-NEXT:    s_endpgm
     ptr addrspace(1) %ptr,
     i32 %s0, i32 %s1, i32 %s2, i32 %s3,
