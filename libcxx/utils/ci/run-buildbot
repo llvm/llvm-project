@@ -487,7 +487,9 @@ bootstrapping-build)
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     step "Install clang and LLDB to a fake location"
-    ${NINJA} -vC "${BUILD_DIR}" install-clang install-lldb
+    # lldb-server is a separate install component, but LLDB needs it to launch
+    # a process on Linux.
+    ${NINJA} -vC "${BUILD_DIR}" install-clang install-lldb install-lldb-server
 
     # TODO: Find a cleaner way to get the libc++ test suite to grab the just-built LLDB
     export PATH="${PATH}:${INSTALL_DIR}/bin"

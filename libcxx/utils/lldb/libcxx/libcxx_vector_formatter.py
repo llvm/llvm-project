@@ -65,8 +65,6 @@ class LibCxxStdVectorSyntheticFrontEnd:
 
         return num_children // self.m_element_size
 
-    # FIXME: newer versions of LLDB auto-generate this.
-    # Eventually this can be removed.
     def get_child_at_index(self, index):
         if not self.m_start or not self.m_finish:
             return None
@@ -109,7 +107,7 @@ class LibCxxStdVectorSyntheticFrontEnd:
         self.m_start = begin_sp
         self.m_finish = end_sp
 
-        return True
+        return False
 
 
 class LibCxxVectorBoolSyntheticFrontEnd:
@@ -188,6 +186,11 @@ class LibCxxVectorBoolSyntheticFrontEnd:
         return retval_sp
 
     def update(self):
+        """
+        Returning False asks LLDB to re-run this on every stop. Returning True
+        freezes the children we last reported, so it is only safe when there
+        are none to go stale.
+        """
         self.m_children = {}
 
         if not self.valobj:
@@ -211,7 +214,7 @@ class LibCxxVectorBoolSyntheticFrontEnd:
             self.m_count = 0
             return False
 
-        return True
+        return False
 
 
 def LibCxxStdVectorSyntheticFrontendCreator(valobj, internal_dict):
