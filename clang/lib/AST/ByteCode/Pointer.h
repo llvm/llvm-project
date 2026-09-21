@@ -49,9 +49,13 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isVolatile() const {
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
+  bool canBeInitialized() const { return Pointee && Base > 0; }
   const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
@@ -436,6 +440,7 @@ struct OpaquePointer {
   unsigned PathLength = 0;
 
   ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
+  bool hasDeclBase() const { return Base.isDecl(); }
   const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
 
@@ -952,7 +957,7 @@ public:
   bool isVolatile() const {
     if (!isBlockPointer())
       return false;
-    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+    return view().isVolatile();
   }
 
   /// Returns the declaration ID.
