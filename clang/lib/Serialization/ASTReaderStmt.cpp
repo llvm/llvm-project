@@ -939,7 +939,7 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
               break;
           }
         }
-        if (Expr *Ex = E.dyn_cast<Expr *>())
+        if (Expr *Ex = dyn_cast<Expr *>(E))
           R = new (Record.getContext()) concepts::ExprRequirement(
                   Ex, RK == concepts::Requirement::RK_Simple, NoexceptLoc,
                   std::move(*Req), Status, SubstitutedConstraintExpr);
