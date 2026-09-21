@@ -568,16 +568,9 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
     } else {
-      llvm::StringRef annot{
-          dirId == llvm::omp::Directive::OMPD_ordered_standalone
-              ? " (standalone)"
-              : dirId == llvm::omp::Directive::OMPD_ordered_blockassoc
-              ? " (block-associated)"
-              : ""};
       context_.Say(clauseSource,
-          "%s clause is not allowed on %s%s directive"_err_en_US,
-          GetUpperName(clauseId, version), GetUpperName(dirId, version),
-          annot.str());
+          "%s clause is not allowed on %s directive"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version));
     }
     return false;
   }
@@ -1655,7 +1648,7 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
     llvm::omp::Directive dirId{beginSpec.DirId()};
     auto &msg{context_.Say(beginSpec.source,
         "Expected OpenMP END %s directive"_err_en_US,
-        parser::omp::GetUpperName(dirId, version))};
+        parser::omp::GetUpperName(dirId, version, /*annotate=*/false))};
     // ORDERED has two variants, so be explicit about which variant we think
     // this is.
     if (dirId == llvm::omp::Directive::OMPD_ordered_blockassoc) {
