@@ -39,10 +39,6 @@ static cl::opt<bool> leadingLines("leading-lines",
                                     cl::desc("Preserve line numbers"),
                                     cl::cat(cat));
 
-static cl::opt<bool> noLeadingLines("no-leading-lines",
-                                    cl::desc("Don't preserve line numbers (default)"),
-                                    cl::cat(cat));
-
 static StringRef toolName;
 static int errorCount;
 

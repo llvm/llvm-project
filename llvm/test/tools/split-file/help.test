@@ -3,4 +3,4 @@ CHECK: OVERVIEW: Split input {{.*}}
 CHECK: USAGE: split-file [options] filename directory
 CHECK: Generic Options:
 CHECK: split-file Options:
-CHECK:   --no-leading-lines
+CHECK:   --leading-lines
