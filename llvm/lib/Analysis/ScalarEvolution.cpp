@@ -10098,6 +10098,22 @@ SCEVUse ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
   return C;
 }
 
+SCEVUse ScalarEvolution::getSCEVAtExit(const SCEV *V, const Loop *L,
+                                       const BasicBlock *ExitingBlock) {
+  SCEVUse ExitValue = getSCEVAtScope(V, L->getParentLoop());
+  if (!isLoopInvariant(ExitValue, L)) {
+    // If we failed to evaluate it in the outer scope, try to evaluate an
+    // addrec for the specific exit.
+    // TODO: Generalize this to other expressions.
+    const SCEV *ExitCount = getExitCount(L, ExitingBlock);
+    if (!isa<SCEVCouldNotCompute>(ExitCount))
+      if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V))
+        if (AddRec->getLoop() == L)
+          ExitValue = AddRec->evaluateAtIteration(ExitCount, *this);
+  }
+  return ExitValue;
+}
+
 /// This builds up a Constant using the ConstantExpr interface.  That way, we
 /// will return Constants for objects which aren't represented by a
 /// SCEVConstant, because SCEVConstant is restricted to ConstantInt.
