@@ -248,9 +248,9 @@ isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth);
 ///                        be complete. Requiring fewer than all of them
 ///                        isolates more tiles, but bounds the number of copies
 ///                        of the loop nest that the AST generator creates.
-isl::set getFullTilePrefixes(isl::set ScheduleRange,
-                             llvm::ArrayRef<int> TileSizes,
-                             unsigned NumCompleteDims);
+isl::set getCompleteTilePrefixes(isl::set ScheduleRange,
+                                 llvm::ArrayRef<int> TileSizes,
+                                 unsigned NumCompleteDims);
 
 /// Create an isl::union_set, which describes the isolate option based on
 /// IsolateDomain.

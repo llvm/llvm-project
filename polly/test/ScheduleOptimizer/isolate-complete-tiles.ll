@@ -1,9 +1,9 @@
 ; RUN: opt %loadNPMPolly '-passes=polly-custom<opt-isl;ast>' -polly-print-ast \
 ; RUN:     -disable-output < %s | FileCheck %s --check-prefix=DEFAULT
-; RUN: opt %loadNPMPolly -polly-isolate-full-tiles \
+; RUN: opt %loadNPMPolly -polly-isolate-complete-tiles \
 ; RUN:     '-passes=polly-custom<opt-isl;ast>' -polly-print-ast \
 ; RUN:     -disable-output < %s | FileCheck %s --check-prefix=ALL
-; RUN: opt %loadNPMPolly -polly-isolate-full-tiles \
+; RUN: opt %loadNPMPolly -polly-isolate-complete-tiles \
 ; RUN:     -polly-isolate-complete-tile-dims=1 \
 ; RUN:     '-passes=polly-custom<opt-isl;ast>' -polly-print-ast \
 ; RUN:     -disable-output < %s | FileCheck %s --check-prefix=INNERMOST
