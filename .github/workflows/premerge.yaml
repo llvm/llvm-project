@@ -99,6 +99,11 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+      - &extra_variables
+        name: Extract Environment Variables
+        run: |
+          echo "Test"
+      - *extra_variables
       - name: Build and Test
         timeout-minutes: 120
         env:
