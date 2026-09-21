@@ -11974,12 +11974,19 @@ def err_coop_mem_layout_enum
             "CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR or "
             "CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR">;
 
+def err_coop_mat_stride_type
+    : Error<"stride argument for load/store of cooperative matrix must have "
+            "type 'size_t'">;
+
 def err_coop_element_and_pointer_type
     : Error<"inconsistent between cooperative matrix element type and buffer "
             "pointer type">;
 
 def err_coop_matrix_arg
     : Error<"argument must be a valid cooperative matrix type">;
+
+def err_coop_matrix_operands_type
+    : Error<"fourth argument of 'coop_mat_mulAdd' must have enum type">;
 
 def err_coop_matrix_assignment
     : Error<"builtin return value should be assigned to cooperative matrix "

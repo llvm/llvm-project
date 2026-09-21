@@ -17423,6 +17423,14 @@ bool Sema::CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr) {
   return ArgError;
 }
 
+bool Sema::CheckCoopMatrixLoadStoreStride(Expr *Stride) {
+  if (convertArgumentToType(*this, Stride, Context.getSizeType())) {
+    Diag(Stride->getExprLoc(), diag::err_coop_mat_stride_type);
+    return true;
+  }
+  return false;
+}
+
 ExprResult Sema::BuiltinCoopMatrixLoad(CallExpr *TheCall,
                                        ExprResult CallResult) {
   if (checkArgCount(TheCall, 3))
@@ -17430,6 +17438,8 @@ ExprResult Sema::BuiltinCoopMatrixLoad(CallExpr *TheCall,
   if (CheckCoopMatrixLoadStorePtr(TheCall, 0))
     return ExprError();
   if (CheckCoopMatrixLoadStoreLayout(TheCall->getArg(1)))
+    return ExprError();
+  if (CheckCoopMatrixLoadStoreStride(TheCall->getArg(2)))
     return ExprError();
   return CallResult;
 }
@@ -17445,6 +17455,8 @@ ExprResult Sema::BuiltinCoopMatrixStore(CallExpr *TheCall,
   CheckCoopMatrixLoadStoreElementType(Arg1->getType(), Arg0->getType(),
                                       Arg0->getBeginLoc());
   if (CheckCoopMatrixLoadStoreLayout(TheCall->getArg(2)))
+    return ExprError();
+  if (CheckCoopMatrixLoadStoreStride(TheCall->getArg(3)))
     return ExprError();
   return CallResult;
 }
@@ -17537,8 +17549,18 @@ static bool isValidMatAMatCElementTypeCombination(QualType ATy, QualType CTy) {
 
 ExprResult Sema::BuiltinCoopMatrixMulAdd(CallExpr *TheCall,
                                          ExprResult CallResult) {
-  if (checkArgCount(TheCall, 3))
+  if (checkArgCountRange(TheCall, 3, 4))
     return ExprError();
+
+  // The fourth argument is optional. If present, it must be an enum.
+  if (TheCall->getNumArgs() == 4) {
+    Expr *Operands = TheCall->getArg(3);
+    QualType OperandsTy = Operands->getType().getCanonicalType();
+
+    if (!OperandsTy->isEnumeralType()) {
+      Diag(Operands->getBeginLoc(), diag::err_coop_matrix_operands_type);
+    }
+  }
 
   Expr *Arg0 = TheCall->getArg(0);
   Expr *Arg1 = TheCall->getArg(1);

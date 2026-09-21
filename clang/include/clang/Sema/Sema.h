@@ -3068,6 +3068,7 @@ private:
                                            SourceLocation MatrixLoc);
   bool CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx);
   bool CheckCoopMatrixLoadStoreLayout(Expr *LayoutExpr);
+  bool CheckCoopMatrixLoadStoreStride(Expr *Stride);
   ExprResult BuiltinCoopMatrixStore(CallExpr *TheCall, ExprResult CallResult);
   ExprResult BuiltinCoopMatrixLoad(CallExpr *TheCall, ExprResult CallResult);
   void CheckCoopMatrixMatMulOutput(CallExpr *TheCall);
