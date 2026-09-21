@@ -2892,11 +2892,17 @@ static FormatToken *getLastNonComment(const UnwrappedLine &Line) {
   return nullptr;
 }
 
+static bool containsPPDirective(const UnwrappedLine &Line) {
+  return llvm::any_of(
+      llvm::drop_begin(Line.Tokens),
+      [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
+}
+
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   FormatToken *Tok = nullptr;
 
   if (Style.InsertBraces && !Line->InPPDirective && !Line->Tokens.empty() &&
-      PreprocessorDirectives.empty() && FormatTok->isNot(tok::semi)) {
+      !containsPPDirective(*Line) && FormatTok->isNot(tok::semi)) {
     Tok = Style.BraceWrapping.AfterControlStatement == FormatStyle::BWACS_Never
               ? getLastNonComment(*Line)
               : Line->Tokens.back().Tok;
