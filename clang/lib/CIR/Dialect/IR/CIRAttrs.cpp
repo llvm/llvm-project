@@ -429,53 +429,73 @@ MemoryEffectsAttr MemoryEffectsAttr::writeOnly(MLIRContext *ctx) {
 
 MemoryEffectsAttr MemoryEffectsAttr::argMemOnly(MLIRContext *ctx,
                                                 ModRefInfo mr) {
-  return get(ctx, ModRefInfo::NoModRef, mr, ModRefInfo::NoModRef,
-             ModRefInfo::NoModRef, ModRefInfo::NoModRef, ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 MemoryEffectsAttr MemoryEffectsAttr::inaccessibleMemOnly(MLIRContext *ctx,
                                                          ModRefInfo mr) {
-  return get(ctx, ModRefInfo::NoModRef, ModRefInfo::NoModRef, mr,
-             ModRefInfo::NoModRef, ModRefInfo::NoModRef, ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef, /*inaccessible_mem=*/mr,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 MemoryEffectsAttr MemoryEffectsAttr::errnoMemOnly(MLIRContext *ctx,
                                                   ModRefInfo mr) {
-  return get(ctx, ModRefInfo::NoModRef, ModRefInfo::NoModRef,
-             ModRefInfo::NoModRef, mr, ModRefInfo::NoModRef,
-             ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/mr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 MemoryEffectsAttr MemoryEffectsAttr::otherMemOnly(MLIRContext *ctx,
                                                   ModRefInfo mr) {
-  return get(ctx, mr, ModRefInfo::NoModRef, ModRefInfo::NoModRef,
-             ModRefInfo::NoModRef, ModRefInfo::NoModRef, ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/mr, /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef,
+             /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgMemOnly(MLIRContext *ctx,
                                                               ModRefInfo mr) {
-  return get(ctx, ModRefInfo::NoModRef, mr, mr, ModRefInfo::NoModRef,
-             ModRefInfo::NoModRef, ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/mr,
+             /*inaccessible_mem=*/mr, /*errno_mem=*/ModRefInfo::NoModRef,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrErrnoMemOnly(
     MLIRContext *ctx, ModRefInfo inaccessibleMr, ModRefInfo errnoMr) {
-  return get(ctx, ModRefInfo::NoModRef, ModRefInfo::NoModRef, inaccessibleMr,
-             errnoMr, ModRefInfo::NoModRef, ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/ModRefInfo::NoModRef,
+             /*inaccessible_mem=*/inaccessibleMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 MemoryEffectsAttr MemoryEffectsAttr::inaccessibleOrArgOrErrnoMemOnly(
     MLIRContext *ctx, ModRefInfo inaccessibleOrArgMr, ModRefInfo errnoMr) {
-  return get(ctx, ModRefInfo::NoModRef, inaccessibleOrArgMr,
-             inaccessibleOrArgMr, errnoMr, ModRefInfo::NoModRef,
-             ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/ModRefInfo::NoModRef,
+             /*arg_mem=*/inaccessibleOrArgMr,
+             /*inaccessible_mem=*/inaccessibleOrArgMr, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 MemoryEffectsAttr
 MemoryEffectsAttr::argumentOrErrnoMemOnly(MLIRContext *ctx, ModRefInfo argMr,
                                           ModRefInfo errnoMr) {
-  return get(ctx, ModRefInfo::NoModRef, argMr, ModRefInfo::NoModRef, errnoMr,
-             ModRefInfo::NoModRef, ModRefInfo::NoModRef);
+  return get(ctx, /*other=*/ModRefInfo::NoModRef, /*arg_mem=*/argMr,
+             /*inaccessible_mem=*/ModRefInfo::NoModRef, /*errno_mem=*/errnoMr,
+             /*target_mem0=*/ModRefInfo::NoModRef,
+             /*target_mem1=*/ModRefInfo::NoModRef);
 }
 
 FPAttr FPAttr::getZero(Type type) {
