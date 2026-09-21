@@ -8,3 +8,6 @@
 
 // RUN: %clang_cc1 -E -dM -triple aarch64-unknown-linux -fsanitize=thread %s | FileCheck %s --check-prefix=TSAN
 // TSAN: #define __SANITIZE_THREAD__ 1
+
+// RUN: %clang_cc1 -E -dM -triple aarch64-unknown-linux -fsanitize=concurrency %s | FileCheck %s --check-prefix=CSAN
+// CSAN: #define __SANITIZE_CONCURRENCY__ 1

@@ -40,8 +40,8 @@ static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type |
-    SanitizerKind::Thread | SanitizerKind::Memory | SanitizerKind::DataFlow |
-    SanitizerKind::NumericalStability;
+    SanitizerKind::Thread | SanitizerKind::Concurrency | SanitizerKind::Memory |
+    SanitizerKind::DataFlow | SanitizerKind::NumericalStability;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
@@ -53,7 +53,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
-    SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
+    SanitizerKind::Thread | SanitizerKind::Concurrency |
+    SanitizerKind::ObjCCast | SanitizerKind::KCFI |
     SanitizerKind::NumericalStability | SanitizerKind::Vptr |
     SanitizerKind::CFI | SanitizerKind::AllocToken;
 static const SanitizerMask RecoverableByDefault =
@@ -738,7 +739,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
                          SanitizerKind::Thread),
-      std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Thread,
+                     SanitizerKind::Memory | SanitizerKind::Concurrency),
+      std::make_pair(SanitizerKind::Concurrency,
+                     SanitizerKind::Thread | SanitizerKind::Address |
+                         SanitizerKind::Memory | SanitizerKind::Leak |
+                         SanitizerKind::Undefined),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
       std::make_pair(SanitizerKind::KernelAddress,
