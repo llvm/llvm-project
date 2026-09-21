@@ -24,6 +24,6 @@ define void @test(ptr %addr) {
 ; CHECK-DAG: attributes [[CONVMEM]] = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-DAG: attributes [[ATOM]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[NOMEM]] = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK-DAG: attributes [[CONV]] = { convergent nounwind }
+; CHECK-DAG: attributes [[CONV]] = { convergent nocallback nofree nounwind willreturn }
 
 declare float @llvm.pisa.cas.fatom.f32.p0(ptr, float, float, i8 immarg)
