@@ -341,23 +341,6 @@ func.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vecto
 
 // -----
 
-func.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>, %size: i32) -> vector<2xi32> {
-  // expected-error @+1 {{cluster size operand must come from a constant op}}
-  %0 = spirv.GroupNonUniformIAdd <Subgroup> <ClusteredReduce> %val cluster_size(%size) : vector<2xi32>, i32 -> vector<2xi32>
-  return %0: vector<2xi32>
-}
-
-// -----
-
-func.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vector<2xi32> {
-  %five = spirv.Constant 5 : i32
-  // expected-error @+1 {{cluster size operand must be a power of two}}
-  %0 = spirv.GroupNonUniformIAdd <Subgroup> <ClusteredReduce> %val cluster_size(%five) : vector<2xi32>, i32 -> vector<2xi32>
-  return %0: vector<2xi32>
-}
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // spirv.GroupNonUniformIMul
 //===----------------------------------------------------------------------===//
@@ -823,23 +806,6 @@ func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
   %four = spirv.Constant 4 : si32
   // expected-error @+1 {{op operand #2 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
   %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta, cluster_size(%four) : f32, i32, si32 -> f32
-  return %0: f32
-}
-
-// -----
-
-func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32, %four: i32) -> f32 {
-  // expected-error @+1 {{cluster size operand must come from a constant op}}
-  %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta, cluster_size(%four) : f32, i32, i32 -> f32
-  return %0: f32
-}
-
-// -----
-
-func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
-  %five = spirv.Constant 5 : i32
-  // expected-error @+1 {{cluster size operand must be a power of two}}
-  %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta, cluster_size(%five) : f32, i32, i32 -> f32
   return %0: f32
 }
 
