@@ -771,8 +771,9 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
 // emitted into module files so the distinction survives, and is not meant to
 // be written in user code.
 TYPE_PARSER(construct<CUDADataAttrSpec>(Parser<common::CUDADataAttr>{},
-    maybe(parenthesized(
-        construct<CUDADataAttrSpec::Implicit>("IMPLICIT" >> ok)))))
+    maybe(
+        extension<LanguageFeature::CUDAImplicitDataAttrSpelling>(parenthesized(
+            construct<CUDADataAttrSpec::Implicit>("IMPLICIT" >> ok))))))
 
 // CUDA-data-attr ->
 //     CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE | UNIFIED

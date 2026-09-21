@@ -23,6 +23,12 @@
 ! symbols, so a consumer without CUDA Fortran enabled is not rejected.
 ! RUN: cd %t && bbc -emit-hlfir -fopenacc use_acc.cuf -o /dev/null
 
+! The qualifier is spelled only in module files: the production is enabled by
+! a language feature that only the module-file reader turns on, so writing it
+! in user code is a syntax error.
+! RUN: cd %t && not bbc -emit-hlfir -fcuda -gpu=managed user_written.cuf -o - 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=NOTFORUSERS
+
 !--- def.cuf
 module m
   ! Every component here was attributed by the compiler, so an enclosing
@@ -74,3 +80,11 @@ end subroutine
 subroutine acc_only()
   use m
 end subroutine
+
+!--- user_written.cuf
+subroutine writes_the_qualifier()
+  real, allocatable, managed(implicit) :: a(:)
+end subroutine
+
+! NOTFORUSERS: user_written.cuf:{{[0-9]+}}:{{[0-9]+}}: error: expected entity declarations
+! NOTFORUSERS-NEXT: real, allocatable, managed(implicit) :: a(:)

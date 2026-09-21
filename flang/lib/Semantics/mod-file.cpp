@@ -1770,6 +1770,10 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   }
   options.features.Enable(common::LanguageFeature::OpenMP);
   options.features.Enable(common::LanguageFeature::CUDA);
+  // Module files may record that the compiler applied a CUDA data attribute
+  // itself, as MANAGED(IMPLICIT). That spelling exists only here.
+  options.features.Enable(
+      common::LanguageFeature::CUDAImplicitDataAttrSpelling);
   if (!isIntrinsic.value_or(false) && !notAModule) {
     // The search for this module file will scan non-intrinsic module
     // directories.  If a directory is in both the intrinsic and non-intrinsic
