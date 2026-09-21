@@ -48,8 +48,6 @@ void PluginManager::init() {
   do {                                                                         \
     Plugins.emplace_back(                                                      \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()));              \
-    if (strcmp(#Name, "host") == 0)                                            \
-      HostPlugin = Plugins.back().get();                                       \
   } while (false);
 #include "Shared/Targets.def"
 
@@ -487,15 +485,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
                                         sizeof(KernelEnv)) == OFFLOAD_SUCCESS;
           if (!ReadOk) {
             KernelEnv = KernelEnvironmentTy{};
-            // If no kernel environment is found, the host kernels are expected
-            // to run in Generic execution mode. Other backends expect to be run
-            // in Bare mode.
-            if (Device.RTL == PM->getHostPlugin())
-              KernelEnv.Configuration.ExecMode =
-                  llvm::omp::OMP_TGT_EXEC_MODE_GENERIC;
-            else
-              KernelEnv.Configuration.ExecMode =
-                  llvm::omp::OMP_TGT_EXEC_MODE_BARE;
+            KernelEnv.Configuration.ExecMode =
+                llvm::omp::OMP_TGT_EXEC_MODE_BARE;
             ODBG(ODT_Mapping)
                 << "Failed to read kernel environment for '" << Entry.SymbolName
                 << "', using default "
