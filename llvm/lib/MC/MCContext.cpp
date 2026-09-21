@@ -725,22 +725,10 @@ template <typename TAttr>
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          TAttr Attributes, MCSection *Parent,
                                          bool IsVirtual) {
-  std::string UniqueName(Name);
-  if (Parent) {
-    UniqueName.append("/").append(Parent->getName());
-    if (auto *P = static_cast<MCSectionGOFF *>(Parent)->getParent())
-      UniqueName.append("/").append(P->getName());
-  }
-  // Do the lookup. If we don't have a hit, return a new section.
-  auto [Iter, Inserted] = GOFFUniquingMap.try_emplace(UniqueName);
-  if (!Inserted)
-    return Iter->second;
-
-  StringRef CachedName = StringRef(Iter->first.c_str(), Name.size());
+  auto [Iter, Inserted] = GOFFUniquingMap.insert(Name);
   MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedName, Kind, IsVirtual, Attributes,
+      MCSectionGOFF(Iter->getKey(), Kind, IsVirtual, Attributes,
                     static_cast<MCSectionGOFF *>(Parent));
-  Iter->second = GOFFSection;
   return GOFFSection;
 }
 
