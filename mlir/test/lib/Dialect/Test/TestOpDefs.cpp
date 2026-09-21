@@ -1323,6 +1323,48 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// SegmentedRegionBranchOp / SegmentedRegionBranchTerminatorOp
+//===----------------------------------------------------------------------===//
+
+void SegmentedRegionBranchOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  populateRegionBranchOpInterfaceCanonicalizationPatterns(patterns,
+                                                          getOperationName());
+}
+
+void SegmentedRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getFirstRegion());
+  regions.emplace_back(&getSecondRegion());
+  if (!point.isParent())
+    regions.emplace_back(getOperation());
+}
+
+ValueRange
+SegmentedRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return {};
+  return successor.getSuccessor()->front().getArguments();
+}
+
+OperandRange
+SegmentedRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  return successor.getSuccessor() == &getFirstRegion() ? getFirst()
+                                                       : getSecond();
+}
+
+MutableOperandRange
+SegmentedRegionBranchTerminatorOp::getMutableSuccessorOperands(
+    RegionSuccessor successor) {
+  if (successor.isOperation())
+    return MutableOperandRange(getOperation(), getNumOperands(), 0);
+  auto parent = cast<SegmentedRegionBranchOp>((*this)->getParentOp());
+  return successor.getSuccessor() == &parent.getFirstRegion()
+             ? getFirstMutable()
+             : getSecondMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopBlockOp
 //===----------------------------------------------------------------------===//
 

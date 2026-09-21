@@ -164,6 +164,13 @@ public:
   virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
                                                  unsigned OpNum) const;
 
+  /// Return the register class to use for the register operand of an inline asm
+  /// memory operand with constraint \p C.
+  virtual const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const {
+    llvm_unreachable("target did not implement memory operand support");
+  }
+
   /// Returns true if MI is an instruction we are unable to reason about
   /// (like a call or something with unmodeled side effects).
   virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
@@ -1111,10 +1118,12 @@ public:
   /// (non-PC) registers as offsets or scaling values, which inherently
   /// tags the corresponding MachineOperand with OPERAND_PCREL.
   ///
-  /// @param MO The MachineOperand in question. MO.isReg() should always
-  /// be true.
+  /// @param MI The instruction containing the operand in question.
+  /// @param OpIdx The index of the operand in question. It should always be a
+  /// register operand.
   /// @return Whether this operand is allowed to be used PC-relatively.
-  virtual bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const {
+  virtual bool isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                           unsigned OpIdx) const {
     return false;
   }
 

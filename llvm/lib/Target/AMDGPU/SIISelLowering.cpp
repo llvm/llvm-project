@@ -2947,12 +2947,12 @@ static void processPSInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
 void SITargetLowering::allocateSpecialEntryInputVGPRs(
     CCState &CCInfo, MachineFunction &MF, const SIRegisterInfo &TRI,
     SIMachineFunctionInfo &Info) const {
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (Info.hasWorkItemIDX()) {
     Register Reg = AMDGPU::VGPR0;
-    MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+    MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), I32);
 
     CCInfo.AllocateReg(Reg);
     unsigned Mask =
@@ -2967,7 +2967,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
           ArgDescriptor::createRegister(AMDGPU::VGPR0, 0x3ff << 10));
     } else {
       unsigned Reg = AMDGPU::VGPR1;
-      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), I32);
 
       CCInfo.AllocateReg(Reg);
       Info.setWorkItemIDY(ArgDescriptor::createRegister(Reg));
@@ -2981,7 +2981,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
           ArgDescriptor::createRegister(AMDGPU::VGPR0, 0x3ff << 20));
     } else {
       unsigned Reg = AMDGPU::VGPR2;
-      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), I32);
 
       CCInfo.AllocateReg(Reg);
       Info.setWorkItemIDZ(ArgDescriptor::createRegister(Reg));
@@ -20751,7 +20751,7 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 // On older subtargets, global FP atomic instructions have a hardcoded FP mode
 // and do not support FP32 denormals, and only support v2f16/f64 denormals.
 static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
-  if (RMW->hasMetadata("amdgpu.ignore.denormal.mode"))
+  if (RMW->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
     return true;
 
   const fltSemantics &Flt = RMW->getType()->getScalarType()->getFltSemantics();
@@ -21469,16 +21469,18 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   Value *LoadedPrivate;
   if (RMW) {
     LoadedPrivate = Builder.CreateAlignedLoad(
-        RMW->getType(), CastToPrivate, RMW->getAlign(), "loaded.private");
+        RMW->getType(), CastToPrivate, RMW->getAlign(), RMW->isVolatile(),
+        "loaded.private");
 
     Value *NewVal = buildAtomicRMWValue(RMW->getOperation(), Builder,
                                         LoadedPrivate, RMW->getValOperand());
 
-    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign());
+    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign(),
+                               RMW->isVolatile());
   } else {
-    auto [ResultLoad, Equal] =
-        buildCmpXchgValue(Builder, CastToPrivate, CX->getCompareOperand(),
-                          CX->getNewValOperand(), CX->getAlign());
+    auto [ResultLoad, Equal] = buildCmpXchgValue(
+        Builder, CastToPrivate, CX->getCompareOperand(), CX->getNewValOperand(),
+        CX->getAlign(), CX->isVolatile());
 
     Value *Insert = Builder.CreateInsertValue(PoisonValue::get(CX->getType()),
                                               ResultLoad, 0);
