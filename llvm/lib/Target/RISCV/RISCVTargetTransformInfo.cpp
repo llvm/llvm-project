@@ -3518,12 +3518,7 @@ bool RISCVTTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 
 bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
                                               Align Alignment) const {
-  if (!isa<VectorType>(DataTy))
-    return false;
-
-  if (!isLegalMaskedLoadStore(DataTy, Alignment))
-    return false;
-  return true;
+  return isLegalMaskedLoadStore(DataTy, Alignment);
 }
 
 bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
