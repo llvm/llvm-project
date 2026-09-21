@@ -1596,10 +1596,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     SourceSize = Checker.EvaluateIntegerArgument(1);
 
     if (SourceSize && SourceSize->isNegative()) {
-      DiagRuntimeBehavior(
-          TheCall->getBeginLoc(), TheCall,
-          PDiag(diag::warn_fortify_source_negative_size)
-              << Checker.getFunctionName());
+      DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                          PDiag(diag::warn_fortify_source_negative_size)
+                              << Checker.getFunctionName());
       return;
     }
 
