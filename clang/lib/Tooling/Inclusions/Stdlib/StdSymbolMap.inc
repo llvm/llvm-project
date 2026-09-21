@@ -9,6 +9,7 @@
 // Generated from cppreference offline HTML book (modified on 2024-11-10).
 //===----------------------------------------------------------------------===//
 
+SYMBOL_MAP_BEGIN(0)
 SYMBOL(ATOMIC_BOOL_LOCK_FREE, None, <atomic>)
 SYMBOL(ATOMIC_CHAR16_T_LOCK_FREE, None, <atomic>)
 SYMBOL(ATOMIC_CHAR32_T_LOCK_FREE, None, <atomic>)
@@ -2289,6 +2290,8 @@ SYMBOL(nextafterf, std::, <cmath>)
 SYMBOL(nextafterf, None, <cmath>)
 SYMBOL(nextafterf, None, <math.h>)
 SYMBOL(nextafterl, std::, <cmath>)
+SYMBOL_MAP_END(0)
+SYMBOL_MAP_BEGIN(1)
 SYMBOL(nextafterl, None, <cmath>)
 SYMBOL(nextafterl, None, <math.h>)
 SYMBOL(nexttoward, std::, <cmath>)
@@ -3985,3 +3988,4 @@ SYMBOL(transform, std::views::, <ranges>)
 SYMBOL(values, std::views::, <ranges>)
 SYMBOL(zip, std::views::, <ranges>)
 SYMBOL(zip_transform, std::views::, <ranges>)
+SYMBOL_MAP_END(1)
