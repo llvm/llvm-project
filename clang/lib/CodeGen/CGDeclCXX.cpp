@@ -487,6 +487,10 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
       !isInNoSanitizeList(SanitizerKind::Thread, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::SanitizeThread);
 
+  if (getLangOpts().Sanitize.has(SanitizerKind::Concurrency) &&
+      !isInNoSanitizeList(SanitizerKind::Concurrency, Fn, Loc))
+    Fn->addFnAttr(llvm::Attribute::SanitizeConcurrency);
+
   if (getLangOpts().Sanitize.has(SanitizerKind::NumericalStability) &&
       !isInNoSanitizeList(SanitizerKind::NumericalStability, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);

@@ -1658,8 +1658,9 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
     CmdArgs.push_back("-lresolv");
 }
 
-// Host interceptor library for offload UBSan.
-static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
+template <typename Predicate>
+static bool hostNeedsOffloadRt(Compilation &C, const ToolChain &HostTC,
+                               Predicate NeedsRuntime) {
   if (HostTC.getTriple().isGPU())
     return false;
 
@@ -1677,12 +1678,23 @@ static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
            C.getDriver().getOffloadArchs(C, C.getArgs(), Kind, *DevTC)) {
         const ArgList &DevArgs = C.getArgsForToolChain(DevTC, BA, Kind);
         SanitizerArgs DevSan = DevTC->getSanitizerArgs(DevArgs, BA, Kind);
-        if (DevSan.needsUbsanRt() && !DevSan.requiresMinimalRuntime())
+        if (NeedsRuntime(DevSan))
           return true;
       }
     }
   }
   return false;
+}
+
+static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
+  return hostNeedsOffloadRt(C, HostTC, [](const SanitizerArgs &S) {
+    return S.needsUbsanRt() && !S.requiresMinimalRuntime();
+  });
+}
+
+static bool hostNeedsCsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
+  return hostNeedsOffloadRt(
+      C, HostTC, [](const SanitizerArgs &S) { return S.needsCsanRt(); });
 }
 
 static void
@@ -1695,8 +1707,10 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
                          SmallVectorImpl<StringRef> &RequiredSymbols) {
   assert(!TC.getTriple().isOSDarwin() && "it's not used by Darwin");
   const SanitizerArgs &SanArgs = TC.getSanitizerArgs(Args);
-  const bool NeedsOffloadRt = hostNeedsUbsanOffloadRt(C, TC);
-  const bool NeedsUbsanRt = SanArgs.needsUbsanRt() || NeedsOffloadRt;
+  const bool NeedsUbsanOffloadRt = hostNeedsUbsanOffloadRt(C, TC);
+  const bool NeedsCsanOffloadRt = hostNeedsCsanOffloadRt(C, TC);
+  const bool NeedsUbsanRt = SanArgs.needsUbsanRt() || NeedsUbsanOffloadRt;
+  const bool NeedsCsanRt = SanArgs.needsCsanRt() || NeedsCsanOffloadRt;
   // Collect shared runtimes.
   if (SanArgs.needsSharedRt()) {
     if (SanArgs.needsAsanRt()) {
@@ -1745,16 +1759,24 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     HelperStaticRuntimes.push_back("asan_static");
 
   // Offloading images can live in DSOs, the host interceptors must follow.
-  if (NeedsOffloadRt) {
+  if (NeedsUbsanOffloadRt) {
     NonWholeStaticRuntimes.push_back("ubsan_offload");
     RequiredSymbols.push_back("__ubsan_offload_init");
+  }
+  if (NeedsCsanOffloadRt) {
+    NonWholeStaticRuntimes.push_back("csan_offload");
+    RequiredSymbols.push_back("__csan_offload_init");
   }
 
   // Collect static runtimes.
   if (Args.hasArg(options::OPT_shared)) {
     // Don't link static runtimes into DSOs.
-    if (NeedsOffloadRt && !SanArgs.needsSharedRt() && !SanArgs.needsUbsanRt())
+    if (NeedsUbsanOffloadRt && !SanArgs.needsSharedRt() &&
+        !SanArgs.needsUbsanRt())
       StaticRuntimes.push_back("ubsan_standalone");
+    if (NeedsCsanOffloadRt && !SanArgs.needsSharedRt() &&
+        !SanArgs.needsCsanRt())
+      StaticRuntimes.push_back("csan");
     return;
   }
 
@@ -1813,6 +1835,8 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
       StaticRuntimes.push_back("ubsan_standalone");
     }
   }
+  if (!SanArgs.needsSharedRt() && NeedsCsanRt)
+    StaticRuntimes.push_back("csan");
   if (SanArgs.needsSafeStackRt()) {
     NonWholeStaticRuntimes.push_back("safestack");
     RequiredSymbols.push_back("__safestack_init");

@@ -198,6 +198,9 @@ SANITIZER("scudo", Scudo)
 // AllocToken
 SANITIZER("alloc-token", AllocToken)
 
+// ConcurrencySanitizer.
+SANITIZER("concurrency", Concurrency)
+
 // Magic group, containing all sanitizers. For example, "-fno-sanitize=all"
 // can be used to disable all the sanitizers.
 SANITIZER_GROUP("all", All, ~SanitizerMask())

@@ -9809,7 +9809,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
     if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal") &&
-        !ToolChainHasRT(TC, "ubsan_standalone"))
+        !ToolChainHasRT(TC, "ubsan_standalone") && !ToolChainHasRT(TC, "csan"))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;

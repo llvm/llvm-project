@@ -36,6 +36,7 @@ FunctionEffectAnalysis
 AddressSanitizer
 HardwareAssistedAddressSanitizer
 ThreadSanitizer
+ConcurrencySanitizer
 MemorySanitizer
 UndefinedBehaviorSanitizer
 DataFlowSanitizer
