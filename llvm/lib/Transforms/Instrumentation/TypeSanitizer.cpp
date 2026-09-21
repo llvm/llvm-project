@@ -154,6 +154,8 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
   Attr = Attr.addFnAttribute(C, Attribute::NoUnwind);
   Attribute::AttrKind SExtAttr =
       TargetLibraryInfo::getExtAttrForI32Param(TargetTriple, /*Signed=*/true);
+  Attribute::AttrKind BoolExtAttr =
+      TargetLibraryInfo::getExtAttrForBoolParam(TargetTriple);
 
   // Initialize the callbacks.  TODO: use TLI/emitLibFunc() for these functions.
   TysanCheck =
@@ -172,7 +174,7 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
 
   TysanIntrumentMemInst = M.getOrInsertFunction(
       "__tysan_instrument_mem_inst",
-      Attr.addParamAttribute(C, 3, Attribute::AttrKind::ZExt), IRB.getVoidTy(),
+      Attr.maybeAddParamAttribute(C, 3, BoolExtAttr), IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer of data to be written to
       IRB.getPtrTy(), // Pointer of data to write
       U64Ty,          // Size of the data in bytes
@@ -181,7 +183,7 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
 
   TysanInstrumentWithShadowUpdate = M.getOrInsertFunction(
       "__tysan_instrument_with_shadow_update",
-      Attr.addParamAttribute(C, 2, Attribute::AttrKind::ZExt)
+      Attr.maybeAddParamAttribute(C, 2, BoolExtAttr)
           .maybeAddParamAttribute(C, 4, SExtAttr),
       IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer to data to be read
