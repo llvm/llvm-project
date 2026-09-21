@@ -1319,6 +1319,47 @@ static bool isThreadYPrivate(acc::PrivateLocalOp privateLocal, bool allowBlock,
          });
 }
 
+/// True when \p op reads or writes privatized storage that every ThreadY row
+/// shares: the privatization is reduced across ThreadY, yet only one copy is
+/// materialized because ThreadY is not among its active dims. Lane 0 of every
+/// row then touches the same buffer, so reconverging per row would leave the
+/// rows racing with each other.
+static bool touchesWorkerSharedPrivate(Operation *op,
+                                       acc::ComputeRegionOp computeRegion) {
+  auto isThreadY = [](GPUParallelDimAttr dim) { return dim.isThreadY(); };
+  bool found = false;
+  op->walk([&](Operation *inner) {
+    for (Value operand : inner->getOperands()) {
+      acc::PrivateLocalOp privateLocal = getPrivateLocalForMemref(operand);
+      if (!privateLocal)
+        continue;
+      GPUParallelDimsAttr parDims =
+          getPrivateParDims(privateLocal, computeRegion);
+      if (!parDims || llvm::none_of(parDims.getArray(), isThreadY))
+        continue;
+      acc::ActiveParDimsAttr activeParDims =
+          acc::getActiveParDimsAttr(privateLocal);
+      if (!activeParDims || llvm::any_of(activeParDims.getArray(), isThreadY))
+        continue;
+      found = true;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  if (!found)
+    return false;
+  // A workgroup barrier may only be emitted where every thread reaches it.
+  // Rows of an enclosing ThreadY loop can have divergent trip counts, so a
+  // region nested in one keeps its per-row reconvergence.
+  for (scf::ParallelOp loop = op->getParentOfType<scf::ParallelOp>(); loop;
+       loop = loop->getParentOfType<scf::ParallelOp>()) {
+    GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(loop);
+    if (parDims && llvm::any_of(parDims.getArray(), isThreadY))
+      return false;
+  }
+  return true;
+}
+
 struct ThreadYBroadeningInfo {
   bool hasActiveWorkerCombine = false;
   bool hasExplicitInactiveCombine = false;
@@ -1822,8 +1863,16 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
 
   // GPU dialect named barriers do not have a means to create a custom barrier
   // id. Thus use nvvm directly.
+  //
+  // The barrier is non-`.aligned`: it synchronizes one row, and the rows of a
+  // workgroup do not all reach it (an enclosing worker loop is strided by
+  // blockDim.y, so rows can have different trip counts, and the barrier sits
+  // after a thread-predicated region). The `.aligned` form asserts the
+  // opposite, which lets the target duplicate the barrier into the arms of the
+  // surrounding branch so a warp reconverges at two points and deadlocks.
   assert(options.deviceType == mlir::acc::DeviceType::Nvidia);
-  NVVM::BarrierOp::create(rewriter, loc, barrierId32, numberOfThreads32);
+  NVVM::BarrierOp::create(rewriter, loc, barrierId32, numberOfThreads32,
+                          /*aligned=*/false);
 
   rewriter.setInsertionPointAfter(outerIf);
 }
@@ -2325,8 +2374,16 @@ void ACCCGToGPULowering::processPredicateRegion(
           bool predicatesThreadX = llvm::any_of(
               parDimsPair.second,
               [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
-          if (predicatesThreadX)
-            createPerRowBarrier(loc);
+          if (predicatesThreadX) {
+            // Storage shared by every worker row (reduced across ThreadY but
+            // materialized once per block) is read back by the other rows, so
+            // the whole workgroup has to reconverge; a per-row barrier leaves
+            // the rows racing with each other.
+            if (touchesWorkerSharedPrivate(interOp, computeRegion))
+              emitGPUBarrierWorkgroup(rewriter, loc);
+            else
+              createPerRowBarrier(loc);
+          }
         }
         // For acc routine ThreadY routines, skip barrier
       } else if (!parDimsPair.first.empty()) {
