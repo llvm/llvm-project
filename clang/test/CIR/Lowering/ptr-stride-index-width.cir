@@ -17,10 +17,10 @@ module {
 }
 
 // LLVM-LABEL: define ptr {{.*}}@minus_multi_use_as_ptr_stride(
-// LLVM-SAME: ptr [[PTR:%[[:alnum:]]+]], i32 [[N:%[[:alnum:]]+]], ptr [[OUT:%[[:alnum:]]+]])
-// LLVM:   [[NEG:%[[:alnum:]]+]] = sub nsw i32 0, [[N]]
+// LLVM-SAME: ptr [[PTR:%.+]], i32 [[N:%.+]], ptr [[OUT:%.+]])
+// LLVM:   [[NEG:%.+]] = sub nsw i32 0, [[N]]
 // LLVM:   store i32 [[NEG]], ptr [[OUT]]
-// LLVM:   [[EXT:%[[:alnum:]]+]] = sext i32 [[N]] to i64
-// LLVM:   [[WIDENED:%[[:alnum:]]+]] = sub i64 0, [[EXT]]
-// LLVM:   [[GEP:%[[:alnum:]]+]] = getelementptr i32, ptr [[PTR]], i64 [[WIDENED]]
+// LLVM:   [[EXT:%.+]] = sext i32 [[N]] to i64
+// LLVM:   [[WIDENED:%.+]] = sub i64 0, [[EXT]]
+// LLVM:   [[GEP:%.+]] = getelementptr i32, ptr [[PTR]], i64 [[WIDENED]]
 // LLVM:   ret ptr [[GEP]]
