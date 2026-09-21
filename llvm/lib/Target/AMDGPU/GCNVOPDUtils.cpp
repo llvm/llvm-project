@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -105,14 +106,15 @@ static bool canMapVOP3PToVOPD(const MachineInstr &MI) {
          getNamedOp(MI, AMDGPU::OpName::src2).getReg();
 }
 
-// In a VOPD3 whose OPX is a 64-bit operation an OPY VGPR source operand reads
-// back the wrong value if it names the last VGPR the wave owns.
-//
-// The number of VGPRs a wave owns is always a whole number of allocation
-// granules, so the last VGPR it owns is always the one just below a granule
-// boundary. A source which is not there cannot be it, whatever the wave's VGPR
-// count turns out to be. That count is deliberately not consulted: it is only
-// known once the whole call graph has been seen, at emission time.
+// In a VOPD3 whose OPX is a 64-bit operation, an OPY VGPR source operand reads
+// back the wrong value if it is the last VGPR the wave owns.
+// A wave always owns a whole number of VGPR allocation granules, so only a
+// register just below a granule boundary can be the last one. The wave also
+// owns at least as many VGPRs as this function uses, so a source which has a
+// register above it in use here cannot be the last one either.
+// The number of VGPRs the wave is actually given is not available until the
+// assembler has seen the whole module, but that can only come out above this
+// function's own usage, so this is conservatively correct.
 static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
                                    const MachineInstr &MIY) {
@@ -128,10 +130,11 @@ static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
   if (TII.getOpSize(MIX, VDstIdx) != 8)
     return false;
 
-  // Targets with this hazard do not support dynamic VGPR allocation.
   unsigned Granule =
-      AMDGPU::IsaInfo::getVGPRAllocGranule(ST, /*DynamicVGPRBlockSize=*/0);
+      AMDGPU::getVGPRAllocGranule(ST.getTargetID().getGPUKind(), ST.isWave32());
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  unsigned NumVGPRs = TRI->getNumUsedPhysRegs(
+      MF.getRegInfo(), AMDGPU::VGPR_32RegClass, /*IncludeCalls=*/false);
   for (AMDGPU::OpName Name :
        {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
     const MachineOperand *Src = TII.getNamedOperand(MIY, Name);
@@ -139,7 +142,8 @@ static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
     if (!Src || !Src->isReg() ||
         !AMDGPU::VGPR_32RegClass.contains(Src->getReg()))
       continue;
-    if ((TRI->getHWRegIndex(Src->getReg()) + 1) % Granule == 0)
+    unsigned Idx = TRI->getHWRegIndex(Src->getReg());
+    if ((Idx + 1) % Granule == 0 && Idx + 1 >= NumVGPRs)
       return true;
   }
   return false;
