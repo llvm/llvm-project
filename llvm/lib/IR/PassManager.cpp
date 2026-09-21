@@ -23,16 +23,18 @@ bool detail::shouldSkipOptimizationForOptBisect(IRUnitRef IR,
                                                 StringRef PassName) {
   LLVMContext *Ctx = nullptr;
   std::string IRName = "";
+  StringRef FuncName = "";
   if (const auto *M = dyn_cast<Module>(IR)) {
     Ctx = &M->getContext();
     IRName = "[module]";
   } else if (const auto *F = dyn_cast<Function>(IR)) {
     Ctx = &F->getContext();
     IRName = F->getName().str();
+    FuncName = F->getName();
   } else {
     llvm_unreachable("Tried to check skipping for an invalid IR type");
   }
-  return Ctx->getOptPassGate().shouldRunPass(PassName, IRName);
+  return Ctx->getOptPassGate().shouldRunPass(PassName, IRName, FuncName);
 }
 
 // Explicit template instantiations and specialization defininitions for core
