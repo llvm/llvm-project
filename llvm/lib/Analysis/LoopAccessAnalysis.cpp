@@ -1036,21 +1036,19 @@ public:
   void addPredicates(PredicatedScalarEvolution &PSE) const {
     ScalarEvolution &SE = *PSE.getSE();
     for (const auto &[Stride, L] : Limits) {
-      if (!L.NeedsPositive)
-        continue;
-      const SCEV *Zero = SE.getZero(Stride->getType());
-      PSE.addPredicate(
-          *SE.getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero));
-      LLVM_DEBUG(dbgs() << "LAA:   Adding positive-stride predicate for "
-                        << *Stride << "\n");
-    }
-    for (const auto &[Stride, L] : Limits) {
-      if (!L.Max)
-        continue;
-      PSE.addPredicate(*SE.getComparePredicate(ICmpInst::ICMP_SLE, Stride,
-                                               SE.getConstant(*L.Max)));
-      LLVM_DEBUG(dbgs() << "LAA:   Adding stride upper-limit predicate "
-                        << *Stride << " <= " << *L.Max << "\n");
+      if (L.NeedsPositive) {
+        const SCEV *Zero = SE.getZero(Stride->getType());
+        PSE.addPredicate(
+            *SE.getComparePredicate(ICmpInst::ICMP_SGT, Stride, Zero));
+        LLVM_DEBUG(dbgs() << "LAA:   Adding positive-stride predicate for "
+                          << *Stride << "\n");
+      }
+      if (L.Max) {
+        PSE.addPredicate(*SE.getComparePredicate(ICmpInst::ICMP_SLE, Stride,
+                                                 SE.getConstant(*L.Max)));
+        LLVM_DEBUG(dbgs() << "LAA:   Adding stride upper-limit predicate "
+                          << *Stride << " <= " << *L.Max << "\n");
+      }
     }
   }
 };
