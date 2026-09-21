@@ -10,12 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Pointer type definitions. See the PISA address-space specification:
+// Generic pointer type. See the PISA address-space specification:
 // https://intel.github.io/pisa/spaces_types.html#address-spaces
 def pisa_generic_ptr_ty  : LLVMQualPointerType<0>;  // (generic)*
-def pisa_global_ptr_ty   : LLVMQualPointerType<1>;  // (global)*
-def pisa_constant_ptr_ty : LLVMQualPointerType<2>;  // (constant)*
-def pisa_shared_ptr_ty   : LLVMQualPointerType<3>;  // (shared)*
 
 // Base classes.
 class PISAIntrinsic<list<LLVMType> ret_types, list<LLVMType> param_types = [],
