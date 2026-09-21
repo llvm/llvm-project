@@ -249,7 +249,7 @@ public:
       bool VisitVarDecl(VarDecl *V) override {
         auto *Init = V->getInit();
         if (V->isLocalVarDecl())
-          Checker->visitVarDecl(V, Init, DeclWithIssue);
+          Checker->visitVarDecl(V, V->getType(), Init, DeclWithIssue);
         return true;
       }
 
@@ -257,7 +257,8 @@ public:
         if (BO->isAssignmentOp()) {
           if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
             if (auto *V = dyn_cast<VarDecl>(VarRef->getDecl()))
-              Checker->visitVarDecl(V, BO->getRHS(), DeclWithIssue);
+              Checker->visitVarDecl(V, V->getType(), BO->getRHS(),
+                                    DeclWithIssue);
           }
         }
         return true;
@@ -314,7 +315,7 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitVarDecl(const VarDecl *V, const Expr *Value,
+  void visitVarDecl(const VarDecl *V, QualType SinkType, const Expr *Value,
                     const Decl *DeclWithIssue) const {
     if (shouldSkipVarDecl(V))
       return;
@@ -327,15 +328,15 @@ public:
         std::optional<bool> IsUncountedPtr = isUnsafePtr(Binding->getType());
         if (!IsUncountedPtr || !*IsUncountedPtr)
           continue;
-        reportBug(V, nullptr, BD, DeclWithIssue);
+        reportBug(V, V->getType(), nullptr, BD, DeclWithIssue);
       }
     }
 
-    std::optional<bool> IsUncountedPtr = isUnsafePtr(V->getType());
+    std::optional<bool> IsUncountedPtr = isUnsafePtr(SinkType);
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (Value && isPtrOriginSafe(V, Value, DeclWithIssue))
         return;
-      reportBug(V, Value, nullptr, DeclWithIssue);
+      reportBug(V, SinkType, Value, nullptr, DeclWithIssue);
     }
   }
 
@@ -372,40 +373,42 @@ public:
           if (Model->isSafeExpr(InitArgOrigin))
             return true;
 
-          if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
-            if (auto *MaybeGuardian =
-                    dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-              const auto *MaybeGuardianArgType =
-                  MaybeGuardian->getType().getTypePtr();
-              if (MaybeGuardianArgType) {
-                const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-                    MaybeGuardianArgType->getAsCXXRecordDecl();
-                if (MaybeGuardianArgCXXRecord) {
-                  if (MaybeGuardian->isLocalVarDecl() &&
-                      (Model->isSafePtr(MaybeGuardianArgCXXRecord) ||
-                       isRefcountedStringsHack(MaybeGuardian)) &&
-                      isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
-                    return true;
-                }
-              }
-
-              if (isa<ParmVarDecl>(MaybeGuardian)) {
-                if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue)) {
-                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(
-                          FD->getBody()))
-                    return true;
-                }
-                if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue)) {
-                  if (GuardianVisitor{MaybeGuardian}.TraverseStmt(
-                          MD->getBody()))
-                    return true;
-                }
-              }
-            }
-          }
+          if (hasGuardian(V, InitArgOrigin, DeclWithIssue))
+            return true;
 
           return false;
         });
+  }
+
+  bool hasGuardian(const VarDecl *V, const Expr *InitArgOrigin,
+                   const Decl *DeclWithIssue) const {
+    auto *Ref = dyn_cast<DeclRefExpr>(InitArgOrigin);
+    if (!Ref)
+      return false;
+
+    auto *MaybeGuardian = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl());
+    if (!MaybeGuardian)
+      return false;
+
+    QualType GuardianType = MaybeGuardian->getType();
+    if (!GuardianType.isNull()) {
+      if (auto *Record = GuardianType->getAsCXXRecordDecl()) {
+        if (MaybeGuardian->isLocalVarDecl() &&
+            (Model->isSafePtr(Record) ||
+             isRefcountedStringsHack(MaybeGuardian)) &&
+            isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
+          return true;
+      }
+    }
+
+    if (isa<ParmVarDecl>(MaybeGuardian)) {
+      if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue))
+        return GuardianVisitor{MaybeGuardian}.TraverseStmt(FD->getBody());
+      if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue))
+        return GuardianVisitor{MaybeGuardian}.TraverseStmt(MD->getBody());
+    }
+
+    return false;
   }
 
   bool shouldSkipVarDecl(const VarDecl *V) const {
@@ -417,8 +420,8 @@ public:
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
-  void reportBug(const VarDecl *V, const Expr *Value, const Decl *BindingDecl,
-                 const Decl *DeclWithIssue) const {
+  void reportBug(const VarDecl *V, QualType SinkType, const Expr *Value,
+                 const Decl *BindingDecl, const Decl *DeclWithIssue) const {
     assert(V);
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
@@ -427,7 +430,7 @@ public:
       Os << "Parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is a ";
-      printPointerTypeAndType(Os, V->getType());
+      printPointerTypeAndType(Os, SinkType);
 
       SourceLocation ExprLoc = (Value) ? Value->getExprLoc() : V->getLocation();
       PathDiagnosticLocation BSLoc(ExprLoc, BR->getSourceManager());
@@ -450,7 +453,7 @@ public:
       else
         printQuotedQualifiedName(Os, V);
       Os << " is a ";
-      printPointerTypeAndType(Os, V->getType());
+      printPointerTypeAndType(Os, SinkType);
 
       PathDiagnosticLocation BSLoc(V->getLocation(), BR->getSourceManager());
       auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
