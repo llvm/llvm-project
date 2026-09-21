@@ -6292,8 +6292,7 @@ define i1 @diff_ugt_implies_icmp_eq(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[DIFF]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %diff = sub i64 %x, %y
@@ -6310,8 +6309,7 @@ define i1 @diff_ugt_implies_icmp_ne_commuted(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[DIFF]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %diff = sub i64 %x, %y
@@ -6328,8 +6326,7 @@ define i1 @diff_sgt_implies_icmp_eq(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[DIFF]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %diff = sub i8 %x, %y
@@ -6346,8 +6343,7 @@ define i1 @diff_slt_implies_icmp_eq(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[DIFF]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %diff = sub i8 %x, %y
@@ -6366,8 +6362,7 @@ define i1 @ptrdiff_sgt_implies_icmp_eq(ptr %p0, ptr %p1) {
 ; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[DIFF]], 7
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P0]], [[P1]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %i0 = ptrtoint ptr %p0 to i64
@@ -6387,8 +6382,7 @@ define i1 @diff_ugt_dom_cond_implies_icmp_eq(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i64 [[DIFF]], 1
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -6415,8 +6409,7 @@ define i1 @diff_sge_dom_cond_false_implies_icmp_ne(i64 %x, i64 %y) {
 ; CHECK:       [[IF_THEN]]:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %diff = sub i64 %x, %y

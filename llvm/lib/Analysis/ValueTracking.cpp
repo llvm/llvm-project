@@ -10048,12 +10048,13 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
       return true;
   }
 
-  // a - b == NonZero -> a != b
-  // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
+  // (a - b) pred C -> a != b, if 0 pred C is false
+  // (ptrtoint(a) - ptrtoint(b)) pred C -> a != b, if 0 pred C is false
   const APInt *L1C;
   Value *A, *B;
-  if (LPred == ICmpInst::ICMP_EQ && ICmpInst::isEquality(RPred) &&
-      match(L1, m_APInt(L1C)) && !L1C->isZero() &&
+  if (ICmpInst::isEquality(RPred) && match(L1, m_APInt(L1C)) &&
+      !ConstantRange::makeExactICmpRegion(LPred, *L1C)
+           .contains(APInt::getZero(L1C->getBitWidth())) &&
       match(L0, m_Sub(m_Value(A), m_Value(B))) &&
       ((A == R0 && B == R1) || (A == R1 && B == R0) ||
        (match(A, m_PtrToIntOrAddr(m_Specific(R0))) &&
@@ -10967,13 +10968,18 @@ void llvm::findValuesAffectedByCondition(
       } else {
         AddCmpOperands(A, B);
         if (HasRHSC) {
+          Value *Y;
           // Handle (A + C1) u< C2, which is the canonical form of
           // A > C3 && A < C4.
           if (match(A, m_AddLike(m_Value(X), m_ConstantInt())))
             AddAffected(X);
+          // X - Y pred C, which implies X != Y if 0 pred C is false.
+          else if (match(A, m_Sub(m_Value(X), m_Value(Y)))) {
+            AddAffected(X);
+            AddAffected(Y);
+          }
 
           if (ICmpInst::isUnsigned(Pred)) {
-            Value *Y;
             // X & Y u> C    -> X >u C && Y >u C
             // X | Y u< C    -> X u< C && Y u< C
             // X nuw+ Y u< C -> X u< C && Y u< C
