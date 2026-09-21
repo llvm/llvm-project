@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=aarch64 \
 # RUN:   -aarch64-enable-subreg-liveness-tracking \
 # RUN:   -run-pass=register-coalescer -debug-only=regalloc \
-# RUN:   -o /dev/null %s 2>&1 | FileCheck %s
+# RUN:   -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Check that removing an identity copy marks non-PHI live-through subranges for
