@@ -14,13 +14,13 @@ define ptr @callbr_result_exit_value(ptr %a0) {
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq ptr [[A0]], [[OUT]]
 ; CHECK-NEXT:    br i1 [[CMP0]], label %[[END:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[OUT1:%.*]] = ptrtoaddr ptr [[OUT]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[OUT1]], [[A02]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A0]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[OUT1:%.*]] = ptrtoaddr ptr [[OUT]] to i64
-; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[OUT1]], [[A02]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A0]], i64 [[DIFF]]
 ; CHECK-NEXT:    ret ptr [[SCEVGEP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret ptr [[A0]]
