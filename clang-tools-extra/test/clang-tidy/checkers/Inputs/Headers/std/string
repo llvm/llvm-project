@@ -28,6 +28,7 @@ struct basic_string {
   basic_string(const C *p, size_type count);
   basic_string(const C *b, const C *e);
   basic_string(size_t, C);
+  basic_string(const basic_string &str, size_type pos, size_type n = npos);
   operator basic_string_view<C, T>() const;
 
   ~basic_string();
@@ -44,6 +45,8 @@ struct basic_string {
   _Type& append(const C *s, size_type n);
   _Type& assign(const C *s);
   _Type& assign(const C *s, size_type n);
+  _Type& assign(size_type count, C ch);
+  _Type& assign(const basic_string &str, size_type pos, size_type n = npos);
 
   int compare(const _Type&) const;
   int compare(const C* s) const;
