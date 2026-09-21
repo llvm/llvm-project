@@ -13,6 +13,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
@@ -119,17 +120,23 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
-  /// \Returns the combined vector type for \p Bndl, even when the element types
-  /// differ. For example: i8,i8,i16 will return <4 x i8>. \Returns null if
-  /// types are of mixed float/integer types.
+  /// \returns the combined vector type for \p Bndl, even when the element
+  /// types differ. The element type is the narrowest one in \p Bndl, so
+  /// i8,i8,i16 returns <4 x i8>. When the element types are not all the same,
+  /// for example i32,float or double,ptr, the element type is an integer of
+  /// the narrowest bitwidth. Values of the original types are recovered by
+  /// reinterpreting the bits of each lane.
   static Type *getCombinedVectorTypeFor(ArrayRef<Instruction *> Bndl,
                                         const DataLayout &DL) {
     assert(!Bndl.empty() && "Expected non-empty Bndl!");
     unsigned TotalBits = 0;
     unsigned MinElmBits = std::numeric_limits<unsigned>::max();
     Type *MinElmTy = nullptr;
+    Type *FirstElmTy = getElementType(Utils::getExpectedType(Bndl[0]));
+    bool SameElmTy = true;
     for (auto [Idx, V] : enumerate(Bndl)) {
       Type *ElmTy = getElementType(Utils::getExpectedType(V));
+      SameElmTy &= ElmTy == FirstElmTy;
 
       unsigned ElmBits = Utils::getNumBits(ElmTy, DL);
       TotalBits += ElmBits * VecUtils::getNumLanes(V);
@@ -138,6 +145,8 @@ public:
         MinElmTy = ElmTy;
       }
     }
+    if (!SameElmTy)
+      MinElmTy = IntegerType::get(Bndl[0]->getContext(), MinElmBits);
     unsigned NumElms = TotalBits / MinElmBits;
     return FixedVectorType::get(MinElmTy, NumElms);
   }

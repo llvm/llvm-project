@@ -30,8 +30,8 @@ define void @mixed_int_float(ptr %ptr0) {
 define void @mixed_int_vector_float(ptr %ptr) {
 ; CHECK-LABEL: define void @mixed_int_vector_float(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <4 x half>, ptr [[PTR]], align 1, !sandboxvec [[META1:![0-9]+]]
-; CHECK-NEXT:    store <4 x half> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <4 x i16>, ptr [[PTR]], align 1, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    store <4 x i16> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr_4 = getelementptr inbounds i8, ptr %ptr, i64 4
@@ -66,8 +66,8 @@ define void @mixed_int_pointer(ptr %ptr) {
 define void @mixed_dboule_pointer(ptr %ptr) {
 ; CHECK-LABEL: define void @mixed_dboule_pointer(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x double>, ptr [[PTR]], align 1, !sandboxvec [[META3:![0-9]+]]
-; CHECK-NEXT:    store <2 x double> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i64>, ptr [[PTR]], align 1, !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META3]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr_8 = getelementptr inbounds i8, ptr %ptr, i64 8
@@ -413,7 +413,7 @@ define amdgpu_kernel void @merge_global_store_2_constants_i32_f32(ptr addrspace(
 define void @const_int_reinterpreted_as_float_lane(ptr %ptr) {
 ; CHECK-LABEL: define void @const_int_reinterpreted_as_float_lane(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <2 x float> <float 1.000000e+00, float 6.389920e-43>, ptr [[PTR]], align 1, !sandboxvec [[META19:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 1065353216, i32 456>, ptr [[PTR]], align 1, !sandboxvec [[META19:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.4 = getelementptr i8, ptr %ptr, i64 4
@@ -441,7 +441,7 @@ define void @const_global_ptr_in_int_lane(ptr %ptr) {
 define void @const_global_ptr_in_double_lane(ptr %ptr) {
 ; CHECK-LABEL: define void @const_global_ptr_in_double_lane(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <2 x double> <double 1.000000e+00, double bitcast (i64 ptrtoint (ptr @g to i64) to double)>, ptr [[PTR]], align 1, !sandboxvec [[META21:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR]], align 1, !sandboxvec [[META21:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -454,7 +454,7 @@ define void @const_global_ptr_in_double_lane(ptr %ptr) {
 define void @const_double_in_ptr_lane(ptr %ptr) {
 ; CHECK-LABEL: define void @const_double_in_ptr_lane(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <2 x ptr> <ptr null, ptr inttoptr (i64 4607182418800017408 to ptr)>, ptr [[PTR]], align 1, !sandboxvec [[META22:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 0, i64 4607182418800017408>, ptr [[PTR]], align 1, !sandboxvec [[META22:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -467,7 +467,7 @@ define void @const_double_in_ptr_lane(ptr %ptr) {
 define void @const_ptrtoint_constexpr(ptr %ptr) {
 ; CHECK-LABEL: define void @const_ptrtoint_constexpr(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <2 x double> <double 1.000000e+00, double bitcast (i64 ptrtoint (ptr @g to i64) to double)>, ptr [[PTR]], align 1, !sandboxvec [[META23:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr @g to i64)>, ptr [[PTR]], align 1, !sandboxvec [[META23:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -480,7 +480,7 @@ define void @const_ptrtoint_constexpr(ptr %ptr) {
 define void @const_gep_constexpr(ptr %ptr) {
 ; CHECK-LABEL: define void @const_gep_constexpr(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <2 x double> <double 1.000000e+00, double bitcast (i64 ptrtoint (ptr getelementptr (i32, ptr @arr, i64 2) to i64) to double)>, ptr [[PTR]], align 1, !sandboxvec [[META24:![0-9]+]]
+; CHECK-NEXT:    store <2 x i64> <i64 4607182418800017408, i64 ptrtoint (ptr getelementptr (i32, ptr @arr, i64 2) to i64)>, ptr [[PTR]], align 1, !sandboxvec [[META24:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -492,7 +492,7 @@ define void @const_gep_constexpr(ptr %ptr) {
 define void @const_scalar_poison(ptr %ptr) {
 ; CHECK-LABEL: define void @const_scalar_poison(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <2 x float> <float 1.000000e+00, float poison>, ptr [[PTR]], align 1, !sandboxvec [[META25:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> <i32 1065353216, i32 poison>, ptr [[PTR]], align 1, !sandboxvec [[META25:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.4 = getelementptr i8, ptr %ptr, i64 4
@@ -555,7 +555,7 @@ define void @const_null_ptr_split_into_i32_lanes(ptr %ptr) {
 define void @const_i128_split_into_ptr_lanes(ptr %ptr) {
 ; CHECK-LABEL: define void @const_i128_split_into_ptr_lanes(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <4 x ptr> <ptr null, ptr null, ptr inttoptr (i64 5 to ptr), ptr null>, ptr [[PTR]], align 1, !sandboxvec [[META29:![0-9]+]]
+; CHECK-NEXT:    store <4 x i64> <i64 0, i64 0, i64 5, i64 0>, ptr [[PTR]], align 1, !sandboxvec [[META29:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -570,7 +570,7 @@ define void @const_i128_split_into_ptr_lanes(ptr %ptr) {
 define void @const_i32_split_into_half_lanes(ptr %ptr) {
 ; CHECK-LABEL: define void @const_i32_split_into_half_lanes(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <4 x half> <half 1.000000e+00, half 2.000000e+00, half 4.172330e-07, half 0.000000e+00>, ptr [[PTR]], align 1, !sandboxvec [[META30:![0-9]+]]
+; CHECK-NEXT:    store <4 x i16> <i16 15360, i16 16384, i16 7, i16 0>, ptr [[PTR]], align 1, !sandboxvec [[META30:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.2 = getelementptr i8, ptr %ptr, i64 2
@@ -585,7 +585,7 @@ define void @const_i32_split_into_half_lanes(ptr %ptr) {
 define void @const_float_split_into_bfloat_lanes(ptr %ptr) {
 ; CHECK-LABEL: define void @const_float_split_into_bfloat_lanes(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <4 x bfloat> <bfloat 1.000000e+00, bfloat 2.000000e+00, bfloat 0.000000e+00, bfloat 3.000000e+00>, ptr [[PTR]], align 1, !sandboxvec [[META31:![0-9]+]]
+; CHECK-NEXT:    store <4 x i16> <i16 16256, i16 16384, i16 0, i16 16448>, ptr [[PTR]], align 1, !sandboxvec [[META31:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.2 = getelementptr i8, ptr %ptr, i64 2
@@ -613,7 +613,7 @@ define void @const_i16_split_into_i8_lanes(ptr %ptr) {
 define void @const_mixed_widths_in_float_lanes(ptr %ptr) {
 ; CHECK-LABEL: define void @const_mixed_widths_in_float_lanes(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <8 x float> <float 1.401300e-45, float 0.000000e+00, float 0.000000e+00, float 2.000000e+00, float 0.000000e+00, float 0.000000e+00, float 3.000000e+00, float 4.000000e+00>, ptr [[PTR]], align 1, !sandboxvec [[META33:![0-9]+]]
+; CHECK-NEXT:    store <8 x i32> <i32 1, i32 0, i32 0, i32 1073741824, i32 0, i32 0, i32 1077936128, i32 1082130432>, ptr [[PTR]], align 1, !sandboxvec [[META33:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -647,7 +647,7 @@ define void @const_data_vectors(ptr %ptr) {
 define void @const_aggregate_zero(ptr %ptr) {
 ; CHECK-LABEL: define void @const_aggregate_zero(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <4 x float> <float 0.000000e+00, float 0.000000e+00, float 7.006490e-45, float 8.407790e-45>, ptr [[PTR]], align 1, !sandboxvec [[META35:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 0, i32 0, i32 5, i32 6>, ptr [[PTR]], align 1, !sandboxvec [[META35:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -685,7 +685,7 @@ define void @const_splat_int_vector(ptr %ptr) {
 define void @const_splat_fp_vector(ptr %ptr) {
 ; CHECK-LABEL: define void @const_splat_fp_vector(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <4 x float> <float 2.000000e+00, float 2.000000e+00, float 1.261170e-44, float 1.401300e-44>, ptr [[PTR]], align 1, !sandboxvec [[META38:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> <i32 1073741824, i32 1073741824, i32 9, i32 10>, ptr [[PTR]], align 1, !sandboxvec [[META38:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.8 = getelementptr i8, ptr %ptr, i64 8
@@ -698,7 +698,7 @@ define void @const_splat_fp_vector(ptr %ptr) {
 define void @const_vector_of_ptrs(ptr %ptr) {
 ; CHECK-LABEL: define void @const_vector_of_ptrs(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    store <4 x ptr> <ptr @g, ptr null, ptr inttoptr (i64 3 to ptr), ptr inttoptr (i64 4 to ptr)>, ptr [[PTR]], align 1, !sandboxvec [[META39:![0-9]+]]
+; CHECK-NEXT:    store <4 x i64> <i64 ptrtoint (ptr @g to i64), i64 0, i64 3, i64 4>, ptr [[PTR]], align 1, !sandboxvec [[META39:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr.16 = getelementptr i8, ptr %ptr, i64 16
