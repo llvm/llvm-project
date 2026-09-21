@@ -43,8 +43,8 @@ public:
   }
 };
 
-#define LIST_CEIL_TESTS(T, func)                                               \
-  using LlvmLibcCeilTest = CeilTest<T>;                                        \
-  TEST_F(LlvmLibcCeilTest, Range) { testRange(&func); }
+#define LIST_CEIL_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = CeilTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_CEILTEST_H

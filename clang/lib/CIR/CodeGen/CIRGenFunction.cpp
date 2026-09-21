@@ -552,10 +552,14 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     fn->setAttr(cir::CIRDialect::getStrictFPAttrName(),
                 mlir::UnitAttr::get(fn.getContext()));
   }
-  prologueCleanupDepth = ehStack.stable_begin();
-
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
+
+  // Wrap the rest of the function in a filter try when this declaration has
+  // a dynamic exception specification. Parameter cleanups are pushed after
+  // this so they nest inside the specification, matching classic codegen.
+  emitStartEHSpec(d);
+  prologueCleanupDepth = ehStack.stable_begin();
 
   // Determine the function body begin location for the prolog.
   // If fd is null or has no body, use startLoc as fallback.
@@ -688,6 +692,8 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   assert(deferredConditionalCleanupStack.empty() &&
          "deferred conditional cleanups were not consumed by a "
          "FullExprCleanupScope");
+
+  emitEndEHSpec(curCodeDecl);
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
@@ -825,10 +831,12 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       llvm_unreachable("no definition for normal function");
     }
 
+    // Finish the function (including closing a dynamic exception
+    // specification try) before verifying so the try body is terminated.
+    finishFunction(bodyRange.getEnd());
+
     if (mlir::failed(fn.verifyBody()))
       return nullptr;
-
-    finishFunction(bodyRange.getEnd());
   }
 
   if (getLangOpts().OpenCL && funcDecl->hasAttr<DeviceKernelAttr>())
