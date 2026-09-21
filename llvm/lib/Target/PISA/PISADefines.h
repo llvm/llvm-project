@@ -20,6 +20,7 @@ enum class Swizzle : unsigned { X, Y, Z, W, XYZW, XY, ZW, NONE };
 constexpr unsigned SimdSize = 32;
 
 // Keep these in sync with PISAInstrInfo.td!
+// Enumerator names preserve the spelling of PISA cache-control modifiers.
 enum class LdCacheCtrl : unsigned {
   Default = 0,
   L1c = 1,
