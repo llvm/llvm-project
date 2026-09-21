@@ -76,7 +76,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   PoolSizeMax = UserPoolSize << 20; // Covert MB to B.
   PoolSize = 0;
 
-  auto Context = Allocator->ZeContext;
+  auto Context = Allocator->L0Context->getZeContext();
   const auto Device = Allocator->Device;
 
   // Check page size used for this allocation kind to decide minimum.
@@ -380,13 +380,11 @@ bool MemAllocatorTy::MemAllocInfoMapTy::remove(void *Ptr,
 }
 
 Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
-                                      const L0OptionsTy &Options,
-                                      ze_context_handle_t ZeCtx) {
+                                      const L0OptionsTy &Options) {
   SupportsLargeMem = L0Device.supportsLargeMem();
   IsHostMem = false;
   Device = &L0Device;
   L0Context = &L0Device.getL0Context();
-  ZeContext = ZeCtx;
   for (auto Kind : {TARGET_ALLOC_DEVICE, TARGET_ALLOC_SHARED}) {
     if (Options.MemPoolConfig[Kind].Use) {
       std::lock_guard<std::mutex> Lock(Mtx);
@@ -406,12 +404,10 @@ Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
 }
 
 Error MemAllocatorTy::initHostPool(L0ContextTy &Driver,
-                                   const L0OptionsTy &Option,
-                                   ze_context_handle_t ZeCtx) {
+                                   const L0OptionsTy &Option) {
   SupportsLargeMem = Driver.supportsLargeMem();
   IsHostMem = true;
   L0Context = &Driver;
-  ZeContext = ZeCtx;
   if (Option.MemPoolConfig[TARGET_ALLOC_HOST].Use) {
     std::lock_guard<std::mutex> Lock(Mtx);
     Pools[TARGET_ALLOC_HOST] = std::make_unique<MemPoolTy>();
@@ -658,7 +654,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
   }
 
   auto zeDevice = Device ? Device->getZeDevice() : nullptr;
-  auto zeContext = ZeContext;
+  auto zeContext = L0Context->getZeContext();
   bool MakeResident = false;
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
@@ -694,7 +690,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
 }
 
 Error MemAllocatorTy::deallocFromL0(void *Ptr) {
-  CALL_ZE_RET_ERROR(zeMemFree, ZeContext, Ptr);
+  CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
   ODBG(OLDT_Alloc) << "Freed device pointer " << Ptr;
   return Plugin::success();
 }

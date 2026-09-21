@@ -250,20 +250,13 @@ class MemAllocatorTy {
     /// Remove allocation information for the given memory location.
     bool remove(void *Ptr, MemAllocInfoTy *Removed = nullptr);
 
-    /// Finds allocation information for the given memory location. Ptr may
-    /// point anywhere inside the allocation.
+    /// Finds allocation information for the given memory location.
     const MemAllocInfoTy *find(void *Ptr) const {
-      if (Map.empty())
+      auto AllocInfo = Map.find(Ptr);
+      if (AllocInfo == Map.end())
         return nullptr;
-      auto I = Map.upper_bound(Ptr);
-      if (I == Map.begin())
-        return nullptr;
-      --I;
-      uintptr_t PtrAsInt = reinterpret_cast<uintptr_t>(Ptr);
-      uintptr_t Base = reinterpret_cast<uintptr_t>(I->first);
-      if (PtrAsInt >= Base + I->second.ReqSize)
-        return nullptr;
-      return &I->second;
+      else
+        return &AllocInfo->second;
     }
 
     /// Check if the map contains the given pointer and offset.
@@ -294,11 +287,6 @@ class MemAllocatorTy {
 
   /// L0 context to use.
   const L0ContextTy *L0Context = nullptr;
-  /// ze_context used for allocations. Normally matches
-  /// L0Context->getZeContext(), but for pools owned by a user-created
-  /// plugin context this holds that context's ze_context so memory ends
-  /// up in the ze_context the caller's queues use.
-  ze_context_handle_t ZeContext = nullptr;
   /// L0 device to use.
   L0DeviceTy *Device = nullptr;
   /// Whether the device supports large memory allocation.
@@ -389,11 +377,8 @@ public:
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
   ~MemAllocatorTy() = default;
 
-  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option,
-                        ze_context_handle_t ZeCtx);
-  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option,
-                     ze_context_handle_t ZeCtx);
-  ze_context_handle_t getZeContext() const { return ZeContext; }
+  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
+  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
   void updateMaxAllocSize(L0DeviceTy &L0Device);
 
   /// Release resources and report statistics if requested.
