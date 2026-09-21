@@ -100,3 +100,21 @@ void arg_overaligned_derived_hfa(OveralignedDerivedHFA d) {}
 // NOHFAALIGN: define{{.*}} void @arg_overaligned_derived_hfa([2 x double] %{{.*}})
 
 }
+
+// C++ empty records occupy a byte and are not ignored as AAPCS arguments.
+// GNU zero-length arrays produce sizeof == 0, which is ignored in every
+// AArch64 ABI, including C++ AAPCS.
+struct ZeroSize {
+  int arr[0];
+};
+struct NestedZeroSize {
+  ZeroSize inner;
+};
+
+extern "C" {
+void arg_zerosize(ZeroSize z) {}
+// CHECK: define{{.*}} void @arg_zerosize()
+
+void arg_nested_zerosize(NestedZeroSize z) {}
+// CHECK: define{{.*}} void @arg_nested_zerosize()
+}
