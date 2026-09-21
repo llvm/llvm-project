@@ -34,10 +34,9 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 
 #include "llvm/Support/Error.h"
@@ -115,25 +114,10 @@ createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB) {
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
                           unsigned SlabAllocateSize) {
-  llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = llvm::orc::lookupAndApply(
-          EPC.getExecutionSession().getBootstrapJITDylib(),
-          {llvm::orc::recordAddr(
-               llvm::orc::rt::sps_ci::SharedMemoryMapperInstanceName,
-               &SAs.Instance),
-           llvm::orc::recordAddr(
-               llvm::orc::rt::sps_ci::SharedMemoryMapperReserve::Name,
-               &SAs.Reserve),
-           llvm::orc::recordAddr(
-               llvm::orc::rt::sps_ci::SharedMemoryMapperInitialize::Name,
-               &SAs.Initialize),
-           llvm::orc::recordAddr(
-               llvm::orc::rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
-               &SAs.Deinitialize),
-           llvm::orc::recordAddr(
-               llvm::orc::rt::sps_ci::SharedMemoryMapperRelease::Name,
-               &SAs.Release)}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = llvm::orc::sps::createSharedMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 
   size_t SlabSize;
   if (llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows())
@@ -145,7 +129,7 @@ createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
     SlabSize = SlabAllocateSize;
 
   return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
-      llvm::orc::SharedMemoryMapper>(SlabSize, EPC, SAs);
+      llvm::orc::SharedMemoryMapper>(SlabSize, ES, std::move(*B));
 }
 
 static llvm::Expected<

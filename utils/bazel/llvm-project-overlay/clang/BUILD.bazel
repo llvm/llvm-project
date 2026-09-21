@@ -2317,6 +2317,7 @@ cc_library(
     hdrs = glob([
         "include/clang/Serialization/*.h",
     ]),
+    features = ["-layering_check"],
     includes = ["include"],
     textual_hdrs = glob([
         "include/clang/Serialization/*.def",
@@ -3389,6 +3390,7 @@ cc_library(
         ":codegen",
         ":frontend",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:IPO",
         "//llvm:Linker",
         "//llvm:Support",

@@ -47,7 +47,7 @@ def X86System : SystemRuntimeLibrary<isX86,
 // CHECK: AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
 // CHECK-NEXT:     if (isLibraryAvailable("compiler-rt"))
-// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, EABIVersion, ABIName, LongDoubleFormat);
+// CHECK-NEXT:       setAvailableLibFuncs_compiler_rt(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
 // CHECK-NEXT:     if (isLibraryAvailable("libm"))
-// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, EABIVersion, ABIName, LongDoubleFormat);
+// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
 // CHECK-NOT:   setUnavailable

@@ -181,9 +181,6 @@ public:
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (isAllocInit(E))
           return;
-        auto SelectorName = E->getSelector().getNameForSlot(0);
-        if (SelectorName == "isEqual" || SelectorName == "isEqualToString")
-          return;
         reportBugOnReceiver(E->getMethodDecl(), Receiver, D);
       }
     }

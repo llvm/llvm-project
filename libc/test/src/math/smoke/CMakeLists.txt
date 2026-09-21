@@ -1437,22 +1437,14 @@ add_fp_unittest(
     expf_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.expf
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  expf_static_rounding_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    expf_static_rounding_test.cpp
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.src.__support.math.expf
+    libc.src.__support.math.expf_double_eval
+    libc.src.__support.math.expf_float_eval
     libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
 )
+
 
 add_fp_unittest(
   expf16_test
@@ -1501,7 +1493,10 @@ add_fp_unittest(
     exp2f_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.exp2f
+    libc.src.__support.math.exp2f_double_eval
+    libc.src.__support.math.exp2f_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1562,7 +1557,10 @@ add_fp_unittest(
     exp10f_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.exp10f
+    libc.src.__support.math.exp10f_double_eval
+    libc.src.__support.math.exp10f_float_eval
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3366,11 +3364,11 @@ add_fp_unittest(
   SUITE
     libc-math-smoke-tests
   SRCS
-    fminimum_numf16_test.cpp
+    fminimum_numbf16_test.cpp
   HDRS
-    FMaximumTest.h
+    FMinimumNumTest.h
   DEPENDS
-    libc.src.math.fminimum_numf16
+    libc.src.math.fminimum_numbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fp_bits

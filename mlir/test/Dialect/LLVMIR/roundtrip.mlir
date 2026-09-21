@@ -1334,3 +1334,16 @@ llvm.func @masked_nontemporal_no_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>)
   llvm.intr.masked.store(%0, %ptr, %mask) <nontemporal> : vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
 }
+
+// CHECK-LABEL: @switch_result_number
+llvm.func @switch_result_number(%arg0: i32) -> i32 {
+  %0:2 = "test.op_with_two_results"() : () -> (i32, i32)
+  // CHECK: llvm.switch
+  llvm.switch %arg0 : i32, ^bb1(%0#0 : i32) [
+    0: ^bb2(%0#1 : i32)
+  ]
+^bb1(%1: i32):
+  llvm.return %1 : i32
+^bb2(%2: i32):
+  llvm.return %2 : i32
+}
