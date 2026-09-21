@@ -15,8 +15,8 @@
 
 namespace clang::tidy::modernize {
 
-/// Replace comparisons between signed and unsigned integers with their safe
-/// C++20 ``std::cmp_*`` alternative, if available.
+/// Replace comparisons between signed and unsigned integers with ``std::cmp_*``
+/// and manual numeric_limits range checks with ``std::in_range``.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-integer-sign-comparison.html
@@ -29,6 +29,7 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void onEndOfTranslationUnit() override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus20 || (LangOpts.CPlusPlus17 && EnableQtSupport);
   }
@@ -36,6 +37,15 @@ public:
 private:
   utils::IncludeInserter IncludeInserter;
   const bool EnableQtSupport;
+
+  // Two-pass state for sign-comparison diagnostics: collect during check(),
+  // emit in onEndOfTranslationUnit() after filtering out range-check children.
+  struct PendingSignCmp {
+    const BinaryOperator *BinaryOp;
+  };
+  llvm::SmallVector<PendingSignCmp, 8> PendingCmps;
+  llvm::SmallVector<SourceRange, 4> RangeCheckRanges;
+  const SourceManager *SrcMgr = nullptr;
 };
 
 } // namespace clang::tidy::modernize
