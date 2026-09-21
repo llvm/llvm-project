@@ -10,26 +10,15 @@
 // These are used in EnumOptionOpnd to represent certain
 def cflag;
 
-// Function to find index of a item from a list of string.
-// Note that tablegen does not allow recursive definition.
+// Function to find the index of an item in a list of strings.
 class getIndexFromList<list<string> slist, string item> {
-  int Idx = !cond(!and(!ge(!size(slist),1), !eq(slist[0],item))  : 0,
-                  !and(!ge(!size(slist),2), !eq(slist[1],item))  : 1,
-                  !and(!ge(!size(slist),3), !eq(slist[2],item))  : 2,
-                  !and(!ge(!size(slist),4), !eq(slist[3],item))  : 3,
-                  !and(!ge(!size(slist),5), !eq(slist[4],item))  : 4,
-                  !and(!ge(!size(slist),6), !eq(slist[5],item))  : 5,
-                  !and(!ge(!size(slist),7), !eq(slist[6],item))  : 6,
-                  !and(!ge(!size(slist),8), !eq(slist[7],item))  : 7,
-                  !and(!ge(!size(slist),9), !eq(slist[8],item))  : 8,
-                  !and(!ge(!size(slist),10),!eq(slist[9],item))  : 9,
-                  !and(!ge(!size(slist),11),!eq(slist[10],item)) : 10,
-                  !and(!ge(!size(slist),12),!eq(slist[11],item)) : 11,
-                  !and(!ge(!size(slist),13),!eq(slist[12],item)) : 12,
-                  !and(!ge(!size(slist),14),!eq(slist[13],item)) : 13,
-                  !and(!ge(!size(slist),15),!eq(slist[14],item)) : 14,
-                  !and(!ge(!size(slist),16),!eq(slist[15],item)) : 15,
-                  true                                           : -1);
+  defvar encodedIndex = !foldl(1, slist, acc, value,
+                               !if(!gt(acc, 0),
+                                   !if(!eq(value, item), !sub(0, acc),
+                                       !add(acc, 1)),
+                                   acc));
+  int Idx = !if(!lt(encodedIndex, 0),
+                !sub(!sub(0, encodedIndex), 1), -1);
 }
 
 // Flags are encoded from msb - 1 - numflags to lsb
