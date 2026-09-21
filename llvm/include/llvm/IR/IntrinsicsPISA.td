@@ -74,7 +74,8 @@ class PISABinaryRndIntrinsic
                                 [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 // Helper class for float operations with rounding mode + saturation flag.
-class PISAFloatIntrinsic<LLVMType ret_ty, list<LLVMType> operand_types>
+class PISAFloatIntrinsic<LLVMType ret_ty, list<LLVMType> operand_types,
+                         list<IntrinsicProperty> intr_properties = []>
     : PISADefaultAttrsIntrinsic<[ret_ty], [], []> {
   defvar num_params = !size(operand_types);
   let ParamTypes = !listconcat(
@@ -82,13 +83,14 @@ class PISAFloatIntrinsic<LLVMType ret_ty, list<LLVMType> operand_types>
     [llvm_i8_ty, // rounding mode
      llvm_i1_ty] // saturation flag
   );
-  let IntrProperties = [
-    IntrNoMem,
-    ImmArg<ArgIndex<num_params>>,
-    ImmArg<ArgIndex<!add(num_params, 1)>>,
-    RoundingModeArgInfo<ArgIndex<num_params>>,
-    SaturationArgInfo<ArgIndex<!add(num_params, 1)>>
-  ];
+  let IntrProperties = !listconcat(
+    [IntrNoMem,
+     ImmArg<ArgIndex<num_params>>,
+     ImmArg<ArgIndex<!add(num_params, 1)>>,
+     RoundingModeArgInfo<ArgIndex<num_params>>,
+     SaturationArgInfo<ArgIndex<!add(num_params, 1)>>],
+    intr_properties
+  );
 }
 
 
@@ -139,7 +141,8 @@ def int_pisa_dp4a_ss : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
                             SaturationArgInfo<ArgIndex<3>>]>;
 
 def int_pisa_smad : PISADefaultAttrsIntrinsic<[llvm_anyint_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
+                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                        [IntrNoMem, Commutative]>;
 
 //===----------------------------------------------------------------------===//
 // 3. Floating Point
@@ -161,10 +164,10 @@ def int_pisa_fmax_sat : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                                NanPropagateArgInfo<ArgIndex<2>>]>;
 
 // Float operations with rounding mode + saturation flag.
-def int_pisa_fadd    : PISAFloatIntrinsic<llvm_anyfloat_ty, [LLVMMatchType<0>, LLVMMatchType<0>]>;
+def int_pisa_fadd    : PISAFloatIntrinsic<llvm_anyfloat_ty, [LLVMMatchType<0>, LLVMMatchType<0>], [Commutative]>;
 def int_pisa_fsub    : PISAFloatIntrinsic<llvm_anyfloat_ty, [LLVMMatchType<0>, LLVMMatchType<0>]>;
-def int_pisa_fmul    : PISAFloatIntrinsic<llvm_anyfloat_ty, [LLVMMatchType<0>, LLVMMatchType<0>]>;
-def int_pisa_fma     : PISAFloatIntrinsic<llvm_anyfloat_ty, [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
+def int_pisa_fmul    : PISAFloatIntrinsic<llvm_anyfloat_ty, [LLVMMatchType<0>, LLVMMatchType<0>], [Commutative]>;
+def int_pisa_fma     : PISAFloatIntrinsic<llvm_anyfloat_ty, [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [Commutative]>;
 
 // Binary float operations with explicit rounding mode.
 def int_pisa_fdiv_rnd : PISABinaryRndIntrinsic;
