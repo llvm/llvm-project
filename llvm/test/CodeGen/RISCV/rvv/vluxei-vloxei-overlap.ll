@@ -53,6 +53,3 @@ entry:
 
   ret <vscale x 1 x i8> %a
 }
-
-declare <vscale x 1 x i8> @llvm.riscv.vluxei.nxv1i8.nxv1i32(<vscale x 1 x i8>, ptr, <vscale x 1 x i32>, iXLen)
-declare <vscale x 1 x i8> @llvm.riscv.vloxei.nxv1i8.nxv1i32(<vscale x 1 x i8>, ptr, <vscale x 1 x i32>, iXLen)
