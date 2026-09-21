@@ -102,7 +102,8 @@ static std::string getKernelAttributeRepr(const KernelAttribute &Attr) {
       {PISA::KernelAttributeType::VEC_TYPE_HINT, ".vec_type_hint"}};
 
   std::string Result;
-  auto It = AvailableMetadataNodeTypes.find(Attr.KernelAttrType);
+  DenseMap<PISA::KernelAttributeType, StringRef>::iterator It =
+      AvailableMetadataNodeTypes.find(Attr.KernelAttrType);
   if (It != AvailableMetadataNodeTypes.end()) {
     Result = It->second;
   }
@@ -110,7 +111,8 @@ static std::string getKernelAttributeRepr(const KernelAttribute &Attr) {
   switch (Attr.KernelAttrType) {
   case llvm::PISA::KernelAttributeType::REQD_WORK_GROUP_SIZE: {
     Result += "(";
-    const auto &Values = std::get<std::vector<uint32_t>>(Attr.KernelAttrValues);
+    const std::vector<uint32_t> &Values =
+        std::get<std::vector<uint32_t>>(Attr.KernelAttrValues);
     if (!Values.empty()) {
       Result +=
           std::accumulate(std::next(Values.begin()), Values.end(),
@@ -123,7 +125,7 @@ static std::string getKernelAttributeRepr(const KernelAttribute &Attr) {
   } break;
   case llvm::PISA::KernelAttributeType::VEC_TYPE_HINT: {
     Result += "(";
-    const auto &Arg = std::get<std::string>(Attr.KernelAttrValues);
+    const std::string &Arg = std::get<std::string>(Attr.KernelAttrValues);
     Result += Arg;
     Result += ")";
   } break;
@@ -145,9 +147,21 @@ static void emitTypeString(uint32_t TypeSizeInBits, uint32_t NumElts,
 }
 
 static void emitTypeString(const LLT &T, raw_ostream &OS) {
-  auto TypeBitSize = T.getScalarType().getSizeInBits();
-  auto NumElts = T.isVector() ? T.getNumElements() : 1;
+  uint32_t TypeBitSize = T.getScalarSizeInBits();
+  uint32_t NumElts = T.isVector() ? T.getNumElements() : 1;
   emitTypeString(TypeBitSize, NumElts, OS);
+}
+
+static void printOffset(int64_t Val, raw_ostream &OS) {
+  // Print an immediate offset only when it is nonzero.
+  if (Val > 0) {
+    OS << "+" << format("%" PRId64, Val);
+  } else if (Val < 0) {
+    if (Val == std::numeric_limits<int64_t>::min())
+      OS << "-" << format("%" PRIu64, Val);
+    else
+      OS << "-" << format("%" PRId64, -Val);
+  }
 }
 
 namespace {
@@ -189,18 +203,6 @@ public:
       llvm_unreachable("Invalid storage space for global variables");
     }
 
-    auto PrintOffset = [](int64_t Val, raw_ostream &OS) {
-      // print imm offset only when it's not zero
-      if (Val > 0) {
-        OS << "+" << format("%" PRId64, Val);
-      } else if (Val < 0) {
-        if (Val == std::numeric_limits<int64_t>::min())
-          OS << "-" << format("%" PRIu64, Val);
-        else
-          OS << "-" << format("%" PRId64, -Val);
-      }
-    };
-
     OS << " .align " << GV.Dcl.Alignment.value() << " ";
 
     if (!GV.Dcl.Section.empty())
@@ -216,15 +218,20 @@ public:
       OS << "[" << GV.Dcl.Size << "]";
     } else {
       OS << " = { ";
-      for (auto [i, X] : llvm::enumerate(GV.Init.Initializer)) {
-        OS << ((i == 0) ? "" : ", ");
-        if (auto Iter = GV.Init.Exprs.find(i); Iter != GV.Init.Exprs.end()) {
-          auto &Entry = Iter->second;
-          if (auto *G = std::get_if<PISA::VariableInit::GlobalExpr>(&Entry)) {
+      for (uint64_t I = 0; I < GV.Init.Initializer.size(); ++I) {
+        const PISA::VariableInit::InitElement &X = GV.Init.Initializer[I];
+        OS << ((I == 0) ? "" : ", ");
+        DenseMap<uint64_t, PISA::VariableInit::SpecialEntry>::const_iterator
+            Iter = GV.Init.Exprs.find(I);
+        if (Iter != GV.Init.Exprs.end()) {
+          const PISA::VariableInit::SpecialEntry &Entry = Iter->second;
+          if (const PISA::VariableInit::GlobalExpr *G =
+                  std::get_if<PISA::VariableInit::GlobalExpr>(&Entry)) {
             OS << "." << X.Type.getSizeInBits() << "b ";
             OS << "@" << G->Name;
-            PrintOffset(G->Offset, OS);
-          } else if (auto *Z = std::get_if<PISA::VariableInit::Zeros>(&Entry)) {
+            printOffset(G->Offset, OS);
+          } else if (const PISA::VariableInit::Zeros *Z =
+                         std::get_if<PISA::VariableInit::Zeros>(&Entry)) {
             OS << ".zero " << Z->N;
           } else {
             llvm_unreachable("unknown construct!");
@@ -257,7 +264,7 @@ public:
 
     OS << getCallingConvRepr(Sig.DN.CC) << " ";
 
-    for (auto KernelAttr : Sig.DN.KernelAttrs) {
+    for (const PISA::KernelAttribute &KernelAttr : Sig.DN.KernelAttrs) {
       OS << getKernelAttributeRepr(KernelAttr) << " ";
     }
 
@@ -275,7 +282,7 @@ public:
     OS << "(";
     if (Sig.DN.CC != CallingConv::PISA_KERNEL) {
       const char *Sep = "";
-      for (auto &Param : Sig.FunctionParams) {
+      for (const PISA::FunctionParameter &Param : Sig.FunctionParams) {
         OS << Sep << ".reg ";
         emitTypeString(Param.Ty, OS);
         OS << " " << Param.Prefix << Param.Idx;
@@ -284,7 +291,7 @@ public:
     } else {
       const char *Sep = "";
       unsigned I = 0;
-      for (auto &Param : Sig.KernelParams) {
+      for (const PISA::KernelParameter &Param : Sig.KernelParams) {
         OS << Sep << ".param[" << Param.Size << "] ";
         if (Param.hasAlign())
           OS << ".align(" << Param.Align << ") ";
@@ -328,7 +335,7 @@ public:
 
     OS << "(";
     const char *Sep = "";
-    for (auto &Param : Dcl.FunctionParams) {
+    for (const PISA::FunctionDeclParam &Param : Dcl.FunctionParams) {
       OS << Sep << ".reg ";
       emitTypeString(Param.Ty, OS);
       Sep = ", ";
@@ -343,12 +350,17 @@ public:
 
   void emitRegDcls(const PISA::RegDcls &Dcls,
                    const PISA::DataTypes &DTs) override {
-    for (auto &[Key, TI] : DTs) {
+    for (const std::pair<std::tuple<unsigned, unsigned, unsigned>,
+                         PISA::TypeInfo> &Entry : DTs) {
+      const std::tuple<unsigned, unsigned, unsigned> &Key = Entry.first;
+      const PISA::TypeInfo &TI = Entry.second;
       // Skip if 0 registers of this type were declared
       if (TI.RegStart == TI.RegCounter)
         continue;
 
-      auto [NumElts, BitWidth, RegType] = Key;
+      unsigned NumElts = std::get<0>(Key);
+      unsigned BitWidth = std::get<1>(Key);
+      unsigned RegType = std::get<2>(Key);
 
       switch (RegType) {
       case PISA::RegEncoder::PRED:
@@ -393,7 +405,7 @@ public:
   }
 
   void emitLocalVariableDcls(const PISA::LocalVariableDcls &Dcls) override {
-    for (auto &V : Dcls.Vars)
+    for (const PISA::LocalVariableDcl &V : Dcls.Vars)
       addLocalVariableDecl(V);
   }
 
@@ -513,8 +525,10 @@ std::string DataTypes::getPrefixFromLLT(LLT Ty) {
       {1, ""},   {2, "v2"}, {3, "v3"},   {4, "v4"},   {5, "v5"},  {6, "v6"},
       {7, "v7"}, {8, "v8"}, {16, "v16"}, {32, "v32"}, {64, "v64"}};
 
-  if (auto It = VectorPrefixes.find(NumElts); It != VectorPrefixes.end())
-    Prefix += It->second;
+  DenseMap<unsigned, StringRef>::const_iterator VectorPrefix =
+      VectorPrefixes.find(NumElts);
+  if (VectorPrefix != VectorPrefixes.end())
+    Prefix += VectorPrefix->second;
   else
     llvm_unreachable("Unsupported PISA vector size");
 
@@ -527,15 +541,17 @@ std::string DataTypes::getPrefixFromLLT(LLT Ty) {
       {128, "q"} // Quad-word
   };
 
-  if (auto It = ScalarPrefixes.find(EltSize); It != ScalarPrefixes.end())
-    Prefix += It->second;
+  DenseMap<unsigned, StringRef>::const_iterator ScalarPrefix =
+      ScalarPrefixes.find(EltSize);
+  if (ScalarPrefix != ScalarPrefixes.end())
+    Prefix += ScalarPrefix->second;
   else
     llvm_unreachable("Unsupported PISA scalar size");
   return Prefix;
 }
 
 DataType DataTypes::getTypeFromPrefix(std::string Prefix) {
-  auto Result =
+  std::tuple<unsigned, unsigned, unsigned> Result =
       llvm::StringSwitch<std::tuple<unsigned, unsigned, unsigned>>(Prefix)
           .Case("%p", {1, 1, PISA::RegEncoder::PRED})
           .Case("%b", {1, 8, PISA::RegEncoder::REG})
@@ -567,6 +583,6 @@ DataType DataTypes::getTypeFromPrefix(std::string Prefix) {
   if (std::get<0>(Result) == 0)
     llvm_unreachable("Unknown type prefix");
 
-  auto [NumElts, EltSize, RegType] = Result;
-  return DataType{NumElts, EltSize, RegType};
+  return DataType{std::get<0>(Result), std::get<1>(Result),
+                  std::get<2>(Result)};
 }

@@ -38,7 +38,9 @@ inline constexpr StringRef CacheCtrlMMRAPrefix = "pisa.cache.ctrl";
 inline std::optional<unsigned> getCacheCtrlFromMMRA(const Instruction &I) {
   MMRAMetadata MMRA(I);
   SmallVector<unsigned, 2> Values;
-  for (const auto &[Prefix, Suffix] : MMRA) {
+  for (const MMRAMetadata::TagT &Tag : MMRA) {
+    StringRef Prefix = Tag.first;
+    StringRef Suffix = Tag.second;
     if (Prefix != CacheCtrlMMRAPrefix)
       continue;
     unsigned Value;
@@ -68,7 +70,7 @@ inline void setCacheCtrlMMRA(Instruction &I, unsigned Value) {
 
   SmallVector<MMRAMetadata::TagT, 4> Tags;
   MMRAMetadata Existing(I);
-  for (const auto &Tag : Existing) {
+  for (const MMRAMetadata::TagT &Tag : Existing) {
     if (Tag.first != CacheCtrlMMRAPrefix)
       Tags.push_back(Tag);
   }
@@ -82,7 +84,8 @@ inline void setCacheCtrlMMRA(Instruction &I, unsigned Value) {
 // Copies the "pisa.cache.ctrl" MMRA tag from From to To if present,
 // preserving all other MMRA tags already on To.
 inline void copyCacheCtrlMMRA(const Instruction &From, Instruction &To) {
-  if (auto Value = getCacheCtrlFromMMRA(From))
+  std::optional<unsigned> Value = getCacheCtrlFromMMRA(From);
+  if (Value)
     setCacheCtrlMMRA(To, *Value);
 }
 
