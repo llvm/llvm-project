@@ -11,13 +11,13 @@ define void @zext_or_masks_v4i8_to_v4i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: zext_or_masks_v4i8_to_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 1
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; CHECK-NEXT:    vseqi.b $vr0, $vr0, 0
 ; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
-; CHECK-NEXT:    vext2xv.d.b $xr0, $xr0
 ; CHECK-NEXT:    xvrepli.d $xr1, 1
+; CHECK-NEXT:    vext2xv.d.b $xr0, $xr0
 ; CHECK-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
@@ -35,14 +35,14 @@ define void @zext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vrepli.h $vr1, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.h $vr1, 1
 ; LA32-NEXT:    vslt.h $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.h $vr0, $vr0, 0
 ; LA32-NEXT:    vor.v $vr0, $vr1, $vr0
-; LA32-NEXT:    vext2xv.d.h $xr0, $xr0
 ; LA32-NEXT:    xvrepli.d $xr1, 1
+; LA32-NEXT:    vext2xv.d.h $xr0, $xr0
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -50,13 +50,13 @@ define void @zext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 ; LA64-LABEL: zext_or_masks_v4i16_to_v4i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vrepli.h $vr1, 1
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vslt.h $vr1, $vr1, $vr0
 ; LA64-NEXT:    vseqi.h $vr0, $vr0, 0
 ; LA64-NEXT:    vor.v $vr0, $vr1, $vr0
-; LA64-NEXT:    vext2xv.d.h $xr0, $xr0
 ; LA64-NEXT:    xvrepli.d $xr1, 1
+; LA64-NEXT:    vext2xv.d.h $xr0, $xr0
 ; LA64-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -74,14 +74,14 @@ define void @zext_or_masks_v8i8_to_v8i32(ptr %ptr, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vrepli.b $vr1, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 1
 ; LA32-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.b $vr0, $vr0, 0
 ; LA32-NEXT:    vor.v $vr0, $vr1, $vr0
-; LA32-NEXT:    vext2xv.w.b $xr0, $xr0
 ; LA32-NEXT:    xvrepli.w $xr1, 1
+; LA32-NEXT:    vext2xv.w.b $xr0, $xr0
 ; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvst $xr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -89,13 +89,13 @@ define void @zext_or_masks_v8i8_to_v8i32(ptr %ptr, ptr %dst) {
 ; LA64-LABEL: zext_or_masks_v8i8_to_v8i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vrepli.b $vr1, 1
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; LA64-NEXT:    vseqi.b $vr0, $vr0, 0
 ; LA64-NEXT:    vor.v $vr0, $vr1, $vr0
-; LA64-NEXT:    vext2xv.w.b $xr0, $xr0
 ; LA64-NEXT:    xvrepli.w $xr1, 1
+; LA64-NEXT:    vext2xv.w.b $xr0, $xr0
 ; LA64-NEXT:    xvand.v $xr0, $xr0, $xr1
 ; LA64-NEXT:    xvst $xr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -112,8 +112,8 @@ define void @sext_or_masks_v4i8_to_v4i64(ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: sext_or_masks_v4i8_to_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vrepli.b $vr1, 1
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; CHECK-NEXT:    vseqi.b $vr0, $vr0, 0
 ; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
@@ -134,9 +134,9 @@ define void @sext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vrepli.h $vr1, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.h $vr1, 1
 ; LA32-NEXT:    vslt.h $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.h $vr0, $vr0, 0
 ; LA32-NEXT:    vor.v $vr0, $vr1, $vr0
@@ -147,8 +147,8 @@ define void @sext_or_masks_v4i16_to_v4i64(ptr %ptr, ptr %dst) {
 ; LA64-LABEL: sext_or_masks_v4i16_to_v4i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vrepli.h $vr1, 1
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vslt.h $vr1, $vr1, $vr0
 ; LA64-NEXT:    vseqi.h $vr0, $vr0, 0
 ; LA64-NEXT:    vor.v $vr0, $vr1, $vr0
@@ -169,9 +169,9 @@ define void @sext_or_masks_v8i8_to_v8i32(ptr %ptr, ptr %dst) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vrepli.b $vr1, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vrepli.b $vr1, 1
 ; LA32-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; LA32-NEXT:    vseqi.b $vr0, $vr0, 0
 ; LA32-NEXT:    vor.v $vr0, $vr1, $vr0
@@ -182,8 +182,8 @@ define void @sext_or_masks_v8i8_to_v8i32(ptr %ptr, ptr %dst) {
 ; LA64-LABEL: sext_or_masks_v8i8_to_v8i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vrepli.b $vr1, 1
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    vslt.b $vr1, $vr1, $vr0
 ; LA64-NEXT:    vseqi.b $vr0, $vr0, 0
 ; LA64-NEXT:    vor.v $vr0, $vr1, $vr0
@@ -206,8 +206,8 @@ define void @mixed_masks_wide_lhs(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a2, $a0, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; CHECK-NEXT:    xvrepli.d $xr2, 1
+; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; CHECK-NEXT:    xvslt.d $xr0, $xr2, $xr0
 ; CHECK-NEXT:    vseqi.b $vr1, $vr1, 0
 ; CHECK-NEXT:    vext2xv.d.b $xr1, $xr1
@@ -229,12 +229,12 @@ define void @mixed_masks_wide_rhs(ptr %ptr, ptr %dst) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a2, $a0, 0
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; CHECK-NEXT:    xvrepli.d $xr2, 1
+; CHECK-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; CHECK-NEXT:    xvslt.d $xr0, $xr2, $xr0
 ; CHECK-NEXT:    xvpickev.w $xr0, $xr0, $xr0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    vseqi.b $vr1, $vr1, 0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    vext2xv.w.b $xr1, $xr1
 ; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0

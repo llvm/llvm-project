@@ -393,8 +393,8 @@ define signext i32 @and_i32_0xfff0_twice(i32 %a, i32 %b) {
 ; LA32S-LABEL: and_i32_0xfff0_twice:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    bstrpick.w $a0, $a0, 15, 4
-; LA32S-NEXT:    slli.w $a0, $a0, 4
 ; LA32S-NEXT:    bstrpick.w $a1, $a1, 15, 4
+; LA32S-NEXT:    slli.w $a0, $a0, 4
 ; LA32S-NEXT:    slli.w $a1, $a1, 4
 ; LA32S-NEXT:    sub.w $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -402,8 +402,8 @@ define signext i32 @and_i32_0xfff0_twice(i32 %a, i32 %b) {
 ; LA64-LABEL: and_i32_0xfff0_twice:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
-; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    slli.d $a1, $a1, 4
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -425,8 +425,8 @@ define i64 @and_i64_0xfff0(i64 %a) {
 ; LA32S-LABEL: and_i64_0xfff0:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    bstrpick.w $a0, $a0, 15, 4
-; LA32S-NEXT:    slli.w $a0, $a0, 4
 ; LA32S-NEXT:    move $a1, $zero
+; LA32S-NEXT:    slli.w $a0, $a0, 4
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_0xfff0:
@@ -464,8 +464,8 @@ define i64 @and_i64_0xfff0_twice(i64 %a, i64 %b) {
 ; LA64-LABEL: and_i64_0xfff0_twice:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
-; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    slli.d $a1, $a1, 4
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -533,9 +533,9 @@ define i64 @and_i64_0xfff0_multiple_times(i64 %a, i64 %b, i64 %c) {
 ; LA32R-NEXT:    and $a2, $a2, $a1
 ; LA32R-NEXT:    and $a3, $a4, $a1
 ; LA32R-NEXT:    sltu $a1, $a0, $a2
-; LA32R-NEXT:    sub.w $a1, $zero, $a1
 ; LA32R-NEXT:    sub.w $a0, $a0, $a2
 ; LA32R-NEXT:    mul.w $a2, $a2, $a3
+; LA32R-NEXT:    sub.w $a1, $zero, $a1
 ; LA32R-NEXT:    xor $a0, $a0, $a2
 ; LA32R-NEXT:    ret
 ;
@@ -547,9 +547,9 @@ define i64 @and_i64_0xfff0_multiple_times(i64 %a, i64 %b, i64 %c) {
 ; LA32S-NEXT:    and $a2, $a2, $a1
 ; LA32S-NEXT:    and $a3, $a4, $a1
 ; LA32S-NEXT:    sltu $a1, $a0, $a2
-; LA32S-NEXT:    sub.w $a1, $zero, $a1
 ; LA32S-NEXT:    sub.w $a0, $a0, $a2
 ; LA32S-NEXT:    mul.w $a2, $a2, $a3
+; LA32S-NEXT:    sub.w $a1, $zero, $a1
 ; LA32S-NEXT:    xor $a0, $a0, $a2
 ; LA32S-NEXT:    ret
 ;

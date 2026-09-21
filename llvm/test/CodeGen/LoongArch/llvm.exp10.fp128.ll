@@ -28,9 +28,9 @@ define <2 x fp128> @exp10_v2f128(<2 x fp128> %x) #0 {
 ; LA64-NEXT:    st.d $s1, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s2, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s3, $sp, 0 # 8-byte Folded Spill
+; LA64-NEXT:    ld.d $a2, $a1, 0
 ; LA64-NEXT:    ld.d $fp, $a1, 16
 ; LA64-NEXT:    ld.d $s0, $a1, 24
-; LA64-NEXT:    ld.d $a2, $a1, 0
 ; LA64-NEXT:    ld.d $a1, $a1, 8
 ; LA64-NEXT:    move $s1, $a0
 ; LA64-NEXT:    move $a0, $a2

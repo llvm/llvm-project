@@ -33,8 +33,8 @@ entry:
 define <32 x i8> @concat_vectors_v32i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: concat_vectors_v32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
@@ -73,8 +73,8 @@ entry:
 define <16 x i16> @concat_vectors_v16i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: concat_vectors_v16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
@@ -109,8 +109,8 @@ entry:
 define <8 x i32> @concat_vectors_v8i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: concat_vectors_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
@@ -144,8 +144,8 @@ entry:
 define <8 x float> @concat_vectors_v8f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: concat_vectors_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
@@ -177,8 +177,8 @@ entry:
 define <4 x i64> @concat_vectors_v8i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: concat_vectors_v8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
@@ -209,8 +209,8 @@ entry:
 define <4 x double> @concat_vectors_v8f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: concat_vectors_v8f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:

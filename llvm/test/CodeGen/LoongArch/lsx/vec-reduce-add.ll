@@ -246,11 +246,11 @@ define void @vec_reduce_add_v2i64(ptr %src, ptr %dst) nounwind {
 ; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 0
 ; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 3
 ; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 1
-; LA32-NEXT:    add.w $a3, $a4, $a3
 ; LA32-NEXT:    add.w $a0, $a2, $a0
+; LA32-NEXT:    add.w $a3, $a4, $a3
 ; LA32-NEXT:    sltu $a2, $a0, $a2
-; LA32-NEXT:    add.w $a2, $a3, $a2
 ; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    add.w $a2, $a3, $a2
 ; LA32-NEXT:    st.w $a2, $a1, 4
 ; LA32-NEXT:    ret
 ;

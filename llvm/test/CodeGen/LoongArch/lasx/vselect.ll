@@ -36,8 +36,8 @@ define void @select_v32i8_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v32i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI2_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI2_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -53,8 +53,8 @@ define void @select_v32i8_2(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v32i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI3_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -87,8 +87,8 @@ define void @select_v16i16_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v16i16_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI5_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI5_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -104,8 +104,8 @@ define void @select_v16i16_2(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v16i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI6_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI6_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -137,8 +137,8 @@ define void @select_v8i32_1(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v8i32_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI8_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI8_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -154,8 +154,8 @@ define void @select_v8f32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI9_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI9_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -171,8 +171,8 @@ define void @select_v4i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI10_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI10_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -188,8 +188,8 @@ define void @select_v4f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI11_0)
+; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI11_0)
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr1, $xr0, $xr2
 ; CHECK-NEXT:    xvst $xr0, $a0, 0

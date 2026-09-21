@@ -63,8 +63,8 @@ define <4 x double> @uitofp_v4i8_v4f64(<16 x i8> %a) {
 ; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr2
-; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
 ; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr2
+; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
 ; CHECK-NEXT:    vffint.d.lu $vr1, $vr1
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -79,8 +79,8 @@ define <4 x double> @uitofp_v16i8_v4f64(<16 x i8> %a) {
 ; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr0
 ; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr2
-; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
 ; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr2
+; CHECK-NEXT:    vffint.d.lu $vr0, $vr0
 ; CHECK-NEXT:    vffint.d.lu $vr1, $vr1
 ; CHECK-NEXT:    ret
   %cvt = uitofp <16 x i8> %a to <16 x double>

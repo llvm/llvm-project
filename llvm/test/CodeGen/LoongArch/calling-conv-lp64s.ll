@@ -61,11 +61,11 @@ define i64 @caller_float_on_stack() nounwind {
 ; CHECK-NEXT:    ori $a2, $zero, 2
 ; CHECK-NEXT:    ori $a4, $zero, 3
 ; CHECK-NEXT:    ori $a6, $zero, 4
-; CHECK-NEXT:    st.d $a1, $sp, 0
-; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    move $a3, $zero
 ; CHECK-NEXT:    move $a5, $zero
 ; CHECK-NEXT:    move $a7, $zero
+; CHECK-NEXT:    st.d $a1, $sp, 0
+; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_float_on_stack)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
@@ -90,8 +90,8 @@ define i64 @caller_tiny_scalar_ret() nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_tiny_scalar_ret)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %1 = call float @callee_tiny_scalar_ret()

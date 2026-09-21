@@ -10,11 +10,11 @@ define <64 x i64> @test1(<64 x i64> %0) nounwind {
 ; LA32-NEXT:    st.w $fp, $sp, 24 # 4-byte Folded Spill
 ; LA32-NEXT:    addi.w $fp, $sp, 32
 ; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
+; LA32-NEXT:    xvld $xr12, $fp, 224
 ; LA32-NEXT:    xvld $xr8, $fp, 0
 ; LA32-NEXT:    xvld $xr9, $fp, 32
 ; LA32-NEXT:    xvld $xr10, $fp, 64
 ; LA32-NEXT:    xvld $xr11, $fp, 96
-; LA32-NEXT:    xvld $xr12, $fp, 224
 ; LA32-NEXT:    xvld $xr13, $fp, 192
 ; LA32-NEXT:    xvld $xr14, $fp, 160
 ; LA32-NEXT:    xvld $xr15, $fp, 128
@@ -47,11 +47,11 @@ define <64 x i64> @test1(<64 x i64> %0) nounwind {
 ; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    addi.d $fp, $sp, 32
 ; LA64-NEXT:    bstrins.d $sp, $zero, 4, 0
+; LA64-NEXT:    xvld $xr12, $fp, 224
 ; LA64-NEXT:    xvld $xr8, $fp, 0
 ; LA64-NEXT:    xvld $xr9, $fp, 32
 ; LA64-NEXT:    xvld $xr10, $fp, 64
 ; LA64-NEXT:    xvld $xr11, $fp, 96
-; LA64-NEXT:    xvld $xr12, $fp, 224
 ; LA64-NEXT:    xvld $xr13, $fp, 192
 ; LA64-NEXT:    xvld $xr14, $fp, 160
 ; LA64-NEXT:    xvld $xr15, $fp, 128
