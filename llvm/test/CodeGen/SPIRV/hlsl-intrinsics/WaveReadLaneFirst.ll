@@ -26,7 +26,7 @@
 
 ; CHECK-LABEL: Begin function test_float
 ; CHECK: %[[#fexpr:]] = OpFunctionParameter %[[#f32]]
-define float @test_float(float %fexpr) {
+define internal float @test_float(float %fexpr) {
 entry:
 ; CHECK: %[[#]] = OpGroupNonUniformBroadcastFirst %[[#f32]] %[[#scope]] %[[#fexpr]]
   %0 = call float @llvm.spv.wave.readlane.first.f32(float %fexpr)
@@ -35,7 +35,7 @@ entry:
 
 ; CHECK-LABEL: Begin function test_int
 ; CHECK: %[[#iexpr:]] = OpFunctionParameter %[[#uint]]
-define i32 @test_int(i32 %iexpr) {
+define internal i32 @test_int(i32 %iexpr) {
 entry:
 ; CHECK: %[[#]] = OpGroupNonUniformBroadcastFirst %[[#uint]] %[[#scope]] %[[#iexpr]]
   %0 = call i32 @llvm.spv.wave.readlane.first.i32(i32 %iexpr)
@@ -44,7 +44,7 @@ entry:
 
 ; CHECK-LABEL: Begin function test_bool
 ; CHECK: %[[#bexpr:]] = OpFunctionParameter %[[#bool]]
-define i1 @test_bool(i1 %bexpr) {
+define internal i1 @test_bool(i1 %bexpr) {
 entry:
 ; CHECK: %[[#]] = OpGroupNonUniformBroadcastFirst %[[#bool]] %[[#scope]] %[[#bexpr]]
   %0 = call i1 @llvm.spv.wave.readlane.first.i1(i1 %bexpr)
@@ -53,7 +53,7 @@ entry:
 
 ; CHECK-LABEL: Begin function test_vfloat
 ; CHECK: %[[#vfexpr:]] = OpFunctionParameter %[[#v4_float]]
-define <4 x float> @test_vfloat(<4 x float> %vfexpr) {
+define internal <4 x float> @test_vfloat(<4 x float> %vfexpr) {
 entry:
 ; CHECK: %[[#]] = OpGroupNonUniformBroadcastFirst %[[#v4_float]] %[[#scope]] %[[#vfexpr]]
   %0 = call <4 x float> @llvm.spv.wave.readlane.first.v4f32(
@@ -62,7 +62,7 @@ entry:
 }
 
 ; CHECK-LABEL: Begin function test_floatv5
-define void @test_floatv5() {
+define internal void @test_floatv5() {
 entry:
   %expr = load <5 x float>, ptr addrspace(10) @wide_f32_5
 ; CHECK: OpGroupNonUniformBroadcastFirst %[[#v5_float]] %[[#scope]]
@@ -73,7 +73,7 @@ entry:
 }
 
 ; CHECK-LABEL: Begin function test_float2x3
-define void @test_float2x3() {
+define internal void @test_float2x3() {
 entry:
   %expr = load <6 x float>, ptr addrspace(10) @wide_f32_6
 ; CHECK: OpGroupNonUniformBroadcastFirst %[[#v6_float]] %[[#scope]]
@@ -84,13 +84,17 @@ entry:
 }
 
 ; CHECK-LABEL: Begin function test_float3x4
-define void @test_float3x4() {
+define internal void @test_float3x4() {
 entry:
   %expr = load <12 x float>, ptr addrspace(10) @wide_f32_12
 ; CHECK: OpGroupNonUniformBroadcastFirst %[[#v12_float]] %[[#scope]]
   %result = call <12 x float> @llvm.spv.wave.readlane.first.v12f32(
       <12 x float> %expr)
   store <12 x float> %result, ptr addrspace(10) @wide_f32_12
+  ret void
+}
+
+define void @main() #0 {
   ret void
 }
 
@@ -101,3 +105,5 @@ declare <4 x float> @llvm.spv.wave.readlane.first.v4f32(<4 x float>)
 declare <5 x float> @llvm.spv.wave.readlane.first.v5f32(<5 x float>)
 declare <6 x float> @llvm.spv.wave.readlane.first.v6f32(<6 x float>)
 declare <12 x float> @llvm.spv.wave.readlane.first.v12f32(<12 x float>)
+
+attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
