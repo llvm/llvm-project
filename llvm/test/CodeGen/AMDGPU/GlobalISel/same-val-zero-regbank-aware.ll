@@ -2,11 +2,8 @@
 ; RUN: llc -global-isel -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck -check-prefix=GFX90A %s
 ; RUN: llc -global-isel -mtriple=amdgpu9.50-amd-amdhsa < %s | FileCheck -check-prefix=GFX950 %s
 
-; Regression test for a crash in AMDGPURegBankCombiner. Widening the two
-; zext i1/i32 -> i64 splits both produce the same zero constant for the
-; high 32 bits (CSE'd by unmerge_merge), turning the xor into an
-; `x xor x` that same_val_zero_regbank_aware must fold without leaving
-; behind a register with no assigned register bank.
+; Check that the xor below, which becomes x xor x after RegBankSelect,
+; compiles instead of crashing in InstructionSelect.
 define amdgpu_kernel void @fuzz_kernel(ptr addrspace(1) %in) {
 ; GFX90A-LABEL: fuzz_kernel:
 ; GFX90A:       ; %bb.0:
