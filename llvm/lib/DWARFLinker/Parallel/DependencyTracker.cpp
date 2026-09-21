@@ -217,11 +217,24 @@ void DependencyTracker::collectRootsToKeep(
           LiveRootWorklistActionTy::MarkSingleLiveEntry, ChildEntry,
           ReferencedBy);
     } break;
-    case dwarf::DW_TAG_imported_module:
-    case dwarf::DW_TAG_imported_declaration:
     case dwarf::DW_TAG_imported_unit: {
-      // Always keep DIEs having DW_AT_import attribute.
-      if (Entry.DieEntry->getTag() == dwarf::DW_TAG_compile_unit) {
+      // Always keep DIEs having DW_AT_import attribute. DW_AT_import of an
+      // imported unit entry names a unit root, and a unit root is never a type
+      // deduplication candidate, so it never has the type name that cloning
+      // into the artificial type unit would ask for. Keep it in plain DWARF
+      // wherever it sits, not merely when it sits under the root.
+      addActionToRootEntriesWorkList(
+          LiveRootWorklistActionTy::MarkSingleLiveEntry, ChildEntry,
+          ReferencedBy);
+    } break;
+    case dwarf::DW_TAG_imported_module:
+    case dwarf::DW_TAG_imported_declaration: {
+      // Always keep DIEs having DW_AT_import attribute. These name a module or
+      // a declaration, either of which may be deduplicated, so placement turns
+      // on where the import sits: directly under the unit root it belongs in
+      // plain DWARF whatever tag that root carries, and the root is identified
+      // by position.
+      if (CompileUnit::isUnitRootDIE(Entry.CU->getDIEIndex(Entry.DieEntry))) {
         addActionToRootEntriesWorkList(
             LiveRootWorklistActionTy::MarkSingleLiveEntry, ChildEntry,
             ReferencedBy);

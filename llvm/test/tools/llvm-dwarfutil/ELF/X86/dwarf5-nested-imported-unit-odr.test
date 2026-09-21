@@ -1,0 +1,216 @@
+## An imported unit entry names a unit root through DW_AT_import, and a unit
+## root is never a type deduplication candidate, so it never carries the type
+## name that cloning into the artificial type unit asks for. Placement of such
+## an entry therefore cannot turn on where it sits: it belongs in plain DWARF
+## at any depth. The linker kept it in plain DWARF only directly under the unit
+## root, so an imported unit entry nested any deeper was given type table
+## placement and aborted in cloneDieRefAttr on a null type name.
+##
+## This is not specific to DW_TAG_partial_unit, so both roots are linked and
+## held to one expectation. Neither root is a workaround for the other here:
+## the compile unit run is the evidence that the defect predates the partial
+## unit work, and the partial unit run is the shape dwz actually emits.
+##
+## U01:  struct T {};
+##       namespace ns { struct S {}; using ::T; }
+## U02:  namespace ns2 { DW_TAG_imported_unit -> U01 }
+## U03:  DW_TAG_imported_unit -> U02
+##       ns::S foo1() { ... }        // DW_FORM_ref_addr reference into U01
+##
+## The import in U02 is nested one level down, inside ns2, which is the whole
+## difference from dwarf5-partial-unit-imported-unit-odr.test. Reaching the
+## failure still needs ODR deduplication to have a type to move, which is what
+## foo1 and its return type are for.
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.out
+# RUN: llvm-dwarfdump --debug-info %t.cu.out | FileCheck %s -DROOT=DW_TAG_compile_unit
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.out
+# RUN: llvm-dwarfdump --debug-info %t.pu.out | FileCheck %s -DROOT=DW_TAG_partial_unit
+
+## Deduplication engaged, so the imports were cloned while there was a type
+## unit to clone them into. The using-declaration is nested exactly as deeply
+## as the imported unit entry is, and it does move here, which is what keeps
+## this test honest: the two nested imports are treated differently because
+## their targets are, not because one of them is nested.
+# CHECK:           DW_AT_name ("__artificial_type_unit")
+# CHECK:           DW_TAG_namespace
+# CHECK-NEXT:        DW_AT_name ("ns")
+# CHECK:             DW_TAG_imported_declaration
+# CHECK-NEXT:          DW_AT_import (0x[[T:[0-9a-f]{8}]] "T")
+# CHECK:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# CHECK-NEXT:          DW_AT_name ("S")
+# CHECK-NOT:  DW_TAG_imported_unit
+# CHECK:      0x[[T]]:   DW_TAG_structure_type
+# CHECK-NEXT:          DW_AT_name ("T")
+
+## The nested imported unit entry stayed in U02, inside the namespace that held
+## it, and resolves to the root DIE of the unit it names.
+# CHECK-NOT:  DW_TAG_imported_unit
+# CHECK:      0x[[U01:[0-9a-f]{8}]]: [[ROOT]]
+# CHECK-NEXT:        DW_AT_producer ("by_hand")
+# CHECK-NEXT:        DW_AT_name ("U01")
+# CHECK-NOT:  DW_TAG_imported_unit
+# CHECK:      0x[[U02:[0-9a-f]{8}]]: [[ROOT]]
+# CHECK-NEXT:        DW_AT_producer ("by_hand")
+# CHECK-NEXT:        DW_AT_name ("U02")
+# CHECK:             DW_TAG_namespace
+# CHECK-NEXT:          DW_AT_name ("ns2")
+# CHECK:               DW_TAG_imported_unit
+# CHECK-NEXT:            DW_AT_import (0x00000000[[U01]] "U01")
+# CHECK:           DW_TAG_compile_unit
+# CHECK-NEXT:        DW_AT_producer ("by_hand")
+# CHECK-NEXT:        DW_AT_name ("U03")
+# CHECK:             DW_TAG_imported_unit
+# CHECK-NEXT:          DW_AT_import (0x00000000[[U02]] "U02")
+# CHECK:             DW_TAG_subprogram
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_imported_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_imported_declaration
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 3
+          Values:
+            - CStr: T
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 7
+          Values:
+            - Value: 0x1f
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: ns2
+        - AbbrCode: 5
+          Values:
+            - Value: 0x0c
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 4
+          Values:
+            - CStr: by_hand
+            - CStr: U03
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 5
+          Values:
+            - Value: 0x3e
+        - AbbrCode: 6
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x27
+        - AbbrCode: 0
+...
