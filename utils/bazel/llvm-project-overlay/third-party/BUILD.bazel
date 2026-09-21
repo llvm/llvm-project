@@ -62,3 +62,31 @@ cc_library_wrapper(
         "//conditions:default": [],
     }),
 )
+
+bool_flag(
+    name = "llvm_enable_libxml2",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "llvm_libxml2_enabled",
+    flag_values = {":llvm_enable_libxml2": "true"},
+)
+
+cc_library_wrapper(
+    name = "libxml2",
+    defines = select({
+        ":llvm_libxml2_enabled": [
+            "LLVM_ENABLE_LIBXML2=1",
+        ],
+        "//conditions:default": [
+            "LLVM_ENABLE_LIBXML2=0",
+        ],
+    }),
+    deps = select({
+        ":llvm_libxml2_enabled": [
+            "@llvm_libxml2//:libxml2",
+        ],
+        "//conditions:default": [],
+    }),
+)
