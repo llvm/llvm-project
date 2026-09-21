@@ -360,6 +360,15 @@ define i32 @sdot4_add_x(i32 %a, i32 %b, i32 %x) {
   ret i32 %r
 }
 
+define void @sdot4_no_use(i32 %a, i32 %b) {
+; CHECK-LABEL: define void @sdot4_no_use(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 7, i1 false)
+  ret void
+}
+
 define i32 @udot4_add(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @udot4_add(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
