@@ -411,7 +411,10 @@ TEST(RISCVISAInfoTest, CanonicalExtensionOrderVP) {
   RISCVISAInfo &Info = **MaybeISAInfo;
 
   // The canonical string should place 'v' before 'p'
-  EXPECT_EQ(Info.toString(), "rv64i2p1_f2p2_d2p2_v1p0_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0");
+  EXPECT_EQ(
+      Info.toString(),
+      "rv64i2p1_f2p2_d2p2_v1p0_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0_zve32f1p0_"
+      "zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0");
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
