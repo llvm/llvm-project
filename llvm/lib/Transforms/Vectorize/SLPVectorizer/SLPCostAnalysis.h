@@ -18,6 +18,7 @@
 
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -103,6 +104,15 @@ getBoolBitmaskCost(const TargetTransformInfo &TTI, bool NeedMask,
                    ArrayRef<int> PermMask, const Value *Root,
                    TargetTransformInfo::TargetCostKind CostKind);
 
+/// Returns the cost of the per-lane operations on the narrowed leaves
+/// \p NarrowedLeafShifts: the shl in the wide vector type if any leaf is
+/// shifted and the and in the narrow vector type if any leaf is masked.
+InstructionCost getNarrowedLeafOpsCost(
+    const TargetTransformInfo &TTI,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CxtI,
+    TargetTransformInfo::TargetCostKind CostKind);
+
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
 /// instead of a scalar.
@@ -144,6 +154,17 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                TargetTransformInfo::TargetCostKind CostKind,
                                const TargetLibraryInfo *TLI,
                                const Instruction *CxtI, unsigned &ShiftWidth);
+
+/// i1 reductions can be emitted as the plain target reduction or in the
+/// bitcast-based form (bitcast to a scalar integer type plus a compare for
+/// and/or, plus ctpop for add). Returns the cost of the cheaper form and
+/// whether it is the bitcast-based one. Ties keep the historically default
+/// form: plain for and/or, bitcast-based for add.
+std::pair<InstructionCost, bool>
+getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
+                   FixedVectorType *VectorTy, Type *ScalarTy,
+                   TargetTransformInfo::CastContextHint Ctx,
+                   TargetTransformInfo::TargetCostKind CostKind);
 
 } // namespace llvm::slpvectorizer
 
