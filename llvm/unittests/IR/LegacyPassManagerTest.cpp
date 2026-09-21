@@ -356,8 +356,7 @@ TEST(PassManager, MemoryOnTheFly) {
 struct CustomOptPassGate : public OptPassGate {
   bool Skip;
   CustomOptPassGate(bool Skip) : Skip(Skip) {}
-  bool shouldRunPass(StringRef PassName,
-                     StringRef IRDescription,
+  bool shouldRunPass(StringRef PassName, StringRef IRDescription,
                      StringRef FuncName) const override {
     return !Skip;
   }
