@@ -742,6 +742,8 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
     else if (BO->getOpcode() == Instruction::Xor)
       ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
+    if (SignExtended || ZeroExtended)
+      return ConstantOffset;
     ConstantOffset =
         find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
             .trunc(BitWidth);
