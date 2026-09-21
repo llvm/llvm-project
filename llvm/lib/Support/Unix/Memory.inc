@@ -237,6 +237,12 @@ void Memory::InvalidateInstructionCache(const void *Addr, size_t Len) {
   for (intptr_t Line = StartLine; Line < EndLine; Line += LineSize)
     asm volatile("icbi 0, %0" : : "r"(Line));
   asm volatile("isync");
+#elif defined(__riscv) && defined(__GNUC__)
+  // __clear_cache() is a no-op in libgcc on RISC-V and is not lowered
+  // by Clang; the builtin lowers to __riscv_flush_icache.
+  const char *Start = static_cast<const char *>(Addr);
+  const char *End = Start + Len;
+  __builtin___clear_cache(const_cast<char *>(Start), const_cast<char *>(End));
 #elif (defined(__arm__) || defined(__aarch64__) || defined(__loongarch__) ||   \
        defined(__mips__)) &&                                                   \
     defined(__GNUC__)
