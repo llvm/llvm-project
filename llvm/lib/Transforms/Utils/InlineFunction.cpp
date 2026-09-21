@@ -1314,7 +1314,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
           MemoryEffects ME = CalleeAAR->getMemoryEffects(Call);
 
           // We'll retain this knowledge without additional metadata.
-          if (ME.onlyAccessesNonaddressableMem())
+          if (ME.onlyAccessesInaccessibleMem())
             continue;
 
           if (ME.onlyAccessesArgPointees())

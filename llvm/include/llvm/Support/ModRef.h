@@ -139,7 +139,8 @@ public:
   /// ModRefInfo, excluding floating-point locations.
   /// The boolean argument value is not used, it only allows to distinguish
   /// between constructors.
-  MemoryEffectsBase(ModRefInfo MR, bool) {
+  MemoryEffectsBase(ModRefInfo MR, bool NoFPEnvMarker) {
+    (void)NoFPEnvMarker;
     for (Location Loc : mem_locations())
       setModRef(Loc, MR);
   }
@@ -152,7 +153,7 @@ public:
   /// Create MemoryEffectsBase that can read and write any memory except
   /// floating-point registers.
   static MemoryEffectsBase unknown_mem() {
-    return MemoryEffectsBase(ModRefInfo::ModRef, false);
+    return MemoryEffectsBase(ModRefInfo::ModRef, /*NoFPEnvMarker*/ true);
   }
 
   /// Create MemoryEffectsBase that cannot read or write any memory.
@@ -163,13 +164,13 @@ public:
   /// Create MemoryEffectsBase that can read any memory excluding floating-point
   /// registers.
   static MemoryEffectsBase readOnly() {
-    return MemoryEffectsBase(ModRefInfo::Ref, false);
+    return MemoryEffectsBase(ModRefInfo::Ref, /*NoFPEnvMarker*/ true);
   }
 
   /// Create MemoryEffectsBase that can write any memory excluding
   /// floating-point registers.
   static MemoryEffectsBase writeOnly() {
-    return MemoryEffectsBase(ModRefInfo::Mod, false);
+    return MemoryEffectsBase(ModRefInfo::Mod, /*NoFPEnvMarker*/ true);
   }
 
   /// Create MemoryEffectsBase that can only access argument memory.
@@ -345,14 +346,9 @@ public:
     return isModOrRefSet(getModRef(Location::ArgMem));
   }
 
-  /// Whether this function only (at most) accesses inaccessible memory.
-  bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
-  }
-
   /// Whether this function only (at most) accesses memory that cannot be
   /// addressed by any pointer.
-  bool onlyAccessesNonaddressableMem() const {
+  bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(Location::InaccessibleMem)
         .getWithoutLoc(Location::FPControl)
         .getWithoutLoc(Location::FPStatus)

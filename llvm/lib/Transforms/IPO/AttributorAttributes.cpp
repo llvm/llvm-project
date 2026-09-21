@@ -8547,7 +8547,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
           State.addKnownBits(inverseLocation(NO_ARGUMENT_MEM, true, true));
         else {
           // Remove location information, only keep read/write info.
-          ME = MemoryEffects(ME.getModRef(), false);
+          ME = MemoryEffects(ME.getModRef(), /*NoFPEnvMarker*/ true);
           A.manifestAttrs(IRP,
                           Attribute::getWithMemoryEffects(
                               IRP.getAnchorValue().getContext(), ME),
@@ -8561,7 +8561,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
               NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
         else {
           // Remove location information, only keep read/write info.
-          ME = MemoryEffects(ME.getModRef(), false);
+          ME = MemoryEffects(ME.getModRef(), /*NoFPEnvMarker*/ true);
           A.manifestAttrs(IRP,
                           Attribute::getWithMemoryEffects(
                               IRP.getAnchorValue().getContext(), ME),
