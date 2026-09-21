@@ -202,16 +202,29 @@ using SCEVUse = SCEVUseT<const SCEV *>;
 /// The no-wrap flags to apply when creating a SCEV expression, to the
 /// expression and use respectively.
 struct SCEVFlags {
-  /// Flags applied directly to a SCEV expression, must be valid wherever the
-  /// expression is valid.
-  SCEVNoWrapFlags ExprFlags;
+  /// The first components of each pair is Flags applied directly to a SCEV
+  /// expression, must be valid wherever the expression is valid. The second
+  /// component are only applied to SCEVUses.
+  std::pair<SCEVNoWrapFlags, SCEVNoWrapFlags> NWFlags = {
+      SCEVNoWrapFlags::FlagAnyWrap, SCEVNoWrapFlags::FlagAnyWrap};
+  std::pair<SCEVExactFlags, SCEVExactFlags> ExactFlags = {
+      SCEVExactFlags::FlagAnyExact, SCEVExactFlags::FlagAnyExact};
 
-  /// Flags only applied to a SCEVUse.
-  SCEVNoWrapFlags UseFlags;
-
-  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagAnyWrap,
+  constexpr SCEVFlags() = default;
+  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags,
                       SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagAnyWrap)
-      : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
+      : NWFlags(ExprFlags, UseFlags) {}
+  constexpr SCEVFlags(SCEVExactFlags ExprFlags,
+                      SCEVExactFlags UseFlags = SCEVExactFlags::FlagAnyExact)
+      : ExactFlags(ExprFlags, UseFlags) {}
+
+  constexpr SCEVNoWrapFlags
+  getNoWrapFlags(SCEVNoWrapFlags Mask = SCEVNoWrapFlags::NoWrapMask) {
+    return (NWFlags.first | NWFlags.second) & Mask;
+  }
+  constexpr bool isExact() {
+    return (ExactFlags.first | ExactFlags.second) == SCEVExactFlags::FlagExact;
+  }
 };
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with

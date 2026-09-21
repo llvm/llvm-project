@@ -28,7 +28,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
-#include <variant>
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X) DEBUG_WITH_TYPE(TYPE, X)
@@ -277,10 +276,9 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 /// InsertBinop - Insert the specified binary operator, doing a small amount
 /// of work to avoid inserting an obviously redundant operation, and hoisting
 /// to an outer loop when the opportunity is there and it is safe.
-Value *SCEVExpander::InsertBinop(
-    Instruction::BinaryOps Opcode, Value *LHS, Value *RHS,
-    std::variant<SCEV::NoWrapFlags, SCEV::ExactFlags> Flags,
-    bool IsSafeToHoist) {
+Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode, Value *LHS,
+                                 Value *RHS, SCEVFlags Flags,
+                                 bool IsSafeToHoist) {
   // Fold a binop with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(LHS))
     if (Constant *CRHS = dyn_cast<Constant>(RHS))
@@ -299,15 +297,13 @@ Value *SCEVExpander::InsertBinop(
         // Ensure that no-wrap flags match.
         if (isa<OverflowingBinaryOperator>(I)) {
           if (I->hasNoSignedWrap() !=
-              any(std::get<SCEV::NoWrapFlags>(Flags) & SCEV::FlagNSW))
+              any(Flags.getNoWrapFlags() & SCEV::FlagNSW))
             return true;
           if (I->hasNoUnsignedWrap() !=
-              any(std::get<SCEV::NoWrapFlags>(Flags) & SCEV::FlagNUW))
+              any(Flags.getNoWrapFlags() & SCEV::FlagNUW))
             return true;
         }
-        if (isa<PossiblyExactOperator>(I) &&
-            I->isExact() !=
-                any(std::get<SCEV::ExactFlags>(Flags) & SCEV::FlagExact))
+        if (isa<PossiblyExactOperator>(I) && I->isExact() != Flags.isExact())
           return true;
         return false;
       };
@@ -336,13 +332,9 @@ Value *SCEVExpander::InsertBinop(
 
   // If we haven't found this binop, insert it.
   Builder.SetCurrentDebugLocation(Loc);
-  bool IsNUW = false, IsNSW = false, IsExact = false;
-  if (std::holds_alternative<SCEV::NoWrapFlags>(Flags)) {
-    IsNUW = any(std::get<SCEV::NoWrapFlags>(Flags) & SCEV::FlagNUW);
-    IsNSW = any(std::get<SCEV::NoWrapFlags>(Flags) & SCEV::FlagNSW);
-  } else {
-    IsExact = any(std::get<SCEV::ExactFlags>(Flags) & SCEV::FlagExact);
-  }
+  bool IsNUW = any(Flags.getNoWrapFlags() & SCEV::FlagNUW);
+  bool IsNSW = any(Flags.getNoWrapFlags() & SCEV::FlagNSW);
+  bool IsExact = Flags.isExact();
   // Don't use folder when expanding post-inc rewrites in LSRMode to preserve
   // the rewrites.
   if (LSRMode && !PostIncLoops.empty() &&
