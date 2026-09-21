@@ -35,7 +35,6 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
@@ -44,7 +43,7 @@
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ConnectionSpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -779,20 +778,10 @@ createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(ExecutorProcessControl &EPC) {
-  SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = lookupAndApply(
-          EPC.getExecutionSession().getBootstrapJITDylib(),
-          {recordAddr(rt::sps_ci::SharedMemoryMapperInstanceName,
-                      &SAs.Instance),
-           recordAddr(rt::sps_ci::SharedMemoryMapperReserve::Name,
-                      &SAs.Reserve),
-           recordAddr(rt::sps_ci::SharedMemoryMapperInitialize::Name,
-                      &SAs.Initialize),
-           recordAddr(rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
-                      &SAs.Deinitialize),
-           recordAddr(rt::sps_ci::SharedMemoryMapperRelease::Name,
-                      &SAs.Release)}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = sps::createSharedMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 
 #ifdef _WIN32
   size_t SlabSize = 1024 * 1024;
@@ -804,7 +793,7 @@ createSharedMemoryManager(ExecutorProcessControl &EPC) {
     SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
-      SlabSize, EPC, SAs);
+      SlabSize, ES, std::move(*B));
 }
 
 static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>

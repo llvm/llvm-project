@@ -307,7 +307,7 @@ enum ID {
 
 class LLGSOptTable : public opt::OptTable {
 public:
-  LLGSOptTable() : opt::OptTable(OptionTables) {}
+  LLGSOptTable() : opt::OptTable(optionTables()) {}
 
   void PrintHelp(llvm::StringRef Name) {
     std::string Usage =

@@ -117,15 +117,10 @@ public:
   /// Get the alias arguments as a \0 separated list.
   /// E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
   const char *getAliasArgs() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getStrTable().getCString(Info->AliasArgsOffset);
+    return Owner->getOptionAliasArgs(getID());
   }
 
-  bool hasAliasArgs() const {
-    assert(Info && "Must have a valid info!");
-    return Info->hasAliasArgs();
-  }
+  bool hasAliasArgs() const { return *getAliasArgs() != '\0'; }
 
   /// Get the default prefix for this option.
   StringRef getPrefix() const { return Owner->getOptionPrefix(getID()); }
