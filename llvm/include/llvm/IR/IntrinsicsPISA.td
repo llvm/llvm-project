@@ -59,7 +59,10 @@ class NanPropagateArgInfo<ArgIndex idx> : ArgInfo<idx, [ArgName<"nanp">]>;
 
 // Helper class for barrier intrinsics.
 class PISAIntrinsicBarrier<string ClangName, list<LLVMType> param_types = []>
-    : PISAIntrinsicClang<[], param_types, [IntrNoMem, IntrHasSideEffects, IntrConvergent], ClangName>;
+    : PISAIntrinsicClang<[], param_types,
+                         [IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                          IntrNoCallback, IntrNoFree, IntrWillReturn],
+                         ClangName>;
 
 // Helper class for unary float operations with rounding mode.
 class PISAUnaryRndIntrinsic
