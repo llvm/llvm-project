@@ -1133,7 +1133,8 @@ static isl::set addTileExtentConstraints(isl::set Set,
                                          llvm::ArrayRef<int> Sizes) {
   unsigned Dims = unsignedFromIslSize(Set.tuple_dim());
   unsigned NumTileDims = Sizes.size();
-  assert(Dims >= NumTileDims);
+  assert(Dims >= NumTileDims &&
+         "Not enough dimensions for the given tile sizes");
   isl::local_space LocalSpace = isl::local_space(Set.get_space());
 
   for (unsigned i = 0; i < NumTileDims; ++i) {
@@ -1153,13 +1154,15 @@ static isl::set addTileExtentConstraints(isl::set Set,
   return Set;
 }
 
-isl::set polly::getFullTilePrefixes(isl::set ScheduleRange,
-                                    llvm::ArrayRef<int> TileSizes,
-                                    unsigned NumCompleteDims) {
+isl::set polly::getCompleteTilePrefixes(isl::set ScheduleRange,
+                                        llvm::ArrayRef<int> TileSizes,
+                                        unsigned NumCompleteDims) {
   unsigned Dims = unsignedFromIslSize(ScheduleRange.tuple_dim());
   unsigned NumTileDims = TileSizes.size();
-  assert(Dims >= NumTileDims);
-  assert(NumCompleteDims >= 1 && NumCompleteDims <= NumTileDims);
+  assert(Dims >= NumTileDims &&
+         "Not enough dimensions for the given tile sizes");
+  assert(NumCompleteDims >= 1 && NumCompleteDims <= NumTileDims &&
+         "The dimensions that have to be complete must be tiled ones");
 
   // Same idea as getPartialTilePrefixes, but keeping the prefixes of the
   // complete tiles instead of the incomplete ones: over-approximate the

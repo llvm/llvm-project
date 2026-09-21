@@ -171,10 +171,11 @@ static cl::list<int>
                                "with --polly-register-tile-size"),
                       cl::Hidden, cl::CommaSeparated, cl::cat(PollyCategory));
 
-static cl::opt<bool> IsolateFullTiles(
-    "polly-isolate-full-tiles",
-    cl::desc("Separate the full tiles of a tiled band from the partial ones, "
-             "so that the point loops of the full tiles have constant bounds"),
+static cl::opt<bool> IsolateCompleteTiles(
+    "polly-isolate-complete-tiles",
+    cl::desc("Separate the complete tiles of a tiled band from the partial "
+             "ones, so that the point loops of the complete tiles have "
+             "constant bounds"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<int> IsolateCompleteTileDims(
@@ -419,20 +420,21 @@ ScheduleTreeOptimizer::isolateFullPartialTiles(isl::schedule_node Node,
   return Result;
 }
 
-/// Separate the full tiles of a tiled band from the partial ones.
+/// Separate the complete tiles of a tiled band from the partial ones.
 ///
-/// The point loops of a full tile run over the whole tile, so isolating those
-/// tiles gives them constant loop bounds instead of the min() expressions that
-/// a tiling of an iteration space which is not a multiple of the tile size
+/// The point loops of a complete tile run over the whole tile, so isolating
+/// those tiles gives them constant loop bounds instead of the min() expressions
+/// that a tiling of an iteration space which is not a multiple of the tile size
 /// produces. The partial tiles are left to a single atomic copy of the loop
 /// nest to keep the code growth bounded.
 ///
 /// @param Node      The point band of the tiling, as returned by tileNode.
 /// @param TileSizes The tile size of each tiled dimension.
 /// @return          The point band of the modified tree.
-static isl::schedule_node isolateFullTiles(isl::schedule_node Node,
-                                           ArrayRef<int> TileSizes) {
-  assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band);
+static isl::schedule_node isolateCompleteTiles(isl::schedule_node Node,
+                                               ArrayRef<int> TileSizes) {
+  assert(isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band &&
+         "Expecting the point band that tileNode returned");
 
   // Below the point band, the prefix schedule covers the outer dimensions
   // followed by the tile and the point dimensions of this tiling.
@@ -447,13 +449,14 @@ static isl::schedule_node isolateFullTiles(isl::schedule_node Node,
     NumCompleteDims =
         std::min<unsigned>(IsolateCompleteTileDims, TileSizes.size());
 
-  isl::set FullTilePrefixes =
-      getFullTilePrefixes(ScheduleRange, TileSizes, NumCompleteDims);
-  if (FullTilePrefixes.is_null())
+  isl::set CompleteTilePrefixes =
+      getCompleteTilePrefixes(ScheduleRange, TileSizes, NumCompleteDims);
+  if (CompleteTilePrefixes.is_null())
     return Node;
 
-  isl::union_set Options = getIsolateOptions(FullTilePrefixes, TileSizes.size())
-                               .unite(getDimOptions(Node.ctx(), "atomic"));
+  isl::union_set Options =
+      getIsolateOptions(CompleteTilePrefixes, TileSizes.size())
+          .unite(getDimOptions(Node.ctx(), "atomic"));
 
   // The option describes the tile dimensions, so it belongs to the tile band,
   // which sits above the marker separating it from the point band.
@@ -594,7 +597,7 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
   if (FirstLevelTiling) {
     // Resolve the tile size of every dimension before tiling splits the band.
     SmallVector<int, 4> Sizes;
-    if (IsolateFullTiles) {
+    if (IsolateCompleteTiles) {
       isl::space Space =
           isl::manage(isl_schedule_node_band_get_space(Node.get()));
       for (unsigned i : rangeIslSize(0, Space.dim(isl::dim::set)))
@@ -607,8 +610,8 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
                     FirstLevelDefaultTileSize);
     FirstLevelTileOpts++;
 
-    if (IsolateFullTiles)
-      Node = isolateFullTiles(Node, Sizes);
+    if (IsolateCompleteTiles)
+      Node = isolateCompleteTiles(Node, Sizes);
   }
 
   if (SecondLevelTiling) {
