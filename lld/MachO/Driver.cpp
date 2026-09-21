@@ -2307,6 +2307,18 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->segmentAddresses[segName] = address;
   }
 
+  if (const Arg *arg = args.getLastArg(OPT_segment_order)) {
+    StringRef(arg->getValue())
+        .split(config->segmentOrder, ':', -1,
+               /*KeepEmpty=*/false);
+    DenseSet<StringRef> seen;
+    for (StringRef segName : config->segmentOrder) {
+      validName(segName);
+      if (!seen.insert(segName).second)
+        error("-segment_order: duplicate segment " + segName);
+    }
+  }
+
   config->sectionAlignments = parseSectAlign(args);
 
   for (const Arg *arg : args.filtered(OPT_segprot)) {

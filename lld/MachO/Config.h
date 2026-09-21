@@ -219,6 +219,7 @@ struct Configuration {
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
   llvm::DenseMap<llvm::StringRef, uint64_t> segmentAddresses;
+  llvm::SmallVector<llvm::StringRef, 0> segmentOrder;
   bool ltoDebugPassManager = false;
   bool emitLLVM = false;
   llvm::StringRef codegenDataGeneratePath;
