@@ -28,6 +28,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
@@ -105,24 +106,33 @@ struct MemTransferInfo {
   ConstantInt *DestIndex = nullptr;
 };
 
+// Per-alloca record produced while scanning a single alloca's users
+struct AllocaUsesInfo {
+  AllocaInst *Alloca;
+  SmallSetVector<Use *, 8> Uses;
+  // Other allocas this alloca's pointer is merged with via a phi/select.
+  SmallVector<AllocaInst *> Links;
+  // True if some phi/select merges this alloca's pointer with null or a
+  // non-alloca object.
+  bool HaveUnpromotableMerge = false;
+
+  explicit AllocaUsesInfo(AllocaInst *Alloca) : Alloca(Alloca) {}
+};
+
 // Analysis for planning the different strategies of alloca promotion.
 //
 // An AllocaAnalysis may represent one alloca or a group of allocas if they need
 // to be promoted together.
 struct AllocaAnalysis {
-  DenseSet<Value *> Pointers;
-  SmallDenseSet<Use *> Uses;
+  SmallSetVector<Use *, 8> Uses;
   unsigned Score = 0;
-  // True if some phi/select merges this alloca's pointer with null or a
-  // non-alloca object. Such merges are still fine for LDS promotion, but they
-  // disable vector promotion.
+  // True if any member's pointer is merged by a phi/select with null or a
+  // non-alloca object. Disables vector promotion for the whole group.
   bool HaveUnpromotableMerge = false;
 
-  // All member allocas of this group, in lane order (Members[0] == Alloca).
+  // All member allocas of this group, in lane order (Members[0] == leader,
+  // the earliest alloca in program order).
   SmallVector<AllocaInst *> Members;
-  // Other allocas this group is directly linked to via a phi/select of
-  // pointers. Used to form groups; empty once grouping is complete.
-  SmallVector<AllocaInst *> Links;
 
   struct {
     FixedVectorType *Ty = nullptr;
@@ -141,11 +151,9 @@ struct AllocaAnalysis {
     SmallVector<User *> Worklist;
   } LDS;
 
-  explicit AllocaAnalysis(AllocaInst *Alloca) { Members.push_back(Alloca); }
-
   bool isGroup() const { return Members.size() > 1; }
 
-  // Returns the leader alloca if this is an alloca group.
+  // Returns the leader alloca of the group.
   AllocaInst *getLeaderAlloca() const { return Members[0]; }
 };
 
@@ -170,7 +178,7 @@ private:
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
-  bool collectAllocaUses(AllocaAnalysis &AA) const;
+  bool collectAllocaUses(AllocaUsesInfo &Info) const;
 
   /// Val is a derived pointer from Alloca. OpIdx0/OpIdx1 are the operand
   /// indices to an instruction with 2 pointer inputs (e.g. select, icmp).
@@ -297,14 +305,14 @@ FunctionPass *llvm::createAMDGPUPromoteAlloca() {
   return new AMDGPUPromoteAlloca();
 }
 
-bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
+bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaUsesInfo &Info) const {
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote alloca: " << Msg << "\n"
                       << "    " << *Inst << "\n");
     return false;
   };
 
-  SmallVector<Instruction *, 4> WorkList({AA.getLeaderAlloca()});
+  SmallVector<Instruction *, 4> WorkList({Info.Alloca});
 
   SmallPtrSet<Value *, 8> Visited;
   // Other allocas which are merged by phi/select with current alloca.
@@ -321,7 +329,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
           return RejectUser(Inst, "pointer escapes via store");
         }
       }
-      AA.Uses.insert(&U);
+      Info.Uses.insert(&U);
 
       if (isa<GetElementPtrInst>(U.getUser())) {
         WorkList.push_back(Inst);
@@ -331,12 +339,12 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
 
         for (auto *Obj : BaseObjs) {
           if (auto *BaseAlloca = dyn_cast<AllocaInst>(Obj)) {
-            if (BaseAlloca != AA.getLeaderAlloca()) {
+            if (BaseAlloca != Info.Alloca) {
               MergedAllocas.insert(const_cast<AllocaInst *>(BaseAlloca));
             }
             WorkList.push_back(Inst);
           } else if (isa<ConstantPointerNull, ConstantAggregateZero>(Obj)) {
-            AA.HaveUnpromotableMerge = true;
+            Info.HaveUnpromotableMerge = true;
             WorkList.push_back(Inst);
           } else {
             return RejectUser(Inst, "phi/select with unkown object");
@@ -346,7 +354,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
     }
   }
   for (auto *Alloca : MergedAllocas)
-    AA.Links.push_back(Alloca);
+    Info.Links.push_back(Alloca);
   return true;
 }
 
@@ -398,7 +406,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
                                   : (MaxVGPRs * 32)) /
       VGPRBudgetRatio;
 
-  SmallMapVector<AllocaInst *, AllocaAnalysis, 4> AllocaAnalysisMap;
+  SmallMapVector<AllocaInst *, AllocaUsesInfo, 4> PromotableAllocas;
   for (Instruction &I : F.getEntryBlock()) {
     auto *AI = dyn_cast<AllocaInst>(&I);
     // Array allocations are probably not worth handling, since an allocation
@@ -406,65 +414,56 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     if (!AI || !AI->isStaticAlloca() || AI->isArrayAllocation())
       continue;
     LLVM_DEBUG(dbgs() << "Analyzing: " << *AI << '\n');
-    AllocaAnalysis AA{AI};
-    if (!collectAllocaUses(AA))
+    AllocaUsesInfo Info{AI};
+    if (!collectAllocaUses(Info))
       continue;
-    AllocaAnalysisMap.insert({AI, std::move(AA)});
+    PromotableAllocas.insert({AI, std::move(Info)});
+  }
+
+  // Group allocas that are merged by phi/select using a union-find over the
+  // link edges.
+  EquivalenceClasses<AllocaInst *> Groups;
+  for (auto &[AI, Info] : PromotableAllocas) {
+    Groups.insert(AI);
+    for (AllocaInst *Link : Info.Links)
+      Groups.unionSets(AI, Link);
   }
 
   std::vector<AllocaAnalysis> Allocas;
-  for (auto &AA : AllocaAnalysisMap.values()) {
-    if (AA.Uses.empty())
+  // Construct one AllocaAnalysis for each alloca group and merge the
+  // information from each alloca.
+  for (const auto *ECV : Groups) {
+    if (!ECV->isLeader())
       continue;
 
-    bool Promotable = true;
-    SmallVector<AllocaInst *> Worklist;
-    LLVM_DEBUG(dbgs() << "Process leader alloca " << *AA.getLeaderAlloca()
-                      << '\n');
-    Worklist.append(AA.Links);
-    // Pull the information from links into the leader alloca.
-    while (!Worklist.empty()) {
-      AllocaInst *CurLink = Worklist.pop_back_val();
-      auto LinkIter = AllocaAnalysisMap.find(CurLink);
-      if (LinkIter != AllocaAnalysisMap.end()) {
-        AllocaAnalysis &LinkAA = LinkIter->second;
-        // Skip if the linked alloca was done or points to the leader alloca
-        // itself.
-        if (LinkAA.Uses.empty() || &LinkAA == &AA)
-          continue;
+    bool HasNonCandidateMember = false;
+    AllocaAnalysis AA;
 
-        LLVM_DEBUG({
-          dbgs() << "  Process link: " << *LinkAA.getLeaderAlloca() << '\n';
-          for (auto *X : LinkAA.Uses)
-            dbgs() << "    Add User " << *X->getUser() << '\n';
-        });
-
-        AA.Uses.insert_range(LinkAA.Uses);
-        LinkAA.Uses.clear();
-        AA.HaveUnpromotableMerge |= LinkAA.HaveUnpromotableMerge;
-        AA.Members.push_back(LinkAA.getLeaderAlloca());
-
-        // Add indirect links to worklist, so that their info are properly
-        // propagated to the leader alloca.
-        Worklist.append(LinkAA.Links);
-        LinkAA.Links.clear();
-      } else {
-        LLVM_DEBUG(dbgs() << "  The alloca is not promotable\n");
-        Promotable = false;
+    for (AllocaInst *AI : Groups.members(*ECV)) {
+      auto It = PromotableAllocas.find(AI);
+      // A member that is not a promotion candidate makes the whole class
+      // unpromotable as a combined vector.
+      if (It == PromotableAllocas.end()) {
+        HasNonCandidateMember = true;
         break;
       }
+      AllocaUsesInfo &Info = It->second;
+      AA.Members.push_back(AI);
+      AA.Uses.insert_range(Info.Uses);
+      AA.HaveUnpromotableMerge |= Info.HaveUnpromotableMerge;
     }
 
-    if (Promotable) {
-      sort(AA.Members, [](AllocaInst *A, AllocaInst *B) -> bool {
-        return A->comesBefore(B);
-      });
-      LLVM_DEBUG({
-        for (AllocaInst *M : AA.Members)
-          dbgs() << "  Members: " << *M << '\n';
-      });
-      Allocas.push_back(AA);
+    if (HasNonCandidateMember) {
+      LLVM_DEBUG(dbgs() << "  Group containing " << *ECV->getData()
+                        << " is not promotable\n");
+      continue;
     }
+
+    sort(AA.Members, [](AllocaInst *A, AllocaInst *B) -> bool {
+      return A->comesBefore(B);
+    });
+
+    Allocas.push_back(std::move(AA));
   }
 
   for (AllocaAnalysis &AA : Allocas) {

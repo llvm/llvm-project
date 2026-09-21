@@ -41,9 +41,10 @@ define half @forwarded_load_across_blocks() {
 ; CHECK-NEXT:    [[ARR:%.*]] = freeze <4 x half> poison
 ; CHECK-NEXT:    br label %[[BB2:.*]]
 ; CHECK:       [[BB2]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> [[TMP0]], i32 0
 ; CHECK-NEXT:    ret half [[TMP1]]
 ;
 entry:
