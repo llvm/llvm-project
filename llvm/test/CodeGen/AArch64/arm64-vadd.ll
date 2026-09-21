@@ -1351,3 +1351,72 @@ define <4 x i32> @neg_narrow_i32(<4 x i64> %a) {
   %vshrn_n = trunc nuw <4 x i64> %s to <4 x i32>
   ret <4 x i32> %vshrn_n
 }
+
+define <8 x i8> @addhn_shift_i8(<8 x i16> %a) nounwind {
+; CHECK-LABEL: addhn_shift_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addhn v0.8b, v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %1 = lshr <8 x i16> %a, splat (i16 7)
+  %2 = trunc <8 x i16> %1 to <8 x i8>
+  ret <8 x i8> %2
+}
+
+define <4 x i16> @addhn_shift_i16(<4 x i32> %a) nounwind {
+; CHECK-LABEL: addhn_shift_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addhn v0.4h, v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %1 = lshr <4 x i32> %a, splat (i32 15)
+  %2 = trunc <4 x i32> %1 to <4 x i16>
+  ret <4 x i16> %2
+}
+
+define <2 x i32> @addhn_shift_i32(<2 x i64> %a) nounwind {
+; CHECK-LABEL: addhn_shift_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addhn v0.2s, v0.2d, v0.2d
+; CHECK-NEXT:    ret
+  %1 = lshr <2 x i64> %a, splat (i64 31)
+  %2 = trunc <2 x i64> %1 to <2 x i32>
+  ret <2 x i32> %2
+}
+
+define <16 x i8> @addhn2_shift_i8(<8 x i16> %a, <8 x i8> %b) nounwind {
+; CHECK-LABEL: addhn2_shift_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    addhn2 v1.16b, v0.8h, v0.8h
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %1 = lshr <8 x i16> %a, splat (i16 7)
+  %2 = trunc <8 x i16> %1 to <8 x i8>
+  %3 = shufflevector <8 x i8> %b, <8 x i8> %2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %3
+}
+
+define <8 x i16> @addhn2_shift_i16(<4 x i32> %a, <4 x i16> %b) nounwind {
+; CHECK-LABEL: addhn2_shift_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    addhn2 v1.8h, v0.4s, v0.4s
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %1 = lshr <4 x i32> %a, splat (i32 15)
+  %2 = trunc <4 x i32> %1 to <4 x i16>
+  %3 = shufflevector <4 x i16> %b, <4 x i16> %2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %3
+}
+
+define <4 x i32> @addhn2_shift_i32(<2 x i64> %a, <2 x i32> %b) nounwind {
+; CHECK-LABEL: addhn2_shift_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    addhn2 v1.4s, v0.2d, v0.2d
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %1 = lshr <2 x i64> %a, splat (i64 31)
+  %2 = trunc <2 x i64> %1 to <2 x i32>
+  %3 = shufflevector <2 x i32> %b, <2 x i32> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %3
+}

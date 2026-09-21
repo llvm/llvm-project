@@ -7931,6 +7931,29 @@ defm : AddSubHNPatterns<ADDHNv2i64_v2i32, ADDHNv2i64_v4i32,
                         SUBHNv2i64_v2i32, SUBHNv2i64_v4i32,
                         v2i32, v2i64, 32>;
 
+def : Pat<(v8i8 (trunc (AArch64vlshr (v8i16 V128:$Rn), (i32 7)))),
+          (ADDHNv8i16_v8i8 V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i16 (trunc (AArch64vlshr (v4i32 V128:$Rn), (i32 15)))),
+          (ADDHNv4i32_v4i16 V128:$Rn, V128:$Rn)>;
+def : Pat<(v2i32 (trunc (AArch64vlshr (v2i64 V128:$Rn), (i32 31)))),
+          (ADDHNv2i64_v2i32 V128:$Rn, V128:$Rn)>;
+
+def : Pat<(v16i8 (concat_vectors (v8i8 V64:$Rd),
+                                 (trunc (AArch64vlshr (v8i16 V128:$Rn),
+                                                      (i32 7))))),
+          (ADDHNv8i16_v16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 V64:$Rd),
+                                 (trunc (AArch64vlshr (v4i32 V128:$Rn),
+                                                      (i32 15))))),
+          (ADDHNv4i32_v8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
+                                 (trunc (AArch64vlshr (v2i64 V128:$Rn),
+                                                      (i32 31))))),
+          (ADDHNv2i64_v4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD bitwise extract from vector instruction.
 //----------------------------------------------------------------------------
