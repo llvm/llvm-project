@@ -49021,8 +49021,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       // Currently blend in v8i16 (not v8f16) since a v8f16 VSELECT can fail to
       // select on some subtargets
       SDValue Mask =
-          DAG.getNode(ISD::SUB, DL, MVT::i16, DAG.getConstant(0, DL, MVT::i16),
-                      DAG.getZExtOrTrunc(Cond, DL, MVT::i16));
+          DAG.getNegative(DAG.getZExtOrTrunc(Cond, DL, MVT::i16), DL, MVT::i16);
       SDValue VLHS =
           DAG.getBitcast(MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
                                                  MVT::v8f16, F16LHS));
