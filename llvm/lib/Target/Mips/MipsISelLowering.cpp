@@ -3058,8 +3058,7 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   static const MCPhysReg F32Regs[] = { Mips::F12, Mips::F14 };
 
-  const MCPhysReg FloatVectorIntRegs[] = {ABI.getArgReg(0, false),
-                                          ABI.getArgReg(2, false)};
+  const MCPhysReg FloatVectorIntRegs[] = {IntRegs[0], IntRegs[2]};
 
   // Do not process byval args here.
   if (ArgFlags.isByVal())
