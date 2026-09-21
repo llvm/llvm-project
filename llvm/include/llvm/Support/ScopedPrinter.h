@@ -14,6 +14,7 @@
 #include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -314,14 +315,8 @@ public:
   }
 
   template <typename T, typename U>
-  void printList(StringRef Label, const T &List, const U &Printer) {
-    startLine() << Label << ": [";
-    ListSeparator LS;
-    for (const auto &Item : List) {
-      OS << LS;
-      Printer(OS, Item);
-    }
-    OS << "]\n";
+  void printList(StringRef Label, const T &List, const U &Mapper) {
+    printList(Label, ArrayRef(map_to_vector(List, Mapper)));
   }
 
   template <typename T> void printHexList(StringRef Label, const T &List) {
