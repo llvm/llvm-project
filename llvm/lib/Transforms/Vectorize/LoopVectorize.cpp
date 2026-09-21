@@ -6655,6 +6655,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(HeaderVPBB))) {
+    assert(
+        all_of(
+            make_range(VPBB->getFirstNonPhi(), VPBB->end()),
+            IsaPred<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
+                    VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
+                    VPWidenCallRecipe, VPWidenIntrinsicRecipe,
+                    VPVectorPointerRecipe, VPVectorEndPointerRecipe,
+                    VPHistogramRecipe, VPInstruction>) &&
+        "Unexpected recipe");
     for (VPInstruction &VPI :
          make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
       // We represent single-scalar casts directly as VPInstructions.
