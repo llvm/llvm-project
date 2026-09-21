@@ -43,13 +43,11 @@ resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
     if (auto intSize = getConstantIntValue(dimSize)) {
       // Mask not all-true for this dim.
       if (maskTypeDimScalableFlags[i] || intSize < maskTypeDimSizes[i])
-        return rewriter.notifyMatchFailure(
-            createMaskOp, "constant mask dimension is not all-true");
+        return failure();
     } else if (auto vscaleMultiplier = getConstantVscaleMultiplier(dimSize)) {
       // Mask not all-true for this dim.
       if (vscaleMultiplier < maskTypeDimSizes[i])
-        return rewriter.notifyMatchFailure(createMaskOp,
-                                           "`vscale` multiple is not all-true");
+        return failure();
     } else {
       // Unknown (without further analysis).
       unknownDims.push_back(UnknownMaskDim{i, dimSize});
@@ -59,54 +57,49 @@ resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
   for (auto [i, dimSize] : unknownDims) {
     // Compute the lower bound for the unknown dimension (i.e. the smallest
     // value it could be).
+
+    // Fixed-width case: without a `vscale` range the bound is a plain constant,
+    // which can only prove a fixed-size dimension all-true.
     if (!vscaleRange) {
       // A constant bound cannot prove a scalable dim, whose runtime size is
       // `vscale` times the size in the type. Checked first to skip the query.
       if (maskTypeDimScalableFlags[i])
-        return rewriter.notifyMatchFailure(
-            createMaskOp, "scalable dimension requires a `vscale` range");
+        return failure();
       FailureOr<int64_t> constantLowerBound =
           ValueBoundsConstraintSet::computeConstantBound(
               presburger::BoundType::LB, dimSize);
       if (failed(constantLowerBound))
-        return rewriter.notifyMatchFailure(
-            createMaskOp, "no constant lower bound for mask dimension");
+        return failure();
       // If LB < the mask dim size then this dim is not all-true.
       if (*constantLowerBound < maskTypeDimSizes[i])
-        return rewriter.notifyMatchFailure(
-            createMaskOp, "lower bound is less than the mask dimension size");
+        return failure();
       continue;
     }
 
+    // Scalable case: with a `vscale` range the bound has the form
+    // `base + n * vscale`, which can prove either kind of dimension all-true.
     FailureOr<ConstantOrScalableBound> dimLowerBound =
         vector::ScalableValueBoundsConstraintSet::computeScalableBound(
             dimSize, {}, vscaleRange->vscaleMin, vscaleRange->vscaleMax,
             presburger::BoundType::LB);
     if (failed(dimLowerBound))
-      return rewriter.notifyMatchFailure(
-          createMaskOp, "no scalable lower bound for mask dimension");
+      return failure();
     auto dimLowerBoundSize = dimLowerBound->getSize();
     if (failed(dimLowerBoundSize))
-      return rewriter.notifyMatchFailure(
-          createMaskOp, "scalable lower bound has no known size");
+      return failure();
     if (dimLowerBoundSize->scalable) {
       // 1. The lower bound, LB, is scalable. If LB is < the mask dim size then
       // this dim is not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
-        return rewriter.notifyMatchFailure(
-            createMaskOp, "scalable lower bound is less than the mask "
-                          "dimension size");
+        return failure();
     } else {
       // 2. The lower bound, LB, is a constant.
       // - If the mask dim size is scalable then this dim is not all-true.
       if (maskTypeDimScalableFlags[i])
-        return rewriter.notifyMatchFailure(
-            createMaskOp, "constant lower bound cannot prove a scalable "
-                          "mask dimension");
+        return failure();
       // - If LB < the _fixed-size_ mask dim size then this dim is not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
-        return rewriter.notifyMatchFailure(
-            createMaskOp, "lower bound is less than the mask dimension size");
+        return failure();
     }
   }
 

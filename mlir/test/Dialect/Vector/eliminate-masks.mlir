@@ -1,14 +1,14 @@
-// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks | FileCheck %s --check-prefixes=CHECK,WITH-RANGE
-// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks=fixed-size | FileCheck %s --check-prefixes=CHECK,NO-RANGE
+// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks | FileCheck %s --check-prefixes=ALL,WITH-RANGE
+// RUN: mlir-opt %s -split-input-file -test-eliminate-vector-masks=fixed-size | FileCheck %s --check-prefixes=ALL,NO-RANGE
 
 // Each scalable test below is paired with a fixed-size equivalent, so that both
-// widths get the same coverage. Only the two cases that need a vscale range to
-// be resolved differ between the two runs; everything else behaves identically
+// widths get the same coverage. Only the one case that needs a vscale range to
+// be resolved differs between the two runs; everything else behaves identically
 // with and without one.
 
 // This tests a general pattern the vectorizer tends to emit.
 
-// CHECK-LABEL: @eliminate_redundant_masks_through_insert_and_extracts
+// ALL-LABEL: @eliminate_redundant_masks_through_insert_and_extracts
 //  WITH-RANGE: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [4] : vector<[4]xi1>
 //  WITH-RANGE: vector.transfer_read {{.*}} %[[ALL_TRUE_MASK]]
 //  WITH-RANGE: vector.mask %[[ALL_TRUE_MASK:.*]] {
@@ -59,9 +59,9 @@ func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor
 // variable, so it is not constant and no fold removes it, but value bounds
 // proves `%i <= 1020`, hence `1024 - %i >= 4`.
 
-// CHECK-LABEL: @eliminate_redundant_masks_fixed_size
-//       CHECK: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [4] : vector<4xi1>
-//       CHECK: vector.transfer_read {{.*}}, %[[ALL_TRUE_MASK]]
+// ALL-LABEL: @eliminate_redundant_masks_fixed_size
+//       ALL: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [4] : vector<4xi1>
+//       ALL: vector.transfer_read {{.*}}, %[[ALL_TRUE_MASK]]
 func.func @eliminate_redundant_masks_fixed_size(%tensor: tensor<1024xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
@@ -81,15 +81,15 @@ func.func @eliminate_redundant_masks_fixed_size(%tensor: tensor<1024xf32>) -> f3
 // -----
 
 // Test to ensure that functions without a body are skipped.
-// CHECK-LABEL: func.func private @negative_no_func_body()
+// ALL-LABEL: func.func private @negative_no_func_body()
 func.func private @negative_no_func_body()
 
 // -----
 
-// CHECK-LABEL: @negative_extract_slice_size_shrink
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<[4]xi1>) -> ()
+// ALL-LABEL: @negative_extract_slice_size_shrink
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<[4]xi1>) -> ()
 func.func @negative_extract_slice_size_shrink(%tensor: tensor<1000xf32>) {
   %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
@@ -114,9 +114,9 @@ func.func @negative_extract_slice_size_shrink(%tensor: tensor<1000xf32>) {
 
 // -----
 
-// CHECK-LABEL: @trivially_all_true_case
-// CHECK: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [2, 4] : vector<2x[4]xi1>
-// CHECK: "test.some_use"(%[[ALL_TRUE_MASK]]) : (vector<2x[4]xi1>) -> ()
+// ALL-LABEL: @trivially_all_true_case
+// ALL: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [2, 4] : vector<2x[4]xi1>
+// ALL: "test.some_use"(%[[ALL_TRUE_MASK]]) : (vector<2x[4]xi1>) -> ()
 func.func @trivially_all_true_case(%tensor: tensor<2x?xf32>)
 {
   %c2 = arith.constant 2 : index
@@ -133,9 +133,9 @@ func.func @trivially_all_true_case(%tensor: tensor<2x?xf32>)
 
 // -----
 
-// CHECK-LABEL: @trivially_all_true_case_fixed_size
-// CHECK: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [2, 4] : vector<2x4xi1>
-// CHECK: "test.some_use"(%[[ALL_TRUE_MASK]]) : (vector<2x4xi1>) -> ()
+// ALL-LABEL: @trivially_all_true_case_fixed_size
+// ALL: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [2, 4] : vector<2x4xi1>
+// ALL: "test.some_use"(%[[ALL_TRUE_MASK]]) : (vector<2x4xi1>) -> ()
 func.func @trivially_all_true_case_fixed_size()
 {
   %c2 = arith.constant 2 : index
@@ -148,10 +148,10 @@ func.func @trivially_all_true_case_fixed_size()
 
 // -----
 
-// CHECK-LABEL: @negative_constant_dim_not_all_true
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<2x[4]xi1>) -> ()
+// ALL-LABEL: @negative_constant_dim_not_all_true
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<2x[4]xi1>) -> ()
 func.func @negative_constant_dim_not_all_true()
 {
   %c1 = arith.constant 1 : index
@@ -167,10 +167,10 @@ func.func @negative_constant_dim_not_all_true()
 
 // -----
 
-// CHECK-LABEL: @negative_constant_dim_not_all_true_fixed_size
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<2x4xi1>) -> ()
+// ALL-LABEL: @negative_constant_dim_not_all_true_fixed_size
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<2x4xi1>) -> ()
 func.func @negative_constant_dim_not_all_true_fixed_size()
 {
   %c1 = arith.constant 1 : index
@@ -183,10 +183,10 @@ func.func @negative_constant_dim_not_all_true_fixed_size()
 
 // -----
 
-// CHECK-LABEL: @negative_constant_vscale_multiple_not_all_true
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<2x[4]xi1>) -> ()
+// ALL-LABEL: @negative_constant_vscale_multiple_not_all_true
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<2x[4]xi1>) -> ()
 func.func @negative_constant_vscale_multiple_not_all_true() {
   %c2 = arith.constant 2 : index
   %c3 = arith.constant 3 : index
@@ -202,10 +202,10 @@ func.func @negative_constant_vscale_multiple_not_all_true() {
 
 // -----
 
-// CHECK-LABEL: @negative_value_bounds_fixed_dim_not_all_true
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<3x[4]xi1>) -> ()
+// ALL-LABEL: @negative_value_bounds_fixed_dim_not_all_true
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<3x[4]xi1>) -> ()
 func.func @negative_value_bounds_fixed_dim_not_all_true(%tensor: tensor<2x?xf32>)
 {
   %c0 = arith.constant 0 : index
@@ -222,10 +222,10 @@ func.func @negative_value_bounds_fixed_dim_not_all_true(%tensor: tensor<2x?xf32>
 
 // -----
 
-// CHECK-LABEL: @negative_value_bounds_fixed_dim_not_all_true_fixed_size
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<3x4xi1>) -> ()
+// ALL-LABEL: @negative_value_bounds_fixed_dim_not_all_true_fixed_size
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<3x4xi1>) -> ()
 func.func @negative_value_bounds_fixed_dim_not_all_true_fixed_size(%tensor: tensor<2x?xf32>)
 {
   %c0 = arith.constant 0 : index
@@ -240,10 +240,10 @@ func.func @negative_value_bounds_fixed_dim_not_all_true_fixed_size(%tensor: tens
 
 // -----
 
-// CHECK-LABEL: @negative_value_bounds_scalable_dim_not_all_true
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<3x[4]xi1>) -> ()
+// ALL-LABEL: @negative_value_bounds_scalable_dim_not_all_true
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<3x[4]xi1>) -> ()
 func.func @negative_value_bounds_scalable_dim_not_all_true(%tensor: tensor<2x100xf32>) {
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
@@ -262,10 +262,10 @@ func.func @negative_value_bounds_scalable_dim_not_all_true(%tensor: tensor<2x100
 
 // Nothing bounds %n from below, so no bound is found at all.
 
-// CHECK-LABEL: @negative_unbounded_operand_fixed_size
-// CHECK-NOT: vector.constant_mask
-// CHECK: %[[MASK:.*]] = vector.create_mask
-// CHECK: "test.some_use"(%[[MASK]]) : (vector<4xi1>) -> ()
+// ALL-LABEL: @negative_unbounded_operand_fixed_size
+// ALL-NOT: vector.constant_mask
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: "test.some_use"(%[[MASK]]) : (vector<4xi1>) -> ()
 func.func @negative_unbounded_operand_fixed_size(%n: index) {
   %mask = vector.create_mask %n : vector<4xi1>
   "test.some_use"(%mask) : (vector<4xi1>) -> ()
@@ -274,21 +274,20 @@ func.func @negative_unbounded_operand_fixed_size(%n: index) {
 
 // -----
 
-// A mask dimension that is only provably all-true once a vscale range is known.
-// `max(%n, 4 * vscale) >= 4 * vscale`, which is exactly the runtime size of
-// `vector<[4]xi1>`.
+// A constant lower bound can never prove a scalable dimension all-true, in
+// either run: `max(%n, 4) >= 4`, but `vector<[4]xi1>` holds `4 * vscale`
+// elements, so the mask is only all-true when `vscale` is 1. Without the
+// scalable-dimension check on the fixed-width path this is folded to an
+// all-true mask, which is wrong for every `vscale > 1`.
 
-// CHECK-LABEL: @scalable_dim_requires_vscale_range
-//  WITH-RANGE: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [4] : vector<[4]xi1>
-//  WITH-RANGE: "test.some_use"(%[[ALL_TRUE_MASK]]) : (vector<[4]xi1>) -> ()
-//  NO-RANGE-NOT: vector.constant_mask
-//  NO-RANGE: %[[MASK:.*]] = vector.create_mask
-//  NO-RANGE: "test.some_use"(%[[MASK]]) : (vector<[4]xi1>) -> ()
-func.func @scalable_dim_requires_vscale_range(%n: index) {
+// ALL-LABEL: @negative_scalable_dim_constant_lower_bound
+//   ALL-NOT: vector.constant_mask
+//       ALL: %[[MASK:.*]] = vector.create_mask
+//       ALL: "test.some_use"(%[[MASK]]) : (vector<[4]xi1>) -> ()
+func.func @negative_scalable_dim_constant_lower_bound(%n: index) {
   %c4 = arith.constant 4 : index
-  %vscale = vector.vscale
-  %c4_vscale = arith.muli %vscale, %c4 : index
-  %m = arith.maxsi %n, %c4_vscale : index
+  // There is no fixed-size equivalent: the dimension under test is scalable.
+  %m = arith.maxsi %n, %c4 : index
   %mask = vector.create_mask %m : vector<[4]xi1>
   "test.some_use"(%mask) : (vector<[4]xi1>) -> ()
   return
