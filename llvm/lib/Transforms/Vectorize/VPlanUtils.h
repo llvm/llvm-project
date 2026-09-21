@@ -244,7 +244,8 @@ BranchProbability getExecutionProbability(BlockFrequency Freq);
 /// the frequency with which it executes relative to the first (header) block,
 /// and whether that frequency was composed using any estimated branch weights.
 /// The frequency of a block is the sum over its incoming edges, or std::nullopt
-/// if any edge on a path reaching it lacks branch weights.
+/// if any edge on a path reaching it lacks branch weights. Edges to blocks
+/// outside \p Blocks are ignored.
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
@@ -325,11 +326,8 @@ public:
     assert(!NewBlock->hasSuccessors() && !NewBlock->hasPredecessors() &&
            "Can't insert new block with predecessors or successors.");
     NewBlock->setParent(BlockPtr->getParent());
-    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      Pred->replaceSuccessor(BlockPtr, NewBlock);
-      NewBlock->appendPredecessor(Pred);
-    }
-    BlockPtr->clearPredecessors();
+    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors()))
+      replaceSuccessor(Pred, BlockPtr, NewBlock);
     connectBlocks(NewBlock, BlockPtr);
   }
 
@@ -381,6 +379,16 @@ public:
     To->removePredecessor(From);
   }
 
+  /// Redirect the edge from \p From to \p OldSucc to \p NewSucc, keeping \p
+  /// From's successor order. \p From is removed from \p OldSucc's predecessors
+  /// and appended to \p NewSucc's.
+  static void replaceSuccessor(VPBlockBase *From, VPBlockBase *OldSucc,
+                               VPBlockBase *NewSucc) {
+    From->replaceSuccessor(OldSucc, NewSucc);
+    OldSucc->removePredecessor(From);
+    NewSucc->appendPredecessor(From);
+  }
+
   /// Reassociate all the blocks connected to \p Old so that they now point to
   /// \p New.
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
@@ -414,18 +422,7 @@ public:
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-
-    // We need the pointee range over (const) BlocktTy & instead of (const)
-    // BlockTy * for filter_range to work properly.
-    auto Filter =
-        make_filter_range(make_pointee_range(Range),
-                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
-      return cast<BlockTy>(&Block);
-    });
+    return make_isa_range<BlockTy>(std::forward<T>(Range));
   }
 
   /// Return an iterator range over \p Range with each block cast to \p

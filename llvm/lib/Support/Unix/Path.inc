@@ -1027,11 +1027,9 @@ ErrorOr<basic_file_status> directory_entry::status() const {
   return s;
 }
 
-//
-// FreeBSD optionally provides /proc/self/fd, but it is incompatible with
-// Linux. The thing to use is realpath.
-//
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
+// Only enable on OSes that have the /proc filesystem, /proc/self/fd,
+// and semantics compatible with Linux.
+#if defined(__linux__)
 #define TRY_PROC_SELF_FD
 #endif
 

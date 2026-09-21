@@ -2947,12 +2947,12 @@ static void processPSInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
 void SITargetLowering::allocateSpecialEntryInputVGPRs(
     CCState &CCInfo, MachineFunction &MF, const SIRegisterInfo &TRI,
     SIMachineFunctionInfo &Info) const {
-  const LLT S32 = LLT::scalar(32);
+  const LLT I32 = LLT::integer(32);
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   if (Info.hasWorkItemIDX()) {
     Register Reg = AMDGPU::VGPR0;
-    MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+    MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), I32);
 
     CCInfo.AllocateReg(Reg);
     unsigned Mask =
@@ -2967,7 +2967,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
           ArgDescriptor::createRegister(AMDGPU::VGPR0, 0x3ff << 10));
     } else {
       unsigned Reg = AMDGPU::VGPR1;
-      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), I32);
 
       CCInfo.AllocateReg(Reg);
       Info.setWorkItemIDY(ArgDescriptor::createRegister(Reg));
@@ -2981,7 +2981,7 @@ void SITargetLowering::allocateSpecialEntryInputVGPRs(
           ArgDescriptor::createRegister(AMDGPU::VGPR0, 0x3ff << 20));
     } else {
       unsigned Reg = AMDGPU::VGPR2;
-      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), S32);
+      MRI.setType(MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass), I32);
 
       CCInfo.AllocateReg(Reg);
       Info.setWorkItemIDZ(ArgDescriptor::createRegister(Reg));
