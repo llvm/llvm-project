@@ -23,6 +23,8 @@ namespace llvm::hlsl {
 
 static constexpr unsigned MaxSignatureRows = 32;
 static constexpr unsigned MaxSignatureCols = 4;
+static constexpr unsigned MaxClipCullRows = 2;
+static constexpr unsigned MaxGeometryStreams = 4;
 
 /// Denotes the element that could not be packed and why.
 class LLVM_ABI SignaturePackingError : public ErrorInfo<SignaturePackingError> {
@@ -30,6 +32,9 @@ public:
   enum ErrorKind {
     SignatureOverflow,
     SemanticIndexOutOfRange,
+    ClipCullOverflow,
+    ClipCullNotAdjacent,
+    InvalidGeometryStream,
   };
 
   static char ID;
@@ -62,6 +67,25 @@ private:
 LLVM_ABI Expected<unsigned>
 packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
+
+/// Packs eligible signature elements without moving previously placed
+/// elements.
+///
+/// See llvm/docs/DirectX/SemanticSignatures.md#prefix-stable-packing for
+/// details.
+///
+/// Returns one past the highest allocated row, or zero if no elements were
+/// allocated. For geometry outputs this is the maximum extent of any stream,
+/// not the sum of their extents.
+///
+/// On failure, Elements is left partially packed: the elements preceding the
+/// one reported by the returned SignaturePackingError keep the locations
+/// they were assigned, while that element and the ones following it retain the
+/// unallocated row and column sentinels.
+LLVM_ABI Expected<unsigned>
+packSignaturePrefixStable(MutableArrayRef<SemanticSignatureElement> Elements,
+                          Triple::EnvironmentType ShaderStage, IOType IOTy,
+                          bool UseNative16BitTypes);
 
 /// Packs eligible signature elements at rows selected by semantic index.
 ///

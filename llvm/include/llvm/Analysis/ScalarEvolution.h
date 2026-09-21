@@ -2512,9 +2512,25 @@ private:
   std::optional<std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>>>
   createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI);
 
+  /// Return the smallest signed (\p IsSigned) or unsigned value for \p S. If \p
+  /// Invert, return it for complement ~S instead.
+  APInt getRangeMin(const SCEV *S, bool IsSigned, bool Invert = false) {
+    if (Invert)
+      return ~getRangeMax(S, IsSigned);
+    return IsSigned ? getSignedRangeMin(S) : getUnsignedRangeMin(S);
+  }
+  /// Return the largest signed (\p IsSigned) or unsigned value for \p S. If \p
+  /// Invert, return it for complement ~S instead.
+  APInt getRangeMax(const SCEV *S, bool IsSigned, bool Invert = false) {
+    if (Invert)
+      return ~getRangeMin(S, IsSigned);
+    return IsSigned ? getSignedRangeMax(S) : getUnsignedRangeMax(S);
+  }
+
   /// Compute the maximum backedge count based on the range of values
   /// permitted by Start, End, and Stride. This is for loops of the form
-  /// {Start, +, Stride} LT End.
+  /// {Start, +, Stride} LT End, or, if \p Invert is set, for the equivalent
+  /// "~Start < ~End" form of {Start, +, -Stride} GT End.
   ///
   /// Preconditions:
   /// * the induction variable is known to be positive.
@@ -2523,17 +2539,13 @@ private:
   /// We *don't* assert these preconditions so please be careful.
   const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
                                      const SCEV *End, unsigned BitWidth,
-                                     bool IsSigned);
+                                     bool IsSigned, bool Invert);
 
-  /// Verify if an linear IV with positive stride can overflow when in a
-  /// less-than comparison, knowing the invariant term of the comparison,
-  /// the stride.
-  bool canIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride, bool IsSigned);
-
-  /// Verify if an linear IV with negative stride can overflow when in a
-  /// greater-than comparison, knowing the invariant term of the comparison,
-  /// the stride.
-  bool canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride, bool IsSigned);
+  /// Verify if a linear IV with positive \p Stride can overflow when compared
+  /// against the invariant \p RHS with a less-than. If \p Invert is true, both
+  /// the IV and \p RHS are inverted
+  bool canIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride, bool IsSigned,
+                         bool Invert = false);
 
   /// Get add expr already created or create a new one.
   const SCEV *getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,

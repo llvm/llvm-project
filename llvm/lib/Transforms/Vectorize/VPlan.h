@@ -565,7 +565,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the recipe to stderr (for debugging).
-  LLVM_ABI_FOR_TEST void dump() const;
+  void dump() const;
 
   /// Print the recipe, delegating to printRecipe().
   void print(raw_ostream &O, const Twine &Indent,
@@ -695,7 +695,7 @@ public:
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPSingleDefRecipe to dbgs() (for debugging).
-  LLVM_ABI_FOR_TEST LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -1378,8 +1378,7 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its
     // (boolean) vector operands is true. It produces the reduced value across
     // all unrolled iterations. Unrolling will add all copies of its original
-    // operand as additional operands. AnyOf is poison-safe as all operands
-    // will be frozen.
+    // operand as additional operands. Note does not block poison propagation.
     AnyOf,
     // Calculates the first active lane index of the vector predicate operands.
     // It produces the lane index across all unrolled iterations. Unrolling will
