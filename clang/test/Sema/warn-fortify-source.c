@@ -10,6 +10,8 @@
 
 typedef unsigned long size_t;
 typedef long ssize_t;
+typedef long off_t;
+typedef long long off64_t;
 typedef unsigned int socklen_t;
 struct sockaddr;
 struct pollfd {
@@ -49,6 +51,16 @@ void bzero(void *dst, size_t n);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 char *fgets(char *s, int size, FILE *stream);
+
+ssize_t read(int fd, void *buf, size_t count);
+ssize_t write(int fd, const void *buf, size_t count);
+ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+ssize_t pread64(int fd, void *buf, size_t count, off64_t offset);
+ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+ssize_t pwrite64(int fd, const void *buf, size_t count, off64_t offset);
+char *getcwd(char *buf, size_t size);
+ssize_t readlink(const char *path, char *buf, size_t bufsize);
+ssize_t readlinkat(int fd, const char *path, char *buf, size_t bufsize);
 
 #ifdef __cplusplus
 }
@@ -172,6 +184,61 @@ void call_fread_fwrite_fgets(FILE *fp) {
   fgets(src, 4, fp);
   fgets(src, 0, fp);
 }
+
+void call_read(void) {
+  char buf[10];
+  read(0, buf, 10);
+  read(0, buf, 20); // expected-warning {{'read' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_pread(void) {
+  char buf[10];
+  pread(0, buf, 10, 0);
+  pread(0, buf, 20, 0); // expected-warning {{'pread' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_pread64(void) {
+  char buf[10];
+  pread64(0, buf, 10, 0);
+  pread64(0, buf, 20, 0); // expected-warning {{'pread64' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_write(void) {
+  char buf[10];
+  write(0, buf, 10);
+  write(0, buf, 20); // expected-warning {{'write' will always read past the end of the source buffer; source buffer has size 10, but the size is 20}}
+}
+
+void call_pwrite(void) {
+  char buf[10];
+  pwrite(0, buf, 10, 0);
+  pwrite(0, buf, 20, 0); // expected-warning {{'pwrite' will always read past the end of the source buffer; source buffer has size 10, but the size is 20}}
+}
+
+void call_pwrite64(void) {
+  char buf[10];
+  pwrite64(0, buf, 10, 0);
+  pwrite64(0, buf, 20, 0); // expected-warning {{'pwrite64' will always read past the end of the source buffer; source buffer has size 10, but the size is 20}}
+}
+
+void call_getcwd(void) {
+  char buf[10];
+  getcwd(buf, 10);
+  getcwd(buf, 20); // expected-warning {{'getcwd' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_readlink(void) {
+  char buf[10];
+  readlink("path", buf, 10);
+  readlink("path", buf, 20); // expected-warning {{'readlink' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
+void call_readlinkat(void) {
+  char buf[10];
+  readlinkat(0, "path", buf, 10);
+  readlinkat(0, "path", buf, 20); // expected-warning {{'readlinkat' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
 
 void call_snprintf(double d, int n) {
   char buf[10];

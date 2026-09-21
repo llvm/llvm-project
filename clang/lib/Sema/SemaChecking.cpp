@@ -1487,6 +1487,66 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIread:
+  case Builtin::BIpread:
+  case Builtin::BIpread64:
+  case Builtin::BIreadlink:
+  case Builtin::BIreadlinkat:
+  case Builtin::BIgetcwd: {
+    unsigned BufIdx = 1;
+    if (BuiltinID == Builtin::BIgetcwd)
+      BufIdx = 0;
+    else if (BuiltinID == Builtin::BIreadlinkat)
+      BufIdx = 2;
+    unsigned CountIdx = BufIdx + 1;
+    unsigned ExpectedArgs = CountIdx + 1;
+    if (BuiltinID == Builtin::BIpread || BuiltinID == Builtin::BIpread64)
+      ++ExpectedArgs;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(BufIdx)->getType()->isPointerType() ||
+        !TheCall->getArg(CountIdx)->getType()->isIntegerType())
+      return;
+    if ((BuiltinID == Builtin::BIgetcwd || BuiltinID == Builtin::BIreadlink ||
+         BuiltinID == Builtin::BIreadlinkat) &&
+        !TheCall->getArg(BufIdx)->getType()->getPointeeType()->isCharType())
+      return;
+    if (BuiltinID != Builtin::BIgetcwd && BuiltinID != Builtin::BIreadlink &&
+        !TheCall->getArg(0)->getType()->isIntegerType())
+      return;
+    if (BuiltinID == Builtin::BIreadlink ||
+        BuiltinID == Builtin::BIreadlinkat) {
+      QualType PathTy =
+          TheCall->getArg(BufIdx - 1)->getType()->getPointeeType();
+      if (PathTy.isNull() || !PathTy->isCharType())
+        return;
+    }
+    if ((BuiltinID == Builtin::BIpread || BuiltinID == Builtin::BIpread64) &&
+        !TheCall->getArg(3)->getType()->isIntegerType())
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(CountIdx);
+    BufferSize = Checker.ComputeSizeArgument(BufIdx);
+    break;
+  }
+
+  case Builtin::BIwrite:
+  case Builtin::BIpwrite:
+  case Builtin::BIpwrite64: {
+    unsigned ExpectedArgs = BuiltinID == Builtin::BIwrite ? 3 : 4;
+    if (TheCall->getNumArgs() != ExpectedArgs ||
+        !TheCall->getArg(0)->getType()->isIntegerType() ||
+        !TheCall->getArg(1)->getType()->isPointerType() ||
+        !TheCall->getArg(2)->getType()->isIntegerType())
+      return;
+    if (BuiltinID != Builtin::BIwrite &&
+        !TheCall->getArg(3)->getType()->isIntegerType())
+      return;
+    DiagID = diag::warn_fortify_source_overread;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
   case Builtin::BIrecv:
   case Builtin::BIrecvfrom: {
     unsigned ExpectedArgs = BuiltinID == Builtin::BIrecv ? 4 : 6;
