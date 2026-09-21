@@ -1234,6 +1234,7 @@
 {'is_defined': True, 'name': '_ZNSt3__127__from_chars_floating_pointIdEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__127__from_chars_floating_pointIfEENS_19__from_chars_resultIT_EEPKcS5_NS_12chars_formatE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__131__get_environment_encoding_nameEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__132__atomic_notify_all_global_tableEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__132__atomic_notify_one_global_tableEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
