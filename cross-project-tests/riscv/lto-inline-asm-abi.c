@@ -68,12 +68,8 @@ __asm__(".symver symver_fn, symver_fn@VER_1.0");
 
 void symver_fn(void) {}
 
-void fn(void) {
-  __asm__ volatile("nop");
-}
+void fn(void) { __asm__ volatile("nop"); }
 
 //--- b.c
 extern void fn(void);
-void caller(void) {
-  fn();
-}
+void caller(void) { fn(); }
