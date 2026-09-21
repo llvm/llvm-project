@@ -8,6 +8,7 @@
 
 #include "RISCVTargetTransformInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
+#include "RISCVPerfectShuffle.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -710,9 +711,9 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
 
   if (ST->hasStdExtZvzip() && LT.second.getScalarSizeInBits() != 1) {
     unsigned Factor;
-    if (isPairEvenShuffleMask(SrcInfo, Mask, Factor) && Factor == 1)
+    if (isPairEven(SrcInfo, Mask, Factor) && Factor == 1)
       return getRISCVInstructionCost(RISCV::VPAIRE_VV, LT.second, CostKind);
-    if (isPairOddShuffleMask(SrcInfo, Mask, Factor) && Factor == 1)
+    if (isPairOdd(SrcInfo, Mask, Factor) && Factor == 1)
       return getRISCVInstructionCost(RISCV::VPAIRO_VV, LT.second, CostKind);
   }
 

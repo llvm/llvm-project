@@ -16,6 +16,7 @@
 #include "RISCV.h"
 #include "RISCVConstantPoolValue.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVPerfectShuffle.h"
 #include "RISCVRegisterInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVSubtarget.h"
@@ -6991,7 +6992,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
     if (Subtarget.hasStdExtZvzip()) {
       bool TryWiden = false;
       unsigned Factor;
-      if (isPairEvenShuffleMask(SrcInfo, Mask, Factor)) {
+      if (isPairEven(SrcInfo, Mask, Factor)) {
         if (Factor == 1) {
           SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
           SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
@@ -7000,7 +7001,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
         }
         TryWiden = true;
       }
-      if (isPairOddShuffleMask(SrcInfo, Mask, Factor)) {
+      if (isPairOdd(SrcInfo, Mask, Factor)) {
         if (Factor == 1) {
           SDValue Src1 = SrcInfo[1].first == 0 ? V1 : V2;
           SDValue Src2 = SrcInfo[0].first == 0 ? V1 : V2;
