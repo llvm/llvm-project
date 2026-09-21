@@ -3336,9 +3336,34 @@ def SwiftPrivate : InheritableAttr {
 def SwiftVersionedAddition : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // A "slice" is one element of an APINotesReader::VersionedInfo: the
+  // annotations that one version of a sidecar '.apinotes' file supplies for one
+  // declaration, paired with that version. An unversioned section supplies a
+  // slice whose version is empty.
+  //
+  // A "group" is all the slices one lookup returned, which is one whole
+  // VersionedInfo. Clang selects at most one slice per group and applies it, so
+  // a slice can only suppress other slices in its own group.
+  //
+  // SliceGroup says which group this slice came from.
+  //
+  // This is needed because capture mode (version-independent apinotes) attaches
+  // every slice from every lookup to the same declaration, which erases the
+  // VersionedInfo boundaries. SliceGroup restores them, so a consumer redoes
+  // the selection once per group instead of pooling unrelated slices.
+  // One group is one lookup: a second API notes reader is a different lookup,
+  // and so is an exact parameter-selector query beside a broad one.
+  //
+  // Group numbers also carry precedence. Clang applies each group's winner in
+  // ascending group order, and when two winners set the same key the last one
+  // applied owns it. So a consumer partitions by group, selects within each
+  // group, then resolves any remaining collision in ascending group order.
+  //
   let Spellings = [];
   let Args = [VersionArgument<"Version">, WrappedAttr<"AdditionalAttr">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
 }
@@ -3346,9 +3371,13 @@ def SwiftVersionedAddition : Attr {
 def SwiftVersionedRemoval : Attr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
+  //
+  // SliceGroup says which lookup this slice belongs to. See the
+  // SwiftVersionedAddition comment above.
   let Spellings = [];
   let Args = [VersionArgument<"Version">, UnsignedArgument<"RawKind">,
-              BoolArgument<"IsReplacedByActive">];
+              BoolArgument<"IsReplacedByActive">,
+              UnsignedArgument<"SliceGroup">];
   let SemaHandler = 0;
   let Documentation = [InternalOnly];
   let AdditionalMembers = [{

@@ -23,6 +23,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
+#include "llvm/ADT/STLExtras.h"
 #include <stack>
 
 using namespace clang;
@@ -34,15 +35,37 @@ enum class IsSubstitution_t : bool { Original, Replacement };
 struct VersionedInfoMetadata {
   /// An empty version refers to unversioned metadata.
   VersionTuple Version;
+  /// Which lookup group this slice came from.
+  /// See the SwiftVersionedAddition comment in Attr.td.
+  unsigned SliceGroup;
   unsigned IsActive : 1;
   unsigned IsReplacement : 1;
 
-  VersionedInfoMetadata(VersionTuple Version, IsActive_t Active,
-                        IsSubstitution_t Replacement)
-      : Version(Version), IsActive(Active == IsActive_t::Active),
+  VersionedInfoMetadata(VersionTuple Version, unsigned SliceGroup,
+                        IsActive_t Active, IsSubstitution_t Replacement)
+      : Version(Version), SliceGroup(SliceGroup),
+        IsActive(Active == IsActive_t::Active),
         IsReplacement(Replacement == IsSubstitution_t::Replacement) {}
 };
 } // end anonymous namespace
+
+/// The slice lookup groups a declaration can receive, numbered so that
+/// ascending group order is the order Sema applies them in.
+///
+/// Sema makes up to two lookups per API notes reader. The broad lookup matches
+/// on the declaration's name alone. The parameter-selector lookup matches on
+/// the name plus a `Where: Parameters:` entry, and runs only for a declaration
+/// that has a parameter selector. Sema applies them reader by reader, broad
+/// first, so giving each reader an adjacent pair keeps the ordinals in
+/// application order. A consumer needs that order to resolve two groups whose
+/// winners set the same key.
+static unsigned broadSliceGroup(unsigned ReaderIndex) {
+  return 2 * ReaderIndex;
+}
+
+static unsigned parameterSelectorSliceGroup(unsigned ReaderIndex) {
+  return 2 * ReaderIndex + 1;
+}
 
 /// Determine whether this is a multi-level pointer type.
 static bool isIndirectPointerType(QualType Type) {
@@ -65,7 +88,8 @@ static void applyAPINotesType(Sema &S, Decl *decl, StringRef typeString,
   if (S.captureSwiftVersionIndependentAPINotes()) {
     auto *typeAttr = SwiftTypeAttr::CreateImplicit(S.Context, typeString);
     auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-        S.Context, metadata.Version, typeAttr, metadata.IsReplacement);
+        S.Context, metadata.Version, typeAttr, metadata.IsReplacement,
+        metadata.SliceGroup);
     decl->addAttr(versioned);
   } else {
     if (!metadata.IsActive)
@@ -98,7 +122,8 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
     auto *nullabilityAttr =
         SwiftNullabilityAttr::CreateImplicit(S.Context, attrNullabilityKind);
     auto *versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-        S.Context, metadata.Version, nullabilityAttr, metadata.IsReplacement);
+        S.Context, metadata.Version, nullabilityAttr, metadata.IsReplacement,
+        metadata.SliceGroup);
     decl->addAttr(versioned);
     return;
   } else {
@@ -149,7 +174,8 @@ void handleAPINotedAttribute(
       // Remove the existing attribute, and treat it as a superseded
       // non-versioned attribute.
       auto *Versioned = SwiftVersionedAdditionAttr::CreateImplicit(
-          S.Context, Metadata.Version, *Existing, /*IsReplacedByActive*/ true);
+          S.Context, Metadata.Version, *Existing, /*IsReplacedByActive*/ true,
+          Metadata.SliceGroup);
 
       D->getAttrs().erase(Existing);
       D->addAttr(Versioned);
@@ -167,7 +193,7 @@ void handleAPINotedAttribute(
     if (auto Attr = CreateAttr()) {
       auto *Versioned = SwiftVersionedAdditionAttr::CreateImplicit(
           S.Context, Metadata.Version, Attr,
-          /*IsReplacedByActive*/ Metadata.IsReplacement);
+          /*IsReplacedByActive*/ Metadata.IsReplacement, Metadata.SliceGroup);
       D->addAttr(Versioned);
     }
   } else {
@@ -176,7 +202,7 @@ void handleAPINotedAttribute(
     // attribute.
     auto *Versioned = SwiftVersionedRemovalAttr::CreateImplicit(
         S.Context, Metadata.Version, AttrKindFor<A>::value,
-        /*IsReplacedByActive*/ Metadata.IsReplacement);
+        /*IsReplacedByActive*/ Metadata.IsReplacement, Metadata.SliceGroup);
     D->addAttr(Versioned);
   }
 }
@@ -872,7 +898,8 @@ static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
 template <typename SpecificInfo>
 static void maybeAttachUnversionedSwiftName(
     Sema &S, Decl *D,
-    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info) {
+    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info,
+    unsigned SliceGroup) {
   if (D->hasAttr<SwiftNameAttr>())
     return;
   if (!Info.getSelected())
@@ -896,8 +923,9 @@ static void maybeAttachUnversionedSwiftName(
   }
 
   // Then explicitly call that out with a removal attribute.
-  VersionedInfoMetadata DummyFutureMetadata(
-      SelectedVersion, IsActive_t::Inactive, IsSubstitution_t::Replacement);
+  VersionedInfoMetadata DummyFutureMetadata(SelectedVersion, SliceGroup,
+                                            IsActive_t::Inactive,
+                                            IsSubstitution_t::Replacement);
   handleAPINotedAttribute<SwiftNameAttr>(
       S, D, /*add*/ false, DummyFutureMetadata, []() -> SwiftNameAttr * {
         llvm_unreachable("should not try to add an attribute here");
@@ -907,13 +935,17 @@ static void maybeAttachUnversionedSwiftName(
 /// Processes all versions of versioned API notes.
 ///
 /// Just dispatches to the various ProcessAPINotes functions in this file.
+///
+/// \param SliceGroup Which group the slices in \p Info form. Selection runs
+/// independently per group, so this has to travel with every slice.
 template <typename SpecificDecl, typename SpecificInfo>
 static void ProcessVersionedAPINotes(
     Sema &S, SpecificDecl *D,
-    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info) {
+    const api_notes::APINotesReader::VersionedInfo<SpecificInfo> Info,
+    unsigned SliceGroup) {
 
   if (!S.captureSwiftVersionIndependentAPINotes())
-    maybeAttachUnversionedSwiftName(S, D, Info);
+    maybeAttachUnversionedSwiftName(S, D, Info, SliceGroup);
 
   unsigned Selected = Info.getSelected().value_or(Info.size());
 
@@ -935,8 +967,9 @@ static void ProcessVersionedAPINotes(
       Version = Info[Selected].first;
     }
 
-    ProcessAPINotes(S, D, InfoSlice,
-                    VersionedInfoMetadata(Version, Active, Replacement));
+    ProcessAPINotes(
+        S, D, InfoSlice,
+        VersionedInfoMetadata(Version, SliceGroup, Active, Replacement));
   }
 }
 
@@ -1109,22 +1142,28 @@ void APINotesSelectorDiagnosticReaderState::markCandidatesUsed(
   }
 }
 
-// Apply the first exact selector entry found. This preserves source-spelling
-// precedence over the desugared fallback and avoids applying multiple exact
-// entries for the same declaration.
+/// Apply the first exact selector entry found. This preserves source-spelling
+/// precedence over the desugared fallback and avoids applying multiple exact
+/// entries for the same declaration.
+///
+/// \param SliceGroup Which group the slices from \p LookupExact form. This
+/// lookup runs its own version selection, so it is a group distinct from the
+/// broad lookup beside it even though both read the same reader. Pass
+/// parameterSelectorSliceGroup() for the reader being read.
 template <typename SpecificInfo, typename SpecificDecl>
 static void processExactAPINotes(
     Sema &S, SpecificDecl *D,
     const APINotesParameterSelectorCandidates &ParameterSelectorCandidates,
     llvm::function_ref<api_notes::APINotesReader::VersionedInfo<SpecificInfo>(
         ArrayRef<std::string>)>
-        LookupExact) {
+        LookupExact,
+    unsigned SliceGroup) {
   auto ProcessSelector = [&](const APINotesParameterSelector &Selector) {
     auto Info = LookupExact(Selector.Parameters);
     if (Info.size() == 0)
       return false;
 
-    ProcessVersionedAPINotes(S, D, Info);
+    ProcessVersionedAPINotes(S, D, Info, SliceGroup);
     return true;
   };
 
@@ -1154,10 +1193,10 @@ void Sema::ProcessAPINotes(Decl *D) {
         UnwindNamespaceContext(DC, APINotes);
     // Global variables.
     if (auto VD = dyn_cast<VarDecl>(D)) {
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         auto Info =
             Reader->lookupGlobalVariable(VD->getName(), APINotesContext);
-        ProcessVersionedAPINotes(*this, VD, Info);
+        ProcessVersionedAPINotes(*this, VD, Info, broadSliceGroup(ReaderIndex));
       }
 
       return;
@@ -1169,10 +1208,16 @@ void Sema::ProcessAPINotes(Decl *D) {
         auto ParameterSelectorCandidates =
             getAPINotesParameterSelectorCandidates(*this, FD);
 
-        for (auto Reader : Readers) {
+        for (auto [ReaderIndexRaw, ReaderRef] : llvm::enumerate(Readers)) {
+          // Capturing a structured binding is a C++20 extension, and the
+          // lambdas below need both of these, so bind plain locals.
+          unsigned ReaderIndex = ReaderIndexRaw;
+          auto *Reader = ReaderRef;
+
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
-          ProcessVersionedAPINotes(*this, FD, Info);
+          ProcessVersionedAPINotes(*this, FD, Info,
+                                   broadSliceGroup(ReaderIndex));
 
           if (ParameterSelectorCandidates)
             processExactAPINotes<api_notes::GlobalFunctionInfo>(
@@ -1180,7 +1225,8 @@ void Sema::ProcessAPINotes(Decl *D) {
                 [&](ArrayRef<std::string> Parameters) {
                   return Reader->lookupGlobalFunction(FD->getName(), Parameters,
                                                       APINotesContext);
-                });
+                },
+                parameterSelectorSliceGroup(ReaderIndex));
 
           if (ParameterSelectorCandidates) {
             auto &DiagnosticState =
@@ -1204,9 +1250,10 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C classes.
     if (auto Class = dyn_cast<ObjCInterfaceDecl>(D)) {
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         auto Info = Reader->lookupObjCClassInfo(Class->getName());
-        ProcessVersionedAPINotes(*this, Class, Info);
+        ProcessVersionedAPINotes(*this, Class, Info,
+                                 broadSliceGroup(ReaderIndex));
       }
 
       return;
@@ -1214,9 +1261,10 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C protocols.
     if (auto Protocol = dyn_cast<ObjCProtocolDecl>(D)) {
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         auto Info = Reader->lookupObjCProtocolInfo(Protocol->getName());
-        ProcessVersionedAPINotes(*this, Protocol, Info);
+        ProcessVersionedAPINotes(*this, Protocol, Info,
+                                 broadSliceGroup(ReaderIndex));
       }
 
       return;
@@ -1256,11 +1304,12 @@ void Sema::ProcessAPINotes(Decl *D) {
             T.split(), getASTContext().getPrintingPolicy());
       }
 
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         if (auto ParentTag = dyn_cast<TagDecl>(Tag->getDeclContext()))
           APINotesContext = UnwindTagContext(ParentTag, APINotes);
         auto Info = Reader->lookupTag(LookupName, APINotesContext);
-        ProcessVersionedAPINotes(*this, Tag, Info);
+        ProcessVersionedAPINotes(*this, Tag, Info,
+                                 broadSliceGroup(ReaderIndex));
       }
 
       return;
@@ -1268,9 +1317,10 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Typedefs
     if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         auto Info = Reader->lookupTypedef(Typedef->getName(), APINotesContext);
-        ProcessVersionedAPINotes(*this, Typedef, Info);
+        ProcessVersionedAPINotes(*this, Typedef, Info,
+                                 broadSliceGroup(ReaderIndex));
       }
 
       return;
@@ -1281,9 +1331,10 @@ void Sema::ProcessAPINotes(Decl *D) {
   if (DC->getRedeclContext()->isFileContext() ||
       DC->getRedeclContext()->isExternCContext()) {
     if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         auto Info = Reader->lookupEnumConstant(EnumConstant->getName());
-        ProcessVersionedAPINotes(*this, EnumConstant, Info);
+        ProcessVersionedAPINotes(*this, EnumConstant, Info,
+                                 broadSliceGroup(ReaderIndex));
       }
 
       return;
@@ -1334,7 +1385,7 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     // Objective-C methods.
     if (auto Method = dyn_cast<ObjCMethodDecl>(D)) {
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         if (auto Context = GetContext(Reader)) {
           // Map the selector.
           Selector Sel = Method->getSelector();
@@ -1352,21 +1403,23 @@ void Sema::ProcessAPINotes(Decl *D) {
 
           auto Info = Reader->lookupObjCMethod(*Context, SelectorRef,
                                                Method->isInstanceMethod());
-          ProcessVersionedAPINotes(*this, Method, Info);
+          ProcessVersionedAPINotes(*this, Method, Info,
+                                   broadSliceGroup(ReaderIndex));
         }
       }
     }
 
     // Objective-C properties.
     if (auto Property = dyn_cast<ObjCPropertyDecl>(D)) {
-      for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         if (auto Context = GetContext(Reader)) {
           bool isInstanceProperty =
               (Property->getPropertyAttributesAsWritten() &
                ObjCPropertyAttribute::kind_class) == 0;
           auto Info = Reader->lookupObjCProperty(*Context, Property->getName(),
                                                  isInstanceProperty);
-          ProcessVersionedAPINotes(*this, Property, Info);
+          ProcessVersionedAPINotes(*this, Property, Info,
+                                   broadSliceGroup(ReaderIndex));
         }
       }
 
@@ -1381,7 +1434,12 @@ void Sema::ProcessAPINotes(Decl *D) {
           !isa<CXXConversionDecl>(CXXMethod)) {
         auto ParameterSelectorCandidates =
             getAPINotesParameterSelectorCandidates(*this, CXXMethod);
-        for (auto Reader : Readers) {
+        for (auto [ReaderIndexRaw, ReaderRef] : llvm::enumerate(Readers)) {
+          // Capturing a structured binding is a C++20 extension, and the
+          // lambdas below need both of these, so bind plain locals.
+          unsigned ReaderIndex = ReaderIndexRaw;
+          auto *Reader = ReaderRef;
+
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             std::string MethodName;
             if (CXXMethod->isOverloadedOperator())
@@ -1392,7 +1450,8 @@ void Sema::ProcessAPINotes(Decl *D) {
               MethodName = CXXMethod->getName();
 
             auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
-            ProcessVersionedAPINotes(*this, CXXMethod, Info);
+            ProcessVersionedAPINotes(*this, CXXMethod, Info,
+                                     broadSliceGroup(ReaderIndex));
 
             if (ParameterSelectorCandidates)
               processExactAPINotes<api_notes::CXXMethodInfo>(
@@ -1400,7 +1459,8 @@ void Sema::ProcessAPINotes(Decl *D) {
                   [&](ArrayRef<std::string> Parameters) {
                     return Reader->lookupCXXMethod(Context->id, MethodName,
                                                    Parameters);
-                  });
+                  },
+                  parameterSelectorSliceGroup(ReaderIndex));
 
             if (ParameterSelectorCandidates) {
               auto &DiagnosticState =
@@ -1423,20 +1483,22 @@ void Sema::ProcessAPINotes(Decl *D) {
 
     if (auto Field = dyn_cast<FieldDecl>(D)) {
       if (!Field->isUnnamedBitField() && !Field->isAnonymousStructOrUnion()) {
-        for (auto Reader : Readers) {
+        for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             auto Info = Reader->lookupField(Context->id, Field->getName());
-            ProcessVersionedAPINotes(*this, Field, Info);
+            ProcessVersionedAPINotes(*this, Field, Info,
+                                     broadSliceGroup(ReaderIndex));
           }
         }
       }
     }
 
     if (auto Tag = dyn_cast<TagDecl>(D)) {
-      for (auto Reader : Readers) {
+      for (auto [ReaderIndex, Reader] : llvm::enumerate(Readers)) {
         if (auto Context = UnwindTagContext(TagContext, APINotes)) {
           auto Info = Reader->lookupTag(Tag->getName(), Context);
-          ProcessVersionedAPINotes(*this, Tag, Info);
+          ProcessVersionedAPINotes(*this, Tag, Info,
+                                   broadSliceGroup(ReaderIndex));
         }
       }
     }
