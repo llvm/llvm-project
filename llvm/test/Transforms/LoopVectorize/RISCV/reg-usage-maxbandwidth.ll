@@ -2,14 +2,49 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-maximize-bandwidth -debug-only=loop-vectorize,vplan -disable-output -S < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-REGS-VP
 
+; Check LV doesn't choose VF that needs to split.
+
 define i32 @dotp(ptr %a, ptr %b) {
-; CHECK-REGS-VP:      LV(REG): VF = vscale x 16
-; CHECK-REGS-VP-NEXT: LV(REG): Found max usage: 2 item
-; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::VRRC, 24 registers
-; CHECK-REGS-VP-NEXT: LV(REG): Found invariant usage: 1 item
-; CHECK-REGS-VP-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-REGS-VP:      LV: Selecting VF: vscale x 16.
+; CHECK-REGS-VP-LABEL: 'dotp'
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 5 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 3 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 2
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 3 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 4
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 8
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 12 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 16
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 24 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV: Selecting VF: vscale x 16.
+;
 entry:
   br label %for.body
 
@@ -31,4 +66,190 @@ for.body:
 
 for.exit:
   ret i32 %add
+}
+
+define void @mix_type_i8_i16(ptr %a, ptr %b, ptr %c, ptr %d) {
+; CHECK-REGS-VP-LABEL: 'mix_type_i8_i16'
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 2
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 4
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 8
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 16
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV: Selecting VF: vscale x 16.
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %load.a = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr i8, ptr %b, i64 %iv
+  store i8 %load.a ,ptr %gep.b, align 1
+  %gep.c = getelementptr i16, ptr %c, i64 %iv
+  %load.c = load i16, ptr %gep.c, align 2
+  %gep.d = getelementptr i16, ptr %d, i64 %iv
+  store i16 %load.c, ptr %gep.d, align 2
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+define void @mix_type_i8_i32(ptr %a, ptr %b, ptr %c, ptr %d) {
+; CHECK-REGS-VP-LABEL: 'mix_type_i8_i32'
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 2
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 4
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 8
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 16
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV: Selecting VF: vscale x 16.
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %load.a = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr i8, ptr %b, i64 %iv
+  store i8 %load.a ,ptr %gep.b, align 1
+  %gep.c = getelementptr i32, ptr %c, i64 %iv
+  %load.c = load i32, ptr %gep.c, align 4
+  %gep.d = getelementptr i32, ptr %d, i64 %iv
+  store i32 %load.c, ptr %gep.d, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+define void @mix_type_i8_i64(ptr %a, ptr %b, ptr %c, ptr %d) {
+; CHECK-REGS-VP-LABEL: 'mix_type_i8_i64'
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 4 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Calculating max register usage:
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 1
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 2
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 4
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 8
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV(REG): VF = vscale x 16
+; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
+; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
+; CHECK-REGS-VP:  LV: Selecting VF: vscale x 16.
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %load.a = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr i8, ptr %b, i64 %iv
+  store i8 %load.a ,ptr %gep.b, align 1
+  %gep.c = getelementptr i64, ptr %c, i64 %iv
+  %load.c = load i64, ptr %gep.c, align 8
+  %gep.d = getelementptr i64, ptr %d, i64 %iv
+  store i64 %load.c, ptr %gep.d, align 8
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret void
 }
