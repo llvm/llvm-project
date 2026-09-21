@@ -88,6 +88,7 @@ jobs:
         (github.event_name != 'pull_request' || github.event.action != 'closed') &&
         fromJSON(needs.premerge-compute.outputs.Linux-values).projects_to_build != ''
     runs-on: llvm-premerge-linux-runners
+    env: ${{ fromJSON(needs.premerge-compute.outputs.Linux-values) }}
     defaults:
       run:
         # The run step defaults to using sh as the shell when running in a
@@ -99,12 +100,6 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
-      - &extract_variables
-        name: Extract Environment Variables
-        env:
-          VALUES: ${{ case(runner.os == 'Windows', needs.premerge-compute.outputs.Windows-values, runner.os == 'macOS', needs.premerge-compute.outputs.Darwin-values, needs.premerge-compute.outputs.Linux-values) }}
-        run: |
-          echo $VALUES | jq -r 'keys[] as $k | "\($k)=\"\(.[$k])\""' >> $GITHUB_ENV
       - name: Build and Test
         timeout-minutes: 120
         env:
@@ -165,34 +160,19 @@ jobs:
         (github.event_name != 'pull_request' || github.event.action != 'closed') &&
         fromJSON(needs.premerge-compute.outputs.Windows-values).projects_to_build != ''
     runs-on: llvm-premerge-windows-2022-runners
+    env: ${{ fromJSON(needs.premerge-compute.outputs.Windows-values) }}
     defaults:
       run:
         shell: bash
     steps:
-      - *extract_variables
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           fetch-depth: 2
       - name: Compute Projects
-        id: vars
         run: |
-          source <(git diff --name-only HEAD~1...HEAD | python .ci/compute_projects.py)
 
-          if [[ "${projects_to_build}" == "" ]]; then
-            echo "No projects to build"
-          fi
-
-          echo "Building projects: ${projects_to_build}"
-          echo "Running project checks targets: ${project_check_targets}"
-          echo "Building runtimes: ${runtimes_to_build}"
-          echo "Running runtimes checks targets: ${runtimes_check_targets}"
-
-          echo "windows-projects=${projects_to_build}" >> $GITHUB_OUTPUT
-          echo "windows-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
-          echo "windows-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
-          echo "windows-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
       - name: Build and Test
         timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
@@ -200,11 +180,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
-          WINDOWS_PROJECTS: ${{ steps.vars.outputs.windows-projects }}
-          WINDOWS_CHECK_TARGETS: ${{ steps.vars.outputs.windows-check-targets }}
-          WINDOWS_RUNTIMES: ${{ steps.vars.outputs.windows-runtimes }}
-          WINDOWS_RUNTIMES_CHECK_TARGETS: ${{ steps.vars.outputs.windows-runtimes-check-targets }}
+          WINDOWS_PROJECTS: ${{ env.projects_to_build }}
+          WINDOWS_CHECK_TARGETS: ${{ env.check_targets }}
+          WINDOWS_RUNTIMES: ${{ env.runtimes_to_build }}
+          WINDOWS_RUNTIMES_CHECK_TARGETS: ${{ env.runtimes_check_targets }}
         run: |
+          bash -c "echo Building projects: ${projects_to_build}"
+          bash -c "echo Running project checks targets: ${project_check_targets}"
+          bash -c "echo Building runtimes: ${runtimes_to_build}"
+          bash -c "echo Running runtimes checks targets: ${runtimes_check_targets}"
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           # See the comments above in the Linux job for why we define each of
           # these environment variables.
@@ -242,8 +226,8 @@ jobs:
         github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed') &&
         fromJSON(needs.premerge-compute.outputs.Darwin-values).projects_to_build != ''
+    env: ${{ fromJSON(needs.premerge-compute.outputs.Darwin-values) }}
     steps:
-      - *extract_variables
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
@@ -262,14 +246,19 @@ jobs:
         env:
           SCCACHE_BUCKET: sccache-bucket
           SCCACHE_REGION: us-west-2
-          PROJECTS: ${{ needs.premerge-compute-macos.outputs.macos-projects }}
-          CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-check-targets }}
-          RUNTIMES: ${{ needs.premerge-compute-macos.outputs.macos-runtimes }}
-          RUNTIMES_CHECK_TARGETS: ${{ needs.premerge-compute-macos.outputs.macos-runtimes-check-targets }}
+          PROJECTS: ${{ env.projects_to_build }}
+          CHECK_TARGETS: ${{ env.project_check_targets }}
+          RUNTIMES: ${{ env.runtimes_to_build }}
+          RUNTIMES_CHECK_TARGETS: ${{ env.runtimes_check_targets }}
           CLANG_TOOLCHAIN_PROGRAM_TIMEOUT: 120
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          echo "Building projects: ${projects_to_build}"
+          echo "Running project checks targets: ${project_check_targets}"
+          echo "Building runtimes: ${runtimes_to_build}"
+          echo "Running runtimes checks targets: ${runtimes_check_targets}"
+
           export SCCACHE_IDLE_TIMEOUT=0
           mkdir -p artifacts
           SCCACHE_LOG=info SCCACHE_ERROR_LOG=$(pwd)/artifacts/sccache.log sccache --start-server
