@@ -193,11 +193,6 @@ public:
   LLVM_ABI std::pair<uint64_t, std::string>
   getSectionAddr(StringRef FileName, StringRef SectionName, bool LocalAddress);
 
-  /// If there is a section at the given local address, return its load
-  /// address, otherwise return std::nullopt.
-  LLVM_ABI std::optional<uint64_t>
-  getSectionLoadAddress(void *LocalAddress) const;
-
 private:
   std::unique_ptr<RuntimeDyldCheckerImpl> Impl;
 };

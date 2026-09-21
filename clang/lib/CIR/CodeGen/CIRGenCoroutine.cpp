@@ -321,6 +321,25 @@ CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
   return coroPromise;
 }
 
+cir::CoroDoneOp CIRGenFunction::emitCoroDoneBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroDoneOp::create(cgm.getBuilder(), loc,
+                                 emitScalarExpr(e->getArg(0)));
+}
+
+cir::CoroResumeOp CIRGenFunction::emitCoroResumeBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroResumeOp::create(cgm.getBuilder(), loc,
+                                   emitScalarExpr(e->getArg(0)));
+}
+
+cir::CoroDestroyOp
+CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroDestroyOp::create(cgm.getBuilder(), loc,
+                                    emitScalarExpr(e->getArg(0)));
+}
+
 static mlir::LogicalResult
 coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
 

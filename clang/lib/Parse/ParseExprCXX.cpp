@@ -153,7 +153,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     }
   }
 
-  if (Tok.is(tok::kw___super)) {
+  if (!HasScopeSpecifier && Tok.is(tok::kw___super)) {
     SourceLocation SuperLoc = ConsumeToken();
     if (!Tok.is(tok::coloncolon)) {
       Diag(Tok.getLocation(), diag::err_expected_coloncolon_after_super);
@@ -1198,6 +1198,16 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
   }
 }
 
+bool Parser::isLambdaSpecifier() {
+  return Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
+                     tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
+                     tok::kw___private, tok::kw___global, tok::kw___local,
+                     tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
+                     tok::kw_requires, tok::kw_noexcept) ||
+         Tok.isRegularKeywordAttribute() ||
+         (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
+}
+
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
@@ -1343,14 +1353,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     HasParentheses = true;
   }
 
-  HasSpecifiers =
-      Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
-                  tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
-                  tok::kw___private, tok::kw___global, tok::kw___local,
-                  tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
-                  tok::kw_requires, tok::kw_noexcept) ||
-      Tok.isRegularKeywordAttribute() ||
-      (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
+  HasSpecifiers = isLambdaSpecifier();
 
   if (HasSpecifiers && !HasParentheses && !getLangOpts().CPlusPlus23) {
     // It's common to forget that one needs '()' before 'mutable', an
@@ -2483,6 +2486,36 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
       // Code completion for the operator name.
       Actions.CodeCompletion().CodeCompleteOperatorName(getCurScope());
       return true;
+    }
+    case tok::lesslessless: {
+      // For CUDA, the Lexer will greedily merge all three <<< in operator<<<
+      // which, in fact, can be a valid template specialization of operator<<,
+      // and will never be a valid kernel launch expression, so split.
+
+      SourceLocation TokLoc = Tok.getLocation();
+      unsigned LessLessLength = Lexer::getTokenPrefixLength(
+          TokLoc, /*CharNo=*/2, PP.getSourceManager(), getLangOpts());
+
+      SourceLocation LessLessLoc = PP.SplitToken(TokLoc, LessLessLength);
+      Token LessLess = Tok;
+      LessLess.setLocation(LessLessLoc);
+      LessLess.setKind(tok::lessless);
+      LessLess.setLength(LessLessLength);
+
+      unsigned OldLength = Tok.getLength();
+
+      bool CachingTokens = PP.IsPreviousCachedToken(Tok);
+      Tok.setKind(tok::less);
+      Tok.setLength(OldLength - LessLessLength);
+      Tok.setLocation(TokLoc.getLocWithOffset(LessLessLength));
+
+      // Update the cache if there is any.
+      if (CachingTokens)
+        PP.ReplacePreviousCachedToken({LessLess, Tok});
+
+      SymbolLocations[SymbolIdx++] = LessLessLoc;
+      Op = OO_LessLess;
+      break;
     }
 
     default:

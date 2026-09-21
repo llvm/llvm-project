@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <numeric>
 #include <string>
 #include <type_traits>
 
@@ -314,6 +316,103 @@ void reorderScalars(SmallVectorImpl<Value *> &Scalars, ArrayRef<int> Mask) {
       Scalars[Mask[I]] = Prev[I];
 }
 
+void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
+  assert(!Mask.empty() && Reuses.size() == Mask.size() &&
+         "Expected non-empty mask.");
+  SmallVector<int> Prev(Reuses.begin(), Reuses.end());
+  Prev.swap(Reuses);
+  for (unsigned I = 0, E = Prev.size(); I < E; ++I)
+    if (Mask[I] != PoisonMaskElem)
+      Reuses[Mask[I]] = Prev[I];
+}
+
+void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
+                  bool BottomOrder) {
+  assert(!Mask.empty() && "Expected non-empty mask.");
+  unsigned Sz = Mask.size();
+  if (BottomOrder) {
+    SmallVector<unsigned> PrevOrder;
+    if (Order.empty()) {
+      PrevOrder.resize(Sz);
+      std::iota(PrevOrder.begin(), PrevOrder.end(), 0);
+    } else {
+      PrevOrder.swap(Order);
+    }
+    Order.assign(Sz, Sz);
+    for (unsigned I = 0; I < Sz; ++I)
+      if (Mask[I] != PoisonMaskElem)
+        Order[I] = PrevOrder[Mask[I]];
+    if (all_of(enumerate(Order), [&](const auto &Data) {
+          return Data.value() == Sz || Data.index() == Data.value();
+        })) {
+      Order.clear();
+      return;
+    }
+    fixupOrderingIndices(Order);
+    return;
+  }
+  SmallVector<int> MaskOrder;
+  if (Order.empty()) {
+    MaskOrder.resize(Sz);
+    std::iota(MaskOrder.begin(), MaskOrder.end(), 0);
+  } else {
+    inversePermutation(Order, MaskOrder);
+  }
+  reorderReuses(MaskOrder, Mask);
+  if (ShuffleVectorInst::isIdentityMask(MaskOrder, Sz)) {
+    Order.clear();
+    return;
+  }
+  Order.assign(Sz, Sz);
+  for (unsigned I = 0; I < Sz; ++I)
+    if (MaskOrder[I] != PoisonMaskElem)
+      Order[MaskOrder[I]] = I;
+  fixupOrderingIndices(Order);
+}
+
+bool isReverseOrder(ArrayRef<unsigned> Order) {
+  assert(!Order.empty() &&
+         "Order is empty. Please check it before using isReverseOrder.");
+  unsigned Sz = Order.size();
+  return all_of(enumerate(Order), [&](const auto &Pair) {
+    return Pair.value() == Sz || Sz - Pair.index() - 1 == Pair.value();
+  });
+}
+
+bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask, unsigned Sz) {
+  ArrayRef<int> FirstCluster = Mask.slice(0, Sz);
+  if (ShuffleVectorInst::isIdentityMask(FirstCluster, Sz))
+    return false;
+  for (unsigned I = Sz, E = Mask.size(); I < E; I += Sz) {
+    ArrayRef<int> Cluster = Mask.slice(I, Sz);
+    if (Cluster != FirstCluster)
+      return false;
+  }
+  return true;
+}
+
+void combineOrders(MutableArrayRef<unsigned> Order,
+                   ArrayRef<unsigned> SecondaryOrder) {
+  assert((SecondaryOrder.empty() || Order.size() == SecondaryOrder.size()) &&
+         "Expected same size of orders");
+  size_t Sz = Order.size();
+  SmallBitVector UsedIndices(Sz);
+  for (unsigned Idx : seq<unsigned>(0, Sz)) {
+    if (Order[Idx] != Sz)
+      UsedIndices.set(Order[Idx]);
+  }
+  if (SecondaryOrder.empty()) {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (Order[Idx] == Sz && !UsedIndices.test(Idx))
+        Order[Idx] = Idx;
+  } else {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (SecondaryOrder[Idx] != Sz && Order[Idx] == Sz &&
+          !UsedIndices.test(SecondaryOrder[Idx]))
+        Order[Idx] = SecondaryOrder[Idx];
+  }
+}
+
 bool allSameType(ArrayRef<Value *> VL) {
   assert(!VL.empty() && "Expected non-empty list of values.");
   Type *Ty = VL.consume_front()->getType();
@@ -572,6 +671,42 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   // we have permutation of 2 vectors.
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc;
+}
+
+Value *createInsertVector(
+    IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
+    function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator) {
+  if (isa<PoisonValue>(Vec) && isa<PoisonValue>(V))
+    return Vec;
+  const unsigned SubVecVF = getNumElements(V->getType());
+  // Create shuffle, insertvector requires that index is multiple of
+  // the subvector length.
+  const unsigned VecVF = getNumElements(Vec->getType());
+  SmallVector<int> Mask(VecVF, PoisonMaskElem);
+  if (isa<PoisonValue>(Vec)) {
+    auto *Begin = std::next(Mask.begin(), Index);
+    std::iota(Begin, std::next(Begin, SubVecVF), 0);
+    Vec = Builder.CreateShuffleVector(V, Mask);
+    return Vec;
+  }
+  std::iota(Mask.begin(), Mask.end(), 0);
+  std::iota(std::next(Mask.begin(), Index),
+            std::next(Mask.begin(), Index + SubVecVF), VecVF);
+  if (Generator)
+    return Generator(Vec, V, Mask);
+  // 1. Resize V to the size of Vec.
+  SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
+  std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
+  V = Builder.CreateShuffleVector(V, ResizeMask);
+  // 2. Insert V into Vec.
+  return Builder.CreateShuffleVector(Vec, V, Mask);
+}
+
+Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
+                           unsigned SubVecVF, unsigned Index) {
+  SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
+  std::iota(Mask.begin(), Mask.end(), Index);
+  return Builder.CreateShuffleVector(Vec, Mask);
 }
 
 SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {
@@ -1002,6 +1137,158 @@ void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
   assert(F && "Expected function.");
   return F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+}
+
+/// Deeper than the standard analysis recursion depth to keep the numeric
+/// bound precise through arithmetic carry chains.
+constexpr unsigned MaxBitPackAnalysisDepth = MaxAnalysisRecursionDepth + 2;
+
+APInt getScalarMaxValue(const Value *V, unsigned Depth) {
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+  const APInt Unknown = APInt::getAllOnes(BitWidth);
+  if (Depth > MaxBitPackAnalysisDepth || !V->getType()->isIntegerTy())
+    return Unknown;
+  const APInt *C, *Amt;
+  if (match(V, m_APInt(C)))
+    return *C;
+  Value *L, *R;
+  if (match(V, m_Add(m_Value(L), m_Value(R))) ||
+      match(V, m_Or(m_Value(L), m_Value(R))) ||
+      match(V, m_Xor(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1)
+        .uadd_sat(getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_NUWSub(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1);
+  if (match(V, m_Mul(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1)
+        .umul_sat(getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_And(m_Value(L), m_Value(R))))
+    return APIntOps::umin(getScalarMaxValue(L, Depth + 1),
+                          getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_LShr(m_Value(L), m_APInt(Amt))) && Amt->ult(BitWidth))
+    return getScalarMaxValue(L, Depth + 1).lshr(*Amt);
+  if (match(V, m_Shl(m_Value(L), m_APInt(Amt))) && Amt->ult(BitWidth)) {
+    APInt LMax = getScalarMaxValue(L, Depth + 1);
+    return LMax.getActiveBits() + Amt->getZExtValue() <= BitWidth
+               ? LMax.shl(*Amt)
+               : Unknown;
+  }
+  if (match(V, m_ZExt(m_Value(L))))
+    return getScalarMaxValue(L, Depth + 1).zext(BitWidth);
+  if (match(V, m_Trunc(m_Value(L)))) {
+    APInt Max = getScalarMaxValue(L, Depth + 1);
+    return Max.getActiveBits() <= BitWidth ? Max.trunc(BitWidth) : Unknown;
+  }
+  if (match(V, m_SExt(m_Value(L)))) {
+    APInt Max = getScalarMaxValue(L, Depth + 1);
+    return Max.isNonNegative() ? Max.zext(BitWidth) : Unknown;
+  }
+  Value *F;
+  if (match(V, m_Select(m_Value(), m_Value(L), m_Value(F))))
+    return APIntOps::umax(getScalarMaxValue(L, Depth + 1),
+                          getScalarMaxValue(F, Depth + 1));
+  return Unknown;
+}
+
+std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
+                                              ArrayRef<APInt> PossibleBits,
+                                              ArrayRef<uint64_t> ShlAmts,
+                                              ArrayRef<APInt> Masks) {
+  unsigned NumElts = PossibleBits.size();
+  BitPackInfo Info;
+  Info.LShrAmts.assign(NumElts, 0);
+  for (unsigned Idx : seq(NumElts)) {
+    APInt Possible = PossibleBits[Idx].shl(ShlAmts[Idx]) & Masks[Idx];
+    if (Possible.isZero())
+      continue;
+    unsigned Lo, W;
+    if (!Possible.isShiftedMask(Lo, W))
+      return std::nullopt;
+    if (Info.FieldWidth == 0) {
+      if (W % 8 != 0 || BitWidth % W != 0)
+        return std::nullopt;
+      Info.FieldWidth = W;
+      Info.LaneOfField.assign(BitWidth / W, BitPackInfo::NoLane);
+    }
+    if (W != Info.FieldWidth || Lo % W != 0)
+      return std::nullopt;
+    unsigned Field = Lo / W;
+    if (Info.LaneOfField[Field] != BitPackInfo::NoLane)
+      return std::nullopt;
+    Info.LaneOfField[Field] = Idx;
+    Info.LShrAmts[Idx] = Lo - ShlAmts[Idx];
+  }
+  if (Info.FieldWidth == 0)
+    return std::nullopt;
+  return Info;
+}
+
+SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
+                                unsigned NumElts, unsigned BytesPerLane) {
+  unsigned BytesPerField = Info.FieldWidth / 8;
+  SmallVector<int> Mask;
+  for (unsigned J : seq(NumBytes)) {
+    unsigned Lane = Info.LaneOfField[J / BytesPerField];
+    Mask.push_back(Lane == BitPackInfo::NoLane
+                       ? (int)(NumElts * BytesPerLane)
+                       : (int)(Lane * BytesPerLane + J % BytesPerField));
+  }
+  return Mask;
+}
+
+Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
+                    unsigned ShiftWidth, unsigned &NumInsts) {
+  NumInsts = 0;
+  auto *VecTy = cast<FixedVectorType>(X->getType());
+  unsigned BitWidth = VecTy->getScalarSizeInBits();
+  assert(BitWidth % 8 == 0 &&
+         "The byte-multiple field width divides the result bit width.");
+  unsigned NumElts = VecTy->getNumElements();
+  Value *Y = X;
+  if (ShiftWidth != BitWidth) {
+    // Compacting a zext back to its source is free, use it directly.
+    if (auto *Z = dyn_cast<ZExtInst>(X);
+        Z && Z->getSrcTy()->getScalarSizeInBits() == ShiftWidth)
+      Y = Z->getOperand(0);
+    else {
+      Y = Builder.CreateTrunc(
+          Y, FixedVectorType::get(IntegerType::get(X->getContext(), ShiftWidth),
+                                  NumElts));
+      ++NumInsts;
+    }
+  }
+  if (Info.needsShift()) {
+    SmallVector<Constant *> Amts;
+    for (uint64_t A : Info.LShrAmts)
+      Amts.push_back(
+          ConstantInt::get(IntegerType::get(X->getContext(), ShiftWidth), A));
+    Y = Builder.CreateLShr(Y, ConstantVector::get(Amts));
+    ++NumInsts;
+  }
+  unsigned InBytes = NumElts * (ShiftWidth / 8);
+  auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
+  SmallVector<int> Mask =
+      getBitPackMask(Info, BitWidth / 8, NumElts, ShiftWidth / 8);
+  auto *IntTy = IntegerType::get(X->getContext(), BitWidth);
+  // A plain byte reversal of the shifted lanes is a bswap.
+  if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
+    NumInsts += 2;
+    return Builder.CreateUnaryIntrinsic(Intrinsic::bswap,
+                                        Builder.CreateBitCast(Y, IntTy));
+  }
+  // An identity byte order needs no shuffle.
+  if (ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+    ++NumInsts;
+    return Builder.CreateBitCast(Y, IntTy);
+  }
+  Value *Packed = Builder.CreateShuffleVector(
+      Builder.CreateBitCast(Y, ByteTy),
+      is_contained(Info.LaneOfField, BitPackInfo::NoLane)
+          ? Constant::getNullValue(ByteTy)
+          : PoisonValue::get(ByteTy),
+      Mask);
+  NumInsts += 3;
+  return Builder.CreateBitCast(Packed, IntTy);
 }
 
 } // namespace llvm::slpvectorizer

@@ -224,14 +224,14 @@ define <16 x i32> @clmul_v16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
 ; AVX512-LABEL: clmul_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm3
-; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm4
-; AVX512-NEXT:    vpclmulqdq $17, %zmm3, %zmm4, %zmm5
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm2 = zmm2[0],zmm5[0],zmm2[1],zmm5[1],zmm2[4],zmm5[4],zmm2[5],zmm5[5],zmm2[8],zmm5[8],zmm2[9],zmm5[9],zmm2[12],zmm5[12],zmm2[13],zmm5[13]
+; AVX512-NEXT:    vpclmulqdq $0, %zmm1, %zmm0, %zmm3
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm2 = zmm3[0],zmm2[0],zmm3[1],zmm2[1],zmm3[4],zmm2[4],zmm3[5],zmm2[5],zmm3[8],zmm2[8],zmm3[9],zmm2[9],zmm3[12],zmm2[12],zmm3[13],zmm2[13]
+; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm1
+; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm0
+; AVX512-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm3
 ; AVX512-NEXT:    vpclmulqdq $0, %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpclmulqdq $0, %zmm3, %zmm4, %zmm1
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[1],zmm1[1],zmm0[4],zmm1[4],zmm0[5],zmm1[5],zmm0[8],zmm1[8],zmm0[9],zmm1[9],zmm0[12],zmm1[12],zmm0[13],zmm1[13]
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm2[0],zmm0[1],zmm2[1],zmm0[4],zmm2[4],zmm0[5],zmm2[5],zmm0[8],zmm2[8],zmm0[9],zmm2[9],zmm0[12],zmm2[12],zmm0[13],zmm2[13]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm3[0],zmm0[1],zmm3[1],zmm0[4],zmm3[4],zmm0[5],zmm3[5],zmm0[8],zmm3[8],zmm0[9],zmm3[9],zmm0[12],zmm3[12],zmm0[13],zmm3[13]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[8],zmm0[8],zmm2[9],zmm0[9],zmm2[12],zmm0[12],zmm2[13],zmm0[13]
 ; AVX512-NEXT:    retq
   %res = call <16 x i32> @llvm.clmul.v16i32(<16 x i32> %a, <16 x i32> %b)
   ret <16 x i32> %res
@@ -923,20 +923,19 @@ define <16 x i32> @clmulr_v16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
 ; AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm3
 ; AVX512-NEXT:    vpandq %zmm2, %zmm0, %zmm2
 ; AVX512-NEXT:    vpclmulqdq $17, %zmm3, %zmm2, %zmm4
-; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm5
-; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm6
-; AVX512-NEXT:    vpclmulqdq $17, %zmm5, %zmm6, %zmm7
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm4 = zmm4[0],zmm7[0],zmm4[1],zmm7[1],zmm4[4],zmm7[4],zmm4[5],zmm7[5],zmm4[8],zmm7[8],zmm4[9],zmm7[9],zmm4[12],zmm7[12],zmm4[13],zmm7[13]
 ; AVX512-NEXT:    vpclmulqdq $0, %zmm3, %zmm2, %zmm2
-; AVX512-NEXT:    vpclmulqdq $0, %zmm5, %zmm6, %zmm3
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm2 = zmm2[0],zmm3[0],zmm2[1],zmm3[1],zmm2[4],zmm3[4],zmm2[5],zmm3[5],zmm2[8],zmm3[8],zmm2[9],zmm3[9],zmm2[12],zmm3[12],zmm2[13],zmm3[13]
-; AVX512-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm2[2],zmm4[2],zmm2[3],zmm4[3],zmm2[6],zmm4[6],zmm2[7],zmm4[7],zmm2[10],zmm4[10],zmm2[11],zmm4[11],zmm2[14],zmm4[14],zmm2[15],zmm4[15]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm2 = zmm2[0],zmm4[0],zmm2[1],zmm4[1],zmm2[4],zmm4[4],zmm2[5],zmm4[5],zmm2[8],zmm4[8],zmm2[9],zmm4[9],zmm2[12],zmm4[12],zmm2[13],zmm4[13]
+; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm3
+; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm4
+; AVX512-NEXT:    vpclmulqdq $17, %zmm3, %zmm4, %zmm5
+; AVX512-NEXT:    vpclmulqdq $0, %zmm3, %zmm4, %zmm3
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm3 = zmm3[0],zmm5[0],zmm3[1],zmm5[1],zmm3[4],zmm5[4],zmm3[5],zmm5[5],zmm3[8],zmm5[8],zmm3[9],zmm5[9],zmm3[12],zmm5[12],zmm3[13],zmm5[13]
+; AVX512-NEXT:    vpunpckhdq {{.*#+}} zmm2 = zmm2[2],zmm3[2],zmm2[3],zmm3[3],zmm2[6],zmm3[6],zmm2[7],zmm3[7],zmm2[10],zmm3[10],zmm2[11],zmm3[11],zmm2[14],zmm3[14],zmm2[15],zmm3[15]
 ; AVX512-NEXT:    vpaddd %zmm2, %zmm2, %zmm2
 ; AVX512-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm4
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm4 = zmm4[0],zmm7[0],zmm4[1],zmm7[1],zmm4[4],zmm7[4],zmm4[5],zmm7[5],zmm4[8],zmm7[8],zmm4[9],zmm7[9],zmm4[12],zmm7[12],zmm4[13],zmm7[13]
 ; AVX512-NEXT:    vpclmulqdq $0, %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm3[0],zmm0[1],zmm3[1],zmm0[4],zmm3[4],zmm0[5],zmm3[5],zmm0[8],zmm3[8],zmm0[9],zmm3[9],zmm0[12],zmm3[12],zmm0[13],zmm3[13]
 ; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm4[0],zmm0[1],zmm4[1],zmm0[4],zmm4[4],zmm0[5],zmm4[5],zmm0[8],zmm4[8],zmm0[9],zmm4[9],zmm0[12],zmm4[12],zmm0[13],zmm4[13]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm3[0],zmm0[1],zmm3[1],zmm0[4],zmm3[4],zmm0[5],zmm3[5],zmm0[8],zmm3[8],zmm0[9],zmm3[9],zmm0[12],zmm3[12],zmm0[13],zmm3[13]
 ; AVX512-NEXT:    vpsrld $31, %zmm0, %zmm0
 ; AVX512-NEXT:    vpord %zmm2, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
@@ -1652,14 +1651,14 @@ define <16 x i32> @clmulh_v16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
 ; AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm3
 ; AVX512-NEXT:    vpandq %zmm2, %zmm0, %zmm2
 ; AVX512-NEXT:    vpclmulqdq $17, %zmm3, %zmm2, %zmm4
+; AVX512-NEXT:    vpclmulqdq $0, %zmm3, %zmm2, %zmm2
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm2 = zmm2[0],zmm4[0],zmm2[1],zmm4[1],zmm2[4],zmm4[4],zmm2[5],zmm4[5],zmm2[8],zmm4[8],zmm2[9],zmm4[9],zmm2[12],zmm4[12],zmm2[13],zmm4[13]
 ; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm1
 ; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm0
-; AVX512-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm5
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm4 = zmm4[0],zmm5[0],zmm4[1],zmm5[1],zmm4[4],zmm5[4],zmm4[5],zmm5[5],zmm4[8],zmm5[8],zmm4[9],zmm5[9],zmm4[12],zmm5[12],zmm4[13],zmm5[13]
-; AVX512-NEXT:    vpclmulqdq $0, %zmm3, %zmm2, %zmm2
+; AVX512-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm3
 ; AVX512-NEXT:    vpclmulqdq $0, %zmm1, %zmm0, %zmm0
-; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm2[0],zmm0[0],zmm2[1],zmm0[1],zmm2[4],zmm0[4],zmm2[5],zmm0[5],zmm2[8],zmm0[8],zmm2[9],zmm0[9],zmm2[12],zmm0[12],zmm2[13],zmm0[13]
-; AVX512-NEXT:    vpunpckhdq {{.*#+}} zmm0 = zmm0[2],zmm4[2],zmm0[3],zmm4[3],zmm0[6],zmm4[6],zmm0[7],zmm4[7],zmm0[10],zmm4[10],zmm0[11],zmm4[11],zmm0[14],zmm4[14],zmm0[15],zmm4[15]
+; AVX512-NEXT:    vpunpckldq {{.*#+}} zmm0 = zmm0[0],zmm3[0],zmm0[1],zmm3[1],zmm0[4],zmm3[4],zmm0[5],zmm3[5],zmm0[8],zmm3[8],zmm0[9],zmm3[9],zmm0[12],zmm3[12],zmm0[13],zmm3[13]
+; AVX512-NEXT:    vpunpckhdq {{.*#+}} zmm0 = zmm2[2],zmm0[2],zmm2[3],zmm0[3],zmm2[6],zmm0[6],zmm2[7],zmm0[7],zmm2[10],zmm0[10],zmm2[11],zmm0[11],zmm2[14],zmm0[14],zmm2[15],zmm0[15]
 ; AVX512-NEXT:    retq
   %a.ext = zext <16 x i32> %a to <16 x i64>
   %b.ext = zext <16 x i32> %b to <16 x i64>
