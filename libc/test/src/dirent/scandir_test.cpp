@@ -12,9 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_dirent.h"
-#include "src/__support/File/scan_impl.h"
 #include "src/__support/OSUtil/path.h"
-#include "src/__support/error_or.h"
 #include "src/dirent/scandir.h"
 #include "src/stdio/asprintf.h"
 #include "src/stdio/fclose.h"
@@ -59,19 +57,49 @@ bool create_empty_file(char *path) {
   return true;
 }
 
+char *create_temp_dir() {
+  char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path(TEMPLATE));
+  if (tmpl == nullptr) {
+    return nullptr;
+  }
+  return LIBC_NAMESPACE::mkdtemp(tmpl);
+}
+
+bool remove_temp_dir(char *dirpath) {
+  if (LIBC_NAMESPACE::rmdir(dirpath) == -1) {
+    return false;
+  }
+  free(dirpath);
+  return true;
+}
+
 int alphasort(const struct dirent **a, const struct dirent **b) {
   return LIBC_NAMESPACE::strcoll((*a)->d_name, (*b)->d_name);
 }
 
+int omegasort(const struct dirent **a, const struct dirent **b) {
+  return -LIBC_NAMESPACE::strcoll((*a)->d_name, (*b)->d_name);
+}
+
 int skip_hidden(const struct dirent *entry) { return entry->d_name[0] != '.'; }
 
+void free_namelist(struct dirent **namelist, int size) {
+  if (namelist == nullptr) {
+    return;
+  }
+
+  for (int i = 0; i < size; ++i) {
+    ::free(namelist[i]);
+  }
+  ::free(namelist);
+}
+
 TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
-  char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path(TEMPLATE));
-  ASSERT_NE(tmpl, nullptr);
-  ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
+  char *dirpath = create_temp_dir();
+  ASSERT_NE(dirpath, nullptr);
 
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, nullptr, nullptr),
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(dirpath, &namelist, nullptr, nullptr),
               Succeeds(ENTRIES_MIN));
   // Order of namelist is not guaranteed so we can't easily use ASSERT_STREQ
   ASSERT_TRUE((LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".", 1) == 0 &&
@@ -85,21 +113,20 @@ TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
                (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
                 LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".", 1) == 0));
 
-  ASSERT_THAT(LIBC_NAMESPACE::rmdir(tmpl), Succeeds());
-  free(tmpl);
+  free_namelist(namelist, ENTRIES_MIN);
+  ASSERT_TRUE(remove_temp_dir(dirpath));
 }
 
 TEST_F(LlvmLibcScandirTest, TestDirFilter) {
-  char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path(TEMPLATE));
-  ASSERT_NE(tmpl, nullptr);
-  ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
+  char *dirpath = create_temp_dir();
+  ASSERT_NE(dirpath, nullptr);
 
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, nullptr),
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(dirpath, &namelist, skip_hidden, nullptr),
               Succeeds(0));
 
-  ASSERT_THAT(LIBC_NAMESPACE::rmdir(tmpl), Succeeds());
-  free(tmpl);
+  free_namelist(namelist, 0);
+  ASSERT_TRUE(remove_temp_dir(dirpath));
 }
 
 TEST_F(LlvmLibcScandirTest, TestDirSorted) {
@@ -119,7 +146,7 @@ TEST_F(LlvmLibcScandirTest, TestDirSorted) {
   ASSERT_TRUE(path_1 != nullptr);
   ASSERT_TRUE(create_empty_file(path_1));
 
-  struct dirent **namelist;
+  struct dirent **namelist = nullptr;
   ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, alphasort),
               Succeeds(3));
 
@@ -127,9 +154,22 @@ TEST_F(LlvmLibcScandirTest, TestDirSorted) {
   ASSERT_STREQ(namelist[1]->d_name, "a");
   ASSERT_STREQ(namelist[2]->d_name, "d");
 
+  free_namelist(namelist, 3);
+
+  // Reverse alphanumeric sort in case the above sorting test passed on chance.
+  namelist = nullptr;
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, omegasort),
+              Succeeds(3));
+
+  ASSERT_STREQ(namelist[0]->d_name, "d");
+  ASSERT_STREQ(namelist[1]->d_name, "a");
+  ASSERT_STREQ(namelist[2]->d_name, "1");
+
   ASSERT_THAT(LIBC_NAMESPACE::remove(path_d), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::remove(path_a), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::remove(path_1), Succeeds());
+
+  free_namelist(namelist, 3);
 
   free(path_d);
   free(path_a);
@@ -139,42 +179,11 @@ TEST_F(LlvmLibcScandirTest, TestDirSorted) {
   free(tmpl);
 }
 
+// While this test only checks for one type of ERROR, it really tests
+// the error propagation from Dir::open. And as such we don't really
+// have to test for every error inherited from Dir::open.
 TEST_F(LlvmLibcScandirTest, TestBadDirname) {
   struct dirent **namelist;
   ASSERT_THAT(LIBC_NAMESPACE::scandir("", &namelist, NULL, NULL),
               Fails(ENOENT, -1));
-}
-
-namespace LIBC_NAMESPACE_DECL {
-
-struct MockDir {
-  static int read_errno_val;
-
-  static LIBC_NAMESPACE::ErrorOr<MockDir *> open(const char *path) {
-    (void)path;
-    return new MockDir();
-  }
-
-  LIBC_NAMESPACE::ErrorOr<struct dirent *> read() {
-
-    return LIBC_NAMESPACE::Error(read_errno_val);
-  }
-
-  int close() {
-    delete this;
-    return 0;
-  }
-};
-
-int MockDir::read_errno_val = 0;
-
-} // namespace LIBC_NAMESPACE_DECL
-
-TEST_F(LlvmLibcScandirTest, ReadFailsWithENOENT) {
-  struct dirent **namelist = nullptr;
-  LIBC_NAMESPACE::MockDir::read_errno_val = ENOENT;
-  auto res = LIBC_NAMESPACE::internal::scan_impl<LIBC_NAMESPACE::MockDir>(
-      "fake/path", &namelist, nullptr, nullptr);
-  ASSERT_FALSE(res.has_value());
-  EXPECT_EQ(res.error(), ENOENT);
 }
