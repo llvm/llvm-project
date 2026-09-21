@@ -2601,12 +2601,17 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   StringRef TrapFuncName =
       CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
   if (TrapFuncName.empty()) {
+    MachineInstrBuilder MIB;
     if (Opcode == TargetOpcode::G_UBSANTRAP) {
       uint64_t Code = cast<ConstantInt>(CI.getOperand(0))->getZExtValue();
-      MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
+      MIB = MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
     } else {
-      MIRBuilder.buildInstr(Opcode);
+      MIB = MIRBuilder.buildInstr(Opcode);
     }
+    // This doesn't go through the generic CallBase-based lowerCall(), so it
+    // never picks up CallLoweringInfo::NoMerge -- set it here directly.
+    if (CI.cannotMerge())
+      MIB.setMIFlag(MachineInstr::MIFlag::NoMerge);
     return true;
   }
 
@@ -2618,6 +2623,10 @@ bool IRTranslatorImpl::translateTrap(const CallInst &CI,
   Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
   Info.CB = &CI;
   Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
+  // This calls the CallLoweringInfo-based lowerCall() overload directly,
+  // bypassing the CallBase-based one that normally populates NoMerge -- set
+  // it here explicitly.
+  Info.NoMerge = CI.cannotMerge();
   return CLI->lowerCall(MIRBuilder, Info);
 }
 
