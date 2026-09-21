@@ -17,21 +17,28 @@ add_subdirectory(debuginfo-tests/llvm-prettyprinters/lldb)
 set(CROSS_PROJECT_TESTS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-set(CROSS_PROJECT_TEST_DEPS
-  FileCheck
-  check-gdb-llvm-support
-  ${LLDB_FORMATTER_TESTS}
-  count
+set(CROSS_PROJECT_TEST_TOOLS
   llvm-ar
   llvm-config
   llvm-dis
   llvm-dwarfdump
   llvm-lto2
   llvm-modextract
+  llvm-nm
   llvm-objdump
-  not
+  llvm-readelf
+  llvm-readobj
   obj2yaml
   split-file
+  )
+
+set(CROSS_PROJECT_TEST_DEPS
+  FileCheck
+  check-gdb-llvm-support
+  ${LLDB_FORMATTER_TESTS}
+  count
+  not
+  ${CROSS_PROJECT_TEST_TOOLS}
   )
 
 if ("clang" IN_LIST LLVM_ENABLE_PROJECTS)
