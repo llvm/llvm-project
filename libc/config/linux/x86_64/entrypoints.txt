@@ -1424,7 +1424,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
-    libc.src.sched.clone
     libc.src.sched.__sched_andcpuset
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
