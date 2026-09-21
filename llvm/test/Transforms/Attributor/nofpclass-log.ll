@@ -365,6 +365,29 @@ define float @ret_log10_noinf_noneg(float nofpclass(inf nsub nnorm) %arg) #0 {
   ret float %call
 }
 
+define float @ret_log_no_pnorm(float nofpclass(pnorm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nzero sub) float @ret_log_no_pnorm
+; CHECK-SAME: (float nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nzero sub) float @llvm.log.f32(float nofpclass(pnorm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.log.f32(float %arg)
+  ret float %call
+}
+
+; log(x) can be negative zero or subnormal if x is close to +1.0 for ppc_fp128.
+; However, if x is not close to +1.0 (e.g. x is not positive normal), then it is
+; safe to rule out negative zero and subnormal for ppc_fp128.
+define ppc_fp128 @ret_log_ppcf128_no_pnorm(ppc_fp128 nofpclass(pnorm) %arg) #0 {
+; CHECK-LABEL: define ppc_fp128 @ret_log_ppcf128_no_pnorm
+; CHECK-SAME: (ppc_fp128 nofpclass(pnorm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.log.ppcf128(ppc_fp128 nofpclass(pnorm) [[ARG]]) #[[ATTR10]]
+; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
+;
+  %call = call ppc_fp128 @llvm.log.ppcf128(ppc_fp128 %arg)
+  ret ppc_fp128 %call
+}
+
 define float @ret_constrained_log2_noinf_noneg(float nofpclass(inf nsub nnorm) %arg) strictfp {
 ; CHECK-LABEL: define nofpclass(pinf nzero sub) float @ret_constrained_log2_noinf_noneg
 ; CHECK-SAME: (float nofpclass(inf nsub nnorm) [[ARG:%.*]]) #[[ATTR9]] {

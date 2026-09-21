@@ -5718,7 +5718,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           F ? F->getDenormalMode(
                   II->getType()->getScalarType()->getFltSemantics())
             : DenormalMode::getDynamic();
-      Known = KnownFPClass::log(KnownSrc, Mode);
+      const bool IsKnownNeverMultiUnitFPType =
+          !V->getType()->getScalarType()->isMultiUnitFPType();
+      Known = KnownFPClass::log(KnownSrc, Mode, IsKnownNeverMultiUnitFPType);
       break;
     }
     case Intrinsic::pow: {
