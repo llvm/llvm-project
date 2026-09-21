@@ -30,6 +30,14 @@ public:
   ~TestClass1() { ++destruction_count_; }
 };
 
+class TestClassAtomic : public std::rcu_obj_base<TestClassAtomic> {
+  std::atomic<int>& destruction_count_;
+
+public:
+  TestClassAtomic(std::atomic<int>& c) : destruction_count_(c) {}
+  ~TestClassAtomic() { destruction_count_.fetch_add(1, std::memory_order_relaxed); }
+};
+
 struct Deleter {
   int i = 0;
   template <class T>
@@ -153,7 +161,7 @@ int main(int, char**) {
     });
   }
   {
-    // multiple writer threads
+    // multiple writer threads with writer protected
     constexpr int num_writers = 4;
     std::latch unlock_latch(num_writers);
 
@@ -165,11 +173,15 @@ int main(int, char**) {
       writer_threads.emplace_back([&] {
         int destruction_count = 0;
         auto* ptr             = new TestClass1(destruction_count);
+        // note that with objects can be reclaimed by any threads
+        // so the non atomic read of destruction_count==0 needs to be protected
+        dom.lock();
         ptr->retire();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
         // should not be destroyed yet as the main thread is still holding the lock
         assert(destruction_count == 0);
+        dom.unlock();
 
         unlock_latch.count_down();
 
@@ -208,16 +220,90 @@ int main(int, char**) {
       writer_threads.emplace_back([&] {
         int destruction_count = 0;
         auto* ptr             = new TestClass1(destruction_count);
+        // note that with objects can be reclaimed by any threads
+        // so the non atomic read of destruction_count==0 needs to be protected
+        auto& dom = std::rcu_default_domain();
+        dom.lock();
         ptr->retire();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
         // should not be destroyed yet as the main thread is still holding the lock
         assert(destruction_count == 0);
+        dom.unlock();
 
         unlock_latch.count_down();
 
         std::rcu_barrier();
         assert(destruction_count == 1);
+      });
+    }
+  }
+  {
+    // multiple writer threads
+    constexpr int num_writers = 4;
+    std::latch unlock_latch(num_writers);
+
+    auto& dom = std::rcu_default_domain();
+    dom.lock();
+
+    std::vector<std::jthread> writer_threads;
+    for (int i = 0; i < num_writers; ++i) {
+      writer_threads.emplace_back([&] {
+        std::atomic<int> destruction_count = 0;
+        auto* ptr                          = new TestClassAtomic(destruction_count);
+        ptr->retire();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        // should not be destroyed yet as the main thread is still holding the lock
+        assert(destruction_count.load(std::memory_order_relaxed) == 0);
+
+        unlock_latch.count_down();
+
+        std::rcu_barrier();
+        assert(destruction_count.load(std::memory_order_relaxed) == 1);
+      });
+    }
+
+    unlock_latch.wait();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    dom.unlock();
+  }
+  {
+    // multiple reader and writer threads
+    constexpr int num_readers = 4;
+    constexpr int num_writers = 3;
+    std::latch unlock_latch(num_writers);
+    std::atomic<int> reader_locked = 0;
+
+    std::vector<std::jthread> reader_threads;
+    for (int i = 0; i < num_readers; ++i) {
+      reader_threads.emplace_back([&] {
+        auto& dom = std::rcu_default_domain();
+        dom.lock();
+        ++reader_locked;
+        unlock_latch.wait();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        dom.unlock();
+      });
+    };
+
+    std::vector<std::jthread> writer_threads;
+    for (int i = 0; i < num_writers; ++i) {
+      writer_threads.emplace_back([&] {
+        std::atomic<int> destruction_count = 0;
+        auto* ptr                          = new TestClassAtomic(destruction_count);
+        ptr->retire();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        // should not be destroyed yet as the main thread is still holding the lock
+        assert(destruction_count.load(std::memory_order_relaxed) == 0);
+
+        unlock_latch.count_down();
+
+        std::rcu_barrier();
+        assert(destruction_count.load(std::memory_order_relaxed) == 1);
       });
     }
   }
