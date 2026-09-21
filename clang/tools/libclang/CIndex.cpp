@@ -1503,6 +1503,10 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation NameLoc,
         Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), NameLoc,
         TU));
 
+  case TemplateName::PackIndexingTemplate:
+    return VisitTemplateName(Name.getAsPackIndexingTemplate()->getPattern(),
+                             NameLoc, NNS);
+
   case TemplateName::DeducedTemplate:
     llvm_unreachable("DeducedTemplate shouldn't appear in source");
   }
@@ -2354,8 +2358,10 @@ void OMPClauseEnqueue::VisitOMPFinalClause(const OMPFinalClause *C) {
 }
 
 void OMPClauseEnqueue::VisitOMPNumThreadsClause(const OMPNumThreadsClause *C) {
+  if (const Expr *Modifier = C->getDimsModifierExpr())
+    Visitor->AddStmt(Modifier);
+  VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
-  Visitor->AddStmt(C->getNumThreads());
 }
 
 void OMPClauseEnqueue::VisitOMPSafelenClause(const OMPSafelenClause *C) {

@@ -693,7 +693,7 @@ bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
 
 bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                                   llvm::Type *eltTy, unsigned numElts) {
-  assert(numElts > 1 && "illegal vector length");
+  assert(numElts > 0 && "illegal vector length");
   return getSwiftABIInfo(CGM).isLegalVectorType(vectorSize, eltTy, numElts);
 }
 
@@ -721,11 +721,14 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
     return;
   }
 
-  // Try to split the vector into legal subvectors.
   auto numElts = cast<llvm::FixedVectorType>(origVectorTy)->getNumElements();
   auto eltTy = origVectorTy->getElementType();
-  assert(numElts != 1);
+  if (numElts == 1) {
+    components.push_back(eltTy);
+    return;
+  }
 
+  // Try to split the vector into legal subvectors.
   // The largest size that we're still considering making subvectors of.
   // Always a power of 2.
   unsigned logCandidateNumElts = llvm::Log2_32(numElts);

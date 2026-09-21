@@ -666,22 +666,19 @@ define dso_local x86_regcallcc <4 x i32> @test_argRet128Vector(<4 x i1> %x, <4 x
 ; X32-LABEL: test_argRet128Vector:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpslld $31, %xmm0, %xmm0
-; X32-NEXT:    vpmovd2m %xmm0, %k1
-; X32-NEXT:    vpblendmd %xmm1, %xmm2, %xmm0 {%k1}
+; X32-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argRet128Vector:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    vpslld $31, %xmm0, %xmm0
-; WIN64-NEXT:    vpmovd2m %xmm0, %k1
-; WIN64-NEXT:    vpblendmd %xmm1, %xmm2, %xmm0 {%k1}
+; WIN64-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argRet128Vector:
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    vpslld $31, %xmm0, %xmm0
-; LINUXOSX64-NEXT:    vpmovd2m %xmm0, %k1
-; LINUXOSX64-NEXT:    vpblendmd %xmm1, %xmm2, %xmm0 {%k1}
+; LINUXOSX64-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; LINUXOSX64-NEXT:    retq
   %d = select <4 x i1> %x, <4 x i32> %a, <4 x i32> %b
   ret <4 x i32> %d

@@ -121,7 +121,7 @@ func.func @kernel_environment(
       memref<f32>) {
     acc.compute_region {
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

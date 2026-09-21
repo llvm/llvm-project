@@ -522,3 +522,42 @@ exit:
 ; CHECK-NEXT: exit: float = 1.0, int = [[ENTRY]]
   ret void
 }
+
+;; The irreducible SCC {h1, h2, c1, c2} inside the natural loop lh exits to e2
+;; with a mass that rounds to zero.  Dropping that exit leaves the lh package
+;; with no successors, hiding the function-level SCC {e1, e2, lh}.
+define void @zero_mass_exit(i1 %x) {
+; CHECK-LABEL: block-frequency-info: zero_mass_exit
+entry:
+; CHECK-NEXT: entry: float = 1.0, int = [[ENTRY:[0-9]+]]
+  br i1 %x, label %e1, label %e2
+
+e1:
+; CHECK-NEXT: e1: float = 1365.3,
+  br label %lh
+
+e2:
+; CHECK-NEXT: e2: float = 1365.3,
+  br label %e1
+
+lh:
+; CHECK-NEXT: lh: float = 1466015503616.0,
+  br i1 %x, label %h1, label %h2
+
+h1:
+; CHECK-NEXT: h1: float = 46912496115712.0,
+  br i1 %x, label %h2, label %lh
+
+h2:
+; CHECK-NEXT: h2: float = 140737486944101.9,
+  br i1 %x, label %h1, label %c1, !prof !36
+
+c1:
+; CHECK-NEXT: c1: float = 21845.3,
+  br i1 %x, label %h1, label %c2, !prof !36
+
+c2:
+; CHECK-NEXT: c2: float = 0.00004069,
+  br i1 %x, label %h1, label %e2, !prof !36
+}
+!36 = !{!"branch_weights", i32 1, i32 0}
