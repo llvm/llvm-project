@@ -180,6 +180,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+### Changes to the Windows installer
+
+* The project has migrated to MSI installers. Previous installations of LLVM,
+  prior (and including) 23.1.0, must be manually uninstalled first, before
+  installing this new release.
+
 ### Changes to TableGen
 
 * Outer let statements use ``ID{n-m}`` instead of ``ID<n-m>`` to be consistent
