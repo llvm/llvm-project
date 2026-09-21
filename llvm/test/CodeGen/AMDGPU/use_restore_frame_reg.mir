@@ -71,7 +71,7 @@ body:             |
   ; MUBUF-NEXT:   $sgpr40 = frame-setup COPY $sgpr33
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr40
   ; MUBUF-NEXT:   $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-  ; MUBUF-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+  ; MUBUF-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
   ; MUBUF-NEXT:   $sgpr41 = frame-setup COPY $sgpr34
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr41
   ; MUBUF-NEXT:   $sgpr34 = frame-setup COPY $sgpr32
@@ -139,7 +139,7 @@ body:             |
   ; FLATSCR-NEXT:   $sgpr40 = frame-setup COPY $sgpr33
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr40
   ; FLATSCR-NEXT:   $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-  ; FLATSCR-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+  ; FLATSCR-NEXT:   $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
   ; FLATSCR-NEXT:   $sgpr41 = frame-setup COPY $sgpr34
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr41
   ; FLATSCR-NEXT:   $sgpr34 = frame-setup COPY $sgpr32

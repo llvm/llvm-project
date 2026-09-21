@@ -2506,7 +2506,7 @@ body:             |
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2533,7 +2533,7 @@ body:             |
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2560,7 +2560,7 @@ body:             |
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2586,7 +2586,7 @@ body:             |
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2612,7 +2612,7 @@ body:             |
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2637,7 +2637,7 @@ body:             |
     ; GFX942-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX942-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX942-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX942-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2662,7 +2662,7 @@ body:             |
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2686,7 +2686,7 @@ body:             |
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2728,7 +2728,7 @@ body:             |
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2755,7 +2755,7 @@ body:             |
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2782,7 +2782,7 @@ body:             |
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2808,7 +2808,7 @@ body:             |
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2834,7 +2834,7 @@ body:             |
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2859,7 +2859,7 @@ body:             |
     ; GFX942-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX942-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX942-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX942-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2884,7 +2884,7 @@ body:             |
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2908,7 +2908,7 @@ body:             |
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2948,7 +2948,7 @@ body:             |
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2973,7 +2973,7 @@ body:             |
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -2998,7 +2998,7 @@ body:             |
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3022,7 +3022,7 @@ body:             |
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3046,7 +3046,7 @@ body:             |
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3069,7 +3069,7 @@ body:             |
     ; GFX942-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX942-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX942-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX942-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3092,7 +3092,7 @@ body:             |
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3114,7 +3114,7 @@ body:             |
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3154,7 +3154,7 @@ body:             |
     ; GFX7-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX7-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX7-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX7-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX7-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX7-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3179,7 +3179,7 @@ body:             |
     ; GFX8-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX8-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX8-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3204,7 +3204,7 @@ body:             |
     ; GFX900-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX900-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX900-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX900-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX900-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3228,7 +3228,7 @@ body:             |
     ; GFX90A-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX90A-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX90A-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX90A-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX90A-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3252,7 +3252,7 @@ body:             |
     ; GFX10-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX10-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
+    ; GFX10-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
     ; GFX10-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX10-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX10-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3275,7 +3275,7 @@ body:             |
     ; GFX942-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX942-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX942-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX942-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX942-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3298,7 +3298,7 @@ body:             |
     ; GFX11-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX11-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX11-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX11-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX11-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX11-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -3320,7 +3320,7 @@ body:             |
     ; GFX12-NEXT: $sgpr4 = frame-setup COPY $sgpr33
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr4
     ; GFX12-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
-    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -8192, implicit-def dead $scc
+    ; GFX12-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc
     ; GFX12-NEXT: $sgpr5 = frame-setup COPY $sgpr34
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr5
     ; GFX12-NEXT: $sgpr34 = frame-setup COPY $sgpr32
