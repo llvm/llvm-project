@@ -192,6 +192,8 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR:   %[[VA_ARG_V:.+]] = cir.load align(8) %[[VA_ARG_B]] : !cir.ptr<!rec_Big>, !rec_Big
 
 // LLVM-LABEL: define dso_local { <2 x float>, i32 } @varargs_aggregate_mixed_pair(i32 noundef %{{.*}}, ...)
+// OGCG:    %[[RETVAL:.+]] = alloca %struct.Bar, align 4
+// OGCG:    %[[REG_TMP:.+]] = alloca %struct.Bar, align 4
 // LLVM:   call void @llvm.va_start.p0(ptr %{{.*}})
 // LLVM:   %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // LLVMCIR: %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 4
@@ -208,8 +210,10 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // OGCG:    %[[REG_SAVE:.+]] = load ptr, ptr %{{.*}}, align 16
 // LLVMCIR: %[[SSE_VAL:.+]] = load <2 x float>, ptr %{{.+}}, align 16
 // OGCG:    %[[SSE_VAL:.+]] = load <2 x float>, ptr %{{.+}}, align 8
-// LLVMCIR: store <2 x float> %[[SSE_VAL]], ptr %{{.*}}, align 8
-// OGCG:    store <2 x float> %[[SSE_VAL]], ptr %{{.*}}, align 4
+// LLVMCIR: %[[SSE_DST:.+]] = getelementptr inbounds nuw { <2 x float>, i32 }, ptr %[[REG_TMP]], i32 0, i32 0
+// LLVMCIR: store <2 x float> %[[SSE_VAL]], ptr %[[SSE_DST]], align 8
+// OGCG:    %[[SSE_DST:.+]] = getelementptr inbounds nuw { <2 x float>, i32 }, ptr %[[REG_TMP]], i32 0, i32 0
+// OGCG:    store <2 x float> %[[SSE_VAL]], ptr %[[SSE_DST]], align 4
 // LLVMCIR: %[[INT_VAL:.+]] = load i32, ptr %{{.+}}, align 8
 // OGCG:    %[[INT_VAL:.+]] = load i32, ptr %{{.+}}, align 4
 // LLVM:   store i32 %[[INT_VAL]], ptr %{{.*}}, align 4
