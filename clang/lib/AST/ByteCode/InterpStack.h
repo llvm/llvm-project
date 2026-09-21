@@ -68,7 +68,7 @@ public:
 
     template <class... Args>
     StackFrame(Args &&...args)
-        : V(std::forward<Args>(args)...), type(toPrimType<T>()) {}
+        : V(std::forward<Args>(args)...), PT(toPrimType<T>()) {}
 
     static constexpr size_t getPaddingSize() {
       if constexpr (sizeof(T) < sizeof(void *))
@@ -81,7 +81,7 @@ public:
 
     LLVM_NO_UNIQUE_ADDRESS T V;
     LLVM_NO_UNIQUE_ADDRESS Padding<getPaddingSize()> P;
-    PrimType type;
+    PrimType PT;
   };
 
   /// Constructs a value in place on the top of the stack.

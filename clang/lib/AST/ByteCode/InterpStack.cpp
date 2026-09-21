@@ -35,7 +35,7 @@ InterpStack::~InterpStack() {
 #endif
   TYPE_SWITCH(PrimType(), {
     using Frame = StackFrame<T>;
-    static_assert(offsetof(Frame, type) == sizeof(Frame) - 1);
+    static_assert(offsetof(Frame, PT) == sizeof(Frame) - 1);
     // Currently we don't need to use extra memory to store the type information
     // for any PrimType on 64 bit platforms. Nothing breaks if this changes, but
     // it would result in 8 extra bytes used just for the type information.
