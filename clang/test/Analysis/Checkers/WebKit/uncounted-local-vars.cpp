@@ -759,3 +759,43 @@ namespace lambda_capture {
   }
 
 } // namespace lambda_capture
+
+namespace using_reexported_ref_deref {
+  class ProtectedRefBase {
+  protected:
+    void ref() const;
+    void deref() const;
+  };
+
+  class PublicUsing : private ProtectedRefBase {
+  public:
+    using ProtectedRefBase::ref;
+    using ProtectedRefBase::deref;
+    void method();
+  };
+
+  PublicUsing* provide_public_using();
+
+  void public_using() {
+    PublicUsing* a = provide_public_using();
+    // expected-warning@-1{{Local variable 'a' is a raw pointer to RefPtr-capable type 'using_reexported_ref_deref::PublicUsing' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    a->method();
+  }
+
+  class PrivateUsing : private ProtectedRefBase {
+    using ProtectedRefBase::ref;
+    using ProtectedRefBase::deref;
+  public:
+    void method();
+  };
+
+  PrivateUsing* provide_private_using();
+
+  void private_using() {
+    PrivateUsing* a = provide_private_using(); // no-warning
+    someFunction();
+    a->method();
+  }
+
+}
