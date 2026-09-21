@@ -90,7 +90,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
     return LIBC_NAMESPACE::Error(saved_errno);
   }
 
-  size_t alloc_size = entries.size() * sizeof(struct dirent *); 
+  size_t alloc_size = entries.size() * sizeof(struct dirent *);
   // The filter may have filtered out all entries. We'd like to avoid
   // malloc(0) in this instance as its exact semantics might be
   // implementation-dependent.
@@ -98,8 +98,7 @@ ErrorOr<int> scan_impl(const char *name, struct dirent ***namelist,
     alloc_size = sizeof(struct dirent *);
   }
 
-  struct dirent **result = static_cast<struct dirent **>(
-      ::malloc(alloc_size));
+  struct dirent **result = static_cast<struct dirent **>(::malloc(alloc_size));
 
   if (result == nullptr) {
     free_entries();
