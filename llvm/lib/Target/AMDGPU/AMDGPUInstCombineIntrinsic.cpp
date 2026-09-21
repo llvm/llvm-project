@@ -2014,6 +2014,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
     }
 
+    if (match(Src1, m_Zero()))
+      return IC.replaceInstUsesWith(II, II.getArgOperand(2));
+
     if (Instruction *I = foldConstantIntoDotAccumulator(II, 2, 3, IC))
       return I;
 
