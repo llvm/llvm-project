@@ -2072,6 +2072,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::VECREDUCE_ADD,
                          ISD::VECTOR_SPLICE_RIGHT});
 
+  if (Subtarget.hasStdExtZvzip())
+    setTargetDAGCombine({ISD::VECTOR_INTERLEAVE});
+
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors() || Subtarget.hasStdExtP())
@@ -14775,7 +14778,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
   if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
-      (8 * RISCV::RVVBitsPerBlock)) {
+          (8 * RISCV::RVVBitsPerBlock) ||
+      // In an unlikely case, a vector type might be legal to RISC-V but
+      // exceeds the MVT limit, in which we also want to split it.
+      (Subtarget.hasStdExtZvzip() && Factor == 2 &&
+       !isTypeLegal(VecVT.changeVectorElementCount(
+           VecVT.getVectorElementCount() * Factor)))) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
@@ -14872,10 +14880,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     return DAG.getMergeValues(Loads, DL);
   }
-
-  assert(!VecVT.isFixedLengthVector() &&
-         "Fixed factor=2 vector interleave should already lower to "
-         "SHUFFLE_VECTOR");
 
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
@@ -19597,6 +19601,31 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
+// Fold (vmxor_vl (setcc_vl a, b, cc), vmset_vl) -> (setcc_vl a, b, !cc) for
+// integer compares. The NOT also flips the masked-off lanes, which the inverted
+// compare copies unchanged from the passthru. So the passthru must be undef,
+// but any mask is fine.
+static SDValue combineVMNOTOfSetCC(SDNode *N, SelectionDAG &DAG) {
+  SDValue Cmp = N->getOperand(0);
+  if (Cmp.getOpcode() != RISCVISD::VMSET_VL &&
+      N->getOperand(1).getOpcode() != RISCVISD::VMSET_VL)
+    return SDValue();
+
+  if (Cmp.getOpcode() == RISCVISD::VMSET_VL)
+    Cmp = N->getOperand(1);
+
+  if (Cmp.getOpcode() != RISCVISD::SETCC_VL || !Cmp.hasOneUse() ||
+      !Cmp.getOperand(0).getValueType().isInteger() ||
+      !Cmp.getOperand(3).isUndef())
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+  CC = ISD::getSetCCInverse(CC, Cmp.getOperand(0).getValueType());
+  return DAG.getNode(RISCVISD::SETCC_VL, SDLoc(N), Cmp.getValueType(),
+                     {Cmp.getOperand(0), Cmp.getOperand(1), DAG.getCondCode(CC),
+                      Cmp.getOperand(3), Cmp.getOperand(4), Cmp.getOperand(5)});
+}
+
 static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -22213,6 +22242,52 @@ static SDValue performMaskedLoadToVPLoadCombine(MaskedLoadSDNode *MLoad,
                                 DAG.getAllOnesConstant(DL, MaskVT), VPLoad,
                                 MLoad->getPassThru(), VL);
   return DAG.getMergeValues({VPMerge, VPLoad.getValue(1)}, DL);
+}
+
+static SDValue performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  const unsigned Factor = N->getNumOperands();
+  assert(Factor <= 8);
+  MVT VecVT = N->getSimpleValueType(0);
+
+  if (Factor != 4 && Factor != 8)
+    return SDValue();
+
+  // Interleave by a tree of vzip.vv instructions.
+  SmallVector<SDValue, 8> Operands(N->op_values());
+  // First, reorder the operands.
+  // For Factor=4, given the original operand order `ABCD`, we need
+  // to reorder it into `ACBD`.
+  // For Factor=8, given the original operand order `ABCDEFGH`, the new
+  // order should be `AECGBFDH`.
+  // So the rule here is that for every operands with an odd index `I`, swap
+  // it with the operand of index `I + (Factor / 2 - 1)`.
+  for (unsigned I = 1U, HalfFactor = Factor / 2; I < HalfFactor; I += 2)
+    std::swap(Operands[I], Operands[I + (HalfFactor - 1)]);
+
+  for (unsigned CurrFactor = Factor; CurrFactor > 1; CurrFactor /= 2) {
+    // Generate a vector_interleave2 for every two operands.
+    for (unsigned I = 0U; I < CurrFactor; I += 2) {
+      assert(Operands[I].getValueType() == Operands[I + 1].getValueType());
+      EVT OperandEVT = Operands[I].getValueType();
+      EVT ResEVT = OperandEVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+
+      SDValue V = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                              DAG.getVTList(OperandEVT, OperandEVT),
+                              Operands[I], Operands[I + 1]);
+      Operands[I / 2] =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, ResEVT, V, V.getValue(1));
+    }
+  }
+
+  // Operands[0] is the resulting concat vector, but we need to split into
+  // Factor parts.
+  SDValue Interleaved = Operands[0];
+  for (unsigned I = 0U; I < Factor; ++I)
+    Operands[I] = DAG.getExtractSubvector(DL, VecVT, Interleaved,
+                                          I * VecVT.getVectorMinNumElements());
+
+  return DAG.getMergeValues(Operands, DL);
 }
 
 // Convert from one FMA opcode to another based on whether we are negating the
@@ -25472,6 +25547,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return N->getOperand(0);
     break;
   }
+  case RISCVISD::VMXOR_VL:
+    return combineVMNOTOfSetCC(N, DAG);
   case RISCVISD::VMERGE_VL: {
     // vmerge_vl allones, x, y, passthru, vl -> vmv_v_v passthru, x, vl
     SDValue Mask = N->getOperand(0);
@@ -25549,6 +25626,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::MLOAD:
     return performMaskedLoadToVPLoadCombine(cast<MaskedLoadSDNode>(N), DAG);
+  case ISD::VECTOR_INTERLEAVE:
+    assert(Subtarget.hasStdExtZvzip());
+    return performVECTOR_INTERLEAVECombine(N, DAG);
   }
 
   return SDValue();

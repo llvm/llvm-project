@@ -303,11 +303,6 @@ public:
     return getGeneration() <= SEA_ISLANDS ? 1 : 2;
   }
 
-  /// Return the amount of LDS that can be used that will not restrict the
-  /// occupancy lower than WaveCount.
-  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
-                                           const Function &) const;
-
   bool supportsMinMaxDenormModes() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
