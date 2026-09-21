@@ -2,9 +2,6 @@
 File Time Type
 ==============
 
-.. contents::
-   :local:
-
 .. _file-time-type-motivation:
 
 Motivation

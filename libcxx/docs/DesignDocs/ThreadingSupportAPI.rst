@@ -2,9 +2,6 @@
 Threading Support API
 =====================
 
-.. contents::
-   :local:
-
 Overview
 ========
 

@@ -2,9 +2,6 @@
 Feature Test Macros
 ===================
 
-.. contents::
-   :local:
-
 Overview
 ========
 

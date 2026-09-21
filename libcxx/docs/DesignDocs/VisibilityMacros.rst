@@ -2,9 +2,6 @@
 Symbol Visibility Macros
 ========================
 
-.. contents::
-   :local:
-
 .. _visibility-macros:
 
 Overview

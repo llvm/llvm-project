@@ -4,9 +4,6 @@
 Testing libc++
 ==============
 
-.. contents::
-  :local:
-
 Getting Started
 ===============
 
