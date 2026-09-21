@@ -57,8 +57,8 @@ struct VectorMaskedLoadOpConverter final
       return rewriter.notifyMatchFailure(
           maskedLoadOp, "expected vector.maskedload with 1-D mask");
     if (maskVType.isScalable())
-      return rewriter.notifyMatchFailure(
-          maskedLoadOp, "cannot scalarize a scalable mask");
+      return rewriter.notifyMatchFailure(maskedLoadOp,
+                                         "cannot scalarize a scalable mask");
 
     Location loc = maskedLoadOp.getLoc();
     int64_t maskLength = maskVType.getShape()[0];
@@ -129,8 +129,8 @@ struct VectorMaskedStoreOpConverter final
       return rewriter.notifyMatchFailure(
           maskedStoreOp, "expected vector.maskedstore with 1-D mask");
     if (maskVType.isScalable())
-      return rewriter.notifyMatchFailure(
-          maskedStoreOp, "cannot scalarize a scalable mask");
+      return rewriter.notifyMatchFailure(maskedStoreOp,
+                                         "cannot scalarize a scalable mask");
 
     Location loc = maskedStoreOp.getLoc();
     int64_t maskLength = maskVType.getShape()[0];
