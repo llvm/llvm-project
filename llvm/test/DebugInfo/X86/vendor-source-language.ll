@@ -1,5 +1,5 @@
 ; DW_LANG_lo_user and DW_LANG_hi_user are enumerated by dwarf::isC(), but the
-; vendor-defined codes between them are not, and used to fall through to the
+; vendor-defined codes between them are not, and used to fall through to a
 ; trailing llvm_unreachable. Emitting a prototyped subprogram in such a
 ; language calls isC() and must not crash.
 
