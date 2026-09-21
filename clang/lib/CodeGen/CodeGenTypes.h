@@ -126,6 +126,11 @@ public:
   /// ConvertType - Convert type T into a llvm::Type.
   llvm::Type *ConvertType(QualType T);
 
+  /// Convert a Clang cooperative matrix type to the corresponding LLVM type.
+  /// The element type and cooperative matrix properties, including scope,
+  /// dimensions, and use, are preserved in the resulting LLVM type.
+  llvm::Type *ConvertTypeForCoopMat(const CooperativeMatrixType *CMT);
+
   /// ConvertTypeForMem - Convert type T into a llvm::Type.  This differs from
   /// ConvertType in that it is used to convert to the memory representation for
   /// a type.  For example, the scalar representation for _Bool is i1, but the
