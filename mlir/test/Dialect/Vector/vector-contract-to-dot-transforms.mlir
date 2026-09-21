@@ -454,10 +454,6 @@ func.func @negative_contract_to_dot_matmat_scalable(%lhs: vector<[2]x2xf32>,
   return %res : vector<[2]x[2]xf32>
 }
 
-// Only the inner (N) dst dim is scalable; the outer (M) dim is still static
-// and gets peeled off by the progressive contraction lowering, but the
-// resulting per-row contraction still can't be unrolled and stays as
-// vector.contract.
 // CHECK-LABEL: @negative_contract_to_dot_matmat_inner_scalable
 // CHECK-SAME: %[[LHS:.+]]: vector<2x3xf32>, %[[RHS:.+]]: vector<3x[2]xf32>, %[[INIT:.+]]: vector<2x[2]xf32>
 //      CHECK: %[[LHS0:.+]] = vector.extract %[[LHS]][0] : vector<3xf32> from vector<2x3xf32>
@@ -474,8 +470,6 @@ func.func @negative_contract_to_dot_matmat_inner_scalable(%lhs: vector<2x3xf32>,
   return %res : vector<2x[2]xf32>
 }
 
-// Only the reduction (K) dim is scalable; vector.reduction handles that
-// natively without unrolling, so this still lowers.
 // CHECK-LABEL: func @contract_to_dot_matvec_scalable_reduction
 // CHECK-SAME: %[[A:.*0]]: vector<4x[8]xf32>,
 // CHECK-SAME: %[[B:.*1]]: vector<[8]xf32>,
