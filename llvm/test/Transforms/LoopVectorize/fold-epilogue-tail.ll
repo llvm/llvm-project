@@ -23,6 +23,9 @@
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -force-partial-aliasing-vectorization \
 ; RUN: -force-target-supports-masked-memory-ops < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ALIAS-MASK
 
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 \
+; RUN: -enable-interleaved-mem-accesses=true < %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-INTERLEAVE
+
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
 ; CHECK: LV: epilogue tail-folding is not supported yet
@@ -214,6 +217,36 @@ for.body:
   br i1 %combined.cond, label %exit, label %for.body
 
 exit:
+  ret void
+}
+
+@AB = common global [1024 x i32] zeroinitializer, align 4
+@CD = common global [1024 x i32] zeroinitializer, align 4
+define void @test_no_masked_interleave_support(i32 %C, i32 %D) {
+; CHECK-INVALID-INTERLEAVE-LABEL: LV: Checking a loop in 'test_no_masked_interleave_support'
+; CHECK-INVALID-INTERLEAVE: remark: <unknown>:0:0: Epilogue tail-folding is not supported with interleaved accesses when masking them isn't supported
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %indvars.iv
+  %tmp = load i32, ptr %arrayidx0, align 4
+  %tmp1 = or disjoint i64 %indvars.iv, 1
+  %arrayidx1 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %tmp1
+  %tmp2 = load i32, ptr %arrayidx1, align 4
+  %add = add nsw i32 %tmp, %C
+  %mul = mul nsw i32 %tmp2, %D
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %indvars.iv
+  store i32 %add, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %tmp1
+  store i32 %mul, ptr %arrayidx3, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
+  %cmp = icmp slt i64 %indvars.iv.next, 1024
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
   ret void
 }
 
