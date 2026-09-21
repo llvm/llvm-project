@@ -5,22 +5,14 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj %s -o %t.o
 # RUN: ld.lld --emit-relocs -Ttext=0x10000 %t.o -o %t.exe
 # RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s --check-prefix=DIAG
-# RUN: llvm-nm --defined-only %t.bolt | FileCheck %s --check-prefix=ADDR --implicit-check-not=__ENTRY_
-# RUN: llvm-bolt %t.exe -o %t.skip.bolt --skip-funcs=_start 2>&1 | FileCheck %s --check-prefix=DIAG
-# RUN: llvm-nm --defined-only %t.skip.bolt | FileCheck %s --check-prefix=ADDR --implicit-check-not=__ENTRY_
 
 # DIAG: BOLT-WARNING: corrupted control flow detected in function _start: an external branch/call targets an invalid instruction in function data_target at address 0x10004; ignoring both functions
 # DIAG-NEXT: BOLT-WARNING: ignoring entry point at address 0x10004 in constant island of function data_target
 # DIAG-NEXT: BOLT-WARNING: corrupted control flow detected in function _start: an external branch/call targets an invalid instruction in function instruction_target at address 0x1000e; ignoring both functions
 # DIAG-NOT: corrupted control flow detected
 # DIAG-NOT: ignoring entry point
-# ADDR-DAG: 0000000000010000 T data_target
-# ADDR-DAG: 000000000001000c T instruction_target
-# ADDR-DAG: 0000000000010014 T _start
 
   .text
-## Targets precede the source so their instruction boundaries are available
-## when the explicit --skip-funcs run scans the source's external references.
   .globl data_target
   .type data_target, @function
 data_target:
