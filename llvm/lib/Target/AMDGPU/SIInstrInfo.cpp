@@ -2737,7 +2737,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
 
   case AMDGPU::S_LOAD_DWORDX16_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM: {
-    if (SubIdx != 0)
+    if (SubIdx != 0 || UsedLanes.all())
       break;
 
     if (I == MBB.end())
@@ -2746,13 +2746,15 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     if (I->isBundled())
       break;
 
+    MachineFunction *MF = MBB.getParent();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    assert(MRI.use_nodbg_empty(DestReg) && "DestReg should have no users yet.");
+
     // Look for a single use of the register that is also a subreg.
     Register RegToFind = Orig.getOperand(0).getReg();
     MachineOperand *UseMO = nullptr;
-    for (auto &CandMO : I->operands()) {
-      if (!CandMO.isReg() || CandMO.getReg() != RegToFind || CandMO.isDef())
-        continue;
-      if (UseMO) {
+    for (MachineOperand& CandMO : MRI.use_nodbg_operands(RegToFind)) {
+      if (CandMO.isDef() || UseMO) {
         UseMO = nullptr;
         break;
       }
@@ -2763,10 +2765,6 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
 
     unsigned Offset = RI.getSubRegIdxOffset(UseMO->getSubReg());
     unsigned SubregSize = RI.getSubRegIdxSize(UseMO->getSubReg());
-
-    MachineFunction *MF = MBB.getParent();
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    assert(MRI.use_nodbg_empty(DestReg) && "DestReg should have no users yet.");
 
     unsigned NewOpcode = -1;
     if (SubregSize == 256)
