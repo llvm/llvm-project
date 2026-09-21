@@ -1746,7 +1746,7 @@ define noundef i32 @udiv-basic(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'udiv-basic'
 ; CHECK-NEXT:  Classifying expressions for: @udiv-basic
 ; CHECK-NEXT:    %res = udiv exact i32 %a, %b
-; CHECK-NEXT:    --> (%a /u %b) U: full-set S: full-set
+; CHECK-NEXT:    --> (%a /u %b)<exact> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv-basic
 ;
   %res = udiv exact i32 %a, %b
