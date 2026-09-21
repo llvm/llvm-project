@@ -17,9 +17,13 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
+// Suppress some additional warnings enabled in libsycl for LLVM headers.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
 #include <llvm/Object/OffloadBinary.h>
 
 #include <OffloadAPI.h>
+#pragma GCC diagnostic pop
 
 #include <memory>
 #include <string_view>
