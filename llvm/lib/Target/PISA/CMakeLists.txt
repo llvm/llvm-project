@@ -11,6 +11,7 @@ tablegen(LLVM PISAGenSearchableTables.inc -gen-searchable-tables)
 add_public_tablegen_target(PISACommonTableGen)
 
 add_llvm_target(PISACodeGen
+  PISACacheCtrlMMRA.cpp
   PISAInstrInfo.cpp
   PISAMCInstLower.cpp
   PISARegManager.cpp
