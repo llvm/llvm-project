@@ -120,15 +120,16 @@ void mapCallInterfaceSymbolsForDummyArgument(
     AbstractConverter &, const Fortran::lower::CallerInterface &caller,
     SymMap &symMap, const Fortran::semantics::Symbol &dummySymbol);
 
-/// Lower the extents of an explicit-shape function-call result, evaluating any
-/// rank-1 bound base (e.g. `mb(n)` in `res(mb(n))`) exactly once rather than
-/// once per dimension. Interface symbols appearing in the result spec
-/// expressions must already be mapped in \p symMap. Returns an empty vector
-/// when the result is not an explicit-shape array with rank-1 bounds, so the
-/// caller falls back to its per-dimension extent lowering.
+/// Lower the extents of an explicit-shape call-interface entity (a function
+/// result or a sequence-associated array dummy), evaluating any rank-1 bound
+/// base (e.g. `mb(n)` in `res(mb(n))`) exactly once rather than once per
+/// dimension. Interface symbols appearing in the entity's spec expressions must
+/// already be mapped in \p symMap. Returns an empty vector when the entity is
+/// not an explicit-shape array with rank-1 bounds, so the caller falls back to
+/// its per-dimension extent lowering.
 llvm::SmallVector<mlir::Value>
-lowerExplicitResultExtents(AbstractConverter &, mlir::Location,
-                           const Fortran::semantics::Symbol &result,
+lowerExplicitMappedExtents(AbstractConverter &, mlir::Location,
+                           const Fortran::semantics::Symbol &symbol,
                            SymMap &symMap, StatementContext &stmtCtx);
 
 // TODO: consider saving the initial expression symbol dependence analysis in

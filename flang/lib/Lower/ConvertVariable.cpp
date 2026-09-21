@@ -1936,6 +1936,22 @@ static llvm::SmallVector<mlir::Value> lowerSharedRankOneBounds(
   return values;
 }
 
+/// True when any dimension's explicit bound is a rank-1 bound element, i.e. the
+/// array's rank was produced by expanding a rank-1 integer bound.  In that case
+/// a non-ROBE bound in a given direction is a single user-written scalar that
+/// the front end clones into every dimension's ShapeSpec, so it can be
+/// evaluated once and reused instead of once per dimension.
+static bool hasRankOneBoundElement(const Fortran::lower::BoxAnalyzer &box) {
+  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound())
+    for (const Fortran::semantics::Bound &bound :
+         {std::cref(spec->lbound()), std::cref(spec->ubound())})
+      if (const auto &explicitBound = bound.GetExplicit())
+        if (Fortran::evaluate::UnwrapExpr<
+                Fortran::evaluate::RankOneBoundElement>(*explicitBound))
+          return true;
+  return false;
+}
+
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
 /// array, or if the lower bounds are deferred, or all implicit or one.
 static void lowerExplicitLowerBounds(
@@ -1956,6 +1972,18 @@ static void lowerExplicitLowerBounds(
           converter, loc, box, /*upper=*/false, idxTy, symMap, stmtCtx);
       !shared.empty()) {
     result.append(shared.begin(), shared.end());
+    return;
+  }
+  // A non-ROBE lower bound in a rank-1-bound-expanded array is a single scalar
+  // broadcast across every dimension; evaluate it once and reuse it.
+  if (hasRankOneBoundElement(box)) {
+    const Fortran::semantics::ShapeSpec *spec = box.dynamicBound().front();
+    if (auto low = spec->lbound().GetExplicit()) {
+      auto expr = Fortran::lower::SomeExpr{*low};
+      mlir::Value lb = builder.createConvert(
+          loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
+      result.append(box.dynamicBound().size(), lb);
+    }
     return;
   }
   for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound()) {
@@ -2001,11 +2029,24 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
   // extracted upper bound for every dimension's extent computation.
   llvm::SmallVector<mlir::Value> sharedUpper = lowerSharedRankOneBounds(
       converter, loc, box, /*upper=*/true, idxTy, symMap, stmtCtx);
+  // A non-ROBE upper bound in a rank-1-bound-expanded array is a single scalar
+  // broadcast across every dimension; evaluate it once and reuse it.
+  mlir::Value broadcastUpper;
+  if (sharedUpper.empty() && hasRankOneBoundElement(box)) {
+    const Fortran::semantics::ShapeSpec *spec = box.dynamicBound().front();
+    if (auto up = spec->ubound().GetExplicit()) {
+      auto expr = Fortran::lower::SomeExpr{*up};
+      broadcastUpper = builder.createConvert(
+          loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
+    }
+  }
   for (const auto &spec : llvm::enumerate(box.dynamicBound())) {
     if (auto up = spec.value()->ubound().GetExplicit()) {
       mlir::Value ub;
       if (!sharedUpper.empty()) {
         ub = sharedUpper[spec.index()];
+      } else if (broadcastUpper) {
+        ub = broadcastUpper;
       } else {
         auto expr = Fortran::lower::SomeExpr{*up};
         ub = builder.createConvert(
@@ -2023,27 +2064,19 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
   assert(result.empty() || result.size() == box.dynamicBound().size());
 }
 
-llvm::SmallVector<mlir::Value> Fortran::lower::lowerExplicitResultExtents(
+llvm::SmallVector<mlir::Value> Fortran::lower::lowerExplicitMappedExtents(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
-    const Fortran::semantics::Symbol &result, Fortran::lower::SymMap &symMap,
+    const Fortran::semantics::Symbol &symbol, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx) {
   Fortran::lower::BoxAnalyzer box;
-  box.analyze(result);
+  box.analyze(symbol);
   llvm::SmallVector<mlir::Value> extents;
   if (!box.isArray() || box.isStaticArray())
     return extents;
   // Only divert from the caller's default per-dimension extent lowering when a
   // rank-1 bound base (e.g. mb(n) in res(mb(n))) would otherwise be
   // re-evaluated once per dimension; lowerExplicitExtents evaluates it once.
-  bool hasRankOneBound = false;
-  for (const Fortran::semantics::ShapeSpec *spec : box.dynamicBound())
-    for (const Fortran::semantics::Bound &bound :
-         {std::cref(spec->lbound()), std::cref(spec->ubound())})
-      if (const auto &explicitBound = bound.GetExplicit())
-        if (Fortran::evaluate::UnwrapExpr<
-                Fortran::evaluate::RankOneBoundElement>(*explicitBound))
-          hasRankOneBound = true;
-  if (!hasRankOneBound)
+  if (!hasRankOneBoundElement(box))
     return extents;
   llvm::SmallVector<mlir::Value> lowerBounds;
   lowerExplicitLowerBounds(converter, loc, box, lowerBounds, symMap, stmtCtx);
@@ -2662,6 +2695,22 @@ void Fortran::lower::mapSymbolAttributes(
         converter, loc, ba, /*upper=*/false, idxTy, symMap, stmtCtx);
     llvm::SmallVector<mlir::Value> sharedUpper = lowerSharedRankOneBounds(
         converter, loc, ba, /*upper=*/true, idxTy, symMap, stmtCtx);
+    // A non-ROBE bound in a rank-1-bound-expanded array is a single scalar
+    // broadcast across every dimension; evaluate it once and reuse it.
+    mlir::Value broadcastLower, broadcastUpper;
+    if (hasRankOneBoundElement(ba)) {
+      const Fortran::semantics::ShapeSpec *spec0 = ba.dynamicBound().front();
+      if (sharedLower.empty())
+        if (auto low = spec0->lbound().GetExplicit()) {
+          auto expr = Fortran::lower::SomeExpr{*low};
+          broadcastLower = builder.createConvert(loc, idxTy, genValue(expr));
+        }
+      if (sharedUpper.empty())
+        if (auto high = spec0->ubound().GetExplicit()) {
+          auto expr = Fortran::lower::SomeExpr{*high};
+          broadcastUpper = builder.createConvert(loc, idxTy, genValue(expr));
+        }
+    }
     for (auto iter : llvm::enumerate(bounds)) {
       auto *spec = iter.value();
       fir::BoxDimsOp dimInfo;
@@ -2686,6 +2735,8 @@ void Fortran::lower::mapSymbolAttributes(
       } else {
         if (!sharedLower.empty()) {
           lb = sharedLower[iter.index()];
+        } else if (broadcastLower) {
+          lb = broadcastLower;
         } else if (auto low = spec->lbound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*low};
           lb = builder.createConvert(loc, idxTy, genValue(expr));
@@ -2696,6 +2747,10 @@ void Fortran::lower::mapSymbolAttributes(
 
         if (!sharedUpper.empty()) {
           ub = sharedUpper[iter.index()];
+          extents.emplace_back(
+              fir::factory::computeExtent(builder, loc, lb, ub));
+        } else if (broadcastUpper) {
+          ub = broadcastUpper;
           extents.emplace_back(
               fir::factory::computeExtent(builder, loc, lb, ub));
         } else if (auto high = spec->ubound().GetExplicit()) {

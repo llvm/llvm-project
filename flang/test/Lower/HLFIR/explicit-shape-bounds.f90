@@ -3,7 +3,7 @@
 ! to compile-time constants; otherwise the N bounds that share one rank-1 base
 ! are lowered by evaluating that base exactly once and extracting each
 ! dimension's element from it, rather than re-evaluating the base per dimension.
-! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nowhere | FileCheck %s
 
 ! Test with PARAMETER rank-1 bounds: the shared constant array is folded, so
 ! each dimension's bound is a compile-time constant and no base array is
@@ -208,4 +208,59 @@ end module
 ! CHECK:  hlfir.apply %[[CONV]], %{{.*}} : (!hlfir.expr<?xi64>, index) -> i64
 ! CHECK:  fir.shape %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shape<3>
 ! CHECK:  fir.call @_QMtest_result_robePf(
+
+! Caller side: sequence-associating an actual with a polymorphic explicit-shape
+! dummy x(mb(k)) remaps the actual into the dummy's shape.  The shared base
+! mb(k) is evaluated once for all dummy dimensions rather than re-evaluated per
+! dimension, matching the result-extent path.
+module test_remap_robe
+  type :: t
+    integer :: i
+  end type
+contains
+  pure function mb(k) result(r)
+    integer, intent(in) :: k
+    integer :: r(3)
+    r = [k, k + 1, k + 2]
+  end function
+  subroutine callee(k, x)
+    integer, intent(in) :: k
+    class(t), intent(in) :: x(mb(k))
+  end subroutine
+  subroutine test_remap_robe_caller(k, y)
+    integer, intent(in) :: k
+    class(t) :: y(:, :, :)
+    call callee(k, y)
+  end subroutine
+end module
+! CHECK-LABEL: func.func @_QMtest_remap_robePtest_remap_robe_caller(
+! CHECK:  hlfir.eval_in_mem shape %{{.*}} -> !hlfir.expr<3xi32> {
+! CHECK:    fir.call @_QMtest_remap_robePmb(
+! CHECK:  }
+! CHECK-NOT:  fir.call @_QMtest_remap_robePmb(
+! CHECK:  fir.shape %{{.*}}, %{{.*}}, %{{.*}} : (index, index, index) -> !fir.shape<3>
+! CHECK:  fir.embox
+! CHECK:  fir.call @_QMtest_remap_robePcallee(
+
+! A broadcast scalar bound in a rank-1-bound-expanded array: a(lb(n(1)):n) has a
+! scalar lower bound lb(n(1)) cloned across every dimension produced by the
+! rank-1 upper bound n.  That scalar is evaluated once and reused for every
+! dimension rather than re-evaluated per dimension.
+module test_broadcast_scalar
+contains
+  pure integer function lb(k)
+    integer, intent(in) :: k
+    lb = k
+  end function
+  subroutine test_broadcast_scalar_bounds(n)
+    integer, intent(in) :: n(3)
+    real :: a(lb(n(1)):n)
+    a = 0.0
+  end subroutine
+end module
+! CHECK-LABEL: func.func @_QMtest_broadcast_scalarPtest_broadcast_scalar_bounds(
+! CHECK:  fir.call @_QMtest_broadcast_scalarPlb(
+! CHECK-NOT:  fir.call @_QMtest_broadcast_scalarPlb(
+! CHECK:  fir.shape_shift %{{.*}} -> !fir.shapeshift<3>
+! CHECK:  hlfir.declare {{.*}}Ea"
 
