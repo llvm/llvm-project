@@ -27,9 +27,6 @@ using namespace ssaf;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
-UnsafeBufferUsageEntitySummary
-ssaf::buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers);
-
 namespace {
 
 class UnsafeBufferUsageWPATest : public TestFixture {

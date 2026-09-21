@@ -632,7 +632,6 @@ static llvm::Function *emitOutlinedFunctionPrologue(
 
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   // Always inline the outlined function if optimizations are enabled.
   if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
@@ -745,7 +744,6 @@ static llvm::Function *emitOutlinedFunctionPrologueAggregate(
   CGM.SetInternalFunctionAttributes(CD, F, FuncInfo);
   if (CD->isNothrow())
     F->setDoesNotThrow();
-  F->setDoesNotRecurse();
 
   CGF.StartFunction(CD, Ctx.VoidTy, F, FuncInfo, Args, Loc, Loc);
   Address ContextAddr = CGF.GetAddrOfLocalVar(CD->getContextParam());
@@ -2247,7 +2245,11 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
       emitBody(CGF, CurStmt, NextLoop, MaxLevel, Level);
     return;
   }
-  if (SimplifiedS == NextLoop) {
+
+  // `tryToFindNextInnerLoop` keeps the intra-tile hint wrapper around, so match
+  // against the loop it annotates. The tile overshoot guard is emitted
+  // separately via EmitOMPLoopBody's finals-conditions handling.
+  if (SimplifiedS == OMPLoopBasedDirective::ignoreIntraTileHint(NextLoop)) {
     if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
@@ -3279,7 +3281,8 @@ void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
     } else if (auto *PartialClause = S.getSingleClause<OMPPartialClause>()) {
       uint64_t Factor = 0;
       if (Expr *FactorExpr = PartialClause->getFactor()) {
-        Factor = FactorExpr->EvaluateKnownConstInt(getContext()).getZExtValue();
+        Factor =
+            FactorExpr->EvaluateKnownConstInt(getContext()).getLimitedValue();
         assert(Factor >= 1 && "Only positive factors are valid");
       }
       OMPBuilder.unrollLoopPartial(DL, CLI, Factor,
@@ -3308,7 +3311,7 @@ void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
   } else if (auto *PartialClause = S.getSingleClause<OMPPartialClause>()) {
     if (Expr *FactorExpr = PartialClause->getFactor()) {
       uint64_t Factor =
-          FactorExpr->EvaluateKnownConstInt(getContext()).getZExtValue();
+          FactorExpr->EvaluateKnownConstInt(getContext()).getLimitedValue();
       assert(Factor >= 1 && "Only positive factors are valid");
       LoopStack.setUnrollCount(Factor);
     }
@@ -8926,5 +8929,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
 }
 
 void CodeGenFunction::EmitOMPAssumeDirective(const OMPAssumeDirective &S) {
+  for (const auto *C : S.getClausesOfKind<OMPHoldsClause>()) {
+    const Expr *E = C->getExpr();
+    assert(E && "holds clause requires an expression");
+    if (!E->HasSideEffects(getContext()))
+      Builder.CreateAssumption(EvaluateExprAsBool(E));
+  }
   EmitStmt(S.getAssociatedStmt());
 }

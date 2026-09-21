@@ -11,7 +11,6 @@
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -20,7 +19,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "si-fold-operands"
@@ -921,6 +919,20 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (Opc == AMDGPU::S_FMAC_F32 && OpNo == 3) {
       if (tryToFoldAsFMAAKorMK())
         return true;
+    }
+
+    // Inlineable constant might have been folded into Imm operand of fmaak or
+    // fmamk and we are trying to fold a non-inlinable constant.
+    if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
+        OpToFold.isImm()) {
+      std::optional<int64_t> ImmVal = OpToFold.getEffectiveImmVal();
+      if (ImmVal && !TII->isInlineConstant(*MI, OpNo, *ImmVal)) {
+        unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
+        MachineOperand &OpImm = MI->getOperand(ImmIdx);
+        if (!OpImm.isReg() &&
+            TII->isInlineConstant(*MI, MI->getOperand(OpNo), OpImm))
+          return tryToFoldAsFMAAKorMK();
+      }
     }
 
     // Special case for s_setreg_b32
@@ -2217,7 +2229,9 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
       OpToFold.getSubReg()) {
     if (DstRC == &AMDGPU::SReg_32RegClass &&
         DstRC == MRI->getRegClass(OpToFold.getReg())) {
-      assert(OpToFold.getSubReg() == AMDGPU::lo16);
+      if (!TRI->getMatchingSuperRegClass(DstRC, &AMDGPU::SGPR_LO16RegClass,
+                                         OpToFold.getSubReg()))
+        return false;
       OpToFold.setSubReg(0);
     }
   }
@@ -2312,7 +2326,7 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
         (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
             ? SISrcMods::OP_SEL_1
             : 0u;
-    if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
+    if (Src0Mods != UnsetMods || Src1Mods != UnsetMods)
       return nullptr;
     return Src0;
   }

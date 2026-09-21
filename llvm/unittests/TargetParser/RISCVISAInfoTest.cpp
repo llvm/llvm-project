@@ -930,6 +930,12 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rva23p1s64", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rva23p1s64'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rvb23p1s64", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rvb23p1s64'");
+  EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
       "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
@@ -941,11 +947,10 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+i", "+m", "+zmmul", "+zalasr"));
 
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_zalasr_xventanacondops", true, false);
+  auto MaybeISAInfo2 =
+      RISCVISAInfo::parseArchString("rv32e_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+zalasr", "+xventanacondops"));
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(), ElementsAre("+e", "+zalasr"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -1265,6 +1270,19 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
   EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
   EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
 
+  // RVY targets default to the capability ABI.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y"}), "il32pc64");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f"}), "il32pc64f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f", "+d"}),
+            "il32pc64d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+e"}), "il32pc64e");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y"}), "l64pc128");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
+            "l64pc128d");
+  // RV64E has no capability ABI (yet).
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
+
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
 }
@@ -1531,6 +1549,7 @@ R"(All available -march extensions for RISC-V
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
+    smpmpdeleg           1.0
     smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
@@ -1543,6 +1562,8 @@ R"(All available -march extensions for RISC-V
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
+    sspmp                1.0
+    sspmpen              1.0
     ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
@@ -1636,7 +1657,6 @@ R"(All available -march extensions for RISC-V
     xtheadmempair        1.0
     xtheadsync           1.0
     xtheadvdot           1.0
-    xventanacondops      1.0
     xwchc                2.2
 
 Experimental extensions
@@ -1664,16 +1684,20 @@ Experimental extensions
     zvvmm                0.1
     zvvmtls              0.1
     zvvmttls             0.1
-    zvzip                0.1
+    zvzip                0.3
     smcsps               0.20
     smehv                0.20
+    smidctrl             0.20
     smijt                0.20
     smip                 0.20
+    smnip                0.20
     smpmpmt              0.6
     sscsps               0.20
     ssehv                0.20
+    ssidctrl             0.20
     ssijt                0.20
     ssip                 0.20
+    ssnip                0.20
     svukte               1.0
     xqccmi               0.2
     xqccmt               0.1
@@ -1693,6 +1717,8 @@ Supported Profiles
     rvi20u64
 
 Experimental Profiles
+    rva23p1s64
+    rvb23p1s64
     rvm23u32
 
 Use -march to specify the target's extension.

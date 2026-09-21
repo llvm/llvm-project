@@ -32,6 +32,7 @@
 #define omp_get_team_size ompc_get_team_size
 
 #define omp_set_num_threads ompc_set_num_threads
+#define kmp_set_num_threads_8 kmpc_set_num_threads_8
 #define omp_set_dynamic ompc_set_dynamic
 #define omp_set_nested ompc_set_nested
 #define omp_set_affinity_format ompc_set_affinity_format
@@ -88,6 +89,7 @@ static size_t __kmps_init() {
 
 /* set API functions */
 void omp_set_num_threads(omp_int_t num_threads) { i; }
+void kmp_set_num_threads_8(int64_t num_threads) { i; }
 void omp_set_dynamic(omp_int_t dynamic) {
   i;
   __kmps_set_dynamic(dynamic);

@@ -314,3 +314,9 @@ namespace Errors {
   static_assert(test1(), ""); // both-error {{not an integral constant expression}}
 #endif
 }
+
+namespace NoDecl {
+  struct S {};
+  struct T : S {};
+  void (T::*foo)(void *) = (void (S::*)(void *))(void (T::*)(void *))0;
+}

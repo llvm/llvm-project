@@ -8,7 +8,10 @@
 // UnsafeBufferUsageAnalysis is a noop analysis.
 //
 // UnsafeBufferUsageAnalysisResult is a map from EntityIds to
-// EntityPointerLevelSets
+// EntityPointerLevelSets.
+//
+// UnsafeBufferReachableAnalysisResult is a flat set of EntityPointerLevels
+// reachable from unsafe buffer usage.
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
@@ -98,7 +101,7 @@ json::Object serializeUnsafeBufferReachableAnalysisResult(
   json::Object Result;
 
   Result[UnsafeBufferReachableAnalysisResultName] =
-      entityPointerLevelMapToJSON(R.Reachables, IdToJSON);
+      entityPointerLevelSetToJSON(R.Reachables, IdToJSON);
   return Result;
 }
 
@@ -113,7 +116,7 @@ deserializeUnsafeBufferReachableAnalysisResult(
         Obj, "an object with a key %s",
         UnsafeBufferReachableAnalysisResultName.data());
 
-  auto Reachables = entityPointerLevelMapFromJSON(*Content, IdFromJSON);
+  auto Reachables = entityPointerLevelSetFromJSON(*Content, IdFromJSON);
 
   if (!Reachables)
     return Reachables.takeError();
@@ -173,7 +176,7 @@ class UnsafeBufferReachableAnalysis
       auto R = SubGraph.getDestNodes(*EPL);
 
       for (const auto &Dst : R) {
-        auto [It, Inserted] = getResult().Reachables[Id].insert(Dst);
+        auto [It, Inserted] = getResult().Reachables.insert(Dst);
         if (Inserted)
           WorkList.push_back(&*It);
       }
@@ -187,9 +190,8 @@ class UnsafeBufferReachableAnalysis
     // Simple DFS:
     std::vector<EPLPtr> Worklist;
 
-    for (auto &[Id, EPLs] : Reachables)
-      for (auto &EPL : EPLs)
-        Worklist.push_back(&EPL);
+    for (auto &EPL : Reachables)
+      Worklist.push_back(&EPL);
 
     while (!Worklist.empty()) {
       EPLPtr Node = Worklist.back();
@@ -233,9 +235,7 @@ public:
     for (auto &[Contributor, EPLs] : UnsafePtrs) {
       auto FilteredRange = llvm::make_filter_range(EPLs, HasNoTypeConstraint);
 
-      if (!FilteredRange.empty())
-        getResult().Reachables[Contributor].insert(FilteredRange.begin(),
-                                                   FilteredRange.end());
+      getResult().Reachables.insert(FilteredRange.begin(), FilteredRange.end());
     }
     return llvm::Error::success();
   }

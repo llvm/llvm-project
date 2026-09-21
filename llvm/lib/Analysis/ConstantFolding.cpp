@@ -56,7 +56,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cerrno>
 #include <cfenv>
@@ -1189,7 +1188,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::Call:
     if (auto *F = dyn_cast<Function>(Ops.back())) {
       const auto *Call = cast<CallBase>(InstOrCE);
-      if (canConstantFoldCallTo(Call, F))
+      if (canConstantFoldCallTo(Call, F, TLI))
         return ConstantFoldCall(Call, F, Ops.slice(0, Ops.size() - 1), TLI,
                                 AllowNonDeterministic);
     }
@@ -1761,6 +1760,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::usub_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::umul_with_overflow:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
   case Intrinsic::sadd_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::ssub_sat:
@@ -1778,6 +1779,7 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_partial_reduce_add:
   case Intrinsic::vector_extract:
   case Intrinsic::vector_insert:
   case Intrinsic::vector_interleave2:
@@ -1996,18 +1998,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
     return !IsStrictFP;
 
   // NVVM add intrinsics with explicit rounding modes
-  case Intrinsic::nvvm_add_rm_d:
-  case Intrinsic::nvvm_add_rn_d:
-  case Intrinsic::nvvm_add_rp_d:
-  case Intrinsic::nvvm_add_rz_d:
-  case Intrinsic::nvvm_add_rm_f:
-  case Intrinsic::nvvm_add_rn_f:
-  case Intrinsic::nvvm_add_rp_f:
-  case Intrinsic::nvvm_add_rz_f:
-  case Intrinsic::nvvm_add_rm_ftz_f:
-  case Intrinsic::nvvm_add_rn_ftz_f:
-  case Intrinsic::nvvm_add_rp_ftz_f:
-  case Intrinsic::nvvm_add_rz_ftz_f:
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
 
   // NVVM div intrinsics with explicit rounding modes
   case Intrinsic::nvvm_div_rm_d:
@@ -2101,7 +2093,8 @@ static bool anyTypeContainsFP(Type *RetTy, ArrayRef<Value *> Ops) {
          });
 }
 
-bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
+bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
+                                 const TargetLibraryInfo *TLI) {
   if (Call->isNoBuiltin())
     return false;
   if (Call->getFunctionType() != F->getFunctionType())
@@ -2120,89 +2113,106 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   if (F->getIntrinsicID() != Intrinsic::not_intrinsic)
     return canConstantFoldIntrinsic(F->getIntrinsicID(), Call->isStrictFP());
 
-  if (!F->hasName() || Call->isStrictFP())
+  if (!TLI || Call->isStrictFP())
     return false;
 
-  // In these cases, the check of the length is required.  We don't want to
-  // return true for a name like "cos\0blah" which strcmp would return equal to
-  // "cos", but has length 8.
-  StringRef Name = F->getName();
-  switch (Name[0]) {
+  LibFunc Func = TLI->getLibFunc(*F);
+  if (Func == NotLibFunc)
+    return false;
+
+  switch (Func) {
+  case LibFunc_acos:
+  case LibFunc_acosf:
+  case LibFunc_acos_finite:
+  case LibFunc_acosf_finite:
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asin_finite:
+  case LibFunc_asinf_finite:
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+  case LibFunc_atan2_finite:
+  case LibFunc_atan2f_finite:
+  case LibFunc_ceil:
+  case LibFunc_ceilf:
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_cosh_finite:
+  case LibFunc_coshf_finite:
+  case LibFunc_cos:
+  case LibFunc_cosf:
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_exp:
+  case LibFunc_expf:
+  case LibFunc_exp_finite:
+  case LibFunc_expf_finite:
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+  case LibFunc_exp2_finite:
+  case LibFunc_exp2f_finite:
+  case LibFunc_fabs:
+  case LibFunc_fabsf:
+  case LibFunc_floor:
+  case LibFunc_floorf:
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+  case LibFunc_ilogb:
+  case LibFunc_ilogbf:
+  case LibFunc_log:
+  case LibFunc_logf:
+  case LibFunc_log_finite:
+  case LibFunc_logf_finite:
+  case LibFunc_logb:
+  case LibFunc_logbf:
+  case LibFunc_logl:
+  case LibFunc_log2:
+  case LibFunc_log2f:
+  case LibFunc_log2_finite:
+  case LibFunc_log2f_finite:
+  case LibFunc_log10:
+  case LibFunc_log10f:
+  case LibFunc_log10_finite:
+  case LibFunc_log10f_finite:
+  case LibFunc_log1p:
+  case LibFunc_log1pf:
+  case LibFunc_nearbyint:
+  case LibFunc_nearbyintf:
+  case LibFunc_nextafter:
+  case LibFunc_nextafterf:
+  case LibFunc_nexttoward:
+  case LibFunc_nexttowardf:
+  case LibFunc_pow:
+  case LibFunc_powf:
+  case LibFunc_pow_finite:
+  case LibFunc_powf_finite:
+  case LibFunc_remainder:
+  case LibFunc_remainderf:
+  case LibFunc_rint:
+  case LibFunc_rintf:
+  case LibFunc_round:
+  case LibFunc_roundf:
+  case LibFunc_roundeven:
+  case LibFunc_roundevenf:
+  case LibFunc_sin:
+  case LibFunc_sinf:
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinh_finite:
+  case LibFunc_sinhf_finite:
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_trunc:
+  case LibFunc_truncf:
+    return true;
   default:
     return false;
-    // clang-format off
-  case 'a':
-    return Name == "acos" || Name == "acosf" ||
-           Name == "asin" || Name == "asinf" ||
-           Name == "atan" || Name == "atanf" ||
-           Name == "atan2" || Name == "atan2f";
-  case 'c':
-    return Name == "ceil" || Name == "ceilf" ||
-           Name == "cos" || Name == "cosf" ||
-           Name == "cosh" || Name == "coshf";
-  case 'e':
-    return Name == "exp" || Name == "expf" || Name == "exp2" ||
-           Name == "exp2f" || Name == "erf" || Name == "erff";
-  case 'f':
-    return Name == "fabs" || Name == "fabsf" ||
-           Name == "floor" || Name == "floorf" ||
-           Name == "fmod" || Name == "fmodf";
-  case 'i':
-    return Name == "ilogb" || Name == "ilogbf";
-  case 'l':
-    return Name == "log" || Name == "logf" || Name == "logl" ||
-           Name == "log2" || Name == "log2f" || Name == "log10" ||
-           Name == "log10f" || Name == "logb" || Name == "logbf" ||
-           Name == "log1p" || Name == "log1pf";
-  case 'n':
-    return Name == "nearbyint" || Name == "nearbyintf" || Name == "nextafter" ||
-           Name == "nextafterf" || Name == "nexttoward" ||
-           Name == "nexttowardf";
-  case 'p':
-    return Name == "pow" || Name == "powf";
-  case 'r':
-    return Name == "remainder" || Name == "remainderf" ||
-           Name == "rint" || Name == "rintf" ||
-           Name == "round" || Name == "roundf" ||
-           Name == "roundeven" || Name == "roundevenf";
-  case 's':
-    return Name == "sin" || Name == "sinf" ||
-           Name == "sinh" || Name == "sinhf" ||
-           Name == "sqrt" || Name == "sqrtf";
-  case 't':
-    return Name == "tan" || Name == "tanf" ||
-           Name == "tanh" || Name == "tanhf" ||
-           Name == "trunc" || Name == "truncf";
-  case '_':
-    // Check for various function names that get used for the math functions
-    // when the header files are preprocessed with the macro
-    // __FINITE_MATH_ONLY__ enabled.
-    // The '12' here is the length of the shortest name that can match.
-    // We need to check the size before looking at Name[1] and Name[2]
-    // so we may as well check a limit that will eliminate mismatches.
-    if (Name.size() < 12 || Name[1] != '_')
-      return false;
-    switch (Name[2]) {
-    default:
-      return false;
-    case 'a':
-      return Name == "__acos_finite" || Name == "__acosf_finite" ||
-             Name == "__asin_finite" || Name == "__asinf_finite" ||
-             Name == "__atan2_finite" || Name == "__atan2f_finite";
-    case 'c':
-      return Name == "__cosh_finite" || Name == "__coshf_finite";
-    case 'e':
-      return Name == "__exp_finite" || Name == "__expf_finite" ||
-             Name == "__exp2_finite" || Name == "__exp2f_finite";
-    case 'l':
-      return Name == "__log_finite" || Name == "__logf_finite" ||
-             Name == "__log10_finite" || Name == "__log10f_finite";
-    case 'p':
-      return Name == "__pow_finite" || Name == "__powf_finite";
-    case 's':
-      return Name == "__sinh_finite" || Name == "__sinhf_finite";
-    }
-    // clang-format on
   }
 }
 
@@ -2230,7 +2240,7 @@ Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
 
 /// Clear the floating-point exception state.
 inline void llvm_fenv_clearexcept() {
-#if HAVE_DECL_FE_ALL_EXCEPT
+#if defined(FE_ALL_EXCEPT)
   feclearexcept(FE_ALL_EXCEPT);
 #endif
   errno = 0;
@@ -2241,7 +2251,7 @@ inline bool llvm_fenv_testexcept() {
   int errno_val = errno;
   if (errno_val == ERANGE || errno_val == EDOM)
     return true;
-#if HAVE_DECL_FE_ALL_EXCEPT && HAVE_DECL_FE_INEXACT
+#if defined(FE_ALL_EXCEPT) && defined(FE_INEXACT)
   if (fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT))
     return true;
 #endif
@@ -2404,6 +2414,48 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   }
 
   return ConstantInt::get(Op->getContext(), Acc);
+}
+
+/// Fold a vector partial reduction add using the deterministic grouping
+/// chosen by TargetLowering::expandPartialReduceMLA. Although the
+/// LangRef leaves the grouping unspecified, input element I is accumulated
+/// into result lane I % NumAccElts, with each accumulator element seeding
+/// its corresponding result lane. Returns nullptr if any element cannot be
+/// folded.
+static Constant *constantFoldVectorPartialReduceAdd(Constant *Acc,
+                                                    Constant *Input,
+                                                    const DataLayout &DL) {
+  auto *AccTy = cast<FixedVectorType>(Acc->getType());
+  // A fixed result type does not guarantee a fixed input type.
+  auto *InputTy = dyn_cast<FixedVectorType>(Input->getType());
+  if (!InputTy)
+    return nullptr;
+
+  unsigned NumAccElts = AccTy->getNumElements();
+  unsigned NumInputElts = InputTy->getNumElements();
+
+  SmallVector<Constant *> ResultElts(NumAccElts);
+  for (unsigned I = 0; I < NumAccElts; ++I) {
+    ResultElts[I] = Acc->getAggregateElement(I);
+    if (!ResultElts[I])
+      return nullptr;
+  }
+
+  for (unsigned I = 0; I < NumInputElts; ++I) {
+    Constant *InputElt = Input->getAggregateElement(I);
+    if (!InputElt)
+      return nullptr;
+
+    unsigned ResultIdx = I % NumAccElts;
+    Constant *Folded = ConstantFoldBinaryOpOperands(
+        Instruction::Add, ResultElts[ResultIdx], InputElt, DL);
+    if (!Folded)
+      return nullptr;
+
+    ResultElts[ResultIdx] = Folded;
+  }
+
+  return ConstantVector::get(ResultElts);
 }
 
 /// Attempt to fold an SSE floating point to integer conversion of a constant
@@ -3619,37 +3671,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantFP::get(Ty, Res);
       }
 
-      case Intrinsic::nvvm_add_rm_f:
-      case Intrinsic::nvvm_add_rn_f:
-      case Intrinsic::nvvm_add_rp_f:
-      case Intrinsic::nvvm_add_rz_f:
-      case Intrinsic::nvvm_add_rm_d:
-      case Intrinsic::nvvm_add_rn_d:
-      case Intrinsic::nvvm_add_rp_d:
-      case Intrinsic::nvvm_add_rz_d:
-      case Intrinsic::nvvm_add_rm_ftz_f:
-      case Intrinsic::nvvm_add_rn_ftz_f:
-      case Intrinsic::nvvm_add_rp_ftz_f:
-      case Intrinsic::nvvm_add_rz_ftz_f: {
-
-        bool IsFTZ = nvvm::FAddShouldFTZ(IntrinsicID);
-        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
-        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
-
-        APFloat::roundingMode RoundMode =
-            nvvm::GetFAddRoundingMode(IntrinsicID);
-
-        APFloat Res = A;
-        APFloat::opStatus Status = Res.add(B, RoundMode);
-
-        if (!Res.isNaN() &&
-            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
-          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
-          return ConstantFP::get(Ty, Res);
-        }
-        return nullptr;
-      }
-
       case Intrinsic::nvvm_mul_rm_f:
       case Intrinsic::nvvm_mul_rn_f:
       case Intrinsic::nvvm_mul_rp_f:
@@ -3922,6 +3943,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
       return ConstantInt::get(Ty, APIntOps::pext(*C0, *C1));
+    case Intrinsic::smulh:
+      if (!C0 || !C1)
+        return Constant::getNullValue(Ty);
+      return ConstantInt::get(Ty, APIntOps::mulhs(*C0, *C1));
+    case Intrinsic::umulh:
+      if (!C0 || !C1)
+        return Constant::getNullValue(Ty);
+      return ConstantInt::get(Ty, APIntOps::mulhu(*C0, *C1));
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_umax:
     case Intrinsic::amdgcn_wave_reduce_max:
@@ -3993,7 +4022,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     if (!FVTy)
       return nullptr;
     unsigned Width = Ty->getIntegerBitWidth();
-    if (APInt::getMaxValue(Width).ult(FVTy->getNumElements()))
+    if (APInt::getMaxValue(Width).ult(FVTy->getNumElements()) ||
+        Operands[0]->containsPoisonElement())
       return PoisonValue::get(Ty);
     for (unsigned I = 0; I < FVTy->getNumElements(); ++I) {
       Constant *Elt = Operands[0]->getAggregateElement(I);
@@ -4196,6 +4226,27 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
           return ConstantFP::get(Ty, V);
         }
         }
+      }
+
+      // TODO: Add constant folding for the _sat variants.
+      if (IntrinsicID == Intrinsic::nvvm_fadd ||
+          IntrinsicID == Intrinsic::nvvm_fadd_ftz) {
+        bool IsFTZ = IntrinsicID == Intrinsic::nvvm_fadd_ftz;
+        APFloat A =
+            IsFTZ ? FTZPreserveSign(Op1->getValueAPF()) : Op1->getValueAPF();
+        APFloat B =
+            IsFTZ ? FTZPreserveSign(Op2->getValueAPF()) : Op2->getValueAPF();
+
+        APFloat Res = A;
+        APFloat::opStatus Status =
+            Res.add(B, nvvm::GetRoundingModeFromImmArg(Operands[2]));
+
+        if (!Res.isNaN() &&
+            (Status == APFloat::opOK || Status == APFloat::opInexact)) {
+          Res = IsFTZ ? FTZPreserveSign(Res) : Res;
+          return ConstantFP::get(Ty, Res);
+        }
+        return nullptr;
       }
     }
   }
@@ -4456,6 +4507,8 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     return ConstantVector::get(Result);
   }
+  case Intrinsic::vector_partial_reduce_add:
+    return constantFoldVectorPartialReduceAdd(Operands[0], Operands[1], DL);
   case Intrinsic::wasm_dot: {
     unsigned NumElements =
         cast<FixedVectorType>(Operands[0]->getType())->getNumElements();
@@ -4483,6 +4536,12 @@ static Constant *ConstantFoldFixedVectorCall(
 
     return ConstantVector::get(Result);
   }
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+    // The rounding mode operand is a scalar, so the lane-wise folding below
+    // does not apply.
+    // TODO: Fold these by passing the rounding mode through to every lane.
+    return nullptr;
   default:
     break;
   }
