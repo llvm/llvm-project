@@ -810,8 +810,7 @@ define <2 x i8> @lshr_fold_or_disjoint_cnt_out_of_bounds(<2 x i8> %x) {
 define i32 @lshr_add_negative_no_exact_known_range(i32 %x) {
 ; CHECK-LABEL: @lshr_add_negative_no_exact_known_range(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[MASKED]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 2, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 4, [[MASKED]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %masked = and i32 %x, 15
@@ -823,8 +822,7 @@ define i32 @lshr_add_negative_no_exact_known_range(i32 %x) {
 define i32 @shl_add_negative_no_flags_known_range(i32 %x) {
 ; CHECK-LABEL: @shl_add_negative_no_flags_known_range(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[MASKED]], -2
-; CHECK-NEXT:    [[R:%.*]] = shl i32 12, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i32 3, [[MASKED]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %masked = and i32 %x, 15
@@ -836,8 +834,7 @@ define i32 @shl_add_negative_no_flags_known_range(i32 %x) {
 define i32 @ashr_add_negative_no_exact_known_range(i32 %x) {
 ; CHECK-LABEL: @ashr_add_negative_no_exact_known_range(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[MASKED]], -1
-; CHECK-NEXT:    [[R:%.*]] = ashr i32 -4, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 -8, [[MASKED]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %masked = and i32 %x, 15
@@ -849,8 +846,7 @@ define i32 @ashr_add_negative_no_exact_known_range(i32 %x) {
 define <2 x i32> @lshr_add_negative_no_exact_known_range_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @lshr_add_negative_no_exact_known_range_vec(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 15)
-; CHECK-NEXT:    [[A:%.*]] = add nsw <2 x i32> [[MASKED]], splat (i32 -1)
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> splat (i32 2), [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> splat (i32 4), [[MASKED]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %masked = and <2 x i32> %x, <i32 15, i32 15>
@@ -866,8 +862,7 @@ define i32 @from_sub_issue222281(i8 %x) {
 ; CHECK-NEXT:    [[V:%.*]] = or disjoint i8 [[M]], -128
 ; CHECK-NEXT:    [[TZ:%.*]] = call range(i8 3, 8) i8 @llvm.cttz.i8(i8 [[V]], i1 true)
 ; CHECK-NEXT:    [[Z:%.*]] = zext nneg i8 [[TZ]] to i32
-; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[Z]], -3
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 64, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 512, [[Z]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m = and i8 %x, -8
@@ -919,8 +914,7 @@ define i32 @lshr_add_negative_no_exact_overflow(i32 range(i32 28, 32) %x) {
 define i32 @lshr_add_negative_no_exact_max_bitwidth_minus_one(i32 %x) {
 ; CHECK-LABEL: @lshr_add_negative_no_exact_max_bitwidth_minus_one(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[A:%.*]] = add nsw i32 [[MASKED]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 2, [[A]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 4, [[MASKED]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %masked = and i32 %x, 31

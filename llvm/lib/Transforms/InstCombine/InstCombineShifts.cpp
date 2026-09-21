@@ -469,35 +469,45 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
     // C << (X - AddC) --> (C >> AddC) << X
     // and
     // C >> (X - AddC) --> (C << AddC) >> X
+    // This requires that no set bits of C are lost by the pre-shift, and that
+    // X is a valid shift amount whenever (X - AddC) is. The latter is implied
+    // by nuw/nsw/exact on the original shift, or holds if X u< BitWidth.
     const APInt *AddC;
     if (match(Op1, m_Add(m_Value(A), m_APInt(AddC))) && AddC->isNegative() &&
         (-*AddC).ult(BitWidth)) {
       unsigned PosOffset = (-*AddC).getZExtValue();
 
-      auto isSuitableForPreShift = [PosOffset, &I, AC]() {
-        switch (I.getOpcode()) {
-        default:
-          return false;
-        case Instruction::Shl:
-          return (I.hasNoSignedWrap() || I.hasNoUnsignedWrap()) &&
-                 AC->eq(AC->lshr(PosOffset).shl(PosOffset));
-        case Instruction::LShr:
-          return I.isExact() && AC->eq(AC->shl(PosOffset).lshr(PosOffset));
-        case Instruction::AShr:
-          return I.isExact() && AC->eq(AC->shl(PosOffset).ashr(PosOffset));
-        }
-      };
-      if (isSuitableForPreShift()) {
+      bool HasShiftFlags;
+      bool IsRoundtrippable;
+      switch (I.getOpcode()) {
+      default:
+        llvm_unreachable("Unexpected shift opcode");
+      case Instruction::Shl:
+        HasShiftFlags = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
+        IsRoundtrippable = AC->eq(AC->lshr(PosOffset).shl(PosOffset));
+        break;
+      case Instruction::LShr:
+        HasShiftFlags = I.isExact();
+        IsRoundtrippable = AC->eq(AC->shl(PosOffset).lshr(PosOffset));
+        break;
+      case Instruction::AShr:
+        HasShiftFlags = I.isExact();
+        IsRoundtrippable = AC->eq(AC->shl(PosOffset).ashr(PosOffset));
+        break;
+      }
+
+      if (IsRoundtrippable &&
+          (HasShiftFlags ||
+           computeKnownBits(A, &I).getMaxValue().ult(BitWidth))) {
         Constant *NewC = ConstantInt::get(Ty, I.getOpcode() == Instruction::Shl
                                                   ? AC->lshr(PosOffset)
                                                   : AC->shl(PosOffset));
         BinaryOperator *NewShiftOp =
             BinaryOperator::Create(I.getOpcode(), NewC, A);
-        if (I.getOpcode() == Instruction::Shl) {
+        if (I.getOpcode() == Instruction::Shl)
           NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
-        } else {
-          NewShiftOp->setIsExact();
-        }
+        else
+          NewShiftOp->setIsExact(I.isExact());
         return NewShiftOp;
       }
     }
