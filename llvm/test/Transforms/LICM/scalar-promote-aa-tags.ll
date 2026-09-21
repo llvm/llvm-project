@@ -583,6 +583,58 @@ exit:
   ret i32 %res
 }
 
+define i32 @promotable.per_iteration_noalias_scope_with_tbaa(i64 %idx, i1 %c, i1 %c2) {
+; CHECK-LABEL: define i32 @promotable.per_iteration_noalias_scope_with_tbaa(
+; CHECK-SAME: i64 [[IDX:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PTR:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IDX]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META8]])
+; CHECK-NEXT:    [[FPTR:%.*]] = getelementptr float, ptr [[PTR]], i64 [[IV]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[FPTR]], align 4, !tbaa [[FLOAT_TBAA4]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    [[V_INC:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    store i32 [[V_INC]], ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[LATCH]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !tbaa [[INT_TBAA0]], !noalias [[META8]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %ptr = alloca [4 x i32]
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %idx, %entry ], [ %iv.next, %latch ]
+  call void @llvm.experimental.noalias.scope.decl(metadata !8)
+  %fptr = getelementptr float, ptr %ptr, i64 %iv
+  store float 0.000000e+00, ptr %fptr, !tbaa !3
+  %v = load i32, ptr %ptr, !tbaa !0
+  %v.inc = add i32 %v, 1
+  store i32 %v.inc, ptr %ptr, !tbaa !0
+  br i1 %c, label %if, label %latch
+
+if:
+  store i32 0, ptr %ptr, !tbaa !0, !noalias !8
+  br label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  br i1 %c2, label %exit, label %loop
+
+exit:
+  %res = load i32, ptr %ptr
+  ret i32 %res
+}
+
 !0 = !{!4, !4, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
