@@ -13563,3 +13563,95 @@ body:             |
 
     S_ENDPGM 0
 ...
+---
+name:            preserve_sload_opcode_during_remat
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GFX908-LABEL: name: preserve_sload_opcode_during_remat
+  ; GFX908: bb.0:
+  ; GFX908-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT:   dead undef [[DEF:%[0-9]+]].sub1:sgpr_64 = IMPLICIT_DEF
+  ; GFX908-NEXT:   dead undef [[DEF1:%[0-9]+]].sub1:vreg_64 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT: bb.1:
+  ; GFX908-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX908-NEXT:   $exec = S_ANDN2_B64_term $exec, [[DEF2]], implicit-def $scc
+  ; GFX908-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; GFX908-NEXT:   S_BRANCH %bb.2
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT: bb.2:
+  ; GFX908-NEXT:   [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM undef [[DEF]], 64, 0 :: (invariant load (s512), align 32, addrspace 4)
+  ; GFX908-NEXT:   [[IMAGE_SAMPLE_V1_V2_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V2 undef [[DEF1]], [[DEF3]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7, undef [[DEF4]].sub8_sub9_sub10_sub11, 4, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; GFX908-NEXT:   [[IMAGE_SAMPLE_V4_V2_:%[0-9]+]]:vreg_128 = IMAGE_SAMPLE_V4_V2 undef [[DEF1]], [[S_LOAD_DWORDX16_IMM]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7, [[DEF3]].sub8_sub9_sub10_sub11, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; GFX908-NEXT:   [[IMAGE_SAMPLE_V4_V2_1:%[0-9]+]]:vreg_128 = IMAGE_SAMPLE_V4_V2 undef [[DEF1]], [[S_LOAD_DWORDX16_IMM]].sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15, [[DEF3]].sub12_sub13_sub14_sub15, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; GFX908-NEXT:   S_NOP 0, implicit [[IMAGE_SAMPLE_V4_V2_]], implicit [[IMAGE_SAMPLE_V1_V2_]], implicit [[IMAGE_SAMPLE_V4_V2_1]]
+  ; GFX908-NEXT:   S_ENDPGM 0
+  ;
+  ; GFX908-GCNTRACKERS-LABEL: name: preserve_sload_opcode_during_remat
+  ; GFX908-GCNTRACKERS: bb.0:
+  ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX908-GCNTRACKERS-NEXT: {{  $}}
+  ; GFX908-GCNTRACKERS-NEXT:   dead undef [[DEF:%[0-9]+]].sub1:sgpr_64 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   dead undef [[DEF1:%[0-9]+]].sub1:vreg_64 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   [[DEF2:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   [[DEF3:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   [[DEF4:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   [[DEF5:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   [[DEF6:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   [[DEF7:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT: {{  $}}
+  ; GFX908-GCNTRACKERS-NEXT: bb.1:
+  ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  ; GFX908-GCNTRACKERS-NEXT: {{  $}}
+  ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_ANDN2_B64_term $exec, [[DEF2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; GFX908-GCNTRACKERS-NEXT:   S_BRANCH %bb.2
+  ; GFX908-GCNTRACKERS-NEXT: {{  $}}
+  ; GFX908-GCNTRACKERS-NEXT: bb.2:
+  ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM undef [[DEF]], 64, 0 :: (invariant load (s512), align 32, addrspace 4)
+  ; GFX908-GCNTRACKERS-NEXT:   [[IMAGE_SAMPLE_V1_V2_:%[0-9]+]]:vgpr_32 = IMAGE_SAMPLE_V1_V2 undef [[DEF1]], [[DEF3]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7, undef [[DEF4]].sub8_sub9_sub10_sub11, 4, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; GFX908-GCNTRACKERS-NEXT:   [[IMAGE_SAMPLE_V4_V2_:%[0-9]+]]:vreg_128 = IMAGE_SAMPLE_V4_V2 undef [[DEF1]], [[S_LOAD_DWORDX16_IMM]].sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7, [[DEF3]].sub8_sub9_sub10_sub11, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; GFX908-GCNTRACKERS-NEXT:   [[IMAGE_SAMPLE_V4_V2_1:%[0-9]+]]:vreg_128 = IMAGE_SAMPLE_V4_V2 undef [[DEF1]], [[S_LOAD_DWORDX16_IMM]].sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15, [[DEF3]].sub12_sub13_sub14_sub15, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[IMAGE_SAMPLE_V4_V2_]], implicit [[IMAGE_SAMPLE_V1_V2_]], implicit [[IMAGE_SAMPLE_V4_V2_1]]
+  ; GFX908-GCNTRACKERS-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    undef %0.sub1:sgpr_64 = IMPLICIT_DEF
+    undef %1.sub1:vreg_64 = IMPLICIT_DEF
+    %2:sreg_64 = IMPLICIT_DEF
+    %3:sgpr_512 = S_LOAD_DWORDX16_IMM undef %0, 64, 0 :: (invariant load (s512), align 32, addrspace 4)
+    %4:sgpr_512 = IMPLICIT_DEF
+    %5:sgpr_512 = IMPLICIT_DEF
+    %11:sgpr_512 = IMPLICIT_DEF
+    %12:sgpr_512 = IMPLICIT_DEF
+    %13:sgpr_512 = IMPLICIT_DEF
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+
+    S_NOP 0, implicit %4, implicit %5, implicit %11, implicit %12, implicit %13
+    $exec = S_ANDN2_B64_term $exec, %2, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+
+    %6:vreg_128 = IMAGE_SAMPLE_V4_V2 undef %1, %3.sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7, %4.sub8_sub9_sub10_sub11, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    %7:vgpr_32 = IMAGE_SAMPLE_V1_V2 undef %1, %4.sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7, undef %5.sub8_sub9_sub10_sub11, 4, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    %8:vreg_128 = IMAGE_SAMPLE_V4_V2 undef %1, %3.sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15, %4.sub12_sub13_sub14_sub15, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    S_NOP 0, implicit %6, implicit %7, implicit %8
+    S_ENDPGM 0
+...
