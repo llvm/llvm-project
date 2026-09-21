@@ -37,6 +37,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
@@ -62,6 +63,10 @@ STATISTIC(NumScalarIntrinsic, "Number of scalar intrinsic calls formed");
 static cl::opt<bool> DisableVectorCombine(
     "disable-vector-combine", cl::init(false), cl::Hidden,
     cl::desc("Disable all vector combine transforms"));
+
+static cl::opt<bool> GuardMaskedRegions(
+    "vector-combine-guard-masked-regions", cl::init(false), cl::Hidden,
+    cl::desc("Experimentally skip masked regions when all lanes are inactive"));
 
 static cl::opt<bool> DisableBinopExtractShuffle(
     "disable-binop-extract-shuffle", cl::init(false), cl::Hidden,
@@ -7083,6 +7088,151 @@ bool VectorCombine::run() {
   return MadeChange;
 }
 
+static bool isCombinedMask(Value *V, ArrayRef<Value *> Masks) {
+  SmallVector<Value *> Worklist{V};
+  SmallPtrSet<Value *, 8> Seen;
+  SmallPtrSet<Value *, 8> Found;
+  while (!Worklist.empty()) {
+    Value *Part = Worklist.pop_back_val();
+    if (!Seen.insert(Part).second)
+      continue;
+    if (is_contained(Masks, Part)) {
+      Found.insert(Part);
+      continue;
+    }
+    Value *LHS, *RHS;
+    if (!match(Part, m_Or(m_Value(LHS), m_Value(RHS))))
+      return false;
+    Worklist.push_back(LHS);
+    Worklist.push_back(RHS);
+  }
+  return Found.size() == Masks.size();
+}
+
+// Keep this opt-in until the cost of the extra branch can be modeled.
+static bool guardMaskedRegions(Function &F) {
+  if (F.hasOptSize())
+    return false;
+  SmallVector<BasicBlock *> Blocks;
+  for (BasicBlock &BB : F)
+    Blocks.push_back(&BB);
+  bool Changed = false;
+  for (BasicBlock *BB : Blocks) {
+    Instruction *First = nullptr, *Last = nullptr;
+    SmallVector<Value *, 4> Masks;
+    SmallVector<IntrinsicInst *> MemoryOps;
+    bool Reject = false;
+    for (Instruction &I : *BB) {
+      auto *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II || (II->getIntrinsicID() != Intrinsic::masked_load &&
+                  II->getIntrinsicID() != Intrinsic::masked_store))
+        continue;
+      bool Store = II->getIntrinsicID() == Intrinsic::masked_store;
+      if (!First)
+        First = II;
+      MemoryOps.push_back(II);
+      if (Store)
+        Last = II;
+    }
+    if (!Last)
+      continue;
+    while (MemoryOps.back() != Last)
+      MemoryOps.pop_back();
+    if (MemoryOps.size() < 2)
+      continue;
+    for (IntrinsicInst *II : MemoryOps) {
+      Value *Mask = II->getArgOperand(
+          II->getIntrinsicID() == Intrinsic::masked_store ? 2 : 1);
+      if (isa<Constant>(Mask) || !isa<FixedVectorType>(Mask->getType()) ||
+          (!Masks.empty() && Mask->getType() != Masks.front()->getType())) {
+        Reject = true;
+        break;
+      }
+      // Do not hoist masks computed inside the region into its guard.
+      if (auto *MI = dyn_cast<Instruction>(Mask))
+        if (MI->getParent() == BB && !MI->comesBefore(First)) {
+          Reject = true;
+          break;
+        }
+      if (!is_contained(Masks, Mask))
+        Masks.push_back(Mask);
+    }
+    if (Reject)
+      continue;
+
+    // Recognize both the original guard and its bitcast/compare canonical form.
+    if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+      auto *BI = dyn_cast<CondBrInst>(Pred->getTerminator());
+      if (BI) {
+        Value *Cond = BI->getCondition();
+        Value *Combined;
+        if (BI->getSuccessor(0) == BB &&
+            (match(Cond, m_Intrinsic<Intrinsic::vector_reduce_or>(
+                             m_Value(Combined))) ||
+             match(Cond,
+                   m_SpecificICmp(ICmpInst::ICMP_NE,
+                                  m_BitCast(m_Value(Combined)), m_Zero()))) &&
+            isCombinedMask(Combined, Masks))
+          continue;
+        if (BI->getSuccessor(1) == BB &&
+            match(Cond,
+                  m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                 m_BitCast(m_Value(Combined)), m_Zero())) &&
+            isCombinedMask(Combined, Masks))
+          continue;
+      }
+    }
+
+    SmallVector<Instruction *> Region;
+    SmallPtrSet<Instruction *, 32> Members;
+    for (Instruction *I = First; I; I = I->getNextNode()) {
+      Region.push_back(I);
+      Members.insert(I);
+      if (I == Last)
+        break;
+    }
+    for (Instruction *I : Region) {
+      auto *II = dyn_cast<IntrinsicInst>(I);
+      bool Masked = II && (II->getIntrinsicID() == Intrinsic::masked_load ||
+                           II->getIntrinsicID() == Intrinsic::masked_store);
+      if (!Masked && (I->mayReadOrWriteMemory() || I->mayHaveSideEffects() ||
+                      I->isTerminator()))
+        Reject = true;
+      if (auto *CB = dyn_cast<CallBase>(I))
+        if (CB->isConvergent())
+          Reject = true;
+      for (User *U : I->users())
+        if (!Members.contains(dyn_cast<Instruction>(U)))
+          Reject = true;
+    }
+    if (Reject)
+      continue;
+
+    IRBuilder<> Builder(First);
+    // The branch and memory operations must agree even for undef mask lanes.
+    SmallDenseMap<Value *, Value *, 4> FrozenMasks;
+    Value *Combined = nullptr;
+    for (Value *Mask : Masks) {
+      Value *Frozen = Builder.CreateFreeze(Mask, "active.mask");
+      FrozenMasks[Mask] = Frozen;
+      Combined = Combined ? Builder.CreateOr(Combined, Frozen, "combined.mask")
+                          : Frozen;
+    }
+    Value *Any = Builder.CreateOrReduce(Combined);
+    for (IntrinsicInst *II : MemoryOps) {
+      unsigned MaskIdx =
+          II->getIntrinsicID() == Intrinsic::masked_store ? 2 : 1;
+      II->setArgOperand(MaskIdx,
+                        FrozenMasks.lookup(II->getArgOperand(MaskIdx)));
+    }
+    Instruction *ThenTerm = SplitBlockAndInsertIfThen(Any, First, false);
+    for (Instruction *I : Region)
+      I->moveBeforePreserving(ThenTerm->getIterator());
+    Changed = true;
+  }
+  return Changed;
+}
+
 PreservedAnalyses VectorCombinePass::run(Function &F,
                                          FunctionAnalysisManager &FAM) {
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
@@ -7093,7 +7243,11 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
   VectorCombine Combiner(F, TTI, DT, AA, AC, DL, CostKind, TryEarlyFoldsOnly);
-  if (!Combiner.run())
+  bool Changed = Combiner.run();
+  if (!DisableVectorCombine && !TryEarlyFoldsOnly && GuardMaskedRegions &&
+      guardMaskedRegions(F))
+    return PreservedAnalyses::none();
+  if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
