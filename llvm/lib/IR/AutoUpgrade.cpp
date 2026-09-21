@@ -988,6 +988,22 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      // Check for the trailing '.' to avoid matching sminv, sminp, etc.
+      if (Name.starts_with("smax.") || Name.starts_with("smin.") ||
+          Name.starts_with("umax.") || Name.starts_with("umin.")) {
+        if (F->arg_size() != 2 || !F->getReturnType()->isIntOrIntVectorTy())
+          return false; // Invalid IR.
+        Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name.take_front(4))
+                               .Case("smax", Intrinsic::smax)
+                               .Case("smin", Intrinsic::smin)
+                               .Case("umax", Intrinsic::umax)
+                               .Case("umin", Intrinsic::umin)
+                               .Default(Intrinsic::not_intrinsic);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
+                                                  F->getReturnType());
+        return true;
+      }
+
       if (Name.starts_with("addp")) {
         // 'aarch64.neon.addp*'.
         if (F->arg_size() != 2)
