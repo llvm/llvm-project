@@ -58,4 +58,26 @@ static_assert(!std::is_constructible_v<PairTuple, std::allocator_arg_t, Alloc, S
 static_assert(!std::is_constructible_v<PairTuple, const SourcePair&&>);
 static_assert(!std::is_constructible_v<PairTuple, std::allocator_arg_t, Alloc, const SourcePair&&>);
 
-int main(int, char**) { return 0; }
+struct Explicit {
+  explicit Explicit(int);
+};
+
+using ExplicitIntTuple = std::tuple<const long&, Explicit>;
+using IntTuple         = std::tuple<int, int>;
+
+struct Implicit {
+  template <class T>
+  Implicit(T&&);
+};
+
+void f(ExplicitIntTuple);
+int f(Implicit);
+
+static_assert(std::is_same_v<decltype(f(std::declval<IntTuple&>())), int>);
+static_assert(std::is_same_v<decltype(f(std::declval<const IntTuple&>())), int>);
+static_assert(std::is_same_v<decltype(f(std::declval<IntTuple&&>())), int>);
+static_assert(std::is_same_v<decltype(f(std::declval<const IntTuple&&>())), int>);
+static_assert(std::is_same_v<decltype(f(std::declval<SourcePair&>())), int>);
+static_assert(std::is_same_v<decltype(f(std::declval<const SourcePair&>())), int>);
+static_assert(std::is_same_v<decltype(f(std::declval<SourcePair&&>())), int>);
+static_assert(std::is_same_v<decltype(f(std::declval<const SourcePair&&>())), int>);

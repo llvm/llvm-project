@@ -652,14 +652,14 @@ public:
             __enable_if_t< _And< _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>, _EnableUTypesCtor<_Up...> >::value,
                            int> = 0>
     requires(__constructs_dangling_reference<_Up...>())
-  tuple(_Up&&...) = delete;
+  explicit(!_And<is_convertible<_Up, _Tp>...>::value) tuple(_Up&&...) = delete;
 
   template <class _Alloc,
             class... _Up,
             __enable_if_t< _And< _BoolConstant<sizeof...(_Up) == sizeof...(_Tp)>, _EnableUTypesCtor<_Up...> >::value,
                            int> = 0>
     requires(__constructs_dangling_reference<_Up...>())
-  tuple(allocator_arg_t, const _Alloc&, _Up&&...) = delete;
+  explicit(!_And<is_convertible<_Up, _Tp>...>::value) tuple(allocator_arg_t, const _Alloc&, _Up&&...) = delete;
 #    endif // _LIBCPP_STD_VER >= 23
 
   // Copy and move constructors (including the allocator_arg_t variants)
@@ -716,11 +716,12 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class... _Up, __enable_if_t< _And< _EnableCtorFromUTypesTuple<const tuple<_Up...>&> >::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<const tuple<_Up...>&>
-  tuple(const tuple<_Up...>&) = delete;
+  explicit(!_And<is_convertible<const _Up&, _Tp>...>::value) tuple(const tuple<_Up...>&) = delete;
 
   template <class... _Up, class _Alloc, __enable_if_t<_EnableCtorFromUTypesTuple<const tuple<_Up...>&>::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<const tuple<_Up...>&>
-  tuple(allocator_arg_t, const _Alloc&, const tuple<_Up...>&) = delete;
+  explicit(!_And<is_convertible<const _Up&, _Tp>...>::value)
+      tuple(allocator_arg_t, const _Alloc&, const tuple<_Up...>&) = delete;
 
   // tuple(tuple<U...>&) constructors (including allocator_arg_t variants)
 
@@ -730,7 +731,7 @@ public:
 
   template <class... _Up, enable_if_t< _EnableCtorFromUTypesTuple<tuple<_Up...>&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<tuple<_Up...>&>
-  tuple(tuple<_Up...>&) = delete;
+  explicit(!_And<is_convertible<_Up&, _Tp>...>::value) tuple(tuple<_Up...>&) = delete;
 
   template <class _Alloc, class... _Up, enable_if_t< _EnableCtorFromUTypesTuple<tuple<_Up...>&>::value>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!_And<is_convertible<_Up&, _Tp>...>::value)
@@ -739,7 +740,7 @@ public:
 
   template <class _Alloc, class... _Up, enable_if_t< _EnableCtorFromUTypesTuple<tuple<_Up...>&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<tuple<_Up...>&>
-  tuple(allocator_arg_t, const _Alloc&, tuple<_Up...>&) = delete;
+  explicit(!_And<is_convertible<_Up&, _Tp>...>::value) tuple(allocator_arg_t, const _Alloc&, tuple<_Up...>&) = delete;
 #    endif // _LIBCPP_STD_VER >= 23
 
   // tuple(tuple<U...>&&) constructors (including allocator_arg_t variants)
@@ -756,11 +757,11 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class... _Up, __enable_if_t<_EnableCtorFromUTypesTuple<tuple<_Up...>&&>::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<tuple<_Up...>&&>
-  tuple(tuple<_Up...>&&) = delete;
+  explicit(!_And<is_convertible<_Up, _Tp>...>::value) tuple(tuple<_Up...>&&) = delete;
 
   template <class _Alloc, class... _Up, __enable_if_t<_EnableCtorFromUTypesTuple<tuple<_Up...>&&>::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<tuple<_Up...>&&>
-  tuple(allocator_arg_t, const _Alloc&, tuple<_Up...>&&) = delete;
+  explicit(!_And<is_convertible<_Up, _Tp>...>::value) tuple(allocator_arg_t, const _Alloc&, tuple<_Up...>&&) = delete;
 
   // tuple(const tuple<U...>&&) constructors (including allocator_arg_t variants)
 
@@ -771,7 +772,7 @@ public:
 
   template <class... _Up, enable_if_t< _EnableCtorFromUTypesTuple<const tuple<_Up...>&&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<const tuple<_Up...>&&>
-  tuple(const tuple<_Up...>&&) = delete;
+  explicit(!_And<is_convertible<const _Up&&, _Tp>...>::value) tuple(const tuple<_Up...>&&) = delete;
 
   template <class _Alloc,
             class... _Up,
@@ -784,7 +785,8 @@ public:
             class... _Up,
             enable_if_t< _EnableCtorFromUTypesTuple<const tuple<_Up...>&&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<const tuple<_Up...>&&>
-  tuple(allocator_arg_t, const _Alloc&, const tuple<_Up...>&&) = delete;
+  explicit(!_And<is_convertible<const _Up&&, _Tp>...>::value)
+      tuple(allocator_arg_t, const _Alloc&, const tuple<_Up...>&&) = delete;
 #    endif // _LIBCPP_STD_VER >= 23
 
   // tuple(const pair<U1, U2>&) constructors (including allocator_arg_t variants)
@@ -830,14 +832,15 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class _Up1, class _Up2, __enable_if_t<_EnableCtorFromPair<const pair<_Up1, _Up2>&>::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<const pair<_Up1, _Up2>&>
-  tuple(const pair<_Up1, _Up2>&) = delete;
+  explicit(!_BothImplicitlyConvertible<const pair<_Up1, _Up2>&>::value) tuple(const pair<_Up1, _Up2>&) = delete;
 
   template <class _Alloc,
             class _Up1,
             class _Up2,
             __enable_if_t<_EnableCtorFromPair<const pair<_Up1, _Up2>&>::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<const pair<_Up1, _Up2>&>
-  tuple(allocator_arg_t, const _Alloc&, const pair<_Up1, _Up2>&) = delete;
+  explicit(!_BothImplicitlyConvertible<const pair<_Up1, _Up2>&>::value)
+      tuple(allocator_arg_t, const _Alloc&, const pair<_Up1, _Up2>&) = delete;
 
   // tuple(pair<U1, U2>&) constructors (including allocator_arg_t variants)
 
@@ -848,7 +851,7 @@ public:
 
   template <class _U1, class _U2, enable_if_t< _EnableCtorFromPair<pair<_U1, _U2>&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<pair<_U1, _U2>&>
-  tuple(pair<_U1, _U2>&) = delete;
+  explicit(!_BothImplicitlyConvertible<pair<_U1, _U2>&>::value) tuple(pair<_U1, _U2>&) = delete;
 
   template <class _Alloc,
             class _U1,
@@ -863,7 +866,8 @@ public:
             class _U2,
             enable_if_t< _EnableCtorFromPair<std::pair<_U1, _U2>&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<std::pair<_U1, _U2>&>
-  tuple(allocator_arg_t, const _Alloc&, pair<_U1, _U2>&) = delete;
+  explicit(!_BothImplicitlyConvertible<pair<_U1, _U2>&>::value)
+      tuple(allocator_arg_t, const _Alloc&, pair<_U1, _U2>&) = delete;
 #    endif // _LIBCPP_STD_VER >= 23
 
   // tuple(pair<U1, U2>&&) constructors (including allocator_arg_t variants)
@@ -884,14 +888,15 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class _Up1, class _Up2, __enable_if_t<_EnableCtorFromPair<pair<_Up1, _Up2>&&>::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<pair<_Up1, _Up2>&&>
-  tuple(pair<_Up1, _Up2>&&) = delete;
+  explicit(!_BothImplicitlyConvertible<pair<_Up1, _Up2>&&>::value) tuple(pair<_Up1, _Up2>&&) = delete;
 
   template <class _Alloc,
             class _Up1,
             class _Up2,
             __enable_if_t<_EnableCtorFromPair<pair<_Up1, _Up2>&&>::value, int> = 0>
     requires __constructs_dangling_reference_from_tuple_like<pair<_Up1, _Up2>&&>
-  tuple(allocator_arg_t, const _Alloc&, pair<_Up1, _Up2>&&) = delete;
+  explicit(!_BothImplicitlyConvertible<pair<_Up1, _Up2>&&>::value)
+      tuple(allocator_arg_t, const _Alloc&, pair<_Up1, _Up2>&&) = delete;
 
   // tuple(const pair<U1, U2>&&) constructors (including allocator_arg_t variants)
 
@@ -902,7 +907,7 @@ public:
 
   template <class _U1, class _U2, enable_if_t< _EnableCtorFromPair<const pair<_U1, _U2>&&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<const pair<_U1, _U2>&&>
-  tuple(const pair<_U1, _U2>&&) = delete;
+  explicit(!_BothImplicitlyConvertible<const pair<_U1, _U2>&&>::value) tuple(const pair<_U1, _U2>&&) = delete;
 
   template <class _Alloc,
             class _U1,
@@ -917,7 +922,8 @@ public:
             class _U2,
             enable_if_t< _EnableCtorFromPair<const pair<_U1, _U2>&&>::value>* = nullptr>
     requires __constructs_dangling_reference_from_tuple_like<const pair<_U1, _U2>&&>
-  tuple(allocator_arg_t, const _Alloc&, const pair<_U1, _U2>&&) = delete;
+  explicit(!_BothImplicitlyConvertible<const pair<_U1, _U2>&&>::value)
+      tuple(allocator_arg_t, const _Alloc&, const pair<_U1, _U2>&&) = delete;
 #    endif // _LIBCPP_STD_VER >= 23
 
   // [tuple.assign]
