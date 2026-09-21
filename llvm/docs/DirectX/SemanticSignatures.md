@@ -209,7 +209,7 @@ reg3: C.xy     | unused.zw
 Optimized packing partitions eligible elements into groups and packs the groups
 in this order:
 
-1. Four-column arbitrary and system-value elements.
+1. Arbitrary and system-value elements that occupy a full register.
 2. Multi-row tessellation factors, which are restricted to the last column.
 3. Arbitrary elements.
 4. System-value elements, including single-row tessellation factors.

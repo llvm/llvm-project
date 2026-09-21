@@ -100,6 +100,17 @@ struct ClipCullState {
   unsigned RowsUsed = 0;
 };
 
+// Groups are packed in increasing order.
+enum class PackingGroup : unsigned {
+  FullRegister,
+  IndexedTessFactor,
+  Arbitrary,
+  SystemValue,
+  ClipCull,
+  SystemGenerated,
+  NotAllocated,
+};
+
 } // namespace
 
 static uint8_t getStartColumn(uint8_t ColumnMask) {
@@ -107,9 +118,8 @@ static uint8_t getStartColumn(uint8_t ColumnMask) {
   return countr_zero(ColumnMask);
 }
 
-// Returns a lower value for groups that must be packed earlier.
-static unsigned
-getOptimizedPackingPriority(const SemanticSignatureElement &Element,
+static PackingGroup
+getOptimizedPackingGroup(const SemanticSignatureElement &Element,
                             Triple::EnvironmentType ShaderStage, IOType IOTy) {
   const SemanticInterpretation Interpretation =
       getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
@@ -121,23 +131,23 @@ getOptimizedPackingPriority(const SemanticSignatureElement &Element,
   if (Element.Cols == MaxSignatureCols &&
       (Interpretation == SemanticInterpretation::Arbitrary ||
        Interpretation == SemanticInterpretation::SV))
-    return 0;
+    return PackingGroup::FullRegister;
 
   if (Interpretation == SemanticInterpretation::TessFactor && Element.Rows > 1)
-    return 1;
+    return PackingGroup::IndexedTessFactor;
 
   switch (Interpretation) {
   case SemanticInterpretation::Arbitrary:
-    return 2;
+    return PackingGroup::Arbitrary;
   case SemanticInterpretation::SV:
   case SemanticInterpretation::TessFactor:
-    return 3;
+    return PackingGroup::SystemValue;
   case SemanticInterpretation::ClipCull:
-    return 4;
+    return PackingGroup::ClipCull;
   case SemanticInterpretation::SGV:
-    return 5;
+    return PackingGroup::SystemGenerated;
   case SemanticInterpretation::NotAllocated:
-    return 6;
+    return PackingGroup::NotAllocated;
   default:
     break;
   }
@@ -597,13 +607,13 @@ Expected<unsigned> llvm::hlsl::packSignatureOptimized(
   llvm::sort(SortedIndices, [&](unsigned LeftIndex, unsigned RightIndex) {
     const SemanticSignatureElement &Left = Elements[LeftIndex];
     const SemanticSignatureElement &Right = Elements[RightIndex];
-    const unsigned LeftPriority =
-        getOptimizedPackingPriority(Left, ShaderStage, IOTy);
-    const unsigned RightPriority =
-        getOptimizedPackingPriority(Right, ShaderStage, IOTy);
+    const PackingGroup LeftGroup =
+        getOptimizedPackingGroup(Left, ShaderStage, IOTy);
+    const PackingGroup RightGroup =
+        getOptimizedPackingGroup(Right, ShaderStage, IOTy);
 
-    if (LeftPriority != RightPriority)
-      return LeftPriority < RightPriority;
+    if (LeftGroup != RightGroup)
+      return LeftGroup < RightGroup;
     if (Left.InterpMode != Right.InterpMode)
       return Left.InterpMode < Right.InterpMode;
     if (Left.Rows != Right.Rows)

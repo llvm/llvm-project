@@ -1883,8 +1883,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsInvalidStreams) {
       EXPECT_EQ(Elements[0].StartCol, 0u);
       EXPECT_EQ(Elements[1].StartRow, UnallocatedRow);
       EXPECT_EQ(Elements[1].StartCol, UnallocatedCol);
-      // Optimized packing places the four-column element first, so it is
-      // allocated even though it follows the invalid stream in source order.
+      // Optimized packing places elements that occupy a full register first.
+      // This element is therefore allocated even though it follows the invalid
+      // stream in source order.
       // The error still identifies the original element, not its sorted index.
       EXPECT_EQ(Elements[2].StartRow, IsOptimized ? 0u : UnallocatedRow);
       EXPECT_EQ(Elements[2].StartCol, IsOptimized ? 0u : UnallocatedCol);
