@@ -83,6 +83,8 @@ int omegasort(const struct dirent **a, const struct dirent **b) {
 
 int skip_hidden(const struct dirent *entry) { return entry->d_name[0] != '.'; }
 
+int skip_as(const struct dirent *entry) { return entry->d_name[0] != 'a'; }
+
 void free_namelist(struct dirent **namelist, int size) {
   if (namelist == nullptr) {
     return;
@@ -117,7 +119,7 @@ TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
   ASSERT_TRUE(remove_temp_dir(dirpath));
 }
 
-TEST_F(LlvmLibcScandirTest, TestDirFilter) {
+TEST_F(LlvmLibcScandirTest, TestFilter) {
   char *dirpath = create_temp_dir();
   ASSERT_NE(dirpath, nullptr);
 
@@ -126,6 +128,35 @@ TEST_F(LlvmLibcScandirTest, TestDirFilter) {
               Succeeds(0));
 
   free_namelist(namelist, 0);
+  ASSERT_TRUE(remove_temp_dir(dirpath));
+}
+
+TEST_F(LlvmLibcScandirTest, TestPartialFilter) {
+  char *dirpath = create_temp_dir();
+  ASSERT_NE(dirpath, nullptr);
+
+  const char *files_to_create[] = {"a0", "a1", "b0"};
+  constexpr size_t NUM_FILES =
+      sizeof(files_to_create) / sizeof(files_to_create[0]);
+  char *filepaths[NUM_FILES];
+
+  for (size_t i = 0; i < NUM_FILES; ++i) {
+    filepaths[i] = join_path(dirpath, files_to_create[i]);
+    ASSERT_NE(filepaths[i], nullptr);
+    ASSERT_TRUE(create_empty_file(filepaths[i]));
+  }
+
+  struct dirent **namelist;
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(dirpath, &namelist, skip_as, nullptr),
+              Succeeds(ENTRIES_MIN + 1));
+
+  free_namelist(namelist, NUM_FILES);
+
+  for (size_t i = 0; i < NUM_FILES; ++i) {
+    ASSERT_THAT(LIBC_NAMESPACE::remove(filepaths[i]), Succeeds());
+    ::free(filepaths[i]);
+  }
+
   ASSERT_TRUE(remove_temp_dir(dirpath));
 }
 
