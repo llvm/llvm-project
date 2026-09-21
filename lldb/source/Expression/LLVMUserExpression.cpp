@@ -323,11 +323,14 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   if (m_jit_start_addr == LLDB_INVALID_ADDRESS && !m_can_interpret)
     return true;
 
+  if (!AllocateAndMaterializeStruct(diagnostic_manager, frame, struct_address))
+    return false;
+
   if (m_can_interpret &&
       !AllocateInterpreterStackFrame(diagnostic_manager, target, process.get()))
     return false;
 
-  return AllocateAndMaterializeStruct(diagnostic_manager, frame);
+  return true;
 }
 
 bool LLVMUserExpression::AllocateInterpreterStackFrame(
@@ -361,7 +364,8 @@ bool LLVMUserExpression::AllocateInterpreterStackFrame(
 }
 
 bool LLVMUserExpression::AllocateAndMaterializeStruct(
-    DiagnosticManager &diagnostic_manager, const lldb::StackFrameSP &frame) {
+    DiagnosticManager &diagnostic_manager, lldb::StackFrameSP &frame,
+    lldb::addr_t &struct_address) {
 
   if (m_materialized_address == LLDB_INVALID_ADDRESS) {
     IRMemoryMap::AllocationPolicy policy =

@@ -120,7 +120,8 @@ private:
 
   // Allocate and materialize the struct.
   bool AllocateAndMaterializeStruct(DiagnosticManager &diagnostic_manager,
-                                    const lldb::StackFrameSP &frame);
+                                    lldb::StackFrameSP &frame,
+                                    lldb::addr_t &struct_address);
 };
 
 } // namespace lldb_private
