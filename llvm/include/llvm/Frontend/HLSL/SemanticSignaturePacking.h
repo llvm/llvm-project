@@ -69,7 +69,7 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
 /// Packs eligible signature elements without moving previously placed
-/// elements.
+/// elements. Only StartRow and StartCol are modified.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#prefix-stable-packing for
 /// details.
@@ -115,7 +115,8 @@ packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
 /// allocated. For geometry outputs this is the maximum extent of any stream,
 /// not the sum of their extents.
 ///
-/// Elements remains in its original signature order. On failure, elements
+/// Only StartRow and StartCol are modified; Elements remains in its original
+/// signature order. On failure, elements
 /// packed before the failing element in optimized order keep their assigned
 /// locations; the failing element and those after it in that order retain the
 /// unallocated row and column sentinels. The returned SignaturePackingError

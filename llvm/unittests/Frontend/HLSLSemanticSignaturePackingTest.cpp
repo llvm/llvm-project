@@ -121,6 +121,21 @@ protected:
     }
   }
 
+  void verifyMetadata(const SemanticSignatureElement &Before,
+                      const SemanticSignatureElement &After) {
+    EXPECT_EQ(After.SigId, Before.SigId);
+    EXPECT_EQ(After.SemanticName, Before.SemanticName);
+    EXPECT_EQ(After.CompType, Before.CompType);
+    EXPECT_EQ(After.SemanticKind, Before.SemanticKind);
+    EXPECT_EQ(After.SemanticIndices, Before.SemanticIndices);
+    EXPECT_EQ(After.InterpMode, Before.InterpMode);
+    EXPECT_EQ(After.Rows, Before.Rows);
+    EXPECT_EQ(After.Cols, Before.Cols);
+    EXPECT_EQ(After.UsageMask, Before.UsageMask);
+    EXPECT_EQ(After.DynIndexMask, Before.DynIndexMask);
+    EXPECT_EQ(After.GSStream, Before.GSStream);
+  }
+
   void verifyPackingError(PackingMethod Method, const TestConfig &Config,
                           SignaturePackingError::ErrorKind ExpectedKind,
                           unsigned ExpectedElementIndex) {
@@ -1957,6 +1972,39 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
 //===----------------------------------------------------------------------===//
 // Optimized ordering tests
 //===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PackingPreservesElementMetadata) {
+  TestConfig Config(
+      Triple::Vertex, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/MaxSignatureRows,
+        /*Cols=*/1, dxil::ElementType::F32,
+        dxbc::PSV::InterpolationMode::Linear}});
+  for (PackingMethod Method :
+       {PackingMethod::PrefixStable, PackingMethod::Optimized}) {
+    SCOPED_TRACE(static_cast<unsigned>(Method));
+    SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+    Elements[0].SemanticName = "Scalar";
+    Elements[1].SemanticName = "Array";
+    Elements[0].UsageMask = 3;
+    Elements[1].UsageMask = 1;
+    Elements[1].DynIndexMask = 1;
+    const SmallVector<SemanticSignatureElement> Before = Elements;
+    const uint32_t *Indices = Elements[1].SemanticIndices.data();
+
+    Expected<unsigned> Rows = pack(Method, Elements, Config);
+    ASSERT_THAT_EXPECTED(Rows, Succeeded());
+    EXPECT_EQ(*Rows, MaxSignatureRows);
+    EXPECT_EQ(Elements[1].SemanticIndices.data(), Indices);
+    for (unsigned I = 0; I != Elements.size(); ++I) {
+      SCOPED_TRACE(I);
+      verifyMetadata(Before[I], Elements[I]);
+      EXPECT_NE(Elements[I].StartRow, UnallocatedRow);
+      EXPECT_NE(Elements[I].StartCol, UnallocatedCol);
+    }
+  }
+}
 
 TEST_F(HLSLSemanticSignaturePackingTest, OptimizedUsesSignatureIDToBreakTies) {
   TestConfig Config(Triple::Vertex, IOType::Out, {});

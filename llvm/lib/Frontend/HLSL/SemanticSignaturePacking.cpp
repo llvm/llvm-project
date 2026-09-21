@@ -91,6 +91,12 @@ struct ElementPlacement {
   SemanticInterpretation Interpretation;
 };
 
+// The only fields written back to a semantic signature element by packing.
+struct ElementLocation {
+  uint32_t Row = UnallocatedRow;
+  uint8_t Col = UnallocatedCol;
+};
+
 // Clip/cull elements are first packed into an independent two-row grid. Each
 // row used in that grid maps to a whole reserved row in the signature.
 struct ClipCullState {
@@ -287,20 +293,20 @@ static void placeRowsAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
 
 static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
                     const ElementPlacement &Placement, uint8_t ColumnMask,
-                    SemanticSignatureElement &Element) {
+                    ElementLocation &Location) {
   placeRowsAt(Rows, StartRow, Placement, ColumnMask);
-  Element.StartRow = StartRow;
-  Element.StartCol = getStartColumn(ColumnMask);
+  Location.Row = StartRow;
+  Location.Col = getStartColumn(ColumnMask);
 }
 
-static bool prefixPackElement(SemanticSignatureElement &Element,
+static bool prefixPackElement(ElementLocation &Location,
                               MutableArrayRef<SignatureRow> Rows,
                               const ElementPlacement &Placement) {
   for (unsigned StartRow = 0; StartRow != Rows.size(); ++StartRow) {
     std::optional<uint8_t> ColumnMask = canPlaceAt(Rows, StartRow, Placement);
     if (!ColumnMask)
       continue;
-    placeAt(Rows, StartRow, Placement, *ColumnMask, Element);
+    placeAt(Rows, StartRow, Placement, *ColumnMask, Location);
     return true;
   }
   return false;
@@ -381,7 +387,7 @@ reserveClipCullSignatureRows(MutableArrayRef<SignatureRow> SignatureRows,
 }
 
 static std::optional<SignaturePackingError::ErrorKind>
-packClipCullElement(SemanticSignatureElement &Element,
+packClipCullElement(ElementLocation &Location,
                     MutableArrayRef<SignatureRow> SignatureRows,
                     ClipCullState &State, const ElementPlacement &Placement) {
   std::optional<uint8_t> ColumnMask;
@@ -403,8 +409,8 @@ packClipCullElement(SemanticSignatureElement &Element,
 
   placeRowsAt(State.Rows, ClipCullStartRow, Placement, *ColumnMask);
   State.RowsUsed = std::max(State.RowsUsed, NewRowsUsed);
-  Element.StartRow = State.SignatureRows[ClipCullStartRow];
-  Element.StartCol = getStartColumn(*ColumnMask);
+  Location.Row = State.SignatureRows[ClipCullStartRow];
+  Location.Col = getStartColumn(*ColumnMask);
   return std::nullopt;
 }
 
@@ -469,15 +475,12 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
   return NextRow;
 }
 
-Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
-    MutableArrayRef<SemanticSignatureElement> Elements,
-    Triple::EnvironmentType ShaderStage, IOType IOTy,
-    bool UseNative16BitTypes) {
-  assert(!(ShaderStage == Triple::Vertex && IOTy == IOType::In) &&
-         !(ShaderStage == Triple::Pixel && IOTy == IOType::Out) &&
-         "prefix-stable packing is not valid for vertex inputs or pixel "
-         "outputs");
-
+template <typename IndexRange>
+static Expected<unsigned>
+packSignatureInOrder(MutableArrayRef<SemanticSignatureElement> Elements,
+                     const IndexRange &Order,
+                     Triple::EnvironmentType ShaderStage, IOType IOTy,
+                     bool UseNative16BitTypes) {
   // Only a geometry shader output signature packs its streams independently.
   const unsigned StreamCount =
       ShaderStage == Triple::EnvironmentType::Geometry && IOTy == IOType::Out
@@ -487,7 +490,8 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
   SmallVector<std::array<SignatureRow, MaxSignatureRows>, 1> Rows(StreamCount);
   SmallVector<ClipCullState, 1> ClipCullStates(StreamCount);
   unsigned NumRows = 0;
-  for (auto &&[Index, Element] : enumerate(Elements)) {
+  for (unsigned Index : Order) {
+    const SemanticSignatureElement &Element = Elements[Index];
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
     assert(Element.Rows > 0 && "signature element must have at least one row");
@@ -526,23 +530,37 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
 
     const unsigned StreamIndex = Element.GSStream;
     MutableArrayRef<SignatureRow> StreamRows = Rows[StreamIndex];
+    ElementLocation Location;
 
     if (Interpretation == SemanticInterpretation::ClipCull) {
       if (std::optional<SignaturePackingError::ErrorKind> Kind =
-              packClipCullElement(Element, StreamRows,
+              packClipCullElement(Location, StreamRows,
                                   ClipCullStates[StreamIndex], Placement))
-        return make_error<SignaturePackingError>(*Kind,
-                                                 static_cast<unsigned>(Index));
-    } else if (!prefixPackElement(Element, StreamRows, Placement)) {
+        return make_error<SignaturePackingError>(*Kind, Index);
+    } else if (!prefixPackElement(Location, StreamRows, Placement)) {
       return make_error<SignaturePackingError>(
           SignaturePackingError::SignatureOverflow,
           static_cast<unsigned>(Index));
     }
 
-    NumRows = std::max(NumRows, Element.StartRow + Element.Rows);
+    Elements[Index].StartRow = Location.Row;
+    Elements[Index].StartCol = Location.Col;
+    NumRows = std::max(NumRows, Location.Row + Element.Rows);
   }
 
   return NumRows;
+}
+
+Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, IOType IOTy,
+    bool UseNative16BitTypes) {
+  assert(!(ShaderStage == Triple::Vertex && IOTy == IOType::In) &&
+         !(ShaderStage == Triple::Pixel && IOTy == IOType::Out) &&
+         "prefix-stable packing is not valid for vertex inputs or pixel "
+         "outputs");
+  return packSignatureInOrder(Elements, seq<unsigned>(0, Elements.size()),
+                              ShaderStage, IOTy, UseNative16BitTypes);
 }
 
 Expected<unsigned> llvm::hlsl::packSignatureIndexed(
@@ -627,28 +645,10 @@ Expected<unsigned> llvm::hlsl::packSignatureOptimized(
     return Left.SigId < Right.SigId;
   });
 
-  // Pack a copy so Elements remains in its original signature order.
-  SmallVector<SemanticSignatureElement> SortedElements;
-  SortedElements.reserve(Elements.size());
-  for (const SortKey &Key : SortedKeys)
-    SortedElements.push_back(Elements[Key.OriginalIndex]);
-
-  Expected<unsigned> NumRows = packSignaturePrefixStable(
-      SortedElements, ShaderStage, IOTy, UseNative16BitTypes);
-
-  for (const auto &[SortedIndex, Key] : enumerate(SortedKeys)) {
-    Elements[Key.OriginalIndex].StartRow = SortedElements[SortedIndex].StartRow;
-    Elements[Key.OriginalIndex].StartCol = SortedElements[SortedIndex].StartCol;
-  }
-
-  if (NumRows)
-    return *NumRows;
-
-  return handleErrors(
-      NumRows.takeError(), [&](const SignaturePackingError &Err) -> Error {
-        assert(Err.getElementIndex() < SortedKeys.size() &&
-               "invalid sorted element index");
-        return make_error<SignaturePackingError>(
-            Err.getErrorKind(), SortedKeys[Err.getElementIndex()].OriginalIndex);
-      });
+  // Traverse the original elements in packing order without copying their
+  // metadata or changing their signature order. Only locations are written.
+  auto Order = map_range(SortedKeys,
+                         [](const SortKey &Key) { return Key.OriginalIndex; });
+  return packSignatureInOrder(Elements, Order, ShaderStage, IOTy,
+                              UseNative16BitTypes);
 }
