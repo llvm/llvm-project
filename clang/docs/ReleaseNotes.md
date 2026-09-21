@@ -828,6 +828,11 @@ features cannot lower the translation-unit ABI level;
 
 #### LoongArch Support
 
+- `loongarch32-*-none-elf` and `loongarch64-*-none-elf` targets now use the
+  bare-metal toolchain, like other bare-metal targets. The linker is run
+  directly instead of through `gcc`, and host include directories are no
+  longer searched.
+
 #### RISC-V Support
 
 - Fixed a bug where the `interrupt` attribute did not accept `machine` together

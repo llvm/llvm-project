@@ -277,17 +277,17 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
 }
 
 /// This method expands the same instruction that MipsSEInstrInfo::
-/// expandBuildPairF64 does, for the case when ABI is fpxx and mthc1 is not
-/// available and the case where the ABI is FP64A. It is implemented here
+/// expandBuildPairF64 does, for FPXX/FP64 when mthc1 is not available and
+/// for FP64A. It is implemented here
 /// because frame indexes are eliminated before MipsSEInstrInfo::
 /// expandBuildPairF64 is called.
 bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       bool FP64) const {
-  // For fpxx and when mthc1 is not available, use:
+  // For FPXX/FP64 when mthc1 is not available, use:
   //   spill + reload via ldc1
   //
-  // The case where dmtc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a BuildPairF64 node.
   //
   // The FP64A ABI (fp64 with nooddspreg) must also use a spill/reload sequence
@@ -305,12 +305,6 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
     Register DstReg = I->getOperand(0).getReg();
     Register LoReg = I->getOperand(1).getReg();
     Register HiReg = I->getOperand(2).getReg();
-
-    // It should be impossible to have FGR64 on MIPS-II or MIPS32r1 (which are
-    // the cases where mthc1 is not available). 64-bit architectures and
-    // MIPS32r2 or later can use FGR64 though.
-    assert(Subtarget.isGP64bit() || Subtarget.hasMTHC1() ||
-           !Subtarget.isFP64bit());
 
     const TargetRegisterClass *RC = &Mips::GPR32RegClass;
     const TargetRegisterClass *RC2 =
@@ -331,8 +325,8 @@ bool ExpandPseudo::expandBuildPairF64(MachineBasicBlock &MBB,
 }
 
 /// This method expands the same instruction that MipsSEInstrInfo::
-/// expandExtractElementF64 does, for the case when ABI is fpxx and mfhc1 is not
-/// available and the case where the ABI is FP64A. It is implemented here
+/// expandExtractElementF64 does, for FPXX/FP64 when mfhc1 is not available and
+/// for FP64A. It is implemented here
 /// because frame indexes are eliminated before MipsSEInstrInfo::
 /// expandExtractElementF64 is called.
 bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
@@ -347,10 +341,10 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     return true;
   }
 
-  // For fpxx and when mfhc1 is not available, use:
+  // For FPXX/FP64 when mfhc1 is not available, use:
   //   spill + reload via ldc1
   //
-  // The case where dmfc1 is available doesn't need to be handled here
+  // The case where 64-bit GPRs can be used doesn't need to be handled here
   // because it never creates a ExtractElementF64 node.
   //
   // The FP64A ABI (fp64 with nooddspreg) must also use a spill/reload sequence
@@ -369,12 +363,6 @@ bool ExpandPseudo::expandExtractElementF64(MachineBasicBlock &MBB,
     Register SrcReg = Op1.getReg();
     unsigned N = Op2.getImm();
     int64_t Offset = 4 * (Subtarget.isLittle() ? N : (1 - N));
-
-    // It should be impossible to have FGR64 on MIPS-II or MIPS32r1 (which are
-    // the cases where mfhc1 is not available). 64-bit architectures and
-    // MIPS32r2 or later can use FGR64 though.
-    assert(Subtarget.isGP64bit() || Subtarget.hasMTHC1() ||
-           !Subtarget.isFP64bit());
 
     const TargetRegisterClass *RC =
         FP64 ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;

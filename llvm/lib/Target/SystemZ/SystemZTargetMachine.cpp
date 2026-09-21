@@ -138,8 +138,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, CPU, FS, Options,
-          getEffectiveRelocModel(TT, RM),
+          T, TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(TT, RM), JIT),
           OL),
       TLOF(createTLOF(getTargetTriple())) {
