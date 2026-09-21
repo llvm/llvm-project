@@ -252,7 +252,15 @@ __extension__ _Static_assert(
 );
 
 __extension__ _Static_assert(
- __builtin_copysign(1.0, 1.0) == 1.0 
+  // double
+  __builtin_copysign(1.0, 1.0) == 1.0 && __builtin_copysign(1.0, -1.0) == -1.0 &&                           \
+  __builtin_copysign(-1.0, 1.0) == 1.0 && __builtin_copysign(-1.0, -1.0) == -1.0  &&                        \
+  !__builtin_signbit(__builtin_copysign(0.0, 1.0)) && __builtin_signbit(__builtin_copysign(0.0, -1.0)) &&   \
+  !__builtin_signbit(__builtin_copysign(-0.0, 1.0)) && __builtin_signbit(__builtin_copysign(-0.0, -1.0)) && \
+  __builtin_copysign(1.0, 0.0) == 1.0 && __builtin_copysign(1.0, -0.0) == -1.0 &&                          \
+
+  // floating-point  
+  // long double
 , "");
 
 //double       g19 = __builtin_powi(2.0, 4);
