@@ -997,9 +997,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FPOpActions.legalFor({V2BF16});
-    FCanonicalizeActions.legalFor({V2BF16});
-    StrictFPOpActions.legalFor({V2BF16});
+    FPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
+    FCanonicalizeActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16,
+                                                                      2);
+    StrictFPOpActions.legalFor({V2BF16}).clampMaxNumElementsStrict(0, BF16, 2);
   }
 
   FPOpActions.widenScalarFor({BF16}, changeElementTo(0, F32));
@@ -1204,7 +1205,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   if (ST.hasBF16PackedInsts()) {
-    FSubActions.lowerFor({V2BF16});
+    FSubActions.lowerFor({V2BF16}).clampMaxNumElements(0, BF16, 2);
   }
 
   if (ST.hasAnyPackedFP32Ops())

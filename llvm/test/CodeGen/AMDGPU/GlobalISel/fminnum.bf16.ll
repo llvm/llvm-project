@@ -130,3 +130,31 @@ define amdgpu_ps <2 x bfloat> @fmax_v2bf16_vl(<2 x bfloat> %a) {
   %result = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>)
   ret <2 x bfloat> %result
 }
+
+define amdgpu_ps <4 x bfloat> @fmin_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) {
+; GFX1250-LABEL: fmin_v4bf16_vv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, v2
+; GFX1250-NEXT:    v_pk_min_num_bf16 v1, v1, v3
+; GFX1250-NEXT:    ; return to shader part epilog
+  %result = call <4 x bfloat> @llvm.minnum.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
+  ret <4 x bfloat> %result
+}
+
+define amdgpu_ps <4 x bfloat> @fmax_v4bf16_vv(<4 x bfloat> %a, <4 x bfloat> %b) {
+; GFX1250-LABEL: fmax_v4bf16_vv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v2
+; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v3
+; GFX1250-NEXT:    ; return to shader part epilog
+  %result = call <4 x bfloat> @llvm.maxnum.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
+  ret <4 x bfloat> %result
+}

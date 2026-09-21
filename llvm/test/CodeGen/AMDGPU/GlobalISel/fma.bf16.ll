@@ -454,3 +454,117 @@ define amdgpu_ps <2 x bfloat> @fma_v2bf16_vll(<2 x bfloat> %a) {
 
 declare bfloat @llvm.fma.bf16(bfloat, bfloat, bfloat)
 declare <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
+
+define amdgpu_ps <4 x bfloat> @fma_v4bf16_vvv(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c) {
+; GFX9-LABEL: fma_v4bf16_vvv:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX9-NEXT:    v_fma_f32 v0, v0, v2, v4
+; GFX9-NEXT:    v_bfe_u32 v4, v0, 16, 1
+; GFX9-NEXT:    v_mov_b32_e32 v12, 0x7fff
+; GFX9-NEXT:    v_or_b32_e32 v2, 0x400000, v0
+; GFX9-NEXT:    v_add3_u32 v4, v4, v0, v12
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v6
+; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v8
+; GFX9-NEXT:    v_lshlrev_b32_e32 v6, 16, v10
+; GFX9-NEXT:    v_fma_f32 v2, v2, v4, v6
+; GFX9-NEXT:    v_bfe_u32 v6, v2, 16, 1
+; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v2
+; GFX9-NEXT:    v_add3_u32 v6, v6, v2, v12
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v6, v4, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v5
+; GFX9-NEXT:    v_fma_f32 v1, v1, v3, v4
+; GFX9-NEXT:    v_bfe_u32 v4, v1, 16, 1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v11, 16, v5
+; GFX9-NEXT:    v_or_b32_e32 v3, 0x400000, v1
+; GFX9-NEXT:    v_add3_u32 v4, v4, v1, v12
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v1
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v7
+; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v9
+; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v11
+; GFX9-NEXT:    v_fma_f32 v3, v3, v4, v5
+; GFX9-NEXT:    v_bfe_u32 v5, v3, 16, 1
+; GFX9-NEXT:    v_or_b32_e32 v4, 0x400000, v3
+; GFX9-NEXT:    v_add3_u32 v5, v5, v3, v12
+; GFX9-NEXT:    v_cmp_u_f32_e32 vcc, 0, v3
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, v5, v4, vcc
+; GFX9-NEXT:    s_mov_b32 s0, 0x7060302
+; GFX9-NEXT:    v_perm_b32 v0, v2, v0, s0
+; GFX9-NEXT:    v_perm_b32 v1, v3, v1, s0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fma_v4bf16_vvv:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b16_e32 v9.l, v3.h
+; GFX12-NEXT:    v_mov_b16_e32 v10.l, v5.h
+; GFX12-NEXT:    v_lshlrev_b32_e32 v8, 16, v4
+; GFX12-NEXT:    v_mov_b16_e32 v4.l, v4.h
+; GFX12-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GFX12-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; GFX12-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; GFX12-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX12-NEXT:    v_lshlrev_b32_e32 v6, 16, v0
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX12-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v7, 16, v2
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, v2.h
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX12-NEXT:    v_fmac_f32_e32 v4, v0, v2
+; GFX12-NEXT:    v_dual_fmac_f32 v8, v6, v7 :: v_dual_lshlrev_b32 v7, 16, v1
+; GFX12-NEXT:    v_mov_b16_e32 v1.l, v1.h
+; GFX12-NEXT:    v_bfe_u32 v6, v8, 16, 1
+; GFX12-NEXT:    v_or_b32_e32 v11, 0x400000, v8
+; GFX12-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v8
+; GFX12-NEXT:    v_add3_u32 v6, v6, v8, 0x7fff
+; GFX12-NEXT:    v_fmac_f32_e32 v10, v1, v9
+; GFX12-NEXT:    v_bfe_u32 v1, v4, 16, 1
+; GFX12-NEXT:    v_cndmask_b32_e32 v2, v6, v11, vcc_lo
+; GFX12-NEXT:    v_fmac_f32_e32 v5, v7, v3
+; GFX12-NEXT:    v_or_b32_e32 v3, 0x400000, v4
+; GFX12-NEXT:    v_bfe_u32 v6, v10, 16, 1
+; GFX12-NEXT:    v_add3_u32 v1, v1, v4, 0x7fff
+; GFX12-NEXT:    v_or_b32_e32 v8, 0x400000, v10
+; GFX12-NEXT:    v_bfe_u32 v0, v5, 16, 1
+; GFX12-NEXT:    v_or_b32_e32 v7, 0x400000, v5
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v5
+; GFX12-NEXT:    v_add3_u32 v6, v6, v10, 0x7fff
+; GFX12-NEXT:    v_add3_u32 v0, v0, v5, 0x7fff
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v5, v0, v7, vcc_lo
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v4
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, v1, v3, vcc_lo
+; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, 0, v10
+; GFX12-NEXT:    v_mov_b16_e32 v0.l, v2.h
+; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, v6, v8, vcc_lo
+; GFX12-NEXT:    v_mov_b16_e32 v1.l, v5.h
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: fma_v4bf16_vvv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_pk_fma_bf16 v0, v0, v2, v4
+; GFX1250-NEXT:    v_pk_fma_bf16 v1, v1, v3, v5
+; GFX1250-NEXT:    ; return to shader part epilog
+  %result = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c)
+  ret <4 x bfloat> %result
+}
