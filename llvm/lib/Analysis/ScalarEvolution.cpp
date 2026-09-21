@@ -391,6 +391,8 @@ void SCEV::print(raw_ostream &OS) const {
   case scUDivExpr: {
     const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(this);
     OS << "(" << UDiv->getLHS() << " /u " << UDiv->getRHS() << ")";
+    if (UDiv->isExact())
+      OS << "<exact>";
     return;
   }
   case scUnknown:
@@ -3057,7 +3059,8 @@ const SCEV *ScalarEvolution::getOrCreateMulExpr(ArrayRef<SCEVUse> Ops,
   return S;
 }
 
-const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
+const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS,
+                                                 bool IsExact) {
   FoldingSetNodeID ID;
   ID.AddInteger(scUDivExpr);
   ID.AddPointer(LHS.getOpaqueValue());
@@ -3070,6 +3073,8 @@ const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
     S->computeAndSetCanonical(*this);
     registerUser(S, {LHS, RHS});
   }
+  if (IsExact)
+    cast<SCEVUDivExpr>(S)->setIsExact();
   return S;
 }
 
@@ -3472,7 +3477,8 @@ const SCEV *ScalarEvolution::getURemExpr(SCEVUse LHS, SCEVUse RHS) {
 
 /// Get a canonical unsigned division expression, or something simpler if
 /// possible.
-const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
+const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS,
+                                         bool IsExact) {
   assert(!LHS->getType()->isPointerTy() &&
          "SCEVUDivExpr operand can't be pointer!");
   assert(LHS->getType() == RHS->getType() &&
@@ -3666,16 +3672,11 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
     return getUDivExpr(NewLHS, NewRHS);
 
-  return getOrCreateUDivExpr(LHS, RHS);
+  return getOrCreateUDivExpr(LHS, RHS, IsExact);
 }
 
-/// Get a canonical unsigned division expression, or something simpler if
-/// possible. There is no representation for an exact udiv in SCEV IR, but we
-/// can attempt to optimize it prior to construction.
 const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
-  // Currently there is no exact specific logic.
-
-  return getUDivExpr(LHS, RHS);
+  return getUDivExpr(LHS, RHS, /*IsExact=*/true);
 }
 
 /// Get an add recurrence expression for the specified loop.  Simplify the
@@ -5201,6 +5202,7 @@ struct BinaryOp {
   Value *RHS;
   bool IsNSW = false;
   bool IsNUW = false;
+  bool IsExact = false;
 
   /// Op is set if this BinaryOp corresponds to a concrete LLVM instruction or
   /// constant expression.
@@ -5213,6 +5215,8 @@ struct BinaryOp {
       IsNSW = OBO->hasNoSignedWrap();
       IsNUW = OBO->hasNoUnsignedWrap();
     }
+    if (auto *PEO = dyn_cast<PossiblyExactOperator>(Op))
+      IsExact = PEO->isExact();
   }
 
   explicit BinaryOp(unsigned Opcode, Value *LHS, Value *RHS, bool IsNSW = false,
@@ -7942,7 +7946,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     case Instruction::UDiv:
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
-      return getUDivExpr(LHS, RHS);
+      return getUDivExpr(LHS, RHS, BO->IsExact);
     case Instruction::URem:
       LHS = getSCEV(BO->LHS);
       RHS = getSCEV(BO->RHS);
