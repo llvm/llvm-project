@@ -3,7 +3,8 @@
 
 @b = external dso_local global [5 x i32], align 16
 
-;; Not profitable to interchange, because the access is invariant to j loop.
+;; Not profitable to interchange in terms of locality of reference, because the
+;; access is invariant to j loop.
 ;;
 ;;  for(int i=0;i<4;i++) {
 ;;    for(int j=1;j<4;j++) {
@@ -13,28 +14,36 @@
 
 define void @test1() {
 ; CHECK-LABEL: define void @test1() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER1:.*]]
+; CHECK:       [[OUTER_HEADER1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
-; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ], [ 1, %[[OUTER_HEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
 ; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 1, %[[OUTER_HEADER]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
+; CHECK:       [[INNER_HEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    store i32 undef, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[J]], 4
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label %[[INNER_HEADER]], label %[[OUTER_BODY:.*]]
+; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i32 [[J]], 1
+; CHECK-NEXT:    br label %[[OUTER_BODY:.*]]
+; CHECK:       [[INNER_LATCH_SPLIT]]:
+; CHECK-NEXT:    [[TMP1]] = add nuw nsw i32 [[J]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[J]], 4
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[INNER_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[OUTER_BODY]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 4
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[OUTER_HEADER1]], label %[[INNER_LATCH_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -72,29 +81,37 @@ exit:
 
 define void @test2() {
 ; CHECK-LABEL: define void @test2() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER1:.*]]
+; CHECK:       [[OUTER_HEADER1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 [[IDXPROM]]
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
-; CHECK:       [[INNER_HEADER]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[INNER_LATCH:.*]] ], [ 1, %[[OUTER_HEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
 ; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 1, %[[OUTER_HEADER]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
+; CHECK:       [[INNER_HEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[LSR_IV]], 4
 ; CHECK-NEXT:    [[CMP_ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    store i32 [[CMP_ZEXT]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label %[[INNER_HEADER]], label %[[OUTER_BODY:.*]]
+; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add nuw nsw i32 [[LSR_IV]], 1
+; CHECK-NEXT:    br label %[[OUTER_BODY:.*]]
+; CHECK:       [[INNER_LATCH_SPLIT]]:
+; CHECK-NEXT:    [[TMP1]] = add nuw nsw i32 [[LSR_IV]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[LSR_IV]], 4
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[INNER_LATCH]], label %[[EXIT:.*]]
 ; CHECK:       [[OUTER_BODY]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[I]], 4
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[OUTER_HEADER1]], label %[[INNER_LATCH_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
