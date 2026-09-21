@@ -323,11 +323,11 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   if (m_jit_start_addr == LLDB_INVALID_ADDRESS && !m_can_interpret)
     return true;
 
-  if (!AllocateAndMaterializeStruct(diagnostic_manager, frame, struct_address))
+  if (!PrepareArgumentStruct(diagnostic_manager, frame, struct_address))
     return false;
 
   if (m_can_interpret &&
-      !AllocateInterpreterStackFrame(diagnostic_manager, target, process.get()))
+      !AllocateInterpreterStackFrame(diagnostic_manager, *target, process.get()))
     return false;
 
   return true;
@@ -338,7 +338,7 @@ bool LLVMUserExpression::AllocateInterpreterStackFrame(
   if (m_stack_frame_bottom != LLDB_INVALID_ADDRESS)
     return true;
 
-  size_t stack_frame_size = target->GetExprAllocSize();
+  size_t stack_frame_size = target.GetExprAllocSize();
   if (stack_frame_size == 0) {
     ABISP abi_sp;
     if (process && (abi_sp = process->GetABI()))
@@ -363,7 +363,7 @@ bool LLVMUserExpression::AllocateInterpreterStackFrame(
   }
 }
 
-bool LLVMUserExpression::AllocateAndMaterializeStruct(
+bool LLVMUserExpression::PrepareArgumentStruct(
     DiagnosticManager &diagnostic_manager, lldb::StackFrameSP &frame,
     lldb::addr_t &struct_address) {
 
