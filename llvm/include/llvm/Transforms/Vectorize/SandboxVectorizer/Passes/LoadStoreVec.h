@@ -61,9 +61,14 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// or nullptr if \p Loads are not a vectorizable.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
-  /// Builds a ConstantVector from per-lane constant store operands in \p
-  /// Constants. \returns the packed ConstantVector.
-  Value *createConstantVector(BndlRef<Value *> Constants);
+  /// Builds a ConstantVector with \p LaneTy elements from the constant store
+  /// operands in \p Constants, reinterpreting the bits of constants of other
+  /// types (e.g. float or ptr in an i32 vector) and splitting constants wider
+  /// than \p LaneTy into several lanes. Casts are folded, so nothing is
+  /// inserted at \p WhereIt. \returns the packed ConstantVector, or nullptr if
+  /// a constant cannot be reinterpreted.
+  Value *createConstantVector(ArrayRef<Value *> Constants, Type *LaneTy,
+                              BBIterator WhereIt);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
   /// loads. \returns true on success.
