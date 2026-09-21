@@ -1631,7 +1631,13 @@ BuiltinTemplateDecl::BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
       BTK(BTK) {}
 
 bool BuiltinTemplateDecl::isPackProducingBuiltinTemplate() const {
-  return getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack;
+  switch (getBuiltinTemplateKind()) {
+  case BTK__builtin_dedup_pack:
+  case BTK__builtin_sort_pack:
+    return true;
+  default:
+    return false;
+  }
 }
 
 bool clang::isPackProducingBuiltinTemplateName(TemplateName N) {

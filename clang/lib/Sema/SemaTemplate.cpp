@@ -19,6 +19,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
@@ -40,6 +41,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
@@ -3428,6 +3430,28 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
   return SpirvOperand::createType(OperandArg);
 }
 
+static QualType sortBuiltinTemplatePack(ASTContext &Context,
+                                        ArrayRef<TemplateArgument> InputArgs) {
+  // FIXME: cache mangling globally?
+  std::unique_ptr<MangleContext> MC(Context.createMangleContext());
+  SmallVector<std::pair<std::string, TemplateArgument>> SortedArgs(
+      InputArgs.size());
+  llvm::transform(
+      InputArgs, SortedArgs.begin(), [&](const TemplateArgument &Arg) {
+        assert(Arg.getKind() == TemplateArgument::Type);
+        std::string MangledName;
+        llvm::raw_string_ostream OS(MangledName);
+        MC->mangleCanonicalTypeName(Arg.getAsType(), OS);
+        return std::pair<std::string, TemplateArgument>(std::move(MangledName),
+                                                        Arg);
+      });
+  llvm::stable_sort(SortedArgs, llvm::less_first());
+
+  auto OutArgs = llvm::to_vector(llvm::make_second_range(SortedArgs));
+  return Context.getSubstBuiltinTemplatePack(
+      TemplateArgument::CreatePackCopy(Context, OutArgs));
+}
+
 static QualType checkBuiltinTemplateIdType(
     Sema &SemaRef, ElaboratedTypeKeyword Keyword, BuiltinTemplateDecl *BTD,
     ArrayRef<TemplateArgument> Converted, SourceLocation TemplateLoc,
@@ -3586,6 +3610,15 @@ static QualType checkBuiltinTemplateIdType(
     }
     return Context.getSubstBuiltinTemplatePack(
         TemplateArgument::CreatePackCopy(Context, OutArgs));
+  }
+  case BTK__builtin_sort_pack: {
+    assert(Converted.size() == 1 &&
+           "__builtin_sort_pack should be given a parameter pack");
+    TemplateArgument Ts = Converted[0];
+    if (Ts.isDependent())
+      return QualType();
+    assert(Ts.getKind() == TemplateArgument::Pack);
+    return sortBuiltinTemplatePack(Context, Ts.getPackAsArray());
   }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");

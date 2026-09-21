@@ -7,14 +7,22 @@
 template <template <class...> class Templ, class...Types>
 using TypePackDedup = Templ<__builtin_dedup_pack<Types...>...>;
 
+template <template <class...> class Templ, class...Types>
+using TypePackSort = Templ<__builtin_sort_pack<Types...>...>;
+
 template <class ...Ts>
 struct TypeList {};
 
 template <int i>
 struct X {};
 
+struct A {};
+struct B {};
+
 void fn1() {
   TypeList<int, double> l1 = TypePackDedup<TypeList, int, double, int>{};
   TypeList<> l2 = TypePackDedup<TypeList>{};
   TypeList<X<0>, X<1>> x1 = TypePackDedup<TypeList, X<0>, X<1>, X<0>, X<1>>{};
+  TypeList<A, B> s1 = TypePackSort<TypeList, B, A>{};
+  TypeList<> s2 = TypePackSort<TypeList>{};
 }
