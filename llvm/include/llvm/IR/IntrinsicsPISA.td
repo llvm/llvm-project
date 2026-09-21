@@ -250,9 +250,13 @@ def int_pisa_redfirstidx : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty], [llvm_i
 // https://intel.github.io/pisa/instructions_memory.html
 //===----------------------------------------------------------------------===//
 
-def int_pisa_cas_fatom : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+def int_pisa_cas_fatom : PISAIntrinsic<[llvm_anyfloat_ty],
                              [llvm_anyptr_ty, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
-                             [IntrHasSideEffects, ImmArg<ArgIndex<3>>]>;
+                             [IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+                              IntrNoCallback, IntrNoFree, IntrWillReturn,
+                              ImmArg<ArgIndex<3>>,
+                              ArgInfo<ArgIndex<3>, [ArgName<"order">,
+                                                   ImmArgPrinter<"printMemoryOrdering">]>]>;
 
 //===----------------------------------------------------------------------===//
 // 8. Synchronization

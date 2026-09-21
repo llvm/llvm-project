@@ -14,6 +14,14 @@ define void @test() {
   ret void
 }
 
+define float @test_cas_fatom(ptr %addr, float %compare, float %value) {
+; CHECK-LABEL: define float @test_cas_fatom(
+  %result = call float @llvm.pisa.cas.fatom.f32.p0(ptr %addr, float %compare, float %value, i8 2)
+; CHECK: call float @llvm.pisa.cas.fatom.f32.p0(ptr %addr, float %compare, float %value, /* order=monotonic */ i8 2)
+  ret float %result
+}
+
 declare i32 @llvm.pisa.lane.id()
 declare i32 @llvm.pisa.subgroup.size()
 declare i32 @llvm.pisa.work.dim()
+declare float @llvm.pisa.cas.fatom.f32.p0(ptr, float, float, i8 immarg)
