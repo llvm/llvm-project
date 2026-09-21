@@ -41,7 +41,7 @@ static unsigned getArity(Operation *op) {
       .Case<tosa::AddOp, tosa::SubOp, tosa::IntDivOp, tosa::MulOp, tosa::PowOp,
             tosa::MaximumOp, tosa::MinimumOp>([](Operation *) { return 2u; })
       .Case<tosa::SelectOp>([](Operation *) { return 3u; })
-      .Default([](Operation *op) { return op->getNumOperands(); });
+      .DefaultUnreachable("Invalid elementwise operation");
 }
 
 // Return the linalg.elementwise kind that is semantically equivalent to the
