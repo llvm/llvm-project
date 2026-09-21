@@ -3433,23 +3433,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       bool RestoreFrameReg = false;
 
-      // Scavenge the scalar temporary the V_READFIRSTLANE_B32 result lands in.
-      // Spilling an SGPR here would flip EXEC with S_NOT, and that clobbers the
-      // SCC this path exists to preserve, so fall back to FrameReg instead.
-      auto ScavengeSGPRForReadfirstlane =
-          [&](MachineBasicBlock::iterator To) -> Register {
-        if (Register Reg = RS->scavengeRegisterBackwards(
-                AMDGPU::SReg_32_XM0RegClass, To, false, 0,
-                /*AllowSpill=*/false))
-          return Reg;
-        if (CanUseFrameRegAsSGPRScratch) {
-          RestoreFrameReg = true;
-          return FrameReg;
-        }
-        return RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass, To,
-                                             false, 0);
-      };
-
       Register ResultReg;
       if (IsCopy) {
         ResultReg = MI->getOperand(0).getReg();
@@ -3503,7 +3486,19 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             assert(ResultReg.isPhysical());
             NewDest = ResultReg;
           } else {
-            NewDest = ScavengeSGPRForReadfirstlane(Shift);
+            // Spilling an SGPR here would flip EXEC with S_NOT, and that
+            // clobbers the SCC this path exists to preserve, so scale FrameReg
+            // in place instead.
+            NewDest = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
+                                                    Shift, false, 0,
+                                                    /*AllowSpill=*/false);
+            if (!NewDest) {
+              if (!CanUseFrameRegAsSGPRScratch)
+                report_fatal_error("Cannot scavenge register while SCC is live "
+                                   "in FI elimination!");
+              NewDest = FrameReg;
+              RestoreFrameReg = true;
+            }
           }
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), NewDest)
               .addReg(TmpResultReg);
@@ -3623,7 +3618,17 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             if (IsCopy) {
               NewDest = ResultReg;
             } else {
-              NewDest = ScavengeSGPRForReadfirstlane(*Add);
+              // As above, an SGPR spill here would clobber the live SCC.
+              NewDest = RS->scavengeRegisterBackwards(
+                  AMDGPU::SReg_32_XM0RegClass, *Add, false, 0,
+                  /*AllowSpill=*/false);
+              if (!NewDest) {
+                if (!CanUseFrameRegAsSGPRScratch)
+                  report_fatal_error("Cannot scavenge register while SCC is "
+                                     "live in FI elimination!");
+                NewDest = FrameReg;
+                RestoreFrameReg = true;
+              }
             }
 
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
