@@ -130,53 +130,47 @@ TEST_F(LlvmLibcScandirTest, TestDirFilter) {
 }
 
 TEST_F(LlvmLibcScandirTest, TestDirSorted) {
-  char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path(TEMPLATE));
-  ASSERT_NE(tmpl, nullptr);
-  ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
+  char *dirpath = create_temp_dir();
+  ASSERT_NE(dirpath, nullptr);
 
-  char *path_d = join_path(tmpl, "d");
-  ASSERT_TRUE(path_d != nullptr);
-  ASSERT_TRUE(create_empty_file(path_d));
+  const char *files_to_create[] = {"d", "a", "1"};
+  constexpr size_t NUM_FILES =
+      sizeof(files_to_create) / sizeof(files_to_create[0]);
+  char *filepaths[NUM_FILES];
 
-  char *path_a = join_path(tmpl, "a");
-  ASSERT_TRUE(path_a != nullptr);
-  ASSERT_TRUE(create_empty_file(path_a));
-
-  char *path_1 = join_path(tmpl, "1");
-  ASSERT_TRUE(path_1 != nullptr);
-  ASSERT_TRUE(create_empty_file(path_1));
+  for (size_t i = 0; i < NUM_FILES; ++i) {
+    filepaths[i] = join_path(dirpath, files_to_create[i]);
+    ASSERT_NE(filepaths[i], nullptr);
+    ASSERT_TRUE(create_empty_file(filepaths[i]));
+  }
 
   struct dirent **namelist = nullptr;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, alphasort),
-              Succeeds(3));
+  ASSERT_THAT(
+      LIBC_NAMESPACE::scandir(dirpath, &namelist, skip_hidden, alphasort),
+      Succeeds(3));
 
   ASSERT_STREQ(namelist[0]->d_name, "1");
   ASSERT_STREQ(namelist[1]->d_name, "a");
   ASSERT_STREQ(namelist[2]->d_name, "d");
-
-  free_namelist(namelist, 3);
+  free_namelist(namelist, NUM_FILES);
 
   // Reverse alphanumeric sort in case the above sorting test passed on chance.
   namelist = nullptr;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, omegasort),
-              Succeeds(3));
+  ASSERT_THAT(
+      LIBC_NAMESPACE::scandir(dirpath, &namelist, skip_hidden, omegasort),
+      Succeeds(3));
 
   ASSERT_STREQ(namelist[0]->d_name, "d");
   ASSERT_STREQ(namelist[1]->d_name, "a");
   ASSERT_STREQ(namelist[2]->d_name, "1");
+  free_namelist(namelist, NUM_FILES);
 
-  ASSERT_THAT(LIBC_NAMESPACE::remove(path_d), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::remove(path_a), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::remove(path_1), Succeeds());
+  for (size_t i = 0; i < NUM_FILES; ++i) {
+    ASSERT_THAT(LIBC_NAMESPACE::remove(filepaths[i]), Succeeds());
+    ::free(filepaths[i]);
+  }
 
-  free_namelist(namelist, 3);
-
-  free(path_d);
-  free(path_a);
-  free(path_1);
-
-  ASSERT_THAT(LIBC_NAMESPACE::rmdir(tmpl), Succeeds());
-  free(tmpl);
+  ASSERT_TRUE(remove_temp_dir(dirpath));
 }
 
 // While this test only checks for one type of ERROR, it really tests
