@@ -28623,7 +28623,7 @@ void BoUpSLP::computeMinimumValueSizes() {
                 ->getBitWidth()) {
       if (UserIgnoreList)
         for (Value *V : TreeRoot)
-          AnalyzedMinBWVals[V] = getTreeSizeExcludingGathers();
+          AnalyzedMinBWVals.insert_or_assign(V, getTreeSizeExcludingGathers());
       NodesToKeepBWs.insert_range(ToDemote);
       continue;
     }
