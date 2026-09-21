@@ -1260,14 +1260,14 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
     an absent optional and is not contiguous at runtime. When a copy is made this
     operation returns the temporary as first result, otherwise, it returns the
     potentially absent variable storage. The second result indicates if a copy
-    was made.
+    was made, and the third indicates if the returned storage must be freed.
 
-    A descriptor address must be provided for the temporary. This descriptor will
-    be set if a temporary copy was made.
+    A descriptor address must be provided for the temporary. This descriptor is
+    set if a temporary copy is made.
 
     This operation is meant to be used in combination with the hlfir.copy_out
-    operation that takes the address of the descriptor for the temporary, deletes
-    the temporary if it was created, and copies the data back if needed.
+    operation that takes the descriptor address and flags, deletes the temporary
+    if needed, and copies the data back if needed.
     This operation allows passing non contiguous arrays to contiguous dummy
     arguments, which is possible in Fortran procedure references.
 
@@ -1280,7 +1280,7 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
                     Arg<AnyReferenceLike, "", [MemWrite]>:$tempBox,
                     Optional<I1>:$var_is_present);
 
-  let results = (outs fir_BaseBoxType, I1);
+  let results = (outs fir_BaseBoxType, I1, I1);
 
   let assemblyFormat = [{
     $var `to` $tempBox (`handle_optional` $var_is_present^)?
@@ -1302,6 +1302,11 @@ def hlfir_CopyInOp : hlfir_Op<"copy_in", [MemoryEffects<[MemAlloc]>]> {
     mlir::Value getWasCopied() {
       return getResult(1);
     }
+
+    /// Get the result indicating if the copied-in storage must be freed.
+    mlir::Value getMustFree() {
+      return getResult(2);
+    }
   }];
 }
 
@@ -1310,19 +1315,20 @@ def hlfir_CopyOutOp : hlfir_Op<"copy_out", [MemoryEffects<[MemFree]>]> {
   let description = [{
     If the variable was copied in a temporary in the related hlfir.copy_in,
     optionally copy back the temporary value to it (that may have been
-    modified between the hlfir.copy_in and hlfir.copy_out). Then deallocate
-    the temporary.
+    modified between the hlfir.copy_in and hlfir.copy_out). Then free the
+    temporary if needed.
     The copy back is done if $var is provided and $was_copied is true.
-    The deallocation of $temp is done if $was_copied is true.
+    The deallocation of $temp is done if $must_free is true.
     $temp must be the descriptor address that was provided to hlfir.copy_in.
   }];
 
   let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$temp,
                        I1:$was_copied,
+                       I1:$must_free,
                        Arg<Optional<fir_BaseBoxType>, "", [MemWrite]>:$var);
 
   let assemblyFormat = [{
-    $temp `,` $was_copied (`to` $var^)?
+    $temp `,` $was_copied `,` $must_free (`to` $var^)?
     attr-dict `:` functional-type(operands, results)
   }];
 }
