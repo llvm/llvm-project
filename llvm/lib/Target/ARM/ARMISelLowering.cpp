@@ -18720,8 +18720,25 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
         // If x == y then x - y == 0 and ARM's CLZ will return 32, shifting it
         // right 5 bits will make that 32 be 1, otherwise it will be 0.
         // CMOV 0, 1, ==, (CMPZ x, y) -> SRL (CTLZ (SUB x, y)), 5
-        SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
-        Res = DAG.getNode(ISD::SRL, dl, VT, DAG.getNode(ISD::CTLZ, dl, VT, Sub),
+        SDValue Value = LHS;
+        if (VT == MVT::i32 && Subtarget->isThumb2() &&
+            isNullConstant(RHS) && LHS.getOpcode() == ISD::AND) {
+          auto *Mask = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+          uint32_t MaskValue = Mask ? Mask->getZExtValue() : 0;
+          if (Mask && MaskValue != 0xff && MaskValue != 0xffff &&
+              MaskValue != ~0U &&
+              isMask_32(MaskValue)) {
+            // For a low contiguous mask, shifting by the number of leading
+            // zeroes preserves whether all masked bits are zero.
+            unsigned ShiftAmount = llvm::countl_zero(MaskValue);
+            Value = DAG.getNode(ISD::SHL, dl, VT, LHS.getOperand(0),
+                                DAG.getConstant(ShiftAmount, dl, VT));
+          }
+        }
+        if (Value == LHS)
+          Value = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+        Res = DAG.getNode(ISD::SRL, dl, VT,
+                          DAG.getNode(ISD::CTLZ, dl, VT, Value),
                           DAG.getConstant(5, dl, MVT::i32));
       } else {
         // CMOV 0, 1, ==, (CMPZ x, y) ->
