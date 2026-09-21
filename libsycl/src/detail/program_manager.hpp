@@ -20,14 +20,13 @@
 #include <detail/device_binary_structures.hpp>
 #include <detail/device_image_wrapper.hpp>
 #include <detail/device_kernel_info.hpp>
+#include <detail/suppress_extra_warnings.hpp>
 
-// Suppress some additional warnings enabled in libsycl for LLVM headers.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Object/OffloadBinary.h>
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 #include <OffloadAPI.h>
-#pragma GCC diagnostic pop
 
 #include <memory>
 #include <mutex>

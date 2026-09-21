@@ -15,11 +15,9 @@
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
-// Suppress some additional warnings enabled in libsycl for LLVM headers.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wshadow"
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Frontend/Offloading/Utility.h>
-#pragma GCC diagnostic pop
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
