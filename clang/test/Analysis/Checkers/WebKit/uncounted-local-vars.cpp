@@ -799,3 +799,27 @@ namespace using_reexported_ref_deref {
   }
 
 }
+
+namespace short_lived_temporaries {
+
+Ref<RefCountable> provide_ref();
+bool condition(const Ref<RefCountable> &);
+
+void dying_ref_temporary() {
+  RefCountable *bar = provide_ref().ptr();
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  bar->method();
+}
+
+void unrelated_temporary_traces_to_guardian(RefCountable &obj) {
+  Ref<RefCountable> guardian(obj);
+  {
+    RefCountable *bar = condition(provide_ref()) ? guardian.ptr() : nullptr;
+    someFunction();
+    if (bar)
+      bar->method();
+  }
+}
+
+} // namespace short_lived_temporaries
