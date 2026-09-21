@@ -1397,8 +1397,8 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   // pointer.
   bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
                                               MF.getFunction().isVarArg());
-  const int64_t FixedObjectSize = getFixedObjectSize(
-      MF, AFI, IsWin64, /*IsFunclet*/ false);
+  const int64_t FixedObjectSize =
+      getFixedObjectSize(MF, AFI, IsWin64, /*IsFunclet*/ false);
   bool isCSR =
       !isFixed && ObjectOffset >= -((int64_t)AFI->getCalleeSavedStackSize(MFI) +
                                     FixedObjectSize);
