@@ -3831,7 +3831,6 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::INSERT_SUBVECTOR:  Res = SplitVecOp_INSERT_SUBVECTOR(N, OpNo); break;
   case ISD::EXTRACT_VECTOR_ELT:Res = SplitVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::CONCAT_VECTORS:    Res = SplitVecOp_CONCAT_VECTORS(N); break;
-    break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = SplitVecOp_VECTOR_FIND_LAST_ACTIVE(N);
     break;
@@ -8299,21 +8298,24 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_REPEAT(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   EVT SrcVT = Src.getValueType();
-  EVT WidennedSrcVT = TLI.getTypeToTransformTo(*DAG.getContext(), SrcVT);
-  assert(WidennedSrcVT.getVectorElementCount().isKnownMultipleOf(
-             SrcVT.getVectorElementCount()) &&
-         "Cannot widen VECTOR_REPEAT operand to an ElementCount that's not "
-         "a multiple of the input ElementCount.");
-  unsigned NumConcat =
-      WidennedSrcVT.getVectorMinNumElements() / SrcVT.getVectorMinNumElements();
+  EVT WidenedSrcVT = TLI.getTypeToTransformTo(*DAG.getContext(), SrcVT);
+
+  if (!WidenedSrcVT.getVectorElementCount().hasKnownScalarFactor(
+          SrcVT.getVectorElementCount()))
+    report_fatal_error(
+        "Cannot widen VECTOR_REPEAT operand to an ElementCount that's not "
+        "a multiple of the input ElementCount.");
 
   // Repeat the original source because the extra lanes of its widened value
   // are unspecified.
+  unsigned NumConcat =
+      WidenedSrcVT.getVectorElementCount().getKnownScalarFactor(
+          SrcVT.getVectorElementCount());
   SmallVector<SDValue, 8> Ops(NumConcat, Src);
-  SDValue WidenedSrc = DAG.getNode(ISD::CONCAT_VECTORS, DL, WidennedSrcVT, Ops);
+  SDValue WidenedSrc = DAG.getNode(ISD::CONCAT_VECTORS, DL, WidenedSrcVT, Ops);
   EVT WidenedVT = VT.changeVectorElementCount(
       *DAG.getContext(),
-      ElementCount::getScalable(WidennedSrcVT.getVectorMinNumElements()));
+      ElementCount::getScalable(WidenedSrcVT.getVectorMinNumElements()));
   SDValue Widened = DAG.getNode(ISD::VECTOR_REPEAT, DL, WidenedVT, WidenedSrc);
   return DAG.getExtractSubvector(DL, VT, Widened, 0);
 }

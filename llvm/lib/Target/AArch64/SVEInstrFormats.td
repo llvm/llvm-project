@@ -1593,8 +1593,6 @@ multiclass sve_int_perm_dup_i<string asm> {
                 nxv4i32, nxv4f32, nxv2i64, nxv2f64] in {
     def : Pat<(VT (vector_repeat (SVEType<VT>.ZSub V128:$vec))),
               (!cast<Instruction>(NAME # _Q) (SUBREG_TO_REG $vec, zsub), (i64 0))>;
-    def : Pat<(VT (vector_repeat (SVEType<VT>.DSub V64:$vec))),
-              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), (i64 0))>;
   }
 
   // When extracting from an unpacked vector the index must be scaled to account

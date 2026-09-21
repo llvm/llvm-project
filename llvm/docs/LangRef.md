@@ -20816,10 +20816,9 @@ filled. For example, repeating `<A, B>` produces a scalable vector containing
 
 ##### Arguments:
 
-The argument must be a fixed-length vector and the result must be a scalable
-vector with the same element type and minimum element count. In other words,
-the result type is formed by adding `vscale x` in front of the argument type's
-element count.
+The argument must be a fixed-length vector (i.e. `<N x Ty>`) and the result a
+scalable vector that is exactly `vscale` times longer (i.e.
+`<vscale x N x Ty>`).
 
 #### '`llvm.vector.reverse`' Intrinsic
 
