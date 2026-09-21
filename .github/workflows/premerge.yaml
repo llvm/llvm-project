@@ -170,8 +170,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 2
-      - name: Compute Projects
-        run: |
 
       - name: Build and Test
         timeout-minutes: 180
