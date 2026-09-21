@@ -9,7 +9,7 @@
 // Tests for NativeDylibManager's SPS Controller Interface.
 //
 //===----------------------------------------------------------------------===//
-
+#ifndef _WIN32
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
@@ -235,3 +235,4 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
       << "weak-missing symbol should be reported as a present optional";
   EXPECT_EQ(*Addrs[1], nullptr);
 }
+#endif

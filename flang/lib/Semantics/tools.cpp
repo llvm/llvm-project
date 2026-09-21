@@ -1203,7 +1203,33 @@ std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
     const Fortran::semantics::DerivedTypeSpec *derived{
         type ? type->AsDerived() : nullptr};
     if (derived) {
-      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+      // Examine every device-allocatable ultimate component, not just the
+      // first one: whether the object has to be relocated depends on all of
+      // them, so stopping at the first would make the answer depend on the
+      // order the components happen to be declared in.
+      bool anyDeviceAllocatable{false};
+      bool anyExplicit{false};
+      UltimateComponentIterator ultimates{*derived};
+      for (const Symbol &comp : ultimates) {
+        if (IsDeviceAllocatable(comp)) {
+          anyDeviceAllocatable = true;
+          const auto *compDetails{comp.detailsIf<ObjectEntityDetails>()};
+          if (!compDetails || !compDetails->cudaDataAttrIsImplicit()) {
+            anyExplicit = true;
+            break;
+          }
+        }
+      }
+      if (anyDeviceAllocatable) {
+        // The compiler applied every one of those attributes, not the user, so
+        // the memory space the user did ask for on the object takes precedence
+        // over them.
+        if (details->cudaDataAttr() && !anyExplicit) {
+          return details->cudaDataAttr();
+        }
+        // A component the user did attribute keeps the existing behavior: the
+        // object is placed in managed memory so that the component's
+        // descriptors stay addressable.
         return common::CUDADataAttr::Managed;
       }
     }
