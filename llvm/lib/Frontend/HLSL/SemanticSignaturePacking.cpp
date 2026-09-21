@@ -83,8 +83,6 @@ struct SignatureRow {
 
 using SignatureRows = std::array<SignatureRow, MaxSignatureRows>;
 
-// Everything the packing rules need to know about the element that is being
-// placed. It applies to every row that the element covers.
 struct ElementPlacement {
   unsigned Rows;
   unsigned Cols;
@@ -93,7 +91,6 @@ struct ElementPlacement {
   SemanticInterpretation Interpretation;
 };
 
-// The only fields written back to a semantic signature element by packing.
 struct ElementLocation {
   uint32_t Row = UnallocatedRow;
   uint8_t Col = UnallocatedCol;
@@ -114,7 +111,6 @@ struct ClipCullState {
   unsigned RowsUsed = 0;
 };
 
-// Groups are packed in increasing order.
 enum class PackingGroup : unsigned {
   FullRegister,
   IndexedTessFactor,

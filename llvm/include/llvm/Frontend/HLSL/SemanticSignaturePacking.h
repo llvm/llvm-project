@@ -105,10 +105,9 @@ LLVM_ABI Expected<unsigned>
 packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
 
-/// Packs eligible signature elements in optimized order, allowing clip/cull
-/// values to share compatible rows while preserving their two-row limit.
-/// Like prefix-stable packing, this is not valid for vertex inputs or pixel
-/// outputs.
+/// Packs eligible signature elements in an optimized order by reordering
+/// elements into a optimal packind order and allowing clip/cull to share
+/// comapatible rows. Only StartRow and StartCol are modified
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#optimized-packing for details.
 ///
@@ -116,18 +115,10 @@ packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
 /// allocated. For geometry outputs this is the maximum extent of any stream,
 /// not the sum of their extents.
 ///
-/// Only StartRow and StartCol are modified; Elements remains in its original
-/// signature order. Earlier successful allocations are preserved on failure,
-/// except that the clip/cull phase is atomic across all geometry streams:
-/// failure in that phase leaves every clip/cull element unallocated, without
-/// changing preceding non-clip/cull allocations. Later groups are not packed.
-///
-/// SignaturePackingError uses indices in the original Elements array. An
-/// intrinsic clip/cull overflow identifies the first element that fails the
-/// temporary two-row packing. A single-row group's placement failure identifies
-/// its first element; failure to find an adjacent pair identifies the first
-/// clip/cull element of that stream. Invalid streams identify the offending
-/// element. A group error need not indicate that this element alone is invalid.
+/// On failure, Elements is left partially packed: the elements preceding the
+/// one reported by the returned SignaturePackingError keep the locations
+/// they were assigned, while that element and the ones following it retain the
+/// unallocated row and column sentinels.
 LLVM_ABI Expected<unsigned>
 packSignatureOptimized(MutableArrayRef<SemanticSignatureElement> Elements,
                        Triple::EnvironmentType ShaderStage, IOType IOTy,
