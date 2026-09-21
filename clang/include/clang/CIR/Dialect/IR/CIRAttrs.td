@@ -1986,39 +1986,137 @@ def CIR_BlockAddrDiffAttr
 }
 
 //===----------------------------------------------------------------------===//
-// Side Effect
+// Memory Effects
 //===----------------------------------------------------------------------===//
 
-def CIR_SideEffect : CIR_I32Enum<
-    "SideEffect", "allowed side effects of a function", [
-      I32EnumCase<"All", 0, "all">,
-      I32EnumCase<"Pure", 1, "pure">,
-      I32EnumCase<"Const", 2, "const">
+def CIR_ModRefInfo : CIR_I32Enum<
+    "ModRefInfo", "whether memory may be read and/or written", [
+      I32EnumCase<"NoModRef", 0, "none">,
+      I32EnumCase<"Ref", 1, "read">,
+      I32EnumCase<"Mod", 2, "write">,
+      I32EnumCase<"ModRef", 3, "readwrite">
 ]> {
   let description = [{
-    The side effect attribute specifies the possible side effects of a function
-    or the target of a call operation.  This is an enumeration attribute with
-    the following possible values:
+    The access a function or callee may perform on a class of memory.  Which
+    class is given by the `#cir.memory_effects` parameter that holds the
+    value.  The possible values are:
 
-    - all: The function or callee can have any side effects. This is the default
-      if no side effects are explicitly listed.
-    - pure: The function or callee may read data from memory, but it cannot
-      write data to memory. This has the same effect as the GNU C/C++ attribute
-      `__attribute__((pure))`.
-    - const: The function or callee may not read or write data from memory. This
-      has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
-
-    Examples:
-
-    ```
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
-    ```
+    - `none`: the memory is neither read nor written.
+    - `read`: the memory may be read, but it is not written.
+    - `write`: the memory may be written, but it is not read.
+    - `readwrite`: the memory may be both read and written.
   }];
 }
 
-def CIR_SideEffectAttr : CIR_EnumAttr<CIR_SideEffect, "side_effect">;
+def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
+  let summary = "Describes the possible memory effects of a function or callee";
+  let description = [{
+    Specifies the possible memory effects of a function or callee.  Memory
+    is divided into classes, each carrying its own access, so that a promise
+    about one class need not be a promise about all of them:
+
+    - `other`: the access for every location not named by one of the other
+      parameters, including locations with no class of their own such as
+      globals and captured pointers.
+    - `arg_mem`: accesses based on the function's pointer arguments.
+    - `inaccessible_mem`: accesses to memory the current module cannot reach,
+      often used to model the control dependencies of intrinsics.
+    - `errno_mem`: accesses to the `errno` variable.
+    - `target_mem0`, `target_mem1`: target-specific state.
+
+    The classes and their meanings match the LLVM dialect's
+    `#llvm.memory_effects`, which lowering converts this attribute to.
+
+    An absent attribute means the effects are unknown, which is the
+    conservative default and what a function with no memory annotation gets.
+    Lowering leaves such a function with no memory attribute at all.
+
+    Example:
+    ```
+    #cir.memory_effects<other = read, arg_mem = readwrite,
+                        inaccessible_mem = none, errno_mem = none,
+                        target_mem0 = none, target_mem1 = none>
+    ```
+
+    The attribute has no keyword syntax, so on an operation it is written in
+    the attribute dictionary:
+
+    ```
+    cir.func private @f() attributes {memory_effects = #cir.memory_effects<...>}
+    %0 = cir.call @f() {memory_effects = #cir.memory_effects<...>} : () -> !s32i
+    ```
+  }];
+
+  let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$arg_mem,
+                        "ModRefInfo":$inaccessible_mem,
+                        "ModRefInfo":$errno_mem, "ModRefInfo":$target_mem0,
+                        "ModRefInfo":$target_mem1);
+
+  let builders = [
+    AttrBuilder<(ins "ModRefInfo":$all), [{
+      return $_get($_ctxt, all, all, all, all, all, all);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    // These mirror the like-named factories on `llvm::MemoryEffects`.
+
+    /// Create MemoryEffectsAttr that cannot read or write any memory.
+    static MemoryEffectsAttr none(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can read any memory.
+    static MemoryEffectsAttr readOnly(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can write any memory.
+    static MemoryEffectsAttr writeOnly(::mlir::MLIRContext *ctx);
+
+    /// Create MemoryEffectsAttr that can only access argument memory.
+    static MemoryEffectsAttr argMemOnly(::mlir::MLIRContext *ctx,
+                                        ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible memory.
+    static MemoryEffectsAttr
+    inaccessibleMemOnly(::mlir::MLIRContext *ctx,
+                        ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access errno memory.
+    static MemoryEffectsAttr errnoMemOnly(::mlir::MLIRContext *ctx,
+                                          ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access other memory.
+    static MemoryEffectsAttr otherMemOnly(::mlir::MLIRContext *ctx,
+                                          ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible or argument
+    /// memory.
+    static MemoryEffectsAttr
+    inaccessibleOrArgMemOnly(::mlir::MLIRContext *ctx,
+                             ModRefInfo mr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible or errno
+    /// memory.
+    static MemoryEffectsAttr inaccessibleOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo inaccessibleMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access inaccessible, argument or
+    /// errno memory.
+    static MemoryEffectsAttr inaccessibleOrArgOrErrnoMemOnly(
+        ::mlir::MLIRContext *ctx,
+        ModRefInfo inaccessibleOrArgMr = ModRefInfo::ModRef,
+        ModRefInfo errnoMr = ModRefInfo::ModRef);
+
+    /// Create MemoryEffectsAttr that can only access argument or errno memory.
+    static MemoryEffectsAttr
+    argumentOrErrnoMemOnly(::mlir::MLIRContext *ctx,
+                           ModRefInfo argMr = ModRefInfo::ModRef,
+                           ModRefInfo errnoMr = ModRefInfo::ModRef);
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // StaticLocalGuardAttr
