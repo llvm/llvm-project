@@ -3554,6 +3554,9 @@ bool X86TargetLowering::shouldReduceLoadWidth(
   EVT VT = Load->getValueType(0);
   if (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) {
     bool FullWidthUse = false;
+    // Set if a use produces a vector value from a >128-bit load, which could
+    // instead fold a 128-bit subvector load.
+    bool VectorFoldUse = false;
     // The extract + store folding only helps the AVX split case, which requires
     // multiple uses of the load.
     bool AllExtractStores = (VT.is256BitVector() || VT.is512BitVector()) &&
@@ -3575,6 +3578,10 @@ bool X86TargetLowering::shouldReduceLoadWidth(
 
       AllExtractStores = false;
 
+      if ((VT.is256BitVector() || VT.is512BitVector()) &&
+          User->getValueType(0).isVector())
+        VectorFoldUse = true;
+
       // If any use is a full width legal/target bin op, then assume its legal
       // and won't split.
       if (isBinOp(User->getOpcode()) &&
@@ -3591,6 +3598,11 @@ bool X86TargetLowering::shouldReduceLoadWidth(
     // EXTRACT_SUBVECTOR) or we're loading a scalar integer.
     if (FullWidthUse)
       return (ByteOffset.value_or(0) > 0) || NewVT.isScalarInteger();
+
+    // Don't narrow a foldable vector load down to a scalar FP element, which
+    // would then need reinserting into a vector.
+    if (VectorFoldUse && !NewVT.isVector() && !NewVT.isScalarInteger())
+      return false;
   }
 
   return true;
