@@ -233,3 +233,43 @@ define i32 @same_source_not_matching_signbits_extra_use(i32 %x) {
   %c = sext i8 %b to i32
   ret i32 %c
 }
+
+define i32 @sext_trunc_widen(i8 %x) {
+; CHECK-LABEL: @sext_trunc_widen(
+; CHECK-NEXT:    [[RESULT:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc nsw i8 %x to i1
+  %result = sext i1 %narrow to i32
+  ret i32 %result
+}
+
+define i8 @sext_trunc_same(i8 %x) {
+; CHECK-LABEL: @sext_trunc_same(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %narrow = trunc nsw i8 %x to i1
+  %result = sext i1 %narrow to i8
+  ret i8 %result
+}
+
+define i32 @sext_trunc_narrow(i64 %x) {
+; CHECK-LABEL: @sext_trunc_narrow(
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nsw i64 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc nsw i64 %x to i1
+  %result = sext i1 %narrow to i32
+  ret i32 %result
+}
+
+define i32 @sext_trunc_nuw(i8 %x) {
+; CHECK-LABEL: @sext_trunc_nuw(
+; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RESULT:%.*]] = sext i1 [[NARROW]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc nuw i8 %x to i1
+  %result = sext i1 %narrow to i32
+  ret i32 %result
+}

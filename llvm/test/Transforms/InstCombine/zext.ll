@@ -1080,3 +1080,107 @@ define <2 x i8> @zext_or_trunc_nuw_vec(<2 x i8> %x, <2 x i4> %y) {
   %zext = zext <2 x i4> %or to <2 x i8>
   ret <2 x i8> %zext
 }
+
+define i32 @zext_trunc_widen(i8 %x) {
+; CHECK-LABEL: @zext_trunc_widen(
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i8 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc nuw i8 %x to i1
+  %result = zext i1 %narrow to i32
+  ret i32 %result
+}
+
+define i64 @zext_trunc_native(i8 %x) {
+; CHECK-LABEL: @zext_trunc_native(
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i8 [[X:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %narrow = trunc nuw i8 %x to i1
+  %result = zext i1 %narrow to i64
+  ret i64 %result
+}
+
+define i8 @zext_trunc_same(i8 %x) {
+; CHECK-LABEL: @zext_trunc_same(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %narrow = trunc nuw i8 %x to i1
+  %result = zext i1 %narrow to i8
+  ret i8 %result
+}
+
+define i32 @zext_trunc_narrow(i64 %x) {
+; CHECK-LABEL: @zext_trunc_narrow(
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw i64 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc nuw i64 %x to i1
+  %result = zext i1 %narrow to i32
+  ret i32 %result
+}
+
+define i32 @zext_trunc_no_flag(i8 %x) {
+; CHECK-LABEL: @zext_trunc_no_flag(
+; CHECK-NEXT:    [[NARROW_MASK:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i8 [[NARROW_MASK]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc i8 %x to i1
+  %result = zext i1 %narrow to i32
+  ret i32 %result
+}
+
+define i32 @zext_trunc_nsw(i8 %x) {
+; CHECK-LABEL: @zext_trunc_nsw(
+; CHECK-NEXT:    [[NARROW_MASK:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i8 [[NARROW_MASK]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc nsw i8 %x to i1
+  %result = zext i1 %narrow to i32
+  ret i32 %result
+}
+
+define <2 x i32> @zext_trunc_nuw_vec(<2 x i8> %x) {
+; CHECK-LABEL: @zext_trunc_nuw_vec(
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg <2 x i8> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %narrow = trunc nuw <2 x i8> %x to <2 x i1>
+  %result = zext <2 x i1> %narrow to <2 x i32>
+  ret <2 x i32> %result
+}
+
+define <vscale x 2 x i32> @zext_trunc_nuw_scalable(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @zext_trunc_nuw_scalable(
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg <vscale x 2 x i8> [[X:%.*]] to <vscale x 2 x i32>
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[RESULT]]
+;
+  %narrow = trunc nuw <vscale x 2 x i8> %x to <vscale x 2 x i1>
+  %result = zext <vscale x 2 x i1> %narrow to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %result
+}
+
+define <2 x i32> @zext_trunc_nuw_vec_narrow(<2 x i64> %x) {
+; CHECK-LABEL: @zext_trunc_nuw_vec_narrow(
+; CHECK-NEXT:    [[RESULT:%.*]] = trunc nuw <2 x i64> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[RESULT]]
+;
+  %narrow = trunc nuw <2 x i64> %x to <2 x i1>
+  %result = zext <2 x i1> %narrow to <2 x i32>
+  ret <2 x i32> %result
+}
+
+define i32 @zext_trunc_nuw_multi_use(i8 %x) {
+; CHECK-LABEL: @zext_trunc_nuw_multi_use(
+; CHECK-NEXT:    [[NARROW:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[NARROW]])
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i8 [[X]] to i32
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %narrow = trunc nuw i8 %x to i1
+  call void @use1(i1 %narrow)
+  %result = zext i1 %narrow to i32
+  ret i32 %result
+}

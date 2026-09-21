@@ -239,6 +239,23 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
         replaceAllDbgUsesWith(*CSrc, *Res, CI, DT);
       return Res;
     }
+
+    // A no-wrap trunc followed by the corresponding extension preserves the
+    // value, so cast directly to the final type.
+    bool IsZExt = isa<ZExtInst>(CI);
+    bool IsSExt = isa<SExtInst>(CI);
+    if (auto *Trunc = dyn_cast<TruncInst>(CSrc);
+        Trunc && ((IsZExt && Trunc->hasNoUnsignedWrap()) ||
+                  (IsSExt && Trunc->hasNoSignedWrap()))) {
+      auto *Res = CastInst::CreateIntegerCast(Trunc->getOperand(0), Ty, IsSExt);
+      if (auto *ResTrunc = dyn_cast<TruncInst>(Res)) {
+        ResTrunc->setHasNoUnsignedWrap(Trunc->hasNoUnsignedWrap());
+        ResTrunc->setHasNoSignedWrap(Trunc->hasNoSignedWrap());
+      } else if (auto *ResZExt = dyn_cast<ZExtInst>(Res)) {
+        ResZExt->setNonNeg(true);
+      }
+      return Res;
+    }
   }
 
   if (auto *Sel = dyn_cast<SelectInst>(Src)) {
@@ -1967,13 +1984,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
-    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
-      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
-      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
-        ResTrunc->setHasNoSignedWrap(true);
-      return Res;
-    }
+    if (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)
+      return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
 
     // If input is a trunc from the destination type, then convert into shifts.
     if (Src->hasOneUse() && X->getType() == DestTy) {

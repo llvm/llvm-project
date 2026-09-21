@@ -1406,8 +1406,7 @@ define i32 @neg_zext_i32_trunc_nsw_i8(i16 %x, i32 %y) {
 
 define i16 @zext_i16_trunc_nuw_nsw_i8(i32 %x) {
 ; CHECK-LABEL: @zext_i16_trunc_nuw_nsw_i8(
-; CHECK-NEXT:    [[C:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
+; CHECK-NEXT:    [[E:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    ret i16 [[E]]
 ;
   %c = trunc nuw nsw i32 %x to i8
@@ -1428,8 +1427,7 @@ define i16 @zext_i16_trunc_nsw_i8(i32 %x) {
 
 define i16 @zext_i16_trunc_nuw_i8(i32 %x) {
 ; CHECK-LABEL: @zext_i16_trunc_nuw_i8(
-; CHECK-NEXT:    [[C:%.*]] = trunc nuw i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[E:%.*]] = and i16 [[C]], 255
+; CHECK-NEXT:    [[E:%.*]] = trunc nuw i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    ret i16 [[E]]
 ;
   %c = trunc nuw i32 %x to i8
