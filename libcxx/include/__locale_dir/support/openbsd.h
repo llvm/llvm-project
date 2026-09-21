@@ -33,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
 struct __locale_guard {
-  __locale_guard(locale_t& __loc) : __old_loc_(::uselocale(__loc)) {}
+  __locale_guard(locale_t __loc) : __old_loc_(::uselocale(__loc)) {}
 
   ~__locale_guard() {
     if (__old_loc_)
@@ -80,21 +80,21 @@ inline __lconv_t* __localeconv(__locale_t& __loc) {
 // Strtonum functions
 //
 template <class _FloatT>
-_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr, __locale_t);
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
   return ::strtof(__nptr, __endptr);
 }
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr, __locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
   return ::strtod(__nptr, __endptr);
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI long double
-__str_to_float_c_locale<long double>(const char* __nptr, char** __endptr, __locale_t) {
+__str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
   return ::strtold(__nptr, __endptr);
 }
 
