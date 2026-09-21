@@ -33,22 +33,11 @@ using llvm::abi::TypeBuilder;
 using llvm::abi::X86ABICompatInfo;
 using llvm::abi::X86AVXABILevel;
 
-// A minimal concrete target that re-exposes the shared, protected
-// isSingleElementStruct helper so it can be exercised directly. The helper is
-// target-independent, so any concrete target classifies it the same way.
-class TestTargetInfo : public TargetInfo {
-public:
-  explicit TestTargetInfo(TypeBuilder &Builder) : TargetInfo(Builder) {}
-  void computeInfo(FunctionInfo &) const override {}
-  using TargetInfo::isSingleElementStruct;
-};
-
 class X86TargetInfoTest : public ::testing::Test {
 protected:
   llvm::BumpPtrAllocator Alloc;
   TypeBuilder TB;
   const ABIType *I8;
-  const ABIType *I16;
   const ABIType *I32;
   const ABIType *F32;
   const ABIType *F64;
@@ -61,7 +50,6 @@ protected:
 
   X86TargetInfoTest()
       : TB(Alloc), I8(TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true)),
-        I16(TB.getIntegerType(16, llvm::Align(2), /*Signed=*/true)),
         I32(TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true)),
         F32(TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4))),
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
@@ -87,20 +75,6 @@ protected:
     return TB.getUnionType(Fields, llvm::TypeSize::getFixed(SizeInBits),
                            Alignment, Alignment, StructPacking::Default,
                            Flags | RecordFlags::CanPassInRegisters);
-  }
-
-  const ABIType *recordOf(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeInBits,
-                          llvm::Align Alignment) {
-    return TB.getRecordType(Fields, llvm::TypeSize::getFixed(SizeInBits),
-                            Alignment, Alignment, StructPacking::Default, {},
-                            {}, RecordFlags::CanPassInRegisters);
-  }
-
-  /// The single-element reduction of \p Ty, or null if it is not a
-  /// single-element struct. Exercises the shared TargetInfo helper directly.
-  const ABIType *singleElement(const ABIType *Ty) {
-    TestTargetInfo TI(TB);
-    return TI.isSingleElementStruct(Ty);
   }
 
   /// The argument classification the target computes for a single parameter.
@@ -421,67 +395,6 @@ TEST_F(X86TargetInfoTest, UnionTailPaddingNarrowsInsideShortUnion) {
   ASSERT_EQ(Pair.size(), 2u);
   expectInteger(Pair[0].FieldType, 64);
   expectInteger(Pair[1].FieldType, 8);
-}
-
-// The shared single-element-struct reduction, used by getByteVectorType and by
-// other targets, looks through single-element wrappers to the scalar element.
-
-// A struct of one float reduces to its single float element.
-TEST_F(X86TargetInfoTest, SingleElementStructSingleScalarFieldReduces) {
-  const ABIType *S = recordOf({FieldInfo(F32, 0)}, 32, llvm::Align(4));
-  EXPECT_EQ(singleElement(S), F32);
-}
-
-// A single-element array is transparent, so a struct of one float[1] reduces
-// to the element type.
-TEST_F(X86TargetInfoTest, SingleElementStructSingleElementArrayReduces) {
-  const ABIType *Arr =
-      TB.getArrayType(F32, /*NumElements=*/1, /*SizeInBits=*/32);
-  const ABIType *S = recordOf({FieldInfo(Arr, 0)}, 32, llvm::Align(4));
-  EXPECT_EQ(singleElement(S), F32);
-}
-
-// A multi-element array is an aggregate that does not itself reduce, so a
-// struct of one short[2] is NOT a single-element struct.
-TEST_F(X86TargetInfoTest, SingleElementStructMultiElementArrayDoesNotReduce) {
-  const ABIType *Arr =
-      TB.getArrayType(I16, /*NumElements=*/2, /*SizeInBits=*/32);
-  const ABIType *S = recordOf({FieldInfo(Arr, 0)}, 32, llvm::Align(2));
-  EXPECT_EQ(singleElement(S), nullptr);
-}
-
-// Two data members: not a single-element struct.
-TEST_F(X86TargetInfoTest, SingleElementStructTwoFieldsDoNotReduce) {
-  const ABIType *S =
-      recordOf({FieldInfo(I32, 0), FieldInfo(I32, 32)}, 64, llvm::Align(4));
-  EXPECT_EQ(singleElement(S), nullptr);
-}
-
-// A single member that leaves tail padding does not cover the record, so it
-// does not reduce.
-TEST_F(X86TargetInfoTest, SingleElementStructTailPaddingDoesNotReduce) {
-  const ABIType *S = recordOf({FieldInfo(I32, 0)}, 64, llvm::Align(8));
-  EXPECT_EQ(singleElement(S), nullptr);
-}
-
-// An empty member supplies no data and is skipped, so a struct of an empty
-// member plus an int reduces to the int.
-TEST_F(X86TargetInfoTest, SingleElementStructEmptyMemberIsSkipped) {
-  const ABIType *S =
-      recordOf({FieldInfo(Empty, 0), FieldInfo(I32, 0)}, 32, llvm::Align(4));
-  EXPECT_EQ(singleElement(S), I32);
-}
-
-// A nested single-element struct reduces to the inner scalar.
-TEST_F(X86TargetInfoTest, SingleElementStructNestedSingleElementReduces) {
-  const ABIType *Inner = recordOf({FieldInfo(F32, 0)}, 32, llvm::Align(4));
-  const ABIType *Outer = recordOf({FieldInfo(Inner, 0)}, 32, llvm::Align(4));
-  EXPECT_EQ(singleElement(Outer), F32);
-}
-
-// A non-record type is never a single-element struct.
-TEST_F(X86TargetInfoTest, SingleElementStructNonRecordReturnsNull) {
-  EXPECT_EQ(singleElement(I32), nullptr);
 }
 
 } // namespace
