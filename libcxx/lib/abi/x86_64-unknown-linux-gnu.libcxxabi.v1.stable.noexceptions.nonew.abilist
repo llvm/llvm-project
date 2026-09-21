@@ -25,6 +25,7 @@
 {'is_defined': False, 'name': '_ZnwmSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_current_primary_exception', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_decrement_exception_refcount', 'type': 'FUNC'}
+{'is_defined': False, 'name': '__cxa_demangle', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_guard_acquire', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_guard_release', 'type': 'FUNC'}
 {'is_defined': False, 'name': '__cxa_increment_exception_refcount', 'type': 'FUNC'}
@@ -601,8 +602,7 @@
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultclEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace16__populate_addrsEmm', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace17__populate_imagesEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__112__stacktrace9__collectERNS0_8_ContextEmm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD2Ev', 'type': 'FUNC'}

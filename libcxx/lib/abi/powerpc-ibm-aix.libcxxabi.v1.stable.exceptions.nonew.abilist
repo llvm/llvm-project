@@ -343,8 +343,7 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112__rs_defaultclEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace16__populate_addrsEmm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace17__populate_imagesEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112__stacktrace9__collectERNS0_8_ContextEmm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -1091,6 +1090,7 @@
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt16invalid_argumentD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt20bad_array_new_lengthC1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt20bad_array_new_lengthD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
+{'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt3__112__stacktrace18__populate_symbolsB9nqe240000ERNS0_8_ContextE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt8bad_castC1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt8bad_castD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'IMP', 'is_defined': False, 'name': '_ZNSt8bad_castD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
