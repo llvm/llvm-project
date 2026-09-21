@@ -102,7 +102,7 @@ jobs:
       - &extract_variables
         name: Extract Environment Variables
         env:
-          VALUES: ${{ case(runner.os == "Windows", needs.premerge-compute.outputs.Windows-values, runner.os == "macOS", needs.premerge-compute.outputs.Darwin-values, needs.premerge-compute.outputs.Linux-values) }}
+          VALUES: ${{ case(runner.os == 'Windows', needs.premerge-compute.outputs.Windows-values, runner.os == 'macOS', needs.premerge-compute.outputs.Darwin-values, needs.premerge-compute.outputs.Linux-values) }}
         run: |
           echo $VALUES | jq -r 'keys[] as $k | "\($k)=\"\(.[$k])\""' >> $GITHUB_ENV
       - name: Build and Test
