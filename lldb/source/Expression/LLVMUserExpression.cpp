@@ -326,8 +326,8 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   if (!PrepareArgumentStruct(diagnostic_manager, frame, struct_address))
     return false;
 
-  if (m_can_interpret &&
-      !AllocateInterpreterStackFrame(diagnostic_manager, *target, process.get()))
+  if (m_can_interpret && !AllocateInterpreterStackFrame(diagnostic_manager,
+                                                        *target, process.get()))
     return false;
 
   return true;
