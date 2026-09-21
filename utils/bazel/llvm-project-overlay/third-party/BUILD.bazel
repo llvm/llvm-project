@@ -1,11 +1,55 @@
 # This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load(":cc_library_wrapper.bzl", "cc_library_wrapper")
 
 package(default_visibility = ["//visibility:public"])
+
+bool_flag(
+    name = "llvm_enable_libxml2",
+    build_setting_default = True,
+)
+
+config_setting(
+    name = "llvm_libxml2_requested",
+    flag_values = {":llvm_enable_libxml2": "true"},
+    visibility = ["//visibility:private"],
+)
+
+selects.config_setting_group(
+    name = "llvm_libxml2_enabled",
+    match_any = [
+        ":llvm_libxml2_requested",
+        "@platforms//os:macos",  # macOS always uses the system's libxml2
+    ],
+)
+
+config_setting(
+    name = "llvm_libxml2_requested_macos",
+    constraint_values = ["@platforms//os:macos"],
+    flag_values = {":llvm_enable_libxml2": "true"},
+    visibility = ["//visibility:private"],
+)
+
+cc_library_wrapper(
+    name = "libxml2",
+    defines = select({
+        ":llvm_libxml2_enabled": ["LLVM_ENABLE_LIBXML2=1"],
+        "//conditions:default": ["LLVM_ENABLE_LIBXML2=0"],
+    }),
+    linkopts = select({
+        "@platforms//os:macos": ["-lxml2"],
+        "//conditions:default": [],
+    }),
+    deps = select({
+        ":llvm_libxml2_requested_macos": [],
+        ":llvm_libxml2_requested": ["@libxml2"],
+        "//conditions:default": [],
+    }),
+)
 
 bool_flag(
     name = "llvm_enable_zstd",
