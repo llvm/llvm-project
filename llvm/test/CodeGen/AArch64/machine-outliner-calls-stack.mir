@@ -1,0 +1,182 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=prologepilog -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @callee_with_locals() #0 {
+    ret void
+  }
+
+  define void @callee_with_stack_args(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h, i64 %i) #0 {
+    ret void
+  }
+
+  define void @callee_variadic(...) #0 {
+    ret void
+  }
+
+  define void @caller1() #0 {
+    ret void
+  }
+
+  define void @caller2() #0 {
+    ret void
+  }
+
+  define void @caller3() #0 {
+    ret void
+  }
+
+  attributes #0 = { noredzone nounwind }
+...
+---
+
+# Callee clobbers callee-saved registers, has no incoming stack arguments. The
+# call should be outlined as Legal.
+
+name:            callee_with_locals
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+    $x19 = MOVZXi 1, 0
+    $x20 = MOVZXi 2, 0
+    RET undef $lr
+...
+---
+
+# Callee has incoming stack arguments. The call should NOT be outlined as Legal.
+
+name:            callee_with_stack_args
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 0, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $lr
+    RET undef $lr
+...
+---
+
+# Callee has variadic arguments. The call should NOT be outlined as Legal.
+
+name:            callee_variadic
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+    RET undef $lr
+...
+---
+
+# CHECK-LABEL: name:            caller1
+name:            caller1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr, $w8
+
+  ; CHECK-LABEL: bb.1:
+  ; CHECK-NOT: BL @callee_with_locals
+  ; CHECK: BL @[[LOCALS_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+  bb.1:
+    BL @callee_with_locals, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 4
+
+    BL @callee_with_locals, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 3
+
+    BL @callee_with_locals, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 2
+
+    BL @callee_with_locals, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+
+  bb.2:
+    RET undef $lr
+...
+---
+
+# CHECK-LABEL: name:            caller2
+name:            caller2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr, $w8
+
+  ; CHECK-LABEL: bb.1:
+  ; CHECK: BL @callee_with_stack_args
+  ; CHECK-NEXT: BL @[[STACK_ARGS_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+  bb.1:
+    BL @callee_with_stack_args, implicit-def dead $lr, implicit $sp
+    $w16 = ORRWri $wzr, 2
+    $w16 = ORRWri $wzr, 2
+    $w0 = ORRWri $wzr, 4
+
+    BL @callee_with_stack_args, implicit-def dead $lr, implicit $sp
+    $w16 = ORRWri $wzr, 2
+    $w16 = ORRWri $wzr, 2
+    $w0 = ORRWri $wzr, 3
+
+    BL @callee_with_stack_args, implicit-def dead $lr, implicit $sp
+    $w16 = ORRWri $wzr, 2
+    $w16 = ORRWri $wzr, 2
+    $w0 = ORRWri $wzr, 2
+
+    BL @callee_with_stack_args, implicit-def dead $lr, implicit $sp
+    $w16 = ORRWri $wzr, 2
+    $w16 = ORRWri $wzr, 2
+    $w0 = ORRWri $wzr, 1
+
+  bb.2:
+    RET undef $lr
+
+---
+
+# CHECK-LABEL: name:            caller3
+name:            caller3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr, $w8
+
+  ; CHECK-LABEL: bb.1:
+  ; CHECK: BL @callee_variadic
+  ; CHECK-NEXT: BL @[[VARIADIC_FUNC:OUTLINED_FUNCTION_[0-9]+]]
+  bb.1:
+    BL @callee_variadic, implicit-def dead $lr, implicit $sp
+    $w15 = ORRWri $wzr, 3
+    $w15 = ORRWri $wzr, 3
+    $w0 = ORRWri $wzr, 4
+
+    BL @callee_variadic, implicit-def dead $lr, implicit $sp
+    $w15 = ORRWri $wzr, 3
+    $w15 = ORRWri $wzr, 3
+    $w0 = ORRWri $wzr, 3
+
+    BL @callee_variadic, implicit-def dead $lr, implicit $sp
+    $w15 = ORRWri $wzr, 3
+    $w15 = ORRWri $wzr, 3
+    $w0 = ORRWri $wzr, 2
+
+    BL @callee_variadic, implicit-def dead $lr, implicit $sp
+    $w15 = ORRWri $wzr, 3
+    $w15 = ORRWri $wzr, 3
+    $w0 = ORRWri $wzr, 1
+
+  bb.2:
+    RET undef $lr
+
+# CHECK: name: [[LOCALS_FUNC]]
+# CHECK: BL @callee_with_locals
+
+# CHECK: name: [[STACK_ARGS_FUNC]]
+# CHECK-NOT: BL @callee_with_stack_args
+
+# CHECK: name: [[VARIADIC_FUNC]]
+# CHECK-NOT: BL @callee_variadic
