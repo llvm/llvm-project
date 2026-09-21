@@ -352,3 +352,326 @@ body: |
     $al = SETCCr 15, implicit $eflags
     RET 0, $al
 ...
+
+# Self-loop: bb.1 is its own predecessor. A live CMP below the redundant
+# compare in bb.1 shadows bb.0's producer on iteration 2+. The below-CmpInstr
+# scan (triggered when the walk detects CmpMBB is on a cycle) spots the
+# clobber and keeps the compare.
+---
+name: selfloop_shadow_below
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: selfloop_shadow_below
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   CMP32ri [[COPY1]], 5, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $al = SETCCr 15, implicit $eflags
+  ; CHECK-NEXT:   RET 0, $al
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    CMP32ri %0, 2, implicit-def $eflags
+    CMP32ri %1, 5, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    liveins: $eflags
+    $al = SETCCr 15, implicit $eflags
+    RET 0, $al
+...
+
+# Two-block cycle bb.1 -> bb.2 -> bb.1. A live CMP below the redundant compare
+# in bb.1 shadows bb.0's producer on the back-edge. The below-CmpInstr scan
+# (triggered when the walk detects CmpMBB is on a cycle) spots the clobber and
+# keeps the compare. Guards against a self-loop-only cycle check that would
+# miss this shape.
+---
+name: twoblock_cycle_shadow_below
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: twoblock_cycle_shadow_below
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   CMP32ri [[COPY1]], 5, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $al = SETCCr 15, implicit $eflags
+  ; CHECK-NEXT:   RET 0, $al
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    CMP32ri %0, 2, implicit-def $eflags
+    CMP32ri %1, 5, implicit-def $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    liveins: $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    liveins: $eflags
+    $al = SETCCr 15, implicit $eflags
+    RET 0, $al
+...
+
+# Self-loop where the below-CmpInstr region holds an NF-convertible dead clobber.
+# The backward walk finds bb.0's producer and detects the cycle back-edge into
+# MultiPredMBB; the below-CmpInstr scan then stages the IMUL, and the reuse
+# succeeds: the redundant compare is removed and the IMUL is rewritten to its
+# NF variant. Exercises the positive path of the new scan (the shadow_below
+# cases only exercise the bail path).
+---
+name: selfloop_nfconvertible_below
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: selfloop_nfconvertible_below
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[IMUL32rr_NF:%[0-9]+]]:gr32 = nuw nsw IMUL32rr_NF [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    CMP32ri %0, 2, implicit-def $eflags
+    %2:gr32 = nuw nsw IMUL32rr %0, %1, implicit-def dead $eflags
+    JMP_1 %bb.1
+...
+
+# Multi-predecessor block sits above CmpMBB in the caller's single-predecessor
+# chain: bb.3 (CmpMBB) <- bb.2 <- bb.1 (MultiPredMBB, self-loop). bb.3 has no
+# back-edge so the below-CmpInstr scan is skipped; the walk finds bb.0's
+# producer through bb.1's non-self predecessor. Guards against a regression
+# where a revisit of MultiPredMBB would double-scan the caller's chain.
+---
+name: multipred_above_cmpmbb
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: multipred_above_cmpmbb
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[IMUL32rr_NF:%[0-9]+]]:gr32 = nuw nsw IMUL32rr_NF [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   JCC_1 %bb.1, 5, implicit undef $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $al = SETCCr 15, implicit $eflags
+  ; CHECK-NEXT:   RET 0, $al
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    %2:gr32 = nuw nsw IMUL32rr %0, %1, implicit-def dead $eflags
+    JCC_1 %bb.1, 5, implicit undef $eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    JMP_1 %bb.3
+
+  bb.3:
+    CMP32ri %0, 2, implicit-def $eflags
+    $al = SETCCr 15, implicit $eflags
+    RET 0, $al
+...
+
+# Three-block cycle bb.2 (CmpMBB) -> bb.3 -> bb.1 (MultiPredMBB) -> bb.2.
+# Exercises the below-CmpInstr scan when MultiPredMBB is a distinct block on
+# the cycle.
+---
+name: threeblock_cycle_shadow_below
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: threeblock_cycle_shadow_below
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   CMP32ri [[COPY1]], 5, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.4, 5, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   liveins: $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $al = SETCCr 15, implicit $eflags
+  ; CHECK-NEXT:   RET 0, $al
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    JMP_1 %bb.2
+
+  bb.2:
+    CMP32ri %0, 2, implicit-def $eflags
+    CMP32ri %1, 5, implicit-def $eflags
+    JCC_1 %bb.4, 5, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.3:
+    JMP_1 %bb.1
+
+  bb.4:
+    liveins: $eflags
+    $al = SETCCr 15, implicit $eflags
+    RET 0, $al
+...
+
+# Self-loop where the below-CmpInstr region holds 7 NF-convertible dead clobbers,
+# exceeding the default MaxNFConversions cap of 6. The below-scan declines
+# staging and the redundant compare is kept. Exercises the cap-bail branch of
+# the below-scan.
+---
+name: selfloop_nfconvertible_below_cap
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: selfloop_nfconvertible_below_cap
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $edi, $esi
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $esi
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 2, implicit-def $eflags
+  ; CHECK-NEXT:   [[IMUL32rr:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[COPY]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr1:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr2:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr1]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr3:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr2]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr4:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr3]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr5:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr4]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[IMUL32rr6:%[0-9]+]]:gr32 = nuw nsw IMUL32rr [[IMUL32rr5]], [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  bb.0:
+    liveins: $edi, $esi
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY $esi
+    CMP32ri %0, 2, implicit-def $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    CMP32ri %0, 2, implicit-def $eflags
+    %2:gr32 = nuw nsw IMUL32rr %0, %1, implicit-def dead $eflags
+    %3:gr32 = nuw nsw IMUL32rr %2, %1, implicit-def dead $eflags
+    %4:gr32 = nuw nsw IMUL32rr %3, %1, implicit-def dead $eflags
+    %5:gr32 = nuw nsw IMUL32rr %4, %1, implicit-def dead $eflags
+    %6:gr32 = nuw nsw IMUL32rr %5, %1, implicit-def dead $eflags
+    %7:gr32 = nuw nsw IMUL32rr %6, %1, implicit-def dead $eflags
+    %8:gr32 = nuw nsw IMUL32rr %7, %1, implicit-def dead $eflags
+    JMP_1 %bb.1
+...

@@ -324,6 +324,8 @@ class ScriptedProcesTestCase(TestBase):
         )
         self.assertEqual(post_launch_frame.thread.GetThreadID(), tid)
 
+    # No dylib on Windows.
+    @skipIfWindows
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
     def test_scripted_process_addressable_bits(self):
         """Test that the addressable bits a scripted process reports are in
