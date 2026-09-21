@@ -164,8 +164,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPTrunc) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite | fcNegZero, Known.getKnownFPClasses());
-  EXPECT_EQ(std::nullopt, Known.getSignBit());
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPTrunc) {
@@ -190,8 +190,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPTrunc) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite | fcNegZero, Known.getKnownFPClasses());
-  EXPECT_EQ(std::nullopt, Known.getSignBit());
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectPos0) {
