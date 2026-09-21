@@ -181,17 +181,17 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
       BoolType        // Do we need to call memmove
   );
 
-  TysanInstrumentWithShadowUpdate = M.getOrInsertFunction(
-      "__tysan_instrument_with_shadow_update",
-      Attr.maybeAddParamAttribute(C, 2, BoolExtAttr)
-          .maybeAddParamAttribute(C, 4, SExtAttr),
-      IRB.getVoidTy(),
-      IRB.getPtrTy(), // Pointer to data to be read
-      IRB.getPtrTy(), // Pointer to type descriptor
-      BoolType,       // Do we need to type check this
-      U64Ty,          // Size of data we access in bytes
-      OrdTy           // Flags
-  );
+  TysanInstrumentWithShadowUpdate =
+      M.getOrInsertFunction("__tysan_instrument_with_shadow_update",
+                            Attr.maybeAddParamAttribute(C, 2, BoolExtAttr)
+                                .maybeAddParamAttribute(C, 4, SExtAttr),
+                            IRB.getVoidTy(),
+                            IRB.getPtrTy(), // Pointer to data to be read
+                            IRB.getPtrTy(), // Pointer to type descriptor
+                            BoolType,       // Do we need to type check this
+                            U64Ty,          // Size of data we access in bytes
+                            OrdTy           // Flags
+      );
 
   TysanSetShadowType = M.getOrInsertFunction(
       "__tysan_set_shadow_type", Attr, IRB.getVoidTy(),
