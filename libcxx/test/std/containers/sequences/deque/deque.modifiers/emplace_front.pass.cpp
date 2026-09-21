@@ -23,8 +23,10 @@
 #include "min_allocator.h"
 #include "test_allocator.h"
 
+// TODO: Investigate how to run heavy tests() during constant evaluation.
+
 template <class C>
-TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
+/*TEST_CONSTEXPR_CXX26*/ C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -43,7 +45,7 @@ TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
 }
 
 template <class C>
-TEST_CONSTEXPR_CXX26 void test(C& c1) {
+/*TEST_CONSTEXPR_CXX26*/ void test(C& c1) {
   typedef typename C::iterator I;
   std::size_t c1_osize = c1.size();
 #if TEST_STD_VER > 14
@@ -63,12 +65,12 @@ TEST_CONSTEXPR_CXX26 void test(C& c1) {
 }
 
 template <class C>
-TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
+/*TEST_CONSTEXPR_CXX26*/ void testN(int start, int N) {
   C c1 = make<C>(N, start);
   test(c1);
 }
 
-TEST_CONSTEXPR_CXX26 bool tests() {
+/*TEST_CONSTEXPR_CXX26*/ bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

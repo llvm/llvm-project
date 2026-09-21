@@ -21,12 +21,14 @@
 #include "../../insert_range_sequence_containers.h"
 #include "test_macros.h"
 
+// TODO: Investigate how to run heavy test() during constant evaluation.
+
 // Tested cases:
 // - different kinds of insertions (inserting an {empty/one-element/mid-sized/long range} into an
 //   {empty/one-element/full} container at the {beginning/middle/end});
 // - inserting move-only elements;
 // - an exception is thrown when copying the elements or when allocating new elements.
-TEST_CONSTEXPR_CXX26 bool test() {
+/*TEST_CONSTEXPR_CXX26*/ bool test() {
   static_assert(test_constraints_insert_range<std::deque, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {

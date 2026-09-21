@@ -13,6 +13,8 @@
 //  Erasing items from the beginning or the end of a deque shall not invalidate iterators
 //  to items that were not erased.
 
+// TODO: Investigate how to run more test cases during constant evaluation.
+
 #include "asan_testing.h"
 #include <deque>
 #include <cassert>

@@ -19,8 +19,10 @@
 #include "min_allocator.h"
 #include "test_macros.h"
 
+// TODO: Investigate how to run heavy test() during constant evaluation.
+
 template <class C>
-TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
+/*TEST_CONSTEXPR_CXX26*/ C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -39,7 +41,7 @@ TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
 }
 
 template <class C>
-TEST_CONSTEXPR_CXX26 void test(C& c1) {
+/*TEST_CONSTEXPR_CXX26*/ void test(C& c1) {
   C s = c1;
   c1.shrink_to_fit();
   assert(c1 == s);
@@ -47,12 +49,12 @@ TEST_CONSTEXPR_CXX26 void test(C& c1) {
 }
 
 template <class C>
-TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
+/*TEST_CONSTEXPR_CXX26*/ void testN(int start, int N) {
   C c1 = make<C>(N, start);
   test(c1);
 }
 
-TEST_CONSTEXPR_CXX26 bool test() {
+/*TEST_CONSTEXPR_CXX26*/ bool test() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

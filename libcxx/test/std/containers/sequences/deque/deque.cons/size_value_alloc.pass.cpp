@@ -18,8 +18,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+// TODO: Investigate how to run heavy test() during constant evaluation.
+
 template <class T, class Allocator>
-TEST_CONSTEXPR_CXX26 void test(unsigned n, const T& x, const Allocator& a) {
+/*TEST_CONSTEXPR_CXX26*/ void test(unsigned n, const T& x, const Allocator& a) {
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
   C d(n, x, a);
@@ -31,7 +33,7 @@ TEST_CONSTEXPR_CXX26 void test(unsigned n, const T& x, const Allocator& a) {
     assert(*i == x);
 }
 
-TEST_CONSTEXPR_CXX26 bool tests() {
+/*TEST_CONSTEXPR_CXX26*/ bool tests() {
   {
     std::allocator<int> a;
     test(0, 5, a);

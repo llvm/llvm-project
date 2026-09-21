@@ -22,6 +22,8 @@
 #include "min_allocator.h"
 #include "test_macros.h"
 
+// TODO: Investigate how to run heavy tests() during constant evaluation.
+
 #ifndef TEST_HAS_NO_EXCEPTIONS
 struct Throws {
   Throws() : v_(0) {}
@@ -51,7 +53,7 @@ bool Throws::sThrows = false;
 #endif
 
 template <class C>
-TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
+/*TEST_CONSTEXPR_CXX26*/ C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -70,7 +72,7 @@ TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
 }
 
 template <class C>
-TEST_CONSTEXPR_CXX26 void test(int P, C& c1, int size) {
+/*TEST_CONSTEXPR_CXX26*/ void test(int P, C& c1, int size) {
   typedef typename C::iterator I;
   assert(static_cast<std::size_t>(P + size) <= c1.size());
   std::size_t c1_osize = c1.size();
@@ -88,7 +90,7 @@ TEST_CONSTEXPR_CXX26 void test(int P, C& c1, int size) {
 }
 
 template <class C>
-TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
+/*TEST_CONSTEXPR_CXX26*/ void testN(int start, int N) {
   int pstep = std::max(N / std::max(std::min(N, 10), 1), 1);
   for (int p = 0; p <= N; p += pstep) {
     int sstep = std::max((N - p) / std::max(std::min(N - p, 10), 1), 1);
@@ -99,7 +101,7 @@ TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   }
 }
 
-TEST_CONSTEXPR_CXX26 bool tests() {
+/*TEST_CONSTEXPR_CXX26*/ bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

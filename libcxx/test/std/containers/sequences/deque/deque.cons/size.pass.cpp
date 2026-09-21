@@ -23,8 +23,10 @@
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
+// TODO: Investigate how to run heavy tests() during constant evaluation.
+
 template <class T, class Allocator>
-TEST_CONSTEXPR_CXX26 void test2(unsigned n) {
+/*TEST_CONSTEXPR_CXX26*/ void test2(unsigned n) {
 #if TEST_STD_VER >= 11
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
@@ -48,7 +50,7 @@ TEST_CONSTEXPR_CXX26 void test2(unsigned n) {
 }
 
 template <class T, class Allocator>
-TEST_CONSTEXPR_CXX26 void test1(unsigned n) {
+/*TEST_CONSTEXPR_CXX26*/ void test1(unsigned n) {
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
   if (!TEST_IS_CONSTANT_EVALUATED)
@@ -70,7 +72,7 @@ TEST_CONSTEXPR_CXX26 void test1(unsigned n) {
 }
 
 template <class T, class Allocator>
-TEST_CONSTEXPR_CXX26 void test3(unsigned n, Allocator const& alloc = Allocator()) {
+/*TEST_CONSTEXPR_CXX26*/ void test3(unsigned n, Allocator const& alloc = Allocator()) {
 #if TEST_STD_VER >= 11
   typedef std::deque<T, Allocator> C;
   {
@@ -86,12 +88,12 @@ TEST_CONSTEXPR_CXX26 void test3(unsigned n, Allocator const& alloc = Allocator()
 }
 
 template <class T, class Allocator>
-TEST_CONSTEXPR_CXX26 void test(unsigned n) {
+/*TEST_CONSTEXPR_CXX26*/ void test(unsigned n) {
   test1<T, Allocator>(n);
   test2<T, Allocator>(n);
 }
 
-TEST_CONSTEXPR_CXX26 bool tests() {
+/*TEST_CONSTEXPR_CXX26*/ bool tests() {
   test<DefaultOnly, std::allocator<DefaultOnly> >(0);
   test<DefaultOnly, std::allocator<DefaultOnly> >(1);
   test<DefaultOnly, std::allocator<DefaultOnly> >(10);
