@@ -118,13 +118,13 @@ private:
   bool AllocateInterpreterStackFrame(DiagnosticManager &diagnostic_manager,
                                      Target &target, Process *process);
 
-  // Prepare the struct holding the expression arguments.
-  //
-  // Materialize expression arguments into the argument struct
-  // (m_materialized_address).
-  //
-  // This method allocates the struct on first call, and reuses the original
-  // allocation on subsequent calls.
+  /// Prepare the struct holding the expression arguments.
+  ///
+  /// Materialize expression arguments into the argument struct
+  /// (m_materialized_address).
+  ///
+  /// This method allocates the struct on first call, and reuses the original
+  /// allocation on subsequent calls.
   bool PrepareArgumentStruct(DiagnosticManager &diagnostic_manager,
                              lldb::StackFrameSP &frame,
                              lldb::addr_t &struct_address);
