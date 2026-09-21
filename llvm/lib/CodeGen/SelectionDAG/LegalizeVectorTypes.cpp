@@ -2295,6 +2295,9 @@ void DAGTypeLegalizer::SplitVecRes_INSERT_VECTOR_ELT(SDNode *N, SDValue &Lo,
     }
   }
 
+  // Freeze the index, as clamping a poison index would be meaningless.
+  Idx = DAG.getFreeze(Idx);
+
   // Make the vector elements byte-addressable if they aren't already.
   EVT VecVT = Vec.getValueType();
   EVT EltVT = VecVT.getVectorElementType();
@@ -4357,6 +4360,9 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   // See if the target wants to custom expand this node.
   if (CustomLowerNode(N, N->getValueType(0), true))
     return SDValue();
+
+  // Freeze the index, as clamping a poison index would be meaningless.
+  Idx = DAG.getFreeze(Idx);
 
   // Make the vector elements byte-addressable if they aren't already.
   SDLoc dl(N);

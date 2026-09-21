@@ -25358,6 +25358,9 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
           if (!IsByteSized && Elmnt.getValueType().bitsLT(EltVT))
             Elmnt = DAG.getNode(ISD::ANY_EXTEND, DL, EltVT, Elmnt);
 
+          // Freeze the index, as clamping a poison index would be meaningless.
+          Index = DAG.getFreeze(Index);
+
           // Store the new element. This may be larger than the vector element
           // type, so use a truncating store.
           SDValue EltPtr =

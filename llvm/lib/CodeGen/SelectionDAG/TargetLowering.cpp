@@ -14284,6 +14284,9 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
       !IsFast)
     return SDValue();
 
+  // Freeze EltNo, as clamping a poison index would be meaningless.
+  EltNo = DAG.getFreeze(EltNo);
+
   // The original DAG loaded the entire vector from memory, so arithmetic
   // within it must be inbounds.
   SDValue NewPtr = getInboundsVectorElementPointer(
