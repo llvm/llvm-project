@@ -215,12 +215,12 @@ class SROA {
   /// queue.
   SmallSetVector<PHINode *, 8> SpeculatablePHIs;
 
-  /// A worklist of stores through PHIs to predicate onto the incoming edges.
+  /// A worklist of PHIs whose stores should be predicated onto incoming edges.
   ///
-  /// All of these stores have been checked so that rewriting them will allow
-  /// the corresponding allocas to be promoted. Edges which require splitting
-  /// are only present when CFG modification is allowed.
-  SmallMapVector<PHINode *, StoreInst *, 8> PHIStoresToRewrite;
+  /// All of these PHIs have been checked so that rewriting their stores will
+  /// allow the corresponding allocas to be promoted. Edges which require
+  /// splitting are only present when CFG modification is allowed.
+  SmallSetVector<PHINode *, 8> PHIsWithStoreToRewrite;
 
   /// A worklist of select instructions to rewrite prior to promoting
   /// allocas.
@@ -1781,7 +1781,7 @@ static bool rewritePHINodeStore(PHINode &PN, StoreInst &SI, DomTreeUpdater &DTU,
     Value *InVal = PN.getIncomingValue(Idx);
     IncomingValues.emplace_back(Pred, InVal);
 
-    // Revisit every alloca exposed by removing the pointer PHI,
+    // Revisit every alloca exposed by removing the pointer PHI.
     if (auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(InVal)))
       Worklist.insert(AI);
   }
@@ -5737,15 +5737,14 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   // Now that we've processed all the slices in the new partition, check if any
   // PHIs or Selects would block promotion.
   SmallVector<PHINode *, 8> NewSpeculatablePHIs;
-  SmallVector<std::pair<PHINode *, StoreInst *>, 2> NewPHIStoresToRewrite;
+  SmallVector<PHINode *, 2> NewPHIsWithStoreToRewrite;
   for (PHINode *PHI : PHIUsers) {
     if (isSafePHIToSpeculate(*PHI)) {
       NewSpeculatablePHIs.push_back(PHI);
       continue;
     }
-    if (StoreInst *SI =
-            getPHIStoreToRewrite(*PHI, PreserveCFG, DTU->getDomTree())) {
-      NewPHIStoresToRewrite.emplace_back(PHI, SI);
+    if (getPHIStoreToRewrite(*PHI, PreserveCFG, DTU->getDomTree())) {
+      NewPHIsWithStoreToRewrite.push_back(PHI);
       continue;
     }
 
@@ -5775,7 +5774,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
         if (isInstructionTriviallyDead(OldInst))
           DeadInsts.push_back(OldInst);
     }
-    if (NewSpeculatablePHIs.empty() && NewPHIStoresToRewrite.empty() &&
+    if (NewSpeculatablePHIs.empty() && NewPHIsWithStoreToRewrite.empty() &&
         SelectUsers.empty()) {
       // Promote the alloca.
       PromotableAllocas.insert(NewAI);
@@ -5784,10 +5783,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
       // worklists and re-queue the new alloca so that we promote it on the next
       // iteration.
       SpeculatablePHIs.insert_range(NewSpeculatablePHIs);
-      PHIStoresToRewrite.reserve(PHIStoresToRewrite.size() +
-                                 NewPHIStoresToRewrite.size());
-      for (auto [PN, SI] : NewPHIStoresToRewrite)
-        PHIStoresToRewrite.insert({PN, SI});
+      PHIsWithStoreToRewrite.insert_range(NewPHIsWithStoreToRewrite);
       SelectsToRewrite.reserve(SelectsToRewrite.size() +
                                NewSelectsToRewrite.size());
       for (auto &&KV : llvm::make_range(
@@ -6349,9 +6345,10 @@ SROA::runOnAlloca(AllocaInst &AI) {
     speculatePHINodeLoads(IRB, *SpeculatablePHIs.pop_back_val());
 
   LLVM_DEBUG(dbgs() << "  Rewriting stores through PHIs\n");
-  auto RemainingPHIStoresToRewrite = PHIStoresToRewrite.takeVector();
-  while (!RemainingPHIStoresToRewrite.empty()) {
-    const auto [PN, SI] = RemainingPHIStoresToRewrite.pop_back_val();
+  auto RemainingPHIsWithStoreToRewrite = PHIsWithStoreToRewrite.takeVector();
+  while (!RemainingPHIsWithStoreToRewrite.empty()) {
+    PHINode *PN = RemainingPHIsWithStoreToRewrite.pop_back_val();
+    auto *SI = cast<StoreInst>(PN->user_back());
     CFGChanged |= rewritePHINodeStore(*PN, *SI, *DTU, Worklist);
   }
 
