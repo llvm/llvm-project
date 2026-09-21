@@ -139,6 +139,10 @@ def ptr_rc_tailcall : RegClassByHwMode<
   [X86_32, X86_64, X86_64_X32],
   [GR32_TC, GR64_TC, GR64_TC]>;
 
+def ptr_rc_tc_or_tcw64 : RegClassByHwMode<
+  [X86_32, X86_64, X86_64_X32],
+  [GR32_TC, GR64_TC_or_TCW64, GR64_TC_or_TCW64]>;
+
 // Special i32mem for addresses of load folding tail calls. These are not
 // allowed to use callee-saved registers since they must be scheduled
 // after callee-saved register are popped.
@@ -153,6 +157,11 @@ def i32mem_TC : X86MemOperand<"printdwordmem", X86Mem32AsmOperand, 32> {
 def i64mem_TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
   let MIOperandInfo = (ops ptr_rc_tailcall, i8imm,
                        ptr_rc_tailcall, i32imm, SEGMENT_REG);
+}
+
+def i64mem_TC_or_w64TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
+  let MIOperandInfo = (ops ptr_rc_tc_or_tcw64, i8imm,
+                       ptr_rc_tc_or_tcw64, i32imm, SEGMENT_REG);
 }
 
 def i64mem_w64TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
