@@ -2719,7 +2719,7 @@ Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
   if (Ty->isIntegerTy(8) && Idxs[0]->getType() == DL.getIndexType(C->getType()))
     return getPtrAdd(C, Idxs[0], NW, InRange, OnlyIfReducedTy);
 
-  // Some API's require an ArrayRef of Value * instead of Constant *.
+  // Some API require an ArrayRef of Value * instead of Constant *.
   ArrayRef<Value *> ValIdxs =
       ArrayRef((Value *const *)Idxs.data(), Idxs.size());
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
@@ -2741,7 +2741,7 @@ Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
       if (!Size)
         continue;
 
-      Offset = ConstantFoldBinaryInstruction(unsigned(Instruction::Add), Offset,
+      Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset,
                                              ConstantInt::get(IdxTy, Size));
       if (!Offset)
         return nullptr;
@@ -2773,14 +2773,12 @@ Constant *ConstantExpr::getGetElementPtr(const DataLayout &DL, Type *Ty,
     if (TySize != TypeSize::getFixed(1)) {
       Constant *Scale = ConstantInt::getSigned(IdxTy, TySize.getFixedValue(),
                                                /*ImplicitTrunc=*/true);
-      Idx =
-          ConstantFoldBinaryInstruction(unsigned(Instruction::Mul), Idx, Scale);
+      Idx = ConstantFoldBinaryInstruction(Instruction::Mul, Idx, Scale);
       if (!Idx)
         return nullptr;
     }
 
-    Offset =
-        ConstantFoldBinaryInstruction(unsigned(Instruction::Add), Offset, Idx);
+    Offset = ConstantFoldBinaryInstruction(Instruction::Add, Offset, Idx);
     if (!Offset)
       return nullptr;
   }
