@@ -2485,7 +2485,7 @@ class BinaryOperator(BaseEnumeration):
 
 
 class UnaryOperator(BaseEnumeration):
-    """A UnaryOperator describes an expression's of unary operator kind."""
+    """Describes the kind of unary operators."""
 
     def __bool__(self):
         """Indicates whether this object is a valid UnaryOperator."""
