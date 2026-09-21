@@ -1752,3 +1752,11 @@ bool clang::checkOffloadBundleID(const llvm::StringRef Str) {
   Str.split(Components, '-', /*MaxSplit=*/5);
   return Components.size() == 5 || Components.size() == 6;
 }
+
+std::string clang::normalizeForBundler(const llvm::Triple &T,
+                                       bool HasTargetID) {
+  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
+                        T.getOSName() + "-" + T.getEnvironmentName())
+                           .str()
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+}

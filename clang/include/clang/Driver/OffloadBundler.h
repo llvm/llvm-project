@@ -96,6 +96,14 @@ struct OffloadTargetInfo {
 /// <kind>-<triple>[-<target id>[:target features]]
 /// <triple> := <arch>-<vendor>-<os>-<env>
 bool checkOffloadBundleID(const llvm::StringRef Str);
+
+/// Construct the normalized triple string used inside an offload bundle entry
+/// ID for device triple \p T. When \p HasTargetID is true the four triple
+/// components are kept verbatim (an explicit target ID will be appended by the
+/// caller); otherwise the triple is normalized to its canonical
+/// four-identifier form. Shared by the HIP toolchain and clang-repl device
+/// offloading so both agree on the bundle target-name policy.
+std::string normalizeForBundler(const llvm::Triple &T, bool HasTargetID);
 } // namespace clang
 
 #endif // LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H
