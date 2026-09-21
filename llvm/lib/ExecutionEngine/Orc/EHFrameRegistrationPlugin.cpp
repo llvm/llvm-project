@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
@@ -24,11 +25,12 @@ EHFrameRegistrationPlugin::Create(ExecutionSession &ES) {
   // bootstrap map.
   ExecutorAddr RegisterEHFrameSectionAllocAction;
   ExecutorAddr DeregisterEHFrameSectionAllocAction;
-  if (auto Err = ES.getExecutorProcessControl().getBootstrapSymbols(
-          {{RegisterEHFrameSectionAllocAction,
-            rt::RegisterEHFrameSectionAllocActionName},
-           {DeregisterEHFrameSectionAllocAction,
-            rt::DeregisterEHFrameSectionAllocActionName}}))
+  if (auto Err = lookupAndApply(
+          ES.getBootstrapJITDylib(),
+          {recordAddr(rt::RegisterEHFrameSectionAllocActionName,
+                      &RegisterEHFrameSectionAllocAction),
+           recordAddr(rt::DeregisterEHFrameSectionAllocActionName,
+                      &DeregisterEHFrameSectionAllocAction)}))
     return std::move(Err);
 
   return std::make_unique<EHFrameRegistrationPlugin>(

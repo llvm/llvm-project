@@ -721,7 +721,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
       switch (llvm::omp::getDirectiveAssociation(dirId)) {
       case llvm::omp::Association::Block:
       case llvm::omp::Association::LoopNest:
-      case llvm::omp::Association::LoopSeq:
+      case llvm::omp::Association::LoopSequence:
         break;
       default:
         if (dirId != llvm::omp::Directive::OMPD_nothing) {
@@ -875,7 +875,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
       } else {
         CheckRectangularNest(*spec, sequence);
       }
-    } else if (assoc == llvm::omp::Association::LoopSeq) {
+    } else if (assoc == llvm::omp::Association::LoopSequence) {
       (void)checkRootLoopCanonical(*spec, /*isSequence=*/true);
     }
   }
@@ -909,7 +909,7 @@ void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
     if (assoc == llvm::omp::Association::LoopNest) {
       context_.Say(
           variant.spec->DirName().source, MsgShouldContainDoOr, "nest");
-    } else if (assoc == llvm::omp::Association::LoopSeq) {
+    } else if (assoc == llvm::omp::Association::LoopSequence) {
       context_.Say(
           variant.spec->DirName().source, MsgShouldContainDoOr, "sequence");
     }

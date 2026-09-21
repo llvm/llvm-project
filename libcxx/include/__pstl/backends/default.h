@@ -29,6 +29,7 @@
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__memory/uninitialized_algorithms.h>
 #include <__optional/comparison.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
@@ -150,6 +151,14 @@ namespace __pstl {
 // - replace_copy_if
 // - reverse_copy
 // - rotate_copy
+//
+// uninitialized_copy family
+// -------------------------------------
+// - uninitialized_copy_n
+//
+// uninitialized_move family
+// -------------------------------------
+// - uninitialized_move_n
 //
 
 //////////////////////////////////////////////////////////////
@@ -903,6 +912,49 @@ struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
         std::move(__first1),
         std::move(__result),
         std::forward<_BinaryOperation>(__op));
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// uninitialized_copy family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __uninitialized_copy_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _Size, class _ForwardIterator>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) const noexcept {
+    if constexpr (__has_random_access_iterator_category_or_concept<_InputIterator>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      using _UninitializedCopy = __dispatch<__uninitialized_copy, __current_configuration, _ExecutionPolicy>;
+      _InputIterator __last    = __first + __n;
+      return _UninitializedCopy()(__policy, std::move(__first), std::move(__last), std::move(__result));
+    } else {
+      return std::uninitialized_copy_n(std::move(__first), __n, std::move(__result));
+    }
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// uninitialized_move family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __uninitialized_move_n<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _InputIterator, class _Size, class _ForwardIterator>
+  optional<pair<_InputIterator, _ForwardIterator>>
+  operator()(_Policy&& __policy, _InputIterator __first, _Size __n, _ForwardIterator __result) const noexcept {
+    if constexpr (__has_random_access_iterator_category_or_concept<_InputIterator>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      using _UninitializedMove = __dispatch<__uninitialized_move, __current_configuration, _ExecutionPolicy>;
+      _InputIterator __last    = __first + __n;
+      auto __res               = _UninitializedMove()(__policy, std::move(__first), __last, std::move(__result));
+      if (!__res)
+        return nullopt; // Failed to run the parallel algorithm, propagate the failure
+      return pair{__last, *__res};
+    } else {
+      return std::uninitialized_move_n(std::move(__first), __n, std::move(__result));
+    }
   }
 };
 
