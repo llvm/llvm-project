@@ -199,3 +199,13 @@ template<int*> struct P;
 S<P> s;
 } // namespace GH202117
 
+namespace test17 {
+struct A { int arr[1]; };
+struct B {
+  static constexpr A &a = A{{0}}; // expected-error {{non-const lvalue reference to type 'A' cannot bind to a temporary of type 'A'}}
+};
+
+B x;
+
+int v = x.a.arr[0]; // Do not crash when evaluating a static reference with an invalid initializer.
+} // namespace test17
