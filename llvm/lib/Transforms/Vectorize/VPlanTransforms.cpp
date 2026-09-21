@@ -3194,10 +3194,9 @@ static bool handleUncountableExitsWithSideEffects(
 
   VPValue *Cond = getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
   if (!Cond) {
-    reportVectorizationFailure(
-        "Unable to determine early exit condition for loop with side effects.\n",
-        "EarlyExitSideEffectsCond",
-        ORE, TheLoop);
+    reportVectorizationFailure("Unable to determine early exit condition for "
+                               "loop with side effects.\n",
+                               "EarlyExitSideEffectsCond", ORE, TheLoop);
     return false;
   }
 
@@ -3236,8 +3235,8 @@ static bool handleUncountableExitsWithSideEffects(
             &Predicates)) {
       reportVectorizationFailure("Early exit loop with side effects contains "
                                  "critical load that may fault.\n",
-                                 "EarlyExitSideEffectsFaultingLoad",
-                                 ORE, TheLoop);
+                                 "EarlyExitSideEffectsFaultingLoad", ORE,
+                                 TheLoop);
       return false;
     }
   }
@@ -3251,10 +3250,10 @@ static bool handleUncountableExitsWithSideEffects(
     return false;
   if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(
                       m_LiveIn(), m_Specific(IV)))) {
-    reportVectorizationFailure(
-        "Early exit loop with side effects contains unsupported critical load.\n",
-        "EarlyExitSideEffectsBadCriticalLoad",
-        ORE, TheLoop);
+    reportVectorizationFailure("Early exit loop with side effects contains "
+                               "unsupported critical load.\n",
+                               "EarlyExitSideEffectsBadCriticalLoad", ORE,
+                               TheLoop);
     return false;
   }
 
@@ -3289,10 +3288,10 @@ static bool handleUncountableExitsWithSideEffects(
       if (R.mayReadOrWriteMemory() && &R != Load) {
         // TODO: Handle conditional memory operations in the loop.
         if (!VPDT.dominates(R.getParent(), LatchVPBB)) {
-          reportVectorizationFailure("Early exit loop with side effects "
-                                     "contains unsupported memory operations.\n",
-                                     "EarlyExitSideEffectsUnsupportedMemOps",
-                                     ORE, TheLoop);
+          reportVectorizationFailure(
+              "Early exit loop with side effects "
+              "contains unsupported memory operations.\n",
+              "EarlyExitSideEffectsUnsupportedMemOps", ORE, TheLoop);
           return false;
         }
         cast<VPInstruction>(&R)->addMask(Mask);
@@ -3320,8 +3319,7 @@ static bool handleUncountableExitsWithSideEffects(
   if (range_size(Phis) != 1) {
     reportVectorizationFailure("Early exit loop with side effects contains "
                                "unsupported reductions or recurrences.\n",
-                               "EarlyExitEffectsSideReductions",
-                               ORE, TheLoop);
+                               "EarlyExitEffectsSideReductions", ORE, TheLoop);
     return false;
   }
   VPPhi *ContinueIV = cast<VPPhi>(Phis.begin());
