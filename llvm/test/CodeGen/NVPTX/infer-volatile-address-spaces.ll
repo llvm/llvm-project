@@ -24,17 +24,19 @@ define i32 @volatile_cluster(ptr addrspace(7) %p) {
   ret i32 %value
 }
 
-; FIXME: Before PTX 9.1, keep local volatile accesses in generic space.
+; Before PTX 9.1, keep local volatile accesses in generic space. PTX 9.1 can
+; refine them to local space while preserving the volatile qualifier.
 define i32 @volatile_local(ptr addrspace(5) %p) {
 ; PTX90-LABEL: volatile_local(
 ; PTX90:       {
 ; PTX90-NEXT:    .reg .b32 %r<2>;
-; PTX90-NEXT:    .reg .b64 %rd<2>;
+; PTX90-NEXT:    .reg .b64 %rd<3>;
 ; PTX90-EMPTY:
 ; PTX90-NEXT:  // %bb.0:
 ; PTX90-NEXT:    ld.param::func.b64 %rd1, [volatile_local_param_0];
-; PTX90-NEXT:    ld.local.b32 %r1, [%rd1];
-; PTX90-NEXT:    st.local.b32 [%rd1], %r1;
+; PTX90-NEXT:    cvta.local.u64 %rd2, %rd1;
+; PTX90-NEXT:    ld.volatile.b32 %r1, [%rd2];
+; PTX90-NEXT:    st.volatile.b32 [%rd2], %r1;
 ; PTX90-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; PTX90-NEXT:    ret;
 ;

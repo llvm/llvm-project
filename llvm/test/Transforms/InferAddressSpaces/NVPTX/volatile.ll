@@ -43,14 +43,21 @@ define i32 @volatile_cluster(ptr addrspace(7) %p) {
   ret i32 %value
 }
 
-; FIXME: Keep volatile accesses generic when the destination space does not
-; support them. Local space requires PTX 9.1; constant space has no volatile form.
+; Keep volatile accesses generic when the destination space does not support
+; them. Local space requires PTX 9.1; constant space has no volatile form.
 define i32 @volatile_local(ptr addrspace(5) %p) {
-; CHECK-LABEL: define i32 @volatile_local(
-; CHECK-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr addrspace(5) [[P]], align 4
-; CHECK-NEXT:    store volatile i32 [[VALUE]], ptr addrspace(5) [[P]], align 4
-; CHECK-NEXT:    ret i32 [[VALUE]]
+; PTX90-LABEL: define i32 @volatile_local(
+; PTX90-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
+; PTX90-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
+; PTX90-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr [[GENERIC]], align 4
+; PTX90-NEXT:    store volatile i32 [[VALUE]], ptr [[GENERIC]], align 4
+; PTX90-NEXT:    ret i32 [[VALUE]]
+;
+; PTX91-LABEL: define i32 @volatile_local(
+; PTX91-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
+; PTX91-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr addrspace(5) [[P]], align 4
+; PTX91-NEXT:    store volatile i32 [[VALUE]], ptr addrspace(5) [[P]], align 4
+; PTX91-NEXT:    ret i32 [[VALUE]]
 ;
   %generic = addrspacecast ptr addrspace(5) %p to ptr
   %value = load volatile i32, ptr %generic, align 4
@@ -61,7 +68,8 @@ define i32 @volatile_local(ptr addrspace(5) %p) {
 define i32 @volatile_constant(ptr addrspace(4) %p) {
 ; CHECK-LABEL: define i32 @volatile_constant(
 ; CHECK-SAME: ptr addrspace(4) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr addrspace(4) [[P]], align 4
+; CHECK-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(4) [[P]] to ptr
+; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr [[GENERIC]], align 4
 ; CHECK-NEXT:    ret i32 [[VALUE]]
 ;
   %generic = addrspacecast ptr addrspace(4) %p to ptr
@@ -71,13 +79,22 @@ define i32 @volatile_constant(ptr addrspace(4) %p) {
 
 ; Exercise volatile and nonvolatile users of the same local pointer.
 define i32 @mixed_local(ptr addrspace(5) %p) {
-; CHECK-LABEL: define i32 @mixed_local(
-; CHECK-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[VOLATILE:%.*]] = load volatile i32, ptr addrspace(5) [[P]], align 4
-; CHECK-NEXT:    [[ORDINARY:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
-; CHECK-NEXT:    store volatile i32 [[ORDINARY]], ptr addrspace(5) [[P]], align 4
-; CHECK-NEXT:    store i32 [[VOLATILE]], ptr addrspace(5) [[P]], align 4
-; CHECK-NEXT:    ret i32 [[ORDINARY]]
+; PTX90-LABEL: define i32 @mixed_local(
+; PTX90-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
+; PTX90-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
+; PTX90-NEXT:    [[VOLATILE:%.*]] = load volatile i32, ptr [[GENERIC]], align 4
+; PTX90-NEXT:    [[ORDINARY:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; PTX90-NEXT:    store volatile i32 [[ORDINARY]], ptr [[GENERIC]], align 4
+; PTX90-NEXT:    store i32 [[VOLATILE]], ptr addrspace(5) [[P]], align 4
+; PTX90-NEXT:    ret i32 [[ORDINARY]]
+;
+; PTX91-LABEL: define i32 @mixed_local(
+; PTX91-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
+; PTX91-NEXT:    [[VOLATILE:%.*]] = load volatile i32, ptr addrspace(5) [[P]], align 4
+; PTX91-NEXT:    [[ORDINARY:%.*]] = load i32, ptr addrspace(5) [[P]], align 4
+; PTX91-NEXT:    store volatile i32 [[ORDINARY]], ptr addrspace(5) [[P]], align 4
+; PTX91-NEXT:    store i32 [[VOLATILE]], ptr addrspace(5) [[P]], align 4
+; PTX91-NEXT:    ret i32 [[ORDINARY]]
 ;
   %generic = addrspacecast ptr addrspace(5) %p to ptr
   %volatile = load volatile i32, ptr %generic, align 4
@@ -89,11 +106,18 @@ define i32 @mixed_local(ptr addrspace(5) %p) {
 
 ; Local volatile support also applies to atomic loads and stores.
 define i32 @volatile_local_seq_cst(ptr addrspace(5) %p) {
-; CHECK-LABEL: define i32 @volatile_local_seq_cst(
-; CHECK-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[VALUE:%.*]] = load atomic volatile i32, ptr addrspace(5) [[P]] seq_cst, align 4
-; CHECK-NEXT:    store atomic volatile i32 [[VALUE]], ptr addrspace(5) [[P]] seq_cst, align 4
-; CHECK-NEXT:    ret i32 [[VALUE]]
+; PTX90-LABEL: define i32 @volatile_local_seq_cst(
+; PTX90-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
+; PTX90-NEXT:    [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
+; PTX90-NEXT:    [[VALUE:%.*]] = load atomic volatile i32, ptr [[GENERIC]] seq_cst, align 4
+; PTX90-NEXT:    store atomic volatile i32 [[VALUE]], ptr [[GENERIC]] seq_cst, align 4
+; PTX90-NEXT:    ret i32 [[VALUE]]
+;
+; PTX91-LABEL: define i32 @volatile_local_seq_cst(
+; PTX91-SAME: ptr addrspace(5) [[P:%.*]]) #[[ATTR0]] {
+; PTX91-NEXT:    [[VALUE:%.*]] = load atomic volatile i32, ptr addrspace(5) [[P]] seq_cst, align 4
+; PTX91-NEXT:    store atomic volatile i32 [[VALUE]], ptr addrspace(5) [[P]] seq_cst, align 4
+; PTX91-NEXT:    ret i32 [[VALUE]]
 ;
   %generic = addrspacecast ptr addrspace(5) %p to ptr
   %value = load atomic volatile i32, ptr %generic seq_cst, align 4
@@ -141,6 +165,3 @@ define { i32, i1 } @volatile_local_rmw(ptr addrspace(5) %p) {
   %result = cmpxchg volatile ptr %generic, i32 %old, i32 0 monotonic monotonic, align 4
   ret { i32, i1 } %result
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; PTX90: {{.*}}
-; PTX91: {{.*}}
