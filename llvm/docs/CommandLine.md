@@ -227,8 +227,8 @@ any of the following inputs:
 ```
 compiler -f          # No value, 'Force' == true
 compiler -f=true     # Value specified, 'Force' == true
-compiler -f=TRUE     # Value specified, 'Force' == true
-compiler -f=FALSE    # Value specified, 'Force' == false
+compiler -f=1        # Value specified, 'Force' == true
+compiler -f=false    # Value specified, 'Force' == false
 compiler -no-f       # Negated, 'Force' == false
 ```
 
@@ -1241,14 +1241,6 @@ specify boolean properties that modify the option.
   be applied to the "`-pos1`" option and the "`-bork`" string to be applied
   to the "`-pos2`" option.
 
-(cl::Sink)=
-
-* The **cl::Sink** modifier is used to handle unknown options. If there is at
-  least one option with `cl::Sink` modifier specified, the parser passes
-  unrecognized option strings to it as values instead of signaling an error. As
-  with `cl::CommaSeparated`, this modifier only makes sense with a {ref}`cl::list <cl::list>`
-  option.
-
 (response files)=
 
 #### Response files
@@ -1507,8 +1499,8 @@ work with new data types and new ways of interpreting the same data.  See the
 (bool parser)=
 
 * The **parser<bool> specialization** is used to convert boolean strings to a
-  boolean value.  Currently accepted strings are "`true`", "`TRUE`",
-  "`True`", "`1`", "`false`", "`FALSE`", "`False`", and "`0`".
+  boolean value.  Currently accepted strings are "`true`", "`1`",
+  "`false`", and "`0`".
 
 * The **parser<boolOrDefault> specialization** is used for cases where the value
   is boolean, but we also need to know whether the option was specified at all.

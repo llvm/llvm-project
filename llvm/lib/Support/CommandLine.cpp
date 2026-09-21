@@ -247,8 +247,6 @@ public:
     // Remember information about positional options.
     if (O->getFormattingFlag() == cl::Positional)
       SC->PositionalOpts.push_back(O);
-    else if (O->getMiscFlags() & cl::Sink) // Remember sink options
-      SC->SinkOpts.push_back(O);
     else if (O->getNumOccurrencesFlag() == cl::ConsumeAfter) {
       if (SC->ConsumeAfterOpt) {
         O->error("Cannot specify more than one option with cl::ConsumeAfter!");
@@ -293,13 +291,6 @@ public:
            Opt != Sub.PositionalOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.PositionalOpts.erase(Opt);
-          break;
-        }
-      }
-    else if (O->getMiscFlags() & cl::Sink)
-      for (auto *Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
-        if (*Opt == O) {
-          Sub.SinkOpts.erase(Opt);
           break;
         }
       }
@@ -375,8 +366,7 @@ public:
            "SubCommand::getAll() should not be registered");
     for (auto &E : SubCommand::getAll().OptionsMap) {
       Option *O = E.second;
-      if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
-          O->hasArgStr())
+      if (O->isPositional() || O->isConsumeAfter() || O->hasArgStr())
         addOption(O, sub);
       else
         addLiteralOption(*O, sub, E.first);
@@ -439,13 +429,14 @@ static CommandLineParser &globalParser() {
 
 template <typename T, T TrueVal, T FalseVal>
 static bool parseBool(Option &O, StringRef ArgName, StringRef Arg, T &Value) {
-  if (Arg == "" || Arg == "true" || Arg == "TRUE" || Arg == "True" ||
-      Arg == "1") {
+  // ProvideOption passes a null Arg for a bare -flag (treated as true) and an
+  // empty one for -flag= (treated as invalid).
+  if (!Arg.data() || Arg == "true" || Arg == "1") {
     Value = TrueVal;
     return false;
   }
 
-  if (Arg == "false" || Arg == "FALSE" || Arg == "False" || Arg == "0") {
+  if (Arg == "false" || Arg == "0") {
     Value = FalseVal;
     return false;
   }
@@ -532,7 +523,6 @@ void SubCommand::unregisterSubCommand() {
 
 void SubCommand::reset() {
   PositionalOpts.clear();
-  SinkOpts.clear();
   OptionsMap.clear();
 
   ConsumeAfterOpt = nullptr;
@@ -568,7 +558,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
     if (!Name.consume_front("no-"))
       return nullptr;
     Option *O = Sub.OptionsMap.lookup(Name);
-    if (!O || !O->isNegatable())
+    if (!O || !(O->getMiscFlags() & Negatable))
       return nullptr;
     Value = "false";
     return O;
@@ -1502,8 +1492,6 @@ void CommandLineParser::ResetAllOptionOccurrences() {
       O->reset();
     for (Option *O : SC->PositionalOpts)
       O->reset();
-    for (Option *O : SC->SinkOpts)
-      O->reset();
     if (SC->ConsumeAfterOpt)
       SC->ConsumeAfterOpt->reset();
   }
@@ -1565,7 +1553,6 @@ bool CommandLineParser::ParseCommandLineOptions(
   assert(ChosenSubCommand);
   auto &ConsumeAfterOpt = ChosenSubCommand->ConsumeAfterOpt;
   auto &PositionalOpts = ChosenSubCommand->PositionalOpts;
-  auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
 
   for (auto *O: DefaultOptions) {
@@ -1702,17 +1689,11 @@ bool CommandLineParser::ParseCommandLineOptions(
 
       // Otherwise, look for the closest available option to report to the user
       // in the upcoming error.
-      if (!Handler && SinkOpts.empty())
+      if (!Handler)
         LookupNearestOption(ArgName, OptionsMap, NearestHandlerString);
     }
 
     if (!Handler) {
-      if (!SinkOpts.empty()) {
-        for (Option *SinkOpt : SinkOpts)
-          SinkOpt->addOccurrence(i, "", StringRef(argv[i]));
-        continue;
-      }
-
       auto ReportUnknownArgument = [&](bool IsArg,
                                        StringRef NearestArgumentName) {
         *Errs << ProgramName << ": Unknown "

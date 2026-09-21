@@ -161,7 +161,8 @@ enum FormattingFlags {
 enum MiscFlags {             // Miscellaneous flags to adjust argument
   CommaSeparated = 0x01,     // Should this cl::list split between commas?
   PositionalEatsArgs = 0x02, // Should this positional cl::list eat -args?
-  Sink = 0x04,               // Should this cl::list eat all unknown options?
+  // -no-<name> sets the option to false. Set for boolean options.
+  Negatable = 0x04,
 
   // Can this option group with other options?
   // If this is enabled, multiple letter options are allowed to bunch together
@@ -229,7 +230,6 @@ public:
   StringRef getDescription() const { return Description; }
 
   SmallVector<Option *, 4> PositionalOpts;
-  SmallVector<Option *, 4> SinkOpts;
   DenseMap<StringRef, Option *> OptionsMap;
 
   Option *ConsumeAfterOpt = nullptr; // The ConsumeAfter option if it exists.
@@ -292,9 +292,6 @@ public:
     return Value ? ((enum ValueExpected)Value) : getValueExpectedFlagDefault();
   }
 
-  // Whether -no-<ArgStr> is accepted and sets the option to false.
-  virtual bool isNegatable() const { return false; }
-
   inline enum OptionHidden getOptionHiddenFlag() const {
     return (enum OptionHidden)HiddenFlag;
   }
@@ -309,7 +306,6 @@ public:
   // Return true if the argstr != ""
   bool hasArgStr() const { return !ArgStr.empty(); }
   bool isPositional() const { return getFormattingFlag() == cl::Positional; }
-  bool isSink() const { return getMiscFlags() & cl::Sink; }
   bool isDefaultOption() const { return getMiscFlags() & cl::DefaultOption; }
 
   bool isConsumeAfter() const {
@@ -1484,11 +1480,6 @@ class opt
     return Parser.getValueExpectedFlagDefault();
   }
 
-  bool isNegatable() const override {
-    return std::is_same_v<DataType, bool> ||
-           std::is_same_v<DataType, boolOrDefault>;
-  }
-
   void getExtraOptionNames(SmallVectorImpl<StringRef> &OptionNames) override {
     return Parser.getExtraOptionNames(OptionNames);
   }
@@ -1520,6 +1511,9 @@ class opt
   }
 
   void done() {
+    if constexpr (std::is_same_v<DataType, bool> ||
+                  std::is_same_v<DataType, boolOrDefault>)
+      setMiscFlag(Negatable);
     addArgument();
     Parser.initialize();
   }

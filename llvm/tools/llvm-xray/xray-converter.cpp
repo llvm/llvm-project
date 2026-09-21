@@ -57,15 +57,9 @@ static cl::opt<bool>
                      cl::init(false), cl::sub(Convert));
 static cl::alias ConvertSymbolize2("y", cl::aliasopt(ConvertSymbolize),
                                    cl::desc("Alias for -symbolize"));
-static cl::opt<bool>
-    NoDemangle("no-demangle",
-               cl::desc("determines whether to demangle function name "
-                        "when symbolizing function ids from the input log"),
-               cl::init(false), cl::sub(Convert));
-
 static cl::opt<bool> Demangle("demangle",
                               cl::desc("demangle symbols (default)"),
-                              cl::sub(Convert));
+                              cl::init(true), cl::sub(Convert));
 
 static cl::opt<std::string>
     ConvertInstrMap("instr_map",
@@ -380,8 +374,7 @@ static CommandRegistration Unused(&Convert, []() -> Error {
 
   const auto &FunctionAddresses = Map.getFunctionAddresses();
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
-  if (Demangle.getPosition() < NoDemangle.getPosition())
-    SymbolizerOpts.Demangle = false;
+  SymbolizerOpts.Demangle = Demangle;
   symbolize::LLVMSymbolizer Symbolizer(SymbolizerOpts);
   FuncIdConversionHelper FuncIdHelper(ConvertInstrMap, Symbolizer,
                                       FunctionAddresses);

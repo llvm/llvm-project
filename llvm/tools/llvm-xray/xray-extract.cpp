@@ -47,10 +47,7 @@ static cl::alias ExtractSymbolize2("s", cl::aliasopt(ExtractSymbolize),
                                    cl::desc("alias for -symbolize"));
 static cl::opt<bool> Demangle("demangle",
                               cl::desc("demangle symbols (default)"),
-                              cl::sub(Extract));
-static cl::opt<bool> NoDemangle("no-demangle",
-                                cl::desc("don't demangle symbols"),
-                                cl::sub(Extract));
+                              cl::init(true), cl::sub(Extract));
 
 static void exportAsYAML(const InstrumentationMap &Map, raw_ostream &OS,
                          FuncIdConversionHelper &FH) {
@@ -87,8 +84,7 @@ static CommandRegistration Unused(&Extract, []() -> Error {
   const auto &FunctionAddresses =
       InstrumentationMapOrError->getFunctionAddresses();
   symbolize::LLVMSymbolizer::Options opts;
-  if (Demangle.getPosition() < NoDemangle.getPosition())
-    opts.Demangle = false;
+  opts.Demangle = Demangle;
   symbolize::LLVMSymbolizer Symbolizer(opts);
   FuncIdConversionHelper FuncIdHelper(ExtractInput, Symbolizer,
                                       FunctionAddresses);
