@@ -104,28 +104,23 @@ void test(SBDebugger &dbg, std::vector<std::string> args) {
   // or the same deadlock will stall exiting:
   class Cleanup {
   public:
-    Cleanup(SBDebugger dbg, int filedes[2]) : m_dbg(dbg) {
+    Cleanup(SBDebugger dbg, FILE *read_end, FILE *write_end)
+        : m_dbg(dbg), m_read_end(read_end), m_write_end(write_end) {
       m_file = m_dbg.GetInputFileHandle();
-      m_filedes[0] = filedes[0];
-      m_filedes[1] = filedes[1];
     }
     ~Cleanup() {
+      fclose(m_write_end);
       m_dbg.SetInputFileHandle(m_file, false);
-#ifdef _WIN32
-      _close(m_filedes[0]);
-      _close(m_filedes[1]);
-#else
-      close(m_filedes[0]);
-      close(m_filedes[1]);
-#endif
+      fclose(m_read_end);
     }
 
   private:
     FILE *m_file;
     SBDebugger m_dbg;
-    int m_filedes[2];
+    FILE *m_read_end;
+    FILE *m_write_end;
   };
-  Cleanup cleanup(dbg, to_lldb_des);
+  Cleanup cleanup(dbg, fh_lldb_in, fh_to_lldb);
 
   dbg.SetInputFileHandle(fh_lldb_in, false);
 

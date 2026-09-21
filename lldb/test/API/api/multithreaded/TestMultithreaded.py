@@ -18,7 +18,6 @@ class SBBreakpointCallbackCase(TestBase):
         TestBase.setUp(self)
 
     @skipIfRemote
-    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/224303
     @skipIfHostIncompatibleWithTarget
     def test_python_stop_hook(self):
         """Test that you can run a python command in a stop-hook when stdin is File based."""
