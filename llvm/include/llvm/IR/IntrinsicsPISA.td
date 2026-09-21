@@ -114,7 +114,7 @@ def int_pisa_subgroup_size   : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty], [],
 def int_pisa_work_dim        : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty], [],
                                    [IntrNoMem, Range<RetIndex, 1, !add(MAX_WORK_DIM, 1)>], "work_dim">;
 
-def int_pisa_activemask          : PISAIntrinsicClang<[llvm_i32_ty], [], [IntrNoMem, IntrConvergent], "activemask">;
+def int_pisa_activemask          : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty], [], [IntrNoMem, IntrConvergent], "activemask">;
 
 //===----------------------------------------------------------------------===//
 // 2. Integer Arithmetic
