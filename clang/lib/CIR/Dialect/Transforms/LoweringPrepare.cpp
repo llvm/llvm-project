@@ -361,7 +361,7 @@ struct LoweringPreparePass
   /// Returns true if the target uses ARM-style guard variables for static
   /// local initialization (32-bit guard, check bit 0 only).
   bool useARMGuardVarABI() const {
-    switch (astCtx->getCXXABIKind()) {
+    switch (lowerModule->getCXXABIKind()) {
     case clang::TargetCXXABI::GenericARM:
     case clang::TargetCXXABI::iOS:
     case clang::TargetCXXABI::WatchOS:
@@ -851,7 +851,7 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
 }
 
 static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
-    mlir::MLIRContext &context, clang::ASTContext &cc,
+    mlir::MLIRContext &context, const clang::TargetInfo &targetInfo,
     const clang::LangOptions &langOpts, CIRBaseBuilderTy &builder,
     mlir::Type elementType) {
 
@@ -869,8 +869,8 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
   };
 
   auto getFloatTypeSemantics =
-      [&cc, &langOpts](mlir::Type type) -> const llvm::fltSemantics & {
-    const clang::TargetInfo &info = cc.getTargetInfo();
+      [&langOpts, &targetInfo](mlir::Type type) -> const llvm::fltSemantics & {
+    const clang::TargetInfo &info = targetInfo;
     if (mlir::isa<cir::FP16Type>(type))
       return info.getHalfFormat();
 
@@ -925,7 +925,8 @@ static mlir::Value
 lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
                 mlir::Location loc, cir::ComplexDivOp op, mlir::Value lhsReal,
                 mlir::Value lhsImag, mlir::Value rhsReal, mlir::Value rhsImag,
-                mlir::MLIRContext &mlirCx, clang::ASTContext &cc) {
+                mlir::MLIRContext &mlirCx,
+                const clang::TargetInfo &targetInfo) {
   cir::ComplexType complexTy = op.getType();
   if (mlir::isa<cir::FPTypeInterface>(complexTy.getElementType())) {
     cir::ComplexRangeKind range = op.getRange();
@@ -942,7 +943,8 @@ lowerComplexDiv(LoweringPreparePass &pass, CIRBaseBuilderTy &builder,
       mlir::Type originalElementType = complexTy.getElementType();
       mlir::Type higherPrecisionElementType =
           higherPrecisionElementTypeForComplexArithmetic(
-              mlirCx, cc, pass.getLangOpts(), builder, originalElementType);
+              mlirCx, targetInfo, pass.getLangOpts(), builder,
+              originalElementType);
 
       if (!higherPrecisionElementType)
         return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
@@ -989,7 +991,7 @@ void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
 
   mlir::Value loweredResult =
       lowerComplexDiv(*this, builder, loc, op, lhsReal, lhsImag, rhsReal,
-                      rhsImag, getContext(), *astCtx);
+                      rhsImag, getContext(), getTargetInfo());
   op.replaceAllUsesWith(loweredResult);
   op.erase();
 }
@@ -1452,8 +1454,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // If threadsafe statics are enabled, but we don't have inline atomics, just
   // call __cxa_guard_acquire unconditionally. The "inline" check isn't
   // actually inline, and the user might not expect calls to __atomic libcalls.
-  unsigned maxInlineWidthInBits =
-      astCtx->getTargetInfo().getMaxAtomicInlineWidth();
+  unsigned maxInlineWidthInBits = getTargetInfo().getMaxAtomicInlineWidth();
 
   if (!threadsafe || maxInlineWidthInBits) {
     // Load the first byte of the guard variable.
@@ -1543,20 +1544,20 @@ void LoweringPreparePass::lowerLocalInitOp(cir::LocalInitOp initOp) {
   // Remove the init local op, now that we've done everything we need with it.
   initOp.erase();
 }
-static bool isThreadWrapperReplaceable(clang::ASTContext &astCtx) {
+static bool isThreadWrapperReplaceable(const clang::TargetInfo &targetInfo) {
   // Note: Classic codegen needs to check that the VarDecl.getTLSKind() ==
   // TLS_Dynamic, but we don't attempt to emit the thread wrapper unless that is
   // already the case.  So the only thing that matters here is whether it is
   // darwin.
-  return astCtx.getTargetInfo().getTriple().isOSDarwin();
+  return targetInfo.getTriple().isOSDarwin();
 }
 
 static cir::GlobalLinkageKind
-getThreadLocalWrapperLinkage(GlobalOp op, clang::ASTContext &astCtx) {
+getThreadLocalWrapperLinkage(GlobalOp op, const clang::TargetInfo &targetInfo) {
   if (isLocalLinkage(op.getLinkage()))
     return op.getLinkage();
 
-  if (isThreadWrapperReplaceable(astCtx))
+  if (isThreadWrapperReplaceable(targetInfo))
     if (!isLinkOnceLinkage(op.getLinkage()) &&
         !isWeakODRLinkage(op.getLinkage()))
       return op.getLinkage();
@@ -1586,26 +1587,25 @@ LoweringPreparePass::getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
       cir::FuncOp::create(builder, op.getLoc(), wrapperName, funcType);
 
   cir::GlobalLinkageKind linkageKind =
-      getThreadLocalWrapperLinkage(op, *astCtx);
+      getThreadLocalWrapperLinkage(op, getTargetInfo());
   func.setLinkageAttr(
       cir::GlobalLinkageKindAttr::get(&getContext(), linkageKind));
 
   // TODO(cir): This is supposed to refer to the comdat of the global symbol,
   // but that isn't in CIR yet.
-  if (astCtx->getTargetInfo().getTriple().supportsCOMDAT() &&
-      func.isWeakForLinker())
+  if (getTargetInfo().getTriple().supportsCOMDAT() && func.isWeakForLinker())
     func.setComdat(true);
 
   mlir::SymbolTable::setSymbolVisibility(
       func, mlir::SymbolTable::Visibility::Private);
 
   if (!isLocalLinkage(linkageKind)) {
-    if (!isThreadWrapperReplaceable(*astCtx) ||
+    if (!isThreadWrapperReplaceable(getTargetInfo()) ||
         isLinkOnceLinkage(linkageKind) || isWeakODRLinkage(linkageKind) ||
         op.getGlobalVisibility() == cir::VisibilityKind::Hidden)
       func.setGlobalVisibility(cir::VisibilityKind::Hidden);
   }
-  if (isThreadWrapperReplaceable(*astCtx))
+  if (isThreadWrapperReplaceable(getTargetInfo()))
     op->emitError("Unhandled thread wrapper attributes for CC and Nounwind");
 
   threadLocalWrappers.insert({wrapperName.getValue(), func});
@@ -2026,7 +2026,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
 /// region is non-empty, the ctor loop is wrapped in a cir.cleanup.scope whose
 /// EH cleanup performs a reverse destruction loop using the partial dtor body.
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
-                                       clang::ASTContext *astCtx,
+                                       const clang::TargetInfo &targetInfo,
                                        mlir::Operation *op, mlir::Type eltTy,
                                        mlir::Value addr,
                                        mlir::Value numElements,
@@ -2034,10 +2034,10 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
   mlir::Location loc = op->getLoc();
   bool isDynamic = numElements != nullptr;
 
-  // TODO: instead of getting the size from the AST context, create alias for
+  // TODO: instead of getting the size from the target, create alias for
   // PtrDiffTy and unify with CIRGen stuff.
   const unsigned sizeTypeSize =
-      astCtx->getTypeSize(astCtx->getSignedSizeType());
+      targetInfo.getTypeWidth(targetInfo.getSignedSizeType());
 
   // Both constructors and destructors use end = begin + numElements.
   // Constructors iterate forward [begin, end).  Destructors iterate backward
@@ -2204,15 +2204,16 @@ void LoweringPreparePass::lowerArrayDtor(cir::ArrayDtor op) {
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
 
   if (op.getNumElements()) {
-    lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
-                               op.getNumElements(), /*arrayLen=*/0,
+    lowerArrayDtorCtorIntoLoop(builder, getTargetInfo(), op, eltTy,
+                               op.getAddr(), op.getNumElements(),
+                               /*arrayLen=*/0,
                                /*isCtor=*/false);
     return;
   }
 
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
-  lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
+  lowerArrayDtorCtorIntoLoop(builder, getTargetInfo(), op, eltTy, op.getAddr(),
                              /*numElements=*/nullptr, arrayLen,
                              /*isCtor=*/false);
 }
@@ -2224,15 +2225,16 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
   mlir::Type eltTy = op->getRegion(0).getArgument(0).getType();
 
   if (op.getNumElements()) {
-    lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
-                               op.getNumElements(), /*arrayLen=*/0,
+    lowerArrayDtorCtorIntoLoop(builder, getTargetInfo(), op, eltTy,
+                               op.getAddr(), op.getNumElements(),
+                               /*arrayLen=*/0,
                                /*isCtor=*/true);
     return;
   }
 
   auto arrayLen =
       mlir::cast<cir::ArrayType>(op.getAddr().getType().getPointee()).getSize();
-  lowerArrayDtorCtorIntoLoop(builder, astCtx, op, eltTy, op.getAddr(),
+  lowerArrayDtorCtorIntoLoop(builder, getTargetInfo(), op, eltTy, op.getAddr(),
                              /*numElements=*/nullptr, arrayLen,
                              /*isCtor=*/true);
 }
@@ -2529,8 +2531,9 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
   PointerType voidPtrTy = builder.getVoidPtrTy();
   PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
   IntType intTy = builder.getSIntNTy(32);
-  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
-                                     /*isSigned=*/false);
+  IntType charTy =
+      cir::IntType::get(&getContext(), getTargetInfo().getCharWidth(),
+                        /*isSigned=*/false);
 
   // --- Create fatbin globals ---
 
@@ -2890,8 +2893,9 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
   auto voidPtrTy = PointerType::get(voidTy);
   auto voidPtrPtrTy = PointerType::get(voidPtrTy);
   IntType intTy = builder.getSIntNTy(32);
-  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
-                                     /*isSigned=*/false);
+  IntType charTy =
+      cir::IntType::get(&getContext(), getTargetInfo().getCharWidth(),
+                        /*isSigned=*/false);
 
   // Extract the GPU binary handle argument.
   mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
@@ -2976,10 +2980,10 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
   PointerType voidPtrTy = builder.getVoidPtrTy();
   PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
   IntType intTy = builder.getSIntNTy(32);
-  IntType sizeTy =
-      builder.getUIntNTy(astCtx->getTargetInfo().getMaxPointerWidth());
-  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
-                                     /*isSigned=*/false);
+  IntType sizeTy = builder.getUIntNTy(getTargetInfo().getMaxPointerWidth());
+  IntType charTy =
+      cir::IntType::get(&getContext(), getTargetInfo().getCharWidth(),
+                        /*isSigned=*/false);
 
   if (cudaDeviceVars.empty())
     return;
