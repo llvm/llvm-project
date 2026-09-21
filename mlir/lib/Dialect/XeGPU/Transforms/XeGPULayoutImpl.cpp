@@ -435,6 +435,17 @@ void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
   });
 }
 
+/// Returns true if every dimension of `shape` except the innermost
+/// `numInnerDims` is a unit (size-1) dimension.
+[[maybe_unused]] static bool leadingDimsAreUnit(ArrayRef<int64_t> shape,
+                                                int numInnerDims) {
+  int numLeading = static_cast<int>(shape.size()) - numInnerDims;
+  if (numLeading <= 0)
+    return true;
+  return llvm::all_of(shape.take_front(numLeading),
+                      [](int64_t dim) { return dim == 1; });
+}
+
 static xegpu::LayoutAttr buildInstDataLayoutWithLane(
     mlir::MLIRContext *context, ArrayRef<int64_t> instData,
     ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
@@ -1266,24 +1277,33 @@ compute2DBlockIOLaneLayout(ArrayRef<int64_t> instShape, int64_t subgroupSize,
 /// 1. Take lane_layout and lane_data from the consumer. A consumer sliced over
 ///    exactly `reductionDims` covers every source dim, so its parent is reused
 ///    as-is. Otherwise it covers only the surviving dims, one entry each, and
-///    each entry is honored on its own dim -- leading dims included, which is
-///    what keeps a reduction over a trailing dim lane-local. Lanes the consumer
-///    leaves unclaimed go to the innermost reduced dim rather than sit idle.
+///    each entry is honored on its own dim. Lanes the consumer leaves unclaimed
+///    go to the innermost reduced dim rather than sit idle.
 ///
 /// 2. Limit lane_layout by `srcShape`: a dim can spread over no more lanes than
 ///    it has elements to give.
 ///
-/// 3. Raise lane_data until a lane packs `maxReduceVectorSize` elements, on one
-///    undistributed dim -- lane_layout 1, so every lane already spans its full
-///    extent and only inst_data widens. What lane_data packs elsewhere comes off
-///    the budget first, and the chosen dim is multiplied up, never overwritten.
-///    Prefer the dim just outside the innermost two, else the innermost
-///    undistributed dim.
+/// 3. Give one dim a per-lane vector, so a lane reduces up to
+///    `maxReduceVectorSize` elements per instruction instead of one.
+///
+///    Which dim: it must be reduced, hold more than one element, and have
+///    lane_layout 1, so a lane owns the whole run it reduces. Among the
+///    innermost two dims, the innermost eligible one is used.
+///
+///    How much: `maxReduceVectorSize / product(lane_data)`, multiplied onto the
+///    dim's existing lane_data rather than replacing it.
+///
+///    Skipped when the dim just outside the innermost two is non-unit: the
+///    source was likely reshaped from 2D -- the scale computation splits one
+///    dim in two -- and no dim of such a source can carry the vector.
 ///
 /// e.g. src=[16,32,32] reduce [2], consumer lane=[1,2] ->
-/// lane_layout=[1,2,8], lane_data=[16,1,1], inst_data=[16,2,8].
+/// lane_layout=[1,2,8], lane_data=[1,1,1], inst_data=[1,2,8].
 /// e.g. src=[16,16] reduce [1], consumer lane=[16] ->
 /// lane_layout=[16,1], lane_data=[1,16], inst_data=[16,16].
+/// e.g. src=[16,32] reduce [1], consumer sliced over [1] with parent
+/// lane=[16,1] data=[1,2] -> the parent is reused, then the remaining 16/2 is
+/// multiplied onto dim 1: lane_data=[1,16], inst_data=[16,16].
 static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                   SmallVector<int64_t>>
 computeReductionLaneLayoutAndData(
@@ -1335,46 +1355,47 @@ computeReductionLaneLayoutAndData(
       ++c;
     }
 
-    // The innermost reduced dim, not an outer one: claiming lanes further out
-    // needs a redistribution convert_layout cannot lower.
+    // The innermost dim only, and only when reduced: an outer one would take
+    // lane_layout [1,2] to [8,2] against a producer still supplying [1,2], and
+    // a lane_layout-only convert_layout has no lowering.
+    // TODO: spend these lanes on an outer reduced dim once that is lowerable --
+    // they sit idle today. Widening it now, even just to srcRank-2, breaks
+    // reduction_2D_scalar_cross_sg_intra_lane.
     int64_t spareLanes = std::max<int64_t>(1, subgroupSize / lanesUsed);
     int innermost = srcRank - 1;
     if (spareLanes > 1 && isReduced(innermost))
       laneLayout[innermost] = spareLanes;
   }
 
-  // Rule 2. This also bounds a reused parent, which may describe a wider source
-  // than the one reduced here: a cross-subgroup reduction shares one result
-  // layout across both stages, so the parent can ask for 16 lanes on a dim this
-  // slab has only 4 columns of.
+  // Rule 2, applied to a reused parent as much as a derived layout.
   for (int i = 0; i < srcRank; ++i)
     laneLayout[i] = std::min(laneLayout[i],
                              std::max<int64_t>(1, srcShape[i] / laneData[i]));
 
-  // Rule 3. The dim just outside the innermost two is preferred because in the
-  // scale computation those two come from a shape_cast that split one dim, so
-  // the dim above them is what should carry the per-lane vector.
+  // Rule 3. A non-unit dim just outside the innermost two means the source was
+  // likely reshaped from 2D -- the scale computation splits one dim in two --
+  // where no dim is a sound place for the vector, so lane_data is left alone.
+  bool mayReshapedFrom2D = srcRank >= 3 && srcShape[srcRank - 3] != 1;
   int64_t vectorBudget =
-      maxReduceVectorSize /
-      std::min(computeProduct(laneData), maxReduceVectorSize);
+      mayReshapedFrom2D
+          ? 1
+          : maxReduceVectorSize /
+                std::min(computeProduct(laneData), maxReduceVectorSize);
+
+  // Exactly one dim carries the vector: it must be unsplit by lanes (so the
+  // lane owns it whole), reduced (that is what the vector feeds), and non-unit.
   auto canCarryVector = [&](int i) {
-    return laneLayout[i] == 1 && srcShape[i] > 1;
+    return laneLayout[i] == 1 && isReduced(i) && srcShape[i] > 1;
   };
+  int innermost = srcRank - 1;
   int vectorDim = -1;
-  if (vectorBudget > 1) {
-    int preferredDim = srcRank - 3;
-    if (preferredDim >= 0 && canCarryVector(preferredDim))
-      vectorDim = preferredDim;
-    else
-      for (int i = srcRank - 1; i >= 0; --i)
-        if (canCarryVector(i)) {
-          vectorDim = i;
-          break;
-        }
-  }
-  if (vectorDim >= 0)
-    laneData[vectorDim] =
-        std::min(vectorBudget * laneData[vectorDim], srcShape[vectorDim]);
+  if (canCarryVector(innermost))
+    vectorDim = innermost;
+  else if (srcRank >= 2 && canCarryVector(innermost - 1))
+    vectorDim = innermost - 1;
+
+  if (vectorBudget > 1 && vectorDim >= 0)
+    laneData[vectorDim] = std::min(vectorBudget, srcShape[vectorDim]);
 
   SmallVector<int64_t> instData(srcRank);
   for (int i = 0; i < srcRank; ++i)
@@ -2444,6 +2465,13 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 /// reduction and spends only otherwise-idle lanes on a cross-lane one. The
 /// inst_data is simply the element-wise product lane_layout * lane_data.
 ///
+/// At the Lane kind a consumer sliced over exactly `reductionDims` is reused
+/// verbatim: the InstData run already settled the packing and inserted any
+/// `convert_layout` needed, so this stage adopts that decision rather than
+/// re-deriving one. Re-deriving is reserved for the other consumers, and
+/// assumes all leading (non-innermost-two) dims are unit, as
+/// `leadingDimsAreUnit` asserts.
+///
 /// The function returns the *result* layout (the SliceAttr). The *source*
 /// layout it decides on is the parent of that slice; both are listed below so
 /// the relationship is explicit.
@@ -2626,6 +2654,11 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       // the layout is not consistent
       srcLayout = consumerSliceLayout.getParent();
     } else {
+      // Only the innermost two dimensions are distributed; all leading
+      // dimensions are assumed to be unit dimensions.
+      assert(leadingDimsAreUnit(srcShape, /*numInnerDims=*/2) &&
+             "Lane reduction layout assumes all leading (non-innermost-two) "
+             "dimensions are unit dimensions");
       auto [laneLayout, laneData, instData] = computeReductionLaneLayoutAndData(
           srcShape, reductionDims, subgroupSize, maxReduceVectorSize,
           consumerLayout);

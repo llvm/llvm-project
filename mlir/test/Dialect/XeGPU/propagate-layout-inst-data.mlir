@@ -208,10 +208,10 @@ func.func @load_gather_with_coalesce_chunksize(%arg0: memref<8x16xf16>, %arg1: m
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_non_unit_dims(
 // CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{layout = #xegpu.layout<inst_data = [16], lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<1024xindex>, vector<1024xi1> -> vector<1024xf16>
-// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [2, 8, 16], lane_layout = [1, 1, 16], lane_data = [2, 8, 1]>} : vector<1024xf16> to vector<8x8x16xf16>
-// CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [2, 8, 16], lane_layout = [1, 1, 16], lane_data = [2, 8, 1]>, dims = [0]>} dense<0.000000e+00> : vector<8x16xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 8, 16], lane_layout = [1, 1, 16], lane_data = [1, 8, 1]>} : vector<1024xf16> to vector<8x8x16xf16>
+// CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 8, 16], lane_layout = [1, 1, 16], lane_data = [1, 8, 1]>, dims = [0]>} dense<0.000000e+00> : vector<8x16xf16>
 // CHECK: %[[CST_1:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>, dims = [0]>} dense<0.000000e+00> : vector<16xf16>
-// CHECK: %[[REDUCE_0:.*]] = vector.multi_reduction <add>, %[[CAST]], %[[CST_0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [2, 8, 16], lane_layout = [1, 1, 16], lane_data = [2, 8, 1]>, dims = [0]>} [0] : vector<8x8x16xf16> to vector<8x16xf16>
+// CHECK: %[[REDUCE_0:.*]] = vector.multi_reduction <add>, %[[CAST]], %[[CST_0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 8, 16], lane_layout = [1, 1, 16], lane_data = [1, 8, 1]>, dims = [0]>} [0] : vector<8x8x16xf16> to vector<8x16xf16>
 // CHECK: %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[REDUCE_0]], %[[CST_1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>, dims = [0]>} [0] : vector<8x16xf16> to vector<16xf16>
 func.func @vector_shape_cast_expand_non_unit_dims(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
     %cst = arith.constant dense<true> : vector<1024xi1>

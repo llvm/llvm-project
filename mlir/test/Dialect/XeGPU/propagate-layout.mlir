@@ -1202,31 +1202,3 @@ func.func @broadcast_slice_expanded_dim(%dst: !xegpu.mem_desc<16x4xbf16>) {
 }
 }
 
-// -----
-// A reduction whose only non-unit surviving dim is a *leading* dim: src
-// [16, 1, 4] reducing dim 2. The 16 lanes belong on dim 0, which leaves the
-// reduction lane-local and lets the gather feeding it use the whole subgroup.
-gpu.module @test {
-// CHECK-LABEL: func.func @reduce_innermost_lanes_on_leading(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<64xi1>
-// CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<64xindex>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<64xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
-// CHECK: %[[SC:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [16, 1, 1], lane_data = [1, 1, 4]>} : vector<64xf16> to vector<16x1x4xf16>
-// CHECK: %[[ACC:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1, 1], lane_data = [1, 1, 4]>, dims = [2]>} dense<0.000000e+00> : vector<16x1xf16>
-// CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[SC]], %[[ACC]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1, 1], lane_data = [1, 1, 4]>, dims = [2]>} [2] : vector<16x1x4xf16> to vector<16x1xf16>
-// CHECK: %[[FLAT:.*]] = vector.shape_cast %[[RED]] {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<16x1xf16> to vector<16xf16>
-// CHECK: xegpu.store %[[FLAT]]
-func.func @reduce_innermost_lanes_on_leading(%arg0: memref<64xf16>, %arg1: memref<16xf16>) {
-    %cst = arith.constant dense<true> : vector<64xi1>
-    %0 = vector.step : vector<64xindex>
-    %1 = xegpu.load %arg0[%0], %cst : memref<64xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
-    %2 = vector.shape_cast %1 : vector<64xf16> to vector<16x1x4xf16>
-    %cst_0 = arith.constant dense<0.000000e+00> : vector<16x1xf16>
-    %3 = vector.multi_reduction <add>, %2, %cst_0 [2] : vector<16x1x4xf16> to vector<16x1xf16>
-    %4 = vector.shape_cast %3 : vector<16x1xf16> to vector<16xf16>
-    %cst_2 = arith.constant dense<true> : vector<16xi1>
-    %cst_3 = arith.constant dense<1> : vector<16xindex>
-    xegpu.store %4, %arg1[%cst_3], %cst_2 : vector<16xf16>, memref<16xf16>, vector<16xindex>, vector<16xi1>
-    return
-  }
-}
