@@ -515,6 +515,8 @@ private:
             SmallVector<mlir::acc::GPUParallelDimAttr>>
   computeActiveAndInactiveParDims(Operation *op, Block *block);
 
+  bool touchesWorkerSharedPrivate(Operation *op);
+
   /// Build a predicate that is true only on inactive parallel dimensions.
   Value
   emitPredicate(Location loc,
@@ -1319,42 +1321,39 @@ static bool isThreadYPrivate(acc::PrivateLocalOp privateLocal, bool allowBlock,
          });
 }
 
-/// True when \p op touches privatized storage shared by every ThreadY row:
-/// reduced across ThreadY, yet materialized once because ThreadY is not
-/// active. Reconverging per row would leave the rows racing.
-static bool touchesWorkerSharedPrivate(Operation *op,
-                                       acc::ComputeRegionOp computeRegion) {
+// Only the compute-region body guarantees that every worker reaches the
+// barrier.
+bool ACCCGToGPULowering::touchesWorkerSharedPrivate(Operation *op) {
+  if (op->getParentOp() != computeRegion.getOperation())
+    return false;
+
   auto isThreadY = [](GPUParallelDimAttr dim) { return dim.isThreadY(); };
-  bool found = false;
+  SmallVector<Value, 8> worklist;
   op->walk([&](Operation *inner) {
-    for (Value operand : inner->getOperands()) {
-      acc::PrivateLocalOp privateLocal = getPrivateLocalForMemref(operand);
-      if (!privateLocal)
-        continue;
+    worklist.append(inner->operand_begin(), inner->operand_end());
+  });
+  llvm::SmallPtrSet<Value, 8> seen;
+  while (!worklist.empty()) {
+    Value value = worklist.pop_back_val();
+    // Scalar dependencies do not imply access to their source storage here.
+    if (!acc::isPointerLikeType(value.getType()) || !seen.insert(value).second)
+      continue;
+    Operation *def = value.getDefiningOp();
+    if (!def)
+      continue;
+    if (auto privateLocal = dyn_cast<acc::PrivateLocalOp>(def)) {
       GPUParallelDimsAttr parDims =
           getPrivateParDims(privateLocal, computeRegion);
       if (!parDims || llvm::none_of(parDims.getArray(), isThreadY))
         continue;
-      acc::ActiveParDimsAttr activeParDims =
-          acc::getActiveParDimsAttr(privateLocal);
-      if (!activeParDims || llvm::any_of(activeParDims.getArray(), isThreadY))
-        continue;
-      found = true;
-      return WalkResult::interrupt();
+      auto parDimsPair = computeActiveAndInactiveParDims(privateLocal, nullptr);
+      if (llvm::none_of(parDimsPair.first, isThreadY))
+        return true;
+      continue;
     }
-    return WalkResult::advance();
-  });
-  if (!found)
-    return false;
-  // Rows of an enclosing ThreadY loop can have divergent trip counts, so they
-  // would not all reach a workgroup barrier.
-  for (scf::ParallelOp loop = op->getParentOfType<scf::ParallelOp>(); loop;
-       loop = loop->getParentOfType<scf::ParallelOp>()) {
-    GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(loop);
-    if (parDims && llvm::any_of(parDims.getArray(), isThreadY))
-      return false;
+    worklist.append(def->operand_begin(), def->operand_end());
   }
-  return true;
+  return false;
 }
 
 struct ThreadYBroadeningInfo {
@@ -1858,10 +1857,9 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
   Value numberOfThreads32 =
       arith::IndexCastOp::create(rewriter, loc, i32Ty, blockDimX);
 
-  // GPU dialect named barriers do not have a means to create a custom barrier
-  // id. Thus use nvvm directly. Non-`.aligned`: only one row reaches this
-  // barrier, and `.aligned` would let the target duplicate it into a
-  // surrounding divergent branch, deadlocking the warp.
+  // GPU dialect named barriers cannot carry a custom barrier id, so use nvvm
+  // directly. Non-aligned: only one row reaches this barrier, and the aligned
+  // form would let the target duplicate it into a divergent branch.
   assert(options.deviceType == mlir::acc::DeviceType::Nvidia);
   NVVM::BarrierOp::create(rewriter, loc, barrierId32, numberOfThreads32,
                           /*aligned=*/false);
@@ -2369,7 +2367,7 @@ void ACCCGToGPULowering::processPredicateRegion(
           if (predicatesThreadX) {
             // Storage shared by every row is read back by the other rows, so
             // the whole workgroup has to reconverge.
-            if (touchesWorkerSharedPrivate(interOp, computeRegion))
+            if (touchesWorkerSharedPrivate(interOp))
               emitGPUBarrierWorkgroup(rewriter, loc);
             else
               createPerRowBarrier(loc);
