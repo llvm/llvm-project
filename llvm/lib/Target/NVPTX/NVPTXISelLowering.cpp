@@ -3303,8 +3303,8 @@ static void appendSplitSPOperands(ArrayRef<SDUse> Input,
 static unsigned getSPCompressNodeOpcode(unsigned NumResults) {
   // SelectionDAG node descriptions have a fixed result arity, so use one node
   // kind for each result-register count selected by the legal SP layouts.
-#define SPCOMPRESS_NODE_CASE(NumResults)                                      \
-  case NumResults:                                                            \
+#define SPCOMPRESS_NODE_CASE(NumResults)                                       \
+  case NumResults:                                                             \
     return NVPTXISD::SPCOMPRESS_R##NumResults
 
   switch (NumResults) {
@@ -3332,8 +3332,8 @@ static unsigned getSPCompressNodeOpcode(unsigned NumResults) {
 }
 
 static unsigned getSPDecompressNodeOpcode(unsigned NumResults) {
-#define SPDECOMPRESS_NODE_CASE(NumResults)                                    \
-  case NumResults:                                                            \
+#define SPDECOMPRESS_NODE_CASE(NumResults)                                     \
+  case NumResults:                                                             \
     return NVPTXISD::SPDECOMPRESS_R##NumResults
 
   switch (NumResults) {
@@ -3401,8 +3401,7 @@ static SDValue lowerSPCompress(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT DataVT = N->getOperand(1).getValueType();
   EVT CDataVT = N->getValueType(1);
-  assert(DataVT.isVector() && CDataVT.isVector() &&
-         "invalid spcompress types");
+  assert(DataVT.isVector() && CDataVT.isVector() && "invalid spcompress types");
 
   unsigned ElemSize = DataVT.getScalarSizeInBits();
   unsigned IdxSize = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
