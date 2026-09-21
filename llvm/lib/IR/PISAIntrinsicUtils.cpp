@@ -14,10 +14,10 @@ using namespace llvm::pisa;
 
 void pisa::printMemoryOrdering(raw_ostream &OS, const Constant *ImmArgVal) {
   auto *CI = cast<ConstantInt>(ImmArgVal);
-  auto AO = static_cast<AtomicOrdering>(CI->getZExtValue());
-  if (static_cast<unsigned>(AO) > static_cast<unsigned>(AtomicOrdering::LAST))
+  uint64_t Val = CI->getZExtValue();
+  if (!isValidAtomicOrdering(Val))
     return; // invalid value, print nothing
-  OS << toIRString(AO);
+  OS << toIRString(static_cast<AtomicOrdering>(Val));
 }
 
 void pisa::printRoundingMode(raw_ostream &OS, const Constant *ImmArgVal) {
