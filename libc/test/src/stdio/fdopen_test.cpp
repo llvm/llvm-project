@@ -89,8 +89,13 @@ TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
 
 TEST_F(LlvmLibcStdioFdopenTest, CloseOnExecPreservedWithoutModifier) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  int fd = LIBC_NAMESPACE::open("/dev/null", O_WRONLY | O_CLOEXEC);
+  constexpr const char *TEST_FILE_NAME =
+      "testdata/close_on_exec_preserved.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd =
+      LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY | O_CLOEXEC, S_IRWXU);
   ASSERT_GE(fd, 0);
+
   FILE *file = LIBC_NAMESPACE::fdopen(fd, "w");
   LIBC_NAMESPACE::cpp::scope_exit close_file([&] {
     if (file != nullptr)
@@ -104,8 +109,11 @@ TEST_F(LlvmLibcStdioFdopenTest, CloseOnExecPreservedWithoutModifier) {
 
 TEST_F(LlvmLibcStdioFdopenTest, CloseOnExecEnabledByModifier) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  int fd = LIBC_NAMESPACE::open("/dev/null", O_WRONLY);
+  constexpr const char *TEST_FILE_NAME = "testdata/close_on_exec_enabled.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GE(fd, 0);
+
   FILE *file = LIBC_NAMESPACE::fdopen(fd, "we");
   LIBC_NAMESPACE::cpp::scope_exit close_file([&] {
     if (file != nullptr)

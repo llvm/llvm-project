@@ -91,27 +91,33 @@ TEST_F(LlvmLibcFreopenTest, ReopenFile) {
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
 TEST_F(LlvmLibcFreopenTest, CloseOnExec) {
-  FILE *file = LIBC_NAMESPACE::fopen("/dev/null", "w");
+  const auto FILENAME =
+      libc_make_test_file_path("freopen_close_on_exec_enabled.test");
+
+  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_NE(file, nullptr);
   LIBC_NAMESPACE::cpp::scope_exit close_file(
       [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
   ASSERT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
               Succeeds(0));
 
-  ASSERT_EQ(LIBC_NAMESPACE::freopen("/dev/null", "we", file), file);
+  ASSERT_EQ(LIBC_NAMESPACE::freopen(FILENAME, "we", file), file);
   EXPECT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
               Succeeds(FD_CLOEXEC));
 }
 
 TEST_F(LlvmLibcFreopenTest, ClearCloseOnExec) {
-  FILE *file = LIBC_NAMESPACE::fopen("/dev/null", "we");
+  const auto FILENAME =
+      libc_make_test_file_path("freopen_close_on_exec_cleared.test");
+
+  ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "we");
   ASSERT_NE(file, nullptr);
   LIBC_NAMESPACE::cpp::scope_exit close_file(
       [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
   ASSERT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
               Succeeds(FD_CLOEXEC));
 
-  ASSERT_EQ(LIBC_NAMESPACE::freopen("/dev/null", "w", file), file);
+  ASSERT_EQ(LIBC_NAMESPACE::freopen(FILENAME, "w", file), file);
   EXPECT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
               Succeeds(0));
 }

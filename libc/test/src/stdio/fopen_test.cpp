@@ -63,16 +63,19 @@ class LlvmLibcFOpenModeTest
     : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
 protected:
   void check_exclusive_create(const char *mode) {
-    const auto FILENAME = libc_make_test_file_path("fopen_exclusive.test");
+    constexpr const char *TEST_FILE_NAME = "testdata/exclusive_create.test";
+    auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
     constexpr char CONTENT[] = "Preserve this content";
 
-    // Remove a file left by an interrupted test run.
-    LIBC_NAMESPACE::remove(FILENAME);
+    // Ensure the file does not exist before testing exclusive creation.
+    LIBC_NAMESPACE::remove(TEST_FILE);
     libc_errno = 0;
-    FILE *file = LIBC_NAMESPACE::fopen(FILENAME, mode);
+    FILE *file = LIBC_NAMESPACE::fopen(TEST_FILE, mode);
     ASSERT_NE(file, nullptr);
+    // Keep the file until the exclusive-open and content checks are complete.
     scope_exit remove_file(
-        [&] { EXPECT_THAT(LIBC_NAMESPACE::remove(FILENAME), Succeeds(0)); });
+        [&] { EXPECT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0)); });
+    // Flush and close the writer before the following checks.
     {
       scope_exit close_file(
           [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
@@ -80,12 +83,12 @@ protected:
                 sizeof(CONTENT) - 1);
     }
 
-    FILE *existing = LIBC_NAMESPACE::fopen(FILENAME, mode);
+    FILE *existing = LIBC_NAMESPACE::fopen(TEST_FILE, mode);
     EXPECT_THAT(existing, Fails(EEXIST, static_cast<void *>(nullptr)));
     if (existing != nullptr)
       EXPECT_THAT(LIBC_NAMESPACE::fclose(existing), Succeeds(0));
 
-    file = LIBC_NAMESPACE::fopen(FILENAME, "r");
+    file = LIBC_NAMESPACE::fopen(TEST_FILE, "r");
     ASSERT_NE(file, nullptr);
     scope_exit close_file(
         [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
@@ -101,33 +104,36 @@ TEST_F(LlvmLibcFOpenModeTest, ExclusiveWrite) { check_exclusive_create("wx"); }
 TEST_F(LlvmLibcFOpenModeTest, ExclusiveAppend) { check_exclusive_create("ax"); }
 
 TEST_F(LlvmLibcFOpenModeTest, CloseOnExec) {
+  constexpr const char *TEST_FILE_NAME = "testdata/close_on_exec.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
   {
-    FILE *file = LIBC_NAMESPACE::fopen("/dev/null", "w");
+    FILE *file = LIBC_NAMESPACE::fopen(TEST_FILE, "w");
     ASSERT_NE(file, nullptr);
-    scope_exit close_file(
-        [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
+
     EXPECT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
                 Succeeds(0));
+    EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
   }
   {
-    FILE *file = LIBC_NAMESPACE::fopen("/dev/null", "we");
+    FILE *file = LIBC_NAMESPACE::fopen(TEST_FILE, "we");
     ASSERT_NE(file, nullptr);
-    scope_exit close_file(
-        [&] { EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0)); });
+
     EXPECT_THAT(LIBC_NAMESPACE::fcntl(LIBC_NAMESPACE::fileno(file), F_GETFD),
                 Succeeds(FD_CLOEXEC));
+    EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
   }
 }
 
 TEST_F(LlvmLibcFOpenModeTest, ReadIgnoresExclusiveModifier) {
-  const auto FILENAME = libc_make_test_file_path("fopen_read_exclusive.test");
-  FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
+  constexpr const char *TEST_FILE_NAME = "testdata/read_exclusive.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  FILE *file = LIBC_NAMESPACE::fopen(TEST_FILE, "w");
   ASSERT_NE(file, nullptr);
   scope_exit remove_file(
-      [&] { EXPECT_THAT(LIBC_NAMESPACE::remove(FILENAME), Succeeds(0)); });
+      [&] { EXPECT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0)); });
   ASSERT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
 
-  file = LIBC_NAMESPACE::fopen(FILENAME, "rx");
+  file = LIBC_NAMESPACE::fopen(TEST_FILE, "rx");
   ASSERT_NE(file, nullptr);
   EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
 }

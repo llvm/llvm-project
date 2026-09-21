@@ -189,9 +189,9 @@ TEST(LlvmLibcFileModeTest, AllPossibleValidCombinations) {
   EXPECT_TRUE(append_update_binary.is_binary_format());
   EXPECT_TRUE(append_update_binary.write_allowed());
   EXPECT_TRUE(append_update_binary.read_allowed());
+}
 
-  // 4. Close-on-exec: possible valid close-on-exec combinations
-
+TEST(LlvmLibcFileModeTest, CloseOnExecCombinations) {
   // a. Read Close-on-exec
   constexpr FileMode read_close_on_exec("re");
   EXPECT_TRUE(read_close_on_exec.is_valid());
