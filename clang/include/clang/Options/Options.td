@@ -2460,10 +2460,10 @@ def femscripten_exceptions : Flag<["-"], "femscripten-exceptions">,
   HelpText<"Use Emscripten JavaScript-based C++ exceptions">;
 def exception_model : Separate<["-"], "exception-model">,
   Visibility<[CC1Option]>, HelpText<"The exception model">,
-  Values<"dwarf,sjlj,seh,wasm,none">,
+  Values<"dwarf,sjlj,seh,wasm,emscripten,none">,
   NormalizedValuesScope<"CodeGenOptions::ExceptionHandlingKind">,
-  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "None"]>,
-  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "None">;
+  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "Emscripten", "None"]>,
+  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "Default">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
   Visibility<[CC1Option]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>,
@@ -2601,8 +2601,8 @@ defm keep_persistent_storage_variables : BoolFOption<"keep-persistent-storage-va
           " keeping all variables that have a persistent storage duration, including global, static and thread-local variables, to guarantee that they can be directly addressed">>;
 defm keep_inline_functions : BoolFOption<"keep-inline-functions",
   CodeGenOpts<"KeepInlineFunctions">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Keep">,
-  NegFlag<SetFalse, [], [ClangOption], "Don't keep">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption], "Keep">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Don't keep">,
   BothFlags<[], [],
           " inline functions whose definition is owned by this translation unit, even if they are inlined into all callers.">>;
 defm fixed_point : BoolFOption<"fixed-point",
@@ -4395,11 +4395,12 @@ def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">,
   Flags<[HelpHidden]>, Alias<offload_new_driver>;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
   Flags<[HelpHidden]>, Alias<no_offload_new_driver>;
-def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">,
   MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
-def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
+def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">,
+  Group<f_Group>, Visibility<[ClangOption, FlangOption]>;
 defm escaping_block_tail_calls : BoolFOption<"escaping-block-tail-calls",
   CodeGenOpts<"NoEscapingBlockTailCalls">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option]>,
@@ -6270,7 +6271,7 @@ defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
   BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
 
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
-def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>, 
+def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>, HelpText<"Keep the frame pointer in leaf functions">;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
   Visibility<[ClangOption, FlangOption]>, HelpText<"Omit frame pointer setup for leaf functions">;

@@ -3580,7 +3580,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -5549,6 +5549,10 @@ public:
       CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD, Expr *InitExpr,
+                                                SourceLocation InitLoc);
+  ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD,
+                                                const InitializedEntity &Entity,
+                                                Expr *InitExpr,
                                                 SourceLocation InitLoc);
 
   /// FinalizeVarWithDestructor - Prepare for calling destructor on the
@@ -7719,7 +7723,24 @@ public:
   /// Emit a warning for all pending noderef expressions that we recorded.
   void WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec);
 
-  ExprResult BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
+private:
+  /// Shared logic for building default member initializer which used in a
+  /// constructor or an aggregate initialization.
+  ///
+  ///
+  /// The caller enters that evaluation context and decides whether the result
+  /// is finished as a full-expression. \p NestedDefaultChecking and
+  /// \p NeedRebuild have to be sampled before entering it.
+  ExprResult BuildCXXDefaultInitInternal(SourceLocation Loc, FieldDecl *Field,
+                                         const InitializedEntity &Entity,
+                                         bool NestedDefaultChecking,
+                                         bool NeedRebuild);
+
+public:
+  ExprResult BuildCXXCtorDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
+  ExprResult
+  BuildCXXAggregateDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                   const InitializedEntity &MemberEntity);
 
   /// Instantiate or parse a C++ default argument expression as necessary.
   /// Return true on error.
@@ -15129,11 +15150,17 @@ public:
       const NamedDecl *D1, ArrayRef<AssociatedConstraint> AC1,
       const NamedDecl *D2, ArrayRef<AssociatedConstraint> AC2);
 
+private:
+  friend class ConstraintSatisfactionChecker;
+  friend class SubstituteParameterMappings;
+
+  UnsignedOrNone EvaluateFoldExpandedConstraintSize(
+      const Expr *Pattern, const MultiLevelTemplateArgumentList &MLTAL);
+
   /// Cache the satisfaction of an atomic constraint.
   /// The key is based on the unsubstituted expression and the parameter
   /// mapping. This lets us not substituting the mapping more than once,
   /// which is (very!) expensive.
-  /// FIXME: this should be private.
   llvm::DenseMap<llvm::FoldingSetNodeID,
                  UnsubstitutedConstraintSatisfactionCacheResult>
       UnsubstitutedConstraintSatisfactionCache;
@@ -15145,7 +15172,6 @@ public:
   llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
       *CurrentCachedTemplateArgs = nullptr;
 
-private:
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in
   /// fact subsume the second's.
