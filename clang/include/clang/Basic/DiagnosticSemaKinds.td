@@ -13417,6 +13417,13 @@ def err_builtin_invalid_arg_type: Error<
 def err_builtin_requires_double_type: Error<
   "%ordinal0 argument must be a scalar, vector, or matrix of double type (was %1)">;
 
+def err_builtin_elementwise_convert_from_fp8_arg_type : Error<
+  "argument to %0 must be an 8-bit integer or a vector of 8-bit integers"
+  "%select{|, or '__mfp8'}1 (was %2)">;
+def err_builtin_elementwise_convert_from_fp8_vector_type : Error<
+  "argument to %0 must be a scalar or a fixed-length vector declared with "
+  "'vector_size' or 'ext_vector_type' (was %1)">;
+
 def err_bswapg_invalid_bit_width : Error<
   "_BitInt type %0 (%1 bits) must be a multiple of 16 bits for byte swapping">;
 

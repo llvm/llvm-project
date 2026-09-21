@@ -805,6 +805,91 @@ of different sizes and signs is forbidden in binary and ternary builtins.
 | T \_\_builtin_elementwise_pext(T x, T m)       | extract bits from x selected by the mask m, pack them contiguously into the least significant bits of the result, and zero the rest.                                                                                                                                                                               | integer types                                |
 | T \_\_builtin_elementwise_pdep(T x, T m)       | deposit the least significant bits of x at the positions where m has a 1-bit, and zero the rest.                                                                                                                                                                                                                   | integer types                                |
 
+(langext-elementwise-encoded-fp-conversions)=
+
+*Conversions from encoded floating-point values*
+
+The `__builtin_elementwise_convert_from_<source_format>_<destination_type>`
+builtins interpret integer bit patterns as floating-point encodings and convert
+them to native floating-point values. They take one scalar or fixed-length
+vector argument and are available in C, C++, OpenCL, CUDA, and HIP.
+
+Each builtin name selects one source encoding and one destination element type:
+
+| Source suffix | Encoding | Element width |
+| ------------- | -------- | ------------- |
+| `f8e5m2` | `Float8E5M2` | 8 bits |
+| `f8e4m3fn` | `Float8E4M3FN` | 8 bits |
+| `f8e5m3fnu` | `Float8E5M3FNU` | 8 bits |
+
+| Destination suffix | Element type |
+| ------------------ | ------------ |
+| `f16` | `_Float16` |
+| `bf16` | `__bf16` |
+| `f32` | `float` |
+
+All nine combinations are supported. The destination suffix has the same meaning
+in every language mode: `f16` denotes `_Float16`, distinct from `__fp16` and
+OpenCL `half`. The destination type must be supported by the target and language
+mode, including the usual checks for offload code.
+
+The argument's element type must be an integer of exactly 8 bits, excluding
+`bool` and enumerations. Signedness does not affect the interpretation.
+`char`, `signed char`, `unsigned char`, and `_BitInt(8)` are accepted when they
+have the required width. On AArch64, a scalar `__mfp8` argument is also accepted
+as an uninterpreted 8-bit container. Integer promotions and the usual arithmetic
+conversions do not apply to the argument.
+
+For vector arguments, the result has the same number of elements and the same
+vector kind as the input, with the selected destination element type. GNU
+`vector_size` and Clang/OpenCL `ext_vector_type` vectors are supported. Scalable,
+sizeless, matrix, and target-specific vector types, including Neon vectors of
+`__mfp8`, are not supported.
+
+```c
+typedef unsigned char uchar4 __attribute__((ext_vector_type(4)));
+typedef float float4 __attribute__((ext_vector_type(4)));
+
+float convert_scalar(unsigned char bits) {
+  return __builtin_elementwise_convert_from_f8e4m3fn_f32(bits);
+}
+
+float4 convert_vector(uchar4 bits) {
+  return __builtin_elementwise_convert_from_f8e4m3fn_f32(bits);
+}
+
+void convert_shifted(unsigned char bits) {
+  // The shift promotes bits to int, which is not an 8-bit element type.
+  __builtin_elementwise_convert_from_f8e5m2_f32(bits >> 1); // error
+  __builtin_elementwise_convert_from_f8e5m2_f32((unsigned char)(bits >> 1)); // OK
+}
+```
+
+These builtins interpret the encoding rather than converting an integer's
+numeric value. For example, converting `(unsigned char)0x38` from `f8e4m3fn` to
+`f32` produces `1.0f`.
+
+Every defined input bit pattern produces a defined result. Finite values convert
+exactly, except that the seven largest finite `Float8E5M3FNU` values, from 65536
+through 114688, convert to infinity in `_Float16`. All finite inputs are exactly
+representable in `__bf16` and `float`. `Float8E4M3FN` and `Float8E5M3FNU` have no
+infinity encoding, and `Float8E5M3FNU` has no sign bit. A NaN input produces a NaN,
+but its sign, quiet or signaling status, and payload are unspecified. The
+conversion does not depend on the dynamic rounding mode and has no
+floating-point environment side effects.
+
+The builtins lower to the LLVM
+[`llvm.convert.from.arbitrary.fp`](https://llvm.org/docs/LangRef.html#llvm-convert-from-arbitrary-fp-intrinsic)
+intrinsic. They do not require a particular instruction or packing, and backend
+support for lowering the intrinsic varies by target.
+
+Use `__has_builtin` with a complete spelling, such as
+`__has_builtin(__builtin_elementwise_convert_from_f8e5m2_f32)`, to query whether
+Clang recognizes the builtin. This does not imply that the destination type is
+available or that the backend can lower the operation. These builtins cannot be
+used in constant expressions, including C static-storage initializers, and
+`__has_constexpr_builtin` returns 0 for them.
+
 *Reduction Builtins*
 
 Each builtin returns a scalar equivalent to applying the specified
