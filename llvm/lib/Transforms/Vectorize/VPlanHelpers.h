@@ -32,6 +32,7 @@ class AssumptionCache;
 class BasicBlock;
 class CallInst;
 class DominatorTree;
+class Function;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
@@ -270,11 +271,6 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
-  /// and return the resulting value.
-  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
-                                       const VPLane &Lane);
-
   /// Add the backedge (latch) incoming value to the canonical, reduction and
   /// first-order recurrence phis in all loop headers state's plan, after
   /// the loop body has been generated.
@@ -432,20 +428,25 @@ class VPSlotTracker {
   /// Cached metadata kind names from the Module's LLVMContext.
   SmallVector<StringRef> MDNames;
 
-  /// Cached Module pointer for printing metadata.
-  const Module *M = nullptr;
+  /// Cached Function pointer for printing names and metadata.
+  const Function *F = nullptr;
 
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 
+  /// Lazily create the ModuleSlotTracker.
+  ModuleSlotTracker &getOrCreateMST();
+
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
     if (Plan) {
+      if (auto *ScalarHeader = Plan->getScalarHeader()) {
+        const BasicBlock *ScalarHeaderIRBB = ScalarHeader->getIRBasicBlock();
+        F = ScalarHeaderIRBB->getParent();
+      }
       assignNames(*Plan);
-      if (auto *ScalarHeader = Plan->getScalarHeader())
-        M = ScalarHeader->getIRBasicBlock()->getModule();
     }
   }
 
@@ -456,13 +457,14 @@ public:
 
   /// Returns the cached metadata kind names.
   ArrayRef<StringRef> getMDNames() {
+    const Module *M = getModule();
     if (MDNames.empty() && M)
       M->getContext().getMDKindNames(MDNames);
     return MDNames;
   }
 
-  /// Returns the cached Module pointer.
-  const Module *getModule() const { return M; }
+  /// Returns the module the plan operates on, if any.
+  const Module *getModule() const { return F ? F->getParent() : nullptr; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

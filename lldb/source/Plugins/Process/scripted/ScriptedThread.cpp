@@ -219,6 +219,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
     }
 
     Address symbol_addr;
+    pc = this->GetProcess()->FixCodeAddress(pc);
     symbol_addr.SetLoadAddress(pc, &this->GetProcess()->GetTarget());
 
     lldb::addr_t cfa = LLDB_INVALID_ADDRESS;

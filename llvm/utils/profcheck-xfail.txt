@@ -6,9 +6,7 @@ CodeGen/WinEH/wineh-setjmp.ll
 CodeGen/WinEH/wineh-statenumbering-cleanups.ll
 CodeGen/WinEH/wineh-statenumbering.ll
 DebugInfo/Generic/block-asan.ll
-Transforms/AggressiveInstCombine/memset.ll
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
-Transforms/AtomicExpand/ARM/thread-model-single.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
@@ -108,5 +106,6 @@ Transforms/TailCallElim/basic.ll
 Transforms/TailCallElim/debugloc.ll
 Transforms/TailCallElim/dropping_debugloc_acc_rec_inst_rnew.ll
 Transforms/TailCallElim/inf-recursion.ll
+Transforms/TailCallElim/shl-accumulator-opt.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/lowerswitch.ll

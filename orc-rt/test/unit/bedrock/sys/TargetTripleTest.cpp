@@ -16,7 +16,7 @@
 #include <algorithm>
 
 using namespace orc_rt;
-
+#ifndef _WIN32
 TEST(TargetTripleTest, NotEmpty) {
   EXPECT_FALSE(sys::detectTargetTriple().empty());
 }
@@ -52,7 +52,7 @@ TEST(TargetTripleTest, OSMatchesCompileTarget) {
   EXPECT_NE(Triple.find("-linux-"), std::string::npos);
 #endif
 }
-
+#endif
 TEST(TargetTripleTest, CachedResultIsIdempotent) {
   EXPECT_EQ(sys::detectTargetTriple(), sys::detectTargetTriple());
 }

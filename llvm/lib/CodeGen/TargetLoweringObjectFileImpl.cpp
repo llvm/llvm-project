@@ -2118,15 +2118,20 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
       RHS->getType()->getPointerAddressSpace() != 0)
     return nullptr;
 
+  const auto *GA = dyn_cast<GlobalAlias>(LHS);
+  const GlobalObject *GO = GA ? dyn_cast_or_null<GlobalObject>(GA->getAliasee())
+                              : dyn_cast<GlobalObject>(LHS);
+
   // Both ptrtoint instructions must wrap global objects:
-  // - Only global variables are eligible for image relative relocations.
-  // - The subtrahend refers to the special symbol __ImageBase, a GlobalVariable.
-  // We expect __ImageBase to be a global variable without a section, externally
-  // defined.
+  // - Only dso_local global variables/functions (or direct aliases thereof) are
+  //   eligible for image relative relocations.
+  // - The subtrahend refers to the special symbol __ImageBase, a
+  // GlobalVariable. We expect __ImageBase to be a global variable without a
+  // section, externally defined.
   //
   // It should look something like this: @__ImageBase = external constant i8
-  if (!isa<GlobalObject>(LHS) || !isa<GlobalVariable>(RHS) ||
-      LHS->isThreadLocal() || RHS->isThreadLocal() ||
+  if (!GO || !TM.shouldAssumeDSOLocal(LHS) || GO->isThreadLocal() ||
+      !isa<GlobalVariable>(RHS) || RHS->isThreadLocal() ||
       RHS->getName() != "__ImageBase" || !RHS->hasExternalLinkage() ||
       cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
     return nullptr;
