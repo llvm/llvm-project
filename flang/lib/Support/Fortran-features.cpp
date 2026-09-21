@@ -326,9 +326,6 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
 }
 
 void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
-  // This feature is set independently and is on by default:
-  bool clockStrict = warnUsage_.test(UsageWarning::SystemClockStrict);
-
   warnLanguage_.reset();
   if (yes) {
     warnLanguage_.flip();
@@ -338,9 +335,6 @@ void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
     warnLanguage_.set(LanguageFeature::OpenACC, false);
     warnLanguage_.set(LanguageFeature::CUDA, false);
   }
-
-  // This feature is set independently and is on by default:
-  warnUsage_.set(UsageWarning::SystemClockStrict, clockStrict);
 }
 
 void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
