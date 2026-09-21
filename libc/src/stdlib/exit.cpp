@@ -26,6 +26,7 @@ extern "C" void __cxa_finalize(void *);
   internal::call_atexit_callbacks();
 #endif
   __cxa_finalize(nullptr);
+  // TODO: flushing needs to happen here
   internal::exit(status);
 }
 

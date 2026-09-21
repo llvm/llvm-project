@@ -45,6 +45,13 @@ LIBC_INLINE void stdc_at_exit_func(void *payload) {
   reinterpret_cast<StdCAtExitCallback *>(payload)();
 }
 
+// so this is the guy executing all callbacks before the exit is completed
+// and I need to make sure
+//
+// Resourcesful link:
+// https://stackoverflow.com/questions/50370985/difference-atexit-and-at-quick-exit
+// https://en.cppreference.com/cpp/utility/program/at_quick_exit
+// https://en.cppreference.com/cpp/utility/program/atexit
 LIBC_INLINE void call_exit_callbacks(ExitCallbackList &callbacks) {
   handler_list_mtx.lock();
   while (!callbacks.empty()) {
