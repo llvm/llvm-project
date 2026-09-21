@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
-load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
@@ -223,13 +223,6 @@ expand_template(
         "//conditions:default": {
             "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 0",
             "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 0",
-        },
-    }) | select({
-        ":system_lzma_enabled": {
-            "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 0",
         },
     }),
     template = "include/lldb/Host/Config.h.cmake",
@@ -682,11 +675,6 @@ cc_library(
     }) + select({
         ":needs_libbsd": [
             "-lbsd",
-        ],
-        "//conditions:default": [],
-    }) + select({
-        ":system_lzma_enabled": [
-            "-llzma",
         ],
         "//conditions:default": [],
     }),

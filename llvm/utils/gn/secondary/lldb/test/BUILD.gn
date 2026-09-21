@@ -140,7 +140,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "DEFAULT_SYSROOT=",
     "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
-    "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
+    "LLVM_ENABLE_LZMA=0",  # FIXME: gn arg, use in llvm-config.h
     "LLDB_ENABLE_MTE=0",
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h
     "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
