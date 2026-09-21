@@ -7,8 +7,9 @@
 ; def with `DW_OP_neg` so the source variable continues to report its
 ; source-level value: prepend it for simple `#dbg_value`s and insert it
 ; after the matching `DW_OP_LLVM_arg, idx` for `DIArgList` references
-; (including the case where several negatibles from the same parent
-; expression are referenced by the same arg list).
+; (including repeated references to the same location operand and the case
+; where several negatibles from the same parent expression are referenced by
+; the same arg list).
 ;
 ; See https://github.com/llvm/llvm-project/issues/220208.
 
@@ -18,16 +19,18 @@ define double @neg_mul_dbgvalue(double %x, double %y, double %z) !dbg !9 {
 ; CHECK-NEXT:    [[A:%.*]] = fmul double [[Y:%.*]], 1.000000e+00, !dbg [[DBG11:![0-9]+]]
 ; CHECK-NEXT:      #dbg_value(double [[A]], [[META12:![0-9]+]], !DIExpression(DW_OP_neg, DW_OP_stack_value), [[META13:![0-9]+]])
 ; CHECK-NEXT:      #dbg_value(!DIArgList(i32 7, double [[A]]), [[META14:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_neg, DW_OP_plus, DW_OP_stack_value), [[META13]])
-; CHECK-NEXT:    [[B:%.*]] = fdiv double [[Z:%.*]], 2.000000e+00, !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:      #dbg_value(!DIArgList(double [[A]], double [[B]]), [[META16:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_neg, DW_OP_LLVM_arg, 1, DW_OP_neg, DW_OP_plus, DW_OP_stack_value), [[META13]])
-; CHECK-NEXT:    [[PROD:%.*]] = fmul double [[A]], [[B]], !dbg [[DBG17:![0-9]+]]
-; CHECK-NEXT:    [[SUM:%.*]] = fsub double [[X:%.*]], [[PROD]], !dbg [[DBG18:![0-9]+]]
-; CHECK-NEXT:    ret double [[SUM]], !dbg [[DBG19:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(!DIArgList(i32 7, double [[A]]), [[META15:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_neg, DW_OP_LLVM_arg, 1, DW_OP_neg, DW_OP_plus, DW_OP_plus, DW_OP_stack_value), [[META13]])
+; CHECK-NEXT:    [[B:%.*]] = fdiv double [[Z:%.*]], 2.000000e+00, !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(!DIArgList(double [[A]], double [[B]]), [[META17:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_neg, DW_OP_LLVM_arg, 1, DW_OP_neg, DW_OP_plus, DW_OP_stack_value), [[META13]])
+; CHECK-NEXT:    [[PROD:%.*]] = fmul double [[A]], [[B]], !dbg [[DBG18:![0-9]+]]
+; CHECK-NEXT:    [[SUM:%.*]] = fsub double [[X:%.*]], [[PROD]], !dbg [[DBG19:![0-9]+]]
+; CHECK-NEXT:    ret double [[SUM]], !dbg [[DBG20:![0-9]+]]
 ;
 entry:
   %a = fmul double %y, -1.000000e+00, !dbg !15
     #dbg_value(double %a, !16, !DIExpression(), !14)
     #dbg_value(!DIArgList(i32 7, double %a), !17, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), !14)
+    #dbg_value(!DIArgList(i32 7, double %a), !23, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_plus, DW_OP_stack_value), !14)
   %b = fdiv double %z, -2.000000e+00, !dbg !18
     #dbg_value(!DIArgList(double %a, double %b), !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), !14)
   ; `fmul %a, %b` chains both negatibles into one canonicalization call.
@@ -60,3 +63,4 @@ entry:
 !20 = !DILocation(line: 4, column: 17, scope: !9)
 !21 = !DILocation(line: 5, column: 10, scope: !9)
 !22 = !DILocation(line: 6, column: 3, scope: !9)
+!23 = !DILocalVariable(name: "twice", scope: !9, file: !1, line: 2, type: !13)
