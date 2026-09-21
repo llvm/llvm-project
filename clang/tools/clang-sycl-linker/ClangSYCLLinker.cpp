@@ -98,24 +98,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "SYCLLinkOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "SYCLLinkOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "SYCLLinkOpts.inc"
-#undef OPTION
-};
-
-class LinkerOptTable : public opt::GenericOptTable {
+class LinkerOptTable : public opt::OptTable {
 public:
-  LinkerOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  LinkerOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
