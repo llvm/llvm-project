@@ -341,24 +341,25 @@ gpu.func @load_high_dim_vector(%source: memref<16x32x64xf32>,
 // -----
 // The unit innermost dimension leaves a 16x1 f16 tile to transfer, and a 2D
 // block load needs a block width that is a multiple of 16 f16 elements. The
-// read must use the scattered path rather than a block load whose shape no
-// hardware instruction can provide.
+// tile is strided in memory - its 16 rows are 1024 elements apart - so it is
+// not a contiguous run either, and the read must use the scattered path rather
+// than a block load whose shape no hardware instruction can provide.
 gpu.module @xevm_module {
-gpu.func @load_high_dim_unsupported_block_width(%source: memref<1x24x1024x1xf16>,
+gpu.func @load_high_dim_unsupported_block_width(%source: memref<1x24x1024x1024xf16>,
     %offset: index) -> vector<1x8x16x1xf16> {
   %pad = ub.poison : f16
   %c0 = arith.constant 0 : index
   %0 = vector.transfer_read %source[%c0, %offset, %offset, %c0], %pad
     {in_bounds = [true, true, true, true]}
-    : memref<1x24x1024x1xf16>, vector<1x8x16x1xf16>
+    : memref<1x24x1024x1024xf16>, vector<1x8x16x1xf16>
   gpu.return %0 : vector<1x8x16x1xf16>
 }
 
 // CHECK-LABEL:  @load_high_dim_unsupported_block_width(
-// CHECK-SAME:   %[[SRC:.+]]: memref<1x24x1024x1xf16>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<1x24x1024x1024xf16>,
 // CHECK-NOT:    xegpu.create_nd_tdesc
 // CHECK-NOT:    xegpu.load_nd
-// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<1x24x1024x1xf16> -> index
+// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<1x24x1024x1024xf16> -> index
 // CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // CHECK:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]][%{{.+}}], %{{.+}} : i64, vector<1x8x16x1xindex>, vector<1x8x16x1xi1> -> vector<1x8x16x1xf16>
 }
