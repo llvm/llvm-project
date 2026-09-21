@@ -1955,6 +1955,31 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
 }
 
 //===----------------------------------------------------------------------===//
+// Optimized ordering tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, OptimizedUsesSignatureIDToBreakTies) {
+  TestConfig Config(Triple::Vertex, IOType::Out, {});
+  for (unsigned I = 0; I != 3; ++I)
+    Config.Elements.push_back(
+        {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear});
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  Elements[0].SigId = 2;
+  Elements[1].SigId = 0;
+  Elements[2].SigId = 1;
+
+  Expected<unsigned> Rows = pack(PackingMethod::Optimized, Elements, Config);
+  ASSERT_THAT_EXPECTED(Rows, Succeeded());
+  EXPECT_EQ(*Rows, 1u);
+  for (unsigned I = 0; I != Elements.size(); ++I) {
+    EXPECT_EQ(Elements[I].SigId, (I + 2) % 3);
+    EXPECT_EQ(Elements[I].StartRow, 0u);
+    EXPECT_EQ(Elements[I].StartCol, Elements[I].SigId);
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Indexed packing tests
 //===----------------------------------------------------------------------===//
 

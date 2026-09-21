@@ -600,21 +600,24 @@ Expected<unsigned> llvm::hlsl::packSignatureOptimized(
          !(ShaderStage == Triple::Pixel && IOTy == IOType::Out) &&
          "optimized packing is not valid for vertex inputs or pixel outputs");
 
-  SmallVector<unsigned> SortedIndices;
-  SortedIndices.reserve(Elements.size());
-  for (unsigned Index = 0; Index != Elements.size(); ++Index)
-    SortedIndices.push_back(Index);
+  struct SortKey {
+    PackingGroup Group;
+    dxbc::PSV::InterpolationMode InterpMode;
+    uint32_t Rows;
+    uint8_t Cols;
+    uint32_t SigId;
+    unsigned OriginalIndex;
+  };
+  SmallVector<SortKey> SortedKeys;
+  SortedKeys.reserve(Elements.size());
+  for (auto [Index, Element] : enumerate(Elements))
+    SortedKeys.push_back({getOptimizedPackingGroup(Element, ShaderStage, IOTy),
+                          Element.InterpMode, Element.Rows, Element.Cols,
+                          Element.SigId, static_cast<unsigned>(Index)});
 
-  llvm::sort(SortedIndices, [&](unsigned LeftIndex, unsigned RightIndex) {
-    const SemanticSignatureElement &Left = Elements[LeftIndex];
-    const SemanticSignatureElement &Right = Elements[RightIndex];
-    const PackingGroup LeftGroup =
-        getOptimizedPackingGroup(Left, ShaderStage, IOTy);
-    const PackingGroup RightGroup =
-        getOptimizedPackingGroup(Right, ShaderStage, IOTy);
-
-    if (LeftGroup != RightGroup)
-      return LeftGroup < RightGroup;
+  llvm::sort(SortedKeys, [](const SortKey &Left, const SortKey &Right) {
+    if (Left.Group != Right.Group)
+      return Left.Group < Right.Group;
     if (Left.InterpMode != Right.InterpMode)
       return Left.InterpMode < Right.InterpMode;
     if (Left.Rows != Right.Rows)
@@ -627,15 +630,15 @@ Expected<unsigned> llvm::hlsl::packSignatureOptimized(
   // Pack a copy so Elements remains in its original signature order.
   SmallVector<SemanticSignatureElement> SortedElements;
   SortedElements.reserve(Elements.size());
-  for (unsigned Index : SortedIndices)
-    SortedElements.push_back(Elements[Index]);
+  for (const SortKey &Key : SortedKeys)
+    SortedElements.push_back(Elements[Key.OriginalIndex]);
 
   Expected<unsigned> NumRows = packSignaturePrefixStable(
       SortedElements, ShaderStage, IOTy, UseNative16BitTypes);
 
-  for (const auto &[SortedIndex, OriginalIndex] : enumerate(SortedIndices)) {
-    Elements[OriginalIndex].StartRow = SortedElements[SortedIndex].StartRow;
-    Elements[OriginalIndex].StartCol = SortedElements[SortedIndex].StartCol;
+  for (const auto &[SortedIndex, Key] : enumerate(SortedKeys)) {
+    Elements[Key.OriginalIndex].StartRow = SortedElements[SortedIndex].StartRow;
+    Elements[Key.OriginalIndex].StartCol = SortedElements[SortedIndex].StartCol;
   }
 
   if (NumRows)
@@ -643,9 +646,9 @@ Expected<unsigned> llvm::hlsl::packSignatureOptimized(
 
   return handleErrors(
       NumRows.takeError(), [&](const SignaturePackingError &Err) -> Error {
-        assert(Err.getElementIndex() < SortedIndices.size() &&
+        assert(Err.getElementIndex() < SortedKeys.size() &&
                "invalid sorted element index");
         return make_error<SignaturePackingError>(
-            Err.getErrorKind(), SortedIndices[Err.getElementIndex()]);
+            Err.getErrorKind(), SortedKeys[Err.getElementIndex()].OriginalIndex);
       });
 }
