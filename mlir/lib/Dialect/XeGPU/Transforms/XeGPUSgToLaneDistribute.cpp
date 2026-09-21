@@ -2078,9 +2078,10 @@ struct SgToLaneConvertLayoutBroadcastExtract
 };
 
 /// Distributes the slice-attributed `xegpu.convert_layout` whose source is
-/// broadcast over two lane groups onto the rows of a subset of the lanes. Each
-/// lane needs one element from its own group and one from the other group, so
-/// one `vector.extract` is paired with one `gpu.shuffle xor`.
+/// broadcast over two lane groups onto the rows of a subset of the lanes.
+/// Column `c` of row `r` is owned by lane `r + c * stride`, so each lane
+/// extracts its own element and gathers the columns of its row with one
+/// `gpu.shuffle idx` per column.
 ///
 ///   xegpu.convert_layout %src
 ///     <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [8, 1, 2],
@@ -2094,24 +2095,14 @@ struct SgToLaneConvertLayoutBroadcastExtract
 /// The input layout has effective `lane_layout` [1, 2], so the distributed
 /// source is `vector<8x1xf8E8M0FNU>`: lane `l` holds all 8 rows of column
 /// `l / 8`. The target puts both columns of one row in a single lane, so the
-/// distributed result is `vector<1x2xf8E8M0FNU>`. Lane `l` owns `[l % 8, 0]`
-/// of its own column and gets the other column from lane `l ^ 8`, which holds
-/// the same row:
-///
-///   %flat    = vector.shape_cast %src : vector<8x1xf8E8M0FNU> to
-///              vector<8xf8E8M0FNU>
-///   %lane    = gpu.lane_id
-///   %row     = arith.remui %lane, %c8 : index
-///   %own     = vector.extract %flat[%row] : f8E8M0FNU from
-///              vector<8xf8E8M0FNU>
-///   %part, %v = gpu.shuffle xor %own, %c8_i32, %c16_i32 : f8E8M0FNU
-///   %res     = vector.from_elements %own, %part : vector<1x2xf8E8M0FNU>
+/// distributed result is `vector<1x2xf8E8M0FNU>` holding row `l % 8`.
 ///
 /// The source is flattened first because `xegpu-vector-linearize` cannot
 /// linearize a `vector.extract` with a dynamic position out of a rank-2 value.
 ///
-/// Lanes 8..15 receive the two columns in the opposite order, which is unused
-/// because the target `lane_layout` [8, 1] only occupies 8 lanes.
+/// All lanes gather every column, including the one they already hold, so that
+/// lanes outside the target `lane_layout` hold replicas as partial lane layouts
+/// require.
 struct SgToLaneConvertLayoutPartialBroadcastExtractShuffle
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
@@ -2165,15 +2156,18 @@ struct SgToLaneConvertLayoutPartialBroadcastExtractShuffle
           op, "input_layout parent must have exactly one non-sliced dimension "
               "with lane_layout extent greater than one");
     // The two broadcast groups must together cover the whole subgroup, so that
-    // `lane_id ^ stride` is the lane holding the other column of the same row.
+    // lane `r + c * stride` is the lane holding column `c` of row `r`.
     if (*stride * redistribution->inputLaneLayout[1] !=
         redistribution->subgroupSize)
       return rewriter.notifyMatchFailure(
           op, "input_layout distributed dimension lane stride times its extent "
               "must equal the subgroup size");
-    if (targetLaneLayout[0] > *stride)
+    // Lane `r + c * stride` must hold row `r`, i.e. (r + stride) %
+    // lane_layout[0] must be r, which requires the row count to divide the
+    // stride.
+    if (*stride % targetLaneLayout[0] != 0)
       return rewriter.notifyMatchFailure(
-          op, "target_layout effective lane_layout[0] must not exceed the "
+          op, "target_layout effective lane_layout[0] must divide the "
               "input_layout distributed dimension lane stride");
 
     Location loc = op.getLoc();
@@ -2191,15 +2185,22 @@ struct SgToLaneConvertLayoutPartialBroadcastExtractShuffle
     Value row = arith::RemUIOp::create(rewriter, loc, laneId, rowCount);
     Value own = vector::ExtractOp::create(rewriter, loc, flat,
                                           ArrayRef<OpFoldResult>{row});
-    Value partner =
-        gpu::ShuffleOp::create(
-            rewriter, loc, own,
-            /*offset=*/static_cast<int32_t>(*stride),
-            /*width=*/static_cast<int32_t>(redistribution->subgroupSize),
-            /*mode=*/gpu::ShuffleMode::XOR)
-            .getShuffleResult();
+    // Gather column `c` of `row` from lane `row + c * stride`, which owns it.
+    Type i32Type = rewriter.getI32Type();
+    Value width = arith::ConstantIntOp::create(rewriter, loc, i32Type,
+                                               redistribution->subgroupSize);
+    Value rowI32 = arith::IndexCastOp::create(rewriter, loc, i32Type, row);
+    Value strideI32 =
+        arith::ConstantIntOp::create(rewriter, loc, i32Type, *stride);
+    Value otherOwner = arith::AddIOp::create(rewriter, loc, rowI32, strideI32);
+    Value column0 = gpu::ShuffleOp::create(rewriter, loc, own, rowI32, width,
+                                           gpu::ShuffleMode::IDX)
+                        .getShuffleResult();
+    Value column1 = gpu::ShuffleOp::create(rewriter, loc, own, otherOwner,
+                                           width, gpu::ShuffleMode::IDX)
+                        .getShuffleResult();
     rewriter.replaceOpWithNewOp<vector::FromElementsOp>(
-        op, redistribution->distributedTarget, ValueRange{own, partner});
+        op, redistribution->distributedTarget, ValueRange{column0, column1});
     return success();
   }
 };

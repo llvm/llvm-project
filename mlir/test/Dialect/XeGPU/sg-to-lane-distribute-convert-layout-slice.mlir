@@ -35,12 +35,8 @@ gpu.func @broadcast_to_row_per_lane() {
 // The input layout leaves effective lane_layout [1, 2], with the distributed
 // dimension at lane stride 8, so the value is broadcast over two lane groups:
 // lane `l` holds all 8 rows of column `l / 8`. The target wants both columns of
-// row `l % 8` in lane `l`, so each lane extracts its own column and shuffles
-// the other one in from lane `l ^ 8`, which holds the same row of the other
-// column.
-//
-// Lanes 8..15 receive the two columns in the opposite order, which is unused
-// because the target lane_layout [8, 1] only occupies 8 lanes.
+// row `l % 8` in lane `l`, and column `c` of a row `r` is owned by lane
+// `r + c * 8`, so every lane gathers both columns from there.
 //
 // The source `test.some_op` is left undistributed by the pass, hence the cast to
 // the distributed input type; a real, distributed producer needs no cast.
@@ -53,12 +49,13 @@ gpu.module @xevm_module {
 // CHECK:         %[[ROWS:.*]] = arith.constant 8 : index
 // CHECK:         %[[ROW:.*]] = arith.remui %[[LANE]], %[[ROWS]] : index
 // CHECK:         %[[OWN:.*]] = vector.extract %[[FLAT]][%[[ROW]]] : f8E8M0FNU from vector<8xf8E8M0FNU>
-// The offset and width constants are created as arguments of the same call in
-// `gpu::ShuffleOp::build`, so their relative order is up to the host compiler.
-// CHECK-DAG:     %[[OFFSET:.*]] = arith.constant 8 : i32
-// CHECK-DAG:     %[[WIDTH:.*]] = arith.constant 16 : i32
-// CHECK:         %[[PARTNER:.*]], %{{.*}} = gpu.shuffle xor %[[OWN]], %[[OFFSET]], %[[WIDTH]] : f8E8M0FNU
-// CHECK:         vector.from_elements %[[OWN]], %[[PARTNER]] : vector<1x2xf8E8M0FNU>
+// CHECK:         %[[WIDTH:.*]] = arith.constant 16 : i32
+// CHECK:         %[[ROWI:.*]] = arith.index_cast %[[ROW]] : index to i32
+// CHECK:         %[[STRIDE:.*]] = arith.constant 8 : i32
+// CHECK:         %[[OTHER:.*]] = arith.addi %[[ROWI]], %[[STRIDE]] : i32
+// CHECK:         %[[COL0:.*]], %{{.*}} = gpu.shuffle idx %[[OWN]], %[[ROWI]], %[[WIDTH]] : f8E8M0FNU
+// CHECK:         %[[COL1:.*]], %{{.*}} = gpu.shuffle idx %[[OWN]], %[[OTHER]], %[[WIDTH]] : f8E8M0FNU
+// CHECK:         vector.from_elements %[[COL0]], %[[COL1]] : vector<1x2xf8E8M0FNU>
 gpu.func @lane_group_columns_to_row_per_lane() {
   %src = "test.some_op"() : () -> vector<8x2xf8E8M0FNU>
   %cvt = xegpu.convert_layout %src
