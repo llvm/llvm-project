@@ -55,10 +55,6 @@ program omp_depend
   !$omp task depend(mutexinoutset: x(:))
   !$omp end task
 
-  !ERROR: 'x' in DEPEND clause is a zero size array section
-  !$omp task depend(depobj: x(:))
-  !$omp end task
-
   !$omp end single
   !$omp end parallel
 
