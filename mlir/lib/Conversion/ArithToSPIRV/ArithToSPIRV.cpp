@@ -1071,46 +1071,6 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
 };
 
 //===----------------------------------------------------------------------===//
-// ConvertFOp
-//===----------------------------------------------------------------------===//
-
-/// Converts arith.convertf (same-bitwidth FP cast, e.g. f16 <-> bf16) to
-/// spirv.FConvert.
-struct ConvertFOpPattern final : public OpConversionPattern<arith::ConvertFOp> {
-  using Base::Base;
-
-  LogicalResult
-  matchAndRewrite(arith::ConvertFOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(op.getType());
-    if (!dstType)
-      return getTypeConversionFailure(rewriter, op);
-
-    if (dstType == adaptor.getIn().getType()) {
-      rewriter.replaceOp(op, adaptor.getIn());
-      return success();
-    }
-
-    std::optional<spirv::FPRoundingMode> rm = std::nullopt;
-    if (arith::RoundingModeAttr roundingMode = op.getRoundingmodeAttr()) {
-      if (!(rm = convertArithRoundingModeToSPIRV(roundingMode.getValue())))
-        return rewriter.notifyMatchFailure(
-            op->getLoc(),
-            llvm::formatv("unsupported rounding mode '{0}'", roundingMode));
-    }
-
-    auto converted = rewriter.replaceOpWithNewOp<spirv::FConvertOp>(
-        op, dstType, adaptor.getIn());
-    if (rm) {
-      converted->setAttr(
-          getDecorationString(spirv::Decoration::FPRoundingMode),
-          spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
-    }
-    return success();
-  }
-};
-
-//===----------------------------------------------------------------------===//
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
@@ -1542,7 +1502,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
-    ConvertFOpPattern,
+    TypeCastingOpPattern<arith::ConvertFOp, spirv::FConvertOp>,
     IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
     BoolToValuePattern<arith::UIToFPOp>,
     IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,

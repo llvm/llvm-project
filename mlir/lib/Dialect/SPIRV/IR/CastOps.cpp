@@ -44,8 +44,10 @@ getCastOpOperandAndResultElementType(Operation *op) {
             return {operandType, resultType};
           });
 
-  if (!operandElemTy || !resultElemTy)
-    return op->emitOpError("incompatible operand and result types"), failure();
+  if (!operandElemTy || !resultElemTy) {
+    op->emitOpError("incompatible operand and result types");
+    return failure();
+  }
 
   return TypePair{operandElemTy, resultElemTy};
 }
