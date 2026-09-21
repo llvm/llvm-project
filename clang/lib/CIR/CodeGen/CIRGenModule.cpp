@@ -157,10 +157,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   // Serialize the lowering-relevant LangOptions onto the ModuleOp so a reloaded
   // .cir is self-describing and lowers the same way it was compiled, without a
-  // live clang::LangOptions. Set here (like the triple) rather than in
-  // release() so it is present even when codegen bails on an error, keeping it
-  // a hard invariant that post-CIRGen lowering can rely on. See
-  // #cir.lowering_lang_options.
+  // live clang::LangOptions.
   theModule->setAttr(
       cir::CIRDialect::getLoweringLangOptionsAttrName(),
       cir::LoweringLangOptionsAttr::get(

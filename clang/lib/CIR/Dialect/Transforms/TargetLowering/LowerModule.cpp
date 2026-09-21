@@ -97,10 +97,7 @@ std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module) {
   // Populate the lowering-relevant LangOptions from the module's
   // #cir.lowering_lang_options attribute so a reloaded .cir lowers the same
   // way it was compiled, without a live clang::LangOptions. When the attribute
-  // is absent (e.g. hand-written CIR) the defaults are kept; the follow-up that
-  // enables .cir as a cc1 input adds the create-vs-load consistency diagnostic.
-  // Other LangOptions members remain unpopulated (see getCXXABIKind, which
-  // still carries the lowerModuleLangOpts marker for that residual gap).
+  // is absent (e.g. hand-written CIR) the defaults are kept;
   clang::LangOptions langOpts;
   if (auto loweringLangOpts =
           mlir::dyn_cast_if_present<cir::LoweringLangOptionsAttr>(

@@ -307,14 +307,8 @@ struct LoweringPreparePass
     return lowerModule->getTarget();
   }
 
-  /// LangOptions facts consumed by lowering, sourced from the module's
-  /// serialized #cir.lowering_lang_options (via LowerModule) so lowering does
-  /// not depend on a live clang::LangOptions and a reloaded .cir lowers the
-  /// same way it was compiled. CIRGen sets that attribute at module
-  /// construction (like the triple), so it is always present here; this
-  /// mirrors getTargetInfo, which likewise reads only from LowerModule.
   const clang::LangOptions &getLangOpts() const {
-    assert(lowerModule && "LoweringPrepare requires a module with a triple");
+    assert(lowerModule && "LoweringPrepare requires a module with LangOptions");
     return lowerModule->getLangOpts();
   }
 
