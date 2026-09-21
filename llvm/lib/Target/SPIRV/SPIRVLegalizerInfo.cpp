@@ -545,8 +545,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   MulFix.lower();
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
-      .legalForCartesianProduct(allFloatScalarsAndVectors,
-                                allIntScalarsAndVectors);
+      .legalForCartesianProduct(allIntScalarsAndVectors,
+                                allFloatScalarsAndVectors);
 
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})

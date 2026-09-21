@@ -2,13 +2,13 @@ ARG LLVM_VERSION=23.1.0
 # FIXME: Use "${LLVM_VERSION%%.*}" instead of "LLVM_VERSION_MAJOR" once we update runners to Ubuntu-26.04 with Buildah >= 1.37
 ARG LLVM_VERSION_MAJOR=23
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS llvm-downloader
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS llvm-downloader
 ARG LLVM_VERSION
 ARG LLVM_VERSION_MAJOR
 
 RUN apt-get update && \
     apt-get install -y wget xz-utils && \
-    wget -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
+    wget --progress=dot:giga -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
     mkdir -p /llvm-extract && \
     tar -xvJf llvm.tar.xz -C /llvm-extract \
         # Only unpack these tools to save space on Github runner.
@@ -19,7 +19,7 @@ RUN apt-get update && \
         LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format && \
     rm llvm.tar.xz
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS minimal
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS minimal
 # Create a new user with id 1001 as that is the user id that
 # Github Actions uses to perform the checkout action.
 RUN useradd gha -u 1001 -m -s /bin/bash
@@ -81,7 +81,7 @@ COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/cla
 
 # Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
-RUN pip install --require-hashes -r requirements_formatting.txt --break-system-packages && \
+RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
 USER gha
 WORKDIR /home/gha
@@ -129,18 +129,18 @@ USER gha
 
 ADD github-automation.py /usr/local/bin/
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS ids-builder
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS ids-builder
 ARG LLVM_VERSION_MAJOR
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg python3 python3-pip git cmake
 
 RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /etc/apt/keyrings/llvm.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_VERSION_MAJOR} main" | tee /etc/apt/sources.list.d/llvm.list && \
+    echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/resolute/ llvm-toolchain-resolute-${LLVM_VERSION_MAJOR} main" | tee /etc/apt/sources.list.d/llvm.list && \
     apt-get update && \
     apt-get install -y clang-${LLVM_VERSION_MAJOR} lld-${LLVM_VERSION_MAJOR} ninja-build libclang-${LLVM_VERSION_MAJOR}-dev
 
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
-RUN pip install --require-hashes -r requirements_formatting.txt --break-system-packages && \
+RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
 
 RUN git clone https://github.com/compnerd/ids && cd ids && \

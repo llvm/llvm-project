@@ -153,7 +153,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     }
   }
 
-  if (Tok.is(tok::kw___super)) {
+  if (!HasScopeSpecifier && Tok.is(tok::kw___super)) {
     SourceLocation SuperLoc = ConsumeToken();
     if (!Tok.is(tok::coloncolon)) {
       Diag(Tok.getLocation(), diag::err_expected_coloncolon_after_super);
@@ -2483,6 +2483,36 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
       // Code completion for the operator name.
       Actions.CodeCompletion().CodeCompleteOperatorName(getCurScope());
       return true;
+    }
+    case tok::lesslessless: {
+      // For CUDA, the Lexer will greedily merge all three <<< in operator<<<
+      // which, in fact, can be a valid template specialization of operator<<,
+      // and will never be a valid kernel launch expression, so split.
+
+      SourceLocation TokLoc = Tok.getLocation();
+      unsigned LessLessLength = Lexer::getTokenPrefixLength(
+          TokLoc, /*CharNo=*/2, PP.getSourceManager(), getLangOpts());
+
+      SourceLocation LessLessLoc = PP.SplitToken(TokLoc, LessLessLength);
+      Token LessLess = Tok;
+      LessLess.setLocation(LessLessLoc);
+      LessLess.setKind(tok::lessless);
+      LessLess.setLength(LessLessLength);
+
+      unsigned OldLength = Tok.getLength();
+
+      bool CachingTokens = PP.IsPreviousCachedToken(Tok);
+      Tok.setKind(tok::less);
+      Tok.setLength(OldLength - LessLessLength);
+      Tok.setLocation(TokLoc.getLocWithOffset(LessLessLength));
+
+      // Update the cache if there is any.
+      if (CachingTokens)
+        PP.ReplacePreviousCachedToken({LessLess, Tok});
+
+      SymbolLocations[SymbolIdx++] = LessLessLoc;
+      Op = OO_LessLess;
+      break;
     }
 
     default:

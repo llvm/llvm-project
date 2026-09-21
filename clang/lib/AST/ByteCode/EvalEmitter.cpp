@@ -18,16 +18,12 @@ using namespace clang;
 using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, FA, Ctx, this), EvalResult(&Ctx) {}
 
-EvalEmitter::~EvalEmitter() {
-  for (auto &V : Locals) {
-    Block *B = reinterpret_cast<Block *>(V.get());
-    if (B->isInitialized())
-      B->invokeDtor();
-  }
-}
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Status, P, Stk, FA, Ctx, this), EvalResult(&Ctx) {}
 
 /// Clean up all our resources. This needs to done in failed evaluations before
 /// we call InterpStack::clear(), because there might be a Pointer on the stack
@@ -151,11 +147,11 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
 Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
   // Allocate memory for a local.
-  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
-                                         Block::InlineDescMD);
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
-                                     /*IsStatic=*/false);
-  B->invokeCtorNoMemset();
+  char *Memory = reinterpret_cast<char *>(
+      S.allocate(sizeof(Block) + D->getAllocSize() + Block::InlineDescMD));
+  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
+                               /*IsStatic=*/false);
+  B->invokeCtor();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
@@ -169,7 +165,7 @@ Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.push_back(std::move(Memory));
+  Locals.push_back(Memory);
   return {D, Off};
 }
 

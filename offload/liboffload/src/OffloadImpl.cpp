@@ -482,6 +482,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write<uint64_t>(Mem);
   } break;
 
+  case OL_DEVICE_INFO_DRIVER_ID:
+    return Info.write<uint32_t>(Device->Device->getDriverId());
+
   default:
     break;
   }
@@ -625,6 +628,10 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
       return createOffloadError(
           ErrorCode::INVALID_DEVICE,
           "all devices in a context must belong to the same platform");
+    if (Devices[I]->Device->getDriverId() != Devices[0]->Device->getDriverId())
+      return createOffloadError(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in a context must have the same driver ID");
     DeviceList.push_back(Devices[I]);
     PluginDevices.push_back(Devices[I]->Device);
   }

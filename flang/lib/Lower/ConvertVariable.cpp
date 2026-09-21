@@ -509,8 +509,15 @@ fir::GlobalOp Fortran::lower::defineGlobal(
   if (global && globalIsInitialized(global))
     return global;
 
+  // Follow USE association only for named constants so the module-file
+  // initializer is available in the using TU. Other globals keep the
+  // local symbol: copying a non-PARAMETER initializer across TUs with
+  // external linkage would be a duplicate definition.
+  const Fortran::semantics::Symbol &objSym =
+      Fortran::semantics::IsNamedConstant(sym.GetUltimate()) ? sym.GetUltimate()
+                                                             : sym;
   const auto *oeDetails =
-      sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+      objSym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
@@ -662,8 +669,22 @@ getLinkageAttribute(Fortran::lower::AbstractConverter &converter,
       (!converter.getLoweringOptions().getSkipExternalRttiDefinition() ||
        Fortran::semantics::IsFromBuiltinModule(var.getSymbol())))
     return builder.createLinkOnceODRLinkage();
-  if (var.isModuleOrSubmoduleVariable())
+  if (var.isModuleOrSubmoduleVariable()) {
+    // Named module PARAMETERs: emit linkonce_odr from the module-file value.
+    // Keep strong linkage when a unique GPU symbol must survive:
+    // - !$acc declare (device registration / USE-side acc.declare)
+    // - CUDA data attributes (e.g. constant)
+    if (var.hasSymbol() &&
+        Fortran::semantics::IsNamedConstant(var.getSymbol().GetUltimate())) {
+      const Fortran::semantics::Symbol &ultimate =
+          var.getSymbol().GetUltimate();
+      if (ultimate.test(Fortran::semantics::Symbol::Flag::AccDeclare) ||
+          Fortran::semantics::GetCUDADataAttr(&ultimate))
+        return {}; // external linkage
+      return builder.createLinkOnceODRLinkage();
+    }
     return {}; // external linkage
+  }
   // Otherwise, the variable is owned by a procedure and must not be visible in
   // other compilation units.
   return builder.createInternalLinkage();
@@ -761,7 +782,8 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Symbol &ultimateSymbol =
       var.getSymbol().GetUltimate();
   llvm::StringRef symNm = toStringRef(ultimateSymbol.name());
-  bool isTarg = var.isTarget();
+  bool isTarg =
+      var.isTarget() || converter.isVisibleCrayPointerTarget(ultimateSymbol);
 
   // Do not allocate storage for cray pointee. The address inside the cray
   // pointer will be used instead when using the pointee. Allocating space
@@ -2073,6 +2095,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     fir::FortranVariableFlagsEnum extraFlags = {};
     if (isCapturedInInternalProcedure(converter, sym))
       extraFlags = extraFlags | fir::FortranVariableFlagsEnum::internal_assoc;
+    if (converter.isVisibleCrayPointerTarget(sym))
+      extraFlags = extraFlags | fir::FortranVariableFlagsEnum::target;
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
                                                   extraFlags);

@@ -668,7 +668,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   EHStreamer *ES = nullptr;
   switch (MAI.getExceptionHandlingType()) {
+  case ExceptionHandling::Default:
+    llvm_unreachable("should have resolved exception model kind");
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is handled in JS glue code and emits no EH tables here.
     if (!usesCFIWithoutEH())
       break;
     [[fallthrough]];
@@ -2093,7 +2097,9 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
-  bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
+  // Only x86 needs this padding; the Arm unwinders back the PC up themselves.
+  bool NeedsEHaNops = MMI->getModule()->getModuleFlag("eh-asynch") &&
+                      TM.getTargetTriple().isX86();
 
   const MCSubtargetInfo *STI = nullptr;
   if (this->MF)
@@ -2186,7 +2192,7 @@ void AsmPrinter::emitFunctionBody() {
         //  an EH region as it must be led by at least a Load
         {
           auto MI2 = std::next(MI.getIterator());
-          if (IsEHa && MI2 != MBB.end() &&
+          if (NeedsEHaNops && MI2 != MBB.end() &&
               (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
             emitNops(1);
         }
@@ -2424,6 +2430,23 @@ void AsmPrinter::emitFunctionBody() {
   R << ore::NV("NumInstructions", NumInstsInFunction)
     << " instructions in function";
   ORE->emit(R);
+
+  if (ORE->allowExtraAnalysis("target-features")) {
+    const Function &F = MF->getFunction();
+    std::string FunctionName;
+    raw_string_ostream OS(FunctionName);
+    F.printAsOperand(OS, /*PrintType=*/false);
+
+    MachineOptimizationRemarkAnalysis Remark(
+        "target-features", "EnabledFeatures", F.getSubprogram(), &MF->front());
+    Remark << "Enabled features for " << ore::NV("Function", FunctionName)
+           << ": ";
+    // The processor feature table is sorted by feature name.
+    ListSeparator LS(",");
+    for (const auto *Feature : MF->getSubtarget().getEnabledProcessorFeatures())
+      Remark << LS << ore::NV("Feature", Feature->key());
+    ORE->emit(Remark);
+  }
 
   // If the function is empty and the object file uses .subsections_via_symbols,
   // then we need to emit *something* to the function body to prevent the
@@ -3956,7 +3979,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   }
   case Instruction::GetElementPtr: {
     // Generate a symbolic expression for the byte address
-    APInt OffsetAI(getDataLayout().getPointerTypeSizeInBits(CE->getType()), 0);
+    APInt OffsetAI(getDataLayout().getIndexTypeSizeInBits(CE->getType()), 0);
     cast<GEPOperator>(CE)->accumulateConstantOffset(getDataLayout(), OffsetAI);
 
     const MCExpr *Base = lowerConstant(CE->getOperand(0));

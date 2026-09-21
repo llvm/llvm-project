@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 class TestBoolVector(TestBase):
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIf(bugnumber="rdar://100741983")
     @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
