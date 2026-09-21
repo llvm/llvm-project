@@ -1857,13 +1857,8 @@ struct SgToLaneConvertLayout
   }
 };
 
-/// Returns true if `layout` has rank 2, the default (row major) effective order
-/// [1, 0] and effective lane_data [1, 1], i.e. it maps the elements of the
-/// value to lanes one by one, without packing several of them into a lane. An
-/// unset lane_data is not accepted: `getEffectiveLaneDataAsInt` returns an
-/// empty vector for it, so layouts that are not lane level are rejected here.
-/// The effective lane_layout is deliberately left unconstrained: it is what the
-/// conversions below redistribute.
+/// `getEffectiveLaneDataAsInt` is empty when `lane_data` is unset, so the unit
+/// check also rejects layouts that are not lane level.
 static bool hasDefaultOrderAndUnitLaneData(xegpu::DistributeLayoutAttr layout) {
   if (layout.getRank() != 2)
     return false;
@@ -2050,9 +2045,10 @@ struct SgToLaneConvertLayoutBroadcastExtract
 
 /// Distributes the slice-attributed `xegpu.convert_layout` whose source is
 /// broadcast over two lane groups onto the rows of a subset of the lanes.
-/// Column `c` of row `r` is owned by lane `r + c * stride`, so each lane
-/// extracts its own element and gathers the columns of its row with one
-/// `gpu.shuffle idx` per column.
+/// Column `c` of row `r` is owned by lane `r + c * stride`, where `stride` is
+/// the lane stride of the input's distributed dimension (see
+/// `getDistributedDimLaneStride`), so each lane extracts its own element and
+/// gathers the columns of its row with one `gpu.shuffle idx` per column.
 ///
 /// The input layout has effective `lane_layout` [1, 2], so the distributed
 /// source holds one column per lane group; the target has [n, 1], so lane `l`
@@ -2174,9 +2170,9 @@ struct SgToLaneConvertLayoutPartialBroadcastExtractShuffle
 /// `vector.deinterleave` and the lane's group selects between them.
 ///
 /// The input layout has effective `lane_layout` [1, 1], so the distributed
-/// source is the whole value; the target has [1, 2], so the lanes below the
-/// group stride keep column 0, the rest column 1, and the distributed result
-/// has one column per lane.
+/// source is the whole value; the target has [1, 2] and its two groups tile the
+/// subgroup, so the first half of the lanes keeps column 0 and the second half
+/// column 1, one column per lane.
 struct SgToLaneConvertLayoutDeinterleaveSelect
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
