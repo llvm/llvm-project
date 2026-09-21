@@ -389,6 +389,10 @@ void FrontendAction::EndSourceFileAction() {
     getCompilerInstance().getPreprocessor().SetEnableMacroExpansion();
 }
 
+void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput) {
+  setCurrentInput(CurrentInput, nullptr);
+}
+
 void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
                                      std::unique_ptr<ASTUnit> AST) {
   this->CurrentInput = CurrentInput;

@@ -248,8 +248,8 @@ static const StaticDiagInfoRec *GetDiagInfo(unsigned DiagID) {
   unsigned ID = DiagID - DIAG_START_COMMON - 1;
 #define CATEGORY(NAME, PREV) \
   if (DiagID > DIAG_START_##NAME) { \
-    Offset += NUM_BUILTIN_##PREV##_DIAGNOSTICS - DIAG_START_##PREV - 1; \
-    ID -= DIAG_START_##NAME - DIAG_START_##PREV; \
+    Offset += llvm::to_underlying(NUM_BUILTIN_##PREV##_DIAGNOSTICS) - DIAG_START_##PREV - 1; \
+    ID -= llvm::to_underlying(DIAG_START_##NAME) - DIAG_START_##PREV; \
   }
 CATEGORY(DRIVER, COMMON)
 CATEGORY(FRONTEND, DRIVER)

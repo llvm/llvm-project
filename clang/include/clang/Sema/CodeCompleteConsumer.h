@@ -50,7 +50,7 @@ class UsingShadowDecl;
 
 /// Default priority values for code-completion results based
 /// on their kind.
-enum {
+enum CodeCompletionPriority {
   /// Priority for the next initialization in a constructor initializer
   /// list.
   CCP_NextInitializer = 7,
@@ -101,7 +101,7 @@ enum {
 
 /// Priority value deltas that are added to code-completion results
 /// based on the context of the result.
-enum {
+enum CodeCompletionDelta {
   /// The result is in a base class.
   CCD_InBaseClass = 2,
 
@@ -129,6 +129,15 @@ enum {
   /// block placeholder.
   CCD_BlockPropertySetter = 3
 };
+
+constexpr unsigned operator+(CodeCompletionPriority P, CodeCompletionDelta D) {
+  return static_cast<unsigned>(llvm::to_underlying(P) +
+                               llvm::to_underlying(D));
+}
+
+constexpr unsigned operator+(CodeCompletionDelta D, CodeCompletionPriority P) {
+  return P + D;
+}
 
 /// Priority value factors by which we will divide or multiply the
 /// priority of a code-completion result.

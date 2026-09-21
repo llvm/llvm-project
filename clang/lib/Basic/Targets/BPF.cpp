@@ -19,7 +19,7 @@ using namespace clang;
 using namespace clang::targets;
 
 static constexpr int NumBuiltins =
-    clang::BPF::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(clang::BPF::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 
 #define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsBPF.inc"

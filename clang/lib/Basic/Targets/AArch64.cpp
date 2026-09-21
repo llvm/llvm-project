@@ -26,18 +26,19 @@ using namespace clang;
 using namespace clang::targets;
 
 static constexpr int NumNeonBuiltins =
-    NEON::FirstFp16Builtin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(NEON::FirstFp16Builtin) - Builtin::FirstTSBuiltin;
 static constexpr int NumFp16Builtins =
-    NEON::FirstTSBuiltin - NEON::FirstFp16Builtin;
+    llvm::to_underlying(NEON::FirstTSBuiltin) - NEON::FirstFp16Builtin;
 static constexpr int NumSVEBuiltins =
-    SVE::FirstNeonBridgeBuiltin - NEON::FirstTSBuiltin;
+    llvm::to_underlying(SVE::FirstNeonBridgeBuiltin) - NEON::FirstTSBuiltin;
 static constexpr int NumSVENeonBridgeBuiltins =
-    SVE::FirstTSBuiltin - SVE::FirstNeonBridgeBuiltin;
-static constexpr int NumSMEBuiltins = SME::FirstTSBuiltin - SVE::FirstTSBuiltin;
+    llvm::to_underlying(SVE::FirstTSBuiltin) - SVE::FirstNeonBridgeBuiltin;
+static constexpr int NumSMEBuiltins =
+    llvm::to_underlying(SME::FirstTSBuiltin) - SVE::FirstTSBuiltin;
 static constexpr int NumAArch64Builtins =
-    AArch64::LastTSBuiltin - SME::FirstTSBuiltin;
+    llvm::to_underlying(AArch64::LastTSBuiltin) - SME::FirstTSBuiltin;
 static constexpr int NumBuiltins =
-    AArch64::LastTSBuiltin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(AArch64::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 static_assert(NumBuiltins ==
               (NumNeonBuiltins + NumFp16Builtins + NumSVEBuiltins +
                NumSVENeonBridgeBuiltins + NumSMEBuiltins + NumAArch64Builtins));

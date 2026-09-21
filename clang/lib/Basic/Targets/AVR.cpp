@@ -19,7 +19,8 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr int NumBuiltins = AVR::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumBuiltins =
+    llvm::to_underlying(AVR::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 
 static constexpr llvm::StringTable BuiltinStrings =
     CLANG_BUILTIN_STR_TABLE_START

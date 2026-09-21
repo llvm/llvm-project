@@ -161,8 +161,9 @@ public:
 
   std::unique_ptr<ASTUnit> takeCurrentASTUnit();
 
+  void setCurrentInput(const FrontendInputFile &CurrentInput);
   void setCurrentInput(const FrontendInputFile &CurrentInput,
-                       std::unique_ptr<ASTUnit> AST = nullptr);
+                       std::unique_ptr<ASTUnit> AST);
 
   /// @}
   /// @name Supported Modes

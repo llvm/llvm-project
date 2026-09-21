@@ -2122,11 +2122,11 @@ void Generic_GCC::GCCInstallationDetector::init(
     StringRef OSEnv = TargetTriple.getOSAndEnvironmentName();
     if (TargetTriple.getEnvironment() == llvm::Triple::GNUX32)
       OSEnv = "linux-gnu";
-    TripleNoVendor = (TargetTriple.getArchName().str() + '-' + OSEnv).str();
+    TripleNoVendor = (TargetTriple.getArchName() + "-" + OSEnv).str();
     CandidateTripleAliases.push_back(TripleNoVendor);
     if (BiarchVariantTriple.getArch() != llvm::Triple::UnknownArch) {
       BiarchTripleNoVendor =
-          (BiarchVariantTriple.getArchName().str() + '-' + OSEnv).str();
+          (BiarchVariantTriple.getArchName() + "-" + OSEnv).str();
       CandidateBiarchTripleAliases.push_back(BiarchTripleNoVendor);
     }
   }
@@ -2939,9 +2939,10 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       // using LI to ensure stable path separators across Windows and
       // Linux.
       Installation.GCCInstallPath =
-          (LibDir + "/" + LibSuffix + "/" + VersionText).str();
+          (Twine(LibDir) + "/" + LibSuffix + "/" + VersionText).str();
       Installation.GCCParentLibPath =
-          (Installation.GCCInstallPath + "/../" + Suffix.ReversePath).str();
+          (Twine(Installation.GCCInstallPath) + "/../" + Suffix.ReversePath)
+              .str();
       Installation.SelectedMultilib = getMultilib();
 
       Installations.push_back(Installation);

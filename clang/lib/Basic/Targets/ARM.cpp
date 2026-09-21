@@ -1045,16 +1045,16 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-static constexpr int NumBuiltins = ARM::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr int NumBuiltins = llvm::to_underlying(ARM::LastTSBuiltin) - Builtin::FirstTSBuiltin;
 static constexpr int NumNeonBuiltins =
-    NEON::FirstFp16Builtin - Builtin::FirstTSBuiltin;
+    llvm::to_underlying(NEON::FirstFp16Builtin) - Builtin::FirstTSBuiltin;
 static constexpr int NumFp16Builtins =
-    NEON::FirstTSBuiltin - NEON::FirstFp16Builtin;
+    llvm::to_underlying(NEON::FirstTSBuiltin) - NEON::FirstFp16Builtin;
 static constexpr int NumMVEBuiltins =
-    ARM::FirstCDEBuiltin - NEON::FirstTSBuiltin;
+    llvm::to_underlying(ARM::FirstCDEBuiltin) - NEON::FirstTSBuiltin;
 static constexpr int NumCDEBuiltins =
-    ARM::FirstARMBuiltin - ARM::FirstCDEBuiltin;
-static constexpr int NumARMBuiltins = ARM::LastTSBuiltin - ARM::FirstARMBuiltin;
+    llvm::to_underlying(ARM::FirstARMBuiltin) - ARM::FirstCDEBuiltin;
+static constexpr int NumARMBuiltins = llvm::to_underlying(ARM::LastTSBuiltin) - ARM::FirstARMBuiltin;
 static_assert(NumBuiltins ==
               (NumNeonBuiltins + NumFp16Builtins + NumMVEBuiltins +
                NumCDEBuiltins + NumARMBuiltins));
