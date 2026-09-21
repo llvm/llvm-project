@@ -1033,28 +1033,23 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
   CPSRDef = nullptr;
   HighLatencyCPSR = false;
 
-  // Skip some bookkeeping in the common case where the avoidCPSRPartialUpdate
-  // heuristic is unnecessary.
-  bool AvoidPartialCPSR = !MinimizeSize && STI->avoidCPSRPartialUpdate();
-
   // Check predecessors for the latest CPSRDef.
-  if (AvoidPartialCPSR) {
-    for (auto *Pred : MBB.predecessors()) {
-      const MBBInfo &PInfo = BlockInfo[Pred->getNumber()];
-      if (!PInfo.Visited) {
-        // Since blocks are visited in RPO, this must be a back-edge.
-        continue;
-      }
-      if (PInfo.HighLatencyCPSR) {
-        HighLatencyCPSR = true;
-        break;
-      }
+  for (auto *Pred : MBB.predecessors()) {
+    const MBBInfo &PInfo = BlockInfo[Pred->getNumber()];
+    if (!PInfo.Visited) {
+      // Since blocks are visited in RPO, this must be a back-edge.
+      continue;
+    }
+
+    if (PInfo.HighLatencyCPSR) {
+      HighLatencyCPSR = true;
+      break;
     }
   }
 
   // If this BB loops back to itself, conservatively avoid narrowing the
   // first instruction that does partial flag update.
-  bool IsSelfLoop = AvoidPartialCPSR && MBB.isSuccessor(&MBB);
+  bool IsSelfLoop = MBB.isSuccessor(&MBB);
   MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),E = MBB.instr_end();
   MachineBasicBlock::instr_iterator NextMII;
   for (; MII != E; MII = NextMII) {
@@ -1078,9 +1073,6 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
       if (NextInSameBundle && !NextMII->isBundledWithPred())
         NextMII->bundleWithPred();
     }
-
-    if (!AvoidPartialCPSR)
-      continue;
 
     // Maintain CPSRDef as the most recent CPSR-defining instruction in program
     // order, so canAddPseudoFlagDep can consult it. MI is inspected after
