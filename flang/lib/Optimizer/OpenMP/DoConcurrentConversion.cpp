@@ -603,6 +603,8 @@ private:
 
     fir::RecordType recordType = asRecordType(eleType);
 
+    // Only decides if the top-level live-in needs a mapper; nested-record
+    // recursion is delegated to `getOrGenImplicitDefaultDeclareMapper`.
     bool requiresImplcitMapper = [&]() {
       if (!recordType)
         return false;
@@ -612,7 +614,7 @@ private:
           return true;
 
         if (asRecordType(fieldType))
-          TODO(liveIn.getLoc(), "Nested record types are not supported yet.");
+          return true;
       }
 
       return false;
@@ -623,7 +625,9 @@ private:
       std::string mapperIdName =
           Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
               recordType);
-      // TODO Add a mangler callback once nested record types are supported.
+      // Nested records are mapped recursively by
+      // `getOrGenImplicitDefaultDeclareMapper` using canonical
+      // (fully-qualified) names.
       mapperId = Fortran::utils::openmp::getOrGenImplicitDefaultDeclareMapper(
           builder, liveIn.getLoc(), recordType, mapperIdName);
     }
