@@ -979,7 +979,7 @@ launchExecutorWithDefaultConnect() {
             inconvertibleErrorCode());
     }
 
-    std::string ConnSpec = "fd=";
+    std::string ConnSpec = "socket:adopt=";
     ConnSpec += std::to_string(Sockets[ChildSocket]);
     if (auto Err = launchExecutor({ConnSpec}))
       return std::move(Err);
