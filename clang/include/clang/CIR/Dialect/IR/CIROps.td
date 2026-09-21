@@ -8604,15 +8604,23 @@ def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
 def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
   Terminator
 ]> {
-  let summary = "Terminate due to exception thrown during cleanup";
+  let summary = "Terminate due to an exception that must not escape";
   let description = [{
-    `cir.eh.terminate` terminates program execution when an exception is thrown
-    while executing cleanup code during exception unwinding. The C++ standard
-    requires that `std::terminate()` be called in this scenario.
+    `cir.eh.terminate` terminates program execution when an exception reaches a
+    point from which the C++ standard does not allow it to propagate, and
+    requires `std::terminate()` to be called instead. That happens when an
+    exception is thrown while executing cleanup code during unwinding, and when
+    an exception tries to escape a function that cannot throw.
 
-    This operation takes an `!cir.eh_token` from a `cir.eh.initiate` operation
-    and acts as a terminator. It is produced during CFG flattening when throwing
-    calls are found in EH cleanup regions.
+    This operation takes an `!cir.eh_token` and acts as a terminator. In
+    high-level CIR it appears as the only operation in the catch-all handler
+    region of the `cir.try` that wraps the body of a function that cannot
+    throw, where the token comes from the handler region's block argument. The
+    handler is a catch-all because such a function terminates on any escaping
+    exception, and it has no `cir.begin_catch` because the runtime helper this
+    operation lowers to performs the catch. After CFG flattening the token
+    comes from a `cir.eh.initiate` operation; flattening also produces this
+    operation for throwing calls found in EH cleanup regions.
 
     During EH ABI lowering, this is replaced with target-specific termination
     code. For the Itanium ABI, the `cir.eh.initiate` is lowered to
@@ -8621,6 +8629,16 @@ def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
     pointer, followed by an unreachable operation.
 
     Example:
+
+    ```
+    cir.try {
+      ...
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.eh.terminate %eh_token : !cir.eh_token
+    }
+    ```
+
+    And after CFG flattening:
 
     ```
     ^terminate_unwind:

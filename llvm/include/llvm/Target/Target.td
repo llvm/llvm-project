@@ -1833,6 +1833,11 @@ class AsmParser {
   // several registers share the same alias (i.e. not a 1:1 mapping).
   bit ShouldEmitMatchRegisterAltName = false;
 
+  // Generate MatchRegisterAltName(StringRef Name, unsigned AltIdx), matching
+  // only explicit names for AltIdx, without fallback. Duplicate names are
+  // checked per index, subject to AllowDuplicateRegisterNames.
+  bit ShouldEmitMatchRegisterAltNameWithIndex = false;
+
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
   // should be generated even if there are duplicate register names. The
   // target is responsible for coercing aliased registers as necessary
