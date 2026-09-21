@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+import sys
+
+# Find the start of the actual symbol table
+for line in sys.stdin:
+  line = line.rstrip()
+  if line == "SYMBOL TABLE:":
+    break
+
+function_sizes = {}
+
+# for line in sys.stdin:
+#   print(line.rstrip())
+
+# Figure out interesting information (and drop the line, since it's just the file name)
+line = sys.stdin.readline().rstrip()
+address_size = len(line) - len(line.lstrip('0'))
+assert line.endswith(".codesize.cpp") # Make sure it's actually just the file name
+
+for line in sys.stdin:
+  line = line.rstrip()[address_size + 1:]
+
+  # If there is a newline we're done with the symbol table and get the relocations
+  if line == "":
+    break
+
+  # Extract the flag characters
+  flags = line[:7]
+  line = line[8:]
+
+  if flags[6] == " " and line.startswith("*UND*"):
+    function_sizes[line[line.rfind(" ") + 1:]] = -1
+
+  if flags[6] == "O":
+    function_sizes[line[line.rfind(" ") + 1:]] = -2
+
+  # Drop everything else that's not a function
+  if flags[6] != "F":
+    continue
+
+  # Drop the section name
+  line = line[line.find("\t") + 1:]
+
+  # Get the size of the function
+  code_size = int(line[:line.find(" ")], 16)
+  line = line[line.find(" "):]
+
+  # Drop an additional annotations
+  line = line[line.rfind(" ") + 1:]
+
+  # The remainder is the mangled function name
+  function_name = line
+
+  function_sizes[function_name] = code_size
+
+edges = {}
+
+while True:
+  EOF = True
+  found_line = False
+  for line in sys.stdin:
+    EOF = False
+    line = line.rstrip()
+    if line.startswith("RELOCATION RECORDS FOR [.text."):
+      found_line = True
+      break
+  if EOF or not found_line:
+    break
+  current_func = line[line.rfind(".text.") + 6:-2]
+  edges[current_func] = list()
+
+  sys.stdin.readline() # remove table header
+
+  for line in sys.stdin:
+    line = line.rstrip()
+    if line == "":
+      break
+    edges[current_func].append(line[line.rfind(" ") + 1:line.rfind("-")])
+
+accumulated_sizes = {}
+
+print_only = False
+
+def get_accumulated_size(func):
+  if func in accumulated_sizes:
+    if not print_only:
+      accumulated_sizes[func] = (accumulated_sizes[func][0], False)
+    return accumulated_sizes[func]
+
+  ConsiderUnique = "BENCHMARK_THIS" not in func
+
+  # For recurice cases just don't count the same function twice. This is inaccurate for actual recursion, but that's
+  # rarely used in libc++, so it doesn't matter too much.
+  accumulated_sizes[func] = (0, ConsiderUnique)
+
+  acc = function_sizes[func]
+
+  if acc < 0: # We have an external symbol or something that's not a function
+    return (0, False)
+
+  if func not in edges:
+    accumulated_sizes[func] = (acc, ConsiderUnique)
+    return (acc, ConsiderUnique)
+
+  for child in edges[func]:
+    acc += get_accumulated_size(child)[0]
+  accumulated_sizes[func] = (acc, ConsiderUnique)
+  return (acc, ConsiderUnique)
+
+for func in function_sizes:
+  if "B14BENCHMARK_THIS" in func:
+    get_accumulated_size(func)
+
+print_only = True
+
+def print_children(level, e):
+  for edge in e:
+    size, unique = get_accumulated_size(edge)
+    if function_sizes[edge] >= 0:
+      print("  " * level + f"{edge} {size}:{function_sizes[edge]}")
+      if unique and edge in edges:
+        print_children(level + 1, edges[edge])
+
+for func in function_sizes:
+  size, unique = get_accumulated_size(func)
+  if unique or function_sizes[func] < 0:
+    continue
+  short_name = func.replace("B14BENCHMARK_THIS", "")
+  print(f"{"[multiuse] " if short_name == func else "[benchmark] "}{short_name}: {size}:{function_sizes[func]}")
+  if func in edges:
+    print_children(1, edges[func])
+  print()

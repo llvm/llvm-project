@@ -274,6 +274,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
     def getTestsForPath(self, testSuite, pathInSuite, litConfig, localConfig):
         SUPPORTED_SUFFIXES = [
             "[.]bench[.]cpp$",
+            "[.]codesize[.]cpp$",
             "[.]pass[.]cpp$",
             "[.]pass[.]mm$",
             "[.]compile[.]pass[.]cpp$",
@@ -366,6 +367,10 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                 steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_min_time=%{benchmark_min_time} --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
                 parse_results = os.path.join(LIBCXX_UTILS, 'parse-google-benchmark-results')
                 steps += [f"{parse_results} %{{temp}}/benchmark-result.json --output-format=lnt > %{{temp}}/results.lnt"]
+            return self._executeShTest(test, litConfig, steps)
+        elif filename.endswith(".codesize.cpp"):
+            steps = ["%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -c -ffunction-sections -o %t.o",
+                     f"%dbg(EXECUTED AS) llvm-objdump -tr %t.o | {os.path.join(LIBCXX_UTILS, "bench-codesize")} | llvm-cxxfilt"]
             return self._executeShTest(test, litConfig, steps)
         elif re.search('[.]gen[.][^.]+$', filename): # This only happens when a generator test is not supported
             return self._executeShTest(test, litConfig, [])
