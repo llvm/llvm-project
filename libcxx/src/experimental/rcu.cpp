@@ -106,7 +106,7 @@ class rcu_domain_impl {
   rcu_singly_list_view retired_queue_stage1_;
   rcu_singly_list_view retired_queue_stage2_;
 
-  friend class rcu_domain;
+  friend class std::rcu_domain;
 
   void update_phase_and_wait() noexcept {
     rcu_singly_list_view working_queue;
