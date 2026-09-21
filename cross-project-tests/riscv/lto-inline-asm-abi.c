@@ -12,16 +12,13 @@
 // RUN: llvm-objdump -d --show-all-symbols --no-show-raw-insn %t.so | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -t %t.so | FileCheck %s --check-prefix=SYMS --implicit-check-not='\$x'
 //
-/// TODO: ThinLTO fails because IRMover drops TargetTriple when importing the
-/// module-level .symver inline asm into b.c's empty ThinLTO module, causing
-/// RISC-V module inline asm in a.c and b.c to use the default lp64 ABI instead
-/// of lp64d.
 // RUN: %clang --target=riscv64-linux-android -march=rv64gcv -O2 -flto=thin -c %t/a.c -o %t1.thin.o
 // RUN: %clang --target=riscv64-linux-android -march=rv64gcv -O2 -flto=thin -c %t/b.c -o %t2.thin.o
-// RUN: not %clang --target=riscv64-linux-android -march=rv64gcv -O2 -flto=thin -shared -nostdlib -fuse-ld=lld -Wl,--version-script=%t/ver.ver %t1.thin.o %t2.thin.o -o %t.thin.so 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=THIN-ERR
-//
-// THIN-ERR: ld.lld: error: {{.*}}.lto.a.o: cannot link object files with different floating-point ABI
+// RUN: %clang --target=riscv64-linux-android -march=rv64gcv -O2 -flto=thin -shared -nostdlib -fuse-ld=lld -Wl,--version-script=%t/ver.ver %t1.thin.o %t2.thin.o -o %t.thin.so 2>&1 \
+// RUN:   | FileCheck %s --allow-empty --implicit-check-not="error:" --implicit-check-not="warning:" --implicit-check-not="note:"
+// RUN: llvm-readobj --file-headers %t.thin.so | FileCheck %s --check-prefix=FLAGS
+// RUN: llvm-objdump -d --show-all-symbols --no-show-raw-insn %t.thin.so | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump -t %t.thin.so | FileCheck %s --check-prefix=SYMS --implicit-check-not='\$x'
 //
 // FLAGS:      Flags [ (0x5)
 // FLAGS-NEXT:   EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
