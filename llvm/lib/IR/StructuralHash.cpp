@@ -35,6 +35,13 @@ class StructuralHashImpl {
 
   /// IgnoreOp is a function that returns true if the operand should be ignored.
   IgnoreOperandFunc IgnoreOp = nullptr;
+  /// Whether name-based hashes of globals with local linkage are qualified
+  /// with the source file name of their module.
+  bool SourceQualifyLocalGlobals;
+  /// Lazily computed hash of the source file name. An instance only hashes
+  /// values from a single module, so one cached value suffices; 0 means the
+  /// source file name is empty and hashes are left unqualified.
+  std::optional<stable_hash> SourceNameHash;
   /// A mapping from instruction indices to instruction pointers.
   /// The index represents the position of an instruction based on the order in
   /// which it is first encountered.
@@ -57,8 +64,10 @@ class StructuralHashImpl {
 public:
   StructuralHashImpl() = delete;
   explicit StructuralHashImpl(bool DetailedHash,
-                              IgnoreOperandFunc IgnoreOp = nullptr)
-      : DetailedHash(DetailedHash), IgnoreOp(IgnoreOp) {
+                              IgnoreOperandFunc IgnoreOp = nullptr,
+                              bool SourceQualifyLocalGlobals = false)
+      : DetailedHash(DetailedHash), IgnoreOp(IgnoreOp),
+        SourceQualifyLocalGlobals(SourceQualifyLocalGlobals) {
     if (IgnoreOp) {
       IndexInstruction = std::make_unique<IndexInstrMap>();
       IndexOperandHashMap = std::make_unique<IndexOperandHashMapType>();
@@ -77,9 +86,23 @@ public:
     return hashAPInt(F.bitcastToAPInt());
   }
 
-  static stable_hash hashGlobalVariable(const GlobalVariable &GVar) {
+  stable_hash hashGlobalName(const GlobalVariable &GVar) {
+    stable_hash GlobalHash = hashGlobalValue(&GVar);
+    if (!GlobalHash || !SourceQualifyLocalGlobals || !GVar.hasLocalLinkage())
+      return GlobalHash;
+    if (!SourceNameHash) {
+      StringRef SourceName = GVar.getParent()->getSourceFileName();
+      SourceNameHash =
+          SourceName.empty() ? stable_hash(0) : stable_hash_name(SourceName);
+    }
+    if (!*SourceNameHash)
+      return GlobalHash;
+    return stable_hash_combine(*SourceNameHash, GlobalHash);
+  }
+
+  stable_hash hashGlobalVariable(const GlobalVariable &GVar) {
     if (!GVar.hasInitializer())
-      return hashGlobalValue(&GVar);
+      return hashGlobalName(GVar);
 
     // Hash the contents of a string.
     if (GVar.getName().starts_with(".str")) {
@@ -102,7 +125,7 @@ public:
           return hashConstant(GVar.getInitializer());
     }
 
-    return hashGlobalValue(&GVar);
+    return hashGlobalName(GVar);
   }
 
   static stable_hash hashGlobalValue(const GlobalValue *GV) {
@@ -115,7 +138,7 @@ public:
   // FunctionComparator::cmpConstants() in FunctionComparator.cpp, but here
   // we're interested in computing a hash rather than comparing two Constants.
   // Some of the logic is simplified, e.g, we don't expand GEPOperator.
-  static stable_hash hashConstant(const Constant *C) {
+  stable_hash hashConstant(const Constant *C) {
     SmallVector<stable_hash> Hashes;
 
     Type *Ty = C->getType();
@@ -332,8 +355,11 @@ stable_hash llvm::StructuralHash(const Function &F, bool DetailedHash) {
   return H.getHash();
 }
 
-stable_hash llvm::StructuralHash(const GlobalVariable &GVar) {
-  return StructuralHashImpl::hashGlobalVariable(GVar);
+stable_hash llvm::StructuralHash(const GlobalVariable &GVar,
+                                 bool SourceQualifyLocalGlobals) {
+  StructuralHashImpl H(/*DetailedHash=*/false, /*IgnoreOp=*/nullptr,
+                       SourceQualifyLocalGlobals);
+  return H.hashGlobalVariable(GVar);
 }
 
 stable_hash llvm::StructuralHash(const Module &M, bool DetailedHash) {
@@ -344,8 +370,10 @@ stable_hash llvm::StructuralHash(const Module &M, bool DetailedHash) {
 
 FunctionHashInfo
 llvm::StructuralHashWithDifferences(const Function &F,
-                                    IgnoreOperandFunc IgnoreOp) {
-  StructuralHashImpl H(/*DetailedHash=*/true, IgnoreOp);
+                                    IgnoreOperandFunc IgnoreOp,
+                                    bool SourceQualifyLocalGlobals) {
+  StructuralHashImpl H(/*DetailedHash=*/true, IgnoreOp,
+                       SourceQualifyLocalGlobals);
   H.update(F);
   return FunctionHashInfo(H.getHash(), H.getIndexInstrMap(),
                           H.getIndexPairOpndHashMap());

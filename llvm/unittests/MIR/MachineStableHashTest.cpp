@@ -211,3 +211,97 @@ body:             |
   EXPECT_NE(stableHashValue(*MF2), stableHashValue(*MF4));
   EXPECT_NE(stableHashValue(*MF3), stableHashValue(*MF4));
 }
+
+TEST_F(MachineStableHashTest, SourceQualifiedLocalGlobals) {
+  auto TM = createTargetMachine(("aarch64--"), "", "");
+  if (!TM)
+    GTEST_SKIP();
+  StringRef MIRStringA = R"MIR(
+--- |
+  source_filename = "a.c"
+  @cache = internal global i32 0
+  @.str = private unnamed_addr constant [5 x i8] c"same\00"
+  @external = global i32 0
+  @0 = internal global i32 0
+  define void @f1() { ret void }
+...
+---
+name:            f1
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+  liveins: $lr
+    $x8 = ADRP target-flags(aarch64-page) @cache
+    $x9 = ADRP target-flags(aarch64-page) @.str
+    $x10 = ADRP target-flags(aarch64-page) @external
+    $x11 = ADRP target-flags(aarch64-page) @0
+  RET undef $lr
+...
+)MIR";
+  // The same module compiled from a different source: @cache and @external
+  // keep their names, while the string has a different symbol identity but
+  // identical contents.
+  StringRef MIRStringB = R"MIR(
+--- |
+  source_filename = "b.c"
+  @cache = internal global i32 0
+  @.str.1 = private unnamed_addr constant [5 x i8] c"same\00"
+  @external = global i32 0
+  define void @f1() { ret void }
+...
+---
+name:            f1
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+  liveins: $lr
+    $x8 = ADRP target-flags(aarch64-page) @cache
+    $x9 = ADRP target-flags(aarch64-page) @.str.1
+    $x10 = ADRP target-flags(aarch64-page) @external
+  RET undef $lr
+...
+)MIR";
+  std::unique_ptr<Module> MA;
+  std::unique_ptr<Module> MB;
+  MachineModuleInfo MMIA(TM.get());
+  MachineModuleInfo MMIB(TM.get());
+  MA = parseMIR(*TM, MIRStringA, MMIA);
+  ASSERT_TRUE(MA);
+  MB = parseMIR(*TM, MIRStringB, MMIB);
+  ASSERT_TRUE(MB);
+
+  auto *MFA = MMIA.getMachineFunction(*MA->getFunction("f1"));
+  auto *MFB = MMIB.getMachineFunction(*MB->getFunction("f1"));
+  auto InstA = MFA->front().begin();
+  auto InstB = MFB->front().begin();
+  const auto &CacheMOA = InstA->getOperand(1);
+  const auto &CacheMOB = InstB->getOperand(1);
+  const auto &StrMOA = (++InstA)->getOperand(1);
+  const auto &StrMOB = (++InstB)->getOperand(1);
+  const auto &ExternalMOA = (++InstA)->getOperand(1);
+  const auto &ExternalMOB = (++InstB)->getOperand(1);
+  const auto &UnnamedMOA = (++InstA)->getOperand(1);
+
+  // By default the source is not part of the hash.
+  EXPECT_EQ(stableHashValue(CacheMOA), stableHashValue(CacheMOB));
+  // Name-based hashes of locals differ across sources.
+  EXPECT_NE(stableHashValue(CacheMOA, /*SourceQualifyLocalGlobals=*/true),
+            stableHashValue(CacheMOB, /*SourceQualifyLocalGlobals=*/true));
+  // Content-hashed strings still match across sources.
+  EXPECT_EQ(stableHashValue(StrMOA, /*SourceQualifyLocalGlobals=*/true),
+            stableHashValue(StrMOB, /*SourceQualifyLocalGlobals=*/true));
+  // Non-local globals denote the same storage everywhere.
+  EXPECT_EQ(stableHashValue(ExternalMOA, /*SourceQualifyLocalGlobals=*/true),
+            stableHashValue(ExternalMOB, /*SourceQualifyLocalGlobals=*/true));
+  // Unnamed globals remain unhashable even when qualified.
+  EXPECT_EQ(stableHashValue(UnnamedMOA, /*SourceQualifyLocalGlobals=*/true),
+            stable_hash(0));
+}
