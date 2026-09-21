@@ -1104,16 +1104,11 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     // (the inserted value Op1 is known): a load-fed lane is free, while a
     // compute-fed lane costs the real packing work, scaled by legalization for
     // wider vectors.
+    auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
-        ST->hasAnyPackedFP32Ops() && Op1) {
-      if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy)) {
-        if (VecTy->getElementType()->isFloatTy()) {
-          if (isa<LoadInst>(Op1))
-            return 0;
-          return getTypeLegalizationCost(ValTy).first;
-        }
-      }
-    }
+        ST->hasAnyPackedFP32Ops() && Op1 && VecTy &&
+        VecTy->getElementType()->isFloatTy() && !isa<LoadInst>(Op1))
+      return getTypeLegalizationCost(ValTy).first;
 
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
