@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx12-5-generic -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu12.5-amd-amdhsa -verify -S -o - %s
 
 typedef short v2s __attribute__((ext_vector_type(2)));
 typedef unsigned int v4u __attribute__((ext_vector_type(4)));

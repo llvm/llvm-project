@@ -1038,3 +1038,115 @@ declare void @inalloca_i64(ptr inalloca(i64))
 declare void @inalloca_i32(ptr inalloca(i32))
 declare ptr @llvm.stacksave()
 declare void @llvm.stackrestore(ptr)
+
+declare ptr @callee(ptr, i32)
+
+define ptr @dont_hoist_musttail_past_skip(ptr %a, i32 %b) {
+; CHECK-LABEL: @dont_hoist_musttail_past_skip(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[B]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+; CHECK:       e:
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[B]], 2
+; CHECK-NEXT:    [[CALL2:%.*]] = musttail call ptr @callee(ptr [[A]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL2]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %x = add i32 %b, 1
+  %call = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call
+
+e:
+  %y = add i32 %b, 2
+  %call2 = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call2
+}
+
+;; Positive: identical musttail calls at the block heads, nothing skipped and
+;; each directly followed by a return, so they ARE hoisted and the blocks are
+;; merged into the predecessor.
+define ptr @hoist_musttail_no_skip(ptr %a, i32 %b) {
+; CHECK-LABEL: @hoist_musttail_no_skip(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %call = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call
+
+e:
+  %call2 = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call2
+}
+
+define ptr @no_hoist_musttail_tail(ptr %a, i32 %b) {
+; CHECK-LABEL: @no_hoist_musttail_tail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @callee(ptr [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL]]
+; CHECK:       e:
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call ptr @callee(ptr [[A]], i32 [[B]])
+; CHECK-NEXT:    ret ptr [[CALL2]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %call = musttail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call
+
+e:
+  %call2 = tail call ptr @callee(ptr %a, i32 %b)
+  ret ptr %call2
+}
+
+define ptr @hoist_tail_past_skipped(ptr %a, i32 %b) {
+; CHECK-LABEL: @hoist_tail_past_skipped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @callee(ptr [[A:%.*]], i32 [[B]])
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[B]], 1
+; CHECK-NEXT:    br label [[J:%.*]]
+; CHECK:       e:
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[B]], 2
+; CHECK-NEXT:    br label [[J]]
+; CHECK:       j:
+; CHECK-NEXT:    ret ptr [[CALL]]
+;
+entry:
+  %c = icmp eq i32 %b, 0
+  br i1 %c, label %t, label %e
+
+t:
+  %x = add i32 %b, 1
+  %call = tail call ptr @callee(ptr %a, i32 %b)
+  br label %j
+
+e:
+  %y = add i32 %b, 2
+  %call2 = tail call ptr @callee(ptr %a, i32 %b)
+  br label %j
+
+j:
+  %p = phi ptr [ %call, %t ], [ %call2, %e ]
+  ret ptr %p
+}

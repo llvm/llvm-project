@@ -22,7 +22,6 @@
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -50,9 +49,18 @@ static bool isSignatureValid(FunctionType *FTy,
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+/// Table of required target features indexed by enum value.
+#define GET_INTRINSIC_TARGET_FEATURES_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+}
+
+StringRef Intrinsic::getRequiredTargetFeatures(ID id) {
+  assert(id < num_intrinsics && "invalid intrinsic ID!");
+  return IntrinsicTargetFeaturesTable[IntrinsicTargetFeaturesOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -1089,6 +1097,12 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
+    // Token has no mangling (see getMangledTypeStr), so it cannot be an
+    // overload type; reject it with a signature error. Label is already
+    // excluded from function signatures, so it never reaches here.
+    if (Ty->isTokenTy())
+      return PrintMsg(false, "any manglable type", OIdx);
+
     IITDescriptor::AnyKindVectorConstraint VC;
     IITDescriptor::AnyKindElementConstraint EC;
     std::tie(VC, EC) = D.getOverloadConstraints();
@@ -1463,5 +1477,19 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
+  OS << static_cast<FPClassTest>(Val);
+}
+
+#define GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS
+#include "llvm/IR/IntrinsicImpl.inc"
+
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+
+// Emit the default-argument values table and lookup function
+// (Intrinsic::getAllDefaultArgValues).
+#define GET_INTRINSIC_DEFAULT_ARG_VALUES
 #include "llvm/IR/IntrinsicImpl.inc"

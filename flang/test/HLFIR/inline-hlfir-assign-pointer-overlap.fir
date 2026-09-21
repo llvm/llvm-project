@@ -58,13 +58,21 @@
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
 // CHECK:   }
 // CHECK: } else {
-// CHECK:   %[[EXPR:.*]] = hlfir.as_expr %{{.*}}
+// CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<?xi32>, %{{.*}} {bindc_name = ".tmp", uniq_name = ""}
+// CHECK:   %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"}
 // CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
-// CHECK:     hlfir.apply %[[EXPR]], %{{.*}}
+// CHECK:     hlfir.designate
+// CHECK:     fir.load
+// CHECK:     hlfir.designate %[[TEMP]]#0
+// CHECK:     hlfir.assign %{{.*}} to %{{.*}} temporary_lhs : i32, !fir.ref<i32>
+// CHECK:   }
+// CHECK:   fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} unordered {
+// CHECK:     hlfir.designate %[[TEMP]]#0
+// CHECK:     fir.load
 // CHECK:     hlfir.designate
 // CHECK:     hlfir.assign %{{.*}} to %{{.*}} : i32, !fir.ref<i32>
 // CHECK:   }
-// CHECK:   hlfir.destroy %[[EXPR]]
+// CHECK:   fir.freemem %{{.*}}
 // CHECK: }
 
 func.func @_QPassign_pointers(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "arr"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}, %arg2: !fir.ref<i32> {fir.bindc_name = "lo1"}, %arg3: !fir.ref<i32> {fir.bindc_name = "hi1"}, %arg4: !fir.ref<i32> {fir.bindc_name = "lo2"}, %arg5: !fir.ref<i32> {fir.bindc_name = "hi2"}) {

@@ -140,8 +140,8 @@ public:
     /// This is the scope of a C++ catch statement.
     CatchScope = 0x1000000,
 
-    /// This bit is currently unused.
-    Unused = 0x2000000,
+    /// This is the scope of a C++26 expansion statement.
+    ExpansionStmtScope = 0x2000000,
 
     /// This is a scope of some OpenMP directive with
     /// order clause which specifies concurrent
@@ -297,6 +297,10 @@ public:
 
   const Scope *getContinueParent() const {
     return const_cast<Scope*>(this)->getContinueParent();
+  }
+
+  bool isExpansionStmtScope() const {
+    return getFlags() & Scope::ExpansionStmtScope;
   }
 
   /// getBreakParent - Return the closest scope that a break statement

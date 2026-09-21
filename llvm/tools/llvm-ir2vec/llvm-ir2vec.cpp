@@ -208,13 +208,13 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
     if (TheTriple.getTriple().empty())
       TheTriple.setTriple(sys::getDefaultTargetTriple());
 
-    auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple.str());
+    auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple);
     if (!TMOrErr) {
       Err.print(ToolName, errs());
       exit(1); // Match original behavior
     }
     Ctx.TM = std::move(*TMOrErr);
-    return Ctx.TM->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout();
   };
 
   Ctx.M = MIR->parseIRModule(SetDataLayout);

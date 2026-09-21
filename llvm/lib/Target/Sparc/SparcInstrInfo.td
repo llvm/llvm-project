@@ -370,9 +370,9 @@ def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
 // bits of the memory pointed by Ptr, possibly byte swapping it as necessary
 // to account for its in-memory endianness. Type can be i16, i32, or i64.
 def SPloadbig    : SDNode<"SPISD::LOAD_BIG", SDTSPloadbig,
-                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def SPloadlittle : SDNode<"SPISD::LOAD_LITTLE", SDTSPloadlittle,
-                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // CHAIN = STORE_BIG/LITTLE CHAIN, GPRC, Ptr, Type
 // These are endianness-adjusted store instructions. They store the low "Type"
@@ -1945,9 +1945,6 @@ def : Pat<(i32 imm:$val),
           (ORri (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 
 // Frame index.
-def to_tframeindex : SDNodeXForm<frameindex, [{
-  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
-}]>;
 def : Pat<(i32 (frameindex:$ptr)), (ADDri (i32 (to_tframeindex $ptr)), (i32 0))>;
 def : Pat<(i64 (frameindex:$ptr)), (ADDri (i64 (to_tframeindex $ptr)), (i64 0))>;
 

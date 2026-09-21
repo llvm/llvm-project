@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -std=c++11 -emit-llvm -o - | FileCheck %s
 
 // Test1::B should just have a single entry in its VTT, which points to the vtable.
 namespace Test1 {

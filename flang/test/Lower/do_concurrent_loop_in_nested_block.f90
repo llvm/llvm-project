@@ -17,8 +17,8 @@ end subroutine
 ! CHECK:         fir.do_concurrent {
 ! CHECK:           fir.do_concurrent.loop {{.*}} local(@{{.*}} %[[OUTER_J_DECL]]#0 -> %[[LOCAL_J_ARG:.*]] : !fir.ref<i32>) {
 ! CHECK:             %[[LOCAL_J_DECL:.*]]:2 = hlfir.declare %[[LOCAL_J_ARG]]
-! CHECK:             fir.do_loop {{.*}} iter_args(%[[NESTED_LOOP_ARG:.*]] = {{.*}}) {
-! CHECK:               fir.store %[[NESTED_LOOP_ARG]] to %[[LOCAL_J_DECL]]#0
+! CHECK:             fir.do_loop %[[NESTED_IV:.*]] = {{.*}} to {{.*}} step {{.*}} : i32 {
+! CHECK:               fir.store %[[NESTED_IV]] to %[[LOCAL_J_DECL]]#0
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:         }

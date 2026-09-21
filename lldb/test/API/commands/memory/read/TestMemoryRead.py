@@ -144,6 +144,48 @@ class MemoryReadTestCase(TestBase):
                 self.assertEqual(len(o), expected_object_length)
             self.assertEqual(len(objects_read), 4)
 
+    def test_memory_read_array_name_decays_to_address(self):
+        """An array expression decays to a pointer to its first element, so
+        `memory read <array>` and `memory read `<array>`` must behave like
+        `memory read &<array>`, rather than failing or reading a bogus address."""
+        self.build_run_stop()
+
+        fmt = "memory read --format uint32_t[] --size 4 --count 3 "
+
+        # Parses the output of the command above, which looks like:
+        #   0x7fff5fbff990: {0x00000002}
+        #   0x7fff5fbff994: {0x00000004}
+        #   0x7fff5fbff998: {0x00000006}
+        # i.e. "<address>: {<value>}" per line. We return the address of the
+        # first line and the list of values across all lines.
+        def read_addr_and_values(suffix):
+            self.runCmd(fmt + suffix)
+            lines = self.res.GetOutput().splitlines()
+            addr = int(lines[0].split(":")[0], 0)
+            values = []
+            for line in lines:
+                values.extend(v.strip(" {}") for v in line.split(":")[1].split())
+            return addr, values
+
+        # Taking the address explicitly yields a pointer whose value is the
+        # array's address; this is the reference every other form must match.
+        ref_addr, ref_values = read_addr_and_values("&my_ints")
+        self.assertEqual(ref_values, ["0x00000002", "0x00000004", "0x00000006"])
+
+        # Every one of these forms must resolve to the same address and data:
+        #   &my_ints        pointer, via OptionArgParser::ToAddress
+        #   `&my_ints`      pointer, via CommandInterpreter::PreprocessToken
+        #   my_ints         array decay, via OptionArgParser::ToAddress
+        #   `my_ints`       array decay, via CommandInterpreter::PreprocessToken
+        for suffix in ["&my_ints", "`&my_ints`", "my_ints", "`my_ints`"]:
+            addr, values = read_addr_and_values(suffix)
+            self.assertEqual(
+                addr, ref_addr, "wrong address for 'memory read %s'" % suffix
+            )
+            self.assertEqual(
+                values, ref_values, "wrong data for 'memory read %s'" % suffix
+            )
+
     def test_memory_read_file(self):
         self.build_run_stop()
         res = lldb.SBCommandReturnObject()

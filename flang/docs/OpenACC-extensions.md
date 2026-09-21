@@ -34,6 +34,13 @@ These extensions require no flag.
 * The `if` clause accepts scalar integer expressions in addition to scalar
   logical expressions.
 * `!$acc routine` directives can be placed at the top level.
+* `!$acc routine` directives can be placed directly within an interface block
+  (i.e. as an interface-specification, such as preceding the interface body they
+  name). The OpenACC specification only permits the named `routine` directive in
+  the specification part of a subroutine, function, or module, and the unnamed
+  form within an interface body; Flang additionally accepts a `routine`
+  directive between the `INTERFACE` statement and the interface bodies, applying
+  a named directive to the interface body it names.
 * `!$acc cache` directives accept scalar variables.
 * `!$acc cache` directives are accepted outside of a loop construct.
 * The `!$acc declare` directive accepts assumed-size array arguments for
@@ -52,6 +59,23 @@ These extensions require no flag.
 
 ## Extensions enabled by default
 
+### `-fopenacc-combined-loop-firstprivate` — combined loop firstprivate
+
+`firstprivate` is a compute-construct clause, not a `loop` clause.  On a
+combined `parallel loop` or `serial loop`, Flang keeps the explicit clause on
+the compute construct and also attaches an implicit `firstprivate` on the
+associated `acc.loop` so each thread gets its own initialized copy.
+
+This applies to all types (scalars, arrays, derived types, etc.) and all
+parallelism modes (`independent`, `seq`, `auto`), consistent with how `private`
+and `reduction` are handled on combined constructs.  `kernels loop` is not
+affected because `kernels` cannot take `firstprivate`.  Standalone `acc loop`
+and non-combined `parallel` / `serial` with separate inner `acc loop` are not
+affected.
+
+Disable with `-fno-openacc-combined-loop-firstprivate` to keep firstprivate
+only on the compute construct (spec behavior).
+
 ### `-fopenacc-multiple-names-in-routine` — `!$acc routine(<name>[, <name>]*) <clause-list>`
 
 The `ROUTINE` directive accepts a parenthesized list of more than one name
@@ -63,28 +87,24 @@ with multiple names.  A warning is emitted for each such directive
 `-Wno-openacc-multiple-names-in-routine`).  This extension may be disabled with
 `-fno-openacc-multiple-names-in-routine`.
 
-## Extensions enabled by flag
-
-### `-fno-openacc-default-none-scalars-strict` — pre-OpenACC-3.2 scalar behavior under `DEFAULT(NONE)`
+### Pre-OpenACC-3.2 scalar behavior under `DEFAULT(NONE)`
 
 OpenACC version 3.2 (section 1.16, change 733) clarified that the
 `default(none)` clause applies to scalar variables.  Prior to version 3.2,
 `default(none)` did not impose a data-clause requirement on scalar variables.
 
-By default, Flang enforces the OpenACC 3.2 behavior: scalar variables
-referenced inside a `default(none)` compute region without an explicit data
-clause produce an error.
-
-When `-fno-openacc-default-none-scalars-strict` is specified, Flang reverts to
-the pre-3.2 behavior: scalar variables referenced inside a `default(none)`
-compute region without an explicit data clause do not produce an error.
-Instead, Flang infers implicit data attributes for those scalars via the same
-implicit-copy logic applied in regions without `default(none)`.
+By default, Flang uses the pre-3.2 behavior: scalar variables referenced inside
+a `default(none)` compute region without an explicit data clause do not produce
+an error. Instead, Flang infers implicit data attributes for those scalars via
+the same implicit-copy logic applied in regions without `default(none)`.
 
 Array variables always require an explicit data clause under `default(none)`
-regardless of this flag.
+regardless of this extension.
 
-When a scalar is implicitly attributed under this extension no warning is
-emitted by default; explicit opt-in to the non-standard behavior is treated as
-acknowledgement.  Use `-Wopenacc-default-none-scalars-strict` to enable
-per-use warnings for audit purposes.
+When a scalar is implicitly attributed under this extension, a warning is
+emitted by default (`-Wopenacc-default-none-scalars-strict`; suppress with
+`-Wno-openacc-default-none-scalars-strict`). Use
+`-fopenacc-default-none-scalars-strict` to enforce the OpenACC 3.2 behavior and
+produce an error for scalar variables that are not listed in an explicit data
+clause. `-fno-openacc-default-none-scalars-strict` preserves the default
+pre-3.2 behavior explicitly.

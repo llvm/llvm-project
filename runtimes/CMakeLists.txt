@@ -1,5 +1,12 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 # This file can be used in two ways: the bootstrapping build calls it from
 # llvm/runtimes/CMakeLists.txt where we reuse the build tree of the top-level
@@ -68,6 +75,16 @@ set(clang_search_paths "${LLVM_BINARY_DIR}")
 if(LLVM_BINARY_DIR)
   list(APPEND llvm_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
   list(APPEND clang_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
+endif()
+
+# Exports from LLVM and Clang may contain shared libraries. When targeting
+# platforms that lack shared library support, importing such
+# exports unrestrictedly will trigger an error. Set
+# LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
+# when the target platform does not support shared libraries.
+get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if (NOT HAS_SHARED_SUPPORT)
+  set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
 endif()
 find_package(LLVM PATHS ${llvm_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang PATHS ${clang_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)

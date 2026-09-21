@@ -32,6 +32,7 @@ class CIRGenModule;
 
 namespace mlir {
 class MLIRContext;
+class ModuleOp;
 } // namespace mlir
 namespace cir {
 class CIRGenerator : public clang::ASTConsumer {

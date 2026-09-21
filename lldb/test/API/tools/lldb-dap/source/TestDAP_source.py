@@ -2,111 +2,79 @@
 Test lldb-dap source request
 """
 
-
-import os
-
-import lldbdap_testcase
 from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs, Source, SourceArgs
 
 
-class TestDAP_source(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_source(DAPTestCaseBase):
     @skipIfWindows
     def test_source(self):
-        """
-        Tests the 'source' packet.
-        """
+        """Tests the Source Request."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
         source = self.getSourcePath("main.c")
-        breakpoint_line = line_number(source, "breakpoint")
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program)) as ctx:
+            breakpoint_line = line_number(source, "breakpoint")
+            [bp_id] = session.resolve_source_breakpoints(source, [breakpoint_line])
 
-        lines = [breakpoint_line]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        stop_event = session.verify_stopped_on_breakpoint(
+            bp_id, after=ctx.process_event
         )
 
-        self.continue_to_breakpoints(breakpoint_ids)
-
-        response = self.dap_server.request_source(sourceReference=0)
-        self.assertFalse(response["success"], "verify invalid sourceReference fails")
-
+        src_args = SourceArgs(source=Source(sourceReference=0), sourceReference=0)
+        session.send_request(src_args).error()
         # Check only source reference in the arguments field.
-        response = self.dap_server.request_custom("source", {"sourceReference": 0})
-        self.assertFalse(response["success"], "expected failed response")
-        error_format = self.get_dict_value(response, ["body", "error", "format"])
-        self.assertIn("unknown source reference", error_format)
+        resp = session.send_request(SourceArgs(sourceReference=0)).error(
+            "verify invalid sourceReference fails"
+        )
+        resp_body = self.expect_not_none(resp.body)
+        error_msg = self.expect_not_none(resp_body.error)
+        self.assertIn("unknown source reference", error_msg.format)
 
-        (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
-        frameCount = len(stackFrames)
-        self.assertGreaterEqual(frameCount, 3, "verify we got up to main at least")
+        # Verify the top three frames handler, add and main.
+        thread_id = session.thread_context_from(stop_event).thread_id
+        response = session.stack_trace(thread_id)
+        frames = response.body.stackFrames
+        self.assertGreaterEqual(len(frames), 3, "verify we got up to main at least.")
         self.assertEqual(
-            totalFrames,
-            frameCount,
+            len(frames),
+            response.body.totalFrames,
             "verify total frames returns a speculative page size",
         )
-        wantFrames = [
-            {
-                "name": "handler",
-                "line": 8,
-                "source": {
-                    "name": "main.c",
-                    "path": source,
-                    "containsSourceReference": False,
-                },
-            },
-            {
-                "name": "add",
-                "source": {
-                    "name": "add",
-                    "path": program + "`add",
-                    "containsSourceReference": True,
-                },
-            },
-            {
-                "name": "main",
-                "line": 12,
-                "source": {
-                    "name": "main.c",
-                    "path": source,
-                    "containsSourceReference": False,
-                },
-            },
-        ]
-        for idx, want in enumerate(wantFrames):
-            got = stackFrames[idx]
-            name = self.get_dict_value(got, ["name"])
-            self.assertEqual(name, want["name"])
 
-            if "line" in want:
-                line = self.get_dict_value(got, ["line"])
-                self.assertEqual(line, want["line"])
+        handler_frame, add_frame, main_frame, *_ = frames
 
-            wantSource = want["source"]
-            source_name = self.get_dict_value(got, ["source", "name"])
-            self.assertEqual(source_name, wantSource["name"])
+        # Verify frame 0 handler.
+        self.assertEqual(handler_frame.name, "handler")
+        self.assertEqual(handler_frame.line, line_number(source, "first_frame"))
+        handler_source = self.expect_not_none(handler_frame.source)
+        self.assertEqual(handler_source.name, "main.c")
+        self.assertEqual(handler_source.path, source)
+        self.assertIsNone(handler_source.sourceReference)
 
-            source_path = self.get_dict_value(got, ["source", "path"])
-            self.assertEqual(source_path, wantSource["path"])
+        # Verify frame 1 add.
+        self.assertEqual(add_frame.name, "add")
+        add_source = self.expect_not_none(add_frame.source)
+        self.assertEqual(add_source.name, "add")
+        self.assertEqual(add_source.path, program + "`add")
 
-            if wantSource["containsSourceReference"]:
-                sourceReference = self.get_dict_value(
-                    got, ["source", "sourceReference"]
-                )
-                response = self.dap_server.request_source(
-                    sourceReference=sourceReference
-                )
-                self.assertTrue(response["success"])
-                self.assertGreater(
-                    len(self.get_dict_value(response, ["body", "content"])),
-                    0,
-                    "verify content returned disassembly",
-                )
-                self.assertEqual(
-                    self.get_dict_value(response, ["body", "mimeType"]),
-                    "text/x-lldb.disassembly",
-                    "verify mime type returned",
-                )
-            else:
-                self.assertNotIn("sourceReference", got["source"])
+        source_ref = self.expect_not_none(add_source.sourceReference)
+        disasm = session.send_request(SourceArgs(source_ref)).result()
+        self.assertGreater(
+            len(disasm.body.content), 0, "verify content returned disassembly"
+        )
+        self.assertEqual(
+            disasm.body.mimeType, "text/x-lldb.disassembly", "verify mime type returned"
+        )
+
+        # Verify frame 2 main.
+        self.assertEqual(main_frame.name, "main")
+        self.assertEqual(main_frame.line, line_number(source, "third_frame"))
+        main_source = self.expect_not_none(main_frame.source)
+        self.assertEqual(main_source.name, "main.c")
+        self.assertEqual(main_source.path, source)
+        self.assertIsNone(main_source.sourceReference)
+
+        session.continue_to_exit()

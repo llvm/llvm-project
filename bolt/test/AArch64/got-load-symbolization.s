@@ -38,9 +38,9 @@ _start:
 # CHECK-NEXT: adrp x2, __BOLT_got_zero
 # CHECK-NEXT: nop
 # CHECK-NEXT: ldr  x2, [x2, :lo12:__BOLT_got_zero{{.*}}]
-	adrp    x2, :got:near
+	adrp    x2, :got:near2
 	nop
-	ldr     x2, [x2, :got_lo12:near]
+	ldr     x2, [x2, :got_lo12:near2]
 
 ## Load data object with local visibility. Relaxable into adrp+add.
 # CHECK-NEXT: adrp x3, "local_far_data/1"
@@ -58,6 +58,7 @@ _start:
 	.size _start, .-_start
 
 .weak near
+.weak near2
 .weak far
 .weak far_data
 
@@ -76,6 +77,12 @@ local_far_data:
 near:
   ret
 .size   near, .-near
+
+	.globl near2
+	.type near2, @function
+near2:
+  ret
+.size   near2, .-near2
 
 #--- far.s
 

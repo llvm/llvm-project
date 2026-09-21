@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify=expected,spir \
 // RUN:   -fsyntax-only -triple=spir64 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -fsyntax-only \
-// RUN:   -triple=amdgcn-amd-amdhsa -fdeclare-opencl-builtins -finclude-default-header
+// RUN:   -triple=amdgpu-amd-amdhsa -fdeclare-opencl-builtins -finclude-default-header
 // TODO: add -cl-std=CL3.0 line when generic and psv are supported.
 
 // Basic parsing/Sema tests for __opencl_atomic_*

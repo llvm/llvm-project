@@ -43,7 +43,8 @@ class MachineRegisterInfo;
 class RegisterBank;
 class SIInstrInfo;
 class SIRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
@@ -101,6 +102,7 @@ private:
   bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectS16MergeToS32(MachineInstr &MI) const;
+  bool selectS16MergeToWide(MachineInstr &MI) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
   bool selectG_BUILD_VECTOR(MachineInstr &I) const;
@@ -111,7 +113,6 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectWritelane(MachineInstr &MI) const;
   bool selectDivScale(MachineInstr &MI) const;
-  bool selectIntrinsicCmp(MachineInstr &MI) const;
   bool selectBallot(MachineInstr &I) const;
   bool selectRelocConstant(MachineInstr &I) const;
   bool selectGroupStaticSize(MachineInstr &I) const;
@@ -166,6 +167,8 @@ private:
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
                                  bool ForceVGPR = false) const;
+
+  Register widenSrcIfVGPR16(Register Src, MachineInstr *InsertPt) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
@@ -350,6 +353,8 @@ private:
                                                           bool &Matched) const;
   ComplexRendererFns selectVOP3PMadMixModsExt(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3PMadMixModsExtNeg(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3PMadMixModsNeg(MachineOperand &Root) const;
 
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;
@@ -414,9 +419,6 @@ private:
                         int OpIdx) const;
   void renderExtractCpolSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
                                int OpIdx) const;
-
-  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
 
   void renderFPPow2ToExponent(MachineInstrBuilder &MIB, const MachineInstr &MI,
                               int OpIdx) const;

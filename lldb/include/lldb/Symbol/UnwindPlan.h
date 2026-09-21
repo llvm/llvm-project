@@ -15,6 +15,7 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 

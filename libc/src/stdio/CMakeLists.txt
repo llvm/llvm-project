@@ -16,7 +16,7 @@ function(add_stdio_entrypoint_object name)
         .generic.${name}
     )
   endif()
-endfunction(add_stdio_entrypoint_object)
+endfunction()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
@@ -50,6 +50,28 @@ add_entrypoint_object(
     libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fmemopen
+  SRCS
+    fmemopen.cpp
+  HDRS
+    fmemopen.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.new
+    libc.src.__support.File.file
+    libc.src.__support.alloc_checker
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_entrypoint_object(
@@ -129,10 +151,10 @@ add_entrypoint_object(
   HDRS
     sprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -148,10 +170,10 @@ add_entrypoint_object(
   HDRS
     snprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -167,9 +189,9 @@ add_entrypoint_object(
   HDRS
     asprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.vasprintf_internal
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.vasprintf_internal
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -186,10 +208,10 @@ add_entrypoint_object(
   HDRS
     vsprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -206,10 +228,10 @@ add_entrypoint_object(
   HDRS
     vsnprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.printf_main
+    libc.src.__support.printf_core.writer
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
@@ -226,14 +248,13 @@ add_entrypoint_object(
   HDRS
     vasprintf.h
   DEPENDS
-    libc.src.stdio.printf_core.vasprintf_internal
-    libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.printf_core.vasprintf_internal
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.error_mapper
     libc.src.__support.libc_errno
     libc.src.__support.CPP.limits
 )
 
-add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
 add_entrypoint_object(
@@ -257,6 +278,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.fdopen
 )
 
+add_entrypoint_object(
+  tmpfile
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tmpfile
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
@@ -272,6 +300,7 @@ add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)
 add_stdio_entrypoint_object(fopen)
+add_stdio_entrypoint_object(freopen)
 add_stdio_entrypoint_object(fclose)
 add_stdio_entrypoint_object(fread_unlocked)
 add_stdio_entrypoint_object(fread)

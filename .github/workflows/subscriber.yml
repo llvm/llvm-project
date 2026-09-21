@@ -25,11 +25,11 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:82b5304c5d99cf5d75a2334885aca57490cbb04f37d07fc49a10a2649824e526"
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-26.04-github-automation:latest@sha256:a8499c90a5890da942693c3e6a28113c2b851037c5facbb102a271f690439472"
 
     steps:
       - id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
           client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

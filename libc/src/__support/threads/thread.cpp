@@ -131,6 +131,7 @@ public:
       atexit_unit.callback(atexit_unit.obj);
       mtx.lock();
     }
+    mtx.unlock();
   }
 };
 
@@ -149,12 +150,8 @@ extern "C" int __cxa_thread_atexit_impl(AtExitCallback *callback, void *obj,
 
 namespace internal {
 
-ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr() {
-  return &atexit_callback_mgr;
-}
-
-void call_atexit_callbacks(ThreadAttributes *attrib) {
-  attrib->atexit_callback_mgr->call();
+void call_atexit_callbacks() {
+  atexit_callback_mgr.call();
   for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
     TSSValueUnit &unit = tss_values[i];
     // Both dtor and value need to nonnull to call dtor
@@ -162,8 +159,6 @@ void call_atexit_callbacks(ThreadAttributes *attrib) {
       unit.dtor(unit.payload);
   }
 }
-
-extern "C" void __cxa_thread_finalize() { call_atexit_callbacks(self.attrib); }
 
 } // namespace internal
 

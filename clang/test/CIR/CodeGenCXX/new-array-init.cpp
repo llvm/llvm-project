@@ -291,7 +291,7 @@ void string_nonconst(int n) {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[CONST_STR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[AFTER_COPY:.*]] = cir.ptr_stride %[[ALLOC_CAST]], %[[CONST_STR_SIZE]] : (!cir.ptr<!s8i>, !u64i) -> !cir.ptr<!s8i>
   // CIR: %[[CONST_STR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
@@ -327,7 +327,7 @@ void string_nonconst_paren(int n) {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[CONST_STR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[AFTER_COPY:.*]] = cir.ptr_stride %[[ALLOC_CAST]], %[[CONST_STR_SIZE]] : (!cir.ptr<!s8i>, !u64i) -> !cir.ptr<!s8i>
   // CIR: %[[CONST_STR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
@@ -363,7 +363,7 @@ void string_nonconst_paren_extra_paren(int n) {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[CONST_STR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
   // CIR: %[[AFTER_COPY:.*]] = cir.ptr_stride %[[ALLOC_CAST]], %[[CONST_STR_SIZE]] : (!cir.ptr<!s8i>, !u64i) -> !cir.ptr<!s8i>
   // CIR: %[[CONST_STR_SIZE:.*]] = cir.const #cir.int<4> : !u64i
@@ -393,7 +393,7 @@ void string_exact() {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 4)
@@ -409,7 +409,7 @@ void string_exact_paren() {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 4)
@@ -425,7 +425,7 @@ void string_exact_paren_extension() {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC4]] : !cir.ptr<!cir.array<!s8i x 4>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 4>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 4>>
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 4)
@@ -441,7 +441,7 @@ void string_sufficient() {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC15]] : !cir.ptr<!cir.array<!s8i x 15>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 15>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 15)
@@ -457,7 +457,7 @@ void string_sufficient_paren() {
   // CIR: %[[ALLOC_CAST:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_AS_STRING:.*]] = cir.cast bitcast %[[ALLOC_CAST]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: %[[GET_STR:.*]] = cir.get_global @[[ABC15]] : !cir.ptr<!cir.array<!s8i x 15>>
-  // CIR: cir.copy %[[GET_STR]] to %[[ALLOC_AS_STRING]] : !cir.ptr<!cir.array<!s8i x 15>>
+  // CIR: cir.copy %[[GET_STR]] align(1) to %[[ALLOC_AS_STRING]] align(1) : !cir.ptr<!cir.array<!s8i x 15>>
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 15)
@@ -642,7 +642,7 @@ void unknown_bound_string() {
   // CIR: %[[ALLOC_CHAR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
   // CIR: %[[ALLOC_STR:.*]] = cir.cast bitcast %[[ALLOC_CHAR]] : !cir.ptr<!s8i> -> !cir.ptr<!cir.array<!s8i x 6>>
   // CIR: %[[GET_HELLO:.*]] = cir.get_global @[[HELLO]] : !cir.ptr<!cir.array<!s8i x 6>>
-  // CIR: cir.copy %[[GET_HELLO]] to %[[ALLOC_STR]] : !cir.ptr<!cir.array<!s8i x 6>>
+  // CIR: cir.copy %[[GET_HELLO]] align(1) to %[[ALLOC_STR]] align(1) : !cir.ptr<!cir.array<!s8i x 6>>
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 6)

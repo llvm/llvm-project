@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -105,6 +106,11 @@ public:
   }
   StringRef getPassName() const override {
     return "AArch64 Redundant Copy Elimination";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 char AArch64RedundantCopyEliminationLegacy::ID = 0;

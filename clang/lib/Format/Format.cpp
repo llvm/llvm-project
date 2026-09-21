@@ -25,6 +25,9 @@
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include <functional>
 #include <limits>
 
 #define DEBUG_TYPE "format-formatter"
@@ -218,10 +221,12 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterClass", Wrapping.AfterClass);
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
     IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
+    IO.mapOptional("AfterExportBlock", Wrapping.AfterExportBlock);
     IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
+    IO.mapOptional("AfterRequiresExpression", Wrapping.AfterRequiresExpression);
     IO.mapOptional("AfterStruct", Wrapping.AfterStruct);
     IO.mapOptional("AfterUnion", Wrapping.AfterUnion);
     IO.mapOptional("BeforeCatch", Wrapping.BeforeCatch);
@@ -844,24 +849,37 @@ template <> struct MappingTraits<FormatStyle::SortIncludesOptions> {
     IO.enumCase(Value, "CaseInsensitive",
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/true,
-                                                 /*IgnoreExtension=*/false});
+                                                 /*IgnoreExtension=*/false,
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
     IO.enumCase(Value, "CaseSensitive",
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
-                                                 /*IgnoreExtension=*/false});
+                                                 /*IgnoreExtension=*/false,
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
+    IO.enumCase(Value, "Natural",
+                FormatStyle::SortIncludesOptions{/*Enabled=*/true,
+                                                 /*IgnoreCase=*/false,
+                                                 /*IgnoreExtension=*/false,
+                                                 /*Natural=*/true,
+                                                 /*FilesBeforeFolders=*/false});
 
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::SortIncludesOptions{});
     IO.enumCase(Value, "true",
                 FormatStyle::SortIncludesOptions{/*Enabled=*/true,
                                                  /*IgnoreCase=*/false,
-                                                 /*IgnoreExtension=*/false});
+                                                 /*IgnoreExtension=*/false,
+                                                 /*Natural=*/false,
+                                                 /*FilesBeforeFolders=*/false});
   }
-
   static void mapping(IO &IO, FormatStyle::SortIncludesOptions &Value) {
     IO.mapOptional("Enabled", Value.Enabled);
     IO.mapOptional("IgnoreCase", Value.IgnoreCase);
     IO.mapOptional("IgnoreExtension", Value.IgnoreExtension);
+    IO.mapOptional("Natural", Value.Natural);
+    IO.mapOptional("FilesBeforeFolders", Value.FilesBeforeFolders);
   }
 };
 
@@ -959,6 +977,16 @@ template <> struct ScalarEnumerationTraits<FormatStyle::SpacesInAnglesStyle> {
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::SIAS_Never);
     IO.enumCase(Value, "true", FormatStyle::SIAS_Always);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::SpacesInBlockCommentsStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::SpacesInBlockCommentsStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::SIBCS_Never);
+    IO.enumCase(Value, "Always", FormatStyle::SIBCS_Always);
+    IO.enumCase(Value, "Leave", FormatStyle::SIBCS_Leave);
   }
 };
 
@@ -1159,14 +1187,14 @@ template <> struct MappingTraits<FormatStyle> {
         break;
       case BAS_BlockIndent:
         Style.AlignAfterOpenBracket = true;
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+        Style.BreakAfterOpenBracketLoop = false;
+        Style.BreakAfterOpenBracketSwitch = false;
         Style.BreakBeforeCloseBracketBracedList = true;
         Style.BreakBeforeCloseBracketFunction = true;
         Style.BreakBeforeCloseBracketIf = true;
-        Style.BreakAfterOpenBracketLoop = false;
-        Style.BreakAfterOpenBracketSwitch = false;
-        Style.BreakBeforeCloseBracketBracedList = false;
-        Style.BreakBeforeCloseBracketFunction = false;
-        Style.BreakBeforeCloseBracketIf = false;
         Style.BreakBeforeCloseBracketLoop = false;
         Style.BreakBeforeCloseBracketSwitch = false;
         break;
@@ -1495,6 +1523,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);
     IO.mapOptional("SpacesInAngles", Style.SpacesInAngles);
+    IO.mapOptional("SpacesInBlockComments", Style.SpacesInBlockComments);
     IO.mapOptional("SpacesInContainerLiterals",
                    Style.SpacesInContainerLiterals);
     IO.mapOptional("SpacesInLineCommentPrefix",
@@ -1701,8 +1730,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterFunction=*/false,
                             /*AfterNamespace=*/false,
                             /*AfterObjCDeclaration=*/false,
+                            /*AfterRequiresExpression=*/false,
                             /*AfterStruct=*/false,
                             /*AfterUnion=*/false,
+                            /*AfterExportBlock=*/false,
                             /*AfterExternBlock=*/false,
                             /*BeforeCatch=*/false,
                             /*BeforeElse=*/false,
@@ -1724,6 +1755,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.SplitEmptyFunction = true;
     Expanded.BraceWrapping.SplitEmptyRecord = false;
@@ -1741,8 +1773,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
@@ -1756,6 +1790,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterFunction = true;
     Expanded.BraceWrapping.AfterNamespace = true;
     Expanded.BraceWrapping.AfterObjCDeclaration = true;
+    Expanded.BraceWrapping.AfterRequiresExpression = true;
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
@@ -1771,8 +1806,10 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterFunction=*/true,
         /*AfterNamespace=*/true,
         /*AfterObjCDeclaration=*/true,
+        /*AfterRequiresExpression=*/true,
         /*AfterStruct=*/true,
         /*AfterUnion=*/true,
+        /*AfterExportBlock=*/true,
         /*AfterExternBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
@@ -1873,8 +1910,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterFunction=*/false,
                              /*AfterNamespace=*/false,
                              /*AfterObjCDeclaration=*/false,
+                             /*AfterRequiresExpression=*/false,
                              /*AfterStruct=*/false,
                              /*AfterUnion=*/false,
+                             /*AfterExportBlock=*/false,
                              /*AfterExternBlock=*/false,
                              /*BeforeCatch=*/false,
                              /*BeforeElse=*/false,
@@ -1994,7 +2033,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ShortNamespaceLines = 1;
   LLVMStyle.SkipMacroDefinitionBody = false;
   LLVMStyle.SortIncludes = {/*Enabled=*/true, /*IgnoreCase=*/false,
-                            /*IgnoreExtension=*/false};
+                            /*IgnoreExtension=*/false, /*Natural=*/false,
+                            /*FilesBeforeFolders=*/false};
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
@@ -2019,6 +2059,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
+  LLVMStyle.SpacesInBlockComments = FormatStyle::SIBCS_Leave;
   LLVMStyle.SpacesInContainerLiterals = true;
   LLVMStyle.SpacesInLineCommentPrefix = {
       /*Minimum=*/1, /*Maximum=*/std::numeric_limits<unsigned>::max()};
@@ -2824,12 +2865,12 @@ private:
   void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
                              tooling::Replacements &Result) {
     bool InEnumBraces = false;
-    const FormatToken *BeforeRBrace = nullptr;
+    FormatToken *BeforeRBrace = nullptr;
     const auto &SourceMgr = Env.getSourceManager();
     for (auto *Line : Lines) {
       if (!Line->Children.empty())
         editEnumTrailingComma(Line->Children, Result);
-      for (const auto *Token = Line->First; Token && !Token->Finalized;
+      for (auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
         if (Token->isNot(TT_EnumRBrace)) {
           if (Token->is(TT_EnumLBrace))
@@ -2839,8 +2880,10 @@ private:
           continue;
         }
         InEnumBraces = false;
-        if (!BeforeRBrace) // Empty braces or Line not affected.
+        if (!BeforeRBrace || BeforeRBrace->HasEnumTrailingCommaHandled) {
+          // Empty braces, or Line not affected, or already handled.
           continue;
+        }
         if (BeforeRBrace->is(tok::comma)) {
           if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
             replaceToken(*BeforeRBrace, BeforeRBrace->Next, SourceMgr, Result);
@@ -2848,6 +2891,7 @@ private:
           cantFail(Result.add(tooling::Replacement(
               SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }
+        BeforeRBrace->HasEnumTrailingCommaHandled = true;
         BeforeRBrace = nullptr;
       }
     }
@@ -3629,25 +3673,83 @@ static void sortCppIncludes(const FormatStyle &Style,
 
   if (Style.SortIncludes.Enabled) {
     stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-      SmallString<128> LHSStem, RHSStem;
+      if (Includes[LHSI].Priority != Includes[RHSI].Priority)
+        return Includes[LHSI].Priority < Includes[RHSI].Priority;
+
+      auto LHSStem = Includes[LHSI].Filename;
+      auto RHSStem = Includes[RHSI].Filename;
+
+      SmallString<128> LHSStemStorage, RHSStemStorage;
       if (Style.SortIncludes.IgnoreExtension) {
-        LHSStem = Includes[LHSI].Filename;
-        RHSStem = Includes[RHSI].Filename;
-        llvm::sys::path::replace_extension(LHSStem, "");
-        llvm::sys::path::replace_extension(RHSStem, "");
+        LHSStemStorage = Includes[LHSI].Filename;
+        RHSStemStorage = Includes[RHSI].Filename;
+        llvm::sys::path::replace_extension(LHSStemStorage, "");
+        llvm::sys::path::replace_extension(RHSStemStorage, "");
+        LHSStem = LHSStemStorage;
+        RHSStem = RHSStemStorage;
       }
+
       std::string LHSStemLower, RHSStemLower;
       std::string LHSFilenameLower, RHSFilenameLower;
       if (Style.SortIncludes.IgnoreCase) {
-        LHSStemLower = LHSStem.str().lower();
-        RHSStemLower = RHSStem.str().lower();
+        LHSStemLower = LHSStem.lower();
+        RHSStemLower = RHSStem.lower();
         LHSFilenameLower = Includes[LHSI].Filename.lower();
         RHSFilenameLower = Includes[RHSI].Filename.lower();
       }
-      return std::tie(Includes[LHSI].Priority, LHSStemLower, LHSStem,
-                      LHSFilenameLower, Includes[LHSI].Filename) <
-             std::tie(Includes[RHSI].Priority, RHSStemLower, RHSStem,
-                      RHSFilenameLower, Includes[RHSI].Filename);
+
+      const auto Compare = Style.SortIncludes.Natural
+                               ? &StringRef::compare_numeric
+                               : &StringRef::compare;
+
+      while (Style.SortIncludes.FilesBeforeFolders) {
+        auto [LHead, LTail] = LHSStem.split('/');
+        auto [RHead, RTail] = RHSStem.split('/');
+
+        bool LIsFile = LTail.empty();
+        bool RIsFile = RTail.empty();
+
+        // A file at this level sorts before a subdirectory at this level.
+        if (LIsFile != RIsFile)
+          return LIsFile;
+
+        // Both are leaf filenames — they are equal at this level, so we
+        // can break out of the loop and compare the full filenames later.
+        if (LIsFile)
+          break;
+
+        // Both are directory components at this level — compare them.
+        if (Style.SortIncludes.IgnoreCase) {
+          int Cmp = std::invoke(Compare, StringRef(LHead.lower()),
+                                StringRef(RHead.lower()));
+          if (Cmp != 0)
+            return Cmp < 0;
+        }
+        if (int Cmp = std::invoke(Compare, LHead, RHead); Cmp != 0)
+          return Cmp < 0;
+
+        // Directory components are equal; descend into the next level.
+        LHSStem = LTail;
+        RHSStem = RTail;
+      }
+
+      if (Style.SortIncludes.IgnoreCase) {
+        int Cmp = std::invoke(Compare, StringRef(LHSStemLower), RHSStemLower);
+        if (Cmp != 0)
+          return Cmp < 0;
+      }
+
+      if (int Cmp = std::invoke(Compare, LHSStem, RHSStem); Cmp != 0)
+        return Cmp < 0;
+
+      if (Style.SortIncludes.IgnoreCase) {
+        int Cmp =
+            std::invoke(Compare, StringRef(LHSFilenameLower), RHSFilenameLower);
+        if (Cmp != 0)
+          return Cmp < 0;
+      }
+      return std::invoke(Compare, Includes[LHSI].Filename,
+                         Includes[RHSI].Filename) < 0;
     });
   }
 
@@ -4151,6 +4253,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   }
 
   SmallVector<StringRef, 4> Matches;
+  SmallVector<tooling::HeaderIncludes::HeaderToInsert, 4> HeadersToInsert;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
     bool Matched =
@@ -4159,19 +4262,17 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                       "'#include ...'");
     (void)Matched;
     auto IncludeName = Matches[2];
-    auto Replace =
-        Includes.insert(IncludeName.trim("\"<>"), IncludeName.starts_with("<"),
-                        tooling::IncludeDirective::Include);
-    if (Replace) {
-      auto Err = Result.add(*Replace);
-      if (Err) {
-        consumeError(std::move(Err));
-        unsigned NewOffset =
-            Result.getShiftedCodePosition(Replace->getOffset());
-        auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
-                                            Replace->getReplacementText());
-        Result = Result.merge(tooling::Replacements(Shifted));
-      }
+    HeadersToInsert.emplace_back(IncludeName,
+                                 tooling::IncludeDirective::Include);
+  }
+  for (const auto &Replace : Includes.insert(HeadersToInsert)) {
+    auto Err = Result.add(Replace);
+    if (Err) {
+      consumeError(std::move(Err));
+      unsigned NewOffset = Result.getShiftedCodePosition(Replace.getOffset());
+      auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
+                                          Replace.getReplacementText());
+      Result = Result.merge(tooling::Replacements(Shifted));
     }
   }
   return Result;
@@ -4327,12 +4428,6 @@ reformat(const FormatStyle &Style, StringRef Code,
     }
   }
 
-  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
-    Passes.emplace_back([&](const Environment &Env) {
-      return DefinitionBlockSeparator(Env, Expanded).process();
-    });
-  }
-
   if (Style.Language == FormatStyle::LK_ObjC &&
       !Style.ObjCPropertyAttributeOrder.empty()) {
     Passes.emplace_back([&](const Environment &Env) {
@@ -4350,6 +4445,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   Passes.emplace_back([&](const Environment &Env) {
     return Formatter(Env, Expanded, Status).process();
   });
+
+  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
 
   if (Style.isJavaScript() &&
       Style.InsertTrailingCommas == FormatStyle::TCS_Wrapped) {

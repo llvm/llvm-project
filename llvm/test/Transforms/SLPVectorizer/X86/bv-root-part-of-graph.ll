@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP9:%.*]], %[[BB1]] ]
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[FMUL]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[FMUL]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP4]], zeroinitializer

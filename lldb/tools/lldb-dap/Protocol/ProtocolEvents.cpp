@@ -90,6 +90,9 @@ static llvm::json::Value toJSON(const StoppedReason &SR) {
   case eStoppedReasonInstructionBreakpoint:
     return "instruction breakpoint";
   }
+
+  assert(false && "invalid StopReason");
+  return "";
 }
 
 llvm::json::Value toJSON(const StoppedEventBody &SEB) {

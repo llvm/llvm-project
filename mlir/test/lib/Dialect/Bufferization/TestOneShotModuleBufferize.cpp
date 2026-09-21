@@ -16,6 +16,7 @@
 
 #include "TestAttributes.h" // TestTensorEncodingAttr, TestMemRefLayoutAttr
 #include "TestDialect.h"
+#include "TestOps.h"
 
 using namespace mlir;
 
@@ -28,6 +29,21 @@ getMemRefLayoutForTensorEncoding(RankedTensorType tensorType) {
         tensorType.getContext(), encoding.getDummy()));
   }
   return {};
+}
+
+test::TestMemRefLayoutAttr
+getLayoutFromBuffer(bufferization::BufferLikeType buffer) {
+  auto layout =
+      llvm::TypeSwitch<bufferization::BufferLikeType,
+                       MemRefLayoutAttrInterface>(buffer)
+          .Case([&](MemRefType memref) { return memref.getLayout(); })
+          .Case([&](test::TestMemrefType testMemref) {
+            return cast<MemRefLayoutAttrInterface>(testMemref.getLayout());
+          })
+          .Default([](bufferization::BufferLikeType) {
+            return MemRefLayoutAttrInterface();
+          });
+  return dyn_cast_or_null<test::TestMemRefLayoutAttr>(layout);
 }
 
 struct TestOneShotModuleBufferizePass
@@ -82,9 +98,14 @@ struct TestOneShotModuleBufferizePass
               })
               .Case([&](test::TestTensorType testTensorType)
                         -> bufferization::BufferLikeType {
+                assert(memSpace == nullptr &&
+                       "memory space is not supported for test types");
+                // Note: unknown type conversion cannot create layout because
+                // test tensor does not have an encoding, this is probably
+                // enough for a test.
                 return test::TestMemrefType::get(
                     testTensorType.getContext(), testTensorType.getShape(),
-                    testTensorType.getElementType(), memSpace);
+                    testTensorType.getElementType(), /*layout=*/nullptr);
               })
               .Default([&](bufferization::TensorLikeType tensor) {
                 llvm_unreachable("unexpected tensor type");
@@ -97,13 +118,8 @@ struct TestOneShotModuleBufferizePass
         [](bufferization::BufferLikeType x, bufferization::BufferLikeType y,
            const bufferization::BufferizationOptions &)
         -> FailureOr<bufferization::BufferLikeType> {
-      auto getLayout = [](bufferization::BufferLikeType t) {
-        auto m = dyn_cast<MemRefType>(t);
-        return m ? dyn_cast<test::TestMemRefLayoutAttr>(m.getLayout())
-                 : test::TestMemRefLayoutAttr();
-      };
-      auto lhsLayout = getLayout(x);
-      auto rhsLayout = getLayout(y);
+      auto lhsLayout = getLayoutFromBuffer(x);
+      auto rhsLayout = getLayoutFromBuffer(y);
       if (lhsLayout && rhsLayout) {
         return lhsLayout.getDummy().getValue() <=
                        rhsLayout.getDummy().getValue()
@@ -111,6 +127,9 @@ struct TestOneShotModuleBufferizePass
                    : y;
       }
       return rhsLayout ? y : x;
+    };
+    opt.castFn = [&](OpBuilder &b, Location loc, Type dest, Value value) {
+      return test::TestDummyCastOp::create(b, loc, dest, value).getResult();
     };
     // Function signature update only works with memref.cast. Disable it to
     // align behaviour for upstream and user casts.

@@ -18,16 +18,12 @@ using namespace clang;
 using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, FA, Ctx, this), EvalResult(&Ctx) {}
 
-EvalEmitter::~EvalEmitter() {
-  for (auto &V : Locals) {
-    Block *B = reinterpret_cast<Block *>(V.get());
-    if (B->isInitialized())
-      B->invokeDtor();
-  }
-}
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+                         InterpStack &Stk, FrameAllocator &FA)
+    : Ctx(Ctx), P(P), S(Status, P, Stk, FA, Ctx, this), EvalResult(&Ctx) {}
 
 /// Clean up all our resources. This needs to done in failed evaluations before
 /// we call InterpStack::clear(), because there might be a Pointer on the stack
@@ -63,7 +59,6 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   QualType T = VD->getType();
   this->ConvertResultToRValue = !Init->isGLValue() && !T->isPointerType() &&
                                 !T->isObjCObjectPointerType();
-  EvalResult.setSource(VD);
 
   if (!this->visitDeclAndReturn(VD, Init, S.inConstantContext()))
     EvalResult.setInvalid();
@@ -129,15 +124,34 @@ bool EvalEmitter::interpretCall(const FunctionDecl *FD, const Expr *E) {
   return this->visitExpr(E, /*DestroyToplevelScope=*/false);
 }
 
+std::optional<bool> EvalEmitter::interpretWithSubstitutions(
+    const FunctionDecl *Callee, ArrayRef<const Expr *> Args, const Expr *This,
+    const Expr *Condition) {
+
+  if (!this->visitWithSubstitutions(Callee, Args, This, Condition))
+    return std::nullopt;
+
+  if (EvalResult.empty() || EvalResult.isInvalid())
+    return false;
+
+  assert(!EvalResult.empty());
+  APValue Result = EvalResult.stealAPValue();
+
+  assert(Result.isInt());
+  return Result.getInt().getBoolValue();
+}
+
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }
 
 EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
-Scope::Local EvalEmitter::createLocal(Descriptor *D) {
+Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
   // Allocate memory for a local.
-  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
-  B->invokeCtorNoMemset();
+  char *Memory = reinterpret_cast<char *>(
+      S.allocate(sizeof(Block) + D->getAllocSize() + Block::InlineDescMD));
+  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
+                               /*IsStatic=*/false);
+  B->invokeCtor();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
@@ -151,8 +165,8 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
 
   // Register the local.
   unsigned Off = Locals.size();
-  Locals.push_back(std::move(Memory));
-  return {Off, D};
+  Locals.push_back(Memory);
+  return {D, Off};
 }
 
 bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
@@ -192,8 +206,8 @@ bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   if (!isActive())
     return true;
 
-  PushIgnoreDiags(S, OpPC);
-  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, OpPC); });
+  PushIgnoreDiags(S);
+  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S); });
 
   size_t StackSizeBefore = S.Stk.size();
   const Expr *Arg = E->getArg(0);
@@ -202,7 +216,7 @@ bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
 
     if (S.inConstantContext() || Arg->HasSideEffects(S.getASTContext()))
       return this->emitBool(false, E);
-    return Invalid(S, OpPC);
+    return Invalid(S, CodePtr());
   }
 
   PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
@@ -233,15 +247,17 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
-    return (*this->PtrCB)(Ptr);
+    return (*this->PtrCB)(S, CodePtr(), Ptr);
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
   // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
+    if (ConvertResultToRValue && Ptr.asFunctionPointer().Func->getDecl())
+      return false;
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
   }
@@ -251,10 +267,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     if (Ptr.isPastEnd())
       return false;
 
-    if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
-      return false;
-
-    if (!Ptr.isZero() && !CheckFinalLoad(S, OpPC, Ptr))
+    if (!Ptr.isZero() && !CheckFinalLoad(S, CodePtr(), Ptr))
       return false;
 
     // Never allow reading from a non-const pointer, unless the memory
@@ -305,7 +318,7 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
@@ -334,7 +347,7 @@ bool EvalEmitter::emitGetRefLocal(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  return handleReference(S, OpPC, B);
+  return handleReference(S, CodePtr(), B);
 }
 
 template <PrimType OpType>
@@ -346,7 +359,7 @@ bool EvalEmitter::emitGetLocal(uint32_t I, SourceInfo Info) {
 
   Block *B = getLocal(I);
 
-  if (!CheckLocalLoad(S, OpPC, B))
+  if (!CheckLocalLoad(S, CodePtr(), B))
     return false;
 
   S.Stk.push<T>(B->deref<T>());

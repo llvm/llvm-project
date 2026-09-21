@@ -1,92 +1,58 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -disable-promote-alloca-to-vector < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9 < %s | FileCheck %s
 
-declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #1
-
-declare i32 @llvm.amdgcn.workitem.id.x() #1
-
-; CI+ intrinsic
-declare void @llvm.amdgcn.s.dcache.inv.vol() #0
-
-; VI+ intrinsic
-declare void @llvm.amdgcn.s.dcache.wb() #0
-
+; The default gfx9-generic subtarget lacks the mad-mix instructions, so the
+; f16 multiply-add is expanded to conversions plus a separate fma.
 ; CHECK-LABEL: {{^}}target_none:
-; CHECK: s_movk_i32 [[OFFSETREG:s[0-9]+]], 0x400
-; CHECK: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, [[OFFSETREG]]
-; CHECK: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
-define amdgpu_kernel void @target_none() #0 {
-  %kernargs = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, ptr addrspace(4) %kernargs, i64 1024
-  %ptr = load ptr addrspace(1), ptr addrspace(4) %kernargs.gep
-  %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %id.ext = sext i32 %id to i64
-  %gep = getelementptr inbounds i32, ptr addrspace(1) %ptr, i64 %id.ext
-  store i32 0, ptr addrspace(1) %gep
+; CHECK: v_cvt_f32_f16_e32 [[A:v[0-9]+]], v0
+; CHECK: v_cvt_f32_f16_e32 [[B:v[0-9]+]], v1
+; CHECK: v_cvt_f32_f16_e32 [[C:v[0-9]+]], v2
+; CHECK: v_mac_f32_e32 [[C]], [[A]], [[B]]
+define float @target_none(half %a, half %b, half %c) #1 {
+  %ae = fpext half %a to float
+  %be = fpext half %b to float
+  %ce = fpext half %c to float
+  %r = call float @llvm.fmuladd.f32(float %ae, float %be, float %ce)
+  ret float %r
+}
+
+; gfx900 has the mad-mix instructions, so the same multiply-add folds the f16
+; conversions into a single v_mad_mix_f32.
+; CHECK-LABEL: {{^}}target_gfx900:
+; CHECK: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+define float @target_gfx900(half %a, half %b, half %c) #2 {
+  %ae = fpext half %a to float
+  %be = fpext half %b to float
+  %ce = fpext half %c to float
+  %r = call float @llvm.fmuladd.f32(float %ae, float %be, float %ce)
+  ret float %r
+}
+
+; gfx906 has the fma-mix instructions, so the same multiply-add folds the f16
+; conversions into a single v_fma_mix_f32.
+; CHECK-LABEL: {{^}}target_gfx906_mad_mix:
+; CHECK: v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
+define float @target_gfx906_mad_mix(half %a, half %b, half %c) #4 {
+  %ae = fpext half %a to float
+  %be = fpext half %b to float
+  %ce = fpext half %c to float
+  %r = call float @llvm.fmuladd.f32(float %ae, float %be, float %ce)
+  ret float %r
+}
+
+; The fdot2 intrinsic is only available on gfx906.
+; CHECK-LABEL: {{^}}target_gfx906:
+; CHECK: v_dot2_f32_f16
+define amdgpu_kernel void @target_gfx906(ptr addrspace(1) %out, <2 x half> %a, <2 x half> %b, float %c) #3 {
+  %dot = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  store float %dot, ptr addrspace(1) %out, align 4
   ret void
 }
 
-; CHECK-LABEL: {{^}}target_tahiti:
-; CHECK: s_movk_i32 [[OFFSETREG:s[0-9]+]], 0x400
-; CHECK: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, [[OFFSETREG]]
-; CHECK: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
-define amdgpu_kernel void @target_tahiti() #1 {
-  %kernargs = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, ptr addrspace(4) %kernargs, i64 1024
-  %ptr = load ptr addrspace(1), ptr addrspace(4) %kernargs.gep
-  %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %id.ext = sext i32 %id to i64
-  %gep = getelementptr inbounds i32, ptr addrspace(1) %ptr, i64 %id.ext
-  store i32 0, ptr addrspace(1) %gep
-  ret void
-}
+declare float @llvm.fmuladd.f32(float, float, float) #0
+declare float @llvm.amdgcn.fdot2(<2 x half>, <2 x half>, float, i1 immarg) #0
 
-; CHECK-LABEL: {{^}}target_bonaire:
-; CHECK: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x100
-; CHECK: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
-; CHECK: s_dcache_inv_vol
-define amdgpu_kernel void @target_bonaire() #3 {
-  %kernargs = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, ptr addrspace(4) %kernargs, i64 1024
-  %ptr = load ptr addrspace(1), ptr addrspace(4) %kernargs.gep
-  %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %id.ext = sext i32 %id to i64
-  %gep = getelementptr inbounds i32, ptr addrspace(1) %ptr, i64 %id.ext
-  store i32 0, ptr addrspace(1) %gep
-  call void @llvm.amdgcn.s.dcache.inv.vol()
-  ret void
-}
-
-; CHECK-LABEL: {{^}}target_fiji:
-; CHECK: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x400
-; CHECK: flat_store_dword
-; CHECK: s_dcache_wb{{$}}
-define amdgpu_kernel void @target_fiji() #4 {
-  %kernargs = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-  %kernargs.gep = getelementptr inbounds i8, ptr addrspace(4) %kernargs, i64 1024
-  %ptr = load ptr addrspace(1), ptr addrspace(4) %kernargs.gep
-  %id = call i32 @llvm.amdgcn.workitem.id.x()
-  %id.ext = sext i32 %id to i64
-  %gep = getelementptr inbounds i32, ptr addrspace(1) %ptr, i64 %id.ext
-  store i32 0, ptr addrspace(1) %gep
-  call void @llvm.amdgcn.s.dcache.wb()
-  ret void
-}
-
-; CHECK-LABEL: {{^}}promote_alloca_enabled:
-; CHECK: ds_read_b32
-define amdgpu_kernel void @promote_alloca_enabled(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
-entry:
-  %stack = alloca [5 x i32], align 4, addrspace(5)
-  %tmp = load i32, ptr addrspace(1) %in, align 4
-  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %tmp
-  %load = load i32, ptr addrspace(5) %arrayidx1
-  store i32 %load, ptr addrspace(1) %out
-  ret void
-}
-
-attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "target-cpu"="tahiti" }
-attributes #3 = { nounwind "target-cpu"="bonaire" }
-attributes #4 = { nounwind "target-cpu"="fiji" }
-attributes #5 = { nounwind "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="1,256" }
+attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }
+attributes #2 = { nounwind denormal_fpenv(float: preservesign) "target-cpu"="gfx900" }
+attributes #3 = { nounwind "target-cpu"="gfx906" }
+attributes #4 = { nounwind denormal_fpenv(float: preservesign) "target-cpu"="gfx906" }

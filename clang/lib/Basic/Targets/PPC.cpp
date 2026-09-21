@@ -714,6 +714,14 @@ ParsedTargetAttr PPCTargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
+bool PPCTargetInfo::isValidFeatureName(StringRef Name) const {
+  // we have some target features that are spelled differently on the command
+  // line versus what's in PPC.td. We need to continue accepting them.
+  if (Name == "pcrel" || Name == "prefixed")
+    return true;
+  return llvm::PPC::isValidFeatureName(Name);
+}
+
 llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   if (Features.empty())
     return llvm::APInt(32, 0);
@@ -835,6 +843,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   if (getTriple().isOSAIX() && Opts.EnableAIXQuadwordAtomicsABI &&
       HasQuadwordAtomics)
     MaxAtomicInlineWidth = 128;
+
+  if (getTriple().isOSAIX() && Opts.EnableAIXExtendedAltivecABI)
+    ABI = "vec-extabi";
 }
 
 llvm::SmallVector<Builtin::InfosShard>

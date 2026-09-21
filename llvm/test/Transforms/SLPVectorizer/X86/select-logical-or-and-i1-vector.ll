@@ -12,28 +12,28 @@ define void @select_logical_or_i1(ptr %dst,
 ; CHECK-LABEL: define void @select_logical_or_i1(
 ; CHECK-SAME: ptr [[DST:%.*]], float [[D0:%.*]], float [[D1:%.*]], float [[D2:%.*]], float [[D3:%.*]], float [[THRESHOLD:%.*]], float [[HPHB_VAL:%.*]], i1 [[SCALAR_COND:%.*]], float [[Y0:%.*]], float [[Y1:%.*]], float [[Y2:%.*]], float [[Y3:%.*]], float [[E0:%.*]], float [[E1:%.*]], float [[E2:%.*]], float [[E3:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[D0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[D1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[D2]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D3]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[THRESHOLD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[D0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[D1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[D2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[THRESHOLD]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp fast uge <4 x float> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> poison, i1 [[SCALAR_COND]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> poison, i1 [[SCALAR_COND]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> splat (i1 true), <4 x i1> [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[HPHB_VAL]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[HPHB_VAL]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP9]], <4 x float> zeroinitializer, <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[Y0]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[Y1]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[Y2]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[Y3]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[Y2]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[Y3]], i64 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> poison, float [[E0]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[E1]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[E2]], i32 2
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float [[E3]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> poison, float [[E0]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[E1]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[E2]], i64 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float [[E3]], i64 3
 ; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[TMP21]], [[TMP17]]
 ; CHECK-NEXT:    store <4 x float> [[TMP22]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
@@ -84,28 +84,28 @@ define void @select_logical_and_i1(ptr %dst,
 ; CHECK-LABEL: define void @select_logical_and_i1(
 ; CHECK-SAME: ptr [[DST:%.*]], float [[D0:%.*]], float [[D1:%.*]], float [[D2:%.*]], float [[D3:%.*]], float [[THRESHOLD:%.*]], float [[HPHB_VAL:%.*]], i1 [[SCALAR_COND:%.*]], float [[Y0:%.*]], float [[Y1:%.*]], float [[Y2:%.*]], float [[Y3:%.*]], float [[E0:%.*]], float [[E1:%.*]], float [[E2:%.*]], float [[E3:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[D0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[D1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[D2]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D3]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[THRESHOLD]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[D0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[D1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[D2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[D3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[THRESHOLD]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp fast uge <4 x float> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> poison, i1 [[SCALAR_COND]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> poison, i1 [[SCALAR_COND]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP7]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[HPHB_VAL]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[HPHB_VAL]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP9]], <4 x float> zeroinitializer, <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[Y0]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[Y1]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[Y2]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[Y3]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[Y2]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[Y3]], i64 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> poison, float [[E0]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[E1]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[E2]], i32 2
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float [[E3]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> poison, float [[E0]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[E1]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[E2]], i64 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float [[E3]], i64 3
 ; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[TMP21]], [[TMP17]]
 ; CHECK-NEXT:    store <4 x float> [[TMP22]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void

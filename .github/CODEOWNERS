@@ -15,7 +15,6 @@
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
-/runtimes/ @llvm/reviewers-libcxx
 
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
 /llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
@@ -161,6 +160,9 @@
 /mlir/**/*shard* @fschlimb
 /mlir/**/*Shard* @fschlimb
 
+# MLIR WasmSSA Dialect
+/mlir/**/WasmSSA* @flemairen6 @lforg37
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
@@ -179,6 +181,7 @@
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
+/utils/bazel/llvm-project-overlay/libc/ @labath @kaladron
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida
@@ -210,3 +213,8 @@
 # AMDGPU Memory Model
 /llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a
 /llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a
+
+# Clang-Tidy tool
+/clang-tools-extra/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2

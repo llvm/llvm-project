@@ -22,6 +22,7 @@ mrs x0, TRFCR_EL1
 mrs x0, TRFCR_EL2
 mrs x0, TRFCR_EL12
 
+hint #18
 tsb csync
 
 //CHECK:  msr TRFCR_EL1, x0           // encoding: [0x20,0x12,0x18,0xd5]
@@ -33,6 +34,7 @@ tsb csync
 //CHECK:  mrs x0, TRFCR_EL12          // encoding: [0x20,0x12,0x3d,0xd5]
 
 //CHECK:  tsb csync                   // encoding: [0x5f,0x22,0x03,0xd5]
+//CHECK-NEXT:  tsb csync              // encoding: [0x5f,0x22,0x03,0xd5]
 
 //CHECK-ERROR: error: expected writable system register or pstate
 //CHECK-ERROR: msr TRFCR_EL1, x0

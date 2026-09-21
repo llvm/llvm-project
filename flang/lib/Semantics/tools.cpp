@@ -182,9 +182,18 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||
           (cat0 != TypeCategory::Complex && cat1 != TypeCategory::Complex);
+    } else if (cat0 == TypeCategory::Character &&
+        cat1 == TypeCategory::Character) {
+      return true;
+    } else if (cat0 == TypeCategory::Derived && cat1 == TypeCategory::Derived) {
+      // Same enumeration type: all six relational operators are allowed
+      const auto *derived0{evaluate::GetDerivedTypeSpec(type0)};
+      const auto *derived1{evaluate::GetDerivedTypeSpec(type1)};
+      return derived0 && derived1 && derived0->IsEnumerationType() &&
+          derived1->IsEnumerationType() &&
+          &derived0->typeSymbol() == &derived1->typeSymbol();
     } else {
-      // not both numeric: only Character is ok
-      return cat0 == TypeCategory::Character && cat1 == TypeCategory::Character;
+      return false;
     }
   }
 }
@@ -832,6 +841,11 @@ bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
   return std::any_of(directs.begin(), directs.end(), IsAllocatable);
 }
 
+bool HasPointerDirectComponent(const DerivedTypeSpec &derived) {
+  DirectComponentIterator directs{derived};
+  return std::any_of(directs.begin(), directs.end(), IsPointer);
+}
+
 static bool MayHaveDefinedAssignment(
     const DerivedTypeSpec &derived, std::set<const Scope *> &checked) {
   if (const Scope *scope{derived.GetScope()};
@@ -1077,7 +1091,9 @@ bool IsAssumedType(const Symbol &symbol) {
 }
 
 bool IsEnumerationType(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
+  // Use the ultimate symbol for cases such as USE-associated enumeration types
+  if (const auto *details{
+          symbol.GetUltimate().detailsIf<DerivedTypeDetails>()}) {
     return details->isEnumerationType();
   }
   return false;
@@ -1187,7 +1203,33 @@ std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
     const Fortran::semantics::DerivedTypeSpec *derived{
         type ? type->AsDerived() : nullptr};
     if (derived) {
-      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+      // Examine every device-allocatable ultimate component, not just the
+      // first one: whether the object has to be relocated depends on all of
+      // them, so stopping at the first would make the answer depend on the
+      // order the components happen to be declared in.
+      bool anyDeviceAllocatable{false};
+      bool anyExplicit{false};
+      UltimateComponentIterator ultimates{*derived};
+      for (const Symbol &comp : ultimates) {
+        if (IsDeviceAllocatable(comp)) {
+          anyDeviceAllocatable = true;
+          const auto *compDetails{comp.detailsIf<ObjectEntityDetails>()};
+          if (!compDetails || !compDetails->cudaDataAttrIsImplicit()) {
+            anyExplicit = true;
+            break;
+          }
+        }
+      }
+      if (anyDeviceAllocatable) {
+        // The compiler applied every one of those attributes, not the user, so
+        // the memory space the user did ask for on the object takes precedence
+        // over them.
+        if (details->cudaDataAttr() && !anyExplicit) {
+          return details->cudaDataAttr();
+        }
+        // A component the user did attribute keeps the existing behavior: the
+        // object is placed in managed memory so that the component's
+        // descriptors stay addressable.
         return common::CUDADataAttr::Managed;
       }
     }

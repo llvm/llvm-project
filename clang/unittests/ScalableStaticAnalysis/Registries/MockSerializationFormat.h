@@ -44,6 +44,24 @@ public:
   llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                      llvm::StringRef Path) override;
 
+  llvm::Expected<StaticLibrary>
+  readStaticLibrary(llvm::StringRef Path) override;
+
+  llvm::Error writeStaticLibrary(const StaticLibrary &S,
+                                 llvm::StringRef Path) override;
+
+  llvm::Expected<MultiArchStaticLibrary>
+  readMultiArchStaticLibrary(llvm::StringRef Path) override;
+
+  llvm::Error writeMultiArchStaticLibrary(const MultiArchStaticLibrary &M,
+                                          llvm::StringRef Path) override;
+
+  llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibrary(llvm::StringRef Path) override;
+
+  llvm::Error writeMultiArchSharedLibrary(const MultiArchSharedLibrary &M,
+                                          llvm::StringRef Path) override;
+
   llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) override;
 
   llvm::Error writeArtifact(const Artifact &A, llvm::StringRef Path) override;

@@ -61,6 +61,10 @@ typedef struct _Unwind_Context _Unwind_Context;   // opaque
 #include <unwind_itanium.h>
 #endif
 
+#if defined(__WASM_EXCEPTIONS__)
+#include <unwind_wasm.h>
+#endif
+
 typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
     (int version,
      _Unwind_Action actions,

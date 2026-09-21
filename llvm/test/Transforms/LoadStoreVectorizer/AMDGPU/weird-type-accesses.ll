@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
 ; Checks that we don't merge loads/stores of types smaller than one
 ; byte, or vectors with elements smaller than one byte.

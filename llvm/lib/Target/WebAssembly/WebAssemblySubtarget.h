@@ -32,10 +32,6 @@
 
 namespace llvm {
 
-// Defined in WebAssemblyGenSubtargetInfo.inc.
-extern const SubtargetFeatureKV
-    WebAssemblyFeatureKV[WebAssembly::NumSubtargetFeatures];
-
 class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   enum SIMDEnum {
     NoSIMD,
@@ -83,8 +79,8 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
-  WebAssemblySubtarget(const Triple &TT, const std::string &CPU,
-                       const std::string &FS, const TargetMachine &TM);
+  WebAssemblySubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                       const TargetMachine &TM);
 
   const WebAssemblySelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;

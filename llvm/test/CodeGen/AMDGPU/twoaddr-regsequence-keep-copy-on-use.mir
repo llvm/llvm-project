@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -verify-machineinstrs -run-pass=twoaddressinstruction -o - %s | FileCheck -check-prefix=CHECK %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -verify-machineinstrs -run-pass=liveintervals,twoaddressinstruction -o - %s | FileCheck -check-prefix=LIS %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -verify-machineinstrs -run-pass=twoaddressinstruction -o - %s | FileCheck -check-prefix=CHECK %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -verify-machineinstrs -run-pass=liveintervals,twoaddressinstruction -o - %s | FileCheck -check-prefix=LIS %s
 
 # Checks that while lowering REG_SEQUENCE, undef COPY are not skipped if there is no LIS
 # information

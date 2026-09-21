@@ -1221,26 +1221,24 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NF-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
 ; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
 ; NF-NEXT:  # %bb.1: # %bb2
-; NF-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
+; NF-NEXT:    movl $0, %r12d # encoding: [0x41,0xbc,0x00,0x00,0x00,0x00]
 ; NF-NEXT:  .LBB50_2: # %bb1
-; NF-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
-; NF-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
-; NF-NEXT:    # encoding: [0x03,0x34,0x24]
-; NF-NEXT:    {nf} imull %ebx, %ebx, %r13d # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x14,0x1c,0xaf,0xdb]
-; NF-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NF-NEXT:    movq (%rsp), %rax # 8-byte Reload
+; NF-NEXT:    # encoding: [0x48,0x8b,0x04,0x24]
+; NF-NEXT:    {nf} addl %eax, %r13d, %ebp # encoding: [0x62,0xd4,0x54,0x1c,0x01,0xc5]
+; NF-NEXT:    {nf} imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x1c,0xaf,0xdb]
 ; NF-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
 ; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
 ; NF-NEXT:  # %bb.3: # %bb4
-; NF-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
-; NF-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
-; NF-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; NF-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    {nf} incl %r12d, %r15d # EVEX TO EVEX Compression encoding: [0x62,0xd4,0x04,0x1c,0xff,0xc4]
 ; NF-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
-; NF-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
-; NF-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; NF-NEXT:    callq *%rax # encoding: [0xff,0xd0]
 ; NF-NEXT:  .LBB50_4: # %bb3
-; NF-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; NF-NEXT:    {nf} orl %r13d, %ebp, %esi # EVEX TO EVEX Compression encoding: [0x62,0x74,0x4c,0x1c,0x09,0xed]
 ; NF-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
 ; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]

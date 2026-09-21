@@ -1,2 +1,2 @@
-template<typename T> struct MyClass {};
-template<typename T> struct MyClass<T*> {};
+template <typename T> struct MyClass {};
+template <typename T> struct MyClass<T *> {};

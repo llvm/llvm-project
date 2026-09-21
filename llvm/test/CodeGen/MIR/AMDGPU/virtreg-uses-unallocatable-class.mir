@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=none -o - %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=amdgpu9.00-- -run-pass=none -o - %s 2>&1 | FileCheck %s
 
 # Check a diagnostic is emitted if non-allocatable classes are used
 # with virtual registers, and there's no assert.

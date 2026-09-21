@@ -9,3 +9,4 @@
 
 // FUCHSIA-DAG: #define __Fuchsia__ 1
 // FUCHSIA-DAG: #define __Fuchsia_API_level__ {{[0-9]+}}
+// FUCHSIA-DAG: #define __Fuchsia_Compiler_ABI__ 1

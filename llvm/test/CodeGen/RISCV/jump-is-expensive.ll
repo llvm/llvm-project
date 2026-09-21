@@ -6,16 +6,16 @@
 define void @foo(i32 %X, i32 %Y, i32 %Z) nounwind {
 ; CHEAP-LABEL: foo:
 ; CHEAP:       # %bb.0: # %entry
-; CHEAP-NEXT:    li a2, 5
 ; CHEAP-NEXT:    sext.w a1, a1
-; CHEAP-NEXT:    blt a1, a2, .LBB0_3
-; CHEAP-NEXT:  # %bb.1: # %entry
 ; CHEAP-NEXT:    sext.w a0, a0
-; CHEAP-NEXT:    beqz a0, .LBB0_3
-; CHEAP-NEXT:  # %bb.2: # %UnifiedReturnBlock
-; CHEAP-NEXT:    ret
-; CHEAP-NEXT:  .LBB0_3: # %cond_true
+; CHEAP-NEXT:    seqz a0, a0
+; CHEAP-NEXT:    slti a1, a1, 5
+; CHEAP-NEXT:    or a0, a0, a1
+; CHEAP-NEXT:    beqz a0, .LBB0_2
+; CHEAP-NEXT:  # %bb.1: # %cond_true
 ; CHEAP-NEXT:    tail bar
+; CHEAP-NEXT:  .LBB0_2: # %UnifiedReturnBlock
+; CHEAP-NEXT:    ret
 ;
 ; EXPENSIVE-LABEL: foo:
 ; EXPENSIVE:       # %bb.0: # %entry

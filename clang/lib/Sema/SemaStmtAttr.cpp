@@ -38,6 +38,18 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     return nullptr;
   }
 
+  // CWG 3045: The innermost enclosing switch statement of a fallthrough
+  // statement S shall be contained in the innermost enclosing expansion
+  // statement (8.7 [stmt.expand]) of S, if any.
+  for (Scope *Sc = S.getCurScope();
+       Sc && !Sc->isFunctionScope() && !Sc->isSwitchScope();
+       Sc = Sc->getParent()) {
+    if (Sc->isExpansionStmtScope()) {
+      S.Diag(A.getLoc(), diag::err_fallthrough_attr_invalid_placement);
+      return nullptr;
+    }
+  }
+
   // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus17 && A.isCXX11Attribute() &&
@@ -349,6 +361,64 @@ static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   // Validation is in Sema::ActOnAttributedStmt().
   return ::new (S.Context) MustTailAttr(S.Context, A);
+}
+
+/// Return true if E is an atomic expression or a fence.
+static bool isAtomicExprOrFence(const Expr *E) {
+  E = E->IgnoreParenCasts();
+
+  if (isa<AtomicExpr>(E))
+    return true;
+
+  // _Atomic type qualifier operations: assignments and compound assignments
+  // to atomic lvalues, and loads from atomic lvalues.
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    if (BO->getLHS()->getType()->isAtomicType())
+      return true;
+  } else if (E->getType()->isAtomicType()) {
+    return true;
+  }
+
+  // Target-independent fence builtins.
+  if (const auto *CE = dyn_cast<CallExpr>(E)) {
+    switch (CE->getBuiltinCallee()) {
+    case Builtin::BI__c11_atomic_thread_fence:
+    case Builtin::BI__c11_atomic_signal_fence:
+    case Builtin::BI__atomic_thread_fence:
+    case Builtin::BI__atomic_signal_fence:
+    case Builtin::BI__scoped_atomic_thread_fence:
+      return true;
+    default:
+      break;
+    }
+  }
+
+  return false;
+}
+
+static Attr *handleAMDGPUAvailableVisibleAttr(Sema &S, Stmt *St,
+                                              const ParsedAttr &A,
+                                              SourceRange Range) {
+  StringRef Mode;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, Mode))
+    return nullptr;
+
+  if (Mode != "none") {
+    S.Diag(A.getLoc(), diag::warn_attribute_type_not_supported) << A << Mode;
+    return nullptr;
+  }
+
+  if (const auto *E = dyn_cast<Expr>(St)) {
+    if (!isAtomicExprOrFence(E)) {
+      S.Diag(A.getLoc(), diag::warn_amdgpu_av_requires_atomic) << A;
+      return nullptr;
+    }
+  } else {
+    S.Diag(A.getLoc(), diag::warn_amdgpu_av_requires_expr) << A;
+    return nullptr;
+  }
+
+  return ::new (S.Context) AMDGPUAvailableVisibleAttr(S.Context, A, Mode);
 }
 
 static Attr *handleLikely(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -730,6 +800,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleNoInlineAttr(S, St, A, Range);
   case ParsedAttr::AT_MustTail:
     return handleMustTailAttr(S, St, A, Range);
+  case ParsedAttr::AT_AMDGPUAvailableVisible:
+    return handleAMDGPUAvailableVisibleAttr(S, St, A, Range);
   case ParsedAttr::AT_Likely:
     return handleLikely(S, St, A, Range);
   case ParsedAttr::AT_Unlikely:

@@ -18,6 +18,7 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -42,7 +43,7 @@ class StringRef;
 namespace RISCVTuneInfoTable {
 
 struct RISCVTuneInfo {
-  const char *Name;
+  StringTable::Offset Name;
   uint8_t PrefFunctionAlignment;
   uint8_t PrefLoopAlignment;
 
@@ -86,7 +87,6 @@ public:
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
-    VentanaVeyron,
     MIPSP8700,
     Andes45,
   };
@@ -176,10 +176,6 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcd", "hasStdExtZcd")
-  bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcf", "hasStdExtZcf")
-  bool hasStdExtCOrZcfOrZce() const { return HasStdExtZcf; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -206,10 +202,6 @@ public:
   }
 
   bool hasBEXTILike() const { return HasStdExtZbs || HasVendorXTHeadBs; }
-
-  bool hasCZEROLike() const {
-    return HasStdExtZicond || HasVendorXVentanaCondOps;
-  }
 
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
@@ -296,6 +288,16 @@ public:
     assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i.id()];
   }
+
+  TargetRegisterClass const *getLargestFPRegClass() const {
+    if (HasStdExtQ)
+      return &RISCV::FPR128RegClass;
+    if (HasStdExtD)
+      return &RISCV::FPR64RegClass;
+    if (HasStdExtF)
+      return &RISCV::FPR32RegClass;
+    return nullptr;
+  };
 
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
@@ -384,6 +386,9 @@ public:
   // Maximum cost used for building integers, integers will be put into constant
   // pool if exceeded.
   unsigned getMaxBuildIntsCost() const;
+
+  unsigned getMispredictionPenalty() const override;
+  unsigned getLoadLatency() const override;
 
   unsigned getMaxLMULForFixedLengthVectors() const;
   bool useRVVForFixedLengthVectors() const;
