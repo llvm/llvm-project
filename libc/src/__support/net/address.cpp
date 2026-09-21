@@ -14,6 +14,7 @@
 
 #include "src/__support/net/address.h"
 #include "hdr/inet-address-macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/in_addr_t.h"
 #include "hdr/types/struct_in6_addr.h"
 #include "hdr/types/struct_in_addr.h"
@@ -26,7 +27,47 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 namespace net {
+
+int inet_pton_v4(cpp::string_view src, void *dst) {
+  uint8_t bytes[4];
+  size_t idx = 0;
+  uint32_t current_val = 0;
+  size_t digits_in_octet = 0;
+
+  for (char c : src) {
+    if (c >= '0' && c <= '9') {
+      // Reject octals and leading zeros
+      if (digits_in_octet > 0 && current_val == 0)
+        return 0;
+
+      current_val = current_val * 10 + static_cast<uint32_t>(c - '0');
+      if (current_val > 255)
+        return 0;
+
+      ++digits_in_octet;
+    } else if (c == '.') {
+      if (digits_in_octet == 0 || idx == 3)
+        return 0; // Empty part or too many dots
+
+      bytes[idx++] = static_cast<uint8_t>(current_val);
+      current_val = 0;
+      digits_in_octet = 0;
+    } else {
+      return 0; // Not ASCII
+    }
+  }
+
+  if (idx != 3 || digits_in_octet == 0)
+    return 0;
+
+  bytes[3] = static_cast<uint8_t>(current_val);
+
+  auto addr = reinterpret_cast<struct in_addr *>(dst);
+  __builtin_memcpy(&addr->s_addr, bytes, 4);
+  return 1;
+}
 
 cpp::optional<in_addr_t> inet_addr(cpp::string_view src) {
   constexpr int IPV4_MAX_DOT_NUM = 3;

@@ -75,7 +75,7 @@ add_libc_test(
 add_libc_test(
   inet_pton
   SUITE
-   libc_arpa_inet_unittests
+    libc_arpa_inet_unittests
   SRCS
     inet_pton_test.cpp
   DEPENDS

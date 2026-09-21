@@ -6,7 +6,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.inet_ntoa
     libc.src.arpa.inet.inet_ntop
-    libc.src.arpa.inet.inet_pton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
@@ -1667,6 +1666,10 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # arpa/inet.h entrypoints
+
+      libc.src.arpa.inet.inet_pton
+
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
 
