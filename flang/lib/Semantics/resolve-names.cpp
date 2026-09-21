@@ -7601,6 +7601,20 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   if (OkToAddComponent(name)) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
     SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+
+    // Implicitely attribute allocatable/pointer components with `managed`
+    // memory if CUDA and `-gpu=mem:managed` are enabled.
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+          !object->cudaDataAttr() &&
+          context().languageFeatures().IsEnabled(
+              common::LanguageFeature::CUDA) &&
+          context().languageFeatures().IsEnabled(
+              common::LanguageFeature::CudaManaged)) {
+        object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        object->set_cudaDataAttrIsImplicit();
+      }
+    }
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
         Initialization(name, *init, /*inComponentDecl=*/true);

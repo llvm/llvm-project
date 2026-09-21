@@ -1753,7 +1753,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
-        llvm::StringRef name(shstr_data.PeekCStr(I->sh_name));
+        llvm::StringRef name = shstr_data.PeekCStr(I->sh_name).value_or("");
         I->section_name = name.str();
 
         if (arch_spec.IsMIPS()) {
@@ -2278,29 +2278,25 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
 // recognize cases when the mapping symbol prefixed by an arbitrary string
 // because if a symbol prefix added to each symbol in the object file with
 // objcopy then the mapping symbols are also prefixed.
-static char FindArmAarch64MappingSymbol(const char *symbol_name) {
-  if (!symbol_name)
+static char FindArmAarch64MappingSymbol(llvm::StringRef symbol_name) {
+  size_t dollar_pos = symbol_name.find('$');
+  if (dollar_pos == llvm::StringRef::npos)
     return '\0';
 
-  const char *dollar_pos = ::strchr(symbol_name, '$');
-  if (!dollar_pos || dollar_pos[1] == '\0')
+  llvm::StringRef mapping = symbol_name.drop_front(dollar_pos + 1);
+  if (mapping.empty())
     return '\0';
 
-  if (dollar_pos[2] == '\0' || dollar_pos[2] == '.')
-    return dollar_pos[1];
+  if (mapping.size() == 1 || mapping[1] == '.')
+    return mapping[0];
   return '\0';
 }
 
-static char FindRISCVMappingSymbol(const char *symbol_name) {
-  if (!symbol_name)
-    return '\0';
-
-  if (strcmp(symbol_name, "$d") == 0) {
+static char FindRISCVMappingSymbol(llvm::StringRef symbol_name) {
+  if (symbol_name == "$d")
     return 'd';
-  }
-  if (strcmp(symbol_name, "$x") == 0) {
+  if (symbol_name == "$x")
     return 'x';
-  }
   return '\0';
 }
 
@@ -2364,15 +2360,15 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (!symbol.Parse(symtab_data, &offset))
       break;
 
-    const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
-    if (!symbol_name)
-      symbol_name = "";
+    // A missing or unterminated name reads as empty.
+    llvm::StringRef symbol_name =
+        strtab_data.PeekCStr(symbol.st_name).value_or("");
 
     // Skip local symbols starting with ".L" because these are compiler
     // generated local labels used for internal purposes (e.g. debugging,
     // optimization) and are not relevant for symbol resolution or external
     // linkage.
-    if (llvm::StringRef(symbol_name).starts_with(".L"))
+    if (symbol_name.starts_with(".L"))
       continue;
 
     // The mold linker emits an extra function symbol like "foo$plt" in
@@ -2380,19 +2376,17 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // will synthesize as an eSymbolTypeTrampoline named "foo". Drop the
     // redundant sibling here so the finalized symbol table has a single
     // clean entry per PLT function.
-    if (symbol.getType() == STT_FUNC &&
-        llvm::StringRef(symbol_name).ends_with("$plt"))
+    if (symbol.getType() == STT_FUNC && symbol_name.ends_with("$plt"))
       continue;
 
     // No need to add non-section symbols that have no names
-    if (symbol.getType() != STT_SECTION &&
-        (symbol_name == nullptr || symbol_name[0] == '\0'))
+    if (symbol.getType() != STT_SECTION && symbol_name.empty())
       continue;
 
     // Skipping oatdata and oatexec sections if it is requested. See details
     // above the definition of skip_oatdata_oatexec for the reasons.
-    if (skip_oatdata_oatexec && (::strcmp(symbol_name, "oatdata") == 0 ||
-                                 ::strcmp(symbol_name, "oatexec") == 0))
+    if (skip_oatdata_oatexec &&
+        (symbol_name == "oatdata" || symbol_name == "oatexec"))
       continue;
 
     SectionSP symbol_section_sp;
@@ -2622,19 +2616,18 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     bool is_global = symbol.getBinding() == STB_GLOBAL;
     uint32_t flags = symbol.st_other << 8 | symbol.st_info | additional_flags;
-    llvm::StringRef symbol_ref(symbol_name);
 
     // Symbol names may contain @VERSION suffixes. Find those and strip them
     // temporarily.
-    size_t version_pos = symbol_ref.find('@');
+    size_t version_pos = symbol_name.find('@');
     bool has_suffix = version_pos != llvm::StringRef::npos;
-    llvm::StringRef symbol_bare = symbol_ref.substr(0, version_pos);
+    llvm::StringRef symbol_bare = symbol_name.substr(0, version_pos);
     Mangled mangled(symbol_bare);
 
     // Now append the suffix back to mangled and unmangled names. Only do it if
     // the demangling was successful (string is not empty).
     if (has_suffix) {
-      llvm::StringRef suffix = symbol_ref.substr(version_pos);
+      llvm::StringRef suffix = symbol_name.substr(version_pos);
 
       llvm::StringRef mangled_name = mangled.GetMangledName().GetStringRef();
       if (!mangled_name.empty())
@@ -2885,7 +2878,8 @@ static unsigned ParsePLTRelocations(
     if (!symbol.Parse(symtab_data, &symbol_offset))
       break;
 
-    const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
+    llvm::StringRef symbol_name =
+        strtab_data.PeekCStr(symbol.st_name).value_or("");
     uint64_t plt_index = plt_offset + i * plt_entsize;
 
     Symbol jump_symbol(
