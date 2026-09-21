@@ -8,7 +8,6 @@
 
 #include <sycl/__impl/usm_functions.hpp>
 
-#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
@@ -154,21 +153,19 @@ void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
 
   void *Ptr{};
   auto OLDevice = detail::getSyclObjImpl(syclDevice)->getOLHandle();
-  auto OLContext = detail::getSyclObjImpl(syclContext)->getOLHandleRef();
 
   ol_result_t Result{};
   if (alignment == 0) {
     Result =
         kind == usm::alloc::host
-            ? detail::callNoCheck(olMemAllocHost, OLContext, OLDevice, numBytes,
-                                  &Ptr)
-            : detail::callNoCheck(olMemAlloc, OLContext, OLDevice,
+            ? detail::callNoCheck(olMemAllocHost, OLDevice, numBytes, &Ptr)
+            : detail::callNoCheck(olMemAlloc, OLDevice,
                                   detail::getOlAllocType(kind), numBytes, &Ptr);
   } else {
     Result = kind == usm::alloc::host
-                 ? detail::callNoCheck(olMemAllocAlignedHost, OLContext,
-                                       OLDevice, numBytes, alignment, &Ptr)
-                 : detail::callNoCheck(olMemAllocAligned, OLContext, OLDevice,
+                 ? detail::callNoCheck(olMemAllocAlignedHost, OLDevice,
+                                       numBytes, alignment, &Ptr)
+                 : detail::callNoCheck(olMemAllocAligned, OLDevice,
                                        detail::getOlAllocType(kind), numBytes,
                                        alignment, &Ptr);
   }
@@ -197,8 +194,8 @@ void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,
 // SYCL 2020 4.8.3.6. Memory deallocation functions.
 
 void free(void *ptr, const context &ctxt) {
-  auto OLContext = detail::getSyclObjImpl(ctxt)->getOLHandleRef();
-  detail::callAndThrow(olMemFree, OLContext, ptr);
+  std::ignore = ctxt;
+  detail::callAndThrow(olMemFree, ptr);
 }
 
 void free(void *ptr, const queue &q) { return free(ptr, q.get_context()); }
