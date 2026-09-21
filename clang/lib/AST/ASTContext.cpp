@@ -907,9 +907,9 @@ interp::Context &ASTContext::getInterpContext() const {
   return *InterpContext;
 }
 
-ParentMapContext &ASTContext::getParentMapContext() {
-  if (!ParentMapCtx)
-    ParentMapCtx.reset(new ParentMapContext(*this));
+ParentMapContext &ASTContext::createParentMapContext() {
+  assert(!ParentMapCtx && "already have a ParentMapContext");
+  ParentMapCtx.reset(new ParentMapContext(*this));
   return *ParentMapCtx;
 }
 

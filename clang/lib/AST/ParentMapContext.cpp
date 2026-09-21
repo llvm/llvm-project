@@ -327,7 +327,8 @@ Expr *ParentMapContext::traverseIgnored(Expr *E) const {
   llvm_unreachable("Invalid Traversal type!");
 }
 
-DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
+DynTypedNode
+ParentMapContext::traverseIgnoredSlow(const DynTypedNode &N) const {
   if (const auto *E = N.get<Expr>()) {
     return DynTypedNode::create(*traverseIgnored(E));
   }
