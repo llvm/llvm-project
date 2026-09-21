@@ -310,7 +310,7 @@ std::string XcodeSDK::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
 }
 
 void XcodeSDKAndSysroot::Merge(const XcodeSDKAndSysroot &other) {
-  llvm::StringRef old_name = m_sdk.GetString();
+  std::string old_name = m_sdk.GetString().str();
   m_sdk.Merge(other.m_sdk);
   llvm::StringRef new_name = m_sdk.GetString();
   if (old_name == new_name)

@@ -93,6 +93,18 @@ TEST(XcodeSDKTest, MergeTest) {
                                      FileSpec{"/Path/To/MacOSX12.5.sdk"}));
   EXPECT_EQ(outranked.GetString(), llvm::StringRef("MacOSX12.5.sdk"));
   EXPECT_EQ(outranked.GetSysroot(), FileSpec{"/Path/To/MacOSX12.5.sdk"});
+
+  // The renamed sysroot can name a directory that doesn't exist, when the
+  // internal SDK lives in a different Xcode.
+  XcodeSDKAndSysroot other_xcode("MacOSX12.5.sdk",
+                                 FileSpec{"/Xcode1.app/MacOSX12.5.sdk"});
+  other_xcode.Merge(
+      XcodeSDKAndSysroot("MacOSX11.5.Internal.sdk",
+                         FileSpec{"/Xcode2.app/MacOSX11.5.Internal.sdk"}));
+  EXPECT_EQ(other_xcode.GetString(),
+            llvm::StringRef("MacOSX12.5.Internal.sdk"));
+  EXPECT_EQ(other_xcode.GetSysroot(),
+            FileSpec{"/Xcode1.app/MacOSX12.5.Internal.sdk"});
 }
 
 #ifndef _WIN32

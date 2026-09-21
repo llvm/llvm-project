@@ -1497,7 +1497,9 @@ llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(const XcodeSDK &sdk) {
 llvm::Expected<FileSpec>
 PlatformDarwin::ResolveXcodeSDK(const XcodeSDKAndSysroot &sdk) {
   // The sysroot recorded in debug info names the SDK the module was built
-  // against, so prefer it over anything Xcode has to offer.
+  // against; if it exists, prefer it over a matching SDK Xcode has to offer.
+  // This commonly happens if a program was built with the CommandLineTools
+  // and lldb comes from Xcode.
   if (const FileSpec &sysroot = sdk.GetSysroot();
       FileSystem::Instance().Exists(sysroot))
     return sysroot;

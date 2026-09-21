@@ -103,9 +103,8 @@ class XcodeSDKAndSysroot {
   FileSpec m_sysroot;
 
 public:
-  /// Default constructor, constructs an empty SDK with no sysroot.
+  /// Constructs an empty SDK with no sysroot.
   XcodeSDKAndSysroot() = default;
-  /// Construct from an SDK and the sysroot it was used from.
   XcodeSDKAndSysroot(XcodeSDK sdk, FileSpec sysroot)
       : m_sdk(std::move(sdk)), m_sysroot(std::move(sysroot)) {}
   XcodeSDKAndSysroot(std::string name, FileSpec sysroot)
