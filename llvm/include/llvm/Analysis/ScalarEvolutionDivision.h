@@ -51,6 +51,7 @@ public:
   void visitZeroExtendExpr(const SCEVZeroExtendExpr *Numerator) {}
   void visitSignExtendExpr(const SCEVSignExtendExpr *Numerator) {}
   void visitUDivExpr(const SCEVUDivExpr *Numerator) {}
+  void visitSDivExpr(const SCEVSDivExpr *Numerator) {}
   void visitSMaxExpr(const SCEVSMaxExpr *Numerator) {}
   void visitUMaxExpr(const SCEVUMaxExpr *Numerator) {}
   void visitSMinExpr(const SCEVSMinExpr *Numerator) {}

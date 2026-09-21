@@ -1,8 +1,10 @@
 ; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
-; CHECK:      Domain :=
-; CHECK-NEXT:   { Stmt_while_cond_i__TO__while_end_i[] };
-;
+; CHECK: 'Polly - Create polyhedral description of Scops' for region: 'while.cond.i => while.end.i' in function 'func':
+; CHECK-NEXT: Invalid Scop!
+; CHECK-NEXT: 'Polly - Create polyhedral description of Scops' for region: 'entry => <Function Return>' in function 'func':
+; CHECK-NEXT: Invalid Scop!
+
 define i32 @func(i32 %param0, i32 %param1, ptr %param2) #3 {
 
 entry:
