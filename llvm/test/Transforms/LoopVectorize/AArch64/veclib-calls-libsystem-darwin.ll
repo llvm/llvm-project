@@ -1859,3 +1859,99 @@ for.body:
 for.end:
   ret void
 }
+
+declare float @nextafterf(float, float) nounwind readnone
+define void @nextafterf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @nextafterf_v4f32(
+; CHECK: call <4 x float> @_simd_nextafter_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @nextafterf(float %lv, float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @nextafter(double, double) nounwind readnone
+define void @nextafter_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @nextafter_v2f64(
+; CHECK: call <2 x double> @_simd_nextafter_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @nextafter(double %lv, double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare float @remainderf(float, float) nounwind readnone
+define void @remainderf_v4f32(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @remainderf_v4f32(
+; CHECK: call <4 x float> @_simd_remainder_f4(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %call = tail call float @remainderf(float %lv, float %lv)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+declare double @remainder(double, double) nounwind readnone
+define void @remainder_v2f64(i64 %n, ptr noalias %y, ptr noalias %x) {
+; CHECK-LABEL: @remainder_v2f64(
+; CHECK: call <2 x double> @_simd_remainder_d2(
+; CHECK: ret void
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
+  %gep.y = getelementptr inbounds double, ptr %y, i64 %iv
+  %lv = load double, ptr %gep.y, align 4
+  %call = tail call double @remainder(double %lv, double %lv)
+  %gep.x = getelementptr inbounds double, ptr %x, i64 %iv
+  store double %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
