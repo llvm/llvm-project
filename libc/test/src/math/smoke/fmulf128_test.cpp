@@ -10,4 +10,4 @@
 
 #include "src/math/fmulf128.h"
 
-LIST_MUL_TESTS(float, float128, LIBC_NAMESPACE::fmulf128)
+LIST_MUL_TESTS(Fmulf128, float, float128, LIBC_NAMESPACE::fmulf128)
