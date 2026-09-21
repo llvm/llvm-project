@@ -1,9 +1,7 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu{device-type=nvidia}))" --split-input-file | FileCheck %s
 
-// A privatization reduced across thread_y but materialized once per block
-// (thread_y is not active) is shared by every worker row: lane 0 of each row
-// writes the same slot and the later combine reads all of them. Reconverging
-// per row would leave the rows racing, so the whole workgroup must reconverge.
+// A privatization reduced across thread_y but materialized once per block is
+// shared by every worker row, so the whole workgroup must reconverge.
 
 // CHECK-LABEL: func.func @worker_shared_private
 // CHECK:       gpu.launch
@@ -42,10 +40,8 @@ func.func @worker_shared_private(%arg0: memref<4xi32>) {
 
 // -----
 
-// The same shape, but thread_y is active so every worker row owns its own
-// slot. Nothing is shared across rows, so the cheaper per-row reconvergence
-// is kept. It must be the non-aligned form: only the lanes of one row reach
-// it, not every thread of the workgroup.
+// thread_y active: every row owns its slot, so the cheaper per-row barrier is
+// kept, in the non-aligned form since only one row reaches it.
 
 // CHECK-LABEL: func.func @worker_private_per_row
 // CHECK:       gpu.launch

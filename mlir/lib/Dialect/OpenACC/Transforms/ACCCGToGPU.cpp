@@ -1319,11 +1319,9 @@ static bool isThreadYPrivate(acc::PrivateLocalOp privateLocal, bool allowBlock,
          });
 }
 
-/// True when \p op reads or writes privatized storage that every ThreadY row
-/// shares: the privatization is reduced across ThreadY, yet only one copy is
-/// materialized because ThreadY is not among its active dims. Lane 0 of every
-/// row then touches the same buffer, so reconverging per row would leave the
-/// rows racing with each other.
+/// True when \p op touches privatized storage shared by every ThreadY row:
+/// reduced across ThreadY, yet materialized once because ThreadY is not
+/// active. Reconverging per row would leave the rows racing.
 static bool touchesWorkerSharedPrivate(Operation *op,
                                        acc::ComputeRegionOp computeRegion) {
   auto isThreadY = [](GPUParallelDimAttr dim) { return dim.isThreadY(); };
@@ -1348,9 +1346,8 @@ static bool touchesWorkerSharedPrivate(Operation *op,
   });
   if (!found)
     return false;
-  // A workgroup barrier may only be emitted where every thread reaches it.
-  // Rows of an enclosing ThreadY loop can have divergent trip counts, so a
-  // region nested in one keeps its per-row reconvergence.
+  // Rows of an enclosing ThreadY loop can have divergent trip counts, so they
+  // would not all reach a workgroup barrier.
   for (scf::ParallelOp loop = op->getParentOfType<scf::ParallelOp>(); loop;
        loop = loop->getParentOfType<scf::ParallelOp>()) {
     GPUParallelDimsAttr parDims = mlir::acc::getParDimsAttr(loop);
@@ -1862,14 +1859,9 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
       arith::IndexCastOp::create(rewriter, loc, i32Ty, blockDimX);
 
   // GPU dialect named barriers do not have a means to create a custom barrier
-  // id. Thus use nvvm directly.
-  //
-  // The barrier is non-`.aligned`: it synchronizes one row, and the rows of a
-  // workgroup do not all reach it (an enclosing worker loop is strided by
-  // blockDim.y, so rows can have different trip counts, and the barrier sits
-  // after a thread-predicated region). The `.aligned` form asserts the
-  // opposite, which lets the target duplicate the barrier into the arms of the
-  // surrounding branch so a warp reconverges at two points and deadlocks.
+  // id. Thus use nvvm directly. Non-`.aligned`: only one row reaches this
+  // barrier, and `.aligned` would let the target duplicate it into a
+  // surrounding divergent branch, deadlocking the warp.
   assert(options.deviceType == mlir::acc::DeviceType::Nvidia);
   NVVM::BarrierOp::create(rewriter, loc, barrierId32, numberOfThreads32,
                           /*aligned=*/false);
@@ -2375,10 +2367,8 @@ void ACCCGToGPULowering::processPredicateRegion(
               parDimsPair.second,
               [](mlir::acc::GPUParallelDimAttr pd) { return pd.isThreadX(); });
           if (predicatesThreadX) {
-            // Storage shared by every worker row (reduced across ThreadY but
-            // materialized once per block) is read back by the other rows, so
-            // the whole workgroup has to reconverge; a per-row barrier leaves
-            // the rows racing with each other.
+            // Storage shared by every row is read back by the other rows, so
+            // the whole workgroup has to reconverge.
             if (touchesWorkerSharedPrivate(interOp, computeRegion))
               emitGPUBarrierWorkgroup(rewriter, loc);
             else
