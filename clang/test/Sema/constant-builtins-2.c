@@ -257,11 +257,32 @@ __extension__ _Static_assert(
   __builtin_copysign(-1.0, 1.0) == 1.0 && __builtin_copysign(-1.0, -1.0) == -1.0  &&                        \
   !__builtin_signbit(__builtin_copysign(0.0, 1.0)) && __builtin_signbit(__builtin_copysign(0.0, -1.0)) &&   \
   !__builtin_signbit(__builtin_copysign(-0.0, 1.0)) && __builtin_signbit(__builtin_copysign(-0.0, -1.0)) && \
-  __builtin_copysign(1.0, 0.0) == 1.0 && __builtin_copysign(1.0, -0.0) == -1.0 &&                          \
+  __builtin_copysign(1.0, 0.0) == 1.0 && __builtin_copysign(1.0, -0.0) == -1.0 &&                           \
 
   // floating-point  
+  __builtin_copysignf(1.0f, 1.0f) == 1.0f && __builtin_copysignf(1.0f, -1.0f) == -1.0f &&                         \
+  __builtin_copysignf(-1.0f, 1.0f) == 1.0f && __builtin_copysignf(-1.0f, -1.0f) == -1.0f  &&                      \
+  !__builtin_signbit(__builtin_copysignf(0.0f, 1.0f)) && __builtin_signbit(__builtin_copysignf(0.0f, -1.0f)) &&   \
+  !__builtin_signbit(__builtin_copysignf(-0.0f, 1.0f)) && __builtin_signbit(__builtin_copysignf(-0.0f, -1.0f)) && \
+  __builtin_copysignf(1.0f, 0.0f) == 1.0f && __builtin_copysignf(1.0f, -0.0f) == -1.0f &&                         \
+
   // long double
-, "");
+  __builtin_copysignl(1.0L, 1.0L) == 1.0L && __builtin_copysignl(1.0L, -1.0L) == -1.0L &&                           \
+  __builtin_copysignl(-1.0L, 1.0L) == 1.0L && __builtin_copysignl(-1.0L, -1.0L) == -1.0L &&                         \
+  !__builtin_signbitl(__builtin_copysignl(0.0L, 1.0L)) && __builtin_signbitl(__builtin_copysignl(0.0L, -1.0L)) &&   \
+  !__builtin_signbitl(__builtin_copysignl(-0.0L, 1.0L)) && __builtin_signbitl(__builtin_copysignl(-0.0L, -1.0L)) && \
+  __builtin_copysignl(1.0L, 0.0L) == 1.0L && __builtin_copysignl(1.0L, -0.0L) == -1.0L &&                           \
+
+#if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
+  // __float128 
+  __builtin_copysignf128(1.0q, 1.0q) == 1.0q && __builtin_copysignf128(1.0q, -1.0q) == -1.0q &&                         \
+  __builtin_copysignf128(-1.0q, 1.0q) == 1.0q && __builtin_copysignf128(-1.0q, -1.0q) == -1.0q &&                       \
+  !__builtin_signbit(__builtin_copysignf128(0.0q, 1.0q)) && __builtin_signbit(__builtin_copysignf128(0.0q, -1.0q)) &&   \
+  !__builtin_signbit(__builtin_copysignf128(-0.0q, 1.0q)) && __builtin_signbit(__builtin_copysignf128(-0.0q, -1.0q)) && \
+  __builtin_copysignf128(1.0q, 0.0q) == 1.0q && __builtin_copysignf128(1.0q, -0.0q) == -1.0q  &&
+#endif
+  1, ""
+);
 
 //double       g19 = __builtin_powi(2.0, 4);
 //float        g20 = __builtin_powif(2.0f, 4);
