@@ -5223,6 +5223,28 @@ void TargetProperties::SetUseDIL(ExecutionContext *exe_ctx, bool b) {
     exp_values->SetPropertyAtIndex(ePropertyUseDIL, true, exe_ctx);
 }
 
+bool TargetProperties::GetUseDILForCreatingValues() const {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertyUseDILForCreatingValues)
+        .value_or(false);
+  else
+    return true;
+}
+
+void TargetProperties::SetUseDILForCreatingValues(bool b) {
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    exp_values->SetPropertyAtIndex(ePropertyUseDILForCreatingValues, b);
+}
+
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
   const uint32_t idx = ePropertyDefaultArch;
   return GetPropertyAtIndexAs<ArchSpec>(idx, {});

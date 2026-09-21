@@ -772,6 +772,8 @@ private:
                           MachineBasicBlock::iterator MBBI,
                           MachineBasicBlock::iterator &NextMBBI,
                           bool IsTailCall);
+  bool expandAddUpperImm(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI);
 };
 
 char LoongArchExpandPseudo::ID = 0;
@@ -810,6 +812,8 @@ bool LoongArchExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/false);
   case LoongArch::PseudoTAIL_MEDIUM:
     return expandFunctionCALL(MBB, MBBI, NextMBBI, /*IsTailCall=*/true);
+  case LoongArch::PseudoAddUpperImm:
+    return expandAddUpperImm(MBB, MBBI);
   }
 
   return false;
@@ -924,6 +928,33 @@ bool LoongArchExpandPseudo::expandFunctionCALL(
   CALL.setMIFlags(MI.getFlags());
 
   MI.eraseFromParent();
+  return true;
+}
+
+bool LoongArchExpandPseudo::expandAddUpperImm(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  DebugLoc DL = MBBI->getDebugLoc();
+  MachineFunction *MF = MBB.getParent();
+  const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+
+  Register DstReg = MBBI->getOperand(0).getReg();
+  bool DstIsDead = MBBI->getOperand(0).isDead();
+  bool Renamable = MBBI->getOperand(0).isRenamable();
+  Register BaseReg = MBBI->getOperand(1).getReg();
+  int64_t Hi = MBBI->getOperand(2).getImm();
+  bool IsLA64 = STI.is64Bit();
+
+  // Expand to LU12I_W + ADD_W/D: the immediate is upper 20-bit.
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W))
+      .addReg(DstReg, RegState::Define | getRenamableRegState(Renamable))
+      .addImm(Hi);
+  BuildMI(MBB, MBBI, DL, TII->get(IsLA64 ? LoongArch::ADD_D : LoongArch::ADD_W))
+      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead) |
+                          getRenamableRegState(Renamable))
+      .addReg(BaseReg)
+      .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable));
+
+  MBBI->eraseFromParent();
   return true;
 }
 
