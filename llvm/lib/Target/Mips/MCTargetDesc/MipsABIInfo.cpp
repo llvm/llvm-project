@@ -196,9 +196,7 @@ unsigned MipsABIInfo::GetFramePtr() const {
   return ArePtrs64bit() ? Mips::FP_64 : Mips::FP;
 }
 
-unsigned MipsABIInfo::GetBasePtr() const {
-  return getSavedRegPtr(7);
-}
+unsigned MipsABIInfo::GetBasePtr() const { return getSavedRegPtr(7); }
 
 unsigned MipsABIInfo::GetGlobalPtr() const {
   return ArePtrs64bit() ? Mips::GP_64 : Mips::GP;

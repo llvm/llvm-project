@@ -48,7 +48,8 @@ public:
   ArrayRef<MCPhysReg> getArgRegs(bool Is64Bit) const;
 
   /// ABI register accessors default to the ABI's GPR width. Use the *RegPtr
-  /// variants for pointer-sized values; N32 has 32-bit pointers and 64-bit GPRs.
+  /// variants for pointer-sized values; N32 has 32-bit pointers and 64-bit
+  /// GPRs.
   MCRegister getArgReg(unsigned I, bool Is64Bit) const;
   MCRegister getArgReg(unsigned I) const {
     return getArgReg(I, AreGprs64bit());
