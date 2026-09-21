@@ -78,6 +78,7 @@
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
+#include "llvm/CodeGen/ResetMachineFunctionPass.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -472,6 +473,7 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
     addFunctionPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false), PMW);
     addFunctionPass(WasmEHPreparePass(), PMW);
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
   case ExceptionHandling::Emscripten:
     // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
