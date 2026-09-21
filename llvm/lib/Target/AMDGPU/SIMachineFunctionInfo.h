@@ -309,6 +309,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   unsigned NumKernargPreloadSGPRs = 0;
+  unsigned KernargPreloadOffset = 0;
 
   unsigned MinNumAGPRs = ~0u;
 
@@ -370,6 +371,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
+    YamlIO.mapOptional("kernargPreloadOffset", MFI.KernargPreloadOffset, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
     YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
   }
@@ -502,6 +504,9 @@ private:
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
+
+  // Dword offset in the kernel argument segment where preloading starts.
+  unsigned KernargPreloadOffset = 0;
 
   // Feature bits required for inputs passed in system SGPRs.
   bool WorkGroupIDX : 1; // Always initialized.
@@ -1033,6 +1038,11 @@ public:
 
   unsigned getNumKernargPreloadedSGPRs() const {
     return UserSGPRInfo.getNumKernargPreloadSGPRs();
+  }
+
+  unsigned getKernargPreloadOffset() const { return KernargPreloadOffset; }
+  void setKernargPreloadOffset(unsigned Offset) {
+    KernargPreloadOffset = Offset;
   }
 
   unsigned getNumWaveDispatchSGPRs() const { return NumWaveDispatchSGPRs; }
