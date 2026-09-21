@@ -961,7 +961,14 @@ static void ProcessVersionedAPINotes(
     // right one.
     if (S.captureSwiftVersionIndependentAPINotes()) {
       Active = IsActive_t::Inactive;
-      Replacement = IsSubstitution_t::Original;
+
+      // Record that this slice exists, independently of whether it goes on to
+      // set any key. A slice that sets nothing still wins selection for the
+      // versions it covers, and winning suppresses every other slice, so a
+      // client recomputing the selection cannot infer the slice set from the
+      // addition and removal wrappers alone.
+      D->addAttr(SwiftVersionedSliceAttr::CreateImplicit(S.Context, Version,
+                                                         SliceGroup));
     } else if (Active == IsActive_t::Inactive && Version.empty()) {
       Replacement = IsSubstitution_t::Replacement;
       Version = Info[Selected].first;

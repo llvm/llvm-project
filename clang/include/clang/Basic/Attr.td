@@ -3387,6 +3387,24 @@ def SwiftVersionedRemoval : Attr {
   }];
 }
 
+def SwiftVersionedSlice : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes, and only under -fswift-version-independent-apinotes.
+  //
+  // One of these records each Swift version slice an API notes lookup supplied
+  // for the declaration, whether or not that slice set any keyed values.
+  // A slice that sets no key still takes part in version selection, selecting it
+  // suppresses the annotations of every other slice in its group, so a
+  // consumer that recomputes the selection has to know the slice exists.
+  //
+  // SliceGroup says which group this slice came from. See the
+  // SwiftVersionedAddition comment above.
+  let Spellings = [];
+  let Args = [VersionArgument<"Version">, UnsignedArgument<"SliceGroup">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
   let Documentation = [NoDerefDocs];

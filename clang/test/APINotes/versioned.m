@@ -31,6 +31,20 @@
 // CHECK-DUMP-NEXT: SwiftNameAttr {{.+}} "unversionedRename_NOTES()"
 // CHECK-DUMP-NOT: Attr
 
+// A 3.0 slice that names this declaration and sets no key. This is the legacy
+// behavior that -fswift-version-independent-apinotes has to let a client
+// reproduce, so it is worth pinning here as the reference.
+// CHECK-DUMP-LABEL: Dumping keylessSliceDUMP
+// CHECK-DUMP: in VersionedKit keylessSliceDUMP
+// At the default version the keyless slice does not qualify, so the unversioned
+// rename applies live.
+// CHECK-UNVERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} "keylessSlice_NOTES()"
+// At 3.0 the keyless slice wins and suppresses the unversioned rename. What
+// survives is a superseded wrapper, and there is no live SwiftNameAttr.
+// CHECK-VERSIONED-DUMP-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 IsReplacedByActive 0{{$}}
+// CHECK-VERSIONED-DUMP-NEXT: SwiftNameAttr {{.+}} "keylessSlice_NOTES()"
+// CHECK-DUMP-NOT: Attr
+
 // CHECK-DUMP-LABEL: Dumping TestGenericDUMP
 // CHECK-VERSIONED-DUMP: SwiftImportAsNonGenericAttr {{.+}} <<invalid sloc>>
 // CHECK-UNVERSIONED-DUMP: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 0{{$}}

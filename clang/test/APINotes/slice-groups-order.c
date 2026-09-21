@@ -27,21 +27,26 @@
 // CHECK: FunctionDecl {{.+}} imported in ExportAsCore sliceGroupOrderProbe
 
 // Group 0: ExportAsCore's broad lookup, with an unversioned and a 3.0 slice.
-// CHECK: SwiftVersionedAdditionAttr {{.+}} Implicit 0 0{{$}}
+// CHECK: SwiftVersionedSliceAttr {{.+}} Implicit 0 0{{$}}
+// CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 0 0{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "coreBroad(_:)"
+// CHECK-NEXT: SwiftVersionedSliceAttr {{.+}} Implicit 3.0 0{{$}}
 // CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 3.0 0{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "coreBroadV3(_:)"
 
 // Group 1: ExportAsCore's parameter-selector lookup. Odd, and adjacent to its
 // own reader's broad group rather than pooled with the other reader's.
+// CHECK-NEXT: SwiftVersionedSliceAttr {{.+}} Implicit 0 1{{$}}
 // CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 0 1{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "coreExact(_:)"
 
 // Group 2: ExportAs's broad lookup, reached through export_as.
+// CHECK-NEXT: SwiftVersionedSliceAttr {{.+}} Implicit 0 2{{$}}
 // CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 0 2{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "exportBroad(_:)"
 
 // Group 3: ExportAs's parameter-selector lookup. Applied last, so under the
 // legacy selection this is the name that would win.
+// CHECK-NEXT: SwiftVersionedSliceAttr {{.+}} Implicit 0 3{{$}}
 // CHECK-NEXT: SwiftVersionedAdditionAttr {{.+}} Implicit 0 3{{$}}
 // CHECK-NEXT: SwiftNameAttr {{.+}} "exportExact(_:)"
