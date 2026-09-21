@@ -4243,6 +4243,26 @@ LogicalResult cir::ComplexImagPtrOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexAddOp & ComplexSubOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexAddOp::verify() {
+  if (getFenvAttr() &&
+      !cir::isAnyFloatingPointType(getLhs().getType().getElementType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point element type";
+  return success();
+}
+
+LogicalResult cir::ComplexSubOp::verify() {
+  if (getFenvAttr() &&
+      !cir::isAnyFloatingPointType(getLhs().getType().getElementType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point element type";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Bit manipulation operations
 //===----------------------------------------------------------------------===//
 

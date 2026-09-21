@@ -6629,6 +6629,8 @@ def CIR_ComplexAddOp : CIR_ComplexBinOp<"complex.add"> {
     %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
     ```
   }];
+
+  let hasVerifier = 1;
 }
 
 def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
@@ -6643,6 +6645,8 @@ def CIR_ComplexSubOp : CIR_ComplexBinOp<"complex.sub"> {
     %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
     ```
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

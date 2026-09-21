@@ -57,3 +57,37 @@ module {
     cir.return
   }
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @complex_add_fenv_with_int_element_type() {
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.complex<!s32i>>
+    %1 = cir.alloca "b" align(4) : !cir.ptr<!cir.complex<!s32i>>
+    %2 = cir.alloca "c" align(4) init : !cir.ptr<!cir.complex<!s32i>>
+    %3 = cir.load align(4) %0 : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+    %4 = cir.load align(4) %1 : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+    // expected-error @below {{'cir.complex.add' op 'fenv' is only valid for floating-point element type}}
+    %5 = cir.complex.add %3, %4 : !cir.complex<!s32i> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @complex_sub_fenv_with_int_element_type() {
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.complex<!s32i>>
+    %1 = cir.alloca "b" align(4) : !cir.ptr<!cir.complex<!s32i>>
+    %2 = cir.alloca "c" align(4) init : !cir.ptr<!cir.complex<!s32i>>
+    %3 = cir.load align(4) %0 : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+    %4 = cir.load align(4) %1 : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+    // expected-error @below {{'cir.complex.sub' op 'fenv' is only valid for floating-point element type}}
+    %5 = cir.complex.sub %3, %4 : !cir.complex<!s32i> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+    cir.return
+  }
+}
