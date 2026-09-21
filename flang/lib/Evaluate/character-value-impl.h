@@ -33,7 +33,7 @@ public:
 
   CharacterValueImpl() = default;
   explicit CharacterValueImpl(int kind, std::string s) {
-    withCharProto(kind, [&](auto c) {
+    WithCharProto(kind, [&](auto c) {
       using CharT = std::decay_t<decltype(c)>;
       using StringT = std::basic_string<CharT>;
       if (std::is_same_v<StringT, std::string>) {
@@ -89,20 +89,7 @@ public:
   std::string ToStdString() const;
 
   bool IsNull() const { return storage_.index() == 0; }
-  int kind() const {
-    return common::visit(
-        common::visitors{
-            [](std::monostate) -> size_t {
-              DIE("operation on uninitialized CharacterValueImpl");
-            },
-            [](const auto &s) {
-              using StringT = std::decay_t<decltype(s)>;
-              using CharT = typename StringT::value_type;
-              return sizeof(CharT);
-            },
-        },
-        storage_);
-  }
+  int kind() const;
 
   /// Byte size of one character unit (1, 2, or 4).
   std::size_t charSize() const;
@@ -180,6 +167,9 @@ public:
   static constexpr std::size_t npos{std::string::npos};
 
   // Find-family methods; return npos when not found.
+  std::size_t find(const CharacterValueImpl &pattern) const;
+  std::size_t rfind(const CharacterValueImpl &pattern) const;
+
   std::size_t find_first_not_of(char c) const {
     return find_first_not_of(static_cast<char32_t>(c));
   }
@@ -196,8 +186,6 @@ public:
   std::size_t find_last_not_of(char32_t c) const;
   std::size_t find_first_not_of(const CharacterValueImpl &set) const;
   std::size_t find_last_not_of(const CharacterValueImpl &set) const;
-  std::size_t find(const CharacterValueImpl &pattern) const;
-  std::size_t rfind(const CharacterValueImpl &pattern) const;
   std::size_t find_first_of(const CharacterValueImpl &set) const;
   std::size_t find_last_of(const CharacterValueImpl &set) const;
 
@@ -206,14 +194,39 @@ public:
 
   // Compile-time dispatchers to current/specified kind
 
+  template <typename CharT, typename = std::void_t<std::basic_string<CharT>>>
+  const std::basic_string<CharT> &GetBasicString() const;
+
+#if 0
+			/// Return the internal representation of the requested type (std::basic_string<>). The current stored representation must match that type or we crash.
+	  template <typename CharT, typename = std::void_t<std::basic_string<CharT>>>
+const   std::basic_string<CharT> & GetBasicString() const {
+	using StringT = std::basic_string<CharT>;
+
+			// Null can represent any type 
+			    if (IsNull()) {
+						// Immutable null constant since we need to return a reference
+						static const StringT null; 
+      return null;
+    }
+
+					// std::get throws std::bad_variant_access, but we do not want to rely soley on exceptions here.
+					if (!std::holds_alternative<StringT>(storage_)) {
+						  DIE("value does not store the requested kind");
+						}
+
+return  std::get<StringT>(storage_);
+			}
+#endif
+
   template <typename F>
-  auto withCharProto(F &&f) const
+  auto WithCharProto(F &&f) const
       -> decltype(std::declval<F>()(std::declval<char>())) {
-    return withCharProto(kind(), f);
+    return WithCharProto(kind(), f);
   }
 
   template <typename F>
-  static auto withCharProto(int kind, F &&f)
+  static auto WithCharProto(int kind, F &&f)
       -> decltype(std::declval<F>()(std::declval<char>())) {
     switch (kind) {
     case 1:
@@ -228,7 +241,7 @@ public:
   }
 
   template <typename F>
-  auto withStdString(F &&f) const
+  auto WithBasicString(F &&f) const
       -> decltype(f(std::declval<const std::string &>())) {
     return common::visit(
         common::visitors{

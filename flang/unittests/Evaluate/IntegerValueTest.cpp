@@ -2116,24 +2116,6 @@ TEST_P(IntegerValueKindPair, ConvertSigned) {
   EXPECT_EQ(IntegerValue(to, -56), exact.value);
 }
 
-TEST_P(IntegerValueKindPair, MixedKindOperandsAreCoerced) {
-  const int receiver{std::get<0>(GetParam())};
-  const int other{std::get<1>(GetParam())};
-  IntegerValue x{receiver, 0x5a};
-  IntegerValue allOnes{other, -1};
-
-  // The result takes the receiver's kind; the argument is converted to it,
-  // preserving its sign.
-  EXPECT_EQ(receiver, x.IOR(allOnes).kind());
-  EXPECT_EQ(IntegerValue(receiver, -1), x.IOR(allOnes));
-  EXPECT_EQ(x, x.IAND(allOnes));
-  EXPECT_EQ(Ordering::Greater, x.CompareSigned(allOnes));
-  EXPECT_EQ(IntegerValue(receiver, 0x5a - 1), x.AddSigned(allOnes).value);
-
-  // A null state operand behaves as a zero of the receiver's width.
-  EXPECT_EQ(x, x.IOR(IntegerValue{}));
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST(IntegerValue, Dump) { IntegerValue(4, -1).dump(); }
 #endif

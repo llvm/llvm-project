@@ -3482,6 +3482,68 @@ private:
     attachToDoStmt(e);
   }
 
+  /// Diagnose each evaluation in \p skipped: these are evaluations that
+  /// were skipped over while descending a collapsed or tiled loop nest to
+  /// find the next inner DO CONSTRUCT (see findNestedDoConstructEvaluation).
+  ///
+  /// The NonLabelDoStmt heading the level being searched is always present
+  /// and is silently expected. A compiler directive (e.g. !DIR$ IVDEP) is
+  /// the only other kind of skipped evaluation known to legitimately
+  /// appear here (OpenACC's collapse/tile clauses do not otherwise require
+  /// the loop nest to be tightly nested, unlike e.g. CUDA Fortran's
+  /// `!$cuf kernel do`; an ordinary statement between loop levels is
+  /// already rejected earlier, in semantic analysis). A directive is
+  /// neither part of the collapsed loop's body nor attached to a DO
+  /// statement that is separately lowered, so it has no effect: warn about
+  /// it rather than silently dropping it.
+  ///
+  /// A directive on the outer loop of a construct is moved ahead of the
+  /// OpenACC directive during parse-tree canonicalization (#106522) and
+  /// can be attached to the resulting acc.loop as a real annotation via
+  /// attachDirectiveToLoop (#216769). A directive between inner loop
+  /// levels, as handled here, cannot be moved that way -- it must stay
+  /// directly above the loop it modifies -- so it is only warned about for
+  /// now. Propagating it onto the acc.loop the same way outer-loop
+  /// directives are, instead of only warning, would be worth doing later.
+  ///
+  /// Anything else means the loop nest was not tightly nested in a way
+  /// this code does not know how to handle -- rather than silently
+  /// discarding unknown statements (the original failure mode this whole
+  /// descent fix addresses), fail loudly with TODO so an unsupported case
+  /// gets reported instead of miscompiled.
+  ///
+  /// This uses mlir::emitWarning rather than SemanticsContext::Warn:
+  /// SemanticsContext::EmitMessages runs once, immediately after semantic
+  /// analysis and before lowering ever starts (see FrontendAction.cpp and
+  /// bbc.cpp), so a Warn() call made here during lowering would be buffered
+  /// into the SemanticsContext's message list and never flushed to output.
+  void diagnoseSkippedEvaluations(
+      llvm::ArrayRef<Fortran::lower::pft::Evaluation *> skipped) {
+    for (Fortran::lower::pft::Evaluation *e : skipped) {
+      // The NonLabelDoStmt heading the level being searched is always a
+      // sibling of whatever comes next (a directive, or the inner
+      // DoConstruct) and is expected here on every call, not just when a
+      // directive is present.
+      if (e->isA<Fortran::parser::NonLabelDoStmt>())
+        continue;
+      if (e->isDirective()) {
+        // Directive evaluations carry no position (enterConstructOrDirective
+        // in PFTBuilder.cpp creates them without one), so e->position maps to
+        // an unknown location; point the warning at the directive's own
+        // source text instead.
+        mlir::Location loc = genLocation(e->position);
+        if (const auto *dir = e->getIf<Fortran::parser::CompilerDirective>())
+          loc = genLocation(dir->source);
+        mlir::emitWarning(loc, "compiler directive ignored: it appears between "
+                               "loop levels of a collapsed or tiled loop nest");
+        continue;
+      }
+      TODO(genLocation(e->position),
+           "unsupported statement between the levels of a collapsed or "
+           "tiled loop nest");
+    }
+  }
+
   void markCurrentFuncAsAlwaysInline(
       const Fortran::parser::CompilerDirective::InlineAlways &dir) {
     mlir::func::FuncOp func = builder->getFunction();
@@ -3655,13 +3717,22 @@ private:
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
         // A DO CONCURRENT holds all controls in one construct; the per-level
-        // descent would overshoot into its body and drop it.
+        // descent would overshoot into its body and drop it. collapse(force:
+        // ...) explicitly allows prologue/epilogue statements between loop
+        // levels and has its own descent below to sink them, so this
+        // strict per-level descent -- which does not expect them -- must
+        // not run for it; curEval's value here is unused in that case.
         const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
-        if (!(outerDo && outerDo->IsDoConcurrent()))
+        if (!collapseForce && !(outerDo && outerDo->IsDoConcurrent()))
           for (uint64_t i = 1; i < loopCount; i++) {
-            if (!curEval->hasNestedEvaluations())
+            llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+            Fortran::lower::pft::Evaluation *nextDo =
+                Fortran::lower::findNestedDoConstructEvaluation(*curEval,
+                                                                &skipped);
+            diagnoseSkippedEvaluations(skipped);
+            if (!nextDo)
               break;
-            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+            curEval = nextDo;
           }
       }
     }
@@ -4004,8 +4075,15 @@ private:
 
         ivTypes.push_back(idxTy);
         ivLocs.push_back(crtLoc);
-        if (i < nestedLoops - 1)
-          loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
+        if (i < nestedLoops - 1) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+          Fortran::lower::pft::Evaluation *nextDo =
+              Fortran::lower::findNestedDoConstructEvaluation(*loopEval,
+                                                              &skipped);
+          diagnoseSkippedEvaluations(skipped);
+          assert(nextDo && "expected a nested DO CONSTRUCT");
+          loopEval = nextDo;
+        }
       }
     }
 
@@ -4033,8 +4111,16 @@ private:
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
       if (!outerDoConstruct->IsDoConcurrent())
-        for (int64_t i = 1; i < nestedLoops; i++)
-          crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+        for (int64_t i = 1; i < nestedLoops; i++) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+          Fortran::lower::pft::Evaluation *nextDo =
+              Fortran::lower::findNestedDoConstructEvaluation(*crtEval,
+                                                              &skipped);
+          diagnoseSkippedEvaluations(skipped);
+          if (!nextDo)
+            break;
+          crtEval = nextDo;
+        }
     }
 
     // Generate loop body

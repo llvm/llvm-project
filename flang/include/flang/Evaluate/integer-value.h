@@ -118,11 +118,21 @@ public:
   bool operator<(const IntegerValue &y) const {
     return CompareSigned(y) == Ordering::Less;
   }
-  bool operator<=(const IntegerValue &y) const { return !(y < *this); }
-  bool operator==(const IntegerValue &y) const;
-  bool operator!=(const IntegerValue &y) const { return !(*this == y); }
-  bool operator>=(const IntegerValue &y) const { return !(*this < y); }
-  bool operator>(const IntegerValue &y) const { return y < *this; }
+  bool operator<=(const IntegerValue &y) const {
+    return CompareSigned(y) != Ordering::Greater;
+  }
+  bool operator==(const IntegerValue &y) const {
+    return CompareSigned(y) == Ordering::Equal;
+  }
+  bool operator!=(const IntegerValue &y) const {
+    return CompareSigned(y) != Ordering::Equal;
+  }
+  bool operator>=(const IntegerValue &y) const {
+    return CompareSigned(y) != Ordering::Less;
+  }
+  bool operator>(const IntegerValue &y) const {
+    return CompareSigned(y) == Ordering::Greater;
+  }
 
   /// Left-justified mask (e.g., MASKL(1) has only its sign bit set)
   static IntegerValue MASKL(int kind, int places);
