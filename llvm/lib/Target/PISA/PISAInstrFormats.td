@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 include "PISAGenericOpcodes.td"
-include "llvm/Target/PISA/MnemonicOperand.td"
+include "MnemonicOperand.td"
 
 class PISAAsmOperand<string am, string sig=am> : AsmOperandClass {
   let Name = am;
