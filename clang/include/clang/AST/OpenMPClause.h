@@ -441,6 +441,7 @@ class OMPAlignClause final
   /// Set alignment value.
   void setAlignment(Expr *A) { setStmt(A); }
 
+public:
   /// Build 'align' clause with the given alignment
   ///
   /// \param A Alignment value.
@@ -453,18 +454,6 @@ class OMPAlignClause final
 
   /// Build an empty clause.
   OMPAlignClause() : OMPOneStmtClause() {}
-
-public:
-  /// Build 'align' clause with the given alignment
-  ///
-  /// \param A Alignment value.
-  /// \param StartLoc Starting location of the clause.
-  /// \param LParenLoc Location of '('.
-  /// \param EndLoc Ending location of the clause.
-  static OMPAlignClause *Create(const ASTContext &C, Expr *A,
-                                SourceLocation StartLoc,
-                                SourceLocation LParenLoc,
-                                SourceLocation EndLoc);
 
   /// Returns alignment
   Expr *getAlignment() const { return getStmtAs<Expr>(); }
@@ -1331,24 +1320,16 @@ public:
 /// for (int i = 0; i < 64; ++i)
 /// \endcode
 class OMPFullClause final : public OMPNoChildClause<llvm::omp::OMPC_full> {
-  friend class OMPClauseReader;
-
-  /// Build an empty clause.
-  explicit OMPFullClause() : OMPNoChildClause() {}
-
 public:
   /// Build an AST node for a 'full' clause.
   ///
-  /// \param C        Context of the AST.
   /// \param StartLoc Starting location of the clause.
   /// \param EndLoc   Ending location of the clause.
-  static OMPFullClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                               SourceLocation EndLoc);
+  OMPFullClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
 
-  /// Build an empty 'full' AST node for deserialization.
-  ///
-  /// \param C Context of the AST.
-  static OMPFullClause *CreateEmpty(const ASTContext &C);
+  /// Build an empty clause.
+  explicit OMPFullClause() : OMPNoChildClause() {}
 };
 
 /// This class represents the 'looprange' clause in the
@@ -1379,19 +1360,20 @@ class OMPLoopRangeClause final : public OMPClause {
   /// Set looprange 'count' expression
   void setCount(Expr *E) { Args[CountExpr] = E; }
 
+public:
+  /// Build a 'looprange' clause.
+  OMPLoopRangeClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation FirstLoc, SourceLocation CountLoc,
+                     SourceLocation EndLoc, Expr *First, Expr *Count)
+      : OMPClause(llvm::omp::OMPC_looprange, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), FirstLoc(FirstLoc), CountLoc(CountLoc) {
+    setFirst(First);
+    setCount(Count);
+  }
+
   /// Build an empty clause for deserialization.
   explicit OMPLoopRangeClause()
       : OMPClause(llvm::omp::OMPC_looprange, {}, {}) {}
-
-public:
-  /// Build a 'looprange' clause AST node.
-  static OMPLoopRangeClause *
-  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
-         SourceLocation FirstLoc, SourceLocation CountLoc,
-         SourceLocation EndLoc, Expr *First, Expr *Count);
-
-  /// Build an empty 'looprange' clause node.
-  static OMPLoopRangeClause *CreateEmpty(const ASTContext &C);
 
   // Location getters/setters
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -1439,10 +1421,7 @@ class OMPPartialClause final : public OMPClause {
   SourceLocation LParenLoc;
 
   /// Optional argument to the clause (unroll factor).
-  Stmt *Factor;
-
-  /// Build an empty clause.
-  explicit OMPPartialClause() : OMPClause(llvm::omp::OMPC_partial, {}, {}) {}
+  Stmt *Factor = nullptr;
 
   /// Set the unroll factor.
   void setFactor(Expr *E) { Factor = E; }
@@ -1453,19 +1432,17 @@ class OMPPartialClause final : public OMPClause {
 public:
   /// Build an AST node for a 'partial' clause.
   ///
-  /// \param C         Context of the AST.
   /// \param StartLoc  Location of the 'partial' identifier.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc    Location of ')'.
   /// \param Factor    Clause argument.
-  static OMPPartialClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                  SourceLocation LParenLoc,
-                                  SourceLocation EndLoc, Expr *Factor);
+  OMPPartialClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                   SourceLocation EndLoc, Expr *Factor)
+      : OMPClause(llvm::omp::OMPC_partial, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Factor(Factor) {}
 
-  /// Build an empty 'partial' AST node for deserialization.
-  ///
-  /// \param C     Context of the AST.
-  static OMPPartialClause *CreateEmpty(const ASTContext &C);
+  /// Build an empty clause.
+  explicit OMPPartialClause() : OMPClause(llvm::omp::OMPC_partial, {}, {}) {}
 
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -5721,42 +5698,26 @@ class OMPDepobjClause final : public OMPClause {
   /// Chunk size.
   Expr *Depobj = nullptr;
 
-  /// Build clause with number of variables \a N.
-  ///
-  /// \param StartLoc Starting location of the clause.
-  /// \param LParenLoc Location of '('.
-  /// \param EndLoc Ending location of the clause.
-  OMPDepobjClause(SourceLocation StartLoc, SourceLocation LParenLoc,
-                  SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_depobj, StartLoc, EndLoc),
-        LParenLoc(LParenLoc) {}
-
-  /// Build an empty clause.
-  ///
-  explicit OMPDepobjClause()
-      : OMPClause(llvm::omp::OMPC_depobj, SourceLocation(), SourceLocation()) {}
-
   void setDepobj(Expr *E) { Depobj = E; }
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
 
 public:
-  /// Creates clause.
+  /// Build a 'depobj' clause.
   ///
-  /// \param C AST context.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   /// \param Depobj depobj expression associated with the 'depobj' directive.
-  static OMPDepobjClause *Create(const ASTContext &C, SourceLocation StartLoc,
-                                 SourceLocation LParenLoc,
-                                 SourceLocation EndLoc, Expr *Depobj);
+  OMPDepobjClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc, Expr *Depobj)
+      : OMPClause(llvm::omp::OMPC_depobj, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Depobj(Depobj) {}
 
-  /// Creates an empty clause.
-  ///
-  /// \param C AST context.
-  static OMPDepobjClause *CreateEmpty(const ASTContext &C);
+  /// Build an empty clause.
+  explicit OMPDepobjClause()
+      : OMPClause(llvm::omp::OMPC_depobj, SourceLocation(), SourceLocation()) {}
 
   /// Returns depobj expression associated with the clause.
   Expr *getDepobj() { return Depobj; }
@@ -9945,6 +9906,7 @@ class OMPBindClause final : public OMPNoChildClause<llvm::omp::OMPC_bind> {
   /// Set the binding kind location.
   void setBindKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
 
+public:
   /// Build 'bind' clause with kind \a K ('teams', 'parallel', or 'thread').
   ///
   /// \param K Binding kind of the clause ('teams', 'parallel' or 'thread').
@@ -9960,24 +9922,6 @@ class OMPBindClause final : public OMPNoChildClause<llvm::omp::OMPC_bind> {
 
   /// Build an empty clause.
   OMPBindClause() : OMPNoChildClause() {}
-
-public:
-  /// Build 'bind' clause with kind \a K ('teams', 'parallel', or 'thread').
-  ///
-  /// \param C AST context
-  /// \param K Binding kind of the clause ('teams', 'parallel' or 'thread').
-  /// \param KLoc Starting location of the binding kind.
-  /// \param StartLoc Starting location of the clause.
-  /// \param LParenLoc Location of '('.
-  /// \param EndLoc Ending location of the clause.
-  static OMPBindClause *Create(const ASTContext &C, OpenMPBindClauseKind K,
-                               SourceLocation KLoc, SourceLocation StartLoc,
-                               SourceLocation LParenLoc, SourceLocation EndLoc);
-
-  /// Build an empty 'bind' clause.
-  ///
-  /// \param C AST context
-  static OMPBindClause *CreateEmpty(const ASTContext &C);
 
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
