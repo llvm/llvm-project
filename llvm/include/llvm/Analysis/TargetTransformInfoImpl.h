@@ -146,6 +146,10 @@ public:
 
   virtual unsigned getFlatAddressSpace() const { return -1; }
 
+  virtual unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const {
+    return AS1 == AS2 ? AS1 : getFlatAddressSpace();
+  }
+
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                           Intrinsic::ID IID) const {
     return false;

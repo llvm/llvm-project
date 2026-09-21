@@ -565,6 +565,11 @@ public:
   /// optimize away.
   LLVM_ABI unsigned getFlatAddressSpace() const;
 
+  /// Return the most specific common address space containing AS1 and AS2.
+  /// Pointers from either input space must be convertible to the result with
+  /// addrspacecast.
+  LLVM_ABI unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const;
+
   /// Return any intrinsic address operand indexes which may be rewritten if
   /// they use a flat address space pointer.
   ///
