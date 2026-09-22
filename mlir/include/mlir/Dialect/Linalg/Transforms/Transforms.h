@@ -1553,6 +1553,10 @@ rewriteInIm2Col(RewriterBase &rewriter,
 FailureOr<std::pair<Operation *, Operation *>>
 rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
 
+/// Quantized variant of rewriteInIm2Col for linalg::Conv2DNchwFchwOp.
+FailureOr<std::pair<Operation *, Operation *>>
+rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwQOp convOp);
+
 /// Convert linalg.conv_2d_nhwc_fhwc(_q) to linalg.conv_2d_nhwc_hwcf(_q) by
 /// materializing transpose.
 FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
