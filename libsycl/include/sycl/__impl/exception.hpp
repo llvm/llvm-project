@@ -165,11 +165,9 @@ public:
 private:
   exception(std::error_code EC, std::shared_ptr<context> SharedPtrCtx,
             const char *WhatArg);
-
   // Exceptions must be noexcept copy constructible, so cannot use std::string
-  // directly.
+  // or context directly.
   std::shared_ptr<std::string> MMessage;
-
   std::shared_ptr<context> MContext;
   std::error_code MErrC = make_error_code(sycl::errc::invalid);
 };

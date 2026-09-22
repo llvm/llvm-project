@@ -31,9 +31,7 @@ namespace unittests {
 // allows to call global state reset and platforms initialization methods to be
 // able to set expectations on devices enumeration calls in a proper way.
 struct UnittestsHelper {
-  UnittestsHelper() {
-    detail::PlatformImpl::rediscoverIfEmpty = true;
-  }
+  UnittestsHelper() { detail::PlatformImpl::rediscoverIfEmpty = true; }
 
   ~UnittestsHelper() {
     detail::getPlatformCache().clear();

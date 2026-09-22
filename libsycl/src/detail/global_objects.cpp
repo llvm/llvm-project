@@ -38,13 +38,6 @@ struct StaticVarShutdownHandler {
   operator=(const StaticVarShutdownHandler &) = delete;
   ~StaticVarShutdownHandler() {
     ProgramAndKernelManager::getInstance().releaseResources();
-    {
-      auto &[AsyncExceptions, AsyncExceptionsMutex] = getAsyncExceptionList();
-      {
-        std::lock_guard<SpinLock> Lock(AsyncExceptionsMutex);
-        AsyncExceptions.clear();
-      }
-    }
     // No error reporting in shutdown
     std::ignore = olShutDown();
   }
