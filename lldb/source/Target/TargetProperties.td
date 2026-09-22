@@ -10,9 +10,6 @@ let Definition = "target_experimental", Path = "target.experimental" in {
   def UseDILForCreatingValues: Property<"use-DIL-for-creating-values", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, use the DIL implementation in API SBValue::CreateValueFromExpression.">;
-  def UseDILForBreakpointConditions: Property<"use-DIL-for-breakpoint-conditions", "Boolean">,
-    Global, DefaultTrue,
-    Desc<"If true, use the DIL implementation to evaluate conditions for breakpoints.">;
 }
 
 let Definition = "target", Path = "target" in {

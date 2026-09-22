@@ -235,8 +235,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   }
 
   // Attempt to parse the condition using Data Inspection Language (DIL).
-  if (condition.GetHash() != m_condition_hash && exe_ctx.HasFrameScope() &&
-      exe_ctx.GetTargetSP()->GetUseDILForBreakpointConditions()) {
+  if (condition.GetHash() != m_condition_hash && exe_ctx.HasFrameScope()) {
     // Lex the expression.
     auto lex_or_err = dil::DILLexer::Create(condition.GetText(), eDILModeFull);
     if (lex_or_err) {

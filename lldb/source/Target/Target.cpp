@@ -5283,28 +5283,6 @@ void TargetProperties::SetUseDILForCreatingValues(bool b) {
     exp_values->SetPropertyAtIndex(ePropertyUseDILForCreatingValues, b);
 }
 
-bool TargetProperties::GetUseDILForBreakpointConditions() const {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    return exp_values
-        ->GetPropertyAtIndexAs<bool>(ePropertyUseDILForBreakpointConditions)
-        .value_or(false);
-  else
-    return true;
-}
-
-void TargetProperties::SetUseDILForBreakpointConditions(bool b) {
-  const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    exp_values->SetPropertyAtIndex(ePropertyUseDILForBreakpointConditions, b);
-}
-
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
   const uint32_t idx = ePropertyDefaultArch;
   return GetPropertyAtIndexAs<ArchSpec>(idx, {});

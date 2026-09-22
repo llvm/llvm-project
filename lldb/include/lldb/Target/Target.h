@@ -285,10 +285,6 @@ public:
 
   void SetUseDILForCreatingValues(bool b);
 
-  bool GetUseDILForBreakpointConditions() const;
-
-  void SetUseDILForBreakpointConditions(bool b);
-
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
