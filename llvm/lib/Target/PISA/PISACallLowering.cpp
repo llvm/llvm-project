@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ModRef.h"
 
 using namespace llvm;
@@ -436,7 +437,7 @@ unsigned PISACallLowering::getLoadParamOpcode(MachineIRBuilder &MIRBuilder,
       Op = ParamScalar[IsKernel][3];
       break;
     default:
-      assert(false && "Bit size for call arg not supported");
+      reportFatalUsageError("Bit size for call arg not supported");
     }
   } else if (ArgType->isPointerTy()) {
     if (BitSize == 64) {
@@ -514,7 +515,7 @@ unsigned PISACallLowering::getLoadParamOpcode(MachineIRBuilder &MIRBuilder,
       Op = ParamVector[IsKernel][3][NumElts - 2];
       break;
     default:
-      assert(false && "Bit size for call arg not supported");
+      reportFatalUsageError("Bit size for call arg not supported");
     }
     assert(Op && "argument type is not supported");
   } else {
