@@ -83,6 +83,17 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "bool", "isDeviceAccessible", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<[{
+        Check if the global variable is backed by memory that is residing in 
+        the current device. This is a subset of `isDeviceAccessible`: memory
+        that is accessible from the device but is physically shared with the
+        host (and so may migrate on demand) is accessible but not in device 
+        memory.
+      }],
+      "bool", "isInDeviceMemory", (ins), [{
+        return ::mlir::cast<::mlir::acc::GlobalVariableOpInterface>($_op)
+            .isDeviceAccessible();
+      }]>,
     InterfaceMethod<"Check if the global variable is compiler generated", "bool",
       "isCompilerGenerated", (ins), [{
         return false;

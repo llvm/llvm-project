@@ -274,18 +274,20 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
-        Returns true if the pointer points to managed or unified storage. Such
-        storage is still device-accessible, but it may migrate on demand rather
-        than being statically resident on the device, so it must not be treated 
-        as already resident (it still needs mapping/attach). The default assumes 
-        storage is not managed/unified; types backed by such storage override this.
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isManagedOrUnifiedData",
+      /*methodName=*/"isInDeviceMemory",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return false;
+        return ::mlir::cast<::mlir::acc::PointerLikeType>($_type)
+            .isDeviceAccessible(var);
       }]
     >,
   ];
@@ -572,19 +574,20 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
-        Returns true if the variable represents managed or unified storage. Such
-        storage is still device-accessible (`isDeviceAccessible` is also true), but it
-        may migrate on demand rather than being statically resident on the
-        device, so it must not be treated as already resident (it still needs
-        mapping/attach). The default assumes storage is not managed/unified;
-        types backed by such storage override this.
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isManagedOrUnifiedData",
+      /*methodName=*/"isInDeviceMemory",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return false;
+        return ::mlir::cast<::mlir::acc::MappableType>($_type)
+            .isDeviceAccessible(var);
       }]
     >,
   ];

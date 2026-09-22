@@ -320,22 +320,48 @@ bool mlir::acc::isDeviceAccessibleValue(mlir::Value val) {
   return false;
 }
 
-bool mlir::acc::isDeviceResidentValue(mlir::Value val) {
-  // Device-resident data is a subset of device-accessible data: it must be
-  // accessible, and it must be statically guaranteed to already live on the
-  // device. Managed/unified storage may happen to reside on the device (pages
-  // migrate on demand), but that dynamic possibility is not a strong enough
-  // guarantee to bypass mapping/attach, so it is conservatively treated as
-  // non-resident.
+bool mlir::acc::isInDeviceMemoryValue(mlir::Value val) {
+  // In-device-memory data is a subset of device-accessible data: it must be
+  // accessible and its storage must physically reside in device memory.
   if (auto mappableTy = dyn_cast<mlir::acc::MappableType>(val.getType()))
-    if (mappableTy.isManagedOrUnifiedData(val))
-      return false;
+    if (mappableTy.isInDeviceMemory(val))
+      return true;
 
   if (auto pointerLikeTy = dyn_cast<mlir::acc::PointerLikeType>(val.getType()))
-    if (pointerLikeTy.isManagedOrUnifiedData(val))
-      return false;
+    if (pointerLikeTy.isInDeviceMemory(val))
+      return true;
 
-  return isDeviceAccessibleValue(val);
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data whose storage is already in device
+  // memory.
+  if (auto declareAttr =
+          defOp->getDiscardableAttrOfType<mlir::acc::DeclareAttr>(
+              mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is in device memory.
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isInDeviceMemoryValue(base);
+  }
+
+  // Handle address_of - check if the referenced global is in device memory.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isInDeviceMemory();
+  }
+
+  return false;
 }
 
 bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {

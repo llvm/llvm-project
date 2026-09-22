@@ -62,7 +62,7 @@ struct OpenACCPointerLikeModel
 
   bool isDeviceAccessible(mlir::Type pointer, mlir::Value var) const;
 
-  bool isManagedOrUnifiedData(mlir::Type pointer, mlir::Value var) const;
+  bool isInDeviceMemory(mlir::Type pointer, mlir::Value var) const;
 };
 
 template <typename T>
@@ -123,7 +123,7 @@ struct OpenACCMappableModel
 
   bool isDeviceAccessible(mlir::Type type, mlir::Value var) const;
 
-  bool isManagedOrUnifiedData(mlir::Type type, mlir::Value var) const;
+  bool isInDeviceMemory(mlir::Type type, mlir::Value var) const;
 };
 
 struct OpenACCReducibleLogicalModel

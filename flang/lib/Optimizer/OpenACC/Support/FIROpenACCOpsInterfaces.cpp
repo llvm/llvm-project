@@ -137,6 +137,17 @@ bool GlobalVariableModel::isDeviceAccessible(mlir::Operation *op) const {
   return false;
 }
 
+bool GlobalVariableModel::isInDeviceMemory(mlir::Operation *op) const {
+  // A global is in device memory when it carries a device-data attribute that
+  // denotes physically device-resident storage. Storage that is device-
+  // accessible but physically shared with the host (and so may migrate on
+  // demand) is accessible but not guaranteed to be in device memory.
+  if (auto dataAttr = cuf::getDataAttr(op))
+    return cuf::isDeviceDataAttribute(dataAttr.getValue()) &&
+           !cuf::isManagedOrUnifiedDataAttribute(dataAttr.getValue());
+  return false;
+}
+
 bool GlobalVariableModel::isCompilerGenerated(mlir::Operation *op) const {
   auto globalOp = mlir::cast<fir::GlobalOp>(op);
   return fir::NameUniquer::isCompilerGenerated(globalOp.getSymName());

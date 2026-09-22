@@ -411,6 +411,13 @@ struct MemrefGlobalVariableModel
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
   }
 
+  bool isInDeviceMemory(Operation *op) const {
+    // A memref address space models storage that is physically resident on the
+    // device, so a device-accessible global is also in device memory. (There
+    // is no host-shared/migratable address space to exclude here.)
+    return isDeviceAccessible(op);
+  }
+
   bool isCompilerGenerated(Operation *op) const { return false; }
 };
 
