@@ -99,14 +99,14 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX90A-NEXT:   successors: %bb.5(0x80000000)
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[PHI:%[0-9]+]]:av_32 = PHI [[DEF]], %bb.0, %8, %bb.4
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.5
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.4 (%ir-block.35):
   ; GFX90A-NEXT:   successors: %bb.3(0x80000000)
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[DEF2]], %bb.1, [[COPY11]], %bb.2
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI1]], implicit $exec
   ; GFX90A-NEXT:   early-clobber %48:vgpr_32 = STRICT_WWM [[COPY8]], implicit $exec
   ; GFX90A-NEXT:   [[V_ADD_F32_e64_6:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_READFIRSTLANE_B32_]], 0, %48, 0, 0, implicit $mode, implicit $exec
@@ -184,14 +184,14 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX942-NEXT:   successors: %bb.5(0x80000000)
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT:   [[PHI:%[0-9]+]]:av_32 = PHI [[DEF]], %bb.0, %8, %bb.4
-  ; GFX942-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX942-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT:   S_BRANCH %bb.5
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT: bb.4 (%ir-block.35):
   ; GFX942-NEXT:   successors: %bb.3(0x80000000)
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[DEF2]], %bb.1, [[COPY11]], %bb.2
-  ; GFX942-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX942-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI1]], implicit $exec
   ; GFX942-NEXT:   early-clobber %47:vgpr_32 = STRICT_WWM [[COPY8]], implicit $exec
   ; GFX942-NEXT:   [[V_ADD_F32_e64_6:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_READFIRSTLANE_B32_]], 0, %47, 0, 0, implicit $mode, implicit $exec
@@ -269,14 +269,14 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT:   successors: %bb.5(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[DEF]], %bb.0, %8, %bb.4
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX11-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_BRANCH %bb.5
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.4 (%ir-block.32):
   ; GFX11-NEXT:   successors: %bb.3(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[DEF3]], %bb.1, [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.2
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX11-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[PHI1]], implicit $exec
   ; GFX11-NEXT:   early-clobber %47:vgpr_32 = STRICT_WWM [[V_WRITELANE_B32_]], implicit $exec
   ; GFX11-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_READFIRSTLANE_B32_]], 0, %47, 0, 0, implicit $mode, implicit $exec

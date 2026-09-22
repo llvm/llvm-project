@@ -56,7 +56,7 @@ body:             |
     ; W32-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W32-NEXT: {{  $}}
     ; W32-NEXT: .3:
-    ; W32-NEXT: $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+    ; W32-NEXT: $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
     ; W32-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
     ; W32-NEXT: S_ENDPGM 0, implicit $vgpr0
     ;
@@ -98,7 +98,7 @@ body:             |
     ; W64-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; W64-NEXT: {{  $}}
     ; W64-NEXT: .3:
-    ; W64-NEXT: $exec = S_MOV_B64 [[S_MOV_B64_]]
+    ; W64-NEXT: $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
     ; W64-NEXT: $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_X_IDXEN]]
     ; W64-NEXT: S_ENDPGM 0, implicit $vgpr0
     %4:vgpr_32 = COPY $vgpr4

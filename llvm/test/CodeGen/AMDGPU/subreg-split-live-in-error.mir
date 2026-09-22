@@ -218,7 +218,7 @@ body: |
 
   bb.18:
     successors: %bb.20(0x40000000), %bb.19(0x40000000)
-    $exec = S_OR_B64 $exec, %47, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %47, implicit-def $scc
     %52:vgpr_32 = V_MAD_F32_e64 0, %3.sub1, 0, target-flags(amdgpu-gotprel32-lo) 0, 1, %3.sub0, 0, 0, implicit $mode, implicit $exec
     %53:vgpr_32 = V_MUL_F32_e32 -2147483648, %3.sub1, implicit $mode, implicit $exec
     %53:vgpr_32 = V_MAC_F32_e32 target-flags(amdgpu-gotprel32-hi) 1065353216, %3.sub2, %53, implicit $mode, implicit $exec

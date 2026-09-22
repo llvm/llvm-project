@@ -58,20 +58,21 @@ define i32 @fix_sgpr_copies_indirect_call(ptr addrspace(5) %ptr) #0 {
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[34:35]
 ; CHECK-NEXT:  .LBB0_2: ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[34:35]
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_waitcnt vmcnt(1)
+; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_waitcnt vmcnt(1)
 ; CHECK-NEXT:    v_readfirstlane_b32 s8, v1
 ; CHECK-NEXT:    s_mov_b32 s4, s6
 ; CHECK-NEXT:    s_mov_b32 s5, s8
 ; CHECK-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[4:5], v[0:1]
 ; CHECK-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
 ; CHECK-NEXT:    s_mov_b32 s7, s8
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_writelane_b32 v41, s6, 14
 ; CHECK-NEXT:    v_writelane_b32 v41, s7, 15
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
@@ -81,6 +82,7 @@ define i32 @fix_sgpr_copies_indirect_call(ptr addrspace(5) %ptr) #0 {
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[34:35]
 ; CHECK-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[34:35]
@@ -99,7 +101,6 @@ define i32 @fix_sgpr_copies_indirect_call(ptr addrspace(5) %ptr) #0 {
 ; CHECK-NEXT:    v_readlane_b32 s7, v41, 9
 ; CHECK-NEXT:    v_readlane_b32 s4, v41, 10
 ; CHECK-NEXT:    v_readlane_b32 s5, v41, 11
-; CHECK-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[20:21], s[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[0:1], s[20:21]

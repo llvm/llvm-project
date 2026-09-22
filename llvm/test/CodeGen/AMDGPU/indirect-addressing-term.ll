@@ -95,8 +95,8 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.0, align 4, addrspace 5)
-  ; GCN-NEXT:   $exec = S_MOV_B64 renamable $sgpr0_sgpr1
+  ; GCN-NEXT:   $sgpr0_sgpr1 = bb-prolog SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.0, align 4, addrspace 5)
+  ; GCN-NEXT:   $exec = bb-prolog S_MOV_B64 renamable $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = SI_SPILL_S128_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s128) from %stack.1, align 4, addrspace 5)

@@ -49,7 +49,7 @@ define half @raw_ptr_buffer_load_format_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffs
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_X_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.format.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -103,7 +103,7 @@ define <2 x half> @raw_ptr_buffer_load_format_v2f16__sgpr_rsrc__vgpr_voffset__sg
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_XY_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.format.v2f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -157,7 +157,7 @@ define <4 x half> @raw_ptr_buffer_load_format_v4f16__sgpr_rsrc__vgpr_voffset__sg
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub0
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub1
   ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
@@ -215,7 +215,7 @@ define half @raw_ptr_buffer_load_format_f16__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_FORMAT_D16_X_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.format.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -269,7 +269,7 @@ define <4 x half> @raw_ptr_buffer_load_format_v4f16__sgpr_rsrc__vgpr_voffset__sg
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub0
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_FORMAT_D16_XYZW_OFFEN]].sub1
   ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]

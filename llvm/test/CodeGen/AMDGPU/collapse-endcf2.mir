@@ -64,12 +64,12 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY4]], implicit-def $scc
+  ; GCN-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY4]], implicit-def $scc
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; GCN-NEXT:   dead [[SI_CALL:%[0-9]+]]:sreg_64 = SI_CALL [[DEF]], @func, csr_amdgpu
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GCN-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
   ; GCN-NEXT:   [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   $m0 = S_MOV_B32 -1
@@ -114,12 +114,12 @@ body:             |
     BUFFER_STORE_DWORD_ADDR64 %14, %8, %5, 0, 4, 0, 0, implicit $exec :: (store (s32), addrspace 1)
 
   bb.3:
-    $exec = S_OR_B64 $exec, %12,  implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %12,  implicit-def $scc
     %20:sreg_64 = IMPLICIT_DEF
     %21:sreg_64 = SI_CALL %20, @func, csr_amdgpu
 
   bb.4:
-    $exec = S_OR_B64 $exec, %3, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %3, implicit-def $scc
     %17:vgpr_32 = V_MOV_B32_e32 3, implicit $exec
     %18:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     $m0 = S_MOV_B32 -1

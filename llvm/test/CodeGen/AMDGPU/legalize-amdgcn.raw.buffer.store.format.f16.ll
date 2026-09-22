@@ -43,7 +43,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -90,7 +90,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__voffset_4095__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.f16(half %val, <4 x i32> %rsrc, i32 4095, i32 %soffset, i32 0)
   ret void
@@ -138,7 +138,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -188,7 +188,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -239,7 +239,7 @@ define void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -284,7 +284,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 4095, i32 0)
   ret void
@@ -329,7 +329,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 4096, i32 0)
   ret void
@@ -377,7 +377,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 16
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
@@ -426,7 +426,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 4095
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
@@ -477,7 +477,7 @@ define void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 4096
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
@@ -532,7 +532,7 @@ define void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_so
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   SI_RETURN
   %voffset.add = add i32 %voffset, 4096
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)

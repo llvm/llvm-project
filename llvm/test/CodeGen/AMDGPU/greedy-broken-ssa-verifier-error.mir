@@ -33,7 +33,7 @@ body:             |
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
 
   bb.3:
-    $exec_lo = S_OR_B32 $exec_lo, undef $sgpr4, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, undef $sgpr4, implicit-def $scc
     $vgpr0 = COPY %0
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 

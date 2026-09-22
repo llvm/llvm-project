@@ -136,7 +136,7 @@ body:             |
     S_BRANCH %bb.21
 
   bb.20:
-    $exec_lo = S_OR_B32 $exec_lo, %34, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %34, implicit-def $scc
     S_BRANCH %bb.30
 
   bb.21:
@@ -184,7 +184,7 @@ body:             |
     S_BRANCH %bb.31
 
   bb.30:
-    $exec_lo = S_OR_B32 $exec_lo, %32, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %32, implicit-def $scc
     S_BRANCH %bb.10
 
   bb.31:

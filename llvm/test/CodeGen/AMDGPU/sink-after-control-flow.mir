@@ -36,7 +36,7 @@ body:             |
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[S_XOR_B32_1]], implicit-def $scc
+  ; GFX10-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, [[S_XOR_B32_1]], implicit-def $scc
   ; GFX10-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
   ; GFX10-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 31
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[V_BFE_U32_e64_]], killed [[S_MOV_B32_2]], implicit $exec
@@ -55,7 +55,7 @@ body:             |
   ; GFX10-NEXT: bb.4:
   ; GFX10-NEXT:   successors: %bb.5(0x80000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[S_XOR_B32_3]], implicit-def $scc
+  ; GFX10-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, [[S_XOR_B32_3]], implicit-def $scc
   ; GFX10-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX10-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; GFX10-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 4
@@ -63,7 +63,7 @@ body:             |
   ; GFX10-NEXT:   S_BRANCH %bb.5
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5:
-  ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[DEF2]], implicit-def $scc
+  ; GFX10-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, [[DEF2]], implicit-def $scc
   ; GFX10-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.4(0x40000000), %bb.5(0x40000000)
@@ -91,7 +91,7 @@ body:             |
   bb.5:
     successors: %bb.6(0x40000000), %bb.7(0x40000000)
 
-    $exec_lo = S_OR_B32 $exec_lo, %23, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %23, implicit-def $scc
     %24:sreg_32 = S_MOV_B32 31
     %25:sreg_32 = V_CMP_NE_U32_e64 %18, killed %24, implicit $exec
     %26:sreg_32 = S_XOR_B32 %25, -1, implicit-def $scc
@@ -109,14 +109,14 @@ body:             |
   bb.7:
     successors: %bb.8(0x80000000)
 
-    $exec_lo = S_OR_B32 $exec_lo, %28, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %28, implicit-def $scc
     %29:sreg_32 = S_MOV_B32 16
     %30:sreg_32 = S_MOV_B32 4
     %31:vgpr_32 = nuw nsw V_LSHL_ADD_U32_e64 %17, %30, killed %29, implicit $exec
     S_BRANCH %bb.8
 
   bb.8:
-    $exec_lo = S_OR_B32 $exec_lo, %14, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %14, implicit-def $scc
     S_ENDPGM 0
 
 ...

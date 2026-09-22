@@ -90,7 +90,7 @@ body: |
 
   bb.7:
     successors: %bb.6(0x80000000)
-    $exec = S_OR_B64 $exec, killed %23, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed %23, implicit-def $scc
     %30:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %15:vreg_128 = COPY %13
     %16:vgpr_32 = COPY killed %30
@@ -157,7 +157,7 @@ body: |
 
   bb.16:
     successors: %bb.17(0x80000000)
-    $exec = S_OR_B64 $exec, killed %50, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed %50, implicit-def $scc
     S_BRANCH %bb.17
 
   bb.17:
