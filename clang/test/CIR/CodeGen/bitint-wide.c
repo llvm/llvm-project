@@ -14,7 +14,7 @@ signed _BitInt(256) w256 = -1;
 
 signed _BitInt(129) g_neg = -1;
 // CIR-DAG: cir.global external @g_neg = #cir.int<-1> : !cir.int<s, 129, bitint> {alignment = 8 : i64}
-// LLVM-dAG: @g_neg = global [24 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF", align 8
+// LLVM-DAG: @g_neg = global [24 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF", align 8
 
 struct HasWide129 {
   int i;
