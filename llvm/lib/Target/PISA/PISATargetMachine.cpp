@@ -192,7 +192,8 @@ void PISAPassConfig::addIRPasses() {
   addPass(createPISAVerifierPass());
 
   // Legalize atomics with LLVM's AtomicExpandPass, driven by the
-  // PISATargetLowering atomic hooks. Keep it first in addIRPasses().
+  // PISATargetLowering atomic hooks, before the standard IR transformation
+  // passes.
   addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
