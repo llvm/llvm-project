@@ -112,6 +112,9 @@ features cannot lower the translation-unit ABI level;
   for homogeneous aggregate classification.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
 
+- Fixed RTTI name for internal-linkage types lacking '*', fixed breaking type_info::operator== and
+  dynamic_cast with libstdc++ (#GH34255)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
