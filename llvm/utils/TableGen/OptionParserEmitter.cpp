@@ -323,10 +323,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// Tables\n\n";
   OS << "#ifdef OPTTABLE_CODE\n";
-  Table.EmitStringTableDef(OS, "OptionStrTable");
-  OS << "\n";
   // A function rather than an object: the object needs dynamic relocations.
   OS << "static llvm::opt::OptTable::Tables optionTables() {\n";
+  Table.EmitStringTableDef(OS, "OptionStrTable");
+  OS << "\n";
 
   // Dump prefixes.
   OS << "  static constexpr llvm::StringTable::Offset OptionPrefixesTable[] = "
@@ -475,7 +475,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "  };\n\n";
 
-  OS << "  return {OptionStrTableStorage, OptionPrefixesTable,\n";
+  OS << "  return {OptionStrTable, OptionPrefixesTable,\n";
   OS << "          OptionInfoTable, OptionInfoExtrasTable, "
         "OptionHelpTextVariantsTable, "
      << (SubCommands.empty() ? "{}" : "OptionSubCommands")
