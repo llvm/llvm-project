@@ -16,6 +16,7 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
+#include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
@@ -120,11 +121,8 @@ DAP::DAP(Log &log, const ReplMode default_repl_mode,
          const std::vector<String> &pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
     : log(log), transport(transport), reference_storage(log, configuration),
-      broadcaster("lldb-dap"),
-      progress_event_reporter(
-          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
-      m_client_name(client_name), m_loop(loop) {
+      broadcaster("lldb-dap"), repl_mode(default_repl_mode),
+      no_lldbinit(no_lldbinit), m_client_name(client_name), m_loop(loop) {
   configuration.preInitCommands = pre_init_commands;
   RegisterRequests();
 }
@@ -421,104 +419,6 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
     SendJSON(llvm::json::Value(std::move(event)));
     idx = end + 1;
   } while (idx < output.size());
-}
-
-// interface ProgressStartEvent extends Event {
-//   event: 'progressStart';
-//
-//   body: {
-//     /**
-//      * An ID that must be used in subsequent 'progressUpdate' and
-//      'progressEnd'
-//      * events to make them refer to the same progress reporting.
-//      * IDs must be unique within a debug session.
-//      */
-//     progressId: string;
-//
-//     /**
-//      * Mandatory (short) title of the progress reporting. Shown in the UI to
-//      * describe the long running operation.
-//      */
-//     title: string;
-//
-//     /**
-//      * The request ID that this progress report is related to. If specified a
-//      * debug adapter is expected to emit
-//      * progress events for the long running request until the request has
-//      been
-//      * either completed or cancelled.
-//      * If the request ID is omitted, the progress report is assumed to be
-//      * related to some general activity of the debug adapter.
-//      */
-//     requestId?: number;
-//
-//     /**
-//      * If true, the request that reports progress may be canceled with a
-//      * 'cancel' request.
-//      * So this property basically controls whether the client should use UX
-//      that
-//      * supports cancellation.
-//      * Clients that don't support cancellation are allowed to ignore the
-//      * setting.
-//      */
-//     cancellable?: boolean;
-//
-//     /**
-//      * Optional, more detailed progress message.
-//      */
-//     message?: string;
-//
-//     /**
-//      * Optional progress percentage to display (value range: 0 to 100). If
-//      * omitted no percentage will be shown.
-//      */
-//     percentage?: number;
-//   };
-// }
-//
-// interface ProgressUpdateEvent extends Event {
-//   event: 'progressUpdate';
-//
-//   body: {
-//     /**
-//      * The ID that was introduced in the initial 'progressStart' event.
-//      */
-//     progressId: string;
-//
-//     /**
-//      * Optional, more detailed progress message. If omitted, the previous
-//      * message (if any) is used.
-//      */
-//     message?: string;
-//
-//     /**
-//      * Optional progress percentage to display (value range: 0 to 100). If
-//      * omitted no percentage will be shown.
-//      */
-//     percentage?: number;
-//   };
-// }
-//
-// interface ProgressEndEvent extends Event {
-//   event: 'progressEnd';
-//
-//   body: {
-//     /**
-//      * The ID that was introduced in the initial 'ProgressStartEvent'.
-//      */
-//     progressId: string;
-//
-//     /**
-//      * Optional, more detailed progress message. If omitted, the previous
-//      * message (if any) is used.
-//      */
-//     message?: string;
-//   };
-// }
-
-void DAP::SendProgressEvent(uint64_t progress_id, const char *message,
-                            uint64_t completed, uint64_t total) {
-  progress_event_reporter.Push(progress_id, message, completed, total);
 }
 
 src_ref_t DAP::CreateSourceReference(lldb::addr_t address) {
@@ -1380,57 +1280,42 @@ llvm::Error DAP::InitializeDebugger() {
 }
 
 void DAP::ProgressEventThread(lldb::SBListener listener) {
+  using namespace std::chrono;
+
+  ProgressEventReporter reporter(
+      [this](protocol::Event event) { Send(std::move(event)); });
+  constexpr uint32_t start_delay =
+      duration_cast<seconds>(ProgressEventReporter::k_start_delay).count();
+
   lldb::SBEvent event;
   bool done = false;
   while (!done) {
-    if (listener.WaitForEvent(UINT32_MAX, event)) {
-      const auto event_mask = event.GetType();
-      if (event.BroadcasterMatchesRef(broadcaster)) {
-        if (event_mask & eBroadcastBitStopProgressThread) {
-          done = true;
-        }
-      } else {
-        lldb::SBStructuredData data =
-            lldb::SBDebugger::GetProgressDataFromEvent(event);
-
-        const uint64_t progress_id =
-            GetUintFromStructuredData(data, "progress_id");
-        const uint64_t completed = GetUintFromStructuredData(data, "completed");
-        const uint64_t total = GetUintFromStructuredData(data, "total");
-        const std::string details =
-            GetStringFromStructuredData(data, "details");
-
-        if (completed == 0) {
-          if (total == UINT64_MAX) {
-            // This progress is non deterministic and won't get updated until it
-            // is completed. Send the "message" which will be the combined title
-            // and detail. The only other progress event for thus
-            // non-deterministic progress will be the completed event So there
-            // will be no need to update the detail.
-            const std::string message =
-                GetStringFromStructuredData(data, "message");
-            SendProgressEvent(progress_id, message.c_str(), completed, total);
-          } else {
-            // This progress is deterministic and will receive updates,
-            // on the progress creation event VSCode will save the message in
-            // the create packet and use that as the title, so we send just the
-            // title in the progressCreate packet followed immediately by a
-            // detail packet, if there is any detail.
-            const std::string title =
-                GetStringFromStructuredData(data, "title");
-            SendProgressEvent(progress_id, title.c_str(), completed, total);
-            if (!details.empty())
-              SendProgressEvent(progress_id, details.c_str(), completed, total);
-          }
-        } else {
-          // This progress event is either the end of the progress dialog, or an
-          // update with possible detail. The "detail" string we send to VS Code
-          // will be appended to the progress dialog's initial text from when it
-          // was created.
-          SendProgressEvent(progress_id, details.c_str(), completed, total);
-        }
-      }
+    const uint32_t poll_time = reporter.HasPending() ? start_delay : UINT32_MAX;
+    if (!listener.WaitForEvent(poll_time, event)) {
+      reporter.Drain(steady_clock::now());
+      continue;
     }
+
+    const auto event_mask = event.GetType();
+    if (event.BroadcasterMatchesRef(broadcaster)) {
+      if (event_mask & eBroadcastBitStopProgressThread)
+        done = true;
+      continue;
+    }
+
+    lldb::SBStructuredData data =
+        lldb::SBDebugger::GetProgressDataFromEvent(event);
+    const uint64_t progress_id = GetUintFromStructuredData(data, "progress_id");
+    const uint64_t completed = GetUintFromStructuredData(data, "completed");
+    const uint64_t total = GetUintFromStructuredData(data, "total");
+
+    std::optional<std::string> title = std::nullopt;
+    if (completed == 0) // first event for this progressId.
+      title = GetStringFromStructuredData(data, "title");
+    std::string details = GetStringFromStructuredData(data, "details");
+
+    reporter.Report(progress_id, std::move(title), std::move(details),
+                    completed, total, steady_clock::now());
   }
   DAP_LOG(log, "Stopped ProgressEvent Thread.");
 }
