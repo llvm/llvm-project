@@ -83,6 +83,13 @@ ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
   if (const auto *CT = Ty->getAs<ComplexType>())
     return classifyComplexType(CT, /*IsRet=*/false);
 
+  // Pass floating-point vectors and vectors larger than 64 bits by reference.
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    uint64_t SizeInBits = getContext().getTypeSize(Ty);
+    if (VT->getElementType()->isRealFloatingType() || SizeInBits > 64)
+      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+  }
+
   const auto *BT = Ty->getAs<BuiltinType>();
   if (BT && BT->getKind() == BuiltinType::LongDouble)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
