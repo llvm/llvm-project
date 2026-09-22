@@ -9,10 +9,10 @@ define fp128 @soften_f128_load(ptr %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32) from %ir.p, align 16)
-  ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 16)
-  ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32) from %ir.p + 8, align 8, basealign 16)
-  ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32) from %ir.p + 12, basealign 16)
+  ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32) from %ir.p, align 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32) from %ir.p + 8, align 8, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32) from %ir.p + 12, basealign 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   SW killed [[LW3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 16)
   ; CHECK-NEXT:   SW killed [[LW2]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8, basealign 16)
   ; CHECK-NEXT:   SW killed [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 16)
@@ -29,7 +29,7 @@ define double @soften_f16_extload(ptr %p) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
-  ; CHECK-NEXT:   [[LH:%[0-9]+]]:gpr = LH [[COPY]], 0 :: (load (s16) from %ir.p)
+  ; CHECK-NEXT:   [[LH:%[0-9]+]]:gpr = LH [[COPY]], 0 :: (load (s16) from %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   $x10 = COPY [[LH]]
   ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) &__extendhfsf2, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2, implicit-def $x10
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
@@ -56,10 +56,10 @@ define i128 @expand_i128_load(ptr %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32) from %ir.p, align 16)
-  ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 16)
-  ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32) from %ir.p + 8, align 8, basealign 16)
-  ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32) from %ir.p + 12, basealign 16)
+  ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32) from %ir.p, align 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32) from %ir.p + 8, align 8, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32) from %ir.p + 12, basealign 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   SW killed [[LW3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 8)
   ; CHECK-NEXT:   SW killed [[LW2]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8)
   ; CHECK-NEXT:   SW killed [[LW1]], [[COPY2]], 4 :: (store (s32) into unknown-address + 4, basealign 8)
@@ -80,10 +80,10 @@ define void @expand_i128_store(ptr %p, i128 %v) {
   ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
   ; CHECK-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 8 :: (load (s32))
   ; CHECK-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY]], 12 :: (load (s32))
-  ; CHECK-NEXT:   SW killed [[LW3]], [[COPY1]], 12 :: (store (s32) into %ir.p + 12, basealign 16)
-  ; CHECK-NEXT:   SW killed [[LW2]], [[COPY1]], 8 :: (store (s32) into %ir.p + 8, align 8, basealign 16)
-  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 16)
-  ; CHECK-NEXT:   SW killed [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 16)
+  ; CHECK-NEXT:   SW killed [[LW3]], [[COPY1]], 12 :: (store (s32) into %ir.p + 12, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW killed [[LW2]], [[COPY1]], 8 :: (store (s32) into %ir.p + 8, align 8, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 16, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW killed [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 16, !mem.cache_hint !1)
   ; CHECK-NEXT:   PseudoRET
   store i128 %v, ptr %p, align 16, !mem.cache_hint !1
   ret void
@@ -97,8 +97,8 @@ define i128 @expand_i128_extload(ptr %p) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[COPY1]]
-  ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32) from %ir.p, align 8)
-  ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 8)
+  ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32) from %ir.p, align 8, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32) from %ir.p + 4, basealign 8, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x0
   ; CHECK-NEXT:   SW [[COPY3]], [[COPY2]], 12 :: (store (s32) into unknown-address + 12, basealign 8)
   ; CHECK-NEXT:   SW [[COPY3]], [[COPY2]], 8 :: (store (s32) into unknown-address + 8, align 8)
@@ -119,8 +119,8 @@ define void @expand_i128_truncstore(ptr %p, i128 %v) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
   ; CHECK-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
-  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 8)
-  ; CHECK-NEXT:   SW killed [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 8)
+  ; CHECK-NEXT:   SW killed [[LW1]], [[COPY1]], 4 :: (store (s32) into %ir.p + 4, basealign 8, !mem.cache_hint !1)
+  ; CHECK-NEXT:   SW killed [[LW]], [[COPY1]], 0 :: (store (s32) into %ir.p, align 8, !mem.cache_hint !1)
   ; CHECK-NEXT:   PseudoRET
   %trunc = trunc i128 %v to i64
   store i64 %trunc, ptr %p, align 8, !mem.cache_hint !1
