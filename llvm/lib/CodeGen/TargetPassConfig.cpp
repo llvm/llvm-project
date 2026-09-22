@@ -958,9 +958,12 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
-    addPass(createWasmEHPass());
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
+    // by this point it needs no generic EH preparation, like the None case.
     addPass(createLowerInvokePass());
 
     // The lower invoke pass may create unreachable code. Remove it.
@@ -1071,7 +1074,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   // Pass to reset the MachineFunction if the ISel failed. Outside of the above
   // if so that the verifier is not added to it.
   if (Selector == SelectorType::GlobalISel)
-    addPass(createResetMachineFunctionPass(
+    addPass(createResetMachineFunctionLegacyPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
 
   // Run the SDAG InstSelector, providing a fallback path when we do not want to
