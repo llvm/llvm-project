@@ -23,6 +23,10 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
   if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
     return false;
 
+  // Data member pointers have scalar evaluation kind.
+  if (const auto *MPT = dyn_cast<MemberPointerType>(Ty))
+    return MPT->isFunctionPointer();
+
   // A matrix type is modeled as an array but lowers to a single flattened
   // vector and has scalar evaluation kind in classic CodeGen, so it is not an
   // aggregate for ABI purposes.
@@ -41,8 +45,9 @@ bool TargetInfo::isPromotableInteger(const IntegerType *IT) const {
   return BitWidth < 32;
 }
 
-ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, bool ByVal) const {
-  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal);
+ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, bool ByVal,
+                                            unsigned AddrSpace) const {
+  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal, AddrSpace);
 }
 
 RecordArgABI TargetInfo::getRecordArgABI(const RecordType *RT) const {
@@ -82,8 +87,8 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
       // is returned indirectly with ByVal=false. This is the RAA path and is
       // distinct from getIndirectReturnResult (plain aggregates), which uses
       // ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
+      FI.getReturnInfo() = ArgInfo::getIndirect(
+          RT->getAlignment(), /*ByVal=*/false, getSRetAddrSpace(RT));
       return true;
     }
   }
