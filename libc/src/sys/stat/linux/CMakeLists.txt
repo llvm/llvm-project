@@ -75,6 +75,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkfifoat
+  SRCS
+    mkfifoat.cpp
+  HDRS
+    ../mkfifoat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   stat
   SRCS
     stat.cpp
@@ -108,6 +122,20 @@ add_entrypoint_object(
     fstat.cpp
   HDRS
     ../fstat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
+)
+
+add_entrypoint_object(
+  fstatat
+  SRCS
+    fstatat.cpp
+  HDRS
+    ../fstatat.h
   DEPENDS
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat

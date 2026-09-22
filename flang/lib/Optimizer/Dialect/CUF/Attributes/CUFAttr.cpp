@@ -65,4 +65,15 @@ bool hasDeviceDataAttr(mlir::Operation *op) {
   return false;
 }
 
+bool isManagedOrUnifiedDataAttribute(cuf::DataAttribute attr) {
+  return attr == cuf::DataAttribute::Managed ||
+         attr == cuf::DataAttribute::Unified;
+}
+
+bool hasManagedOrUnifiedDataAttr(mlir::Operation *op) {
+  if (auto dataAttr = getDataAttr(op))
+    return isManagedOrUnifiedDataAttribute(dataAttr.getValue());
+  return false;
+}
+
 } // namespace cuf

@@ -1149,6 +1149,14 @@ public:
   /// enforced. Null when the current function needs no such wrapper.
   cir::TryOp ehSpecTryOp;
 
+  /// Whether the wrapper opened by emitStartEHSpec is a terminate scope, whose
+  /// handler calls std::terminate() for any escaping exception, rather than the
+  /// filter of a dynamic exception specification.
+  bool inEHSpecTerminateScope() {
+    return ehSpecTryOp &&
+           mlir::isa<cir::CatchAllAttr>(ehSpecTryOp.getHandlerTypes()[0]);
+  }
+
   bool isCatchOrCleanupRequired();
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
@@ -2736,6 +2744,7 @@ public:
   mlir::LogicalResult emitOMPSplitDirective(const OMPSplitDirective &s);
   mlir::LogicalResult
   emitOMPInterchangeDirective(const OMPInterchangeDirective &s);
+  mlir::LogicalResult emitOMPFlattenDirective(const OMPFlattenDirective &s);
   mlir::LogicalResult emitOMPAssumeDirective(const OMPAssumeDirective &s);
   mlir::LogicalResult emitOMPMaskedDirective(const OMPMaskedDirective &s);
   mlir::LogicalResult emitOMPStripeDirective(const OMPStripeDirective &s);
