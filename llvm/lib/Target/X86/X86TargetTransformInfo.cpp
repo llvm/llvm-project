@@ -1988,74 +1988,161 @@ InstructionCost X86TTIImpl::getShuffleCost(
     LT.first = 1;
 
     if (LT.second.isVectorOf(MVT::i1)) {
-      // A scalar splat moves the value across in a gpr.
-      if (!Args.empty() && !Args.front()->getType()->isVectorTy()) {
-        static const CostKindCosts ScalarSplat = {1, 2, 2, 2};
-        static const CostKindCosts ScalarSplatUnpck = {2, 6, 3, 3};
-        const CostKindCosts &Costs = LT.second == MVT::v64i1 && !ST->is64Bit()
-                                         ? ScalarSplatUnpck
-                                         : ScalarSplat;
-        if (auto KindCost = Costs[CostKind])
-          return *KindCost;
-      }
-
-      // A mask lane splat sign extends the mask to a vector, splats it there
-      // and converts it back, so it is priced by lane and by subtarget.
-      static const CostKindCosts SmallLaneSplat = {1, 3, 3, 3};
-      static const CostKindCosts LaneSplat = {1, 5, 3, 3};
-      static const CostKindCosts LaneSplatVarPerm = {1, 5, 4, 4};
-      static const CostKindCosts LaneSplatPerm = {2, 8, 4, 5};
-      static const CostKindCosts LaneSplatCross = {3, 9, 5, 6};
-      static const CostKindCosts LaneSplatCrossPerm = {2, 6, 5, 7};
-
+      // A scalar splat moves the value across in a gpr. A mask lane splat
+      // sign extends the mask to a vector, splats it there and converts it
+      // back, so it is priced by lane and by subtarget.
+      enum MaskBroadcastForm {
+        ScalarSplat,
+        LaneSplat,
+        LanePermute,
+        LaneCrossPermute,
+        ExtractSplat,
+        ExtractPermute
+      };
       // The index names a lane of the whole shuffle, so fold it onto the
       // first operand and then onto the legalized register holding it.
       int NumSrcElts = SrcTy->getElementCount().getKnownMinValue();
       int NumRegElts = LT.second.getVectorNumElements();
       int Lane = Index < 0 ? Index : (Index % NumSrcElts) % NumRegElts;
-
-      if (LT.second == MVT::v64i1 && !ST->useBWIRegs()) {
+      bool IsCrossSublane =
+          NumRegElts >= 32 && !ST->hasVBMI() && Lane >= 16 && Lane % 16 != 0;
+      MaskBroadcastForm Form;
+      if (!Args.empty() && !Args.front()->getType()->isVectorTy()) {
+        Form = ScalarSplat;
+      } else if (LT.second == MVT::v64i1 && !ST->useBWIRegs()) {
         // A legal mask register does not imply that we can use a 512-bit
         // vector for the round trip. In this case lower1BitShuffle falls back
         // to extracting the bit and splatting it through a GPR.
-        static const CostKindCosts ExtractAndSplat = {1, 7, 5, 5};
-        static const CostKindCosts ExtractAndSplatUnpck = {2, 10, 5, 5};
-        static const CostKindCosts ShiftMask = {1, 4, 1, 1};
-        const CostKindCosts &Costs =
-            ST->is64Bit() ? ExtractAndSplat : ExtractAndSplatUnpck;
-        InstructionCost Cost = *Costs[CostKind];
-        if (Lane != 0)
-          Cost += *ShiftMask[CostKind];
-        return Cost;
+        Form = Lane == 0 ? ExtractSplat : ExtractPermute;
+      } else {
+        Form = Lane == 0        ? LaneSplat
+               : IsCrossSublane ? LaneCrossPermute
+                                : LanePermute;
+      }
+      // When avoiding 512-bit widening, lower1BitShuffle extends v16i1 to
+      // v16i16 instead. With BW, its vpmovm2w / vpmovw2m round trip does not
+      // require DQ.
+      bool HasDQRoundTrip = ST->hasDQI() || (NumRegElts == 16 && ST->hasBWI() &&
+                                             !ST->canExtendTo512DQ());
+
+      static const CostKindTblEntry X64MaskBroadcastTbl[] = { // 64-bit targets
+        // neg + kmovq
+        { ScalarSplat,    MVT::v64i1, { 1,  2, 2, 2 } },
+        // kmovd + movzbl + andl + negq + kmovq
+        { ExtractSplat,   MVT::v64i1, { 1,  7, 5, 5 } },
+        // kshiftrq + kmovd + movzbl + andl + negq + kmovq
+        { ExtractPermute, MVT::v64i1, { 2, 11, 6, 6 } },
+      };
+
+      static const CostKindTblEntry AVX512VBMIFastVarPermMaskBroadcastTbl[] = {
+        // vpmovm2b + vpermb + vpmovb2m
+        { LanePermute, MVT::v64i1, { 1, 5, 4, 4 } },
+        { LanePermute, MVT::v32i1, { 1, 5, 4, 4 } },
+      };
+
+      static const CostKindTblEntry AVX512DQFastVarPermMaskBroadcastTbl[] = {
+        // vpmovm2d + vpermd + vpmovd2m
+        { LanePermute, MVT::v8i1,  { 1, 5, 4, 4 } },
+      };
+
+      static const CostKindTblEntry AVX512FastVarPermMaskBroadcastTbl[] = {
+        // vpcmpeqd + vmovdqa32 + vpermd + vptestmd
+        { LanePermute,      MVT::v8i1,  { 2, 8, 4, 4 } },
+        // vpmovm2b + vpshufb + vpbroadcastd + vpermd + vpmovb2m
+        { LaneCrossPermute, MVT::v64i1, { 2, 6, 5, 7 } },
+        { LaneCrossPermute, MVT::v32i1, { 2, 6, 5, 7 } },
+      };
+
+      static const CostKindTblEntry AVX512DQMaskBroadcastTbl[] = {
+        // vpmovm2d + vpbroadcastd + vpmovd2m
+        { LaneSplat,   MVT::v16i1, { 1, 5, 3, 3 } },
+        { LaneSplat,   MVT::v8i1,  { 1, 5, 3, 3 } },
+        { LaneSplat,   MVT::v4i1,  { 1, 3, 3, 3 } },
+        // vpmovm2q + vpbroadcastq + vpmovq2m
+        { LaneSplat,   MVT::v2i1,  { 1, 3, 3, 3 } },
+        // vpmovm2d + vpshufd + vpbroadcastd + vpmovd2m
+        { LanePermute, MVT::v16i1, { 2, 8, 4, 5 } },
+        { LanePermute, MVT::v8i1,  { 2, 8, 4, 5 } },
+        // vpmovm2d + vpshufd + vpmovd2m
+        { LanePermute, MVT::v4i1,  { 1, 3, 3, 3 } },
+        // vpmovm2q + vpshufd + vpmovq2m
+        { LanePermute, MVT::v2i1,  { 1, 3, 3, 3 } },
+      };
+
+      static const CostKindTblEntry AVX512MaskBroadcastTbl[] = {
+        // neg + kmovd + kunpckdq
+        { ScalarSplat,      MVT::v64i1, { 2,  6, 3, 3 } },
+        // neg + kmov
+        { ScalarSplat,      MVT::v32i1, { 1,  2, 2, 2 } },
+        { ScalarSplat,      MVT::v16i1, { 1,  2, 2, 2 } },
+        { ScalarSplat,      MVT::v8i1,  { 1,  2, 2, 2 } },
+        { ScalarSplat,      MVT::v4i1,  { 1,  2, 2, 2 } },
+        { ScalarSplat,      MVT::v2i1,  { 1,  2, 2, 2 } },
+        // kmovd + andl + negl + kmovd + kunpckdq
+        { ExtractSplat,     MVT::v64i1, { 2, 10, 5, 5 } },
+        // kshiftrq + kmovd + andl + negl + kmovd + kunpckdq
+        { ExtractPermute,   MVT::v64i1, { 3, 14, 6, 6 } },
+        // vpmovm2b + vpbroadcastb + vpmovb2m
+        { LaneSplat,        MVT::v64i1, { 1,  5, 3, 3 } },
+        { LaneSplat,        MVT::v32i1, { 1,  5, 3, 3 } },
+        // vpternlogd + vpbroadcastd + vptestmd
+        { LaneSplat,        MVT::v16i1, { 2,  8, 3, 3 } },
+        // vpcmpeqd + vmovdqa32 + vpbroadcastd + vptestmd
+        { LaneSplat,        MVT::v8i1,  { 2,  8, 3, 3 } },
+        { LaneSplat,        MVT::v4i1,  { 2,  6, 3, 3 } },
+        // vpcmpeqd + vmovdqa64 + vpbroadcastq + vptestmq
+        { LaneSplat,        MVT::v2i1,  { 2,  6, 3, 3 } },
+        // vpmovm2b + vpsrlw + vpbroadcastb + vpmovb2m
+        { LanePermute,      MVT::v64i1, { 2,  8, 4, 5 } },
+        { LanePermute,      MVT::v32i1, { 2,  8, 4, 5 } },
+        // vpternlogd + vpshufd + vpbroadcastd + vptestmd
+        { LanePermute,      MVT::v16i1, { 3, 11, 4, 5 } },
+        // vpcmpeqd + vmovdqa32 + vpshufd + vpbroadcastd + vptestmd
+        { LanePermute,      MVT::v8i1,  { 3, 11, 4, 5 } },
+        // vpcmpeqd + vmovdqa32 + vpshufd + vptestmd
+        { LanePermute,      MVT::v4i1,  { 2,  6, 3, 3 } },
+        // vpcmpeqd + vmovdqa64 + vpshufd + vptestmq
+        { LanePermute,      MVT::v2i1,  { 2,  6, 3, 3 } },
+        // vpmovm2b + vpshufb + vextracti128 + vpbroadcastd + vpmovb2m
+        { LaneCrossPermute, MVT::v64i1, { 3,  9, 5, 6 } },
+        { LaneCrossPermute, MVT::v32i1, { 3,  9, 5, 6 } },
+      };
+
+      if (ST->is64Bit())
+        if (const auto *Entry =
+                CostTableLookup(X64MaskBroadcastTbl, Form, LT.second))
+          if (auto KindCost = Entry->Cost[CostKind])
+            return *KindCost;
+
+      if (ST->hasFastVariableCrossLaneShuffle()) {
+        if (ST->hasVBMI())
+          if (const auto *Entry = CostTableLookup(
+                  AVX512VBMIFastVarPermMaskBroadcastTbl, Form, LT.second))
+            if (auto KindCost = Entry->Cost[CostKind])
+              return *KindCost;
+
+        if (HasDQRoundTrip)
+          if (const auto *Entry = CostTableLookup(
+                  AVX512DQFastVarPermMaskBroadcastTbl, Form, LT.second))
+            if (auto KindCost = Entry->Cost[CostKind])
+              return *KindCost;
+
+        if (const auto *Entry = CostTableLookup(
+                AVX512FastVarPermMaskBroadcastTbl, Form, LT.second))
+          if (auto KindCost = Entry->Cost[CostKind])
+            return *KindCost;
       }
 
-      bool IsCrossSublane =
-          NumRegElts >= 32 && !ST->hasVBMI() && Lane >= 16 && Lane % 16 != 0;
-      bool IsVarPerm = ST->hasFastVariableCrossLaneShuffle() &&
-                       (NumRegElts == 8 || (NumRegElts >= 32 && ST->hasVBMI()));
-      const CostKindCosts &CrossCosts = ST->hasFastVariableCrossLaneShuffle()
-                                            ? LaneSplatCrossPerm
-                                            : LaneSplatCross;
-      const CostKindCosts &Costs = NumRegElts <= 4  ? SmallLaneSplat
-                                   : Lane == 0      ? LaneSplat
-                                   : IsCrossSublane ? CrossCosts
-                                   : IsVarPerm      ? LaneSplatVarPerm
-                                                    : LaneSplatPerm;
-      if (auto KindCost = Costs[CostKind]) {
-        InstructionCost Cost = *KindCost;
-        // When avoiding 512-bit widening, lower1BitShuffle extends v16i1 to
-        // v16i16 instead. With BW, its vpmovm2w / vpmovw2m round trip does not
-        // require DQ.
-        bool UsesBWConversions =
-            NumRegElts == 16 && ST->hasBWI() && !ST->canExtendTo512DQ();
-        if (!ST->hasDQI() && NumRegElts <= 16 && !UsesBWConversions) {
-          if (CostKind == TTI::TCK_RecipThroughput)
-            Cost += 1;
-          else if (CostKind == TTI::TCK_Latency)
-            Cost += 3;
-        }
-        return Cost;
-      }
+      if (HasDQRoundTrip)
+        if (const auto *Entry =
+                CostTableLookup(AVX512DQMaskBroadcastTbl, Form, LT.second))
+          if (auto KindCost = Entry->Cost[CostKind])
+            return *KindCost;
+
+      if (const auto *Entry =
+              CostTableLookup(AVX512MaskBroadcastTbl, Form, LT.second))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
     }
 
     // If we're broadcasting a load then AVX/AVX2 can do this for free.
