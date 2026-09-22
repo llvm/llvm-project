@@ -143,6 +143,16 @@ bool isDeviceDataAttribute(cuf::DataAttribute attr);
 /// whose value returns true for `isDeviceDataAttribute`.
 bool hasDeviceDataAttr(mlir::Operation *op);
 
+/// Check if a CUDA data attribute represents managed or unified storage.
+/// Returns true for Managed and Unified attributes. Such storage is
+/// device-accessible but may migrate rather than being statically guaranteed
+/// to reside on the device.
+bool isManagedOrUnifiedDataAttribute(cuf::DataAttribute attr);
+
+/// Returns true if the operation has a `cuf::DataAttributeAttr`
+/// whose value returns true for `isManagedOrUnifiedDataAttribute`.
+bool hasManagedOrUnifiedDataAttr(mlir::Operation *op);
+
 } // namespace cuf
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_CUF_CUFATTR_H
