@@ -5551,6 +5551,17 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   return Cost;
 }
 
+#ifndef NDEBUG
+/// Returns the frequency with which \p VPBB executes, as recorded on its
+/// recipes. All recipes of a block share the same frequency.
+static std::optional<VPExecutionFrequency>
+getRecordedExecutionFrequency(const VPBasicBlock *VPBB) {
+  if (VPBB->empty())
+    return std::nullopt;
+  return cast<VPInstruction>(&VPBB->front())->getExecutionFrequency();
+}
+#endif
+
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
                                                VPRegisterUsage *RU) const {
   VPCostContext CostCtx(*TLI, Plan, *CM, Config,
@@ -6376,12 +6387,9 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
 
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
-    // All recipes of a block share the same recorded frequency; empty blocks
-    // and blocks that always or never execute carry none.
-    if (VPBB->empty())
-      continue;
+    // Nothing to check for blocks without a recorded frequency.
     std::optional<VPExecutionFrequency> Freq =
-        cast<VPInstruction>(&VPBB->front())->getExecutionFrequency();
+        getRecordedExecutionFrequency(VPBB);
     if (!Freq)
       continue;
     BranchProbability Computed = vputils::getExecutionProbability(Freq->Freq);
