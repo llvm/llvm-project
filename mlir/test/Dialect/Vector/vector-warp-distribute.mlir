@@ -763,6 +763,20 @@ func.func @vector_reduction(%laneid: index) -> (f32) {
 
 // -----
 
+// CHECK-PROP-LABEL: @negative_vector_reduction_scalable
+// CHECK-PROP-NOT: gpu.shuffle
+// CHECK-PROP: vector.reduction <add>, %{{.*}} : vector<[32]xf32> into f32
+func.func @negative_vector_reduction_scalable(%laneid: index) -> (f32) {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
+    %0 = "test.some_def"() : () -> (vector<[32]xf32>)
+    %1 = vector.reduction <add>, %0 : vector<[32]xf32> into f32
+    gpu.yield %1 : f32
+  }
+  return %r : f32
+}
+
+// -----
+
 // CHECK-PROP-LABEL: func @warp_distribute(
 //  CHECK-PROP-SAME:    %[[ID:[a-zA-Z0-9]+]]
 //  CHECK-PROP-SAME:    %[[SRC:[a-zA-Z0-9]+]]
