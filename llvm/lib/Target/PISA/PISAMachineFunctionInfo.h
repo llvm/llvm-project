@@ -24,7 +24,7 @@ public:
   ~PISAMachineFunctionInfo() override;
 
   ArgInfo getArgInfo(unsigned Slot) const {
-    auto I = ArgInfos.find(Slot);
+    DenseMap<unsigned, ArgInfo>::const_iterator I = ArgInfos.find(Slot);
     if (I == ArgInfos.end())
       return {0, false};
     return I->second;
