@@ -545,10 +545,10 @@ constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> min(
   return min((vector<T, N>)p0, p1);
 }
 
-_DXC_DEPRECATED_SCALAR_FN(float, int, max)
+_DXC_DEPRECATED_SCALAR_FN(float, int, min)
 constexpr float min(float p0, int p1) { return min(p0, (float)p1); }
 
-_DXC_DEPRECATED_SCALAR_FN(int, float, max)
+_DXC_DEPRECATED_SCALAR_FN(int, float, min)
 constexpr float min(int p0, float p1) { return min((float)p0, p1); }
 
 //===----------------------------------------------------------------------===//

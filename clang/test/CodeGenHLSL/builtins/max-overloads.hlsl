@@ -84,7 +84,7 @@ double4 test_max_double4_mismatch2(double4 p0, double p1) { return max(p1, p0); 
 // CHECK: [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 %{{.*}} to float
 // CHECK: [[MAX:%.*]] = call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) float @llvm.maxnum.f32(float {{%.*}}, float [[CONV]])
 // CHECK: ret float [[MAX]]
-float test_max_float_int_mismatch(float p0, int p1) { return max(p0, 1); }
+float test_max_float_int_mismatch(float p0, int p1) { return max(p0, p1); }
 
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float {{.*}}test_max_float_int_mismatch2
 // CHECK: [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 %{{.*}} to float
