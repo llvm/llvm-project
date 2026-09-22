@@ -18,9 +18,9 @@ const SymbolNameSpec DeregisterEHFrameSectionAllocActionName =
     SymbolNameSpec::verbatim("llvm_orc_deregisterEHFrameAllocAction");
 
 const SymbolNameSpec RegisterJITLoaderGDBAllocActionName =
-    SymbolNameSpec::verbatim("orc_rt_ci_aa_sps_GDBJITRegistrar_register");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_GDBJITRegistrar_register");
 const SymbolNameSpec DeregisterJITLoaderGDBAllocActionName =
-    SymbolNameSpec::verbatim("orc_rt_ci_aa_sps_GDBJITRegistrar_deregister");
+    SymbolNameSpec::c("orc_rt_ci_aa_sps_GDBJITRegistrar_deregister");
 
 const SymbolNameSpec DispatchName =
     SymbolNameSpec::verbatim("__orc_rt_jit_dispatch");
@@ -29,9 +29,9 @@ const SymbolNameSpec DispatchCtxName =
 
 const MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
-        SymbolNameSpec::verbatim(
+        SymbolNameSpec::c(
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections"),
-        SymbolNameSpec::verbatim(
+        SymbolNameSpec::c(
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections")};
 
 } // end namespace rt

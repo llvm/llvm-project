@@ -1060,6 +1060,14 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                    AbiInfo.getIndirectByVal(),
                                    AbiInfo.getIndirectRealign());
   }
+  case llvm::abi::ArgInfo::IndirectAliased: {
+    // Aliased indirect carries an address space but never byval.
+    CharUnits Alignment =
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign().value());
+    return ABIArgInfo::getIndirectAliased(Alignment,
+                                          AbiInfo.getIndirectAddrSpace(),
+                                          AbiInfo.getIndirectRealign());
+  }
   case llvm::abi::ArgInfo::Ignore:
     return ABIArgInfo::getIgnore();
   }
