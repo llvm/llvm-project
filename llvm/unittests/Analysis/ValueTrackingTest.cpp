@@ -9,6 +9,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantRange.h"
@@ -130,6 +131,103 @@ protected:
     EXPECT_EQ(SignBitKnown, Known.getSignBit());
   }
 };
+}
+
+TEST_F(ComputeKnownBitsTest, NVVMWarpInputCondContext) {
+  parseAssembly(R"(
+    define i32 @test(i32 %x) {
+      %A = call i32 @llvm.nvvm.shfl.sync.bfly.i32(i32 -1, i32 %x, i32 1, i32 31)
+      %cond = icmp ult i32 %x, 2
+      %CxtI = and i32 %A, 1
+      ret i32 %CxtI
+    }
+    declare i32 @llvm.nvvm.shfl.sync.bfly.i32(i32, i32, i32, i32)
+  )");
+
+  CondContext CC(&findInstructionByName(F, "cond"));
+  CC.AffectedValues.insert(F->getArg(0));
+  SimplifyQuery Q =
+      SimplifyQuery(M->getDataLayout(), CxtI).getWithCondContext(CC);
+  EXPECT_EQ(computeKnownBits(F->getArg(0), Q).Zero, APInt(32, 0xfffffffe));
+  EXPECT_TRUE(computeKnownBits(A, Q).isUnknown());
+}
+
+TEST_F(ComputeKnownBitsTest, NVVMWarpInputDominatingCondition) {
+  parseAssembly(R"(
+    define i32 @test(i32 %x) {
+      %A = call i32 @llvm.nvvm.redux.sync.umax(i32 %x, i32 -1)
+      %cond = icmp ult i32 %x, 2
+      br i1 %cond, label %then, label %else
+    then:
+      %A2 = call i32 @llvm.nvvm.redux.sync.umax(i32 %x, i32 -1)
+      %CxtI = add i32 %A, %A2
+      ret i32 %CxtI
+    else:
+      ret i32 0
+    }
+    declare i32 @llvm.nvvm.redux.sync.umax(i32, i32)
+  )");
+
+  DominatorTree DT(*F);
+  DomConditionCache DC;
+  DC.registerBranch(cast<CondBrInst>(F->getEntryBlock().getTerminator()));
+  SimplifyQuery Q(M->getDataLayout(), &DT, nullptr, CxtI);
+  Q.DC = &DC;
+  EXPECT_EQ(computeKnownBits(F->getArg(0), Q).Zero, APInt(32, 0xfffffffe));
+  // The condition constrains every input to A2, but only A's receiving lane.
+  EXPECT_TRUE(computeKnownBits(A, Q).isUnknown());
+  EXPECT_EQ(computeKnownBits(A2, Q).Zero, APInt(32, 0xfffffffe));
+}
+
+TEST_F(ComputeKnownBitsTest, NVVMWarpInputLaterAssume) {
+  parseAssembly(R"(
+    define i32 @test(i32 %x) {
+      %A = call i32 @llvm.nvvm.shfl.bfly.i32(i32 %x, i32 1, i32 31)
+      %cond = icmp ult i32 %x, 2
+      call void @llvm.assume(i1 %cond)
+      %CxtI = and i32 %A, 1
+      ret i32 %CxtI
+    }
+    declare i32 @llvm.nvvm.shfl.bfly.i32(i32, i32, i32)
+    declare void @llvm.assume(i1)
+  )");
+
+  DominatorTree DT(*F);
+  AssumptionCache AC(*F);
+  SimplifyQuery Q(M->getDataLayout(), &DT, &AC, CxtI);
+  // The willreturn shuffle guarantees every participating lane reaches the
+  // assumption, so it constrains all source lanes as well as the receiver.
+  EXPECT_EQ(computeKnownBits(F->getArg(0), Q.getWithInstruction(A)).Zero,
+            APInt(32, 0xfffffffe));
+  EXPECT_EQ(computeKnownBits(A, Q).Zero, APInt(32, 0xfffffffe));
+}
+
+TEST_F(ComputeKnownBitsTest, NVVMWarpInputConditionalAssume) {
+  parseAssembly(R"(
+    define i32 @test(i32 %x, i1 %take) {
+      %A = call i32 @llvm.nvvm.shfl.bfly.i32(i32 %x, i32 1, i32 31)
+      br i1 %take, label %then, label %else
+    then:
+      %cond = icmp ult i32 %x, 2
+      call void @llvm.assume(i1 %cond)
+      %A2 = call i32 @llvm.nvvm.redux.sync.umax(i32 %x, i32 -1)
+      %CxtI = add i32 %A, %A2
+      ret i32 %CxtI
+    else:
+      ret i32 0
+    }
+    declare i32 @llvm.nvvm.shfl.bfly.i32(i32, i32, i32)
+    declare i32 @llvm.nvvm.redux.sync.umax(i32, i32)
+    declare void @llvm.assume(i1)
+  )");
+
+  DominatorTree DT(*F);
+  AssumptionCache AC(*F);
+  SimplifyQuery Q(M->getDataLayout(), &DT, &AC, CxtI);
+  EXPECT_EQ(computeKnownBits(F->getArg(0), Q).Zero, APInt(32, 0xfffffffe));
+  // The assumption constrains every input to A2, but only A's receiving lane.
+  EXPECT_TRUE(computeKnownBits(A, Q).isUnknown());
+  EXPECT_EQ(computeKnownBits(A2, Q).Zero, APInt(32, 0xfffffffe));
 }
 
 TEST_F(MatchSelectPatternTest, SimpleFMin) {
