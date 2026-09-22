@@ -277,15 +277,15 @@ AST_MATCHER_P(NamedDecl, hasReturnTypestateAttr,
   return false;
 }
 
-AST_MATCHER_P(NamedDecl, hasCallableWhenAttr, CallableWhenAttr::ConsumedState,
-              State) {
+AST_MATCHER(NamedDecl, hasCallableWhenAttr) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
     if (const auto *Attr = MD->getAttr<CallableWhenAttr>()) {
-      return llvm::is_contained(Attr->callableStates(), State);
+      return true;
     }
   }
   return false;
 }
+
 
 auto isOptionalMemberCallWithNameMatcher(
     ast_matchers::internal::Matcher<NamedDecl> matcher,
@@ -1340,12 +1340,34 @@ auto buildTransferMatchSwitch() {
 }
 
 llvm::SmallVector<UncheckedOptionalAccessDiagnostic>
+isCallableInState(const CXXMemberCallExpr* E, const Environment &Env) {
+  if (auto *OptionalLoc = cast_or_null<RecordStorageLocation>(
+          getLocBehindPossiblePointer(*E->getImplicitObjectArgument(), Env))) {
+    auto *Prop = Env.getValue(locForHasValue(*OptionalLoc));
+    if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
+      const auto& f = HasValueVal->formula();
+      if( Env.proves(f) ) // engaged
+        return {};
+      const auto& Range = CharSourceRange::getTokenRange(E->getSourceRange());
+      if( Env.proves(Env.arena().makeNot(f)) ) // empty
+      {
+        return {UncheckedOptionalAccessDiagnostic{Range}};
+      }
+      // unknown
+      return {UncheckedOptionalAccessDiagnostic{Range}};
+    }
+    return {};
+  }
+  return {};
+}
+
+llvm::SmallVector<UncheckedOptionalAccessDiagnostic>
 diagnoseUnwrapCall(const Expr *ObjectExpr, const Environment &Env) {
   if (auto *OptionalLoc = cast_or_null<RecordStorageLocation>(
           getLocBehindPossiblePointer(*ObjectExpr, Env))) {
     auto *Prop = Env.getValue(locForHasValue(*OptionalLoc));
     if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
-      if (Env.proves(HasValueVal->formula()))
+       if (Env.proves(HasValueVal->formula()))
         return {};
     }
   }
@@ -1373,7 +1395,17 @@ auto buildDiagnoseMatchSwitch(
               [](const CallExpr *E, const MatchFinder::MatchResult &,
                  const Environment &Env) {
                 return diagnoseUnwrapCall(E->getArg(0), Env);
-              });
+              })
+          //
+          .CaseOfCFGStmt<CXXMemberCallExpr>(
+                isOptionalMemberCallWithNameMatcher(
+                  hasCallableWhenAttr(),
+                  IgnorableOptional),
+            []( const CXXMemberCallExpr* E, const MatchFinder::MatchResult &,
+                 const Environment &Env){
+                    return isCallableInState(E, Env);
+                 }
+          );
 
   auto Builder = Options.IgnoreValueCalls
                      ? std::move(DiagBuilder)
