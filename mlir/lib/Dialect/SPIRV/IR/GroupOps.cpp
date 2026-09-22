@@ -218,10 +218,4 @@ LogicalResult GroupNonUniformLogicalXorOp::verify() {
   return verifyGroupNonUniformArithmeticOp<GroupNonUniformLogicalXorOp>(*this);
 }
 
-//===----------------------------------------------------------------------===//
-// spirv.GroupNonUniformRotateKHR
-//===----------------------------------------------------------------------===//
-
-LogicalResult GroupNonUniformRotateKHROp::verify() { return success(); }
-
 } // namespace mlir::spirv
