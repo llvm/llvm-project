@@ -72,7 +72,6 @@ jobs:
                   print $1
                 }')
           ninja -C "$BUILD_DIR" $TABLEGEN_TARGETS
-          ninja -C "$BUILD_DIR" check-llvm
 
       - name: Run ids check
         env:
@@ -97,3 +96,7 @@ jobs:
           name: workflow-args
           path: |
             llvm-project/comments
+
+      - name: Build and test libLLVM.so
+        run: |
+          ninja -C build check-llvm
