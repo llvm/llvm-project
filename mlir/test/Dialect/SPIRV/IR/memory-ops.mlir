@@ -746,7 +746,17 @@ func.func @copy_memory_target_bad_operand() {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
   // expected-error @+1 {{op not compatible with memory operand 'MakePointerVisible'}}
-  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+  spirv.Return
+}
+
+// -----
+
+func.func @copy_memory_target_make_pointer_available_missing_non_private() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  %1 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{op memory operand 'MakePointerAvailable' or 'MakePointerVisible' requires 'NonPrivatePointer' to also be specified}}
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable>, source_memory_access=#spirv.memory_access<None>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
   spirv.Return
 }
 
@@ -787,6 +797,17 @@ func.func @copy_memory_print_maa() {
 
   // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4], ["Aligned", 8] : f32
   "spirv.CopyMemory"(%0, %1) {source_memory_access=#spirv.memory_access<Aligned>, memory_access=#spirv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // A lone mask applies to both operands, so it may carry MakePointerVisible,
+  // MakePointerAvailable, or both. It must stay a lone mask when printed.
+  // CHECK: spirv.CopyMemory "Function" %{{[0-9]+}}, "Function" %{{[0-9]+}} ["MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{[0-9]+}}, "Function" %{{[0-9]+}} ["MakePointerAvailable|MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
+
+  // CHECK: spirv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["MakePointerAvailable|NonPrivatePointer"], ["MakePointerVisible|NonPrivatePointer"] : f32
+  "spirv.CopyMemory"(%0, %1) {memory_access=#spirv.memory_access<MakePointerAvailable|NonPrivatePointer>, source_memory_access=#spirv.memory_access<MakePointerVisible|NonPrivatePointer>} : (!spirv.ptr<f32, Function>, !spirv.ptr<f32, Function>) -> ()
 
   spirv.Return
 }
