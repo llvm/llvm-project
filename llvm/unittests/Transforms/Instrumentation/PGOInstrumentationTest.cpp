@@ -27,6 +27,7 @@ namespace {
 using namespace llvm;
 
 using testing::_;
+using ::testing::Combine;
 using ::testing::DoDefault;
 using ::testing::Invoke;
 using ::testing::NotNull;
@@ -192,12 +193,15 @@ TEST_P(PGOInstrumentationGenTest, Instrumented) {
   EXPECT_FALSE(IRInstrVar->isDeclaration());
 }
 
-struct PGOInstrumentationUseTest : Test, WithParamInterface<bool> {};
+struct PGOInstrumentationUseTest : Test,
+                                   WithParamInterface<std::tuple<bool, bool>> {
+};
 
-INSTANTIATE_TEST_SUITE_P(ExistingMetadata, PGOInstrumentationUseTest,
-                         Values(false, true));
+INSTANTIATE_TEST_SUITE_P(ProfileAvailability, PGOInstrumentationUseTest,
+                         Combine(Values(false, true), Values(false, true)));
 
-TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
+TEST_P(PGOInstrumentationUseTest, UniformityMetadataUsesPresence) {
+  const auto [HasUniformityProfile, HasExistingMetadata] = GetParam();
   static constexpr StringRef Code = R"(
     define i32 @f(i1 %cond) {
     entry:
@@ -259,7 +263,8 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
     std::string ProfileName = getIRPGOFuncName(*GenFunction);
     NamedInstrProfRecord Record(ProfileName, FunctionHash,
                                 std::vector<uint64_t>(NumCounters, 10));
-    Record.UniformityBits = {static_cast<uint8_t>(UniformityMask)};
+    if (HasUniformityProfile)
+      Record.UniformityBits = {static_cast<uint8_t>(UniformityMask)};
 
     InstrProfWriter Writer;
     ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::IRInstrumentation),
@@ -276,16 +281,37 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
     ASSERT_THAT(UseModule, NotNull());
     Function *UseFunction = UseModule->getFunction("f");
     ASSERT_THAT(UseFunction, NotNull());
-    if (GetParam()) {
+    if (HasExistingMetadata) {
       MDNode *UniformMD = MDNode::get(Context, {});
+      UseFunction->setMetadata(LLVMContext::MD_uniformity_profile, UniformMD);
       for (BasicBlock &BB : *UseFunction)
         BB.getTerminator()->setMetadata(
             LLVMContext::MD_block_uniformity_profile, UniformMD);
+      UseFunction->getEntryBlock().getTerminator()->setMetadata(
+          LLVMContext::MD_branch_uniformity_profile, UniformMD);
     }
     ModulePassManager UseMPM;
     UseMPM.addPass(PGOInstrumentationUse("/profile.profdata", "", false, FS));
     UseMPM.run(*UseModule, MAM);
     EXPECT_FALSE(verifyModule(*UseModule, &errs()));
+
+    MDNode *FunctionMD =
+        UseFunction->getMetadata(LLVMContext::MD_uniformity_profile);
+    // Missing uniformity data preserves existing hints. Observed nonuniformity
+    // replaces positive hints covered by the new profile.
+    EXPECT_EQ(FunctionMD != nullptr,
+              HasUniformityProfile || HasExistingMetadata);
+    if (FunctionMD)
+      EXPECT_EQ(FunctionMD->getNumOperands(), 0u);
+
+    auto *Branch =
+        cast<CondBrInst>(UseFunction->getEntryBlock().getTerminator());
+    MDNode *BranchMD =
+        Branch->getMetadata(LLVMContext::MD_branch_uniformity_profile);
+    EXPECT_EQ(BranchMD != nullptr,
+              HasUniformityProfile ? UniformityMask == 3 : HasExistingMetadata);
+    if (BranchMD)
+      EXPECT_EQ(BranchMD->getNumOperands(), 0u);
 
     for (unsigned I = 0; I < NumCounters; ++I) {
       BasicBlock *BB = nullptr;
@@ -296,7 +322,8 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
 
       MDNode *MD = BB->getTerminator()->getMetadata(
           LLVMContext::MD_block_uniformity_profile);
-      bool IsUniform = (UniformityMask & (1u << I)) != 0;
+      bool IsUniform = HasUniformityProfile ? (UniformityMask & (1u << I)) != 0
+                                            : HasExistingMetadata;
       EXPECT_EQ(MD != nullptr, IsUniform);
       if (MD)
         EXPECT_EQ(MD->getNumOperands(), 0u);
