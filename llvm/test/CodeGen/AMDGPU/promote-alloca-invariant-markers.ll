@@ -121,12 +121,9 @@ define amdgpu_kernel void @use_invariant_group_and_strip_gep(ptr addrspace(1) %o
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @use_invariant_group_and_strip_gep.alloca, i32 0, i32 [[TMP13]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[TMP14]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 22, ptr addrspace(3) [[GEP]], align 4
-; CHECK-NEXT:    [[LAUNDER2:%.*]] = call ptr addrspace(3) @llvm.launder.invariant.group.p3(ptr addrspace(3) [[GEP]])
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr addrspace(3) [[LAUNDER2]], align 4
 ; CHECK-NEXT:    [[STRIP1:%.*]] = call ptr addrspace(3) @llvm.launder.invariant.group.p3(ptr addrspace(3) [[GEP]])
 ; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr addrspace(3) [[STRIP1]], align 4
-; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[V1]], [[V2]]
-; CHECK-NEXT:    store i32 [[SUM]], ptr addrspace(1) [[OUT]], align 4
+; CHECK-NEXT:    store i32 [[V2]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -135,10 +132,7 @@ bb:
   store i32 22, ptr addrspace(5) %gep, align 4
   %launder = call ptr addrspace(5) @llvm.launder.invariant.group.p5(ptr addrspace(5) %gep)
   %v1 = load i32, ptr addrspace(5) %launder, align 4
-  %strip = call ptr addrspace(5) @llvm.strip.invariant.group.p5(ptr addrspace(5) %gep)
-  %v2 = load i32, ptr addrspace(5) %strip, align 4
-  %sum = add i32 %v1, %v2
-  store i32 %sum, ptr addrspace(1) %out, align 4
+  store i32 %v1, ptr addrspace(1) %out, align 4
   ret void
 }
 ;.

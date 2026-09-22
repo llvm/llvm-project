@@ -801,7 +801,6 @@ define void @ptr_uses(ptr %ptr, ptr %wptr) {
 }
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
-declare ptr @llvm.strip.invariant.group.p0(ptr)
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }

@@ -1423,4 +1423,3 @@ define void @captures_metadata_provenance(ptr %x, ptr %y) {
 }
 
 declare ptr @llvm.launder.invariant.group.p0(ptr)
-declare ptr @llvm.strip.invariant.group.p0(ptr)
