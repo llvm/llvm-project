@@ -236,6 +236,12 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
+  /// Attach @llvm.can.load.speculatively checks for \p Plan's speculative
+  /// loads, bypassing the vector loop if any fails.
+  static void attachSpeculativeLoadChecks(VPlan &Plan, ElementCount VF,
+                                          PredicatedScalarEvolution &PSE,
+                                          Loop *TheLoop, bool AddBranchWeights);
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed. Uses \p PSE to detect contiguous memory
@@ -373,14 +379,13 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Check if all loads in the loop are dereferenceable. Iterates over the
-  /// loop body blocks reachable from \p HeaderVPBB. Returns false if any
-  /// non-dereferenceable load is found.
-  static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
-                                         Loop *TheLoop,
-                                         PredicatedScalarEvolution &PSE,
-                                         DominatorTree &DT,
-                                         AssumptionCache *AC);
+  /// Replace loads that may fault with @llvm.speculative.load, backed by an
+  /// oracle plan replaying \p Plan's exit conditions. Must run before the early
+  /// exits are flattened. Returns false if a load cannot be replaced.
+  static bool replaceUnsafeLoadsWithSpeculative(VPlan &Plan, Loop *TheLoop,
+                                                PredicatedScalarEvolution &PSE,
+                                                DominatorTree &DT,
+                                                AssumptionCache *AC);
 
   /// Update \p Plan to account for uncountable early exits by introducing
   /// appropriate branching logic in the latch that handles early exits and the

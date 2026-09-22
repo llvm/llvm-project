@@ -37,6 +37,26 @@ namespace {
 using VPInstructionTest = VPlanTestBase;
 using VPlanSCEVTest = VPlanTestIRBase;
 
+TEST_F(VPInstructionTest, ReturnKeepsOperandAlive) {
+  VPlan &Plan = getPlan();
+  auto *Exit = Plan.createVPBasicBlock("exit");
+  Plan.setEntry(Exit);
+  VPBuilder Builder(Exit);
+  VPValue *One = Plan.getConstantInt(64, 1);
+  VPInstruction *Value = Builder.createAdd(One, One);
+  Builder.createAdd(Value, One);
+  VPInstruction *Ret = Builder.createNaryOp(Instruction::Ret, Value);
+
+  VPlanTransforms::removeDeadRecipes(Plan);
+  EXPECT_EQ(Exit->size(), 2u);
+  EXPECT_EQ(&Exit->front(), Value);
+  EXPECT_EQ(Exit->getTerminator(), Ret);
+  EXPECT_EQ(std::as_const(*Exit).getTerminator(), Ret);
+  EXPECT_TRUE(Ret->getScalarType()->isVoidTy());
+  EXPECT_FALSE(Ret->mayReadOrWriteMemory());
+  EXPECT_TRUE(Ret->usesFirstLaneOnly(Value));
+}
+
 TEST_F(VPlanSCEVTest, GetSCEVExprForVPValueAbs) {
   const char *ModuleString = R"(
 define void @f(i32 %x) {

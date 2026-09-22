@@ -23,6 +23,77 @@ LLVM_ABI extern cl::opt<bool> VerifyEachVPlan;
 using VPVerifierTest = VPlanTestBase;
 
 namespace {
+TEST_F(VPVerifierTest, ReturnTerminator) {
+  VPlan &Plan = getPlan();
+  auto *Exit = Plan.createVPBasicBlock("exit");
+  Plan.setEntry(Exit);
+  VPValue *One = Plan.getConstantInt(64, 1);
+  VPBuilder Builder(Exit);
+  Builder.createNaryOp(Instruction::Ret, One);
+  EXPECT_TRUE(verifyVPlanIsValid(Plan));
+
+  auto CheckInvalidReturn = [&]() {
+#if GTEST_HAS_STREAM_REDIRECTION
+    ::testing::internal::CaptureStderr();
+#endif
+    EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+    EXPECT_STREQ(
+        "Return must terminate a top-level block without successors!\n",
+        ::testing::internal::GetCapturedStderr().c_str());
+#endif
+  };
+
+  // A return must be the last recipe in its block.
+  VPInstruction *AfterRet = Builder.createAdd(One, One);
+  CheckInvalidReturn();
+  AfterRet->eraseFromParent();
+
+  // A return cannot have a successor.
+  VPBlockUtils::connectBlocks(Exit, Plan.getScalarHeader());
+  CheckInvalidReturn();
+  VPBlockUtils::disconnectBlocks(Exit, Plan.getScalarHeader());
+
+  // A return cannot terminate a block inside a loop region.
+  auto *Entry = Plan.createVPBasicBlock("entry");
+  Plan.setEntry(Entry);
+  auto *Region = Plan.createLoopRegion(One->getScalarType(), DebugLoc(), "loop",
+                                       Exit, Exit);
+  VPBlockUtils::connectBlocks(Entry, Region);
+  CheckInvalidReturn();
+}
+
+TEST_F(VPVerifierTest, LiveIn) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Entry = Plan.getEntry();
+  Type *I64Ty = Type::getInt64Ty(C);
+  VPBuilder Builder(Entry);
+  Builder.createLiveIn(0, I64Ty);
+  VPInstruction *LiveIn1 = Builder.createLiveIn(1, I64Ty);
+  EXPECT_TRUE(verifyVPlanIsValid(Plan));
+
+  auto CheckInvalidPlan = [&](const char *Msg) {
+#if GTEST_HAS_STREAM_REDIRECTION
+    ::testing::internal::CaptureStderr();
+#endif
+    EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+    EXPECT_STREQ(Msg, ::testing::internal::GetCapturedStderr().c_str());
+#endif
+  };
+
+  // Live-ins must have distinct indices.
+  VPInstruction *Duplicate = Builder.createLiveIn(1, I64Ty);
+  CheckInvalidPlan("Multiple live-ins with index 1!\n");
+  Duplicate->eraseFromParent();
+
+  // Live-ins must be in the plan's entry block.
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock("bb");
+  VPBlockUtils::connectBlocks(Entry, VPBB);
+  LiveIn1->moveBefore(*VPBB, VPBB->end());
+  CheckInvalidPlan("Live-in must be in the plan's entry block!\n");
+}
+
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);

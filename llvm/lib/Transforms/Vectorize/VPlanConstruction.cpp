@@ -1229,14 +1229,157 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
     R->eraseFromParent();
 }
 
-bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
-                                                 Loop *TheLoop,
-                                                 PredicatedScalarEvolution &PSE,
-                                                 DominatorTree &DT,
-                                                 AssumptionCache *AC) {
+/// Clone plain CFG \p Plan into an oracle plan: a scalar loop with trip count
+/// VF replaying the exit conditions, returning safe lanes * \p AccessSize
+/// bytes.
+static VPSpeculativeLoadOracleRecipe *buildOraclePlan(VPlan &Plan,
+                                                      uint64_t AccessSize) {
+  std::unique_ptr<VPlan> OraclePlan(Plan.duplicate());
+
+  auto [HeaderVPBB, LatchVPBB] =
+      VPBlockUtils::getPlainCFGHeaderAndLatch(*OraclePlan);
+  Type *IVTy = OraclePlan->getVectorTripCount().getType();
+  VPValue *Zero = OraclePlan->getZero(IVTy);
+  VPValue *One = OraclePlan->getConstantInt(IVTy, 1);
+  auto *LatchTerm = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(match(LatchTerm, m_BranchOnCond()) && "Unexpected terminator");
+  auto *ScalarIVPHI =
+      VPBuilder(HeaderVPBB, HeaderVPBB->begin())
+          .createScalarPhi({Zero}, DebugLoc::getUnknown(), "index");
+  VPBuilder LatchBuilder(LatchTerm);
+  VPValue *IVInc = LatchBuilder.createAdd(
+      ScalarIVPHI, One, DebugLoc::getUnknown(), "index.next", {true, false});
+  ScalarIVPHI->addIncoming(IVInc);
+  LatchBuilder.createNaryOp(VPInstruction::BranchOnCount,
+                            {IVInc, &OraclePlan->getVF()},
+                            LatchTerm->getDebugLoc());
+  LatchTerm->eraseFromParent();
+
+  // Make the header the entry's single successor; the original entry and the
+  // vector skeleton become unreachable.
+  auto *NewEntry = OraclePlan->createVPBasicBlock("oracle.entry");
+  OraclePlan->setEntry(NewEntry);
+  VPBlockUtils::disconnectBlocks(HeaderVPBB->getPredecessors()[0], HeaderVPBB);
+  VPBlockUtils::connectBlocks(NewEntry, HeaderVPBB);
+  HeaderVPBB->swapPredecessors();
+
+  // Update the IV to start at the current vector iteration, passed as argument
+  // to the oracle function.
+  VPValue *BaseIndex = VPBuilder(NewEntry).createLiveIn(0, IVTy, "base.index");
+  VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+  auto *AdjustedIV = Builder.createAdd(ScalarIVPHI, BaseIndex,
+                                       DebugLoc::getUnknown(), "adjusted.iv");
+
+  // Replace wide inductions with scalar equivalents based on the adjusted IV.
+  assert(
+      none_of(HeaderVPBB->phis(),
+              IsaPred<VPReductionPHIRecipe, VPFirstOrderRecurrencePHIRecipe>) &&
+      "unsupported header phi in the oracle plan");
+  for (VPWidenIntOrFpInductionRecipe &WideIV : make_early_inc_range(
+           make_isa_range<VPWidenIntOrFpInductionRecipe>(HeaderVPBB->phis()))) {
+    const InductionDescriptor &ID = WideIV.getInductionDescriptor();
+    WideIV.replaceAllUsesWith(Builder.createDerivedIV(
+        ID.getKind(), dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()),
+        WideIV.getStartValue(), AdjustedIV, WideIV.getStepValue()));
+    WideIV.eraseFromParent();
+  }
+
+  // Redirect all early exits and the latch exit to a single new exit block.
+  auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(*OraclePlan);
+  auto *ExitVPBB = OraclePlan->createVPBasicBlock("oracle.exit");
+  for (auto [Pred, EarlyExitVPBB] :
+       vputils::getEarlyExits(*OraclePlan, MiddleVPBB)) {
+    for (VPRecipeBase &R : EarlyExitVPBB->phis())
+      cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+    VPBlockUtils::replaceSuccessor(Pred, EarlyExitVPBB, ExitVPBB);
+  }
+  VPBlockUtils::replaceSuccessor(LatchVPBB, MiddleVPBB, ExitVPBB);
+
+  // The scalar header is unreachable.
+  VPBlockUtils::disconnectBlocks(OraclePlan->getScalarPreheader(),
+                                 OraclePlan->getScalarHeader());
+
+  // Reset a recipe-defined trip count; it now lives in an unreachable block.
+  VPValue *TC = OraclePlan->getTripCount();
+  if (TC->getDefiningRecipe()) {
+    TC->replaceAllUsesWith(Zero);
+    OraclePlan->resetTripCount(Zero);
+  }
+  // Return the number of valid leading bytes: (exit IV + 1) * store size.
+  Type *I64Ty = Type::getInt64Ty(OraclePlan->getContext());
+  VPBuilder ExitBuilder(ExitVPBB);
+  VPValue *LaneCount = ExitBuilder.createScalarZExtOrTrunc(
+      ExitBuilder.createAdd(ScalarIVPHI, One, DebugLoc::getUnknown(), "lanes"),
+      I64Ty, {});
+  VPValue *ByteCount = ExitBuilder.createOverflowingOp(
+      Instruction::Mul,
+      {LaneCount, OraclePlan->getConstantInt(I64Ty, AccessSize)}, {},
+      DebugLoc::getUnknown(), "bytes");
+  ExitBuilder.createNaryOp(Instruction::Ret, ByteCount);
+
+  VPlanTransforms::removeDeadRecipes(*OraclePlan);
+  VPlanTransforms::convertToConcreteRecipes(*OraclePlan);
+  VPlanTransforms::combineRecipes(*OraclePlan);
+
+  // Scalarize the remaining Load and GEP recipes in the executable CFG.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      HeaderVPBB);
+  auto OracleBlocks = VPBlockUtils::blocksAs<VPBasicBlock>(RPOT);
+  for (VPBasicBlock *VPBB : OracleBlocks) {
+    for (VPInstruction &VPI :
+         make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+      unsigned Opc = VPI.getOpcode();
+      if (Opc != Instruction::Load && Opc != Instruction::GetElementPtr)
+        continue;
+      auto *Replicate = VPBuilder::createSingleScalarOp(
+          Opc, VPI.operands(), /*Mask=*/nullptr, VPI, VPI, VPI.getDebugLoc(),
+          VPI.getUnderlyingInstr());
+      Replicate->insertBefore(&VPI);
+      VPI.replaceAllUsesWith(Replicate);
+      VPI.eraseFromParent();
+    }
+  }
+
+  // Collect the live-ins the oracle needs, those will become function
+  // arguments.
+  SetVector<VPIRValue *> LiveIns;
+  for (VPBasicBlock *VPBB : OracleBlocks)
+    for (VPRecipeBase &R : *VPBB)
+      for (VPValue *Op : R.operands()) {
+        auto *LiveIn = dyn_cast<VPIRValue>(Op);
+        if (LiveIn && !isa<ConstantData>(LiveIn->getValue()))
+          LiveIns.insert(LiveIn);
+      }
+
+  auto SymbolicBaseIndex = std::make_unique<VPSymbolicValue>(IVTy);
+  SmallVector<VPValue *> Operands = {SymbolicBaseIndex.get()};
+  VPBuilder EntryBuilder(NewEntry);
+  for (VPIRValue *LiveIn : LiveIns) {
+    Value *V = LiveIn->getValue();
+    LiveIn->replaceAllUsesWith(
+        EntryBuilder.createLiveIn(Operands.size(), V->getType(), V->getName()));
+    Operands.push_back(Plan.getOrAddLiveIn(V));
+  }
+
+  return new VPSpeculativeLoadOracleRecipe(std::move(OraclePlan), AccessSize,
+                                           Operands,
+                                           std::move(SymbolicBaseIndex));
+}
+
+bool VPlanTransforms::replaceUnsafeLoadsWithSpeculative(
+    VPlan &Plan, Loop *TheLoop, PredicatedScalarEvolution &PSE,
+    DominatorTree &DT, AssumptionCache *AC) {
   ScalarEvolution &SE = *PSE.getSE();
-  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
-  for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
+  const DataLayout &DL = Plan.getDataLayout();
+  auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  auto Bail = [](const char *Reason) {
+    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: " << Reason << ".\n");
+    return false;
+  };
+
+  auto LoopBody = vp_rpo_plain_cfg_loop_body(HeaderVPBB);
+  SmallVector<VPInstruction *> UnsafeLoads;
+  for (VPBasicBlock *VPBB : LoopBody) {
     for (VPRecipeBase &R : *VPBB) {
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI || VPI->getOpcode() != Instruction::Load) {
@@ -1245,30 +1388,89 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
       }
 
       // Get the pointer SCEV for dereferenceability checking.
-      VPValue *Ptr = VPI->getOperand(0);
-      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
-      if (isa<SCEVCouldNotCompute>(PtrSCEV)) {
-        LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Found non-dereferenceable "
-                             "load with SCEVCouldNotCompute pointer\n");
-        return false;
-      }
+      const SCEV *PtrSCEV =
+          vputils::getSCEVExprForVPValue(VPI->getOperand(0), PSE, TheLoop);
+      if (isa<SCEVCouldNotCompute>(PtrSCEV))
+        return Bail("load pointer SCEV cannot be computed");
 
-      // Check dereferenceability using the SCEV-based version.
-      Type *LoadTy = VPI->getScalarType();
-      const SCEV *SizeSCEV =
-          SE.getStoreSizeOfExpr(DL.getIndexType(PtrSCEV->getType()), LoadTy);
+      // TODO: Support safe loop-invariant loads here.
+      const SCEV *SizeSCEV = SE.getStoreSizeOfExpr(
+          DL.getIndexType(PtrSCEV->getType()), VPI->getScalarType());
       auto *Load = cast<LoadInst>(VPI->getUnderlyingValue());
       SmallVector<const SCEVPredicate *> Preds;
       if (isDereferenceableAndAlignedInLoop(PtrSCEV, Load->getAlign(), SizeSCEV,
                                             TheLoop, SE, DT, AC, &Preds))
         continue;
 
-      LLVM_DEBUG(
-          dbgs() << "LV: Not vectorizing: Auto-vectorization of loops with "
-                    "potentially faulting load is not supported.\n");
-      return false;
+      UnsafeLoads.push_back(VPI);
     }
   }
+
+  if (UnsafeLoads.empty())
+    return true;
+
+  // TODO: Support loads with different element types.
+  Type *EltTy = UnsafeLoads.front()->getScalarType();
+  uint64_t AccessSize = DL.getTypeStoreSize(EltTy).getFixedValue();
+  if (EltTy->getPrimitiveSizeInBits().getKnownMinValue() != AccessSize * 8 ||
+      !isPowerOf2_64(AccessSize) ||
+      any_of(UnsafeLoads,
+             [EltTy](VPInstruction *L) { return L->getScalarType() != EltTy; }))
+    return Bail("unsupported element type for speculative loads");
+
+  // TODO: Support non-unit-strided loads.
+  if (any_of(UnsafeLoads, [&](VPInstruction *L) {
+        return vputils::getConstantStride(L->getOperand(0), EltTy, PSE,
+                                          TheLoop) != 1;
+      }))
+    return Bail("speculative load is not a consecutive access");
+
+  auto EarlyExits =
+      vputils::getEarlyExits(Plan, VPBlockUtils::getPlainCFGMiddleBlock(Plan));
+  if (EarlyExits.size() != 1)
+    return Bail("loop has multiple early exits");
+
+  VPBasicBlock *EarlyExitingVPBB = EarlyExits.front().first;
+  VPDominatorTree VPDT(Plan);
+  for (VPInstruction *VPI : UnsafeLoads)
+    if (!VPDT.dominates(VPI->getParent(), EarlyExitingVPBB) ||
+        !VPDT.dominates(VPI->getParent(), LatchVPBB))
+      return Bail("conditionally executed unsafe load");
+
+  // TODO: Extend oracle logic to support remaining recipes.
+  auto ContainsUnsupportedRecipes = [](const VPRecipeBase &R) {
+    if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+      unsigned Opc = VPI->getOpcode();
+      // Independent freezes can make the oracle exit before the vector loop,
+      // replacing a later, defined exit's loaded value with poison.
+      return Opc == Instruction::Call || Opc == Instruction::FCmp ||
+             Opc == Instruction::Freeze || Instruction::isUnaryOp(Opc);
+    }
+    if (isa<VPWidenPointerInductionRecipe>(&R))
+      return true;
+    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
+    return IV && IV->getStepValue()->getDefiningRecipe();
+  };
+  if (any_of(LoopBody, [&](VPBasicBlock *VPBB) {
+        return any_of(*VPBB, ContainsUnsupportedRecipes);
+      }))
+    return Bail("loop body cannot be replayed by a speculative-load oracle");
+
+  auto *Oracle = buildOraclePlan(Plan, AccessSize);
+  Oracle->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+
+  for (VPInstruction *VPI : UnsafeLoads) {
+    SmallVector<VPValue *> Ops = {VPI->getOperand(0),
+                                  /*FromEnd=*/Plan.getFalse(), Oracle};
+    append_range(Ops, Oracle->operands());
+    VPBuilder Builder(VPI);
+    VPValue *SpecLoad = Builder.insert(new VPWidenIntrinsicRecipe(
+        Intrinsic::speculative_load, Ops, VPI->getScalarType(), {}, {},
+        VPI->getDebugLoc()));
+    VPI->replaceAllUsesWith(Builder.createFreeze(SpecLoad, VPI->getDebugLoc()));
+    VPI->eraseFromParent();
+  }
+
   return true;
 }
 
@@ -1333,6 +1535,11 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, DebugLoc DL) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
   TopRegion->getEntryBasicBlock()->setName("vector.body");
+
+  // A speculative-load oracles start at the current canonical IV.
+  if (auto *Oracle = vputils::findSpeculativeLoadOracle(Plan))
+    cast<VPSymbolicValue>(Oracle->getOperand(0))
+        ->replaceAllUsesWith(TopRegion->getCanonicalIV());
 }
 
 void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
@@ -1491,6 +1698,38 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
   VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
   attachVPCheckBlock(Plan, CondVPV, CheckBlockVPBB, AddBranchWeights);
+}
+
+void VPlanTransforms::attachSpeculativeLoadChecks(
+    VPlan &Plan, ElementCount VF, PredicatedScalarEvolution &PSE, Loop *TheLoop,
+    bool AddBranchWeights) {
+  auto *Oracle = vputils::findSpeculativeLoadOracle(Plan);
+  if (!Oracle)
+    return;
+
+  VPBasicBlock *CheckBlockVPBB = Plan.createVPBasicBlock("spec.load.check");
+  VPBuilder Builder(CheckBlockVPBB);
+  Type *I1Ty = Type::getInt1Ty(Plan.getContext());
+  Type *I64Ty = Type::getInt64Ty(Plan.getContext());
+  VPValue *SizeVal =
+      Builder.createElementCount(I64Ty, VF * Oracle->getAccessSize());
+  VPValue *AllChecksPassed = Plan.getTrue();
+  for (VPUser *U : Oracle->users()) {
+    auto *R = cast<VPWidenIntrinsicRecipe>(U);
+    const SCEV *PtrSCEV =
+        vputils::getSCEVExprForVPValue(R->getOperand(0), PSE, TheLoop);
+    assert(!isa<SCEVCouldNotCompute>(PtrSCEV) && "non-computable pointer SCEV");
+    auto *AR = cast<SCEVAddRecExpr>(PtrSCEV);
+    PtrSCEV = AR->getStart();
+    VPValue *StartPtr = vputils::getOrCreateVPValueForSCEVExpr(Plan, PtrSCEV);
+    VPValue *IsSafe = Builder.createScalarIntrinsic(
+        Intrinsic::can_load_speculatively, {StartPtr, SizeVal}, I1Ty,
+        DebugLoc::getUnknown());
+    AllChecksPassed = Builder.createAnd(AllChecksPassed, IsSafe);
+  }
+
+  attachVPCheckBlock(Plan, Builder.createNot(AllChecksPassed), CheckBlockVPBB,
+                     AddBranchWeights);
 }
 
 void VPlanTransforms::addMinimumIterationCheck(

@@ -165,6 +165,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   };
 
   VPValue *LHSVal, *RHSVal;
+  // Broadcast just replicates a scalar, so the SCEV is the same as its operand.
+  if (match(V, m_Broadcast(m_VPValue(LHSVal))))
+    return getSCEVExprForVPValue(LHSVal, PSE, L);
   if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
@@ -610,6 +613,13 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
   for (VPRecipeBase &R : *Plan.getVectorPreheader())
     if (match(&R, m_VPInstruction<VPInstruction::IncomingAliasMask>()))
       return cast<VPInstruction>(&R);
+  return nullptr;
+}
+
+VPSpeculativeLoadOracleRecipe *vputils::findSpeculativeLoadOracle(VPlan &Plan) {
+  for (VPRecipeBase &R : *Plan.getVectorLoopRegion()->getEntryBasicBlock())
+    if (auto *Oracle = dyn_cast<VPSpeculativeLoadOracleRecipe>(&R))
+      return Oracle;
   return nullptr;
 }
 
