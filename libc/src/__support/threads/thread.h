@@ -71,11 +71,12 @@ struct Thread {
   int run(ThreadRunnerPosix *func, void *arg, void *stack = nullptr,
           size_t stacksize = DEFAULT_STACKSIZE,
           size_t guardsize = DEFAULT_GUARDSIZE,
-          bool detached = DEFAULT_DETACHED) {
+          bool detached = DEFAULT_DETACHED,
+          cpp::optional<SchedParameters> sched_params = cpp::nullopt) {
     ThreadRunner runner;
     runner.posix_runner = func;
     return run(ThreadStyle::POSIX, runner, arg, stack, stacksize, guardsize,
-               detached);
+               detached, sched_params);
   }
 
   int run(ThreadRunnerStdc *func, void *arg, void *stack = nullptr,
@@ -85,7 +86,7 @@ struct Thread {
     ThreadRunner runner;
     runner.stdc_runner = func;
     return run(ThreadStyle::STDC, runner, arg, stack, stacksize, guardsize,
-               detached);
+               detached, cpp::nullopt);
   }
 
   int join(int *val) {
@@ -112,7 +113,8 @@ struct Thread {
 
   // Return 0 on success or an error value on failure.
   int run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
-          size_t stacksize, size_t guardsize, bool detached);
+          size_t stacksize, size_t guardsize, bool detached,
+          cpp::optional<SchedParameters> sched_params = cpp::nullopt);
 
   // Return 0 on success or an error value on failure.
   int join(ThreadReturnValue &retval);
