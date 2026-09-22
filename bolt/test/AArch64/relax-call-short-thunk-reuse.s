@@ -84,7 +84,7 @@ E:
 .E_entry:
 # FDATA: 1 E #.E_entry# 100
   ret
-  .space 0x80
+  .space 0x78
   .size E, .-E
 
   .globl F

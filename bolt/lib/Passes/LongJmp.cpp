@@ -1325,8 +1325,13 @@ void ClusteredRelaxation::buildLayout() {
 void ClusteredRelaxation::printStats() const {
   BC.outs() << "BOLT-INFO: built " << Clusters.size()
             << " function fragment cluster(s)\n";
+
   for (size_t I = 0; I < Clusters.size(); ++I) {
     const FragmentCluster &FC = Clusters[I];
+
+    assert(FC.ActualThunkBytes <= FC.EstimatedThunkBytes &&
+           "thunk estimate exceeded; range checks used a stale safety margin");
+
     BC.outs() << "BOLT-INFO: cluster: " << I << '\n'
               << "BOLT-INFO:   " << FC.NumFragments << " fragment(s)\n"
               << "BOLT-INFO:   " << FC.Size
@@ -1447,9 +1452,8 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
 }
 
 void ClusteredRelaxation::estimateThunkBytes() {
-  // Estimate in the same order as relaxation so reuse approximates the
-  // thunks that will actually be created below. This models the worst case
-  // by assuming selected thunks are necessary without performing range checks.
+  // Conservatively estimate both branch chains and long thunks without range
+  // checks or cross-cluster reuse. Deduplicate targets within each cluster.
   SmallVector<DenseSet<const MCSymbol *>, 4> BranchThunkTargets;
   SmallVector<DenseSet<const MCSymbol *>, 4> LongThunkTargets;
   BranchThunkTargets.resize(Clusters.size());
@@ -1460,7 +1464,6 @@ void ClusteredRelaxation::estimateThunkBytes() {
     auto getClusterAtHop = [&](unsigned Hop) {
       return IsForward ? Ref.SourceCluster + Hop : Ref.SourceCluster - Hop;
     };
-
     const unsigned NumHops =
         getClusterDistance(Ref.SourceCluster, Ref.TargetCluster);
     for (unsigned Hop = 0; Hop < NumHops; ++Hop) {
@@ -1471,36 +1474,17 @@ void ClusteredRelaxation::estimateThunkBytes() {
   };
 
   auto estimateLongThunk = [&](const OutOfRangeRef &Ref) {
-    const unsigned SourceCluster = Ref.SourceCluster;
-    const bool IsForward = SourceCluster < Ref.TargetCluster;
-    if (LongThunkTargets[SourceCluster].contains(Ref.TargetSymbol))
-      return;
-
-    unsigned ReuseCluster = -1u;
-    if (IsForward && SourceCluster > 0)
-      ReuseCluster = SourceCluster - 1;
-    else if (!IsForward && SourceCluster + 1 < Clusters.size())
-      ReuseCluster = SourceCluster + 1;
-
-    if (ReuseCluster != -1u &&
-        LongThunkTargets[ReuseCluster].contains(Ref.TargetSymbol))
-      return;
-
-    LongThunkTargets[SourceCluster].insert(Ref.TargetSymbol);
-    Clusters[SourceCluster].EstimatedThunkBytes += LongThunkSize;
+    if (LongThunkTargets[Ref.SourceCluster].insert(Ref.TargetSymbol).second)
+      Clusters[Ref.SourceCluster].EstimatedThunkBytes += LongThunkSize;
   };
 
   for (const OutOfRangeRef &Call : OutOfLayoutCalls)
     estimateLongThunk(Call);
 
-  for (auto &Calls : llvm::reverse(CallsByDistance)) {
+  for (const auto &Calls : CallsByDistance) {
     for (const OutOfRangeRef &Call : Calls) {
-      const unsigned Distance =
-          getClusterDistance(Call.SourceCluster, Call.TargetCluster);
-      if (Distance <= opts::MaxThunkChainLength)
-        estimateBranchThunks(Call);
-      else
-        estimateLongThunk(Call);
+      estimateBranchThunks(Call);
+      estimateLongThunk(Call);
     }
   }
 
