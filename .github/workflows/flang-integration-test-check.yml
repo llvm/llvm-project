@@ -1,19 +1,23 @@
 name: Flang integration test check
 
 on:
-  pull_request_target:
+  # This workflow needs pull_request_target so it can comment on pull requests
+  # from forks. It only examines patches using the GitHub API and never checks
+  # out or executes code from the pull request branch.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, synchronize, reopened]
     paths:
       - "flang/test/**"
 
-# This workflow only inspects file patches through the GitHub API. In
-# particular, it must not check out or execute code from the pull request.
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   check-for-full-pipeline-tests:
+    if: github.repository == 'llvm/llvm-project'
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-24.04
     steps:
       - name: Check for new full-pipeline test invocations
