@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
-      - "flang/test/**"
+      - "flang/**"
       - ".github/workflows/flang-integration-test-check.yml"
 
 permissions:
