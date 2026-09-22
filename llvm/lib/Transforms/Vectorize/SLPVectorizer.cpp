@@ -13155,9 +13155,10 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
           if (!I || (TE.isAltShuffle() && I->getOpcode() != Instruction::FAdd &&
                      I->getOpcode() != Instruction::FSub))
             continue;
-          if (canConvertToFMA(I, InstructionsState(I, I), *DT, *DL, *TTI, *TLI,
-                              *this, getFMulOperandIdx(I))
-                  .isValid()) {
+          std::optional<unsigned> FMulOpIdx = getFMulOperandIdx(I);
+          if (FMulOpIdx && canConvertToFMA(I, InstructionsState(I, I), *DT, *DL,
+                                           *TTI, *TLI, *this, *FMulOpIdx)
+                               .isValid()) {
             assert(Count > 0 && "Underflow in scalar inst count (fma)");
             --Count;
           }
@@ -16393,9 +16394,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     return IntrinsicCost;
   };
   auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
-                                         Instruction *VI, unsigned FMulOpIdx) {
+                                         Instruction *VI,
+                                         std::optional<unsigned> FMulOpIdx) {
+    if (!FMulOpIdx)
+      return InstructionCost::getInvalid();
     InstructionCost Cost =
-        canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, *this, FMulOpIdx);
+        canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, *this, *FMulOpIdx);
     return Cost;
   };
   switch (ShuffleOrOp) {
@@ -16881,8 +16885,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       for (Value *V : E->Scalars) {
         if (auto *FPCI = dyn_cast<FPMathOperator>(V)) {
           FMF &= FPCI->getFastMathFlags();
-          if (auto *FPCIOp = dyn_cast<FPMathOperator>(FPCI->getOperand(0)))
-            FMF &= FPCIOp->getFastMathFlags();
+          if (E->isCopyableElement(V))
+            continue;
+          if (std::optional<unsigned> FMulOpIdx =
+                  getFMulOperandIdx(cast<Instruction>(V)))
+            FMF &= cast<FPMathOperator>(FPCI->getOperand(*FMulOpIdx))
+                       ->getFastMathFlags();
         }
       }
       IntrinsicCostAttributes ICA(Intrinsic::fmuladd, VecTy,
@@ -34517,14 +34525,15 @@ bool SLPVectorizerPass::tryToVectorize(
     return false;
   // Skip potential FMA candidates and collect them for a retry after all other
   // instructions in the block have been processed.
-  if (!AllowFMACandidates &&
-      (I->getOpcode() == Instruction::FAdd ||
-       I->getOpcode() == Instruction::FSub) &&
-      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI, R,
-                      getFMulOperandIdx(I))
-          .isValid()) {
-    FMACandidates.insert(I);
-    return false;
+  if (!AllowFMACandidates && (I->getOpcode() == Instruction::FAdd ||
+                              I->getOpcode() == Instruction::FSub)) {
+    std::optional<unsigned> FMulOpIdx = getFMulOperandIdx(I);
+    if (FMulOpIdx && canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI,
+                                     *TLI, R, *FMulOpIdx)
+                         .isValid()) {
+      FMACandidates.insert(I);
+      return false;
+    }
   }
 
   Value *P = I->getParent();
@@ -35839,7 +35848,7 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
       auto *U = cast<Instruction>(I.user_back());
       if (InstructionsState S = getSameOpcode(U, *TLI);
           S && S.isAddSubLikeOp() &&
-          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R, getFMulOperandIdx(U))
+          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R, *getFMulOperandIdx(U))
               .isValid())
         continue;
     }

@@ -1019,14 +1019,14 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
   return Narrow;
 }
 
-unsigned getFMulOperandIdx(const Instruction *I) {
+std::optional<unsigned> getFMulOperandIdx(const Instruction *I) {
   assert((I->getOpcode() == Instruction::FAdd ||
           I->getOpcode() == Instruction::FSub) &&
          "Expected an fadd/fsub-like instruction");
   for (auto [Idx, Op] : enumerate(I->operand_values()))
     if (match(Op, m_OneUse(m_FMul(m_Value(), m_Value()))))
       return Idx;
-  return 0;
+  return std::nullopt;
 }
 
 namespace {
