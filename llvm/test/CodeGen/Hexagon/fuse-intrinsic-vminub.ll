@@ -7,6 +7,8 @@
 ; FUSE-LABEL: fused:
 ; FUSE-NOT: cmp.gtu
 ; FUSE: [[V:r[0-9]+:[0-9]+]],[[P:p[0-3]]] = vminub(
+; FUSE-DAG: r{{[0-9]+}} = [[P]]
+; FUSE-DAG: memd(gp+#g) = [[V]]
 define i32 @fused(i64 %a, i64 %b) {
 entry:
   %p = tail call i32 @llvm.hexagon.C2.cmpgtup(i64 %a, i64 %b)
