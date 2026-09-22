@@ -8,6 +8,7 @@
 
 #include "PISARegisterBankInfo.h"
 #include "PISARegisterInfo.h"
+#include "PISASubtarget.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
@@ -29,7 +30,7 @@ PISARegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  const PISARegisterInfo *TRI = MF.getSubtarget<PISASubtarget>().getRegisterInfo();
 
   SmallVector<const ValueMapping *, 8> OpdsMapping(MI.getNumOperands());
 
