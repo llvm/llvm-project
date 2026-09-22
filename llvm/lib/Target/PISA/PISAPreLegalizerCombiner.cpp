@@ -223,7 +223,7 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
   llvm::Register ValueReg = LS.getOperand(0).getReg();
   llvm::MachineMemOperand &MMO = LS.getMMO();
 
-  /// The remaining size in Bits that still has to be loaded/stored
+  // The remaining size in Bits that still has to be loaded/stored
   ssize_t Size = LS.getMemSizeInBits().getValue();
   // Support sizes that are not a multiple of 8 by "promoting" them to the next
   // multiple of 8. If the size is already a multiple of 8, it is not modified
@@ -242,7 +242,7 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
     ValueReg = NewValueReg;
   }
 
-  /// The register holding the loaded value at the end
+  // The register holding the loaded value at the end
   Register LoadRes;
   while (Size > 0) {
     uint64_t OpSize = bit_floor(static_cast<size_t>(Size));
@@ -253,7 +253,7 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
     llvm::MachineMemOperand *NewMMO =
         MI.getMF()->getMachineMemOperand(&MMO, MMO.getOffset() + Offset, OpTy);
 
-    /// Stores the (potentially modified) pointer register
+    // Stores the (potentially modified) pointer register
     llvm::Register AddrReg = PointerReg;
     // We might need to change the store offset
     if (Offset != 0) {
@@ -389,14 +389,14 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
 
   llvm::Register ValueReg = StoreInst.getOperand(0).getReg();
 
-  /// This has the integer size at the beginning, and each individual load
-  /// decreases the value by its load size. At the end, this must be zero.
-  /// NB: We use the size of the store here, promoted to the next multiple
-  ///  of 8. This size might be modified later if we find a G_*EXT/G_TRUNC.
+  // This has the integer size at the beginning, and each individual load
+  // decreases the value by its load size. At the end, this must be zero.
+  // NB: We use the size of the store here, promoted to the next multiple
+  //  of 8. This size might be modified later if we find a G_*EXT/G_TRUNC.
   unsigned ValueSize = StoreInst.getMemSize().getValue() * 8;
 
-  /// This stores the size of the last load instruction in Bytes, s.t. we can
-  /// verify that the current load is larger than the previous one
+  // This stores the size of the last load instruction in Bytes, s.t. we can
+  // verify that the current load is larger than the previous one
   unsigned LastSize = 0;
 
   SizeModificationOp = nullptr;
@@ -411,7 +411,7 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
       NextChainInst->getOpcode() == TargetOpcode::G_ZEXT ||
       NextChainInst->getOpcode() == TargetOpcode::G_SEXT ||
       NextChainInst->getOpcode() == TargetOpcode::G_SEXT_INREG) {
-    /// The "actual" size that was used during loading
+    // The "actual" size that was used during loading
     unsigned LoadSize = MRI.getType(NextChainInst->getOperand(1).getReg())
                             .getScalarSizeInBits();
 
@@ -662,7 +662,7 @@ void PISAPreLegalizerCombinerImpl::applySimplifyNonPowerOf2LoadStoreChain(
     llvm::MachineMemOperand *NewMMO = MI.getMF()->getMachineMemOperand(
         &MMO, MMO.getOffset() + Offset, LoadTy);
 
-    /// Stores the (potentially modified) pointer register
+    // Stores the (potentially modified) pointer register
     llvm::Register AddrReg = PointerReg;
 
     // Add the offset to the pointer reg if the offset is not zero
