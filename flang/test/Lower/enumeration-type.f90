@@ -50,7 +50,37 @@ subroutine test_constructor()
   type(color) :: c
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
   ! CHECK: hlfir.assign %[[C2]]
+  ! Constant argument is range-checked at compile time (semantics), so no
+  ! runtime range check is emitted here.
+  ! CHECK-NOT: fir.call @{{.*}}ReportFatalUserError
   c = color(2)
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test enumeration constructor — color(i) runtime range check
+! -----------------------------------------------------------------------------
+
+! A non-constant argument cannot be range-checked at compile time, so lowering
+! emits an always-on runtime check (1 <= i <= enumeratorCount) with fatal
+! error termination (F2023 7.6.2 para 5).
+
+! CHECK-LABEL: func.func @_QPtest_constructor_runtime(
+! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32>
+subroutine test_constructor_runtime(i)
+  use enum_mod
+  integer, intent(in) :: i
+  type(color) :: c
+  ! CHECK: %[[ORD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
+  ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
+  ! CHECK: %[[LOW:.*]] = arith.cmpi slt, %[[ORD]], %[[ONE]] : i32
+  ! CHECK: %[[HIGH:.*]] = arith.cmpi sgt, %[[ORD]], %[[MAX]] : i32
+  ! CHECK: %[[OOR:.*]] = arith.ori %[[LOW]], %[[HIGH]] : i1
+  ! CHECK: fir.if %[[OOR]] {
+  ! CHECK:   fir.call @{{.*}}ReportFatalUserError
+  ! CHECK: }
+  ! CHECK: hlfir.assign %[[ORD]]
+  c = color(i)
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -115,10 +145,10 @@ subroutine test_next(c)
   type(color) :: result
   integer :: stat
   ! CHECK: %[[ORD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! Compute: min(ordinal + 1, 3)
-  ! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
+  ! Compute: min(ordinal + 1, 3). Constants are hoisted, so match order-free.
+  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
+  ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
   ! CHECK: %[[INC:.*]] = arith.addi %[[ORD]], %[[ONE]] : i32
-  ! CHECK: %[[MAX:.*]] = arith.constant 3 : i32
   ! CHECK: %[[CMP:.*]] = arith.cmpi sle, %[[INC]], %[[MAX]] : i32
   ! CHECK: %[[RES:.*]] = arith.select %[[CMP]], %[[INC]], %[[MAX]] : i32
   ! Boundary check: ordinal == 3
@@ -204,10 +234,6 @@ subroutine test_select_case(c)
 end subroutine
 
 ! -----------------------------------------------------------------------------
-!            Test enumeration dummy argument passing
-! -----------------------------------------------------------------------------
-
-! -----------------------------------------------------------------------------
 !            Test formatted WRITE of enumeration value
 ! -----------------------------------------------------------------------------
 
@@ -237,6 +263,41 @@ subroutine test_formatted_read(c)
   ! CHECK: fir.call @_FortranAioInputInteger(%{{.*}}, %[[CONV]], %{{.*}})
   ! CHECK: fir.call @_FortranAioEndIoStatement
   read(*, '(I4)') c
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test enumeration type as a function result
+! -----------------------------------------------------------------------------
+
+! An enumeration result lowers to i32 and is returned by value like an integer;
+! it must not use the caller-allocated fir.save_result ABI reserved for
+! record-shaped derived results.
+
+module enum_func_mod
+  enumeration type :: color2
+    enumerator :: c2red, c2green, c2blue
+  end enumeration type
+contains
+  ! CHECK-LABEL: func.func @_QMenum_func_modPpick() -> i32
+  function pick() result(c)
+    type(color2) :: c
+    c = c2blue
+  end function
+end module
+
+! CHECK-LABEL: func.func @_QPtest_func_result()
+subroutine test_func_result()
+  use enum_func_mod
+  type(color2) :: c
+  logical :: l
+  ! Result returned by value as i32, with no fir.save_result.
+  ! CHECK: %[[RES:.*]] = fir.call @_QMenum_func_modPpick() {{.*}}: () -> i32
+  ! CHECK-NOT: fir.save_result
+  ! CHECK: hlfir.assign %[[RES]]
+  c = pick()
+  ! The result is a genuine enumeration value: comparison lowers to i32 cmpi.
+  ! CHECK: arith.cmpi eq, %{{.*}}, %{{.*}} : i32
+  l = (c == c2blue)
 end subroutine
 
 ! -----------------------------------------------------------------------------

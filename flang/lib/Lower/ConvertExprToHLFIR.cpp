@@ -2341,13 +2341,42 @@ private:
               }
               // Non-constant ordinal (e.g. color(i) with variable i): lower
               // the __ordinal component expression to a runtime scalar value.
-              // TODO: when a -fcheck=enum runtime check flag is added, emit a
-              // bounds check here that the ordinal is in 1..enumeratorCount.
               hlfir::Entity ordinalEntity = gen(*val);
               mlir::Value ordinal =
                   hlfir::loadTrivialScalar(loc, builder, ordinalEntity);
               if (ordinal.getType() != ty)
                 ordinal = builder.createConvert(loc, ty, ordinal);
+              // F2023 7.6.2 para 5 requires the constructor value to be
+              // positive and <= the number of enumerators. This is a plain
+              // "shall" (not a numbered constraint), so the processor is not
+              // required to detect a violation; the standard leaves the
+              // behavior to the processor. We choose to always emit a runtime
+              // range check with error termination. This block could be placed
+              // behind an -fcheck=enum style flag if the community prefers an
+              // opt-in implementation.
+              int count = ctor.derivedTypeSpec()
+                              .typeSymbol()
+                              .GetUltimate()
+                              .get<Fortran::semantics::DerivedTypeDetails>()
+                              .enumeratorCount();
+              mlir::Value one = builder.createIntegerConstant(loc, ty, 1);
+              mlir::Value maxVal =
+                  builder.createIntegerConstant(loc, ty, count);
+              mlir::Value tooLow = mlir::arith::CmpIOp::create(
+                  builder, loc, mlir::arith::CmpIPredicate::slt, ordinal, one);
+              mlir::Value tooHigh = mlir::arith::CmpIOp::create(
+                  builder, loc, mlir::arith::CmpIPredicate::sgt, ordinal,
+                  maxVal);
+              mlir::Value outOfRange =
+                  mlir::arith::OrIOp::create(builder, loc, tooLow, tooHigh);
+              auto ifOp = fir::IfOp::create(builder, loc, {}, outOfRange,
+                                            /*withElseRegion=*/false);
+              builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+              fir::runtime::genReportFatalUserError(
+                  builder, loc,
+                  "enumeration constructor value is out of range (must be "
+                  "positive and not greater than the number of enumerators)");
+              builder.setInsertionPointAfter(ifOp);
               return hlfir::EntityWithAttributes{ordinal};
             }
           }
