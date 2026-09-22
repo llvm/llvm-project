@@ -1440,6 +1440,7 @@ private:
   BinaryByteStream BBS;
 
   SectionRef Section;
+  uint32_t SectionOffset = 0;
   const COFFObjectFile *Obj = nullptr;
 
   std::vector<const coff_relocation *> Relocs;
@@ -1450,6 +1451,7 @@ private:
   Expected<const coff_resource_data_entry &>
   getDataEntryAtOffset(uint32_t Offset);
   Expected<ArrayRef<UTF16>> getDirStringAtOffset(uint32_t Offset);
+  Error load(const COFFObjectFile *O, const SectionRef &S, uint32_t Offset);
 };
 
 // Corresponds to `_FPO_DATA` structure in the PE/COFF spec.
