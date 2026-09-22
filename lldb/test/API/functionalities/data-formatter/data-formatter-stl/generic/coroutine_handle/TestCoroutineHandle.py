@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class TestCoroutineHandle(TestBase):
     SHARED_BUILD_TESTCASE = False
+    TEST_WITH_PDB_DEBUG_INFO = True
 
     def do_test(self):
         """Test std::coroutine_handle is displayed correctly."""
@@ -18,8 +19,11 @@ class TestCoroutineHandle(TestBase):
         # Clang <= 20 used to also name the resume/destroy functions
         # as `my_generator_func`.
         # Never versions of clang name the clones as `.resume`/`.destroy`.
+        # On Windows with DWARF, we get:
+        # `struct int_generator my_generator_func(void) at main.cpp:{line}`
+        # and with PDB, we get `my_generator_func at main.cpp:{line}`.
         test_generator_func_ptr_re = re.compile(
-            r"^\(a.out`my_generator_func\(\)( \(\..*\))? at main.cpp:[0-9]*\)$"
+            r"^\(a.out`(struct int_generator )?my_generator_func(\((void)?\))?( \(\..*\))? at main.cpp:[0-9]*\)$"
         )
 
         # Run until the initial suspension point
@@ -171,4 +175,10 @@ class TestCoroutineHandle(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "15.0"])
     def test_libcpp(self):
         self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
         self.do_test()
