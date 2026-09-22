@@ -4125,20 +4125,13 @@ void Parser::ParseDeclarationSpecifiers(
           IdentifierInfo *II = T.getIdentifierInfo();
           if (!II)
             return false;
-          // Memoize per scope so we do at most one LookupName per
-          // identifier per scope.
-          auto It = IsTypedefNameCache.find(II);
-          if (It != IsTypedefNameCache.end())
-            return It->second;
           // Suppress diagnostics; the real parse will emit them later.
           LookupResult R(Actions, II, T.getLocation(),
                          Sema::LookupOrdinaryName);
           Actions.LookupName(R, getCurScope(),
                              /*AllowBuiltinCreation=*/false);
           R.suppressDiagnostics();
-          bool Result = R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
-          IsTypedefNameCache[II] = Result;
-          return Result;
+          return R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
         };
         auto MayBeTypeSpecifier = [&]() {
           // In pre-C23 C, auto can be used as a storage-class specifier.
