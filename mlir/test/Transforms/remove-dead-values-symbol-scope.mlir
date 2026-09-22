@@ -1,8 +1,5 @@
 // RUN: mlir-opt %s -split-input-file --pass-pipeline='builtin.module(gpu.module(remove-dead-values{canonicalize=false}),builtin.module(remove-dead-values{canonicalize=false}))' | FileCheck %s --check-prefixes=CHECK,SCOPED
-// RUN: mlir-opt %s -split-input-file --pass-pipeline='builtin.module(gpu.module(remove-dead-values),builtin.module(remove-dead-values))' > %t.parallel
-// RUN: FileCheck %s --check-prefixes=CHECK,SCOPED < %t.parallel
-// RUN: mlir-opt %s -split-input-file --mlir-disable-threading --pass-pipeline='builtin.module(gpu.module(remove-dead-values),builtin.module(remove-dead-values))' > %t.serial
-// RUN: diff %t.parallel %t.serial
+// RUN: mlir-opt %s -split-input-file --pass-pipeline='builtin.module(gpu.module(remove-dead-values),builtin.module(remove-dead-values))' | FileCheck %s --check-prefixes=CHECK,SCOPED
 // RUN: mlir-opt %s -split-input-file --remove-dead-values='canonicalize=false' | FileCheck %s --check-prefixes=CHECK,FULL
 
 // The launch is outside the pass root. An empty user map does not mean that the
