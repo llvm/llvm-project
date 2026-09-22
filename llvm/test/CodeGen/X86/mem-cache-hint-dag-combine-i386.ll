@@ -5,8 +5,8 @@ define void @replace_store_of_fp_constant(ptr %p) {
   ; CHECK-LABEL: name: replace_store_of_fp_constant
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
-  ; CHECK-NEXT:   MOV32mi [[MOV32rm]], 1, $noreg, 4, $noreg, 1072939139 :: (store (s32) into %ir.p + 4, basealign 8)
-  ; CHECK-NEXT:   MOV32mi [[MOV32rm]], 1, $noreg, 0, $noreg, 309237645 :: (store (s32) into %ir.p, align 8)
+  ; CHECK-NEXT:   MOV32mi [[MOV32rm]], 1, $noreg, 4, $noreg, 1072939139 :: (store (s32) into %ir.p + 4, basealign 8, !mem.cache_hint !1)
+  ; CHECK-NEXT:   MOV32mi [[MOV32rm]], 1, $noreg, 0, $noreg, 309237645 :: (store (s32) into %ir.p, align 8, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   store double 0x3FF3C083126E978D, ptr %p, align 8, !mem.cache_hint !0
   ret void
@@ -16,7 +16,7 @@ define double @combine_consecutive_loads_as_double(ptr %p) {
   ; CHECK-LABEL: name: combine_consecutive_loads_as_double
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
-  ; CHECK-NEXT:   [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 killed [[MOV32rm]], 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.p)
+  ; CHECK-NEXT:   [[LD_Fp64m80_:%[0-9]+]]:rfp80 = nofpexcept LD_Fp64m80 killed [[MOV32rm]], 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (load (s64) from %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0, killed [[LD_Fp64m80_]]
   %lo = load i32, ptr %p, align 8, !mem.cache_hint !1
   %p4 = getelementptr i8, ptr %p, i32 4

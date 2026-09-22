@@ -5082,10 +5082,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         SDValue Ptr = Lod->getBasePtr();
         if (bestOffset != 0)
           Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::getFixed(bestOffset));
-        SDValue NewLoad =
-            DAG.getLoad(newVT, dl, Lod->getChain(), Ptr,
-                        Lod->getPointerInfo().getWithOffset(bestOffset),
-                        Lod->getBaseAlign());
+        SDValue NewLoad = DAG.getLoad(
+            newVT, dl, Lod->getChain(), Ptr,
+            Lod->getPointerInfo().getWithOffset(bestOffset),
+            Lod->getBaseAlign(), MachineMemOperand::MONone,
+            MMOMetadata(Lod->getAAInfo(), nullptr, Lod->getMemCacheHint()));
         SDValue And =
             DAG.getNode(ISD::AND, dl, newVT, NewLoad,
                         DAG.getConstant(bestMask.trunc(bestWidth), dl, newVT));
