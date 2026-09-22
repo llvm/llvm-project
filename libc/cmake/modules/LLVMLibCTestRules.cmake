@@ -765,17 +765,21 @@ function(add_libc_hermetic test_name)
   get_fq_target_name(${test_name}.libc fq_libc_target_name)
 
   set(startup_target libc.startup.${LIBC_TARGET_OS}.crt1)
-  set(startup_deps "")
+  set(startup_target_dep "")
   if(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
     if(NOT TARGET ${startup_target})
-      message(VERBOSE "Skipping ${fq_target_name} as ${startup_target} is not available on ${LIBC_TARGET_OS}.")
+      if(LIBC_CMAKE_VERBOSE_LOGGING)
+        message(STATUS "Skipping ${fq_target_name} as ${startup_target} is not available on ${LIBC_TARGET_OS}.")
+      endif()
       return()
     endif()
-    list(APPEND startup_deps ${startup_target})
+    set(startup_target_dep ${startup_target})
   endif()
 
-  if(NOT startup_deps AND NOT LIBC_TEST_LINK_OPTIONS_DEFAULT)
-    message(VERBOSE "Skipping ${fq_target_name} as it has no startup provider.")
+  if(NOT startup_target_dep AND NOT LIBC_TEST_LINK_OPTIONS_DEFAULT)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "Skipping ${fq_target_name} as it has no startup provider.")
+    endif()
     return()
   endif()
 
@@ -796,9 +800,9 @@ function(add_libc_hermetic test_name)
 
   get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
   list(APPEND fq_deps_list
+    ${startup_target_dep}
     # Hermetic tests use the platform's startup object. So, their deps also
     # have to be collected.
-    libc.startup.${LIBC_TARGET_OS}.crt1
     # We always add the memory functions objects. This is because the
     # compiler's codegen can emit calls to the C memory functions.
     libc.src.__support.StringUtil.error_to_string
@@ -823,19 +827,6 @@ function(add_libc_hermetic test_name)
   if(LIBC_TEST_SUBPROCESS_TESTS AND NOT HERMETIC_TEST_C_TEST)
     list(APPEND fq_deps_list
       libc.test.UnitTest.LibcDeathTestExecutors
-=======
-      ${startup_deps}
-      # We always add the memory functions objects. This is because the
-      # compiler's codegen can emit calls to the C memory functions.
-      libc.src.__support.StringUtil.error_to_string
-      libc.src.string.memcmp
-      libc.src.string.memcpy
-      libc.src.string.memmove
-      libc.src.string.memset
-      libc.src.strings.bcmp
-      libc.src.strings.bzero
-      # Syscalls used by death tests.
->>>>>>> 968c82934d28 ([libc] Allow hermetic tests to use external startup objects)
       libc.src.poll.poll
       libc.src.signal.kill
       libc.src.stdio.fflush
@@ -1045,7 +1036,7 @@ function(add_libc_hermetic test_name)
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
-      libc.startup.${LIBC_TARGET_OS}.crt1
+      ${startup_target_dep}
       ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
       ${coverage_link_libs}
