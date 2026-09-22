@@ -722,6 +722,69 @@ TEST_P(ImportReflection, ImportMetaInfoBuiltinType) {
   EXPECT_EQ(BuiltinType::MetaInfo, ToBT->getKind());
 }
 
+TEST_P(ImportReflection, ImportReflectionAPValueAsType) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <auto R> struct S {};
+      using declToImport = S<^^int>;
+      )",
+      Lang_CXX26, "input.cc");
+  auto *FromTA = FirstDeclMatcher<TypeAliasDecl>().match(
+      FromTU, typeAliasDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromTA);
+
+  auto *ToTA = Import(FromTA, Lang_CXX26);
+  ASSERT_TRUE(ToTA);
+
+  const auto *ToSpec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+      ToTA->getUnderlyingType()->getAsCXXRecordDecl());
+  ASSERT_TRUE(ToSpec);
+  const TemplateArgumentList &ToArgs = ToSpec->getTemplateArgs();
+  ASSERT_EQ(ToArgs.size(), 1u);
+  const TemplateArgument &ToArg = ToArgs.get(0);
+  ASSERT_EQ(TemplateArgument::StructuralValue, ToArg.getKind());
+
+  const APValue &ToVal = ToArg.getAsStructuralValue();
+  ASSERT_TRUE(ToVal.isReflection());
+  EXPECT_EQ(ReflectionKind::Type, ToVal.getReflectionOperandKind());
+
+  const auto *ToTSI = static_cast<const TypeSourceInfo *>(
+      ToVal.getReflectionOpaqueOperand());
+  ASSERT_TRUE(ToTSI);
+  EXPECT_EQ(ToTA->getASTContext().IntTy.getAsOpaquePtr(),
+            ToTSI->getType().getCanonicalType().getAsOpaquePtr());
+}
+
+TEST_P(ImportReflection, ImportReflectionAPValueAsNullReflection) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      using info = decltype(^^int);
+      template <auto R> struct S {};
+      using declToImport = S<info{}>;
+      )",
+      Lang_CXX26, "input.cc");
+  auto *FromTA = FirstDeclMatcher<TypeAliasDecl>().match(
+      FromTU, typeAliasDecl(hasName("declToImport")));
+  ASSERT_TRUE(FromTA);
+
+  auto *ToTA = Import(FromTA, Lang_CXX26);
+  ASSERT_TRUE(ToTA);
+
+  const auto *ToSpec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+      ToTA->getUnderlyingType()->getAsCXXRecordDecl());
+  ASSERT_TRUE(ToSpec);
+  const TemplateArgumentList &ToArgs = ToSpec->getTemplateArgs();
+  ASSERT_EQ(ToArgs.size(), 1u);
+  const TemplateArgument &ToArg = ToArgs.get(0);
+  ASSERT_EQ(TemplateArgument::StructuralValue, ToArg.getKind());
+
+  const APValue &ToVal = ToArg.getAsStructuralValue();
+  ASSERT_TRUE(ToVal.isReflection());
+  EXPECT_EQ(ReflectionKind::Null, ToVal.getReflectionOperandKind());
+
+  EXPECT_EQ(ToVal.getReflectionOpaqueOperand(), nullptr);
+}
+
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {
   MatchVerifier<Decl> Verifier;
   testImport("template <typename T> void declToImport() { };", Lang_CXX03, "",
