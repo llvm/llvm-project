@@ -5974,18 +5974,6 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
   Address addr = base.getAddress();
   if (hasBPFPreserveStaticOffset(rec))
     addr = wrapWithBPFPreserveStaticOffset(*this, addr);
-  if (auto *ClassDef = dyn_cast<CXXRecordDecl>(rec)) {
-    if (CGM.getCodeGenOpts().StrictVTablePointers &&
-        ClassDef->isDynamicClass()) {
-      // Getting to any field of dynamic object requires stripping dynamic
-      // information provided by invariant.group.  This is because accessing
-      // fields may leak the real address of dynamic object, which could result
-      // in miscompilation when leaked pointer would be compared.
-      auto *stripped =
-          Builder.CreateStripInvariantGroup(addr.emitRawPointer(*this));
-      addr = Address(stripped, addr.getElementType(), addr.getAlignment());
-    }
-  }
 
   unsigned RecordCVR = base.getVRQualifiers();
   if (rec->isUnion()) {
