@@ -42,6 +42,10 @@ int main() {
   // CHECK: @_Z3fooITnDaLDmtydEEvv
   foo <^^long double> ();
   // CHECK: @_Z3fooITnDaLDmtyeEEvv
+  foo <^^__int128> ();
+  // CHECK: @_Z3fooITnDaLDmtynEEvv
+  foo <^^unsigned __int128> ();
+  // CHECK: @_Z3fooITnDaLDmtyoEEvv
   foo <^^Type> ();
   // CHECK: @_Z3fooITnDaLDmta4TypeEEvv
   return 0;
