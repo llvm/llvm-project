@@ -5915,7 +5915,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     }
     auto *RetTy = cast<ScalableVectorType>(F->getReturnType());
     unsigned MinElts = RetTy->getMinNumElements();
-    unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+    uint64_t I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     Value *NewIdx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0), NewIdx});
     break;
@@ -5929,7 +5929,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
     if (Name.starts_with("aarch64.sve.tuple.set")) {
-      unsigned I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+      uint64_t I = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
       auto *Ty = cast<ScalableVectorType>(CI->getArgOperand(2)->getType());
       Value *NewIdx =
           ConstantInt::get(Type::getInt64Ty(C), I * Ty->getMinNumElements());

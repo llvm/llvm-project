@@ -48,7 +48,7 @@ enum OptionVisibility {
 namespace {
 class TestOptTable : public OptTable {
 public:
-  TestOptTable(bool IgnoreCase = false) : OptTable(OptionTables, IgnoreCase) {
+  TestOptTable(bool IgnoreCase = false) : OptTable(optionTables(), IgnoreCase) {
     setValuesCodeFn(getOptionValuesCode);
   }
 };

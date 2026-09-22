@@ -794,4 +794,77 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentOveralignedHFAAlign) {
   }
 }
 
+// Empty records and zero-size types are ignored as returns under all AArch64
+// ABI kinds. Empty C arguments are ignored; Darwin also ignores empty C++
+// arguments. C++ AAPCS/Win64 only ignore zero-size types.
+TEST_F(AArch64TargetInfoTest, ClassifyEmptyAndZeroSizeIgnore) {
+  const ABIType *EmptyC = makeRecord({}, 0, llvm::Align(1),
+                                     /*UnadjustedAlign=*/llvm::Align(1));
+  const ABIType *EmptyUnion =
+      TB.getUnionType({}, llvm::TypeSize::getFixed(0), llvm::Align(1),
+                      /*UnadjustedAlign=*/llvm::Align(1),
+                      StructPacking::Default, RecordFlags::CanPassInRegisters);
+  const ABIType *EmptyCXX =
+      makeRecord({}, 8, llvm::Align(1), /*UnadjustedAlign=*/llvm::Align(1),
+                 passableRecordFlags(/*IsCXX=*/true));
+  const ABIType *ZeroArr = TB.getArrayType(I32, /*NumElements=*/0,
+                                           /*SizeInBits=*/0);
+  const ABIType *ZeroSizeCXX = makeRecord(
+      {FieldInfo(ZeroArr, 0)}, 0, llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1), passableRecordFlags(/*IsCXX=*/true));
+  const ABIType *NestedZeroSize = makeRecord(
+      {FieldInfo(ZeroSizeCXX, 0)}, 0, llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1), passableRecordFlags(/*IsCXX=*/true));
+
+  auto ClassifyArg = [&](AArch64ABIKind Kind, bool IsCXX, const ABIType *Ty) {
+    AArch64ABIOptions Opts(Kind);
+    Opts.IsCXX = IsCXX;
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {Ty});
+    TI->computeInfo(*FI);
+    return FI->getArgInfo(0).Info;
+  };
+
+  auto ClassifyReturn = [&](AArch64ABIKind Kind, bool IsCXX,
+                            const ABIType *Ty) {
+    AArch64ABIOptions Opts(Kind);
+    Opts.IsCXX = IsCXX;
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Ty, {});
+    TI->computeInfo(*FI);
+    return FI->getReturnInfo();
+  };
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    EXPECT_TRUE(ClassifyReturn(Kind, /*IsCXX=*/false, EmptyC).isIgnore());
+    EXPECT_TRUE(ClassifyReturn(Kind, /*IsCXX=*/false, EmptyUnion).isIgnore());
+    EXPECT_TRUE(ClassifyReturn(Kind, /*IsCXX=*/true, EmptyCXX).isIgnore());
+    EXPECT_TRUE(ClassifyReturn(Kind, /*IsCXX=*/true, ZeroSizeCXX).isIgnore());
+
+    EXPECT_TRUE(ClassifyArg(Kind, /*IsCXX=*/false, EmptyC).isIgnore());
+    EXPECT_TRUE(ClassifyArg(Kind, /*IsCXX=*/false, EmptyUnion).isIgnore());
+    EXPECT_TRUE(ClassifyArg(Kind, /*IsCXX=*/true, ZeroSizeCXX).isIgnore());
+    EXPECT_TRUE(ClassifyArg(Kind, /*IsCXX=*/true, NestedZeroSize).isIgnore());
+  }
+
+  // Darwin ignores empty C++ records even when they occupy a byte.
+  EXPECT_TRUE(ClassifyArg(AArch64ABIKind::DarwinPCS, /*IsCXX=*/true, EmptyCXX)
+                  .isIgnore());
+
+  // An ignored empty argument does not affect classification of later args.
+  {
+    AArch64ABIOptions Opts(AArch64ABIKind::AAPCS);
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {EmptyC, I32});
+    TI->computeInfo(*FI);
+    EXPECT_TRUE(FI->getArgInfo(0).Info.isIgnore());
+    expectUncoercedDirect(FI->getArgInfo(1).Info);
+  }
+}
+
 } // namespace

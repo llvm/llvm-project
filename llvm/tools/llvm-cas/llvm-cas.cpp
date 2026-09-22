@@ -39,7 +39,7 @@ using namespace llvm::opt;
 
 class LLVMCASOptTable : public opt::OptTable {
 public:
-  LLVMCASOptTable() : opt::OptTable(OptionTables) {}
+  LLVMCASOptTable() : opt::OptTable(optionTables()) {}
 };
 
 enum class CommandKind {
