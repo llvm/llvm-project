@@ -15,16 +15,14 @@
 
 ;; Very long function name that will require continuation records.
 ;; Symbol names longer than 8 bytes need continuations in ESD records.
-define i32 @very_long_function_name_that_exceeds_eight_bytes_and_requires_continuation_records() {
-entry:
-  ret i32 42
+define void @very_long_function_name_that_exceeds_eight_bytes_and_requires_continuation_records() {
+  ret void
 }
 
 ;; Another long name.
-define i32 @another_extremely_long_function_name_for_testing_continuation_handling() {
-entry:
-  ret i32 100
+define void @another_extremely_long_function_name_for_testing_continuation_handling() {
+  ret void
 }
 
 ;; Global variable with long name.
-@global_variable_with_an_extremely_long_name_to_test_esd_continuations = global i32 42, align 4
+@global_variable_with_an_extremely_long_name_to_test_esd_continuations = global i32 0
