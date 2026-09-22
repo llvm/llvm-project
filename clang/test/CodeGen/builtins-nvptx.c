@@ -1206,6 +1206,15 @@ __device__ void nvvm_cvt_pzo_sm107f() {
   // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.bf16x2.to.e2m3x2.rz.satfinite(<2 x bfloat> zeroinitializer, i1 true)
   __nvvm_bf16x2_to_e2m3x2_rz_satfinite_pzo({0, 0});
 
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e2m1x2.rz.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  __nvvm_ff_to_e2m1x2_rz_relu_satfinite(1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.ff.to.e2m1x2.rz.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 true)
+  __nvvm_ff_to_e2m1x2_rz_relu_satfinite_pzo(1, 1);
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.f16x2.to.e2m1x2.rn.satfinite(<2 x half> zeroinitializer, i1 true)
+  __nvvm_f16x2_to_e2m1x2_rn_satfinite_pzo({0, 0});
+  // CHECK_PTX94_SM107f: call i16 @llvm.nvvm.bf16x2.to.e2m1x2.rz.satfinite(<2 x bfloat> zeroinitializer, i1 true)
+  __nvvm_bf16x2_to_e2m1x2_rz_satfinite_pzo({0, 0});
+
 #endif
   // CHECK: ret void
 }
@@ -1318,14 +1327,14 @@ __device__ void nvvm_cvt_sm100a_sm101a_sm120a() {
   // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
   __nvvm_e3m2x2_to_f16x2_rn_relu(0x4C4C);
 
-  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
   __nvvm_ff_to_e2m1x2_rn_satfinite(1.0f, 1.0f);
 
-  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
-  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00, i1 false)
   __nvvm_ff_to_e2m1x2_rn_relu_satfinite(1.0f, 1.0f);
   
   // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
