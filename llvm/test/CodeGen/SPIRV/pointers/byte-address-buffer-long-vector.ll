@@ -4,6 +4,7 @@
 ; CHECK-DAG: %[[GLSLEXT:[0-9]+]] = OpExtInstImport "GLSL.std.450"
 ; CHECK-DAG: %[[FLOAT:[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: %[[V4FLOAT:[0-9]+]] = OpTypeVector %[[FLOAT]] 4
+; CHECK-LABEL: %[[#]] = OpFunction %[[#]] DontInline %[[#]] ; -- Begin function main
 ; CHECK: OpBitcast %[[FLOAT]]
 ; CHECK-COUNT-4: OpCompositeConstruct %[[V4FLOAT]]
 ; CHECK-COUNT-4: OpExtInst %[[V4FLOAT]] %[[GLSLEXT]] {{Cosh}}
