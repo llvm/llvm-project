@@ -10905,6 +10905,17 @@ void SelectionDAGBuilder::visitVAStart(const CallInst &I) {
 }
 
 void SelectionDAGBuilder::visitVAArg(const VAArgInst &I) {
+  // The code generator does not support va_arg with an aggregate type on any
+  // target, and such a type has no value type to lower it to.
+  if (I.getType()->isAggregateType()) {
+    SDLoc sdl = getCurSDLoc();
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        *I.getFunction(), "va_arg with an aggregate type is not supported",
+        sdl.getDebugLoc()));
+    setValueToPoison(&I, sdl);
+    return;
+  }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const DataLayout &DL = DAG.getDataLayout();
   SDValue V = DAG.getVAArg(
