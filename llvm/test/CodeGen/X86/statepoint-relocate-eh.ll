@@ -2,10 +2,10 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -early-live-intervals < %s | FileCheck %s
 
-; A gc.relocate of a directly-lowered value (a constant or an alloca)
-; in an invoke's landing pad must rematerialize the value at the
-; relocate, not export a vreg defined after the statepoint call in the
-; invoke block.
+; A gc.relocate of a directly-lowered value (a constant, an alloca, or
+; undef) in an invoke's landing pad must materialize the value at the
+; relocate, insert a def after the statepoint call in the invoke
+; block.
 
 target triple = "x86_64-pc-linux-gnu"
 
@@ -83,6 +83,44 @@ lpad:
   %lp = landingpad token cleanup
   %ac.rel = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %lp, i32 0, i32 0)
   ret ptr addrspace(1) %ac.rel
+}
+
+; A gc.relocate of a value that lowers to undefin a landing pad must
+; also materialize at the relocate, not read a cross-block vreg with
+; no definition.
+define ptr addrspace(1) @relocate_poison_in_landing_pad() gc "statepoint-example" personality ptr null {
+; CHECK-LABEL: relocate_poison_in_landing_pad:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:  .Ltmp8: # EH_LABEL
+; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:  .Ltmp11:
+; CHECK-NEXT:  .Ltmp9: # EH_LABEL
+; CHECK-NEXT:  # %bb.1: # %normal
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB2_2: # %lpad
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:  .Ltmp10: # EH_LABEL
+; CHECK-NEXT:    movl $4278124286, %eax # imm = 0xFEFEFEFE
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+entry:
+  %c = inttoptr i64 poison to ptr addrspace(1)
+  %sp = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %c) ]
+          to label %normal unwind label %lpad
+
+normal:
+  ret ptr addrspace(1) null
+
+lpad:
+  %lp = landingpad token cleanup
+  %c.rel = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %lp, i32 0, i32 0)
+  ret ptr addrspace(1) %c.rel
 }
 
 declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)

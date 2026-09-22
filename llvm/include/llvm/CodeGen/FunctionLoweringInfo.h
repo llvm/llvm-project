@@ -103,12 +103,12 @@ public:
   /// A directly-lowered statepoint value (see willLowerDirectly): a leaf that
   /// can be rebuilt at a gc.relocate in another block.
   struct StatepointDirectLeaf {
-    enum LeafKind { FrameIndex, Constant };
+    enum LeafKind { FrameIndex, Constant, Undef };
     LeafKind Kind;
     APInt IntValue;      // Constant: the integer value.
     int FrameIndexValue; // FrameIndex: the frame index.
 
-    /// Capture the leaf \p V, which must be a non-undef directly-lowered value.
+    /// Capture the leaf \p V, which must be a directly-lowered value.
     LLVM_ABI explicit StatepointDirectLeaf(SDValue V);
 
     /// Rebuild the captured leaf as a fresh SDValue of type \p VT.

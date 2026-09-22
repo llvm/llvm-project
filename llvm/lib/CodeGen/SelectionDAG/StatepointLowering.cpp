@@ -73,6 +73,10 @@ static cl::opt<unsigned> MaxRegistersForGCPointers(
     "max-registers-for-gc-values", cl::Hidden, cl::init(0),
     cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
 
+// Lowering relocate(undef) as arbitrary constant. Current constant value is
+// chosen such that it's unlikely to be a valid pointer.
+static constexpr uint32_t UndefStackMapValue = 0xFEFEFEFE;
+
 typedef FunctionLoweringInfo::StatepointRelocationRecord RecordType;
 
 static void pushStackMapConstant(SmallVectorImpl<SDValue>& Ops,
@@ -261,9 +265,10 @@ static bool willLowerDirectly(SDValue Incoming) {
 }
 
 FunctionLoweringInfo::StatepointDirectLeaf::StatepointDirectLeaf(SDValue V) {
-  assert(willLowerDirectly(V) && !V.isUndef() &&
-         "not a non-undef directly-lowered leaf");
-  if (auto *FI = dyn_cast<FrameIndexSDNode>(V)) {
+  assert(willLowerDirectly(V) && "not a directly-lowered leaf");
+  if (V.isUndef()) {
+    Kind = Undef;
+  } else if (auto *FI = dyn_cast<FrameIndexSDNode>(V)) {
     Kind = FrameIndex;
     FrameIndexValue = FI->getIndex();
   } else {
@@ -279,6 +284,8 @@ SDValue FunctionLoweringInfo::StatepointDirectLeaf::rematerialize(
     return DAG.getFrameIndex(FrameIndexValue, VT);
   case Constant:
     return DAG.getConstant(IntValue, DL, VT);
+  case Undef:
+    return DAG.getConstant(UndefStackMapValue, DL, VT);
   }
   llvm_unreachable("unhandled directly-lowered leaf kind");
 }
@@ -959,9 +966,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
       // A gc.relocate in another block needs the value there. Exporting it
       // would define a vreg after the call that does not dominate a use on the
       // unwind edge, so record the leaf and rebuild it in visitGCRelocate
-      // instead. undef re-lowers trivially and is left to the fallback path.
-      if (Relocate->getParent() != StatepointInstr->getParent() &&
-          !SDV.isUndef())
+      // instead.
+      if (Relocate->getParent() != StatepointInstr->getParent())
         Record.RematLeaf.emplace(SDV);
     }
     RelocationMap[Relocate] = Record;
@@ -1329,9 +1335,8 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   SDValue SD = getValue(DerivedPtr);
 
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
-    // Lowering relocate(undef) as arbitrary constant. Current constant value
-    // is chosen such that it's unlikely to be a valid pointer.
-    setValue(&Relocate, DAG.getConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
+    setValue(&Relocate,
+             DAG.getConstant(UndefStackMapValue, SDLoc(SD), MVT::i64));
     return;
   }
 
