@@ -1474,8 +1474,8 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
     return marshal;
   }
 
-  const llvm::SmallVector<mlir::Type>
-  flattenTypeList(mlir::Location loc, const mlir::Type type) const {
+  llvm::SmallVector<mlir::Type> flattenTypeList(mlir::Location loc,
+                                                const mlir::Type type) const {
     llvm::SmallVector<mlir::Type> flatTypes;
 
     llvm::TypeSwitch<mlir::Type>(type)
@@ -1496,8 +1496,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
           const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
           if (sem == &llvm::APFloat::IEEEsingle() ||
               sem == &llvm::APFloat::IEEEdouble())
-            std::fill_n(std::back_inserter(flatTypes), 2,
-                        cmplx.getElementType());
+            flatTypes.append(2, cmplx.getElementType());
           else
             TODO(loc, "unsupported complex type(not IEEEsingle, IEEEdouble"
                       "as a structure component for BIND(C), "
@@ -1522,13 +1521,13 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
             // Don't check for subtype again if element-type is scalar.
             if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(
                     eleTy)) {
-              std::fill_n(std::back_inserter(flatTypes), numOfEle, eleTy);
+              flatTypes.append(numOfEle, eleTy);
             } else {
               llvm::SmallVector<mlir::Type> subTypeList =
                   flattenTypeList(loc, eleTy);
-              if (subTypeList.size() != 0)
+              if (!subTypeList.empty())
                 for (std::uint64_t i = 0; i < numOfEle; ++i)
-                  llvm::copy(subTypeList, std::back_inserter(flatTypes));
+                  flatTypes.append(subTypeList);
             }
           } else
             TODO(loc, "unsupported dynamic extent sequence type as a structure "
@@ -1540,8 +1539,8 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
             mlir::Type eleTy = component.second;
             llvm::SmallVector<mlir::Type> subTypeList =
                 flattenTypeList(loc, eleTy);
-            if (subTypeList.size() != 0)
-              llvm::copy(subTypeList, std::back_inserter(flatTypes));
+            if (!subTypeList.empty())
+              flatTypes.append(subTypeList);
           }
         })
         .Case([&](fir::VectorType vecTy) {
@@ -1662,8 +1661,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
     mlir::MLIRContext *context = recTy.getContext();
 
     // Have to do this first to catch any illegal types in the record.
-    const llvm::SmallVector<mlir::Type> &flattenedTypes =
-        flattenTypeList(loc, recTy);
+    llvm::SmallVector<mlir::Type> flattenedTypes = flattenTypeList(loc, recTy);
 
     // This is odd and some targets reject it. The spec says to ignore it.
     // IIRC Fortran does not allow empty structs and not all versions of C do.
@@ -1698,13 +1696,13 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       // registers are available. (The registers need not be an aligned pair.)
       // Otherwise, it is passed according to the integer calling convention.
       if (fprArgs > 1) {
-        if (isResult)
+        if (isResult) {
           // Results have to be passed in single return type so use tuples.
           marshal.emplace_back(
               mlir::TupleType::get(context, mlir::TypeRange{flattenedTypes[0],
                                                             flattenedTypes[1]}),
               AT{});
-        else {
+        } else {
           // Clang flattens this as two floats, so do the same.
           marshal.emplace_back(flattenedTypes[0], AT{});
           marshal.emplace_back(flattenedTypes[1], AT{});
@@ -1729,12 +1727,12 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       // unspecified. If the struct is not passed in this manner, then it is
       // passed according to the integer calling convention.
       if (gprArgs && fprArgs) {
-        if (isResult)
+        if (isResult) {
           marshal.emplace_back(
               mlir::TupleType::get(context, mlir::TypeRange{flattenedTypes[0],
                                                             flattenedTypes[1]}),
               AT{});
-        else {
+        } else {
           // Clang flattens this as one float and one integer, so do the same.
           marshal.emplace_back(flattenedTypes[0], AT{});
           marshal.emplace_back(flattenedTypes[1], AT{});
