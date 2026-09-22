@@ -68,8 +68,8 @@ jobs:
               },
             );
             const previous = comments.find(
-              comment => comment.user.login === "github-actions[bot]" &&
-                comment.body.includes(marker),
+              comment => comment.user && comment.user.login === "github-actions[bot]" &&
+                typeof comment.body === "string" && comment.body.startsWith(marker),
             );
 
             // issue-write.yml creates or updates comments from this artifact.
