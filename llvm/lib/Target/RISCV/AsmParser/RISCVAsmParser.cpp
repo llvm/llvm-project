@@ -894,26 +894,6 @@ public:
     });
   }
 
-  bool isUImm2Lsb0() const { return isUImmShifted<1, 1>(); }
-
-  bool isUImm5Lsb0() const { return isUImmShifted<4, 1>(); }
-
-  bool isUImm6Lsb0() const { return isUImmShifted<5, 1>(); }
-
-  bool isUImm6Lsb000() const { return isUImmShifted<3, 3>(); }
-
-  bool isUImm7Lsb00() const { return isUImmShifted<5, 2>(); }
-
-  bool isUImm7Lsb000() const { return isUImmShifted<4, 3>(); }
-
-  bool isUImm8Lsb00() const { return isUImmShifted<6, 2>(); }
-
-  bool isUImm8Lsb000() const { return isUImmShifted<5, 3>(); }
-
-  bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
-
-  bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
-
   bool isUImm10Lsb00NonZero() const {
     return isUImmPred(
         [](int64_t Imm) { return isShiftedUInt<8, 2>(Imm) && (Imm != 0); });
@@ -4257,6 +4237,11 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                         "provided");
     }
   }
+
+  if (Opcode == RISCV::CV_INSERT &&
+      Inst.getOperand(3).getImm() + Inst.getOperand(4).getImm() >= 32)
+    return Error(Operands[3]->getStartLoc(),
+                 "the sum of the immediate operands must be less than 32");
 
   if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
       Opcode == RISCV::TH_LWD) {

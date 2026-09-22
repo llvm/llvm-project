@@ -169,6 +169,7 @@ def OMPC_Depobj : Clause<[Spelling<"depobj">]> {
   let isImplicit = true;
 }
 def OMPC_Depth : Clause<[Spelling<"depth">]> {
+  let clangClass = "OMPDepthClause";
   let flangClass = "ScalarIntConstantExpr";
 }
 def OMPC_Destroy : Clause<[Spelling<"destroy">]> {
@@ -1623,6 +1624,7 @@ def OMP_DistributeParallelFor
     VersionedClause<OMPC_Message, 60>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -1654,6 +1656,7 @@ def OMP_DistributeParallelForSimd
     VersionedClause<OMPC_Message, 60>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
@@ -1700,6 +1703,7 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
     VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_Linear>,
+    VersionedClause<OMPC_NonTemporal, 50>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_Reduction>,
   ];
@@ -2687,6 +2691,7 @@ def OMP_TargetTeamsDistributeParallelFor
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -2730,6 +2735,7 @@ def OMP_TargetTeamsDistributeParallelForSimd
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,
@@ -2985,6 +2991,7 @@ def OMP_TeamsDistributeParallelFor
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_Schedule>,
     VersionedClause<OMPC_Severity, 60>,
@@ -3018,6 +3025,7 @@ def OMP_TeamsDistributeParallelForSimd
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_Order, 50>,
+    VersionedClause<OMPC_Ordered>,
     VersionedClause<OMPC_ProcBind>,
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_Schedule>,

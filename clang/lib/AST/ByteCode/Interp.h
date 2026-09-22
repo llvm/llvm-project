@@ -1642,6 +1642,7 @@ bool PseudoDtor(InterpState &S, CodePtr OpPC);
 bool StartThisLifetime(InterpState &S);
 bool StartThisLifetime1(InterpState &S);
 bool MarkDestroyed(InterpState &S, CodePtr OpPC);
+bool DefaultInit(InterpState &S, CodePtr OpPC, const CXXConstructorDecl *Ctor);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
@@ -3734,6 +3735,12 @@ inline bool StartSpeculation(InterpState &S) {
 inline bool StartInit(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   S.InitializingPtrs.push_back(Ptr.view());
+  return true;
+}
+
+inline bool StartFieldInit(InterpState &S, uint32_t FieldOffset) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingPtrs.push_back(Ptr.view().atField(FieldOffset));
   return true;
 }
 

@@ -481,7 +481,7 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType, bit IsSparse = fals
       !eq(gf,"m16n16:x1") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m16n16:x2") : !listsplat(llvm_i32_ty, 4),
 
-      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64 -> s32 @ m8n16
+      // ldmatrix b8x16.b6x16_p32, b8x16.b4x16_p64, s8.s4 -> s32 @ m8n16
       !eq(gf,"m8n16:x1") : !listsplat(llvm_i32_ty, 1),
       !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
       !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
@@ -834,7 +834,7 @@ class NVVM_MMA_OPS {
     ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
 
   list<WMMA_REGS> ldmatrix_geom_m8n16_ops = LDMATRIX_OPS<
-    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
+    ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64", "s8.s4"]>.ret;
 
   list<WMMA_REGS> stmatrix_b16_ops = STMATRIX_OPS<
     ["m8n8"], ["x1", "x2", "x4"], ["b16"]>.ret;
@@ -1033,6 +1033,7 @@ class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
     !and(!eq(g, "m8n16"), !eq(t, "b8"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b6x16_p32"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b4x16_p64"), !eq(trans, 0)): true,
+    !and(!eq(g, "m8n16"), !eq(t, "s8.s4"), !eq(trans, 0)): true,
     true: false
   );
 }
