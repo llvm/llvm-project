@@ -1102,7 +1102,8 @@ public:
   /// Returns default flags for \p Opcode and scalar \p ResultTy for opcodes
   /// that support it, asserts otherwise. Opcodes not supporting default flags
   /// include compares and ComputeReductionResult.
-  LLVM_ABI_FOR_TEST static VPIRFlags getDefaultFlags(unsigned Opcode, Type *ResultTy = nullptr);
+  LLVM_ABI_FOR_TEST static VPIRFlags getDefaultFlags(unsigned Opcode,
+                                                     Type *ResultTy = nullptr);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
@@ -1887,7 +1888,8 @@ protected:
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
 /// TODO: Merge with VPWidenRecipe now that type is associated to every
 /// VPRecipeValue.
-class LLVM_ABI_FOR_TEST VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenCastRecipe : public VPRecipeWithIRFlags,
+                                            public VPIRMetadata {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1934,7 +1936,8 @@ protected:
 };
 
 /// A recipe for widening vector intrinsics.
-class LLVM_ABI_FOR_TEST VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags,
+                                                 public VPIRMetadata {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
