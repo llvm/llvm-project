@@ -1997,8 +1997,14 @@ mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
     // If the operand is already most derived object, no need to look up vtable.
   }
 
-  auto typeInfo =
-      cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(loc, ty));
+  mlir::Attribute rtti = cgm.getAddrOfRTTIDescriptor(loc, ty);
+  // When RTTI is disabled for the target (e.g. CUDA/HIP device compilation),
+  // this is a null pointer instead of a reference to the descriptor.
+  auto typeInfo = dyn_cast<cir::GlobalViewAttr>(rtti);
+  if (!typeInfo)
+    return builder.createBitcast(
+        builder.getConstant(loc, cast<mlir::TypedAttr>(rtti)), resultType);
+
   // `getAddrOfRTTIDescriptor` lies to us and always gives us a uint8ptr as its
   // type, however we need the value of the actual global to call the
   // get-global-op, so look it up here.

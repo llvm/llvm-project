@@ -1201,7 +1201,9 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
     Provide ABI specific information about a dynamic cast operation.
 
     The `src_rtti` and the `dest_rtti` parameters give the RTTI of the source
-    record type and the destination record type, respectively.
+    record type and the destination record type, respectively. Both are absent
+    when RTTI is not emitted for the target (e.g. CUDA/HIP device code), in
+    which case null pointers are passed to the runtime function instead.
 
     The `runtime_func` parameter gives the `__dynamic_cast` function which is
     provided by the runtime. The `bad_cast_func` parameter gives the
@@ -1212,8 +1214,8 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
   }];
 
   let parameters = (ins
-    CIR_GlobalViewAttr:$src_rtti,
-    CIR_GlobalViewAttr:$dest_rtti,
+    OptionalParameter<"cir::GlobalViewAttr">:$src_rtti,
+    OptionalParameter<"cir::GlobalViewAttr">:$dest_rtti,
     "mlir::FlatSymbolRefAttr":$runtime_func,
     "mlir::FlatSymbolRefAttr":$bad_cast_func,
     CIR_IntAttr:$offset_hint
@@ -1226,7 +1228,7 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
                                     "mlir::FlatSymbolRefAttr":$runtime_func,
                                     "mlir::FlatSymbolRefAttr":$bad_cast_func,
                                     "IntAttr":$offset_hint), [{
-      return $_get(src_rtti.getContext(), src_rtti, dest_rtti, runtime_func,
+      return $_get(runtime_func.getContext(), src_rtti, dest_rtti, runtime_func,
                    bad_cast_func, offset_hint);
     }]>,
   ];
