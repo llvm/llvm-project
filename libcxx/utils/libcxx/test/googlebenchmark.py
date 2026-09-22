@@ -214,7 +214,7 @@ def prepare(config, litConfig):
     _run(
         litConfig,
         "build",
-        [cmake, "--build", buildDir, "--target", "install", "--parallel"],
+        [cmake, "--build", buildDir, "--target", "install", "--parallel", str(os.cpu_count() or 1)],
         cwd=root,
     )
 
