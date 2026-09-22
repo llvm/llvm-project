@@ -56,6 +56,20 @@ module @outer {
       }
     }
 
+    // Public functions can have callers outside the IR, even if all IR users
+    // are visible to the pass.
+    // CHECK-LABEL: func.func @public_callee(
+    // CHECK-SAME: %{{[^ ,)]+}}: i32) -> i32
+    func.func @public_callee(%dead: i32) -> i32 {
+      %c1 = arith.constant 1 : i32
+      return %c1 : i32
+    }
+    func.func @public_caller(%x: i32) {
+      // CHECK: call @public_callee(%{{[^ ,)]+}}) : (i32) -> i32
+      %r = func.call @public_callee(%x) : (i32) -> i32
+      return
+    }
+
     // Private symbols have no callers outside their table.
     // CHECK-LABEL: func.func private @private_callee()
     func.func private @private_callee(%dead: i32) {

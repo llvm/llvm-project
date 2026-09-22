@@ -415,7 +415,7 @@ public:
                                      : ArrayRef<Operation *>();
   }
 
-  /// Return true if all uses of the symbol are known to be within this scope.
+  /// Return true if all uses of the symbol within the IR are within this scope.
   bool areAllUsesVisible(Operation *symbol) const {
     return symbolsWithAllUsesVisible.contains(symbol);
   }
