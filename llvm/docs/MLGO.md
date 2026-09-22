@@ -113,9 +113,8 @@ ninja
 ```
 
 After running CMake and building the project, there should be a
-
-: `compilation_commands.json` file within the build directory. You can then
-  run the following command to create a corpus:
+`compilation_commands.json` file within the build directory. You can then
+run the following command to create a corpus:
 
 ```bash
 python3 ./extract_ir.py \
@@ -451,7 +450,8 @@ useful in different scenarios. The representations can be useful for various
 downstream tasks, including ML-guided compiler optimizations.
 
 The core components are:
-: - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
+
+- **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
     vector representations. This is managed by `IR2VecVocabAnalysis`. The
     vocabulary (.json file) contains three sections -- Opcodes, Types, and
     Arguments, each containing the representations of the corresponding
@@ -462,7 +462,7 @@ The core components are:
     for it to be valid; order in which they appear does not matter.
     :::
 
-  - **Embedder**: A class (`ir2vec::Embedder`) that uses the vocabulary to
+- **Embedder**: A class (`ir2vec::Embedder`) that uses the vocabulary to
     compute embeddings for instructions, basic blocks, and functions.
 
 #### Using IR2Vec

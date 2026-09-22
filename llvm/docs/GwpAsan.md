@@ -130,8 +130,8 @@ several aspects of GWP-ASan to be configured through the following methods:
   default visibility. This will override the compile time define;
 - Depending on allocator support (Scudo has support for this mechanism): Through
   an environment variable, containing the options string to be parsed. In Scudo,
-  this is through {title-reference}`SCUDO_OPTIONS=GWP_ASAN_${OPTION_NAME}=${VALUE}` (e.g.
-  {title-reference}`SCUDO_OPTIONS=GWP_ASAN_SampleRate=100`). Options defined this way will
+  this is through `SCUDO_OPTIONS=GWP_ASAN_${OPTION_NAME}=${VALUE}` (e.g.
+  `SCUDO_OPTIONS=GWP_ASAN_SampleRate=100`). Options defined this way will
   override any definition made through `__gwp_asan_default_options`.
 
 The options string follows a syntax similar to ASan, where distinct options

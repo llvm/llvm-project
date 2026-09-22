@@ -55,7 +55,7 @@ this fuzzer has reported are [on OSS Fuzz's tracker](https://bugs.chromium.org/p
 ### llvm-demangle-fuzzer
 
 A {{ generic_fuzzer }} for the Itanium demangler used in various LLVM tools. We've
-fuzzed \_\_cxa_demangle to death, why not fuzz LLVM's implementation of the same
+fuzzed `__cxa_demangle` to death, why not fuzz LLVM's implementation of the same
 function!
 
 ### llvm-isel-fuzzer

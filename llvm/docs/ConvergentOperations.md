@@ -391,7 +391,7 @@ executed the anchor together -- executes with the same set of threads as the
 final `@subgroupBroadcastFirst`. Nothing else is required for correctness as
 far as convergence is concerned.
 
-The function `@reserveSpaceInBuffer` itself is \_not\_ `convergent`: callers
+The function `@reserveSpaceInBuffer` itself is *not* `convergent`: callers
 are free to move call sites of the function as they see fit. This can change
 the behavior in practice, by changing the sets of threads that are grouped
 together for the atomic operation. This can be visible in the output of the

@@ -91,7 +91,7 @@ steps:
    `Shape`. The reason for this is that since `Shape` is abstract
    (`computeArea() = 0;`), you will never actually have non-derived
    instances of exactly that class (only subclasses). See [Concrete Bases
-   and Deeper Hierarchies][concrete bases and deeper hierarchies] for information on how to deal with
+   and Deeper Hierarchies](#concrete-bases-and-deeper-hierarchies) for information on how to deal with
    non-abstract bases. It's worth mentioning here that unlike
    `dynamic_cast<>`, LLVM-style RTTI can be used (and is often used) for
    classes that don't have v-tables.
@@ -225,7 +225,7 @@ steps:
    `classof` into `Shape`: all relevant classes derive from `Shape`,
    and `Shape` itself is abstract (has no entry in the `Kind` enum),
    so this notional inferred `classof` is all we need. See [Concrete
-   Bases and Deeper Hierarchies][concrete bases and deeper hierarchies] for more information about how to extend
+   Bases and Deeper Hierarchies](#concrete-bases-and-deeper-hierarchies) for more information about how to extend
    this example to more general hierarchies.
 
 Although for this small example setting up LLVM-style RTTI seems like a lot
@@ -322,7 +322,7 @@ As the comment indicates, this code contains a bug. A straightforward and
 non-clever way to avoid this is to introduce an explicit `SK_LastSquare`
 entry in the enum when adding the first subclass(es). For example, we could
 rewrite the example at the beginning of [Concrete Bases and Deeper
-Hierarchies][concrete bases and deeper hierarchies] as:
+Hierarchies](#concrete-bases-and-deeper-hierarchies) as:
 
 ```c++
  enum ShapeKind {

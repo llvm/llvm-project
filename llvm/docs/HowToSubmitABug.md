@@ -111,7 +111,7 @@ potentially be much faster.
 :::{TIP}
 Reduction is fastest and most effective the simpler the
 reproduction script is. Ideally, this will be running
-{title-reference}`opt` with a
+`opt` with a
 single pass. The most effective way to extract the IR before a
 specific point is a two step process. First, run the testcase with
 the `-print-pass-numbers` flag. This will print the name of a
@@ -147,13 +147,13 @@ If none of these crash, please follow the instructions for a
 should be able to reduce this with {doc}`llvm-reduce
 <CommandGuide/llvm-reduce>`, similar to middle end bugs. In this
 case, your test script should use {doc}`llc <CommandGuide/llc>`
-instead of {title-reference}`opt`.
+instead of `opt`.
 
 Please run this, then file a bug with the instructions and reduced
-`.bc` file that {title-reference}`llvm-reduce` emits. If something goes wrong
-with {title-reference}`llvm-reduce`, please submit the `foo.bc` file and the
+`.bc` file that `llvm-reduce` emits. If something goes wrong
+with `llvm-reduce`, please submit the `foo.bc` file and the
 option that
-{title-reference}`llc` crashes with.
+`llc` crashes with.
 
 ### LTO bugs
 
@@ -172,8 +172,9 @@ for later analysis.
 
 On Windows, use lld-link as the linker. Adjust your compilation
 flags as follows:
-\* Add `/lldsavetemps` to the linker flags.
-\* When linking from the compiler driver, add `/link /lldsavetemps` in order to forward that flag to the linker.
+
+- Add `/lldsavetemps` to the linker flags.
+- When linking from the compiler driver, add `/link /lldsavetemps` in order to forward that flag to the linker.
 
 Using the specified flags will generate four intermediate bytecode files:
 
