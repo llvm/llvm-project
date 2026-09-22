@@ -32,7 +32,7 @@ namespace LIBC_NAMESPACE_DECL {
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType inline_memcmp_arm(CPtr p1,
                                                                 CPtr p2,
                                                                 size_t count) {
-#if defined(LIBC_TARGET_CPU_HAS_MVE)
+#if defined(LIBC_TARGET_CPU_HAS_MVE) && LIBC_HAS_VECTOR_TYPE
   using Bytes = cpp::simd<uint8_t, 16>;
   using Mask = cpp::simd<bool, 16>;
   cpp::simd<uint32_t, 16> lanes = cpp::iota<uint32_t, 16>();
