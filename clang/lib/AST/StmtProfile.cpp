@@ -535,6 +535,11 @@ void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
     Profiler->VisitExpr(Factor);
 }
 
+void OMPClauseProfiler::VisitOMPDepthClause(const OMPDepthClause *C) {
+  if (const Expr *Depth = C->getDepth())
+    Profiler->VisitExpr(Depth);
+}
+
 void OMPClauseProfiler::VisitOMPLoopRangeClause(const OMPLoopRangeClause *C) {
   if (const Expr *First = C->getFirst())
     Profiler->VisitExpr(First);
@@ -1094,6 +1099,10 @@ void StmtProfiler::VisitOMPInterchangeDirective(
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPFlattenDirective(const OMPFlattenDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPSplitDirective(const OMPSplitDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
@@ -1486,10 +1495,13 @@ void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   if (Canonical)
     T = T.getCanonicalType();
   ID.AddInteger(T->getTypeClass());
-  if (auto BitIntT = T->getAs<BitIntType>())
-    BitIntT->Profile(ID);
-  else
+  if (auto BitIntT = T->getAs<BitIntType>()) {
+    auto [IsUnsigned, NumBits] = BitIntT->getKey();
+    ID.AddInteger(IsUnsigned);
+    ID.AddInteger(NumBits);
+  } else {
     ID.AddInteger(T->castAs<BuiltinType>()->getKind());
+  }
 }
 
 void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {

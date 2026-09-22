@@ -2118,16 +2118,29 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
       RHS->getType()->getPointerAddressSpace() != 0)
     return nullptr;
 
+  const auto *GA = dyn_cast<GlobalAlias>(LHS);
+  const GlobalObject *GO = GA ? dyn_cast_or_null<GlobalObject>(GA->getAliasee())
+                              : dyn_cast<GlobalObject>(LHS);
+
   // Both ptrtoint instructions must wrap global objects:
-  // - Only global variables are eligible for image relative relocations.
-  // - The subtrahend refers to the special symbol __ImageBase, a GlobalVariable.
-  // We expect __ImageBase to be a global variable without a section, externally
-  // defined.
+  // - Only global variables that are dso_local are eligible for image relative
+  //   relocations.
+  // - FIXME: Referring to a dllimport function produces an image-relative
+  //   relocation against the local import thunk rather than the canonical
+  //   function pointer, which lacks program-wide pointer identity. This is
+  //   sufficient for use cases like MSVC exception handling metadata (where the
+  //   function is only invoked), but is not theoretically sound in general.
+  //   We probably need something like dso_local_equivalent to explicitly
+  //   request a callable local entry point.
+  // - The subtrahend refers to the special symbol __ImageBase, a
+  //   GlobalVariable. We expect __ImageBase to be a global variable without a
+  //   section, externally defined.
   //
   // It should look something like this: @__ImageBase = external constant i8
-  if (!isa<GlobalObject>(LHS) || !isa<GlobalVariable>(RHS) ||
-      LHS->isThreadLocal() || RHS->isThreadLocal() ||
-      RHS->getName() != "__ImageBase" || !RHS->hasExternalLinkage() ||
+  if (!GO || (isa<GlobalVariable>(GO) && !TM.shouldAssumeDSOLocal(LHS)) ||
+      GO->isThreadLocal() || !isa<GlobalVariable>(RHS) ||
+      RHS->isThreadLocal() || RHS->getName() != "__ImageBase" ||
+      !RHS->hasExternalLinkage() ||
       cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
     return nullptr;
 
@@ -2860,6 +2873,12 @@ bool TargetLoweringObjectFileGOFF::shouldPutJumpTableInFunctionSection(
   return true;
 }
 
+MCSection *TargetLoweringObjectFileGOFF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+  return TextSection;
+}
+
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);
@@ -2887,7 +2906,7 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   auto *Symbol = TM.getSymbol(GO);
 
-  if (Kind.isBSS() || Kind.isData()) {
+  if (Kind.isBSS() || Kind.isData() || Kind.isReadOnlyWithRel()) {
     GOFF::ESDBindingScope PRBindingScope =
         GO->hasExternalLinkage()
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport

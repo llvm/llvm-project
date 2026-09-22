@@ -282,6 +282,12 @@ static llvm::cl::opt<bool>
                                  "the LHS of the intrinsic assignment"),
                   llvm::cl::init(true));
 
+static llvm::cl::opt<bool> fpSumReassociation(
+    "ffp-sum-reassociation",
+    llvm::cl::desc("Enable Fortran-standard compliant reassociation within "
+                   "individual REAL and COMPLEX sum expressions"),
+    llvm::cl::init(true));
+
 static llvm::cl::opt<bool> stackRepackArrays(
     "fstack-repack-arrays",
     llvm::cl::desc("Allocate temporary arrays for -frepack-arrays "
@@ -507,6 +513,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
+  loweringOptions.setSplitSumExpressionTree(fpSumReassociation);
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
@@ -658,6 +665,8 @@ int main(int argc, char **argv) {
   }
 
   Fortran::parser::Options options;
+  // bbc always preprocesses the input.
+  options.preprocessingEnabled = true;
   options.predefinitions.emplace_back("__flang__"s, "1"s);
   options.predefinitions.emplace_back("__flang_major__"s,
                                       std::string{FLANG_VERSION_MAJOR_STRING});

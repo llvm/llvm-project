@@ -1578,7 +1578,7 @@ public:
     if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
       return RD->isLocalClass();
 
-    return dyn_cast<FunctionDecl>(getDeclContext());
+    return getDeclContext()->getEnclosingFunction();
   }
 
   FunctionDecl *isLocalClass() {
@@ -4343,6 +4343,24 @@ public:
   SourceLocation getRSquareLoc() const { return RSquareLoc; }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
+
+  /// Result of attempting to extract the original variable from a
+  /// DecompositionDecl.
+  struct OriginalVarResult {
+    enum DiagnosticKind {
+      CallExpr = 0,     // Function call.
+      InitListExpr = 1, // Initializer list.
+      Temporary = 2,    // Temporary object.
+      MoveExpr = 3,     // Move expression.
+    };
+    const VarDecl *Var = nullptr;
+    DiagnosticKind DiagKind = Temporary;
+  };
+
+  /// If this decomposition was initialized from a variable (e.g., auto [a,b] =
+  /// p), returns the variable. Otherwise returns nullptr with a diagnostic kind
+  /// indicating why extraction failed.
+  OriginalVarResult getOriginalVar() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }

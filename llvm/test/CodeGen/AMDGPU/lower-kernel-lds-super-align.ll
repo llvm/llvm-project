@@ -44,7 +44,7 @@ define amdgpu_kernel void @k1(i64 %x) {
 
 ; CHECK-LABEL: @k2
 ; CHECK: store i16 1, ptr addrspace(3) @llvm.amdgcn.kernel.k2.lds, align 4
-; CHECK: store i16 2, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.kernel.k2.lds.t, ptr addrspace(3) @llvm.amdgcn.kernel.k2.lds, i32 0, i32 2), align 4
+; CHECK: store i16 2, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @llvm.amdgcn.kernel.k2.lds, i32 4), align 4
 define amdgpu_kernel void @k2() {
   store i16 1, ptr addrspace(3) @lds.2, align 2
   store i16 2, ptr addrspace(3) @lds.3, align 2

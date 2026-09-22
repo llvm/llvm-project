@@ -323,14 +323,10 @@ void RISCVMachObjectWriter::recordRelocation(
         (!B_Base || !B_Base->getFragment() ? 0
                                            : Writer->getSymbolAddress(*B_Base));
 
-    // If there's any addend left to handle, inline it in the instruction's
-    // immediate.
+    // If there's any addend left to handle, inline it in the data being
+    // relocated. Unlike the 12-bit immediate of an addi or an lw, the data
+    // is wide enough to store the whole addend.
     FixedValue = Value;
-    if (!isValidInt<12>(
-            FixedValue,
-            "AUIPC out of range of corresponding %pcrel_lo instruction", Asm,
-            Fixup.getLoc()))
-      return;
 
     emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ A_Base, Index,
                    IsPCRel, Log2Size, /*Type*/ MachO::RISCV_RELOC_UNSIGNED);

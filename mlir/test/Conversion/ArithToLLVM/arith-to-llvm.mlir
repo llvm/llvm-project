@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s --check-prefixes=CHECK,CHECK-DERIVE
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
@@ -540,7 +540,7 @@ func.func @fcmp(f32, f32) -> () {
   // CHECK-NEXT: llvm.fcmp "ule" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "une" %arg0, %arg1 : f32
   // CHECK-NEXT: llvm.fcmp "uno" %arg0, %arg1 : f32
-  // CHECK-NEXT: llvm.fcmp "oeq" %arg0, %arg1 {fastmathFlags = #llvm.fastmath<fast>} : f32
+  // CHECK-NEXT: llvm.fcmp "oeq" %arg0, %arg1 fastmath<fast> : f32
   // CHECK-NEXT: return
   %1 = arith.cmpf oeq, %arg0, %arg1 : f32
   %2 = arith.cmpf ogt, %arg0, %arg1 : f32
@@ -838,18 +838,53 @@ func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
   %2 = arith.minnumf %arg0, %arg1 : f32
   // CHECK: = llvm.intr.maxnum(%arg0, %arg1) : (f32, f32) -> f32
   %3 = arith.maxnumf %arg0, %arg1 : f32
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (f32, f32) -> f32
+  %4 = arith.minimumnumf %arg0, %arg1 : f32
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (f32, f32) -> f32
+  %5 = arith.maximumnumf %arg0, %arg1 : f32
   return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @minmaxnumf_float_widths
+func.func @minmaxnumf_float_widths(%arg0 : f16, %arg1 : f16, %arg2 : bf16,
+                                   %arg3 : bf16, %arg4 : f64, %arg5 : f64) {
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (f16, f16) -> f16
+  %0 = arith.minimumnumf %arg0, %arg1 : f16
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (f16, f16) -> f16
+  %1 = arith.maximumnumf %arg0, %arg1 : f16
+  // CHECK: = llvm.intr.minimumnum(%arg2, %arg3) : (bf16, bf16) -> bf16
+  %2 = arith.minimumnumf %arg2, %arg3 : bf16
+  // CHECK: = llvm.intr.maximumnum(%arg2, %arg3) : (bf16, bf16) -> bf16
+  %3 = arith.maximumnumf %arg2, %arg3 : bf16
+  // CHECK: = llvm.intr.minimumnum(%arg4, %arg5) : (f64, f64) -> f64
+  %4 = arith.minimumnumf %arg4, %arg5 : f64
+  // CHECK: = llvm.intr.maximumnum(%arg4, %arg5) : (f64, f64) -> f64
+  %5 = arith.maximumnumf %arg4, %arg5 : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @minmaxnumf_vector
+func.func @minmaxnumf_vector(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) {
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = arith.minimumnumf %arg0, %arg1 : vector<4xf32>
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %1 = arith.maximumnumf %arg0, %arg1 : vector<4xf32>
+  return
 }
 
 // -----
 
 // CHECK-LABEL: @fastmath
 func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
-// CHECK: llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
-// CHECK: llvm.fmul %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
-// CHECK: llvm.fneg %arg0  {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: llvm.fadd %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.fmul %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.fneg %arg0 fastmath<fast> : f32
 // CHECK: llvm.fadd %arg0, %arg1  : f32
-// CHECK: llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+// CHECK: llvm.fadd %arg0, %arg1 fastmath<nnan, ninf> : f32
   %0 = arith.addf %arg0, %arg1 fastmath<fast> : f32
   %1 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
   %2 = arith.negf %arg0 fastmath<fast> : f32
@@ -862,22 +897,26 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
 
 // CHECK-LABEL: @ops_supporting_fastmath
 func.func @ops_supporting_fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
-// CHECK: llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: llvm.fadd %arg0, %arg1 fastmath<fast> : f32
   %0 = arith.addf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.fdiv %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: llvm.fdiv %arg0, %arg1 fastmath<fast> : f32
   %1 = arith.divf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.intr.maximum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+// CHECK: llvm.intr.maximum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
   %2 = arith.maximumf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.intr.minimum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+// CHECK: llvm.intr.minimum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
   %3 = arith.minimumf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.fmul %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
-  %4 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.fneg %arg0  {fastmathFlags = #llvm.fastmath<fast>} : f32
-  %5 = arith.negf %arg0 fastmath<fast> : f32
-// CHECK: llvm.frem %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
-  %6 = arith.remf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.fsub %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
-  %7 = arith.subf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.maximumnum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
+  %4 = arith.maximumnumf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.minimumnum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
+  %5 = arith.minimumnumf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.fmul %arg0, %arg1 fastmath<fast> : f32
+  %6 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.fneg %arg0 fastmath<fast> : f32
+  %7 = arith.negf %arg0 fastmath<fast> : f32
+// CHECK: llvm.frem %arg0, %arg1 fastmath<fast> : f32
+  %8 = arith.remf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.fsub %arg0, %arg1 fastmath<fast> : f32
+  %9 = arith.subf %arg0, %arg1 fastmath<fast> : f32
   return
 }
 
@@ -969,11 +1008,11 @@ func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2
 
 // -----
 
-//   CHECK-LABEL: func @supported_fp_type
-//         CHECK:   llvm.fadd {{.*}} : f32
-//         CHECK:   llvm.fadd {{.*}} : vector<4xf32>
+// CHECK-LABEL: func @supported_fp_type
+//       CHECK:   llvm.fadd {{.*}} : f32
+//       CHECK:   llvm.fadd {{.*}} : vector<4xf32>
 // CHECK-COUNT-4:   llvm.fadd {{.*}} : vector<8xf32>
-//         CHECK:   llvm.fcmp {{.*}} : f32
+//       CHECK:   llvm.fcmp {{.*}} : f32
 func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8xf32>, %arg3: f32) {
   %0 = arith.addf %arg0, %arg0 : f32
   %1 = arith.addf %arg1, %arg1 : vector<4xf32>
@@ -1096,3 +1135,72 @@ func.func @unconvertible_type_constant() -> tf32 {
   %0 = arith.constant 2.0 : tf32
   return %0 : tf32
 }
+
+// -----
+
+// 32-bit data layout: arith.constant with index type -> i32 constant.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+
+func.func @constant_index_32bit() -> index {
+  %c0 = arith.constant 0 : index
+  return %c0 : index
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @constant_index_32bit
+// CHECK-DERIVE: llvm.mlir.constant(0 : i32) : i32
+
+// -----
+
+// 32-bit data layout: arith.cmpi on index type -> icmp on i32.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+
+func.func @cmpi_index_32bit(%a: index, %b: index) -> i1 {
+  %cmp = arith.cmpi slt, %a, %b : index
+  return %cmp : i1
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @cmpi_index_32bit
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: llvm.icmp "slt" %{{.*}}, %{{.*}} : i32
+
+// -----
+
+// 32-bit data layout: arith.addi on index type -> add on i32.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+
+func.func @addi_index_32bit(%a: index, %b: index) -> index {
+  %add = arith.addi %a, %b : index
+  return %add : index
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @addi_index_32bit
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+// CHECK-DERIVE: llvm.add %{{.*}}, %{{.*}} : i32
+
+// -----
+
+// Without dlti.dl_spec the default index width (i64) is preserved.
+
+module {
+
+func.func @constant_index_default() -> index {
+  %c0 = arith.constant 0 : index
+  return %c0 : index
+}
+
+}
+
+// CHECK-DERIVE-LABEL: func @constant_index_default
+// CHECK-DERIVE: llvm.mlir.constant(0 : i64) : i64
+
