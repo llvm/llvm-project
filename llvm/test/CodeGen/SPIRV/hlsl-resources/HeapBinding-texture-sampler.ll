@@ -62,7 +62,7 @@ entry:
   %BufPtr1 = call noundef align 4 dereferenceable(16) ptr addrspace(11)
         @llvm.spv.resource.getpointer.p11.tspirv.Image_f32_5_2_0_0_2_1t.i32(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %Buf, i32 1)
         
-  store <4 x float> %Value0, ptr addrspace(11) %BufPtr1, align 4
+  store <4 x float> %Value1, ptr addrspace(11) %BufPtr1, align 4
 
   ret void
 }

@@ -262,19 +262,38 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
   return Changed;
 }
 
+bool moduleContainsConstantString(Module &M, StringRef Str) {
+  for (GlobalVariable &GV : M.globals()) {
+    if (!GV.hasInitializer())
+      continue;
+    if (ConstantDataArray *CDA =
+            dyn_cast<ConstantDataArray>(GV.getInitializer())) {
+      if (CDA->isString() && CDA->getAsCString() == Str)
+        return true;
+    }
+  }
+  return false;
+}
+
+// Creates unique global variable for the heap name string, making
+// sure that each heap name string is unique within the module.
 GlobalVariable *createHeapNameString(Module &M, StringRef Name) {
   SmallString<32> GlobalStringName(Name);
   uint32_t HeapNameLen = Name.size();
+  StringRef HeapName;
   for (unsigned Suffix = 1;; ++Suffix) {
     GlobalStringName.append(".str");
-    if (!M.getNamedValue(GlobalStringName))
-      break;
+    if (!M.getNamedValue(GlobalStringName)) {
+      // Make sure the module does not already have a constant
+      // string with this value.
+      HeapName = GlobalStringName.substr(0, HeapNameLen);
+      if (!moduleContainsConstantString(M, HeapName))
+        break;
+    }
     GlobalStringName.resize(Name.size());
     raw_svector_ostream(GlobalStringName) << '.' << Suffix;
     HeapNameLen = GlobalStringName.size();
   }
-  StringRef HeapName = GlobalStringName.substr(0, HeapNameLen);
-
   Constant *Init = ConstantDataArray::getString(M.getContext(), HeapName);
   GlobalVariable *HeapNameGV = new GlobalVariable(
       M, Init->getType(), /*isConstant=*/true, GlobalValue::PrivateLinkage,
@@ -290,7 +309,7 @@ GlobalVariable *createHeapNameString(Module &M, StringRef Name) {
 // `llvm.spv.resource.handlefromheap` and groups them according to whether they
 // create CBV/SRV/UAV resources or samplers. It also collects calls to
 // `llvm.spv.resource.counterhandlefromheap` intrinsics that form a third group.
-///
+//
 // The function assigns the first available binding to each non-empty heap group
 // in this order: CBV/SRV/UAV resources, samplers, and counters. For each group,
 // it will replace the heap intrinsic calls with their explicit
@@ -300,7 +319,7 @@ GlobalVariable *createHeapNameString(Module &M, StringRef Name) {
 // itself. It only assigns a unique name that is shared by all resources
 // belonging to the same heap type; the existing `SPIRVInstructionSelector` will
 // create the globals.
-
+//
 // Because the CBV/SRV/UAV group can contain resources of different types, these
 // resources must be represented by separate arrays, one for each unique
 // resource type. All of these arrays will use the same binding and therefore
@@ -341,7 +360,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
 
   if (!CbvSrvUavs.empty()) {
     // For CBV/UAV/SRV resources we need to create a different
-    // ResourceDecriptorHeap name for each unique resource type. They will all
+    // ResourceDescriptorHeap name for each unique resource type. They will all
     // share the same binding and will overlap.
     uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
     SmallDenseMap<TargetExtType *, GlobalVariable *> ResourceDescriptorHeaps;
@@ -396,10 +415,11 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
 
   if (!Counters.empty()) {
     uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
+    [[maybe_unused]] Type *CounterHandleTy = Counters.front()->getReturnType();
     for (Function *F : Counters) {
       // The counter handle type should be the same for all resource types
       // that have a counter (target("spirv.VulkanBuffer", i32, 12, 1)).
-      assert(F->getReturnType() == Counters.front()->getReturnType() &&
+      assert(F->getReturnType() == CounterHandleTy &&
              "counter handle type mismatch");
       for (User *U : make_early_inc_range(F->users())) {
         if (CallInst *CI = dyn_cast<CallInst>(U)) {
