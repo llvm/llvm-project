@@ -35,7 +35,7 @@ bool PISACallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     return false;
   if (Val) {
     const DataLayout &DL = MIRBuilder.getDataLayout();
-    const TargetSubtargetInfo &STI = MIRBuilder.getMF().getSubtarget();
+    const PISASubtarget &STI = MIRBuilder.getMF().getSubtarget<PISASubtarget>();
     unsigned Op = 0;
     Type *Ty = Val->getType();
     Register VReg = VRegs[0];
@@ -384,8 +384,8 @@ unsigned PISACallLowering::getLoadParamOpcode(MachineIRBuilder &MIRBuilder,
                                               Type *ArgType) const {
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   MachineFunction &MF = MIRBuilder.getMF();
-  const PISARegisterInfo *TRI = static_cast<const PISARegisterInfo *>(
-      MF.getSubtarget().getRegisterInfo());
+  const PISARegisterInfo *TRI =
+      MF.getSubtarget<PISASubtarget>().getRegisterInfo();
 
   bool IsKernel = (F.getCallingConv() == CallingConv::PISA_KERNEL);
   unsigned Op = 0;
@@ -540,8 +540,9 @@ bool PISACallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   MachineInstrBuilder MIB;
-  const PISARegisterInfo *TRI = static_cast<const PISARegisterInfo *>(
-      MIRBuilder.getMF().getSubtarget().getRegisterInfo());
+  const PISARegisterInfo *TRI = MIRBuilder.getMF()
+                                    .getSubtarget<PISASubtarget>()
+                                    .getRegisterInfo();
 
   if (IsIndirectCall) {
     Register CalleeReg = Info.Callee.getReg();
