@@ -320,3 +320,119 @@ subroutine take_enum(c)
   use enum_mod
   type(color), intent(in) :: c
 end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test enumeration-typed scalar PARAMETER
+! -----------------------------------------------------------------------------
+
+! A named constant of enumeration type must lower to an i32 constant, not a
+! record type (previously asserted on cast<fir::RecordType> in ConvertConstant).
+
+! CHECK-LABEL: func.func @_QPtest_enum_parameter()
+subroutine test_enum_parameter()
+  use enum_mod
+  type(color), parameter :: cRed = red
+  type(color) :: c
+  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_enum_parameterECcred"} : (!fir.ref<i32>)
+  ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+  ! CHECK: hlfir.assign %[[C1]]
+  c = cRed
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test enumeration array constructor
+! -----------------------------------------------------------------------------
+
+! An array constructor of enumerators must lower to an i32 array constant, not a
+! record-typed array (previously asserted on cast<fir::RecordType>).
+
+! CHECK-LABEL: func.func @_QPtest_array_constructor()
+subroutine test_array_constructor()
+  use enum_mod
+  type(color) :: arr(3)
+  ! CHECK: %[[RO:.*]] = fir.address_of(@_QQro.3x_QMenum_modTcolor.{{[0-9]+}}) : !fir.ref<!fir.array<3xi32>>
+  ! CHECK: hlfir.declare %[[RO]]
+  ! CHECK: hlfir.assign
+  arr = [red, green, blue]
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test enumeration array PARAMETER
+! -----------------------------------------------------------------------------
+
+! CHECK-LABEL: func.func @_QPtest_array_parameter()
+subroutine test_array_parameter()
+  use enum_mod
+  type(color), parameter :: pal(3) = [red, green, blue]
+  type(color) :: arr(3)
+  ! CHECK: hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFtest_array_parameterECpal"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>)
+  ! CHECK: hlfir.assign
+  arr = pal
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test NEXT() over a whole array (elemental)
+! -----------------------------------------------------------------------------
+
+! NEXT()/PREVIOUS() applied to an array argument lower to an hlfir.elemental over
+! i32 ordinals (previously asserted on getIntOrFloatBitWidth for the array case).
+
+! CHECK-LABEL: func.func @_QPtest_next_array(
+subroutine test_next_array(arr)
+  use enum_mod
+  type(color), intent(in) :: arr(3)
+  type(color) :: narr(3)
+  integer :: stat(3)
+  ! Value elemental: min(ordinal + 1, 3).
+  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ! CHECK: %[[ELE:.*]] = hlfir.designate %{{.*}} : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
+  ! CHECK: %[[ORD:.*]] = fir.load %[[ELE]] : !fir.ref<i32>
+  ! CHECK-DAG: %[[ONE:.*]] = arith.constant 1 : i32
+  ! CHECK-DAG: %[[MAX:.*]] = arith.constant 3 : i32
+  ! CHECK: %[[INC:.*]] = arith.addi %[[ORD]], %[[ONE]] : i32
+  ! CHECK: %[[CMP:.*]] = arith.cmpi sle, %[[INC]], %[[MAX]] : i32
+  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[INC]], %[[MAX]] : i32
+  ! CHECK: hlfir.yield_element %[[SEL]] : i32
+  ! STAT elemental: 112 at the last enumerator, else 0.
+  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ! CHECK: arith.cmpi eq, %{{.*}}, %{{.*}} : i32
+  ! CHECK-DAG: arith.constant 112 : i32
+  ! CHECK-DAG: arith.constant 0 : i32
+  ! CHECK: arith.select
+  ! CHECK: hlfir.yield_element
+  narr = next(arr, stat=stat)
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Test PREVIOUS() over a whole array (elemental)
+! -----------------------------------------------------------------------------
+
+! CHECK-LABEL: func.func @_QPtest_previous_array(
+subroutine test_previous_array(arr)
+  use enum_mod
+  type(color), intent(in) :: arr(3)
+  type(color) :: parr(3)
+  integer :: stat(3)
+  ! Value elemental: max(ordinal - 1, 1).
+  ! CHECK: hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<3xi32> {
+  ! CHECK: %[[ELE:.*]] = hlfir.designate %{{.*}} : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
+  ! CHECK: %[[ORD:.*]] = fir.load %[[ELE]] : !fir.ref<i32>
+  ! CHECK: %[[ONE:.*]] = arith.constant 1 : i32
+  ! CHECK: %[[DEC:.*]] = arith.subi %[[ORD]], %[[ONE]] : i32
+  ! CHECK: %[[CMP:.*]] = arith.cmpi sge, %[[DEC]], %[[ONE]] : i32
+  ! CHECK: %[[SEL:.*]] = arith.select %[[CMP]], %[[DEC]], %[[ONE]] : i32
+  ! CHECK: hlfir.yield_element %[[SEL]] : i32
+  parr = previous(arr, stat=stat)
+end subroutine
+
+! -----------------------------------------------------------------------------
+!            Verify the enum array constructor constant is i32 ordinals 1,2,3
+! -----------------------------------------------------------------------------
+
+! CHECK: fir.global internal @_QQro.3x_QMenum_modTcolor.{{[0-9]+}} {{.*}}constant : !fir.array<3xi32> {
+! CHECK: %[[G1:.*]] = arith.constant 1 : i32
+! CHECK: fir.insert_value %{{.*}}, %[[G1]], [0 : index]
+! CHECK: %[[G2:.*]] = arith.constant 2 : i32
+! CHECK: fir.insert_value %{{.*}}, %[[G2]], [1 : index]
+! CHECK: %[[G3:.*]] = arith.constant 3 : i32
+! CHECK: fir.insert_value %{{.*}}, %[[G3]], [2 : index]
