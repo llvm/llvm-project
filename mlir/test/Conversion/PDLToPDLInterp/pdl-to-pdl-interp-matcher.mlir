@@ -133,11 +133,11 @@ module @constraint_with_result_multiple {
 // CHECK-LABEL: module @negated_constraint
 module @negated_constraint {
   // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
-  // CHECK: pdl_interp.apply_constraint "constraint"(%[[ROOT]] : !pdl.operation) {isNegated = true}
+  // CHECK: pdl_interp.apply_constraint "constraint"(%[[ROOT]] : !pdl.operation) is_negated = true
   // CHECK: pdl_interp.record_match @rewriters::@pdl_generated_rewriter(%[[ROOT]] : !pdl.operation)
   pdl.pattern : benefit(1) {
     %root = operation
-    pdl.apply_native_constraint "constraint"(%root : !pdl.operation) {isNegated = true}
+    pdl.apply_native_constraint "constraint"(%root : !pdl.operation) is_negated = true
     rewrite %root with "rewriter"
   }
 }

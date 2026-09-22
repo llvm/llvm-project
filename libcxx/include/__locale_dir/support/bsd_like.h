@@ -15,6 +15,7 @@
 #include <__utility/forward.h>
 #include <clocale> // std::lconv
 #include <ctype.h>
+#include <langinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,6 +64,16 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __loc
 
 inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return ::localeconv_l(__loc); }
 #endif // _LIBCPP_BUILDING_LIBRARY
+
+inline __locale_t __get_c_locale() {
+#if defined(__APPLE__) || defined(__FreeBSD__)
+  return 0;
+#elif defined(__NetBSD__)
+  return LC_C_LOCALE;
+#else
+#  error "BSD-like platforms need to extend this list."
+#endif
+}
 
 //
 // Strtonum functions
@@ -180,7 +191,11 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return ::mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
+}
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")
@@ -207,5 +222,7 @@ _LIBCPP_DIAGNOSTIC_POP
 
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
+
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_BSD_LIKE_H

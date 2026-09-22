@@ -21,8 +21,11 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 
 #define GET_GICOMBINER_DEPS
 #include "SPIRVGenPreLegalizeGICombiner.inc"
@@ -91,54 +94,53 @@ bool SPIRVPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 // Pass boilerplate
 // ================
 
-class SPIRVPreLegalizerCombiner : public MachineFunctionPass {
+class SPIRVPreLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SPIRVPreLegalizerCombiner();
+  SPIRVPreLegalizerCombinerLegacy();
 
   StringRef getPassName() const override { return "SPIRVPreLegalizerCombiner"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  SPIRVPreLegalizerCombinerImplRuleConfig RuleConfig;
 };
 
 } // end anonymous namespace
 
-void SPIRVPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void SPIRVPreLegalizerCombinerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-SPIRVPreLegalizerCombiner::SPIRVPreLegalizerCombiner()
-    : MachineFunctionPass(ID) {
-  if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
-}
+SPIRVPreLegalizerCombinerLegacy::SPIRVPreLegalizerCombinerLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool SPIRVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+static bool
+runPreLegalizerCombiner(MachineFunction &MF, bool ShouldSkip,
+                        function_ref<GISelValueTracking *()> GetVT,
+                        function_ref<MachineDominatorTree *()> GetMDT) {
   if (MF.getProperties().hasFailedISel())
     return false;
+
+  SPIRVPreLegalizerCombinerImplRuleConfig RuleConfig;
+  if (!RuleConfig.parseCommandLineOption())
+    reportFatalUsageError("Invalid rule identifier");
 
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-  MachineDominatorTree *MDT =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !ShouldSkip;
+  GISelValueTracking *VT = GetVT();
+  MachineDominatorTree *MDT = GetMDT();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
                      F.hasMinSize());
@@ -153,17 +155,43 @@ bool SPIRVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char SPIRVPreLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(SPIRVPreLegalizerCombiner, DEBUG_TYPE,
+char SPIRVPreLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(SPIRVPreLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine SPIRV machine instrs before legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(SPIRVPreLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(SPIRVPreLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine SPIRV machine instrs before legalization", false,
                     false)
 
 namespace llvm {
-FunctionPass *createSPIRVPreLegalizerCombiner() {
-  return new SPIRVPreLegalizerCombiner();
+FunctionPass *createSPIRVPreLegalizerCombinerLegacyPass() {
+  return new SPIRVPreLegalizerCombinerLegacy();
 }
 } // end namespace llvm
+
+bool SPIRVPreLegalizerCombinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runPreLegalizerCombiner(
+      MF, skipFunction(MF.getFunction()),
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      },
+      [&]() {
+        return &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+      });
+}
+
+PreservedAnalyses
+SPIRVPreLegalizerCombinerPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runPreLegalizerCombiner(
+      MF, MF.getFunction().hasOptNone(),
+      [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
+      [&]() { return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF); });
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<GISelValueTrackingAnalysis>();
+}

@@ -25,26 +25,21 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/API/SBUnixSignals.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <utility>
-
-#if defined(_WIN32)
-#define NOMINMAX
-#include <windows.h>
-
-#ifndef PATH_MAX
-#define PATH_MAX MAX_PATH
-#endif
-#endif
 
 using namespace llvm;
 
@@ -178,6 +173,36 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+static std::string GetSignalName(lldb::SBThread &thread) {
+  if (thread.GetStopReasonDataCount() == 0)
+    return {};
+
+  const int32_t signo =
+      static_cast<int32_t>(thread.GetStopReasonDataAtIndex(0));
+  lldb::SBUnixSignals signals = thread.GetProcess().GetUnixSignals();
+  if (const char *name = signals.GetSignalAsCString(signo))
+    return name;
+  return llvm::formatv("signal {0}", signo).str();
+}
+
+static std::string GetInstrumentationRuntimeName(lldb::SBThread &thread) {
+  lldb::SBStream stream;
+  if (!thread.GetStopReasonExtendedInfoAsJSON(stream))
+    return {};
+
+  llvm::Expected<llvm::json::Value> report =
+      llvm::json::parse({stream.GetData(), stream.GetSize()});
+  if (!report) {
+    llvm::consumeError(report.takeError());
+    return {};
+  }
+
+  const llvm::json::Object *obj = report->getAsObject();
+  if (!obj)
+    return {};
+  return obj->getString("instrumentation_class").value_or("").str();
+}
+
 static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
                              bool all_threads_stopped, bool preserve_focus) {
   protocol::StoppedEventBody body;
@@ -220,10 +245,17 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
       body.hitBreakpointIds.push_back(bp_id);
       body.text = llvm::formatv("data breakpoint {0}", bp_id).str();
     } break;
+    // DAP lacks stopped reasons for signals and instrumentation.
     case lldb::eStopReasonSignal:
+      body.reason = protocol::eStoppedReasonException;
+      body.text = GetSignalName(thread);
+      break;
     case lldb::eStopReasonException:
+      body.reason = protocol::eStoppedReasonException;
+      break;
     case lldb::eStopReasonInstrumentation:
       body.reason = protocol::eStoppedReasonException;
+      body.text = GetInstrumentationRuntimeName(thread);
       break;
     case lldb::eStopReasonExec:
     case lldb::eStopReasonFork:
@@ -475,7 +507,7 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
 
     // NOTE: Both mutexes must be acquired to prevent deadlock when
     // handling `modules_request`, which also requires both locks.
-    lldb::SBMutex api_mutex = dap->GetAPIMutex();
+    lldb::SBMutex api_mutex = target.GetAPIMutex();
     const std::scoped_lock<lldb::SBMutex, std::mutex> guard(api_mutex,
                                                             dap->modules_mutex);
     for (uint32_t i = 0; i < num_modules; ++i) {
@@ -483,7 +515,7 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
           lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
 
       std::optional<protocol::Module> p_module =
-          CreateModule(dap->target, module, remove_module);
+          CreateModule(target, module, remove_module);
       if (!p_module)
         continue;
 

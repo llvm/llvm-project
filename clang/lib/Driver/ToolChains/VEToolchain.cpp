@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEToolchain.h"
-#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Options/Options.h"
@@ -106,8 +105,7 @@ void VEToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void VEToolChain::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args,
-                                        StringRef BoundArch,
+                                        ArgStringList &CC1Args, BoundArch BA,
                                         Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
   bool UseInitArrayDefault = true;
@@ -140,8 +138,6 @@ void VEToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
                                       ArgStringList &CmdArgs) const {
   assert((GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) &&
          "Only -lc++ (aka libxx) is supported in this toolchain.");
-
-  tools::addArchSpecificRPath(*this, Args, CmdArgs);
 
   // Add paths for libc++.so and other shared libraries.
   if (std::optional<std::string> Path = getStdlibPath()) {

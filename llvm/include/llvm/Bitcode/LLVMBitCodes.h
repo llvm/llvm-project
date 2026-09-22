@@ -120,6 +120,11 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
+
+  MODULE_CODE_ASM_PROPERTY = 19, // [strchr x N]
+
+  // GUIDLIST: [n x i64]
+  MODULE_CODE_GUIDLIST = 20,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -395,6 +400,7 @@ enum MetadataCodes {
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
   METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
   METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
+  METADATA_PROPERTY = 50, // [distinct, name, file, line, type, backing_storage]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -566,6 +572,9 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInstOptionalFlags - Flags for serializing
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
+/// Flags for serializing AddrSpaceCastInst's SubclassOptionalData contents.
+enum AddrSpaceCastInstOptionalFlags { ASCI_NON_NULL = 0 };
 
 /// Mark to distinguish metadata from value in an operator bundle.
 enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };
@@ -820,6 +829,8 @@ enum AttributeKindCodes {
   ATTR_KIND_DENORMAL_FPENV = 106,
   ATTR_KIND_NOOUTLINE = 107,
   ATTR_KIND_FLATTEN = 108,
+  ATTR_KIND_NOIPA = 109,
+  ATTR_KIND_NOFREEOBJ = 110,
 };
 
 enum ComdatSelectionKindCodes {

@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVMergeRegionExitTargets.h"
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
@@ -131,7 +130,7 @@ static void validateRegionExits(const SPIRV::ConvergenceRegion *CR) {
   for (auto *Child : CR->Children)
     validateRegionExits(Child);
 
-  std::unordered_set<BasicBlock *> ExitTargets;
+  SmallPtrSet<BasicBlock *, 0> ExitTargets;
   for (auto *Exit : CR->Exits) {
     for (auto *BB : successors(Exit)) {
       if (CR->Blocks.count(BB) == 0)
@@ -176,7 +175,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
 
@@ -187,7 +185,7 @@ public:
 } // namespace
 
 PreservedAnalyses
-SPIRVMergeRegionExitTargets::run(Function &F, FunctionAnalysisManager &AM) {
+SPIRVMergeRegionExitTargetsPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &RegionInfo = AM.getResult<SPIRVConvergenceRegionAnalysis>(F);
   return runImpl(F, LI, RegionInfo) ? PreservedAnalyses::none()
@@ -200,7 +198,6 @@ INITIALIZE_PASS_BEGIN(SPIRVMergeRegionExitTargetsLegacy,
                       "split-region-exit-blocks",
                       "SPIRV split region exit blocks", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 

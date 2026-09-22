@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlanVerifier.h"
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
-#include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "VPlanTestBase.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -76,7 +76,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
       new VPInstruction(Instruction::Sub, {DefI, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {UseI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -118,7 +118,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -201,31 +201,129 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPlan &Plan = getPlan();
-  VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *I1 =
-      new VPInstruction(Instruction::Add, {Zero, Zero},
-                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   VPInstruction *BranchOnCond2 =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  VPBB2->appendRecipe(BranchOnCond);
+  VPBB3->appendRecipe(BranchOnCond2);
+
+  VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                            "R1", VPBB2, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBlockUtils::connectBlocks(R1, VPBB3);
+
+  // VPBB3 is outside the region and has the scalar header as both successors.
+  VPBlockUtils::connectBlocks(VPBB3, Plan.getScalarHeader());
+  VPBlockUtils::connectBlocks(VPBB3, Plan.getScalarHeader());
+
+  EXPECT_EQ(R1, Plan.getVectorLoopRegion());
+
+  // Duplicate successors are allowed for blocks with conditional terminators.
+  EXPECT_TRUE(verifyVPlanIsValid(Plan));
+}
+
+TEST_F(VPVerifierTest, VectorLoopRegionWithMultiplePredecessors) {
+  VPlan &Plan = getPlan();
+  VPInstruction *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
+  VPInstruction *BranchOnCond2 =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
 
-  VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(BranchOnCond2);
   VPBB2->appendRecipe(BranchOnCond);
 
   VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
                                             "R1", VPBB2, VPBB2);
+  // Connect the region twice, so it does not have a single predecessor and
+  // cannot be reached by following the last successors from the entry.
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
-
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
-  // Duplicate successors are allowed for blocks with conditional terminators.
-  EXPECT_TRUE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ("VPlan must have a single top-level loop region, reachable from "
+               "the entry by following the last successor of each block\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
+TEST_F(VPVerifierTest, MultipleTopLevelLoopRegions) {
+  VPlan &Plan = getPlan();
+  VPInstruction *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
+  VPInstruction *BranchOnCond2 =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  VPBB2->appendRecipe(BranchOnCond);
+  VPBB3->appendRecipe(BranchOnCond2);
+
+  VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                            "R1", VPBB2, VPBB2);
+  VPRegionBlock *R2 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                            "R2", VPBB3, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBlockUtils::connectBlocks(R1, R2);
+  VPBlockUtils::connectBlocks(R2, Plan.getScalarHeader());
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ("VPlan must have a single top-level loop region, reachable from "
+               "the entry by following the last successor of each block\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
+}
+
+TEST_F(VPVerifierTest, EntryBlockWithPredecessor) {
+  VPlan &Plan = getPlan();
+  VPInstruction *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
+  VPInstruction *BranchOnCond2 =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  VPBB2->appendRecipe(BranchOnCond);
+  VPBB3->appendRecipe(BranchOnCond2);
+
+  VPRegionBlock *R1 = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                            "R1", VPBB2, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBlockUtils::connectBlocks(R1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB3, Plan.getScalarHeader());
+  // Branch back to the entry block, which must be the root of the top-level
+  // CFG.
+  VPBlockUtils::connectBlocks(VPBB3, VPBB1);
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ("VPlan entry block has predecessors\n",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
 }
 
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
@@ -235,9 +333,9 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
   VPInstruction *BranchOnCond2 =
-      new VPInstruction(VPInstruction::BranchOnCond, {I1});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -272,7 +370,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
       new VPInstruction(Instruction::Add, {Zero, Zero},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
-      new VPInstruction(VPInstruction::BranchOnCond, {DefI});
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
@@ -296,8 +394,8 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
 
 TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
   VPlan &Plan = getPlan();
-  VPValue *Zero = Plan.getConstantInt(32, 0);
-  auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {Zero});
+  auto *BranchOnCond =
+      new VPInstruction(VPInstruction::BranchOnCond, {Plan.getFalse()});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("header");
@@ -328,6 +426,34 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
 #endif
 
   delete PHINode;
+}
+
+TEST_F(VPVerifierTest, DerivedIVWithStartInLoopRegions) {
+  VPlan &Plan = getPlan();
+  auto *I32Ty = Type::getInt32Ty(C);
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+
+  VPBuilder Builder(Latch);
+  VPValue *Start = Builder.createNot(Plan.getPoison(I32Ty));
+  Builder.createDerivedIV(InductionDescriptor::IK_IntInduction, nullptr, Start,
+                          Plan.getPoison(I32Ty), Plan.getPoison(I32Ty));
+  Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getTrue());
+
+  VPRegionBlock *LoopR = Plan.createLoopRegion(I32Ty, DebugLoc::getUnknown(),
+                                               "loop", Latch, Latch);
+  VPBlockUtils::connectBlocks(Entry, LoopR);
+  VPBlockUtils::connectBlocks(LoopR, Plan.getScalarHeader());
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+  EXPECT_STREQ(
+      "VPDerivedIVRecipe must have start value defined outside loop regions\n",
+      ::testing::internal::GetCapturedStderr().c_str());
+#endif
 }
 
 TEST_F(VPVerifierTest, testRUN_VPLAN_PASS) {

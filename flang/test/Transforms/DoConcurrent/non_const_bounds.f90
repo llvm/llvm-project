@@ -41,5 +41,5 @@ end program main
 ! CHECK:     }
 ! CHECK:   }
 ! CHECK:   omp.terminator
-! CHECK: }
+! CHECK: } {omp.combined}
 

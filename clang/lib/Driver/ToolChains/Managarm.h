@@ -41,7 +41,7 @@ public:
   }
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
   std::string computeSysRoot() const override;
 

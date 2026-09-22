@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -122,6 +123,22 @@ LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                              Value *Arm, bool Invert,
                                              const SimplifyQuery &Q,
                                              unsigned Depth = 0);
+
+enum class NoCommonBitsSetResult {
+  /// Not known to have no common set bits.
+  Unknown,
+
+  /// Known to have no common set bits only if undef values are ignored.
+  OnlyIfUndefIgnored,
+
+  /// Known to have no common set bits.
+  Known,
+};
+
+/// Return how strongly LHS and RHS are known to have no common set bits.
+LLVM_ABI NoCommonBitsSetResult getNoCommonBitsSetResult(
+    const WithCache<const Value *> &LHSCache,
+    const WithCache<const Value *> &RHSCache, const SimplifyQuery &SQ);
 
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
@@ -237,10 +254,6 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 /// the result of the comparison is true when the input value is signed.
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
-
-LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
-    const Instruction *I, const KnownFPClass &KnownLHS,
-    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
@@ -364,7 +377,13 @@ inline Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
   Value *Base =
       Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt, AllowNonInbounds);
 
-  Offset = OffsetAPInt.getSExtValue();
+  std::optional<int64_t> OffsetInt64 = OffsetAPInt.trySExtValue();
+  if (!OffsetInt64) {
+    Offset = 0;
+    return Ptr;
+  }
+
+  Offset = *OffsetInt64;
   return Base;
 }
 inline const Value *
@@ -427,43 +446,55 @@ LLVM_ABI uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
 /// the pointer within its underlying object. Offset preservation implies
 /// nullness preservation; pass true when callers reason about either offset or
 /// null equality (e.g. GEP decomposition, dereferenceability, isKnownNonZero).
+/// If \p MustPreserveProvenance is true, the call must preserve the provenance
+/// exactly, as opposed to being only based-on the argument.
 LLVM_ABI const Value *
 getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                     bool MustPreserveOffset);
-inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
-                                                   bool MustPreserveOffset) {
+                                     bool MustPreserveOffset,
+                                     bool MustPreserveProvenance = false);
+inline Value *
+getArgumentAliasingToReturnedPointer(CallBase *Call, bool MustPreserveOffset,
+                                     bool MustPreserveProvenance = false) {
   return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
-      const_cast<const CallBase *>(Call), MustPreserveOffset));
+      const_cast<const CallBase *>(Call), MustPreserveOffset,
+      MustPreserveProvenance));
 }
 
 /// {launder,strip}.invariant.group returns pointer that aliases its argument,
 /// and it only captures pointer by returning it.
 /// These intrinsics are not marked as nocapture, because returning is
 /// considered as capture. The arguments are not marked as returned neither,
-/// because it would make it useless. If \p MustPreserveOffset is true, the
-/// intrinsic must preserve the byte offset of the pointer within its
-/// underlying object (which excludes `llvm.ptrmask`, since masking off low
-/// bits changes the byte offset while still aliasing the same object).
+/// because it would make it useless. See getArgumentAliasingToReturnedPointer()
+/// for the meaning of \p MustPreserveOffset and \p MustPreserveProvenance.
 LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveOffset);
+    const CallBase *Call, bool MustPreserveOffset,
+    bool MustPreserveProvenance = false);
 
 /// This method strips off any GEP address adjustments, pointer casts
 /// or `llvm.threadlocal.address` from the specified value \p V, returning the
 /// original object being addressed. Note that the returned value has pointer
 /// type if the specified value does. If the \p MaxLookup value is non-zero, it
 /// limits the number of instructions to be stripped off.
+/// If \p MustPreserveProvenance is true, return a pointer with the exactly
+/// same provenance as \p V, as opposed to \p V only being based-on the
+/// underlying object.
 LLVM_ABI const Value *
-getUnderlyingObject(const Value *V, unsigned MaxLookup = MaxLookupSearchDepth);
+getUnderlyingObject(const Value *V, unsigned MaxLookup = MaxLookupSearchDepth,
+                    bool MustPreserveProvenance = false);
 inline Value *getUnderlyingObject(Value *V,
-                                  unsigned MaxLookup = MaxLookupSearchDepth) {
+                                  unsigned MaxLookup = MaxLookupSearchDepth,
+                                  bool MustPreserveProvenance = false) {
   // Force const to avoid infinite recursion.
   const Value *VConst = V;
-  return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
+  return const_cast<Value *>(
+      getUnderlyingObject(VConst, MaxLookup, MustPreserveProvenance));
 }
 
 /// Like getUnderlyingObject(), but will try harder to find a single underlying
 /// object. In particular, this function also looks through selects and phis.
-LLVM_ABI const Value *getUnderlyingObjectAggressive(const Value *V);
+LLVM_ABI const Value *
+getUnderlyingObjectAggressive(const Value *V,
+                              bool MustPreserveProvenance = false);
 
 /// This method is similar to getUnderlyingObject except that it can
 /// look through phi and select instructions and return multiple objects.
@@ -848,6 +879,8 @@ LLVM_ABI bool mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
 /// form with the strictness flipped predicate. Return the new predicate and
 /// corresponding constant RHS if possible. Otherwise return std::nullopt.
 /// E.g., (icmp sgt X, 0) -> (icmp sle X, 1).
+/// For a samesign predicate, fail if adjusting the constant would change its
+/// sign bit, because that would change the comparison's poison domain.
 LLVM_ABI std::optional<std::pair<CmpPredicate, Constant *>>
 getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C);
 

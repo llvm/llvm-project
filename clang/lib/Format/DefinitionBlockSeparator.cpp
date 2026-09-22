@@ -66,6 +66,10 @@ void DefinitionBlockSeparator::separateBlocks(
   };
   unsigned NewlineCount =
       (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always ? 1 : 0) + 1;
+
+  Style.MaxEmptyLinesToKeep =
+      std::max(Style.MaxEmptyLinesToKeep, NewlineCount - 1);
+
   WhitespaceManager Whitespaces(
       Env.getSourceManager(), Style,
       Style.LineEnding > FormatStyle::LE_CRLF
@@ -88,6 +92,11 @@ void DefinitionBlockSeparator::separateBlocks(
       assert(TargetLine);
       assert(TargetToken);
 
+      // Lines should not be added in the disabled region.
+      if (TargetToken->is(tok::comment) &&
+          isClangFormatOn(TargetToken->TokenText)) {
+        return;
+      }
       // Do not handle EOF newlines.
       if (TargetToken->is(tok::eof))
         return;

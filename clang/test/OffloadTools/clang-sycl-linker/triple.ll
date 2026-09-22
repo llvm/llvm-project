@@ -13,7 +13,7 @@
 ; Test that triple was inferred from inputs and recorded in the offload image.
 ; RUN: llvm-as %t/input1.ll -o %t/input1.bc
 ; RUN: llvm-as %t/input2.ll -o %t/input2.bc
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=TRIPLE-INFERENCE
 ; TRIPLE-INFERENCE: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ;

@@ -3051,19 +3051,19 @@ def FTRUNC_S_D : FTRUNC_S_D_ENC, FTRUNC_S_D_DESC;
 def FTRUNC_U_W : FTRUNC_U_W_ENC, FTRUNC_U_W_DESC;
 def FTRUNC_U_D : FTRUNC_U_D_ENC, FTRUNC_U_D_DESC;
 
-def : MipsPat<(fsub MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
+def : MipsPat<(fsub_contract MSA128WOpnd:$wd, (fmul_contract MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
               (FMSUB_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
-def : MipsPat<(fsub MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
+              ISA_MIPS1, ASE_MSA;
+def : MipsPat<(fsub_contract MSA128DOpnd:$wd, (fmul_contract MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
               (FMSUB_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA;
 
-def : MipsPat<(fadd MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
+def : MipsPat<(fadd_contract MSA128WOpnd:$wd, (fmul_contract MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
               (FMADD_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
-def : MipsPat<(fadd MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
+              ISA_MIPS1, ASE_MSA;
+def : MipsPat<(fadd_contract MSA128DOpnd:$wd, (fmul_contract MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
               (FMADD_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA;
 
 def HADD_S_H : HADD_S_H_ENC, HADD_S_H_DESC;
 def HADD_S_W : HADD_S_W_ENC, HADD_S_W_DESC;
@@ -3645,43 +3645,6 @@ def SZ_H_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v8i16, MSA128H>;
 def SZ_W_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v4i32, MSA128W>;
 def SZ_D_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllZero, v2i64, MSA128D>;
 def SZ_V_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAnyZero, v16i8, MSA128B>;
-
-// Pseudoes used to implement transparent fp16 support.
-
-let ASEPredicate = [HasMSA] in {
-  let usesCustomInserter = 1 in {
-    def ST_F16 :
-        MipsPseudo<(outs), (ins MSA128F16:$ws, mem_simm10:$addr),
-                   [(store (f16 MSA128F16:$ws), (addrimm10:$addr))]>;
-    def LD_F16 :
-        MipsPseudo<(outs MSA128F16:$ws), (ins mem_simm10:$addr),
-                   [(set MSA128F16:$ws, (f16 (load addrimm10:$addr)))]>;
-  }
-
-  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-    def MSA_FP_EXTEND_W_PSEUDO :
-        MipsPseudo<(outs FGR32Opnd:$fd), (ins MSA128F16:$ws),
-                   [(set FGR32Opnd:$fd, (f32 (fpextend MSA128F16:$ws)))]>;
-    def MSA_FP_ROUND_W_PSEUDO :
-        MipsPseudo<(outs MSA128F16:$wd), (ins FGR32Opnd:$fs),
-                   [(set MSA128F16:$wd, (f16 (fpround FGR32Opnd:$fs)))]>;
-    def MSA_FP_EXTEND_D_PSEUDO :
-        MipsPseudo<(outs FGR64Opnd:$fd), (ins MSA128F16:$ws),
-                   [(set FGR64Opnd:$fd, (f64 (fpextend MSA128F16:$ws)))]>;
-    def MSA_FP_ROUND_D_PSEUDO :
-        MipsPseudo<(outs MSA128F16:$wd), (ins FGR64Opnd:$fs),
-                   [(set MSA128F16:$wd, (f16 (fpround FGR64Opnd:$fs)))]>;
-  }
-
-  def : MipsPat<(MipsTruncIntFP MSA128F16:$ws),
-                (TRUNC_W_D64 (MSA_FP_EXTEND_D_PSEUDO MSA128F16:$ws))>,
-        ISA_MIPS1, ASE_MSA;
-
-  def : MipsPat<(MipsFPCmp MSA128F16:$ws, MSA128F16:$wt, imm:$cond),
-                (FCMP_S32 (MSA_FP_EXTEND_W_PSEUDO MSA128F16:$ws),
-                          (MSA_FP_EXTEND_W_PSEUDO MSA128F16:$wt), imm:$cond)>,
-        ISA_MIPS1_NOT_32R6_64R6, ASE_MSA;
-}
 
 def vsplati64_imm_eq_63 : PatLeaf<(bitconvert (v4i32 (build_vector))), [{
   APInt Imm;

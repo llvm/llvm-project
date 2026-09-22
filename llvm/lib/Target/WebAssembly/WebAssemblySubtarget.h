@@ -32,10 +32,6 @@
 
 namespace llvm {
 
-// Defined in WebAssemblyGenSubtargetInfo.inc.
-extern const SubtargetFeatureKV
-    WebAssemblyFeatureKV[WebAssembly::NumSubtargetFeatures];
-
 class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   enum SIMDEnum {
     NoSIMD,
@@ -52,6 +48,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasExtendedConst = false;
   bool HasFP16 = false;
   bool HasGC = false;
+  bool HasCooperativeMultithreading = false;
   bool HasLibcallThreadContext = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
@@ -82,8 +79,8 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
 public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
-  WebAssemblySubtarget(const Triple &TT, const std::string &CPU,
-                       const std::string &FS, const TargetMachine &TM);
+  WebAssemblySubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                       const TargetMachine &TM);
 
   const WebAssemblySelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
@@ -117,6 +114,9 @@ public:
   bool hasExtendedConst() const { return HasExtendedConst; }
   bool hasFP16() const { return HasFP16; }
   bool hasGC() const { return HasGC; }
+  bool hasCooperativeMultithreading() const {
+    return HasCooperativeMultithreading;
+  }
   bool hasLibcallThreadContext() const { return HasLibcallThreadContext; }
   bool hasMultiMemory() const { return HasMultiMemory; }
   bool hasMultivalue() const { return HasMultivalue; }

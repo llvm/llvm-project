@@ -1719,7 +1719,7 @@ define nofpclass(snan) float @not_nan__minimum_noundef_md__not_nan(float nofpcla
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.minimum.f32(float [[NOT_NAN0]], float [[NOT_NAN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
-  %result = call float @llvm.minimum.f32(float %not.nan0, float %not.nan1), !noundef !0, !unknown.md !0
+  %result = call noundef float @llvm.minimum.f32(float %not.nan0, float %not.nan1), !unknown.md !0
   ret float %result
 }
 

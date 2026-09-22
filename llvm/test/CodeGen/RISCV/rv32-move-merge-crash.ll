@@ -48,7 +48,7 @@ define void @test(i32 %arg0, i32 %arg1) nounwind {
 ; ZCMP-P-NEXT:    #NO_APP
 ; ZCMP-P-NEXT:    #APP
 ; ZCMP-P-NEXT:    #NO_APP
-; ZCMP-P-NEXT:    padd.dw a0, a4, zero
+; ZCMP-P-NEXT:    mvd a0, a4
 ; ZCMP-P-NEXT:    tail foo
 ;
 ; ZCMP-P64-LABEL: test:

@@ -180,3 +180,82 @@ define <2 x half> @insert_half_vec_constant(<2 x half> %v, half %a) {
   ret <2 x half> %ie
 }
 
+; DXIL indexable temps cannot hold i1 elements (booleans are 32 bits in memory).
+; A dynamically indexed extractelement of a <N x i1> vector must spill to an
+; [N x i32] array, zero-extending each element on store and truncating the
+; dynamically loaded value back to i1.
+define i1 @extract_i1_vec_dynamic(<4 x i1> %v, i32 %i) {
+; CHECK-LABEL: define i1 @extract_i1_vec_dynamic(
+; CHECK-SAME: <4 x i1> [[V:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[EE_ALLOCA:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    [[EE_EXTRACT:%.*]] = extractelement <4 x i1> [[V]], i64 0
+; CHECK-NEXT:    [[EE_ZEXT:%.*]] = zext i1 [[EE_EXTRACT]] to i32
+; CHECK-NEXT:    [[EE_INDEX:%.*]] = getelementptr inbounds [4 x i32], ptr [[EE_ALLOCA]], i32 0, i32 0
+; CHECK-NEXT:    store i32 [[EE_ZEXT]], ptr [[EE_INDEX]], align 4
+; CHECK-NEXT:    [[EE_EXTRACT1:%.*]] = extractelement <4 x i1> [[V]], i64 1
+; CHECK-NEXT:    [[EE_ZEXT2:%.*]] = zext i1 [[EE_EXTRACT1]] to i32
+; CHECK-NEXT:    [[EE_INDEX3:%.*]] = getelementptr inbounds [4 x i32], ptr [[EE_ALLOCA]], i32 0, i32 1
+; CHECK-NEXT:    store i32 [[EE_ZEXT2]], ptr [[EE_INDEX3]], align 4
+; CHECK-NEXT:    [[EE_EXTRACT4:%.*]] = extractelement <4 x i1> [[V]], i64 2
+; CHECK-NEXT:    [[EE_ZEXT5:%.*]] = zext i1 [[EE_EXTRACT4]] to i32
+; CHECK-NEXT:    [[EE_INDEX6:%.*]] = getelementptr inbounds [4 x i32], ptr [[EE_ALLOCA]], i32 0, i32 2
+; CHECK-NEXT:    store i32 [[EE_ZEXT5]], ptr [[EE_INDEX6]], align 4
+; CHECK-NEXT:    [[EE_EXTRACT7:%.*]] = extractelement <4 x i1> [[V]], i64 3
+; CHECK-NEXT:    [[EE_ZEXT8:%.*]] = zext i1 [[EE_EXTRACT7]] to i32
+; CHECK-NEXT:    [[EE_INDEX9:%.*]] = getelementptr inbounds [4 x i32], ptr [[EE_ALLOCA]], i32 0, i32 3
+; CHECK-NEXT:    store i32 [[EE_ZEXT8]], ptr [[EE_INDEX9]], align 4
+; CHECK-NEXT:    [[EE_INDEX10:%.*]] = getelementptr inbounds [4 x i32], ptr [[EE_ALLOCA]], i32 0, i32 [[I]]
+; CHECK-NEXT:    [[EE_LOAD:%.*]] = load i32, ptr [[EE_INDEX10]], align 4
+; CHECK-NEXT:    [[EE_TRUNC:%.*]] = trunc i32 [[EE_LOAD]] to i1
+; CHECK-NEXT:    ret i1 [[EE_TRUNC]]
+;
+  %ee = extractelement <4 x i1> %v, i32 %i
+  ret i1 %ee
+}
+
+; A dynamically indexed insertelement of a <N x i1> vector must likewise spill
+; to an [N x i32] array, zero-extending the stored value and truncating each
+; reloaded element back to i1 when reconstructing the vector.
+define <4 x i1> @insert_i1_vec_dynamic(<4 x i1> %v, i1 %a, i32 %i) {
+; CHECK-LABEL: define <4 x i1> @insert_i1_vec_dynamic(
+; CHECK-SAME: <4 x i1> [[V:%.*]], i1 [[A:%.*]], i32 [[I:%.*]]) {
+; CHECK-NEXT:    [[IE_ALLOCA:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    [[IE_EXTRACT:%.*]] = extractelement <4 x i1> [[V]], i64 0
+; CHECK-NEXT:    [[IE_ZEXT:%.*]] = zext i1 [[IE_EXTRACT]] to i32
+; CHECK-NEXT:    [[IE_INDEX:%.*]] = getelementptr inbounds [4 x i32], ptr [[IE_ALLOCA]], i32 0, i32 0
+; CHECK-NEXT:    store i32 [[IE_ZEXT]], ptr [[IE_INDEX]], align 4
+; CHECK-NEXT:    [[IE_EXTRACT1:%.*]] = extractelement <4 x i1> [[V]], i64 1
+; CHECK-NEXT:    [[IE_ZEXT2:%.*]] = zext i1 [[IE_EXTRACT1]] to i32
+; CHECK-NEXT:    [[IE_INDEX3:%.*]] = getelementptr inbounds [4 x i32], ptr [[IE_ALLOCA]], i32 0, i32 1
+; CHECK-NEXT:    store i32 [[IE_ZEXT2]], ptr [[IE_INDEX3]], align 4
+; CHECK-NEXT:    [[IE_EXTRACT4:%.*]] = extractelement <4 x i1> [[V]], i64 2
+; CHECK-NEXT:    [[IE_ZEXT5:%.*]] = zext i1 [[IE_EXTRACT4]] to i32
+; CHECK-NEXT:    [[IE_INDEX6:%.*]] = getelementptr inbounds [4 x i32], ptr [[IE_ALLOCA]], i32 0, i32 2
+; CHECK-NEXT:    store i32 [[IE_ZEXT5]], ptr [[IE_INDEX6]], align 4
+; CHECK-NEXT:    [[IE_EXTRACT7:%.*]] = extractelement <4 x i1> [[V]], i64 3
+; CHECK-NEXT:    [[IE_ZEXT8:%.*]] = zext i1 [[IE_EXTRACT7]] to i32
+; CHECK-NEXT:    [[IE_INDEX9:%.*]] = getelementptr inbounds [4 x i32], ptr [[IE_ALLOCA]], i32 0, i32 3
+; CHECK-NEXT:    store i32 [[IE_ZEXT8]], ptr [[IE_INDEX9]], align 4
+; CHECK-NEXT:    [[IE_INDEX10:%.*]] = getelementptr inbounds [4 x i32], ptr [[IE_ALLOCA]], i32 0, i32 [[I]]
+; CHECK-NEXT:    [[IE_LOAD:%.*]] = load i32, ptr [[IE_INDEX10]], align 4
+; CHECK-NEXT:    [[IE_ZEXT11:%.*]] = zext i1 [[A]] to i32
+; CHECK-NEXT:    store i32 [[IE_ZEXT11]], ptr [[IE_INDEX10]], align 4
+; CHECK-NEXT:    [[IE_LOAD12:%.*]] = load i32, ptr [[IE_INDEX]], align 4
+; CHECK-NEXT:    [[IE_TRUNC:%.*]] = trunc i32 [[IE_LOAD12]] to i1
+; CHECK-NEXT:    [[IE_INSERT:%.*]] = insertelement <4 x i1> poison, i1 [[IE_TRUNC]], i32 0
+; CHECK-NEXT:    [[IE_LOAD13:%.*]] = load i32, ptr [[IE_INDEX3]], align 4
+; CHECK-NEXT:    [[IE_TRUNC14:%.*]] = trunc i32 [[IE_LOAD13]] to i1
+; CHECK-NEXT:    [[IE_INSERT15:%.*]] = insertelement <4 x i1> [[IE_INSERT]], i1 [[IE_TRUNC14]], i32 1
+; CHECK-NEXT:    [[IE_LOAD16:%.*]] = load i32, ptr [[IE_INDEX6]], align 4
+; CHECK-NEXT:    [[IE_TRUNC17:%.*]] = trunc i32 [[IE_LOAD16]] to i1
+; CHECK-NEXT:    [[IE_INSERT18:%.*]] = insertelement <4 x i1> [[IE_INSERT15]], i1 [[IE_TRUNC17]], i32 2
+; CHECK-NEXT:    [[IE_LOAD19:%.*]] = load i32, ptr [[IE_INDEX9]], align 4
+; CHECK-NEXT:    [[IE_TRUNC20:%.*]] = trunc i32 [[IE_LOAD19]] to i1
+; CHECK-NEXT:    [[IE_INSERT21:%.*]] = insertelement <4 x i1> [[IE_INSERT18]], i1 [[IE_TRUNC20]], i32 3
+; CHECK-NEXT:    store i32 [[IE_LOAD]], ptr [[IE_INDEX10]], align 4
+; CHECK-NEXT:    ret <4 x i1> [[IE_INSERT21]]
+;
+  %ie = insertelement <4 x i1> %v, i1 %a, i32 %i
+  ret <4 x i1> %ie
+}
+

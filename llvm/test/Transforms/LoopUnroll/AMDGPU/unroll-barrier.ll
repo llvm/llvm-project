@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-unknown-amdhsa -mcpu=hawaii -passes=loop-unroll -S < %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu7.01-unknown-amdhsa -passes=loop-unroll -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @test_unroll_convergent_barrier(
 ; CHECK: call void @llvm.amdgcn.s.barrier()

@@ -62,9 +62,8 @@ static_assert(!std::__signed_integer<SomeObject>);
 static_assert(!std::__signed_integer<SomeEnum>);
 static_assert(!std::__signed_integer<SomeScopedEnum>);
 
-// cv-qualified versions are distinct types ([basic.type.qualifier]) and so
-// not signed integer types per [basic.fundamental]/p1. The three meaningful
-// flavors in C++ are const, volatile, and const volatile.
+// cv-qualified versions are distinct types ([basic.type.qualifier]) and not
+// signed integer types per [basic.fundamental]/p1.
 static_assert(!std::__signed_integer<const int>);
 static_assert(!std::__signed_integer<volatile int>);
 static_assert(!std::__signed_integer<const volatile int>);
@@ -79,7 +78,7 @@ static_assert(!std::__signed_integer<int&>);
 static_assert(!std::__signed_integer<const int&>);
 
 // Extended signed integer types per [basic.fundamental]/p3 Note 1.
-#if TEST_HAS_EXTENSION(bit_int)
+#if TEST_HAS_BITINT
 static_assert(std::__signed_integer<signed _BitInt(8)>);
 static_assert(std::__signed_integer<signed _BitInt(16)>);
 static_assert(std::__signed_integer<signed _BitInt(64)>);

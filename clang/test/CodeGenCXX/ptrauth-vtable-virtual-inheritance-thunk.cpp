@@ -177,7 +177,8 @@
 
 // CHECK: @_ZTS1G = constant [3 x i8] c"1G\00", align 1
 
-// CHECK: @_ZTV1B = linkonce_odr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr @_ZTI1B,
+// DARWIN: @_ZTV1B = linkonce_odr unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr @_ZTI1B,
+// ELF: @_ZTV1B = linkonce_odr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr @_ZTI1B,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1A1fEv, i32 0, i64 55636, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 2)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1A1gEv, i32 0, i64 19402, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN1A1hEz, i32 0, i64 31735, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV1B, i32 0, i32 0, i32 4)),

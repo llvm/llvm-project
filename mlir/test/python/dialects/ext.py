@@ -105,6 +105,176 @@ def testMyInt():
         print(adaptor1.rhs)
 
 
+# CHECK: TEST: testBareOperandAndResult
+@run
+def testBareOperandAndResult():
+    class TestBare(Dialect, name="ext_bare"):
+        pass
+
+    class BareOp(TestBare.Operation, name="bare"):
+        lhs: Operand
+        rhs: Operand
+        res: Result
+
+    class BareSpecifierOp(TestBare.Operation, name="bare_specifier"):
+        arg: Operand = operand(kw_only=True)
+        res: Result = result(kw_only=True)
+
+    class BareVariadicOp(TestBare.Operation, name="bare_variadic"):
+        ins: Sequence[Operand]
+        outs: Sequence[Result]
+        maybe_in: Optional[Operand] = None
+        maybe_out: Optional[Result] = None
+
+    with Context(), Location.unknown():
+        TestBare.load()
+
+        # CHECK: irdl.dialect @ext_bare {
+        # CHECK:   irdl.operation @bare {
+        # CHECK:     %0 = irdl.any
+        # CHECK:     %1 = irdl.any
+        # CHECK:     irdl.operands(lhs: %0, rhs: %1)
+        # CHECK:     %2 = irdl.any
+        # CHECK:     irdl.results(res: %2)
+        # CHECK:   }
+        # CHECK:   irdl.operation @bare_specifier {
+        # CHECK:     %0 = irdl.any
+        # CHECK:     irdl.operands(arg: %0)
+        # CHECK:     %1 = irdl.any
+        # CHECK:     irdl.results(res: %1)
+        # CHECK:   }
+        # CHECK:   irdl.operation @bare_variadic {
+        # CHECK:     %0 = irdl.any
+        # CHECK:     %1 = irdl.any
+        # CHECK:     irdl.operands(ins: variadic %0, maybe_in: optional %1)
+        # CHECK:     %2 = irdl.any
+        # CHECK:     %3 = irdl.any
+        # CHECK:     irdl.results(outs: variadic %2, maybe_out: optional %3)
+        # CHECK:   }
+        # CHECK: }
+        print(TestBare._mlir_module)
+
+        # CHECK: (self, /, lhs, rhs, res, *, loc=None, ip=None)
+        print(BareOp.__init__.__signature__)
+        # CHECK: (self, /, *, arg, res, loc=None, ip=None)
+        print(BareSpecifierOp.__init__.__signature__)
+        # CHECK: (self, /, ins, outs, *, maybe_in=None, maybe_out=None, loc=None, ip=None)
+        print(BareVariadicOp.__init__.__signature__)
+
+        i32 = IntegerType.get_signless(32)
+        f32 = F32Type.get()
+        module = Module.create()
+        with InsertionPoint(module.body):
+            ione = arith.constant(i32, 1)
+            fone = arith.constant(f32, 1.0)
+            bare = BareOp(ione, fone, f32)
+            bare_specifier = BareSpecifierOp(arg=fone, res=i32)
+            variadic = BareVariadicOp(
+                [ione, ione],
+                [i32, i32],
+                maybe_in=fone,
+                maybe_out=f32,
+            )
+            empty = BareVariadicOp([], [])
+
+        assert module.operation.verify()
+        # CHECK: "ext_bare.bare"(%c1_i32, %cst) : (i32, f32) -> f32
+        # CHECK: "ext_bare.bare_specifier"(%cst) : (f32) -> i32
+        # CHECK: "ext_bare.bare_variadic"(%c1_i32, %c1_i32, %cst) {operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>} : (i32, i32, f32) -> (i32, i32, f32)
+        # CHECK: "ext_bare.bare_variadic"() {operandSegmentSizes = array<i32: 0, 0>, resultSegmentSizes = array<i32: 0, 0>} : () -> ()
+        print(module)
+
+        # Different bare operands are constrained independently.
+        # CHECK: i32 f32 f32
+        print(bare.lhs.type, bare.rhs.type, bare.res.type)
+        # CHECK: f32 i32
+        print(bare_specifier.arg.type, bare_specifier.res.type)
+        # CHECK: 2 f32 2 f32
+        print(
+            len(variadic.ins),
+            variadic.maybe_in.type,
+            len(variadic.outs),
+            variadic.maybe_out.type,
+        )
+        # CHECK: 0 None 0 None
+        print(len(empty.ins), empty.maybe_in, len(empty.outs), empty.maybe_out)
+
+
+# CHECK: TEST: testDialectLoadInMultipleContexts
+@run
+def testDialectLoadInMultipleContexts():
+    class ContextLoadDialect(Dialect, name="ext_context_load"):
+        pass
+
+    class ContextLoadType(ContextLoadDialect.Type, name="type"):
+        value: IntegerAttr
+
+    class ContextLoadAttr(ContextLoadDialect.Attribute, name="attr"):
+        value: StringAttr
+
+    class ContextLoadOp(ContextLoadDialect.Operation, name="op"):
+        attr: ContextLoadAttr
+        result: Result[ContextLoadType]
+
+    def check_dialect(context_name, type_value):
+        i32 = IntegerType.get_signless(32)
+        result_type = ContextLoadType.get(IntegerAttr.get(i32, type_value))
+        attr = ContextLoadAttr.get(StringAttr.get(context_name))
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            ContextLoadOp(attr, result_type)
+
+        assert module.operation.verify()
+        module = Module.parse(str(module))
+        op = module.body.operations[0]
+        assert isinstance(op, ContextLoadOp)
+        assert isinstance(op.attr, ContextLoadAttr)
+        assert isinstance(op.result.type, ContextLoadType)
+
+        print(
+            f"{context_name}: {type(op).__name__}, "
+            f"{type(op.attr).__name__}, {type(op.result.type).__name__}"
+        )
+        print(op.attr.value)
+        print(op.result.type.value)
+
+    first_context = Context()
+    second_context = Context()
+
+    with first_context, Location.unknown():
+        ContextLoadDialect.load()
+        try:
+            ContextLoadDialect.load()
+        except DialectAlreadyLoadedError as e:
+            assert isinstance(e, RuntimeError)
+            # CHECK: same context: Dialect 'ext_context_load' has already been loaded in the current context.
+            print("same context:", e)
+        else:
+            raise AssertionError("expected DialectAlreadyLoadedError")
+
+        # CHECK: first context: ContextLoadOp, ContextLoadAttr, ContextLoadType
+        # CHECK: "first context"
+        # CHECK: 1 : i32
+        check_dialect("first context", 1)
+
+    with second_context, Location.unknown():
+        ContextLoadDialect.load()
+        # CHECK: second context: ContextLoadOp, ContextLoadAttr, ContextLoadType
+        # CHECK: "second context"
+        # CHECK: 2 : i32
+        check_dialect("second context", 2)
+
+    with first_context, Location.unknown():
+        try:
+            ContextLoadDialect.load()
+        except DialectAlreadyLoadedError as e:
+            # CHECK: same context again: Dialect 'ext_context_load' has already been loaded in the current context.
+            print("same context again:", e)
+        else:
+            raise AssertionError("expected DialectAlreadyLoadedError")
+
+
 # CHECK: TEST: testExtDialect
 @run
 def testExtDialect():
@@ -562,6 +732,69 @@ def testExtDialectWithRegion():
             print(e)
 
 
+# CHECK: TEST: testIsIsolatedFromAboveTrait
+@run
+def testIsIsolatedFromAboveTrait():
+    class TestIsolated(Dialect, name="ext_isolated"):
+        pass
+
+    class UseOp(TestIsolated.Operation, name="use"):
+        value: Operand[Any]
+
+    class NotIsolatedOp(
+        TestIsolated.Operation, name="not_isolated", traits=[NoTerminatorTrait]
+    ):
+        body: Region
+
+    class IsolatedOp(
+        TestIsolated.Operation,
+        name="isolated",
+        traits=[NoTerminatorTrait, IsIsolatedFromAboveTrait],
+    ):
+        body: Region
+
+    with Context(), Location.unknown():
+        TestIsolated.load()
+
+        # CHECK: not isolated has trait: False
+        print(
+            "not isolated has trait:",
+            NotIsolatedOp.has_trait(IsIsolatedFromAboveTrait),
+        )
+        # CHECK: isolated has trait: True
+        print("isolated has trait:", IsolatedOp.has_trait(IsIsolatedFromAboveTrait))
+
+        not_isolated_module = Module.create()
+        with InsertionPoint(not_isolated_module.body):
+            i32 = IntegerType.get_signless(32)
+            value = arith.constant(i32, 0)
+            not_isolated = NotIsolatedOp()
+            not_isolated.body.blocks.append()
+            with InsertionPoint(not_isolated.body.blocks[0]):
+                UseOp(value)
+
+        assert not_isolated_module.operation.verify()
+        # CHECK: not isolated: verification succeeded
+        print("not isolated: verification succeeded")
+
+        isolated_module = Module.create()
+        with InsertionPoint(isolated_module.body):
+            value = arith.constant(i32, 0)
+            isolated = IsolatedOp()
+            isolated.body.blocks.append()
+            with InsertionPoint(isolated.body.blocks[0]):
+                UseOp(value)
+
+        try:
+            isolated_module.operation.verify()
+        except MLIRError as e:
+            # CHECK: isolated: Verification failed:
+            # CHECK: using value defined outside the region
+            print("isolated:", e)
+        else:
+            raise AssertionError("expected IsIsolatedFromAbove verification to fail")
+
+
 # CHECK: TEST: testExtDialectWithType
 @run
 def testExtDialectWithType():
@@ -849,8 +1082,8 @@ def testExtDialectWithInterfaces():
 
     class NoMemoryEffectModel(ir.MemoryEffectsOpInterface):
         @staticmethod
-        def get_effects(op, effects):
-            pass
+        def get_effects(op):
+            return []
 
     class AlwaysSpeculatableModel(ir.ConditionallySpeculatable):
         @staticmethod
@@ -897,6 +1130,67 @@ def testExtDialectWithInterfaces():
             print("static spec query error:", e)
 
 
+# CHECK: TEST: testExtDialectWithPublicInterfaces
+@run
+def testExtDialectWithPublicInterfaces():
+    class TestPublicIface(Dialect, name="ext_public_iface"):
+        pass
+
+    class NoEffectOp(
+        TestPublicIface.Operation, name="no_effect", traits=[NoMemoryEffect]
+    ):
+        pass
+
+    class AlwaysSpeculatableOp(
+        TestPublicIface.Operation,
+        name="always_speculatable",
+        traits=[AlwaysSpeculatable],
+    ):
+        pass
+
+    class RecursivelySpeculatableOp(
+        TestPublicIface.Operation,
+        name="recursively_speculatable",
+        traits=[NoTerminatorTrait, RecursivelySpeculatable],
+    ):
+        body: Region
+
+    with Context(), Location.unknown():
+        TestPublicIface.load()
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            no_effect = NoEffectOp()
+            always_speculatable = AlwaysSpeculatableOp()
+            recursively_speculatable = RecursivelySpeculatableOp()
+            recursively_speculatable.body.blocks.append()
+            with InsertionPoint(recursively_speculatable.body.blocks[0]):
+                AlwaysSpeculatableOp()
+
+        assert module.operation.verify()
+
+        no_effect_iface = ir.MemoryEffectsOpInterface(no_effect)
+        always_speculatable_iface = ir.ConditionallySpeculatable(always_speculatable)
+        recursively_speculatable_iface = ir.ConditionallySpeculatable(
+            recursively_speculatable
+        )
+
+        # CHECK: public no memory effects: 0
+        print("public no memory effects:", len(no_effect_iface.get_effects()))
+        # CHECK: public always speculatable: True
+        print(
+            "public always speculatable:",
+            always_speculatable_iface.getSpeculatability()
+            == ir.Speculatability.Speculatable,
+        )
+        # CHECK: public recursively speculatable: True
+        print(
+            "public recursively speculatable:",
+            recursively_speculatable_iface.getSpeculatability()
+            == ir.Speculatability.RecursivelySpeculatable,
+        )
+
+
 # CHECK: TEST: testExtDialectWithPure
 @run
 def testExtDialectWithPure():
@@ -940,6 +1234,16 @@ def testExtDialectWithPure():
         # CHECK:   %[[NP:.*]] = "ext_pure.no_pure"(%[[P0]], %[[P1]]) : (i32, i32) -> i32
         # CHECK: }
         print(module)
+
+        pure_memory_iface = ir.MemoryEffectsOpInterface(p1)
+        pure_spec_iface = ir.ConditionallySpeculatable(p1)
+        # CHECK: pure memory effects: 0
+        print("pure memory effects:", len(pure_memory_iface.get_effects()))
+        # CHECK: pure speculatable: True
+        print(
+            "pure speculatable:",
+            pure_spec_iface.getSpeculatability() == ir.Speculatability.Speculatable,
+        )
 
         patterns = RewritePatternSet()
         apply_patterns_and_fold_greedily(module, patterns.freeze())

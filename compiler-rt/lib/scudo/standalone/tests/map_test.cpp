@@ -129,7 +129,7 @@ TEST(ScudoMapDeathTest, MapNoAccessUnmap) {
 
   ASSERT_TRUE(ReservedMemory.create(/*Addr=*/0U, Size, MappingName));
   EXPECT_NE(ReservedMemory.getBase(), 0U);
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       memset(reinterpret_cast<void *>(ReservedMemory.getBase()), 0xaa, Size),
       "");
 
@@ -138,7 +138,7 @@ TEST(ScudoMapDeathTest, MapNoAccessUnmap) {
 
 TEST(ScudoMapDeathTest, MapUnmap) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();
-  EXPECT_DEATH(
+  SCUDO_EXPECT_DEATH(
       {
         // Repeat few time to avoid missing crash if it's mmaped by unrelated
         // code.
@@ -169,7 +169,7 @@ TEST(ScudoMapDeathTest, MapWithGuardUnmap) {
   scudo::uptr Q = MemMap.getBase() + PageSize;
   ASSERT_TRUE(MemMap.remap(Q, Size, MappingName));
   memset(reinterpret_cast<void *>(Q), 0xaa, Size);
-  EXPECT_DEATH(memset(reinterpret_cast<void *>(Q), 0xaa, Size + 1), "");
+  SCUDO_EXPECT_DEATH(memset(reinterpret_cast<void *>(Q), 0xaa, Size + 1), "");
   MemMap.unmap();
 }
 

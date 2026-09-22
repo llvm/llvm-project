@@ -246,8 +246,27 @@ public:
   /// is initialized when a dialect is loaded.
   bool isParametricStorageInitialized(TypeID id);
 
+  /// Begins a transient scope. All subsequent allocations and uniquing
+  /// registrations will be recorded in a transient layer.
+  /// Precondition: The uniquer must not already be in a transient scope.
+  void beginTransientScope();
+
+  /// Ends the transient scope and resets back to the base state, freeing
+  /// all transiently allocated storage instances and clearing transient lookup
+  /// tables.
+  /// Precondition: The uniquer must be in a transient scope.
+  void endTransientScope();
+
+  /// Returns true if the uniquer is currently in a transient scope.
+  bool isInTransientScope() const;
+
   /// Changes the mutable component of 'storage' by forwarding the trailing
   /// arguments to the 'mutate' function of the derived class.
+  /// Note: When in a transient scope, any storage memory allocated during
+  /// mutation will come from the transient allocator. Mutating base storage
+  /// instances (allocated before the transient scope) while in a transient
+  /// scope is not supported as that transient memory will be freed on scope
+  /// exit.
   template <typename Storage, typename... Args>
   LogicalResult mutate(TypeID id, Storage *storage, Args &&...args) {
     auto mutationFn = [&](StorageAllocator &allocator) -> LogicalResult {

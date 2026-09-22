@@ -66,7 +66,7 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
                  binaryOperator(), callExpr(), returnStmt(), cxxConstructExpr(),
-                 cxxUnresolvedConstructExpr()))
+                 cxxUnresolvedConstructExpr(), atomicExpr()))
           .bind("Mark"),
       this);
   Finder->addMatcher(varDecl(hasOwnInitializer(anything())).bind("Mark"), this);
@@ -75,10 +75,9 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
 void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Parm = Result.Nodes.getNodeAs<ParmVarDecl>("Parm")) {
     if (const DeclContext *D = Parm->getParentFunctionOrMethod()) {
-      if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
-        if (M->isVirtual() || M->size_overridden_methods() != 0)
-          return;
-      }
+      if (const auto *M = dyn_cast<CXXMethodDecl>(D);
+          M && (M->isVirtual() || M->size_overridden_methods() != 0))
+        return;
     }
     addParm(Parm);
   } else if (const auto *Ctor =
@@ -114,6 +113,13 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
           markCanNotBeConst(Arg->IgnoreParenCasts(), false);
         }
       }
+    } else if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
+      // Atomic builtins may write through their pointer operands, such as the
+      // 'expected' operand of a compare-exchange, which receives the old value
+      // when the exchange fails.
+      for (const Expr *SubExpr :
+           llvm::ArrayRef(AE->getSubExprs(), AE->getNumSubExprs()))
+        markCanNotBeConst(SubExpr->IgnoreParenCasts(), true);
     } else if (const auto *CE = dyn_cast<CXXConstructExpr>(S)) {
       for (const auto *Arg : CE->arguments())
         markCanNotBeConst(Arg->IgnoreParenCasts(), true);
@@ -185,7 +191,7 @@ void NonConstParameterCheck::addParm(const ParmVarDecl *Parm) {
 }
 
 void NonConstParameterCheck::setReferenced(const DeclRefExpr *Ref) {
-  auto It = Parameters.find(dyn_cast<ParmVarDecl>(Ref->getDecl()));
+  const auto It = Parameters.find(dyn_cast<ParmVarDecl>(Ref->getDecl()));
   if (It != Parameters.end())
     It->second.IsReferenced = true;
 }
@@ -283,7 +289,7 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (const auto *Constr = dyn_cast<CXXConstructExpr>(E)) {
     for (const auto *Arg : Constr->arguments())
       if (const auto *M = dyn_cast<MaterializeTemporaryExpr>(Arg))
-        markCanNotBeConst(cast<Expr>(M->getSubExpr()), CanNotBeConst);
+        markCanNotBeConst(M->getSubExpr(), CanNotBeConst);
       else
         markCanNotBeConst(Arg, CanNotBeConst);
   } else if (const auto *CE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
@@ -298,7 +304,7 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (CanNotBeConst) {
     // Referencing parameter.
     if (const auto *D = dyn_cast<DeclRefExpr>(E)) {
-      auto It = Parameters.find(dyn_cast<ParmVarDecl>(D->getDecl()));
+      const auto It = Parameters.find(dyn_cast<ParmVarDecl>(D->getDecl()));
       if (It != Parameters.end())
         It->second.CanBeConst = false;
     }

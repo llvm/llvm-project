@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 // CHECK:      def X0 { // C
 // CHECK-NEXT:   bit x = 1;
 // CHECK-NEXT: }

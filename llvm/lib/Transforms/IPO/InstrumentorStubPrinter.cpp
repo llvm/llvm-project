@@ -53,6 +53,8 @@ static std::pair<std::string, std::string> getAsCType(Type *Ty,
 /// type \p Ty. The flags in \p Flags describe the properties of the argument.
 /// See IRTArg::IRArgFlagTy.
 static std::string getPrintfFormatString(Type *Ty, unsigned Flags) {
+  if (Flags & IRTArg::TYPEID)
+    return "%s";
   if (Ty->isIntegerTy()) {
     if (Ty->getIntegerBitWidth() > 32) {
       assert(Ty->getIntegerBitWidth() == 64);
@@ -90,7 +92,12 @@ std::pair<std::string, std::string> IRTCallDescription::createCBodies() const {
     if (!First)
       AddToFormats(", ");
     First = false;
-    AddToArgs(", " + IRArg.Name);
+
+    if (!(IRArg.Flags & IRTArg::TYPEID)) {
+      AddToArgs(", " + IRArg.Name);
+    } else {
+      AddToArgs(", getLLVMTypeIDName(" + IRArg.Name + ")");
+    }
     AddToFormats(IRArg.Name + ": ");
     if (NumReplaceableArgs == 1 && (IRArg.Flags & IRTArg::REPLACABLE)) {
       DirectReturnValue = IRArg.Name;

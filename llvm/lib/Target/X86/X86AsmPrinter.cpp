@@ -25,8 +25,10 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -433,6 +435,10 @@ void X86AsmPrinter::PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
   if (HasBaseReg && Modifier == "no-rip" && BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
+  // If we really just want to print out displacement.
+  if ((DispSpec.isGlobal() || DispSpec.isSymbol()) && Modifier == "disp-only")
+    HasBaseReg = false;
+
   // HasParenPart - True if we will print out the () part of the mem ref.
   bool HasParenPart = IndexReg.getReg() || HasBaseReg;
 
@@ -667,10 +673,11 @@ void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
       *Subtarget);
 }
 
-static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
-                              char Mode, raw_ostream &O) {
+static bool printAsmMRegister(const X86AsmPrinter &P, const MachineInstr &MI,
+                              const MachineOperand &MO, char Mode,
+                              raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   if (!X86::GR8RegClass.contains(Reg) &&
       !X86::GR16RegClass.contains(Reg) &&
@@ -711,10 +718,10 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
   return false;
 }
 
-static bool printAsmVRegister(const MachineOperand &MO, char Mode,
-                              raw_ostream &O) {
+static bool printAsmVRegister(const MachineInstr &MI, const MachineOperand &MO,
+                              char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   unsigned Index;
   if (X86::VR128XRegClass.contains(Reg))
@@ -756,6 +763,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     if (ExtraCode[1] != 0) return true; // Unknown modifier.
 
     const MachineOperand &MO = MI->getOperand(OpNo);
+    const bool IsIntel = MI->getInlineAsmDialect() == InlineAsm::AD_Intel;
 
     switch (ExtraCode[0]) {
     default:
@@ -778,9 +786,9 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
           O << "(%rip)";
         return false;
       case MachineOperand::MO_Register:
-        O << '(';
+        O << (IsIntel ? '[' : '(');
         PrintOperand(MI, OpNo, O);
-        O << ')';
+        O << (IsIntel ? ']' : ')');
         return false;
       }
 
@@ -804,7 +812,8 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 
     case 'A': // Print '*' before a register (it must be a register)
       if (MO.isReg()) {
-        O << '*';
+        if (!IsIntel)
+          O << '*';
         PrintOperand(MI, OpNo, O);
         return false;
       }
@@ -817,7 +826,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'q': // Print DImode register
     case 'V': // Print native register without '%'
       if (MO.isReg())
-        return printAsmMRegister(*this, MO, ExtraCode[0], O);
+        return printAsmMRegister(*this, *MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 
@@ -825,7 +834,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 't': // Print V8SFmode register
     case 'g': // Print V16SFmode register
       if (MO.isReg())
-        return printAsmVRegister(MO, ExtraCode[0], O);
+        return printAsmVRegister(*MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 
@@ -1157,12 +1166,18 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
 
 PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
+  // Force the computation of SDPI so that it is available for the
+  // actual pass, where it cannot be explicitly requested.
+  MAM.getResult<StaticDataProfileInfoAnalysis>(M);
   X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
       MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doInitialization(M);
   return PreservedAnalyses::all();
@@ -1178,7 +1193,12 @@ PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
     return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
         .getCachedResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MFAM, &MF](Module &M) {
+    return &MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                .getCachedResult<StaticDataProfileInfoAnalysis>(
+                    *MF.getFunction().getParent())
+                ->getStaticDataProfileInfo();
+  };
   setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
   AsmPrinter.runOnMachineFunction(MF);
   return PreservedAnalyses::all();
@@ -1191,7 +1211,10 @@ PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doFinalization(M);
   return PreservedAnalyses::all();

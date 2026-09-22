@@ -52,8 +52,8 @@ let Predicates = [HasStdExtZvdot4a8i] in {
 //===----------------------------------------------------------------------===//
 
 let HasPassthruOp = true, HasMaskOp = true in {
-  def riscv_vdot4a_vl : RVSDNode<"VDOT4A_VL", SDT_RISCVIntBinOp_VL>;
-  def riscv_vdot4au_vl : RVSDNode<"VDOT4AU_VL", SDT_RISCVIntBinOp_VL>;
+  def riscv_vdot4a_vl : RVSDNode<"VDOT4A_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+  def riscv_vdot4au_vl : RVSDNode<"VDOT4AU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   def riscv_vdot4asu_vl : RVSDNode<"VDOT4ASU_VL", SDT_RISCVIntBinOp_VL>;
 } // let HasPassthruOp = true, HasMaskOp = true
 
@@ -61,26 +61,29 @@ let HasPassthruOp = true, HasMaskOp = true in {
 // Pseudo Instructions for CodeGen
 //===----------------------------------------------------------------------===//
 
-multiclass VPseudoVDOT4A_VV_VX<bit Commutable = 0> {
+multiclass VPseudoVDOT4A_VX {
   foreach m = MxSet<32>.m in {
-    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
-              SchedBinary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV", m.MX,
-                          forcePassthruRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
               SchedBinary<"WriteVIMulAddX", "ReadVIMulAddV", "ReadVIMulAddX", m.MX,
                           forcePassthruRead=true>;
   }
 }
 
-let Predicates = [HasStdExtZvdot4a8i], mayLoad = 0, mayStore = 0,
-    hasSideEffects = 0 in {
+multiclass VPseudoVDOT4A_VV_VX<bit Commutable = 0>
+    : VPseudoVDOT4A_VX {
+  foreach m = MxSet<32>.m in {
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
+              SchedBinary<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV", m.MX,
+                          forcePassthruRead=true>;
+  }
+}
+
+let Predicates = [HasStdExtZvdot4a8i] in {
   defm PseudoVDOT4A : VPseudoVDOT4A_VV_VX<Commutable=1>;
   defm PseudoVDOT4AU : VPseudoVDOT4A_VV_VX<Commutable=1>;
   defm PseudoVDOT4ASU : VPseudoVDOT4A_VV_VX;
   // VDOT4AUS does not have a VV variant
-  foreach m = MxListVF4 in {
-    defm "PseudoVDOT4AUS_VX" : VPseudoTernaryWithPolicy<m.vrclass, m.vrclass, GPR, m>;
-  }
+  defm PseudoVDOT4AUS : VPseudoVDOT4A_VX;
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,6 +94,12 @@ defvar AllE32Vectors = [VI32MF2, VI32M1, VI32M2, VI32M4, VI32M8];
 defm : VPatBinaryVL_VV_VX<riscv_vdot4a_vl, "PseudoVDOT4A", AllE32Vectors, ExtraPreds=[HasStdExtZvdot4a8i]>;
 defm : VPatBinaryVL_VV_VX<riscv_vdot4au_vl, "PseudoVDOT4AU", AllE32Vectors, ExtraPreds=[HasStdExtZvdot4a8i]>;
 defm : VPatBinaryVL_VV_VX<riscv_vdot4asu_vl, "PseudoVDOT4ASU", AllE32Vectors, ExtraPreds=[HasStdExtZvdot4a8i]>;
+
+// vdot4aus.vx is the operand-swapped counterpart of vdot4asu.vx: it takes an
+// unsigned vector and a signed scalar. Use it when the signed operand of
+// riscv_vdot4asu_vl is a scalar splat. There is no .vv form because the
+// register operands can just be swapped.
+defm : VPatBinaryVL_R_VX<riscv_vdot4asu_vl, "PseudoVDOT4AUS", AllE32Vectors, ExtraPreds=[HasStdExtZvdot4a8i]>;
 
 // These VPat definitions are for vdot4a because they have a different operand
 // order with other ternary instructions (i.e. vop.vx vd, vs2, rs1)

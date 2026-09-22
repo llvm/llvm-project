@@ -13,7 +13,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -57,7 +56,7 @@ Error AppleAcceleratorTable::extract() {
   FormParams = {Hdr.Version, 0, dwarf::DwarfFormat::DWARF32};
 
   // Check that we can read all the hashes and offsets from the
-  // section (see SourceLevelDebugging.rst for the structure of the index).
+  // section (see SourceLevelDebugging.md for the structure of the index).
   if (!AccelSection.isValidOffset(getIthBucketBase(Hdr.BucketCount - 1)))
     return createStringError(
         errc::illegal_byte_sequence,

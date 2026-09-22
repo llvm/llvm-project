@@ -194,16 +194,9 @@ LLVM_ABI Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
 LLVM_ABI Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                                  const SimplifyQuery &Q);
 
-/// Given operands for a unary intrinsic, fold the result or return null.
-LLVM_ABI Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
-                                       FastMathFlags FMF,
-                                       const SimplifyQuery &Q);
-
-/// Given operands for a binary intrinsic, fold the result or return null.
-LLVM_ABI Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                        Value *Op0, Value *Op1,
-                                        FastMathFlags FMF,
-                                        const SimplifyQuery &Q);
+/// Given operands for an AddrSpaceCastInst, fold the result or return null.
+LLVM_ABI Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
+                                          const SimplifyQuery &Q);
 
 /// Given operands for an intrinsic, fold the result or return null. Context
 /// Function is passed as \p CxtF. \p ExBehavior and \p Rounding only apply to

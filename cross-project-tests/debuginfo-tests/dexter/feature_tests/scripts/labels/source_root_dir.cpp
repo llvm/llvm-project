@@ -1,6 +1,6 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --source-root-dir %S/Inputs \
-// RUN:   --use-script --binary %t -- %s | FileCheck %s
+// RUN:   --binary %t -- %s | FileCheck %s
 
 // Check that when --source-root-dir is provided, labels will be checked
 // relative to that directory.
@@ -21,11 +21,18 @@ int main() {
   return factorial(a); // !dex_label call
 }
 
-// CHECK: total_watched_steps: 20
-// CHECK: correct_steps: 20
-// CHECK: incorrect_steps: 0
-// CHECK: missing_var_steps: 0
-// CHECK: unexpected_value_steps: 0
+// CHECK: Step 0
+
+/// While stopped at the first line of `factorial`, no !expect nodes should be
+/// active.
+// CHECK: source_root_dir.cpp(11
+// CHECK-NOT: Active !expect nodes
+// CHECK: source_root_dir.cpp(13
+
+/// Verify that we stop in the correct header.
+// CHECK: Inputs/header.h(7
+
+// CHECK: correct_step_coverage: 100.0%
 // CHECK: seen_values: 9
 // CHECK: missing_values: 0
 

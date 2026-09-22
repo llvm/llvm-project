@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -161,6 +162,7 @@ public:
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -174,13 +176,7 @@ public:
            "TOC pointer used in a function using PC-Relative addressing!");
     if (skipFunction(MF.getFunction()))
       return false;
-    bool Changed = simplifyCode();
-#ifndef NDEBUG
-    if (Changed)
-      MF.verify(this, "Error in PowerPC MI Peephole optimization, compile with "
-                      "-mllvm -disable-ppc-peephole");
-#endif
-    return Changed;
+    return simplifyCode();
   }
 };
 
@@ -889,6 +885,8 @@ bool PPCMIPeephole::simplifyCode() {
             LLVM_DEBUG(dbgs() << "Changing splat immediate from " << SplatImm
                               << " to " << NewElem << " in instruction: ");
             LLVM_DEBUG(MI.dump());
+            if (!MRI->constrainRegClass(ShiftOp1, &PPC::VRRCRegClass))
+              llvm_unreachable("Can't fail because vrrc is subset of vsrc");
             addRegToUpdate(MI.getOperand(OpNo).getReg());
             addRegToUpdate(ShiftOp1);
             MI.getOperand(OpNo).setReg(ShiftOp1);

@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgpu -fsyntax-only -verify %s
 
 // Test that the second argument (strategy) must be a constant integer
 

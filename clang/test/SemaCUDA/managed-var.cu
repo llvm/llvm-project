@@ -52,3 +52,55 @@ typedef __managed__ int managed_int;
 
 __managed__ A a;
 // expected-error@-1 {{dynamic initialization is not supported for __device__, __constant__, __shared__, and __managed__ variables}}
+
+namespace gh198079 {
+__managed__ int x = 0;
+template <int *P> int *get() { return P; } // expected-note {{ ignored: non-type template argument is not a constant expression}}
+
+void foo() {
+  static constexpr auto a = &x;
+  // expected-error@-1 {{constexpr variable 'a' must be initialized by a constant expression}}
+  // expected-error@-2 {{invalid use of a __managed__ variable}}
+  // expected-note@-3 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+
+  get<&x>(); // expected-error {{no matching function for call to 'get'}}
+
+}
+
+template <int *PP>
+class boop {
+public:
+  static constexpr auto B = PP;
+};
+
+__device__ void bar() {
+  static constexpr auto A = boop<&x>::B; // expected-error {{non-type template argument is not a constant expression}}
+}
+int *hostglob = &x;
+// expected-error@-1 {{invalid use of a __managed__ variable}}
+// expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+int hostglob1 = x;
+// expected-error@-1 {{invalid use of a __managed__ variable}}
+// expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+size_t hostglob2 = (size_t)&x;
+// expected-error@-1 {{invalid use of a __managed__ variable}}
+// expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+struct Test {
+  Test(int) {}
+};
+Test hostglob3{x};
+// expected-error@-1 {{invalid use of a __managed__ variable}}
+// expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+
+int foo(int);
+Test hostglob4(foo(x));
+// expected-error@-1 {{invalid use of a __managed__ variable}}
+// expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+
+thread_local int hostglob5 = x;
+// expected-error@-1 {{invalid use of a __managed__ variable}}
+// expected-note@-2 {{__managed__ variable shall not be used in initialization of an object with static or thread local storage duration}}
+
+int ok = sizeof(x);
+auto reader = [] { return x; };
+} // namespace gh198079

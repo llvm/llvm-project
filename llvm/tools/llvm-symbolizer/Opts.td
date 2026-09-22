@@ -40,6 +40,7 @@ def functions_EQ : Joined<["--"], "functions=">, HelpText<"Print function name f
 defm gsym_file_directory : Eq<"gsym-file-directory", "Path to directory where to look for GSYM files">, MetaVarName<"<dir>">, Group<grp_gsym>;
 def help : F<"help", "Display this help">;
 defm dwp : Eq<"dwp", "Path to DWP file to be use for any split CUs">, MetaVarName<"<file>">;
+defm pdb : Eq<"pdb", "Path to PDB file">, MetaVarName<"<file>">;
 defm dsym_hint
     : Eq<"dsym-hint",
          "Path to .dSYM bundles to search for debug info for the object files">,

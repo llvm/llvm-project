@@ -53,7 +53,7 @@ public:
   /// subscripting behavior - for example a sparse array, disable automatic
   /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   /// This function is assumed to always succeed and if it fails, the front-end
@@ -82,6 +82,8 @@ public:
   // expected to use the return as the name of the type of this ValueObject for
   // display purposes
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
+
+  virtual void *GetImplementation() { return nullptr; }
 
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
   typedef std::unique_ptr<SyntheticChildrenFrontEnd> UniquePointer;
@@ -119,7 +121,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return llvm::createStringErrorV("Type has no child named '{0}'", name);
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
   lldb::ChildCacheState Update() override {
@@ -469,12 +471,13 @@ public:
 
     ConstString GetSyntheticTypeName() override;
 
+    void *GetImplementation() override;
+
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
   private:
     std::string m_python_class;
-    StructuredData::ObjectSP m_wrapper_sp;
-    ScriptInterpreter *m_interpreter;
+    lldb::ScriptedSyntheticChildrenInterfaceSP m_interface_sp;
 
     FrontEnd(const FrontEnd &) = delete;
     const FrontEnd &operator=(const FrontEnd &) = delete;

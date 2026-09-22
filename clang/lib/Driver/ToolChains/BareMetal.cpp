@@ -351,8 +351,7 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
-                                      ArgStringList &CC1Args,
-                                      StringRef BoundArch,
+                                      ArgStringList &CC1Args, BoundArch BA,
                                       Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }
@@ -491,6 +490,7 @@ void baremetal::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xstatic_lib_tool);
   CmdArgs.push_back(Output.getFilename());
 
   for (const auto &II : Inputs) {
@@ -650,14 +650,13 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 // code, ignoring all runtime library support issues on the assumption that
 // baremetal targets typically implement their own runtime support.
 SanitizerMask
-BareMetal::getSupportedSanitizers(StringRef BoundArch,
+BareMetal::getSupportedSanitizers(BoundArch BA,
                                   Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
                          getTriple().getArch() == llvm::Triple::aarch64_be;
   const bool IsRISCV64 = getTriple().isRISCV64();
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::PointerCompare;

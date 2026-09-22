@@ -132,7 +132,7 @@ TEST(DebugInfoDrop, DropOriginalDebugInfo) {
   std::string StdOut = testing::internal::GetCapturedStderr();
 
   std::string ErrorForSP = "ERROR:  dropped DISubprogram of";
-  std::string WarningForLoc = "WARNING:  dropped DILocation of";
+  std::string WarningForLoc = "WARNING:  did not generate DILocation for";
   std::string FinalResult = "CheckModuleDebugify (original debuginfo): FAIL";
 
   EXPECT_TRUE(StdOut.find(ErrorForSP) != std::string::npos);

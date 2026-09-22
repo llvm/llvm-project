@@ -10,11 +10,11 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
+#include "PseudoProbeLinker.h"
 #include "SwiftModule.h"
 #include "dsymutil.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -264,7 +264,7 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
 
 ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
     const DebugMapObject &Obj, const DebugMap &DebugMap,
-    remarks::RemarkLinker &RL,
+    remarks::RemarkLinker &RL, PseudoProbeLinker &PL,
     std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM) {
   auto ErrorOrObj = loadObject(Obj, DebugMap.getTriple());
   std::unique_ptr<DWARFFile> Res;
@@ -288,6 +288,9 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         Obj.getObjectFilename(), std::move(Context),
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj, DLBRM),
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+
+    if (Error E = PL.collect(*ErrorOrObj))
+      reportWarning(toString(std::move(E)), Obj.getObjectFilename());
 
     Error E = RL.link(*ErrorOrObj);
     // FIXME: Remark parsing errors are not propagated to the user.
@@ -729,6 +732,7 @@ bool DwarfLinkerForBinary::linkImpl(
       GeneralLinker->setOutputDWARFEmitter(Streamer.get());
   }
 
+  PseudoProbeLinker PL(Options);
   remarks::RemarkLinker RL;
   if (!Options.RemarksPrependPath.empty())
     RL.setExternalFilePrependPath(Options.RemarksPrependPath);
@@ -743,6 +747,7 @@ bool DwarfLinkerForBinary::linkImpl(
   GeneralLinker->setNumThreads(Options.Threads);
   GeneralLinker->setPrependPath(Options.PrependPath);
   GeneralLinker->setKeepFunctionForStatic(Options.KeepFunctionForStatic);
+  GeneralLinker->setThreadPool(ThreadPool);
   GeneralLinker->setInputVerificationHandler(
       [&](const DWARFFile &File, llvm::StringRef Output) {
         std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
@@ -758,7 +763,7 @@ bool DwarfLinkerForBinary::linkImpl(
 
     auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
     if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
-            loadObject(Obj, DebugMap, RL, DLBRelocMap)) {
+            loadObject(Obj, DebugMap, RL, PL, DLBRelocMap)) {
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       return *ObjectsForLinking.back().Object;
     } else {
@@ -943,7 +948,7 @@ bool DwarfLinkerForBinary::linkImpl(
 
     auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
     if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
-            loadObject(*Obj, Map, RL, DLBRelocMap)) {
+            loadObject(*Obj, Map, RL, PL, DLBRelocMap)) {
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
                                    OnCUDieLoaded);
@@ -972,6 +977,9 @@ bool DwarfLinkerForBinary::linkImpl(
 
   StringRef ArchName = Map.getTriple().getArchName();
   if (Error E = emitRemarks(Options, Map.getBinaryPath(), ArchName, RL))
+    return error(toString(std::move(E)));
+
+  if (Error E = PL.emit(Map.getTriple()))
     return error(toString(std::move(E)));
 
   if (Options.NoOutput)

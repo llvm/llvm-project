@@ -330,6 +330,9 @@ int main(int argc, char **argv) {
         func_p = swap_chars;
 
       std::lock_guard<std::mutex> lock(g_print_mutex);
+#if defined(__arm64e__)
+      func_p = __builtin_ptrauth_strip(func_p, /*ptrauth_key_asib*/ 1);
+#endif
       printf("code address: %p\n", func_p);
     } else if (consume_front(arg, "call-function:")) {
       void (*func_p)() = nullptr;
@@ -399,6 +402,8 @@ int main(int argc, char **argv) {
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);
+      // Make the test more reliable on Windows.
+      fflush(stdout);
     }
   }
 

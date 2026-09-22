@@ -1,0 +1,8 @@
+# Verify that clangd-index-server accepts Windows-style absolute paths as
+# project root, allowing the server to run on Linux with a Windows-built index.
+# "C:/project" is absolute in Windows style but not POSIX style.
+# REQUIRES: clangd-remote-index
+# RUN: not clangd-index-server --server-address=localhost:0 %t.idx "C:\\project" 2>&1 | FileCheck %s
+# The server should pass the path validation and fail later on missing index.
+# CHECK-NOT: Index root should be an absolute path
+# CHECK: does not exist

@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __comp_detail {
 
@@ -79,8 +79,8 @@ struct common_comparison_category {
 template <class... _Ts>
 using common_comparison_category_t = typename common_comparison_category<_Ts...>::type;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_COMMON_COMPARISON_CATEGORY_H

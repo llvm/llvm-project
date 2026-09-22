@@ -19,6 +19,25 @@ struct CtorSet {
   CtorSet(std::string s) { view = s; } // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
 };
 
+// A field escape on some-but-not-all paths (or in a loop) must still be caught:
+// the field's origin only spans blocks via the exit escape, so it must survive
+// the join.
+struct CtorSetConditional {
+  std::string_view view;  // expected-note {{this field dangles}}
+  CtorSetConditional(std::string s, bool c) {
+    if (c)
+      view = s; // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
+  }
+};
+
+struct CtorSetInLoop {
+  std::string_view view;  // expected-note {{this field dangles}}
+  CtorSetInLoop(std::string s, int n) {
+    for (int i = 0; i < n; ++i)
+      view = s; // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
+  }
+};
+
 struct CtorInitLifetimeBound {
   std::string_view view;  // expected-note {{this field dangles}}
   CtorInitLifetimeBound(std::string s) : view(construct_view(s)) {} // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
@@ -226,3 +245,44 @@ struct HasUniquePtrField {
   }
 };
 } // namespace MakeUnique
+
+namespace DtorNoWarn {
+struct DtorSet {
+  std::string_view view;
+  ~DtorSet() {
+    std::string s;
+    view = s;
+  }
+};
+} // namespace DtorNoWarn
+
+namespace LambdaCaptureReset {
+struct MyObj {};
+struct HasField {
+  MyObj* ptr; // expected-note 3 {{this field dangles}}
+
+  void this_capture() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [this]() {
+      ptr = nullptr;
+    };
+  }
+
+  void capture_by_ref() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [&]() {
+      ptr = nullptr;
+    };
+  }
+
+  void foo_init_capture() {
+    MyObj local;
+    ptr = &local; // expected-warning-re {{stack memory associated with local variable 'local' may escape to the field 'ptr' which will dangle. {{.*}} captured by a lambda}}
+    auto cleanup = [&p = ptr]() {
+      p = nullptr;
+    };
+  }
+};
+} // namespace LambdaCaptureReset
