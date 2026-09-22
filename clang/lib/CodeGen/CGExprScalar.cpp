@@ -2717,14 +2717,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         // Casting to pointer that could carry dynamic information (provided by
         // invariant.group) requires launder.
         Src = Builder.CreateLaunderInvariantGroup(Src);
-      } else if (SrcType.mayBeDynamicClass() && DestTy.mayBeNotDynamicClass()) {
-        // Casting to pointer that does not carry dynamic information (provided
-        // by invariant.group) requires stripping it.  Note that we don't do it
-        // if the source could not be dynamic type and destination could be
-        // dynamic because dynamic information is already laundered.  It is
-        // because launder(strip(src)) == launder(src), so there is no need to
-        // add extra strip before launder.
-        Src = Builder.CreateStripInvariantGroup(Src);
       }
     }
 
@@ -3007,18 +2999,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_PointerToIntegral: {
     assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
-    auto *PtrExpr = Visit(E);
-
-    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers) {
-      const QualType SrcType = E->getType();
-
-      // Casting to integer requires stripping dynamic information as it does
-      // not carries it.
-      if (SrcType.mayBeDynamicClass())
-        PtrExpr = Builder.CreateStripInvariantGroup(PtrExpr);
-    }
-
-    PtrExpr = CGF.authPointerToPointerCast(PtrExpr, E->getType(), DestTy);
+    auto *PtrExpr =
+        CGF.authPointerToPointerCast(Visit(E), E->getType(), DestTy);
     return Builder.CreatePtrToInt(PtrExpr, ConvertType(DestTy));
   }
   case CK_ToVoid: {
@@ -5380,23 +5362,6 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
       Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");
     } else {
       // Unsigned integers and pointers.
-
-      if (CGF.CGM.getCodeGenOpts().StrictVTablePointers &&
-          !isa<llvm::ConstantPointerNull>(LHS) &&
-          !isa<llvm::ConstantPointerNull>(RHS)) {
-
-        // Dynamic information is required to be stripped for comparisons,
-        // because it could leak the dynamic information.  Based on comparisons
-        // of pointers to dynamic objects, the optimizer can replace one pointer
-        // with another, which might be incorrect in presence of invariant
-        // groups. Comparison with null is safe because null does not carry any
-        // dynamic information.
-        if (LHSTy.mayBeDynamicClass())
-          LHS = Builder.CreateStripInvariantGroup(LHS);
-        if (RHSTy.mayBeDynamicClass())
-          RHS = Builder.CreateStripInvariantGroup(RHS);
-      }
-
       Result = Builder.CreateICmp(UICmpOpc, LHS, RHS, "cmp");
     }
 

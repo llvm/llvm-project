@@ -17,13 +17,13 @@ sfence.w.inval 0x10 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 sfence.inval.ir 0x10 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
-hfence.vvma zero, a1, a2 # CHECK: :[[@LINE]]:13: error: unexpected extra operand for instruction
+hfence.vvma zero, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
 
-hfence.vvma a0, 0x10 # CHECK: :[[@LINE]]:13: error: unexpected extra operand for instruction
+hfence.vvma a0, 0x10 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
 
-hfence.gvma zero, a1, a2 # CHECK: :[[@LINE]]:13: error: unexpected extra operand for instruction
+hfence.gvma zero, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
 
-hfence.gvma a0, 0x10 # CHECK: :[[@LINE]]:13: error: unexpected extra operand for instruction
+hfence.gvma a0, 0x10 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
 
 hinval.vvma zero, a1, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
