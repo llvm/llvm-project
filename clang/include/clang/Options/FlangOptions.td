@@ -400,13 +400,11 @@ defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
 
 def finit_local_EQ : Joined<["-"], "finit-local=">,
   Group<f_Group>,
-  Visibility<[FC1Option, FlangOption]>,
   HelpText<"Initialize local variables without explicit or default initialization. "
            "Accepts: zero or 0x<hex-byte>.">;
 
 def finit_local_zero : Flag<["-"], "finit-local-zero">,
   Group<f_Group>,
-  Visibility<[FC1Option, FlangOption]>,
   HelpText<"Zero-initialize local variables without explicit or default initialization "
            "(alias for -finit-local=zero, GFortran compatibility)">,
   Alias<finit_local_EQ>, AliasArgs<["zero"]>;
