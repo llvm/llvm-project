@@ -22403,8 +22403,8 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
   // Even if %offset0 and %offset1 are both constants, and `%offset0 + %offset1`
   // exceeds uimm5, using an extra register to materialize the new offset + .vx
   // is probably still more benefitial.
-  SDValue NewOffset = DAG.getNode(ISD::ADD, DL, Subtarget.getXLenVT(), Offset0,
-                                  Offset1, SDNodeFlags::NoUnsignedWrap);
+  SDValue NewOffset =
+      DAG.getNode(ISD::ADD, DL, Subtarget.getXLenVT(), Offset0, Offset1);
   EVT VecVT = N->getValueType(0);
   return DAG.getNode(
       RISCVISD::VSLIDEDOWN_VL, DL, VecVT,
