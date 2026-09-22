@@ -346,6 +346,10 @@ let Definition = "platform", Path = "platform" in {
     Global,
     DefaultStringValue<"">,
     Desc<"Root directory for cached modules.">;
+  def ShellExpandTimeout: Property<"shell-expand-timeout", "UInt64">,
+    Global,
+    DefaultUnsignedValue<180>,
+    Desc<"The time in seconds to wait for the shell expansion of launch arguments to complete. A value of 0 disables the timeout.">;
 }
 
 let Definition = "thread", Path = "target.process.thread" in {

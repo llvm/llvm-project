@@ -118,7 +118,6 @@ define i32 @test_mbcnt_full_pattern_wave32_partial() "amdgpu-flat-work-group-siz
 ; CHECK-LABEL: define i32 @test_mbcnt_full_pattern_wave32_partial(
 ; CHECK-SAME: ) #[[ATTR3]] !reqd_work_group_size [[META3]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 48) i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[B:%.*]] = and i32 [[TMP0]], 31
 ; CHECK-NEXT:    ret i32 [[B]]
