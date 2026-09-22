@@ -19,11 +19,6 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${config_flags}
       ${arch_flags})
 
-  if(LIBC_TEST_MAX_CONCURRENCY)
-    libc_add_definition(compile_options
-      "LIBC_TEST_MAX_CONCURRENCY=${LIBC_TEST_MAX_CONCURRENCY}")
-  endif()
-
   # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
   # will make those tests no-op to reduce the overall test time.
   if(LIBC_TEST_SKIP_DEATH_TESTS)
