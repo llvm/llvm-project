@@ -15,6 +15,8 @@
 
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Operation.h"
+#include <optional>
 
 namespace llvm {
 class StringRef;
@@ -35,6 +37,22 @@ namespace cuf {
 static constexpr llvm::StringRef dataAttrName = "data_attr";
 static constexpr llvm::StringRef getDataAttrName() { return "cuf.data_attr"; }
 static constexpr llvm::StringRef getProcAttrName() { return "cuf.proc_attr"; }
+/// On the device copy of a procedure, the symbol of the procedure it copies.
+static constexpr llvm::StringRef getDeviceCopyOfAttrName() {
+  return "cuf.device_copy_of";
+}
+/// Mark \p copy as the device copy of the procedure named \p original.
+inline void setDeviceCopyOf(mlir::Operation *copy, llvm::StringRef original) {
+  copy->setAttr(getDeviceCopyOfAttrName(),
+                mlir::FlatSymbolRefAttr::get(copy->getContext(), original));
+}
+/// The name of the procedure \p op is the device copy of, if it is one.
+inline std::optional<llvm::StringRef> getDeviceCopyOf(mlir::Operation *op) {
+  if (auto ref =
+          op->getAttrOfType<mlir::FlatSymbolRefAttr>(getDeviceCopyOfAttrName()))
+    return ref.getValue();
+  return std::nullopt;
+}
 
 /// Attribute to carry CUDA launch_bounds values.
 static constexpr llvm::StringRef getLaunchBoundsAttrName() {

@@ -301,6 +301,10 @@ TEST(InternalNamesTest, isCompilerGenerated) {
   ASSERT_TRUE(NameUniquer::isCompilerGenerated(
       "_QQcl.2E2F6669725F7064745F6578616D706C652E66393000",
       /*excludeStringLiterals=*/false));
+  // Test for array literals
+  ASSERT_FALSE(NameUniquer::isCompilerGenerated("_QQro.4x3xc1.0"));
+  ASSERT_TRUE(NameUniquer::isCompilerGenerated("_QQro.4x3xc1.0",
+      /*excludeStringLiterals=*/true, /*excludeArrayLiterals=*/false));
 }
 
 // main() from gtest_main
