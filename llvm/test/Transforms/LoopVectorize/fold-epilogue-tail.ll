@@ -154,19 +154,19 @@ define i32 @fixed-order-recurrence(ptr %src) {
 ; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with fixed-order recurrence
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %i = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %previous = phi i32 [ 0, %entry ], [ %ld, %for.body ]
+loop:
+  %i = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %previous = phi i32 [ 0, %entry ], [ %ld, %loop ]
   %gep = getelementptr inbounds i32, ptr %src, i64 %i
   %ld = load i32, ptr %gep, align 4
-  %inc = add nuw nsw i64 %i, 1
-  %exitcond = icmp eq i64 %inc, 23
-  br i1 %exitcond, label %for.end, label %for.body
+  %iv.next = add nuw nsw i64 %i, 1
+  %exitcond = icmp eq i64 %iv.next, 23
+  br i1 %exitcond, label %for.end, label %loop
 
 for.end:
-  %result = phi i32 [ %previous, %for.body ]
+  %result = phi i32 [ %previous, %loop ]
   ret i32 %result
 }
 
@@ -222,29 +222,29 @@ exit:
 
 @AB = common global [1024 x i32] zeroinitializer, align 4
 @CD = common global [1024 x i32] zeroinitializer, align 4
-define void @test_no_masked_interleave_support(i32 %C, i32 %D) {
+define void @test_no_masked_interleave_support() {
 ; CHECK-INVALID-INTERLEAVE-LABEL: LV: Checking a loop in 'test_no_masked_interleave_support'
 ; CHECK-INVALID-INTERLEAVE: remark: <unknown>:0:0: Epilogue tail-folding is not supported with interleaved accesses when masking them isn't supported
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %iv
   %tmp = load i32, ptr %arrayidx0, align 4
-  %tmp1 = or disjoint i64 %indvars.iv, 1
+  %tmp1 = or disjoint i64 %iv, 1
   %arrayidx1 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %tmp1
   %tmp2 = load i32, ptr %arrayidx1, align 4
-  %add = add nsw i32 %tmp, %C
-  %mul = mul nsw i32 %tmp2, %D
-  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %indvars.iv
+  %add = add nsw i32 %tmp, 3
+  %mul = mul nsw i32 %tmp2, 5
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %iv
   store i32 %add, ptr %arrayidx2, align 4
   %arrayidx3 = getelementptr inbounds [1024 x i32], ptr @CD, i64 0, i64 %tmp1
   store i32 %mul, ptr %arrayidx3, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
-  %cmp = icmp slt i64 %indvars.iv.next, 1024
-  br i1 %cmp, label %for.body, label %for.end
+  %iv.next = add nuw nsw i64 %iv, 2
+  %cmp = icmp slt i64 %iv.next, 1024
+  br i1 %cmp, label %loop, label %for.end
 
 for.end:
   ret void
