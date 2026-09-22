@@ -17,11 +17,6 @@
 ; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s \
 ; RUN: --check-prefix=CHECK-INVALID-COSTS
 
-; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize,vectorutils \
-; RUN: -epilogue-tail-folding-policy=prefer-fold-tail --disable-output \
-; RUN: -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 \
-; RUN: | FileCheck %s --check-prefix=CHECK-INVALIDATE-INTERLEAVE
-
 target triple = "aarch64-linux-gnu"
 
 define void @test_epilogue_tf(ptr %A, i64 %n, i32 %val) {
@@ -686,32 +681,3 @@ for.end:
   ret void
 }
 declare void @foo(ptr)
-
-
-define i64 @test_no_masked_interleave_support(i64 %y, i32 %n) {
-; CHECK-INVALIDATE-INTERLEAVE-LABEL: Checking a loop in 'test_no_masked_interleave_support'
-; CHECK-INVALIDATE-INTERLEAVE: LV: epilogue tail-folding is enabled
-; CHECK-INVALIDATE-INTERLEAVE: LV: Analyzing interleaved accesses...
-; CHECK-INVALIDATE-INTERLEAVE: LV: Invalidate all interleaved groups due to fold-tail by masking which requires masked-interleaved support
-entry:
-  br label %for.body
-
-for.body:
-  %i = phi i32 [ 0, %entry ], [ %inc, %cond.end ]
-  %cmp = icmp eq i64 %y, 0
-  br i1 %cmp, label %cond.end, label %cond.false
-
-cond.false:
-  %div = xor i64 3, %y
-  br label %cond.end
-
-cond.end:
-  %cond = phi i64 [ %div, %cond.false ], [ 77, %for.body ]
-  %inc = add nuw nsw i32 %i, 1
-  %exitcond = icmp eq i32 %inc, %n
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body
-
-for.cond.cleanup:
-  ret i64 %cond
-}
-

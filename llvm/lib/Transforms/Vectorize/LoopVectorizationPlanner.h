@@ -880,8 +880,6 @@ class LoopVectorizationPlanner {
 
   /// The interleaved access analysis.
   InterleavedAccessInfo &IAI;
-  /// The interleaved access analysis for the case of tail-folded epilogue.
-  std::unique_ptr<InterleavedAccessInfo> EpilogueTfIAI;
 
   PredicatedScalarEvolution &PSE;
 
