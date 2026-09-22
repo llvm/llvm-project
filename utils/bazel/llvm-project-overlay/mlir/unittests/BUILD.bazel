@@ -36,6 +36,7 @@ cc_test(
     srcs = glob([
         "IR/*.cpp",
     ]),
+    features = ["-layering_check"],  # #include "../../lib/IR/SymbolRefContainmentCache.h"
     deps = [
         "//llvm:Core",
         "//llvm:Remarks",
