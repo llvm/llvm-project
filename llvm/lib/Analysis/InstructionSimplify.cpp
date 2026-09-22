@@ -4203,8 +4203,8 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (Constant *CLHS = dyn_cast<Constant>(LHS)) {
     if (Constant *CRHS = dyn_cast<Constant>(RHS)) {
       // if the folding isn't successfull, fall back to the rest of the logic
-      if (auto *Result = ConstantFoldCompareInstOperands(Pred, CLHS, CRHS, Q.DL,
-                                                         Q.TLI, Q.CxtF))
+      if (auto *Result = ConstantFoldCompareInstOperands(
+              Pred, CLHS, CRHS, Q.DL, Q.TLI, Q.getFunction()))
         return Result;
     } else {
       // If we have a constant, make sure it is on the RHS.
@@ -4274,9 +4274,10 @@ static Value *simplifyFCmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     return computeKnownFPClass(LHS, FMF, InterestedFlags, Q);
   };
 
-  if (C && Q.CxtF) {
+  if (C && Q.getFunction()) {
     // Fold out compares that express a class test.
-    auto [ClassVal, ClassTest] = fcmpToClassTest(Pred, *Q.CxtF, LHS, C);
+    auto [ClassVal, ClassTest] =
+        fcmpToClassTest(Pred, *Q.getFunction(), LHS, C);
     if (ClassVal) {
       FullKnownClassLHS = computeLHSClass();
       if ((FullKnownClassLHS->getKnownFPClasses() & ClassTest) == fcNone)
@@ -5725,8 +5726,9 @@ Value *llvm::simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 static Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
                                         const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
-  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.CxtF &&
-      !NullPointerIsDefined(Q.CxtF, Op->getType()->getPointerAddressSpace()))
+  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.getFunction() &&
+      !NullPointerIsDefined(Q.getFunction(),
+                            Op->getType()->getPointerAddressSpace()))
     return PoisonValue::get(Ty);
 
   return ::simplifyCastInst(Instruction::AddrSpaceCast, Op, Ty, Q, MaxRecurse);
@@ -6950,10 +6952,10 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    if (!Q.CxtF)
+    if (!Q.getFunction())
       break;
 
-    const Function *F = Q.CxtF;
+    const Function *F = Q.getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
@@ -7382,7 +7384,7 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (all_of(Args, IsaPred<Constant>))
     if (Constant *C = ConstantFoldIntrinsic(
             IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
-            ReturnType, Q.DL, Q.CxtF))
+            ReturnType, Q.DL, Q.getFunction()))
       return C;
 
   // Most of the intrinsics with no operands have some kind of side effect.
@@ -7390,9 +7392,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      if (!Q.CxtF)
+      if (!Q.getFunction())
         return nullptr;
-      ConstantRange CR = getVScaleRange(Q.CxtF, 64);
+      ConstantRange CR = getVScaleRange(Q.getFunction(), 64);
       if (const APInt *C = CR.getSingleElement())
         return ConstantInt::get(ReturnType, C->getZExtValue());
       return nullptr;
@@ -7534,8 +7536,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     ConstantRange NumElts(
         APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
     if (Ty->isScalableTy())
-      NumElts = NumElts.multiply(Q.CxtF ? getVScaleRange(Q.CxtF, BitWidth)
-                                        : ConstantRange::getFull(BitWidth));
+      NumElts = NumElts.multiply(Q.getFunction()
+                                     ? getVScaleRange(Q.getFunction(), BitWidth)
+                                     : ConstantRange::getFull(BitWidth));
 
     // If we know Offset > NumElts, simplify to poison.
     ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
@@ -7738,7 +7741,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse) {
   assert(I->getFunction() && "instruction should be inserted in a function");
-  assert((!SQ.CxtF || SQ.CxtF == I->getFunction()) &&
+  assert((!SQ.getFunction() || SQ.getFunction() == I->getFunction()) &&
          "context instruction should be in the same function");
 
   const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
