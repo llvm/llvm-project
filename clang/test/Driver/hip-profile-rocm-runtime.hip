@@ -37,4 +37,6 @@
 // RUN: --offload-arch=gfx90a -fprofile-generate -resource-dir=%t \
 // RUN: -nogpuinc -nogpulib %s 2>&1 \
 // RUN: | FileCheck -check-prefix=HIP-DEVICE-PGO %s
+// HIP-DEVICE-PGO-DAG: "-emit-llvm-bc"
+// HIP-DEVICE-PGO-DAG: "-flto=full"
 // HIP-DEVICE-PGO: "{{.*}}lld" {{.*}}"{{.*}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"
