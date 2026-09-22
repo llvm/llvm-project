@@ -1162,6 +1162,15 @@ RISCVTTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
       CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
+  // Splitting involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  if (MICA.getID() == Intrinsic::vp_load ||
+      MICA.getID() == Intrinsic::vp_store) {
+    auto LT = getTypeLegalizationCost(Src);
+    if (LT.first > 1)
+      SplitCost += LT.first * TTI::TCC_Expensive;
+  }
+
   return getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
 
@@ -1302,6 +1311,8 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
                 MICA.getID() == Intrinsic::vp_gather;
   unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
   Type *DataTy = MICA.getDataType();
+  Type *PtrTy = DataTy->getWithNewType(
+      DL.getAddressType(DataTy->getContext(), MICA.getAddressSpace()));
   Align Alignment = MICA.getAlignment();
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
@@ -1312,12 +1323,24 @@ RISCVTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
        !isLegalMaskedScatter(DataTy, Align(Alignment))))
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
+  // Splitting vp intrinsics involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  if (MICA.getID() == Intrinsic::vp_gather ||
+      MICA.getID() == Intrinsic::vp_scatter) {
+    auto DataLT = getTypeLegalizationCost(DataTy);
+    auto PtrLT = getTypeLegalizationCost(PtrTy);
+    if (DataLT.first > 1)
+      SplitCost += DataLT.first * TTI::TCC_Expensive;
+    if (PtrLT.first > 1)
+      SplitCost += PtrLT.first * TTI::TCC_Expensive;
+  }
+
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * TTI::TCC_Basic;
+  return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
@@ -1375,12 +1398,18 @@ RISCVTTIImpl::getStridedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (CostKind == TTI::TCK_CodeSize)
     return TTI::TCC_Basic;
 
+  // Splitting vp intrinsics involves additional evl arithmetic and vl toggles.
+  InstructionCost SplitCost = 0;
+  auto LT = getTypeLegalizationCost(DataTy);
+  if (LT.first > 1)
+    SplitCost += LT.first * TTI::TCC_Expensive;
+
   // Cost is proportional to the number of memory operations implied.  For
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
-  return NumLoads * TTI::TCC_Basic;
+  return SplitCost + NumLoads * TTI::TCC_Basic;
 }
 
 InstructionCost

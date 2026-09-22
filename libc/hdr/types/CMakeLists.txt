@@ -58,6 +58,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct___pthread_cleanup_frame
+  HDRS
+    struct___pthread_cleanup_frame.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct___pthread_cleanup_frame
+)
+
+add_proxy_header_library(
   struct_r_debug
   HDRS
     struct_r_debug.h
@@ -183,6 +191,14 @@ add_proxy_header_library(
     struct_passwd.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_passwd
+)
+
+add_proxy_header_library(
+  struct_group
+  HDRS
+    struct_group.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_group
 )
 
 add_proxy_header_library(

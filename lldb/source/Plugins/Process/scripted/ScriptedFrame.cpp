@@ -112,6 +112,7 @@ ScriptedFrame::Create(ThreadSP thread_sp,
   SymbolContext sc;
   Address symbol_addr;
   if (pc != LLDB_INVALID_ADDRESS) {
+    pc = process_sp->FixCodeAddress(pc);
     symbol_addr.SetLoadAddress(pc, &process_sp->GetTarget());
     symbol_addr.CalculateSymbolContext(&sc);
   }
