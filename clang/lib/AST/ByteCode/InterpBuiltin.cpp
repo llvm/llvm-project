@@ -4686,6 +4686,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_fminimum_numf128:
     return interp__builtin_fmin(S, OpPC, Frame, /*IsNumBuiltin=*/true);
 
+  case Builtin::BIfmax:
+  case Builtin::BIfmaxf:
+  case Builtin::BIfmaxl:
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:

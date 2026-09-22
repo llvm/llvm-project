@@ -4272,18 +4272,16 @@ def Fma : FPMathTemplate, LibBuiltin<"math.h"> {
 
 def Fmax : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["fmax"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Fmin : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["fmin"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def FmaximumNum : FPMathTemplate, LibBuiltin<"math.h"> {
