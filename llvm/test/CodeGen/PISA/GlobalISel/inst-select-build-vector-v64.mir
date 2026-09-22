@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=instruction-select %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=instruction-select %s -o - | FileCheck %s
 
 # Selecting a G_BUILD_VECTOR whose destination class (RegV64_32b) has no
 # per-element sub-registers must use the large-vector insert path, not
