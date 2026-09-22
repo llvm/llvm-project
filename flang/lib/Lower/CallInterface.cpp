@@ -1062,7 +1062,8 @@ private:
       }
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
-      if (!dynamicType.GetDerivedTypeSpec().IsVectorType()) {
+      if (!dynamicType.GetDerivedTypeSpec().IsVectorType() &&
+          !isEnumerationDerived(dynamicType)) {
         // Derived result need to be allocated by the caller and the result
         // value must be saved. Derived type in implicit interface cannot have
         // length parameters.
@@ -1172,6 +1173,18 @@ private:
                     attrs);
       addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
     }
+  }
+
+  // An F2023 enumeration type has Derived category but lowers to i32 and is
+  // returned by value like an integer, so it must not use the caller-allocated
+  // fir.save_result ABI reserved for record-shaped results.
+  static bool
+  isEnumerationDerived(const Fortran::evaluate::DynamicType &dynamicType) {
+    // GetDerivedTypeSpec() is null-safe: it yields nullptr for polymorphic and
+    // assumed-type results whose category is Derived but have no derived spec.
+    const Fortran::semantics::DerivedTypeSpec *spec{
+        Fortran::evaluate::GetDerivedTypeSpec(dynamicType)};
+    return spec && Fortran::semantics::IsEnumerationType(spec->typeSymbol());
   }
 
   mlir::Type
@@ -1397,8 +1410,10 @@ private:
     addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
                  Property::Value);
     // Explicit results require the caller to allocate the storage and save the
-    // function result in the storage with a fir.save_result.
-    setSaveResult();
+    // function result in the storage with a fir.save_result. Enumeration
+    // results lower to i32 and are returned by value, so they are exempt.
+    if (!isEnumerationDerived(typeAndShape->type()))
+      setSaveResult();
   }
 
   // Return nullopt for scalars, empty vector for assumed rank, and a vector
