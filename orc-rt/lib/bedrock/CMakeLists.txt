@@ -2,6 +2,7 @@
 set(ORC_RT_BEDROCK_SOURCES
   BootstrapInfo.cpp
   ConnectionSpec.cpp
+  ConnectorRegistry.cpp
   ExecutorProcessInfo.cpp
   GDBJITRegistrar.cpp
   InProcessControllerAccess.cpp
@@ -40,7 +41,9 @@ set(ORC_RT_BEDROCK_POSIX_SOURCES
   sys/posix/DynamicLibrary.cpp
   sys/posix/Memory.cpp
   sys/posix/PageSize.cpp
+  sys/posix/SocketConnector.cpp
   sys/posix/SocketHandle.cpp
+  sys/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
