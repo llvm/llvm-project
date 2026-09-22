@@ -17,20 +17,20 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 define void @forked_ptrs_different_base_same_offset(ptr nocapture readonly %Base1, ptr nocapture readonly %Base2, ptr nocapture %Dest, ptr nocapture readonly %Preds) {
 ; CHECK-LABEL: @forked_ptrs_different_base_same_offset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoaddr ptr [[DEST:%.*]] to i64
-; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoaddr ptr [[PREDS:%.*]] to i64
-; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2:%.*]] to i64
-; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoaddr ptr [[BASE1:%.*]] to i64
 ; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoaddr ptr [[BASE1:%.*]] to i64
+; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[BASE15]], [[BASE23]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15
+; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoaddr ptr [[PREDS:%.*]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[BASE15]], [[PREDS2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP3]], 15
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = freeze i1 [[DIFF_CHECK5]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
+; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoaddr ptr [[DEST:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[BASE15]], [[DEST1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK7:%.*]] = icmp ult i64 [[TMP5]], 15

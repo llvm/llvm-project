@@ -259,21 +259,19 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF-LABEL: define void @alias_mask_reverse_iterate(
 ; CHECK-TF-SAME: ptr noalias [[PTRA:%.*]], ptr [[PTRB:%.*]], ptr [[PTRC:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NEXT:    [[PTRC2:%.*]] = ptrtoaddr ptr [[PTRC]] to i64
-; CHECK-TF-NEXT:    [[PTRB1:%.*]] = ptrtoaddr ptr [[PTRB]] to i64
 ; CHECK-TF-NEXT:    [[IV_START:%.*]] = add i64 [[N]], -1
 ; CHECK-TF-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-TF:       [[VECTOR_MEMCHECK]]:
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-TF-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-TF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], -1
+; CHECK-TF-NEXT:    [[PTRB1:%.*]] = ptrtoaddr ptr [[PTRB]] to i64
+; CHECK-TF-NEXT:    [[PTRC2:%.*]] = ptrtoaddr ptr [[PTRC]] to i64
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = sub i64 [[PTRB1]], [[PTRC2]]
 ; CHECK-TF-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP2]], 1
 ; CHECK-TF-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; CHECK-TF-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
-; CHECK-TF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-TF-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 4
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[IV_START]])
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
@@ -281,7 +279,7 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TF-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[IV_START]], [[INDEX]]
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[PTRA]], i64 [[OFFSET_IDX]]
-; CHECK-TF-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP4]], 1
+; CHECK-TF-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]
 ; CHECK-TF-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 [[TMP10]]
 ; CHECK-TF-NEXT:    [[REVERSE:%.*]] = call <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
@@ -293,7 +291,7 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[PTRC]], i64 [[OFFSET_IDX]]
 ; CHECK-TF-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i64 [[TMP10]]
 ; CHECK-TF-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[REVERSE7]], ptr align 1 [[TMP16]], <vscale x 16 x i1> [[REVERSE]])
-; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
+; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[IV_START]])
 ; CHECK-TF-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP17]], true

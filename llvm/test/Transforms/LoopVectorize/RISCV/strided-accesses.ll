@@ -587,8 +587,6 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) vscale_range
 ; NOSTRIDED-LABEL: define void @double_stride_int_scaled(
 ; NOSTRIDED-SAME: ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[STRIDE:%.*]]) #[[ATTR0]] {
 ; NOSTRIDED-NEXT:  [[ENTRY:.*:]]
-; NOSTRIDED-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P]] to i64
-; NOSTRIDED-NEXT:    [[P21:%.*]] = ptrtoaddr ptr [[P2]] to i64
 ; NOSTRIDED-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; NOSTRIDED:       [[VECTOR_SCEVCHECK]]:
 ; NOSTRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
@@ -597,6 +595,8 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) vscale_range
 ; NOSTRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP3]], 4
 ; NOSTRIDED-NEXT:    [[TMP8:%.*]] = add nsw i64 [[TMP1]], -1
+; NOSTRIDED-NEXT:    [[P21:%.*]] = ptrtoaddr ptr [[P2]] to i64
+; NOSTRIDED-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; NOSTRIDED-NEXT:    [[TMP6:%.*]] = sub i64 [[P21]], [[P3]]
 ; NOSTRIDED-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; NOSTRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP8]]
@@ -638,8 +638,6 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) vscale_range
 ; NOSTRIDED-UF2-LABEL: define void @double_stride_int_scaled(
 ; NOSTRIDED-UF2-SAME: ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[STRIDE:%.*]]) #[[ATTR0]] {
 ; NOSTRIDED-UF2-NEXT:  [[ENTRY:.*]]:
-; NOSTRIDED-UF2-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P]] to i64
-; NOSTRIDED-UF2-NEXT:    [[P21:%.*]] = ptrtoaddr ptr [[P2]] to i64
 ; NOSTRIDED-UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; NOSTRIDED-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
@@ -648,9 +646,10 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) vscale_range
 ; NOSTRIDED-UF2-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; NOSTRIDED-UF2-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; NOSTRIDED-UF2:       [[VECTOR_MEMCHECK]]:
-; NOSTRIDED-UF2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 5
+; NOSTRIDED-UF2-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP0]], 5
 ; NOSTRIDED-UF2-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP3]], -1
+; NOSTRIDED-UF2-NEXT:    [[P21:%.*]] = ptrtoaddr ptr [[P2]] to i64
+; NOSTRIDED-UF2-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; NOSTRIDED-UF2-NEXT:    [[TMP5:%.*]] = sub i64 [[P21]], [[P3]]
 ; NOSTRIDED-UF2-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP5]], 1
 ; NOSTRIDED-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]

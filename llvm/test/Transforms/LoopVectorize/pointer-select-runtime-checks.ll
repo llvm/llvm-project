@@ -73,19 +73,19 @@ exit:
 define void @test_loop_dependent_select1(ptr %src.1, ptr %src.2, ptr %dst, i1 %c, i8 %n) {
 ; CHECK-LABEL: @test_loop_dependent_select1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_23:%.*]] = ptrtoaddr ptr [[SRC_2:%.*]] to i64
-; CHECK-NEXT:    [[SRC_12:%.*]] = ptrtoaddr ptr [[SRC_1:%.*]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST:%.*]] to i64
+; CHECK-NEXT:    [[SRC_12:%.*]] = ptrtoaddr ptr [[SRC_1:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1]], [[SRC_12]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK_FR:%.*]] = freeze i1 [[DIFF_CHECK]]
+; CHECK-NEXT:    [[SRC_23:%.*]] = ptrtoaddr ptr [[SRC_2:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC_23]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP6]], 1

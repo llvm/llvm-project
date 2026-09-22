@@ -161,8 +161,6 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %A2 = ptrtoaddr ptr %A to i64
-; CHECK-NEXT:    IR   %B1 = ptrtoaddr ptr %B to i64
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
@@ -171,13 +169,15 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:    IR   %0 = add i32 %n, -1
 ; CHECK-NEXT:    IR   %1 = icmp slt i32 %0, 0
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%1>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.memcheck>:
-; CHECK-NEXT:    IR   %2 = sub i64 %B1, %A2
-; CHECK-NEXT:    IR   %3 = sub i64 %2, 1
-; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %3, 63
-; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP4:%[0-9]+]]> = ptrtoaddr ir<%B> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = ptrtoaddr ir<%A> to i64
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = sub vp<[[VP4]]>, vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = sub vp<[[VP6]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP7]]>, ir<63>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.main.loop.iter.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.main.loop.iter.check:
@@ -186,14 +186,14 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = and ir<%n>, ir<7>
-; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP6]]>
-; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = and ir<%n>, ir<7>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub ir<%n>, vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP7]]>, ir<%red.next>
+; CHECK-NEXT:    WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP11]]>, ir<%red.next>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%iv.ext> = sext vp<%index> to i64
 ; CHECK-NEXT:    CLONE ir<%gep.a> = getelementptr inbounds ir<%A>, ir<%iv.ext>
 ; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.a>
@@ -217,8 +217,8 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ vp<%n.vec>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, ir-bb<vector.scevcheck> ], [ ir<0>, ir-bb<vector.memcheck> ], [ ir<0>, vector.main.loop.iter.check ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, ir-bb<vector.scevcheck> ], [ ir<0>, ir-bb<vector.memcheck> ], [ ir<0>, vector.main.loop.iter.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ vp<%n.vec>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, ir-bb<vector.scevcheck> ], [ ir<0>, vector.memcheck ], [ ir<0>, vector.main.loop.iter.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, ir-bb<vector.scevcheck> ], [ ir<0>, vector.memcheck ], [ ir<0>, vector.main.loop.iter.check ]
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
 ; CHECK-NEXT:    EMIT-SCALAR vp<[[VP14:%[0-9]+]]> = resume-for-epilogue vp<%bc.merge.rdx>, ir<0>
@@ -243,8 +243,6 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %A2 = ptrtoaddr ptr %A to i64
-; CHECK-NEXT:    IR   %B1 = ptrtoaddr ptr %B to i64
 ; CHECK-NEXT:    IR   %min.iters.check = icmp ult i32 %n, 4
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.scevcheck>
 ; CHECK-EMPTY:
@@ -268,8 +266,8 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vec.epilog.iter.check>:
 ; CHECK-NEXT:    IR   %vec.epilog.resume.val = phi i32 [ %n.vec, %middle.block ], [ 0, %iter.check ], [ 0, %vector.scevcheck ], [ 0, %vector.memcheck ], [ 0, %vector.main.loop.iter.check ] (extra operands: ir<0> from ir-bb<vector.main.loop.iter.check>, ir<%n.vec> from ir-bb<middle.block>)
-; CHECK-NEXT:    IR   %bc.merge.rdx = phi i64 [ %10, %middle.block ], [ 0, %iter.check ], [ 0, %vector.scevcheck ], [ 0, %vector.memcheck ], [ 0, %vector.main.loop.iter.check ] (extra operands: ir<0> from ir-bb<vector.main.loop.iter.check>, ir<%10> from ir-bb<middle.block>)
-; CHECK-NEXT:    EMIT vp<%min.epilog.iters.check> = icmp ult ir<%4>, ir<4>
+; CHECK-NEXT:    IR   %bc.merge.rdx = phi i64 [ %12, %middle.block ], [ 0, %iter.check ], [ 0, %vector.scevcheck ], [ 0, %vector.memcheck ], [ 0, %vector.main.loop.iter.check ] (extra operands: ir<0> from ir-bb<vector.main.loop.iter.check>, ir<%12> from ir-bb<middle.block>)
+; CHECK-NEXT:    EMIT vp<%min.epilog.iters.check> = icmp ult ir<%6>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.epilog.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, vec.epilog.ph
 ; CHECK-EMPTY:
@@ -300,7 +298,7 @@ define i64 @bypass_blocks(ptr %A, ptr %B, i32 %n) {
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<vec.epilog.scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ], [ %10, %middle.block ] (extra operand: vp<[[VP7]]> from vec.epilog.middle.block)
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i64 [ %red.next, %loop ], [ %12, %middle.block ] (extra operand: vp<[[VP7]]> from vec.epilog.middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vec.epilog.scalar.ph>:
@@ -352,16 +350,16 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  Live-in ir<16> = vector-trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %src2 = ptrtoaddr ptr %src to i64
-; CHECK-NEXT:    IR   %dst1 = ptrtoaddr ptr %dst to i64
 ; CHECK-NEXT:    EMIT branch-on-cond ir<false>
-; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.memcheck
 ; CHECK-EMPTY:
-; CHECK-NEXT:  ir-bb<vector.memcheck>:
-; CHECK-NEXT:    IR   %0 = sub i64 %dst1, %src2
-; CHECK-NEXT:    IR   %1 = sub i64 %0, 1
-; CHECK-NEXT:    IR   %diff.check = icmp ult i64 %1, 31
-; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoaddr ir<%dst> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoaddr ir<%src> to i64
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP2]]>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub vp<[[VP4]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP5]]>, ir<31>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.main.loop.iter.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.main.loop.iter.check:
@@ -379,8 +377,8 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<%index>
 ; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%add>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<8>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, ir<16>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP8]]>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
@@ -392,9 +390,9 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<16>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, ir-bb<vector.memcheck> ], [ ir<0>, vector.main.loop.iter.check ]
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP7:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ ir<16>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, vector.memcheck ], [ ir<0>, vector.main.loop.iter.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -415,8 +413,6 @@ define void @all_iterations_in_main_loop_with_memcheck(ptr %dst, ptr %src) {
 ; CHECK-NEXT:  Live-in ir<16> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %src2 = ptrtoaddr ptr %src to i64
-; CHECK-NEXT:    IR   %dst1 = ptrtoaddr ptr %dst to i64
 ; CHECK-NEXT:  Successor(s): ir-bb<vec.epilog.scalar.ph>, ir-bb<vector.memcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:

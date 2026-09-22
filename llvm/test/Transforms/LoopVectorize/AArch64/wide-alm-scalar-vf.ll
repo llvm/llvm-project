@@ -7,10 +7,10 @@ define void @wide_active_lane_mask_i32_tc(ptr %src, ptr %dst, i32 %n) #0 {
 ; CHECK-UF4-LABEL: define void @wide_active_lane_mask_i32_tc(
 ; CHECK-UF4-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-UF4-NEXT:  entry:
-; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
-; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-UF4-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK-UF4:       vector.memcheck:
+; CHECK-UF4-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-UF4-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-UF4-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-UF4-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 15

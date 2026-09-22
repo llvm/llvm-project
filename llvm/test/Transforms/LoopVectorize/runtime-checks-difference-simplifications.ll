@@ -224,15 +224,15 @@ exit:
 define void @check_creation_order(ptr %a, ptr %b, i32 %m) {
 ; CHECK-LABEL: @check_creation_order(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
 ; CHECK-NEXT:    [[M_EXT:%.*]] = sext i32 [[M:%.*]] to i64
-; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr double, ptr [[A]], i64 [[M_EXT]]
+; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[M_EXT]]
 ; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[M_EXT]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 31
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK3:%.*]] = icmp ult i64 [[TMP4]], 31

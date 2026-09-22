@@ -4,14 +4,14 @@ define void @fmin32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-LABEL: define void @fmin32(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
-; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
-; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
+; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[OUTPUT1]], [[INPUT12]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
+; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[OUTPUT1]], [[INPUT23]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -82,14 +82,14 @@ define void @fmax32(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-LABEL: define void @fmax32(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
-; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
-; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
+; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[OUTPUT1]], [[INPUT12]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
+; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[OUTPUT1]], [[INPUT23]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -160,14 +160,14 @@ define void @fmin64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-LABEL: define void @fmin64(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
-; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
-; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
+; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[OUTPUT1]], [[INPUT12]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
+; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[OUTPUT1]], [[INPUT23]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -238,14 +238,14 @@ define void @fmax64(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-LABEL: define void @fmax64(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
-; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
-; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
+; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[OUTPUT1]], [[INPUT12]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], 31
+; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[OUTPUT1]], [[INPUT23]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -316,14 +316,14 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-LABEL: define void @fmin16(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
-; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
-; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
+; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[OUTPUT1]], [[INPUT12]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 31
+; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[OUTPUT1]], [[INPUT23]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31
@@ -394,14 +394,14 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-LABEL: define void @fmax16(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[INPUT1:%.*]], ptr noundef readonly captures(none) [[INPUT2:%.*]], ptr noundef writeonly captures(none) [[OUTPUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
-; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
-; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[OUTPUT1:%.*]] = ptrtoaddr ptr [[OUTPUT]] to i64
+; CHECK-NEXT:    [[INPUT12:%.*]] = ptrtoaddr ptr [[INPUT1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[OUTPUT1]], [[INPUT12]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 31
+; CHECK-NEXT:    [[INPUT23:%.*]] = ptrtoaddr ptr [[INPUT2]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[OUTPUT1]], [[INPUT23]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP3]], 31

@@ -74,8 +74,6 @@ for.body:
 define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: @vector_reverse_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
@@ -84,9 +82,10 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP3]], -1
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP16]]

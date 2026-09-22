@@ -5,13 +5,13 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_pointer_use(pt
 ; CHECK-LABEL: define void @replace_first_order_recurrence_with_versioned_iv_for_pointer_use(
 ; CHECK-SAME: ptr [[Y:%.*]], ptr [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[Y1]], -8
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[X2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP9]], 1
@@ -78,8 +78,6 @@ define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_pointer
 ; CHECK-LABEL: define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_pointer_use_btc_versioned(
 ; CHECK-SAME: ptr [[Y:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[SMAX3]] to i32
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 4
@@ -94,6 +92,8 @@ define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_pointer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[Y1]], -8
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[X2]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP9]], 1
@@ -165,13 +165,13 @@ define i64 @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_poi
 ; CHECK-LABEL: define i64 @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_pointer_use(
 ; CHECK-SAME: ptr [[Y:%.*]], ptr [[X:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[Y1]], -8
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[X2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
@@ -246,8 +246,6 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_po
 ; CHECK-LABEL: define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_pointer_use(
 ; CHECK-SAME: ptr [[Y:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[SMAX3]] to i32
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP0]], 4
@@ -267,6 +265,8 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_po
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP17]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[Y1]], -8
 ; CHECK-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP18]], [[X2]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP19]], 1
@@ -335,12 +335,12 @@ define void @replace_for_removes_predicate(ptr %y, ptr %x, i64 %n) {
 ; CHECK-LABEL: define void @replace_for_removes_predicate(
 ; CHECK-SAME: ptr [[Y:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
-; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[Y1]], [[X2]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 31
