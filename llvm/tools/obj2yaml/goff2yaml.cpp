@@ -76,7 +76,7 @@ Error GOFFDumper::dumpHeader(ArrayRef<uint8_t> Data) {
 Error GOFFDumper::dumpExternalSymbol(ArrayRef<uint8_t> Data) {
   GOFFYAML::ESDRecord Sym;
   // Flattened data contains PTV header (bytes 0-2) + bytes 3-72 (prefix) + name
-  // data Use DataExtractor to read fields with correct endianness (big-endian
+  // data. Use DataExtractor to read fields with correct endianness (big-endian
   // for GOFF)
   DataExtractor DE(Data, false); // false = big-endian
   DataExtractor::Cursor C(0);
