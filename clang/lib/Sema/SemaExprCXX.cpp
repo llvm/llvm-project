@@ -5007,15 +5007,6 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     llvm_unreachable("Improper first standard conversion");
   }
 
-  // HLSL Packed Types are a special case which need to be converted to uint
-  // before the second conversions are applied.
-  if (SCS.Dimension == ICK_HLSL_Packed_Type_Conversion) {
-    From = ImpCastExprToType(From, Context.UnsignedIntTy, CK_IntegralCast,
-                             From->getValueKind(), nullptr, CCK)
-               .get();
-    FromType = Context.UnsignedIntTy;
-  }
-
   // Perform the second implicit conversion
   switch (SCS.Second) {
   case ICK_Identity:
@@ -5407,6 +5398,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              From->getValueKind()).get();
     break;
 
+  case ICK_HLSL_Packed_Type_Conversion: {
+    From = ImpCastExprToType(From, ToType, CK_IntegralCast,
+                             From->getValueKind(), nullptr, CCK)
+               .get();
+    break;
+  }
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
@@ -5420,12 +5417,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
   case ICK_HLSL_Matrix_Splat:
-  case ICK_HLSL_Packed_Type_Conversion:
     llvm_unreachable("Improper second standard conversion");
   }
 
-  if (SCS.Dimension != ICK_Identity &&
-      SCS.Dimension != ICK_HLSL_Packed_Type_Conversion) {
+  if (SCS.Dimension != ICK_Identity) {
     // If SCS.Element is not ICK_Identity the To and From types must be HLSL
     // vectors or matrices.
     assert(

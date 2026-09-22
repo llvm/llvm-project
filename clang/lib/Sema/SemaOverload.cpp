@@ -2352,30 +2352,37 @@ static bool IsHLSLPackedTypeConversion(Sema &S, QualType FromType,
                                        ImplicitConversionKind &ICK,
                                        ImplicitConversionKind &DimensionICK,
                                        Expr *From) {
-  if (!S.getLangOpts().HLSL || !FromType->isHLSLBuiltinPackedType())
+  if (!S.getLangOpts().HLSL)
     return false;
   if (S.Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
-  if (ToType->isHLSLBuiltinPackedType()) {
+  bool FromPacked = FromType->isHLSLBuiltinPackedType();
+  bool ToPacked = ToType->isHLSLBuiltinPackedType();
+
+  if (FromPacked && ToPacked) {
     ICK = ICK_Integral_Conversion;
     DimensionICK = ICK_Identity;
     return true;
   }
 
-  if (!ToType->isScalarType())
+  // Only convert to and from scalars to packed types
+  if (FromPacked && !ToType->isScalarType())
+    return false;
+  if (ToPacked && !FromType->isScalarType())
     return false;
 
   QualType UIntTy = S.Context.UnsignedIntTy;
-  DimensionICK = ICK_HLSL_Packed_Type_Conversion;
 
-  // Already converting to uint, don't need to do anything else
-  if (S.Context.hasSameUnqualifiedType(UIntTy, ToType))
+  // Converting to or from uint
+  if (S.Context.hasSameUnqualifiedType(UIntTy, FromType) ||
+      S.Context.hasSameUnqualifiedType(UIntTy, ToType)) {
+    ICK = ICK_HLSL_Packed_Type_Conversion;
+    DimensionICK = ICK_Identity;
     return true;
+  }
 
-  // We can reuse IsVectorOrMatrixElementConversion to handle uint to
-  // float/integral/boolean conversion and promotion
-  return IsVectorOrMatrixElementConversion(S, UIntTy, ToType, ICK, From);
+  return false;
 }
 
 static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
@@ -6529,13 +6536,13 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Fixed_Point_Conversion:
   case ICK_HLSL_Vector_Truncation:
   case ICK_HLSL_Matrix_Truncation:
+  case ICK_HLSL_Packed_Type_Conversion:
     return false;
 
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
   case ICK_Function_To_Pointer:
   case ICK_HLSL_Array_RValue:
-  case ICK_HLSL_Packed_Type_Conversion:
     llvm_unreachable("found a first conversion kind in Second");
 
   case ICK_Function_Conversion:
