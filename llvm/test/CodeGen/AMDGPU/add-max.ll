@@ -235,16 +235,16 @@ define amdgpu_ps float @add_max_v2u16_sss(<2 x i16> inreg %a, <2 x i16> inreg %b
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    v_pk_add_u16 v0, s0, s1 clamp
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-NEXT:    s_and_b32 s1, s2, 0xffff
 ; GISEL-NEXT:    s_lshr_b32 s2, s2, 16
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GISEL-NEXT:    s_and_b32 s3, s0, 0xffff
 ; GISEL-NEXT:    s_lshr_b32 s0, s0, 16
 ; GISEL-NEXT:    s_max_u32 s1, s3, s1
 ; GISEL-NEXT:    s_max_u32 s0, s0, s2
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-NEXT:    ; return to shader part epilog
   %add = call <2 x i16> @llvm.uadd.sat.i32(<2 x i16> %a, <2 x i16> %b)

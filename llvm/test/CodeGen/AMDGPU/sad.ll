@@ -1318,17 +1318,17 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-GISEL-NEXT:    global_load_u16 v3, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-5-GISEL-NEXT:    s_and_b32 s4, 0xffff, s2
 ; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
+; GFX12-5-GISEL-NEXT:    s_and_b32 s4, 0xffff, s2
 ; GFX12-5-GISEL-NEXT:    s_and_b32 s5, 0xffff, s3
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_cmp_gt_u32 s4, s5
 ; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s5, v3
+; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s6, s2, s3
 ; GFX12-5-GISEL-NEXT:    s_sub_co_i32 s2, s3, s2
 ; GFX12-5-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
-; GFX12-5-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-5-GISEL-NEXT:    s_cselect_b32 s2, s6, s2
 ; GFX12-5-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-GISEL-NEXT:    s_add_co_i32 s2, s2, s5
