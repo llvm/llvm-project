@@ -1859,7 +1859,7 @@ static void generateReproducer(Instruction *Cond, bool IsSigned, Module *M,
 /// the fact involving \p V was added. In that case, return a new row for
 /// V <= decompose(V) to link the variable with the decomposition result.
 static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
-                                     const ConstraintInfo &Info,
+                                     ConstraintInfo &Info,
                                      const DataLayout &DL) {
   const auto &Value2Index = Info.getValue2Index(C.IsSigned);
   auto It = Value2Index.find(V);
@@ -2100,7 +2100,7 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
                      SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
                      SmallVectorImpl<StackEntry> &DFSInStack) {
-  getDecomposeCache().clear();
+  Info.getDecomposeCache().clear();
   Info.popLastConstraint(E.IsSigned);
   // Remove variables in the system that went out of scope.
   auto &Mapping = Info.getValue2Index(E.IsSigned);
