@@ -282,6 +282,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the X86 Backend
 
+* Added assembler and code generation support for the `AVX10_V2_AUX`
+  instruction set.
+
 ### Changes to the OCaml bindings
 
 * Removed the `size_of` and `align_of` functions. Create a constant based on

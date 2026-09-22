@@ -52,8 +52,11 @@ bool isRefcountedStringsHack(const VarDecl *V) {
 
 struct GuardianVisitor : DynamicRecursiveASTVisitor {
   const VarDecl *Guardian{nullptr};
+  bool GuardianIsRawPtrOrRef{false};
 
-  explicit GuardianVisitor(const VarDecl *Guardian) : Guardian(Guardian) {
+  explicit GuardianVisitor(const VarDecl *Guardian,
+                           bool GuardianIsRawPtrOrRef = false)
+      : Guardian(Guardian), GuardianIsRawPtrOrRef(GuardianIsRawPtrOrRef) {
     assert(Guardian);
   }
 
@@ -110,6 +113,8 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   }
 
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
+    if (GuardianIsRawPtrOrRef)
+      return true;
     auto *Method = MCE->getMethodDecl();
     auto ObjType = MCE->getObjectType();
     if (ObjType.isConstQualified())
@@ -125,14 +130,29 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
 private:
   bool mutatesGuardian(const Expr *Arg, const ParmVarDecl *ParmDecl) {
     Arg = Arg->IgnoreParenCasts();
-    if (auto *VarRef = dyn_cast<DeclRefExpr>(Arg)) {
-      if (VarRef->getDecl() == Guardian) {
-        auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
-        if (!ArgType.isConstQualified())
-          return true;
-      }
+    auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
+    bool IsAddressOf = false;
+    if (auto *UO = dyn_cast<UnaryOperator>(Arg);
+        UO && UO->getOpcode() == UO_AddrOf) {
+      Arg = UO->getSubExpr()->IgnoreParenCasts();
+      IsAddressOf = true;
     }
-    return false;
+    auto *VarRef = dyn_cast<DeclRefExpr>(Arg);
+    if (!VarRef || VarRef->getDecl() != Guardian)
+      return false;
+    if (GuardianIsRawPtrOrRef && !Guardian->getType()->isPointerType())
+      return false;
+    if (IsAddressOf) {
+      if (!ArgType->isPointerType())
+        return false;
+      return !ArgType->getPointeeType().isConstQualified();
+    }
+    if (GuardianIsRawPtrOrRef) {
+      if (!ArgType->isReferenceType())
+        return false;
+      return !ArgType.getNonReferenceType().isConstQualified();
+    }
+    return !ArgType.isConstQualified();
   }
 };
 
@@ -406,10 +426,12 @@ public:
     }
 
     if (isa<ParmVarDecl>(MaybeGuardian)) {
+      bool IsRawPtrOrRef = isUnsafePtr(GuardianType).value_or(false);
+      GuardianVisitor Visitor{MaybeGuardian, IsRawPtrOrRef};
       if (auto *FD = dyn_cast<FunctionDecl>(DeclWithIssue))
-        return GuardianVisitor{MaybeGuardian}.TraverseStmt(FD->getBody());
+        return Visitor.TraverseStmt(FD->getBody());
       if (auto *MD = dyn_cast<ObjCMethodDecl>(DeclWithIssue))
-        return GuardianVisitor{MaybeGuardian}.TraverseStmt(MD->getBody());
+        return Visitor.TraverseStmt(MD->getBody());
     }
 
     return false;

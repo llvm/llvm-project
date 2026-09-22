@@ -85,7 +85,9 @@ Address CIRGenFunction::createCleanupActiveFlag() {
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
-    builder.createFlagStore(loc, false, active.getPointer());
+    cir::StoreOp store =
+        builder.createFlagStore(loc, false, active.getPointer());
+    outermostConditional->advanceInsertPoint(store);
   }
 
   // Set to true at the current location (inside the conditional branch).
