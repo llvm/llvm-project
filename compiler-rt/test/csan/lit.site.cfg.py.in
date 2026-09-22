@@ -1,0 +1,8 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.name_suffix = "@CONFIG_NAME@"
+config.target_cflags = "@CSAN_TEST_TARGET_CFLAGS@"
+config.target_arch = "@CSAN_TEST_TARGET_ARCH@"
+
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+lit_config.load_config(config, "@CSAN_LIT_TESTS_DIR@/lit.common.cfg.py")
