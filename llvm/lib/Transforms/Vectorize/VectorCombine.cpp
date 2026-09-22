@@ -3456,10 +3456,10 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (!isTriviallyVectorizable(IID))
     return false;
 
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
-    Value *Arg0 = II0->getArgOperand(I);
-    Value *Arg1 = II1->getArgOperand(I);
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
+  for (unsigned Idx = 0, E = II0->arg_size(); Idx != E; ++Idx) {
+    Value *Arg0 = II0->getArgOperand(Idx);
+    Value *Arg1 = II1->getArgOperand(Idx);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Idx, &TTI)) {
       // Scalar operands must be identical.
       if (Arg0 != Arg1)
         return false;
@@ -3480,23 +3480,24 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   SmallVector<Type *> NewArgsTy;
   InstructionCost NewCost = 0;
   SmallDenseSet<std::pair<Value *, Value *>> SeenOperandPairs;
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
-      NewArgsTy.push_back(II0->getArgOperand(I)->getType());
+  for (unsigned Idx = 0, E = II0->arg_size(); Idx != E; ++Idx) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Idx, &TTI)) {
+      NewArgsTy.push_back(II0->getArgOperand(Idx)->getType());
     } else {
-      auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(I)->getType());
+      auto *VecTy = cast<FixedVectorType>(II0->getArgOperand(Idx)->getType());
       auto *ArgTy = FixedVectorType::get(VecTy->getElementType(),
                                          ShuffleDstTy->getNumElements());
       NewArgsTy.push_back(ArgTy);
       std::pair<Value *, Value *> OperandPair =
-          std::make_pair(II0->getArgOperand(I), II1->getArgOperand(I));
+          std::make_pair(II0->getArgOperand(Idx), II1->getArgOperand(Idx));
       if (!SeenOperandPairs.insert(OperandPair).second) {
         // We've already computed the cost for this operand pair.
         continue;
       }
       NewCost += TTI.getShuffleCost(
           TargetTransformInfo::SK_PermuteTwoSrc, ArgTy, VecTy, CostKind,
-          OldMask, 0, nullptr, {II0->getArgOperand(I), II1->getArgOperand(I)});
+          OldMask, 0, nullptr,
+          {II0->getArgOperand(Idx), II1->getArgOperand(Idx)});
     }
   }
   IntrinsicCostAttributes NewAttr(IID, ShuffleDstTy, NewArgsTy);
@@ -3516,24 +3517,25 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
 
   SmallVector<Value *> NewArgs;
   SmallDenseMap<std::pair<Value *, Value *>, Value *> ShuffleCache;
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
-      NewArgs.push_back(II0->getArgOperand(I));
+  for (unsigned Idx = 0, E = II0->arg_size(); Idx != E; ++Idx) {
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Idx, &TTI)) {
+      NewArgs.push_back(II0->getArgOperand(Idx));
     } else {
       std::pair<Value *, Value *> OperandPair =
-          std::make_pair(II0->getArgOperand(I), II1->getArgOperand(I));
+          std::make_pair(II0->getArgOperand(Idx), II1->getArgOperand(Idx));
       auto It = ShuffleCache.find(OperandPair);
       if (It != ShuffleCache.end()) {
         // Reuse previously created shuffle for this operand pair.
         NewArgs.push_back(It->second);
         continue;
       }
-      Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I),
-                                                II1->getArgOperand(I), OldMask);
+      Value *Shuf = Builder.CreateShuffleVector(
+          II0->getArgOperand(Idx), II1->getArgOperand(Idx), OldMask);
       ShuffleCache[OperandPair] = Shuf;
       NewArgs.push_back(Shuf);
       Worklist.pushValue(Shuf);
     }
+  }
   Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
 
   // Intersect flags from the old intrinsics.

@@ -125,9 +125,20 @@ template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
   return ZeroBits;
 }
 
+/// Returns the number of bits needed to represent Value if Value is nonzero.
+/// Returns 0 otherwise.
+///
+/// Ex. bit_width(5) == 3.
 template <typename T, typename _ = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] constexpr int bit_width(T x) noexcept {
-  return std::numeric_limits<T>::digits - countl_zero(x);
+[[nodiscard]] constexpr int bit_width(T Value) noexcept {
+  int Width = 0;
+
+  while (Value != 0) {
+    Value >>= 1;
+    ++Width;
+  }
+
+  return Width;
 }
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>

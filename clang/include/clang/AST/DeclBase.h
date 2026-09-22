@@ -2198,20 +2198,14 @@ public:
   /// In particular, this will return nullptr if the *nearest* enclosing
   /// DeclContext that is not an expansion statement is something other
   /// than a function (e.g. a CXXRecordDecl, even if it is a local class).
-  FunctionDecl *getEnclosingFunction() {
-    return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
-  }
-
+  FunctionDecl *getEnclosingFunction();
   const FunctionDecl *getEnclosingFunction() const {
-    return dyn_cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+    return const_cast<DeclContext *>(this)->getEnclosingFunction();
   }
 
-  FunctionDecl *castEnclosingFunction() {
-    return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
-  }
-
+  FunctionDecl *castEnclosingFunction();
   const FunctionDecl *castEnclosingFunction() const {
-    return cast<FunctionDecl>(getEnclosingNonExpansionStatementContext());
+    return const_cast<DeclContext *>(this)->castEnclosingFunction();
   }
 
   /// Test whether the context supports looking up names.

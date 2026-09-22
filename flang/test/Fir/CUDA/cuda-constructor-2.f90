@@ -31,10 +31,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK: gpu.module @cuda_device_mod
 
-// MARKER: llvm.mlir.global external @Mcuda_compiled
 // NOMARKER-NOT: Mcuda_compiled
+// MARKER-NOT: Mcuda_compiled
 // CHECK: llvm.func internal @__cudaFortranConstructor() {
-// MARKER-DAG: llvm.mlir.addressof @Mcuda_compiled
 // NOUNIFIED-DAG: %[[MODULE:.*]] = cuf.register_module @cuda_device_mod -> !llvm.ptr
 // NOUNIFIED-DAG: %[[VAR_NAME:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,12>>
 // NOUNIFIED-DAG: %[[VAR_ADDR:.*]] = fir.address_of(@_QMmtestsEn) : !fir.ref<!fir.array<5xi32>>
@@ -178,10 +177,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 }
 
 // CHECK: llvm.func internal @__cudaFortranConstructor()
-// NOMARKER-NEXT: llvm.return
-// MARKER-NEXT: llvm.mlir.addressof @Mcuda_compiled
-// MARKER-NEXT: llvm.load volatile
-// MARKER-NEXT: llvm.return
+// CHECK-NEXT: llvm.return
 // CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor]
 
 // -----
@@ -430,3 +426,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // NOUNIFIED-DAG: %[[SZ12I64:.*]] = fir.convert %[[SZ12]] : (index) -> i64
 // NOUNIFIED-DAG: fir.call @_FortranACUFRegisterVariable(%{{.*}}, %[[TPPKDEV2]], %{{.*}}, %[[SZ12I64]])
 // UNIFIED: cuf.register_variable_static @_QMtestEtp_packed_dev("_QMtestEtp_packed_dev", 12) {deviceResident}
+
+// -----
+
+// Mcuda_compiled is emitted only for the program unit (_QQmain).
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">>, fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-i64:64-i128:128-n8:16:32:64-S128"} {
+  func.func @_QQmain() {
+    return
+  }
+}
+
+// MARKER: llvm.mlir.global external @Mcuda_compiled
+// NOMARKER-NOT: Mcuda_compiled
+// CHECK: llvm.func internal @__cudaFortranConstructor() {
+// MARKER: llvm.mlir.addressof @Mcuda_compiled
+// MARKER: llvm.load volatile
+// CHECK: llvm.return
+

@@ -549,9 +549,10 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// unpacked into the register(s) holding it, a scalar too wide for one register
 /// split into a tuple of them, a scalar the classifier widens to fill its
 /// eightbyte, and a value whose live bytes start partway into its storage
-/// because a leading eightbyte holds no field (getDirectOffset).  getDirect
-/// keeps canFlatten set so the rewriter can split a multi-field coerced
-/// struct into individual wire arguments.  Any other scalar passes in its
+/// because a leading eightbyte holds no field (getDirectOffset).  canFlatten
+/// follows the classifier's CanBeFlattened, so the rewriter splits a
+/// multi-field coerced struct into individual wire arguments unless the
+/// classifier asked to keep it intact.  Any other scalar passes in its
 /// natural CIR type, which a null coercion denotes.  A coercion this bridge
 /// cannot represent yields std::nullopt so the caller reports NYI rather than
 /// silently passing the value unchanged.
@@ -612,7 +613,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     // trip for nothing.
     if (comparesAgainstCoerce && coerced == origTy)
       return ArgClassification::getDirect();
-    return ArgClassification::getDirect(coerced, offset);
+    ArgClassification classified =
+        ArgClassification::getDirect(coerced, offset);
+    classified.canFlatten = info.getCanBeFlattened();
+    return classified;
   }
   // An extended value is always read from byte 0 of its own storage, so
   // there is no offset to honor here.
@@ -706,12 +710,15 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   fc.returnInfo = *retAc;
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = i < inputs.size() ? inputs[i] : mlir::Type();
+    const llvm::abi::ArgInfo &argInfo = fi->getArgInfo(i).Info;
     std::optional<ArgClassification> ac =
-        convertABIArgInfo(fi->getArgInfo(i).Info, ctx, origArg);
+        convertABIArgInfo(argInfo, ctx, origArg);
     if (!ac) {
       nyiCoercion(origArg);
       return std::nullopt;
     }
+    ac->neededIntRegs = argInfo.getNeededIntRegs();
+    ac->neededSseRegs = argInfo.getNeededSseRegs();
     fc.argInfos.push_back(*ac);
   }
   return fc;
@@ -757,6 +764,22 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                                  [&]() { return func.emitOpError(); });
 }
 
+/// Classify the single type fetched by a `cir.va_arg` as an unnamed argument
+/// (RequiredArgs(0)) with a full register budget.  Returns std::nullopt and
+/// emits an NYI error if the type is not one this bridge handles.
+static std::optional<ArgClassification> classifyX86_64VarArgType(
+    mlir::Type ty, MLIRContext *ctx, const DataLayout &dl,
+    mlir::abi::ABITypeMapper &typeMapper,
+    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+  std::optional<FunctionClassification> fc = classifyX86_64Signature(
+      cir::VoidType::get(ctx), mlir::TypeRange(ty), llvm::abi::RequiredArgs(0),
+      ctx, dl, typeMapper, targetInfo, modOp, emitError);
+  if (!fc)
+    return std::nullopt;
+  return fc->argInfos[0];
+}
+
 /// Classify a call that passes arguments through an ellipsis.  The callee's
 /// own classification covers only its declared parameters, but an ellipsis
 /// argument competes for the same argument registers as a declared one, so
@@ -799,7 +822,7 @@ struct CallConvLoweringPass
   using CallConvLoweringBase::CallConvLoweringBase;
 
   CallConvLoweringPass(const CallConvLoweringOptions &options,
-                       const llvm::abi::ABICompatInfo &x86AbiCompat)
+                       const llvm::abi::X86ABICompatInfo &x86AbiCompat)
       : CallConvLoweringBase(options), x86AbiCompat(x86AbiCompat) {}
 
   void runOnOperation() override;
@@ -808,7 +831,7 @@ struct CallConvLoweringPass
   /// compatibility version.  Carried outside the pass options because the
   /// struct has no command-line parser, so a cir-opt run gets the library
   /// defaults rather than a target's values.
-  llvm::abi::ABICompatInfo x86AbiCompat;
+  llvm::abi::X86ABICompatInfo x86AbiCompat;
 };
 
 /// Record on \p fc whether \p returnType is CIR's void.  The x86_64 classifier
@@ -1169,6 +1192,28 @@ void CallConvLoweringPass::runOnOperation() {
       return;
     }
   }
+
+  if (isX86) {
+    // Collect the fetches before rewriting any, because rewriting one erases
+    // it, and a live walk holds the op it is about to visit next.
+    SmallVector<cir::VAArgOp> vaArgs;
+    moduleOp.walk([&](cir::VAArgOp v) { vaArgs.push_back(v); });
+    for (cir::VAArgOp v : vaArgs) {
+      cir::FuncOp enclosing = v->getParentOfType<cir::FuncOp>();
+      std::optional<ArgClassification> ac = classifyX86_64VarArgType(
+          v.getType(), ctx, dl, *x86TypeMapper,
+          x86TargetFor(avxLevelFor(enclosing)), moduleOp,
+          [&]() { return v->emitOpError(); });
+      if (!ac) {
+        signalPassFailure();
+        return;
+      }
+      if (failed(rewriteCtx.rewriteVAArg(v.getOperation(), *ac, builder))) {
+        signalPassFailure();
+        return;
+      }
+    }
+  }
 }
 
 } // namespace
@@ -1179,7 +1224,8 @@ std::unique_ptr<Pass> mlir::createCallConvLoweringPass() {
 
 std::unique_ptr<Pass> mlir::createCallConvLoweringPass(
     cir::CallConvTarget target, llvm::abi::X86AVXABILevel x86AvxAbiLevel,
-    bool allowsX86TargetAttrAvx, const llvm::abi::ABICompatInfo &x86AbiCompat) {
+    bool allowsX86TargetAttrAvx,
+    const llvm::abi::X86ABICompatInfo &x86AbiCompat) {
   CallConvLoweringOptions options;
   options.target = target;
   options.x86AvxAbiLevel = x86AvxAbiLevel;

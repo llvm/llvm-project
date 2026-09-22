@@ -353,9 +353,9 @@ Error LevelZeroPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
 Expected<PluginAllocInfoTy>
 LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
   void *Raw = const_cast<void *>(Ptr);
-  for (auto &KV : DeviceAllocators) {
-    if (auto *Info = KV.second->getAllocInfo(Raw))
-      return PluginAllocInfoTy{KV.first, static_cast<TargetAllocTy>(Info->Kind),
+  for (const auto &[Device, Allocator] : DeviceAllocators) {
+    if (auto *Info = Allocator->getAllocInfo(Raw))
+      return PluginAllocInfoTy{Device, static_cast<TargetAllocTy>(Info->Kind),
                                Info->Base, Info->ReqSize};
   }
   if (HostAllocator) {

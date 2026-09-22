@@ -18,12 +18,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -135,6 +137,11 @@ static cl::opt<std::string> ClWriteSummary(
 static cl::opt<bool> EnableJumpTableDebugInfo(
     "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
     cl::desc("Enable debug info generation for jump tables"));
+
+// FIXME: Remove in clang 26.
+static cl::opt<bool> ReorderCfiJumpTablesProfiles(
+    "reorder-cfi-jump-tables-profiles", cl::init(true), cl::Hidden,
+    cl::desc("Reorder CFI jump tables using profile information"));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -469,8 +476,12 @@ static void createCfiFunctionsMetadata(
     else if (F.hasExternalWeakLinkage())
       Linkage = CfiFunctionLinkage::WeakDeclaration;
 
-    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(
-        Linkage, CfiFunctionHotness::fromFunction(F, PSI, BFIGetter));
+    CfiFunctionHotness Hotness =
+        ReorderCfiJumpTablesProfiles
+            ? CfiFunctionHotness::fromFunction(F, PSI, BFIGetter)
+            : CfiFunctionHotness();
+
+    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(Linkage, Hotness);
 
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt8Ty(Ctx), EncodedLinkage)));
@@ -718,6 +729,9 @@ class LowerTypeTestsModule {
 
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
+
+  // Map from function to hotness passed via cfi.functions metadata.
+  DenseMap<const Function *, CfiFunctionHotness> FunctionSummaryHotness;
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -2211,16 +2225,45 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     return O1.size() < O2.size();
   });
 
+  bool IsGlobalSet =
+      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
+
+  unique_function<bool(uint64_t, uint64_t)> Less;
+  if (!IsGlobalSet && !FunctionSummaryHotness.empty() &&
+      ReorderCfiJumpTablesProfiles) {
+    // Estimated weight of each jump entry.
+    std::vector<CfiFunctionHotness> GTMHotness;
+    GTMHotness.reserve(Globals.size());
+    for (GlobalTypeMember *GTM : Globals) {
+      GTMHotness.push_back(
+          FunctionSummaryHotness.lookup(cast<Function>(GTM->getGlobal())));
+    }
+
+    // Order jump table entries by hotness ascending so that the hottest
+    // entry is placed at the end of the jump table:
+    // 1. Under jump table relaxation (SHT_LLVM_CFI_JUMP_TABLE), the linker
+    //    moves the jump table directly before the target of the last entry
+    //    and deletes its branch so the target function body acts as the
+    //    last entry.
+    // 2. The jump table is placed into the output section of that last
+    //    target. Jump tables are critical to performance; if the last
+    //    entry were a cold function, the jump table would be dragged into a
+    //    cold binary section (such as .text.unlikely). Placing the hottest
+    //    entry at the end ensures the jump table lands in a hot section and
+    //    the hottest callee benefits from fall-through without a branch.
+    Less = [GTMHotness = std::move(GTMHotness)](uint64_t A, uint64_t B) {
+      return GTMHotness[A] < GTMHotness[B];
+    };
+  }
+
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
-  GlobalLayoutBuilder GLB(Globals.size());
+  GlobalLayoutBuilder GLB(Globals.size(), std::move(Less));
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
   // Build a vector of globals with the computed layout.
-  bool IsGlobalSet =
-      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
   for (uint64_t Offset : GLB.build()) {
@@ -2245,11 +2288,11 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
   if (Arch == Triple::arm)
     CanUseArmJumpTable = true;
   if (Arch == Triple::arm || Arch == Triple::thumb) {
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
       // Skip declarations since we should not query the TTI for them.
       if (F.isDeclaration())
@@ -2447,6 +2490,38 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
+    // For internal linkage cfiFunction defs/decls, we only needed the alias
+    // through the linker. We can replace those aliases with the aliased
+    // function here.
+    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
+    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
+      if (A.hasLocalLinkage())
+        continue;
+      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
+          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
+        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
+          if (F->hasExternalLinkage()) {
+            // The original internal linkage function was independently promoted
+            // by thinlink. While, pre-link, all static references to it
+            // (implicitly, module-internal) were replaced with references to
+            // the alias, thinlink might decide to promote it because (for
+            // example) it turns out to be a hot indirect call target in a
+            // different module.
+            // In that case, we need to remember its thinlink-promoted name
+            // because it's potentially referenced elsewhere, and make sure
+            // there's an alias to it.
+            PromotedFuncs.emplace_back(F, F->getName());
+          } else {
+            F->setLinkage(GlobalValue::ExternalLinkage);
+            F->setVisibility(GlobalValue::HiddenVisibility);
+          }
+          A.replaceAllUsesWith(F);
+          F->takeName(&A);
+          A.eraseFromParent();
+        }
+      }
+    }
+
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2467,6 +2542,9 @@ bool LowerTypeTestsModule::lower() {
       for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false);
     }
+    // Add an alias with the thinlink promotion name.
+    for (auto &[F, Name] : PromotedFuncs)
+      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }
@@ -2631,6 +2709,12 @@ bool LowerTypeTestsModule::lower() {
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
         }
+        uint8_t Encoded = cast<ConstantAsMetadata>(FuncMD->getOperand(1))
+                              ->getValue()
+                              ->getUniqueInteger()
+                              .getZExtValue();
+        // TODO: Implement for Full LTO.
+        FunctionSummaryHotness[F] = decodeCfiFunctionHotness(Encoded);
       }
     }
   }
@@ -2694,6 +2778,10 @@ bool LowerTypeTestsModule::lower() {
         if (!CrossDsoCfi || !IsJumpTableCanonical || F->hasLocalLinkage())
           continue;
       }
+
+      // TODO: Pre-fill for full LTO.
+      // if (!ExportSummary)
+      //   FunctionSummaryHotness[F] = getHotness(*F, PSI, BFIGetter);
     }
 
     auto *GTM = GlobalTypeMember::create(Alloc, &GO, IsJumpTableCanonical,
