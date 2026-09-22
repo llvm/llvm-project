@@ -74,14 +74,8 @@ LLVM_ABI KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                                     bool UseInstrInfo = true,
                                     unsigned Depth = 0);
 
-/// Returns the known bits rather than passing by reference.
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                    const DataLayout &DL,
-                                    AssumptionCache *AC = nullptr,
-                                    const Instruction *CxtI = nullptr,
-                                    const DominatorTree *DT = nullptr,
-                                    bool UseInstrInfo = true,
-                                    unsigned Depth = 0);
+                                    const SimplifyQuery &Q, unsigned Depth = 0);
 
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const SimplifyQuery &Q,
                                     unsigned Depth = 0);

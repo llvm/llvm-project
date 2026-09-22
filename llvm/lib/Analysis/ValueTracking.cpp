@@ -143,9 +143,6 @@ static void computeKnownBits(const Value *V, const APInt &DemandedElts,
                              KnownBits &Known, const SimplifyQuery &Q,
                              unsigned Depth);
 
-static KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                  const SimplifyQuery &Q, unsigned Depth);
-
 void llvm::computeKnownBits(const Value *V, KnownBits &Known,
                             const SimplifyQuery &Q, unsigned Depth) {
   // Since the number of lanes in a scalable vector is unknown at compile time,
@@ -172,16 +169,6 @@ KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
                                  unsigned Depth) {
   return computeKnownBits(
       V, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo), Depth);
-}
-
-KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                 const DataLayout &DL, AssumptionCache *AC,
-                                 const Instruction *CxtI,
-                                 const DominatorTree *DT, bool UseInstrInfo,
-                                 unsigned Depth) {
-  return ::computeKnownBits(
-      V, DemandedElts,
-      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo), Depth);
 }
 
 static NoCommonBitsSetResult
@@ -2529,8 +2516,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them.
-static KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                  const SimplifyQuery &Q, unsigned Depth) {
+KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
+                                 const SimplifyQuery &Q, unsigned Depth) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
   ::computeKnownBits(V, DemandedElts, Known, Q, Depth);
   return Known;
