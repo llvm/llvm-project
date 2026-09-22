@@ -6236,6 +6236,8 @@ widenDeinterleavedOperations(ArrayRef<Value *> Members, unsigned Factor,
         NewOperand =
             widenDeinterleavedOperations(Operands, Factor, WideEC, Builder);
       }
+    } else {
+      assert(all_equal(Operands) && "expected all operands to be equal");
     }
     NewOperands.push_back(NewOperand);
   }
