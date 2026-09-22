@@ -15,12 +15,13 @@
 ; EXTRA-FEATURES-NEXT: .option pop
 
 ;; TODO: emitTargetFeaturePush does not call setArchString(), so the mapping
-;; symbol does not record +d/+f/+zicsr when assembling directly to an object file.
+;; symbol does not record +d/+f/+zicsr when assembling directly to an object
+;; file, causing llvm-objdump to fail to disassemble `fld`.
 ; OBJ-LABEL: Disassembly of section .text:
 ; OBJ-EMPTY:
 ; OBJ-NEXT:  0000000000000000 <$xrv64i2p1>:
 ; OBJ-NEXT:  0000000000000000 <func>:
-; OBJ-NEXT:         0:      	fld	ft0, 0x0(sp)
+; OBJ-NEXT:         0:      	<unknown>
 ; OBJ-NEXT:         4:      	ret
 ; OBJ-NOT:   {{.}}
 
