@@ -12672,19 +12672,6 @@ SDValue SITargetLowering::handleD16VData(SDValue VData, SelectionDAG &DAG,
   return VData;
 }
 
-static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
-  switch (Intr) {
-  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
-  case Intrinsic::amdgcn_load_async_to_lds:
-  case Intrinsic::amdgcn_global_load_async_lds:
-    return true;
-  }
-  return false;
-}
-
 SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -12982,8 +12969,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
             ? 1
             : 0,
         DL, MVT::i8));                                           // swz
-    Ops.push_back(
-        DAG.getTargetConstant(isAsyncLDSDMA(IntrinsicID), DL, MVT::i8));
+    Ops.push_back(DAG.getTargetConstant(
+        AMDGPU::isAsyncLDSDMAIntrinsic(IntrinsicID), DL, MVT::i8));
     Ops.push_back(M0Val.getValue(0));                            // Chain
     Ops.push_back(M0Val.getValue(1));                            // Glue
 
@@ -13068,8 +13055,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Aux = Op.getConstantOperandVal(6);
     Ops.push_back(DAG.getTargetConstant(Aux & ~AMDGPU::CPol::VIRTUAL_BITS, DL,
                                         MVT::i32)); // CPol
-    Ops.push_back(
-        DAG.getTargetConstant(isAsyncLDSDMA(IntrinsicID), DL, MVT::i8));
+    Ops.push_back(DAG.getTargetConstant(
+        AMDGPU::isAsyncLDSDMAIntrinsic(IntrinsicID), DL, MVT::i8));
 
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
