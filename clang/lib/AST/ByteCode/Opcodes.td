@@ -190,6 +190,9 @@ def PushIgnoreDiags : SuccessOpcode;
 def PopIgnoreDiags : SuccessOpcode;
 
 def StartInit : SuccessOpcode;
+def StartFieldInit : SuccessOpcode {
+  let Args = [ArgUint32];
+}
 def EndInit : SuccessOpcode;
 
 def StartSpeculation : SuccessOpcode;

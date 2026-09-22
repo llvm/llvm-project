@@ -221,6 +221,7 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createSystemZAlignGlobalsPass());
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }

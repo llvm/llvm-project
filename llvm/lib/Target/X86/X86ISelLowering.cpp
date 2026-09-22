@@ -3940,6 +3940,13 @@ unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
   return ISD::SRL;
 }
 
+bool X86TargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
+  // Prefer inc-of-add for scalars and single-element vectors, and sub-of-not
+  // for multi-element vectors.
+  return VT.isScalarInteger() ||
+         (VT.isVector() && VT.getVectorElementCount().isScalar());
+}
+
 TargetLoweringBase::CondMergingParams
 X86TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                  const Value *Lhs,
@@ -28864,6 +28871,20 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return EmitMaskedTruncSStore(IsSigned, Chain, dl, DataToTruncate, Addr,
                                    VMask, MemVT, MemIntr->getMemOperand(), DAG);
     }
+    case X86ISD::VTRUNCSS: {
+      SDVTList VTs = DAG.getVTList(MVT::Other);
+      if (isAllOnesConstant(Mask)) {
+        SDValue Ops[] = {Chain, DataToTruncate, Addr};
+        return DAG.getMemIntrinsicNode(X86ISD::VTRUNCSTORESS, dl, VTs, Ops,
+                                       MemVT, MemIntr->getMemOperand());
+      }
+
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
+      SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+      SDValue Ops[] = {Chain, DataToTruncate, Addr, VMask};
+      return DAG.getMemIntrinsicNode(X86ISD::VMTRUNCSTORESS, dl, VTs, Ops,
+                                     MemVT, MemIntr->getMemOperand());
+    }
     default:
       llvm_unreachable("Unsupported truncstore intrinsic");
     }
@@ -43217,18 +43238,48 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
                                             DAG.getBitcast(OpVT, RHS)));
         }
       }
-      if (SrcOpcode == ISD::SINT_TO_FP && IsSafeToMoveShuffle(N0, SrcOpcode) &&
-          OpVT.getScalarSizeInBits() ==
-              N0.getOperand(0).getScalarValueSizeInBits()) {
-        SDValue Res = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
-        if (Opc == X86ISD::VPERMV)
-          Res = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Res);
-        else if (N.getNumOperands() == 2)
-          Res = DAG.getNode(Opc, DL, ShuffleVT, Res, N.getOperand(1));
-        else
-          Res = DAG.getNode(Opc, DL, ShuffleVT, Res);
-        Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
-        return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res));
+      switch (SrcOpcode) {
+      case ISD::SINT_TO_FP:
+        if (IsSafeToMoveShuffle(N0, SrcOpcode) &&
+            OpVT.getScalarSizeInBits() ==
+                N0.getOperand(0).getScalarValueSizeInBits()) {
+          SDValue Res = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+          if (Opc == X86ISD::VPERMV)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Res);
+          else if (N.getNumOperands() == 2)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res, N.getOperand(1));
+          else
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res);
+          Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
+          return DAG.getBitcast(ShuffleVT,
+                                DAG.getNode(SrcOpcode, DL, OpVT, Res));
+        }
+        break;
+      case X86ISD::VSHL:
+      case X86ISD::VSRL:
+      case X86ISD::VSRA:
+      case X86ISD::VSHLI:
+      case X86ISD::VSRLI:
+      case X86ISD::VSRAI:
+      case X86ISD::VROTLI:
+      case X86ISD::VROTRI:
+        // Move shuffle through shifts as it might help load folding.
+        // TODO: Relax shuffle constraint.
+        if ((Opc == X86ISD::PSHUFD || Opc == X86ISD::PSHUFLW ||
+             Opc == X86ISD::PSHUFHW) &&
+            IsSafeToMoveShuffle(N0, SrcOpcode)) {
+          SDValue Res = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+          if (Opc == X86ISD::VPERMV)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Res);
+          else if (N.getNumOperands() == 2)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res, N.getOperand(1));
+          else
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res);
+          Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
+          return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res,
+                                                       N0.getOperand(1)));
+        }
+        break;
       }
     }
     break;
@@ -44011,32 +44062,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFLW:
   case X86ISD::PSHUFHW: {
-    SDValue N0 = N.getOperand(0);
-    SDValue N1 = N.getOperand(1);
-    if (N0->hasOneUse()) {
-      SDValue V = peekThroughOneUseBitcasts(N0);
-      switch (V.getOpcode()) {
-      case X86ISD::VSHL:
-      case X86ISD::VSRL:
-      case X86ISD::VSRA:
-      case X86ISD::VSHLI:
-      case X86ISD::VSRLI:
-      case X86ISD::VSRAI:
-      case X86ISD::VROTLI:
-      case X86ISD::VROTRI: {
-        MVT InnerVT = V.getSimpleValueType();
-        if (InnerVT.getScalarSizeInBits() <= VT.getScalarSizeInBits()) {
-          SDValue Res = DAG.getNode(Opcode, DL, VT,
-                                    DAG.getBitcast(VT, V.getOperand(0)), N1);
-          Res = DAG.getBitcast(InnerVT, Res);
-          Res = DAG.getNode(V.getOpcode(), DL, InnerVT, Res, V.getOperand(1));
-          return DAG.getBitcast(VT, Res);
-        }
-        break;
-      }
-      }
-    }
-
     Mask = getPSHUFShuffleMask(N);
     assert(Mask.size() == 4);
     break;
@@ -50279,7 +50304,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
         !Subtarget.canUseCMOV() || hasFPCMov(CC)) {
       SDValue Ops[] = {FalseOp, TrueOp, DAG.getTargetConstant(CC, DL, MVT::i8),
                        Flags};
-      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
     }
   }
 
@@ -50399,7 +50424,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       if (CC == X86::COND_E && CmpAgainst == dyn_cast<ConstantSDNode>(TrueOp)) {
         SDValue Ops[] = {FalseOp, Cond.getOperand(0),
                          DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
-        return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+        return DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
       }
     }
   }
@@ -50459,10 +50484,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
 
       SDValue LOps[] = {FalseOp, TrueOp,
                         DAG.getTargetConstant(CC0, DL, MVT::i8), Flags};
-      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, VT, LOps);
+      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, VT, LOps, N->getFlags());
       SDValue Ops[] = {LCMOV, TrueOp, DAG.getTargetConstant(CC1, DL, MVT::i8),
                        Flags};
-      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
+      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
       return CMOV;
     }
   }
@@ -50503,8 +50528,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // This should constant fold.
       SDValue Diff = DAG.getNode(ISD::SUB, DL, VT, Const, Add.getOperand(1));
       SDValue CMov =
-          DAG.getNode(X86ISD::CMOV, DL, VT, Diff, Add.getOperand(0),
-                      DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond);
+          DAG.getNode(X86ISD::CMOV, DL, VT,
+                      {Diff, Add.getOperand(0),
+                       DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond},
+                      N->getFlags());
       return DAG.getNode(ISD::ADD, DL, VT, CMov, Add.getOperand(1));
     }
   }
@@ -55642,6 +55669,17 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     return EmitTruncSStore(IsSigned, St->getChain(), dl,
                            StoredVal.getOperand(0), St->getBasePtr(), VT,
                            St->getMemOperand(), DAG);
+  }
+
+  // Try to fold a VTRUNCSS into a truncating store.
+  if (!St->isTruncatingStore() && StoredVal.getOpcode() == X86ISD::VTRUNCSS &&
+      StoredVal.hasOneUse() &&
+      TLI.isTruncStoreLegal(StoredVal.getOperand(0).getValueType(), VT,
+                            St->getAlign(), St->getAddressSpace())) {
+    SDVTList VTs = DAG.getVTList(MVT::Other);
+    SDValue Ops[] = {St->getChain(), StoredVal.getOperand(0), St->getBasePtr()};
+    return DAG.getMemIntrinsicNode(X86ISD::VTRUNCSTORESS, dl, VTs, Ops, VT,
+                                   St->getMemOperand());
   }
 
   // Try to fold a extract_element(VTRUNC) pattern into a truncating store.
@@ -61046,6 +61084,12 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     SDValue ADC = DAG.getNode(X86ISD::ADC, SDLoc(Op1), Op1->getVTList(), Op0,
                               Op1.getOperand(1), Op1.getOperand(2));
     return DAG.getNode(ISD::SUB, DL, VT, ADC.getValue(0), Op1.getOperand(0));
+  }
+
+  // Fold SUB(~A,~B) -> SUB(B,A)
+  if (isBitwiseNot(Op0) && Op0.hasOneUse() && isBitwiseNot(Op1) &&
+      Op1.hasOneUse()) {
+    return DAG.getNode(ISD::SUB, DL, VT, Op1.getOperand(0), Op0.getOperand(0));
   }
 
   if (SDValue V = combineXorSubCTLZ(N, DL, DAG, Subtarget))
