@@ -24,6 +24,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1580,7 +1581,8 @@ Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
     else {
       Value *ICmp =
           Builder.CreateICmp(MinMaxIntrinsic::getPredicate(IntrinID), LHS, RHS);
-      Sel = Builder.CreateSelect(ICmp, LHS, RHS, Name);
+      Sel = Builder.CreateSelectWithUnknownProfile(ICmp, LHS, RHS,
+                                                   "scev-expander", Name);
     }
     LHS = Sel;
   }
@@ -2340,7 +2342,8 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   Builder.SetInsertPoint(Loc);
   // Compute |Step|
   Value *StepCompare = Builder.CreateICmp(ICmpInst::ICMP_SLT, StepValue, Zero);
-  Value *AbsStep = Builder.CreateSelect(StepCompare, NegStepValue, StepValue);
+  Value *AbsStep = Builder.CreateSelectWithUnknownProfile(
+      StepCompare, NegStepValue, StepValue, "scev-expander");
 
   // Compute |Step| * Backedge
   // Compute:
@@ -2399,7 +2402,8 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
           Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, Sub, StartValue);
     if (NeedPosCheck && NeedNegCheck) {
       // Select the answer based on the sign of Step.
-      EndCheck = Builder.CreateSelect(StepCompare, EndCompareGT, EndCompareLT);
+      EndCheck = Builder.CreateSelectWithUnknownProfile(
+          StepCompare, EndCompareGT, EndCompareLT, "scev-expander");
     }
     return Builder.CreateOr(EndCheck, OfMul);
   };
