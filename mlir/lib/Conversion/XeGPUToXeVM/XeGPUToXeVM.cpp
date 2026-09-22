@@ -214,27 +214,30 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 
 //
 // High-D (>2D) nd descriptors are lowered by viewing the source as a single
-// flattened 2D plane: `base_height` is the product of all dims but the
-// innermost, so the 2D-block surface covers every leading (batch) plane at
-// once, and a batch position becomes a row offset into it. Leaving `base_ptr`
-// at the true base means an out-of-range batch index lands past `base_height`,
-// where the HW boundary check handles it, instead of aiming the surface at
-// unmapped memory. Encoding the leading strides as row counts (`stride[d] /
-// stride[R-2]`) also makes them dimensionless, so they survive element-type
-// repacking (e.g. the f16 -> i32 transpose repack) without a unit conversion.
+// flattened 2D plane, so the 2D-block surface covers every leading (batch)
+// plane at once and a batch position becomes a row offset into it. The surface
+// height is the row extent the leading dims reach:
+//   base_height = size[R-2] + sum_d (size[d] - 1) * (stride[d] / stride[R-2])
+//
+// Leaving `base_ptr` at the true base means an out-of-range batch index lands
+// past `base_height`, where the HW boundary check handles it, instead of aiming
+// the surface at unmapped memory. Encoding the leading strides as row counts
+// (`stride[d] / stride[R-2]`) also makes them dimensionless, so they survive
+// element-type repacking (e.g. the f16 -> i32 transpose repack) without a unit
+// conversion.
 //
 // Limitations of the flattened-plane view:
 //  1. Each leading stride must be a whole number of rows. A source with gaps
 //     between planes (`stride[d] % stride[R-2] != 0`) is not lowered. This can
 //     only be checked when the strides are static; for dynamic strides the
 //     divisibility is assumed.
-//  2. `base_height` grows to the product of the leading dims, so a source with
-//     a large batch x head x sequence extent can exceed the HW 2D-block
-//     surface height.
+//  2. `base_height` grows with the leading extent, so a source with a large
+//     batch x head x sequence extent can exceed the HW 2D-block surface height.
 //  3. Plane boundaries are invisible to the boundary check: a tile whose rows
-//     run past `size[R-2]` reads the next plane's rows instead of the zero
-//     padding a per-plane surface would return. This only matters when
-//     `size[R-2]` is not a multiple of the tile height.
+//     run past `size[R-2]` reads the following rows of the surface (the next
+//     plane, or the padding between planes) instead of the zeros a per-plane
+//     surface would return. This only matters when `size[R-2]` is not a
+//     multiple of the tile height.
 //
 
 class CreateNdDescToXeVMPattern
@@ -347,15 +350,37 @@ class CreateNdDescToXeVMPattern
     };
     // The descriptor's innermost 2 dims are the 2D tile (H, W).
     Value baseShapeW = createOffset(mixedSizes, rank - 1);
-    // Height of the flattened plane: every leading (batch) plane is stacked
-    // into the surface, so the boundary check covers an out-of-range batch.
-    // For rank 2 this is just size[0].
-    Value baseShapeH = createOffset(mixedSizes, rank - 2);
-    for (int64_t d = 0; d < rank - 2; ++d)
-      baseShapeH = arith::MulIOp::create(rewriter, loc, baseShapeH,
-                                         createOffset(mixedSizes, d));
     // Pitch is the stride of dim rank-2 (the row stride of the 2D tile).
     Value basePitch = createOffset(mixedStrides, rank - 2);
+    // Leading (batch) strides as a number of rows (`stride[d] / pitch`).
+    SmallVector<Value> leadingRowStrides;
+    for (int64_t d = 0; d < rank - 2; ++d) {
+      std::optional<int64_t> leading = getConstantIntValue(mixedStrides[d]);
+      std::optional<int64_t> pitch =
+          getConstantIntValue(mixedStrides[rank - 2]);
+      if (leading && pitch && *pitch != 0)
+        leadingRowStrides.push_back(arith::ConstantIntOp::create(
+            rewriter, loc, payloadElemTy, *leading / *pitch));
+      else
+        leadingRowStrides.push_back(arith::DivUIOp::create(
+            rewriter, loc, createOffset(mixedStrides, d), basePitch));
+    }
+    // Height of the flattened plane: every leading (batch) plane is stacked
+    // into the surface, so the boundary check covers an out-of-range batch.
+    //   base_height = size[R-2] + sum_d (size[d] - 1) * leadingRowStride[d]
+    // For rank 2 this is just size[0].
+    Value baseShapeH = createOffset(mixedSizes, rank - 2);
+    if (rank > 2) {
+      Value one = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 1);
+      for (int64_t d = 0; d < rank - 2; ++d) {
+        Value planesBelow = rewriter.createOrFold<arith::SubIOp>(
+            loc, createOffset(mixedSizes, d), one);
+        Value rows = rewriter.createOrFold<arith::MulIOp>(
+            loc, planesBelow, leadingRowStrides[d]);
+        baseShapeH =
+            rewriter.createOrFold<arith::AddIOp>(loc, baseShapeH, rows);
+      }
+    }
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -372,26 +397,13 @@ class CreateNdDescToXeVMPattern
     payload =
         vector::InsertOp::create(rewriter, loc, basePitch, payload,
                                  static_cast<int>(NdTdescOffset::BasePitch));
-    // Leading (batch) strides go into the spare payload slots as a number of
-    // rows; the load/store/prefetch lowering turns the batch offsets into a row
-    // offset with them. Row units keep them independent of the element type, so
-    // an element-type repack cannot put them out of step with the pitch.
-    for (int64_t d = 0; d < rank - 2; ++d) {
-      std::optional<int64_t> leading = getConstantIntValue(mixedStrides[d]);
-      std::optional<int64_t> pitch =
-          getConstantIntValue(mixedStrides[rank - 2]);
-      Value leadingRowStride;
-      if (leading && pitch && *pitch != 0) {
-        leadingRowStride = arith::ConstantIntOp::create(
-            rewriter, loc, payloadElemTy, *leading / *pitch);
-      } else {
-        leadingRowStride = arith::DivUIOp::create(
-            rewriter, loc, createOffset(mixedStrides, d), basePitch);
-      }
+    // The leading (batch) row strides go into the spare payload slots; the
+    // load/store/prefetch lowering turns the batch offsets into a row offset
+    // with them.
+    for (int64_t d = 0; d < rank - 2; ++d)
       payload = vector::InsertOp::create(
-          rewriter, loc, leadingRowStride, payload,
+          rewriter, loc, leadingRowStrides[d], payload,
           static_cast<int>(NdTdescOffset::LeadingStride0) + d);
-    }
     rewriter.replaceOp(op, payload);
     return success();
   }
