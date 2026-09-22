@@ -212,6 +212,10 @@ infrastructure are described first, followed by tool-specific sections.
 
   - No longer diagnoses variables declared with `decltype(auto)`, where the
     suggested `const` does not compile.
+    
+- Fixed an infinite loop in {doc}`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
+  inherits from itself or has a circular inheritance graph.
 
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in

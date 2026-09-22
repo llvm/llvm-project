@@ -2400,9 +2400,25 @@ void LoweringPreparePass::lowerStdOp(cir::StdOpInterface typedOp) {
     resultType = op->getResult(0).getType();
   cir::CallOp call = builder.createCallOp(
       op->getLoc(), typedOp.getOriginalFnAttr(), resultType, op->getOperands());
-  for (mlir::NamedAttribute attr : op->getAttrs())
-    if (attr.getName() != typedOp.getOriginalFnAttrName())
-      call->setAttr(attr.getName(), attr.getValue());
+
+  // IdiomRecognizer stores both the inherent and discardable attributes of the
+  // original call as discardable attributes on the raised operation because
+  // the cir.std operations do not share CallOp's property schema. Reconstruct
+  // the original storage class from the destination CallOp schema here.
+  //
+  // This intentionally uses getInherentAttr as a schema query, not as a test
+  // that `call` currently has the attribute: generated property accessors
+  // return an engaged optional with a null attribute for a recognized but unset
+  // optional property. An empty optional means the name is not inherent to
+  // CallOp and must remain discardable.
+  // TODO: Replace this transport encoding with shared call properties on the
+  // raised operations.
+  for (mlir::NamedAttribute attr : op->getDiscardableAttrs()) {
+    if (call->getInherentAttr(attr.getName()).has_value())
+      call->setInherentAttr(attr.getName(), attr.getValue());
+    else
+      call->setDiscardableAttr(attr.getName(), attr.getValue());
+  }
 
   op->replaceAllUsesWith(call);
   op->erase();

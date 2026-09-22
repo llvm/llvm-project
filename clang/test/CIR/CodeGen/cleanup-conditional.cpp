@@ -1003,3 +1003,76 @@ void test_combined_cleanups(bool c) {
 // OGCG:   store ptr %[[TMP_LE]], ptr %[[R]]
 // OGCG:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
 // OGCG:   ret void
+
+struct Payload { ~Payload(); };
+Payload globalPayload;
+struct Holder { Holder(); Holder(Payload); };
+struct Guard { Guard(); ~Guard(); operator bool(); };
+
+// The condition of this conditional materializes its own temporary (Guard),
+// whose destructor is emitted as a cir.cleanup.scope nested inside the
+// full-expression scope. That scope is created after the conditional
+// evaluation begins, so it is appended to the block that the Payload
+// temporary's active flag must be cleared in.
+//
+// The clear must be anchored ahead of that nested scope. If it is instead
+// appended to the end of the block, it lands after the conditional and
+// overwrites the "true" store in the taken arm, leaving ~Payload unreachable
+// and the temporary leaked.
+void test_flag_cleared_before_cond_cleanup() {
+  Guard() ? Holder() : globalPayload;
+}
+// CIR-LABEL: @_Z37test_flag_cleared_before_cond_cleanupv
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Guard>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[AGG_TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Payload>
+// CIR:   cir.cleanup.scope {
+// The clear precedes both the Guard constructor and the nested cleanup scope.
+// CIR:     %[[FALSE:.*]] = cir.const #false
+// CIR:     cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:     cir.call @_ZN5GuardC1Ev(%[[REF_TMP]])
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[COND:.*]] = cir.call @_ZN5GuardcvbEv(%[[REF_TMP]])
+// CIR:       cir.if %[[COND]] {
+// CIR:         cir.call @_ZN6HolderC1Ev(%{{.*}})
+// CIR:       } else {
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.store %[[TRUE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:         cir.call @_ZN6HolderC1E7Payload(%{{.*}}, %[[AGG_TMP]])
+// CIR:       }
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN5GuardD1Ev(%[[REF_TMP]])
+// CIR:     }
+// CIR:   } cleanup normal {
+// CIR:     %[[IS_ACTIVE:.*]] = cir.load{{.*}} %[[ACTIVE]]
+// CIR:     cir.if %[[IS_ACTIVE]] {
+// CIR:       cir.call @_ZN7PayloadD1Ev(%[[AGG_TMP]])
+// CIR:     }
+// CIR:   }
+
+// LLVM-LABEL: define dso_local void @_Z37test_flag_cleared_before_cond_cleanupv(
+// LLVM:         %[[REF_TMP:.*]] = alloca %struct.Guard
+// LLVMCIR:      %[[ACTIVE:.*]] = alloca i8
+// LLVM:         %[[AGG_TMP:.*]] = alloca %struct.Payload
+// OGCG:         %[[ACTIVE:.*]] = alloca i1
+// LLVMCIR:      store i8 0, ptr %[[ACTIVE]]
+// LLVM:         call void @_ZN5GuardC1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVM:         %[[COND:.*]] = call {{.*}} i1 @_ZN5GuardcvbEv(ptr {{.*}} %[[REF_TMP]])
+// OGCG:         store i1 false, ptr %[[ACTIVE]]
+// LLVM:         br i1 %[[COND]], label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]
+// LLVM:       [[FALSE_BR]]:
+// LLVMCIR:      store i8 1, ptr %[[ACTIVE]]
+// FIXME: CIR destroys Guard before Payload; reverse-of-construction order
+// requires ~Payload to run first, as OGCG below does. Tracked separately from
+// the active-flag placement this test covers.
+// LLVMCIR:      call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
+// LLVMCIR:      %[[ACTIVE_BYTE:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR:      %[[ACTIVE_BOOL:.*]] = trunc i8 %[[ACTIVE_BYTE]] to i1
+// LLVMCIR:      br i1 %[[ACTIVE_BOOL]], label %[[DTOR:.*]], label %[[SKIP:.*]]
+// OGCG:         store i1 true, ptr %[[ACTIVE]]
+// OGCG:         %[[IS_ACTIVE:.*]] = load i1, ptr %[[ACTIVE]]
+// OGCG:         br i1 %[[IS_ACTIVE]], label %[[DTOR:.*]], label %[[DONE:.*]]
+// LLVM:       [[DTOR]]:
+// LLVM:         call void @_ZN7PayloadD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// OGCG:       [[DONE]]:
+// OGCG:         call void @_ZN5GuardD1Ev(ptr {{.*}} %[[REF_TMP]])
