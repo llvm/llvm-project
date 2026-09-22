@@ -42,7 +42,8 @@ inline PISATargetInfo getPISATargetInfo(StringRef Name) {
 #include "PISATargetParser.def"
 #undef PISA_TARGET
   };
-  auto *It = llvm::find_if(Info, [&Name](const PISATargetInfo &Entry) {
+  const PISATargetInfo *It =
+      llvm::find_if(Info, [&Name](const PISATargetInfo &Entry) {
     return Entry.Name == Name;
   });
   return It == std::end(Info) ? DefaultInfo : *It;

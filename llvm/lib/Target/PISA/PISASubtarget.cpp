@@ -47,6 +47,6 @@ PISASubtarget &PISASubtarget::initSubtargetDependencies(StringRef CPU,
 // Determine compatibility of instruction's PISA target, specified via
 // "let Predicates = []", vs. platform's target, specified via -mcpu=
 bool PISASubtarget::supportsPISATarget(StringRef Name) const {
-  auto InstrPISATarget = PISA::getPISATargetInfo(Name);
+  PISA::PISATargetInfo InstrPISATarget = PISA::getPISATargetInfo(Name);
   return isCompatiblePISATargetInfo(PISATarget, InstrPISATarget);
 }

@@ -88,7 +88,7 @@ PISATargetMachine::getSubtargetImpl(const Function &F) const {
   SmallString<128> Key(CPU);
   Key.append(FS);
 
-  auto &I = SubtargetMap[Key];
+  std::unique_ptr<PISASubtarget> &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<PISASubtarget>(TargetTriple, CPU.str(), FS.str(),
                                         *this);
@@ -97,7 +97,7 @@ PISATargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 unsigned PISATargetMachine::getAssumedAddrSpace(const Value *V) const {
-  const auto *Ld = dyn_cast<LoadInst>(V);
+  const LoadInst *Ld = dyn_cast<LoadInst>(V);
   if (!Ld || Ld->getPointerOperand()->getType()->getPointerAddressSpace() !=
                  unsigned(PISAAS::AddressSpace::CONSTANT))
     return ~0U;
@@ -106,7 +106,7 @@ unsigned PISATargetMachine::getAssumedAddrSpace(const Value *V) const {
 
 std::pair<const Value *, unsigned>
 PISATargetMachine::getPredicatedAddrSpace(const Value *V) const {
-  auto *II = dyn_cast<IntrinsicInst>(V);
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(V);
   if (!II)
     return std::make_pair(nullptr, -1);
 

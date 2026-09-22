@@ -55,10 +55,10 @@ public:
   }
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const override {
-    auto Sas = (SrcAS == (unsigned)PISAAS::AddressSpace::GLOBAL) ||
+    bool Sas = (SrcAS == (unsigned)PISAAS::AddressSpace::GLOBAL) ||
                (SrcAS == (unsigned)PISAAS::AddressSpace::CONSTANT) ||
                (SrcAS == (unsigned)PISAAS::AddressSpace::GENERIC);
-    auto Das = (DstAS == (unsigned)PISAAS::AddressSpace::GLOBAL) ||
+    bool Das = (DstAS == (unsigned)PISAAS::AddressSpace::GLOBAL) ||
                (DstAS == (unsigned)PISAAS::AddressSpace::CONSTANT) ||
                (DstAS == (unsigned)PISAAS::AddressSpace::GENERIC);
     return Sas && Das;

@@ -20,6 +20,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/PISAAddrSpace.h"
 
+#include <functional>
 #include <type_traits>
 
 #define DEBUG_TYPE "pisa-lower"
@@ -193,7 +194,7 @@ SyncScope::ID hoistedFenceScope(Instruction *Inst) {
   SyncScope::ID SSID = getAtomicSyncScopeID(Inst).value_or(SyncScope::System);
   // Shared memory has no meaningful system scope, so narrow the scope used for
   // hoisted fences to the widest valid shared-memory scope.
-  if (const auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
+  if (const AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(Inst))
     if (RMW->getPointerAddressSpace() == SharedAS && SSID == SyncScope::System)
       return Inst->getContext().getOrInsertSyncScopeID("gpu-shared");
   return SSID;
@@ -287,15 +288,16 @@ bool PISATargetLowering::isCheapToSpeculateCtlz(Type *Ty) const { return true; }
 
 bool PISATargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                              Register N0, Register N1) const {
-  auto GetOneDefInst = [&MRI](Register N) -> MachineInstr * {
-    auto *Def = MRI.getOneDef(N);
+  std::function<MachineInstr *(Register)> GetOneDefInst =
+      [&MRI](Register N) -> MachineInstr * {
+    MachineOperand *Def = MRI.getOneDef(N);
     if (Def)
       return Def->getParent();
     return nullptr;
   };
 
-  auto *I0 = GetOneDefInst(N0);
-  auto *I1 = GetOneDefInst(N1);
+  MachineInstr *I0 = GetOneDefInst(N0);
+  MachineInstr *I1 = GetOneDefInst(N1);
   if (I0 && I1) {
     // Prevent reassociating the following pattern
     //  (add (mul a, b), (add (mul c, d), e))
@@ -306,8 +308,8 @@ bool PISATargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
       std::swap(I0, I1);
     if (I0->getOpcode() == TargetOpcode::G_MUL &&
         I1->getOpcode() == TargetOpcode::G_ADD) {
-      auto *NI0 = GetOneDefInst(I1->getOperand(1).getReg());
-      auto *NI1 = GetOneDefInst(I1->getOperand(2).getReg());
+      MachineInstr *NI0 = GetOneDefInst(I1->getOperand(1).getReg());
+      MachineInstr *NI1 = GetOneDefInst(I1->getOperand(2).getReg());
       if (NI0 && NI1 &&
           (NI0->getOpcode() == TargetOpcode::G_MUL ||
            NI1->getOpcode() == TargetOpcode::G_MUL)) {
@@ -348,7 +350,7 @@ void PISATargetLowering::getTgtMemIntrinsic(
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Info.flags |= getTargetMMOFlags(I);
     // syncscope("<target-scope>") support for atomics
-    if (auto *ConstInt = dyn_cast<ConstantInt>(I.getArgOperand(3)))
+    if (ConstantInt *ConstInt = dyn_cast<ConstantInt>(I.getArgOperand(3)))
       Info.order = static_cast<llvm::AtomicOrdering>(ConstInt->getZExtValue());
     Infos.push_back(Info);
     return;
@@ -360,10 +362,10 @@ void PISATargetLowering::getTgtMemIntrinsic(
 
 LLT PISATargetLowering::getOptimalMemOpLLT(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
-  auto I8 = LLT::integer(8);
-  auto I16 = LLT::integer(16);
-  auto I32 = LLT::integer(32);
-  auto I64 = LLT::integer(64);
+  LLT I8 = LLT::integer(8);
+  LLT I16 = LLT::integer(16);
+  LLT I32 = LLT::integer(32);
+  LLT I64 = LLT::integer(64);
 
   if (Op.size() >= 16 && Op.isAligned(Align(8)))
     return LLT::fixed_vector(2, I64);
@@ -438,8 +440,8 @@ PISATargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       break;
     case 'r': {
       // FIXME: we already have a method to get the register class from LLT
-      auto VectorSize = VT.isVector() ? VT.getVectorNumElements() : 1;
-      auto ElementSize = VT.getScalarSizeInBits();
+      unsigned VectorSize = VT.isVector() ? VT.getVectorNumElements() : 1;
+      unsigned ElementSize = VT.getScalarSizeInBits();
       assert(VectorSize >= 1 &&
              (ElementSize == 32 ? VectorSize <= 8 || VectorSize == 16 ||
                                       VectorSize == 32 || VectorSize == 64
@@ -479,8 +481,8 @@ PISATargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 MachineMemOperand::Flags
 PISATargetLowering::getTargetMMOFlags(const Instruction &I) const {
   MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
-  if (auto Hint = PISA::getCacheCtrlFromMMRA(I)) {
-    auto HintValue = *Hint & 0xF;
+  if (std::optional<unsigned> Hint = PISA::getCacheCtrlFromMMRA(I)) {
+    unsigned HintValue = *Hint & 0xF;
     Flags |= static_cast<MachineMemOperand::Flags>(HintValue << 6);
   }
   return Flags;
@@ -502,7 +504,7 @@ void PISATargetLowering::computeKnownBitsForTargetInstr(
   if (Intrinsic::isOverloaded(IID))
     return;
 
-  auto *Ctx = &MI->getMF()->getFunction().getContext();
+  LLVMContext *Ctx = &MI->getMF()->getFunction().getContext();
   FunctionType *FT = Intrinsic::getType(*Ctx, IID);
   AttributeList Attrs = Intrinsic::getAttributes(*Ctx, IID, FT);
 
@@ -587,7 +589,7 @@ bool PISATargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   // Use AtomicExpand fence splitting only for RMWs that become CAS loops.
   // Native atomics keep their ordering.
-  if (const auto *RMW = dyn_cast<AtomicRMWInst>(I))
+  if (const AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I))
     return computeRMWExpansion(RMW) == AtomicExpansionKind::CmpXChg;
   return false;
 }
@@ -640,7 +642,8 @@ void PISATargetLowering::emitExpandAtomicRMW(AtomicRMWInst *A) const {
   IR.SetInsertPoint(JoinBB->begin());
   PHINode *Res = IR.CreatePHI(A->getType(), 2);
 
-  auto EmitArm = [&](BasicBlock *BB, unsigned AS) {
+  std::function<void(BasicBlock *, unsigned)> EmitArm =
+      [&](BasicBlock *BB, unsigned AS) {
     IR.SetInsertPoint(BB);
     Value *Cast = IR.CreateAddrSpaceCast(A->getPointerOperand(),
                                          PointerType::get(Ctx, AS));

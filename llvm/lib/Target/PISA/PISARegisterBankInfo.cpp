@@ -34,7 +34,7 @@ PISARegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   SmallVector<const ValueMapping *, 8> OpdsMapping(MI.getNumOperands());
 
   for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx) {
-    auto &MO = MI.getOperand(Idx);
+    const MachineOperand &MO = MI.getOperand(Idx);
 
     if (MO.isReg() && MO.getReg().isValid()) {
       unsigned Size = getSizeInBits(MO.getReg(), MRI, *TRI);
