@@ -4021,6 +4021,16 @@ Value *llvm::invertCondition(Value *Condition) {
   return Inverted;
 }
 
+std::optional<bool> llvm::isImpliedByEdgeCondition(
+    const BasicBlock *PredBB, const BasicBlock *SuccBB, CmpPredicate Pred,
+    const Value *LHS, const Value *RHS, const DataLayout &DL) {
+  const auto *PredBI = dyn_cast<CondBrInst>(PredBB->getTerminator());
+  if (!PredBI || PredBI->getSuccessor(0) == PredBI->getSuccessor(1))
+    return std::nullopt;
+  return isImpliedCondition(PredBI->getCondition(), Pred, LHS, RHS, DL,
+                            /*LHSIsTrue=*/PredBI->getSuccessor(0) == SuccBB);
+}
+
 bool llvm::inferAttributesFromOthers(Function &F) {
   // Note: We explicitly check for attributes rather than using cover functions
   // because some of the cover functions include the logic being implemented.
