@@ -110,26 +110,30 @@ static bool isSupportedBlockShape(const xegpu::uArch::uArch *uArch,
   if (!blockInst)
     return false;
 
-  // Query the untransformed shapes. Whether a tile is eventually loaded with
-  // the transformed (VNNI) variant is only decided later, when layout
-  // propagation knows whether it feeds the B operand of a matrix operation,
-  // but for 8-, 16- and 32-bit elements the transformed shapes are a subset of
-  // the untransformed ones, so nothing the transformed variant could access is
-  // rejected here. Sub-byte elements are the exception, and there accepting a
-  // transformed-only shape would just move the failure into layout
-  // propagation, which asserts once it picks the untransformed variant.
-  // A missing entry means the element type itself is not supported.
-  std::optional<xegpu::uArch::BlockIOInstructionInterface::BlockShapes>
-      blockShapes = blockInst->getBlockWidthHeightCount(
-          elemTy, /*hasTransform=*/false, hasTranspose);
-  if (!blockShapes)
-    return false;
-
-  auto [widths, heights, counts] = *blockShapes;
   int width = static_cast<int>(shape.back());
   int height = static_cast<int>(shape[shape.size() - 2]);
-  return xegpu::getLargestDivisor(width, widths) != -1 &&
-         xegpu::getLargestDivisor(height, heights) != -1;
+
+  // A tile is accessible when both of its extents are multiples of a supported
+  // block extent, so that the later XeGPU passes can split it into hardware
+  // blocks. A missing entry means this variant does not support the element
+  // type.
+  auto fitsBlockShapes = [&](bool hasTransform) {
+    std::optional<xegpu::uArch::BlockIOInstructionInterface::BlockShapes>
+        blockShapes = blockInst->getBlockWidthHeightCount(elemTy, hasTransform,
+                                                          hasTranspose);
+    if (!blockShapes)
+      return false;
+    auto [widths, heights, counts] = *blockShapes;
+    return xegpu::getLargestDivisor(width, widths) != -1 &&
+           xegpu::getLargestDivisor(height, heights) != -1;
+  };
+
+  // Whether a tile is eventually loaded with the transformed (VNNI) variant is
+  // only decided later, when layout propagation knows whether it feeds the B
+  // operand of a matrix operation, so accept a tile that either variant can
+  // access.
+  return fitsBlockShapes(/*hasTransform=*/false) ||
+         fitsBlockShapes(/*hasTransform=*/true);
 }
 
 static LogicalResult transferPreconditions(PatternRewriter &rewriter,
