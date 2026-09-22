@@ -1506,7 +1506,8 @@ class OMPDepthClause final : public OMPClause {
   /// Location of '('.
   SourceLocation LParenLoc;
 
-  /// The depth expression (number of loops to flatten).
+  /// The depth expression (e.g. number of loops to flatten or nest-levels to
+  /// fuse).
   Stmt *Depth = nullptr;
 
   /// Build an empty clause.

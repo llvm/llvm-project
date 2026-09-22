@@ -28,12 +28,12 @@ int main() {
 
 #pragma omp parallel for schedule(static, 1) num_threads(2)
 #pragma omp flatten
-  for (int I : Is)
-    for (int J : Js) {
+  for (int i : Is)
+    for (int j : Js) {
       int T = omp_get_thread_num();
       int C = Count[T]++;
-      Pairs[T][C][0] = I;
-      Pairs[T][C][1] = J;
+      Pairs[T][C][0] = i;
+      Pairs[T][C][1] = j;
     }
   dump("with-flatten", Count, Pairs);
 

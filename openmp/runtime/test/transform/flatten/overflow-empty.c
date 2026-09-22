@@ -9,8 +9,8 @@ static int Count;
 
 static void flatten(int Lower, int Upper) {
 #pragma omp flatten
-  for (int I = Lower; I < Upper; ++I)
-    for (int J = 0; J < 2; ++J)
+  for (int i = Lower; i < Upper; ++i)
+    for (int j = 0; j < 2; ++j)
       ++Count;
 }
 

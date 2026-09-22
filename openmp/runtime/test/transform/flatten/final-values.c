@@ -5,34 +5,34 @@
 #include <stdlib.h>
 
 int main(void) {
-  int I = -1;
-  int J = -1;
+  int i = -1;
+  int j = -1;
 
 #pragma omp flatten
-  for (I = 0; I < 2; ++I)
-    for (J = 0; J < 3; ++J)
-      if (I == 1 && J == 2)
+  for (i = 0; i < 2; ++i)
+    for (j = 0; j < 3; ++j)
+      if (i == 1 && j == 2)
         continue;
 
-  printf("i=%d j=%d\n", I, J);
+  printf("i=%d j=%d\n", i, j);
 
 #pragma omp flatten
-  for (I = 5; I > 0; I -= 2)
-    for (J = 7; J > 1; J -= 3)
+  for (i = 5; i > 0; i -= 2)
+    for (j = 7; j > 1; j -= 3)
       ;
 
-  printf("descending-i=%d descending-j=%d\n", I, J);
+  printf("descending-i=%d descending-j=%d\n", i, j);
 
   // An empty inner loop executes no body, but the outer loop still runs to
-  // completion, so 'I' reaches its final value while 'J' keeps the value from
+  // completion, so 'i' reaches its final value while 'j' keeps the value from
   // its initialization.
   int Zero = 0;
 #pragma omp flatten
-  for (I = 0; I < 3; ++I)
-    for (J = 0; J < Zero; ++J)
+  for (i = 0; i < 3; ++i)
+    for (j = 0; j < Zero; ++j)
       ;
 
-  printf("empty-inner-i=%d empty-inner-j=%d\n", I, J);
+  printf("empty-inner-i=%d empty-inner-j=%d\n", i, j);
   return EXIT_SUCCESS;
 }
 
