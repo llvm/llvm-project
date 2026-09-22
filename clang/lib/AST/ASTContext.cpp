@@ -8040,7 +8040,11 @@ bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
            getCanonicalTemplateName(Arg2.getAsTemplateOrTemplatePattern());
 
   case TemplateArgument::Integral:
-    return llvm::APSInt::isSameValue(Arg1.getAsIntegral(),
+    // The types have to match as well as the values:
+    // C++ [temp.type]p2
+    // C++ [temp.deduct.type]p20
+    return hasSameType(Arg1.getIntegralType(), Arg2.getIntegralType()) &&
+           llvm::APSInt::isSameValue(Arg1.getAsIntegral(),
                                      Arg2.getAsIntegral());
 
   case TemplateArgument::StructuralValue:

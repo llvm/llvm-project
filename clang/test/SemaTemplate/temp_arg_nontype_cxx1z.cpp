@@ -267,22 +267,23 @@ namespace Auto {
   }
 
   namespace Decomposition {
-    // Types of deduced non-type template arguments must match exactly, so
-    // partial ordering fails in both directions here.
-    template<auto> struct Any;
-    template<int N> struct Any<N> { typedef int Int; }; // expected-note 3{{match}}
-    template<short N> struct Any<N> { typedef int Short; }; // expected-note 3{{match}}
-    Any<0>::Int is_int; // expected-error {{ambiguous}}
-    Any<(short)0>::Short is_short; // expected-error {{ambiguous}}
-    Any<(char)0>::Short is_char; // expected-error {{ambiguous}}
+    // Types of deduced non-type template arguments must match exactly, so each
+    // of these selects at most one partial specialization: the one whose
+    // parameter has the same type as the argument.
+    template<auto> struct Any; // expected-note {{template is declared here}}
+    template<int N> struct Any<N> { typedef int Int; };
+    template<short N> struct Any<N> { typedef int Short; };
+    Any<0>::Int is_int;
+    Any<(short)0>::Short is_short;
+    Any<(char)0>::Short is_char; // expected-error {{implicit instantiation of undefined template 'Auto::Decomposition::Any<'\x00'>'}}
 
     template<int, auto> struct NestedAny;
-    template<auto N> struct NestedAny<0, N>; // expected-note 3{{match}}
-    template<int N> struct NestedAny<0, N> { typedef int Int; }; // expected-note 3{{match}}
-    template<short N> struct NestedAny<0, N> { typedef int Short; }; // expected-note 3{{match}}
-    NestedAny<0, 0>::Int nested_int; // expected-error {{ambiguous}}
-    NestedAny<0, (short)0>::Short nested_short; // expected-error {{ambiguous}}
-    NestedAny<0, (char)0>::Short nested_char; // expected-error {{ambiguous}}
+    template<auto N> struct NestedAny<0, N>; // expected-note {{template is declared here}}
+    template<int N> struct NestedAny<0, N> { typedef int Int; };
+    template<short N> struct NestedAny<0, N> { typedef int Short; };
+    NestedAny<0, 0>::Int nested_int;
+    NestedAny<0, (short)0>::Short nested_short;
+    NestedAny<0, (char)0>::Short nested_char; // expected-error {{implicit instantiation of undefined template 'Auto::Decomposition::NestedAny<0, '\x00'>'}}
 
     double foo(int, bool);
     template<auto& f> struct fn_result_type;
@@ -648,6 +649,139 @@ namespace GH58682 {
   template <decltype(auto) v> struct B<A<v>> { static constexpr int k = 1; };
   static_assert(B<A<(g)>>::k == 1, "");
 } // namespace GH58682
+
+namespace GH124186 {
+  template <class T, auto V> struct S {
+    static constexpr int value = 0;
+  };
+
+  template <class T> struct S<T, 0> {
+    static constexpr int value = 1;
+  };
+
+  enum E { Zero };
+
+  static_assert(S<void, 0>::value == 1);
+  static_assert(S<void, 0L>::value == 0);
+  static_assert(S<void, 0U>::value == 0);
+  static_assert(S<void, false>::value == 0);
+  static_assert(S<void, Zero>::value == 0);
+
+  // For a parameter of non-placeholder type the argument is converted to the
+  // type of the parameter, so these all still match.
+  template <class T, int V> struct F {
+    static constexpr int value = 0;
+  };
+
+  template <class T> struct F<T, 0> {
+    static constexpr int value = 1;
+  };
+
+  static_assert(F<void, 0>::value == 1);
+  static_assert(F<void, 0L>::value == 1);
+  static_assert(F<void, 0U>::value == 1);
+
+  // Test with aliasing and cv modifiers
+  typedef int my_int;
+  using my_const_int = const int;
+
+  template <class T, auto V> struct G {
+    static constexpr int value = 0;
+  };
+
+  template <class T> struct G<T, (my_int)0> {
+    static constexpr int value = 1;
+  };
+
+  static_assert(G<void, 0>::value == 1);
+  static_assert(G<void, 0L>::value == 0);
+
+  template <auto V> struct H {
+    static constexpr int value = 0;
+  };
+
+  template <my_int V> struct H<V> {
+    static constexpr int value = 1;
+  };
+
+  template <auto V> struct I {
+    static constexpr int value = 0;
+  };
+
+  template <my_const_int V> struct I<V> {
+    static constexpr int value = 1;
+  };
+
+  static_assert(H<0>::value == 1);
+  static_assert(H<0L>::value == 0);
+  static_assert(I<0>::value == 1);
+  static_assert(I<0L>::value == 0);
+
+  // Variable templates behave the same way.
+  template <class T, auto V> constexpr int value = 0;
+  template <class T> constexpr int value<T, 0> = 1;
+
+  static_assert(value<void, 0> == 1);
+  static_assert(value<void, 0L> == 0);
+  static_assert(value<void, 0U> == 0);
+  static_assert(value<void, false> == 0);
+} // namespace GH124186
+
+namespace GH42421 {
+  template <auto V> struct S {
+    static constexpr int value = 0;
+  };
+
+  template <int I> struct S<I> {
+    static constexpr int value = 1;
+  };
+
+  static_assert(S<42>::value == 1);
+  // A long or unsigned argument does not match an int parameter.
+  static_assert(S<42L>::value == 0);
+  static_assert(S<42U>::value == 0);
+
+  // Only the partial specialization is type-sensitive here; the explicit
+  // specialization is not a candidate for Q<42U, int> either way.
+  template <auto I, class T> struct Q {
+    static constexpr int value = 0;
+  };
+
+  template <class T> struct Q<42, T> {
+    static constexpr int value = 1;
+  };
+
+  template <> struct Q<42, int> {
+    static constexpr int value = 2;
+  };
+
+  static_assert(Q<42U, int>::value == 0);
+  // The explicit specialization still wins for an int argument.
+  static_assert(Q<42, int>::value == 2);
+} // namespace GH42421
+
+namespace GH53982 {
+  enum class E1 : unsigned int { E11 = 1 };
+  enum class E2 : unsigned int { E21 = 1 };
+
+  template <int j, auto i> struct C {
+    static constexpr int value = 0;
+  };
+
+  template <int j> struct C<j, E1::E11> {
+    static constexpr int value = 1;
+  };
+
+  template <int j> struct C<j, E2::E21> {
+    static constexpr int value = 2;
+  };
+
+  static_assert(C<0, E1::E11>::value == 1);
+  static_assert(C<1, E2::E21>::value == 2);
+
+  // The shared underlying value on its own matches neither.
+  static_assert(C<0, 1U>::value == 0);
+} // namespace GH53982
 
 // C++26 [temp.deduct.type]p13, Example 8.
 namespace temp_deduct_type_p13 {

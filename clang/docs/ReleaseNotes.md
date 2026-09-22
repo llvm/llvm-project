@@ -727,6 +727,13 @@ features cannot lower the translation-unit ABI level;
 - Fixed ambiguous overload where two non-static member functions with
   different signatures could be incorrectly considered equivalent. (#GH224499)
 
+- Fixed template argument deduction incorrectly selecting a class or variable
+  template partial specialization whose non-type template argument has a
+  different type from the argument it is matched against, when the corresponding
+  parameter of the primary template has a placeholder type. For example, given
+  `template <class T, auto V> struct S`, the partial specialization `S<T, 0>` is
+  no longer selected for `S<void, 0L>`. (#GH124186), (#GH42421), (#GH53982)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
