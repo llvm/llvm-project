@@ -17,7 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
-#include <memory>
+#include <optional>
 
 namespace lldb_private {
 
@@ -52,28 +52,6 @@ public:
   ///
   /// Initialize with both mangled and demangled names empty.
   Mangled() = default;
-
-  Mangled(const Mangled &other)
-      : m_mangled(other.m_mangled), m_demangled(other.m_demangled),
-        m_demangled_info(
-            other.m_demangled_info
-                ? std::make_unique<DemangledNameInfo>(*other.m_demangled_info)
-                : nullptr) {}
-
-  Mangled &operator=(const Mangled &other) {
-    if (this != &other) {
-      m_mangled = other.m_mangled;
-      m_demangled = other.m_demangled;
-      m_demangled_info =
-          other.m_demangled_info
-              ? std::make_unique<DemangledNameInfo>(*other.m_demangled_info)
-              : nullptr;
-    }
-    return *this;
-  }
-
-  Mangled(Mangled &&) = default;
-  Mangled &operator=(Mangled &&) = default;
 
   /// Construct with name.
   ///
@@ -157,15 +135,9 @@ public:
   ///     A const reference to the display demangled name string object.
   ConstString GetDisplayDemangledName() const;
 
-  void SetDemangledName(ConstString name) {
-    m_demangled = name;
-    m_demangled_info.reset();
-  }
+  void SetDemangledName(ConstString name) { m_demangled = name; }
 
-  void SetMangledName(ConstString name) {
-    m_mangled = name;
-    m_demangled_info.reset();
-  }
+  void SetMangledName(ConstString name) { m_mangled = name; }
 
   /// Mangled name get accessor.
   ///
@@ -290,8 +262,15 @@ public:
   ///   table offsets in the cache data.
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
-  /// Retrieve \c DemangledNameInfo of the demangled name held by this object.
-  const DemangledNameInfo *GetDemangledInfo() const;
+  /// Compute the \c DemangledNameInfo of the demangled name.
+  ///
+  /// Note that this always re-runs the demangler. \see DemangledNameInfoCache
+  /// for caching the result.
+  ///
+  /// \return
+  ///     std::nullopt if no info could be computed (for example because the
+  ///     name is mangled with a scheme that doesn't provide any info).
+  std::optional<DemangledNameInfo> ComputeDemangledInfo() const;
 
   /// Compute the base name (without namespace/class qualifiers) from the
   /// demangled name.
@@ -305,25 +284,14 @@ public:
   ConstString GetBaseName() const;
 
 private:
-  /// If \c force is \c false, this function will re-use the previously
-  /// demangled name (if any). If \c force is \c true (or the mangled name
-  /// on this object was not previously demangled), demangle and cache the
-  /// name.
-  ConstString GetDemangledNameImpl(bool force) const;
-
   /// The mangled version of the name.
   ConstString m_mangled;
 
   /// Mutable so we can get it on demand with
   /// a const version of this object.
   mutable ConstString m_demangled;
-
-  /// If available, holds information about where in \c m_demangled certain
-  /// parts of the name (e.g., basename, arguments, etc.) begin and end.
-  mutable std::unique_ptr<DemangledNameInfo> m_demangled_info;
 };
-static_assert(sizeof(Mangled) <= 2 * sizeof(ConstString) +
-                                     sizeof(std::unique_ptr<DemangledNameInfo>),
+static_assert(sizeof(Mangled) <= 2 * sizeof(ConstString),
               "High-volume object, size of object must be increased with care");
 
 Stream &operator<<(Stream &s, const Mangled &obj);

@@ -26,6 +26,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -112,7 +113,6 @@ Mangled::operator bool() const { return m_mangled || m_demangled; }
 void Mangled::Clear() {
   m_mangled.Clear();
   m_demangled.Clear();
-  m_demangled_info.reset();
 }
 
 // Compare the string values.
@@ -126,16 +126,13 @@ void Mangled::SetValue(ConstString name) {
     if (IsMangledName(name.GetStringRef())) {
       m_demangled.Clear();
       m_mangled = name;
-      m_demangled_info.reset();
     } else {
       m_demangled = name;
       m_mangled.Clear();
-      m_demangled_info.reset();
     }
   } else {
     m_demangled.Clear();
     m_mangled.Clear();
-    m_demangled_info.reset();
   }
 }
 
@@ -281,31 +278,28 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
   llvm_unreachable("Fully covered switch above!");
 }
 
-ConstString Mangled::GetDemangledName() const {
-  return GetDemangledNameImpl(/*force=*/false);
-}
-
-const DemangledNameInfo *Mangled::GetDemangledInfo() const {
-  if (!m_demangled_info)
-    GetDemangledNameImpl(/*force=*/true);
-  return m_demangled_info.get();
-}
-
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledNameImpl(bool force) const {
+ConstString Mangled::GetDemangledName() const {
   if (!m_mangled)
     return m_demangled;
 
-  // Re-use previously demangled names.
-  if (!force && !m_demangled.IsNull())
-    return m_demangled;
+  // Work on a local copy of the cached name. Another thread can be demangling
+  // the same name at the same time, so the member is only read and written as
+  // a whole and never left holding an intermediate value.
+  ConstString demangled = m_demangled;
 
-  if (!force && m_mangled.GetMangledCounterpart(m_demangled) &&
-      !m_demangled.IsNull())
-    return m_demangled;
+  // Re-use previously demangled names.
+  if (!demangled.IsNull())
+    return demangled;
+
+  ConstString counterpart;
+  if (m_mangled.GetMangledCounterpart(counterpart) && !counterpart.IsNull()) {
+    m_demangled = counterpart;
+    return counterpart;
+  }
 
   // We didn't already mangle this name, demangle it and if all goes well
   // add it to our map.
@@ -314,14 +308,9 @@ ConstString Mangled::GetDemangledNameImpl(bool force) const {
   case eManglingSchemeMSVC:
     demangled_name = GetMSVCDemangledStr(m_mangled);
     break;
-  case eManglingSchemeItanium: {
-    std::pair<char *, DemangledNameInfo> demangled =
-        GetItaniumDemangledStr(m_mangled.GetCString());
-    demangled_name = demangled.first;
-    m_demangled_info =
-        std::make_unique<DemangledNameInfo>(std::move(demangled.second));
+  case eManglingSchemeItanium:
+    demangled_name = GetItaniumDemangledStr(m_mangled.GetCString()).first;
     break;
-  }
   case eManglingSchemeRustV0:
     demangled_name = GetRustV0DemangledStr(m_mangled);
     break;
@@ -338,17 +327,28 @@ ConstString Mangled::GetDemangledNameImpl(bool force) const {
   }
 
   if (demangled_name) {
-    m_demangled.SetStringWithMangledCounterpart(demangled_name, m_mangled);
+    demangled.SetStringWithMangledCounterpart(demangled_name, m_mangled);
     free(demangled_name);
-  }
-
-  if (m_demangled.IsNull()) {
+  } else {
     // Set the demangled string to the empty string to indicate we tried to
     // parse it once and failed.
-    m_demangled.SetCString("");
+    demangled.SetCString("");
   }
 
-  return m_demangled;
+  m_demangled = demangled;
+  return demangled;
+}
+
+std::optional<DemangledNameInfo> Mangled::ComputeDemangledInfo() const {
+  // Itanium is the only scheme that provides any name info.
+  if (!m_mangled ||
+      GetManglingScheme(m_mangled.GetStringRef()) != eManglingSchemeItanium)
+    return std::nullopt;
+
+  std::pair<char *, DemangledNameInfo> demangled =
+      GetItaniumDemangledStr(m_mangled.GetCString());
+  free(demangled.first);
+  return std::move(demangled.second);
 }
 
 ConstString Mangled::GetDisplayDemangledName() const {
@@ -469,7 +469,6 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
                      const StringTableReader &strtab) {
   m_mangled.Clear();
   m_demangled.Clear();
-  m_demangled_info.reset();
   MangledEncoding encoding = (MangledEncoding)data.GetU8(offset_ptr);
   switch (encoding) {
     case Empty:
@@ -549,8 +548,8 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
 }
 
 ConstString Mangled::GetBaseName() const {
-  const auto *demangled_info = GetDemangledInfo();
-  if (demangled_info == nullptr)
+  std::optional<DemangledNameInfo> demangled_info = ComputeDemangledInfo();
+  if (!demangled_info)
     return {};
 
   ConstString demangled_name = GetDemangledName();

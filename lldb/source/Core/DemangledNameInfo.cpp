@@ -7,10 +7,42 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DemangledNameInfo.h"
+#include "lldb/Core/Mangled.h"
 
 using namespace llvm::itanium_demangle;
 
 namespace lldb_private {
+
+std::optional<DemangledNameInfo>
+DemangledNameInfoCache::Get(const Mangled &mangled) {
+  ConstString mangled_name = mangled.GetMangledName();
+  if (!mangled_name)
+    return std::nullopt;
+
+  const char *key = mangled_name.GetCString();
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    auto it = m_infos.find(key);
+    if (it != m_infos.end())
+      return it->second;
+  }
+
+  // Demangle outside of the lock. Two threads asking for the same name at the
+  // same time just compute the same info twice, which is cheaper than making
+  // every other thread wait for one demangle to finish.
+  std::optional<DemangledNameInfo> info = mangled.ComputeDemangledInfo();
+
+  std::lock_guard<std::mutex> guard(m_mutex);
+  if (m_infos.size() >= m_max_entries)
+    m_infos.clear();
+  m_infos.insert({key, info});
+  return info;
+}
+
+void DemangledNameInfoCache::Clear() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  m_infos.clear();
+}
 
 bool TrackingOutputBuffer::shouldTrack() const {
   if (!isPrintingTopLevelFunctionType())

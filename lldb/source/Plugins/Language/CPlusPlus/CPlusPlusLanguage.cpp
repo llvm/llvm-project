@@ -257,6 +257,14 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
+/// The demangled info of the names that got formatted recently. Formatting a
+/// single frame asks for the info of the same name several times over, so
+/// without this every one of those would re-run the demangler.
+static DemangledNameInfoCache &GetDemangledInfoCache() {
+  static DemangledNameInfoCache g_cache;
+  return g_cache;
+}
+
 static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
 GetAndValidateInfo(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
@@ -269,7 +277,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
         "function '{0}' does not have a demangled name",
         mangled.GetMangledName());
 
-  const DemangledNameInfo *info = mangled.GetDemangledInfo();
+  std::optional<DemangledNameInfo> info = GetDemangledInfoCache().Get(mangled);
   if (!info)
     return llvm::createStringErrorV(
         "function '{0}' does not have demangled info", demangled_name);
