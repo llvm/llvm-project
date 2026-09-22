@@ -1060,14 +1060,15 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       assert((IsTail || PCAddr) && "Non-tail call without return PC");
 
-      LLVM_DEBUG(
-          dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
-                 << (CalleeDecl
-                         ? CalleeDecl->getName()
-                         : StringRef(
-                               MF.getSubtarget().getRegisterInfo()->getName(
-                                   CallTarget.getReg())))
-                 << (IsTail ? " [IsTail]" : "") << "\n");
+      LLVM_DEBUG({
+        dbgs() << "CallSiteEntry: " << MF.getName() << " -> ";
+        if (CalleeDecl)
+          dbgs() << CalleeDecl->getName();
+        else
+          MF.getSubtarget().getRegisterInfo()->printName(dbgs(),
+                                                         CallTarget.getReg());
+        dbgs() << (IsTail ? " [IsTail]" : "") << "\n";
+      });
 
       DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
           ScopeDIE, CalleeSP, CalleeDecl, IsTail, PCAddr, CallAddr, CallTarget,

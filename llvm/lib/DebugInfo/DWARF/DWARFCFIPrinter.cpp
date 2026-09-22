@@ -23,13 +23,9 @@ using namespace dwarf;
 
 static void printRegister(raw_ostream &OS, const DIDumpOptions &DumpOpts,
                           unsigned RegNum) {
-  if (DumpOpts.GetNameForDWARFReg) {
-    auto RegName = DumpOpts.GetNameForDWARFReg(RegNum, DumpOpts.IsEH);
-    if (!RegName.empty()) {
-      OS << RegName;
-      return;
-    }
-  }
+  if (DumpOpts.GetNameForDWARFReg &&
+      DumpOpts.GetNameForDWARFReg(OS, RegNum, DumpOpts.IsEH))
+    return;
   OS << "reg" << RegNum;
 }
 

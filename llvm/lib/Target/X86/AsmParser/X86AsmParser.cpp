@@ -2803,19 +2803,23 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
         // sizes, but not to other types.
         uint16_t RegSize =
             RegSizeInBits(*getContext().getRegisterInfo(), RegNo);
-        if (RegSize == 0)
-          return Error(
-              Start,
-              "cannot cast register '" +
-                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
-                  "'; its size is not easily defined.");
-        if (RegSize != Size)
-          return Error(
-              Start,
-              std::to_string(RegSize) + "-bit register '" +
-                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
-                  "' cannot be used as a " + std::to_string(Size) + "-bit " +
-                  SizeStr.upper());
+        if (RegSize == 0) {
+          std::string Msg;
+          raw_string_ostream MsgOS(Msg);
+          MsgOS << "cannot cast register '";
+          getContext().getRegisterInfo()->printName(MsgOS, RegNo);
+          MsgOS << "'; its size is not easily defined.";
+          return Error(Start, Msg);
+        }
+        if (RegSize != Size) {
+          std::string Msg;
+          raw_string_ostream MsgOS(Msg);
+          MsgOS << RegSize << "-bit register '";
+          getContext().getRegisterInfo()->printName(MsgOS, RegNo);
+          MsgOS << "' cannot be used as a " << Size << "-bit "
+                << SizeStr.upper();
+          return Error(Start, Msg);
+        }
       }
       Operands.push_back(X86Operand::CreateReg(RegNo, Start, End));
       return false;

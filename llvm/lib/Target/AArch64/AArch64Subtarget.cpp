@@ -399,8 +399,12 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
 
   auto TRI = getRegisterInfo();
   StringSet<> ReservedRegNames(llvm::from_range, ReservedRegsForRA);
+  SmallString<8> RegName;
   for (unsigned i = 0; i < 29; ++i) {
-    if (ReservedRegNames.count(TRI->getName(AArch64::X0 + i)))
+    RegName.clear();
+    raw_svector_ostream RegNameOS(RegName);
+    TRI->printName(RegNameOS, AArch64::X0 + i);
+    if (ReservedRegNames.count(RegName))
       ReserveXRegisterForRA.set(i);
   }
   // X30 is named LR, so we can't use TRI->getName to check X30.

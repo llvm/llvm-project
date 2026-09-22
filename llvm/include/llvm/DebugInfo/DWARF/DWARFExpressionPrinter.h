@@ -48,8 +48,8 @@ LLVM_ABI void printDwarfExpression(const DWARFExpression *E, raw_ostream &OS,
 /// \returns true if the expression was successfully printed
 LLVM_ABI bool printDwarfExpressionCompact(
     const DWARFExpression *E, raw_ostream &OS,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg =
-        nullptr);
+    std::function<bool(raw_ostream &OS, uint64_t RegNum, bool IsEH)>
+        GetNameForDWARFReg = nullptr);
 
 /// Pretty print a register opcode and operands.
 /// \param U within the context of this Dwarf unit, if any.

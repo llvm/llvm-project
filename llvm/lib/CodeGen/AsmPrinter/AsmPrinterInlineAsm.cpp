@@ -388,11 +388,13 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) {
   }
 
   if (!RestrRegs.empty()) {
-    std::string Msg = "inline asm clobber list contains reserved registers: ";
+    std::string Msg;
+    raw_string_ostream MsgOS(Msg);
+    MsgOS << "inline asm clobber list contains reserved registers: ";
     ListSeparator LS;
     for (const Register RR : RestrRegs) {
-      Msg += LS;
-      Msg += TRI->getRegAsmName(RR);
+      MsgOS << LS;
+      TRI->printRegAsmName(MsgOS, RR);
     }
 
     const Function &Fn = MF->getFunction();

@@ -738,8 +738,11 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
 
     if (AllocOpt != PBQP::RegAlloc::getSpillOptionIdx()) {
       MCRegister PReg = G.getNodeMetadata(NId).getAllowedRegs()[AllocOpt - 1];
-      LLVM_DEBUG(dbgs() << "VREG " << printReg(VReg, &TRI) << " -> "
-                        << TRI.getName(PReg) << "\n");
+      LLVM_DEBUG({
+        dbgs() << "VREG " << printReg(VReg, &TRI) << " -> ";
+        TRI.printName(dbgs(), PReg);
+        dbgs() << "\n";
+      });
       assert(PReg != 0 && "Invalid preg selected.");
       VRM.assignVirt2Phys(VReg, PReg);
     } else {

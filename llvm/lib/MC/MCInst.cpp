@@ -27,7 +27,7 @@ void MCOperand::print(raw_ostream &OS, const MCContext *Ctx) const {
   else if (isReg()) {
     OS << "Reg:";
     if (Ctx && Ctx->getRegisterInfo())
-      OS << Ctx->getRegisterInfo()->getName(getReg());
+      Ctx->getRegisterInfo()->printName(OS, getReg());
     else
       OS << getReg().id();
   } else if (isImm())

@@ -881,8 +881,11 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
 
   // Reserved register modification is an error.
   if (MCRegister Reg = mayModifyReserved(Inst)) {
-    error(Inst, Twine("illegal modification of reserved LFI register ") +
-                    RegInfo->getName(Reg));
+    std::string Msg;
+    raw_string_ostream MsgOS(Msg);
+    MsgOS << "illegal modification of reserved LFI register ";
+    RegInfo->printName(MsgOS, Reg);
+    error(Inst, Msg);
     return;
   }
 

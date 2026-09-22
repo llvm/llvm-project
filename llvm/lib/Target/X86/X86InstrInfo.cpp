@@ -4415,8 +4415,13 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     report_fatal_error("Unable to copy EFLAGS physical register!");
   }
 
-  LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to "
-                    << RI.getName(DestReg) << '\n');
+  LLVM_DEBUG({
+    dbgs() << "Cannot copy ";
+    RI.printName(dbgs(), SrcReg);
+    dbgs() << " to ";
+    RI.printName(dbgs(), DestReg);
+    dbgs() << '\n';
+  });
   report_fatal_error("Cannot emit physreg copy instruction");
 }
 

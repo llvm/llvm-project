@@ -1021,15 +1021,15 @@ public:
                                    int SPAdj, unsigned FIOperandNum,
                                    RegScavenger *RS = nullptr) const = 0;
 
-  /// Return the assembly name for \p Reg.
-  virtual std::string getRegAsmName(MCRegister Reg) const {
+  /// Write the assembly name for \p Reg.
+  virtual void printRegAsmName(raw_ostream &OS, MCRegister Reg) const {
     // FIXME: We are assuming that the assembly name is equal to the TableGen
     // name converted to lower case
     //
     // The TableGen name is the name of the definition for this register in the
     // target's tablegen files.  For example, the TableGen name of
     // def EAX : Register <...>; is "EAX"
-    return getName(Reg);
+    printName(OS, Reg);
   }
 
   //===--------------------------------------------------------------------===//

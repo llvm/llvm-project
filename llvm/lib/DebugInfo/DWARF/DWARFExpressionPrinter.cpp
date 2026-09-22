@@ -56,22 +56,21 @@ static bool decodeVirtualRegisterName(uint64_t DwarfRegNum,
   return true;
 }
 
-/// Resolves a DWARF register number to a display name: first via \p
+/// Writes the display name of a DWARF register number: first via \p
 /// GetNameForDWARFReg (MC register names), otherwise try decoding
-/// ASCII-encoded virtual register names (NVPTX-specific).
-/// Returns empty if neither applies.
-static std::string resolveRegName(
-    uint64_t DwarfRegNum, bool IsEH,
-    const std::function<StringRef(uint64_t, bool)> &GetNameForDWARFReg) {
-  if (GetNameForDWARFReg) {
-    StringRef R = GetNameForDWARFReg(DwarfRegNum, IsEH);
-    if (!R.empty())
-      return R.str();
-  }
+/// ASCII-encoded virtual register names (NVPTX-specific). Says whether it
+/// wrote anything, which it does not if neither applies.
+static bool
+resolveRegName(raw_ostream &OS, uint64_t DwarfRegNum, bool IsEH,
+               const std::function<bool(raw_ostream &, uint64_t, bool)>
+                   &GetNameForDWARFReg) {
+  if (GetNameForDWARFReg && GetNameForDWARFReg(OS, DwarfRegNum, IsEH))
+    return true;
   SmallString<8> Decoded;
-  if (decodeVirtualRegisterName(DwarfRegNum, Decoded))
-    return Decoded.str().str();
-  return "";
+  if (!decodeVirtualRegisterName(DwarfRegNum, Decoded))
+    return false;
+  OS << Decoded;
+  return true;
 }
 
 static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
@@ -269,8 +268,8 @@ struct PrintedExpr {
 static bool printCompactDWARFExpr(
     raw_ostream &OS, DWARFExpression::iterator I,
     const DWARFExpression::iterator E,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg =
-        nullptr) {
+    std::function<bool(raw_ostream &OS, uint64_t RegNum, bool IsEH)>
+        GetNameForDWARFReg = nullptr) {
   SmallVector<PrintedExpr, 4> Stack;
 
   auto UnknownOpcode = [](raw_ostream &OS, uint8_t Opcode,
@@ -302,23 +301,17 @@ static bool printCompactDWARFExpr(
       // DW_OP_regx: A register, with the register num given as an operand.
       // Printed as the plain register name.
       const uint64_t DwarfRegNum = Op.getRawOperand(0);
-      std::string RegName =
-          resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
-      if (RegName.empty())
-        return UnknownRegister(OS, DwarfRegNum);
       raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
-      S << RegName;
+      if (!resolveRegName(S, DwarfRegNum, false, GetNameForDWARFReg))
+        return UnknownRegister(OS, DwarfRegNum);
       break;
     }
     case dwarf::DW_OP_bregx: {
       const uint64_t DwarfRegNum = Op.getRawOperand(0);
       const uint64_t Offset = Op.getRawOperand(1);
-      std::string RegName =
-          resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
-      if (RegName.empty())
-        return UnknownRegister(OS, DwarfRegNum);
       raw_svector_ostream S(Stack.emplace_back().String);
-      S << RegName;
+      if (!resolveRegName(S, DwarfRegNum, false, GetNameForDWARFReg))
+        return UnknownRegister(OS, DwarfRegNum);
       if (Offset)
         S << formatv("{0:+d}", Offset);
       break;
@@ -367,22 +360,16 @@ static bool printCompactDWARFExpr(
         // DW_OP_reg<N>: A register, with the register num implied by the
         // opcode. Printed as the plain register name.
         uint64_t DwarfRegNum = Opcode - dwarf::DW_OP_reg0;
-        std::string RegName =
-            resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
-        if (RegName.empty())
-          return UnknownRegister(OS, DwarfRegNum);
         raw_svector_ostream S(Stack.emplace_back(PrintedExpr::Value).String);
-        S << RegName;
+        if (!resolveRegName(S, DwarfRegNum, false, GetNameForDWARFReg))
+          return UnknownRegister(OS, DwarfRegNum);
       } else if (Opcode >= dwarf::DW_OP_breg0 &&
                  Opcode <= dwarf::DW_OP_breg31) {
         int DwarfRegNum = Opcode - dwarf::DW_OP_breg0;
         int64_t Offset = Op.getRawOperand(0);
-        std::string RegName =
-            resolveRegName(DwarfRegNum, false, GetNameForDWARFReg);
-        if (RegName.empty())
-          return UnknownRegister(OS, DwarfRegNum);
         raw_svector_ostream S(Stack.emplace_back().String);
-        S << RegName;
+        if (!resolveRegName(S, DwarfRegNum, false, GetNameForDWARFReg))
+          return UnknownRegister(OS, DwarfRegNum);
         if (Offset)
           S << formatv("{0:+d}", Offset);
       } else {
@@ -408,7 +395,8 @@ static bool printCompactDWARFExpr(
 
 bool printDwarfExpressionCompact(
     const DWARFExpression *E, raw_ostream &OS,
-    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+    std::function<bool(raw_ostream &OS, uint64_t RegNum, bool IsEH)>
+        GetNameForDWARFReg) {
   return printCompactDWARFExpr(OS, E->begin(), E->end(), GetNameForDWARFReg);
 }
 
@@ -434,22 +422,22 @@ bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
   else
     DwarfRegNum = Opcode - DW_OP_reg0;
 
-  std::string RegName =
-      resolveRegName(DwarfRegNum, DumpOpts.IsEH, DumpOpts.GetNameForDWARFReg);
+  // Nothing is to be written where the register has no name, so the name goes
+  // here first.
+  SmallString<16> RegName;
+  raw_svector_ostream RegNameOS(RegName);
+  if (!resolveRegName(RegNameOS, DwarfRegNum, DumpOpts.IsEH,
+                      DumpOpts.GetNameForDWARFReg))
+    return false;
 
-  if (!RegName.empty()) {
-    if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
-        Opcode == DW_OP_bregx || SubOpcode == DW_OP_LLVM_aspace_bregx)
-      OS << ' ' << RegName << formatv("{0:+d}", int64_t(Operands[OpNum]));
-    else
-      OS << ' ' << RegName;
+  OS << ' ' << RegName;
+  if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
+      Opcode == DW_OP_bregx || SubOpcode == DW_OP_LLVM_aspace_bregx)
+    OS << formatv("{0:+d}", int64_t(Operands[OpNum]));
 
-    if (Opcode == DW_OP_regval_type)
-      prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, 1);
-    return true;
-  }
-
-  return false;
+  if (Opcode == DW_OP_regval_type)
+    prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, 1);
+  return true;
 }
 
 } // namespace llvm

@@ -282,9 +282,11 @@ void Instruction::dump(const MCRegisterInfo &RegInfo,
     if (Op.isMemory())
       Stream << " Memory";
     if (Op.isReg()) {
-      if (Op.isImplicitReg())
-        Stream << " Reg(" << RegInfo.getName(Op.getImplicitReg()) << ")";
-      else
+      if (Op.isImplicitReg()) {
+        Stream << " Reg(";
+        RegInfo.printName(Stream, Op.getImplicitReg());
+        Stream << ")";
+      } else
         Stream << " RegClass("
                << RegInfo.getRegClassName(
                       &RegInfo.getRegClass(Op.Info->RegClass))
@@ -383,7 +385,7 @@ void DumpMCOperand(const MCRegisterInfo &MCRegisterInfo, const MCOperand &Op,
   if (!Op.isValid())
     OS << "Invalid";
   else if (Op.isReg())
-    OS << MCRegisterInfo.getName(Op.getReg());
+    MCRegisterInfo.printName(OS, Op.getReg());
   else if (Op.isImm())
     OS << Op.getImm();
   else if (Op.isDFPImm())

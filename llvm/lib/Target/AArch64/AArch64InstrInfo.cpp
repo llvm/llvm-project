@@ -6371,8 +6371,10 @@ void AArch64InstrInfo::copyPhysRegImpl(MachineBasicBlock &MBB,
   }
 
 #ifndef NDEBUG
-  errs() << RI.getRegAsmName(DestReg) << " = COPY " << RI.getRegAsmName(SrcReg)
-         << "\n";
+  RI.printRegAsmName(errs(), DestReg);
+  errs() << " = COPY ";
+  RI.printRegAsmName(errs(), SrcReg);
+  errs() << "\n";
 #endif
   llvm_unreachable("unimplemented reg-to-reg copy");
 }

@@ -10393,9 +10393,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
     if (RegError) {
       const MachineFunction &MF = DAG.getMachineFunction();
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-      std::string RegName = TRI.getName(*RegError);
-      Info.ErrorMsg << "register '" << RegName << "' allocated for constraint '"
-                    << OpInfo.ConstraintCode
+      Info.ErrorMsg << "register '";
+      TRI.printName(Info.ErrorMsg, *RegError);
+      Info.ErrorMsg << "' allocated for constraint '" << OpInfo.ConstraintCode
                     << "' does not match required type";
       return true;
     }
@@ -10406,8 +10406,9 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
 
       for (Register Reg : OpInfo.AssignedRegs.Regs) {
         if (Reg.isPhysical() && TRI.isInlineAsmReadOnlyReg(MF, Reg)) {
-          Info.ErrorMsg << "write to reserved register '"
-                        << TRI.getRegAsmName(Reg) << "'";
+          Info.ErrorMsg << "write to reserved register '";
+          TRI.printRegAsmName(Info.ErrorMsg, Reg);
+          Info.ErrorMsg << "'";
           return true;
         }
       }

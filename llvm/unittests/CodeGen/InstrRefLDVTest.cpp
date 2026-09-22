@@ -131,8 +131,12 @@ public:
   Register getRegByName(const char *WantedName) {
     auto *TRI = MF->getRegInfo().getTargetRegisterInfo();
     // Slow, but works.
+    SmallString<32> Name;
     for (unsigned int I = 1; I < TRI->getNumRegs(); ++I) {
-      if (TRI->getName(I) == WantedName)
+      Name.clear();
+      raw_svector_ostream NameOS(Name);
+      TRI->printName(NameOS, I);
+      if (Name == WantedName)
         return I;
     }
 

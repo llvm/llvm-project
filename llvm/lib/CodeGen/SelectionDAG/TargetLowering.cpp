@@ -6094,8 +6094,12 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
     if (!isLegalRC(*RI, RC))
       continue;
 
+    SmallString<32> AsmName;
     for (const MCPhysReg &PR : RC) {
-      if (RegName.equals_insensitive(RI->getRegAsmName(PR))) {
+      AsmName.clear();
+      raw_svector_ostream AsmNameOS(AsmName);
+      RI->printRegAsmName(AsmNameOS, PR);
+      if (RegName.equals_insensitive(AsmName)) {
         std::pair<unsigned, const TargetRegisterClass *> S =
             std::make_pair(PR, &RC);
 

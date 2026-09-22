@@ -55,9 +55,20 @@ unsigned LVLGen::getVL(const MachineInstr &MI) {
   return VE::NoRegister;
 }
 
+#ifndef NDEBUG
+/// Only used by the traces below, which name registers alongside plain
+/// strings.
+static std::string getRegName(const MachineBasicBlock &MBB, unsigned Reg) {
+  std::string Name;
+  raw_string_ostream NameOS(Name);
+  MBB.getParent()->getSubtarget<VESubtarget>().getRegisterInfo()->printName(
+      NameOS, Reg);
+  return Name;
+}
+#endif
+
 bool LVLGen::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
-#define RegName(no)                                                            \
-  (MBB.getParent()->getSubtarget<VESubtarget>().getRegisterInfo()->getName(no))
+#define RegName(no) (getRegName(MBB, no))
 
   bool Changed = false;
   bool HasRegForVL = false;

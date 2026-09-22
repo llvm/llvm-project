@@ -995,8 +995,11 @@ bool LowOverheadLoop::ValidateLiveOuts() {
       if (!isRegInClass(MO, QPRs) || !MO.isDef())
         continue;
       if (!HasPredicatedUsers(MI, MO, Predicated)) {
-        LLVM_DEBUG(dbgs() << "  Found an unknown def of : "
-                          << TRI.getRegAsmName(MO.getReg()) << " at " << *MI);
+        LLVM_DEBUG({
+          dbgs() << "  Found an unknown def of : ";
+          TRI.printRegAsmName(dbgs(), MO.getReg());
+          dbgs() << " at " << *MI;
+        });
         NonPredicated.insert(MI);
         break;
       }

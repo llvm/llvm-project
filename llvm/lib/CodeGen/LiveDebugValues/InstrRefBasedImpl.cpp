@@ -1171,7 +1171,10 @@ std::string MLocTracker::LocIdxToName(LocIdx Idx) const {
         .concat(Twine(" offs ").concat(Twine(Pos.second))))))
         .str();
   } else {
-    return TRI.getRegAsmName(ID);
+    std::string Name;
+    raw_string_ostream NameOS(Name);
+    TRI.printRegAsmName(NameOS, ID);
+    return Name;
   }
 }
 

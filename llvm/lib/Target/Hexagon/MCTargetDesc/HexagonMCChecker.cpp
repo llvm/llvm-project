@@ -33,6 +33,14 @@ static cl::opt<bool>
     RelaxNVChecks("relax-nv-checks", cl::Hidden,
                   cl::desc("Relax checks of new-value validity"));
 
+/// The diagnostics below name registers in the middle of their messages.
+static std::string getRegName(MCRegisterInfo const &RI, MCRegister Reg) {
+  std::string Name;
+  raw_string_ostream NameOS(Name);
+  RI.printName(NameOS, Reg);
+  return Name;
+}
+
 const HexagonMCChecker::PredSense
     HexagonMCChecker::Unconditional(Hexagon::NoRegister, false);
 
@@ -534,7 +542,7 @@ bool HexagonMCChecker::checkRegistersReadOnly() {
       MCRegister Register = Operand.getReg();
       if (ReadOnly.find(Register) != ReadOnly.end()) {
         reportError(Inst.getLoc(), "Cannot write to read-only register `" +
-                                       Twine(RI.getName(Register)) + "'");
+                                       getRegName(RI, Register) + "'");
         return false;
       }
     }
@@ -596,7 +604,7 @@ void HexagonMCChecker::checkRegisterCurDefs() {
         HasRegDefUse = HasRegDefUse || registerUsed(*Alias);
 
       if (!HasRegDefUse)
-        reportWarning("Register `" + Twine(RI.getName(RegDef)) +
+        reportWarning("Register `" + getRegName(RI, RegDef) +
                       "' used with `.cur' "
                       "but not used in the same packet");
     }
@@ -678,7 +686,7 @@ bool HexagonMCChecker::checkRegisters() {
       }
       // Warn on an unused temporary definition.
       if (!vHistFound) {
-        reportWarning("register `" + Twine(RI.getName(R)) +
+        reportWarning("register `" + getRegName(RI, R) +
                       "' used with `.tmp' but not used in the same packet");
         return true;
       }
@@ -766,12 +774,12 @@ void HexagonMCChecker::compoundRegisterMap(unsigned &Register) {
 }
 
 void HexagonMCChecker::reportErrorRegisters(MCRegister Register) {
-  reportError("register `" + Twine(RI.getName(Register)) +
+  reportError("register `" + getRegName(RI, Register) +
               "' modified more than once");
 }
 
 void HexagonMCChecker::reportErrorNewValue(MCRegister Register) {
-  reportError("register `" + Twine(RI.getName(Register)) +
+  reportError("register `" + getRegName(RI, Register) +
               "' used with `.new' "
               "but not validly modified in the same packet");
 }
@@ -804,7 +812,7 @@ bool HexagonMCChecker::checkLegalVecRegPair() {
 
   if (!IsPermitted && HasReversePairs) {
     for (auto R : ReversePairs)
-      reportError("register pair `" + Twine(RI.getName(R)) +
+      reportError("register pair `" + getRegName(RI, R) +
                   "' is not permitted for this architecture");
     return false;
   }
@@ -822,7 +830,7 @@ bool HexagonMCChecker::checkHVXAccum()
     MCRegister R = I.getOperand(0).getReg();
     TmpDefsIterator It = TmpDefs.find(R);
     if (It != TmpDefs.end()) {
-      reportError("register `" + Twine(RI.getName(R)) + ".tmp" +
+      reportError("register `" + getRegName(RI, R) + ".tmp" +
                   "' is accumulated in this packet");
       return false;
     }

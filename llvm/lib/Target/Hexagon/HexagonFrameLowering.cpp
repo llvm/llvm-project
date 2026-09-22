@@ -172,12 +172,15 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   // useSpillFunction()/useRestoreFunction().
   Register SCSPReg = HST.getSCSPReg();
   const auto &HRI = *HST.getRegisterInfo();
-  if (!HST.isRegisterReservedByUser(SCSPReg))
+  if (!HST.isRegisterReservedByUser(SCSPReg)) {
     // Lower-cased to match the spelling of the -ffixed-<reg> flag the user
     // needs to pass; TRI names the register "R18".
-    report_fatal_error(Twine("Must reserve ") +
-                       StringRef(HRI.getName(SCSPReg)).lower() +
+    SmallString<8> RegName;
+    raw_svector_ostream RegNameOS(RegName);
+    HRI.printName(RegNameOS, SCSPReg);
+    report_fatal_error(Twine("Must reserve ") + StringRef(RegName).lower() +
                        " to use shadow call stack on Hexagon");
+  }
 
   const auto &HII = *HST.getInstrInfo();
 

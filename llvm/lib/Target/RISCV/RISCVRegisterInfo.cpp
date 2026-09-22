@@ -894,10 +894,12 @@ bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
   return false;
 }
 
-std::string RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
-  if (Reg == RISCV::SF_VCIX_STATE)
-    return "sf.vcix_state";
-  return TargetRegisterInfo::getRegAsmName(Reg);
+void RISCVRegisterInfo::printRegAsmName(raw_ostream &OS, MCRegister Reg) const {
+  if (Reg == RISCV::SF_VCIX_STATE) {
+    OS << "sf.vcix_state";
+    return;
+  }
+  TargetRegisterInfo::printRegAsmName(OS, Reg);
 }
 
 const uint32_t *

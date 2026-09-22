@@ -17,16 +17,15 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <string>
 #include <utility>
 
 namespace llvm {
@@ -659,22 +658,25 @@ public:
   /// otherwise.
   unsigned getSubRegIndex(MCRegister RegNo, MCRegister SubRegNo) const;
 
-  /// Return the human-readable symbolic target-specific name for the
-  /// specified physical register.
+  /// Write the human-readable symbolic target-specific name for the specified
+  /// physical register.
   ///
   /// Registers of a sequence block have no names of their own. They are named
   /// after their block and the member they start at, which the name of the
   /// block leaves room for: SGPR_128 and member 4 give SGPR4_128.
-  std::string getName(MCRegister RegNo) const {
-    if (const MCSeqBlockDesc *Block = getSeqBlockOf(RegNo)) {
-      StringRef Name = RegStrings + Block->Name;
-      unsigned Member = (RegNo.id() - Block->FirstReg) * Block->Step;
-      size_t At = Name.find('_');
-      assert(At != StringRef::npos && "A block is named after its sequence and "
-                                      "the width of its registers.");
-      return (Name.take_front(At) + Twine(Member) + Name.drop_front(At)).str();
+  void printName(raw_ostream &OS, MCRegister RegNo) const {
+    const MCSeqBlockDesc *Block = getSeqBlockOf(RegNo);
+    if (!Block) {
+      OS << (RegStrings + get(RegNo).Name);
+      return;
     }
-    return RegStrings + get(RegNo).Name;
+
+    StringRef Name = RegStrings + Block->Name;
+    size_t At = Name.find('_');
+    assert(At != StringRef::npos && "A block is named after its sequence and "
+                                    "the width of its registers.");
+    unsigned Member = (RegNo.id() - Block->FirstReg) * Block->Step;
+    OS << Name.take_front(At) << Member << Name.drop_front(At);
   }
 
   /// Returns where the sub-register indices of the given register begin, in

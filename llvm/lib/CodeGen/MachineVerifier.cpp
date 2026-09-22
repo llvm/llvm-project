@@ -3576,8 +3576,9 @@ void MachineVerifier::visitMachineFunctionAfter() {
           if (!PInfo.regsLiveOut.count(LiveInReg)) {
             report("Live in register not found to be live out from predecessor.",
                    &MBB);
-            OS << TRI->getName(LiveInReg) << " not found to be live out from "
-               << printMBBReference(*Pred) << '\n';
+            TRI->printName(OS, LiveInReg);
+            OS << " not found to be live out from " << printMBBReference(*Pred)
+               << '\n';
           }
         }
       }

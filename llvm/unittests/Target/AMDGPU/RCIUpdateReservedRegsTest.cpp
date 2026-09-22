@@ -101,7 +101,7 @@ body:             |
   MRI.reserveReg(VGPR0, &TRI);
   for (MCRegAliasIterator Alias(VGPR0, &TRI, /*IncludeSubRegs=*/true);
        Alias.isValid(); ++Alias)
-    EXPECT_TRUE(MRI.isReserved(*Alias)) << TRI.getName(*Alias);
+    EXPECT_TRUE(MRI.isReserved(*Alias)) << printReg(*Alias, &TRI);
 
   Incremental.updateReservedRegs(MRI.getReservedRegs());
 

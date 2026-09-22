@@ -122,7 +122,10 @@ Printable llvm::printReg(Register Reg, const TargetRegisterInfo *TRI,
       OS << '$' << "physreg" << Reg.id();
     else if (Reg < TRI->getNumRegs()) {
       OS << '$';
-      printLowerCase(TRI->getName(Reg), OS);
+      SmallString<32> Name;
+      raw_svector_ostream NameOS(Name);
+      TRI->printName(NameOS, Reg);
+      printLowerCase(Name, OS);
     } else
       llvm_unreachable("Register kind is unsupported.");
 
@@ -152,9 +155,11 @@ Printable llvm::printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI) {
     // Normal units have at least one root.
     MCRegUnitRootIterator Roots(Unit, TRI);
     assert(Roots.isValid() && "Unit has no roots.");
-    OS << TRI->getName(*Roots);
-    for (++Roots; Roots.isValid(); ++Roots)
-      OS << '~' << TRI->getName(*Roots);
+    TRI->printName(OS, *Roots);
+    for (++Roots; Roots.isValid(); ++Roots) {
+      OS << '~';
+      TRI->printName(OS, *Roots);
+    }
   });
 }
 

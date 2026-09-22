@@ -5510,8 +5510,12 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
             (Reg >= AArch64::S16 && Reg <= AArch64::S31) ||
             (Reg >= AArch64::H16 && Reg <= AArch64::H31) ||
             (Reg >= AArch64::B16 && Reg <= AArch64::B31)) {
-          Warning(IDLoc, "register " + Twine(RI->getName(Reg)) +
-                             " is disallowed on ARM64EC.");
+          std::string Msg;
+          raw_string_ostream MsgOS(Msg);
+          MsgOS << "register ";
+          RI->printName(MsgOS, Reg);
+          MsgOS << " is disallowed on ARM64EC.";
+          Warning(IDLoc, Msg);
         }
       }
     }

@@ -318,9 +318,13 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
 
           CodeTemplate CT;
           CT.Instructions.push_back(std::move(IT));
-          CT.Config = formatv("{3}(%{0}, %{1}, {2})", RegInfo.getName(BaseReg),
-                              RegInfo.getName(IndexReg), Scale, Disp)
-                          .str();
+          SmallString<16> BaseName, IndexName;
+          raw_svector_ostream BaseNameOS(BaseName), IndexNameOS(IndexName);
+          RegInfo.printName(BaseNameOS, BaseReg);
+          RegInfo.printName(IndexNameOS, IndexReg);
+          CT.Config =
+              formatv("{3}(%{0}, %{1}, {2})", BaseName, IndexName, Scale, Disp)
+                  .str();
           Result.push_back(std::move(CT));
           if (Result.size() >= Opts.MaxConfigsPerOpcode)
             return std::move(Result);

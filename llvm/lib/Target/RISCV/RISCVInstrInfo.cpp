@@ -585,8 +585,11 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Handle copy from csr
   if (RISCV::VCSRRegClass.contains(SrcReg) &&
       RISCV::GPRRegClass.contains(DstReg)) {
+    SmallString<16> SrcName;
+    raw_svector_ostream SrcNameOS(SrcName);
+    TRI->printName(SrcNameOS, SrcReg);
     BuildMI(MBB, MBBI, DL, get(RISCV::CSRRS), DstReg)
-        .addImm(RISCVSysReg::lookupSysRegByName(TRI->getName(SrcReg))->Encoding)
+        .addImm(RISCVSysReg::lookupSysRegByName(SrcName)->Encoding)
         .addReg(RISCV::X0);
     return;
   }
@@ -3986,9 +3989,11 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   } else if (RISCV::VRRegClass.contains(Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
   } else {
-    llvm::reportFatalInternalError(Twine("buildClearRegister is not "
-                                         "implemented for ") +
-                                   TRI.getRegAsmName(Reg));
+    std::string Msg;
+    raw_string_ostream MsgOS(Msg);
+    MsgOS << "buildClearRegister is not implemented for ";
+    TRI.printRegAsmName(MsgOS, Reg);
+    llvm::reportFatalInternalError(Msg.c_str());
   }
 }
 

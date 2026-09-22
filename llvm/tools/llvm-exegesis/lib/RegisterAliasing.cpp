@@ -81,9 +81,10 @@ RegisterAliasingTrackerCache::getRegisterClass(unsigned RegClassIndex) const {
 
 std::string debugString(const MCRegisterInfo &RegInfo, const BitVector &Regs) {
   std::string Result;
+  raw_string_ostream ResultOS(Result);
   for (const unsigned Reg : Regs.set_bits()) {
-    Result.append(RegInfo.getName(Reg));
-    Result.push_back(' ');
+    RegInfo.printName(ResultOS, Reg);
+    ResultOS << ' ';
   }
   return Result;
 }

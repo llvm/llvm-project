@@ -187,17 +187,13 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
   DataExtractor Data(LocExpr.Expr, Unit->getContext().isLittleEndian());
   DWARFExpression Expression(Data, Unit->getAddressByteSize());
 
-  // The name is put together on demand, so it is kept here for the StringRef
-  // handed back to point at.
-  std::string RegNameStorage;
-  auto GetRegName = [&MRI, &RegNameStorage](uint64_t DwarfRegNum,
-                                            bool IsEH) -> StringRef {
-    if (std::optional<MCRegister> LLVMRegNum =
-            MRI.getLLVMRegNum(DwarfRegNum, IsEH)) {
-      RegNameStorage = MRI.getName(*LLVMRegNum);
-      return RegNameStorage;
-    }
-    return {};
+  auto GetRegName = [&MRI](raw_ostream &OS, uint64_t DwarfRegNum,
+                           bool IsEH) -> bool {
+    std::optional<MCRegister> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, IsEH);
+    if (!LLVMRegNum)
+      return false;
+    MRI.printName(OS, *LLVMRegNum);
+    return true;
   };
 
   printDwarfExpressionCompact(&Expression, OS, GetRegName);

@@ -253,7 +253,7 @@ void PhysicalRegisterInfo::print(raw_ostream &OS, RegisterRef A) const {
   if (A.isReg()) {
     MCRegister Reg = A.asMCReg();
     if (Reg && Reg.id() < TRI.getNumRegs())
-      OS << TRI.getName(Reg);
+      TRI.printName(OS, Reg);
     else
       OS << printReg(Reg, &TRI);
     OS << PrintLaneMaskShort(A.Mask);

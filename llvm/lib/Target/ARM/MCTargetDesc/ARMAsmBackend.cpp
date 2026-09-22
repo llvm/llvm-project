@@ -1319,10 +1319,11 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
 
     int RegOffset = Offset->second;
     if (RegOffset != CurOffset - 4) {
-      DEBUG_WITH_TYPE("compact-unwind",
-                      llvm::dbgs() << MRI.getName(CSReg.Reg) << " saved at "
-                                   << RegOffset << " but only supported at "
-                                   << CurOffset << "\n");
+      DEBUG_WITH_TYPE("compact-unwind", {
+        MRI.printName(llvm::dbgs(), CSReg.Reg);
+        llvm::dbgs() << " saved at " << RegOffset << " but only supported at "
+                     << CurOffset << "\n";
+      });
       return CU::UNWIND_ARM_MODE_DWARF;
     }
     CompactUnwindEncoding |= CSReg.Encoding;
@@ -1353,18 +1354,19 @@ uint64_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   for (int Idx = FloatRegCount - 1; Idx >= 0; --Idx) {
     auto Offset = RegOffsets.find(FPRCSRegs[Idx]);
     if (Offset == RegOffsets.end()) {
-      DEBUG_WITH_TYPE("compact-unwind",
-                      llvm::dbgs() << FloatRegCount << " D-regs saved, but "
-                                   << MRI.getName(FPRCSRegs[Idx])
-                                   << " not saved\n");
+      DEBUG_WITH_TYPE("compact-unwind", {
+        llvm::dbgs() << FloatRegCount << " D-regs saved, but ";
+        MRI.printName(llvm::dbgs(), FPRCSRegs[Idx]);
+        llvm::dbgs() << " not saved\n";
+      });
       return CU::UNWIND_ARM_MODE_DWARF;
     } else if (Offset->second != CurOffset - 8) {
-      DEBUG_WITH_TYPE("compact-unwind",
-                      llvm::dbgs() << FloatRegCount << " D-regs saved, but "
-                                   << MRI.getName(FPRCSRegs[Idx])
-                                   << " saved at " << Offset->second
-                                   << ", expected at " << CurOffset - 8
-                                   << "\n");
+      DEBUG_WITH_TYPE("compact-unwind", {
+        llvm::dbgs() << FloatRegCount << " D-regs saved, but ";
+        MRI.printName(llvm::dbgs(), FPRCSRegs[Idx]);
+        llvm::dbgs() << " saved at " << Offset->second << ", expected at "
+                     << CurOffset - 8 << "\n";
+      });
       return CU::UNWIND_ARM_MODE_DWARF;
     }
     CurOffset -= 8;

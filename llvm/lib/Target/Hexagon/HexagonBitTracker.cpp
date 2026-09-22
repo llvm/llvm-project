@@ -114,8 +114,11 @@ uint16_t HexagonEvaluator::getPhysRegBitWidth(MCRegister Reg) const {
   if (const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg))
     return TRI.getRegSizeInBits(*RC);
 
-  llvm_unreachable(
-      (Twine("Unhandled physical register") + TRI.getName(Reg)).str().c_str());
+  std::string Msg;
+  raw_string_ostream MsgOS(Msg);
+  MsgOS << "Unhandled physical register";
+  TRI.printName(MsgOS, Reg);
+  llvm_unreachable(Msg.c_str());
 }
 
 const TargetRegisterClass &HexagonEvaluator::composeWithSubRegIndex(

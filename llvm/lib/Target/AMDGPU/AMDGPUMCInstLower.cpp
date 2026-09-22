@@ -318,10 +318,11 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
     return; // Nothing to report
 
   SmallString<512> TransferredRegs;
+  raw_svector_ostream TransferredRegsOS(TransferredRegs);
   for (unsigned I = 0; I < sizeof(Mask) * 8; ++I) {
     if (Mask & (1 << I)) {
-      (llvm::Twine(" ") + TRI->getRegAsmName(FirstRegInBlock + I))
-          .toVector(TransferredRegs);
+      TransferredRegsOS << " ";
+      TRI->printRegAsmName(TransferredRegsOS, FirstRegInBlock + I);
     }
   }
 

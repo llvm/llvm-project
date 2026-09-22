@@ -139,8 +139,13 @@ LLVMState::createRegNameToRegNoMapping() const {
   auto Map = std::make_unique<StringMap<MCRegister>>(RegInfo.getNumRegs());
   // Special-case RegNo 0, which would otherwise be spelled as ''.
   (*Map)[kNoRegister] = 0;
-  for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I)
-    (*Map)[RegInfo.getName(I)] = I;
+  SmallString<32> Name;
+  for (unsigned I = 1, E = RegInfo.getNumRegs(); I < E; ++I) {
+    Name.clear();
+    raw_svector_ostream NameOS(Name);
+    RegInfo.printName(NameOS, I);
+    (*Map)[Name] = I;
+  }
   assert(Map->size() == RegInfo.getNumRegs() && "Size prediction failed");
   return std::move(Map);
 }

@@ -87,7 +87,9 @@ struct YamlContext {
     // Special case: Reg may be invalid. We have to deal with it explicitly.
     if (!Reg.isValid())
       return kNoRegister.str();
-    std::string RegName = State->getRegInfo().getName(Reg);
+    std::string RegName;
+    raw_string_ostream RegNameOS(RegName);
+    State->getRegInfo().printName(RegNameOS, Reg);
     if (RegName.empty())
       ErrorStream << "No register with enum value '" << Reg.id() << "'\n";
     return RegName;

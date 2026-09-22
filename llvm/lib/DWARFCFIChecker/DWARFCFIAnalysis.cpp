@@ -43,6 +43,15 @@ struct CFARegOffsetInfo {
   }
 };
 
+/// The diagnostics below name each register in several of their variants, so
+/// the names are put together once and kept.
+static std::string getRegName(const MCRegisterInfo *MCRI, MCRegister Reg) {
+  std::string Name;
+  raw_string_ostream NameOS(Name);
+  MCRI->printName(NameOS, Reg);
+  return Name;
+}
+
 static std::optional<CFARegOffsetInfo>
 getCFARegOffsetInfo(const dwarf::UnwindRow &UnwindRow) {
   auto CFALocation = UnwindRow.getCFAValue();
@@ -179,7 +188,7 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
                   Reg));
     return;
   }
-  std::string RegName = MCRI->getName(*MaybeLLVMReg);
+  std::string RegName = getRegName(MCRI, *MaybeLLVMReg);
 
   // Each case is annotated with its corresponding number as described in
   // `llvm/include/llvm/DWARFCFIChecker/DWARFCFIAnalysis.h`.
@@ -199,7 +208,7 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
             Inst.getLoc(),
             formatv("changed register {1}, that register {0}'s unwinding rule "
                     "uses, but there is no CFI directives about it",
-                    RegName, MCRI->getName(*MaybeLLVMUsedReg)));
+                    RegName, getRegName(MCRI, *MaybeLLVMUsedReg)));
         return;
       }
     return; // Case 1.a
@@ -273,10 +282,10 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
 
   auto MaybeLLVMPrevReg = MCRI->getLLVMRegNum(PrevCFA.Reg, IsEH);
   std::string PrevCFARegName =
-      MaybeLLVMPrevReg ? MCRI->getName(*MaybeLLVMPrevReg) : "";
+      MaybeLLVMPrevReg ? getRegName(MCRI, *MaybeLLVMPrevReg) : "";
   auto MaybeLLVMNextReg = MCRI->getLLVMRegNum(NextCFA.Reg, IsEH);
   std::string NextCFARegName =
-      MaybeLLVMNextReg ? MCRI->getName(*MaybeLLVMNextReg) : "";
+      MaybeLLVMNextReg ? getRegName(MCRI, *MaybeLLVMNextReg) : "";
 
   if (PrevCFA == NextCFA) {         // Case 1
     if (!Writes.count(PrevCFA.Reg)) // Case 1.a

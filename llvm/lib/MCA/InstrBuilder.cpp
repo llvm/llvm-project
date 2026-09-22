@@ -385,9 +385,9 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     Write.IsOptionalDef = false;
     assert(Write.RegisterID != 0 && "Expected a valid phys register!");
     LLVM_DEBUG({
-      dbgs() << "\t\t[Def][I] OpIdx=" << ~Write.OpIndex
-             << ", PhysReg=" << MRI.getName(Write.RegisterID)
-             << ", Latency=" << Write.Latency
+      dbgs() << "\t\t[Def][I] OpIdx=" << ~Write.OpIndex << ", PhysReg=";
+      MRI.printName(dbgs(), Write.RegisterID);
+      dbgs() << ", Latency=" << Write.Latency
              << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
     });
   }
@@ -469,9 +469,12 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     Read.UseIndex = NumExplicitUses + I;
     Read.RegisterID = MCDesc.implicit_uses()[I];
     Read.SchedClassID = SchedClassID;
-    LLVM_DEBUG(dbgs() << "\t\t[Use][I] OpIdx=" << ~Read.OpIndex
-                      << ", UseIndex=" << Read.UseIndex << ", RegisterID="
-                      << MRI.getName(Read.RegisterID) << '\n');
+    LLVM_DEBUG({
+      dbgs() << "\t\t[Use][I] OpIdx=" << ~Read.OpIndex
+             << ", UseIndex=" << Read.UseIndex << ", RegisterID=";
+      MRI.printName(dbgs(), Read.RegisterID);
+      dbgs() << '\n';
+    });
   }
 
   CurrentUse += NumImplicitUses;

@@ -30,18 +30,22 @@ static void appendULEB128(SmallVectorImpl<uint8_t> &V, uint64_t Val) {
 // Use a fixed map so these tests don't depend on which targets are built into
 // the unit test binary. Unmapped values cover failed target lookups and
 // ASCII-packed names.
-static StringRef getTestRegisterName(uint64_t DwarfRegNum, bool) {
+static bool getTestRegisterName(raw_ostream &OS, uint64_t DwarfRegNum, bool) {
   switch (DwarfRegNum) {
   case 0:
-    return "R0";
+    OS << "R0";
+    return true;
   case 10:
-    return "R10";
+    OS << "R10";
+    return true;
   case 13:
-    return "SP";
+    OS << "SP";
+    return true;
   case 256:
-    return "D0";
+    OS << "D0";
+    return true;
   default:
-    return {};
+    return false;
   }
 }
 

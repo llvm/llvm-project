@@ -1126,9 +1126,11 @@ bool Thumb1FrameLowering::spillCalleeSavedRegisters(
                                        OrderedCopyRegs.rend(), CopyRegs);
     assert(CopyRegIt != OrderedCopyRegs.rend());
     unsigned NumRegsPushed = FrameRecord.size() + SpilledGPRs.size();
-    LLVM_DEBUG(
-        dbgs() << "LR is live-in but clobbered in prologue, restoring via "
-               << RegInfo->getName(*CopyRegIt) << "\n");
+    LLVM_DEBUG({
+      dbgs() << "LR is live-in but clobbered in prologue, restoring via ";
+      RegInfo->printName(dbgs(), *CopyRegIt);
+      dbgs() << "\n";
+    });
 
     BuildMI(MBB, MI, DebugLoc(), TII.get(ARM::tLDRspi), *CopyRegIt)
         .addReg(ARM::SP)

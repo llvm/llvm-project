@@ -204,7 +204,7 @@ public:
       SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
       bool SpillToPhysVGPRLane = false) const;
 
-  std::string getRegAsmName(MCRegister Reg) const override;
+  void printRegAsmName(raw_ostream &OS, MCRegister Reg) const override;
 
   // Pseudo regs are not allowed
   unsigned getHWRegIndex(MCRegister Reg) const;

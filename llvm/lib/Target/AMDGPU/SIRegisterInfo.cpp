@@ -3655,8 +3655,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     return false;
 }
 
-std::string SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
-  return AMDGPUInstPrinter::getRegisterName(Reg);
+void SIRegisterInfo::printRegAsmName(raw_ostream &OS, MCRegister Reg) const {
+  OS << AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
 unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {

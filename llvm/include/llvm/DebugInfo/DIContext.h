@@ -213,7 +213,9 @@ struct DIDumpOptions {
   std::string JsonErrSummaryFile;
   /// List of DWARF tags to filter children by.
   llvm::SmallVector<unsigned, 0> FilterChildTag;
-  std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
+  /// Writes the name of the given register, if it has one, and says whether
+  /// it wrote anything.
+  std::function<bool(raw_ostream &OS, uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
 
   /// Return default option set for printing a single DIE without children.

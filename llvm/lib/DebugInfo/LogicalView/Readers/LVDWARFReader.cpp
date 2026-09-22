@@ -588,19 +588,16 @@ std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
   raw_string_ostream Stream(string);
   DIDumpOptions DumpOpts;
   auto *MCRegInfo = MRI.get();
-  // The name is put together on demand, so it is kept here for the StringRef
-  // handed back to point at.
-  std::string RegNameStorage;
-  auto GetRegName = [&MCRegInfo, &RegNameStorage](uint64_t DwarfRegNum,
-                                                  bool IsEH) -> StringRef {
+  auto GetRegName = [&MCRegInfo](raw_ostream &OS, uint64_t DwarfRegNum,
+                                 bool IsEH) -> bool {
     if (!MCRegInfo)
-      return {};
-    if (std::optional<MCRegister> LLVMRegNum =
-            MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH)) {
-      RegNameStorage = MCRegInfo->getName(*LLVMRegNum);
-      return RegNameStorage;
-    }
-    return {};
+      return false;
+    std::optional<MCRegister> LLVMRegNum =
+        MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH);
+    if (!LLVMRegNum)
+      return false;
+    MCRegInfo->printName(OS, *LLVMRegNum);
+    return true;
   };
   DumpOpts.GetNameForDWARFReg = GetRegName;
   prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts, Opcode, Operands);

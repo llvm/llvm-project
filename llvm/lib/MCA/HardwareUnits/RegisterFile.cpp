@@ -179,8 +179,9 @@ void RegisterFile::addRegisterFile(const MCRegisterFileDesc &RF,
         // The only register file that is allowed to overlap is the default
         // register file at index #0. The analysis is inaccurate if register
         // files overlap.
-        errs() << "warning: register " << MRI.getName(Reg)
-               << " defined in multiple register files.";
+        errs() << "warning: register ";
+        MRI.printName(errs(), Reg);
+        errs() << " defined in multiple register files.";
       }
       IPC = std::make_pair(RegisterFileIndex, RCE.Cost);
       Entry.RenameAs = Reg;
@@ -241,8 +242,9 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
     return;
 
   LLVM_DEBUG({
-    dbgs() << "[PRF] addRegisterWrite [ " << Write.getSourceIndex() << ", "
-           << MRI.getName(RegID) << "]\n";
+    dbgs() << "[PRF] addRegisterWrite [ " << Write.getSourceIndex() << ", ";
+    MRI.printName(dbgs(), RegID);
+    dbgs() << "]\n";
   });
 
   // If RenameAs is equal to RegID, then RegID is subject to register renaming
@@ -516,8 +518,11 @@ void RegisterFile::collectWrites(
   const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
   MCPhysReg RegID = RS.getRegisterID();
   assert(RegID && RegID < RegisterMappings.size());
-  LLVM_DEBUG(dbgs() << "[PRF] collecting writes for register "
-                    << MRI.getName(RegID) << '\n');
+  LLVM_DEBUG({
+    dbgs() << "[PRF] collecting writes for register ";
+    MRI.printName(dbgs(), RegID);
+    dbgs() << '\n';
+  });
 
   // Check if this is an alias.
   const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
@@ -565,9 +570,9 @@ void RegisterFile::collectWrites(
   LLVM_DEBUG({
     for (const WriteRef &WR : Writes) {
       const WriteState &WS = *WR.getWriteState();
-      dbgs() << "[PRF] Found a dependent use of Register "
-             << MRI.getName(WS.getRegisterID()) << " (defined by instruction #"
-             << WR.getSourceIndex() << ")\n";
+      dbgs() << "[PRF] Found a dependent use of Register ";
+      MRI.printName(dbgs(), WS.getRegisterID());
+      dbgs() << " (defined by instruction #" << WR.getSourceIndex() << ")\n";
     }
   });
 }
@@ -727,8 +732,8 @@ void RegisterFile::dump() const {
     const RegisterMapping &RM = RegisterMappings[I];
     const RegisterRenamingInfo &RRI = RM.second;
     if (ZeroRegisters[I]) {
-      dbgs() << MRI.getName(I) << ", " << I
-             << ", PRF=" << RRI.IndexPlusCost.first
+      MRI.printName(dbgs(), I);
+      dbgs() << ", " << I << ", PRF=" << RRI.IndexPlusCost.first
              << ", Cost=" << RRI.IndexPlusCost.second
              << ", RenameAs=" << RRI.RenameAs << ", IsZero=" << ZeroRegisters[I]
              << ",";
