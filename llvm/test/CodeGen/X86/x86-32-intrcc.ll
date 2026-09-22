@@ -381,7 +381,45 @@ define x86_intrcc void @test_isr_realign(ptr byval(%struct.interrupt_frame) %fra
   ret void
 }
 
+; Every 32-bit handler realigns with or without the stackrealign attribute, so
+; the mask must cover an over-aligned object, not just the 16 bytes the calling
+; convention needs.
+define x86_intrcc void @test_isr_over_aligned(ptr byval(%struct.interrupt_frame) %frame) #3 {
+; CHECK-LABEL: test_isr_over_aligned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    andl $-16, %esp
+; CHECK-NEXT:    subl $96, %esp
+; CHECK-NEXT:    vmovups %ymm0, -56(%ebp) # 32-byte Spill
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovaps %ymm0, (%esp)
+; CHECK-NEXT:    vmovups -56(%ebp), %ymm0 # 32-byte Reload
+; CHECK-NEXT:    movl %ebp, %esp
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    iretl
+;
+; CHECK0-LABEL: test_isr_over_aligned:
+; CHECK0:       # %bb.0:
+; CHECK0-NEXT:    pushl %ebp
+; CHECK0-NEXT:    movl %esp, %ebp
+; CHECK0-NEXT:    andl $-16, %esp
+; CHECK0-NEXT:    subl $96, %esp
+; CHECK0-NEXT:    vmovups %ymm0, -56(%ebp) # 32-byte Spill
+; CHECK0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK0-NEXT:    # kill: def $ymm0 killed $xmm0
+; CHECK0-NEXT:    vmovaps %ymm0, (%esp)
+; CHECK0-NEXT:    vmovups -56(%ebp), %ymm0 # 32-byte Reload
+; CHECK0-NEXT:    movl %ebp, %esp
+; CHECK0-NEXT:    popl %ebp
+; CHECK0-NEXT:    iretl
+  %v = alloca <8 x float>, align 32
+  store volatile <8 x float> zeroinitializer, ptr %v, align 32
+  ret void
+}
+
 
 attributes #0 = { nounwind "frame-pointer"="all" }
 attributes #1 = { nounwind "no-realign-stack" }
 attributes #2 = { nounwind "stackrealign" }
+attributes #3 = { nounwind "target-features"="+avx" }
