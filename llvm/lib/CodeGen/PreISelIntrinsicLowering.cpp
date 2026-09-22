@@ -137,6 +137,31 @@ static bool lowerLoadRelative(Function &F) {
   return Changed;
 }
 
+/// Lower @llvm.can.load.speculatively using target-specific expansion.
+/// Targets may provide their own expansion via
+/// TargetLowering::emitCanLoadSpeculatively; the default expansion
+/// conservatively returns false.
+static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
+  if (!TM)
+    return false;
+
+  return forEachCall(F, [&](CallInst *CI) {
+    const TargetLowering *TLI =
+        TM->getSubtargetImpl(*CI->getFunction())->getTargetLowering();
+
+    IRBuilder<> Builder(CI);
+    // A null result means the target cannot answer; lower to false.
+    Value *Result = TLI->emitCanLoadSpeculatively(Builder, CI->getArgOperand(0),
+                                                  CI->getArgOperand(1));
+    if (!Result)
+      Result = Builder.getFalse();
+
+    CI->replaceAllUsesWith(Result);
+    CI->eraseFromParent();
+    return true;
+  });
+}
+
 // ObjCARC has knowledge about whether an obj-c runtime function needs to be
 // always tail-called or never tail-called.
 static CallInst::TailCallKind getOverridingTailCallKind(const Function &F) {
@@ -673,6 +698,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::load_relative:
       Changed |= lowerLoadRelative(F);
+      break;
+    case Intrinsic::can_load_speculatively:
+      Changed |= lowerCanLoadSpeculatively(F, TM);
       break;
     case Intrinsic::is_constant:
     case Intrinsic::objectsize:

@@ -343,10 +343,21 @@ public:
   // with the first token, so diagnostics can be reported with a real source
   // location instead of being printed with no location information.
   void onBeginOfFile() override {
+    // If the target streamer already has a resolved ABI (e.g. set by
+    // RISCVTargetELFStreamer for a valid -target-abi, or set by
+    // RISCVAsmPrinter during codegen), skip ABI validation.
+    if (getTargetStreamer().hasTargetABI())
+      return;
+
     Expected<RISCVABI::ABI> ABIOrErr =
         RISCVABI::computeTargetABI(getSTI(), getTargetOptions().ABIName);
-    if (!ABIOrErr)
+    if (!ABIOrErr) {
       getParser().printError(getLoc(), toString(ABIOrErr.takeError()));
+      getTargetStreamer().setTargetABI(
+          cantFail(RISCVABI::computeTargetABI(getSTI(), "")));
+      return;
+    }
+    getTargetStreamer().setTargetABI(*ABIOrErr);
   }
 };
 
@@ -882,26 +893,6 @@ public:
       return (isUInt<5>(Imm) && Imm != 0) || (Imm >= 0xfffe0 && Imm <= 0xfffff);
     });
   }
-
-  bool isUImm2Lsb0() const { return isUImmShifted<1, 1>(); }
-
-  bool isUImm5Lsb0() const { return isUImmShifted<4, 1>(); }
-
-  bool isUImm6Lsb0() const { return isUImmShifted<5, 1>(); }
-
-  bool isUImm6Lsb000() const { return isUImmShifted<3, 3>(); }
-
-  bool isUImm7Lsb00() const { return isUImmShifted<5, 2>(); }
-
-  bool isUImm7Lsb000() const { return isUImmShifted<4, 3>(); }
-
-  bool isUImm8Lsb00() const { return isUImmShifted<6, 2>(); }
-
-  bool isUImm8Lsb000() const { return isUImmShifted<5, 3>(); }
-
-  bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
-
-  bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
 
   bool isUImm10Lsb00NonZero() const {
     return isUImmPred(
@@ -4246,6 +4237,11 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                         "provided");
     }
   }
+
+  if (Opcode == RISCV::CV_INSERT &&
+      Inst.getOperand(3).getImm() + Inst.getOperand(4).getImm() >= 32)
+    return Error(Operands[3]->getStartLoc(),
+                 "the sum of the immediate operands must be less than 32");
 
   if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
       Opcode == RISCV::TH_LWD) {

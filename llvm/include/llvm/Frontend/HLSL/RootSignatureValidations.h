@@ -30,7 +30,6 @@ LLVM_ABI bool verifyRegisterValue(uint32_t RegisterValue);
 LLVM_ABI bool verifyRegisterSpace(uint32_t RegisterSpace);
 LLVM_ABI bool verifyRootDescriptorFlag(uint32_t Version,
                                        dxbc::RootDescriptorFlags Flags);
-LLVM_ABI bool verifyRangeType(uint32_t Type);
 LLVM_ABI bool verifyDescriptorRangeFlag(uint32_t Version,
                                         dxil::ResourceClass Type,
                                         dxbc::DescriptorRangeFlags Flags);
