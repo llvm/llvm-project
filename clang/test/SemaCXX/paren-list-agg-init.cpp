@@ -466,3 +466,14 @@ template <class T> struct Un {
 constexpr Un<int> un; // beforecxx20-note {{requested here}}
 static_assert(un.u.a == 'a');
 }
+
+namespace GH189005 {
+struct Elem { int x; };
+struct Outer { Elem arr[2]; };
+template <class T> struct Nested {
+  Outer m;
+  constexpr Nested() : m({{1}, {2}}) {} // beforecxx20-warning 2{{C++20 extension}}
+};
+constexpr Nested<int> n; // beforecxx20-note {{requested here}}
+static_assert(n.m.arr[0].x == 1 && n.m.arr[1].x == 2);
+}
