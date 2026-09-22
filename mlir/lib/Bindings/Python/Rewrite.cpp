@@ -483,6 +483,10 @@ public:
     mlirGreedyRewriteDriverConfigEnableConstantCSE(get(), enable);
   }
 
+  void setAllowUnverifiableIR(bool allow) {
+    mlirGreedyRewriteDriverConfigSetAllowUnverifiableIR(get(), allow);
+  }
+
   int64_t getMaxIterations() {
     return mlirGreedyRewriteDriverConfigGetMaxIterations(get());
   }
@@ -511,6 +515,10 @@ public:
 
   bool isConstantCSEEnabled() {
     return mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(get());
+  }
+
+  bool isUnverifiableIRAllowed() {
+    return mlirGreedyRewriteDriverConfigIsUnverifiableIRAllowed(get());
   }
 
 private:
@@ -730,7 +738,11 @@ void populateRewriteSubmodule(nb::module_ &m) {
       .def_prop_rw("enable_constant_cse",
                    &PyGreedyRewriteConfig::isConstantCSEEnabled,
                    &PyGreedyRewriteConfig::enableConstantCSE,
-                   "Enable or disable constant CSE");
+                   "Enable or disable constant CSE")
+      .def_prop_rw("allow_unverifiable_ir",
+                   &PyGreedyRewriteConfig::isUnverifiableIRAllowed,
+                   &PyGreedyRewriteConfig::setAllowUnverifiableIR,
+                   "Allow unverifiable IR during greedy rewriting");
 
   nb::class_<PyConversionConfig>(m, "ConversionConfig")
       .def(nb::init<>(), "Create a conversion config with defaults")
@@ -779,10 +791,12 @@ void populateRewriteSubmodule(nb::module_ &m) {
           "results.")
       .def(
           "walk_and_apply_patterns",
-          [](PyOperationBase &op, PyFrozenRewritePatternSet &set) {
-            mlirWalkAndApplyPatterns(op.getOperation(), set.get());
+          [](PyOperationBase &op, PyFrozenRewritePatternSet &set,
+             bool allowUnverifiableIR) {
+            mlirWalkAndApplyPatterns(op.getOperation(), set.get(),
+                                     allowUnverifiableIR);
           },
-          "op"_a, "set"_a,
+          "op"_a, "set"_a, "allow_unverifiable_ir"_a = false,
           "Applies the given patterns to the given op by a fast walk-based "
           "driver.")
       .def(

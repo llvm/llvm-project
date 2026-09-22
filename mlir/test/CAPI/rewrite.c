@@ -542,6 +542,10 @@ void testGreedyRewriteDriverConfig(MlirContext ctx) {
   // Test config creation and destruction
   MlirGreedyRewriteDriverConfig config = mlirGreedyRewriteDriverConfigCreate();
 
+  // CHECK: DefaultAllowUnverifiableIR: 0
+  fprintf(stderr, "DefaultAllowUnverifiableIR: %d\n",
+          mlirGreedyRewriteDriverConfigIsUnverifiableIRAllowed(config));
+
   // Test all configuration setters
   mlirGreedyRewriteDriverConfigSetMaxIterations(config, 5);
   mlirGreedyRewriteDriverConfigSetMaxNumRewrites(config, 100);
@@ -552,6 +556,7 @@ void testGreedyRewriteDriverConfig(MlirContext ctx) {
   mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
       config, MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL);
   mlirGreedyRewriteDriverConfigEnableConstantCSE(config, false);
+  mlirGreedyRewriteDriverConfigSetAllowUnverifiableIR(config, true);
 
   // Test all configuration getters and verify values
   // CHECK: MaxIterations: 5
@@ -575,6 +580,9 @@ void testGreedyRewriteDriverConfig(MlirContext ctx) {
   // CHECK: ConstantCSEEnabled: 0
   fprintf(stderr, "ConstantCSEEnabled: %d\n",
           mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(config));
+  // CHECK: AllowUnverifiableIR: 1
+  fprintf(stderr, "AllowUnverifiableIR: %d\n",
+          mlirGreedyRewriteDriverConfigIsUnverifiableIRAllowed(config));
 
   // CHECK: Config test completed successfully
   fprintf(stderr, "Config test completed successfully\n");

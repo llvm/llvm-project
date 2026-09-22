@@ -416,6 +416,12 @@ mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
 MLIR_CAPI_EXPORTED void mlirGreedyRewriteDriverConfigEnableConstantCSE(
     MlirGreedyRewriteDriverConfig config, bool enable);
 
+/// Sets whether to allow unverifiable IR during greedy rewriting.
+/// Note: Verifiability is only actually checked if the build option
+/// `MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS` is enabled.
+MLIR_CAPI_EXPORTED void mlirGreedyRewriteDriverConfigSetAllowUnverifiableIR(
+    MlirGreedyRewriteDriverConfig config, bool allow);
+
 /// Gets the maximum number of iterations for the greedy rewrite driver.
 MLIR_CAPI_EXPORTED int64_t mlirGreedyRewriteDriverConfigGetMaxIterations(
     MlirGreedyRewriteDriverConfig config);
@@ -446,11 +452,20 @@ mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(
 MLIR_CAPI_EXPORTED bool mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(
     MlirGreedyRewriteDriverConfig config);
 
+/// Gets whether unverifiable IR is allowed during greedy rewriting.
+/// Note: Verifiability is only actually checked if the build option
+/// `MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS` is enabled.
+MLIR_CAPI_EXPORTED bool mlirGreedyRewriteDriverConfigIsUnverifiableIRAllowed(
+    MlirGreedyRewriteDriverConfig config);
+
 /// Applies the given patterns to the given op by a fast walk-based pattern
 /// rewrite driver.
+/// Note: If `allowUnverifiableIR` is set to true, the IR is allowed to be in an
+/// unverifiable state. Verifiability is only actually checked if the build
+/// option `MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS` is enabled.
 MLIR_CAPI_EXPORTED void
-mlirWalkAndApplyPatterns(MlirOperation op,
-                         MlirFrozenRewritePatternSet patterns);
+mlirWalkAndApplyPatterns(MlirOperation op, MlirFrozenRewritePatternSet patterns,
+                         bool allowUnverifiableIR);
 
 /// Apply a partial conversion on the given operation.
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPartialConversion(

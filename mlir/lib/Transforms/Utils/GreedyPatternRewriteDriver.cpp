@@ -56,8 +56,10 @@ namespace {
 /// This struct stores finger prints of ops to determine whether the IR has
 /// changed or not.
 struct ExpensiveChecks : public RewriterBase::ForwardingListener {
-  ExpensiveChecks(RewriterBase::Listener *driver, Operation *topLevel)
-      : RewriterBase::ForwardingListener(driver), topLevel(topLevel) {}
+  ExpensiveChecks(RewriterBase::Listener *driver, Operation *topLevel,
+                  bool allowUnverifiableIR)
+      : RewriterBase::ForwardingListener(driver), topLevel(topLevel),
+        allowUnverifiableIR(allowUnverifiableIR) {}
 
   /// Compute finger prints of the given op and its nested ops.
   void computeFingerPrints(Operation *topLevel) {
@@ -80,7 +82,7 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
       return;
 
     // Make sure that the IR still verifies.
-    if (failed(verify(topLevel)))
+    if (!allowUnverifiableIR && failed(verify(topLevel)))
       llvm::report_fatal_error("IR failed to verify after pattern application");
 
     // Pattern application success => IR must have changed.
@@ -125,7 +127,7 @@ struct ExpensiveChecks : public RewriterBase::ForwardingListener {
       return;
 
     // Make sure that the IR still verifies.
-    if (failed(verify(topLevel)))
+    if (!allowUnverifiableIR && failed(verify(topLevel)))
       llvm::report_fatal_error("IR failed to verify after folding");
   }
 
@@ -170,6 +172,9 @@ protected:
 
   /// Finger print of the top-level operation.
   std::optional<OperationFingerPrint> topLevelFingerPrint;
+
+  /// Whether to allow unverifiable IR during pattern rewrites.
+  bool allowUnverifiableIR = false;
 };
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
@@ -423,7 +428,8 @@ GreedyPatternRewriteDriver::GreedyPatternRewriteDriver(
       , expensiveChecks(
           /*driver=*/this,
           /*topLevel=*/config.getScope() ? config.getScope()->getParentOp()
-                                         : nullptr)
+                                         : nullptr,
+          /*allowUnverifiableIR=*/config.isUnverifiableIRAllowed())
 // clang-format on
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 {
@@ -945,7 +951,8 @@ mlir::applyPatternsGreedily(Region &region,
     config.setScope(&region);
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  if (failed(verify(config.getScope()->getParentOp())))
+  if (!config.isUnverifiableIRAllowed() &&
+      failed(verify(config.getScope()->getParentOp())))
     llvm::report_fatal_error(
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
@@ -1075,7 +1082,8 @@ LogicalResult mlir::applyOpPatternsGreedily(
   }
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
-  if (config.getScope() && failed(verify(config.getScope()->getParentOp())))
+  if (!config.isUnverifiableIRAllowed() && config.getScope() &&
+      failed(verify(config.getScope()->getParentOp())))
     llvm::report_fatal_error(
         "greedy pattern rewriter input IR failed to verify");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS

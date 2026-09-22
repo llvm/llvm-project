@@ -402,6 +402,11 @@ void mlirGreedyRewriteDriverConfigEnableConstantCSE(
   unwrap(config)->enableConstantCSE(enable);
 }
 
+void mlirGreedyRewriteDriverConfigSetAllowUnverifiableIR(
+    MlirGreedyRewriteDriverConfig config, bool allow) {
+  unwrap(config)->setAllowUnverifiableIR(allow);
+}
+
 int64_t mlirGreedyRewriteDriverConfigGetMaxIterations(
     MlirGreedyRewriteDriverConfig config) {
   return unwrap(config)->getMaxIterations();
@@ -457,6 +462,11 @@ bool mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(
   return unwrap(config)->isConstantCSEEnabled();
 }
 
+bool mlirGreedyRewriteDriverConfigIsUnverifiableIRAllowed(
+    MlirGreedyRewriteDriverConfig config) {
+  return unwrap(config)->isUnverifiableIRAllowed();
+}
+
 MlirLogicalResult
 mlirApplyPatternsAndFoldGreedily(MlirModule op,
                                  MlirFrozenRewritePatternSet patterns,
@@ -474,8 +484,10 @@ mlirApplyPatternsAndFoldGreedilyWithOp(MlirOperation op,
 }
 
 void mlirWalkAndApplyPatterns(MlirOperation op,
-                              MlirFrozenRewritePatternSet patterns) {
-  mlir::walkAndApplyPatterns(unwrap(op), *unwrap(patterns));
+                              MlirFrozenRewritePatternSet patterns,
+                              bool allowUnverifiableIR) {
+  mlir::walkAndApplyPatterns(unwrap(op), *unwrap(patterns),
+                             allowUnverifiableIR);
 }
 
 MlirLogicalResult
