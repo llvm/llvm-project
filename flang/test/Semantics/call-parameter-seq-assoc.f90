@@ -155,3 +155,32 @@ subroutine value_dummy_not_yet()
   call byval4(gp)   ! whole array: accepted
   call byval3(v(2)) ! variable element: accepted (preexisting behavior)
 end subroutine
+
+module mimplied
+  ! Implied-shape named constants: the storage-sequence check must see their
+  ! extents (from the initializer) and their lower bounds, including
+  ! nondefault ones and rank > 1.
+  integer, parameter :: ip1(*) = [1, 2, 3, 4]
+  integer, parameter :: ip0(0:*) = [1, 2, 3, 4]
+  integer, parameter :: ip2(0:*, *) = reshape([1, 2, 3, 4, 5, 6], [2, 3])
+contains
+  subroutine expl3i(x)
+    integer, intent(in) :: x(3)
+  end subroutine
+  subroutine expl6i(x)
+    integer, intent(in) :: x(6)
+  end subroutine
+end module
+
+subroutine implied_shape()
+  use mimplied
+  call expl3i(ip1(2))   ! remaining 3: conforming
+  call expl3i(ip0(1))   ! remaining 3: conforming
+  call expl3i(ip2(1, 1)) ! remaining 5: conforming
+  !ERROR: Actual argument has fewer elements remaining in storage sequence (2) than dummy argument 'x=' array (3)
+  call expl3i(ip1(3))
+  !ERROR: Actual argument has fewer elements remaining in storage sequence (2) than dummy argument 'x=' array (3)
+  call expl3i(ip0(2))
+  !ERROR: Actual argument has fewer elements remaining in storage sequence (4) than dummy argument 'x=' array (6)
+  call expl6i(ip2(0, 2))
+end subroutine
