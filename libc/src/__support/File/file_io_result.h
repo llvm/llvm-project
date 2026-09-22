@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Result type for file I/O operations.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_IO_RESULT_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_IO_RESULT_H
