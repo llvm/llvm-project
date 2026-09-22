@@ -18,6 +18,7 @@
 #include "PISATargetMachine.h"
 #include "PISAUtils.h"
 #include "TargetInfo/PISATargetInfo.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -45,6 +46,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/PISAAddrSpace.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -874,9 +876,14 @@ void PISAAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     O << MO.getImm();
     break;
 
-  case MachineOperand::MO_FPImmediate:
-    O << MO.getFPImm();
+  case MachineOperand::MO_FPImmediate: {
+    const APInt Bits = MO.getFPImm()->getValueAPF().bitcastToAPInt();
+    if (Bits.getBitWidth() > 64)
+      reportFatalUsageError("unsupported PISA floating-point immediate");
+    O << format_hex(Bits.getZExtValue(), Bits.getBitWidth() / 4 + 2,
+                    /*Upper=*/true);
     break;
+  }
 
   case MachineOperand::MO_MachineBasicBlock:
     O << *MO.getMBB()->getSymbol();

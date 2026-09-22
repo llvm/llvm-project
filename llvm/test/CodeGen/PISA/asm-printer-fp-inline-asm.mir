@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=pisa -start-after=irtranslator -verify-machineinstrs \
+# RUN:   -filetype=asm %s -o - | FileCheck %s
+
+# Inline assembly operands must use the same exact-width hexadecimal format as
+# PISA floating-point instruction immediates, not ConstantFP pointer addresses.
+
+---
+name: fp_inline_asm
+selected: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: @fp_inline_asm()
+    ; CHECK: // half 0x3C00
+    ; CHECK: // bfloat 0x3F80
+    ; CHECK: // float 0x3F800000
+    ; CHECK: // double 0x3FF0000000000000
+    INLINEASM &"// half $0", sideeffect, imm, half 1.000000e+00
+    INLINEASM &"// bfloat $0", sideeffect, imm, bfloat 1.000000e+00
+    INLINEASM &"// float $0", sideeffect, imm, float 1.000000e+00
+    INLINEASM &"// double $0", sideeffect, imm, double 1.000000e+00
+    ret
+...
