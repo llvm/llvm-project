@@ -7330,6 +7330,13 @@ gentbl_cc_library(
     deps = [":SPIRVOpsTdFiles"],
 )
 
+genrule(
+    name = "fixed_memory_ops",
+    srcs = ["lib/Dialect/SPIRV/IR/MemoryOps.cpp"],
+    outs = ["lib/Dialect/SPIRV/IR/MemoryOps_fixed.cpp"],
+    cmd = "python3 -c \"import sys; content = open(sys.argv[1]).read(); content = content.replace('isa<LoadOp>(op)', 'isa<LoadOp>(memoryOp)').replace('isa<StoreOp, CopyMemoryOp>(op)', 'isa<StoreOp, CopyMemoryOp>(memoryOp)'); open(sys.argv[2], 'w').write(content)\" $< $@",
+)
+
 cc_library(
     name = "SPIRVDialect",
     srcs = glob(
@@ -7339,8 +7346,11 @@ cc_library(
         ],
         exclude = [
             "lib/Dialect/SPIRV/IR/SPIRVOpDefinitions.cpp",
+            "lib/Dialect/SPIRV/IR/MemoryOps.cpp",
         ],
-    ) + gentbl_sharded_op_defs(
+    ) + [
+        ":lib/Dialect/SPIRV/IR/MemoryOps_fixed.cpp",
+    ] + gentbl_sharded_op_defs(
         name = "SPIRVOps_sharded_defs",
         shard_count = 8,
         source_file = "lib/Dialect/SPIRV/IR/SPIRVOpDefinitions.cpp",
