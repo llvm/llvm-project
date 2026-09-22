@@ -43,7 +43,6 @@ jobs:
                 -D CMAKE_BUILD_TYPE=Release \
                 -D CMAKE_C_COMPILER=clang \
                 -D CMAKE_CXX_COMPILER=clang++ \
-                -D LLVM_ENABLE_PROJECTS=clang \
                 -D LLVM_TARGETS_TO_BUILD="host" \
                 -D LLVM_INCLUDE_TESTS=OFF \
                 -D LLVM_INCLUDE_BENCHMARKS=OFF \
@@ -58,7 +57,6 @@ jobs:
             llvm_vcsrevision_h \
             intrinsics_gen omp_gen acc_gen analysis_gen target_parser_gen vt_gen \
             DllOptionsTableGen LibOptionsTableGen \
-            clang-tablegen-targets \
             lib/ExecutionEngine/JITLink/COFFOptions.inc
 
           # Build per-target tablegen output for every enabled target.
