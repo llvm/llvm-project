@@ -240,20 +240,15 @@ static bool isPossiblyIncompatibleIntrinsic(const Instruction *I) {
     return false;
 
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
+    unsigned IID = II->getIntrinsicID();
+    switch (IID) {
     default:
-      break;
+      return Intrinsic::isTargetIntrinsic(IID);
     case Intrinsic::vscale:
     case Intrinsic::masked_gather:
     case Intrinsic::masked_scatter:
       return true;
     }
-
-    StringRef Name = II->getCalledFunction()->getName();
-    if (Name.starts_with("llvm.aarch64.neon") ||
-        Name.starts_with("llvm.aarch64.sve") ||
-        Name.starts_with("llvm.aarch64.sme"))
-      return true;
   }
 
   return false;
@@ -278,6 +273,7 @@ static bool hasPossibleIncompatibleOps(const Function *F,
                                        bool ConsiderZA, bool ConsiderSM) {
   assert((ConsiderZA || ConsiderSM) && "No SME state to consider");
 
+  bool IsAlwaysInline = F->hasFnAttribute(Attribute::AlwaysInline);
   bool HasVLDependentArgsOrRet =
       F->getReturnType()->isScalableTy() ||
       any_of(F->getFunctionType()->params(),
@@ -288,10 +284,11 @@ static bool hasPossibleIncompatibleOps(const Function *F,
       // Inlining operations on fixed-length vectors when the streaming
       // mode does not match, is rejected because performance may be impacted.
       // This decision should eventually be moved the cost-model.
-      if (ConsiderSM && (isa<FixedVectorType>(I.getType()) ||
-                         any_of(I.operand_values(), [](const Value *V) {
-                           return isa<FixedVectorType>(V->getType());
-                         })))
+      if (!IsAlwaysInline && ConsiderSM &&
+          (isa<FixedVectorType>(I.getType()) ||
+           any_of(I.operand_values(), [](const Value *V) {
+             return isa<FixedVectorType>(V->getType());
+           })))
         return true;
 
       // Inlining operations on scalable vectors is rejected because it is

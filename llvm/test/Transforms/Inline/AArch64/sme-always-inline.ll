@@ -85,7 +85,31 @@ define ptr @compatible_vscale_dependent_operation_sm(ptr %p) #0 "aarch64_pstate_
 }
 
 ; functions with fixed-length vectors shouldn't be inlined if the streaming properties don't match
-; as performance may be affected.
+; as performance may be affected. However, when they have the alwaysinline property, they should
+; still be inlined.
+
+define void @fixed_length_vector_operation_alwaysinline(ptr %p) #0 alwaysinline {
+; CHECK-LABEL: define void @fixed_length_vector_operation_alwaysinline(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+  store <4 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @fixed_length_vector_operation_caller_force_inline(ptr %p) #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @fixed_length_vector_operation_caller_force_inline(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+  call void @fixed_length_vector_operation_alwaysinline(ptr %p)
+  ret void
+}
+
+; functions with fixed-length vectors shouldn't be inlined if the streaming properties don't match
+; as performance may be affected. Check they're not inlined without the alwaysinline attribute.
 define void @fixed_length_vector_operation(ptr %p) #0 {
 ; CHECK-LABEL: define void @fixed_length_vector_operation(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
