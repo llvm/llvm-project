@@ -1032,16 +1032,21 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 
 VPRegionBlock *VPlan::getVectorLoopRegion() {
   // Find the vector loop region by following the last successor of each block,
-  // starting from the plan's entry. The vector code path is always the last
-  // successor of the entry (and of the min-iters bypass block, if present), and
-  // every block on the path to the region has a single predecessor. Stop at the
-  // first block with multiple predecessors: in a plain CFG that is the loop
-  // header (no region exists yet), and in a rolled CFG it is the middle block
-  // following the region.
-  for (VPBlockBase *B = Entry; B && B->getNumPredecessors() <= 1;
-       B = B->hasSuccessors() ? B->getSuccessors().back() : nullptr)
+  // starting from the plan's entry; the vector code path is always the last
+  // successor. Every block on the path has a single predecessor, except the
+  // vector preheader, which is also entered from the block bypassing the main
+  // vector loop when vectorizing the epilogue. Stop at any other block with
+  // multiple predecessors: in a plain CFG that is the loop header (no region
+  // exists yet), in a region based CFG the scalar preheader.
+  for (VPBlockBase *B = Entry; B;) {
     if (auto *R = dyn_cast<VPRegionBlock>(B))
-      return R->isReplicator() ? nullptr : R;
+      return R->isReplicator() || R->getNumPredecessors() != 1 ? nullptr : R;
+    VPBlockBase *Succ =
+        B->hasSuccessors() ? B->getSuccessors().back() : nullptr;
+    if (B->getNumPredecessors() > 1 && !isa_and_present<VPRegionBlock>(Succ))
+      return nullptr;
+    B = Succ;
+  }
   return nullptr;
 }
 
