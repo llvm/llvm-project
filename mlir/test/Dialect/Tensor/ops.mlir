@@ -63,6 +63,16 @@ func.func @extract(%arg0: tensor<?x?x?xf32>, %arg1: index) {
 
 // -----
 
+// CHECK-LABEL:   func.func @extract_static(
+// CHECK-SAME:                              %[[TENSOR:.*]]: tensor<?x?x?xf32>) {
+func.func @extract_static(%arg0: tensor<?x?x?xf32>) {
+  // CHECK: tensor.extract_static %[[TENSOR]][1, 2, 3] : tensor<?x?x?xf32>
+  %0 = tensor.extract_static %arg0[1, 2, 3] : tensor<?x?x?xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL:   func @insert(
 // CHECK-SAME:                  %[[SCALAR:.*]]: f32
 // CHECK-SAME:                  %[[INDEX:.*]]: index
@@ -70,6 +80,17 @@ func.func @extract(%arg0: tensor<?x?x?xf32>, %arg1: index) {
 func.func @insert(%arg0: f32, %arg1: index, %arg2: tensor<?x?x?xf32>) {
   // CHECK: tensor.insert %[[SCALAR]] into %[[DEST1]][%[[INDEX]], %[[INDEX]], %[[INDEX]]] : tensor<?x?x?xf32>
   %0 = tensor.insert %arg0 into %arg2[%arg1, %arg1, %arg1] : tensor<?x?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL:   func @insert_static(
+// CHECK-SAME:                  %[[SCALAR:.*]]: f32
+// CHECK-SAME:                  %[[DEST1:.*]]: tensor<?x?x?xf32>
+func.func @insert_static(%arg0: f32, %arg1: tensor<?x?x?xf32>) {
+  // CHECK: tensor.insert_static %[[SCALAR]] into %[[DEST1]][1, 2, 3] : tensor<?x?x?xf32>
+  %0 = tensor.insert_static %arg0 into %arg1[1, 2, 3] : tensor<?x?x?xf32>
   return
 }
 

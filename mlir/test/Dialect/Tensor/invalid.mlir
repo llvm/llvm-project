@@ -72,9 +72,48 @@ func.func @extract_too_many_indices(%arg0: tensor<?xf32>) {
 
 // -----
 
+func.func @extract_static_too_many_indices(%arg0: tensor<?xf32>) {
+  // expected-error@+1 {{incorrect number of indices for extract_static}}
+  %0 = tensor.extract_static %arg0[] : tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @extract_static_indices_out_of_bound(%arg0: tensor<2xf32>) {
+  // expected-error@+1 {{static index out of bound for extract_static}}
+  %0 = tensor.extract_static %arg0[4] : tensor<2xf32>
+  return
+}
+
+// -----
+
 func.func @insert_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
   // expected-error@+1 {{incorrect number of indices}}
   %0 = tensor.insert %arg0 into %arg1[] : tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @insert_static_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
+  // expected-error@+1 {{incorrect number of indices for insert_static}}
+  %0 = tensor.insert_static %arg0 into %arg1[] : tensor<?xf32>
+  return
+}
+
+// -----
+
+func.func @insert_static_indices_out_of_bound(%arg0: f32, %arg1: tensor<2xf32>) {
+  // expected-error@+1 {{static index out of bound for insert_static}}
+  %0 = tensor.insert_static %arg0 into %arg1[4] : tensor<2xf32>
+  return
+}
+
+// -----
+
+func.func @insert_static_indices_dynamic(%arg0: f32, %arg1: tensor<?xf32>) {
+  %0 = tensor.insert_static %arg0 into %arg1[4] : tensor<?xf32>
   return
 }
 
