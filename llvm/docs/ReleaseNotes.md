@@ -316,6 +316,10 @@ Makes programs 10x faster by doing Special New Thing.
   writes PE images with a dangling attribute certificate table (Authenticode
   signature) entry, but clears the entry instead.
 
+* llvm-mt now supports the `/inputresource`, `/outputresource` and
+  `/updateresource` options, which read and write manifests embedded in PE
+  images as resources.
+
 ### Changes to LLDB
 
 * `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm

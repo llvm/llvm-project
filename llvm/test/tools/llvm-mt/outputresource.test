@@ -1,0 +1,47 @@
+REQUIRES: libxml2
+UNSUPPORTED: system-windows
+
+Write the merged manifest to the RT_MANIFEST resource of a PE image.
+RUN: yaml2obj %p/Inputs/pe.yaml -o %t.exe
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /manifest %p/Inputs/additional.manifest /outputresource:%t.exe
+RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s --check-prefix=RESOURCES
+RUN: llvm-mt /inputresource:%t.exe /out:%t.manifest
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /manifest %p/Inputs/additional.manifest /out:%t.expected.manifest
+RUN: diff %t.expected.manifest %t.manifest
+
+RESOURCES:      Type: MANIFEST (ID 24) [
+RESOURCES:        Name: (ID 1) [
+RESOURCES:          Language: (ID 0) [
+
+The resource ID defaults to 1 and can be given with or without a '#'. Existing
+resources are replaced.
+RUN: llvm-mt /manifest %p/Inputs/additional.manifest "/outputresource:%t.exe;#1"
+RUN: llvm-mt /manifest %p/Inputs/additional.manifest "/outputresource:%t.exe;2"
+RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s --check-prefix=RESOURCES2
+RUN: llvm-mt "/inputresource:%t.exe;#1" /out:%t.1.manifest
+RUN: llvm-mt "/inputresource:%t.exe;#2" /out:%t.2.manifest
+RUN: llvm-mt /manifest %p/Inputs/additional.manifest /out:%t.expected2.manifest
+RUN: diff %t.expected2.manifest %t.1.manifest
+RUN: diff %t.expected2.manifest %t.2.manifest
+
+RESOURCES2:      Type: MANIFEST (ID 24) [
+RESOURCES2:        Name: (ID 1) [
+RESOURCES2:          Language: (ID 0) [
+RESOURCES2:        Name: (ID 2) [
+RESOURCES2:          Language: (ID 0) [
+
+The manifest can be written to a file and a resource at the same time.
+RUN: llvm-mt /manifest %p/Inputs/test_manifest.manifest /out:%t.3.manifest /outputresource:%t.exe
+RUN: llvm-mt /inputresource:%t.exe /out:%t.4.manifest
+RUN: diff %t.3.manifest %t.4.manifest
+
+With /notify_update, the exit code indicates whether the resource changed.
+RUN: not llvm-mt /manifest %p/Inputs/additional.manifest /outputresource:%t.exe /notify_update
+RUN: llvm-mt /manifest %p/Inputs/additional.manifest /outputresource:%t.exe /notify_update
+
+Errors.
+RUN: not llvm-mt /manifest %p/Inputs/test_manifest.manifest /outputresource:%p/Inputs/test_manifest.manifest 2>&1 | FileCheck %s --check-prefix=NOT-OBJECT
+NOT-OBJECT: llvm-mt: error: '{{.*}}test_manifest.manifest': The file was not recognized as a valid object file
+
+RUN: not llvm-mt /manifest %p/Inputs/test_manifest.manifest "/outputresource:%t.exe;#" 2>&1 | FileCheck %s --check-prefix=INVALID-ID
+INVALID-ID: llvm-mt: error: invalid resource ID in '{{.*}}.exe;#'
