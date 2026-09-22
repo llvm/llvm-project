@@ -26,7 +26,6 @@ define dso_local signext i16 @f0(i16 signext %F) local_unnamed_addr #0 {
 ; V6M-NEXT:    uxth r1, r0
 ; V6M-NEXT:    lsrs r1, r1, #15
 ; V6M-NEXT:    adds r0, r0, r1
-; V6M-NEXT:    sxth r0, r0
 ; V6M-NEXT:    asrs r0, r0, #1
 ; V6M-NEXT:    bx lr
 
@@ -117,7 +116,6 @@ define dso_local signext i16 @f4(i16 signext %F) {
 ; T2:       @ %bb.0: @ %entry
 ; T2-NEXT:    uxth r1, r0
 ; T2-NEXT:    add.w r0, r0, r1, lsr #15
-; T2-NEXT:    sxth r0, r0
 ; T2-NEXT:    asrs r0, r0, #1
 ; T2-NEXT:    bx lr
 ;
@@ -126,7 +124,6 @@ define dso_local signext i16 @f4(i16 signext %F) {
 ; T1-NEXT:    uxth r1, r0
 ; T1-NEXT:    lsrs r1, r1, #15
 ; T1-NEXT:    adds r0, r0, r1
-; T1-NEXT:    sxth r0, r0
 ; T1-NEXT:    asrs r0, r0, #1
 ; T1-NEXT:    bx lr
 ;
@@ -135,7 +132,6 @@ define dso_local signext i16 @f4(i16 signext %F) {
 ; V6M-NEXT:    uxth r1, r0
 ; V6M-NEXT:    lsrs r1, r1, #15
 ; V6M-NEXT:    adds r0, r0, r1
-; V6M-NEXT:    sxth r0, r0
 ; V6M-NEXT:    asrs r0, r0, #1
 ; V6M-NEXT:    bx lr
 
