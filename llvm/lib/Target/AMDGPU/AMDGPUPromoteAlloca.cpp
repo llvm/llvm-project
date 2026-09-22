@@ -549,7 +549,7 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
 }
 
 static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
-  LLVMContext &Ctx = Ptr->getContext();
+  IRBuilder<> B(Ptr->getContext());
   Ptr = Ptr->stripPointerCasts();
 
   // Already computed (also breaks cycles for pointer phis).
@@ -560,8 +560,7 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   // A pointer that is directly one of the member allocas indexes lane
   // BaseLane[member].
   if (auto *AI = dyn_cast<AllocaInst>(Ptr)) {
-    Value *Idx =
-        ConstantInt::get(Type::getInt32Ty(Ctx), AA.Vector.BaseLane.lookup(AI));
+    Value *Idx = B.getInt32(AA.Vector.BaseLane.lookup(AI));
     AA.Vector.IndexCache[Ptr] = Idx;
     return Idx;
   }
@@ -569,7 +568,7 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   // Pointer phi: build a parallel phi of lane indices. Insert and cache it
   // before recursing so self-referential phis terminate.
   if (auto *Phi = dyn_cast<PHINode>(Ptr)) {
-    IRBuilder<> B(Phi);
+    B.SetInsertPoint(Phi);
     PHINode *IdxPhi = B.CreatePHI(B.getInt32Ty(), Phi->getNumIncomingValues(),
                                   "promotealloca.idx");
     AA.Vector.IndexCache[Ptr] = IdxPhi;
@@ -584,7 +583,7 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   if (auto *SI = dyn_cast<SelectInst>(Ptr)) {
     Value *T = calculateVectorIndex(SI->getTrueValue(), AA);
     Value *F = calculateVectorIndex(SI->getFalseValue(), AA);
-    IRBuilder<> B(SI);
+    B.SetInsertPoint(SI);
     Value *Idx = B.CreateSelect(SI->getCondition(), T, F, "promotealloca.idx");
     AA.Vector.IndexCache[Ptr] = Idx;
     return Idx;
@@ -595,7 +594,6 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
   assert(I != AA.Vector.GEPVectorIdx.end() && "Must have entry for GEP!");
 
   if (!I->second.Full) {
-    IRBuilder<> B(Ctx);
     Value *Result = nullptr;
     B.SetInsertPoint(GEP);
 
