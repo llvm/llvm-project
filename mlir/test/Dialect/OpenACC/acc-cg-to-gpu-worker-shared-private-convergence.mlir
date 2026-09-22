@@ -286,3 +286,43 @@ func.func @inferred_worker_shared(%arg0: memref<4xi32>) {
   acc.copyout accPtr(%0 : memref<4xi32>) to varPtr(%arg0 : memref<4xi32>) dataClause(acc_reduction) implicit(true) name("r")
   return
 }
+
+// -----
+
+// Every thread runs a loop with uniform bounds, so the workgroup barrier is
+// still legal there.
+// CHECK-LABEL: func.func @shared_under_uniform_for
+// CHECK: gpu.launch
+// CHECK: scf.for
+// CHECK: memref.store
+// CHECK: gpu.barrier{{$}}
+// CHECK-NOT: nvvm.barrier
+// CHECK: gpu.terminator
+
+func.func @shared_under_uniform_for(%arg0: memref<4xi32>) {
+  %0 = acc.copyin varPtr(%arg0 : memref<4xi32>) dataClause(acc_reduction) implicit(true) name("r") -> memref<4xi32>
+  acc.kernel_environment dataOperands(%0 : memref<4xi32>) {
+    %c1_pw = arith.constant 1 : index
+    %c4_pw = arith.constant 4 : index
+    %c64_pw = arith.constant 64 : index
+    %bx = acc.par_width %c1_pw par_dim(#acc.par_dim<block_x>)
+    %wy = acc.par_width %c4_pw par_dim(#acc.par_dim<thread_y>)
+    %tx = acc.par_width %c64_pw par_dim(#acc.par_dim<thread_x>)
+    %private = acc.privatize par_dims(#acc<par_dims[block_x, thread_y]>) : () -> !acc.private_type<memref<4xi32>>
+    acc.compute_region launch(%kbx = %bx, %kwy = %wy, %ktx = %tx) ins(%arg2 = %0, %priv = %private) : (memref<4xi32>, !acc.private_type<memref<4xi32>>) {
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %c4 = arith.constant 4 : index
+      %c0_i32 = arith.constant 0 : i32
+      %local = acc.private_local %priv {acc.active_par_dims = #acc<active_par_dims[block_x]>, acc.par_dims = #acc<par_dims[block_x, thread_y]>} : (!acc.private_type<memref<4xi32>>) -> memref<4xi32>
+      scf.for %u = %c0 to %c4 step %c1 {
+        acc.predicate_region {
+          memref.store %c0_i32, %local[%u] : memref<4xi32>
+        } {acc.active_par_dims = #acc<active_par_dims[block_x, thread_y]>}
+      }
+      acc.yield
+    } <{origin = "acc.parallel"}>
+  }
+  acc.copyout accPtr(%0 : memref<4xi32>) to varPtr(%arg0 : memref<4xi32>) dataClause(acc_reduction) implicit(true) name("r")
+  return
+}

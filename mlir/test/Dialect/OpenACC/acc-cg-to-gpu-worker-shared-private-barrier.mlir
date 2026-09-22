@@ -5,6 +5,7 @@
 
 // CHECK-LABEL: func.func @worker_shared_private
 // CHECK:       gpu.launch
+// CHECK:       acc.gpu_shared_memory <num_copies = 1
 // CHECK:       scf.if
 // CHECK:       gpu.barrier
 // CHECK-NOT:   gpu.barrier scope <subgroup>
@@ -40,11 +41,12 @@ func.func @worker_shared_private(%arg0: memref<4xi32>) {
 
 // -----
 
-// thread_y active: every row owns its slot, so the cheaper per-row barrier is
-// kept, in the non-aligned form since only one row reaches it.
+// thread_y active selects the per-row barrier, in the non-aligned form since
+// the rows need not reach it together.
 
 // CHECK-LABEL: func.func @worker_private_per_row
 // CHECK:       gpu.launch
+// CHECK:       acc.gpu_shared_memory <num_copies = 1
 // CHECK:       scf.if
 // CHECK:       nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}} aligned = false
 
