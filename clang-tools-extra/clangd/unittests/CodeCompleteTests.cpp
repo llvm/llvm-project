@@ -4392,12 +4392,14 @@ TEST(CompletionTest, ReplaceRangeInclude) {
   EXPECT_EQ(Results.ReplaceRange, A.range());
 
   // A UCN-like escape is not interpreted in a header name.
+  TU.ExtraArgs.push_back("-fno-ms-compatibility");
   const char *UnicodeLike = R"cpp(#include "[[su^\u00e9/]]foo.h")cpp";
   A = Annotations(UnicodeLike);
   TU.Code = A.code();
   Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
   EXPECT_EQ(Results.InsertRange, A.range());
   EXPECT_EQ(Results.ReplaceRange, A.range());
+  TU.ExtraArgs.pop_back();
 
   // In MSVC compatibility mode, backslash is a path separator.
   TU.ExtraArgs.push_back("-fms-compatibility");
