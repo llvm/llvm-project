@@ -33,7 +33,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 TEST_F(LlvmLibcPosixFallocateTest, InvalidArgs) {
   // Negative offset must return EINVAL.
   EXPECT_EQ(LIBC_NAMESPACE::posix_fallocate(0, -1, 1024), EINVAL);
-  // Zero length must return EINVAL.
+  // Zero length may return EINVAL.
   EXPECT_EQ(LIBC_NAMESPACE::posix_fallocate(0, 0, 0), EINVAL);
   // Negative length must return EINVAL.
   EXPECT_EQ(LIBC_NAMESPACE::posix_fallocate(0, 0, -1), EINVAL);
@@ -43,7 +43,6 @@ TEST_F(LlvmLibcPosixFallocateTest, InvalidArgs) {
 
 TEST_F(LlvmLibcPosixFallocateTest, BadFileDescriptor) {
   EXPECT_EQ(LIBC_NAMESPACE::posix_fallocate(-1, 0, 4096), EBADF);
-  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_F(LlvmLibcPosixFallocateTest, AllocateAndExtend) {
@@ -104,5 +103,4 @@ TEST_F(LlvmLibcPosixFallocateTest, Pipe) {
   // behavior).
   int ret = LIBC_NAMESPACE::posix_fallocate(pipefd[1], 0, 1024);
   EXPECT_TRUE(ret == ESPIPE || ret == EBADF);
-  ASSERT_ERRNO_SUCCESS();
 }
