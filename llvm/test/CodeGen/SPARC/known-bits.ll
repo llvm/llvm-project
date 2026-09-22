@@ -9,119 +9,23 @@
 define i128 @knownbits_build_pair_shl(i128 %a0, i128 %a1, i1 %a2) nounwind {
 ; BE-LABEL: knownbits_build_pair_shl:
 ; BE:       ! %bb.0: ! %entry
-; BE-NEXT:    add %sp, -144, %sp
-; BE-NEXT:    ld [%sp+244], %o0
+; BE-NEXT:    ld [%sp+100], %o0
 ; BE-NEXT:    andcc %o0, 1, %g0
-; BE-NEXT:    be .LBB0_2
-; BE-NEXT:    nop
-; BE-NEXT:  ! %bb.1: ! %bb
-; BE-NEXT:    mov %g0, %o0
-; BE-NEXT:    ld [%sp+240], %o2
-; BE-NEXT:    mov %g0, %o1
-; BE-NEXT:    std %o0, [%sp+136]
-; BE-NEXT:    std %o0, [%sp+128]
-; BE-NEXT:    std %o0, [%sp+120]
-; BE-NEXT:    std %o0, [%sp+112]
-; BE-NEXT:    srl %o2, 3, %o0
-; BE-NEXT:    and %o0, 12, %o0
-; BE-NEXT:    add %sp, 112, %o1
-; BE-NEXT:    add %o1, %o0, %o3
-; BE-NEXT:    ld [%o3+4], %o4
-; BE-NEXT:    add %sp, 96, %o5
-; BE-NEXT:    or %o5, 4, %o5
-; BE-NEXT:    st %o4, [%o5]
-; BE-NEXT:    ld [%o3+12], %o4
-; BE-NEXT:    add %sp, 104, %o5
-; BE-NEXT:    or %o5, 4, %o5
-; BE-NEXT:    st %o4, [%o5]
-; BE-NEXT:    ld [%o1+%o0], %o0
-; BE-NEXT:    st %o0, [%sp+96]
-; BE-NEXT:    ld [%o3+8], %o0
-; BE-NEXT:    st %o0, [%sp+104]
-; BE-NEXT:    ldd [%sp+96], %o4
-; BE-NEXT:    and %o2, 31, %o3
-; BE-NEXT:    sll %o4, %o3, %o0
-; BE-NEXT:    xor %o3, 31, %o2
-; BE-NEXT:    srl %o5, 1, %o1
-; BE-NEXT:    ldd [%sp+104], %g2
-; BE-NEXT:    srl %o1, %o2, %o1
-; BE-NEXT:    or %o0, %o1, %o0
-; BE-NEXT:    sll %o5, %o3, %o1
-; BE-NEXT:    srl %g2, 1, %o4
-; BE-NEXT:    srl %o4, %o2, %o4
-; BE-NEXT:    or %o1, %o4, %o1
-; BE-NEXT:    sll %g2, %o3, %o4
-; BE-NEXT:    srl %g3, 1, %o5
-; BE-NEXT:    srl %o5, %o2, %o2
-; BE-NEXT:    or %o4, %o2, %o2
-; BE-NEXT:    sll %g3, %o3, %o3
-; BE-NEXT:    retl
-; BE-NEXT:    add %sp, 144, %sp
-; BE-NEXT:  .LBB0_2: ! %exit
 ; BE-NEXT:    mov %g0, %o0
 ; BE-NEXT:    mov %g0, %o1
 ; BE-NEXT:    mov %g0, %o2
-; BE-NEXT:    mov %g0, %o3
 ; BE-NEXT:    retl
-; BE-NEXT:    add %sp, 144, %sp
+; BE-NEXT:    mov %g0, %o3
 ;
 ; LE-LABEL: knownbits_build_pair_shl:
 ; LE:       ! %bb.0: ! %entry
-; LE-NEXT:    add %sp, -144, %sp
-; LE-NEXT:    ld [%sp+244], %o0
+; LE-NEXT:    ld [%sp+100], %o0
 ; LE-NEXT:    andcc %o0, 1, %g0
-; LE-NEXT:    be .LBB0_2
-; LE-NEXT:    nop
-; LE-NEXT:  ! %bb.1: ! %bb
-; LE-NEXT:    mov %g0, %o0
-; LE-NEXT:    mov %g0, %o1
-; LE-NEXT:    std %o0, [%sp+136]
-; LE-NEXT:    std %o0, [%sp+128]
-; LE-NEXT:    std %o0, [%sp+120]
-; LE-NEXT:    std %o0, [%sp+112]
-; LE-NEXT:    add %sp, 112, %o0
-; LE-NEXT:    add %o0, 16, %o0
-; LE-NEXT:    srl %o4, 3, %o1
-; LE-NEXT:    and %o1, 12, %o1
-; LE-NEXT:    sub %o0, %o1, %o0
-; LE-NEXT:    ld [%o0+4], %o1
-; LE-NEXT:    add %sp, 96, %o2
-; LE-NEXT:    or %o2, 4, %o2
-; LE-NEXT:    st %o1, [%o2]
-; LE-NEXT:    ld [%o0+12], %o1
-; LE-NEXT:    add %sp, 104, %o2
-; LE-NEXT:    or %o2, 4, %o2
-; LE-NEXT:    st %o1, [%o2]
-; LE-NEXT:    ld [%o0], %o1
-; LE-NEXT:    st %o1, [%sp+96]
-; LE-NEXT:    ld [%o0+8], %o0
-; LE-NEXT:    st %o0, [%sp+104]
-; LE-NEXT:    ldd [%sp+96], %g2
-; LE-NEXT:    and %o4, 31, %o0
-; LE-NEXT:    sll %g3, %o0, %o1
-; LE-NEXT:    xor %o0, 31, %o3
-; LE-NEXT:    ldd [%sp+104], %o4
-; LE-NEXT:    srl %g2, 1, %o2
-; LE-NEXT:    srl %o2, %o3, %o2
-; LE-NEXT:    or %o1, %o2, %o1
-; LE-NEXT:    sll %o4, %o0, %o2
-; LE-NEXT:    srl %g3, 1, %g4
-; LE-NEXT:    srl %g4, %o3, %g4
-; LE-NEXT:    or %o2, %g4, %o2
-; LE-NEXT:    sll %o5, %o0, %g4
-; LE-NEXT:    srl %o4, 1, %o4
-; LE-NEXT:    srl %o4, %o3, %o3
-; LE-NEXT:    or %g4, %o3, %o3
-; LE-NEXT:    sll %g2, %o0, %o0
-; LE-NEXT:    retl
-; LE-NEXT:    add %sp, 144, %sp
-; LE-NEXT:  .LBB0_2: ! %exit
 ; LE-NEXT:    mov %g0, %o0
 ; LE-NEXT:    mov %g0, %o1
 ; LE-NEXT:    mov %g0, %o2
-; LE-NEXT:    mov %g0, %o3
 ; LE-NEXT:    retl
-; LE-NEXT:    add %sp, 144, %sp
+; LE-NEXT:    mov %g0, %o3
 entry:
   %v = and i128 %a0, 0
   br i1 %a2, label %bb, label %exit

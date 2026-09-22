@@ -211,50 +211,14 @@ define i128 @knownbits_build_pair_shl(i128 %a0, i128 %a1, i1 %a2) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $48, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    testb $1, 56(%ebp)
-; X86-NEXT:    je .LBB8_2
-; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    movl 40(%ebp), %ecx
-; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; X86-NEXT:    vmovups %ymm0, (%esp)
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shrb $3, %dl
-; X86-NEXT:    andb $12, %dl
-; X86-NEXT:    negb %dl
-; X86-NEXT:    movsbl %dl, %ebx
-; X86-NEXT:    movl 20(%esp,%ebx), %edx
-; X86-NEXT:    movl 24(%esp,%ebx), %eax
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    shldl %cl, %edx, %edi
-; X86-NEXT:    movl 16(%esp,%ebx), %esi
-; X86-NEXT:    movl 28(%esp,%ebx), %ebx
-; X86-NEXT:    shldl %cl, %eax, %ebx
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl %ebx, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    shll %cl, %edi
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-NEXT:    shldl %cl, %esi, %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %edi, (%eax)
-; X86-NEXT:    jmp .LBB8_3
-; X86-NEXT:  .LBB8_2: # %exit
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
-; X86-NEXT:  .LBB8_3: # %exit
-; X86-NEXT:    leal -12(%ebp), %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: knownbits_build_pair_shl:
