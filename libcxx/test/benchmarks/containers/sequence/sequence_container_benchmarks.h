@@ -612,6 +612,25 @@ void sequence_container_benchmarks(std::string container) {
           c.insert(c.end(), value); // re-insert an element at the end to avoid needing a new container
         }
       });
+
+    if constexpr (std::is_integral_v<ValueType>) {
+      for (auto gen : generators)
+        bench("index-loop" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
+          const auto size = st.range(0);
+          std::vector<ValueType> in;
+          std::generate_n(std::back_inserter(in), size, gen);
+          DoNotOptimizeData(in);
+
+          Container c(in.begin(), in.end());
+          DoNotOptimize(c);
+
+          for (auto _ : st) {
+            for (size_t i = 0; i != c.size(); ++i)
+              c[i] = std::make_unsigned_t<ValueType>(c[i]) + 1;
+            DoNotOptimize(c);
+          }
+        });
+    }
   }
 }
 
