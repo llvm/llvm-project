@@ -2355,7 +2355,10 @@ llvm::APInt *GetTraitScore(
     return nullptr;
 
   auto constVal = evaluate::ToInt64(*typedExpr);
-  if (!constVal)
+  // Reachability can request scores before CheckTraitScore diagnoses them.
+  // Treat an invalid score as absent during recovery rather than passing a
+  // negative value to the unsigned scorer.
+  if (!constVal || *constVal < 0)
     return nullptr;
 
   scoreStorage = llvm::APInt(64, *constVal);
@@ -2427,10 +2430,6 @@ UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
   return UnsupportedSelectorFeature::None;
 }
 
-// Add the construct trait properties implied by an OpenMP directive (e.g.
-// `target` adds `construct_target_target`, `target teams` adds both
-// `construct_target_target` and `construct_teams_teams`) to \p vmi. This
-// decomposes combined/composite construct selectors into their leaf traits.
 static void AppendConstructTraitsForDirective(
     llvm::omp::Directive dir, llvm::omp::VariantMatchInfo &vmi) {
   auto add = [&](llvm::omp::TraitProperty prop) {
@@ -2479,6 +2478,19 @@ void AppendDirectiveContextTraits(llvm::omp::Directive directive,
       constructTraits.append(
           vmi.ConstructTraits.begin(), vmi.ConstructTraits.end());
     }
+  }
+}
+
+void AppendConstructTraitsForSelector(const parser::OmpTraitSelectorName &name,
+    llvm::omp::VariantMatchInfo &vmi) {
+  if (const auto *dir{std::get_if<llvm::omp::Directive>(&name.u)}) {
+    AppendConstructTraitsForDirective(*dir, vmi);
+  } else if (const auto *value{
+                 std::get_if<parser::OmpTraitSelectorName::Value>(&name.u)}) {
+    // SIMD is parsed as a predefined selector name because it can also take
+    // clause properties, unlike the other construct selectors.
+    if (*value == parser::OmpTraitSelectorName::Value::Simd)
+      AppendConstructTraitsForDirective(llvm::omp::Directive::OMPD_simd, vmi);
   }
 }
 
@@ -2533,16 +2545,7 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
 
   // Construct trait selector with no properties (e.g. `construct={simd}`):
   // the selector itself implies the property.
-  if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
-    AppendConstructTraitsForDirective(*dir, vmi);
-  } else if (const auto *value{std::get_if<parser::OmpTraitSelectorName::Value>(
-                 &traitName.u)}) {
-    // SIMD is a predefined selector name because it can take clause
-    // properties, unlike the other construct selectors.
-    if (*value == parser::OmpTraitSelectorName::Value::Simd) {
-      AppendConstructTraitsForDirective(llvm::omp::Directive::OMPD_simd, vmi);
-    }
-  }
+  AppendConstructTraitsForSelector(traitName, vmi);
 }
 
 std::optional<DynamicUserCondition> MakeVariantMatchInfo(
@@ -2580,20 +2583,22 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         &modifiers->front().u);
   };
 
-  auto getDirectiveVariant = [](const parser::OmpClause::When &whenClause)
+  auto getVariant = [](const parser::OmpDirectiveSpecification &spec) {
+    // Preserve NOTHING with APPLY so semantic checks can validate its loop
+    // transformations and lowering can diagnose unsupported APPLY clauses.
+    return spec.DirId() == llvm::omp::Directive::OMPD_nothing &&
+            spec.Clauses().v.empty()
+        ? nullptr
+        : &spec;
+  };
+
+  auto getDirectiveVariant = [&](const parser::OmpClause::When &whenClause)
       -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
     const auto &optionalSpec{std::get<1>(whenClause.v.t)};
     if (!optionalSpec) {
       return {nullptr, false};
     }
-    if (optionalSpec->value().DirId() == llvm::omp::Directive::OMPD_nothing) {
-      return {nullptr, true};
-    }
-    return {&optionalSpec->value(), true};
-  };
-
-  auto getFallbackVariant = [](const parser::OmpDirectiveSpecification &spec) {
-    return spec.DirId() == llvm::omp::Directive::OMPD_nothing ? nullptr : &spec;
+    return {getVariant(optionalSpec->value()), true};
   };
 
   for (const parser::OmpClause &clause : clauses.v) {
@@ -2705,11 +2710,11 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
     } else if (const auto *otherwiseClause{
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)}) {
       if (otherwiseClause->v && otherwiseClause->v->v) {
-        result.fallback = getFallbackVariant(otherwiseClause->v->v->value());
+        result.fallback = getVariant(otherwiseClause->v->v->value());
       }
     } else if (const auto *defaultVariantClause{
                    std::get_if<parser::OmpClause::DefaultVariant>(&clause.u)}) {
-      result.fallback = getFallbackVariant(defaultVariantClause->v.v.value());
+      result.fallback = getVariant(defaultVariantClause->v.v.value());
     }
   }
   return result;
