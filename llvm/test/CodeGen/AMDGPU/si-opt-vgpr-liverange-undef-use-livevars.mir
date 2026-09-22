@@ -76,6 +76,6 @@ body:             |
 
   bb.5:
     %6:vreg_64 = PHI undef %7:vreg_64, %bb.3, %1, %bb.4
-    SI_END_CF killed %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0, implicit %6
 ...

@@ -66,7 +66,7 @@ body:             |
   ; GFX9-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; GFX9-NEXT: {{  $}}
   ; GFX9-NEXT: bb.2:
-  ; GFX9-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX9-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX9-NEXT:   $sgpr30_sgpr31 = COPY [[COPY]]
   ; GFX9-NEXT:   $vgpr0 = COPY [[V_MOV_B32_e32_]]
   ; GFX9-NEXT:   S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
@@ -109,7 +109,7 @@ body:             |
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
 
   bb.2:
-    $exec = S_MOV_B64 killed %20
+    $exec = bb-prolog S_MOV_B64 killed %20
     $sgpr30_sgpr31 = COPY killed %17
     $vgpr0 = COPY killed %24
     S_SETPC_B64_return killed $sgpr30_sgpr31, implicit killed $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3

@@ -91,7 +91,7 @@ body:             |
 
   bb.5:
     successors: %bb.9(0x80000000)
-    $exec = S_OR_B64 $exec, %46, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %46, implicit-def $scc
     %47:vgpr_32 = COPY killed %48
     %49:vgpr_32 = COPY killed %50
     %51:vreg_128 = COPY killed %52
@@ -111,7 +111,7 @@ body:             |
 
   bb.6:
     successors: %bb.7(0x40000000), %bb.13(0x40000000)
-    $exec = S_OR_B64 $exec, killed %60, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed %60, implicit-def $scc
     %61:sreg_64 = V_CMP_NE_U32_e64 0, killed %62, implicit $exec
     %63:vreg_128 = COPY killed %64
     %65:vgpr_32 = COPY killed %66
@@ -140,7 +140,7 @@ body:             |
 
   bb.9:
     successors: %bb.6(0x04000000), %bb.4(0x7c000000)
-    $exec = S_OR_B64 $exec, %45, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %45, implicit-def $scc
     %62:vgpr_32 = COPY killed %42
     %66:vgpr_32 = COPY killed %41
     %76:vgpr_32 = COPY killed %40
@@ -182,7 +182,7 @@ body:             |
 
   bb.12:
     successors: %bb.15(0x40000000), %bb.5(0x40000000)
-    $exec = S_OR_B64 $exec, killed %85, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed %85, implicit-def $scc
     %87:sreg_64 = V_CMP_LT_U32_e64 11, killed %28, implicit $exec
     %88:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
     %56:sreg_64 = COPY %24
@@ -199,7 +199,7 @@ body:             |
 
   bb.13:
     successors: %bb.14(0x40000000), %bb.16(0x40000000)
-    $exec = S_OR_B64 $exec, killed %67, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed %67, implicit-def $scc
     %91:vgpr_32 = COPY killed %65
     %92:vreg_128 = COPY killed %63
     %93:sreg_64 = V_CMP_NE_U32_e64 0, killed %91, implicit $exec
@@ -232,7 +232,7 @@ body:             |
 
   bb.16:
     successors: %bb.3(0x80000000)
-    $exec = S_OR_B64 $exec, killed %95, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed %95, implicit-def $scc
     %103:vreg_128 = COPY killed %94
     %104:vreg_128 = COPY killed %103
     %5:vreg_128 = COPY killed %104

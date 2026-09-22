@@ -94,7 +94,7 @@ body:             |
 
   bb.8:
     %13:vreg_128 = PHI %10, %bb.6, %12, %bb.7
-    SI_END_CF killed %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %5:vreg_128 = REG_SEQUENCE %13.sub2, %subreg.sub0, %13.sub2, %subreg.sub1, killed %13.sub2, %subreg.sub2, undef %3, %subreg.sub3
     S_ENDPGM 0
 ...
