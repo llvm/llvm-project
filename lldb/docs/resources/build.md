@@ -275,16 +275,25 @@ test execution.
 
 LLDB's script interpreter plugins (for Python and  Lua) can be built as static
 or dynamic libraries. This is controlled by
-`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS`, which defaults to `ON` on masOS and
+`LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS`, which defaults to `ON` on macOS and
 FreeBSD, and `OFF` everywhere else.
 
 `LLDB_ENABLE_PYTHON_LIMITED_API` makes LLDB use the Python
 [Limited API](https://docs.python.org/3/c-api/stable.html). It defaults to `ON`
-when using SWIG 4.2 or later.
+when using SWIG 4.2 or later, except in the following cases, where it defaults
+to `OFF`:
+
+- `LLDB_EMBED_PYTHON_HOME` is `ON`, which is the default on Windows. The two
+  options are mutually exclusive and setting both is a configure error.
+- SWIG is exactly 4.4.0 and Python is 3.13 or later, due to
+  [swig#3283](https://github.com/swig/swig/issues/3283). This combination is
+  also a configure error if `LLDB_ENABLE_PYTHON_LIMITED_API` is requested
+  explicitly.
 
 When both of these options are enabled, LLDB can use, and be used from, a
 different version of Python (3.8 or later) than it was built against. Note that
-on Windows, `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` is not required.
+on Windows, `LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS` is not required, so
+`-DLLDB_EMBED_PYTHON_HOME=OFF -DLLDB_ENABLE_PYTHON_LIMITED_API=ON` is enough.
 
 #### Windows
 
@@ -300,8 +309,9 @@ are commonly used on Windows.
   crashes while running the test suite. If set to 0, LLDB will silently crash.
   Setting to 1 allows a developer to attach a JIT debugger at the time of a
   crash, rather than having to reproduce a failure or use a crash dump.
-- `PYTHON_HOME` (Required): Path to the folder where the Python distribution
-  is installed. For example, `C:\Python35`.
+- `PYTHON_HOME` (Optional): Path to the folder where the Python distribution is
+  installed, used as a hint when locating Python. For example,
+  `C:\Python311`. Windows requires Python 3.11 or later.
 - `LLDB_EMBED_PYTHON_HOME` (Default=1 on Windows): When this is 1, LLDB will bind
   statically to the location specified in the `PYTHON_HOME` CMake variable,
   ignoring any value of `PYTHONHOME` set in the environment. This is most
@@ -312,12 +322,21 @@ are commonly used on Windows.
   runtime (looking for installed Pythons, or using the `PYTHONHOME`
   environment variable if it is specified).
 
+  Leaving `LLDB_EMBED_PYTHON_HOME` at its Windows default also forces
+  `LLDB_ENABLE_PYTHON_LIMITED_API` off, which links LLDB against
+  `python3XX.dll` for the exact Python it was built with. To run against a
+  different Python version than you built with, use
+  `-DLLDB_EMBED_PYTHON_HOME=OFF -DLLDB_ENABLE_PYTHON_LIMITED_API=ON`; LLDB then
+  links against the stable-ABI `python3.dll` instead and locates it at runtime
+  through `PATH`. The `LLDB_PYTHON_LIBRARY` environment variable overrides that
+  search with an absolute path to the versioned Python DLL.
+
 Sample command line:
 
 ```
 $ cmake -G Ninja^
     -DLLDB_TEST_DEBUG_TEST_CRASHES=1^
-    -DPYTHON_HOME=C:\Python35^
+    -DPYTHON_HOME=C:\Python311^
     -DLLDB_TEST_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
     <path to root of llvm source tree>
 ```
