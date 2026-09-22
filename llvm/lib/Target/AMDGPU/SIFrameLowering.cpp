@@ -1522,9 +1522,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm((Alignment - 1) * getScratchScaleFactor(ST))
         .setMIFlag(MachineInstr::FrameSetup);
     auto And = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_AND_B32), FramePtrReg)
-        .addReg(FramePtrReg, RegState::Kill)
-        .addImm(-Alignment * getScratchScaleFactor(ST))
-        .setMIFlag(MachineInstr::FrameSetup);
+                   .addReg(FramePtrReg, RegState::Kill)
+                   .addImm(~(Alignment * getScratchScaleFactor(ST) - 1u))
+                   .setMIFlag(MachineInstr::FrameSetup);
     And->getOperand(3).setIsDead(); // Mark SCC as dead.
     FuncInfo->setIsStackRealigned(true);
   } else if ((HasFP = hasFP(MF))) {

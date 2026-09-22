@@ -428,7 +428,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            AMDGPU::OpName::srsrc);
     assert(vaddr0 >= 0 && srsrc > vaddr0);
     unsigned NumExtraAddrs = srsrc - vaddr0 - 1;
-    unsigned NumPadding = (-NumExtraAddrs) & 3;
+    unsigned NumPadding = ~(NumExtraAddrs - 1u) & 3;
 
     for (unsigned i = 0; i < NumExtraAddrs; ++i) {
       getMachineOpValue(MI, MI.getOperand(vaddr0 + 1 + i), Encoding, Fixups,
