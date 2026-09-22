@@ -6,15 +6,12 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -nostdlib -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp \
-# RUN:   --lite=1 --data %t.fdata \
+# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp --lite=1 --data %t.fdata \
 # RUN:   --print-normalized 2>&1 | FileCheck %s --check-prefix=CHECK-BOLT-LITE
-# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp \
-# RUN:   --lite=0 --data %t.fdata \
+# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp --lite=0 --data %t.fdata \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
-# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp \
-# RUN:   --hot-functions-at-end --lite=0 --data %t.fdata \
-# RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HOT-END
+# RUN: llvm-bolt %t.exe -o %t.bolt --relax-exp --hot-functions-at-end --lite=0 \
+# RUN:   --data %t.fdata | FileCheck %s --check-prefix=CHECK-BOLT-HOT-END
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 
 ## Constant islands at the end of functions foo(), bar(), and _start() make each

@@ -10,20 +10,16 @@
 
 # RUN: %clang %cflags -Wl,-q -Wl,-e,foo %s -o %t.tailcall -nostdlib
 # RUN: link_fdata --no-lbr %s %t.tailcall %t.tailcall.fdata
-# RUN: llvm-bolt %t.tailcall -o %t.tailcall.bolt \
-# RUN:   --data %t.tailcall.fdata --relocs \
-# RUN:   --lite=0 --relax-exp --reorder-functions=exec-count \
-# RUN:   --skip-funcs='^bar$' \
+# RUN: llvm-bolt %t.tailcall -o %t.tailcall.bolt --data %t.tailcall.fdata \
+# RUN:   --relax-exp --reorder-functions=exec-count --skip-funcs='^bar$' \
 # RUN:   | FileCheck %s --check-prefix=TAILCALL-BOLT
 # RUN: llvm-objdump -d \
 # RUN:   --disassemble-symbols=foo,bar,bar_body,padding,__AArch64_forward_ADRPThunk_bar_0 \
 # RUN:   %t.tailcall.bolt | FileCheck %s --check-prefix=TAILCALL
 
-# RUN: %clang %cflags -DBRANCH -Wl,-q -Wl,-e,foo %s -o %t.branch \
-# RUN:   -nostdlib
+# RUN: %clang %cflags -DBRANCH -Wl,-q -Wl,-e,foo %s -o %t.branch -nostdlib
 # RUN: link_fdata --no-lbr %s %t.branch %t.branch.fdata
-# RUN: llvm-bolt %t.branch -o %t.branch.bolt \
-# RUN:   --data %t.branch.fdata --relocs \
+# RUN: llvm-bolt %t.branch -o %t.branch.bolt --data %t.branch.fdata \
 # RUN:   --lite=0 --relax-exp --reorder-functions=exec-count \
 # RUN:   | FileCheck %s --check-prefix=BRANCH-BOLT
 # RUN: llvm-objdump -d \

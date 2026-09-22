@@ -36,12 +36,10 @@
 # RUN: %clang %cflags -Wl,-q -Wl,-e,A %s -o %t -nostdlib
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --split-functions \
-# RUN:   --compact-code-model --relax-exp \
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --split-functions --relax-exp \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-bolt %t -o %t.hfe.bolt --data %t.fdata --split-functions \
-# RUN:   --compact-code-model --relax-exp \
-# RUN:   --hot-functions-at-end \
+# RUN:   --relax-exp --hot-functions-at-end \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT-HFE
 # RUN: llvm-readelf -S %t.bolt | FileCheck %s --check-prefix=CHECK-SECTIONS
 # RUN: llvm-objdump -d \

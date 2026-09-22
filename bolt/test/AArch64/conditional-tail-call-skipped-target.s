@@ -6,8 +6,8 @@
 # REQUIRES: system-linux
 
 # RUN: %clang %cflags -Wl,-q -Wl,-e,_start %s -o %t -nostdlib
-# RUN: llvm-bolt %t -o %t.bolt --relocs --lite=0 --relax-exp \
-# RUN:   --skip-funcs='^skipped$' | FileCheck %s --check-prefix=CHECK-BOLT
+# RUN: llvm-bolt %t -o %t.bolt --relax-exp --skip-funcs='^skipped$' \
+# RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-OUTPUT
 
 # CHECK-BOLT: BOLT-INFO: relaxed 1 calls with long thunks

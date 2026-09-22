@@ -19,9 +19,8 @@
 # RUN: %clang %cflags -Wl,-q -Wl,-e,A %s -o %t -nostdlib
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata \
-# RUN:   --compact-code-model --relax-exp --max-cluster-size=64 \
-# RUN:   --max-thunk-chain-length=0 \
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --relax-exp \
+# RUN:   --max-cluster-size=64 --max-thunk-chain-length=0 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d \
 # RUN:   --disassemble-symbols=A,B,C,D,E,__AArch64_backward_ADRPThunk_A_0,__AArch64_backward_ADRPThunk_A_1 \
