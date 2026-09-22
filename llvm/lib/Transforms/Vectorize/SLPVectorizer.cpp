@@ -1290,11 +1290,14 @@ public:
     ///   Luís F. W. Góes
     int getScoreAtLevelRec(Value *LHS, Value *RHS, Instruction *U1,
                            Instruction *U2, int CurrLevel,
-                           ArrayRef<Value *> MainAltOps) const {
+                           ArrayRef<Value *> MainAltOps,
+                           int *RootScore = nullptr) const {
 
       // Get the shallow score of V1 and V2.
       int ShallowScoreAtThisLevel =
           getShallowScore(LHS, RHS, U1, U2, MainAltOps);
+      if (RootScore)
+        *RootScore = ShallowScoreAtThisLevel;
 
       // If reached MaxLevel,
       //  or if V1 and V2 are not instructions,
@@ -1540,9 +1543,14 @@ public:
                                     LookAheadMaxDepth);
       // Keep track of the instruction stack as we recurse into the operands
       // during the look-ahead score exploration.
+      int OpcodeScore;
       int Score =
           LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
-                                       /*CurrLevel=*/1, MainAltOps);
+                                       /*CurrLevel=*/1, MainAltOps,
+                                       &OpcodeScore);
+      if (OpcodeScore != LookAheadHeuristics::ScoreSameOpcode &&
+          OpcodeScore != LookAheadHeuristics::ScoreAltOpcodes)
+        OpcodeScore = 0;
       if (Score) {
         int SplatScore =
             getSplatScore(Lane, OpIdx, Idx, UsedLanes) * ScoreScaleFactor;
@@ -1559,7 +1567,11 @@ public:
           const int SF = (LHS == RHS && isConstant(LHS))
                              ? ScoreConstantScaleFactor
                              : ScoreScaleFactor;
+          // Scale the cumulative score and use immediate compatibility to
+          // break ties before considering whether all users are vectorized.
           Score *= SF;
+          Score += OpcodeScore;
+          Score *= SF;  // Scale Opcode as well
           Score += getExternalUseScore(Lane, OpIdx, Idx);
           IsUsed = true;
         }
