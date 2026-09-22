@@ -32,7 +32,8 @@ bool detail::shouldSkipOptimizationForOptBisect(IRUnitRef IR,
   } else {
     llvm_unreachable("Tried to check skipping for an invalid IR type");
   }
-  return Ctx->getOptPassGate().shouldRunPass(PassName, IRName);
+  const OptPassGate &Gate = Ctx->getOptPassGate();
+  return Gate.isEnabled() && !Gate.shouldRunPass(PassName, IRName);
 }
 
 // Explicit template instantiations and specialization defininitions for core

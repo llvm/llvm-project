@@ -1,6 +1,8 @@
 
 set(ORC_RT_BEDROCK_SOURCES
   BootstrapInfo.cpp
+  ConnectionSpec.cpp
+  ConnectorRegistry.cpp
   ExecutorProcessInfo.cpp
   GDBJITRegistrar.cpp
   InProcessControllerAccess.cpp
@@ -9,7 +11,6 @@ set(ORC_RT_BEDROCK_SOURCES
   Session.cpp
   SimpleNativeMemoryMap.cpp
   SimpleSymbolTable.cpp
-  StandaloneMachOUnwindInfoRegistrar.cpp
   ThreadPoolRunner.cpp
   sps/AllSPSCI.cpp
   sps/CallSPSCI.cpp
@@ -18,7 +19,6 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/NativeDylibManagerSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
   sps/SimpleRemoteCA.cpp
-  sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
   )
 
 # System implementations are composed, not merely selected: a target gets one
@@ -41,12 +41,16 @@ set(ORC_RT_BEDROCK_POSIX_SOURCES
   sys/posix/DynamicLibrary.cpp
   sys/posix/Memory.cpp
   sys/posix/PageSize.cpp
+  sys/posix/SocketConnector.cpp
   sys/posix/SocketHandle.cpp
+  sys/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
   sys/darwin/CPUFeatures.cpp
   sys/darwin/TargetTriple.cpp
+  StandaloneMachOUnwindInfoRegistrar.cpp
+  sps/StandaloneMachOUnwindInfoRegistrarSPSCI.cpp
 )
 
 set(ORC_RT_BEDROCK_LINUX_SOURCES
@@ -54,10 +58,9 @@ set(ORC_RT_BEDROCK_LINUX_SOURCES
   sys/linux/TargetTriple.cpp
 )
 
-# TODO: Windows has no counterparts for the sys/posix/ sources yet
-# (DynamicLibrary, Memory, PageSize, SocketHandle), so Windows builds are
-# incomplete.
 set(ORC_RT_BEDROCK_WINDOWS_SOURCES
+  sys/windows/DynamicLibrary.cpp
+  sys/windows/Memory.cpp
   sys/windows/CPUFeatures.cpp
   sys/windows/TargetTriple.cpp
 )
