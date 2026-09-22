@@ -61,7 +61,7 @@ exit:
 define void @loop_contains_store_multidim_condition_load(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) readonly %pred) !dbg !12 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_multidim_condition_load'
 ; CHECK-DEBUG:       LV: Not vectorizing: Unable to determine early exit condition for loop with side effects.
-; CHECK-REMARK:      foo.c:20:3: loop not vectorized: Unable to determine early exit condition for loop with side effects.
+; CHECK-REMARK:      foo.c:20:3: loop not vectorized: Unable to determine early exit condition for loop with side effects
 entry:
   br label %for.body, !dbg !13
 
@@ -430,8 +430,8 @@ exit:
 
 define void @loop_contains_store_decrementing_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) !dbg !38 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_decrementing_iv'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains non-contiguous load used by the exit condition.
-; CHECK-REMARK:      foo.c:150:3: loop not vectorized: Early exit loop with side effects contains non-contiguous load used by the exit condition.
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition with an unsupported memory access pattern
+; CHECK-REMARK:      foo.c:150:3: loop not vectorized: Early exit loop with side effects contains load used by the exit condition with an unsupported memory access pattern
 entry:
   br label %for.body, !dbg !39
 
@@ -857,8 +857,8 @@ exit.uncountable:
 ; getelementptr used for the critical load that feeds the exit condition.
 define void @uncountable_exit_condition_load_offset_from_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(42) readonly %pred) !dbg !64 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_condition_load_offset_from_iv'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported load used by the exit condition.
-; CHECK-REMARK:      foo.c:280:3: loop not vectorized: Early exit loop with side effects contains unsupported load used by the exit condition.
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains load used by the exit condition with an unsupported memory access pattern
+; CHECK-REMARK:      foo.c:280:3: loop not vectorized: Early exit loop with side effects contains load used by the exit condition with an unsupported memory access pattern
 entry:
   br label %for.body, !dbg !65
 
@@ -887,7 +887,7 @@ define i32 @uncountable_exit_with_masked_ldst_separate_condition(ptr dereference
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_masked_ldst_separate_condition'
 ; CHECK-DEBUG:       LV: We can vectorize this loop!
 ; CHECK-DEBUG:       LV: Vectorization is possible but not beneficial.
-; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported memory operations.
+; CHECK-REMARK:      foo.c:290:3: loop not vectorized: Early exit loop with side effects contains unsupported memory operations
 entry:
   br label %for.body, !dbg !67
 
@@ -1077,7 +1077,7 @@ exit:
 define i64 @uncountable_exit_with_extra_induction(ptr dereferenceable(80) noalias %array, ptr align 4 dereferenceable(80) readonly %pred) !dbg !78 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_extra_induction'
 ; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported reductions or recurrences.
-; CHECK-REMARK:      foo.c:350:3: loop not vectorized: Early exit loop with side effects contains unsupported reductions or recurrences.
+; CHECK-REMARK:      foo.c:350:3: loop not vectorized: Early exit loop with side effects contains unsupported reductions or recurrences
 entry:
   br label %for.body, !dbg !79
 

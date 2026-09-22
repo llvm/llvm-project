@@ -3195,7 +3195,7 @@ static bool handleUncountableExitsWithSideEffects(
   VPValue *Cond = getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
   if (!Cond) {
     reportVectorizationFailure("Unable to determine early exit condition for "
-                               "loop with side effects.\n",
+                               "loop with side effects",
                                "EarlyExitSideEffectsCond", ORE, TheLoop);
     return false;
   }
@@ -3235,7 +3235,7 @@ static bool handleUncountableExitsWithSideEffects(
             &Predicates)) {
       reportVectorizationFailure("Early exit loop with side effects contains "
                                  "load used by the exit condition that may "
-                                 "fault.\n",
+                                 "fault",
                                  "EarlyExitSideEffectsFaultingLoad", ORE,
                                  TheLoop);
       return false;
@@ -3249,9 +3249,9 @@ static bool handleUncountableExitsWithSideEffects(
   if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
       !match(IV->getStepValue(), m_SpecificInt(1))) {
     reportVectorizationFailure("Early exit loop with side effects contains "
-                               "non-contiguous load used by the exit "
-                               "condition.\n",
-                               "EarlyExitSideEffectsBadCriticalLoad", ORE,
+                               "load used by the exit condition with an "
+                               "unsupported memory access pattern",
+                               "EarlyExitSideEffectsBadLoadAccessPattern", ORE,
                                TheLoop);
     return false;
   }
@@ -3259,9 +3259,9 @@ static bool handleUncountableExitsWithSideEffects(
   if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(
                       m_LiveIn(), m_Specific(IV)))) {
     reportVectorizationFailure("Early exit loop with side effects contains "
-                               "unsupported load used by the exit "
-                               "condition.\n",
-                               "EarlyExitSideEffectsBadCriticalLoad", ORE,
+                               "load used by the exit condition with an "
+                               "unsupported memory access pattern",
+                               "EarlyExitSideEffectsBadLoadAccessPattern", ORE,
                                TheLoop);
     return false;
   }
@@ -3298,9 +3298,9 @@ static bool handleUncountableExitsWithSideEffects(
         // TODO: Handle conditional memory operations in the loop.
         if (!VPDT.dominates(R.getParent(), LatchVPBB)) {
           reportVectorizationFailure(
-              "Early exit loop with side effects "
-              "contains unsupported memory operations.\n",
-              "EarlyExitSideEffectsUnsupportedMemOps", ORE, TheLoop);
+              "Early exit loop with side effects contains unsupported "
+              "conditional memory operations",
+              "EarlyExitSideEffectsUnsupportedConditionalMemOps", ORE, TheLoop);
           return false;
         }
         cast<VPInstruction>(&R)->addMask(Mask);
@@ -3326,9 +3326,10 @@ static bool handleUncountableExitsWithSideEffects(
   // TODO: Handle more than one Phi; re-derive from IV.
   // TODO: Handle reductions.
   if (range_size(Phis) != 1) {
-    reportVectorizationFailure("Early exit loop with side effects contains "
-                               "unsupported reductions or recurrences.\n",
-                               "EarlyExitEffectsSideReductions", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Early exit loop with side effects contains "
+        "unsupported reductions, inductions or recurrences",
+        "EarlyExitSideEffectsReductions", ORE, TheLoop);
     return false;
   }
   VPPhi *ContinueIV = cast<VPPhi>(Phis.begin());
@@ -3359,7 +3360,7 @@ bool VPlanTransforms::handleUncountableEarlyExits(
       !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC)) {
     reportVectorizationFailure(
         "Auto-vectorization of early exit loops with potentially "
-        "faulting loads is not supported.\n.",
+        "faulting loads is not supported",
         "EarlyExitFaultingLoads", ORE, TheLoop);
     return false;
   }
