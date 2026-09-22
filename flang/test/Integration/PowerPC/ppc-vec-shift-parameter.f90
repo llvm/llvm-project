@@ -6,7 +6,7 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-! RUN: %flang_fc1 -emit-llvm %s -triple ppc64le-unknown-linux -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
 ! REQUIRES: target=powerpc{{.*}}
 
 ! The shift amount of vec_sld must reach PowerPC lowering as a constant even
