@@ -150,6 +150,7 @@ void call_f32_vector_return(void) {
 //
 void call_f64_vector_return(void) {
   v1f64_result = return_v1f64(1.0);
+}
 
 typedef float float2 __attribute__((vector_size(8)));
 typedef int int4 __attribute__((vector_size(16)));
