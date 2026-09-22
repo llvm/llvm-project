@@ -1,17 +1,6 @@
 # RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
 # Check that i32 vectors with an illegal number of elements are extended to the nearest legal size before extracting the element using the G_EXTRACT_VECTOR_ELT instruction.
 
---- |
-  define pisa_kernel i32 @test_v10_32b(<10 x i32> %vec) {
-    %elem = extractelement <10 x i32> %vec, i32 5
-    ret i32 %elem
-  }
-
-  define pisa_kernel i32 @test_v20_32b(<20 x i32> %vec) {
-    %elem = extractelement <20 x i32> %vec, i32 10
-    ret i32 %elem
-  }
-...
 ---
 name: test_v10_32b
 tracksRegLiveness: true
