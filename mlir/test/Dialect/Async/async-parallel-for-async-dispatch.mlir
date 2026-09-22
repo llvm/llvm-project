@@ -84,3 +84,43 @@ func.func @loop_2d(%arg0: index, %arg1: index, %arg2: index, // lb, ub, step
 // CHECK:           memref.store
 
 // CHECK-LABEL: func private @async_dispatch_fn
+
+// -----
+
+// CHECK-LABEL: @empty_2d_dynamic
+// CHECK-SAME:    %[[LB:.*]]: index, %[[UB:.*]]: index, %[[STEP:.*]]: index
+func.func @empty_2d_dynamic(%lb: index, %ub: index, %step: index, %arg0: memref<?x?xf32>) {
+  // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:      %[[RANGE0:.*]] = arith.subi %[[UB]], %[[LB]]
+  // CHECK:      %[[RAW0:.*]] = arith.ceildivsi %[[RANGE0]], %[[STEP]]
+  // CHECK:      %[[TRIP0:.*]] = arith.maxsi %[[RAW0]], %[[C0]]
+  // CHECK:      %[[RANGE1:.*]] = arith.subi %[[UB]], %[[LB]]
+  // CHECK:      %[[RAW1:.*]] = arith.ceildivsi %[[RANGE1]], %[[STEP]]
+  // CHECK:      %[[TRIP1:.*]] = arith.maxsi %[[RAW1]], %[[C0]]
+  // CHECK:      %[[FLATTENED:.*]] = arith.muli %[[TRIP0]], %[[TRIP1]]
+  // CHECK:      %[[IS_NOOP:.*]] = arith.cmpi eq, %[[FLATTENED]], %[[C0]] : index
+  // CHECK:      scf.if %[[IS_NOOP]] {
+  // CHECK-NEXT: } else {
+  scf.parallel (%i, %j) = (%lb, %lb) to (%ub, %ub) step (%step, %step) {
+    %one = arith.constant 1.0 : f32
+    memref.store %one, %arg0[%i, %j] : memref<?x?xf32>
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @empty_2d_static
+func.func @empty_2d_static(%arg0: memref<8x8xi32>) {
+  // CHECK:      %[[TRUE:.*]] = arith.constant true
+  // CHECK:      scf.if %[[TRUE]] {
+  // CHECK-NEXT: } else {
+  %c5 = arith.constant 5 : index
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %one = arith.constant 1 : i32
+  scf.parallel (%i, %j) = (%c5,%c5) to (%c0,%c0) step (%c2,%c2) {
+    memref.store %one, %arg0[%i, %j] : memref<8x8xi32>
+  }
+  return
+}
