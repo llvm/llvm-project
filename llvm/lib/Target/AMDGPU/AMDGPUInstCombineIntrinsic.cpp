@@ -1145,6 +1145,36 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
 
   return IC.replaceInstUsesWith(II, Result);
 }
+
+/// Try to fold a constant addition into the accumulator when saturation is
+/// disabled.
+static Instruction *foldConstantIntoDotAccumulator(IntrinsicInst &II,
+                                                   unsigned AccIdx,
+                                                   unsigned ClampIdx,
+                                                   InstCombiner &IC) {
+  // Reassociating across a saturating accumulation is not valid.
+  if (!match(II.getArgOperand(ClampIdx), m_Zero()) || !II.hasOneUse())
+    return nullptr;
+
+  const APInt *Acc;
+  if (!match(II.getArgOperand(AccIdx), m_APInt(Acc)))
+    return nullptr;
+
+  auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
+  if (!AccumUser)
+    return nullptr;
+
+  const APInt *AccumDelta;
+  if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+    return nullptr;
+
+  Constant *NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+
+  IC.replaceInstUsesWith(*AccumUser, &II);
+  IC.eraseInstFromFunction(*AccumUser);
+  return IC.replaceOperand(II, AccIdx, NewAcc);
+}
+
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -1984,27 +2014,17 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
     }
 
-    if (!match(II.getArgOperand(3), m_Zero()) || !II.hasOneUse())
-      break;
+    if (Instruction *I = foldConstantIntoDotAccumulator(II, 2, 3, IC))
+      return I;
 
-    const APInt *Acc;
-    if (!match(II.getArgOperand(2), m_APInt(Acc)))
-      break;
+    break;
+  }
+  case Intrinsic::amdgcn_sudot4:
+  case Intrinsic::amdgcn_sudot8: {
+    if (Instruction *I = foldConstantIntoDotAccumulator(II, 4, 5, IC))
+      return I;
 
-    auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
-    if (!AccumUser)
-      break;
-
-    const APInt *AccumDelta;
-    Constant *NewAcc;
-    if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
-      break;
-
-    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
-
-    IC.replaceInstUsesWith(*AccumUser, &II);
-    IC.eraseInstFromFunction(*AccumUser);
-    return IC.replaceOperand(II, 2, NewAcc);
+    break;
   }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);
@@ -2124,32 +2144,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Src);
     }
     return std::nullopt;
-  }
-  case Intrinsic::amdgcn_sudot4:
-  case Intrinsic::amdgcn_sudot8: {
-    // Reassociating across a saturating accumulate is not valid.
-    if (!II.hasOneUse() || !match(II.getArgOperand(5), m_Zero()))
-      break;
-
-    const APInt *Acc;
-    if (!match(II.getArgOperand(4), m_APInt(Acc)))
-      break;
-
-    auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
-    if (!AccumUser)
-      break;
-
-    const APInt *AccumDelta;
-    Constant *NewAcc;
-    if (!match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
-      break;
-
-    NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
-
-    IC.replaceOperand(II, 4, NewAcc);
-    IC.replaceInstUsesWith(*AccumUser, &II);
-    IC.eraseInstFromFunction(*AccumUser);
-    return &II;
   }
   case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
   case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
