@@ -1390,26 +1390,24 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       passingPolymorphicToNonPolymorphic &&
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
+  // The copy analysis only needs the actual argument and the dummy
+  // characteristics, so it also drives the parameter-object temporary below
+  // in contexts that do not use the copy-in/copy-out machinery.
+  Fortran::evaluate::FoldingContext &foldingContext{
+      callContext.converter.getFoldingContext()};
+  const bool suggestCopyIn{
+      Fortran::evaluate::ActualArgNeedsCopy(arg.entity, arg.characteristics,
+                                            foldingContext,
+                                            /*forCopyOut=*/false)
+          .value_or(true)};
+  const bool suggestCopyOut{
+      Fortran::evaluate::ActualArgNeedsCopy(arg.entity, arg.characteristics,
+                                            foldingContext,
+                                            /*forCopyOut=*/true)
+          .value_or(true)};
   bool mustDoCopyIn{false};
   bool mustDoCopyOut{false};
-  // Default to suggesting a copy when the copy analysis does not run, so
-  // that the parameter-object temporary below stays conservative in
-  // contexts that disable the analysis.
-  bool suggestCopyIn{true};
-  bool suggestCopyOut{true};
-
   if (callContext.doCopyIn) {
-    Fortran::evaluate::FoldingContext &foldingContext{
-        callContext.converter.getFoldingContext()};
-
-    suggestCopyIn = Fortran::evaluate::ActualArgNeedsCopy(
-                        arg.entity, arg.characteristics, foldingContext,
-                        /*forCopyOut=*/false)
-                        .value_or(true);
-    suggestCopyOut = Fortran::evaluate::ActualArgNeedsCopy(
-                         arg.entity, arg.characteristics, foldingContext,
-                         /*forCopyOut=*/true)
-                         .value_or(true);
     mustDoCopyIn = actual.isArray() && suggestCopyIn;
     mustDoCopyOut = actual.isArray() && suggestCopyOut;
   }
