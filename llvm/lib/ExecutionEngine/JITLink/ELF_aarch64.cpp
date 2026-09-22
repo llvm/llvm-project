@@ -31,16 +31,19 @@ namespace {
 
 constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
 
-class ELFJITLinker_aarch64 : public JITLinker<ELFJITLinker_aarch64> {
-  friend class JITLinker<ELFJITLinker_aarch64>;
+template <llvm::endianness Endianness>
+class ELFJITLinker_aarch64
+    : public JITLinker<ELFJITLinker_aarch64<Endianness>> {
+  using JITLinkerBase = JITLinker<ELFJITLinker_aarch64<Endianness>>;
+  friend JITLinkerBase;
 
 public:
   ELFJITLinker_aarch64(std::unique_ptr<JITLinkContext> Ctx,
                        std::unique_ptr<LinkGraph> G,
                        PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
-    if (shouldAddDefaultTargetPasses(getGraph().getTargetTriple()))
-      getPassConfig().PostAllocationPasses.push_back(
+      : JITLinkerBase(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    if (this->shouldAddDefaultTargetPasses(this->getGraph().getTargetTriple()))
+      this->getPassConfig().PostAllocationPasses.push_back(
           [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
   }
 
@@ -48,7 +51,7 @@ private:
   Symbol *GOTSymbol = nullptr;
 
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return aarch64::applyFixup(G, B, E, GOTSymbol);
+    return aarch64::applyFixup<Endianness>(G, B, E, GOTSymbol);
   }
 
   Error getOrCreateGOTSymbol(LinkGraph &G) {
@@ -710,6 +713,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64_be(
       std::move(ObjectBuffer), std::move(SSP));
 }
 
+template <llvm::endianness Endianness>
 void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
                       std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;
@@ -740,7 +744,18 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
 
-  ELFJITLinker_aarch64::link(std::move(Ctx), std::move(G), std::move(Config));
+  ELFJITLinker_aarch64<Endianness>::link(std::move(Ctx), std::move(G),
+                                         std::move(Config));
+}
+
+void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
+                      std::unique_ptr<JITLinkContext> Ctx) {
+  link_ELF_aarch64<llvm::endianness::little>(std::move(G), std::move(Ctx));
+}
+
+void link_ELF_aarch64_be(std::unique_ptr<LinkGraph> G,
+                         std::unique_ptr<JITLinkContext> Ctx) {
+  link_ELF_aarch64<llvm::endianness::big>(std::move(G), std::move(Ctx));
 }
 
 } // namespace jitlink

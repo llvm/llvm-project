@@ -124,8 +124,10 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
               std::unique_ptr<JITLinkContext> Ctx) {
   switch (G->getTargetTriple().getArch()) {
   case Triple::aarch64:
-  case Triple::aarch64_be:
     link_ELF_aarch64(std::move(G), std::move(Ctx));
+    return;
+  case Triple::aarch64_be:
+    link_ELF_aarch64_be(std::move(G), std::move(Ctx));
     return;
   case Triple::arm:
   case Triple::armeb:

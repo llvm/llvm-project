@@ -494,6 +494,11 @@ inline unsigned getMoveWide16Shift(uint32_t Instr) {
 }
 
 /// Apply fixup expression for edge to block content.
+///
+/// \tparam Endianness the target endianness applied to data fixups. In BE8
+///        mode instructions remain little-endian (the A64 ISA is
+///        word-invariant), so only data fixups use this value.
+template <llvm::endianness Endianness>
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         const Symbol *GOTSymbol) {
   using namespace support;
@@ -502,21 +507,17 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   char *FixupPtr = BlockWorkingMem + E.getOffset();
   orc::ExecutorAddr FixupAddress = B.getAddress() + E.getOffset();
 
-  // AArch64 BE8: data values follow target endianness, but instructions are
-  // always encoded in LE byte order (the A64 ISA is word-invariant).
-  llvm::endianness DataEndian = G.getEndianness();
-
   switch (E.getKind()) {
   case Pointer64: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    endian::write64(FixupPtr, Value, DataEndian);
+    endian::write64<Endianness>(FixupPtr, Value);
     break;
   }
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (Value > std::numeric_limits<uint32_t>::max())
       return makeTargetOutOfRangeError(G, B, E);
-    endian::write32(FixupPtr, Value, DataEndian);
+    endian::write32<Endianness>(FixupPtr, Value);
     break;
   }
   case Delta32:
@@ -533,9 +534,9 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
         return makeTargetOutOfRangeError(G, B, E);
-      endian::write32(FixupPtr, static_cast<uint32_t>(Value), DataEndian);
+      endian::write32<Endianness>(FixupPtr, static_cast<uint32_t>(Value));
     } else
-      endian::write64(FixupPtr, static_cast<uint64_t>(Value), DataEndian);
+      endian::write64<Endianness>(FixupPtr, static_cast<uint64_t>(Value));
     break;
   }
   case Branch26PCRel: {
