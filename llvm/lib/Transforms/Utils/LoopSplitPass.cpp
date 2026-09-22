@@ -95,10 +95,15 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     // Legality analysis proved representable.
     const SCEV *Off = SE.getConstant(Ty, Offset);
     Off = SE.getUMaxExpr(One, SE.getUMinExpr(Off, Count));
-    const SCEV *Point =
-        Descending ? SE.getMinusSCEV(Start, Off) : SE.getAddExpr(Start, Off);
-    const SCEV *PrevEnd =
-        Descending ? SE.getAddExpr(Point, One) : SE.getMinusSCEV(Point, One);
+    const SCEV *Point;
+    const SCEV *PrevEnd;
+    if (Descending) {
+      Point = SE.getMinusSCEV(Start, Off);
+      PrevEnd = SE.getAddExpr(Point, One);
+    } else {
+      Point = SE.getAddExpr(Start, Off);
+      PrevEnd = SE.getMinusSCEV(Point, One);
+    }
     LS->addPartition(PrevStart, PrevEnd);
     PrevStart = Point;
   }
