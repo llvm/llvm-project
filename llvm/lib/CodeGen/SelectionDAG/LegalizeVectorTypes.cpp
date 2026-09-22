@@ -6333,12 +6333,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_ADDRSPACECAST(SDNode *N) {
 
   // The source has the same number of elements as the result, so widen it to
   // match WidenVT. It only lives in the widened-vector map if it is itself
-  // widened; otherwise pad it up to the widened element count.
+  // widened; otherwise pad it up to the widened element count
+  // when it is illegal.
   SDValue InOp = N->getOperand(0);
   EVT InVT = InOp.getValueType();
-  if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+  TargetLowering::LegalizeTypeAction InAction = getTypeAction(InVT);
+  if (InAction == TargetLowering::TypeWidenVector) {
     InOp = GetWidenedVector(InOp);
-  } else {
+  } else if (InAction != TargetLowering::TypeLegal) {
     EVT InWidenVT = EVT::getVectorVT(*DAG.getContext(),
                                      InVT.getVectorElementType(), WidenEC);
     InOp = DAG.getInsertSubvector(DL, DAG.getPOISON(InWidenVT), InOp, 0);
