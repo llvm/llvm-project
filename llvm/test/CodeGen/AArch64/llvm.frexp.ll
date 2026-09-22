@@ -1181,4 +1181,148 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
   ret <2 x i32> %result.1
 }
 
+define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr w0, [sp, #12]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_f128_i32:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    sub sp, sp, #80
+; WINDOWS-NEXT:    adrp x8, "__xmm@40710000000000000000000000000000"
+; WINDOWS-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; WINDOWS-NEXT:    ldr q1, [x8, :lo12:"__xmm@40710000000000000000000000000000"]
+; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    bl __multf3
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    mov x10, #-9223090561878065152 // =0x8001000000000000
+; WINDOWS-NEXT:    mov w15, #-114 // =0xffffff8e
+; WINDOWS-NEXT:    stp q1, q0, [sp, #32]
+; WINDOWS-NEXT:    ldp x9, x8, [sp, #32]
+; WINDOWS-NEXT:    ldp x13, x12, [sp, #48]
+; WINDOWS-NEXT:    ubfx x11, x8, #48, #15
+; WINDOWS-NEXT:    and x14, x8, #0x7fffffffffffffff
+; WINDOWS-NEXT:    cmp x11, #0
+; WINDOWS-NEXT:    add x11, x14, x10
+; WINDOWS-NEXT:    csel x8, x12, x8, eq
+; WINDOWS-NEXT:    and x12, x12, #0x7fff000000000000
+; WINDOWS-NEXT:    csel x13, x13, x9, eq
+; WINDOWS-NEXT:    csel x12, x12, x14, eq
+; WINDOWS-NEXT:    csel w14, w15, wzr, eq
+; WINDOWS-NEXT:    and x8, x8, #0x8000ffffffffffff
+; WINDOWS-NEXT:    cmp x9, #1
+; WINDOWS-NEXT:    add x9, x14, x12, lsr #48
+; WINDOWS-NEXT:    orr x8, x8, #0x3ffe000000000000
+; WINDOWS-NEXT:    mov w12, #-16382 // =0xffffc002
+; WINDOWS-NEXT:    sbcs xzr, x11, x10
+; WINDOWS-NEXT:    stp x13, x8, [sp, #16]
+; WINDOWS-NEXT:    add w8, w9, w12
+; WINDOWS-NEXT:    b.lo .LBB24_2
+; WINDOWS-NEXT:  // %bb.1:
+; WINDOWS-NEXT:    ldr q1, [sp, #16]
+; WINDOWS-NEXT:  .LBB24_2:
+; WINDOWS-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; WINDOWS-NEXT:    csel w0, wzr, w8, lo
+; WINDOWS-NEXT:    mov v0.16b, v1.16b
+; WINDOWS-NEXT:    add sp, sp, #80
+; WINDOWS-NEXT:    ret
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  ret { fp128, i32 } %result
+}
+
+define fp128 @test_frexp_f128_i32_only_use_fract(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32_only_use_fract:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_f128_i32_only_use_fract:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    sub sp, sp, #80
+; WINDOWS-NEXT:    adrp x8, "__xmm@40710000000000000000000000000000"
+; WINDOWS-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; WINDOWS-NEXT:    ldr q1, [x8, :lo12:"__xmm@40710000000000000000000000000000"]
+; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    bl __multf3
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    mov x13, #-9223090561878065152 // =0x8001000000000000
+; WINDOWS-NEXT:    stp q1, q0, [sp, #32]
+; WINDOWS-NEXT:    ldp x9, x8, [sp, #32]
+; WINDOWS-NEXT:    ldp x14, x12, [sp, #48]
+; WINDOWS-NEXT:    ubfx x10, x8, #48, #15
+; WINDOWS-NEXT:    and x11, x8, #0x7fffffffffffffff
+; WINDOWS-NEXT:    cmp x10, #0
+; WINDOWS-NEXT:    add x10, x11, x13
+; WINDOWS-NEXT:    csel x8, x12, x8, eq
+; WINDOWS-NEXT:    csel x11, x14, x9, eq
+; WINDOWS-NEXT:    cmp x9, #1
+; WINDOWS-NEXT:    and x8, x8, #0x8000ffffffffffff
+; WINDOWS-NEXT:    sbcs xzr, x10, x13
+; WINDOWS-NEXT:    orr x8, x8, #0x3ffe000000000000
+; WINDOWS-NEXT:    stp x11, x8, [sp, #16]
+; WINDOWS-NEXT:    b.lo .LBB25_2
+; WINDOWS-NEXT:  // %bb.1:
+; WINDOWS-NEXT:    ldr q1, [sp, #16]
+; WINDOWS-NEXT:  .LBB25_2:
+; WINDOWS-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; WINDOWS-NEXT:    mov v0.16b, v1.16b
+; WINDOWS-NEXT:    add sp, sp, #80
+; WINDOWS-NEXT:    ret
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  %result.0 = extractvalue { fp128, i32 } %result, 0
+  ret fp128 %result.0
+}
+
+define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32_only_use_exp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr w0, [sp, #12]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_f128_i32_only_use_exp:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    sub sp, sp, #64
+; WINDOWS-NEXT:    adrp x8, "__xmm@40710000000000000000000000000000"
+; WINDOWS-NEXT:    str x30, [sp, #48] // 8-byte Spill
+; WINDOWS-NEXT:    ldr q1, [x8, :lo12:"__xmm@40710000000000000000000000000000"]
+; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    bl __multf3
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    mov x12, #-9223090561878065152 // =0x8001000000000000
+; WINDOWS-NEXT:    stp q1, q0, [sp, #16]
+; WINDOWS-NEXT:    ldp x9, x8, [sp, #16]
+; WINDOWS-NEXT:    ldp x11, x30, [sp, #40] // 8-byte Folded Reload
+; WINDOWS-NEXT:    ubfx x10, x8, #48, #15
+; WINDOWS-NEXT:    and x8, x8, #0x7fffffffffffffff
+; WINDOWS-NEXT:    and x11, x11, #0x7fff000000000000
+; WINDOWS-NEXT:    cmp x10, #0
+; WINDOWS-NEXT:    mov w10, #-114 // =0xffffff8e
+; WINDOWS-NEXT:    csel x11, x11, x8, eq
+; WINDOWS-NEXT:    csel w10, w10, wzr, eq
+; WINDOWS-NEXT:    add x8, x8, x12
+; WINDOWS-NEXT:    add x10, x10, x11, lsr #48
+; WINDOWS-NEXT:    mov w11, #-16382 // =0xffffc002
+; WINDOWS-NEXT:    cmp x9, #1
+; WINDOWS-NEXT:    sbcs xzr, x8, x12
+; WINDOWS-NEXT:    add w9, w10, w11
+; WINDOWS-NEXT:    csel w0, wzr, w9, lo
+; WINDOWS-NEXT:    add sp, sp, #64
+; WINDOWS-NEXT:    ret
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  %result.0 = extractvalue { fp128, i32 } %result, 1
+  ret i32 %result.0
+}
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
