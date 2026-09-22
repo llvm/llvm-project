@@ -48,15 +48,24 @@ static const MemRegion *getObjectUnderConstruction(const CallEvent &Call) {
 }
 
 static const MemRegion *getCXXDestructorThisRegion(const CallEvent &Call) {
-  return cast<CXXDestructorCall>(Call).getCXXThisVal().getAsRegion();
+  // An explicit destructor call (p->~T()) is a CXXMemberCall, not a
+  // CXXDestructorCall, so accept both.
+  if (const auto *Dtor = dyn_cast<CXXDestructorCall>(&Call))
+    return Dtor->getCXXThisVal().getAsRegion();
+  if (const auto *Member = dyn_cast<CXXMemberCall>(&Call);
+      Member && isa_and_nonnull<CXXDestructorDecl>(Member->getDecl()))
+    return Member->getCXXThisVal().getAsRegion();
+  return nullptr;
 }
 
 static bool isNotDeferLockUniqueLock(const CallEvent &Call) {
-  if (Call.getNumArgs() < 2)
+  // Use the constructor's declared parameter type to identify the defer_lock_t
+  // overload.
+  ArrayRef<ParmVarDecl *> Params = Call.parameters();
+  if (Params.size() < 2)
     return true;
-  const Expr *SecondArg = Call.getArgExpr(1);
-  QualType ArgType = SecondArg->getType().getNonReferenceType();
-  if (const auto *RD = ArgType->getAsRecordDecl();
+  QualType ParamType = Params[1]->getType().getNonReferenceType();
+  if (const auto *RD = ParamType->getAsRecordDecl();
       RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace())
     return false;
   return true;
@@ -83,18 +92,23 @@ struct CritSectionMarker {
   }
 };
 
-enum class Role {
+enum class RoleKind {
   Lock,
   Unlock,
 };
 
+// llvm::function_ref does not reject stateful functors/capturing lambdas, so
+// function pointers are used to avoid future issues coming from those objects'
+// lifetimes (more specifically to prevent such configuration entries from
+// compiling, increasing robustness).
 using GetRegionFn = const MemRegion *(*)(const CallEvent &);
 using FilterFn = bool (*)(const CallEvent &);
 
 struct ThreadingCallDescription {
-  Role Role;
+  RoleKind Role;
   GetRegionFn GetRegion = getFirstArgRegion;
-  FilterFn Filter = nullptr;
+  // Keep every call by default.
+  FilterFn Filter = [](const CallEvent &) { return true; };
 };
 
 class SuppressNonBlockingStreams : public BugReporterVisitor {
@@ -160,28 +174,28 @@ private:
       // presence of the name parts "std" and "lock"/"unlock".
       // TODO: Ensure that CallDescription understands inherited methods.
       {{CDM::CXXMethod, {"std", /*"mutex",*/ "lock"}, 0},
-       {Role::Lock, getCXXThisRegion}},
+       {RoleKind::Lock, getCXXThisRegion}},
       {{CDM::CXXMethod, {"std", /*"mutex",*/ "unlock"}, 0},
-       {Role::Unlock, getCXXThisRegion}},
-      {{CDM::CLibrary, {"pthread_mutex_lock"}, 1}, {Role::Lock}},
-      {{CDM::CLibrary, {"pthread_mutex_unlock"}, 1}, {Role::Unlock}},
-      {{CDM::CLibrary, {"mtx_lock"}, 1}, {Role::Lock}},
-      {{CDM::CLibrary, {"mtx_unlock"}, 1}, {Role::Unlock}},
-      {{CDM::CLibrary, {"pthread_mutex_trylock"}, 1}, {Role::Lock}},
-      {{CDM::CLibrary, {"mtx_trylock"}, 1}, {Role::Lock}},
-      {{CDM::CLibrary, {"mtx_timedlock"}, 1}, {Role::Lock}},
+       {RoleKind::Unlock, getCXXThisRegion}},
+      {{CDM::CLibrary, {"pthread_mutex_lock"}, 1}, {RoleKind::Lock}},
+      {{CDM::CLibrary, {"pthread_mutex_unlock"}, 1}, {RoleKind::Unlock}},
+      {{CDM::CLibrary, {"mtx_lock"}, 1}, {RoleKind::Lock}},
+      {{CDM::CLibrary, {"mtx_unlock"}, 1}, {RoleKind::Unlock}},
+      {{CDM::CLibrary, {"pthread_mutex_trylock"}, 1}, {RoleKind::Lock}},
+      {{CDM::CLibrary, {"mtx_trylock"}, 1}, {RoleKind::Lock}},
+      {{CDM::CLibrary, {"mtx_timedlock"}, 1}, {RoleKind::Lock}},
       {{CDM::CXXMethod, {"lock_guard", "lock_guard"}},
-       {Role::Lock, getObjectUnderConstruction}},
+       {RoleKind::Lock, getObjectUnderConstruction}},
       {{CDM::CXXMethod, {"lock_guard", "~lock_guard"}},
-       {Role::Unlock, getCXXDestructorThisRegion}},
+       {RoleKind::Unlock, getCXXDestructorThisRegion}},
       {{CDM::CXXMethod, {"unique_lock", "unique_lock"}},
-       {Role::Lock, getObjectUnderConstruction, isNotDeferLockUniqueLock}},
+       {RoleKind::Lock, getObjectUnderConstruction, isNotDeferLockUniqueLock}},
       {{CDM::CXXMethod, {"unique_lock", "~unique_lock"}},
-       {Role::Unlock, getCXXDestructorThisRegion}},
+       {RoleKind::Unlock, getCXXDestructorThisRegion}},
       {{CDM::CXXMethod, {"scoped_lock", "scoped_lock"}},
-       {Role::Lock, getObjectUnderConstruction}},
+       {RoleKind::Lock, getObjectUnderConstruction}},
       {{CDM::CXXMethod, {"scoped_lock", "~scoped_lock"}},
-       {Role::Unlock, getCXXDestructorThisRegion}},
+       {RoleKind::Unlock, getCXXDestructorThisRegion}},
   };
 
   const CallDescriptionSet BlockingFunctions{{CDM::CLibrary, {"sleep"}},
@@ -234,7 +248,7 @@ BlockInCriticalSectionChecker::lookupThreadingCall(
   const ThreadingCallDescription *Desc = ThreadingCalls.lookup(Call);
   if (!Desc)
     return nullptr;
-  if (Desc->Filter && !Desc->Filter(Call))
+  if (!Desc->Filter(Call))
     return nullptr;
   return Desc;
 }
@@ -309,19 +323,19 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
     return;
   }
 
+  // Constructors are modeled in evalCall, so skip them before the lookup.
+  if (isa<CXXConstructorCall>(Call))
+    return;
+
   const ThreadingCallDescription *Desc = lookupThreadingCall(Call);
   if (!Desc)
     return;
 
-  // RAII constructors are modeled in evalCall so they are not inlined.
-  if (isa<CXXConstructorCall>(Call))
-    return;
-
   switch (Desc->Role) {
-  case Role::Lock:
+  case RoleKind::Lock:
     handleLock(*Desc, Call, C, C.getState());
     break;
-  case Role::Unlock:
+  case RoleKind::Unlock:
     handleUnlock(*Desc, Call, C);
     break;
   }
@@ -329,9 +343,20 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
 
 bool BlockInCriticalSectionChecker::evalCall(const CallEvent &Call,
                                              CheckerContext &C) const {
-  const ThreadingCallDescription *Desc = lookupThreadingCall(Call);
-  if (!Desc || !isa<CXXConstructorCall>(Call))
+  // Only RAII constructors are modeled here, so skip everything else before
+  // the lookup.
+  if (!isa<CXXConstructorCall>(Call))
     return false;
+
+  const ThreadingCallDescription *Desc = lookupThreadingCall(Call);
+  if (!Desc)
+    return false;
+
+  // Every constructor entry in the configuration is a lock acquisition.
+  // This seems to be reasonable, but if modeling requires to relax this
+  // assumption, we can do so.
+  assert(Desc->Role == RoleKind::Lock &&
+         "Constructor threading call must be a lock");
 
   ProgramStateRef State = C.getState();
   // Escape the object under construction to model the side-effects of the
