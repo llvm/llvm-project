@@ -260,19 +260,9 @@ enum FeatureIDs {
 // various phys regs won't be available. It's easier (maintenance-wise) to
 // bulk-reset the state of the evaluator each time we are about to use it
 // again.
-template <typename T> size_t getTotalSize(ArrayRef<int64_t> Shape) {
-  size_t Ret = sizeof(T);
-  for (const auto V : Shape)
-    Ret *= V;
-  return Ret;
-}
-
-void resetInputs(MLModelRunner &Runner, ArrayRef<int64_t> PerLiveRangeShape) {
-#define _RESET(TYPE, NAME, SHAPE, __)                                          \
-  std::memset(Runner.getTensorUntyped(FeatureIDs::NAME), 0,                    \
-              getTotalSize<TYPE>(SHAPE));
-  RA_EVICT_FEATURES_LIST(_RESET)
-#undef _RESET
+void resetInputs(MLModelRunner &Runner, ArrayRef<TensorSpec> InputFeatures) {
+  for (auto [I, Spec] : enumerate(InputFeatures))
+    std::memset(Runner.getTensorUntyped(I), 0, Spec.getTotalTensorBufferSize());
 }
 
 // Per-live interval components that get aggregated into the feature values
@@ -288,8 +278,6 @@ struct LIFeatureComponents {
   bool IsRemat = false;
 };
 
-static constexpr unsigned ExpectedMaxInterferingIntervals = 32;
-
 using CandidateRegList =
     SmallVector<std::pair<MCRegister, bool>, CompiledModelNumColumns>;
 using FeaturesListNormalizer =
@@ -299,7 +287,7 @@ using FeaturesListNormalizer =
 class MLEvictAdvisor : public RegAllocEvictionAdvisor {
 public:
   MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-                 MLModelRunner *Runner, int64_t NumColumns,
+                 MLModelRunner *Runner, ArrayRef<TensorSpec> InputFeatures,
                  const MachineBlockFrequencyInfo &MBFI,
                  const MachineLoopInfo &Loops);
 
@@ -308,10 +296,9 @@ protected:
     return static_cast<const RegAllocEvictionAdvisor &>(DefaultAdvisor);
   }
 
+  const ArrayRef<TensorSpec> InputFeatures;
   const size_t NumColumns;
   const size_t CandidateVirtRegPos = NumColumns - 1;
-  const SmallVector<int64_t, 2> PerLiveRangeShape{
-      1, static_cast<int64_t>(NumColumns)};
 
   // The assumption is that if the Runner could not be constructed, we emit-ed
   // error, and we shouldn't be asking for it here.
@@ -430,8 +417,7 @@ public:
               : getRequiredNumColumns(*MF.getSubtarget().getRegisterInfo(),
                                       RA.getRegClassInfo());
       const std::vector<int64_t> PerLiveRangeShape{1, NumColumns};
-      const std::vector<TensorSpec> InputFeatures{
-          RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
+      InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
       Runner = createReleaseModeModelRunner<CompiledModelType,
                                             HaveMLIRLoweringRegAlloc>(
           MF.getFunction().getContext(), InputFeatures, DecisionName,
@@ -440,11 +426,12 @@ public:
     }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
-    return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), NumColumns,
+    return std::make_unique<MLEvictAdvisor>(MF, RA, Runner.get(), InputFeatures,
                                             *MBFI, *Loops);
   }
 
 private:
+  std::vector<TensorSpec> InputFeatures;
   std::unique_ptr<MLModelRunner> Runner;
   int64_t NumColumns = CompiledModelNumColumns;
 };
@@ -495,10 +482,10 @@ class DevelopmentModeEvictAdvisor : public MLEvictAdvisor {
 public:
   DevelopmentModeEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                               MLModelRunner *Runner,
+                              ArrayRef<TensorSpec> InputFeatures,
                               const MachineBlockFrequencyInfo &MBFI,
                               const MachineLoopInfo &Loops, Logger *Log)
-      : MLEvictAdvisor(MF, RA, Runner, CompiledModelNumColumns, MBFI, Loops),
-        Log(Log) {}
+      : MLEvictAdvisor(MF, RA, Runner, InputFeatures, MBFI, Loops), Log(Log) {}
 
 private:
   int64_t tryFindEvictionCandidatePosition(
@@ -587,7 +574,7 @@ public:
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
     return std::make_unique<DevelopmentModeEvictAdvisor>(
-        MF, RA, Runner.get(), *MBFI, *Loops, Log.get());
+        MF, RA, Runner.get(), InputFeatures, *MBFI, *Loops, Log.get());
   }
 
 private:
@@ -641,10 +628,12 @@ float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
 }
 
 MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
-                               MLModelRunner *Runner, int64_t NumColumns,
+                               MLModelRunner *Runner,
+                               ArrayRef<TensorSpec> InputFeatures,
                                const MachineBlockFrequencyInfo &MBFI,
                                const MachineLoopInfo &Loops)
-    : RegAllocEvictionAdvisor(MF, RA), NumColumns(NumColumns),
+    : RegAllocEvictionAdvisor(MF, RA), InputFeatures(InputFeatures),
+      NumColumns(InputFeatures[FeatureIDs::mask].shape()[1]),
       DefaultAdvisor(MF, RA), Runner(std::move(Runner)), MBFI(MBFI),
       Loops(Loops), InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
   assert(this->Runner);
@@ -685,8 +674,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   // The cascade tracking is the same as in the default advisor
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
-  SmallVector<const LiveInterval *, ExpectedMaxInterferingIntervals>
-      InterferingIntervals;
+  SmallVector<const LiveInterval *, 32> InterferingIntervals;
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // Different from the default heuristic, we don't make any assumptions
@@ -765,7 +753,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   size_t Available = 0;
   // Make sure we don't have leftover partial state from an attempt where we
   // had no available candidates and bailed out early.
-  resetInputs(*Runner, PerLiveRangeShape);
+  resetInputs(*Runner, InputFeatures);
 
   // Track the index->register mapping because AllocationOrder doesn't do that
   // and we'd have to scan it.
