@@ -498,11 +498,11 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1250-NEXT:  .LBB3_1: ; %for.body
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v4, s0
+; GFX1250-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
+; GFX1250-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
 ; GFX1250-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 16
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, 16
-; GFX1250-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
-; GFX1250-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1250-NEXT:    s_wait_dscnt 0x1
 ; GFX1250-NEXT:    ds_store_2addr_b32 v4, v0, v1 offset0:2 offset1:3
@@ -684,13 +684,13 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], 0xb0, v[2:3]
 ; GFX1250-NEXT:  .LBB4_2: ; %for.body
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[2:3]
 ; GFX1250-NEXT:    flat_prefetch_b8 v[2:3] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], 16, v[2:3]
+; GFX1250-NEXT:    flat_load_b128 v[4:7], v[4:5]
 ; GFX1250-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX1250-NEXT:    flat_load_b128 v[4:7], v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b128 v[0:1], v[4:7]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0

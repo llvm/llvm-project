@@ -25,9 +25,9 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    v_lshl_add_u32 v12, v10, 5, s1
 ; CHECK-NEXT:    v_lshl_add_u32 v13, v10, 8, s1
 ; CHECK-NEXT:    v_lshl_add_u32 v14, v10, 7, s1
-; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    ds_load_b64 v[0:1], v11 offset:4
 ; CHECK-NEXT:    ds_load_b64 v[2:3], v12
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

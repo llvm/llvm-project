@@ -133,6 +133,13 @@ private:
   /// instructions, return the number of stall cycles until one shadow clears.
   unsigned checkMultiShadowHazard(const MachineInstr &MI) const;
 
+  /// Check for va_sdst / va_ssrc hazards.
+  /// When not using SCHED_MODE 0, MI450 pessimistically assumes that there will
+  /// be hazards in certain scenarios when VALU read/write SGPRs. This models
+  /// that pessimism. Returns cycles stall cycles until va_sdst / va_ssrc hazard
+  /// clears.
+  unsigned checkVASSrcVASDstHazards(const MachineInstr &MI) const;
+
   /// Update WMMA window state when a WMMA instruction is emitted.
   void updateWMMAWindowState(const MachineInstr &MI);
 

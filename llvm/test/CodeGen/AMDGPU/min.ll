@@ -861,12 +861,13 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; GFX1250-NEXT:    s_min_i32 s2, s2, s3
 ; GFX1250-NEXT:    s_ashr_i32 s7, s7, 8
 ; GFX1250-NEXT:    v_perm_b32 v0, s4, s2, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX1250-NEXT:    s_ashr_i32 s5, s5, 8
 ; GFX1250-NEXT:    s_min_i32 s3, s9, s8
 ; GFX1250-NEXT:    s_min_i32 s2, s5, s7
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_perm_b32 v1, s2, s3, v1
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX1250-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
