@@ -65,6 +65,8 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::AppleARM64:
   case TargetCXXABI::GenericARM:
     return CreateCIRGenItaniumCXXABI(cgm);
+  case TargetCXXABI::Microsoft:
+    return CreateCIRGenMicrosoftCXXABI(cgm);
 
   case TargetCXXABI::Fuchsia:
   case TargetCXXABI::iOS:
@@ -72,7 +74,6 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   case TargetCXXABI::GenericMIPS:
   case TargetCXXABI::WebAssembly:
   case TargetCXXABI::XL:
-  case TargetCXXABI::Microsoft:
     cgm.errorNYI("createCXXABI: C++ ABI kind");
     return nullptr;
   }
@@ -1705,6 +1706,20 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (fd->isInlineBuiltinDeclaration())
     return true;
 
+  if (codeGenOpts.OptimizationLevel == 0 && !fd->hasAttr<AlwaysInlineAttr>())
+    return false;
+
+  // We don't import function bodies from other named module units since that
+  // behavior may break ABI compatibility of the current unit.
+  if (const Module *m = fd->getOwningModule();
+      m && m->getTopLevelModule()->isNamedModule() &&
+      getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
+    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+  }
+
+  if (fd->hasAttr<NoInlineAttr>())
+    return false;
+
   // PR9614 / glibc btowc workaround: an available_externally function whose
   // body just calls itself (via asm label or __builtin_* lowering on the
   // same name) is not a valid stand-in for the real implementation.  Drop
@@ -3233,7 +3248,6 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
                                             cir::FuncOp func, bool isThunk) {
   // TODO(cir): More logic of constructAttributeList is needed.
   cir::CallingConv callingConv;
-  cir::SideEffect sideEffect;
 
   // TODO(cir): The current list should be initialized with the extra function
   // attributes, but we don't have those yet.  For now, the PAL is initialized
@@ -3244,7 +3258,7 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   std::vector<mlir::NamedAttrList> argAttrs(info.arguments().size());
   mlir::NamedAttrList retAttrs{};
   constructAttributeList(func.getName(), info, globalDecl, pal, argAttrs,
-                         retAttrs, callingConv, sideEffect,
+                         retAttrs, callingConv,
                          /*attrOnCallSite=*/false, isThunk);
 
   for (mlir::NamedAttribute attr : pal)
@@ -3957,6 +3971,24 @@ void CIRGenModule::release() {
                          builder.getStringAttr(fnName));
     }
   }
+
+  // Serialize the lowering-relevant LangOptions onto the ModuleOp,
+  // unconditionally, so a reloaded .cir module is self-describing. See
+  // #cir.lowering_lang_options.
+  theModule->setAttr(
+      cir::CIRDialect::getLoweringLangOptionsAttrName(),
+      cir::LoweringLangOptionsAttr::get(
+          &getMLIRContext(),
+          /*exceptions=*/langOpts.Exceptions,
+          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
+          /*cuda=*/langOpts.CUDA,
+          /*cuda_is_device=*/langOpts.CUDAIsDevice,
+          /*hip=*/langOpts.HIP,
+          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
+          /*openmp=*/langOpts.OpenMP != 0,
+          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
+          /*clang_abi_compat=*/
+          static_cast<int32_t>(langOpts.getClangABICompat())));
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.
