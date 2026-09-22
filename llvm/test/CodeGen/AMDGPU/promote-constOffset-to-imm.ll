@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgpu9.0a < %s | FileCheck -check-prefixes=GFX9,GFX90A %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
-; RUN: llc -mtriple=amdgpu9.42 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GFX942-FLATSCR %s
-; RUN: llc -mtriple=amdgpu12.00 -mattr=+enable-flat-scratch < %s | FileCheck -check-prefixes=GFX12-FLATSCR %s
+; RUN: llc -mtriple=amdgpu9.42 < %s | FileCheck -check-prefixes=GFX942-FLATSCR %s
+; RUN: llc -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GFX12-FLATSCR %s
 
 declare i64 @_Z13get_global_idj(i32) #0
 declare i32 @llvm.amdgcn.workitem.id.x()
