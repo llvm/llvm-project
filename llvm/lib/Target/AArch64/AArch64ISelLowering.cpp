@@ -20321,12 +20321,21 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 int64_t
 AArch64TargetLowering::getPreferredLargeGEPBaseOffset(int64_t MinOffset,
                                                       int64_t MaxOffset) const {
-  int64_t HighPart = MinOffset & ~0xfffULL;
-  if (MinOffset >> 12 == MaxOffset >> 12 && isLegalAddImmediate(HighPart)) {
-    // Rebase the value to an integer multiple of imm12.
-    return HighPart;
+  if (MinOffset >= 0) {
+    // Positive offsets: rebase to a 4096-byte-aligned high part so the
+    // residual fits LDR/STR's 12-bit unsigned scaled immediate.
+    int64_t HighPart = MinOffset & ~0xfffULL;
+    if (MinOffset >> 12 == MaxOffset >> 12 && isLegalAddImmediate(HighPart))
+      return HighPart;
+  } else {
+    // Negative offsets: there is no natural "aligned" preferred base like
+    // positive field offsets in a struct, so rebase to the minimum offset
+    // directly. All residuals (Offset - MinOffset) are then non-negative,
+    // and CGP's own isLegalAddressingMode check validates each one fits
+    // LDR/STR's addressing range.
+    if (isLegalAddImmediate(MinOffset))
+      return MinOffset;
   }
-
   return 0;
 }
 
