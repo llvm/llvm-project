@@ -39,6 +39,7 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.simd
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.config
     libc.src.__support.macros.is_defined

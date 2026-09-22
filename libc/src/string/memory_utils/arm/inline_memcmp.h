@@ -23,7 +23,7 @@
 #include "src/string/memory_utils/utils.h"
 
 #if defined(LIBC_TARGET_CPU_HAS_MVE)
-#include <arm_mve.h>
+#include "src/__support/CPP/simd.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -33,17 +33,22 @@ namespace LIBC_NAMESPACE_DECL {
                                                                 CPtr p2,
                                                                 size_t count) {
 #if defined(LIBC_TARGET_CPU_HAS_MVE)
+  using Bytes = cpp::simd<uint8_t, 16>;
+  using Mask = cpp::simd<bool, 16>;
+  cpp::simd<uint32_t, 16> lanes = cpp::iota<uint32_t, 16>();
   // Cast to raw address to avoid ub:expr.add.out.of.bounds
   uintptr_t p1_addr = cpp::bit_cast<uintptr_t>(p1);
   uintptr_t p2_addr = cpp::bit_cast<uintptr_t>(p2);
   while (count != 0) {
     // Predication handles the final partial vector without reading past count.
-    mve_pred16_t active = vctp8q(count);
-    uint8x16_t a = vldrbq_z_u8(cpp::bit_cast<const uint8_t *>(p1_addr), active);
-    uint8x16_t b = vldrbq_z_u8(cpp::bit_cast<const uint8_t *>(p2_addr), active);
-    unsigned mismatches = vcmpneq_m_u8(a, b, active);
-    if (mismatches != 0) {
-      const size_t offset = cpp::countr_zero(mismatches);
+    Mask active = cpp::simd_cast<bool>(lanes < count);
+    Bytes a =
+        cpp::load_masked<Bytes>(active, cpp::bit_cast<CPtr>(p1_addr), Bytes{});
+    Bytes b =
+        cpp::load_masked<Bytes>(active, cpp::bit_cast<CPtr>(p2_addr), Bytes{});
+    Mask mismatches = cpp::simd_cast<bool>(a != b) & active;
+    if (cpp::any_of(mismatches)) {
+      size_t offset = cpp::find_first_set(mismatches);
       return static_cast<int32_t>(cpp::bit_cast<CPtr>(p1_addr)[offset]) -
              static_cast<int32_t>(cpp::bit_cast<CPtr>(p2_addr)[offset]);
     }
