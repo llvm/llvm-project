@@ -159,8 +159,7 @@ void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
   }
 
   // Handle feature strings
-  if (!Info.Features.empty()) {
-    assert(Info.Features.size() == 1 && "one feature per version for now");
+  if (Info.Features.size() == 1) {
     StringRef Feature = Info.Features[0];
     assert(Feature.starts_with("+") || Feature.starts_with("-"));
 
