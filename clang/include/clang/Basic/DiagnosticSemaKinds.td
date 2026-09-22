@@ -13716,7 +13716,8 @@ def warn_hlsl_duplicate_interpolation : Warning<
   "duplicate interpolation modifier %0">,
   InGroup<DuplicateDeclSpecifier>;
 def warn_hlsl_interpolation_override : Warning<
-  "interpolation modifier '%0' overrides '%1'">,
+  "interpolation modifier '%select{centroid|sample}0' overrides "
+  "'%select{center|centroid}1'">,
   InGroup<IgnoredAttributes>;
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "

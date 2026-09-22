@@ -827,20 +827,6 @@ SemaHLSL::mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
   return HLSLParamModifierAttr::Create(getASTContext(), AL);
 }
 
-static StringRef
-getInterpolationSamplingLocationName(InterpolationModifier Location) {
-  switch (Location) {
-  case InterpolationModifier::Sample:
-    return "sample";
-  case InterpolationModifier::Centroid:
-    return "centroid";
-  case InterpolationModifier::Center:
-    return "center";
-  default:
-    llvm_unreachable("expected an explicit interpolation sampling location");
-  }
-}
-
 void SemaHLSL::handleInterpolationModifierAttr(Decl *D, const ParsedAttr &AL) {
   InterpolationModifier Modifier;
   switch (static_cast<HLSLInterpolationModifierAttr::Spelling>(
@@ -887,10 +873,10 @@ void SemaHLSL::handleInterpolationModifierAttr(Decl *D, const ParsedAttr &AL) {
           llvm::hlsl::getInterpolationSamplingLocation(Modifier);
       if (any(OldLocation) && any(NewLocation)) {
         Diag(AL.getLoc(), diag::warn_hlsl_interpolation_override)
-            << getInterpolationSamplingLocationName(
-                   std::max(OldLocation, NewLocation))
-            << getInterpolationSamplingLocationName(
-                   std::min(OldLocation, NewLocation));
+            << (std::max(OldLocation, NewLocation) ==
+                InterpolationModifier::Sample)
+            << (std::min(OldLocation, NewLocation) ==
+                InterpolationModifier::Centroid);
       }
     }
     D->dropAttr<HLSLInterpolationModifierAttr>();
