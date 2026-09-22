@@ -104,9 +104,9 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
   assert(node_up && "ASTNodeUP must not contain a nullptr");
 
   if (error) {
-    LLDB_LOGF(GetLog(LLDBLog::Expressions),
-              "[DILParser::Parse] DIL parser failed:\n%s",
-              llvm::toStringWithoutConsuming(error).c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions),
+             "[DILParser::Parse] DIL parser failed:\n{0}",
+             llvm::toStringWithoutConsuming(error).c_str());
     return error;
   }
 

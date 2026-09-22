@@ -205,17 +205,17 @@ llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
     if (llvm::Expected<Token> t = Lex(expr, remainder)) {
       Token token = *t;
       if (llvm::Error error = IsNotAllowedByMode(expr, token, mode)) {
-        LLDB_LOGF(GetLog(LLDBLog::Expressions),
-                  "[DILLexer::Create] DIL mode restriction:\n%s",
-                  llvm::toStringWithoutConsuming(error).c_str());
+        LLDB_LOG(GetLog(LLDBLog::Expressions),
+                 "[DILLexer::Create] DIL mode restriction:\n{0}",
+                 llvm::toStringWithoutConsuming(error).c_str());
         return error;
       }
       tokens.push_back(std::move(token));
     } else {
       auto error = t.takeError();
-      LLDB_LOGF(GetLog(LLDBLog::Expressions),
-                "[DILLexer::Create] DIL lexer failed:\n%s",
-                llvm::toStringWithoutConsuming(error).c_str());
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "[DILLexer::Create] DIL lexer failed:\n{0}",
+               llvm::toStringWithoutConsuming(error).c_str());
       return error;
     }
   } while (tokens.back().GetKind() != Token::eof);
