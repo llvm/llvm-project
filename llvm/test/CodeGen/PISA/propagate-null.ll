@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=pisa -stop-after=pisa-propagate-null-pointers | FileCheck %s
+; RUN: llc < %s -mtriple=pisa -stop-after=pisa-propagate-null-pointers \
+; RUN:     | FileCheck %s
 
 ; CHECK: @global_null_ptr = dso_local local_unnamed_addr addrspace(1) global ptr addrspace(3) inttoptr (i32 -1 to ptr addrspace(3)), align 4
 ; CHECK-DAG: @shared_null = {{.*}} addrspace(3) inttoptr (i32 -1 to ptr addrspace(3))

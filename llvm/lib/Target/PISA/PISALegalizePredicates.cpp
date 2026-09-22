@@ -38,6 +38,8 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Debug.h"
 
+#include <functional>
+
 #define DEBUG_TYPE "pisa-legalize-predicates"
 #define DEBUG_NAME "PISA Legalize Predicates"
 
@@ -181,7 +183,7 @@ private:
 // -----------------------------------------------------------------------------
 
 bool PISALegalizePredicatesImpl::isPromotable(Register R) {
-  auto It = Cache.find(R);
+  DenseMap<Register, Status>::iterator It = Cache.find(R);
   if (It != Cache.end())
     return It->second == Yes;
 
@@ -267,7 +269,7 @@ void PISALegalizePredicatesImpl::invalidateUnhandled() {
   bool Changed = true;
   while (Changed) {
     Changed = false;
-    for (auto &E : Cache) {
+    for (DenseMap<Register, Status>::value_type &E : Cache) {
       if (E.second != Yes)
         continue;
       Register R = E.first;
@@ -292,15 +294,12 @@ void PISALegalizePredicatesImpl::invalidateUnhandled() {
       // Phase 3 doesn't recursively try to promote a non-promotable reg.
       MachineInstr *Def = MRI.getVRegDef(R);
       assert(Def);
-      auto IsOperandPromotable = [&](Register Op) {
-        return Cache.lookup(Op) == Yes;
-      };
       switch (Def->getOpcode()) {
       case TargetOpcode::G_AND:
       case TargetOpcode::G_OR:
       case TargetOpcode::G_XOR: {
-        if (!IsOperandPromotable(Def->getOperand(1).getReg()) ||
-            !IsOperandPromotable(Def->getOperand(2).getReg())) {
+        if (Cache.lookup(Def->getOperand(1).getReg()) != Yes ||
+            Cache.lookup(Def->getOperand(2).getReg()) != Yes) {
           E.second = No;
           Changed = true;
         }
@@ -312,7 +311,7 @@ void PISALegalizePredicatesImpl::invalidateUnhandled() {
       case TargetOpcode::G_TRUNC:
       case TargetOpcode::G_EXTRACT_VECTOR_ELT:
       case TargetOpcode::COPY: {
-        if (!IsOperandPromotable(Def->getOperand(1).getReg())) {
+        if (Cache.lookup(Def->getOperand(1).getReg()) != Yes) {
           E.second = No;
           Changed = true;
         }
@@ -328,7 +327,7 @@ void PISALegalizePredicatesImpl::invalidateUnhandled() {
 }
 
 bool PISALegalizePredicatesImpl::tryGetDomain(Register R, Domain &Out) {
-  auto It = DomMemo.find(R);
+  DenseMap<Register, unsigned char>::iterator It = DomMemo.find(R);
   if (It != DomMemo.end()) {
     switch (It->second) {
     case 1:
@@ -345,12 +344,12 @@ bool PISALegalizePredicatesImpl::tryGetDomain(Register R, Domain &Out) {
     }
   }
   DomMemo[R] = 0; // visiting -- a cycle reaching back here resolves to bail.
-  auto Set = [&](Domain D) {
+  std::function<bool(Domain)> Set = [&](Domain D) {
     DomMemo[R] = D == Domain::Any ? 1 : D == Domain::Sext ? 2 : 3;
     Out = D;
     return true;
   };
-  auto Bail = [&]() {
+  std::function<bool()> Bail = [&]() {
     DomMemo[R] = 4;
     return false;
   };
@@ -411,7 +410,7 @@ bool PISALegalizePredicatesImpl::tryGetDomain(Register R, Domain &Out) {
 // -----------------------------------------------------------------------------
 
 Register PISALegalizePredicatesImpl::getOrBuildPromoted(Register R) {
-  auto It = Promoted.find(R);
+  DenseMap<Register, Register>::iterator It = Promoted.find(R);
   if (It != Promoted.end())
     return It->second;
 
@@ -448,8 +447,9 @@ Register PISALegalizePredicatesImpl::getOrBuildPromoted(Register R) {
       Register LhsReg = Def->getOperand(2).getReg();
       Register RhsReg = Def->getOperand(3).getReg();
 
-      auto ClassifyOperands = [&](Register A, Register B, Register &PromOp,
-                                  bool &IsAllOnes) -> bool {
+      std::function<bool(Register, Register, Register &, bool &)>
+          ClassifyOperands = [&](Register A, Register B, Register &PromOp,
+                                 bool &IsAllOnes) {
         if (!isPromotable(A))
           return false;
         MachineInstr *BDef = MRI.getVRegDef(B);
@@ -482,7 +482,7 @@ Register PISALegalizePredicatesImpl::getOrBuildPromoted(Register R) {
           return PromS32;
         }
         setInsertPointAfter(*Def);
-        auto AllOnesC = B.buildConstant(LLT::integer(32), -1);
+        MachineInstrBuilder AllOnesC = B.buildConstant(LLT::integer(32), -1);
         B.buildXor(Dst, PromS32, AllOnesC.getReg(0));
         break;
       }
@@ -519,7 +519,7 @@ Register PISALegalizePredicatesImpl::getOrBuildPromoted(Register R) {
     (void)OK;
     assert(OK);
     setInsertPointAfter(*Def);
-    auto NewC = B.buildConstant(NewTy, Val);
+    MachineInstrBuilder NewC = B.buildConstant(NewTy, Val);
     Promoted[R] = NewC.getReg(0);
     return NewC.getReg(0);
   }
@@ -571,7 +571,7 @@ Register PISALegalizePredicatesImpl::restoreS1(Register PromotedReg,
   // Each sink gets its own restoration -- sharing across sinks would need
   // dominance analysis and is not worth the complexity in v1.
   setInsertPointBefore(InsertBeforeMI);
-  auto Zero = B.buildConstant(LLT::integer(32), 0);
+  MachineInstrBuilder Zero = B.buildConstant(LLT::integer(32), 0);
   Register Dst = MRI.createGenericVirtualRegister(LLT::integer(1));
   B.buildICmp(CmpInst::ICMP_NE, Dst, PromotedReg, Zero.getReg(0));
   return Dst;
@@ -584,8 +584,8 @@ bool PISALegalizePredicatesImpl::run() {
   // recursively when we encounter a use whose own operands haven't been
   // classified yet.
   SmallVector<MachineInstr *, 32> Cmps;
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       unsigned Opc = MI.getOpcode();
       if (Opc != TargetOpcode::G_ICMP && Opc != TargetOpcode::G_FCMP)
         continue;
@@ -618,7 +618,7 @@ bool PISALegalizePredicatesImpl::run() {
       if (UI->getNumDefs() < 1)
         continue;
       Register UR = UI->getOperand(0).getReg();
-      auto It = Cache.find(UR);
+      DenseMap<Register, Status>::iterator It = Cache.find(UR);
       if (It != Cache.end())
         continue; // already classified
       if (isPromotable(UR))
@@ -638,7 +638,7 @@ bool PISALegalizePredicatesImpl::run() {
     while (Changed) {
       Changed = false;
       DomMemo.clear();
-      for (auto &E : Cache) {
+      for (DenseMap<Register, Status>::value_type &E : Cache) {
         if (E.second != Yes)
           continue;
         Domain D;
@@ -676,7 +676,7 @@ bool PISALegalizePredicatesImpl::run() {
   SmallVector<MachineInstr *, 32> ToRewriteDefs;
   bool HasVectorExtract = false;
   unsigned NumBitwise = 0;
-  for (auto &E : Cache) {
+  for (DenseMap<Register, Status>::value_type &E : Cache) {
     if (E.second != Yes)
       continue;
     MachineInstr *Def = MRI.getVRegDef(E.first);
@@ -737,7 +737,7 @@ bool PISALegalizePredicatesImpl::run() {
   // scalar path.
   bool HasEscapingSink = false;
   bool HasPredicateSink = false;
-  for (auto &E : Cache) {
+  for (DenseMap<Register, Status>::value_type &E : Cache) {
     if (E.second != Yes)
       continue;
     Register R = E.first;
@@ -754,11 +754,11 @@ bool PISALegalizePredicatesImpl::run() {
         continue;
       // Clean eq/ne sink: redirected to the s32 promoted forms, no round trip.
       if (UI->getOpcode() == TargetOpcode::G_ICMP) {
-        auto Pred = (CmpInst::Predicate)UI->getOperand(1).getPredicate();
-        auto Qualifies = [&](Register X) { return Cache.lookup(X) == Yes; };
+        CmpInst::Predicate Pred =
+            (CmpInst::Predicate)UI->getOperand(1).getPredicate();
         if ((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-            Qualifies(UI->getOperand(2).getReg()) &&
-            Qualifies(UI->getOperand(3).getReg())) {
+            Cache.lookup(UI->getOperand(2).getReg()) == Yes &&
+            Cache.lookup(UI->getOperand(3).getReg()) == Yes) {
           HasEscapingSink = true;
           continue;
         }
@@ -794,7 +794,7 @@ bool PISALegalizePredicatesImpl::run() {
   // a register is a *value* in Promoted, not a key, so Promoted.count() alone
   // would miss it).
   DenseSet<Register> PromotedVals;
-  for (auto &P : Promoted)
+  for (DenseMap<Register, Register>::value_type &P : Promoted)
     PromotedVals.insert(P.second);
 
   // Walk each promoted register's uses; rewrite out-of-set sinks via a
@@ -803,7 +803,7 @@ bool PISALegalizePredicatesImpl::run() {
   //
   // Only "eraseable" originals require this -- cmps/constants/copies remain
   // alive in MIR and feed their sinks unchanged.
-  for (auto &E : Cache) {
+  for (DenseMap<Register, Status>::value_type &E : Cache) {
     if (E.second != Yes)
       continue;
     Register OrigReg = E.first;
@@ -856,15 +856,15 @@ bool PISALegalizePredicatesImpl::run() {
       // restoring each operand back to i1 -- which would cost a ucmp.ne plus a
       // select per operand -- and keeps the cmp's i1 result feeding its sink.
       if (UI->getOpcode() == TargetOpcode::G_ICMP) {
-        auto Pred = (CmpInst::Predicate)UI->getOperand(1).getPredicate();
+        CmpInst::Predicate Pred =
+            (CmpInst::Predicate)UI->getOperand(1).getPredicate();
         // An operand qualifies if it is a promoted chain (a key of Promoted) or
         // already its s32 promoted form (redirected in an earlier iteration).
-        auto Qualifies = [&](Register X) {
-          return Promoted.count(X) || PromotedVals.count(X);
-        };
+        Register LHS = UI->getOperand(2).getReg();
+        Register RHS = UI->getOperand(3).getReg();
         if ((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
-            Qualifies(UI->getOperand(2).getReg()) &&
-            Qualifies(UI->getOperand(3).getReg())) {
+            (Promoted.count(LHS) || PromotedVals.count(LHS)) &&
+            (Promoted.count(RHS) || PromotedVals.count(RHS))) {
           U->setReg(NewReg);
           ++NumRestorations;
           continue;
@@ -892,7 +892,7 @@ bool PISALegalizePredicatesImpl::run() {
           // to ucmp + sel + trunc, whereas `and , 1` keeps the value in a GP
           // register and matches the legalizer's fused boolean-mask lowering.
           setInsertPointBefore(*UI);
-          auto One = B.buildConstant(LLT::integer(32), 1);
+          MachineInstrBuilder One = B.buildConstant(LLT::integer(32), 1);
           Register Masked = MRI.createGenericVirtualRegister(LLT::integer(32));
           B.buildAnd(Masked, NewReg, One.getReg(0));
           unsigned W = OrigTy.getSizeInBits();
@@ -933,7 +933,7 @@ void PISALegalizePredicatesImpl::eraseDeadOriginals() {
   // Collect erasable candidates into a worklist. Iterate until no more
   // instructions become dead (removing a def may free its operands).
   SmallVector<Register, 16> Worklist;
-  for (auto &E : Cache) {
+  for (DenseMap<Register, Status>::value_type &E : Cache) {
     if (E.second != Yes)
       continue;
     Register R = E.first;
