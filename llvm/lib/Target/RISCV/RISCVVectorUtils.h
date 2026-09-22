@@ -1,4 +1,4 @@
-//===-- RISCVPerfectShuffle.h - RISC-V shuffle helpers ---------*- C++ -*-===//
+//===-- RISCVVectorUtils.h - RISC-V vector utilities ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines helpers for recognizing vector shuffle masks that can be
-// lowered with RISC-V vector permutation instructions.
+// This file defines RISC-V vector utilities shared across the backend,
+// including helpers for recognizing shuffle masks supported by vector
+// permutation instructions.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_RISCV_RISCVPERFECTSHUFFLE_H
-#define LLVM_LIB_TARGET_RISCV_RISCVPERFECTSHUFFLE_H
+#ifndef LLVM_LIB_TARGET_RISCV_RISCVVECTORUTILS_H
+#define LLVM_LIB_TARGET_RISCV_RISCVVECTORUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/MathExtras.h"
@@ -68,4 +69,4 @@ inline bool isPairOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
 }
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_RISCV_RISCVPERFECTSHUFFLE_H
+#endif // LLVM_LIB_TARGET_RISCV_RISCVVECTORUTILS_H

@@ -8,7 +8,7 @@
 
 #include "RISCVTargetTransformInfo.h"
 #include "MCTargetDesc/RISCVMatInt.h"
-#include "RISCVPerfectShuffle.h"
+#include "RISCVVectorUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
@@ -2086,17 +2086,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (InterleavedTy->getScalarSizeInBits() == 1)
       break;
 
-    if (FixedVectorType *FVT = dyn_cast<FixedVectorType>(InterleavedTy)) {
+    if (auto *FVT = dyn_cast<FixedVectorType>(InterleavedTy)) {
       if (IsInterleave) {
         unsigned VF = FVT->getNumElements() / 2;
-        FixedVectorType *HalfFVT =
-            FixedVectorType::getHalfElementsVectorType(FVT);
+        auto *HalfFVT = FixedVectorType::getHalfElementsVectorType(FVT);
         return getShuffleCost(TTI::SK_PermuteTwoSrc, FVT, HalfFVT, CostKind,
                               createInterleaveMask(VF, 2), 0, nullptr);
       }
 
-      FixedVectorType *HalfFVT =
-          FixedVectorType::getHalfElementsVectorType(FVT);
+      auto *HalfFVT = FixedVectorType::getHalfElementsVectorType(FVT);
       unsigned VF = HalfFVT->getNumElements();
       InstructionCost Cost = 0;
       for (unsigned Start = 0; Start != 2; ++Start)
