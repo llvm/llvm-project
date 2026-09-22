@@ -157,6 +157,10 @@ libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
 
+# OpenMP version and date
+add_compile_definitions(KMP_SPEC_VERSION=${LIBOMP_VERSION_MAJOR}.${LIBOMP_VERSION_MINOR})
+add_compile_definitions(KMP_SPEC_DATE=${LIBOMP_OMP_YEAR_MONTH})
+
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
 add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
