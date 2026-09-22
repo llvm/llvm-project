@@ -5,30 +5,32 @@
 ! the scope of the module, with a linkage name, and visible outside this compile
 ! unit.
 
-! The compile unit names the file as it was given on the command line, while
-! anything that has a source location names it as the location does.
-! CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: {{.*}}debug-module-constant.f90{{.*}})
-! CHECK-DAG: ![[FILE2:.*]] = !DIFile(filename: {{.*}}debug-module-constant.f90{{.*}})
-! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}file: ![[FILE]]{{.*}})
-! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper"{{.*}})
+! Two DIFile name this file: the compile unit's, which keeps the path the
+! driver was given, and the one anything with a source location is described
+! in, which is that path split into a base name and a parent. Match them on
+! that difference rather than on the order they happen to be emitted in.
+! CHECK-DAG: ![[CUFILE:.*]] = !DIFile(filename: "{{.*}}/debug-module-constant.f90", directory: "{{.*}}")
+! CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: "debug-module-constant.f90", directory: "{{.*}}")
+! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}file: ![[CUFILE]]{{.*}})
+! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE]]{{.*}})
 ! CHECK-DAG: ![[I4:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 ! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
 
 module helper
-! CHECK-DAG: ![[MAX:.*]] = distinct !DIGlobalVariable(name: "max_size", linkageName: "_QMhelperECmax_size", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+2]], type: ![[I4]], isLocal: false, isDefinition: true)
+! CHECK-DAG: ![[MAX:.*]] = distinct !DIGlobalVariable(name: "max_size", linkageName: "_QMhelperECmax_size", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+2]], type: ![[I4]], isLocal: false, isDefinition: true)
 ! CHECK-DAG: !DIGlobalVariableExpression(var: ![[MAX]], expr: !DIExpression())
   integer, parameter :: max_size = 100
 
-! CHECK-DAG: ![[PI:.*]] = distinct !DIGlobalVariable(name: "pi", linkageName: "_QMhelperECpi", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+2]], type: ![[R4]], isLocal: false, isDefinition: true)
+! CHECK-DAG: ![[PI:.*]] = distinct !DIGlobalVariable(name: "pi", linkageName: "_QMhelperECpi", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+2]], type: ![[R4]], isLocal: false, isDefinition: true)
 ! CHECK-DAG: !DIGlobalVariableExpression(var: ![[PI]], expr: !DIExpression())
   real, parameter :: pi = 3.14159274
 
-! CHECK-DAG: ![[PRIMES:.*]] = distinct !DIGlobalVariable(name: "primes", linkageName: "_QMhelperECprimes", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+3]], type: ![[ARR:.*]], isLocal: false, isDefinition: true)
+! CHECK-DAG: ![[PRIMES:.*]] = distinct !DIGlobalVariable(name: "primes", linkageName: "_QMhelperECprimes", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+3]], type: ![[ARR:.*]], isLocal: false, isDefinition: true)
 ! CHECK-DAG: ![[ARR]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[I4]]{{.*}})
 ! CHECK-DAG: !DIGlobalVariableExpression(var: ![[PRIMES]], expr: !DIExpression())
   integer, parameter :: primes(3) = [2, 3, 5]
 
-! CHECK-DAG: ![[TAG:.*]] = distinct !DIGlobalVariable(name: "tag", linkageName: "_QMhelperECtag", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+3]], type: ![[STR:.*]], isLocal: false, isDefinition: true)
+! CHECK-DAG: ![[TAG:.*]] = distinct !DIGlobalVariable(name: "tag", linkageName: "_QMhelperECtag", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+3]], type: ![[STR:.*]], isLocal: false, isDefinition: true)
 ! CHECK-DAG: ![[STR]] = !DIStringType(size: 40, encoding: DW_ATE_ASCII)
 ! CHECK-DAG: !DIGlobalVariableExpression(var: ![[TAG]], expr: !DIExpression())
   character(len=5), parameter :: tag = "hello"

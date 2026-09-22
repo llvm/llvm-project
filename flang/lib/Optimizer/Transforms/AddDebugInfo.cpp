@@ -529,8 +529,10 @@ AddDebugInfoPass::getOrCreateModuleAttr(const std::string &name,
     // The location of the fir.module_debug_imports is that of the MODULE
     // statement. A module that has none is not defined here, and gets no line.
     if (auto iter{moduleDebugImportsByName.find(name)};
-        iter != moduleDebugImportsByName.end())
+        iter != moduleDebugImportsByName.end()) {
       line = fir::getLineFromLoc(iter->second.getLoc());
+      fileAttr = getFileAttrFromLoc(iter->second.getLoc(), fileAttr);
+    }
 
     // When decl is true, it means that module is only being used in this
     // compilation unit and it is defined elsewhere. But if the file/line/scope
