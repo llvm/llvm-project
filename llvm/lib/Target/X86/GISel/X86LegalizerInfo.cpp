@@ -94,7 +94,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // Keep G_IMPLICIT_DEF/G_FREEZE able to materialize s64 even on i386, but do
   // not treat multi-block G_PHI of s64 as legal there: the selector cannot
   // EXTRACT/INSERT scalar subregs of an s64 GPR on 32-bit (#216648).
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
+  getActionDefinitionsBuilder(
+      {G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
       .legalFor({p0, s1, s8, s16, s32, s64})
       .legalFor(UseX87, {s80})
       .legalFor(Is64Bit, {s128})
