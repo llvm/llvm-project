@@ -2130,10 +2130,12 @@ SDValue MipsTargetLowering::lowerConstantFP(SDValue Op,
     if (Lo != 0 || Bits == 0)
       return SDValue();
 
-    SDValue ZeroReg = DAG.getConstant(0, DL, MVT::i32);
-    SDValue LowPart = DAG.getNode(MipsISD::MTC1_D64, DL, VT, ZeroReg);
-    SDValue HiReg = DAG.getConstant(INTVal.lshr(32).trunc(32), DL, MVT::i32);
-    return DAG.getNode(MipsISD::MTHC1_D64, DL, VT, LowPart, HiReg);
+    // TODO: DAG.getConstant(0) should be optimized to avoid generate an extra
+    // instr `addiu $x, $zero, 0`.
+    SDValue Low =
+        DAG.getCopyFromReg(DAG.getEntryNode(), DL, Mips::ZERO, MVT::i32);
+    SDValue Hi = DAG.getConstant(INTVal.extractBits(32, 32), DL, MVT::i32);
+    return DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Low, Hi);
   }
   }
 
