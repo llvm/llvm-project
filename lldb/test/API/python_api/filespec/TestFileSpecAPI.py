@@ -27,6 +27,7 @@ class FileSpecAPITestCase(TestBase):
         self.assertFalse(spec == "/a/c")
         self.assertFalse(spec != "/a/b")
         self.assertTrue(spec != "/a/c")
+        self.assertEqual(spec.GetPath(), "/a/b")
 
     def test_filespec_eq_other_type(self):
         """Test SBFileSpec equality with unsupported types returns False."""

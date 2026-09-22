@@ -111,13 +111,9 @@ std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
   if (id_only)
     return p_module;
 
-  std::array<char, PATH_MAX> path_buffer{};
   if (const lldb::SBFileSpec file_spec = module.GetFileSpec()) {
     p_module.name = file_spec.GetFilename();
-
-    const uint32_t path_size =
-        file_spec.GetPath(path_buffer.data(), path_buffer.size());
-    p_module.path = std::string(path_buffer.data(), path_size);
+    p_module.path = GetSBFileSpecPath(file_spec);
   }
 
   if (const uint32_t num_compile_units = module.GetNumCompileUnits();
@@ -127,9 +123,7 @@ std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
     p_module.debugInfoSizeBytes = GetDebugInfoSize(module);
 
     if (const lldb::SBFileSpec symbol_fspec = module.GetSymbolFileSpec()) {
-      const uint32_t path_size =
-          symbol_fspec.GetPath(path_buffer.data(), path_buffer.size());
-      p_module.symbolFilePath = std::string(path_buffer.data(), path_size);
+      p_module.symbolFilePath = GetSBFileSpecPath(symbol_fspec);
     }
   } else {
     p_module.symbolStatus = "Symbols not found.";

@@ -296,15 +296,27 @@ public:
   /// \param[in] max_path_length
   ///     The maximum length of \a path.
   ///
-  /// \return
-  ///     Returns the number of characters that would be needed to
-  ///     properly copy the full path into \a path. If the returned
-  ///     number is less than \a max_path_length, then the path is
-  ///     properly copied and terminated. If the return value is
-  ///     >= \a max_path_length, then the path was truncated (but is
-  ///     still NULL terminated).
+  /// \return The number of characters (including the NULL terminator) that
+  ///     would be needed to hold the full string, or 0 if \a src is empty.
+  ///     A return value greater than \a dst_len indicates truncation.
   size_t GetPath(char *path, size_t max_path_length,
                  bool denormalize = true) const;
+
+  /// Copy \ref src into the fixed-size buffer \ref dst.
+  ///
+  /// \param[in] src
+  ///     The buffer to copy from.
+  ///
+  /// \param[in,out] dst
+  ///     The destination to copy the buffer to
+  ///
+  /// \param[in] dst_len
+  ///     The length of the destination buffer.
+  ///
+  /// \return The number of characters (including the NULL terminator) that
+  ///     would be needed to hold the full string, or 0 if \a src is empty.
+  ///     A return value greater than \a dst_len indicates truncation.
+  static size_t CopyToBuffer(llvm::StringRef src, char *dst, size_t dst_len);
 
   /// Extract the full path to the file.
   ///

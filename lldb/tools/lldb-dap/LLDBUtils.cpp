@@ -220,12 +220,13 @@ ScopeSyncMode::ScopeSyncMode(lldb::SBDebugger &debugger)
 ScopeSyncMode::~ScopeSyncMode() { m_debugger.SetAsync(m_async); }
 
 std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec) {
-  const auto directory_length = ::strlen(file_spec.GetDirectory());
-  const auto file_name_length = ::strlen(file_spec.GetFilename());
+  const uint32_t length = file_spec.GetPath(nullptr, 0);
+  if (length == 0)
+    return std::string{};
 
-  std::string path(directory_length + file_name_length + 1, '\0');
-  file_spec.GetPath(path.data(), path.length() + 1);
-  return path;
+  std::string buf(length - 1, '\0');
+  file_spec.GetPath(buf.data(), length);
+  return buf;
 }
 
 lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
