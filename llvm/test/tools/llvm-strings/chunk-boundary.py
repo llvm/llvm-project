@@ -102,9 +102,7 @@ args = parser.parse_intermixed_args()
 
 repeat = args.repeat or [1] * len(args.parts)
 if len(repeat) != len(args.parts):
-    parser.error(
-        "--repeat has %d counts for %d PARTs" % (len(repeat), len(args.parts))
-    )
+    parser.error("--repeat has %d counts for %d PARTs" % (len(repeat), len(args.parts)))
 
 out = b"".join(
     (b"\0" * int(part) if part.isdigit() else part.encode()) * count
