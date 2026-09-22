@@ -19,11 +19,13 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
+#include <optional>
 #include <utility>
 
 namespace fir {
@@ -79,6 +81,12 @@ struct LoopInvariantCodeMotion
 /// on its own.
 static bool isNonOptionalScalar(Value location) {
   while (true) {
+    // A compute-region argument forwards a mapped input. Recover its storage
+    // provenance before checking whether a speculative scalar read is safe.
+    if (Value operand = acc::getACCOperandForBlockArg(location)) {
+      location = operand;
+      continue;
+    }
     LDBG() << "Checking location:\n" << location;
     Type dataType = fir::unwrapRefType(location.getType());
     if (!isa<fir::BaseBoxType>(location.getType()) &&
@@ -374,7 +382,20 @@ void LoopInvariantCodeMotion::runOnOperation() {
                             maybeConditionallyExecuted);
       };
 
-  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+  // Resolve the name once: ancestor checks compare interned operation names,
+  // not strings. Keep analysis scope independent of the selected loop scope.
+  std::optional<OperationName> scopeOpName;
+  if (!onlyInside.empty())
+    scopeOpName.emplace(onlyInside, &getContext());
+  Operation *function = getOperation();
+  function->walk([&](LoopLikeOpInterface loopLike) {
+    if (scopeOpName) {
+      Operation *scope = loopLike->getParentOp();
+      while (scope != function && scope->getName() != *scopeOpName)
+        scope = scope->getParentOp();
+      if (scope->getName() != *scopeOpName)
+        return;
+    }
     if (!fir::canMoveOutOf(loopLike, nullptr)) {
       LDBG() << "Cannot hoist anything out of loop operation: ";
       LDBG_OS([&](llvm::raw_ostream &os) {
