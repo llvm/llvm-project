@@ -1167,8 +1167,9 @@ SDValue X86TargetLowering::LowerCallResult(
     // In some calling conventions we need to remove the used registers
     // from the register mask.
     if (RegMask) {
-      for (MCPhysReg SubReg : TRI->subregs_inclusive(VA.getLocReg()))
-        RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
+      for (MCRegAliasIterator Alias(VA.getLocReg(), TRI, true); Alias.isValid();
+           ++Alias)
+        RegMask[*Alias / 32] &= ~(1u << (*Alias % 32));
     }
 
     // Report an error if there was an attempt to return FP values via XMM
@@ -2682,12 +2683,16 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
     memcpy(RegMask, Mask, sizeof(RegMask[0]) * RegMaskSize);
 
-    // Make sure all sub registers of the argument registers are reset
-    // in the RegMask.
+    // Make sure all aliases of the argument registers are reset in the
+    // RegMask, including superregisters. Clearing only subregs_inclusive is
+    // insufficient: an i32 argument in R14D must also remove R14 from the
+    // preserved set, otherwise a live 64-bit value in R14 can be incorrectly
+    // kept across the call (see llvm/llvm-project#225057).
     if (ShouldDisableArgRegs) {
       for (auto const &RegPair : RegsToPass)
-        for (MCPhysReg SubReg : TRI->subregs_inclusive(RegPair.first))
-          RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
+        for (MCRegAliasIterator Alias(RegPair.first, TRI, true); Alias.isValid();
+             ++Alias)
+          RegMask[*Alias / 32] &= ~(1u << (*Alias % 32));
     }
 
     // Create the RegMask Operand according to our updated mask.
