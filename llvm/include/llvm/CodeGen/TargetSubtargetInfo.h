@@ -105,14 +105,20 @@ public:
   bool isIntrinsicSupported(unsigned IntrinsicID,
                             const FunctionType *FTy) const;
 
-  /// Returns the target features required by the target intrinsic
-  /// \p IntrinsicID with signature \p FTy. An empty expression means no
-  /// features are required; \c std::nullopt means no feature expression
-  /// supports the intrinsic. Targets override this for intrinsics marked as
-  /// requiring custom target features.
-  virtual std::optional<StringRef>
+  /// Returns the feature expression that makes target intrinsic \p IntrinsicID
+  /// with signature \p FTy unsupported. An empty expression means no features
+  /// are required; \c std::nullopt means no feature expression supports the
+  /// intrinsic.
+  std::optional<StringRef>
   getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
                                         const FunctionType *FTy) const;
+
+  /// Returns the overload-dependent target features for an intrinsic whose
+  /// target feature expression contains \c $custom. Targets override this to
+  /// implement the custom part of the support check.
+  virtual std::optional<StringRef>
+  getCustomRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
+                                              const FunctionType *FTy) const;
 
   // Interfaces to the major aspects of target machine information:
   //

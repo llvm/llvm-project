@@ -811,8 +811,10 @@ class TypeInfoGen<list<LLVMType> RetTypes, list<LLVMType> ParamTypes> {
 //    The empty string means no target features are required. The expression
 //    uses feature names from the target's subtarget feature table. Comma means
 //    AND, | means OR, comma has higher precedence than |, and parentheses group
-//    expressions. The special value "$custom" means the expression depends on
-//    the resolved overload type and is provided by the target.
+//    expressions. The special "$custom" marker may be used as the entire
+//    expression or its final comma-separated term. In the latter form, the
+//    preceding expression is a static requirement and the target provides an
+//    additional overload-dependent requirement.
 //
 class Intrinsic<list<LLVMType> ret_types,
                 list<LLVMType> param_types = [],
@@ -860,15 +862,13 @@ class MSBuiltin<string name> {
 /// this specifies the required feature expression using feature names from the
 /// target's subtarget feature table. The expression grammar matches Clang
 /// builtins: comma means AND, | means OR, comma has higher precedence than |,
-/// and parentheses group expressions.
+/// and parentheses group expressions. The special "$custom" marker may be used
+/// as the entire expression or its final comma-separated term. In the latter
+/// form, the preceding expression is a static requirement and the target
+/// provides an additional overload-dependent requirement.
 class RequiresTargetFeatures<string features> {
   string TargetFeatures = features;
 }
-
-/// RequiresCustomTargetFeatures - The required target features depend on the
-/// intrinsic's resolved overload type and are provided by the target. The
-/// target may reject an overload when no feature expression supports it.
-class RequiresCustomTargetFeatures : RequiresTargetFeatures<"$custom">;
 
 /// Utility class for intrinsics that
 /// 1. Don't touch memory or any hidden state

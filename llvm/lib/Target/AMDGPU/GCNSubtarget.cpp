@@ -58,7 +58,8 @@ static cl::opt<unsigned>
 
 GCNSubtarget::~GCNSubtarget() = default;
 
-std::optional<StringRef> GCNSubtarget::getRequiredTargetFeaturesForIntrinsic(
+std::optional<StringRef>
+GCNSubtarget::getCustomRequiredTargetFeaturesForIntrinsic(
     unsigned IntrinsicID, const FunctionType *FTy) const {
   if (IntrinsicID == Intrinsic::amdgcn_ballot) {
     if (!FTy)
@@ -68,8 +69,8 @@ std::optional<StringRef> GCNSubtarget::getRequiredTargetFeaturesForIntrinsic(
     return StringRef();
   }
 
-  return TargetSubtargetInfo::getRequiredTargetFeaturesForIntrinsic(IntrinsicID,
-                                                                    FTy);
+  return TargetSubtargetInfo::getCustomRequiredTargetFeaturesForIntrinsic(
+      IntrinsicID, FTy);
 }
 
 static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {

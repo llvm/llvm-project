@@ -64,13 +64,14 @@ LLVM_ABI StringRef getName(ID id);
 /// overloading, such as "llvm.ssa.copy".
 LLVM_ABI StringRef getBaseName(ID id);
 
-/// \returns the static target feature expression required by an intrinsic, or
-/// \c CustomTargetFeatures when it must be resolved from the overload type by
-/// the target.
+/// \returns the target feature expression required by an intrinsic. A final
+/// \c CustomTargetFeatures term indicates that an additional check must be
+/// resolved from the overload type by the target.
 LLVM_ABI StringRef getRequiredTargetFeatures(ID id);
 
-/// Sentinel used when an intrinsic's required target features depend on its
-/// resolved overload type and must be provided by the target.
+/// Sentinel used as an entire target feature expression or its final
+/// comma-separated term when support requires an overload-dependent target
+/// check.
 inline constexpr StringLiteral CustomTargetFeatures = "$custom";
 
 /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx" or

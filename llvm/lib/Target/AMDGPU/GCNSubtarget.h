@@ -131,9 +131,8 @@ public:
   /// function \p F.
   void checkSubtargetFeatures(const Function &F) const;
 
-  std::optional<StringRef>
-  getRequiredTargetFeaturesForIntrinsic(unsigned IntrinsicID,
-                                        const FunctionType *FTy) const override;
+  std::optional<StringRef> getCustomRequiredTargetFeaturesForIntrinsic(
+      unsigned IntrinsicID, const FunctionType *FTy) const override;
 
   const SIInstrInfo *getInstrInfo() const override { return &InstrInfo; }
 
