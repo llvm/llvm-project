@@ -714,7 +714,7 @@ inline bool FPArithShouldFTZ(Intrinsic::ID IntrinsicID) {
   llvm_unreachable("Checking FTZ flag for invalid NVVM fadd/fmul intrinsic");
 }
 
-inline bool FPArithIsSat(Intrinsic::ID IntrinsicID) {
+inline bool FPArithIsSaturating(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_fadd_sat:
   case Intrinsic::nvvm_fadd_ftz_sat:
