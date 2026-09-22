@@ -40,33 +40,6 @@ static Value *getValueFromBundleOpInfo(AssumeInst &Assume,
   return (Assume.op_begin() + BOI.Begin + Idx)->get();
 }
 
-bool llvm::hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
-                                StringRef AttrName, uint64_t *ArgVal) {
-  assert(Attribute::isExistingAttribute(AttrName) &&
-         "this attribute doesn't exist");
-  assert((ArgVal == nullptr || Attribute::isIntAttrKind(
-                                   Attribute::getAttrKindFromName(AttrName))) &&
-         "requested value for an attribute that has no argument");
-  if (Assume.bundle_op_infos().empty())
-    return false;
-
-  for (auto &BOI : Assume.bundle_op_infos()) {
-    if (BOI.Tag->getKey() != AttrName)
-      continue;
-    if (IsOn && (BOI.End - BOI.Begin <= ABA_WasOn ||
-                 IsOn != getValueFromBundleOpInfo(Assume, BOI, ABA_WasOn)))
-      continue;
-    if (ArgVal) {
-      assert(BOI.End - BOI.Begin > ABA_Argument);
-      *ArgVal =
-          cast<ConstantInt>(getValueFromBundleOpInfo(Assume, BOI, ABA_Argument))
-              ->getZExtValue();
-    }
-    return true;
-  }
-  return false;
-}
-
 void llvm::fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result) {
   for (auto &Bundles : Assume.bundle_op_infos()) {
     std::pair<Value *, Attribute::AttrKind> Key{

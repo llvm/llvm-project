@@ -23,6 +23,7 @@
 
 #include "bolt/Passes/RetpolineInsertion.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "bolt-retpoline"

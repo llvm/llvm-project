@@ -47,6 +47,7 @@
 #ifndef LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 #define LLVM_IR_DEBUGPROGRAMINSTRUCTION_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
@@ -189,9 +190,11 @@ public:
   LLVM_ABI LLVMContext &getContext();
   LLVM_ABI const LLVMContext &getContext() const;
 
+  LLVM_ABI Instruction *getInstruction();
   LLVM_ABI const Instruction *getInstruction() const;
-  LLVM_ABI const BasicBlock *getParent() const;
+
   LLVM_ABI BasicBlock *getParent();
+  LLVM_ABI const BasicBlock *getParent() const;
 
   LLVM_ABI void removeFromParent();
   LLVM_ABI void eraseFromParent();
@@ -525,7 +528,7 @@ public:
   Metadata *getRawAddress() const {
     return isDbgAssign() ? DebugValues[1] : DebugValues[0];
   }
-  Metadata *getRawAssignID() const { return DebugValues[2]; }
+  Metadata *getRawAssignID() const { return DebugValues[AssignIDIdx]; }
   LLVM_ABI DIAssignID *getAssignID() const;
   DIExpression *getAddressExpression() const { return AddressExpression.get(); }
   MDNode *getRawAddressExpression() const {
@@ -553,10 +556,6 @@ public:
   LLVM_ABI DbgVariableIntrinsic *
   createDebugIntrinsic(Module *M, Instruction *InsertBefore) const;
 
-  /// Handle changes to the location of the Value(s) that we refer to happening
-  /// "under our feet".
-  LLVM_ABI void handleChangedLocation(Metadata *NewLocation);
-
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
   LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,
                       bool IsForDebug) const;
@@ -570,10 +569,7 @@ public:
 /// Filter the DbgRecord range to DbgVariableRecord types only and downcast.
 static inline auto
 filterDbgVars(iterator_range<simple_ilist<DbgRecord>::iterator> R) {
-  return map_range(
-      make_filter_range(R,
-                        [](DbgRecord &E) { return isa<DbgVariableRecord>(E); }),
-      [](DbgRecord &E) { return std::ref(cast<DbgVariableRecord>(E)); });
+  return make_isa_range<DbgVariableRecord>(R);
 }
 
 /// Per-instruction record of debug-info. If an Instruction is the position of

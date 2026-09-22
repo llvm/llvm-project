@@ -104,6 +104,8 @@
 // INSTRINFO-NEXT:     MyTarget::YRegsRegClassID,
 // INSTRINFO-NEXT:   },
 // INSTRINFO-NEXT: };
+// INSTRINFO-LABEL: #ifdef GET_INSTRINFO_MC_HELPER_DECLS
+// INSTRINFO:       extern const int16_t MyTargetRegClassByHwModeTables[4][2];
 
 // ASMWRITER-LABEL: static const AliasPatternCond Conds[] = {
 // ASMWRITER-NEXT:    // (TEST_PTRREG PtrRC:$dst, PtrRC:$src) -

@@ -211,3 +211,81 @@ entry:
   %and = and <4 x i32> %or, %not
   ret <4 x i32> %and
 }
+
+define i32 @or_xor_or(i32 %x, i32 %y) {
+; CHECK-LABEL: or_xor_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr w0, w0, w1
+; CHECK-NEXT:    ret
+entry:
+; fold or (xor x, y), (x and/or y) --> or x, y
+  %xor = xor i32 %x, %y
+  %or = or i32 %x, %y
+  %or2 = or i32 %xor, %or
+  ret i32 %or2
+}
+
+define i32 @or_xor_and(i32 %x, i32 %y) {
+; CHECK-LABEL: or_xor_and:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr w0, w0, w1
+; CHECK-NEXT:    ret
+entry:
+; fold or (xor x, y), (x and/or y) --> or x, y
+  %xor = xor i32 %x, %y
+  %and = and i32 %x, %y
+  %or2 = or i32 %xor, %and
+  ret i32 %or2
+}
+
+define i64 @or_xor_or_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: or_xor_or_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr x0, x0, x1
+; CHECK-NEXT:    ret
+entry:
+; fold or (xor x, y), (x and/or y) --> or x, y
+  %xor = xor i64 %x, %y
+  %or = or i64 %x, %y
+  %or2 = or i64 %xor, %or
+  ret i64 %or2
+}
+
+define i64 @or_xor_and_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: or_xor_and_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr x0, x0, x1
+; CHECK-NEXT:    ret
+entry:
+; fold or (xor x, y), (x and/or y) --> or x, y
+  %xor = xor i64 %x, %y
+  %and = and i64 %x, %y
+  %or2 = or i64 %xor, %and
+  ret i64 %or2
+}
+
+define <4 x i32> @or_xor_or_vector(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: or_xor_or_vector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+; fold or (xor x, y), (x and/or y) --> or x, y
+  %xor = xor <4 x i32> %x, %y
+  %or = or <4 x i32> %x, %y
+  %or2 = or <4 x i32> %xor, %or
+  ret <4 x i32> %or2
+}
+
+define <4 x i32> @or_xor_and_vector(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: or_xor_and_vector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+; fold or (xor x, y), (x and/or y) --> or x, y
+  %xor = xor <4 x i32> %x, %y
+  %and = and <4 x i32> %x, %y
+  %or2 = or <4 x i32> %xor, %and
+  ret <4 x i32> %or2
+}

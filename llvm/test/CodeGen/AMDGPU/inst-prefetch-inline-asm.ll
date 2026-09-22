@@ -3,16 +3,16 @@
 ;; label subtraction (.Lfunc_end - func_sym), giving exact code size.
 ;; See inst-prefetch-hint.ll for explanation of the instprefsize expression.
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck --check-prefix=GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck --check-prefix=GFX12 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=obj < %s -o %t.gfx11.o
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa < %s | FileCheck --check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -filetype=obj < %s -o %t.gfx11.o
 ; RUN: llvm-objdump -s -j .rodata %t.gfx11.o | FileCheck --check-prefix=OBJ-GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj < %s -o %t.gfx12.o
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -filetype=obj < %s -o %t.gfx12.o
 ; RUN: llvm-objdump -s -j .rodata %t.gfx12.o | FileCheck --check-prefix=OBJ-GFX12 %s
 ;; Verify text assembly round-trips through the MC assembler.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=obj -o %t.rt.gfx11.o
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa < %s | llvm-mc -triple amdgpu11.00-amd-amdhsa -mcpu=gfx1100 -filetype=obj -o %t.rt.gfx11.o
 ; RUN: llvm-objdump -s -j .rodata %t.rt.gfx11.o | FileCheck --check-prefix=OBJ-GFX11 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj -o %t.rt.gfx12.o
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa < %s | llvm-mc -triple amdgpu12.00-amd-amdhsa -mcpu=gfx1200 -filetype=obj -o %t.rt.gfx12.o
 ; RUN: llvm-objdump -s -j .rodata %t.rt.gfx12.o | FileCheck --check-prefix=OBJ-GFX12 %s
 
 ;; --- .fill directive: .fill 256, 4, 0 => 1024 bytes + 4 (s_endpgm) = 1028 ---

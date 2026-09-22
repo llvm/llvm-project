@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
 

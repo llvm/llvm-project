@@ -10,7 +10,7 @@ define ptr @test()  {
 ; CHECK-NEXT:    [[PC:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[BB:%.*]] ]
 ; CHECK-NEXT:    br i1 false, label [[FOR_INC:%.*]], label [[BB2:%.*]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[PC]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[PC]], i64 1
 ; CHECK-NEXT:    br i1 false, label [[BB2]], label [[BB]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    br i1 false, label [[BB2]], label [[FOR_BODY]]

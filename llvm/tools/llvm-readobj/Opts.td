@@ -76,6 +76,7 @@ def macho_dysymtab : FF<"macho-dysymtab", "Display Dysymtab command">, Group<grp
 def macho_indirect_symbols : FF<"macho-indirect-symbols", "Display indirect symbols">, Group<grp_mach_o>;
 def macho_linker_options : FF<"macho-linker-options", "Display linker options">, Group<grp_mach_o>;
 def macho_segment : FF<"macho-segment", "Display Segment command">, Group<grp_mach_o>;
+def macho_target_triple : FF<"macho-target-triple", "Display target triple command">, Group<grp_mach_o>;
 def macho_version_min : FF<"macho-version-min", "Display version min command">, Group<grp_mach_o>;
 
 // PE/COFF specific options.

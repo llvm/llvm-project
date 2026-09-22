@@ -480,13 +480,16 @@ __hexagon_fmadf5:
 		BH ^= lsr(AH,#31)
 		BL = BH
 	}
+	// BH holds the 2-bit rounding mode XORed with the result's sign bit,
+	// making the tests below sign-agnostic. The result stays finite (DBL_MAX)
+	// when rounding toward zero, or when rounding toward the infinity opposite
+	// to the overflow direction (i.e. away from the overflowing infinity).
+	// In all other rounding modes the result is infinity.
 	{
-		p0 = !cmp.eq(BL,#1)
-		p0 = !cmp.eq(BH,#2)
-	}
-	{
-		p0 = dfcmp.eq(ATMP,ATMP)
-		if (p0.new) CTMP = ATMP
+		p0 = !cmp.eq(BL,#1)		// not round-toward-zero
+		p0 = !cmp.eq(BH,#2)		// and not rounding away from the overflow
+		if (p0.new) CTMP = ATMP		// neither: result is infinity
+		p0 = dfcmp.eq(ATMP,ATMP)	// A == A is false only for NaN; raise fp flags
 	}
 	{
 		A = insert(CTMP,#63,#0)

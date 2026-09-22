@@ -17,8 +17,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
-#include <algorithm>
-#include <vector>
 
 namespace Fortran::semantics {
 
@@ -267,7 +265,7 @@ void DataChecker::Leave(const parser::EntityDecl &decl) {
     const auto *list{
         std::get_if<std::list<common::Indirection<parser::DataStmtValue>>>(
             &init->u)};
-    if (name && list) {
+    if (name && list && !exprAnalyzer_.context().HasError(*name)) {
       AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
     }
   }

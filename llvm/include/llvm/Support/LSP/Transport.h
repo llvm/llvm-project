@@ -27,13 +27,6 @@
 #include <memory>
 
 namespace llvm {
-// Simple helper function that returns a string as printed from a op.
-template <typename T> static std::string debugString(T &&Op) {
-  std::string InstrStr;
-  llvm::raw_string_ostream Os(InstrStr);
-  Os << Op;
-  return Os.str();
-}
 namespace lsp {
 class MessageHandler;
 
@@ -172,19 +165,9 @@ public:
                                  StringRef PayloadName, StringRef PayloadKind) {
     T Result;
     llvm::json::Path::Root Root;
-    if (fromJSON(Raw, Result, Root))
-      return std::move(Result);
-
-    // Dump the relevant parts of the broken message.
-    std::string Context;
-    llvm::raw_string_ostream Os(Context);
-    Root.printErrorContext(Raw, Os);
-
-    // Report the error (e.g. to the client).
-    return llvm::make_error<LSPError>(
-        llvm::formatv("failed to decode {0} {1}: {2}", PayloadName, PayloadKind,
-                      fmt_consume(Root.getError())),
-        ErrorCode::InvalidParams);
+    if (!fromJSON(Raw, Result, Root))
+      return handleParseError(Raw, PayloadName, PayloadKind, Root);
+    return std::move(Result);
   }
 
   template <typename Param, typename Result, typename ThisT>
@@ -229,6 +212,14 @@ public:
     };
   }
 
+  // Simple helper function that returns a string as printed from a op.
+  template <typename T> static std::string debugString(T &&Op) {
+    std::string InstrStr;
+    llvm::raw_string_ostream Os(InstrStr);
+    Os << Op;
+    return Os.str();
+  }
+
   /// Create an OutgoingRequest function that, when called, sends a request with
   /// the given method via the transport. Should the outgoing request be
   /// met with a response, the result JSON is parsed and the response callback
@@ -266,6 +257,10 @@ public:
   }
 
 private:
+  LLVM_ABI static llvm::Error
+  handleParseError(const llvm::json::Value &Raw, StringRef PayloadName,
+                   StringRef PayloadKind, const llvm::json::Path::Root &Root);
+
   template <typename HandlerT>
   using HandlerMap = llvm::StringMap<llvm::unique_function<HandlerT>>;
 

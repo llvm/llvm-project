@@ -230,9 +230,9 @@ static bool isLegalOp(Operation *op) {
                         isLegalType);
   }
 
-  auto attrs = llvm::map_range(op->getAttrs(), [](const NamedAttribute &attr) {
-    return attr.getValue();
-  });
+  auto attrs = llvm::map_range(
+      op->getDiscardableAttrDictionary().getValue(),
+      [](const NamedAttribute &attr) { return attr.getValue(); });
 
   return llvm::all_of(op->getOperandTypes(), isLegalType) &&
          llvm::all_of(op->getResultTypes(), isLegalType) &&

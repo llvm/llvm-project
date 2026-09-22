@@ -13,4 +13,3 @@
 using namespace llvm;
 
 template class llvm::GenericCycleInfo<SSAContext>;
-template class llvm::GenericCycle<SSAContext>;

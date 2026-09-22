@@ -65,15 +65,6 @@ DataVisualization::GetSyntheticForType(lldb::TypeNameSpecifierImplSP type_sp) {
   return GetFormatManager().GetSyntheticForType(type_sp);
 }
 
-bool DataVisualization::AnyMatches(
-    const FormattersMatchCandidate &candidate_type,
-    TypeCategoryImpl::FormatCategoryItems items, bool only_enabled,
-    const char **matching_category,
-    TypeCategoryImpl::FormatCategoryItems *matching_type) {
-  return GetFormatManager().AnyMatches(candidate_type, items, only_enabled,
-                                       matching_category, matching_type);
-}
-
 bool DataVisualization::Categories::GetCategory(ConstString category,
                                                 lldb::TypeCategoryImplSP &entry,
                                                 bool allow_create) {

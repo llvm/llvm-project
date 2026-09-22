@@ -376,6 +376,28 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirAttribute splitDebugFilename, intptr_t nImportedEntities,
     MlirAttribute const *importedEntities);
 
+/// Creates a LLVM DICompileUnit attribute with a source language dialect.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguage, unsigned int sourceLanguageDialect,
+    MlirAttribute file, MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
+    intptr_t nImportedEntities, MlirAttribute const *importedEntities);
+
+/// Creates an LLVM DICompileUnit attribute with a DWARF v6 source language
+/// name, version, and optional source language dialect.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDICompileUnitAttrGetWithSourceLanguageName(
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguageName, uint32_t sourceLanguageVersion,
+    unsigned int sourceLanguageDialect, MlirAttribute file,
+    MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
+    intptr_t nImportedEntities, MlirAttribute const *importedEntities);
+
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompileUnitAttrGetName(void);
 
 /// Creates a LLVM DIFlags attribute.
@@ -510,18 +532,19 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDConstantAttrGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLLVMMDConstantAttrGetValue(MlirAttribute attr);
 
-/// Creates an LLVM MDFuncAttr referencing a function symbol.
-MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx,
-                                                       MlirAttribute name);
+/// Creates an LLVM MDGlobalValueAttr referencing a symbol-backed global value.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDGlobalValueAttrGet(MlirContext ctx, MlirAttribute name);
 
-/// Returns `true` if the attribute is an LLVM MDFuncAttr.
-MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr);
+/// Returns `true` if the attribute is an LLVM MDGlobalValueAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDGlobalValueAttr(MlirAttribute attr);
 
-/// Returns the TypeID of MDFuncAttr.
-MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void);
+/// Returns the TypeID of MDGlobalValueAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDGlobalValueAttrGetTypeID(void);
 
-/// Returns the symbol name of an LLVM MDFuncAttr.
-MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr);
+/// Returns the symbol name of an LLVM MDGlobalValueAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDGlobalValueAttrGetName(MlirAttribute attr);
 
 /// Creates an LLVM MDNodeAttr.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDNodeAttrGet(

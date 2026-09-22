@@ -2,33 +2,6 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 declare void @clobber(ptr)
-declare i32 @readonly_call(ptr) nounwind willreturn memory(read)
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, <4 x i1>, <4 x i32>)
-declare i32 @llvm.read_register.i32(metadata)
-
-define i32 @dont_sink_ordinary_readonly_call_with_metadata(ptr %p, i1 %cond) {
-; CHECK-LABEL: define i32 @dont_sink_ordinary_readonly_call_with_metadata(
-; CHECK-SAME: ptr [[P:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @clobber(ptr [[P]])
-; CHECK-NEXT:    br i1 [[COND]], label %[[USE:.*]], label %[[EXIT:.*]]
-; CHECK:       [[USE]]:
-; CHECK-NEXT:    [[V:%.*]] = call i32 @readonly_call(ptr [[P]]), !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    ret i32 [[V]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %v = call i32 @readonly_call(ptr %p), !invariant.load !0
-  call void @clobber(ptr %p)
-  br i1 %cond, label %use, label %exit
-
-use:
-  ret i32 %v
-
-exit:
-  ret i32 0
-}
 
 define <4 x i32> @sink_masked_load_with_metadata(ptr %p, <4 x i1> %mask, <4 x i32> %passthru, i1 %cond) {
 ; CHECK-LABEL: define <4 x i32> @sink_masked_load_with_metadata(
@@ -37,7 +10,7 @@ define <4 x i32> @sink_masked_load_with_metadata(ptr %p, <4 x i1> %mask, <4 x i3
 ; CHECK-NEXT:    call void @clobber(ptr [[P]])
 ; CHECK-NEXT:    br i1 [[COND]], label %[[USE:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[USE]]:
-; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[P]], <4 x i1> [[MASK]], <4 x i32> [[PASSTHRU]]), !invariant.load [[META0]]
+; CHECK-NEXT:    [[V:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[P]], <4 x i1> [[MASK]], <4 x i32> [[PASSTHRU]]), !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x i32> [[V]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret <4 x i32> [[PASSTHRU]]

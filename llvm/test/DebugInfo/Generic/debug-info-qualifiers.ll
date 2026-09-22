@@ -18,6 +18,14 @@
 ; CHECK-NEXT: DW_AT_reference  DW_FORM_flag_present
 ; CHECK: DW_TAG_subroutine_type     DW_CHILDREN_yes
 ; CHECK-NEXT: DW_AT_rvalue_reference DW_FORM_flag_present
+
+; The abbrev table (printed before .debug_info on some targets, e.g. XCOFF/AIX)
+; may contain multiple DW_TAG_subprogram entries that would trip the CHECK-NOT
+; below.  Anchor to .debug_info contents: to skip past the abbrev section.
+; CHECK: .debug_info contents:
+; CHECK: DW_TAG_subprogram
+; CHECK-NOT: DW_TAG_subprogram
+; CHECK:   DW_AT_name {{.*}}"g"
 ;
 ; CHECK: DW_TAG_subprogram
 ; CHECK-NOT: DW_TAG_subprogram

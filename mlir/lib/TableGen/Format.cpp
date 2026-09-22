@@ -183,8 +183,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
       range = range.drop_front(repl.index);
       if (repl.end != FmtReplacement::kUnset)
         range = range.drop_back(adapters.size() - repl.end);
-      llvm::interleaveComma(range, s,
-                            [&](auto &x) { x->format(s, /*Options=*/""); });
+      llvm::interleaveComma(range, s, [&](auto &x) { x(s, /*Options=*/""); });
       continue;
     }
 
@@ -194,7 +193,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
       s << repl.spec << kMarkerForNoSubst;
       continue;
     }
-    adapters[repl.index]->format(s, /*Options=*/"");
+    adapters[repl.index](s, /*Options=*/"");
   }
 }
 
@@ -203,17 +202,16 @@ FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
     : FmtObjectBase(fmt, ctx, params.size()) {
   parameters.reserve(params.size());
   for (std::string p : params)
-    parameters.push_back(
-        llvm::support::detail::build_format_adapter(std::move(p)));
+    parameters.emplace_back(std::move(p));
 
   adapters.reserve(parameters.size());
   for (auto &p : parameters)
-    adapters.push_back(&p);
+    adapters.push_back(p);
 }
 
 FmtStrVecObject::FmtStrVecObject(FmtStrVecObject &&that)
     : FmtObjectBase(std::move(that)), parameters(std::move(that.parameters)) {
   adapters.reserve(parameters.size());
   for (auto &p : parameters)
-    adapters.push_back(&p);
+    adapters.push_back(p);
 }

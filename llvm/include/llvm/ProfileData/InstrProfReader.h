@@ -32,6 +32,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -44,10 +45,6 @@
 namespace llvm {
 
 class InstrProfReader;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// A file format agnostic iterator over profiling data.
 template <class record_type = NamedInstrProfRecord,
@@ -349,6 +346,7 @@ private:
   uint64_t Version;
   uint64_t CountersDelta;
   uint64_t BitmapDelta;
+  uint64_t UniformCountersDelta;
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
@@ -358,6 +356,8 @@ private:
   const char *CountersEnd;
   const char *BitmapStart;
   const char *BitmapEnd;
+  const char *UniformCountersStart;
+  const char *UniformCountersEnd;
   const char *NamesStart;
   const char *NamesEnd;
   const char *VNamesStart = nullptr;
@@ -469,11 +469,13 @@ private:
   Error readFuncHash(NamedInstrProfRecord &Record);
   Error readRawCounts(InstrProfRecord &Record);
   Error readRawBitmapBytes(InstrProfRecord &Record);
+  Error readRawUniformCounters(InstrProfRecord &Record);
   Error readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
 
   void advanceData() {
-    // `CountersDelta` is a constant zero when using debug info correlation.
+    // `CountersDelta` and `BitmapDelta` are constant zero when using debug info
+    // correlation.
     if (!Correlator && !BIDFetcherCorrelator) {
       // The initial CountersDelta is the in-memory address difference between
       // the data and counts sections:
@@ -482,6 +484,7 @@ private:
       // with respect to the next record.
       CountersDelta -= sizeof(*Data);
       BitmapDelta -= sizeof(*Data);
+      UniformCountersDelta -= sizeof(*Data);
     }
     Data++;
     ValueDataStart += CurValueDataSize;

@@ -112,6 +112,22 @@ consteval int doubleDelete() { // both-error {{never produces a constant express
 static_assert(doubleDelete() == 1); // both-error {{not an integral constant expression}} \
                                     // both-note {{in call to 'doubleDelete()'}}
 
+template <int N>
+constexpr bool doubleDelete2(const char (&x)[N]) {
+  int *p[N];
+  for (int i = 0; i < N; i++)
+    p[i] = new int(x[i]);
+
+  delete p[0];
+  delete p[0]; // both-note {{delete of pointer that has already been deleted}}
+
+  return true;
+}
+static_assert(doubleDelete2("foo")); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
+
+
+
 constexpr int AutoArray() {
   auto array = new int[]{0, 1, 2, 3};
   int ret = array[3];

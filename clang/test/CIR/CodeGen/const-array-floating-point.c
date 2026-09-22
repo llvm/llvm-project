@@ -13,13 +13,13 @@ __bf16 bf_arr[3] = {1.0, -2.0, 0.0};
 float f_arr[3] = {1.0, -2.0, 0.0};
 double d_arr[3] = {1.0, -2.0, 0.0};
 
-// CIR-DAG: cir.global external @ld_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.long_double<!cir.f80>, #cir.fp<-2.000000e+00> : !cir.long_double<!cir.f80>, #cir.fp<0.000000e+00> : !cir.long_double<!cir.f80>]> : !cir.array<!cir.long_double<!cir.f80> x 3>
+// CIR-DAG: cir.global external @ld_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.long_double<!cir.f80>, #cir.fp<-2.000000e+00> : !cir.long_double<!cir.f80>], trailing_zeros> : !cir.array<!cir.long_double<!cir.f80> x 3>
 // CIR-DAG: cir.global external @ld_zero = #cir.zero : !cir.array<!cir.long_double<!cir.f80> x 4>
-// CIR-DAG: cir.global external @q_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.f128, #cir.fp<-2.000000e+00> : !cir.f128, #cir.fp<0.000000e+00> : !cir.f128]> : !cir.array<!cir.f128 x 3>
-// CIR-DAG: cir.global external @h_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.f16, #cir.fp<-2.000000e+00> : !cir.f16, #cir.fp<0.000000e+00> : !cir.f16]> : !cir.array<!cir.f16 x 3>
-// CIR-DAG: cir.global external @bf_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.bf16, #cir.fp<-2.000000e+00> : !cir.bf16, #cir.fp<0.000000e+00> : !cir.bf16]> : !cir.array<!cir.bf16 x 3>
-// CIR-DAG: cir.global external @f_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<-2.000000e+00> : !cir.float, #cir.fp<0.000000e+00> : !cir.float]> : !cir.array<!cir.float x 3>
-// CIR-DAG: cir.global external @d_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.double, #cir.fp<-2.000000e+00> : !cir.double, #cir.fp<0.000000e+00> : !cir.double]> : !cir.array<!cir.double x 3>
+// CIR-DAG: cir.global external @q_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.f128, #cir.fp<-2.000000e+00> : !cir.f128], trailing_zeros> : !cir.array<!cir.f128 x 3>
+// CIR-DAG: cir.global external @h_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.f16, #cir.fp<-2.000000e+00> : !cir.f16], trailing_zeros> : !cir.array<!cir.f16 x 3>
+// CIR-DAG: cir.global external @bf_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.bf16, #cir.fp<-2.000000e+00> : !cir.bf16], trailing_zeros> : !cir.array<!cir.bf16 x 3>
+// CIR-DAG: cir.global external @f_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<-2.000000e+00> : !cir.float], trailing_zeros> : !cir.array<!cir.float x 3>
+// CIR-DAG: cir.global external @d_arr = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.double, #cir.fp<-2.000000e+00> : !cir.double], trailing_zeros> : !cir.array<!cir.double x 3>
 
 // LLVM-DAG: @ld_arr = global [3 x x86_fp80] [x86_fp80 1.000000e+00, x86_fp80 -2.000000e+00, x86_fp80 0.000000e+00]
 // LLVM-DAG: @ld_zero = global [4 x x86_fp80] zeroinitializer

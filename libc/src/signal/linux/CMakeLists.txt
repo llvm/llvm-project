@@ -22,7 +22,7 @@ add_entrypoint_object(
   HDRS
     ../kill.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.types.pid_t
     libc.src.errno.errno
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -105,6 +105,22 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
     libc.src.__support.common
     libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  pthread_kill
+  SRCS
+    pthread_kill.cpp
+  HDRS
+    ../pthread_kill.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.pthread_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(

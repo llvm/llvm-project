@@ -32,6 +32,12 @@ namespace std {
   template <class T>
     constexpr int bit_width(T x) noexcept;       // C++20
 
+  // [bit.shift], shifting
+  template<class T, class S>
+    constexpr T shl(T x, S s) noexcept; // C++29
+  template<class T, class S>
+    constexpr T shr(T x, S s) noexcept; // C++29
+
   // [bit.rotate], rotating
   template<class T>
     constexpr T rotl(T x, int s) noexcept; // C++20
@@ -84,18 +90,16 @@ namespace std {
 #    include <__bit/byteswap.h>
 #  endif
 
+#  if _LIBCPP_STD_VER >= 29
+#    include <__bit/shift.h>
+#  endif
+
 #  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <cstdlib>
-#    include <iosfwd>
-#    include <limits>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_BIT

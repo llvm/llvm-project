@@ -148,10 +148,10 @@ define i32 @test7(i32 %x) nounwind {
 ;
 ; X64-LABEL: test7:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    shrl $2, %edi
-; X64-NEXT:    imulq $613566757, %rdi, %rax # imm = 0x24924925
-; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movabsq $658812288404291584, %rcx # imm = 0x924924928000000
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdx, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %div = udiv i32 %x, 28
@@ -410,40 +410,40 @@ define { i64, i32 } @PR38622(i64) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    shrdl $11, %edi, %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    shrdl $11, %ebx, %edi
 ; X86-NEXT:    movl $1125899, %edx # imm = 0x112E0B
-; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl $-400107883, %edx # imm = 0xE826D695
-; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    movl %edx, %ebp
 ; X86-NEXT:    addl (%esp), %ebp # 4-byte Folded Reload
 ; X86-NEXT:    adcl $0, %esi
-; X86-NEXT:    shrl $11, %edi
-; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    shrl $11, %ebx
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    movl $1125899, %edx # imm = 0x112E0B
 ; X86-NEXT:    mull %edx
-; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    movl $-400107883, %edx # imm = 0xE826D695
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    adcl %edx, %esi
-; X86-NEXT:    adcl $0, %ebx
+; X86-NEXT:    adcl $0, %edi
 ; X86-NEXT:    addl (%esp), %esi # 4-byte Folded Reload
-; X86-NEXT:    adcl $0, %ebx
-; X86-NEXT:    shrdl $9, %ebx, %esi
+; X86-NEXT:    adcl $0, %edi
+; X86-NEXT:    shrdl $9, %edi, %esi
 ; X86-NEXT:    imull $-294967296, %esi, %eax # imm = 0xEE6B2800
 ; X86-NEXT:    subl %eax, %ecx
-; X86-NEXT:    shrl $9, %ebx
+; X86-NEXT:    shrl $9, %edi
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    movl %ebx, %edx
+; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -474,35 +474,20 @@ define { i64, i32 } @PR38622(i64) nounwind {
 define { i64, i32 } @PR38622_signed(i64) nounwind {
 ; X86-LABEL: PR38622_signed:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    pushl $0
 ; X86-NEXT:    pushl $-294967296 # imm = 0xEE6B2800
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    calll __divdi3
 ; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl $-294967296 # imm = 0xEE6B2800
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    calll __moddi3
-; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    imull $-294967296, %eax, %ecx # imm = 0xEE6B2800
+; X86-NEXT:    subl %ecx, %esi
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR38622_signed:

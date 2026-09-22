@@ -412,3 +412,29 @@ func.func @user(%arg0: tensor<f32>) -> tensor<f32> {
 // CHECK:     @user
 // CHECK-2:     constant @identity
 // CHECK:       call @identity
+
+// -----
+
+func.func @callee0() {
+  return
+}
+
+func.func @caller0() {
+  call @callee1() : () -> ()
+  return
+}
+
+func.func @caller1() {
+  call @callee1() : () -> ()
+  return
+}
+
+func.func @callee1() {
+  return
+}
+
+// CHECK:     @callee0
+// CHECK:     @caller0
+// CHECK:       call @callee0()
+// CHECK-NOT: @caller1
+// CHECK-NOT: @callee1

@@ -22,21 +22,21 @@ LLVM_DUMP_METHOD void HWEvents::dump() const { dbgs() << *this << "\n"; }
 
 static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
                                              const SIInstrInfo &TII) {
-  if (TII.isVALU(Inst, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(Inst)) {
+  if (TII.isVALU(Inst, /*AllowLDSDMA=*/false)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
     // has its own event.
 
     if (TII.isXDL(Inst))
-      return HWEvents::VGPR_XDL_WRITE;
+      return HWEvents::VGPR_XDL_READ | HWEvents::VGPR_XDL_WRITE;
 
     if (TII.isTRANS(Inst))
-      return HWEvents::VGPR_TRANS_WRITE;
+      return HWEvents::VGPR_TRANS_READ | HWEvents::VGPR_TRANS_WRITE;
 
     if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return HWEvents::VGPR_DPMACC_WRITE;
+      return HWEvents::VGPR_DPMACC_READ | HWEvents::VGPR_DPMACC_WRITE;
 
-    return HWEvents::VGPR_CSMACC_WRITE;
+    return HWEvents::VGPR_CSMACC_READ | HWEvents::VGPR_CSMACC_WRITE;
   }
 
   // FLAT and LDS instructions may read their VGPR sources out-of-order
@@ -56,13 +56,14 @@ static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
   return HWEvents::NONE;
 }
 
-static HWEvents getVmemHWEvent(const MachineInstr &Inst, const GCNSubtarget &ST,
-                               const SIInstrInfo &TII) {
+HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
+                                    const SIInstrInfo &TII) {
   switch (Inst.getOpcode()) {
   // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
   case AMDGPU::GLOBAL_INV:
-    return HWEvents::GLOBAL_INV_ACCESS; // tracked using loadcnt, but doesn't
-                                        // write VGPRs
+  case AMDGPU::BUFFER_INV:
+    return HWEvents::VMEM_INV_ACCESS; // tracked using loadcnt/vmcnt, but
+                                      // doesn't write VGPRs
   case AMDGPU::GLOBAL_WB:
   case AMDGPU::GLOBAL_WBINV:
     return HWEvents::VMEM_WRITE_ACCESS; // tracked using storecnt
@@ -82,7 +83,8 @@ static HWEvents getVmemHWEvent(const MachineInstr &Inst, const GCNSubtarget &ST,
       return HWEvents::SCRATCH_WRITE_ACCESS;
     return HWEvents::VMEM_WRITE_ACCESS;
   }
-  if (!ST.hasExtendedWaitCounts() || SIInstrInfo::isFLAT(Inst))
+
+  if (SIInstrInfo::isFLAT(Inst))
     return HWEvents::VMEM_READ_ACCESS;
 
   if (SIInstrInfo::isImage(Inst)) {
@@ -104,8 +106,8 @@ static HWEvents getVmemHWEvent(const MachineInstr &Inst, const GCNSubtarget &ST,
 }
 
 static HWEvents getEventsForImpl(const MachineInstr &Inst,
-                                 const GCNSubtarget &ST,
-                                 const SIInstrInfo &TII) {
+                                 const GCNSubtarget &ST, const SIInstrInfo &TII,
+                                 bool TgSplit) {
   if (TII.isDS(Inst) && TII.usesLGKM_CNT(Inst)) {
     if (TII.isAlwaysGDS(Inst.getOpcode()) ||
         TII.hasModifiersSet(Inst, AMDGPU::OpName::gds))
@@ -116,17 +118,17 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
 
   if (TII.isFLAT(Inst)) {
     if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()))
-      return getVmemHWEvent(Inst, ST, TII);
+      return getSimplifiedVMEMEventsFor(Inst, TII);
 
     assert(Inst.mayLoadOrStore());
     HWEvents E = HWEvents::NONE;
     if (TII.mayAccessVMEMThroughFlat(Inst)) {
       if (ST.hasWaitXcnt())
         E |= HWEvents::VMEM_GROUP;
-      E |= getVmemHWEvent(Inst, ST, TII);
+      E |= getSimplifiedVMEMEventsFor(Inst, TII);
     }
 
-    if (TII.mayAccessLDSThroughFlat(Inst))
+    if (TII.mayAccessLDSThroughFlat(Inst, TgSplit))
       E |= HWEvents::LDS_ACCESS;
 
     if (SIInstrInfo::usesASYNC_CNT(Inst))
@@ -140,11 +142,11 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
 
   if (SIInstrInfo::isVMEM(Inst) &&
       (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
+       Inst.getOpcode() == AMDGPU::BUFFER_INV ||
        Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
-    // BUFFER_WBL2 is included here because unlike invalidates, has to be
-    // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
-    // completed.
-    HWEvents E = getVmemHWEvent(Inst, ST, TII);
+    // BUFFER_INV increments VM_CNT. BUFFER_WBL2 also needs tracking because an
+    // S_WAITCNT vmcnt(0) must follow it to ensure the writeback has completed.
+    HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
     if (ST.hasWaitXcnt())
       E |= HWEvents::VMEM_GROUP;
     if (ST.vmemWriteNeedsExpWaitcnt() &&
@@ -194,13 +196,13 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
 }
 
 HWEvents getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
-                      bool IsExpertMode) {
+                      bool IsExpertMode, bool TgSplit) {
   const SIInstrInfo &TII = *ST.getInstrInfo();
 
   if (IsExpertMode)
-    return getEventsForImpl(Inst, ST, TII) |
+    return getEventsForImpl(Inst, ST, TII, TgSplit) |
            getExpertSchedulingEventType(Inst, TII);
-  return getEventsForImpl(Inst, ST, TII);
+  return getEventsForImpl(Inst, ST, TII, TgSplit);
 }
 } // namespace AMDGPU
 

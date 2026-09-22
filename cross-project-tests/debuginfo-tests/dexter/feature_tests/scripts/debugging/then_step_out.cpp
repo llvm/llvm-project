@@ -1,5 +1,5 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t \
+// RUN: %dexter_regression_test_run --skip-evaluate --binary %t \
 // RUN:   -- %s | FileCheck %s
 
 /// Test that when we use !then step_out, we jump out of the current frame, but

@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu hawaii -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu fiji -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx906 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu7.01-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu8.03-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu9.06-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -O0 -triple amdgpu10.10-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 typedef unsigned int uint;
 typedef unsigned long ulong;

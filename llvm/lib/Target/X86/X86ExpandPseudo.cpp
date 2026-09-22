@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
 #include "llvm/IR/Analysis.h"
@@ -73,8 +72,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -402,6 +399,18 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
         .addReg(DestAddr.getReg());
+    if (STI->hasSHSTK()) {
+      unsigned PopOpcode = STI->is64Bit() ? X86::POP64r : X86::POP32r;
+      unsigned JumpOpcode = X86::JMP32r;
+      if (Uses64BitFramePtr)
+        JumpOpcode = STI->isTargetWin64() || STI->isTargetUEFI64()
+                         ? X86::JMP64r_REX
+                         : X86::JMP64r;
+      BuildMI(MBB, MBBI, DL, TII->get(PopOpcode))
+          .addReg(DestAddr.getReg(), RegState::Define);
+      BuildMI(MBB, MBBI, DL, TII->get(JumpOpcode)).addReg(DestAddr.getReg());
+      MBB.erase(MBBI);
+    }
     // The EH_RETURN pseudo is really removed during the MC Lowering.
     return true;
   }
@@ -672,7 +681,6 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTDPBUUDV:
   case X86::PTDPBF16PSV:
   case X86::PTDPFP16PSV:
-  case X86::PTMMULTF32PSV:
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:
@@ -691,7 +699,6 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
     case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
-    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
     case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
     case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
@@ -771,8 +778,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
     if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
       ++Count;
-    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
-        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+    if (getX86MCRegisterClass(X86::GR32RegClassID).contains(Base) ||
+        getX86MCRegisterClass(X86::GR32RegClassID).contains(Index))
       ++Count;
     if (Count < 2)
       return false;

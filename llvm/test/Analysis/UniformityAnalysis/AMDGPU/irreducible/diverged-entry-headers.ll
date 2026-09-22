@@ -11,7 +11,7 @@
 ;;
 ;; CHECK-LABEL: UniformityInfo for function 't_header':
 ;; CHECK: CYCLES ASSUMED DIVERGENT:
-;; CHECK:   depth=1: entries(T P) S Q R
+;; CHECK:   depth=1: entries(T P) Q R S
 
 define amdgpu_kernel void @t_header(i32 %a, i32 %b, i32 %c) {
 entry:

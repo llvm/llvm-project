@@ -23,11 +23,11 @@ define fastcc void @test_shuffle_with_trunc() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lh %r1, 0
 ; CHECK-NEXT:    l %r0, 0
-; CHECK-NEXT:    larl %r2, .LCPI1_0
-; CHECK-NEXT:    vl %v0, 0(%r2), 3
-; CHECK-NEXT:    vlvgf %v1, %r0, 0
-; CHECK-NEXT:    vlvgh %v2, %r1, 0
-; CHECK-NEXT:    vperm %v0, %v1, %v2, %v0
+; CHECK-NEXT:    vlvgh %v1, %r1, 0
+; CHECK-NEXT:    larl %r1, .LCPI1_0
+; CHECK-NEXT:    vl %v2, 0(%r1), 3
+; CHECK-NEXT:    vlvgf %v0, %r0, 0
+; CHECK-NEXT:    vperm %v0, %v0, %v1, %v2
 ; CHECK-NEXT:    vst %v0, 0, 3
 ; CHECK-NEXT:    br %r14
   %1 = load i32, ptr null, align 8

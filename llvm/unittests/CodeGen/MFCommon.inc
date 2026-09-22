@@ -23,7 +23,7 @@ protected:
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, {}, nullptr, {}, nullptr, nullptr,
+      : TargetRegisterInfo(nullptr, nullptr, {}, nullptr, nullptr,
                            LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr);
@@ -51,6 +51,10 @@ public:
   unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                   unsigned Idx) const override {
     return 0;
+  }
+  const TargetRegisterClass *
+  getLargestRegClassForRegPressureSet(unsigned Idx) const override {
+    return nullptr;
   }
   const int *
   getRegClassPressureSets(const TargetRegisterClass *RC) const override {
@@ -88,8 +92,9 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
-                            nullptr, nullptr, nullptr, nullptr, nullptr),
+      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, {}, nullptr,
+                            nullptr, nullptr, nullptr, nullptr, nullptr,
+                            nullptr),
         FL(), TL(TM, *this) {}
   ~BogusSubtarget() override = default;
 
@@ -111,6 +116,11 @@ public:
     return Features;
   }
 
+  const FeatureBitset &getInlineMustMatchFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
 private:
   BogusFrameLowering FL;
   BogusRegisterInfo TRI;
@@ -128,7 +138,7 @@ class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
       : CodeGenTargetMachineImpl(
-            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Target(), Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {
     // With an empty Triple, `initAsmInfo` cannot be called. Provide
@@ -137,9 +147,9 @@ public:
     AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
     MRI = std::make_unique<MCRegisterInfo>();
     STI = std::make_unique<MCSubtargetInfo>(
-        Triple(""), "", "", "", ArrayRef<StringRef>{},
-        ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr);
+        Triple(""), "", "", "", StringTable{""}, ArrayRef<SubtargetFeatureKV>{},
+        ArrayRef<SubtargetSubTypeKV>{}, ArrayRef<SubtargetSubTypeAliasKV>{},
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

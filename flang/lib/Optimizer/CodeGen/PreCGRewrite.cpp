@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
-#include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -389,12 +388,12 @@ public:
     mlir::IntegerAttr dummyArgNoAttr;
     if (auto attr = declareOp->getAttrOfType<mlir::IntegerAttr>("dummy_arg_no"))
       dummyArgNoAttr = attr;
-    // FIXME: Add FortranAttrs and CudaAttrs
+    // FIXME: Add FortranAttrs
     auto xDeclOp = fir::cg::XDeclareOp::create(
         rewriter, loc, declareOp.getType(), declareOp.getMemref(), shapeOpers,
         shiftOpers, declareOp.getTypeparams(), declareOp.getDummyScope(),
         declareOp.getStorage(), declareOp.getStorageOffset(),
-        declareOp.getUniqName(), dummyArgNoAttr);
+        declareOp.getUniqName(), declareOp.getDataAttrAttr(), dummyArgNoAttr);
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << declareOp << " to " << xDeclOp << '\n');
     rewriter.replaceOp(declareOp, xDeclOp.getOperation()->getResults());

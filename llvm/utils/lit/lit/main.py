@@ -40,6 +40,7 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
+        pass_env=opts.pass_env,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
@@ -123,11 +124,11 @@ def main(builtin_params={}):
         record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
-        selected_tests, discovered_tests
+        selected_tests, discovered_tests, opts
     )
 
     if opts.time_tests:
-        print_histogram(discovered_tests)
+        print_histogram(discovered_tests, opts.time_tests)
 
     print_results(discovered_tests, elapsed, opts)
 
@@ -317,12 +318,12 @@ def execute_in_tmp_dir(run, lit_config):
                 )
 
 
-def print_histogram(tests):
+def print_histogram(tests, slowest_limit):
     test_times = [
         (t.getFullName(), t.result.elapsed) for t in tests if t.result.elapsed
     ]
     if test_times:
-        lit.util.printHistogram(test_times, title="Tests")
+        lit.util.printHistogram(test_times, slowest_limit, title="Tests")
 
 
 def print_results(tests, elapsed, opts):
