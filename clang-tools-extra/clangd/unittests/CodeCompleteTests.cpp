@@ -4355,6 +4355,60 @@ TEST(CompletionTest, ReplaceRangeNoCompile) {
   EXPECT_EQ(Results.ReplaceRange, std::nullopt);
 }
 
+TEST(CompletionTest, ReplaceRangeInclude) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableInsertReplace = true;
+
+  TestTU TU;
+  TU.AdditionalFiles["include/sub/foo.h"] = "";
+  TU.AdditionalFiles["include/sub/u00e9/bar.h"] = "";
+  TU.ExtraArgs = {"-Iinclude"};
+
+  // Replace range starts after a preceding path component and includes the
+  // closing angle bracket.
+  const char *NestedPath = R"cpp(#include <sub/[[fo^o.h>]])cpp";
+  Annotations A(NestedPath);
+  TU.Code = A.code();
+  CodeCompleteResult Results =
+      completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // Replace range starts after a preceding path component and includes the
+  // closing quote.
+  const char *WithQuote = R"cpp(#include "sub/[[fo^o.h"]])cpp";
+  A = Annotations(WithQuote);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // Replace range includes the path component and its trailing separator.
+  const char *PathComponent = R"cpp(#include "[[su^b/]]foo.h")cpp";
+  A = Annotations(PathComponent);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // A UCN-like escape is not interpreted in a header name.
+  const char *UnicodeLike = R"cpp(#include "[[su^\u00e9/]]foo.h")cpp";
+  A = Annotations(UnicodeLike);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // In MSVC compatibility mode, backslash is a path separator.
+  TU.ExtraArgs.push_back("-fms-compatibility");
+  const char *UnicodeLikeMs = R"cpp(#include "[[su^\]]u00e9/bar.h")cpp";
+  A = Annotations(UnicodeLikeMs);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+}
+
 TEST(NoCompileCompletionTest, Basic) {
   auto Results = completionsNoCompile(R"cpp(
     void func() {
