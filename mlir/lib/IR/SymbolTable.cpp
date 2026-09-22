@@ -1070,6 +1070,7 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
       }
     }
   };
+  // A root with no containing block has no symbol users in enclosing IR.
   SymbolTable::walkSymbolTables(
       symbolTableOp, /*allSymUsesVisible=*/!symbolTableOp->getBlock(), walkFn);
 }
