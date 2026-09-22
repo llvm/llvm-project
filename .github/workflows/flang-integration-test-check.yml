@@ -36,8 +36,12 @@ jobs:
 
             const findings = [];
             for (const file of files) {
-              if (!file.filename.startsWith("flang/test/") || !file.patch)
+              if (!file.filename.startsWith("flang/test/"))
                 continue;
+              if (!file.patch) {
+                core.notice(`Not checked (no patch text from the API): ${file.filename}`);
+                continue;
+              }
 
               // Count full-pipeline flag tokens across lit directives on both
               // sides of the diff. Only report a net increase, so reindentation,
