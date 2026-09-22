@@ -7,7 +7,7 @@ define <8 x i8> @combine_insert_load_same(ptr %p) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x0
-  ; CHECK-NEXT:   [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load (s64) from %ir.p, align 1)
+  ; CHECK-NEXT:   [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY]], 0 :: (load (s64) from %ir.p, align 1, !mem.cache_hint !1)
   ; CHECK-NEXT:   $d0 = COPY [[LDRDui]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $d0
   %p1 = getelementptr i8, ptr %p, i64 1

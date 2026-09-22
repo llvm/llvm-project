@@ -12,7 +12,7 @@ define i32 @funnel_shift_same(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 3, $noreg :: (load (s32) from %ir.p + 3, align 1)
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 3, $noreg :: (load (s32) from %ir.p + 3, align 1, !mem.cache_hint !1)
   ; CHECK-NEXT:   $eax = COPY [[MOV32rm]]
   ; CHECK-NEXT:   RET 0, $eax
   %p1 = getelementptr i8, ptr %p, i64 4
@@ -44,7 +44,7 @@ define <4 x i32> @all_ones_masked_load(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[VMOVDQArm:%[0-9]+]]:vr128 = VMOVDQArm [[COPY]], 1, $noreg, 0, $noreg :: (load (s128) from %ir.p)
+  ; CHECK-NEXT:   [[VMOVDQArm:%[0-9]+]]:vr128 = VMOVDQArm [[COPY]], 1, $noreg, 0, $noreg :: (load (s128) from %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   $xmm0 = COPY [[VMOVDQArm]]
   ; CHECK-NEXT:   RET 0, $xmm0
   %v = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 %p, i32 16, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison), !mem.cache_hint !0
@@ -58,7 +58,7 @@ define void @all_ones_masked_store(ptr %p, <4 x i32> %v) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   VMOVDQAmr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store (s128) into %ir.p)
+  ; CHECK-NEXT:   VMOVDQAmr [[COPY1]], 1, $noreg, 0, $noreg, [[COPY]] :: (store (s128) into %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   call void @llvm.masked.store.v4i32.p0(<4 x i32> %v, ptr align 16 %p, i32 16, <4 x i1> <i1 true, i1 true, i1 true, i1 true>), !mem.cache_hint !2
   ret void
@@ -70,8 +70,8 @@ define <16 x i32> @combine_ext_load(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[VPMOVSXWDYrm:%[0-9]+]]:vr256 = VPMOVSXWDYrm [[COPY]], 1, $noreg, 0, $noreg :: (load (s128) from %ir.p, align 32)
-  ; CHECK-NEXT:   [[VPMOVSXWDYrm1:%[0-9]+]]:vr256 = VPMOVSXWDYrm [[COPY]], 1, $noreg, 16, $noreg :: (load (s128) from %ir.p + 16, basealign 32)
+  ; CHECK-NEXT:   [[VPMOVSXWDYrm:%[0-9]+]]:vr256 = VPMOVSXWDYrm [[COPY]], 1, $noreg, 0, $noreg :: (load (s128) from %ir.p, align 32, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[VPMOVSXWDYrm1:%[0-9]+]]:vr256 = VPMOVSXWDYrm [[COPY]], 1, $noreg, 16, $noreg :: (load (s128) from %ir.p + 16, basealign 32, !mem.cache_hint !1)
   ; CHECK-NEXT:   $ymm0 = COPY [[VPMOVSXWDYrm]]
   ; CHECK-NEXT:   $ymm1 = COPY [[VPMOVSXWDYrm1]]
   ; CHECK-NEXT:   RET 0, $ymm0, $ymm1
@@ -86,7 +86,7 @@ define i8 @reduce_load_width(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s8) from %ir.p, align 8)
+  ; CHECK-NEXT:   [[MOV8rm:%[0-9]+]]:gr8 = MOV8rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s8) from %ir.p, align 8, !mem.cache_hint !1)
   ; CHECK-NEXT:   $al = COPY [[MOV8rm]]
   ; CHECK-NEXT:   RET 0, $al
   %v = load i64, ptr %p, align 8, !mem.cache_hint !0
@@ -105,8 +105,8 @@ define i32 @refine_alignment(i32 %v) {
   ; CHECK-NEXT:   $rdi = COPY [[LEA64r]]
   ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @use, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %stack.0.p, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.p)
-  ; CHECK-NEXT:   MOV32mr %stack.0.p, 1, $noreg, 0, $noreg, [[COPY]] :: (store (s32) into %ir.p)
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %stack.0.p, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.p, !range !5, !mem.cache_hint !1)
+  ; CHECK-NEXT:   MOV32mr %stack.0.p, 1, $noreg, 0, $noreg, [[COPY]] :: (store (s32) into %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $rdi = COPY [[LEA64r]]
   ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @use, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
@@ -129,7 +129,7 @@ define void @shrink_load_replace_store(ptr %p, i8 %v) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
-  ; CHECK-NEXT:   MOV8mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[COPY2]] :: (store (s8) into %ir.p, align 4)
+  ; CHECK-NEXT:   MOV8mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[COPY2]] :: (store (s8) into %ir.p, align 4, !alias.scope !6, !noalias !9, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %old = load i32, ptr %p, align 4
   %keep = and i32 %old, -256
@@ -145,7 +145,7 @@ define void @reduce_load_op_store(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   NOT8m [[COPY]], 1, $noreg, 0, $noreg :: (store (s8) into %ir.p, align 8), (load (s8) from %ir.p, align 8, !alias.scope !6, !noalias !9)
+  ; CHECK-NEXT:   NOT8m [[COPY]], 1, $noreg, 0, $noreg :: (store (s8) into %ir.p, align 8, !alias.scope !6, !noalias !9, !mem.cache_hint !1), (load (s8) from %ir.p, align 8, !alias.scope !6, !noalias !9, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %old = load i64, ptr %p, align 8, !alias.scope !20, !noalias !23, !mem.cache_hint !0
   %new = xor i64 %old, 255
@@ -161,7 +161,7 @@ define void @merge_trunc_stores_same(ptr %p, i16 %v) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-  ; CHECK-NEXT:   MOV16mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[COPY2]] :: (store (s16) into %ir.p)
+  ; CHECK-NEXT:   MOV16mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[COPY2]] :: (store (s16) into %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %lo = trunc i16 %v to i8
   store i8 %lo, ptr %p, align 2, !mem.cache_hint !2
@@ -197,7 +197,7 @@ define i32 @match_load_combine_same(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.p)
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   $eax = COPY [[MOV32rm]]
   ; CHECK-NEXT:   RET 0, $eax
   %b0 = load i8, ptr %p, align 4, !mem.cache_hint !0
@@ -255,7 +255,7 @@ define void @merge_constant_stores_same(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   MOV32mi [[COPY]], 1, $noreg, 0, $noreg, 67305985 :: (store (s32) into %ir.p)
+  ; CHECK-NEXT:   MOV32mi [[COPY]], 1, $noreg, 0, $noreg, 67305985 :: (store (s32) into %ir.p, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   store i8 1, ptr %p, align 4, !mem.cache_hint !2
   %p1 = getelementptr i8, ptr %p, i64 1
@@ -292,8 +292,8 @@ define void @merge_store_of_loads_same(ptr noalias %dst, ptr noalias %src) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.src)
-  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV32rm]] :: (store (s32) into %ir.dst)
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (load (s32) from %ir.src, !mem.cache_hint !1)
+  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, killed [[MOV32rm]] :: (store (s32) into %ir.dst, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %a = load i8, ptr %src, align 4, !mem.cache_hint !0
   %s1 = getelementptr i8, ptr %src, i64 1
@@ -346,7 +346,7 @@ define void @replace_store_of_insert_load(ptr %p, i32 %v) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 8, $noreg, [[COPY]] :: (store (s32) into %ir.p + 8, align 8, basealign 16)
+  ; CHECK-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 8, $noreg, [[COPY]] :: (store (s32) into %ir.p + 8, align 8, basealign 16, !alias.scope !6, !noalias !9, !mem.cache_hint !1)
   ; CHECK-NEXT:   RET 0
   %old = load <4 x i32>, ptr %p, align 16
   %new = insertelement <4 x i32> %old, i32 %v, i32 2
@@ -378,7 +378,7 @@ define <4 x i32> @concat_shuffles_different(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[VPSHUFDmi:%[0-9]+]]:vr128 = VPSHUFDmi [[COPY]], 1, $noreg, 0, $noreg, -40 :: (load (s128) from %ir.p, !mem.cache_hint !1)
+  ; CHECK-NEXT:   [[VPSHUFDmi:%[0-9]+]]:vr128 = VPSHUFDmi [[COPY]], 1, $noreg, 0, $noreg, -40 :: (load (s128) from %ir.p)
   ; CHECK-NEXT:   $xmm0 = COPY [[VPSHUFDmi]]
   ; CHECK-NEXT:   RET 0, $xmm0
   %a = load <2 x i32>, ptr %p, align 16, !mem.cache_hint !0
@@ -401,7 +401,7 @@ define i32 @select_loads_same(i1 %c, ptr %p, ptr %q) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr8 = COPY [[COPY2]].sub_8bit
   ; CHECK-NEXT:   TEST8ri killed [[COPY3]], 1, implicit-def $eflags
   ; CHECK-NEXT:   [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[COPY]], [[COPY1]], 5, implicit $eflags
-  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[CMOV64rr]], 1, $noreg, 0, $noreg :: (load (s32))
+  ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm killed [[CMOV64rr]], 1, $noreg, 0, $noreg :: (load (s32), !mem.cache_hint !1)
   ; CHECK-NEXT:   $eax = COPY [[MOV32rm]]
   ; CHECK-NEXT:   RET 0, $eax
   %a = load i32, ptr %p, align 4, !mem.cache_hint !0
@@ -436,7 +436,7 @@ define i1 @simplify_setcc(ptr %p) {
   ; CHECK-NEXT:   liveins: $rdi
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   CMP8mi [[COPY]], 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s8) from %ir.p, align 8, !alias.scope !6, !noalias !9)
+  ; CHECK-NEXT:   CMP8mi [[COPY]], 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s8) from %ir.p, align 8, !alias.scope !6, !noalias !9, !mem.cache_hint !1)
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   $al = COPY [[SETCCr]]
   ; CHECK-NEXT:   RET 0, $al
