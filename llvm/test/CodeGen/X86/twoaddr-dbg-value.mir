@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livevars,twoaddressinstruction -mtriple=x86_64-- -o - %s | FileCheck %s
+# RUN: llc --passes='require<live-intervals>,two-address-instruction' -mtriple=x86_64-- -o - %s | FileCheck %s
 ---
 name:            foo
 tracksRegLiveness: true
@@ -21,7 +21,7 @@ body:             |
 # TwoAddressInstructionPass::rescheduleMIBelowKill optimization
 
 # CHECK: PUSH32r %1, implicit-def $esp, implicit $esp
-# CHECK-NEXT: %2:gr32 = COPY killed %1
+# CHECK-NEXT: %2:gr32 = COPY %1
 # CHECK-NEXT: %2:gr32 = XOR32ri %2, 1, implicit-def dead $eflags
+# CHECK-NEXT: %3:gr32 = COPY %2
 # CHECK-NEXT: DBG_VALUE %2
-# CHECK-NEXT: %3:gr32 = COPY killed %2
