@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: 'ghcr.io/llvm/ci-ubuntu-26.04-ids-checks:latest@sha256:610825c41aea545132a5b441ee864acf050ac54ff40009fbaaf3e158f139e5d7'
-    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -45,10 +44,10 @@ jobs:
                 -D CMAKE_CXX_COMPILER=clang++ \
                 -D LLVM_ENABLE_PROJECTS=clang \
                 -D LLVM_TARGETS_TO_BUILD="host" \
-                -D LLVM_INCLUDE_TESTS=OFF \
                 -D LLVM_INCLUDE_BENCHMARKS=OFF \
                 -D CMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
+                -D LLVM_LINK_LLVM_DYLIB=ON \
                 -G Ninja
 
           # Build the generated-header prerequisites that idt needs to parse
@@ -97,3 +96,7 @@ jobs:
           name: workflow-args
           path: |
             llvm-project/comments
+
+      - name: Build and test libLLVM.so
+        run: |
+          ninja -C ./llvm-project/build check-llvm
