@@ -107,7 +107,20 @@ private:
   /// behavior which is not modelled in the compiler.
   unsigned BufferCycles = 0;
 
+  /// Compares two SUnits by depth (lower depth = higher priority for top-down).
+  /// \returns -1 if Candidate is worse, 0 if equal, 1 if Candidate is better.
+  int compareDepth(SUnit *Candidate, SUnit *Existing) const;
+
+  /// Compares two SUnits by proximity to freeing a register.
+  /// \returns -1 if Candidate is worse, 0 if equal, 1 if Candidate is better.
+  int compareRegFreeProximity(SUnit *Candidate, SUnit *Existing) const;
+
+  /// Try to update PrioritySUs with a new \p SU.
+  void updatePrioritySUsWith(SUnit *SU, bool IsCloseToRegPressureLimit = false);
+
 public:
+  /// Rebuild PrioritySUs from AllSUs using the given pressure flag.
+  void rebuildPrioritySUs(bool IsCloseToRegPressureLimit);
   HardwareUnitInfo() {}
 
   unsigned size() { return AllSUs.size(); }
@@ -192,11 +205,13 @@ public:
   SUnit *getNextTargetSU(bool LookDeep = false) const;
   /// Insert the \p SU into AllSUs and account its \p BlockingCycles into
   /// the TotalCycles. This maintains the list of PrioritySUs.
-  void insert(SUnit *SU, unsigned BlockingCycles);
+  void insert(SUnit *SU, unsigned BlockingCycles,
+              bool IsCloseToRegPressureLimit);
   /// Update the state for \p SU being scheduled by removing it from the AllSUs
   /// and reducing its \p BlockingCycles from the TotalCycles. This maintains
   /// the list of PrioritySUs.
-  void markScheduled(SUnit *SU, unsigned BlockingCycles);
+  void markScheduled(SUnit *SU, unsigned BlockingCycles,
+                     bool IsCloseToRegPressureLimit);
   /// After we've collected all the region pressure for this HWUI, correct for
   /// any specifics of the behavior of this resource. For example, if the
   /// HardwareUnit can hold N instructions simultaneously, then there is no
@@ -255,6 +270,10 @@ protected:
 
   StallCosts getStallCosts(SUnit *SU, SchedBoundary &Zone);
 
+  /// Controls whether or not the KillProximity heuristic is used when
+  /// selecting the next candidate SU for scheduling.
+  bool IsCloseToRegPressureLimit = false;
+
 public:
   CandidateHeuristics() = default;
 
@@ -310,6 +329,15 @@ public:
                                 SchedBoundary *Zone) const;
 
   void dumpRegionSummary();
+
+  void setIsCloseToRegPressureLimit(bool Value) {
+    IsCloseToRegPressureLimit = Value;
+  }
+
+  void rebuildAllPrioritySUs() {
+    for (auto &HWUI : HWUInfo)
+      HWUI.rebuildPrioritySUs(IsCloseToRegPressureLimit);
+  }
 };
 
 class AMDGPUCoExecSchedStrategy final : public GCNSchedStrategy {
