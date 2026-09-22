@@ -998,7 +998,8 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
     if (isa<SCEVCouldNotCompute>(Coeff))
       return Coeff;
 
-    const SCEV *Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff);
+    SCEVUse Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff,
+                                {SCEV::FlagAnyWrap, UseFlags});
     Result = SE.getAddExpr(Result, Mul, {SCEV::FlagAnyWrap, UseFlags});
   }
   return Result;
@@ -10096,6 +10097,22 @@ SCEVUse ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
       break;
     }
   return C;
+}
+
+SCEVUse ScalarEvolution::getSCEVAtExit(const SCEV *V, const Loop *L,
+                                       const BasicBlock *ExitingBlock) {
+  SCEVUse ExitValue = getSCEVAtScope(V, L->getParentLoop());
+  if (!isLoopInvariant(ExitValue, L)) {
+    // If we failed to evaluate it in the outer scope, try to evaluate an
+    // addrec for the specific exit.
+    // TODO: Generalize this to other expressions.
+    const SCEV *ExitCount = getExitCount(L, ExitingBlock);
+    if (!isa<SCEVCouldNotCompute>(ExitCount))
+      if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V))
+        if (AddRec->getLoop() == L)
+          ExitValue = AddRec->evaluateAtIteration(ExitCount, *this);
+  }
+  return ExitValue;
 }
 
 /// This builds up a Constant using the ConstantExpr interface.  That way, we
