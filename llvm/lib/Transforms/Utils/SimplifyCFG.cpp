@@ -4177,6 +4177,12 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
   } else
     PBI->setMetadata(LLVMContext::MD_prof, nullptr);
 
+  // The new predicate has different successor evidence. BB, if it survives,
+  // also executes only on the remaining predecessor paths.
+  PBI->setMetadata(LLVMContext::MD_branch_uniformity_profile, nullptr);
+  BI->setMetadata(LLVMContext::MD_block_uniformity_profile, nullptr);
+  BI->setMetadata(LLVMContext::MD_branch_uniformity_profile, nullptr);
+
   // Now, update the CFG.
   PBI->setSuccessor(PBI->getSuccessor(0) != BB, UniqueSucc);
 
@@ -4908,6 +4914,12 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
   // Merge the conditions.
   Value *Cond =
       createLogicalOp(Builder, Instruction::Or, PBICond, BICond, "brmerge");
+
+  // The new predicate has different successor evidence. BB, if it survives,
+  // also executes only on the remaining predecessor paths.
+  PBI->setMetadata(LLVMContext::MD_branch_uniformity_profile, nullptr);
+  BI->setMetadata(LLVMContext::MD_block_uniformity_profile, nullptr);
+  BI->setMetadata(LLVMContext::MD_branch_uniformity_profile, nullptr);
 
   // Modify PBI to branch on the new condition to the new dests.
   PBI->setCondition(Cond);
