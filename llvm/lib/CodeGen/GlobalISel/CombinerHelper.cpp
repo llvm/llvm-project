@@ -3376,11 +3376,6 @@ bool CombinerHelper::matchKnownBitsToConstant(MachineInstr &MI,
   if (!Ty.isScalar() && !Ty.isFixedVector())
     return false;
 
-  // Don't materialize a def that already has a class/bank constraint into a
-  // constant.
-  if (!MRI.getRegClassOrRegBank(Dst).isNull())
-    return false;
-
   if (!isConstantLegalOrBeforeLegalizer(Ty))
     return false;
 
