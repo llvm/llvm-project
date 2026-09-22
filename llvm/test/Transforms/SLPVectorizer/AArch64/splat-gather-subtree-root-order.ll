@@ -69,4 +69,49 @@ exit:
   ret void
 }
 
+; The reversed loads of the same vector factor make the reordering pass prefer
+; the reverse order tree-wide; the splat subtree root has no users and must
+; still stay a plain vector load in memory order.
+
+define void @splat_root_pinned_by_reorder_pass(ptr %u, ptr %b, ptr %c) {
+; CHECK-LABEL: define void @splat_root_pinned_by_reorder_pass(
+; CHECK-SAME: ptr [[U:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[B2P:%.*]] = getelementptr i8, ptr [[B]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[U]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[B2P]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[C]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP5]], <2 x double> zeroinitializer)
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP3]], <2 x double> [[TMP7]], <2 x double> [[TMP6]])
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    store <2 x double> [[TMP10]], ptr [[U]], align 8
+; CHECK-NEXT:    ret void
+;
+  %u1p = getelementptr i8, ptr %u, i64 8
+  %u0 = load double, ptr %u, align 8
+  %u1 = load double, ptr %u1p, align 8
+  %b1p = getelementptr i8, ptr %b, i64 8
+  %b0 = load double, ptr %b, align 8
+  %b1 = load double, ptr %b1p, align 8
+  %b2p = getelementptr i8, ptr %b, i64 16
+  %b3p = getelementptr i8, ptr %b, i64 24
+  %b2 = load double, ptr %b2p, align 8
+  %b3 = load double, ptr %b3p, align 8
+  %c1p = getelementptr i8, ptr %c, i64 8
+  %c0 = load double, ptr %c, align 8
+  %c1 = load double, ptr %c1p, align 8
+  %m0 = call double @llvm.fmuladd.f64(double %b1, double %u0, double 0.0)
+  %m1 = call double @llvm.fmuladd.f64(double %b0, double %u0, double 0.0)
+  %n0 = call double @llvm.fmuladd.f64(double %b3, double %u1, double %m0)
+  %n1 = call double @llvm.fmuladd.f64(double %b2, double %u1, double %m1)
+  %s0 = fadd double %n0, %c1
+  %s1 = fadd double %n1, %c0
+  store double %s0, ptr %u, align 8
+  store double %s1, ptr %u1p, align 8
+  ret void
+}
+
 declare double @llvm.fmuladd.f64(double, double, double)
