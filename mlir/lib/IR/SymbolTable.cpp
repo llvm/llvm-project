@@ -1055,6 +1055,7 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
   auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
     for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
       if (auto symbol = dyn_cast<SymbolOpInterface>(nestedOp)) {
+        // Private symbols can only have users within this table.
         if (symbol.isPrivate() || (symbol.isNested() && allUsesVisible))
           symbolsWithAllUsesVisible.insert(&nestedOp);
       }
