@@ -21,7 +21,7 @@
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT: [shl] -> {  :  }
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [shl] -> { : shl <= -57 or shl >= 32768 }
+; CHECK-NEXT: [shl] -> { : shl >= 32711 or shl <= -57 }
 ; CHECK:      Defined Behavior Context:
 ; CHECK-NEXT: [shl] -> {  : -56 <= shl <= 32710 }
 
