@@ -991,6 +991,8 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
             TrampolineBB = addTrampolineAfter(/*BB=*/nullptr, TargetSymbol,
                                               /*TargetBB=*/nullptr,
                                               /*Count=*/0);
+            if (MIB->isTailCall(Inst))
+              MIB->convertJmpToTailCall(*TrampolineBB->getLastNonPseudoInstr());
             SymbolTrampolines[TargetSymbol] = TrampolineBB;
             auto L = BC.scopeLock();
             MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(),
