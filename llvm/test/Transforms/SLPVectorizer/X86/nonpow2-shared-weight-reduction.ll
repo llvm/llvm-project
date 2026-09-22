@@ -18,46 +18,33 @@ define void @ship3(ptr %weights, ptr %src, i64 %bpp, ptr %dst, i32 %n) {
 ; NPOT-NEXT:    br i1 [[POS]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; NPOT:       loop:
 ; NPOT-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; NPOT-NEXT:    [[ACCB:%.*]] = phi i32 [ 0, [[TMP0]] ], [ [[ADDB:%.*]], [[LOOP]] ]
-; NPOT-NEXT:    [[ACCG:%.*]] = phi i32 [ 0, [[TMP0]] ], [ [[ADDG:%.*]], [[LOOP]] ]
-; NPOT-NEXT:    [[ACCR:%.*]] = phi i32 [ 0, [[TMP0]] ], [ [[ADDR:%.*]], [[LOOP]] ]
+; NPOT-NEXT:    [[TMP1:%.*]] = phi <3 x i32> [ zeroinitializer, [[TMP0]] ], [ [[TMP7:%.*]], [[LOOP]] ]
 ; NPOT-NEXT:    [[WGEP:%.*]] = getelementptr inbounds i32, ptr [[WEIGHTS:%.*]], i64 [[IV]]
 ; NPOT-NEXT:    [[W:%.*]] = load i32, ptr [[WGEP]], align 4
 ; NPOT-NEXT:    [[OFF:%.*]] = mul nsw i64 [[IV]], [[BPP:%.*]]
 ; NPOT-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i64 [[OFF]]
-; NPOT-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 1
-; NPOT-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 2
-; NPOT-NEXT:    [[B:%.*]] = load i8, ptr [[P0]], align 1
-; NPOT-NEXT:    [[G:%.*]] = load i8, ptr [[P1]], align 1
-; NPOT-NEXT:    [[R:%.*]] = load i8, ptr [[P2]], align 1
-; NPOT-NEXT:    [[ZB:%.*]] = zext i8 [[B]] to i32
-; NPOT-NEXT:    [[ZG:%.*]] = zext i8 [[G]] to i32
-; NPOT-NEXT:    [[ZR:%.*]] = zext i8 [[R]] to i32
-; NPOT-NEXT:    [[MB:%.*]] = mul nsw i32 [[W]], [[ZB]]
-; NPOT-NEXT:    [[MG:%.*]] = mul nsw i32 [[W]], [[ZG]]
-; NPOT-NEXT:    [[MR:%.*]] = mul nsw i32 [[W]], [[ZR]]
-; NPOT-NEXT:    [[ADDB]] = add nsw i32 [[MB]], [[ACCB]]
-; NPOT-NEXT:    [[ADDG]] = add nsw i32 [[MG]], [[ACCG]]
-; NPOT-NEXT:    [[ADDR]] = add nsw i32 [[MR]], [[ACCR]]
+; NPOT-NEXT:    [[TMP2:%.*]] = load <3 x i8>, ptr [[P0]], align 1
+; NPOT-NEXT:    [[TMP3:%.*]] = zext <3 x i8> [[TMP2]] to <3 x i32>
+; NPOT-NEXT:    [[TMP4:%.*]] = insertelement <3 x i32> poison, i32 [[W]], i64 0
+; NPOT-NEXT:    [[TMP5:%.*]] = shufflevector <3 x i32> [[TMP4]], <3 x i32> poison, <3 x i32> zeroinitializer
+; NPOT-NEXT:    [[TMP6:%.*]] = mul nsw <3 x i32> [[TMP5]], [[TMP3]]
+; NPOT-NEXT:    [[TMP7]] = add nsw <3 x i32> [[TMP6]], [[TMP1]]
 ; NPOT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; NPOT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_EXT]]
 ; NPOT-NEXT:    br i1 [[DONE]], label [[EXIT_LOOP:%.*]], label [[LOOP]]
 ; NPOT:       exit.loop:
-; NPOT-NEXT:    [[SB:%.*]] = lshr i32 [[ADDB]], 16
-; NPOT-NEXT:    [[SG:%.*]] = lshr i32 [[ADDG]], 16
-; NPOT-NEXT:    [[SR:%.*]] = lshr i32 [[ADDR]], 16
-; NPOT-NEXT:    [[TB:%.*]] = trunc i32 [[SB]] to i8
-; NPOT-NEXT:    [[TG:%.*]] = trunc i32 [[SG]] to i8
-; NPOT-NEXT:    [[TR:%.*]] = trunc i32 [[SR]] to i8
+; NPOT-NEXT:    [[TMP8:%.*]] = lshr <3 x i32> [[TMP7]], splat (i32 16)
+; NPOT-NEXT:    [[TMP9:%.*]] = trunc <3 x i32> [[TMP8]] to <3 x i8>
 ; NPOT-NEXT:    br label [[EXIT]]
 ; NPOT:       exit:
-; NPOT-NEXT:    [[TMP11:%.*]] = phi i8 [ 0, [[TMP0]] ], [ [[TB]], [[EXIT_LOOP]] ]
-; NPOT-NEXT:    [[TMP12:%.*]] = phi i8 [ 0, [[TMP0]] ], [ [[TG]], [[EXIT_LOOP]] ]
-; NPOT-NEXT:    [[TMP13:%.*]] = phi i8 [ 0, [[TMP0]] ], [ [[TR]], [[EXIT_LOOP]] ]
+; NPOT-NEXT:    [[TMP10:%.*]] = phi <3 x i8> [ zeroinitializer, [[TMP0]] ], [ [[TMP9]], [[EXIT_LOOP]] ]
 ; NPOT-NEXT:    [[D1:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 1
 ; NPOT-NEXT:    [[D2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
+; NPOT-NEXT:    [[TMP11:%.*]] = extractelement <3 x i8> [[TMP10]], i64 0
 ; NPOT-NEXT:    store i8 [[TMP11]], ptr [[DST]], align 1
+; NPOT-NEXT:    [[TMP12:%.*]] = extractelement <3 x i8> [[TMP10]], i64 1
 ; NPOT-NEXT:    store i8 [[TMP12]], ptr [[D1]], align 1
+; NPOT-NEXT:    [[TMP13:%.*]] = extractelement <3 x i8> [[TMP10]], i64 2
 ; NPOT-NEXT:    store i8 [[TMP13]], ptr [[D2]], align 1
 ; NPOT-NEXT:    ret void
 ;
