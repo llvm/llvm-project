@@ -155,7 +155,7 @@ private:
 };
 
 // Forward declared for use below.
-inline __locale_t __get_c_locale();
+inline _LIBCPP_HIDE_FROM_ABI __locale_t __get_c_locale();
 
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 _LIBCPP_EXPORTED_FROM_ABI __locale_t __newlocale(int __mask, const char* __locale, __locale_t __base);
