@@ -1497,6 +1497,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
+    libc.src.stdlib.secure_getenv
     libc.src.stdlib.setenv
     libc.src.stdlib.system
     libc.src.stdlib.unsetenv
