@@ -17,6 +17,12 @@
 // RUN:   FileCheck -check-prefix=SRAMECC-OFF %s
 // SRAMECC-OFF: "-mno-sramecc"
 
+// SRAMECC remains selectable on gfx12.5 even though XNACK is hardwired on.
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1250:sramecc+ %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=SRAMECC-ON %s
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1250:sramecc- %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=SRAMECC-OFF %s
+
 // Test that target ID takes precedence over explicit flags
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a:xnack+ -mno-xnack %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=TARGETID-OVERRIDES-XNACK %s

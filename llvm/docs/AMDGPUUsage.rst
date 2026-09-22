@@ -1025,7 +1025,8 @@ consumed by the AMDGPU backend during code generation.
      - ``i32``
      - Error
      - Controls SRAMECC mode. This is ignored on targets which do not
-       support sramecc.
+       support SRAMECC on/off modes. Targets that support SRAMECC without
+       on/off modes always have SRAMECC enabled.
 
        - absent: **any**. The module can be loaded and executed in a process
          with SRAMECC either enabled or disabled.

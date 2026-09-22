@@ -32,9 +32,9 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
     return Ret;
   const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
       llvm::AMDGPU::getFeatureBitset(ProcKind);
-  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_SUPPORT))
+  // Only allow features in target IDs if the processor supports on/off modes.
+  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_ON_OFF_MODES))
     Ret.push_back("sramecc");
-  // Only allow xnack in target ID if the processor supports on/off modes.
   if (Features.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES))
     Ret.push_back("xnack");
   return Ret;
