@@ -1,6 +1,7 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --asm-verbose=0 --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not="OpCapability Int16" --implicit-check-not="OpCapability Int64" --implicit-check-not="OpCapability Float16" --implicit-check-not="OpCapability Float64"
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --asm-verbose=0 --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not="OpCapability Int8" --implicit-check-not="OpCapability Int16" --implicit-check-not="OpCapability Int64" --implicit-check-not="OpCapability Float16" --implicit-check-not="OpCapability Float64"
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --asm-verbose=0 --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=UNIQUE
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --asm-verbose=0 --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=DROPPED
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --asm-verbose=0 --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=DEDUP
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; A constant assignment names an OpConstant, which satisfies DebugValue's
@@ -21,7 +22,7 @@
 ;
 ; A non-semantic instruction can be removed from a module without changing it,
 ; so debug info must not make the module require something it otherwise would
-; not. OpTypeInt 16, OpTypeInt 64, OpTypeFloat 16 and OpTypeFloat 64 each
+; not. OpTypeInt 8, OpTypeInt 16, OpTypeInt 64, OpTypeFloat 16 and OpTypeFloat 64 each
 ; oblige the module to declare a capability, and spirv-val rejects the module
 ; without it, so a narrow or wide constant the module does not already define
 ; is dropped instead. The implicit-check-not options on the first RUN line
@@ -45,7 +46,16 @@
 
 ; UNIQUE-COUNT-1: OpTypeBool
 ; UNIQUE-NOT: OpTypeBool
+
+; A constant assignment whose value collides with one the handler emits for its
+; own use must reuse it rather than declare a second. 100 is the
+; DebugInfoVersion operand of DebugCompilationUnit, and it is emitted well
+; before the assignment that also wants it, so this needs its own FileCheck
+; pass to keep the negative region running to end of file.
+; DEDUP-COUNT-1: OpConstant {{%[0-9]+}} 100{{ *$}}
+; DEDUP-NOT: OpConstant {{%[0-9]+}} 100{{ *$}}
 ; CHECK-DAG: [[NEGNAME:%[0-9]+]] = OpString "negative"
+; CHECK-DAG: [[TINYNAME:%[0-9]+]] = OpString "tiny"
 ; CHECK-DAG: [[NARROWNAME:%[0-9]+]] = OpString "narrow"
 ; CHECK-DAG: [[WIDENAME:%[0-9]+]] = OpString "wide"
 ; CHECK-DAG: [[HALFNAME:%[0-9]+]] = OpString "half"
@@ -55,26 +65,32 @@
 ; CHECK-DAG: [[WIDESOURCENAME:%[0-9]+]] = OpString "wide_source"
 ; CHECK-DAG: [[WIDEFLOATNAME:%[0-9]+]] = OpString "wide_float_location"
 ; CHECK-DAG: [[WIDENEDNEGNAME:%[0-9]+]] = OpString "widened_negative"
+; CHECK-DAG: [[VERSIONNAME:%[0-9]+]] = OpString "collides_with_version"
 ; CHECK-DAG: [[F32NAME:%[0-9]+]] = OpString "single"
+; CHECK-DAG: [[C100:%[0-9]+]] = OpConstant [[I32]] 100{{ *$}}
 ; CHECK-DAG: [[NEGVAR:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[NEGNAME]]
 ; The narrow and wide variables still get a DebugLocalVariable. Only the
 ; binding to their value is dropped, since naming it would need a type the
 ; module does not have. The DROPPED prefix below asserts that: it captures the
 ; four ids from the module section, which precedes every function body, so its
 ; negative region covers all of them.
+; CHECK-DAG: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[TINYNAME]]
 ; CHECK-DAG: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[NARROWNAME]]
 ; CHECK-DAG: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[WIDENAME]]
 ; CHECK-DAG: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[HALFNAME]]
 ; CHECK-DAG: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[DOUBLENAME]]
 
+; DROPPED-DAG: [[DTINYNAME:%[0-9]+]] = OpString "tiny"
 ; DROPPED-DAG: [[DNARROWNAME:%[0-9]+]] = OpString "narrow"
 ; DROPPED-DAG: [[DWIDENAME:%[0-9]+]] = OpString "wide"
 ; DROPPED-DAG: [[DHALFNAME:%[0-9]+]] = OpString "half"
 ; DROPPED-DAG: [[DDOUBLENAME:%[0-9]+]] = OpString "double"
+; DROPPED-DAG: [[DTINY:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[DTINYNAME]]
 ; DROPPED-DAG: [[DNARROW:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[DNARROWNAME]]
 ; DROPPED-DAG: [[DWIDE:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[DWIDENAME]]
 ; DROPPED-DAG: [[DHALF:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[DHALFNAME]]
 ; DROPPED-DAG: [[DDOUBLE:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[DDOUBLENAME]]
+; DROPPED-NOT: DebugValue [[DTINY]]
 ; DROPPED-NOT: DebugValue [[DNARROW]]
 ; DROPPED-NOT: DebugValue [[DWIDE]]
 ; DROPPED-NOT: DebugValue [[DHALF]]
@@ -85,6 +101,7 @@
 ; CHECK-DAG: [[WIDEFLOATVAR:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[WIDEFLOATNAME]]
 ; CHECK-DAG: [[WIDENEDNEGVAR:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[WIDENEDNEGNAME]]
 ; CHECK-DAG: [[F32VAR:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[F32NAME]]
+; CHECK-DAG: [[VERSIONVAR:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLocalVariable [[VERSIONNAME]]
 
 ; CHECK: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugValue {{%[0-9]+}} [[C42]]
 ; CHECK: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugValue {{%[0-9]+}} [[TRUE]]
@@ -95,6 +112,7 @@
 ; CHECK: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugValue [[WIDESOURCEVAR]] [[C42]]
 ; CHECK: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugValue [[WIDENEDNEGVAR]] [[CNEG]]
 ; CHECK: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugValue [[F32VAR]] [[F32C]]
+; CHECK: OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugValue [[VERSIONVAR]] [[C100]]
 ; CHECK-NOT: DebugValue [[WIDEFLOATVAR]]
 
 target triple = "spirv64-unknown-unknown"
@@ -105,6 +123,7 @@ entry:
     #dbg_value(i1 true, !11, !DIExpression(), !10)
     #dbg_value(i1 false, !12, !DIExpression(), !10)
     #dbg_value(i32 -1, !13, !DIExpression(), !10)
+    #dbg_value(i8 3, !32, !DIExpression(), !10)
     #dbg_value(i16 7, !14, !DIExpression(), !10)
     #dbg_value(i64 1234605616436508552, !15, !DIExpression(), !10)
     #dbg_value(half 0xH3C00, !16, !DIExpression(), !10)
@@ -114,6 +133,7 @@ entry:
     #dbg_value(i128 18446744073709551658, !25, !DIExpression(), !10)
     #dbg_value(i16 -1, !27, !DIExpression(), !10)
     #dbg_value(float 1.000000e+00, !30, !DIExpression(), !10)
+    #dbg_value(i32 100, !31, !DIExpression(), !10)
     #dbg_value(fp128 0xL00000000000000003FFF000000000000, !26, !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned), !10)
   ret i32 %x, !dbg !10
 }
@@ -152,3 +172,6 @@ entry:
 !28 = !DIBasicType(name: "another int", size: 32, encoding: DW_ATE_signed)
 !29 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
 !30 = !DILocalVariable(name: "single", scope: !5, file: !1, line: 16, type: !29)
+!31 = !DILocalVariable(name: "collides_with_version", scope: !5, file: !1, line: 17, type: !7)
+!32 = !DILocalVariable(name: "tiny", scope: !5, file: !1, line: 18, type: !33)
+!33 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)

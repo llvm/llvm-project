@@ -523,10 +523,6 @@ static void generateAssignType(MachineInstr &MI, Register ResultRegister,
                     << " with type: " << *ResultType);
   MachineIRBuilder MIB(MI);
   updateRegType(ResultRegister, nullptr, ResultType, GR, MIB, MRI);
-  // updateRegType() moves the insert point past any debug record following the
-  // definition. Leaving it there puts the ASSIGN_TYPE, which takes over the
-  // def below, after a DBG_VALUE that names the register, so the record would
-  // precede its own definition. Pin the insert point back.
   MIB.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
 
   // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is

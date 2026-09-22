@@ -7,21 +7,28 @@
 ; optional-capability types, so the debug handler must reuse each type and
 ; emit only the constants needed by the DebugValue records.
 ;
+; An 8-bit integer is gated by Int8 exactly as 16 and 64 are gated by Int16 and
+; Int64, so a char assignment binds here and is dropped in a module without the
+; type.
+;
 ; The signature uses no 32-bit integer, so this is the one module in the suite
 ; where the handler creates OpTypeInt 32 0 rather than finding it. That type
 ; has a second owner, the line and column constants every DebugLine needs, and
 ; two declarations of it are a duplicate the validator rejects.
 
+; CHECK-DAG: OpCapability Int8
 ; CHECK-DAG: OpCapability Int16
 ; CHECK-DAG: OpCapability Int64
 ; CHECK-DAG: OpCapability Float16
 ; CHECK-DAG: OpCapability Float64
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
+; CHECK-DAG: [[I8:%[0-9]+]] = OpTypeInt 8 0
 ; CHECK-DAG: [[I16:%[0-9]+]] = OpTypeInt 16 0
 ; CHECK-DAG: [[I64:%[0-9]+]] = OpTypeInt 64 0
 ; CHECK-DAG: [[F16:%[0-9]+]] = OpTypeFloat 16
 ; CHECK-DAG: [[F64:%[0-9]+]] = OpTypeFloat 64
+; CHECK-DAG: [[I8C:%[0-9]+]] = OpConstant [[I8]] 3{{ *$}}
 ; CHECK-DAG: [[I16C:%[0-9]+]] = OpConstant [[I16]] 7{{ *$}}
 ; CHECK-DAG: [[I64C:%[0-9]+]] = OpConstant [[I64]] 1234605616436508552{{ *$}}
 ; A half prints as its raw bit pattern and a double prints as a value, so
@@ -31,11 +38,13 @@
 ; CHECK-DAG: [[F64C:%[0-9]+]] = OpConstant [[F64]] 1{{ *$}}
 ; CHECK-DAG: [[I32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[I32C:%[0-9]+]] = OpConstant [[I32]] 987654321{{ *$}}
+; CHECK-DAG: [[I8NAME:%[0-9]+]] = OpString "i8_constant"
 ; CHECK-DAG: [[I16NAME:%[0-9]+]] = OpString "i16_constant"
 ; CHECK-DAG: [[I64NAME:%[0-9]+]] = OpString "i64_constant"
 ; CHECK-DAG: [[F16NAME:%[0-9]+]] = OpString "half_constant"
 ; CHECK-DAG: [[F64NAME:%[0-9]+]] = OpString "double_constant"
 ; CHECK-DAG: [[I32NAME:%[0-9]+]] = OpString "i32_constant"
+; CHECK-DAG: [[I8VAR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[I8NAME]]
 ; CHECK-DAG: [[I16VAR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[I16NAME]]
 ; CHECK-DAG: [[I64VAR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[I64NAME]]
 ; CHECK-DAG: [[F16VAR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[F16NAME]]
@@ -43,6 +52,7 @@
 ; CHECK-DAG: [[I32VAR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[I32NAME]]
 
 ; CHECK: OpFunction
+; CHECK: OpExtInst [[VOID]] [[EXT]] DebugValue [[I8VAR]] [[I8C]]
 ; CHECK: OpExtInst [[VOID]] [[EXT]] DebugValue [[I16VAR]] [[I16C]]
 ; CHECK: OpExtInst [[VOID]] [[EXT]] DebugValue [[I64VAR]] [[I64C]]
 ; CHECK: OpExtInst [[VOID]] [[EXT]] DebugValue [[F16VAR]] [[F16C]]
@@ -62,11 +72,13 @@
 ; whole semantic type block and reaches end of file. Pairing each positive with
 ; its own negative would end each region at the next positive, before the point
 ; where emitNonSemanticGlobalDebugInfo() would add a duplicate.
+; UNIQUE-DAG: OpTypeInt 8 0
 ; UNIQUE-DAG: OpTypeInt 16 0
 ; UNIQUE-DAG: OpTypeInt 64 0
 ; UNIQUE-DAG: OpTypeFloat 16
 ; UNIQUE-DAG: OpTypeFloat 64
 ; UNIQUE-DAG: OpTypeInt 32 0
+; UNIQUE-NOT: OpTypeInt 8 0
 ; UNIQUE-NOT: OpTypeInt 16 0
 ; UNIQUE-NOT: OpTypeInt 64 0
 ; UNIQUE-NOT: OpTypeFloat 16
@@ -75,8 +87,9 @@
 
 target triple = "spirv64-unknown-unknown"
 
-define spir_func i64 @existing_types(i16 %s, i64 %l, half %h, double %d) !dbg !5 {
+define spir_func i64 @existing_types(i8 %c, i16 %s, i64 %l, half %h, double %d) !dbg !5 {
 entry:
+    #dbg_value(i8 3, !18, !DIExpression(), !15)
     #dbg_value(i16 7, !11, !DIExpression(), !15)
     #dbg_value(i64 1234605616436508552, !12, !DIExpression(), !15)
     #dbg_value(half 0xH3C00, !13, !DIExpression(), !15)
@@ -94,7 +107,7 @@ entry:
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !DISubroutineType(types: !6)
 !5 = distinct !DISubprogram(name: "existing_types", linkageName: "existing_types", scope: !1, file: !1, line: 1, type: !4, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
-!6 = !{!8, !7, !8, !9, !10}
+!6 = !{!8, !19, !7, !8, !9, !10}
 !7 = !DIBasicType(name: "short", size: 16, encoding: DW_ATE_signed)
 !8 = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
 !9 = !DIBasicType(name: "half", size: 16, encoding: DW_ATE_float)
@@ -106,3 +119,5 @@ entry:
 !15 = !DILocation(line: 6, column: 3, scope: !5)
 !16 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !17 = !DILocalVariable(name: "i32_constant", scope: !5, file: !1, line: 7, type: !16)
+!18 = !DILocalVariable(name: "i8_constant", scope: !5, file: !1, line: 8, type: !19)
+!19 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)

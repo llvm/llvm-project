@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegister.h"
@@ -36,17 +35,8 @@
 namespace llvm {
 
 class GlobalVariable;
+class MachineDominatorTree;
 class SPIRVSubtarget;
-
-namespace SPIRV {
-/// A #dbg_value that assigns a literal, as collected from LLVM IR.
-struct ConstantAssignment {
-  const DIBasicType *Type; ///< The variable's type, stripped to a scalar.
-  uint64_t Bits;           ///< The value, narrowed to that type.
-  const DILocalVariable *Var;
-  const DIExpression *Expr;
-};
-} // namespace SPIRV
 
 /// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo.100 (NSDI)
 /// instructions for the SPIR-V backend. Registered with SPIRVAsmPrinter when
@@ -169,24 +159,14 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   MCRegister CachedOpTypeInt32Reg;
 
-  // Cache of already-emitted i32 constants, keyed by value. Prevents
-  // duplicate OpConstant instructions for the same integer value.
-  DenseMap<uint32_t, MCRegister> I32ConstantCache;
-
   // Result id per SPIR-V scalar type this handler needed, keyed by opcode and
   // width. MB_TypeConstVars holds only what module analysis collected, so a
   // type emitted here has to be remembered separately to stay unique.
   DenseMap<std::pair<unsigned, int64_t>, MCRegister> ScalarTypeCache;
 
-  // Result id per scalar constant, keyed by its type's id and its bits.
-  // MB_TypeConstVars does not hold what this handler emitted either, and
-  // keying on the type lets two DIBasicTypes describing it share a constant.
+  // Result id per scalar constant, keyed by its type's id and its bits. Keying
+  // on the type lets two DIBasicTypes describing it share a constant.
   DenseMap<std::pair<unsigned, uint64_t>, MCRegister> ScalarConstantCache;
-
-  // Constant assignments collected in beginModule(). A record only earns an
-  // OpConstant when it can produce a DebugValue, so these are filtered rather
-  // than emitted wholesale.
-  SmallVector<SPIRV::ConstantAssignment> ConstantAssignments;
 
   // Result id per collected constant, keyed by its type and bits. Filled
   // during module-scope emission, since an OpConstant has to precede every
@@ -244,12 +224,6 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
     SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode;
     MCRegister LocationReg; ///< The Variable or Value operand.
   };
-
-  // A record can name a function-local definition only when that definition
-  // dominates the record. Requiring MachineDominatorTreeWrapperPass in
-  // SPIRVAsmPrinter::getAnalysisUsage() would build a tree for every SPIR-V
-  // compilation, so this one is built on the first record of each function.
-  std::unique_ptr<MachineDominatorTree> DomTree;
 
   // Records to emit before their anchor is printed, built once per function by
   // analyzeDebugRecords() and only read afterwards.
@@ -331,9 +305,8 @@ private:
 
   /// Open the DebugScope region \p MI belongs to, closing the previous one.
   ///
-  /// \returns False when module-scope emission produced no DebugScope for that
-  /// scope, or no DebugInlinedAt for its chain, so the open region is not
-  /// \p MI's.
+  /// \returns False when \p MI's scope has no \c DebugScope, or its chain no
+  /// \c DebugInlinedAt, leaving the open region someone else's.
   bool emitDebugScopeForInstruction(const MachineInstr *MI);
   void emitDebugLineForInstruction(const MachineInstr *MI);
   void preparePerFunctionDebug(const MachineFunction *MF);
@@ -539,18 +512,18 @@ private:
   /// with no module-scope id, a physical register, a variadic value, an
   /// instruction reference, or a definition that does not dominate \p MI.
   void resolveDebugRecord(const MachineInstr &MI,
-                          const MachineInstr *LastEmitted);
+                          const MachineInstr *LastEmitted,
+                          const MachineDominatorTree &DomTree);
 
   /// Store \p MI on \p Anchor, to emit before \p Anchor is printed.
   void placeRecord(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
                    const MachineInstr &MI, MCRegister LocationReg,
                    const MachineInstr *Anchor);
 
-  /// Emit the records \c analyzeDebugRecords() anchored on \p Anchor.
   void emitAnalyzedRecords(const MachineInstr *Anchor);
 
-  /// The module-scope constant \p MI assigns, or \c std::nullopt when \p MI
-  /// is not a constant assignment this backend collected a constant for.
+  /// The \c OpConstant id for the constant \p MI assigns, or \c std::nullopt
+  /// when \p MI assigns no constant this backend emitted.
   std::optional<MCRegister> getConstantValueReg(const MachineInstr &MI) const;
 
   /// Result id of the constant \p Opcode of type \p TypeReg holding
@@ -567,10 +540,16 @@ private:
   MCRegister findOrEmitScalarType(const DIBasicType *BT,
                                   SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Result id of the constant \p Value of type \p BT, reusing one from
-  /// \c MB_TypeConstVars when the module already defines it.
+  /// Result id of the constant \p Value, with \p BT giving both the SPIR-V
+  /// type and the opcode. Invalid when the type may not be created.
   MCRegister findOrEmitScalarConstant(const DIBasicType *BT, uint64_t Value,
                                       SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Result id of the constant \p Value of type \p TypeReg, reusing one from
+  /// \c MB_TypeConstVars or from an earlier call when either already has it.
+  MCRegister findOrEmitConstant(unsigned Opcode, MCRegister TypeReg,
+                                uint64_t Value, unsigned Width,
+                                SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \p Opcode naming \p MI's variable, \p LocationReg and \p MI's
   /// expression, after \p MI's own \c DebugScope and \c DebugLine. Emits

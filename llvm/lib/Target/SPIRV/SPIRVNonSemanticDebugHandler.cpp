@@ -12,11 +12,14 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -260,7 +263,6 @@ unsigned SPIRVNonSemanticDebugHandler::toNSDISrcLang(unsigned DwarfSrcLang) {
   }
 }
 
-// Whether \p BT is a SPIR-V OpTypeBool.
 static bool isBooleanType(const DIBasicType *BT) {
   return BT->getEncoding() == dwarf::DW_ATE_boolean;
 }
@@ -285,28 +287,16 @@ static uint64_t constantBits(const APInt &Value, const DIBasicType *BT) {
                       BT);
 }
 
-// \p CI as a 64-bit value, truncated to the width of \p BT. A one-bit constant
-// is zero extended, widths 2 through 64 are sign extended, and anything wider
-// is truncated.
-static uint64_t constantBits(const ConstantInt *CI, const DIBasicType *BT) {
-  const APInt &Value = CI->getValue();
-  if (Value.getBitWidth() > 64)
-    return constantBits(Value, BT);
-  if (Value.getBitWidth() == 1)
-    return constantBits(Value.getZExtValue(), BT);
-  return constantBits(static_cast<uint64_t>(Value.getSExtValue()), BT);
-}
-
 // The DIBasicType that \p Ty resolves to through any typedefs, or null.
-//
-// This accepts: a boolean of any size, and a 16, 32 or 64-bit integer or float.
-// Anything else gives null, including a type reached through a cv-qualifier.
 static const DIBasicType *stripToScalarType(const DIType *Ty) {
-  // Only a typedef is looked through. A cv-qualified type is not emitted as a
-  // DebugType, so emitDebugLocalVariable() cannot name it and the variable
-  // gets no DebugLocalVariable.
+  // A cv-qualified type gets no DebugType, so its variable has no
+  // DebugLocalVariable and its records are dropped.
+  //
+  // Since visitDIDerivedType accepts a cyclic typedef chain, this stops once it
+  // reaches an already seen type.
+  SmallPtrSet<const DIDerivedType *, 4> Seen;
   while (const auto *DT = dyn_cast_or_null<DIDerivedType>(Ty)) {
-    if (DT->getTag() != dwarf::DW_TAG_typedef)
+    if (DT->getTag() != dwarf::DW_TAG_typedef || !Seen.insert(DT).second)
       return nullptr;
     Ty = DT->getBaseType();
   }
@@ -325,33 +315,13 @@ static const DIBasicType *stripToScalarType(const DIType *Ty) {
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_signed_char:
   case dwarf::DW_ATE_unsigned_char:
+    return Size == 8 || Size == 16 || Size == 32 || Size == 64 ? BT : nullptr;
   case dwarf::DW_ATE_float:
+    // SPIR-V has no 8-bit float.
     return Size == 16 || Size == 32 || Size == 64 ? BT : nullptr;
   default:
     return nullptr;
   }
-}
-
-static bool isLowerableExpression(const DIExpression *Expr);
-
-// The constant assignment \p DVR makes to \p LV, or nullopt when this backend
-// cannot name the assigned value.
-static std::optional<SPIRV::ConstantAssignment>
-getConstantAssignment(const DbgVariableRecord *DVR, const DILocalVariable *LV) {
-  if (!DVR->isDbgValue() || DVR->getNumVariableLocationOps() != 1)
-    return std::nullopt;
-  const auto *BT = stripToScalarType(LV->getType());
-  if (!BT || !isLowerableExpression(DVR->getExpression()))
-    return std::nullopt;
-  const Value *V = DVR->getVariableLocationOp(0);
-  std::optional<uint64_t> Bits;
-  if (const auto *CI = dyn_cast_or_null<ConstantInt>(V))
-    Bits = constantBits(CI, BT);
-  else if (const auto *CFP = dyn_cast_or_null<ConstantFP>(V))
-    Bits = constantBits(CFP->getValueAPF().bitcastToAPInt(), BT);
-  if (!Bits)
-    return std::nullopt;
-  return SPIRV::ConstantAssignment{BT, *Bits, LV, DVR->getExpression()};
 }
 
 // Collect distinct DILocations and DILocalVariables from LLVM IR.
@@ -367,8 +337,7 @@ getConstantAssignment(const DbgVariableRecord *DVR, const DILocalVariable *LV) {
 // still get a DebugLocalVariable.
 static void collectDebugLocationsAndLocalVariables(
     const Module &M, SetVector<const DILocation *> &Locations,
-    SetVector<const DILocalVariable *> &LVs,
-    SmallVectorImpl<SPIRV::ConstantAssignment> &Assignments) {
+    SetVector<const DILocalVariable *> &LVs) {
   for (const Function &F : M) {
     const DISubprogram *SP = F.getSubprogram();
     if (!SP)
@@ -383,14 +352,8 @@ static void collectDebugLocationsAndLocalVariables(
         if (const DILocation *DL = DR.getDebugLoc().get())
           Locations.insert(DL);
         if (const auto *DVR = dyn_cast<DbgVariableRecord>(&DR))
-          if (const DILocalVariable *LV = DVR->getVariable()) {
+          if (const DILocalVariable *LV = DVR->getVariable())
             LVs.insert(LV);
-            // The OpConstant has to precede every function body, so it is
-            // collected here and emitted with the rest of module-scope debug
-            // info.
-            if (auto CA = getConstantAssignment(DVR, LV))
-              Assignments.push_back(*CA);
-          }
       }
     }
   }
@@ -439,11 +402,9 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   ScopeToPathOpStringReg.clear();
   DebugSourceRegByFileStr.clear();
   OpStringContentCache.clear();
-  I32ConstantCache.clear();
   ScalarTypeCache.clear();
   ScalarConstantCache.clear();
   ConstantValueRegs.clear();
-  ConstantAssignments.clear();
   DebugTypeFunctionCache.clear();
   DebugOperationCache.clear();
   DebugExpressionCache.clear();
@@ -524,7 +485,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   }
 
   collectDebugLocationsAndLocalVariables(*M, UniqueDebugLocations,
-                                         LocalVariables, ConstantAssignments);
+                                         LocalVariables);
 
   // DILexicalBlock and DINamespace scopes are lowered to DebugLexicalBlock.
   // Collect them in parent-before-child order so they can be later emitted in a
@@ -559,13 +520,8 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   if (!MAI.ExtInstSetMap.count(NSSet))
     MAI.ExtInstSetMap[NSSet] = MAI.getNextIDRegister();
 
-  // Types, constants and globals never reach endInstruction(), and this section
-  // is written before every function body, so record them as already emitted.
-  // handleTypeDeclOrConstant() keeps only one instruction per signature here
-  // and aliases every duplicate to its id (which identifies them).
   for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars)) {
-    MCRegister Id = getResultId(*MI, MAI);
-    if (Id.isValid())
+    if (MCRegister Id = getResultId(*MI, MAI))
       ModuleScopeIds.insert(Id);
   }
 }
@@ -638,31 +594,8 @@ MCRegister SPIRVNonSemanticDebugHandler::getCachedScopePathOpStringReg(
 
 MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantI32(
     uint32_t Value, MCRegister I32TypeReg, SPIRV::ModuleAnalysisInfo &MAI) {
-  auto [It, Inserted] = I32ConstantCache.try_emplace(Value);
-  if (!Inserted)
-    return It->second;
-
-  for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars)) {
-    if (MI->getOpcode() != SPIRV::OpConstantI || MI->getNumOperands() < 3 ||
-        !MI->getOperand(2).isImm())
-      continue;
-    if (MAI.getRegisterAlias(MI->getMF(), MI->getOperand(1).getReg()) !=
-            I32TypeReg ||
-        static_cast<uint64_t>(MI->getOperand(2).getImm()) != Value)
-      continue;
-    It->second = MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
-    return It->second;
-  }
-
-  MCRegister Reg = MAI.getNextIDRegister();
-  It->second = Reg;
-  MCInst Inst;
-  Inst.setOpcode(SPIRV::OpConstantI);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  Inst.addOperand(MCOperand::createReg(I32TypeReg));
-  Inst.addOperand(MCOperand::createImm(static_cast<int64_t>(Value)));
-  emitMCInst(Inst);
-  return Reg;
+  return findOrEmitConstant(SPIRV::OpConstantI, I32TypeReg, Value,
+                            /*Width=*/32, MAI);
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
@@ -725,7 +658,7 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeVoid(
 }
 
 // Whether declaring \p BT's SPIR-V type would require a capability. The type
-// width determines the requirement: Int16, Int64, Float16 and Float64 in
+// width determines the requirement: Int8, Int16, Int64, Float16 and Float64 in
 // SPIRVModuleAnalysis::collectReqs(). A boolean and a 32-bit scalar are free.
 static bool scalarTypeNeedsCapability(const DIBasicType *BT) {
   if (isBooleanType(BT))
@@ -770,10 +703,10 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitScalarType(
   }
 
   // A non-semantic instruction "has no semantic impact, and can be safely
-  // removed from the module", so debug info must not make the module require
-  // something it otherwise would not. Declaring OpTypeInt 64 would force the
-  // module to declare Int64, and in Vulkan that ties it to a device feature,
-  // so we drop all the types that the module doesn't already have.
+  // removed from the module", so debug info must leave the module's
+  // requirements alone. Declaring OpTypeInt 64 forces Int64, which Vulkan ties
+  // to a device feature, so this returns nothing if the type requires a new
+  // capability.
   if (scalarTypeNeedsCapability(BT))
     return MCRegister();
 
@@ -817,8 +750,7 @@ MCRegister SPIRVNonSemanticDebugHandler::findModuleConstant(
     if (MAI.getRegisterAlias(MI->getMF(), MI->getOperand(1).getReg()) !=
         TypeReg)
       continue;
-    // A boolean holds its value in its opcode, so the opcode and the type are
-    // the whole comparison.
+    // A boolean holds its value in its opcode, so there is nothing to compare.
     if (!IsBool && !constantHasValue(*MI, Value, IsWide))
       continue;
     return MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
@@ -826,19 +758,12 @@ MCRegister SPIRVNonSemanticDebugHandler::findModuleConstant(
   return MCRegister();
 }
 
-MCRegister SPIRVNonSemanticDebugHandler::findOrEmitScalarConstant(
-    const DIBasicType *BT, uint64_t Value, SPIRV::ModuleAnalysisInfo &MAI) {
-  bool IsBool = isBooleanType(BT);
-  bool IsFloat = BT->getEncoding() == dwarf::DW_ATE_float;
-  bool IsWide = !IsBool && BT->getSizeInBits() == 64;
-  MCRegister TypeReg = findOrEmitScalarType(BT, MAI);
-  if (!TypeReg.isValid())
-    return MCRegister();
-
-  unsigned Opcode =
-      IsBool    ? (Value ? SPIRV::OpConstantTrue : SPIRV::OpConstantFalse)
-      : IsFloat ? SPIRV::OpConstantF
-                : SPIRV::OpConstantI;
+// \p Width is 0 for a boolean, whose value lives in \p Opcode.
+MCRegister SPIRVNonSemanticDebugHandler::findOrEmitConstant(
+    unsigned Opcode, MCRegister TypeReg, uint64_t Value, unsigned Width,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  bool IsBool = Width == 0;
+  bool IsWide = Width == 64;
 
   auto [CacheIt, Inserted] =
       ScalarConstantCache.try_emplace({TypeReg.id(), Value}, MCRegister());
@@ -864,7 +789,7 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitScalarConstant(
     Inst.addOperand(MCOperand::createImm(static_cast<int64_t>(Lo_32(Value))));
     if (IsWide) {
       Inst.addOperand(MCOperand::createImm(static_cast<int64_t>(Hi_32(Value))));
-    } else if (BT->getSizeInBits() == 16) {
+    } else if (Width == 16) {
       // A 16-bit float takes one word, the same as a 32-bit one, so the text
       // printer needs the width to pick the right APFloat semantics.
       Inst.setFlags(SPIRV::INST_PRINTER_WIDTH16);
@@ -873,6 +798,22 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitScalarConstant(
   emitMCInst(Inst);
   CacheIt->second = Reg;
   return Reg;
+}
+
+MCRegister SPIRVNonSemanticDebugHandler::findOrEmitScalarConstant(
+    const DIBasicType *BT, uint64_t Value, SPIRV::ModuleAnalysisInfo &MAI) {
+  MCRegister TypeReg = findOrEmitScalarType(BT, MAI);
+  if (!TypeReg.isValid())
+    return MCRegister();
+
+  bool IsBool = isBooleanType(BT);
+  bool IsFloat = BT->getEncoding() == dwarf::DW_ATE_float;
+  unsigned Opcode =
+      IsBool    ? (Value ? SPIRV::OpConstantTrue : SPIRV::OpConstantFalse)
+      : IsFloat ? SPIRV::OpConstantF
+                : SPIRV::OpConstantI;
+  return findOrEmitConstant(Opcode, TypeReg, Value,
+                            IsBool ? 0 : BT->getSizeInBits(), MAI);
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeInt32(
@@ -1205,13 +1146,6 @@ mapExprOperand(const DIExpression::ExprOperand &Op) {
     Operands.push_back(static_cast<uint32_t>(Arg));
   }
   return Operands;
-}
-
-// Whether every operand of \p Expr maps to a DebugOperation.
-static bool isLowerableExpression(const DIExpression *Expr) {
-  return all_of(Expr->expr_ops(), [](const DIExpression::ExprOperand &Op) {
-    return mapExprOperand(Op).has_value();
-  });
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugOperation(
@@ -1645,7 +1579,6 @@ void SPIRVNonSemanticDebugHandler::resetPerFunctionDebugState() {
   LastLineMI = nullptr;
   LastScopeMI = nullptr;
   Records.clear();
-  DomTree.reset();
 }
 
 void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
@@ -1774,12 +1707,6 @@ void SPIRVNonSemanticDebugHandler::emitDebugBinding(
   if (!ExprRegOpt)
     return;
 
-  // Both lookups come first, so only a record that will be emitted opens a
-  // region.
-  //
-  // emitDebugScopeForInstruction() fails when this record's scope has no
-  // emitted id. The record would then fall into whatever region is open and
-  // name a scope the variable is not in, so drop it.
   if (!emitDebugScopeForInstruction(MI))
     return;
   emitDebugLineForInstruction(MI);
@@ -1791,10 +1718,10 @@ void SPIRVNonSemanticDebugHandler::emitDebugBinding(
               {*VarRegOpt, LocationReg, *ExprRegOpt}, MAI);
 }
 
-// The OpConstant id for the constant that \p MI assigns, or nullopt if \p MI
-// does not assign a constant collected by this backend.
-std::optional<MCRegister> SPIRVNonSemanticDebugHandler::getConstantValueReg(
-    const MachineInstr &MI) const {
+// The scalar type and value of the constant \p MI assigns, or nullopt when
+// this backend cannot name it.
+static std::optional<std::pair<const DIBasicType *, uint64_t>>
+getConstantDbgValueBits(const MachineInstr &MI) {
   if (!MI.isNonListDebugValue() || MI.isIndirectDebugValue())
     return std::nullopt;
 
@@ -1811,11 +1738,20 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::getConstantValueReg(
   if (Value.isImm())
     Bits = constantBits(static_cast<uint64_t>(Value.getImm()), BT);
   else if (Value.isCImm())
-    Bits = constantBits(Value.getCImm(), BT);
+    Bits = constantBits(Value.getCImm()->getValue(), BT);
   else
     Bits = constantBits(Value.getFPImm()->getValueAPF().bitcastToAPInt(), BT);
+  return std::make_pair(BT, Bits);
+}
 
-  auto It = ConstantValueRegs.find({BT, Bits});
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::getConstantValueReg(
+    const MachineInstr &MI) const {
+  std::optional<std::pair<const DIBasicType *, uint64_t>> Const =
+      getConstantDbgValueBits(MI);
+  if (!Const)
+    return std::nullopt;
+
+  auto It = ConstantValueRegs.find(*Const);
   if (It == ConstantValueRegs.end() || !It->second.isValid())
     return std::nullopt;
   return It->second;
@@ -1914,7 +1850,8 @@ SPIRVNonSemanticDebugHandler::resolveDebugLocTarget(const MachineInstr *MI) {
 }
 
 void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
-    const MachineInstr &MI, const MachineInstr *LastEmitted) {
+    const MachineInstr &MI, const MachineInstr *LastEmitted,
+    const MachineDominatorTree &DomTree) {
   SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
   const MachineFunction &MF = *MI.getMF();
 
@@ -1936,8 +1873,6 @@ void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
     return;
   }
 
-  // A constant assignment names the id emitted for it at module scope, which
-  // every function body follows.
   if (std::optional<MCRegister> ConstReg = getConstantValueReg(MI)) {
     placeRecord(SPIRV::NonSemanticExtInst::DebugValue, MI, *ConstReg, Anchor);
     return;
@@ -1960,7 +1895,7 @@ void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
   // record naming a definition that does not dominate it is dropped.
   const MachineInstr *Def = MF.getRegInfo().getUniqueVRegDef(*ValReg);
   if (ModuleScopeIds.contains(ValueReg) ||
-      (isEmitted(Def, MAI) && DomTree->dominates(Def, &MI)))
+      (isEmitted(Def, MAI) && DomTree.dominates(Def, &MI)))
     placeRecord(SPIRV::NonSemanticExtInst::DebugValue, MI, ValueReg, Anchor);
 }
 
@@ -1968,15 +1903,17 @@ void SPIRVNonSemanticDebugHandler::analyzeDebugRecords(
     const MachineFunction &MF) {
   assert(CurrentMAI && "CurrentMAI must be set");
 
+  // Built on the first record rather than required as an analysis pass, which
+  // would build a tree for every SPIR-V compilation.
+  std::optional<MachineDominatorTree> DomTree;
+
   for (const MachineBasicBlock &MBB : MF) {
     const MachineInstr *LastEmitted = nullptr;
     for (const MachineInstr &MI : MBB) {
       if (MI.isDebugValueLike()) {
-        if (!DomTree) {
-          DomTree = std::make_unique<MachineDominatorTree>();
-          DomTree->recalculate(const_cast<MachineFunction &>(MF));
-        }
-        resolveDebugRecord(MI, LastEmitted);
+        if (!DomTree)
+          DomTree.emplace(const_cast<MachineFunction &>(MF));
+        resolveDebugRecord(MI, LastEmitted, *DomTree);
       }
 
       if (isEmitted(&MI, *CurrentMAI))
@@ -2098,10 +2035,11 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   unsigned Line = DL->getLine();
   unsigned Col = DL->getColumn();
 
+  unsigned I32TypeId = CachedOpTypeInt32Reg.id();
   MCRegister SrcReg = DebugSourceRegByFileStr.lookup(FileStrReg.id());
-  MCRegister LineReg = I32ConstantCache.lookup(Line);
-  MCRegister ColStartReg = I32ConstantCache.lookup(Col);
-  MCRegister ColEndReg = I32ConstantCache.lookup(Col + 1);
+  MCRegister LineReg = ScalarConstantCache.lookup({I32TypeId, Line});
+  MCRegister ColStartReg = ScalarConstantCache.lookup({I32TypeId, Col});
+  MCRegister ColEndReg = ScalarConstantCache.lookup({I32TypeId, Col + 1});
 
   // The elements of each collected DILocation (DebugSource, line/column
   // constants) are pre-emitted from LLVM-IR instruction !dbg attachments and
@@ -2157,20 +2095,27 @@ void SPIRVNonSemanticDebugHandler::notifyEntryLabelEmitted(
   tryEmitDebugFunctionDefinition(*CurrentMAI);
 }
 
-void SPIRVNonSemanticDebugHandler::collectDebugExpressions(
-    SetVector<const DIExpression *> &Out) const {
-  MachineModuleInfo *ModuleInfo = Asm->MMI;
-  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
-
-  for (const Function &F : *ModuleInfo->getModule()) {
-    const MachineFunction *MF = ModuleInfo->getMachineFunction(F);
+static void forEachDebugValueLike(const MachineModuleInfo &ModuleInfo,
+                                  function_ref<void(const MachineInstr &)> Fn) {
+  for (const Function &F : *ModuleInfo.getModule()) {
+    const MachineFunction *MF = ModuleInfo.getMachineFunction(F);
     if (!MF)
       continue;
     for (const MachineBasicBlock &MBB : *MF)
       for (const MachineInstr &MI : MBB)
         if (MI.isDebugValueLike())
-          Out.insert(MI.getDebugExpression());
+          Fn(MI);
   }
+}
+
+void SPIRVNonSemanticDebugHandler::collectDebugExpressions(
+    SetVector<const DIExpression *> &Out) const {
+  MachineModuleInfo *ModuleInfo = Asm->MMI;
+  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
+
+  forEachDebugValueLike(*ModuleInfo, [&](const MachineInstr &MI) {
+    Out.insert(MI.getDebugExpression());
+  });
 }
 
 void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
@@ -2410,20 +2355,24 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
     if (const DILocation *IA = DL->getInlinedAt())
       getOrEmitDebugInlinedAt(IA, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
 
-  // Both maps are populated by now, so repeating the lookups that
-  // emitDebugBinding() performs emits a type and a constant only for an
-  // assignment that will reach a DebugValue.
-  for (const SPIRV::ConstantAssignment &CA : ConstantAssignments) {
-    if (!DebugLocalVariableRegs.contains(CA.Var) ||
-        !DebugExpressionRegs.contains(CA.Expr))
-      continue;
-    auto [It, Inserted] =
-        ConstantValueRegs.try_emplace({CA.Type, CA.Bits}, MCRegister());
+  // Repeating the lookups emitDebugBinding() performs emits a type and a
+  // constant only for an assignment that will reach a DebugValue.
+  MachineModuleInfo *ModuleInfo = Asm->MMI;
+  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
+  forEachDebugValueLike(*ModuleInfo, [&](const MachineInstr &MI) {
+    std::optional<std::pair<const DIBasicType *, uint64_t>> Const =
+        getConstantDbgValueBits(MI);
+    if (!Const)
+      return;
+    if (!DebugLocalVariableRegs.contains(MI.getDebugVariable()) ||
+        !DebugExpressionRegs.contains(MI.getDebugExpression()))
+      return;
+    auto [It, Inserted] = ConstantValueRegs.try_emplace(*Const, MCRegister());
     if (Inserted)
-      It->second = findOrEmitScalarConstant(CA.Type, CA.Bits, MAI);
+      It->second = findOrEmitScalarConstant(Const->first, Const->second, MAI);
     if (!It->second.isValid())
       ConstantValueRegs.erase(It);
-  }
+  });
 
   for (const DILocation *DL : UniqueDebugLocations) {
     emitOpConstantI32(DL->getLine(), I32TypeReg, MAI);
