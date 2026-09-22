@@ -2857,7 +2857,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   while (MaybeParseCXX11Attributes(DeclAttrs) ||
          MaybeParseGNUAttributes(DeclSpecAttrs, &CommonLateParsedAttrs) ||
-         MaybeParseMicrosoftAttributes(DeclSpecAttrs))
+         MaybeParseMicrosoftAttributes(DeclSpecAttrs, /*IsStmtContext=*/false))
     ;
 
   SourceLocation DeclStart;
@@ -4971,7 +4971,8 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
                  ParsedAttr::Form::Microsoft());
 }
 
-void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
+void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs,
+                                      bool IsStmtContext) {
   assert(Tok.is(tok::l_square) && "Not a Microsoft attribute list");
 
   SourceLocation StartLoc = Tok.getLocation();
@@ -4987,10 +4988,17 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
                 StopAtSemi | StopBeforeMatch | StopAtCodeCompletion);
       if (Tok.is(tok::code_completion)) {
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteAttribute(
-            AttributeCommonInfo::AS_Microsoft,
-            SemaCodeCompletion::AttributeCompletion::Attribute,
-            /*Scope=*/nullptr);
+        if (getLangOpts().HLSL) {
+          Actions.CodeCompletion().CodeCompleteHLSLAttributes(
+              {AttributeCommonInfo::AS_Microsoft}, /*Kind=*/std::nullopt,
+              /*RequireStmt=*/IsStmtContext,
+              /*ExcludeKind=*/ParsedAttr::AT_HLSLParsedSemantic);
+        } else {
+          Actions.CodeCompletion().CodeCompleteAttribute(
+              AttributeCommonInfo::AS_Microsoft,
+              SemaCodeCompletion::AttributeCompletion::Attribute,
+              /*Scope=*/nullptr);
+        }
         break;
       }
       if (Tok.isNot(tok::identifier)) // ']', but also eof
