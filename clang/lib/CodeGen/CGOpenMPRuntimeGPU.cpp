@@ -755,8 +755,6 @@ void CGOpenMPRuntimeGPU::emitBareKernelEnvironment(
   // configured, so emit it directly here.
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
   Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_BARE;
-  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
-
   CGBuilderTy &Bld = CGF.Builder;
   OMPBuilder.emitKernelEnvironment(Bld, Attrs);
 }

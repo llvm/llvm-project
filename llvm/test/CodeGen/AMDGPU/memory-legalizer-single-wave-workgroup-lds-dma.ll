@@ -6,30 +6,25 @@
 
 declare void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8), ptr addrspace(3) nocapture, i32, i32, i32, i32, i32)
 
-define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) #0 {
+define void @lds_wg_fence_release_single32(ptr addrspace(3) inreg %lds) #0 {
 ; GFX9-LABEL: lds_wg_fence_release_single32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX9-NEXT:    ds_write_b32 v0, v1
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX9-NEXT:    ds_read_b32 v1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v0, v1
-; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: lds_wg_fence_release_single32:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 1
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    ds_write_b32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
@@ -37,23 +32,22 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    ds_write_b32 v0, v1
-; GFX942-NEXT:    s_endpgm
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: lds_wg_fence_release_single32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 1
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-NEXT:    ds_write_b32 v0, v1
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-NEXT:    ds_read_b32 v1, v0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_write_b32 v0, v1
-; GFX10-NEXT:    s_endpgm
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   store i32 1, ptr addrspace(3) %lds, align 4
   fence syncscope("workgroup") release
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -61,30 +55,25 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
   ret void
 }
 
-define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) #1 {
+define void @lds_wg_fence_release_single64(ptr addrspace(3) inreg %lds) #1 {
 ; GFX9-LABEL: lds_wg_fence_release_single64:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 1
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX9-NEXT:    ds_write_b32 v0, v1
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX9-NEXT:    ds_read_b32 v1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v0, v1
-; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: lds_wg_fence_release_single64:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 1
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    ds_write_b32 v0, v1
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
@@ -92,41 +81,38 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    ds_write_b32 v0, v1
-; GFX942-NEXT:    s_endpgm
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-W32-LABEL: lds_wg_fence_release_single64:
 ; GFX10-W32:       ; %bb.0:
-; GFX10-W32-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-W32-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v1, 1
-; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-W32-NEXT:    ds_write_b32 v0, v1
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-W32-NEXT:    ds_read_b32 v1, v0
-; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-W32-NEXT:    ds_write_b32 v0, v1
-; GFX10-W32-NEXT:    s_endpgm
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-W64-LABEL: lds_wg_fence_release_single64:
 ; GFX10-W64:       ; %bb.0:
-; GFX10-W64-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-W64-NEXT:    s_load_dword s0, s[4:5], 0x24
+; GFX10-W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-W64-NEXT:    v_mov_b32_e32 v1, 1
-; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-W64-NEXT:    ds_write_b32 v0, v1
-; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-W64-NEXT:    ds_read_b32 v1, v0
-; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-W64-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-W64-NEXT:    ds_write_b32 v0, v1
-; GFX10-W64-NEXT:    s_endpgm
+; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W64-NEXT:    s_setpc_b64 s[30:31]
   store i32 1, ptr addrspace(3) %lds, align 4
   fence syncscope("workgroup") release
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -134,111 +120,96 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
   ret void
 }
 
-define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds) #2 {
+define void @lds_dma_wg_fence_release_single32(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) inreg %lds) #2 {
 ; GFX9-LABEL: lds_dma_wg_fence_release_single32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x24
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2c
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_load_dword s0, s[6:7], 0x34
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s0, 36
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[6:7], s0 offset:0x8
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s1, s3
-; GFX9-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x24
-; GFX9-NEXT:    s_load_dword s0, s[6:7], 0x34
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s3, s5
-; GFX9-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s10, s18
+; GFX9-NEXT:    s_mov_b32 s8, s16
+; GFX9-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
+; GFX9-NEXT:    s_mov_b32 s11, s19
+; GFX9-NEXT:    s_mov_b32 s12, s11
+; GFX9-NEXT:    s_mov_b32 s13, s10
+; GFX9-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; GFX9-NEXT:    s_mov_b32 s9, s17
+; GFX9-NEXT:    s_mov_b32 s14, s9
+; GFX9-NEXT:    s_mov_b32 s4, s8
 ; GFX9-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
-; GFX9-NEXT:    s_mov_b32 s5, s3
-; GFX9-NEXT:    s_mov_b32 s6, s2
-; GFX9-NEXT:    s_mov_b32 s7, s1
-; GFX9-NEXT:    s_mov_b32 s1, 0
-; GFX9-NEXT:    s_mov_b32 m0, s0
+; GFX9-NEXT:    s_mov_b32 s5, s14
+; GFX9-NEXT:    s_mov_b32 s6, s13
+; GFX9-NEXT:    s_mov_b32 s7, s12
+; GFX9-NEXT:    s_mov_b32 s8, 0
+; GFX9-NEXT:    s_mov_b32 m0, s20
 ; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    buffer_load_dword off, s[4:7], s1 lds
+; GFX9-NEXT:    buffer_load_dword off, s[4:7], s8 lds
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX9-NEXT:    ds_read_b32 v1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    ds_write_b32 v0, v1
-; GFX9-NEXT:    s_endpgm
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: lds_dma_wg_fence_release_single32:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x24
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2c
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dword s0, s[6:7], 0x34
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s0, 36
-; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[6:7], s0 offset:0x8
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s1, s3
-; GFX942-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX942-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x24
-; GFX942-NEXT:    s_load_dword s0, s[6:7], 0x34
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s3, s5
-; GFX942-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
-; GFX942-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
-; GFX942-NEXT:    s_mov_b32 s5, s3
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_mov_b32 s6, s2
-; GFX942-NEXT:    s_mov_b32 s7, s1
-; GFX942-NEXT:    s_mov_b32 s1, 0
-; GFX942-NEXT:    s_mov_b32 m0, s0
+; GFX942-NEXT:    s_mov_b32 s4, s0
+; GFX942-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX942-NEXT:    s_mov_b32 s7, s3
+; GFX942-NEXT:    s_mov_b32 s8, s7
+; GFX942-NEXT:    s_mov_b32 s9, s6
+; GFX942-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX942-NEXT:    s_mov_b32 s5, s1
+; GFX942-NEXT:    s_mov_b32 s10, s5
+; GFX942-NEXT:    s_mov_b32 s0, s4
+; GFX942-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX942-NEXT:    s_mov_b32 s1, s10
+; GFX942-NEXT:    s_mov_b32 s2, s9
+; GFX942-NEXT:    s_mov_b32 s3, s8
+; GFX942-NEXT:    s_mov_b32 s4, 0
+; GFX942-NEXT:    s_mov_b32 m0, s16
 ; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    buffer_load_dword off, s[4:7], s1 lds
+; GFX942-NEXT:    buffer_load_dword off, s[0:3], s4 lds
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX942-NEXT:    ds_read_b32 v1, v0
-; GFX942-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    ds_write_b32 v0, v1
-; GFX942-NEXT:    s_endpgm
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: lds_dma_wg_fence_release_single32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b64 s[6:7], s[4:5]
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x24
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x2c
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x34
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s0, 36
-; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[6:7], s0 offset:0x8
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s1, s3
-; GFX10-NEXT:    ; kill: def $sgpr2 killed $sgpr2 killed $sgpr2_sgpr3
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x24
-; GFX10-NEXT:    s_load_dword s0, s[6:7], 0x34
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s3, s5
-; GFX10-NEXT:    ; kill: def $sgpr4 killed $sgpr4 killed $sgpr4_sgpr5
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_mov_b32 s10, s18
+; GFX10-NEXT:    s_mov_b32 s8, s16
+; GFX10-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
+; GFX10-NEXT:    s_mov_b32 s11, s19
+; GFX10-NEXT:    s_mov_b32 s12, s11
+; GFX10-NEXT:    s_mov_b32 s13, s10
+; GFX10-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; GFX10-NEXT:    s_mov_b32 s9, s17
+; GFX10-NEXT:    s_mov_b32 s14, s9
+; GFX10-NEXT:    s_mov_b32 s4, s8
 ; GFX10-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5_sgpr6_sgpr7
-; GFX10-NEXT:    s_mov_b32 s5, s3
-; GFX10-NEXT:    s_mov_b32 s6, s2
-; GFX10-NEXT:    s_mov_b32 s7, s1
-; GFX10-NEXT:    s_mov_b32 s1, 0
-; GFX10-NEXT:    s_mov_b32 m0, s0
-; GFX10-NEXT:    buffer_load_dword off, s[4:7], s1 lds
+; GFX10-NEXT:    s_mov_b32 s5, s14
+; GFX10-NEXT:    s_mov_b32 s6, s13
+; GFX10-NEXT:    s_mov_b32 s7, s12
+; GFX10-NEXT:    s_mov_b32 s8, 0
+; GFX10-NEXT:    s_mov_b32 m0, s20
+; GFX10-NEXT:    buffer_load_dword off, s[4:7], s8 lds
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX10-NEXT:    ds_read_b32 v1, v0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    ds_write_b32 v0, v1
-; GFX10-NEXT:    s_endpgm
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
   fence syncscope("workgroup") release
   %v = load i32, ptr addrspace(3) %lds, align 4
