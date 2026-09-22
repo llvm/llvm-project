@@ -234,3 +234,238 @@ loop:
 exit:
   ret void
 }
+
+define void @sgt_guarded_sext_start_and_bound(i32 %start, i32 %bound) {
+; CHECK-LABEL: 'sgt_guarded_sext_start_and_bound'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt_guarded_sext_start_and_bound
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((sext i32 %start to i64) + (-1 * (sext i32 %bound to i64))<nsw>)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((sext i32 %start to i64) + (-1 * (sext i32 %bound to i64))<nsw>)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %guard = icmp slt i32 %start, %bound
+  br i1 %guard, label %exit, label %ph
+
+ph:
+  %start.ext = sext i32 %start to i64
+  %bound.ext = sext i32 %bound to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start.ext, %ph ], [ %iv.next, %loop ]
+  %iv.next = add nsw i64 %iv, -1
+  %ec = icmp sgt i64 %iv, %bound.ext
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; As above, but the start is zero-extended and the bound sign-extended.
+define void @sgt_guarded_zext_start(i32 %start, i32 %bound) {
+; CHECK-LABEL: 'sgt_guarded_zext_start'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt_guarded_zext_start
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((zext i32 %start to i64) + (-1 * (sext i32 %bound to i64))<nsw>)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 6442450943
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((zext i32 %start to i64) + (-1 * (sext i32 %bound to i64))<nsw>)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %guard = icmp slt i32 %start, %bound
+  br i1 %guard, label %exit, label %ph
+
+ph:
+  %start.ext = zext i32 %start to i64
+  %bound.ext = sext i32 %bound to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start.ext, %ph ], [ %iv.next, %loop ]
+  %iv.next = add nsw i64 %iv, -1
+  %ec = icmp sgt i64 %iv, %bound.ext
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @ugt_guarded_bound_is_add(i32 %x, i32 %a, i32 %b) {
+; CHECK-LABEL: 'ugt_guarded_bound_is_add'
+; CHECK-NEXT:  Determining loop execution counts for: @ugt_guarded_bound_is_add
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i8 (trunc i32 %x to i8) to i32) + (-1 * (%a + %b)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i8 (trunc i32 %x to i8) to i32) + (-1 * (%a + %b)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = and i32 %x, 255
+  %lim = add i32 %a, %b
+  %start = add nsw i32 %n, -1
+  %guard = icmp ugt i32 %n, %lim
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, -1
+  %ec = icmp ugt i32 %iv, %lim
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; As above, signed.
+define void @sgt_guarded_bound_is_add(i32 %x, i32 %a, i32 %b) {
+; CHECK-LABEL: 'sgt_guarded_bound_is_add'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt_guarded_bound_is_add
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (zext i8 (trunc i32 %x to i8) to i32) + (-1 * (%a + %b)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2147483394
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (zext i8 (trunc i32 %x to i8) to i32) + (-1 * (%a + %b)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = and i32 %x, 255
+  %lim = add i32 %a, %b
+  %start = add nsw i32 %n, -1
+  %guard = icmp sgt i32 %n, %lim
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, -1
+  %ec = icmp sgt i32 %iv, %lim
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @ugt_guarded_bound_is_add_with_constant(i32 %x, i32 %a, i32 %b) {
+; CHECK-LABEL: 'ugt_guarded_bound_is_add_with_constant'
+; CHECK-NEXT:  Determining loop execution counts for: @ugt_guarded_bound_is_add_with_constant
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-8 + (zext i8 (trunc i32 %x to i8) to i32) + (-1 * %a) + (-1 * %b))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-8 + (zext i8 (trunc i32 %x to i8) to i32) + (-1 * %a) + (-1 * %b))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %n = and i32 %x, 255
+  %ab = add i32 %a, %b
+  %lim = add i32 %ab, 7
+  %start = add nsw i32 %n, -1
+  %guard = icmp ugt i32 %n, %lim
+  br i1 %guard, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, -1
+  %ec = icmp ugt i32 %iv, %lim
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The entry guard proves the decrement is positive.
+define void @sgt_variable_stride_guard(i32 %start, i32 %bound, i32 %stride) {
+; CHECK-LABEL: 'sgt_variable_stride_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt_variable_stride_guard
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %guard = icmp sgt i32 %stride, 0
+  br i1 %guard, label %ph, label %exit
+
+ph:
+  %step = sub i32 0, %stride
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %ph ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, %step
+  %ec = icmp sgt i32 %iv, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Without a guard, the decrement may be zero or negative.
+define void @sgt_variable_stride_no_guard(i32 %start, i32 %bound, i32 %stride) {
+; CHECK-LABEL: 'sgt_variable_stride_no_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt_variable_stride_no_guard
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %ph
+
+ph:
+  %step = sub i32 0, %stride
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %ph ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, %step
+  %ec = icmp sgt i32 %iv, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; A nonnegative decrement may still be zero, so the loop may not terminate.
+define void @sgt_variable_stride_nonnegative_guard(i32 %start, i32 %bound, i32 %stride) {
+; CHECK-LABEL: 'sgt_variable_stride_nonnegative_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt_variable_stride_nonnegative_guard
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %guard = icmp sge i32 %stride, 0
+  br i1 %guard, label %ph, label %exit
+
+ph:
+  %step = sub i32 0, %stride
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %ph ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, %step
+  %ec = icmp sgt i32 %iv, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Negating INT_MIN wraps to INT_MIN; it does not give a positive stride.
+define void @sgt_variable_stride_min_guard(i32 %start, i32 %bound, i32 %stride) {
+; CHECK-LABEL: 'sgt_variable_stride_min_guard'
+; CHECK-NEXT:  Determining loop execution counts for: @sgt_variable_stride_min_guard
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %guard = icmp eq i32 %stride, -2147483648
+  br i1 %guard, label %ph, label %exit
+
+ph:
+  %step = sub i32 0, %stride
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %ph ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, %step
+  %ec = icmp sgt i32 %iv, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
