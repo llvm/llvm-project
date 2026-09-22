@@ -31749,7 +31749,8 @@ public:
         // The accumulator replaces the root on the edges carrying it and is
         // reduced once in the exit block. The values bypassing the loop never
         // went through the reduction operations and must stay exact: the
-        // scalar phi keeps them and they are selected past the reduction.
+        // scalar phi keeps them and they are selected past the reduction
+        // without its fast-math flags.
         unsigned NumIncoming = ExitPhi->getNumIncomingValues();
         auto *VExit = PHINode::Create(VecTy, NumIncoming, "slprdx.exit",
                                       ExitPhi->getIterator());
@@ -31776,8 +31777,8 @@ public:
           R.eraseInstruction(ExitPhi);
           continue;
         }
-        Value *Sel = XB.CreateSelectWithUnknownProfile(
-            FromLoop, Res, ExitPhi, DEBUG_TYPE, "slprdx.sel");
+        Value *Sel = XB.CreateSelectFMFWithUnknownProfile(
+            FromLoop, Res, ExitPhi, FastMathFlags(), DEBUG_TYPE, "slprdx.sel");
         ExitPhi->replaceUsesWithIf(
             Sel, [Sel](Use &U) { return U.getUser() != Sel; });
       }
