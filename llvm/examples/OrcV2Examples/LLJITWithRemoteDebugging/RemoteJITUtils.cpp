@@ -89,7 +89,8 @@ launchLocalExecutor(StringRef ExecutablePath) {
 
     std::string ExecPath = ExecutablePath.str();
     std::string TestOutputFlag = "test-jitloadergdb";
-    std::string ConnSpec = "fd=" + std::to_string(Sockets[ChildSocket]);
+    std::string ConnSpec =
+        "socket:adopt=" + std::to_string(Sockets[ChildSocket]);
     char *const Args[] = {ExecPath.data(), TestOutputFlag.data(),
                           ConnSpec.data(), nullptr};
     int RC = execvp(ExecutablePath.data(), Args);

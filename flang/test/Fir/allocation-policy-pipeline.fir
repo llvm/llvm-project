@@ -13,6 +13,8 @@
 // RUN: fir-opt --inline-hlfir-copy="small-array-threshold=4096" \
 // RUN:   --allocation-placement="small-array-threshold=4096" %s \
 // RUN:   | FileCheck %s --check-prefix=BIG
+// RUN: fir-opt --convert-hlfir-to-fir %s \
+// RUN:   | FileCheck %s --check-prefix=CODEGEN
 
 module attributes {fir.allocation_policy =
                        #fir.allocation_policy<stack_arrays = false,
@@ -22,6 +24,21 @@ module attributes {fir.allocation_policy =
                    llvm.data_layout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"} {
 
 func.func private @callee100(!fir.ref<!fir.array<100xf64>>) -> ()
+func.func private @callee8(!fir.ref<!fir.array<8xf64>>) -> ()
+
+// CODEGEN-LABEL: func.func @small_copy_in_buffer
+// CODEGEN:         fir.alloca !fir.array<8xf64>
+// CODEGEN:         fir.call @_FortranAShallowCopyDirect
+// CODEGEN:         fir.call @callee8
+// CODEGEN-NOT:     fir.allocmem
+func.func @small_copy_in_buffer(%arg0: !fir.box<!fir.array<8xf64>>) {
+  %0 = fir.alloca !fir.box<!fir.array<8xf64>>
+  %1:3 = hlfir.copy_in %arg0 to %0 : (!fir.box<!fir.array<8xf64>>, !fir.ref<!fir.box<!fir.array<8xf64>>>) -> (!fir.box<!fir.array<8xf64>>, i1, i1)
+  %2 = fir.box_addr %1#0 : (!fir.box<!fir.array<8xf64>>) -> !fir.ref<!fir.array<8xf64>>
+  fir.call @callee8(%2) : (!fir.ref<!fir.array<8xf64>>) -> ()
+  hlfir.copy_out %0, %1#1, %1#2 : (!fir.ref<!fir.box<!fir.array<8xf64>>>, i1, i1) -> ()
+  return
+}
 
 // SMALL-LABEL:   func.func @copy_in_buffer
 // SMALL:           fir.allocmem !fir.array<100xf64> {bindc_name = ".tmp.copy_in"
@@ -32,18 +49,50 @@ func.func private @callee100(!fir.ref<!fir.array<100xf64>>) -> ()
 // BIG:             fir.alloca !fir.array<100xf64> {bindc_name = ".tmp.copy_in"
 // BIG-NOT:         fir.allocmem
 // BIG-NOT:         fir.freemem
+// CODEGEN-LABEL: func.func @copy_in_buffer
+// CODEGEN-COUNT-1: fir.alloca !fir.box
+// CODEGEN-NOT:     fir.alloca !fir.box
+// CODEGEN:         fir.allocmem !fir.array<100xf64>
+// CODEGEN:         fir.embox
+// CODEGEN:         fir.call @_FortranAShallowCopyDirect
+// CODEGEN:         fir.store %{{.*}} to %{{.*}} : !fir.ref<!fir.box<!fir.array<100xf64>>>
+// CODEGEN-NOT:     fir.call @_FortranACopyInAssign
+// CODEGEN:         fir.call @callee100
+// CODEGEN:         fir.if
+// CODEGEN:         fir.freemem
+// CODEGEN-NOT:     fir.call @_FortranACopyOutAssign
 func.func @copy_in_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<i32>) {
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<100xf64>>>
+  %0 = fir.alloca !fir.box<!fir.array<100xf64>>
   %c1 = arith.constant 1 : index
   %c100 = arith.constant 100 : index
   %1 = fir.load %arg1 : !fir.ref<i32>
   %2 = fir.convert %1 : (i32) -> i64
   %3 = fir.shape %c100 : (index) -> !fir.shape<1>
   %4 = hlfir.designate %arg0 (%2, %c1:%c100:%c1)  shape %3 : (!fir.box<!fir.array<?x?xf64>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<100xf64>>
-  %5:2 = hlfir.copy_in %4 to %0 : (!fir.box<!fir.array<100xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<100xf64>>>>) -> (!fir.box<!fir.array<100xf64>>, i1)
+  %5:3 = hlfir.copy_in %4 to %0 : (!fir.box<!fir.array<100xf64>>, !fir.ref<!fir.box<!fir.array<100xf64>>>) -> (!fir.box<!fir.array<100xf64>>, i1, i1)
   %6 = fir.box_addr %5#0 : (!fir.box<!fir.array<100xf64>>) -> !fir.ref<!fir.array<100xf64>>
   fir.call @callee100(%6) : (!fir.ref<!fir.array<100xf64>>) -> ()
-  hlfir.copy_out %0, %5#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<100xf64>>>>, i1) -> ()
+  hlfir.copy_out %0, %5#1, %5#2 : (!fir.ref<!fir.box<!fir.array<100xf64>>>, i1, i1) -> ()
+  return
+}
+
+// Copy-back uses a non-allocating runtime entry point before freeing the
+// compiler-allocated buffer.
+// CODEGEN-LABEL: func.func @copy_in_out_buffer
+// CODEGEN:         fir.allocmem !fir.array<100xf64>
+// CODEGEN:         fir.call @_FortranAShallowCopyDirect
+// CODEGEN:         fir.call @callee100
+// CODEGEN:         fir.if
+// CODEGEN:           fir.call @_FortranACopyOutAssignDirect
+// CODEGEN:         fir.if
+// CODEGEN:           fir.freemem
+// CODEGEN-NOT:     fir.call @_FortranACopy{{In|Out}}Assign
+func.func @copy_in_out_buffer(%arg0: !fir.box<!fir.array<100xf64>>) {
+  %0 = fir.alloca !fir.box<!fir.array<100xf64>>
+  %1:3 = hlfir.copy_in %arg0 to %0 : (!fir.box<!fir.array<100xf64>>, !fir.ref<!fir.box<!fir.array<100xf64>>>) -> (!fir.box<!fir.array<100xf64>>, i1, i1)
+  %2 = fir.box_addr %1#0 : (!fir.box<!fir.array<100xf64>>) -> !fir.ref<!fir.array<100xf64>>
+  fir.call @callee100(%2) : (!fir.ref<!fir.array<100xf64>>) -> ()
+  hlfir.copy_out %0, %1#1, %1#2 to %arg0 : (!fir.ref<!fir.box<!fir.array<100xf64>>>, i1, i1, !fir.box<!fir.array<100xf64>>) -> ()
   return
 }
 

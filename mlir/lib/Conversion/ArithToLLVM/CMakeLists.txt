@@ -14,6 +14,8 @@ add_mlir_conversion_library(MLIRArithToLLVM
   MLIRArithAttrToLLVMConversion
   MLIRArithDialect
   MLIRArithTransforms
+  MLIRAnalysis
+  MLIRDataLayoutInterfaces
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
   )

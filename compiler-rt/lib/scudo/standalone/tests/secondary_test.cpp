@@ -627,7 +627,7 @@ TEST(ScudoSecondaryTest, ReleaseOlderThanAllEntries) {
 TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
   CacheInfoType<TestCacheConfig> Info;
 
-  // Disable the release interval so we can do tests the releaseOlderThan
+  // Disable the release interval so we can test the releaseOlderThan
   // function.
   Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
 
@@ -684,7 +684,8 @@ TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
 TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytes) {
   CacheInfoType<TestCacheConfig> Info;
 
-  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  // Set the interval to a large value so no entries are released.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
   Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
   Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
 
@@ -728,7 +729,8 @@ TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytes) {
 TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytes) {
   CacheInfoType<TestCacheConfig> Info;
 
-  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  // Set the interval to a large value so no entries are released.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
   Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
   Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
 
@@ -785,7 +787,8 @@ TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytes) {
 TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytesDynamicShrink) {
   CacheInfoType<TestCacheConfig> Info;
 
-  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  // Set the interval to a large value so no entries are released.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
   Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
   Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
 
@@ -826,4 +829,36 @@ TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytesDynamicShrink) {
   EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()), 0U);
   EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()),
             0x3333U);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytesDisabled) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  // This should avoid doing any trimming.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  scudo::uptr PageSize = scudo::getPageSizeCached();
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize,
+                        static_cast<scudo::sptr>(4 * PageSize));
+  Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes,
+                        static_cast<scudo::sptr>(4 * PageSize));
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), 0U);
+
+  Info.MemMaps.emplace_back(Info.allocate(2 * PageSize));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  EXPECT_NE(0U, Size1);
+  Info.storeMemMap(Info.MemMaps[0]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1);
+
+  // Releasing is disabled so it should not trim.
+  Info.MemMaps.emplace_back(Info.allocate(3 * PageSize));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  EXPECT_NE(0U, Size2);
+  Info.storeMemMap(Info.MemMaps[1]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1 + Size2);
+
+  // Trimming should be triggered now and the first element should be trimmed.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size2);
 }

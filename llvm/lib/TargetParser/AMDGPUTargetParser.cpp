@@ -528,6 +528,34 @@ AMDGPU::getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch) {
   return getBufferResourceNumRecordsWidth(getGPUKindFromSubArch(SubArch));
 }
 
+unsigned AMDGPU::getLDSAllocGranule(GPUKind AK) {
+  const AMDGPUFeatureBitset &Features = getFeatureBitset(AK);
+  if (Features.none())
+    return 256;
+  assert((Features.test(FEAT_LDS_ALLOC_GRANULARITY_256) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_512) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_1024) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_1280) ||
+          Features.test(FEAT_LDS_ALLOC_GRANULARITY_2048)) &&
+         "missing LDS allocation granularity feature");
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_256))
+    return 256;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_512))
+    return 512;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_1024))
+    return 1024;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_1280))
+    return 1280;
+  if (Features.test(FEAT_LDS_ALLOC_GRANULARITY_2048))
+    return 2048;
+
+  return 256;
+}
+
+unsigned AMDGPU::getLDSAllocGranule(Triple::SubArchType SubArch) {
+  return getLDSAllocGranule(getGPUKindFromSubArch(SubArch));
+}
+
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->MaxWavesPerEU : 10;
@@ -564,7 +592,12 @@ static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
     FEAT_AGPR_ALLOC,
     FEAT_1536_PHYSICAL_VGPRS,
     FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY,
-    FEAT_1024_ADDRESSABLE_VGPRS};
+    FEAT_1024_ADDRESSABLE_VGPRS,
+    FEAT_LDS_ALLOC_GRANULARITY_256,
+    FEAT_LDS_ALLOC_GRANULARITY_512,
+    FEAT_LDS_ALLOC_GRANULARITY_1024,
+    FEAT_LDS_ALLOC_GRANULARITY_1280,
+    FEAT_LDS_ALLOC_GRANULARITY_2048};
 
 // Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.
@@ -828,11 +861,8 @@ std::optional<TargetID> TargetID::parse(const Triple &TT,
   if (!TT.isAMDGCN())
     return std::nullopt;
 
-  // Filter out unrecognized subarch suffixes. The bare arch may be spelled
-  // either "amdgcn" (legacy) or "amdgpu" (new subarch triples); anything else
-  // with no recognized subarch is a stray suffix.
-  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn" &&
-      TT.getArchName() != "amdgpu")
+  // Filter out unrecognized subarch suffixes.
+  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn")
     return std::nullopt;
 
   // A named processor (i.e. not the empty/generic wildcard, which is resolved
@@ -917,7 +947,7 @@ void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
                         isXnackHardwiredOn(Arch));
 }
 
-std::string TargetID::getCanonicalTargetIDString() const {
+std::string TargetID::getCanonicalFeatureString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   printCanonicalTargetIDString(OS);

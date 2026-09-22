@@ -175,7 +175,7 @@
 ; GCN-O0-GISEL-NEXT:       amdgpu-reg-bank-legalize
 ; GCN-O0-GISEL-NEXT:       amdgpu-regbank-combiner
 ; GCN-O0-GISEL-NEXT:       instruction-select
-; GCN-O0-GISEL-NEXT:       ResetMachineFunctionPass
+; GCN-O0-GISEL-NEXT:       reset-machine-function
 ; GCN-O0-GISEL-NEXT:       finalize-isel
 ; GCN-O0-GISEL-NEXT:       localstackalloc
 ; GCN-O0-GISEL-NEXT: require<reg-usage>
@@ -498,7 +498,7 @@
 ; GCN-O2-GISEL-NEXT:       amdgpu-reg-bank-legalize
 ; GCN-O2-GISEL-NEXT:       amdgpu-regbank-combiner
 ; GCN-O2-GISEL-NEXT:       instruction-select
-; GCN-O2-GISEL-NEXT:       ResetMachineFunctionPass
+; GCN-O2-GISEL-NEXT:       reset-machine-function
 ; GCN-O2-GISEL-NEXT:       finalize-isel
 ; GCN-O2-GISEL-NEXT:       early-tailduplication
 ; GCN-O2-GISEL-NEXT:       opt-phis
@@ -879,7 +879,7 @@
 ; GCN-O3-GISEL-NEXT:       amdgpu-reg-bank-legalize
 ; GCN-O3-GISEL-NEXT:       amdgpu-regbank-combiner
 ; GCN-O3-GISEL-NEXT:       instruction-select
-; GCN-O3-GISEL-NEXT:       ResetMachineFunctionPass
+; GCN-O3-GISEL-NEXT:       reset-machine-function
 ; GCN-O3-GISEL-NEXT:       finalize-isel
 ; GCN-O3-GISEL-NEXT:       early-tailduplication
 ; GCN-O3-GISEL-NEXT:       opt-phis

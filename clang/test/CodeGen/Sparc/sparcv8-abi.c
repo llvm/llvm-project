@@ -150,4 +150,23 @@ void call_f32_vector_return(void) {
 //
 void call_f64_vector_return(void) {
   v1f64_result = return_v1f64(1.0);
+
+typedef float float2 __attribute__((vector_size(8)));
+typedef int int4 __attribute__((vector_size(16)));
+
+void float2_sink(float2);
+void int4_sink(int4);
+
+// Floating-point vectors are passed indirectly in ordinary function calls.
+// CHECK-LABEL: define dso_local void @pass_float2(ptr noundef byval(<2 x float>) align 8
+// CHECK: call void @float2_sink(ptr noundef byval(<2 x float>) align 8
+void pass_float2(float2 value) {
+  float2_sink(value);
+}
+
+// Integer vectors larger than 64 bits are also passed indirectly.
+// CHECK-LABEL: define dso_local void @pass_int4(ptr noundef byval(<4 x i32>) align 16
+// CHECK: call void @int4_sink(ptr noundef byval(<4 x i32>) align 16
+void pass_int4(int4 value) {
+  int4_sink(value);
 }
