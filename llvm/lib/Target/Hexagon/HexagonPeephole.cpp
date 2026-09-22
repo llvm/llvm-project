@@ -95,7 +95,7 @@ namespace {
     HexagonPeephole() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
-    void fuseIntrinsicVMinUB(MachineFunction &MF);
+    bool fuseIntrinsicVMinUB(MachineFunction &MF);
 
     StringRef getPassName() const override {
       return "Hexagon optimize redundant zero and size extends";
@@ -115,6 +115,8 @@ INITIALIZE_PASS(HexagonPeephole, "hexagon-peephole", "Hexagon Peephole",
 bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+
+  bool Changed = false;
 
   QII = static_cast<const HexagonInstrInfo *>(MF.getSubtarget().getInstrInfo());
   MRI = &MF.getRegInfo();
@@ -215,6 +217,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
             // Change the 1st operand.
             MI.removeOperand(1);
             MI.addOperand(MachineOperand::CreateReg(PeepholeSrc, false));
+            Changed = true;
           } else  {
             DenseMap<unsigned, std::pair<unsigned, unsigned> >::iterator DI =
               PeepholeDoubleRegsMap.find(SrcReg);
@@ -225,6 +228,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
                   PeepholeSrc.first, false /*isDef*/, false /*isImp*/,
                   false /*isKill*/, false /*isDead*/, false /*isUndef*/,
                   false /*isEarlyClobber*/, PeepholeSrc.second));
+              Changed = true;
             }
           }
         }
@@ -248,6 +252,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
                 MRI->clearKillFlags(PeepholeSrc);
                 int NewOp = QII->getInvertedPredicatedOpcode(MI.getOpcode());
                 MI.setDesc(QII->get(NewOp));
+                Changed = true;
                 Done = true;
               }
             }
@@ -282,6 +287,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
                   .add(MI.getOperand(S1));
               MRI->clearKillFlags(POrig);
               MI.eraseFromParent();
+              Changed = true;
             }
           } // if (NewOp)
         } // if (!Done)
@@ -292,9 +298,9 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
   } // Basic Block
 
   if (FuseIntrinsicVMinUB)
-    fuseIntrinsicVMinUB(MF);
+    Changed |= fuseIntrinsicVMinUB(MF);
 
-  return true;
+  return Changed;
 }
 
 // Return true if both instructions have identical input operands in order.
@@ -310,7 +316,9 @@ static bool hasCommonInputOps(const MachineInstr *I1, const MachineInstr *I2) {
   return true;
 }
 
-void HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
+bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
+  bool Changed = false;
+
   for (MachineBasicBlock &MBB : MF) {
     SmallPtrSet<MachineInstr *, 8> DeadMIs;
 
@@ -355,11 +363,14 @@ void HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
 
       DeadMIs.insert(&MI);
       DeadMIs.insert(Sibling);
+      Changed = true;
     }
 
     for (MachineInstr *MI : DeadMIs)
       MI->eraseFromParent();
   }
+
+  return Changed;
 }
 
 FunctionPass *llvm::createHexagonPeephole() {
