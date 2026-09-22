@@ -170,3 +170,25 @@ entry:
   %d. = select i1 %tobool.not, double %d, double -0.000000e+00
   ret double %d.
 }
+
+define double @freeze_poison() nounwind {
+; CHECK32D-LABEL: freeze_poison:
+; CHECK32D:       # %bb.0:
+; CHECK32D-NEXT:    fcvt.d.w fa0, zero
+; CHECK32D-NEXT:    ret
+;
+; CHECK64D-LABEL: freeze_poison:
+; CHECK64D:       # %bb.0:
+; CHECK64D-NEXT:    fmv.d.x fa0, zero
+; CHECK64D-NEXT:    ret
+;
+; CHECKRV32ZDINX-LABEL: freeze_poison:
+; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: freeze_poison:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    ret
+  %a = freeze double poison
+  ret double %a
+}

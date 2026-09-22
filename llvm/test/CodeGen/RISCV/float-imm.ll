@@ -68,3 +68,16 @@ define float @float_negative_zero(ptr %pf) nounwind {
 ; CHECKZFINX-NEXT:    ret
   ret float -0.0
 }
+
+define float @freeze_poison() nounwind {
+; CHECK-LABEL: freeze_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: freeze_poison:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    ret
+  %a = freeze float poison
+  ret float %a
+}

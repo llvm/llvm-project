@@ -1171,6 +1171,74 @@ static bool isApplicableToPLIOrPLUI(int Val) {
          Bit15To8 == Bit7To0;
 }
 
+void RISCVDAGToDAGISel::selectFPConstant(SDNode *Node, const SDLoc &DL, MVT VT,
+                                         const APFloat &APF) {
+  bool Is64Bit = Subtarget->is64Bit();
+  bool HasZdinx = Subtarget->hasStdExtZdinx();
+  MVT XLenVT = Subtarget->getXLenVT();
+
+  bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
+  SDValue Imm;
+  // For +0.0 or f64 -0.0 we need to start from X0. For all others, we will
+  // create an integer immediate.
+  if (APF.isPosZero() || NegZeroF64) {
+    if (VT == MVT::f64 && HasZdinx && !Is64Bit)
+      Imm = CurDAG->getRegister(RISCV::X0_Pair, MVT::f64);
+    else
+      Imm = CurDAG->getRegister(RISCV::X0, XLenVT);
+  } else {
+    Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
+                    *Subtarget);
+  }
+
+  unsigned Opc;
+  switch (VT.SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected size");
+  case MVT::bf16:
+    assert(Subtarget->hasStdExtZfbfmin());
+    Opc = RISCV::FMV_H_X;
+    break;
+  case MVT::f16:
+    Opc = Subtarget->hasStdExtZhinxmin() ? RISCV::COPY : RISCV::FMV_H_X;
+    break;
+  case MVT::f32:
+    Opc = Subtarget->hasStdExtZfinx() ? RISCV::COPY : RISCV::FMV_W_X;
+    break;
+  case MVT::f64:
+    // For RV32, we can't move from a GPR, we need to convert instead. This
+    // should only happen for +0.0 and -0.0.
+    assert((Subtarget->is64Bit() || APF.isZero()) && "Unexpected constant");
+    if (HasZdinx)
+      Opc = RISCV::COPY;
+    else
+      Opc = Is64Bit ? RISCV::FMV_D_X : RISCV::FCVT_D_W;
+    break;
+  }
+
+  SDNode *Res;
+  if (VT.SimpleTy == MVT::f16 && Opc == RISCV::COPY)
+    Res = CurDAG->getTargetExtractSubreg(RISCV::sub_16, DL, VT, Imm).getNode();
+  else if (VT.SimpleTy == MVT::f32 && Opc == RISCV::COPY)
+    Res = CurDAG->getTargetExtractSubreg(RISCV::sub_32, DL, VT, Imm).getNode();
+  else if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
+    Res = CurDAG->getMachineNode(
+        Opc, DL, VT, Imm,
+        CurDAG->getTargetConstant(RISCVFPRndMode::RNE, DL, XLenVT));
+  else
+    Res = CurDAG->getMachineNode(Opc, DL, VT, Imm);
+
+  // For f64 -0.0, we need to insert a fneg.d idiom.
+  if (NegZeroF64) {
+    Opc = RISCV::FSGNJN_D;
+    if (HasZdinx)
+      Opc = Is64Bit ? RISCV::FSGNJN_D_INX : RISCV::FSGNJN_D_IN32X;
+    Res = CurDAG->getMachineNode(Opc, DL, VT, SDValue(Res, 0), SDValue(Res, 0));
+  }
+
+  ReplaceNode(Node, Res);
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1243,75 +1311,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::ConstantFP: {
     const APFloat &APF = cast<ConstantFPSDNode>(Node)->getValueAPF();
-
-    bool Is64Bit = Subtarget->is64Bit();
-    bool HasZdinx = Subtarget->hasStdExtZdinx();
-
-    bool NegZeroF64 = APF.isNegZero() && VT == MVT::f64;
-    SDValue Imm;
-    // For +0.0 or f64 -0.0 we need to start from X0. For all others, we will
-    // create an integer immediate.
-    if (APF.isPosZero() || NegZeroF64) {
-      if (VT == MVT::f64 && HasZdinx && !Is64Bit)
-        Imm = CurDAG->getRegister(RISCV::X0_Pair, MVT::f64);
-      else
-        Imm = CurDAG->getRegister(RISCV::X0, XLenVT);
-    } else {
-      Imm = selectImm(CurDAG, DL, XLenVT, APF.bitcastToAPInt().getSExtValue(),
-                      *Subtarget);
-    }
-
-    unsigned Opc;
-    switch (VT.SimpleTy) {
-    default:
-      llvm_unreachable("Unexpected size");
-    case MVT::bf16:
-      assert(Subtarget->hasStdExtZfbfmin());
-      Opc = RISCV::FMV_H_X;
-      break;
-    case MVT::f16:
-      Opc = Subtarget->hasStdExtZhinxmin() ? RISCV::COPY : RISCV::FMV_H_X;
-      break;
-    case MVT::f32:
-      Opc = Subtarget->hasStdExtZfinx() ? RISCV::COPY : RISCV::FMV_W_X;
-      break;
-    case MVT::f64:
-      // For RV32, we can't move from a GPR, we need to convert instead. This
-      // should only happen for +0.0 and -0.0.
-      assert((Subtarget->is64Bit() || APF.isZero()) && "Unexpected constant");
-      if (HasZdinx)
-        Opc = RISCV::COPY;
-      else
-        Opc = Is64Bit ? RISCV::FMV_D_X : RISCV::FCVT_D_W;
-      break;
-    }
-
-    SDNode *Res;
-    if (VT.SimpleTy == MVT::f16 && Opc == RISCV::COPY) {
-      Res =
-          CurDAG->getTargetExtractSubreg(RISCV::sub_16, DL, VT, Imm).getNode();
-    } else if (VT.SimpleTy == MVT::f32 && Opc == RISCV::COPY) {
-      Res =
-          CurDAG->getTargetExtractSubreg(RISCV::sub_32, DL, VT, Imm).getNode();
-    } else if (Opc == RISCV::FCVT_D_W_IN32X || Opc == RISCV::FCVT_D_W)
-      Res = CurDAG->getMachineNode(
-          Opc, DL, VT, Imm,
-          CurDAG->getTargetConstant(RISCVFPRndMode::RNE, DL, XLenVT));
-    else
-      Res = CurDAG->getMachineNode(Opc, DL, VT, Imm);
-
-    // For f64 -0.0, we need to insert a fneg.d idiom.
-    if (NegZeroF64) {
-      Opc = RISCV::FSGNJN_D;
-      if (HasZdinx)
-        Opc = Is64Bit ? RISCV::FSGNJN_D_INX : RISCV::FSGNJN_D_IN32X;
-      Res =
-          CurDAG->getMachineNode(Opc, DL, VT, SDValue(Res, 0), SDValue(Res, 0));
-    }
-
-    ReplaceNode(Node, Res);
+    selectFPConstant(Node, DL, VT, APF);
     return;
   }
+  case ISD::FREEZE:
+    // Lower (freeze poison) to a zero producing instruction so we properly
+    // nan-box to FLEN.
+    if (VT.isFloatingPoint() && !VT.isVector() && Subtarget->hasStdExtF() &&
+        Node->getOperand(0).getOpcode() == ISD::POISON) {
+      APFloat Zero = APFloat::getZero(VT.getFltSemantics());
+      selectFPConstant(Node, DL, VT, Zero);
+      return;
+    }
+    break;
   case RISCVISD::BuildGPRPair:
   case RISCVISD::BuildPairF64:
   case RISCVISD::BuildPairGPRVec: {

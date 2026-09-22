@@ -134,3 +134,25 @@ define half @half_negative_zero(ptr %pf) nounwind {
 ; CHECKIZHINXMIN-NEXT:    ret
   ret half -0.0
 }
+
+define half @freeze_poison() nounwind {
+; CHECK-LABEL: freeze_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.h.x fa0, zero
+; CHECK-NEXT:    ret
+;
+; CHECKIZHINX-LABEL: freeze_poison:
+; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    ret
+;
+; CHECKIZFHMIN-LABEL: freeze_poison:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, zero
+; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: freeze_poison:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    ret
+  %a = freeze half poison
+  ret half %a
+}

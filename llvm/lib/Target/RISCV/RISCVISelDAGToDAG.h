@@ -108,6 +108,8 @@ public:
                                        SDValue X, unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
   bool tryWideningMulAcc(SDNode *Node, const SDLoc &DL);
+  void selectFPConstant(SDNode *Node, const SDLoc &DL, MVT VT,
+                        const APFloat &APF);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
