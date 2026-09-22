@@ -6669,17 +6669,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenNonPhiRecipe(&VPI, Range);
+      if (!Recipe)
+        Recipe = RecipeBuilder.handleReplication(&VPI, Range);
+      Builder.insert(Recipe);
 
-      if (isa_and_nonnull<VPWidenIntOrFpInductionRecipe>(Recipe) &&
-          VPI.getOpcode() == Instruction::Trunc) {
-        // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be
-        // moved to the phi section in the header.
-        Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-      } else {
-        if (!Recipe)
-          Recipe = RecipeBuilder.handleReplication(&VPI, Range);
-        Builder.insert(Recipe);
-      }
       if (Recipe->getNumDefinedValues() == 1) {
         VPI.replaceAllUsesWith(Recipe->getVPSingleValue());
       } else {
