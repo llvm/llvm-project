@@ -22314,7 +22314,7 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
   // would be
   // `%vl1 - %offset <= VLMAX - %offset` ---> `%vl1 <= VLMAX`
   // Thus, we will never read those zeros that are shifted in by VSLIDEDOWN_VL.
-  // Second, we don't want slideup to read pass the result produced by
+  // Second, we don't want slideup to read past the result produced by
   // slidedown. So the condition for this case would be `%vl0 + %offset >=
   // %vl1`.
   if (!isVLMax(SlideDownVL)) {
