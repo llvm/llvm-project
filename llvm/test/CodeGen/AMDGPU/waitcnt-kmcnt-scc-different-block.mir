@@ -150,7 +150,7 @@ body: |
     S_CBRANCH_EXECZ %bb.4, implicit $exec
 
   bb.1:
-    V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr1, implicit-def $exec, implicit $exec
+    bb-prolog V_CMPX_EQ_U32_nosdst_e32 0, killed $vgpr1, implicit-def $exec, implicit $exec
     S_CBRANCH_EXECZ %bb.3, implicit $exec
 
   bb.2:

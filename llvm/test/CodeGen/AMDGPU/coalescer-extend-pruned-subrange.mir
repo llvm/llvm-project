@@ -53,7 +53,7 @@ body: |
 
   bb.4:
     successors: %bb.5
-    $exec = S_OR_B64 $exec, %20, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %20, implicit-def $scc
 
   bb.5:
     successors: %bb.7, %bb.6
@@ -90,7 +90,7 @@ body: |
 
   bb.10:
     successors: %bb.9
-    $exec = S_OR_B64 $exec, %29, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %29, implicit-def $scc
     %36:vgpr_32 = COPY %28
     %37:sreg_64_xexec = V_CMP_NE_U32_e64 0, %36, implicit $exec
     %38:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %37, implicit $exec

@@ -163,7 +163,7 @@ body:             |
     %109:vgpr_32 = PHI %31, %bb.0, %24, %bb.1
     %110:vgpr_32 = PHI %39, %bb.0, %1, %bb.1
     %111:vgpr_32 = PHI %35, %bb.0, %72, %bb.1
-    SI_END_CF %65, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %65, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %112:vgpr_32 = V_ADD_U32_e64 %97, %56, 0, implicit $exec
     %113:vgpr_32 = V_MUL_LO_U32_e64 %112, %49, implicit $exec
     %114:vgpr_32 = V_SUB_U32_e64 %113, %39, 0, implicit $exec
@@ -4296,7 +4296,7 @@ body:             |
 # CHECK-CP-JSON:               }
 # CHECK-CP-JSON-NEXT:        },
 # CHECK-CP-JSON-NEXT:        {
-# CHECK-CP-JSON-NEXT:          "instr": "SI_END_CF %65, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-CP-JSON-NEXT:          "instr": "bb-prolog SI_END_CF %65, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-CP-JSON-NEXT:          "id": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-CP-JSON-NEXT:          "tail-len": {{[0-9]+}},
@@ -9224,7 +9224,7 @@ body:             |
 # CHECK-GX-JSON:               }
 # CHECK-GX-JSON-NEXT:        },
 # CHECK-GX-JSON-NEXT:        {
-# CHECK-GX-JSON-NEXT:          "instr": "SI_END_CF %65, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-GX-JSON-NEXT:          "instr": "bb-prolog SI_END_CF %65, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:          "id": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "head-len": {{[0-9]+}},
 # CHECK-GX-JSON-NEXT:          "tail-len": {{[0-9]+}},

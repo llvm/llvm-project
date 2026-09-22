@@ -479,7 +479,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $vcc_lo, $sgpr1, $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr1, implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, killed renamable $sgpr1, implicit-def $scc
   ; CHECK-NEXT:   renamable $vgpr0 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr0, $vcc_lo, implicit $exec
   ; CHECK-NEXT:   $exec_lo = S_XOR_B32 $vcc_lo, -1, implicit-def $scc
   ; CHECK-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0) :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
@@ -490,7 +490,7 @@ body:             |
     successors: %bb.1, %bb.2
     liveins: $vgpr0, $vgpr1
 
-    renamable $vcc_lo = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
+    renamable $vcc_lo = bb-prolog SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     $sgpr1 = S_MOV_B32 $exec_lo
     V_CMPX_EQ_U32_nosdst_e64 $vgpr0, $vgpr1, implicit-def $exec, implicit $exec
     S_CBRANCH_EXECZ %bb.2, implicit $exec
@@ -504,7 +504,7 @@ body:             |
   bb.2:
     liveins: $vcc_lo, $sgpr1, $vgpr0, $vgpr1
 
-    $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr1, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, killed renamable $sgpr1, implicit-def $scc
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr0, $vcc_lo, implicit $exec
     SI_WHOLE_WAVE_FUNC_RETURN killed renamable $vcc_lo, implicit $vgpr0
 

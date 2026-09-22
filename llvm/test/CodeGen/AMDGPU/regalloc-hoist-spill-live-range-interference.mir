@@ -4,12 +4,13 @@
 # InlineSpiller tries to hoist the spill of %1 by storing its sibling %0 after
 # the basic block prologue. Extending the PHI-defined %0 to that insertion point
 # would overlap an interval already assigned to the same physical register.
-# Reject the hoist and spill %0 at the original copy instead.
+# Reject the hoist and spill %0 at the original copy instead. %3 is a COPY so it
+# is not rematerialized out of the prolog.
 
 # CHECK-LABEL: name: hoist_spill_live_range_interference
 # CHECK: bb.2:
 # CHECK: SI_SPILL_WWM_V32_SAVE %0
-# CHECK-NEXT: $exec = S_AND_B64
+# CHECK-NEXT: $exec = bb-prolog S_AND_B64
 
 ---
 name:            hoist_spill_live_range_interference
@@ -35,10 +36,10 @@ body: |
     %0:vgpr_32 = COPY %2
 
   bb.2:
-    %1:vgpr_32 = lr-split WWM_COPY %0:vgpr_32
-    $exec = S_AND_B64 $exec, $exec, implicit-def $scc
-    %3:vgpr_32 = IMPLICIT_DEF
-    %4:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = lr-split bb-prolog WWM_COPY %0:vgpr_32
+    $exec = bb-prolog S_AND_B64 $exec, $exec, implicit-def $scc
+    %3:vgpr_32 = bb-prolog COPY %2
+    %4:vgpr_32 = bb-prolog IMPLICIT_DEF
     KILL %2:vgpr_32, %3:vgpr_32, %4:vgpr_32
     KILL %1:vgpr_32, %2:vgpr_32
     S_ENDPGM 0
