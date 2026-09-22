@@ -27,6 +27,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -36,8 +37,9 @@
 
 using namespace llvm;
 
-static void diagnoseNonUniqueResourceAccess(Instruction *I,
-                                            ArrayRef<IntrinsicInst *> Handles) {
+[[noreturn]] static void
+diagnoseNonUniqueResourceAccess(Instruction *I,
+                                ArrayRef<IntrinsicInst *> Handles) {
   LLVMContext &Context = I->getContext();
   std::string InstStr;
   raw_string_ostream InstOS(InstStr);
@@ -52,8 +54,9 @@ static void diagnoseNonUniqueResourceAccess(Instruction *I,
     Context.diagnose(DiagnosticInfoGeneric(
         "Uses resource handle:" + Twine(HandleStr), DS_Note));
   }
-  Context.diagnose(DiagnosticInfoGeneric(
-      "Resource access is not guaranteed to map to a unique global resource"));
+  report_fatal_error(
+      "Resource access is not guaranteed to map to a unique global resource",
+      /*gen_crash_diag=*/false);
 }
 
 static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
@@ -997,10 +1000,8 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           SameGlobalBinding &=
               (B == getHandleIntrinsicBinding(Handles[Idx], DRTM));
 
-        if (!SameGlobalBinding) {
+        if (!SameGlobalBinding)
           diagnoseNonUniqueResourceAccess(&I, Handles);
-          continue;
-        }
 
         replaceHandleWithIndices(HandleOp, Handles[0], DeadInsts, VisitedPhis);
       }
