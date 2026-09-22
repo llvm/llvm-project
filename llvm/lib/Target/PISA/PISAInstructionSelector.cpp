@@ -12,6 +12,7 @@
 #include "PISAInstrInfo.h"
 #include "PISARegisterBankInfo.h"
 #include "PISARegisterInfo.h"
+#include "PISASubtarget.h"
 #include "PISATargetMachine.h"
 #include "PISAUtils.h"
 
@@ -24,13 +25,18 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/IntrinsicsPISA.h"
 #include "llvm/IR/PISAIntrinsicUtils.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PISAAddrSpace.h"
+
+#include <optional>
+#include <tuple>
 
 namespace llvm {
 namespace PISA {
@@ -53,8 +59,9 @@ using namespace MIPatternMatch;
 
 namespace {
 
-/// Returns an APFloat from Val converted to the appropriate size.
-static APFloat getAPFloatFromSize(double Val, unsigned Size) {
+/// Returns an APFloat from Val converted to the appropriate type.
+static APFloat getAPFloatFromType(double Val, LLT Ty) {
+  unsigned Size = Ty.getScalarSizeInBits();
   if (Size == 32)
     return APFloat(float(Val));
   if (Size == 64)
@@ -63,7 +70,8 @@ static APFloat getAPFloatFromSize(double Val, unsigned Size) {
     llvm_unreachable("Unsupported FPConstant size");
   bool Ignored;
   APFloat APF(Val);
-  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
+  APF.convert(Ty.isBFloat16() ? APFloat::BFloat() : APFloat::IEEEhalf(),
+              APFloat::rmNearestTiesToEven, &Ignored);
   return APF;
 }
 
@@ -74,9 +82,9 @@ struct SyncScopeInfo {
 
   SyncScopeInfo() {}
   SyncScopeInfo(llvm::LLVMContext &Context) {
-    for (const auto &[Name, Opcode] : Name2Opcode) {
-      auto ID = Context.getOrInsertSyncScopeID(Name);
-      ID2Opcode.emplace_or_assign(ID, Opcode);
+    for (const StringMapEntry<unsigned> &Entry : Name2Opcode) {
+      SyncScope::ID ID = Context.getOrInsertSyncScopeID(Entry.getKey());
+      ID2Opcode.emplace_or_assign(ID, Entry.getValue());
     }
     ID2Opcode.emplace_or_assign(SyncScope::SingleThread, PISA::fence_subgroup);
     ID2Opcode.emplace_or_assign(SyncScope::System, PISA::fence_global_system);
@@ -221,13 +229,13 @@ void PISAInstructionSelector::setupMF(MachineFunction &MF,
   // Setup the correct stack ID.
   for (int Idx = MFI->getObjectIndexBegin(), EndIdx = MFI->getObjectIndexEnd();
        Idx != EndIdx; ++Idx) {
-    if (auto *AI = MFI->getObjectAllocation(Idx)) {
-      const auto AS = AI->getAddressSpace();
+    if (const AllocaInst *AI = MFI->getObjectAllocation(Idx)) {
+      const unsigned AS = AI->getAddressSpace();
       Type *AllocatedTy = AI->getAllocatedType();
-      if (auto *ATy = dyn_cast<ArrayType>(AllocatedTy))
+      if (ArrayType *ATy = dyn_cast<ArrayType>(AllocatedTy))
         AllocatedTy = ATy->getElementType();
 
-      auto *TExtTy = dyn_cast<TargetExtType>(AllocatedTy);
+      TargetExtType *TExtTy = dyn_cast<TargetExtType>(AllocatedTy);
 
       if (AS == SharedAS) {
         assert(MF.getFunction().getCallingConv() == CallingConv::PISA_KERNEL &&
@@ -354,7 +362,7 @@ MachineInstr *PISAInstructionSelector::findPtrBaseDefinition(
     if (!Visited.insert(DefMI).second)
       continue;
 
-    auto Opcode = DefMI->getOpcode();
+    unsigned Opcode = DefMI->getOpcode();
     switch (Opcode) {
     default:
       // If we see an instruction that we don't recognize, stop looking and try
@@ -398,7 +406,9 @@ bool PISAInstructionSelector::selectG_ADDRSPACE_CAST(
   [[maybe_unused]] constexpr unsigned PrivateAS =
       static_cast<unsigned>(PISAAS::AddressSpace::PRIVATE);
 
-  auto [Dst, DstTy, Src, SrcTy] = I.getFirst2RegLLTs();
+  Register Dst, Src;
+  LLT DstTy, SrcTy;
+  std::tie(Dst, DstTy, Src, SrcTy) = I.getFirst2RegLLTs();
   const unsigned DstAS = DstTy.getAddressSpace();
   [[maybe_unused]] const unsigned SrcAS = SrcTy.getAddressSpace();
 
@@ -508,15 +518,19 @@ bool PISAInstructionSelector::selectAddSubWithOverflow(MachineInstr &I) const {
   const bool HasCarryIn = I.getOpcode() == TargetOpcode::G_UADDE ||
                           I.getOpcode() == TargetOpcode::G_USUBE;
 
-  auto [DstReg, CarryOutReg, Src0Reg, Src1Reg] = I.getFirst4Regs();
-  const auto *DstRC = TRI.getRegClassFromLLT(MRI->getType(DstReg));
-  const auto *PredRC = &PISA::PredRegClass;
+  Register DstReg, CarryOutReg, Src0Reg, Src1Reg;
+  std::tie(DstReg, CarryOutReg, Src0Reg, Src1Reg) = I.getFirst4Regs();
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassFromLLT(MRI->getType(DstReg));
+  const TargetRegisterClass *PredRC = &PISA::PredRegClass;
 
   // Is there any reason to support 16b addc/subb?
   assert(DstRC == &PISA::Reg32bRegClass);
 
-  auto Src0C = getIConstantVRegValWithLookThrough(Src0Reg, *MRI);
-  auto Src1C = getIConstantVRegValWithLookThrough(Src1Reg, *MRI);
+  std::optional<ValueAndVReg> Src0C =
+      getIConstantVRegValWithLookThrough(Src0Reg, *MRI);
+  std::optional<ValueAndVReg> Src1C =
+      getIConstantVRegValWithLookThrough(Src1Reg, *MRI);
   unsigned RegReg = Src0C ? 0 : (Src1C ? 1 : 2);
 
   const bool HasCarryOut = !HasCarryIn || !MRI->use_nodbg_empty(CarryOutReg);
@@ -539,7 +553,7 @@ bool PISAInstructionSelector::selectAddSubWithOverflow(MachineInstr &I) const {
                      ? CarryInOutOpc
                      : (HasCarryOut ? CarryOutOpc : CarryInOpc);
 
-  auto MIB = BuildMI(*BB, &I, DL, TII.get(Opc), DstReg);
+  MachineInstrBuilder MIB = BuildMI(*BB, &I, DL, TII.get(Opc), DstReg);
   if (HasCarryOut)
     MIB.addDef(CarryOutReg);
   if (Src0C)
@@ -576,14 +590,18 @@ bool PISAInstructionSelector::selectSignedAddSubWithOverflow(
   const bool HasCarryIn = I.getOpcode() == TargetOpcode::G_SADDE ||
                           I.getOpcode() == TargetOpcode::G_SSUBE;
 
-  auto [DstReg, CarryOutReg, Src0Reg, Src1Reg] = I.getFirst4Regs();
-  const auto *DstRC = TRI.getRegClassFromLLT(MRI->getType(DstReg));
-  const auto *PredRC = &PISA::PredRegClass;
+  Register DstReg, CarryOutReg, Src0Reg, Src1Reg;
+  std::tie(DstReg, CarryOutReg, Src0Reg, Src1Reg) = I.getFirst4Regs();
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassFromLLT(MRI->getType(DstReg));
+  const TargetRegisterClass *PredRC = &PISA::PredRegClass;
 
   assert(DstRC == &PISA::Reg32bRegClass);
 
-  auto Src0C = getIConstantVRegValWithLookThrough(Src0Reg, *MRI);
-  auto Src1C = getIConstantVRegValWithLookThrough(Src1Reg, *MRI);
+  std::optional<ValueAndVReg> Src0C =
+      getIConstantVRegValWithLookThrough(Src0Reg, *MRI);
+  std::optional<ValueAndVReg> Src1C =
+      getIConstantVRegValWithLookThrough(Src1Reg, *MRI);
   unsigned RegReg = Src0C ? 0 : (Src1C ? 1 : 2);
 
   unsigned PISAOps[] = {PISA::uaddc_co_32b_ir,    PISA::uaddc_co_32b_ri,
@@ -595,11 +613,11 @@ bool PISAInstructionSelector::selectSignedAddSubWithOverflow(
   unsigned NoCarryOpc = PISAOps[(IsAdd ? 0 : 3) + RegReg];
   unsigned CarryOpc = PISAOps[6 + (IsAdd ? 0 : 3) + RegReg];
 
-  auto CarryOutPredReg = MRI->createVirtualRegister(PredRC);
-  const auto *IntRC = TRI.getRegClassFromLLT(LLT::integer(16));
-  auto CarryOutIntReg = MRI->createVirtualRegister(IntRC);
-  auto CarryInIntReg = MRI->createVirtualRegister(IntRC);
-  auto MIB =
+  Register CarryOutPredReg = MRI->createVirtualRegister(PredRC);
+  const TargetRegisterClass *IntRC = TRI.getRegClassFromLLT(LLT::integer(16));
+  Register CarryOutIntReg = MRI->createVirtualRegister(IntRC);
+  Register CarryInIntReg = MRI->createVirtualRegister(IntRC);
+  MachineInstrBuilder MIB =
       BuildMI(*BB, &I, DL, TII.get(HasCarryIn ? CarryOpc : NoCarryOpc), DstReg)
           .addDef(CarryOutPredReg);
   if (Src0C)
@@ -659,11 +677,10 @@ bool PISAInstructionSelector::selectBitcast(MachineInstr &I) const {
   Register SrcReg = I.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
 
   if (DstTy.getSizeInBits() != SrcTy.getSizeInBits()) {
-    assert(false && "Wrong bitcast operands!");
     return false;
   }
 
@@ -684,7 +701,9 @@ bool PISAInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
   const DebugLoc &DL = MI.getDebugLoc();
   const int NumSrc = MI.getNumOperands() - 1;
 
-  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  Register DstReg, SrcReg;
+  LLT DstTy, SrcTy;
+  std::tie(DstReg, DstTy, SrcReg, SrcTy) = MI.getFirst2RegLLTs();
   const unsigned SrcNumElts = SrcTy.isVector() ? SrcTy.getNumElements() : 1;
   const unsigned SrcEltSize = SrcTy.getScalarSizeInBits();
 
@@ -695,7 +714,7 @@ bool PISAInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
     if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
       return false;
 
-    auto DstNumElts = DstTy.getSizeInBits() / SrcTy.getScalarSizeInBits();
+    uint64_t DstNumElts = DstTy.getSizeInBits() / SrcTy.getScalarSizeInBits();
     DstTy = LLT::fixed_vector(DstNumElts, SrcTy.getScalarType());
     DstReg = MRI->createGenericVirtualRegister(DstTy);
   }
@@ -761,7 +780,7 @@ bool PISAInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
         return true;
       }
 
-      auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+      const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
       Register CurVec = MRI->createVirtualRegister(DstRC);
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::IMPLICIT_DEF), CurVec);
       if (!RBI.constrainGenericRegister(CurVec, *DstRC, *MRI))
@@ -799,22 +818,24 @@ bool PISAInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
       Regs.push_back(SrcReg);
 
     } else {
-      auto *SubRC = TRI.getRegClassFromLLT(SrcTy.getScalarType());
+      const TargetRegisterClass *SubRC =
+          TRI.getRegClassFromLLT(SrcTy.getScalarType());
       for (unsigned J = 0; J < SrcNumElts; J++) {
-        auto SubRegIdx = TRI.getSubRegIdx(SrcEltSize, J);
+        unsigned SubRegIdx = TRI.getSubRegIdx(SrcEltSize, J);
         // Constrain SrcReg to the subclass supporting this subreg index
         // (needed when RC contains physicals without the subreg, e.g.
         // RegV2_16b with Reg32b members that lack sub16_N). Sources may not
         // have an RC set yet if their defining instruction hasn't been
         // selected (selection order is bottom-up), so derive from LLT.
-        auto *SrcRC = MRI->getRegClassOrNull(SrcReg);
+        const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
         if (!SrcRC)
           SrcRC = TRI.getRegClassFromLLT(SrcTy);
         if (SrcRC) {
-          if (auto *NarrowRC = TRI.getSubClassWithSubReg(SrcRC, SubRegIdx))
+          if (const TargetRegisterClass *NarrowRC =
+                  TRI.getSubClassWithSubReg(SrcRC, SubRegIdx))
             RBI.constrainGenericRegister(SrcReg, *NarrowRC, *MRI);
         }
-        auto SubSrcReg =
+        Register SubSrcReg =
             MRI->createGenericVirtualRegister(SrcTy.getScalarType());
         BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), SubSrcReg)
             .addReg(SrcReg, {}, SubRegIdx);
@@ -828,7 +849,7 @@ bool PISAInstructionSelector::selectG_MERGE_VALUES(MachineInstr &MI) const {
     return false;
 
   // copy back the value in case of scalar destination
-  auto OrigDstReg = MI.getOperand(0).getReg();
+  Register OrigDstReg = MI.getOperand(0).getReg();
   if (!MRI->getType(OrigDstReg).isVector()) {
     BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), OrigDstReg)
         .addReg(DstReg);
@@ -858,9 +879,9 @@ bool PISAInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
       return false;
 
-    auto SrcNumElts = SrcTy.getSizeInBits() / DstTy.getScalarSizeInBits();
+    uint64_t SrcNumElts = SrcTy.getSizeInBits() / DstTy.getScalarSizeInBits();
     SrcTy = LLT::fixed_vector(SrcNumElts, DstTy.getScalarType());
-    auto NewSrcReg = MRI->createGenericVirtualRegister(SrcTy);
+    Register NewSrcReg = MRI->createGenericVirtualRegister(SrcTy);
     BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), NewSrcReg)
         .addReg(SrcReg);
     SrcReg = NewSrcReg;
@@ -877,13 +898,15 @@ bool PISAInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     Register DstReg = MI.getOperand(I).getReg();
     SmallVector<Register> Regs;
     for (unsigned J = 0; J < DstNumElts; J++) {
-      auto SubRegIdx = TRI.getSubRegIdx(DstEltSize, I * DstNumElts + J);
+      unsigned SubRegIdx = TRI.getSubRegIdx(DstEltSize, I * DstNumElts + J);
       // Constrain SrcReg to the subclass supporting this subreg index.
-      if (auto *CurSrcRC = MRI->getRegClassOrNull(SrcReg)) {
-        if (auto *NarrowRC = TRI.getSubClassWithSubReg(CurSrcRC, SubRegIdx))
+      if (const TargetRegisterClass *CurSrcRC =
+              MRI->getRegClassOrNull(SrcReg)) {
+        if (const TargetRegisterClass *NarrowRC =
+                TRI.getSubClassWithSubReg(CurSrcRC, SubRegIdx))
           MRI->constrainRegClass(SrcReg, NarrowRC);
       }
-      auto SubDstReg =
+      Register SubDstReg =
           (DstNumElts == 1)
               ? DstReg
               : MRI->createGenericVirtualRegister(DstTy.getScalarType());
@@ -893,7 +916,8 @@ bool PISAInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     }
 
     if (DstNumElts > 1) {
-      auto *SubRC = TRI.getRegClassFromLLT(DstTy.getScalarType());
+      const TargetRegisterClass *SubRC =
+          TRI.getRegClassFromLLT(DstTy.getScalarType());
       for (Register R : Regs) {
         if (!RBI.constrainGenericRegister(R, *SubRC, *MRI))
           return false;
@@ -922,8 +946,8 @@ bool PISAInstructionSelector::selectConvPtrInt(MachineInstr &I) const {
 
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
 
   assert(DstTy.getSizeInBits() == SrcTy.getSizeInBits() &&
          "mismatch in int2ptr src/dst sizes");
@@ -949,7 +973,7 @@ bool PISAInstructionSelector::selectCopy(MachineInstr &I) const {
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
 
-  if (auto *SrcDefI = MRI.getVRegDef(SrcReg);
+  if (MachineInstr *SrcDefI = MRI.getVRegDef(SrcReg);
       SrcDefI && SrcDefI->isInlineAsm() && !SrcTy.isValid()) {
     assert(DstTy.isValid());
     SrcTy = DstTy;
@@ -959,11 +983,10 @@ bool PISAInstructionSelector::selectCopy(MachineInstr &I) const {
     DstTy = SrcTy;
   }
 
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
 
   if (DstTy.getSizeInBits() != SrcTy.getSizeInBits()) {
-    assert(false && "Operands with different bit size!");
     return false;
   }
 
@@ -995,7 +1018,7 @@ bool PISAInstructionSelector::emitBuildVector(MachineInstr &InsertPt,
   LLT DstTy = MRI.getType(DstReg);
   LLT EltTy = MRI.getType(Srcs[0]);
   const unsigned SrcSize = EltTy.getSizeInBits();
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
 
   Register CurVecReg = MRI.createVirtualRegister(DstRC);
   BuildMI(*BB, &InsertPt, InsertPt.getDebugLoc(),
@@ -1010,15 +1033,17 @@ bool PISAInstructionSelector::emitBuildVector(MachineInstr &InsertPt,
       TRI.getSubClassWithSubReg(DstRC, TRI.getSubRegIdx(SrcSize, 0));
   if (!HasSubRegSupport || Srcs.size() > 4) {
     assert(EltTy.getScalarSizeInBits() == 32);
-    for (auto [Index, EltReg] : llvm::enumerate(Srcs)) {
+    for (unsigned Index = 0; Index < Srcs.size(); ++Index) {
+      Register EltReg = Srcs[Index];
       // lookup target opcode
       std::string OpcodeName = "insert_" + std::to_string(Index) + "_v" +
                                std::to_string(DstTy.getNumElements()) + "i" +
                                std::to_string(DstTy.getScalarSizeInBits()) +
                                "_i32_r";
-      auto *Entry = PISA::lookupName2InstrOpEntry(OpcodeName);
+      const PISA::Name2InstrEntry *Entry =
+          PISA::lookupName2InstrOpEntry(OpcodeName);
       assert(Entry && "unable to find insert instruction");
-      auto Opcode = Entry->Opcode;
+      unsigned Opcode = Entry->Opcode;
 
       Register CurDstReg =
           (Index + 1 == NumSrcs) ? DstReg : MRI.createVirtualRegister(DstRC);
@@ -1036,12 +1061,14 @@ bool PISAInstructionSelector::emitBuildVector(MachineInstr &InsertPt,
     // RegV2_16b with Reg32b members that lack sub16_N).
     if (NumSrcs > 0) {
       unsigned FirstSubRegIdx = TRI.getSubRegIdx(SrcSize, 0);
-      if (auto *NarrowRC = TRI.getSubClassWithSubReg(DstRC, FirstSubRegIdx)) {
+      if (const TargetRegisterClass *NarrowRC =
+              TRI.getSubClassWithSubReg(DstRC, FirstSubRegIdx)) {
         DstRC = NarrowRC;
         MRI.constrainRegClass(CurVecReg, DstRC);
       }
     }
-    for (auto [Idx, EltReg] : llvm::enumerate(Srcs)) {
+    for (unsigned Idx = 0; Idx < Srcs.size(); ++Idx) {
+      Register EltReg = Srcs[Idx];
       unsigned SubRegIdx = TRI.getSubRegIdx(SrcSize, Idx);
       Register CurDstReg =
           (Idx + 1 == NumSrcs) ? DstReg : MRI.createVirtualRegister(DstRC);
@@ -1081,7 +1108,7 @@ bool PISAInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &I) const {
   SmallVector<Register> SrcRegs;
   uint32_t LastDefinedIdx = 1;
   for (uint32_t It = 1; It < I.getNumOperands(); It++) {
-    auto SrcReg = I.getOperand(It).getReg();
+    Register SrcReg = I.getOperand(It).getReg();
     MachineInstr *Def = getDefIgnoringCopies(SrcReg, MRI);
     if (Def->getOpcode() != TargetOpcode::G_IMPLICIT_DEF) {
       AllUndef = false;
@@ -1097,7 +1124,8 @@ bool PISAInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &I) const {
   if (AllUndef) {
     // replace vector of IMPLICIT_DEFs with a single IMPLICIT_DEF
     BuildMI(*BB, &I, DL, TII.get(TargetOpcode::IMPLICIT_DEF)).addDef(DstReg);
-    auto *DstRC = TRI.getRegClassFromLLT(MRI.getType(DstReg));
+    const TargetRegisterClass *DstRC =
+        TRI.getRegClassFromLLT(MRI.getType(DstReg));
     if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
       return false;
   } else if (!emitBuildVector(I, DstReg, SrcRegs))
@@ -1131,18 +1159,18 @@ bool PISAInstructionSelector::selectG_FCANONICALIZE(MachineInstr &I) const {
   Register SrcReg = I.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
-  auto BitSize = DstTy.getScalarSizeInBits();
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  unsigned BitSize = DstTy.getScalarSizeInBits();
 
   // https://llvm.org/docs/LangRef.html#i-intr-llvm-canonicalize
-  auto &Ctx = I.getMF()->getFunction().getContext();
-  auto *CFP = ConstantFP::get(Ctx, getAPFloatFromSize(1.0, BitSize));
+  LLVMContext &Ctx = I.getMF()->getFunction().getContext();
+  ConstantFP *CFP = ConstantFP::get(Ctx, getAPFloatFromType(1.0, DstTy));
 
   unsigned Opcode;
   switch (BitSize) {
   case 16:
-    Opcode = PISA::fmul_hf_ri;
+    Opcode = DstTy.isBFloat16() ? PISA::fmul_bf_ri : PISA::fmul_hf_ri;
     break;
   case 32:
     Opcode = PISA::fmul_f_ri;
@@ -1176,16 +1204,16 @@ bool PISAInstructionSelector::selectG_LROUND(MachineInstr &I) const {
 
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(SrcReg);
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
-  auto SrcSize = SrcTy.getScalarSizeInBits();
-  auto DstSize = DstTy.getScalarSizeInBits();
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  unsigned SrcSize = SrcTy.getScalarSizeInBits();
+  unsigned DstSize = DstTy.getScalarSizeInBits();
   assert((SrcSize == 32 || SrcSize == 64) && "illegal Src type for lround");
   assert((DstSize == 32 || DstSize == 64) && "illegal Dst type for lround");
 
-  auto &Ctx = I.getMF()->getFunction().getContext();
-  auto *FPHalf = ConstantFP::get(Ctx, getAPFloatFromSize(0.5, SrcSize));
-  auto *FPZero = ConstantFP::get(Ctx, getAPFloatFromSize(0.0, SrcSize));
+  LLVMContext &Ctx = I.getMF()->getFunction().getContext();
+  ConstantFP *FPHalf = ConstantFP::get(Ctx, getAPFloatFromType(0.5, SrcTy));
+  ConstantFP *FPZero = ConstantFP::get(Ctx, getAPFloatFromType(0.0, SrcTy));
 
   unsigned F2i[/*src/64*/ 2][/*dst/64*/ 2] = {
       {PISA::f2i_u32_f_rz_r, PISA::f2i_u64_f_rz_r},
@@ -1199,7 +1227,7 @@ bool PISAInstructionSelector::selectG_LROUND(MachineInstr &I) const {
   Register FNegReg = MRI.createVirtualRegister(SrcRC);
   Register FSelReg = MRI.createVirtualRegister(SrcRC);
 
-  auto *CmpRC = TRI.getRegClassFromLLT(LLT::integer(1));
+  const TargetRegisterClass *CmpRC = TRI.getRegClassFromLLT(LLT::integer(1));
   Register CmpReg = MRI.createVirtualRegister(CmpRC);
 
   unsigned Opcode;
@@ -1238,11 +1266,12 @@ bool PISAInstructionSelector::selectG_BFX(MachineInstr &I, bool Signed) const {
   DebugLoc DL = I.getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  auto [Dst, Src0, Src1, Src2] = I.getFirst4Regs();
+  Register Dst, Src0, Src1, Src2;
+  std::tie(Dst, Src0, Src1, Src2) = I.getFirst4Regs();
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src0);
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
   assert((SrcTy.getScalarSizeInBits() == 32) && "illegal Src type for bfe");
   assert((DstTy.getScalarSizeInBits() == 32) && "illegal Dst type for bfe");
 
@@ -1256,32 +1285,36 @@ bool PISAInstructionSelector::selectG_BFX(MachineInstr &I, bool Signed) const {
                          PISA::sbfe_32b_rir, PISA::sbfe_32b_rii,
                          PISA::sbfe_32b_irr, PISA::sbfe_32b_iri,
                          PISA::sbfe_32b_iir, PISA::sbfe_32b_iii};
-  auto &Opcodes = Signed ? OpcodesS : OpcodesU;
-  auto WidthImm = getIConstantVRegValWithLookThrough(Src2, MRI);
-  auto OffsetImm = getIConstantVRegValWithLookThrough(Src1, MRI);
-  auto SourceImm = getIConstantVRegValWithLookThrough(Src0, MRI);
+  const unsigned *Opcodes = Signed ? OpcodesS : OpcodesU;
+  std::optional<ValueAndVReg> WidthImm =
+      getIConstantVRegValWithLookThrough(Src2, MRI);
+  std::optional<ValueAndVReg> OffsetImm =
+      getIConstantVRegValWithLookThrough(Src1, MRI);
+  std::optional<ValueAndVReg> SourceImm =
+      getIConstantVRegValWithLookThrough(Src0, MRI);
   unsigned OpIdx = SourceImm ? 4 : 0;
   if (WidthImm)
     OpIdx += 2;
   if (OffsetImm)
     OpIdx += 1;
-  auto MIB = BuildMI(*BB, &I, DL, TII.get(Opcodes[OpIdx])).addDef(Dst);
+  MachineInstrBuilder MIB =
+      BuildMI(*BB, &I, DL, TII.get(Opcodes[OpIdx])).addDef(Dst);
   if (SourceImm) {
-    auto SourceImmValue = Signed ? SourceImm->Value.getSExtValue()
+    uint64_t SourceImmValue = Signed ? SourceImm->Value.getSExtValue()
                                  : SourceImm->Value.getZExtValue();
     MIB.addImm(SourceImmValue);
   } else {
     MIB.addReg(Src0);
   }
   if (WidthImm) {
-    auto WidthImmValue = Signed ? WidthImm->Value.getSExtValue()
+    uint64_t WidthImmValue = Signed ? WidthImm->Value.getSExtValue()
                                 : WidthImm->Value.getZExtValue();
     MIB.addImm(WidthImmValue);
   } else {
     MIB.addReg(Src2);
   }
   if (OffsetImm) {
-    auto OffsetImmValue = Signed ? OffsetImm->Value.getSExtValue()
+    uint64_t OffsetImmValue = Signed ? OffsetImm->Value.getSExtValue()
                                  : OffsetImm->Value.getZExtValue();
     MIB.addImm(OffsetImmValue);
   } else {
@@ -1302,8 +1335,8 @@ bool PISAInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   DebugLoc DL = I.getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  auto Dst = I.getOperand(0).getReg();
-  auto Src = I.getOperand(1).getCImm()->getZExtValue();
+  Register Dst = I.getOperand(0).getReg();
+  uint64_t Src = I.getOperand(1).getCImm()->getZExtValue();
   LLT DstTy = MRI.getType(Dst);
   unsigned DstSize = DstTy.getScalarSizeInBits();
 
@@ -1328,7 +1361,8 @@ bool PISAInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
       LLVM_DEBUG(errs() << "Unsupported G_CONSTANT size: " << DstSize << "\n");
       return false;
     }
-    auto *DstRC = TRI.getRegClassFromLLT(LLT::integer(DstSize));
+    const TargetRegisterClass *DstRC =
+        TRI.getRegClassFromLLT(LLT::integer(DstSize));
     BuildMI(*BB, &I, DL, TII.get(MovOpc), Dst).addImm(Src);
     if (!RBI.constrainGenericRegister(Dst, *DstRC, MRI))
       return false;
@@ -1336,9 +1370,9 @@ bool PISAInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
     return true;
   }
 
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
 
-  auto *ConstRC = TRI.getRegClassFromLLT(LLT::integer(32));
+  const TargetRegisterClass *ConstRC = TRI.getRegClassFromLLT(LLT::integer(32));
   Register ConstReg = MRI.createVirtualRegister(ConstRC);
   BuildMI(*BB, &I, DL, TII.get(PISA::mov_i32_i), ConstReg).addImm(0);
 
@@ -1372,9 +1406,10 @@ bool PISAInstructionSelector::selectG_FENCE(MachineInstr &MI) const {
     return true;
   }
 
-  auto Entry = SSI.ID2Opcode.find(Ord);
+  DenseMap<SyncScope::ID, unsigned>::const_iterator Entry =
+      SSI.ID2Opcode.find(Ord);
   if (Entry == SSI.ID2Opcode.end())
-    llvm_unreachable("unimplemented fence syncscope");
+    reportFatalUsageError("G_FENCE syncscope is not supported on PISA");
 
   if (Entry->second == PISA::fence_subgroup)
     BuildMI(*BB, &MI, DL, TII.get(Entry->second));
@@ -1389,11 +1424,14 @@ bool PISAInstructionSelector::selectG_INSERT_SUBVECTOR(MachineInstr &MI) const {
   DebugLoc DL = MI.getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  auto [Dst, DstTy, Src0, Src0Ty, Src1, Src1Ty] = MI.getFirst3RegLLTs();
+  Register Dst, Src0, Src1;
+  LLT DstTy, Src0Ty, Src1Ty;
+  std::tie(Dst, DstTy, Src0, Src0Ty, Src1, Src1Ty) =
+      MI.getFirst3RegLLTs();
   assert(DstTy.getScalarSizeInBits() == 32);
-  auto Index = MI.getOperand(3).getImm();
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *Src1RC = TRI.getRegClassFromLLT(Src1Ty);
+  int64_t Index = MI.getOperand(3).getImm();
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *Src1RC = TRI.getRegClassFromLLT(Src1Ty);
 
   // lookup target opcode
   std::string OpcodeName = "insert_" + std::to_string(Index) + "_v" +
@@ -1401,9 +1439,10 @@ bool PISAInstructionSelector::selectG_INSERT_SUBVECTOR(MachineInstr &MI) const {
                            std::to_string(DstTy.getScalarSizeInBits()) + "_v" +
                            std::to_string(Src1Ty.getNumElements()) + "i" +
                            std::to_string(Src1Ty.getScalarSizeInBits()) + "_r";
-  auto *Entry = PISA::lookupName2InstrOpEntry(OpcodeName);
+  const PISA::Name2InstrEntry *Entry =
+      PISA::lookupName2InstrOpEntry(OpcodeName);
   assert(Entry && "unable to find insert instruction");
-  auto Opcode = Entry->Opcode;
+  unsigned Opcode = Entry->Opcode;
 
   BuildMI(*BB, &MI, DL, TII.get(Opcode), Dst).addReg(Src0).addReg(Src1);
 
@@ -1422,10 +1461,12 @@ bool PISAInstructionSelector::selectG_EXTRACT_SUBVECTOR(
   DebugLoc DL = MI.getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
-  auto Index = MI.getOperand(2).getImm();
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  Register Dst, Src;
+  LLT DstTy, SrcTy;
+  std::tie(Dst, DstTy, Src, SrcTy) = MI.getFirst2RegLLTs();
+  int64_t Index = MI.getOperand(2).getImm();
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
 
   // If the extracted sub-vector is a nameable composite sub-register slice of
   // the source (e.g. lanes 0,1 -> .xy or lanes 2,3 -> .zw of a 4-lane vector),
@@ -1458,9 +1499,10 @@ bool PISAInstructionSelector::selectG_EXTRACT_SUBVECTOR(
                            std::to_string(DstTy.getScalarSizeInBits()) + "_v" +
                            std::to_string(SrcTy.getNumElements()) + "i" +
                            std::to_string(SrcTy.getScalarSizeInBits()) + "_r";
-  auto *Entry = PISA::lookupName2InstrOpEntry(OpcodeName);
+  const PISA::Name2InstrEntry *Entry =
+      PISA::lookupName2InstrOpEntry(OpcodeName);
   assert(Entry && "unable to find insert instruction");
-  auto Opcode = Entry->Opcode;
+  unsigned Opcode = Entry->Opcode;
 
   BuildMI(*BB, &MI, DL, TII.get(Opcode), Dst).addReg(Src);
 
@@ -1478,18 +1520,21 @@ bool PISAInstructionSelector::selectG_INSERT_VECTOR_ELT(
   DebugLoc DL = MI.getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  auto [Dst, DstTy, Src0, Src0Ty, Src1, Src1Ty, Idx, IdxTy] =
+  Register Dst, Src0, Src1, Idx;
+  LLT DstTy, Src0Ty, Src1Ty, IdxTy;
+  std::tie(Dst, DstTy, Src0, Src0Ty, Src1, Src1Ty, Idx, IdxTy) =
       MI.getFirst4RegLLTs();
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *Src1RC = TRI.getRegClassFromLLT(Src1Ty);
-  auto *IdxRC = TRI.getRegClassFromLLT(IdxTy);
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *Src1RC = TRI.getRegClassFromLLT(Src1Ty);
+  const TargetRegisterClass *IdxRC = TRI.getRegClassFromLLT(IdxTy);
 
   // Check if Index is a constant
-  auto IndexConst = getIConstantVRegValWithLookThrough(Idx, MRI);
+  std::optional<ValueAndVReg> IndexConst =
+      getIConstantVRegValWithLookThrough(Idx, MRI);
 
   if (IndexConst) {
     // Handle constant index case
-    auto Index = IndexConst->Value.getZExtValue();
+    uint64_t Index = IndexConst->Value.getZExtValue();
 
     // Use insert instruction for index >= 4 or when the dest register
     // class lacks per-element sub-register structure (e.g. v64).
@@ -1500,15 +1545,17 @@ bool PISAInstructionSelector::selectG_INSERT_VECTOR_ELT(
           std::to_string(DstTy.getNumElements()) + "i" +
           std::to_string(DstTy.getScalarSizeInBits()) + "_i" +
           std::to_string(Src1Ty.getScalarSizeInBits()) + "_r";
-      auto *Entry = PISA::lookupName2InstrOpEntry(OpcodeName);
+      const PISA::Name2InstrEntry *Entry =
+          PISA::lookupName2InstrOpEntry(OpcodeName);
       assert(Entry && "unable to find insert instruction");
-      auto Opcode = Entry->Opcode;
+      unsigned Opcode = Entry->Opcode;
 
       BuildMI(*BB, &MI, DL, TII.get(Opcode), Dst).addReg(Src0).addReg(Src1);
     } else { // use swizzle
-      auto SubRegIdx = TRI.getSubRegIdx(DstTy.getScalarSizeInBits(), Index);
+      unsigned SubRegIdx = TRI.getSubRegIdx(DstTy.getScalarSizeInBits(), Index);
       // Constrain Src0 (the vector input) and Dst to support the subreg.
-      if (auto *NarrowRC = TRI.getSubClassWithSubReg(DstRC, SubRegIdx))
+      if (const TargetRegisterClass *NarrowRC =
+              TRI.getSubClassWithSubReg(DstRC, SubRegIdx))
         DstRC = NarrowRC;
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::INSERT_SUBREG), Dst)
           .addReg(Src0)
@@ -1521,9 +1568,10 @@ bool PISAInstructionSelector::selectG_INSERT_VECTOR_ELT(
     std::string OpcodeName = "insert_dynamic_v" +
                              std::to_string(DstTy.getNumElements()) + "i" +
                              std::to_string(DstTy.getScalarSizeInBits());
-    auto *Entry = PISA::lookupName2InstrOpEntry(OpcodeName);
+    const PISA::Name2InstrEntry *Entry =
+        PISA::lookupName2InstrOpEntry(OpcodeName);
     assert(Entry && "unable to find insert.dynamic instruction");
-    auto Opcode = Entry->Opcode;
+    unsigned Opcode = Entry->Opcode;
 
     BuildMI(*BB, &MI, DL, TII.get(Opcode), Dst)
         .addReg(Src0)
@@ -1546,17 +1594,21 @@ bool PISAInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
   DebugLoc DL = MI.getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
-  auto [Dst, DstTy, Src, SrcTy, Idx, IdxTy] = MI.getFirst3RegLLTs();
-  auto *DstRC = TRI.getRegClassFromLLT(DstTy);
-  auto *SrcRC = TRI.getRegClassFromLLT(SrcTy);
-  auto *IdxRC = TRI.getRegClassFromLLT(IdxTy);
+  Register Dst, Src, Idx;
+  LLT DstTy, SrcTy, IdxTy;
+  std::tie(Dst, DstTy, Src, SrcTy, Idx, IdxTy) =
+      MI.getFirst3RegLLTs();
+  const TargetRegisterClass *DstRC = TRI.getRegClassFromLLT(DstTy);
+  const TargetRegisterClass *SrcRC = TRI.getRegClassFromLLT(SrcTy);
+  const TargetRegisterClass *IdxRC = TRI.getRegClassFromLLT(IdxTy);
 
   // Check if Index is a constant
-  auto IndexConst = getIConstantVRegValWithLookThrough(Idx, MRI);
+  std::optional<ValueAndVReg> IndexConst =
+      getIConstantVRegValWithLookThrough(Idx, MRI);
 
   if (IndexConst) {
     // Handle constant index case
-    auto Index = IndexConst->Value.getZExtValue();
+    uint64_t Index = IndexConst->Value.getZExtValue();
 
     // Use extract instruction for index >= 4 or when the source register
     // class lacks per-element sub-register structure (e.g. v64).
@@ -1567,16 +1619,18 @@ bool PISAInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
           std::to_string(DstTy.getScalarSizeInBits()) + "_v" +
           std::to_string(SrcTy.getNumElements()) + "i" +
           std::to_string(SrcTy.getScalarSizeInBits()) + "_r";
-      auto *Entry = PISA::lookupName2InstrOpEntry(OpcodeName);
+      const PISA::Name2InstrEntry *Entry =
+          PISA::lookupName2InstrOpEntry(OpcodeName);
       assert(Entry && "unable to find insert instruction");
-      auto Opcode = Entry->Opcode;
+      unsigned Opcode = Entry->Opcode;
 
       BuildMI(*BB, &MI, DL, TII.get(Opcode), Dst).addReg(Src);
     } else { // use swizzle
-      auto SubRegIdx = TRI.getSubRegIdx(SrcTy.getScalarSizeInBits(), Index);
+      unsigned SubRegIdx = TRI.getSubRegIdx(SrcTy.getScalarSizeInBits(), Index);
       // Constrain Src to the subclass supporting this subreg index.
-      if (auto *CurSrcRC = MRI.getRegClassOrNull(Src)) {
-        if (auto *NarrowRC = TRI.getSubClassWithSubReg(CurSrcRC, SubRegIdx))
+      if (const TargetRegisterClass *CurSrcRC = MRI.getRegClassOrNull(Src)) {
+        if (const TargetRegisterClass *NarrowRC =
+                TRI.getSubClassWithSubReg(CurSrcRC, SubRegIdx))
           MRI.constrainRegClass(Src, NarrowRC);
       }
       BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY))
@@ -1587,9 +1641,10 @@ bool PISAInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     std::string OpcodeName = "extract_dynamic_v" +
                              std::to_string(SrcTy.getNumElements()) + "i" +
                              std::to_string(SrcTy.getScalarSizeInBits());
-    auto *Entry = PISA::lookupName2InstrOpEntry(OpcodeName);
+    const PISA::Name2InstrEntry *Entry =
+        PISA::lookupName2InstrOpEntry(OpcodeName);
     assert(Entry && "unable to find extract.dynamic instruction");
-    auto Opcode = Entry->Opcode;
+    unsigned Opcode = Entry->Opcode;
 
     BuildMI(*BB, &MI, DL, TII.get(Opcode), Dst).addReg(Src).addReg(Idx);
   }
@@ -1759,15 +1814,18 @@ PISAInstructionSelector::selectParamSlot_ir(MachineOperand &Root) const {
                            PISA::iadd_64b_ir, PISA::iadd_64b_ii};
   for (unsigned I = 1, E = OffsetRegs.size(); I != E; ++I) {
     Register CurOffReg = OffsetRegs[I];
-    auto *RC = &PISA::Reg64bRegClass;
+    const TargetRegisterClass *RC = &PISA::Reg64bRegClass;
     assert(MRI->getRegClassOrNull(OffsetReg) == RC ||
            TRI.getRegClassFromLLT(MRI->getType(OffsetReg)) == RC ||
            TRI.getRegClassFromLLT(MRI->getType(CurOffReg)) == RC);
-    auto OffsetC = getIConstantVRegValWithLookThrough(OffsetReg, *MRI);
-    auto CurOffC = getIConstantVRegValWithLookThrough(CurOffReg, *MRI);
+    std::optional<ValueAndVReg> OffsetC =
+        getIConstantVRegValWithLookThrough(OffsetReg, *MRI);
+    std::optional<ValueAndVReg> CurOffC =
+        getIConstantVRegValWithLookThrough(CurOffReg, *MRI);
     Register Tmp = MRI->createVirtualRegister(RC);
     unsigned OpIdx = OffsetC.has_value() << 1 | CurOffC.has_value();
-    auto MIB = BuildMI(*BB, MI, DL, TII.get(AddOpcodes[OpIdx]), Tmp);
+    MachineInstrBuilder MIB =
+        BuildMI(*BB, MI, DL, TII.get(AddOpcodes[OpIdx]), Tmp);
     if (OffsetC)
       MIB.addImm(OffsetC->Value.getSExtValue());
     else
