@@ -666,9 +666,27 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
       // because arrays and structs are always row aligned, and accesses to
       // vector elements will show up as a load of the vector followed by an
       // extractelement.
+      Value *RowIndex = *LastGEP->idx_begin();
+      uint64_t IndexScale =
+          DL.getTypeAllocSize(LastGEP->getSourceElementType());
+      if (IndexScale < hlsl::CBufferRowSizeInBytes) {
+        assert(hlsl::CBufferRowSizeInBytes % IndexScale == 0 &&
+               "CBuffer GEP index is not row aligned");
+        RowIndex = Builder.CreateExactUDiv(
+            RowIndex,
+            ConstantInt::get(Builder.getInt32Ty(),
+                             hlsl::CBufferRowSizeInBytes / IndexScale));
+      } else if (IndexScale > hlsl::CBufferRowSizeInBytes) {
+        assert(IndexScale % hlsl::CBufferRowSizeInBytes == 0 &&
+               "CBuffer GEP index is not row aligned");
+        RowIndex = Builder.CreateMul(
+            RowIndex,
+            ConstantInt::get(Builder.getInt32Ty(),
+                             IndexScale / hlsl::CBufferRowSizeInBytes));
+      }
       CurrentRow = cast<ConstantInt>(CurrentRow)->isZero()
-                       ? *LastGEP->idx_begin()
-                       : Builder.CreateAdd(CurrentRow, *LastGEP->idx_begin());
+                       ? RowIndex
+                       : Builder.CreateAdd(CurrentRow, RowIndex);
       CurrentIndex = 0;
     }
   }

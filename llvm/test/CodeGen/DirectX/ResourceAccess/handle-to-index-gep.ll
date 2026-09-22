@@ -157,6 +157,47 @@ merge:
   ret <3 x i32> %value
 }
 
+; CHECK-LABEL: define i32 @cbuffer_gep_phi_one_branch(
+; CHECK-SAME: i1 %[[COND:.*]], i32 %[[ROW:.*]])
+define i32 @cbuffer_gep_phi_one_branch(i1 %cond, i32 %row) {
+entry:
+  %handle0 = call target("dx.CBuffer", %__cblayout_CB2) @llvm.dx.resource.handlefromimplicitbinding(i32 1, i32 0, i32 2, i32 0, ptr @CB.str)
+  %ptr0 = call ptr addrspace(2) @llvm.dx.resource.getpointer(target("dx.CBuffer", %__cblayout_CB2) %handle0, i32 0)
+; CHECK: entry:
+; CHECK-NEXT: br i1 %[[COND]], label %then, label %merge
+  br i1 %cond, label %then, label %merge
+
+then:
+  %handle1 = call target("dx.CBuffer", %__cblayout_CB2) @llvm.dx.resource.handlefromimplicitbinding(i32 1, i32 0, i32 2, i32 1, ptr @CB.str)
+  %ptr1 = call ptr addrspace(2) @llvm.dx.resource.getpointer(target("dx.CBuffer", %__cblayout_CB2) %handle1, i32 0)
+  %row1 = getelementptr <{ <3 x i32>, target("dx.Padding", 4) }>, ptr addrspace(2) %ptr1, i32 %row
+; CHECK: then:
+; CHECK-NEXT: %[[ROW_OFFSET:.*]] = mul i32 %[[ROW]], 16
+; CHECK-NEXT: %[[ROW_INDEX:.*]] = add i32 0, %[[ROW_OFFSET]]
+; CHECK-NEXT: br label %merge
+  br label %merge
+
+merge:
+; CHECK: merge:
+; CHECK-NEXT: %[[HANDLE_IDX:.*]] = phi i32 [ 0, %entry ], [ 1, %then ]
+; CHECK-NEXT: %[[OFFSET:.*]] = phi i32 [ 0, %entry ], [ %[[ROW_INDEX]], %then ]
+; CHECK-NEXT: %[[HANDLE:.*]] = call target("dx.CBuffer", %__cblayout_CB2) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_s___cblayout_CB2st(i32 1, i32 0, i32 2, i32 %[[HANDLE_IDX]], ptr @CB.str)
+; CHECK-NEXT: %[[ROW_IDX:.*]] = udiv exact i32 %[[OFFSET]], 16
+; CHECK-NEXT: %[[LOAD:.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.i32.i32.i32.i32.tdx.CBuffer_s___cblayout_CB2st(target("dx.CBuffer", %__cblayout_CB2) %[[HANDLE]], i32 %[[ROW_IDX]])
+; CHECK-NEXT: %[[X:.*]] = extractvalue { i32, i32, i32, i32 } %[[LOAD]], 0
+; CHECK-NEXT: %[[Y:.*]] = extractvalue { i32, i32, i32, i32 } %[[LOAD]], 1
+; CHECK-NEXT: %[[Z:.*]] = extractvalue { i32, i32, i32, i32 } %[[LOAD]], 2
+; CHECK-NEXT: %[[V0:.*]] = insertelement <3 x i32> poison, i32 %[[X]], i32 0
+; CHECK-NEXT: %[[V1:.*]] = insertelement <3 x i32> %[[V0]], i32 %[[Y]], i32 1
+; CHECK-NEXT: %[[V2:.*]] = insertelement <3 x i32> %[[V1]], i32 %[[Z]], i32 2
+; CHECK-NEXT: %[[E:.*]] = extractelement <3 x i32> %[[V2]], i32 0
+; CHECK-NEXT: ret i32 %[[E]]
+  %ptr = phi ptr addrspace(2) [ %ptr0, %entry ], [ %row1, %then ]
+  %value = load <3 x i32>, ptr addrspace(2) %ptr, align 16
+  %e = extractelement <3 x i32> %value, i32 0
+  ret i32 %e
+}
+
 ; CHECK-LABEL: define void @cb_phi_handle(
 ; CHECK-SAME: ptr %[[DST:.*]], i1 %[[COND:.*]], i32 %[[IDX:.*]])
 define void @cb_phi_handle(ptr %dst, i1 %cond, i32 %idx) {
