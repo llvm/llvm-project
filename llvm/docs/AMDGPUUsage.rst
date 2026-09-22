@@ -2711,8 +2711,8 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       kernel argument that holds the completion action pointer. If this
                                                       attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-async"                                Indicates the function does not execute any asynchronous operations
-                                                      (LDS DMA, ASYNC, TENSOR).
+     "amdgpu-no-async"                                Indicates the function does not execute any
+                                                      :ref:`asynchronous operations<amdgpu-async-operations>`.
 
      "amdgpu-tg-split"                                Enable threadgroup split execution mode for the function. This must be
                                                       consistently set (or unset) for all reachable functions. This is only
