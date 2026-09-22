@@ -15521,27 +15521,6 @@ void SCEVWrapPredicate::print(raw_ostream &OS, unsigned Depth) const {
   OS << "\n";
 }
 
-SCEVWrapPredicate::IncrementWrapFlags
-SCEVWrapPredicate::getImpliedFlags(const SCEVAddRecExpr *AR,
-                                   ScalarEvolution &SE) {
-  IncrementWrapFlags ImpliedFlags = IncrementAnyWrap;
-  SCEV::NoWrapFlags StaticFlags = AR->getNoWrapFlags();
-
-  // We can safely transfer the NSW flag as NSSW.
-  if (ScalarEvolution::setFlags(StaticFlags, SCEV::FlagNSW) == StaticFlags)
-    ImpliedFlags = IncrementNSSW;
-
-  if (ScalarEvolution::setFlags(StaticFlags, SCEV::FlagNUW) == StaticFlags) {
-    // If the increment is positive, the SCEV NUW flag will also imply the
-    // WrapPredicate NUSW flag.
-    if (const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
-      if (Step->getValue()->getValue().isNonNegative())
-        ImpliedFlags = setFlags(ImpliedFlags, IncrementNUSW);
-  }
-
-  return ImpliedFlags;
-}
-
 /// Union predicates don't get cached so create a dummy set ID for it.
 SCEVUnionPredicate::SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds,
                                        ScalarEvolution &SE)
@@ -15714,18 +15693,6 @@ void PredicatedScalarEvolution::updateGeneration() {
       II.second = {Generation, SE.rewriteUsingPredicate(Rewritten, &L, *Preds)};
     }
   }
-}
-
-bool PredicatedScalarEvolution::hasNoOverflow(
-    Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags) {
-  const auto *AR = dyn_cast<SCEVAddRecExpr>(getSCEV(V));
-  if (!AR)
-    return false;
-
-  Flags = SCEVWrapPredicate::clearFlags(
-      Flags, SCEVWrapPredicate::getImpliedFlags(AR, SE));
-
-  return Flags == SCEVWrapPredicate::IncrementAnyWrap;
 }
 
 const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(

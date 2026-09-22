@@ -547,6 +547,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
+- Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -983,6 +984,21 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - The `holds` clause on the `assume` directive now lowers side-effect-free
   conditions to `llvm.assume`, enabling downstream optimizations. Previously
   the clause was parsed but its condition was discarded without effect.
+
+- Added support for capturing structured bindings in OpenMP regions
+  (a C++20 extension; warned as an extension in C++17). Individual bindings
+  form aggregate decompositions(structs, classes, and arrays) can now be used
+  in data-sharing clauses (``private``, ``firstprivate``, ``lastprivate``,
+  ``shared``, ``linear``) and ``map`` clauses for target directives.
+  Tuple-like bindings (types using the tuple protocol with ``get<N>()``,
+  such as ``std::pair`` or ``std::tuple``) are not yet supported and
+  will produce a compilation error. Reduction clauses with structured bindings
+  are not yet supported.
+  When the original variable is explicitly mapped in a target region
+  but only bindings from it are used (not the original variable itself),
+  modifications to the bindings will not be reflected in the original variable.
+  To ensure correct behavior, either use the original variable directly in the
+  target region or map the bindings explicitly instead.
 
 ### SYCL Support
 

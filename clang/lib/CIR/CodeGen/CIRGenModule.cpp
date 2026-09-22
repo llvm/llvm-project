@@ -155,6 +155,24 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   theModule->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
                      builder.getI32IntegerAttr(target.getIntWidth()));
 
+  // Serialize the lowering-relevant LangOptions onto the ModuleOp so a reloaded
+  // .cir is self-describing and lowers the same way it was compiled, without a
+  // live clang::LangOptions.
+  theModule->setAttr(
+      cir::CIRDialect::getLoweringLangOptionsAttrName(),
+      cir::LoweringLangOptionsAttr::get(
+          &mlirContext,
+          /*exceptions=*/langOpts.Exceptions,
+          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
+          /*cuda=*/langOpts.CUDA,
+          /*cuda_is_device=*/langOpts.CUDAIsDevice,
+          /*hip=*/langOpts.HIP,
+          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
+          /*openmp=*/langOpts.OpenMP != 0,
+          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
+          /*clang_abi_compat=*/
+          static_cast<int32_t>(langOpts.getClangABICompat())));
+
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
                        cir::OptInfoAttr::get(&mlirContext,
@@ -2468,7 +2486,8 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       getTypes().getCIRGenRecordLayout(currentClass);
 
   // The field is declared directly in this class.
-  if (astContext.isSameEntity(field->getParent(), currentClass)) {
+  if (astContext.isSameEntity(field->getParent()->getMostRecentDecl(),
+                              currentClass->getMostRecentDecl())) {
     int32_t fieldIdx;
     if (currentClass->isUnion()) {
       // For unions, getCIRFieldNo always returns 0 for every union member (all
@@ -3248,7 +3267,6 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
                                             cir::FuncOp func, bool isThunk) {
   // TODO(cir): More logic of constructAttributeList is needed.
   cir::CallingConv callingConv;
-  cir::SideEffect sideEffect;
 
   // TODO(cir): The current list should be initialized with the extra function
   // attributes, but we don't have those yet.  For now, the PAL is initialized
@@ -3259,7 +3277,7 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   std::vector<mlir::NamedAttrList> argAttrs(info.arguments().size());
   mlir::NamedAttrList retAttrs{};
   constructAttributeList(func.getName(), info, globalDecl, pal, argAttrs,
-                         retAttrs, callingConv, sideEffect,
+                         retAttrs, callingConv,
                          /*attrOnCallSite=*/false, isThunk);
 
   for (mlir::NamedAttribute attr : pal)
@@ -3972,24 +3990,6 @@ void CIRGenModule::release() {
                          builder.getStringAttr(fnName));
     }
   }
-
-  // Serialize the lowering-relevant LangOptions onto the ModuleOp,
-  // unconditionally, so a reloaded .cir module is self-describing. See
-  // #cir.lowering_lang_options.
-  theModule->setAttr(
-      cir::CIRDialect::getLoweringLangOptionsAttrName(),
-      cir::LoweringLangOptionsAttr::get(
-          &getMLIRContext(),
-          /*exceptions=*/langOpts.Exceptions,
-          /*threadsafe_statics=*/langOpts.ThreadsafeStatics,
-          /*cuda=*/langOpts.CUDA,
-          /*cuda_is_device=*/langOpts.CUDAIsDevice,
-          /*hip=*/langOpts.HIP,
-          /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
-          /*openmp=*/langOpts.OpenMP != 0,
-          /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
-          /*clang_abi_compat=*/
-          static_cast<int32_t>(langOpts.getClangABICompat())));
 
   // Classic codegen calls `checkAliases` here to validate any alias
   // definitions emitted during codegen.

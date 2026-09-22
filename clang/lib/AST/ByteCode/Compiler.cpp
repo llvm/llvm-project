@@ -2362,8 +2362,16 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T,
                                   bool Activate = false) -> bool {
-      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
+      bool DefaultInit = isa<CXXDefaultInitExpr>(Init);
+      InitStackScope<Emitter> ISS(this, DefaultInit);
+
+      if (DefaultInit && !this->emitStartFieldInit(FieldToInit->Offset, Init))
+        return false;
+
       if (!this->visit(Init))
+        return false;
+
+      if (DefaultInit && !this->emitEndInit(Init))
         return false;
 
       bool BitField = FieldToInit->isBitField();
@@ -2392,7 +2400,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (Activate && !this->emitActivate(E))
         return false;
 
-      return this->visitInitializerPop(Init);
+      if (!this->emitStartInit(Init))
+        return false;
+
+      return this->visitInitializerPop(Init) && this->emitEndInit(Init);
     };
 
     if (R->isUnion()) {

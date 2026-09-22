@@ -262,6 +262,7 @@ public:
   bool BeginAttrs(); // always returns true
   Attrs GetAttrs();
   std::optional<common::CUDADataAttr> cudaDataAttr() { return cudaDataAttr_; }
+  bool cudaDataAttrIsImplicit() const { return cudaDataAttrIsImplicit_; }
   Attrs EndAttrs();
   bool SetPassNameOn(Symbol &);
   void SetBindNameOn(Symbol &);
@@ -304,10 +305,12 @@ public:
   HANDLE_ATTR_CLASS(Volatile, VOLATILE)
 #undef HANDLE_ATTR_CLASS
   bool Pre(const common::CUDADataAttr);
+  bool Pre(const parser::CUDADataAttrSpec::Implicit &);
 
 protected:
   std::optional<Attrs> attrs_;
   std::optional<common::CUDADataAttr> cudaDataAttr_;
+  bool cudaDataAttrIsImplicit_{false};
 
   Attr AccessSpecToAttr(const parser::AccessSpec &x) {
     switch (x.v) {
@@ -776,8 +779,8 @@ public:
     symbol.attrs().set(attr);
     symbol.implicitAttrs().set(attr);
   }
-  void SetCUDADataAttr(
-      SourceName, Symbol &, std::optional<common::CUDADataAttr>);
+  void SetCUDADataAttr(SourceName, Symbol &,
+      std::optional<common::CUDADataAttr>, bool isImplicit = false);
 
 protected:
   FuncResultStack &funcResultStack() { return funcResultStack_; }
@@ -2586,6 +2589,7 @@ Attrs AttrsVisitor::EndAttrs() {
   Attrs result{GetAttrs()};
   attrs_.reset();
   cudaDataAttr_.reset();
+  cudaDataAttrIsImplicit_ = false;
   passName_ = std::nullopt;
   bindName_.reset();
   isCDefined_ = false;
@@ -2724,6 +2728,12 @@ bool AttrsVisitor::Pre(const common::CUDADataAttr x) {
         common::EnumToString(*cudaDataAttr_), common::EnumToString(x));
   }
   cudaDataAttr_ = x;
+  return false;
+}
+bool AttrsVisitor::Pre(const parser::CUDADataAttrSpec::Implicit &) {
+  // The (IMPLICIT) qualifier only appears in module files, marking an
+  // attribute this compiler applied rather than one the user wrote.
+  cudaDataAttrIsImplicit_ = true;
   return false;
 }
 
@@ -3836,7 +3846,7 @@ bool ScopeHandler::CheckDuplicatedAttrs(
 }
 
 void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
-    std::optional<common::CUDADataAttr> attr) {
+    std::optional<common::CUDADataAttr> attr, bool isImplicit) {
   if (attr) {
     ConvertToObjectEntity(symbol);
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -3847,6 +3857,7 @@ void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
             std::string{common::EnumToString(*object->cudaDataAttr())}.c_str());
       } else {
         object->set_cudaDataAttr(attr);
+        object->set_cudaDataAttrIsImplicit(isImplicit);
       }
     } else {
       Say(source,
@@ -5772,7 +5783,8 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
   }
   SubprogramDetails &entryDetails{entrySymbol.get<SubprogramDetails>()};
   CHECK(entryDetails.entryScope() == &inclusiveScope);
-  SetCUDADataAttr(name.source, entrySymbol, cudaDataAttr());
+  SetCUDADataAttr(
+      name.source, entrySymbol, cudaDataAttr(), cudaDataAttrIsImplicit());
   entrySymbol.attrs() |= GetAttrs();
   SetBindNameOn(entrySymbol);
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
@@ -6243,7 +6255,8 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   attrs.set(Attr::INTRINSIC, false); // dealt with in Pre(TypeDeclarationStmt)
   Symbol &symbol{DeclareUnknownEntity(name, attrs)};
   symbol.ReplaceName(name.source);
-  SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+  SetCUDADataAttr(
+      name.source, symbol, cudaDataAttr(), cudaDataAttrIsImplicit());
   if (const auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
     ConvertToObjectEntity(symbol) || ConvertToProcEntity(symbol);
     symbol.set(
@@ -6686,6 +6699,8 @@ bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
       if (attr == common::CUDADataAttr::Value) {
         SetExplicitAttr(*symbol, Attr::VALUE);
       } else {
+        // ATTRIBUTES(...) carries a bare CUDA-data-attr, with no place for
+        // the (IMPLICIT) qualifier, so such an attribute is always the user's.
         SetCUDADataAttr(name.source, *symbol, attr);
       }
     }
@@ -7600,7 +7615,8 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   }
   if (OkToAddComponent(name)) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
-    SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+    SetCUDADataAttr(
+        name.source, symbol, cudaDataAttr(), cudaDataAttrIsImplicit());
 
     // Implicitely attribute allocatable/pointer components with `managed`
     // memory if CUDA and `-gpu=mem:managed` are enabled.
@@ -7734,7 +7750,8 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
     attrs.set(Attr::PRIVATE);
   }
   Symbol &symbol{DeclareProcEntity(name, attrs, procInterface)};
-  SetCUDADataAttr(name.source, symbol, cudaDataAttr()); // for error
+  SetCUDADataAttr(name.source, symbol, cudaDataAttr(),
+      cudaDataAttrIsImplicit()); // for error
   symbol.ReplaceName(name.source);
   if (dtDetails) {
     dtDetails->add_component(symbol);
@@ -8717,7 +8734,8 @@ Symbol *DeclarationVisitor::MakeTypeSymbol(
       attrs.set(Attr::PRIVATE);
     }
     Symbol &result{MakeSymbol(name, attrs, std::move(details))};
-    SetCUDADataAttr(name, result, cudaDataAttr());
+
+    SetCUDADataAttr(name, result, cudaDataAttr(), cudaDataAttrIsImplicit());
     return &result;
   }
 }
@@ -10992,8 +11010,10 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         if (context().languageFeatures().IsEnabled(
                 common::LanguageFeature::CUDA)) {
           if (context().languageFeatures().IsEnabled(
-                  common::LanguageFeature::CudaManaged))
+                  common::LanguageFeature::CudaManaged)) {
             object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+            object->set_cudaDataAttrIsImplicit();
+          }
           // Implicitly treat allocatable arrays as pinned when feature is
           // enabled.
           else if (IsAllocatable(symbol) &&

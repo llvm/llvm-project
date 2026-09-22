@@ -1,8 +1,8 @@
 // Test that a '<kernel>_kernel_environment' global is generated for
-// 'ompx_bare' kernels, that its exec mode is BARE, that its thread/team
-// bounds reflect the required 'num_teams'/'thread_limit' clauses, and that
-// the bare kernel does not go through the device runtime init/deinit
-// sequence.
+// 'ompx_bare' kernels, that its exec mode is BARE, that no thread/team
+// bounds are derived from the 'thread_limit'/'num_teams' clauses and 
+// that the bare kernel does not go through the device runtime 
+// init/deinit sequence.
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s
@@ -22,8 +22,11 @@ int bar(int n) {
   return a;
 }
 
-// CHECK: @{{.*}}ftemplate{{.*}}_kernel_environment = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 0, i32 1, i32 32, i32 1, i32 1, i32 0 },
+// CHECK: @{{.*}}ftemplate{{.*}}_kernel_environment = weak_odr protected constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 0, i32 1, i32 -1, i32 1, i32 -1, i32 0 },
 
 // The bare kernel does not go through the device runtime init/deinit
 // sequence.
 // CHECK-NOT: call {{.*}} @__kmpc_target_init(
+
+// No thread bound must be derived from 'thread_limit' for a bare kernel.
+// CHECK-NOT: "nvvm.maxntid"

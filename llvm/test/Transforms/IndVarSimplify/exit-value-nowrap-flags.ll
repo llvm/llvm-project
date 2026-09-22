@@ -353,7 +353,7 @@ define ptr @ptr_step_mul_nuw(ptr %first, ptr %last) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 24
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[UMIN]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 24
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[FIRST]], i64 [[TMP6]]
 ; CHECK-NEXT:    ret ptr [[SCEVGEP]]
 ; CHECK:       [[DONE]]:
