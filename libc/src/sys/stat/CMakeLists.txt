@@ -59,6 +59,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkfifoat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkfifoat
+)
+
+add_entrypoint_object(
   stat
   ALIAS
   DEPENDS
