@@ -516,6 +516,8 @@ features cannot lower the translation-unit ABI level;
 - Suggests the correct location for an attribute written before the `using`
   keyword of an alias-declaration. (#GH155787)
 
+- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -577,6 +579,14 @@ features cannot lower the translation-unit ABI level;
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
+
+- Fixed lambdas with specifiers or attributes after the capture list being
+  misparsed as function declarations in direct-initialization contexts under
+  `-fms-extensions` or in HLSL mode.
+
+- Fixed the destruction timing of temporaries created by default member
+  initializers during aggregate initialization. Such an initializer is part of
+  the full-expression containing the aggregate initialization. (#GH85601)
 
 - Fixed false-positive module ODR diagnostics when a type is found through a
   using-declaration in one definition and directly in another. ODR hashing also
@@ -719,6 +729,14 @@ features cannot lower the translation-unit ABI level;
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 
+- Fixed ambiguous overload where two non-static member functions with
+  different signatures could be incorrectly considered equivalent. (#GH224499)
+
+- Fixed an assertion failure when explicitly instantiating a nested member with 
+  an ill-formed template argument. Clang now checks for a failed declaration 
+  lookup before asserting that the name is not dependent, avoiding an assertion 
+  after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -802,6 +820,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
+  position when ``-fms-compatibility`` is enabled, matching the existing
+  ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
+  identifier outside that context.
+
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
   stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
@@ -814,6 +837,11 @@ features cannot lower the translation-unit ABI level;
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
+
+- `loongarch32-*-none-elf` and `loongarch64-*-none-elf` targets now use the
+  bare-metal toolchain, like other bare-metal targets. The linker is run
+  directly instead of through `gcc`, and host include directories are no
+  longer searched.
 
 #### RISC-V Support
 

@@ -571,6 +571,22 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  bool checkIfFunctionMustProgress() {
+    if (cgm.getCodeGenOpts().getFiniteLoops() ==
+        clang::CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
+    // C++11 and later guarantees that a thread eventually will do one of the
+    // following (C++11 [intro.multithread]p24 and C++17 [intro.progress]p1):
+    // - terminate,
+    //  - make a call to a library I/O function,
+    //  - perform an access through a volatile glvalue, or
+    //  - perform a synchronization operation or an atomic operation.
+    //
+    // Hence each function is 'mustprogress' in C++11 or later.
+    return getLangOpts().CPlusPlus11;
+  }
+
   /// True if an insertion point is defined. If not, this indicates that the
   /// current code being emitted is unreachable.
   /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
@@ -1106,6 +1122,15 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// Wrap the function body in a `cir.try` that enforces the exception
+  /// specification of \p d: a filter handler for a dynamic specification
+  /// (`throw(T...)` or pre-C++17 `throw()`), or a terminate handler for a
+  /// specification that permits nothing to escape.
+  void emitStartEHSpec(const clang::Decl *d);
+
+  /// Close the `cir.try` opened by emitStartEHSpec.
+  void emitEndEHSpec(const clang::Decl *d);
+
   /// returns true if aggregate type has a volatile member.
   bool hasVolatileMember(QualType t) {
     if (const auto *rd = t->getAsRecordDecl())
@@ -1119,6 +1144,18 @@ public:
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
+
+  /// The `cir.try` wrapping a function whose exception specification has to be
+  /// enforced. Null when the current function needs no such wrapper.
+  cir::TryOp ehSpecTryOp;
+
+  /// Whether the wrapper opened by emitStartEHSpec is a terminate scope, whose
+  /// handler calls std::terminate() for any escaping exception, rather than the
+  /// filter of a dynamic exception specification.
+  bool inEHSpecTerminateScope() {
+    return ehSpecTryOp &&
+           mlir::isa<cir::CatchAllAttr>(ehSpecTryOp.getHandlerTypes()[0]);
+  }
 
   bool isCatchOrCleanupRequired();
 

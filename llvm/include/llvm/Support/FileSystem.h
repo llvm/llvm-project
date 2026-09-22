@@ -752,14 +752,6 @@ inline std::error_code setLastAccessAndModificationTime(const Twine &Path,
 /// @returns True if status() != status_error.
 LLVM_ABI bool status_known(const basic_file_status &s);
 
-/// Is status available?
-///
-/// @param path Input path.
-/// @param result Set to true if status() != status_error.
-/// @returns errc::success if result has been successfully set, otherwise a
-///          platform-specific error_code.
-LLVM_ABI std::error_code status_known(const Twine &path, bool &result);
-
 enum CreationDisposition : unsigned {
   /// CD_CreateAlways - When opening a file:
   ///   * If it already exists, truncate it.

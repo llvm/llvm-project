@@ -498,8 +498,8 @@ class LoopCompare {
 public:
   explicit LoopCompare(DominatorTree &dt) : DT(dt) {}
 
-  bool operator()(std::pair<const Loop *, const SCEV *> LHS,
-                  std::pair<const Loop *, const SCEV *> RHS) const {
+  bool operator()(std::pair<const Loop *, SCEVUse> LHS,
+                  std::pair<const Loop *, SCEVUse> RHS) const {
     // Keep pointer operands sorted at the end.
     if (LHS.second->getType()->isPointerTy() !=
         RHS.second->getType()->isPointerTy())
@@ -552,8 +552,8 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   // Iterate in reverse so that constants are emitted last, all else equal, and
   // so that pointer operands are inserted first, which the code below relies on
   // to form more involved GEPs.
-  SmallVector<std::pair<const Loop *, const SCEV *>, 8> OpsAndLoops;
-  for (const SCEV *Op : reverse(S->operands()))
+  SmallVector<std::pair<const Loop *, SCEVUse>, 8> OpsAndLoops;
+  for (SCEVUse Op : reverse(S->operands()))
     OpsAndLoops.push_back(std::make_pair(getRelevantLoop(Op), Op));
 
   // Sort by loop. Use a stable sort so that constants follow non-constants and
@@ -565,7 +565,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   Value *Sum = nullptr;
   for (auto I = OpsAndLoops.begin(), E = OpsAndLoops.end(); I != E;) {
     const Loop *CurLoop = I->first;
-    const SCEV *Op = I->second;
+    SCEVUse Op = I->second;
     if (!Sum) {
       // This is the first operand. Just expand it.
       Sum = expand(Op);

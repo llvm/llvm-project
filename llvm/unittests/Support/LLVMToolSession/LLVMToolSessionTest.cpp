@@ -8,15 +8,18 @@
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Driver.h"
+#include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <string>
 
 using namespace llvm;
 
 namespace {
 
 std::unique_ptr<ToolSession> Session;
+std::string ExecutablePath;
 unsigned CompilerCalls;
 unsigned LinkerCalls;
 unsigned WrapperCalls;
@@ -49,6 +52,21 @@ int clangWrapperMain(int Argc, char **Argv, const ToolContext &Context) {
 
 int resetOptionsMain(int, char **, const ToolContext &) {
   cl::ResetAllOptionOccurrences();
+  return 0;
+}
+
+int directMain(int Argc, char **Argv, const ToolContext &Context) {
+  EXPECT_EQ(Argc, 1);
+  EXPECT_STREQ(Argv[0], ExecutablePath.c_str());
+  EXPECT_STREQ(Context.Path, ExecutablePath.c_str());
+  EXPECT_FALSE(Context.NeedsPrependArg);
+  return 0;
+}
+
+int fuzzyMain(int Argc, char **Argv, const ToolContext &Context) {
+  EXPECT_EQ(Argc, 1);
+  EXPECT_STREQ(Argv[0], "Tests");
+  EXPECT_TRUE(Context.NeedsPrependArg);
   return 0;
 }
 
@@ -105,14 +123,31 @@ TEST(LLVMToolSessionTest, SurvivesCommandLineOptionReset) {
   EXPECT_EQ(CompilerCalls, CompilerCallsBefore + 1);
 }
 
+TEST(LLVMToolSessionTest, DirectInvocationDoesNotNeedPrependArg) {
+  const char *Args[] = {ExecutablePath.c_str()};
+  ErrorOr<int> Result = Session->callTool(Args);
+  ASSERT_TRUE(Result);
+  EXPECT_EQ(*Result, 0);
+}
+
+TEST(LLVMToolSessionTest, DirectInvocationPrefersExactToolName) {
+  const char *Args[] = {"Tests"};
+  ErrorOr<int> Result = Session->callTool(Args);
+  ASSERT_TRUE(Result);
+  EXPECT_EQ(*Result, 0);
+}
+
 } // namespace
 
 int main(int Argc, char **Argv) {
   int StatefulResult = 42;
+  ExecutablePath = Argv[0];
   const CallableTool Tools[] = {
+      {sys::path::stem(Argv[0]), directMain},
       {"clang", compilerMain},
       {"clang-wrapper", clangWrapperMain},
       {"reset-options", resetOptionsMain},
+      {"Tests", fuzzyMain},
       {"stateful-tool",
        [&StatefulResult](int, char **, const ToolContext &) {
          return StatefulResult;
