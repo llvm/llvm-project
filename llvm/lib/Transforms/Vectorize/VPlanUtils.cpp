@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -360,6 +361,19 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 
   return PSE.getPredicatedSCEV(Expr);
+}
+
+std::optional<int64_t>
+vputils::getConstantStride(VPValue *Addr, Type *AccessTy,
+                           PredicatedScalarEvolution &PSE, const Loop *L) {
+  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
+         "should not try to widen irregular types");
+  const SCEV *AddrSCEV = getSCEVExprForVPValue(Addr, PSE, L);
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
+  if (!AddRec)
+    return {};
+
+  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
 
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,

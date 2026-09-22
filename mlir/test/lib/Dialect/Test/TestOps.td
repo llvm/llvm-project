@@ -2828,6 +2828,23 @@ def SegmentedRegionBranchTerminatorOp
                        Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
 }
 
+def IsolatedRegionBranchOp : TEST_Op<"isolated_region_branch", [
+    IsolatedFromAbove, RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let hasCanonicalizer = 1;
+}
+
+def IsolatedRegionYieldOp : TEST_Op<"isolated_region_yield", [
+    Pure, ReturnLike, Terminator,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+}
+
 def RegionIfYieldOp : TEST_Op<"region_if_yield",
       [NoMemoryEffect, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>:$results);
