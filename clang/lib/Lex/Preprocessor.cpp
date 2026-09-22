@@ -881,8 +881,7 @@ void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
 }
 
 static bool isProtectedEmbedParameterName(const IdentifierInfo *II) {
-  return II->isStr("limit") || II->isStr("prefix") || II->isStr("suffix") ||
-         II->isStr("if_empty");
+  return llvm::is_contained(PPEmbedParameterIdentNames, II->getName());
 }
 
 /// HandleIdentifier - This callback is invoked when the lexer reads an

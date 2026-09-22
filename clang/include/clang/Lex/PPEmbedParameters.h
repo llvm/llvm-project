@@ -19,6 +19,11 @@
 
 namespace clang {
 
+/// List of identifier names that match to embed parameters. 
+inline constexpr StringRef PPEmbedParameterIdentNames[] = {
+  "clang::offset", "limit", "prefix", "suffix", "if_empty"
+};
+
 /// Preprocessor extension embed parameter "clang::offset"
 /// `clang::offset( constant-expression )`
 class PPEmbedParameterOffset : public PPDirectiveParameter {
