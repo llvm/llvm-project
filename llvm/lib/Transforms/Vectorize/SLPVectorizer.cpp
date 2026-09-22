@@ -19029,47 +19029,249 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   SmallVector<
       std::tuple<InstructionCost, InstructionCost, SmallVector<unsigned>>>
       SubtreeCosts(VectorizableTree.size());
-  auto UpdateParentNodes =
-      [&](const TreeEntry *UserTE, const TreeEntry *TE,
-          InstructionCost TotalCost, InstructionCost Cost,
-          SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
-              &VisitedUser,
-          bool AddToList = true) {
-        while (UserTE &&
-               VisitedUser.insert(std::make_pair(TE, UserTE)).second) {
-          std::get<0>(SubtreeCosts[UserTE->Idx]) += TotalCost;
-          std::get<1>(SubtreeCosts[UserTE->Idx]) += Cost;
-          if (AddToList)
-            std::get<2>(SubtreeCosts[UserTE->Idx]).push_back(TE->Idx);
-          UserTE = UserTE->UserTreeIndex.UserTE;
+  // (Re)computes the subtree costs for the nodes that are not deleted.
+  auto ComputeSubtreeCosts = [&]() {
+    SubtreeCosts.assign(
+        VectorizableTree.size(),
+        std::tuple<InstructionCost, InstructionCost, SmallVector<unsigned>>());
+    auto UpdateParentNodes =
+        [&](const TreeEntry *UserTE, const TreeEntry *TE,
+            InstructionCost TotalCost, InstructionCost Cost,
+            SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
+                &VisitedUser,
+            bool AddToList = true) {
+          while (UserTE &&
+                 VisitedUser.insert(std::make_pair(TE, UserTE)).second) {
+            std::get<0>(SubtreeCosts[UserTE->Idx]) += TotalCost;
+            std::get<1>(SubtreeCosts[UserTE->Idx]) += Cost;
+            if (AddToList)
+              std::get<2>(SubtreeCosts[UserTE->Idx]).push_back(TE->Idx);
+            UserTE = UserTE->UserTreeIndex.UserTE;
+          }
+        };
+    for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
+      TreeEntry &TE = *Ptr;
+      if (DeletedNodes.contains(&TE))
+        continue;
+      // Combined subnodes are not costed on their own (their cost is 0), but
+      // must be included into the ancestors' subtree node lists, so that they
+      // get deleted together with the trimmed combined root.
+      InstructionCost C = NodesCosts.at(&TE);
+      InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
+      std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
+      std::get<1>(SubtreeCosts[TE.Idx]) += C;
+      if (const TreeEntry *UserTE = TE.UserTreeIndex.UserTE) {
+        SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
+            VisitedUser;
+        UpdateParentNodes(UserTE, &TE, C + ExtractCost, C, VisitedUser);
+      }
+    }
+    SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4> Visited;
+    for (TreeEntry *TE : GatheredLoadsNodes) {
+      if (DeletedNodes.contains(TE))
+        continue;
+      InstructionCost TotalCost = std::get<0>(SubtreeCosts[TE->Idx]);
+      InstructionCost Cost = std::get<1>(SubtreeCosts[TE->Idx]);
+      for (Value *V : TE->Scalars) {
+        for (const TreeEntry *BVTE : ValueToGatherNodes.lookup(V)) {
+          if (DeletedNodes.contains(BVTE))
+            continue;
+          UpdateParentNodes(BVTE, TE, TotalCost, Cost, Visited,
+                            /*AddToList=*/false);
         }
-      };
-  for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
-    TreeEntry &TE = *Ptr;
-    // Combined subnodes are not costed on their own (their cost is 0), but
-    // must be included into the ancestors' subtree node lists, so that they
-    // get deleted together with the trimmed combined root.
-    InstructionCost C = NodesCosts.at(&TE);
-    InstructionCost ExtractCost = ExtractCosts.lookup(&TE);
-    std::get<0>(SubtreeCosts[TE.Idx]) += C + ExtractCost;
-    std::get<1>(SubtreeCosts[TE.Idx]) += C;
-    if (const TreeEntry *UserTE = TE.UserTreeIndex.UserTE) {
-      SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
-          VisitedUser;
-      UpdateParentNodes(UserTE, &TE, C + ExtractCost, C, VisitedUser);
+      }
     }
-  }
-  SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4> Visited;
-  for (TreeEntry *TE : GatheredLoadsNodes) {
-    InstructionCost TotalCost = std::get<0>(SubtreeCosts[TE->Idx]);
-    InstructionCost Cost = std::get<1>(SubtreeCosts[TE->Idx]);
+  };
+  ComputeSubtreeCosts();
+  using ValuesToInsertTy =
+      SmallDenseMap<const TreeEntry *, SmallVector<Value *>>;
+  auto GetScalarTy = [&](const TreeEntry *TE) {
+    Type *ScalarTy = TE->Scalars.front()->getType();
+    auto It = MinBWs.find(TE);
+    if (It != MinBWs.end())
+      ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
+    return ScalarTy;
+  };
+  // Lanes of the subtree scalars used by the surviving gather nodes, and the
+  // values to materialize in those gathers if the subtree is deleted.
+  auto FindDemandedElts = [&](TreeEntry *TE, ValuesToInsertTy &ValuesToInsert) {
+    APInt DemandedElts = APInt::getZero(TE->getVectorFactor());
     for (Value *V : TE->Scalars) {
-      for (const TreeEntry *BVTE : ValueToGatherNodes.lookup(V))
-        UpdateParentNodes(BVTE, TE, TotalCost, Cost, Visited,
-                          /*AddToList=*/false);
+      unsigned Pos = TE->findLaneForValue(V);
+      for (const TreeEntry *BVE : ValueToGatherNodes.lookup(V)) {
+        if (DeletedNodes.contains(BVE))
+          continue;
+        DemandedElts.setBit(Pos);
+        ValuesToInsert.try_emplace(BVE).first->second.push_back(V);
+      }
     }
+    return DemandedElts;
+  };
+  // Cost of materializing the values directly in the surviving gather nodes
+  // that use them.
+  auto GetGatherInsertCost = [&](Type *ScalarTy,
+                                 const ValuesToInsertTy &ValuesToInsert) {
+    InstructionCost BVCost = 0;
+    for (const auto &[BVE, Values] : ValuesToInsert) {
+      APInt BVDemandedElts = APInt::getZero(BVE->getVectorFactor());
+      SmallVector<Value *> BVValues(BVE->getVectorFactor(),
+                                    PoisonValue::get(ScalarTy));
+      for (Value *V : Values) {
+        unsigned Pos = BVE->findLaneForValue(V);
+        BVValues[Pos] = V;
+        BVDemandedElts.setBit(Pos);
+      }
+      BVCost += getScalarizationOverhead(
+          *TTI, SLPReVec, ScalarTy,
+          cast<VectorType>(getWidenedType(ScalarTy, BVE->getVectorFactor())),
+          BVDemandedElts, /*Insert=*/true, /*Extract=*/false, CostKind,
+          BVDemandedElts.isAllOnes(), BVValues);
+    }
+    return BVCost;
+  };
+  auto RecostEntry = [&](const TreeEntry *TE) {
+    InstructionCost C = getEntryCost(TE, VectorizedVals, CheckedExtracts);
+    if (!C.isValid() || C == 0)
+      return C;
+    uint64_t Scale = EntryToScale.lookup(TE);
+    if (!Scale)
+      Scale = getEntryEffectiveScale(*TE);
+    return C * Scale;
+  };
+  // A splat subtree pays off only if some surviving gather node reuses it and
+  // its price plus the extracts of its scalars used by the remaining scalar
+  // code plus the current cost of the gather nodes that reuse it is not worse
+  // than re-emitting those gathers without the subtree.
+  auto IsSplatSubtreeProfitable = [&](TreeEntry *TE,
+                                      ValuesToInsertTy &ValuesToInsert,
+                                      InstructionCost &CurrentGathersCost,
+                                      InstructionCost &DroppedGathersCost) {
+    if (FindDemandedElts(TE, ValuesToInsert).isZero())
+      return false;
+    APInt ExtractElts = APInt::getZero(TE->getVectorFactor());
+    for (Value *V : TE->Scalars) {
+      if (!isa<Instruction>(V) || TE->isCopyableElement(V))
+        continue;
+      // Too many users - the scalar is extracted anyway.
+      if (V->hasNUsesOrMore(UsesLimit) || any_of(V->users(), [&](User *U) {
+            return none_of(getTreeEntries(U), [&](const TreeEntry *UseTE) {
+              return !DeletedNodes.contains(UseTE) &&
+                     !TransformedToGatherNodes.contains(UseTE);
+            });
+          }))
+        ExtractElts.setBit(TE->findLaneForValue(V));
+    }
+    Type *ScalarTy = GetScalarTy(TE);
+    InstructionCost KeepCost = getScalarizationOverhead(
+        *TTI, SLPReVec, ScalarTy,
+        cast<VectorType>(getWidenedType(ScalarTy, TE->getVectorFactor())),
+        ExtractElts, /*Insert=*/false, /*Extract=*/true, CostKind);
+    // Scale the extract cost to the subtree's execution frequency: the
+    // subtree and gather costs it is compared against are already loop-scaled.
+    if (KeepCost.isValid() && KeepCost != 0)
+      KeepCost *= getEntryEffectiveScale(*TE);
+    // Add the cost of the subtree itself, computed before any trimming:
+    // trimming of the subtree's own nodes would otherwise make it look
+    // artificially cheap. The inner nodes of the subtree keep their external
+    // scalar users too, so their extracts are part of the price as well.
+    KeepCost += std::get<1>(SubtreeCosts[TE->Idx]);
+    for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
+      KeepCost += ExtractCosts.lookup(VectorizableTree[Idx].get());
+    // The reusing gather nodes currently pay the broadcast cost; without
+    // the subtree they fall back to plain insertion sequences. Gather
+    // nodes already erased from NodesCosts are being deleted and do not
+    // count on either side.
+    CurrentGathersCost = 0;
+    for (const auto &[BVE, _] : ValuesToInsert)
+      CurrentGathersCost += NodesCosts.lookup(BVE);
+    KeepCost += CurrentGathersCost;
+    // Re-cost the gather nodes with the subtree tentatively deleted.
+    DeletedNodes.insert(TE);
+    SmallVector<TreeEntry *> TempDeleted;
+    for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx])) {
+      TreeEntry *Child = VectorizableTree[Idx].get();
+      if (DeletedNodes.insert(Child).second)
+        TempDeleted.push_back(Child);
+    }
+    DroppedGathersCost = 0;
+    for (const auto &[BVE, _] : ValuesToInsert) {
+      if (!NodesCosts.contains(BVE))
+        continue;
+      DroppedGathersCost += RecostEntry(BVE);
+    }
+    DeletedNodes.erase(TE);
+    for (TreeEntry *Child : TempDeleted)
+      DeletedNodes.erase(Child);
+    // On a cost tie prefer dropping the subtree: the reusing gathers
+    // materialize the scalars at the same price with fewer instructions.
+    return KeepCost < DroppedGathersCost;
+  };
+  // Re-price the gathers that reused a dropped splat subtree, so the
+  // remaining subtrees are checked against the costs with it deleted.
+  auto SyncGatherCosts = [&](const ValuesToInsertTy &ValuesToInsert) {
+    for (const auto &[BVE, _] : ValuesToInsert)
+      if (!DeletedNodes.contains(BVE))
+        NodesCosts[BVE] = RecostEntry(BVE);
+  };
+  // Deletes the subtree. The per-node costs are erased eagerly only where the
+  // total is recomputed from them right after the deletion.
+  auto DeleteSubtree = [&](TreeEntry *TE, bool EraseCosts) {
+    DeletedNodes.insert(TE);
+    if (EraseCosts)
+      NodesCosts.erase(TE);
+    for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx])) {
+      TreeEntry *Child = VectorizableTree[Idx].get();
+      DeletedNodes.insert(Child);
+      if (EraseCosts)
+        NodesCosts.erase(Child);
+    }
+  };
+  // Gathered loads subtrees left without surviving gather users are dead.
+  auto DropDeadGatheredLoads = [&](bool EraseCosts) {
+    for (TreeEntry *TE : GatheredLoadsNodes) {
+      if (DeletedNodes.contains(TE))
+        continue;
+      ValuesToInsertTy ValuesToInsert;
+      if (!FindDemandedElts(TE, ValuesToInsert).isZero())
+        continue;
+      DeleteSubtree(TE, EraseCosts);
+    }
+  };
+  // Drops the splat subtrees that are unused by the surviving gathers or do
+  // not pay off; returns true if anything was dropped.
+  auto DropUnprofitableSplatSubtrees = [&](bool EraseCosts) {
+    bool Dropped = false;
+    for (TreeEntry *TE : SplatGatheredScalarsRoots) {
+      if (DeletedNodes.contains(TE))
+        continue;
+      ValuesToInsertTy ValuesToInsert;
+      InstructionCost CurrentGathersCost = 0, DroppedGathersCost = 0;
+      if (IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
+                                   DroppedGathersCost))
+        continue;
+      DeleteSubtree(TE, EraseCosts);
+      SyncGatherCosts(ValuesToInsert);
+      Dropped = true;
+    }
+    return Dropped;
+  };
+  auto SumNodesCosts = [&]() {
+    InstructionCost C = 0;
+    for (const auto &P : NodesCosts)
+      C += P.second;
+    return C;
+  };
+  // The splat subtrees are speculative. The ones that do not pay off even in
+  // the full tree are dropped before the trimming: the reusing gathers are
+  // priced for the broadcast from the subtree vector while the subtree is
+  // around, which distorts the trimming decisions of the main tree, and fewer
+  // surviving gathers after the trimming can only make keeping a subtree less
+  // profitable.
+  if (DropUnprofitableSplatSubtrees(/*EraseCosts=*/true)) {
+    DropDeadGatheredLoads(/*EraseCosts=*/true);
+    ComputeSubtreeCosts();
+    Cost = SumNodesCosts();
   }
-  Visited.clear();
   using CostIndicesTy =
       std::pair<TreeEntry *, std::tuple<InstructionCost, InstructionCost,
                                         SmallVector<unsigned>>>;
@@ -19097,13 +19299,11 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       (Worklist.top().first->Idx == 0 || Worklist.top().first->Idx == 1))
     return Cost;
 
-  // Original gather costs before any trimming; used to rebase the reference
-  // cost on the recosted gathers if the trimming is reverted.
-  SmallDenseMap<const TreeEntry *, InstructionCost> OrigGatherCosts;
-  if (!SplatGatheredScalarsRoots.empty())
-    for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
-      if (TE->isGather())
-        OrigGatherCosts.try_emplace(TE.get(), NodesCosts.lookup(TE.get()));
+  // Node costs and deleted nodes before any trimming; the restored tree is
+  // priced from them if the trimming is reverted.
+  const SmallDenseMap<const TreeEntry *, InstructionCost> OrigNodesCosts =
+      NodesCosts;
+  const SmallPtrSet<const TreeEntry *, 8> OrigDeletedNodes = DeletedNodes;
   bool Changed = false;
   bool PreferTrimmedTree = false;
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
@@ -19277,131 +19477,6 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     }
     Worklist.pop();
   }
-  using ValuesToInsertTy =
-      SmallDenseMap<const TreeEntry *, SmallVector<Value *>>;
-  auto GetScalarTy = [&](const TreeEntry *TE) {
-    Type *ScalarTy = TE->Scalars.front()->getType();
-    auto It = MinBWs.find(TE);
-    if (It != MinBWs.end())
-      ScalarTy = IntegerType::get(ScalarTy->getContext(), It->second.first);
-    return ScalarTy;
-  };
-  // Lanes of the subtree scalars used by the surviving gather nodes, and the
-  // values to materialize in those gathers if the subtree is deleted.
-  auto FindDemandedElts = [&](TreeEntry *TE, ValuesToInsertTy &ValuesToInsert) {
-    APInt DemandedElts = APInt::getZero(TE->getVectorFactor());
-    for (Value *V : TE->Scalars) {
-      unsigned Pos = TE->findLaneForValue(V);
-      for (const TreeEntry *BVE : ValueToGatherNodes.lookup(V)) {
-        if (DeletedNodes.contains(BVE))
-          continue;
-        DemandedElts.setBit(Pos);
-        ValuesToInsert.try_emplace(BVE).first->second.push_back(V);
-      }
-    }
-    return DemandedElts;
-  };
-  // Cost of materializing the values directly in the surviving gather nodes
-  // that use them.
-  auto GetGatherInsertCost = [&](Type *ScalarTy,
-                                 const ValuesToInsertTy &ValuesToInsert) {
-    InstructionCost BVCost = 0;
-    for (const auto &[BVE, Values] : ValuesToInsert) {
-      APInt BVDemandedElts = APInt::getZero(BVE->getVectorFactor());
-      SmallVector<Value *> BVValues(BVE->getVectorFactor(),
-                                    PoisonValue::get(ScalarTy));
-      for (Value *V : Values) {
-        unsigned Pos = BVE->findLaneForValue(V);
-        BVValues[Pos] = V;
-        BVDemandedElts.setBit(Pos);
-      }
-      BVCost += getScalarizationOverhead(
-          *TTI, SLPReVec, ScalarTy,
-          cast<VectorType>(getWidenedType(ScalarTy, BVE->getVectorFactor())),
-          BVDemandedElts, /*Insert=*/true, /*Extract=*/false, CostKind,
-          BVDemandedElts.isAllOnes(), BVValues);
-    }
-    return BVCost;
-  };
-  auto RecostEntry = [&](const TreeEntry *TE) {
-    InstructionCost C = getEntryCost(TE, VectorizedVals, CheckedExtracts);
-    if (!C.isValid() || C == 0)
-      return C;
-    uint64_t Scale = EntryToScale.lookup(TE);
-    if (!Scale)
-      Scale = getEntryEffectiveScale(*TE);
-    return C * Scale;
-  };
-  // A splat subtree pays off only if its price plus the extracts of its
-  // scalars used by the remaining scalar code plus the current cost of the
-  // gather nodes that reuse it is not worse than re-emitting those gathers
-  // without the subtree.
-  auto IsSplatSubtreeProfitable = [&](TreeEntry *TE,
-                                      const ValuesToInsertTy &ValuesToInsert,
-                                      InstructionCost &CurrentGathersCost,
-                                      InstructionCost &DroppedGathersCost) {
-    APInt ExtractElts = APInt::getZero(TE->getVectorFactor());
-    for (Value *V : TE->Scalars) {
-      if (!isa<Instruction>(V) || TE->isCopyableElement(V))
-        continue;
-      // Too many users - the scalar is extracted anyway.
-      if (V->hasNUsesOrMore(UsesLimit) || any_of(V->users(), [&](User *U) {
-            return none_of(getTreeEntries(U), [&](const TreeEntry *UseTE) {
-              return !DeletedNodes.contains(UseTE) &&
-                     !TransformedToGatherNodes.contains(UseTE);
-            });
-          }))
-        ExtractElts.setBit(TE->findLaneForValue(V));
-    }
-    Type *ScalarTy = GetScalarTy(TE);
-    InstructionCost KeepCost = getScalarizationOverhead(
-        *TTI, SLPReVec, ScalarTy,
-        cast<VectorType>(getWidenedType(ScalarTy, TE->getVectorFactor())),
-        ExtractElts, /*Insert=*/false, /*Extract=*/true, CostKind);
-    // Scale the extract cost to the subtree's execution frequency: the
-    // subtree and gather costs it is compared against are already loop-scaled.
-    if (KeepCost.isValid() && KeepCost != 0)
-      KeepCost *= getEntryEffectiveScale(*TE);
-    // Add the cost of the subtree itself, computed before any trimming:
-    // trimming of the subtree's own nodes would otherwise make it look
-    // artificially cheap.
-    KeepCost += std::get<1>(SubtreeCosts[TE->Idx]);
-    // The reusing gather nodes currently pay the broadcast cost; without
-    // the subtree they fall back to plain insertion sequences. Gather
-    // nodes already erased from NodesCosts are being deleted and do not
-    // count on either side.
-    CurrentGathersCost = 0;
-    for (const auto &[BVE, _] : ValuesToInsert)
-      CurrentGathersCost += NodesCosts.lookup(BVE);
-    KeepCost += CurrentGathersCost;
-    // Re-cost the gather nodes with the subtree tentatively deleted.
-    DeletedNodes.insert(TE);
-    SmallVector<TreeEntry *> TempDeleted;
-    for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx])) {
-      TreeEntry *Child = VectorizableTree[Idx].get();
-      if (DeletedNodes.insert(Child).second)
-        TempDeleted.push_back(Child);
-    }
-    DroppedGathersCost = 0;
-    for (const auto &[BVE, _] : ValuesToInsert) {
-      if (!NodesCosts.contains(BVE))
-        continue;
-      DroppedGathersCost += RecostEntry(BVE);
-    }
-    DeletedNodes.erase(TE);
-    for (TreeEntry *Child : TempDeleted)
-      DeletedNodes.erase(Child);
-    // On a cost tie prefer dropping the subtree: the reusing gathers
-    // materialize the scalars at the same price with fewer instructions.
-    return KeepCost < DroppedGathersCost;
-  };
-  // Re-price the gathers that reused a dropped splat subtree, so the
-  // remaining subtrees are checked against the costs with it deleted.
-  auto SyncGatherCosts = [&](const ValuesToInsertTy &ValuesToInsert) {
-    for (const auto &[BVE, _] : ValuesToInsert)
-      if (!DeletedNodes.contains(BVE))
-        NodesCosts[BVE] = RecostEntry(BVE);
-  };
   // The VF=2 instruction-count veto rejects the whole tree when the vector code
   // has more instructions than the scalar code. The auxiliary subtrees - splat
   // gather roots and gathered loads - are optional: the surviving gathers can
@@ -19438,9 +19513,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       InstructionCost CurrentGathersCost = 0;
       for (const auto &[BVE, _] : ValuesToInsert)
         CurrentGathersCost += NodesCosts.lookup(BVE);
-      DeletedNodes.insert(TE);
-      for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
-        DeletedNodes.insert(VectorizableTree[Idx].get());
+      DeleteSubtree(TE, /*EraseCosts=*/false);
       // All reusers were dropped: the subtree is dead. Without current node
       // costs the total conservatively keeps the subtree cost.
       if (IsDead) {
@@ -19487,39 +19560,45 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     // unprofitable ones instead of letting them reject the whole tree.
     InstructionCost TotalCost = std::get<1>(SubtreeCosts.front());
     for (TreeEntry *TE : SplatGatheredScalarsRoots) {
+      if (DeletedNodes.contains(TE))
+        continue;
       ValuesToInsertTy ValuesToInsert;
       InstructionCost CurrentGathersCost = 0, DroppedGathersCost = 0;
-      if (!FindDemandedElts(TE, ValuesToInsert).isZero() &&
-          IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
+      if (IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
                                    DroppedGathersCost)) {
         TotalCost += std::get<1>(SubtreeCosts[TE->Idx]);
         continue;
       }
-      DeletedNodes.insert(TE);
-      for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
-        DeletedNodes.insert(VectorizableTree[Idx].get());
+      DeleteSubtree(TE, /*EraseCosts=*/false);
       // The gather nodes that reused the subtree are re-emitted without it.
       TotalCost += DroppedGathersCost - CurrentGathersCost;
       SyncGatherCosts(ValuesToInsert);
     }
-    // Gathered loads subtrees left without surviving gather users are dead.
-    for (TreeEntry *TE : GatheredLoadsNodes) {
-      if (DeletedNodes.contains(TE))
-        continue;
-      ValuesToInsertTy ValuesToInsert;
-      if (!FindDemandedElts(TE, ValuesToInsert).isZero())
-        continue;
-      DeletedNodes.insert(TE);
-      for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
-        DeletedNodes.insert(VectorizableTree[Idx].get());
-    }
+    DropDeadGatheredLoads(/*EraseCosts=*/false);
     TrimAuxSubtreesForInstCount(TotalCost, /*UseCurrentNodeCosts=*/false);
     return TotalCost;
   }
 
   SmallPtrSet<TreeEntry *, 4> SubtreesToDelete;
-  SmallPtrSet<TreeEntry *, 4> DroppedSplatSubtrees;
   InstructionCost LoadsExtractsCost = 0;
+  // Check if all gather nodes that reuse the splat subtrees are marked for
+  // deletion. In this case the whole splat subtree must be deleted. If only
+  // some of the gathers are trimmed, keeping the subtree still costs its full
+  // price plus the extracts of the scalars used by the remaining scalar code,
+  // while the surviving gathers can materialize the splatted scalars
+  // directly. Drop the subtree if it does not pay off.
+  for (TreeEntry *TE : SplatGatheredScalarsRoots) {
+    if (DeletedNodes.contains(TE))
+      continue;
+    ValuesToInsertTy ValuesToInsert;
+    InstructionCost CurrentGathersCost, DroppedGathersCost;
+    if (IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
+                                 DroppedGathersCost))
+      continue;
+    SubtreesToDelete.insert(TE);
+    NodesCosts.erase(TE);
+  }
+
   // Check if all loads of gathered loads nodes are marked for deletion. In this
   // case the whole gathered loads subtree must be deleted.
   // Also, try to account for extracts, which might be required, if only part of
@@ -19546,35 +19625,6 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       }
       LoadsExtractsCost += BVCost;
     }
-    NodesCosts.erase(TE);
-  }
-
-  // Check if all gather nodes that reuse the splat subtrees are marked for
-  // deletion. In this case the whole splat subtree must be deleted. If only
-  // some of the gathers are trimmed, keeping the subtree still costs its full
-  // price plus the extracts of the scalars used by the remaining scalar code,
-  // while the surviving gathers can materialize the splatted scalars
-  // directly. Drop the subtree if it does not pay off.
-  for (TreeEntry *TE : SplatGatheredScalarsRoots) {
-    if (DeletedNodes.contains(TE))
-      continue;
-    ValuesToInsertTy ValuesToInsert;
-    APInt DemandedElts = FindDemandedElts(TE, ValuesToInsert);
-    if (!DemandedElts.isZero()) {
-      InstructionCost CurrentGathersCost, DroppedGathersCost;
-      if (IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
-                                   DroppedGathersCost))
-        continue;
-      // Dropped as unprofitable: exclude its cost from the reference cost, so
-      // the trimming of the remaining tree is not reverted because of it, and
-      // keep it deleted even if the trimming is reverted.
-      DroppedSplatSubtrees.insert(TE);
-      for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
-        DroppedSplatSubtrees.insert(VectorizableTree[Idx].get());
-      Cost -= std::get<1>(SubtreeCosts[TE->Idx]);
-    }
-    // Not used by the surviving gathers or not profitable to keep.
-    SubtreesToDelete.insert(TE);
     NodesCosts.erase(TE);
   }
 
@@ -19613,63 +19663,44 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
                       << ".\n"
                       << "SLP: Current total cost = " << NewCost << "\n");
   }
-  const bool Reverted =
-      NewCost + LoadsExtractsCost > Cost ||
-      (!PreferTrimmedTree && NewCost + LoadsExtractsCost == Cost);
-  if (Reverted) {
-    DeletedNodes.clear();
+  // The trimming is reverted if the restored tree is not more expensive. The
+  // restored tree is priced the same way as the trimmed one, from the per-node
+  // costs: adjusting the pre-trimming total incrementally is not exact with
+  // the auxiliary subtrees around, since the subtree costs recorded before the
+  // trimming fold in the gathered loads they reuse, and the gathers inside a
+  // subtree change their price once their reuse sources are dropped.
+  auto ComputeRestoredCost = [&]() {
+    DeletedNodes = OrigDeletedNodes;
     TransformedToGatherNodes.clear();
-    // The dropped splat subtrees stay deleted: they were excluded from the
-    // reference cost and must not be resurrected by the revert.
-    DeletedNodes.insert(DroppedSplatSubtrees.begin(),
-                        DroppedSplatSubtrees.end());
-    NewCost = Cost;
+    NodesCosts = OrigNodesCosts;
     if (!SplatGatheredScalarsRoots.empty()) {
-      // The revert restores the pre-trimming tree, including the splat
-      // subtrees that were deleted as unused while their reusing gathers were
-      // trimmed. Recost the gather nodes for the restored set of vectorized
-      // nodes, then drop the splat subtrees that do not pay off in the
-      // restored tree. The reference cost still holds the gather costs of the
-      // full tree, where the already dropped splat subtrees served as reuse
-      // sources; rebase it on the recosted costs.
-      for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
-        if (!TE->isGather() || DeletedNodes.contains(TE.get()))
-          continue;
-        InstructionCost C = RecostEntry(TE.get());
-        NewCost += C - OrigGatherCosts.lookup(TE.get());
-        NodesCosts[TE.get()] = C;
-      }
-      for (TreeEntry *TE : SplatGatheredScalarsRoots) {
-        if (DeletedNodes.contains(TE))
-          continue;
-        ValuesToInsertTy ValuesToInsert;
-        InstructionCost CurrentGathersCost = 0, DroppedGathersCost = 0;
-        if (!FindDemandedElts(TE, ValuesToInsert).isZero() &&
-            IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
-                                     DroppedGathersCost))
-          continue;
-        DeletedNodes.insert(TE);
-        for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
-          DeletedNodes.insert(VectorizableTree[Idx].get());
-        NewCost += DroppedGathersCost - CurrentGathersCost -
-                   std::get<1>(SubtreeCosts[TE->Idx]);
-        SyncGatherCosts(ValuesToInsert);
-      }
+      for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
+        if (TE->isGather() && !DeletedNodes.contains(TE.get()))
+          NodesCosts[TE.get()] = RecostEntry(TE.get());
+      DropUnprofitableSplatSubtrees(/*EraseCosts=*/false);
       // Dropping the splat subtrees may leave the gathered loads subtrees
-      // built for them without surviving gather users; delete those too.
-      for (TreeEntry *TE : GatheredLoadsNodes) {
-        if (DeletedNodes.contains(TE))
-          continue;
-        ValuesToInsertTy ValuesToInsert;
-        if (!FindDemandedElts(TE, ValuesToInsert).isZero())
-          continue;
-        DeletedNodes.insert(TE);
-        for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
-          DeletedNodes.insert(VectorizableTree[Idx].get());
-        NewCost -= std::get<1>(SubtreeCosts[TE->Idx]);
-      }
+      // built for them without surviving gather users.
+      DropDeadGatheredLoads(/*EraseCosts=*/false);
+      for (const TreeEntry *TE : DeletedNodes)
+        NodesCosts.erase(TE);
     }
+    return SumNodesCosts();
+  };
+  const InstructionCost TrimmedCost = NewCost + LoadsExtractsCost;
+  auto TrimmedDeletedNodes = DeletedNodes;
+  auto TrimmedTransformedNodes = TransformedToGatherNodes;
+  auto TrimmedNodesCosts = NodesCosts;
+  const InstructionCost RestoredCost = ComputeRestoredCost();
+  LLVM_DEBUG(dbgs() << "SLP: Trimmed tree cost = " << TrimmedCost
+                    << ", restored tree cost = " << RestoredCost << ".\n");
+  const bool Reverted = TrimmedCost > RestoredCost ||
+                        (!PreferTrimmedTree && TrimmedCost == RestoredCost);
+  if (Reverted) {
+    NewCost = RestoredCost;
   } else {
+    DeletedNodes = std::move(TrimmedDeletedNodes);
+    TransformedToGatherNodes = std::move(TrimmedTransformedNodes);
+    NodesCosts = std::move(TrimmedNodesCosts);
     // If the remaining tree is just a buildvector - exit, it will cause
     // endless attempts to vectorize.
     if (VectorizableTree.size() >= 2 && getRootNode().hasState() &&
@@ -19686,7 +19717,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         TransformedToGatherNodes.contains(VectorizableTree[2].get()))
       return InstructionCost::getInvalid();
   }
-  TrimAuxSubtreesForInstCount(NewCost, /*UseCurrentNodeCosts=*/!Reverted);
+  TrimAuxSubtreesForInstCount(NewCost, /*UseCurrentNodeCosts=*/true);
   return NewCost;
 }
 
