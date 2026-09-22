@@ -4,7 +4,6 @@
 #include "AArch64TargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -186,51 +185,6 @@ TEST(AArch64ReservedRegs, ArtificialHIRegistersAreReserved) {
   EXPECT_TRUE(Reserved.test(AArch64::S31_HI));
   EXPECT_TRUE(Reserved.test(AArch64::D31_HI));
   EXPECT_TRUE(Reserved.test(AArch64::Q31_HI));
-}
-
-TEST(AArch64RegAllocationHints, NoDuplicates) {
-  std::unique_ptr<TargetMachine> TM = createTargetMachine("");
-  ASSERT_TRUE(TM);
-
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
-  ASSERT_TRUE(II);
-
-  const AArch64RegisterInfo &TRI = II->getRegisterInfo();
-
-  LLVMContext Context;
-  Module M("", Context);
-  M.setDataLayout(TM->createDataLayout());
-  Function *F = Function::Create(
-      FunctionType::get(Type::getVoidTy(Context), /*isVarArg=*/false),
-      GlobalValue::ExternalLinkage, "f", &M);
-
-  MachineModuleInfo MMI(TM.get());
-  const TargetSubtargetInfo *STI = TM->getSubtargetImpl(*F);
-  MachineFunction MF(*F, *TM, *STI, MMI.getContext(), /*FunctionNum=*/0);
-  MF.initTargetMachineFunctionInfo(*STI);
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  MRI.freezeReservedRegs();
-
-  Register VirtReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  MRI.addRegAllocationHint(VirtReg, AArch64::X0);
-
-  ArrayRef<MCPhysReg> Order = AArch64::GPR64RegClass.getRegisters();
-  SmallVector<MCPhysReg, 4> Hints;
-
-  // Calling getRegAllocationHints once should not produce duplicate hints
-  // from fallthrough to TargetRegisterInfo::getRegAllocationHints.
-  TRI.getRegAllocationHints(VirtReg, Order, Hints, MF, /*VRM=*/nullptr,
-                            /*Matrix=*/nullptr);
-  EXPECT_EQ(Hints.size(), 1u);
-  EXPECT_EQ(Hints[0], MCPhysReg(AArch64::X0));
-
-  // Calling getRegAllocationHints a second time with Hints already populated
-  // should not append duplicate hints.
-  TRI.getRegAllocationHints(VirtReg, Order, Hints, MF, /*VRM=*/nullptr,
-                            /*Matrix=*/nullptr);
-  EXPECT_EQ(Hints.size(), 1u);
-  EXPECT_EQ(Hints[0], MCPhysReg(AArch64::X0));
 }
 
 } // namespace

@@ -36,9 +36,17 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
   // lead to break being included in the extraction zone.
   EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
-  // FIXME: ExtractFunction should be unavailable inside loop construct
-  // initializer/condition.
+  // A loop's initializer has its value discarded just like an ordinary
+  // statement, so it remains extractable (unlike the condition; see
+  // ControlFlowConditions below).
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
+  // ...but if the declared name is used later (in the condition,
+  // increment, or body), extraction is unavailable regardless -- not
+  // because of any condition/init-specific logic, but because
+  // requiresHoisting() (checked in ExtractFunction::prepare(), independent
+  // of what kind of statement is being extracted) catches it.
+  EXPECT_EQ(apply("void use(int); for([[int i = 0;]] i < 10; ++i) use(i);"),
+            "unavailable");
   // Extract certain return
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return
@@ -676,6 +684,68 @@ TEST_F(ExtractFunctionTest, SingleStatement) {
       foo([[stream << 3]], 4);
     })cpp"),
             "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, ControlFlowConditions) {
+  Context = File;
+  // The condition of an `if` is not a discardable statement -- its value is
+  // consumed by the `if` itself.
+  EXPECT_EQ(apply(R"cpp(
+    int example(int event1, bool event2, double event3) {
+      if ([[event1 == 2 && event2 && event3 == 10.3]])
+        return 1;
+      return 0;
+    })cpp"),
+            "unavailable");
+  // Same, but for other control-flow constructs' conditions.
+  EXPECT_EQ(apply("void f(int x) { while ([[x > 0]]) --x; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { do {} while ([[x > 0]]); }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { for (; [[x > 0]];) ; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { switch ([[x + 1]]) {} }"), "unavailable");
+  // A condition-variable declaration (`if (T x = ...)`) is likewise not a
+  // discardable statement: its truthiness *is* the condition.
+  EXPECT_EQ(apply("bool cond(); void f() { if ([[bool b = cond()]]) ; }"),
+            "unavailable");
+  // Unlike the condition, a loop's initializer and increment clauses have
+  // their value discarded just like an ordinary statement, so they remain
+  // extractable (any hazard from extracting a declaration used later is
+  // already caught by ExtractionZone::requiresHoisting, independently of
+  // this).
+  EXPECT_THAT(apply("void f(int x) { for ([[x = 0]]; x < 10; ++x) ; }"),
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply("void f(int x) { for (;; [[--x]]) ; }"),
+              HasSubstr("extracted"));
+  // Likewise, an `if`/`switch` init-statement (C++17) is extractable.
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_THAT(apply("void f(int x) { if ([[x = 0]]; x > 0) ; }"),
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply("void f(int x) { switch ([[x = 0]]; x) {} }"),
+              HasSubstr("extracted"));
+  // Sanity check: extraction from the *body* of these constructs (as opposed
+  // to their condition) is unaffected.
+  EXPECT_THAT(apply("void f(int x) { if (x > 0) [[x = x * 2;]] }"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RangeBasedFor) {
+  Context = File;
+  // The range-expression of a range-based for is consumed to build the
+  // hidden begin/end iterators, so it's not a discardable statement either
+  // (same category as an ordinary condition).
+  EXPECT_EQ(apply(R"cpp(
+    struct Vec { int *begin(); int *end(); };
+    Vec V;
+    void f() { for (auto X : [[V]]) {} }
+  )cpp"),
+            "unavailable");
+  // Extraction from the body is unaffected.
+  EXPECT_THAT(apply(R"cpp(
+    struct Vec { int *begin(); int *end(); };
+    Vec V;
+    void foo(int);
+    void f() { for (auto X : V) { [[foo(X);]] } }
+  )cpp"),
+              HasSubstr("extracted"));
 }
 
 } // namespace
