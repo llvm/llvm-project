@@ -255,8 +255,19 @@ mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
 /// otherwise it returns std::nullopt.
 std::optional<bool> isNewAllocationResult(mlir::OpResult result);
 
+/// The procedure \p func stands for in diagnostics and remarks: itself, or the
+/// procedure it is a compiler-made copy of (the device copy of a CUDA Fortran
+/// host_device procedure) when that one can be found.
+mlir::FunctionOpInterface getPresentedFunction(mlir::FunctionOpInterface func);
+
+/// Same for the callee of \p call named by \p callee; null if it does not
+/// resolve to a function.
+mlir::FunctionOpInterface getPresentedCallee(mlir::Operation *call,
+                                             mlir::SymbolRefAttr callee);
+
 /// Used to obtain user-facing function name that can be used in
-/// diagnostics and remarks without mangling or underscores.
+/// diagnostics and remarks without mangling or underscores. Compiler-made
+/// copies are reported under the name of the procedure they copy.
 std::string getPresentableFunctionName(mlir::FunctionOpInterface func);
 } // namespace fir
 
