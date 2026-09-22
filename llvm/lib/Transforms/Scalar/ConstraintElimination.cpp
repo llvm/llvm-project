@@ -1802,9 +1802,9 @@ static void generateReproducer(Instruction *Cond, bool IsSigned, Module *M,
 }
 
 /// If \p V is a variable in the system and constraint \p C does not contain \p
-/// V, it is likely we managed to decompose \p V at this point, but not earlier
-/// when the fact involving \p V was added. In that case, return a new row for V
-/// == decompose(V) to link the variable with the decomposition result.
+/// V, we managed to decompose \p V at this point, but likely not earlier when
+/// the fact involving \p V was added. In that case, return a new row for
+/// V <= decompose(V) to link the variable with the decomposition result.
 static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
                                      const ConstraintInfo &Info,
                                      const DataLayout &DL) {
