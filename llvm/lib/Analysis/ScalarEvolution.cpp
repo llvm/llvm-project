@@ -998,8 +998,25 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
     if (isa<SCEVCouldNotCompute>(Coeff))
       return Coeff;
 
+    SCEV::NoWrapFlags MulFlags = UseFlags;
+    if (ScalarEvolution::hasFlags(MulFlags, SCEV::FlagNSW)) {
+      SCEVUse Start = Operands[0];
+      SCEVUse Step = Operands[1];
+      if (!SE.isKnownNonNegative(Start) || !SE.isKnownNonNegative(Step)) {
+        // If Start and Step do not have the same sign, either the multiply or
+        // the add in Start + (It * Step) may wrap.
+        if (!SE.isKnownNonPositive(Start) || !SE.isKnownNonPositive(Step)) {
+          UseFlags = ScalarEvolution::clearFlags(UseFlags, SCEV::FlagNSW);
+          MulFlags = ScalarEvolution::clearFlags(MulFlags, SCEV::FlagNSW);
+        } else if (!SE.isKnownNonNegative(Coeff)) {
+          // It * Step may wrap signed if It (aka Coeff) is negative.
+          MulFlags = ScalarEvolution::clearFlags(MulFlags, SCEV::FlagNSW);
+        }
+      }
+    }
+
     SCEVUse Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff,
-                                {SCEV::FlagAnyWrap, UseFlags});
+                                {SCEV::FlagAnyWrap, MulFlags});
     Result = SE.getAddExpr(Result, Mul, {SCEV::FlagAnyWrap, UseFlags});
   }
   return Result;
@@ -1012,8 +1029,9 @@ SCEVUse SCEVAddRecExpr::getExitValue(ScalarEvolution &SE) const {
   // The loop reaches iteration BTC, so the value this recurrence computes there
   // is the value it had, and that did not wrap.
   return evaluateAtIteration(operands(), BTC, SE,
-                             isAffine() ? getNoWrapFlags(SCEV::FlagNUW)
-                                        : SCEV::FlagAnyWrap);
+                             isAffine()
+                                 ? getNoWrapFlags(SCEV::FlagNUW | SCEV::FlagNSW)
+                                 : SCEV::FlagAnyWrap);
 }
 
 //===----------------------------------------------------------------------===//
