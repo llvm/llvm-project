@@ -2118,6 +2118,18 @@ class RVPBinaryIntrinsic
   def int_riscv_pmulhsu  : RVPBinaryIntrinsic;
   def int_riscv_pmulhrsu : RVPBinaryIntrinsic;
 
+  // Scalar Multiply High. On RV32 these map to the M-extension mulh
+  // instructions and the P-extension mulhr instructions.
+  class RVPScalarMulHighIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_mulh_i32    : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhr_i32   : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhu_u32   : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhru_u32  : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhsu_i32  : RVPScalarMulHighIntrinsic;
+  def int_riscv_mulhrsu_i32 : RVPScalarMulHighIntrinsic;
+
   // Packed Multiply High Accumulate.
   def int_riscv_pmhacc    : RVPTernaryIntrinsic;
   def int_riscv_pmhracc   : RVPTernaryIntrinsic;
