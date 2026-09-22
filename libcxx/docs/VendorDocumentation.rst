@@ -581,7 +581,9 @@ Using libcxxrt on Linux
 
 You will need to keep the source tree of `libcxxrt`_ available
 on your build machine and your copy of the libcxxrt shared library must
-be placed where your linker will find it.
+be placed where your linker will find it. You must use a recent version
+of libcxxrt since historical versions did not provide the necessary
+definitions of ``operator new``.
 
 We can now run CMake like:
 
@@ -590,7 +592,6 @@ We can now run CMake like:
   $ cmake -G Ninja -S runtimes -B build                               \
           -DLLVM_ENABLE_RUNTIMES="libcxx"                             \
           -DLIBCXX_CXX_ABI=libcxxrt                                   \
-          -DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=ON                   \
           -DLIBCXXABI_USE_LLVM_UNWINDER=OFF                           \
           -DLIBCXX_CXX_ABI_INCLUDE_PATHS=path/to/libcxxrt-sources/src
   $ ninja -C build install-cxx
