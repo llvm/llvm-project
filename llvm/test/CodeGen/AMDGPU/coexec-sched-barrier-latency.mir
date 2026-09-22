@@ -9,6 +9,12 @@
   attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
 ...
 
+# The coexec-scheduler includes BarrierLatency mutations, thus users have access to the amdgpu-barrier-signal-wait-latency control.
+# The coexec-scheduler gives strong preference to instructions with no outstanding dependent latency, and slightly less strong
+# priority to instructions which participate in memory pipelining. The consequence is that it should prioritize respecting the 
+# requested amdgpu-barrier-signal-wait-latency, and schedule the S_BARRIER_WAIT shortly after it is ready. This test should 
+# demonstrate how this S_BARRIER_SIGNAL/WAIT scheduling behav
+
 ---
 name: test-sched-signal-wait
 tracksRegLiveness: true
