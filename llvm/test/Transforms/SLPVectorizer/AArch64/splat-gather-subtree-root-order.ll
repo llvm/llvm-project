@@ -14,20 +14,17 @@ define void @splat_root_reversed_loads(ptr %u, ptr %b, ptr %ext, i64 %n) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[U_ADDR:%.*]] = getelementptr inbounds [2 x double], ptr [[U]], i64 [[IV]]
-; CHECK-NEXT:    [[U1_ADDR:%.*]] = getelementptr inbounds i8, ptr [[U_ADDR]], i64 8
 ; CHECK-NEXT:    [[B2_ADDR:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 16
 ; CHECK-NEXT:    [[EXT_ADDR:%.*]] = getelementptr inbounds double, ptr [[EXT]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[U_ADDR]], align 8
-; CHECK-NEXT:    [[U1:%.*]] = load double, ptr [[U1_ADDR]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[U_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[B2_ADDR]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[E:%.*]] = fmul double [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    store double [[E]], ptr [[EXT_ADDR]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP1]], <2 x double> [[TMP4]], <2 x double> zeroinitializer)
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[U1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP2]], <2 x double> [[TMP6]], <2 x double> [[TMP5]])
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[U_ADDR]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
