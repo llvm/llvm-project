@@ -428,11 +428,12 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_decrementing_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+define void @loop_contains_store_decrementing_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) !dbg !38 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'loop_contains_store_decrementing_iv'
-; CHECK-DEBUG:       LV: We can vectorize this loop!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains non-contiguous load used by the exit condition.
+; CHECK-REMARK:      foo.c:150:3: loop not vectorized: Early exit loop with side effects contains non-contiguous load used by the exit condition.
 entry:
-  br label %for.body
+  br label %for.body, !dbg !39
 
 for.body:
   %iv = phi i64 [ 19, %entry ], [ %iv.next, %for.inc ]
@@ -443,12 +444,12 @@ for.body:
   %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
   %ee.val = load i16, ptr %ee.addr, align 2
   %ee.cond = icmp sgt i16 %ee.val, 500
-  br i1 %ee.cond, label %exit, label %for.inc
+  br i1 %ee.cond, label %exit, label %for.inc, !dbg !39
 
 for.inc:
   %iv.next = sub nuw nsw i64 %iv, 1
   %counted.cond = icmp eq i64 %iv.next, 0
-  br i1 %counted.cond, label %exit, label %for.body
+  br i1 %counted.cond, label %exit, label %for.body, !dbg !39
 
 exit:
   ret void
@@ -856,8 +857,8 @@ exit.uncountable:
 ; getelementptr used for the critical load that feeds the exit condition.
 define void @uncountable_exit_condition_load_offset_from_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(42) readonly %pred) !dbg !64 {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_condition_load_offset_from_iv'
-; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported critical load.
-; CHECK-REMARK:      foo.c:280:3: loop not vectorized: Early exit loop with side effects contains unsupported critical load.
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported load used by the exit condition.
+; CHECK-REMARK:      foo.c:280:3: loop not vectorized: Early exit loop with side effects contains unsupported load used by the exit condition.
 entry:
   br label %for.body, !dbg !65
 
@@ -1132,6 +1133,8 @@ declare i64 @get_an_unknown_offset();
 !33 = !DILocation(line: 120, column: 3, scope: !32)
 !36 = distinct !DISubprogram(name: "loop_contains_store_requiring_alias_check", scope: !2, file: !2, line: 140, type: !3, isLocal: false, isDefinition: true, scopeLine: 140, flags: DIFlagPrototyped, isOptimized: true, unit: !1000, retainedNodes: !4)
 !37 = !DILocation(line: 140, column: 3, scope: !36)
+!38 = distinct !DISubprogram(name: "loop_contains_store_decrementing_iv", scope: !2, file: !2, line: 150, type: !3, isLocal: false, isDefinition: true, scopeLine: 150, flags: DIFlagPrototyped, isOptimized: true, unit: !1000, retainedNodes: !4)
+!39 = !DILocation(line: 150, column: 3, scope: !38)
 !40 = distinct !DISubprogram(name: "loop_contains_store_condition_load_requires_gather", scope: !2, file: !2, line: 160, type: !3, isLocal: false, isDefinition: true, scopeLine: 160, flags: DIFlagPrototyped, isOptimized: true, unit: !1000, retainedNodes: !4)
 !41 = !DILocation(line: 160, column: 3, scope: !40)
 !42 = distinct !DISubprogram(name: "loop_contains_store_uncounted_exit_is_a_switch", scope: !2, file: !2, line: 170, type: !3, isLocal: false, isDefinition: true, scopeLine: 170, flags: DIFlagPrototyped, isOptimized: true, unit: !1000, retainedNodes: !4)

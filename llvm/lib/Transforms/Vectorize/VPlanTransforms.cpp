@@ -3234,7 +3234,8 @@ static bool handleUncountableExitsWithSideEffects(
             PSE.getSE()->getConstant(EltSize), TheLoop, *PSE.getSE(), DT, AC,
             &Predicates)) {
       reportVectorizationFailure("Early exit loop with side effects contains "
-                                 "critical load that may fault.\n",
+                                 "load used by the exit condition that may "
+                                 "fault.\n",
                                  "EarlyExitSideEffectsFaultingLoad", ORE,
                                  TheLoop);
       return false;
@@ -3246,12 +3247,20 @@ static bool handleUncountableExitsWithSideEffects(
   // accesses for the condition load right now.
   auto *IV = cast<VPWidenInductionRecipe>(&HeaderVPBB->front());
   if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
-      !match(IV->getStepValue(), m_SpecificInt(1)))
+      !match(IV->getStepValue(), m_SpecificInt(1))) {
+    reportVectorizationFailure("Early exit loop with side effects contains "
+                               "non-contiguous load used by the exit "
+                               "condition.\n",
+                               "EarlyExitSideEffectsBadCriticalLoad", ORE,
+                               TheLoop);
     return false;
+  }
+
   if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(
                       m_LiveIn(), m_Specific(IV)))) {
     reportVectorizationFailure("Early exit loop with side effects contains "
-                               "unsupported critical load.\n",
+                               "unsupported load used by the exit "
+                               "condition.\n",
                                "EarlyExitSideEffectsBadCriticalLoad", ORE,
                                TheLoop);
     return false;
