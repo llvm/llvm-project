@@ -1183,7 +1183,7 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       if (SrcBits > 16)
         return Scale(FPTy->isHalfTy() ? 3 : 2);
       if (FPTy->isHalfTy() && ST->has16BitInsts())
-        return Scale(Narrow ? (IsSigned ? 3 : 2)
+        return Scale(Narrow                           ? (IsSigned ? 3 : 2)
                      : SrcBits == 8 && !ST->hasSDWA() ? 2
                                                       : 1);
       const InstructionCost FloatCost =
