@@ -10973,13 +10973,12 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
       Result = APValue(ReflectionKind::Null, nullptr);
       break;
     case ReflectionKind::Type: {
-      const auto *FromTSI = static_cast<const TypeSourceInfo *>(
-          FromValue.getReflectionOpaqueOperand());
-      QualType ImpType = importChecked(Err, FromTSI->getType());
+      auto *FromTSI = const_cast<TypeSourceInfo *>(
+          static_cast<const TypeSourceInfo *>(
+              FromValue.getReflectionOpaqueOperand()));
+      TypeSourceInfo *ToTSI = importChecked(Err, FromTSI);
       if (Err)
         return std::move(Err);
-      TypeSourceInfo *ToTSI =
-          Importer.ToContext.getTrivialTypeSourceInfo(ImpType);
       Result = APValue(ReflectionKind::Type, ToTSI);
       break;
     }
