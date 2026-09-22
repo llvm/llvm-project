@@ -398,9 +398,7 @@ static bool isThreadXPrivatize(PrivatizeOp privatize) {
 }
 
 /// True when \p block is nested in a region that only part of the workgroup
-/// enters, such as an `scf.if` or `fir.if` branch, so a workgroup barrier there
-/// could deadlock. A loop body does not count: every thread agrees on the trip
-/// count here.
+/// enters.
 static bool isInsideConditional(Block *block) {
   if (!block)
     return false;
@@ -408,7 +406,7 @@ static bool isInsideConditional(Block *block) {
        parent && !isa<gpu::LaunchOp, FunctionOpInterface>(parent);
        parent = parent->getParentOp())
     if (isa<RegionBranchOpInterface>(parent) &&
-        !isa<LoopLikeOpInterface>(parent))
+        !isa<LoopLikeOpInterface, scf::ExecuteRegionOp>(parent))
       return true;
   return false;
 }
