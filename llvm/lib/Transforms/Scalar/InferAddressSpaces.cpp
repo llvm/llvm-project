@@ -70,7 +70,7 @@
 // The monotone transfer function moves the address space of a pointer down a
 // lattice path from uninitialized to specific and then to generic. A join
 // operation of two different specific address spaces pushes the expression down
-// to the generic address space. The analysis completes once it reaches a fixed
+// to their common address space. The analysis completes once it reaches a fixed
 // point.
 //
 // Second, IR rewriting in Step 2 also needs to be circular. For example,
@@ -791,27 +791,25 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   if (Constant *C = dyn_cast<Constant>(Operand))
     return ConstantExpr::getAddrSpaceCast(C, NewPtrTy);
 
-  if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand))
-    return NewOperand;
-
   Instruction *Inst = cast<Instruction>(OperandUse.getUser());
-  auto I = PredicatedAS.find(std::make_pair(Inst, Operand));
-  if (I != PredicatedAS.end()) {
-    // Insert an addrspacecast on that operand before the user.
-    unsigned NewAS = I->second;
-    Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(Operand->getType(), NewAS);
-    auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
-
-    if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
-      return phiNodeOperandWithNewAddressSpace(NewI, Operand);
-
-    NewI->insertBefore(Inst->getIterator());
-    NewI->setDebugLoc(Inst->getDebugLoc());
-    return NewI;
+  if (Value *NewOperand = ValueWithNewAddrSpace.lookup(Operand)) {
+    Operand = NewOperand;
+  } else if (!PredicatedAS.contains(std::make_pair(Inst, Operand))) {
+    assert(PoisonUsesToFix && "missing inferred operand replacement");
+    PoisonUsesToFix->push_back(&OperandUse);
+    return PoisonValue::get(NewPtrTy);
   }
 
-  PoisonUsesToFix->push_back(&OperandUse);
-  return PoisonValue::get(NewPtrTy);
+  if (Operand->getType() == NewPtrTy)
+    return Operand;
+
+  auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
+  if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
+    return phiNodeOperandWithNewAddressSpace(NewI, OperandUse.get());
+
+  NewI->insertBefore(Inst->getIterator());
+  NewI->setDebugLoc(Inst->getDebugLoc());
+  return NewI;
 }
 
 // A helper function for cloneInstructionWithNewAddressSpace. Handles the
@@ -1101,6 +1099,9 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
 // comments).
 unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
                                                    unsigned AS2) const {
+  if (AS1 == AS2)
+    return AS1;
+
   if (AS1 == FlatAddrSpace || AS2 == FlatAddrSpace)
     return FlatAddrSpace;
 
@@ -1109,8 +1110,7 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
   if (AS2 == UninitializedAddressSpace)
     return AS1;
 
-  // The join of two different specific address spaces is flat.
-  return (AS1 == AS2) ? AS1 : FlatAddrSpace;
+  return TTI->getAddressSpaceJoin(AS1, AS2);
 }
 
 bool InferAddressSpacesImpl::run(Function &CurFn) {
@@ -1589,9 +1589,10 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
     unsigned OperandNo = PoisonUse->getOperandNo();
     assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
-    WeakTrackingVH NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
-    assert(NewOp &&
-           "poison replacements in ValueWithNewAddrSpace shouldn't be null");
+    unsigned NewAS =
+        NewV->getOperand(OperandNo)->getType()->getPointerAddressSpace();
+    Value *NewOp = operandWithNewAddressSpaceOrCreatePoison(
+        *PoisonUse, NewAS, ValueWithNewAddrSpace, PredicatedAS, nullptr);
     NewV->setOperand(OperandNo, NewOp);
   }
 

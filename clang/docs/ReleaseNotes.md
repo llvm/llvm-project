@@ -809,6 +809,8 @@ features cannot lower the translation-unit ABI level;
 
 #### X86 Support
 
+- Support `AVX10_V2_AUX` ISA (`-mavx10v2aux`).
+
 #### Arm and AArch64 Support
 
 - Added support for pointer authentication discrimination of C++ virtual table
