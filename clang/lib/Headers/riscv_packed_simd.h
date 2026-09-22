@@ -175,11 +175,6 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_convertvector(__rs1, rty);                                \
   }
-#define __packed_widen_shift(name, rty, ty, mask)                              \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
-                                                          unsigned __shamt) {  \
-    return __builtin_convertvector(__rs1, rty) << (__shamt & (mask));          \
-  }
 #define __packed_widen_binary_op(name, rty, ty, op)                            \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
                                                           ty __rs2) {          \
@@ -736,10 +731,14 @@ __packed_widen_high2(pwcvth_i32x2, int32x2_t, int16x2_t)
 __packed_widen_high2(pwcvth_u32x2, uint32x2_t, uint16x2_t)
 
 /* Packed Widening Shift */
-__packed_widen_shift(pwsll_s_u16x4, uint16x4_t, uint8x4_t, 0xf)
-__packed_widen_shift(pwsll_s_u32x2, uint32x2_t, uint16x2_t, 0x1f)
-__packed_widen_shift(pwsla_s_i16x4, int16x4_t, int8x4_t, 0xf)
-__packed_widen_shift(pwsla_s_i32x2, int32x2_t, int16x2_t, 0x1f)
+__packed_binary_builtin_mixed(pwsll_s_u16x4, uint16x4_t, uint8x4_t, unsigned,
+                              __builtin_riscv_pwsll_s_u16x4)
+__packed_binary_builtin_mixed(pwsll_s_u32x2, uint32x2_t, uint16x2_t, unsigned,
+                              __builtin_riscv_pwsll_s_u32x2)
+__packed_binary_builtin_mixed(pwsla_s_i16x4, int16x4_t, int8x4_t, unsigned,
+                              __builtin_riscv_pwsla_s_i16x4)
+__packed_binary_builtin_mixed(pwsla_s_i32x2, int32x2_t, int16x2_t, unsigned,
+                              __builtin_riscv_pwsla_s_i32x2)
 
 /* Packed Widening Addition and Subtraction */
 __packed_widen_binary_op(pwadd_i16x4, int16x4_t, int8x4_t, +)
@@ -1325,7 +1324,6 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_merge_builtin
 #undef __packed_unary_builtin
 #undef __packed_widen_convert
-#undef __packed_widen_shift
 #undef __packed_widen_binary_op
 #undef __packed_widen_binary_acc_op
 #undef __packed_widen_mul

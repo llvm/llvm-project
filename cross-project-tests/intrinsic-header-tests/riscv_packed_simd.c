@@ -2385,21 +2385,25 @@ int32x2_t test_pwsla_s_i32x2_imm(int16x2_t rs1) {
   return __riscv_pwsla_s_i32x2(rs1, 7);
 }
 
-// Verify that an out-of-range constant shift amount is masked to the maximum
-// in-range value by the header implementation.
-// CHECK-LABEL: test_pwsll_s_u16x4_masked_imm:
-// RV32:        pslli.dh{{[[:space:]]}}a0, a0, 15
+// The intrinsic uses the low 5 bits of the register-form instruction. Values
+// that do not fit an immediate form must retain that register-form semantics.
+// CHECK-LABEL: test_pwsll_s_u16x4_low5:
+// RV32:        li{{[[:space:]]}}a1, 31
+// RV32-NEXT:   pwsll.bs{{[[:space:]]}}a0, a0, a1
+// RV64:        li{{[[:space:]]}}a1, 31
 // RV64:        pwcvtu.wb
-// RV64:        pslli.h{{[[:space:]]}}a0, a0, 15
-uint16x4_t test_pwsll_s_u16x4_masked_imm(uint8x4_t rs1) {
+// RV64:        psll.hs{{[[:space:]]}}a0, a0, a1
+uint16x4_t test_pwsll_s_u16x4_low5(uint8x4_t rs1) {
   return __riscv_pwsll_s_u16x4(rs1, 31);
 }
 
-// CHECK-LABEL: test_pwsll_s_u32x2_masked_imm:
-// RV32:        pslli.dw{{[[:space:]]}}a0, a0, 31
+// CHECK-LABEL: test_pwsll_s_u32x2_low5:
+// RV32:        li{{[[:space:]]}}a1, 63
+// RV32-NEXT:   pwsll.hs{{[[:space:]]}}a0, a0, a1
+// RV64:        li{{[[:space:]]}}a1, 63
 // RV64:        pwcvtu.wh
-// RV64:        pslli.w{{[[:space:]]}}a0, a0, 31
-uint32x2_t test_pwsll_s_u32x2_masked_imm(uint16x2_t rs1) {
+// RV64:        psll.ws{{[[:space:]]}}a0, a0, a1
+uint32x2_t test_pwsll_s_u32x2_low5(uint16x2_t rs1) {
   return __riscv_pwsll_s_u32x2(rs1, 63);
 }
 

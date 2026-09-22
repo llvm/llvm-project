@@ -4,6 +4,11 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-p -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s --check-prefixes=CHECK,RV64
 
+declare <4 x i16> @llvm.riscv.pwsll.v4i16.v4i8(<4 x i8>, i32)
+declare <2 x i32> @llvm.riscv.pwsll.v2i32.v2i16(<2 x i16>, i32)
+declare <4 x i16> @llvm.riscv.pwsla.v4i16.v4i8(<4 x i8>, i32)
+declare <2 x i32> @llvm.riscv.pwsla.v2i32.v2i16(<2 x i16>, i32)
+
 define <4 x i16> @pwsll_v4i8(<4 x i8> %x, i16 %shamt) {
 ; RV32-LABEL: pwsll_v4i8:
 ; RV32:       # %bb.0:
@@ -15,10 +20,8 @@ define <4 x i16> @pwsll_v4i8(<4 x i8> %x, i16 %shamt) {
 ; RV64-NEXT:    pwcvtu.wb a0, a0
 ; RV64-NEXT:    psll.hs a0, a0, a1
 ; RV64-NEXT:    ret
-  %ext = zext <4 x i8> %x to <4 x i16>
-  %splat.ins = insertelement <4 x i16> poison, i16 %shamt, i64 0
-  %splat = shufflevector <4 x i16> %splat.ins, <4 x i16> poison, <4 x i32> zeroinitializer
-  %res = shl <4 x i16> %ext, %splat
+  %shamt.ext = zext i16 %shamt to i32
+  %res = call <4 x i16> @llvm.riscv.pwsll.v4i16.v4i8(<4 x i8> %x, i32 %shamt.ext)
   ret <4 x i16> %res
 }
 
@@ -33,10 +36,7 @@ define <2 x i32> @pwsll_v2i16(<2 x i16> %x, i32 %shamt) {
 ; RV64-NEXT:    pwcvtu.wh a0, a0
 ; RV64-NEXT:    psll.ws a0, a0, a1
 ; RV64-NEXT:    ret
-  %ext = zext <2 x i16> %x to <2 x i32>
-  %splat.ins = insertelement <2 x i32> poison, i32 %shamt, i64 0
-  %splat = shufflevector <2 x i32> %splat.ins, <2 x i32> poison, <2 x i32> zeroinitializer
-  %res = shl <2 x i32> %ext, %splat
+  %res = call <2 x i32> @llvm.riscv.pwsll.v2i32.v2i16(<2 x i16> %x, i32 %shamt)
   ret <2 x i32> %res
 }
 
@@ -52,10 +52,8 @@ define <4 x i16> @pwsla_v4i8(<4 x i8> %x, i16 %shamt) {
 ; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    psll.hs a0, a0, a1
 ; RV64-NEXT:    ret
-  %ext = sext <4 x i8> %x to <4 x i16>
-  %splat.ins = insertelement <4 x i16> poison, i16 %shamt, i64 0
-  %splat = shufflevector <4 x i16> %splat.ins, <4 x i16> poison, <4 x i32> zeroinitializer
-  %res = shl <4 x i16> %ext, %splat
+  %shamt.ext = zext i16 %shamt to i32
+  %res = call <4 x i16> @llvm.riscv.pwsla.v4i16.v4i8(<4 x i8> %x, i32 %shamt.ext)
   ret <4 x i16> %res
 }
 
@@ -71,10 +69,7 @@ define <2 x i32> @pwsla_v2i16(<2 x i16> %x, i32 %shamt) {
 ; RV64-NEXT:    psext.w.h a0, a0
 ; RV64-NEXT:    psll.ws a0, a0, a1
 ; RV64-NEXT:    ret
-  %ext = sext <2 x i16> %x to <2 x i32>
-  %splat.ins = insertelement <2 x i32> poison, i32 %shamt, i64 0
-  %splat = shufflevector <2 x i32> %splat.ins, <2 x i32> poison, <2 x i32> zeroinitializer
-  %res = shl <2 x i32> %ext, %splat
+  %res = call <2 x i32> @llvm.riscv.pwsla.v2i32.v2i16(<2 x i16> %x, i32 %shamt)
   ret <2 x i32> %res
 }
 
@@ -89,8 +84,7 @@ define <4 x i16> @pwslli_v4i8(<4 x i8> %x) {
 ; RV64-NEXT:    pwcvtu.wb a0, a0
 ; RV64-NEXT:    pslli.h a0, a0, 3
 ; RV64-NEXT:    ret
-  %ext = zext <4 x i8> %x to <4 x i16>
-  %res = shl <4 x i16> %ext, <i16 3, i16 3, i16 3, i16 3>
+  %res = call <4 x i16> @llvm.riscv.pwsll.v4i16.v4i8(<4 x i8> %x, i32 3)
   ret <4 x i16> %res
 }
 
@@ -105,8 +99,7 @@ define <2 x i32> @pwslli_v2i16(<2 x i16> %x) {
 ; RV64-NEXT:    pwcvtu.wh a0, a0
 ; RV64-NEXT:    pslli.w a0, a0, 7
 ; RV64-NEXT:    ret
-  %ext = zext <2 x i16> %x to <2 x i32>
-  %res = shl <2 x i32> %ext, <i32 7, i32 7>
+  %res = call <2 x i32> @llvm.riscv.pwsll.v2i32.v2i16(<2 x i16> %x, i32 7)
   ret <2 x i32> %res
 }
 
@@ -122,8 +115,7 @@ define <4 x i16> @pwslai_v4i8(<4 x i8> %x) {
 ; RV64-NEXT:    psext.h.b a0, a0
 ; RV64-NEXT:    pslli.h a0, a0, 3
 ; RV64-NEXT:    ret
-  %ext = sext <4 x i8> %x to <4 x i16>
-  %res = shl <4 x i16> %ext, <i16 3, i16 3, i16 3, i16 3>
+  %res = call <4 x i16> @llvm.riscv.pwsla.v4i16.v4i8(<4 x i8> %x, i32 3)
   ret <4 x i16> %res
 }
 
@@ -139,8 +131,57 @@ define <2 x i32> @pwslai_v2i16(<2 x i16> %x) {
 ; RV64-NEXT:    psext.w.h a0, a0
 ; RV64-NEXT:    pslli.w a0, a0, 7
 ; RV64-NEXT:    ret
-  %ext = sext <2 x i16> %x to <2 x i32>
-  %res = shl <2 x i32> %ext, <i32 7, i32 7>
+  %res = call <2 x i32> @llvm.riscv.pwsla.v2i32.v2i16(<2 x i16> %x, i32 7)
+  ret <2 x i32> %res
+}
+
+define <4 x i16> @pwslli_v4i8_31(<4 x i8> %x) {
+; RV32-LABEL: pwslli_v4i8_31:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 31
+; RV32-NEXT:    pwsll.bs a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pwslli_v4i8_31:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 31
+; RV64-NEXT:    pwcvtu.wb a0, a0
+; RV64-NEXT:    psll.hs a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pwsll.v4i16.v4i8(<4 x i8> %x, i32 31)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @pwslai_v4i8_16(<4 x i8> %x) {
+; RV32-LABEL: pwslai_v4i8_16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 16
+; RV32-NEXT:    pwsla.bs a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pwslai_v4i8_16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 16
+; RV64-NEXT:    pwcvtu.wb a0, a0
+; RV64-NEXT:    psext.h.b a0, a0
+; RV64-NEXT:    psll.hs a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pwsla.v4i16.v4i8(<4 x i8> %x, i32 16)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @pwslli_v2i16_31(<2 x i16> %x) {
+; RV32-LABEL: pwslli_v2i16_31:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pwslli.h a0, a0, 31
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pwslli_v2i16_31:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pwcvtu.wh a0, a0
+; RV64-NEXT:    pslli.w a0, a0, 31
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pwsll.v2i32.v2i16(<2 x i16> %x, i32 31)
   ret <2 x i32> %res
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
