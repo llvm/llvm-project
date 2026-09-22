@@ -275,8 +275,7 @@ static void processFuncOp(FunctionOpInterface funcOp,
   LDBG() << "Processing function op: "
          << OpWithFlags(funcOp,
                         OpPrintingFlags().skipRegions().printGenericOpForm());
-  // A nested symbol can have callers outside the pass root. Its signature must
-  // stay unchanged even if all users in the map are calls, or the map is empty.
+  // Preserve the signature if callers may exist outside the pass root.
   if (funcOp.isExternal() || !symbolUserMap.areAllUsesVisible(funcOp)) {
     LDBG() << "Function is external or has unknown users, skipping: "
            << funcOp.getOperation()->getName();
