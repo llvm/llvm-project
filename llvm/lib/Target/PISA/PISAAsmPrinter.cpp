@@ -35,6 +35,7 @@
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -142,11 +143,22 @@ private:
       uint64_t Idx = VI.Initializer.size() - 1;
       VI.Exprs.insert({Idx, GE});
     }
+    void addSplatVector(const Constant *C, LLT ScalarTy,
+                        const APInt &EltVal) {
+      assert(EltVal.getBitWidth() <= 64 &&
+             "Splat element too wide for uint64_t");
+      FixedVectorType *VTy = cast<FixedVectorType>(C->getType());
+      unsigned NumElts = VTy->getNumElements();
+      uint64_t Val = EltVal.getZExtValue();
+      for (unsigned I = 0; I < NumElts; ++I)
+        addVal(ScalarTy, Val);
+      pad(C, NumElts);
+    }
     void lowerConstant(const Constant *C) {
-      auto *Expr = AP.lowerConstant(C);
+      const MCExpr *Expr = AP.lowerConstant(C);
       MCValue Res;
       if (!Expr->evaluateAsRelocatable(Res, nullptr))
-        llvm_unreachable("unhandled expression!");
+        reportFatalUsageError("unsupported PISA global initializer expression");
       LLT Ty = getLLTForType(*C->getType(), DL);
       if (!Res.getAddSym() && !Res.getSubSym()) {
         if (Res.getConstant() == 0)
@@ -155,22 +167,26 @@ private:
           addVal(Ty, static_cast<uint64_t>(Res.getConstant()));
         return;
       }
-      assert(!Res.getSubSym() && "unhandled expression!");
+      if (Res.getSubSym())
+        reportFatalUsageError("unsupported PISA global initializer expression");
       std::string Name = Res.getAddSym()->getName().str();
       PISA::VariableInit::GlobalExpr E{std::move(Name), Res.getConstant()};
       addGlobal(Ty, E);
     }
     uint64_t computeSize(const Constant *C) const {
       uint64_t Total = 0;
-      for (auto [i, Elt] : llvm::enumerate(VI.Initializer)) {
-        if (auto Iter = VI.Exprs.find(i); Iter != VI.Exprs.end()) {
-          auto &Entry = Iter->second;
-          if (auto *Z = std::get_if<PISA::VariableInit::Zeros>(&Entry)) {
+      for (uint64_t I = 0; I < VI.Initializer.size(); ++I) {
+        DenseMap<uint64_t, PISA::VariableInit::SpecialEntry>::const_iterator
+            Iter = VI.Exprs.find(I);
+        if (Iter != VI.Exprs.end()) {
+          const PISA::VariableInit::SpecialEntry &Entry = Iter->second;
+          if (const PISA::VariableInit::Zeros *Z =
+                  std::get_if<PISA::VariableInit::Zeros>(&Entry)) {
             Total += Z->N;
             continue;
           }
         }
-        Total += Elt.Type.getSizeInBytes();
+        Total += VI.Initializer[I].Type.getSizeInBytes();
       }
       return Total;
     }
@@ -248,33 +264,23 @@ void PISAAsmPrinter::FlattenGlobal::process(const Constant *C) {
   uint64_t Size = DL.getTypeAllocSize(C->getType());
   if (isZero(C))
     return pad(C);
-  auto AddSplatVector = [&](LLT ScalarTy, const APInt &EltVal) {
-    assert(EltVal.getBitWidth() <= 64 && "Splat element too wide for uint64_t");
-    auto *VTy = cast<FixedVectorType>(C->getType());
-    unsigned NumElts = VTy->getNumElements();
-    uint64_t Val = EltVal.getZExtValue();
-    for (unsigned I = 0; I < NumElts; ++I)
-      addVal(ScalarTy, Val);
-    pad(C, NumElts);
-  };
-
-  if (auto *CI = dyn_cast<ConstantInt>(C)) {
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
     if (C->getType()->isVectorTy()) {
-      auto *VTy = cast<FixedVectorType>(C->getType());
+      FixedVectorType *VTy = cast<FixedVectorType>(C->getType());
       uint64_t EltAllocSize = DL.getTypeAllocSize(VTy->getElementType());
       LLT ScalarTy = LLT::integer(EltAllocSize * 8);
-      AddSplatVector(ScalarTy, CI->getValue());
+      addSplatVector(C, ScalarTy, CI->getValue());
     } else {
       // We don't use the LLT type of `C` directly here because `C` could be,
       // for example, a s1. The allocation size is 1, so we want to give it
       // a type of s8 to reflect that.
       addVal(LLT::integer(Size * 8), CI->getZExtValue());
     }
-  } else if (auto *FP = dyn_cast<ConstantFP>(C)) {
+  } else if (const ConstantFP *FP = dyn_cast<ConstantFP>(C)) {
     if (C->getType()->isVectorTy()) {
-      auto *VTy = cast<FixedVectorType>(C->getType());
+      FixedVectorType *VTy = cast<FixedVectorType>(C->getType());
       LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL);
-      AddSplatVector(ScalarTy, FP->getValueAPF().bitcastToAPInt());
+      addSplatVector(C, ScalarTy, FP->getValueAPF().bitcastToAPInt());
     } else {
       LLT Ty = getLLTForType(*C->getType(), DL);
       addVal(Ty, FP->getValueAPF().bitcastToAPInt().getZExtValue());
@@ -286,7 +292,7 @@ void PISAAsmPrinter::FlattenGlobal::process(const Constant *C) {
       addVal(Ty, Val);
     else
       pad(C);
-  } else if (auto *CV = dyn_cast<ConstantVector>(C)) {
+  } else if (const ConstantVector *CV = dyn_cast<ConstantVector>(C)) {
     Type *ElementType = CV->getType()->getElementType();
     uint64_t ElementSizeInBits = DL.getTypeSizeInBits(ElementType);
     uint64_t ElementAllocSizeInBits = DL.getTypeAllocSizeInBits(ElementType);
@@ -302,7 +308,7 @@ void PISAAsmPrinter::FlattenGlobal::process(const Constant *C) {
           ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT),
           DL));
       if (!CI) {
-        report_fatal_error(
+        reportFatalUsageError(
             "Cannot lower vector global with unusual element type");
       }
       emitGlobalConstantLargeInt(CI);
@@ -314,12 +320,12 @@ void PISAAsmPrinter::FlattenGlobal::process(const Constant *C) {
         process(CV->getAggregateElement(I));
       pad(C, CV->getNumOperands());
     }
-  } else if (auto *CA = dyn_cast<ConstantArray>(C)) {
+  } else if (const ConstantArray *CA = dyn_cast<ConstantArray>(C)) {
     for (unsigned I = 0; I < CA->getNumOperands(); I++)
       process(CA->getAggregateElement(I));
-  } else if (auto *CS = dyn_cast<ConstantStruct>(C)) {
-    auto *StructTy = cast<StructType>(CS->getType());
-    auto *Layout = DL.getStructLayout(StructTy);
+  } else if (const ConstantStruct *CS = dyn_cast<ConstantStruct>(C)) {
+    StructType *StructTy = cast<StructType>(CS->getType());
+    const StructLayout *Layout = DL.getStructLayout(StructTy);
     for (unsigned I = 0, E = CS->getNumOperands(); I != E; ++I) {
       const Constant *Field = CS->getOperand(I);
       // Print the actual field value.
@@ -335,7 +341,8 @@ void PISAAsmPrinter::FlattenGlobal::process(const Constant *C) {
       // as padding to ensure that the next field starts at the right offset.
       pad(PadSize);
     }
-  } else if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
+  } else if (const ConstantDataSequential *CDS =
+                 dyn_cast<ConstantDataSequential>(C)) {
     for (unsigned I = 0; I < CDS->getNumElements(); I++)
       process(CDS->getElementAsConstant(I));
     pad(C, CDS->getNumElements());
@@ -357,7 +364,7 @@ void PISAAsmPrinter::FlattenGlobal::process(const Constant *C) {
     assert(Size == 8 && "global symbol with non 64-bit size?");
     lowerConstant(C);
   } else {
-    llvm_unreachable("unhandled constant!");
+    reportFatalUsageError("unsupported PISA global initializer constant");
   }
 }
 
@@ -373,14 +380,14 @@ static bool isIgnoredIntrinsicGlobal(const GlobalVariable &GV) {
   // These are metadata for the annotation intrinsic, not real data.
   if (GV.hasPrivateLinkage() && GV.isConstant() &&
       all_of(GV.users(), [](const User *U) {
-        if (auto *CE = dyn_cast<ConstantExpr>(U))
+        if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(U))
           return all_of(CE->users(), [](const User *UU) {
-            auto *CI = dyn_cast<CallInst>(UU);
+            const CallInst *CI = dyn_cast<CallInst>(UU);
             return CI && CI->getCalledFunction() &&
                    CI->getCalledFunction()->getIntrinsicID() ==
                        Intrinsic::ptr_annotation;
           });
-        auto *CI = dyn_cast<CallInst>(U);
+        const CallInst *CI = dyn_cast<CallInst>(U);
         return CI && CI->getCalledFunction() &&
                CI->getCalledFunction()->getIntrinsicID() ==
                    Intrinsic::ptr_annotation;
@@ -391,14 +398,14 @@ static bool isIgnoredIntrinsicGlobal(const GlobalVariable &GV) {
     return false;
 
   if (GV.getName() == "llvm.global_ctors")
-    report_fatal_error(
+    reportFatalUsageError(
         "llvm.global_ctors is not supported by the PISA backend");
 
   if (GV.getName() == "llvm.global_dtors")
-    report_fatal_error(
-        "llvm.global_ctors is not supported by the PISA backend");
+    reportFatalUsageError(
+        "llvm.global_dtors is not supported by the PISA backend");
 
-  report_fatal_error("unknown special variable with appending linkage");
+  reportFatalUsageError("unknown special variable with appending linkage");
 }
 
 void PISAAsmPrinter::emitGlobalsAndFuncDecls(Module &M) {
@@ -406,15 +413,15 @@ void PISAAsmPrinter::emitGlobalsAndFuncDecls(Module &M) {
 
   // emit header info
   // - we always emit in latest PISA syntax
-  auto GetHdrTarget = [&]() -> SmallString<16> {
-    return ST ? ST->getPISATargetName() : "";
-  };
-  PISA::HeaderDcl HD = {PISA::LatestPISAVersion, GetHdrTarget()};
+  SmallString<16> HeaderTarget;
+  if (ST)
+    HeaderTarget = ST->getPISATargetName();
+  PISA::HeaderDcl HD = {PISA::LatestPISAVersion, HeaderTarget};
   TS.emitHeader(HD);
   OutStreamer->addBlankLine();
 
   // Emit Module level function decl
-  for (auto &F : M) {
+  for (Function &F : M) {
     if (!F.isDeclaration() || F.isIntrinsic()) // avoid llvm builtins
       continue;
 
@@ -426,7 +433,7 @@ void PISAAsmPrinter::emitGlobalsAndFuncDecls(Module &M) {
   }
 
   // Translate global variables
-  for (auto &GV : M.globals()) {
+  for (GlobalVariable &GV : M.globals()) {
     if (isIgnoredIntrinsicGlobal(GV))
       continue;
 
@@ -470,7 +477,7 @@ bool PISAAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 void PISAAsmPrinter::emitFunctionHeader() {
   const Function &F = MF->getFunction();
 
-  auto *Section = getObjFileLowering().SectionForGlobal(&F, TM);
+  MCSection *Section = getObjFileLowering().SectionForGlobal(&F, TM);
   MF->setSection(Section);
 }
 
@@ -479,22 +486,27 @@ void PISAAsmPrinter::updateFuncParamIdxs(PISA::DataTypes &DTs) {
   // declarations (vs the already-processed func param dcls)
   DTs.finalizeFuncParams();
 
-  llvm::DenseMap<std::tuple</*NumElts=*/unsigned, /*BitWidth=*/unsigned,
-                            /*Type=*/unsigned>,
-                 /*Index=*/unsigned>
-      ParamIdxs;
+  using ParamIndexMap =
+      DenseMap<std::tuple</*NumElts=*/unsigned, /*BitWidth=*/unsigned,
+                          /*Type=*/unsigned>,
+               /*Index=*/unsigned>;
+  ParamIndexMap ParamIdxs;
 
-  auto &MRI = MF->getRegInfo();
-  for (auto &[CurReg, Info] : RegMgr->mapping()) {
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  for (const PISA::RegManager::MappingTy::value_type &Entry :
+       RegMgr->mapping()) {
+    Register CurReg = Entry.first;
+    const PISA::RegManager::RegInfo &Info = Entry.second;
     // We are only trying to update indices for function parameters
     if (!(Info.Flags & PISA::RegManager::NoEmissionDef))
       continue;
 
-    auto *RC = MRI.getRegClass(CurReg);
+    const TargetRegisterClass *RC = MRI.getRegClass(CurReg);
     unsigned BitWidth = TRI->getBitSizeFromRegClass(RC);
     unsigned NumElts = TRI->getNumEltsFromRegClass(RC);
-    auto [It, Inserted] =
-        ParamIdxs.try_emplace(std::make_tuple(NumElts, BitWidth, Info.Type), 0);
+    ParamIndexMap::iterator It =
+        ParamIdxs.try_emplace(std::make_tuple(NumElts, BitWidth, Info.Type), 0)
+            .first;
     RegMgr->setRegIdx(CurReg, It->second++);
 
     // Sanity check that all function parameter indexes are < the total
@@ -506,26 +518,30 @@ void PISAAsmPrinter::updateFuncParamIdxs(PISA::DataTypes &DTs) {
 }
 
 void PISAAsmPrinter::collectRegDcls(PISA::RegDcls &Dcls) {
-  auto &MRI = MF->getRegInfo();
-  for (auto &[CurReg, Info] : RegMgr->mapping()) {
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  for (const PISA::RegManager::MappingTy::value_type &Entry :
+       RegMgr->mapping()) {
+    Register CurReg = Entry.first;
+    const PISA::RegManager::RegInfo &Info = Entry.second;
     if (Info.Flags & PISA::RegManager::NoEmissionDef)
       continue;
-    auto *RC = MRI.getRegClass(CurReg);
+    const TargetRegisterClass *RC = MRI.getRegClass(CurReg);
     unsigned BitWidth = TRI->getBitSizeFromRegClass(RC);
     unsigned NumElts = TRI->getNumEltsFromRegClass(RC);
     TypeInfo &TI = DTs->emplaceInfo(NumElts, BitWidth, Info.Type);
-    auto Bank = RegMgr->getRegBank(NumElts, BitWidth);
+    PISA::RegEncoder::RegBank Bank =
+        RegMgr->getRegBank(NumElts, BitWidth);
     const char *Prefix =
         RegMgr->getPrefixFromBank(static_cast<PISA::RegManager::RegBank>(Bank));
     Dcls.Regs[std::make_tuple(NumElts, BitWidth, Info.Type)].push_back(
-        std::make_pair(Prefix, TI.RegCounter));
+        {Prefix, TI.RegCounter});
     RegMgr->setRegIdx(CurReg, TI.RegCounter);
     TI.RegCounter++;
   }
 }
 
 void PISAAsmPrinter::collectLocalVariableDcls(PISA::LocalVariableDcls &Dcls) {
-  auto &MFI = MF->getFrameInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
   for (int Idx = MFI.getObjectIndexBegin(), EndIdx = MFI.getObjectIndexEnd();
        Idx != EndIdx; ++Idx) {
     if (MFI.isDeadObjectIndex(Idx))
@@ -560,7 +576,7 @@ PISA::LinkageTy PISAAsmPrinter::collectLinkage(const GlobalValue &V) {
     return PISA::LinkageTy::DEFAULT;
 
   // global variable linkage
-  if (auto *GVar = dyn_cast<GlobalVariable>(&V)) {
+  if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(&V)) {
     // External GV with no initializer must be .import. In llvm, global
     // variable definitions must be initialized. Though PISA allows
     // a GV definition with no initializer, we can safely determine the
@@ -581,7 +597,7 @@ static void collectIntelHostAccessMetadata(PISA::GlobalVariableDcl &PGV,
   if (!MD || MD->getNumOperands() < 2)
     return;
 
-  auto *NameMD = dyn_cast<MDString>(MD->getOperand(1));
+  MDString *NameMD = dyn_cast<MDString>(MD->getOperand(1));
   if (!NameMD)
     return;
 
@@ -590,7 +606,7 @@ static void collectIntelHostAccessMetadata(PISA::GlobalVariableDcl &PGV,
 
 void PISAAsmPrinter::collectGlobalVariable(PISA::GlobalVariableDcl &PGV,
                                            const GlobalVariable &GV) {
-  auto &DL = GV.getParent()->getDataLayout();
+  const DataLayout &DL = GV.getParent()->getDataLayout();
   PGV.Dcl.Linkage = collectLinkage(GV);
   PGV.Dcl.SS =
       PISA::mapAddrSpaceToStorageSpace(GV.getType()->getAddressSpace());
@@ -611,7 +627,7 @@ void PISAAsmPrinter::collectFunctionDeclaration(PISA::FunctionDeclaration &Dcl,
   assert(F.getCallingConv() != CallingConv::PISA_KERNEL);
 
   collectFunctionDirectiveAndName(Dcl.DN, F);
-  for (auto &P : F.args()) {
+  for (const Argument &P : F.args()) {
     PISA::FunctionDeclParam Param;
     if (P.getType()->getScalarSizeInBits() == 1) {
       Param.Ty = LLT::integer(8);
@@ -627,24 +643,25 @@ void PISAAsmPrinter::collectKernelParameters(PISA::FunctionSignature &Sig) {
       MF->getInfo<PISAMachineFunctionInfo>();
 
   // print params
-  auto &DL = MF->getFunction().getParent()->getDataLayout();
+  const DataLayout &DL = MF->getFunction().getParent()->getDataLayout();
   for (unsigned Index = 0; Index < MF->getFunction().arg_size(); ++Index) {
-    auto [Size, IsByRef] = MFInfo->getArgInfo(Index);
+    std::pair<unsigned, bool> ArgInfo = MFInfo->getArgInfo(Index);
     PISA::KernelParameter Param;
-    Param.Size = Size;
-    auto *ArgTy = MF->getFunction().getArg(Index)->getType()->getScalarType();
-    auto Align = alignTo(PowerOf2Ceil(DL.getABITypeAlign(ArgTy).value()), 4);
+    Param.Size = ArgInfo.first;
+    Type *ArgTy = MF->getFunction().getArg(Index)->getType()->getScalarType();
+    uint64_t Align =
+        alignTo(PowerOf2Ceil(DL.getABITypeAlign(ArgTy).value()), 4);
     if (Align != 8) {
       // Kernel parameters are aligned to 8 bytes by default.
       Param.Align = Align;
     }
-    if (ArgTy->isPointerTy() && !IsByRef) {
-      auto AS = ArgTy->getPointerAddressSpace();
+    if (ArgTy->isPointerTy() && !ArgInfo.second) {
+      unsigned AS = ArgTy->getPointerAddressSpace();
       if ((AS == (unsigned)PISAAS::AddressSpace::CONSTANT) ||
           (AS == (unsigned)PISAAS::AddressSpace::GLOBAL) ||
           (AS == (unsigned)PISAAS::AddressSpace::SHARED))
         Param.AS = ArgTy->getPointerAddressSpace();
-      if (auto PtrAlign = MF->getFunction().getParamAlign(Index))
+      if (MaybeAlign PtrAlign = MF->getFunction().getParamAlign(Index))
         Param.PtrAlign = PtrAlign->value();
     }
 
@@ -653,7 +670,7 @@ void PISAAsmPrinter::collectKernelParameters(PISA::FunctionSignature &Sig) {
     const Function &F = MF->getFunction();
     if (MDNode *MD = F.getMetadata("kernel_arg_name"))
       if (Index < MD->getNumOperands())
-        if (auto *S = dyn_cast<MDString>(MD->getOperand(Index)))
+        if (MDString *S = dyn_cast<MDString>(MD->getOperand(Index)))
           if (!S->getString().empty())
             Param.ArgName = S->getString().str();
 
@@ -663,11 +680,11 @@ void PISAAsmPrinter::collectKernelParameters(PISA::FunctionSignature &Sig) {
 
 void PISAAsmPrinter::collectFunctionParameters(PISA::FunctionSignature &Sig) {
   llvm::SmallVector<const MachineInstr *, 8> FuncParamInsts;
-  for (auto &MBB : *MF) {
+  for (MachineBasicBlock &MBB : *MF) {
     // FunctionParam must be contiguous and in the same BB
     // Find the iterator of the first FunctionParam inst and iterate from it
     // to collect all FunctionParam insts
-    auto MIIt = find_if(
+    MachineBasicBlock::iterator MIIt = find_if(
         MBB, [&](MachineInstr &MI) { return TII->isFunctionParamInstr(MI); });
 
     for (; MIIt != MBB.end(); ++MIIt) {
@@ -683,10 +700,11 @@ void PISAAsmPrinter::collectFunctionParameters(PISA::FunctionSignature &Sig) {
   });
 
   // Collect params
-  for (auto *MI : FuncParamInsts) {
+  for (const MachineInstr *MI : FuncParamInsts) {
     const MachineOperand &MO = MI->getOperand(0);
     assert(MO.getSubReg() == 0 && "no swizzle allowed on args!");
-    const auto *RC = MF->getRegInfo().getRegClass(MO.getReg());
+    const TargetRegisterClass *RC =
+        MF->getRegInfo().getRegClass(MO.getReg());
     PISA::FunctionParameter Param;
     unsigned NumElts = TRI->getNumEltsFromRegClass(RC);
     unsigned EltSize = TRI->getBitSizeFromRegClass(RC);
@@ -702,13 +720,11 @@ static std::string getNameFromType(Type *Ty, bool IsSigned) {
   std::string Name = "unknown";
   switch (Ty->getTypeID()) {
   default:
-    llvm_unreachable("unsupported type");
-    break;
+    reportFatalUsageError("unsupported PISA kernel vector type hint");
   case Type::IntegerTyID: {
     switch (Ty->getIntegerBitWidth()) {
     default:
-      llvm_unreachable("unsupported integer type");
-      break;
+      reportFatalUsageError("unsupported PISA kernel vector type hint integer");
     case 8:
       Name = IsSigned ? "char" : "uchar";
       break;
@@ -733,7 +749,7 @@ static std::string getNameFromType(Type *Ty, bool IsSigned) {
     Name = "double";
     break;
   case Type::FixedVectorTyID: {
-    auto *VecTy = cast<FixedVectorType>(Ty);
+    FixedVectorType *VecTy = cast<FixedVectorType>(Ty);
     Name = getNameFromType(VecTy->getElementType(), IsSigned) +
            std::to_string(VecTy->getNumElements());
   } break;
@@ -766,13 +782,15 @@ void PISAAsmPrinter::collectFunctionDirectiveAndName(
            PISA::KernelAttributeType::REQD_WORK_GROUP_SIZE},
           {"vec_type_hint", PISA::KernelAttributeType::VEC_TYPE_HINT}};
 
-  for (auto [MetadataName, EnumVal] : AvailableKernelMetadataNodeTypes) {
-    MDNode *Node = dyn_cast_or_null<MDNode>(F.getMetadata(MetadataName));
+  for (const std::pair<StringRef, PISA::KernelAttributeType> &MetadataType :
+       AvailableKernelMetadataNodeTypes) {
+    MDNode *Node =
+        dyn_cast_or_null<MDNode>(F.getMetadata(MetadataType.first));
     if (!Node)
       continue;
-    auto &KernelAttr = DN.KernelAttrs.emplace_back();
-    KernelAttr.KernelAttrType = EnumVal;
-    switch (EnumVal) {
+    PISA::KernelAttribute &KernelAttr = DN.KernelAttrs.emplace_back();
+    KernelAttr.KernelAttrType = MetadataType.second;
+    switch (MetadataType.second) {
     case llvm::PISA::KernelAttributeType::REQD_WORK_GROUP_SIZE: {
       KernelAttr.KernelAttrValues.emplace<std::vector<uint32_t>>();
       std::transform(Node->op_begin(), Node->op_end(),
@@ -791,7 +809,7 @@ void PISAAsmPrinter::collectFunctionDirectiveAndName(
       Metadata *Op1 = Node->getOperand(1);
       ConstantInt *CI =
           cast<ConstantInt>(cast<ValueAsMetadata>(Op1)->getValue());
-      auto TypeName =
+      std::string TypeName =
           getNameFromType(cast<ValueAsMetadata>(Op0)->getType(), CI->isOne());
       KernelAttr.KernelAttrValues.emplace<std::string>(TypeName);
     } break;
@@ -843,7 +861,7 @@ void PISAAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register: {
-    auto Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (Reg.isPhysical())
       O << PISAInstPrinter::getRegisterName(Reg);
     else {
@@ -881,7 +899,7 @@ void PISAAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   case MachineOperand::MO_JumpTableIndex:
   case MachineOperand::MO_ConstantPoolIndex:
   default:
-    llvm_unreachable("<unknown operand type>");
+    reportFatalUsageError("unsupported PISA assembly operand type");
   }
 }
 
@@ -896,8 +914,8 @@ bool PISAAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 std::string PISAAsmPrinter::getVirtualRegisterName(Register R) const {
-  auto &MRI = MF->getRegInfo();
-  const auto *RC = MRI.getRegClass(R);
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  const TargetRegisterClass *RC = MRI.getRegClass(R);
 
   std::string Name;
   raw_string_ostream O(Name);
