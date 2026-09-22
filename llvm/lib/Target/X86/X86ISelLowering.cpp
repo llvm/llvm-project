@@ -58550,7 +58550,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   }
 }
 
-// Combine FMSUBADD(A, B, C) -> VFCMULC(A, B) for fp16 (complex)
+// Combine FMSUBADD(SHUFFLE(B),A,FMUL(SHUFFLE(A),SHUFFLE(B))) -> VFCMULC(A,B)
 // Combine FMADDSUB(A, B, FNEG(C)) -> FMSUBADD(A, B, C)
 // Combine FMSUBADD(A, B, FNEG(C)) -> FMADDSUB(A, B, C)
 static SDValue combineFMADDSUB(SDNode *N, SelectionDAG &DAG,
