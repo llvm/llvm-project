@@ -1977,6 +1977,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
 
+    // Canonicalize the constant multiplicand to Src1.
     if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
       II.setArgOperand(0, Src1);
       II.setArgOperand(1, Src0);
