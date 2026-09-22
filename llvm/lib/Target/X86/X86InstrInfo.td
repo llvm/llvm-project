@@ -85,6 +85,9 @@ include "X86InstrKL.td"
 // AMX instructions
 include "X86InstrAMX.td"
 
+// ACE instructions
+include "X86InstrACE.td"
+
 // RAO-INT instructions
 include "X86InstrRAOINT.td"
 
