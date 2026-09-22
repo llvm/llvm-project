@@ -1220,6 +1220,14 @@ public:
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
   }
 
+  /// Adds the metadata that can be preserved when combining all of \p VL into
+  /// a single instruction represented by \p Repr.
+  VPIRMetadata(const Instruction &Repr, ArrayRef<Value *> VL) {
+    getMetadataToPropagate(&Repr, VL, Metadata);
+    // Drop the kinds the bundle does not agree on, which come back as null.
+    erase_if(Metadata, [](const auto &P) { return !P.second; });
+  }
+
   /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) = default;
 
