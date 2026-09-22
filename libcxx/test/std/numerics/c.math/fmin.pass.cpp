@@ -57,6 +57,15 @@ TEST_CONSTEXPR_CXX23 bool test() {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
+  // mixed-type promotions testing
+  {
+    using lim = std::numeric_limits<T>;
+    assert(std::fmax(1, 2.0) == 1);              // int and double
+    assert(std::fmax(2.0f, 1) == 1);             // float and int
+    assert(std::fmax(1.0L, 0.0f) == 0.0f);       // long double and float
+    assert(std::fmax(lim::quiet_NaN(), 0) == 0); // NaN and int
+  }
+
   return true;
 }
 
