@@ -42,13 +42,17 @@ class TestStepThroughLazyLibrary(TestBase):
         if frame.line_entry.line == first_stop_line:
             thread.StepOver()
             frame = thread.GetFrameAtIndex(0)
-            self.assertNotEqual(frame.line_entry.line, first_stop_line, "Stepped past first stop line")
-    
+            self.assertNotEqual(
+                frame.line_entry.line, first_stop_line, "Stepped past first stop line"
+            )
+
         thread.StepInto()
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual(frame.name, "return_bar", "Stepped in second use")
 
-        run_to_bkpt = target.BreakpointCreateBySourceRegex("Run to here", self.main_source_file)
+        run_to_bkpt = target.BreakpointCreateBySourceRegex(
+            "Run to here", self.main_source_file
+        )
         self.assertNotEqual(0, run_to_bkpt.num_locations, "Made run to here bkpt")
 
         thread_list = lldbutil.continue_to_breakpoint(process, run_to_bkpt)
@@ -58,5 +62,3 @@ class TestStepThroughLazyLibrary(TestBase):
         thread.StepInto()
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual(frame.name, "return_baz", "Stepped into return_baz")
-        
-        
