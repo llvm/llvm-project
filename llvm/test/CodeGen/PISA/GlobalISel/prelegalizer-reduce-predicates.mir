@@ -11,13 +11,6 @@
 # inverting the predicate for the -1 case (eq -> ne) and leaving it unchanged
 # for the 0 case.
 
---- |
-  define i32 @reduce_and(<2 x i32> %a, <2 x i32> %b) { ret i32 0 }
-  define i32 @reduce_or(<2 x i32> %a, <2 x i32> %b) { ret i32 0 }
-  define i32 @reduce_xor(<2 x i32> %a, <2 x i32> %b) { ret i32 0 }
-  define i32 @reduce_and_use_icmp_neg1(<2 x i32> %a, <2 x i32> %b) { ret i32 0 }
-  define i32 @reduce_and_use_icmp_zero(<2 x i32> %a, <2 x i32> %b) { ret i32 0 }
-...
 ---
 name:            reduce_and
 tracksRegLiveness: true
