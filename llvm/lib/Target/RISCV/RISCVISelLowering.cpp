@@ -27591,17 +27591,25 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   // the caller's sret pointer. If only the caller has an sret parameter, treat
   // that pointer like an ordinary pointer when passing call arguments.
   // TODO: Support other sret buffers that outlive the caller, such as globals.
-  bool IsCallerStructRet =
-      !Caller.arg_empty() && Caller.getArg(0)->hasStructRetAttr();
-  bool IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
+  bool IsCalleeStructRet = llvm::any_of(
+      Outs, [](const ISD::OutputArg &Out) { return Out.Flags.isSRet(); });
   if (IsCalleeStructRet) {
     // Do not allow the tail call if the caller has no sret parameter.
-    if (!IsCallerStructRet)
+    if (!Caller.hasStructRetAttr() || !CLI.CB || CLI.CB->arg_empty())
       return false;
-    // RISC-V passes the sret pointer as the first argument in a0. Require the
-    // callee's sret argument to be the caller's incoming sret pointer.
-    if (!CLI.CB || CLI.CB->arg_empty() ||
-        CLI.CB->getArgOperand(0) != Caller.getArg(0))
+
+    // RISC-V psABI passes the sret pointer as the first argument. But under
+    // the Microsoft C++ ABI on Windows, the sret pointer is allowed as the
+    // second pointer after `this` pointer.
+    if (Subtarget.getTargetTriple().isKnownWindowsMSVCEnvironment()) {
+      auto *CallerSRetArg = Caller.getArg(0)->hasStructRetAttr()
+                                ? Caller.getArg(0)
+                                : Caller.getArg(1);
+      for (unsigned Idx = 0; Idx < 2 && Idx < CLI.CB->arg_size(); Idx++)
+        if (CLI.CB->paramHasAttr(Idx, Attribute::StructRet) &&
+            CLI.CB->getArgOperand(Idx) != CallerSRetArg)
+          return false;
+    } else if (CLI.CB->getArgOperand(0) != Caller.getArg(0))
       return false;
   }
 
