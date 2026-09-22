@@ -1,5 +1,7 @@
-# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+xtheadmemidx,+xtheadmempair %s 2>&1 | FileCheck %s --check-prefixes=CHECK,RV32
-# RUN: not llvm-mc -disassemble -triple=riscv64 -mattr=+xtheadmemidx,+xtheadmempair %s 2>&1 | FileCheck %s --check-prefixes=CHECK,RV64
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+xtheadmemidx,+xtheadmempair %s 2>&1 \
+# RUN:     | FileCheck %s --check-prefixes=CHECK,RV32
+# RUN: not llvm-mc -disassemble -triple=riscv64 -mattr=+xtheadmemidx,+xtheadmempair %s 2>&1 \
+# RUN:     | FileCheck %s --check-prefixes=CHECK,RV64
 
 [0x0b,0x45,0x05,0x1c]
 # CHECK: warning: invalid instruction encoding
