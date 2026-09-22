@@ -351,6 +351,7 @@ kmpc_set_defaults                           224
         __kmpc_dist_for_static_init_4u      248
         __kmpc_dist_for_static_init_8       249
         __kmpc_dist_for_static_init_8u      250
+        __kmpc_dist_for_static_fini
         __kmpc_dist_dispatch_init_4         251
         __kmpc_dist_dispatch_init_4u        252
         __kmpc_dist_dispatch_init_8         253
