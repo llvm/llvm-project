@@ -28,6 +28,46 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
+
+#include <string>
+#include <utility>
+
+namespace llvm::cl {
+template <>
+class parser<std::pair<std::string, bool>>
+    : public basic_parser<std::pair<std::string, bool>> {
+public:
+  parser(Option &option) : basic_parser(option) {}
+
+  bool parse(Option &option, StringRef argName, StringRef arg,
+             std::pair<std::string, bool> &value) {
+    auto [name, flagStr] = arg.rsplit(':');
+    if (name.empty() || flagStr.empty())
+      return option.error("expected <name>:<bool>", argName);
+
+    bool ifMain = false;
+    if (flagStr.equals_insensitive("true") || flagStr == "1")
+      ifMain = true;
+    else if (flagStr.equals_insensitive("false") || flagStr == "0")
+      ifMain = false;
+    else
+      return option.error("invalid boolean in extra constructor mapping",
+                          argName);
+
+    value = {name.str(), ifMain};
+    return false;
+  }
+
+  StringRef getValueName() const override { return "name:bool"; }
+
+  static void print(raw_ostream &os,
+                    const std::pair<std::string, bool> &value) {
+    os << value.first << ':' << (value.second ? "true" : "false");
+  }
+};
+} // namespace llvm::cl
 
 namespace fir {
 #define GEN_PASS_DEF_CUFADDCONSTRUCTOR
@@ -321,10 +361,10 @@ struct CUFAddConstructor
     // Create the constructor function that call CUFRegisterAllocator.
     builder.setInsertionPointToEnd(mod.getBody());
     mlir::LLVM::GlobalOp cudaCompiledGlobal;
-    // Only the program unit needs the link-time CUDA Fortran runtime check.
-    bool emitCudaCompiledMarker =
-        emitCudaCompiled &&
+    bool hasProgramEntry =
         symTab.lookup<mlir::func::FuncOp>(fir::NameUniquer::doProgramEntry());
+    // Only the program unit needs the link-time CUDA Fortran runtime check.
+    bool emitCudaCompiledMarker = emitCudaCompiled && hasProgramEntry;
     if (emitCudaCompiledMarker) {
       // Undefined sentinel: objects compiled as CUDA Fortran reference this
       // symbol so linking without the CUDA Fortran runtime produces
@@ -490,6 +530,26 @@ struct CUFAddConstructor
       mlir::LLVM::LoadOp::create(builder, loc, mlir::IntegerType::get(ctx, 8),
                                  addr, /*alignment=*/0, /*isVolatile=*/true);
     }
+
+    // The extra constructors are defined in a runtime library, so they are
+    // only declared here and called from the constructor: an entry in
+    // llvm.mlir.global_ctors requires a function with a definition.
+    auto addExtraConstructor = [&](const std::string &funcName) {
+      if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName)) {
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToEnd(mod.getBody());
+        mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, funcTy);
+      }
+      mlir::LLVM::CallOp::create(builder, loc, funcTy,
+                                 mlir::SymbolRefAttr::get(ctx, funcName));
+    };
+    for (const auto &funcName : extraConstructors)
+      addExtraConstructor(funcName);
+    for (const auto &funcName : entryOnlyConstructors) {
+      if (hasProgramEntry)
+        addExtraConstructor(funcName);
+    }
+
     mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});
 
     // Create the llvm.global_ctor with the function.
