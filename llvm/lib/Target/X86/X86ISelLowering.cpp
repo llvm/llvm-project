@@ -43447,7 +43447,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
   MVT VT = N.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
-  SmallVector<int, 4> Mask;
   unsigned Opcode = N.getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
@@ -44059,12 +44058,68 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
     return SDValue();
   }
-  case X86ISD::PSHUFD:
+  case X86ISD::PSHUFD: {
+    SmallVector<int, 4> Mask = getPSHUFShuffleMask(N);
+    assert(Mask.size() == 4);
+    return combineRedundantDWordShuffle(N, Mask, DL, DAG);
+  }
   case X86ISD::PSHUFLW:
   case X86ISD::PSHUFHW: {
-    Mask = getPSHUFShuffleMask(N);
+    SDValue V = N.getOperand(0);
+    SmallVector<int, 4> Mask = getPSHUFShuffleMask(N);
     assert(Mask.size() == 4);
-    break;
+    assert(VT.getVectorElementType() == MVT::i16 && "Bad word shuffle type!");
+
+    // See if this reduces to a PSHUFD which is no more expensive and can
+    // combine with more operations. Note that it has to at least flip the
+    // dwords as otherwise it would have been removed as a no-op.
+    if (ArrayRef<int>(Mask).equals({2, 3, 0, 1})) {
+      int DMask[] = {0, 1, 2, 3};
+      int DOffset = N.getOpcode() == X86ISD::PSHUFLW ? 0 : 2;
+      DMask[DOffset + 0] = DOffset + 1;
+      DMask[DOffset + 1] = DOffset + 0;
+      MVT DVT = MVT::getVectorVT(MVT::i32, NumElts / 2);
+      V = DAG.getBitcast(DVT, V);
+      V = DAG.getNode(X86ISD::PSHUFD, DL, DVT, V,
+                      getV4X86ShuffleImm8ForMask(DMask, DL, DAG));
+      return DAG.getBitcast(VT, V);
+    }
+
+    // Look for shuffle patterns which can be implemented as a single unpack.
+    // FIXME: This doesn't handle the location of the PSHUFD generically, and
+    // only works when we have a PSHUFD followed by two half-shuffles.
+    if (Mask[0] == Mask[1] && Mask[2] == Mask[3] &&
+        (V.getOpcode() == X86ISD::PSHUFLW ||
+         V.getOpcode() == X86ISD::PSHUFHW) &&
+        V.getOpcode() != N.getOpcode() && V.hasOneUse() &&
+        V.getOperand(0).hasOneUse()) {
+      SDValue D = peekThroughOneUseBitcasts(V.getOperand(0));
+      if (D.getOpcode() == X86ISD::PSHUFD) {
+        SmallVector<int, 4> VMask = getPSHUFShuffleMask(V);
+        SmallVector<int, 4> DMask = getPSHUFShuffleMask(D);
+        int NOffset = N.getOpcode() == X86ISD::PSHUFLW ? 0 : 4;
+        int VOffset = V.getOpcode() == X86ISD::PSHUFLW ? 0 : 4;
+        int WordMask[8];
+        for (int i = 0; i < 4; ++i) {
+          WordMask[i + NOffset] = Mask[i] + NOffset;
+          WordMask[i + VOffset] = VMask[i] + VOffset;
+        }
+        // Map the word mask through the DWord mask.
+        int MappedMask[8];
+        for (int i = 0; i < 8; ++i)
+          MappedMask[i] = 2 * DMask[WordMask[i] / 2] + WordMask[i] % 2;
+        if (ArrayRef<int>(MappedMask).equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
+            ArrayRef<int>(MappedMask).equals({4, 4, 5, 5, 6, 6, 7, 7})) {
+          // We can replace all three shuffles with an unpack.
+          V = DAG.getBitcast(VT, D.getOperand(0));
+          return DAG.getNode(MappedMask[0] == 0 ? X86ISD::UNPCKL
+                                                : X86ISD::UNPCKH,
+                             DL, VT, V, V);
+        }
+      }
+    }
+
+    return SDValue();
   }
   case X86ISD::MOVSD:
   case X86ISD::MOVSH:
@@ -44278,79 +44333,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     }
     return SDValue();
   }
-  default:
-    return SDValue();
-  }
-
-  // Nuke no-op shuffles that show up after combining.
-  if (isNoopShuffleMask(Mask))
-    return N.getOperand(0);
-
-  // Look for simplifications involving one or two shuffle instructions.
-  SDValue V = N.getOperand(0);
-  switch (N.getOpcode()) {
-  default:
-    break;
-  case X86ISD::PSHUFLW:
-  case X86ISD::PSHUFHW:
-    assert(VT.getVectorElementType() == MVT::i16 && "Bad word shuffle type!");
-
-    // See if this reduces to a PSHUFD which is no more expensive and can
-    // combine with more operations. Note that it has to at least flip the
-    // dwords as otherwise it would have been removed as a no-op.
-    if (ArrayRef<int>(Mask).equals({2, 3, 0, 1})) {
-      int DMask[] = {0, 1, 2, 3};
-      int DOffset = N.getOpcode() == X86ISD::PSHUFLW ? 0 : 2;
-      DMask[DOffset + 0] = DOffset + 1;
-      DMask[DOffset + 1] = DOffset + 0;
-      MVT DVT = MVT::getVectorVT(MVT::i32, NumElts / 2);
-      V = DAG.getBitcast(DVT, V);
-      V = DAG.getNode(X86ISD::PSHUFD, DL, DVT, V,
-                      getV4X86ShuffleImm8ForMask(DMask, DL, DAG));
-      return DAG.getBitcast(VT, V);
-    }
-
-    // Look for shuffle patterns which can be implemented as a single unpack.
-    // FIXME: This doesn't handle the location of the PSHUFD generically, and
-    // only works when we have a PSHUFD followed by two half-shuffles.
-    if (Mask[0] == Mask[1] && Mask[2] == Mask[3] &&
-        (V.getOpcode() == X86ISD::PSHUFLW ||
-         V.getOpcode() == X86ISD::PSHUFHW) &&
-        V.getOpcode() != N.getOpcode() &&
-        V.hasOneUse() && V.getOperand(0).hasOneUse()) {
-      SDValue D = peekThroughOneUseBitcasts(V.getOperand(0));
-      if (D.getOpcode() == X86ISD::PSHUFD) {
-        SmallVector<int, 4> VMask = getPSHUFShuffleMask(V);
-        SmallVector<int, 4> DMask = getPSHUFShuffleMask(D);
-        int NOffset = N.getOpcode() == X86ISD::PSHUFLW ? 0 : 4;
-        int VOffset = V.getOpcode() == X86ISD::PSHUFLW ? 0 : 4;
-        int WordMask[8];
-        for (int i = 0; i < 4; ++i) {
-          WordMask[i + NOffset] = Mask[i] + NOffset;
-          WordMask[i + VOffset] = VMask[i] + VOffset;
-        }
-        // Map the word mask through the DWord mask.
-        int MappedMask[8];
-        for (int i = 0; i < 8; ++i)
-          MappedMask[i] = 2 * DMask[WordMask[i] / 2] + WordMask[i] % 2;
-        if (ArrayRef<int>(MappedMask).equals({0, 0, 1, 1, 2, 2, 3, 3}) ||
-            ArrayRef<int>(MappedMask).equals({4, 4, 5, 5, 6, 6, 7, 7})) {
-          // We can replace all three shuffles with an unpack.
-          V = DAG.getBitcast(VT, D.getOperand(0));
-          return DAG.getNode(MappedMask[0] == 0 ? X86ISD::UNPCKL
-                                                : X86ISD::UNPCKH,
-                             DL, VT, V, V);
-        }
-      }
-    }
-
-    break;
-
-  case X86ISD::PSHUFD:
-    if (SDValue NewN = combineRedundantDWordShuffle(N, Mask, DL, DAG))
-      return NewN;
-
-    break;
   }
 
   return SDValue();

@@ -7320,6 +7320,12 @@ void BoUpSLP::reorderTopToBottom() {
     });
     // Do an actual reordering, if profitable.
     for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+      // The splat-gather subtree load roots stay in memory order: the reusing
+      // gathers fetch lanes by value.
+      if (TE->State == TreeEntry::Vectorize &&
+          TE->getOpcode() == Instruction::Load &&
+          is_contained(SplatGatheredScalarsRoots, TE.get()))
+        continue;
       // Just do the reordering for the nodes with the given VF.
       if (TE->Scalars.size() != VF) {
         if (TE->ReuseShuffleIndices.size() == VF &&
@@ -11524,6 +11530,11 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
         VectorizableTree.pop_back();
         continue;
       }
+      // The root has no users, the gathers reuse its lanes by value: keep the
+      // loads in memory order instead of permuting them into the group order.
+      if (NewRoot->State == TreeEntry::Vectorize &&
+          NewRoot->getOpcode() == Instruction::Load)
+        NewRoot->ReorderIndices.clear();
       SplatGatheredScalarsRoots.push_back(NewRoot);
     }
   };
@@ -31738,7 +31749,8 @@ public:
         // The accumulator replaces the root on the edges carrying it and is
         // reduced once in the exit block. The values bypassing the loop never
         // went through the reduction operations and must stay exact: the
-        // scalar phi keeps them and they are selected past the reduction.
+        // scalar phi keeps them and they are selected past the reduction
+        // without its fast-math flags.
         unsigned NumIncoming = ExitPhi->getNumIncomingValues();
         auto *VExit = PHINode::Create(VecTy, NumIncoming, "slprdx.exit",
                                       ExitPhi->getIterator());
@@ -31765,8 +31777,8 @@ public:
           R.eraseInstruction(ExitPhi);
           continue;
         }
-        Value *Sel = XB.CreateSelectWithUnknownProfile(
-            FromLoop, Res, ExitPhi, DEBUG_TYPE, "slprdx.sel");
+        Value *Sel = XB.CreateSelectFMFWithUnknownProfile(
+            FromLoop, Res, ExitPhi, FastMathFlags(), DEBUG_TYPE, "slprdx.sel");
         ExitPhi->replaceUsesWithIf(
             Sel, [Sel](Use &U) { return U.getUser() != Sel; });
       }
