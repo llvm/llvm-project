@@ -183,6 +183,10 @@ enum class AlignRequirementKind {
 
   /// The alignment comes from an alignment attribute on a enum type.
   RequiredByEnum,
+
+  /// The type's natural alignment is preserved under #pragma pack in MSVC
+  /// record layout (e.g., vectors, x87 fp80).
+  ResistPragmaPack,
 };
 
 struct TypeInfo {

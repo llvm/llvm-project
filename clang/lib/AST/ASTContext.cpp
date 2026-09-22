@@ -2059,7 +2059,11 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
 }
 
 bool ASTContext::isAlignmentRequired(const Type *T) const {
-  return getTypeInfo(T).AlignRequirement != AlignRequirementKind::None;
+  AlignRequirementKind Kind = getTypeInfo(T).AlignRequirement;
+  // ResistPragmaPack is only meant to resist #pragma pack in MSVC record
+  // layout, not to trigger other "aligned attribute" behaviors.
+  return Kind != AlignRequirementKind::None &&
+         Kind != AlignRequirementKind::ResistPragmaPack;
 }
 
 bool ASTContext::isAlignmentRequired(QualType T) const {
@@ -2189,6 +2193,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
              VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       // Adjust the alignment for fixed-length RVV vectors.
       Align = std::min<unsigned>(64, Width);
+    // Vector types have their natural alignment resist reduction by
+    // #pragma pack in MSVC record layout.
+    AlignRequirement = AlignRequirementKind::ResistPragmaPack;
     break;
   }
 
@@ -2350,6 +2357,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
         Width = Target->getLongDoubleWidth();
         Align = Target->getLongDoubleAlign();
       }
+      // x87 extended precision (fp80) has its natural alignment resist
+      // reduction by #pragma pack in MSVC record layout.
+      if (&Target->getLongDoubleFormat() ==
+          &llvm::APFloat::x87DoubleExtended())
+        AlignRequirement = AlignRequirementKind::ResistPragmaPack;
       break;
     case BuiltinType::Float128:
       if (Target->hasFloat128Type() || !getLangOpts().OpenMP ||
@@ -2547,9 +2559,19 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     const ASTRecordLayout &Layout = getASTRecordLayout(RD);
     Width = toBits(Layout.getSize());
     Align = toBits(Layout.getAlignment());
-    AlignRequirement = RD->hasAttr<AlignedAttr>()
-                           ? AlignRequirementKind::RequiredByRecord
-                           : AlignRequirementKind::None;
+    if (RD->hasAttr<AlignedAttr>()) {
+      AlignRequirement = AlignRequirementKind::RequiredByRecord;
+    } else if (llvm::any_of(RD->fields(), [this](const FieldDecl *FD) {
+                 return getTypeInfo(FD->getType()).AlignRequirement ==
+                        AlignRequirementKind::ResistPragmaPack;
+               })) {
+      // Propagate ResistPragmaPack if any field has that requirement, so
+      // pragma pack applied to enclosing records won't reduce alignment for
+      // records containing vector or x87 fp80 types.
+      AlignRequirement = AlignRequirementKind::ResistPragmaPack;
+    } else {
+      AlignRequirement = AlignRequirementKind::None;
+    }
     break;
   }
 
