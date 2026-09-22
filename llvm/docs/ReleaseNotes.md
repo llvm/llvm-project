@@ -267,6 +267,8 @@ Makes programs 10x faster by doing Special New Thing.
   register, that is used when software guarded branch is needed.
 * Updated the experimental `Zvzip` extension to the v0.3 draft specification.
 * Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
+* Updated the canonical order of one-letter RISC-V extensions to match the
+  latest specification, placing ``p`` after ``v`` and removing unused ``n``.
 
 ### Changes to the WebAssembly Backend
 
