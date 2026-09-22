@@ -9,11 +9,11 @@
 ! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
 ! CHECK-DAG: ![[I4:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 module helper
-! CHECK-DAG: ![[GLR:.*]] = distinct !DIGlobalVariable(name: "glr", linkageName: "_QMhelperEglr", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+2]], type: ![[R4]], isLocal: false, isDefinition: true)
+! CHECK-DAG: ![[GLR:.*]] = distinct !DIGlobalVariable(name: "glr", linkageName: "_QMhelperEglr", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+2]], type: ![[R4]], isLocal: false, isDefinition: true)
 ! CHECK-DAG: ![[GLRX:.*]] = !DIGlobalVariableExpression(var: ![[GLR]], expr: !DIExpression())
   real glr
 
-! CHECK-DAG: ![[GLI:.*]] = distinct !DIGlobalVariable(name: "gli", linkageName: "_QMhelperEgli", scope: ![[MOD]], file: ![[FILE]], line: [[@LINE+2]], type: ![[I4]], isLocal: false, isDefinition: true)
+! CHECK-DAG: ![[GLI:.*]] = distinct !DIGlobalVariable(name: "gli", linkageName: "_QMhelperEgli", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+2]], type: ![[I4]], isLocal: false, isDefinition: true)
 ! CHECK-DAG: ![[GLIX:.*]] = !DIGlobalVariableExpression(var: ![[GLI]], expr: !DIExpression())
   integer gli
 

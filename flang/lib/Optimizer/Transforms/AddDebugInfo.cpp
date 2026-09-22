@@ -159,6 +159,18 @@ bool debugInfoIsAlreadySet(mlir::Location loc) {
   return fusedLoc && mlir::isa_and_present<AttrT>(fusedLoc.getMetadata());
 }
 
+/// The file that \p loc names, or \p fallback if it names none.
+mlir::LLVM::DIFileAttr getFileAttrFromLoc(mlir::Location loc,
+                                          mlir::LLVM::DIFileAttr fallback) {
+  auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>();
+  if (!fileLoc)
+    return fallback;
+  llvm::StringRef path = fileLoc.getFilename().getValue();
+  return mlir::LLVM::DIFileAttr::get(loc.getContext(),
+                                     llvm::sys::path::filename(path),
+                                     llvm::sys::path::parent_path(path));
+}
+
 // Generates the name for the artificial DISubprogram that we are going to
 // generate for omp::TargetOp. Its logic is borrowed from
 // getTargetEntryUniqueInfo and
@@ -432,7 +444,8 @@ void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
   }
 
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
-      context, scopeAttr, mlir::StringAttr::get(context, name), fileAttr,
+      context, scopeAttr, mlir::StringAttr::get(context, name),
+      getFileAttrFromLoc(declOp.getLoc(), fileAttr),
       fir::getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0, tyAttr,
       mlir::LLVM::DIFlags::Zero);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
@@ -622,7 +635,8 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
       typeGen.convertType(globalOp.getType(), fileAttr, scope, declOp);
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
-      linkageName, fileAttr, line, diType, isLocalToUnit,
+      linkageName, getFileAttrFromLoc(globalOp.getLoc(), fileAttr), line,
+      diType, isLocalToUnit,
       /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
   auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
       globalOp.getContext(), gvAttr, nullptr);
@@ -656,16 +670,9 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
-  llvm::StringRef fileName(fileAttr.getName());
-  llvm::StringRef filePath(fileAttr.getDirectory());
   unsigned int CC = (funcOp.getName() == fir::NameUniquer::doProgramEntry())
                         ? llvm::dwarf::getCallingConvention("DW_CC_program")
                         : llvm::dwarf::getCallingConvention("DW_CC_normal");
-
-  if (auto funcLoc = l->findInstanceOf<mlir::FileLineColLoc>()) {
-    fileName = llvm::sys::path::filename(funcLoc.getFilename().getValue());
-    filePath = llvm::sys::path::parent_path(funcLoc.getFilename().getValue());
-  }
 
   mlir::StringAttr fullName = mlir::StringAttr::get(context, funcOp.getName());
   mlir::Attribute attr = funcOp->getAttr(fir::getInternalFuncNameAttrName());
@@ -712,8 +719,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   mlir::LLVM::DISubroutineTypeAttr subTypeAttr =
       mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
-  mlir::LLVM::DIFileAttr funcFileAttr =
-      mlir::LLVM::DIFileAttr::get(context, fileName, filePath);
+  mlir::LLVM::DIFileAttr funcFileAttr = getFileAttrFromLoc(l, fileAttr);
 
   // Only definitions need a distinct identifier and a compilation unit.
   mlir::DistinctAttr id, id2;

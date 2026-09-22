@@ -31,5 +31,6 @@ end program
 ! CHECK-DAG: ![[BODY:[0-9]+]] = !DIFile(filename: "body.f90"
 ! CHECK-DAG: ![[SUB:[0-9]+]] = distinct !DISubprogram(name: "included_sub", linkageName: "included_sub_", {{.*}}file: ![[BODY]], line: 4, {{.*}}scopeLine: 4
 ! CHECK-DAG: !DISubprogram(name: "inner", linkageName: "_QFincluded_subPinner", scope: ![[SUB]], file: ![[BODY]], line: 9, {{.*}}scopeLine: 9
+! CHECK-DAG: !DILocalVariable(name: "i", arg: 1, scope: ![[SUB]], file: ![[BODY]], line: 5
 ! CHECK-DAG: !DISubprogram(name: "p", linkageName: "_QQmain", {{.*}}file: ![[MAIN:[0-9]+]], line: 2
 ! CHECK-DAG: ![[MAIN]] = !DIFile(filename: "main.f90"
