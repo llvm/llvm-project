@@ -300,6 +300,8 @@ defm : OptionalValueField<"slp-threshold", "int",
 // each iteration are unlikely to pay off, so they get a tighter bound.
 defm : ValueField<"slp-vec-loop-rt-checks-cost-percent", "unsigned", "10",
   "Maximum SLP runtime alias check cost, as a percentage of the guarded scalar region cost, for blocks of loops already vectorized by the loop vectorizer">;
+defm : BoolField<"slp-use-vplan-codegen", "false",
+  "Use VPlan-based codegen in SLP vectorizer">;
 defm : BoolField<"slp-vectorize-hor", "true",
   "Attempt to vectorize horizontal reductions">;
 defm : BoolField<"slp-vectorize-hor-store", "false",
