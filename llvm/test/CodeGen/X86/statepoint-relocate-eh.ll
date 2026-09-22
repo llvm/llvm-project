@@ -85,7 +85,7 @@ lpad:
   ret ptr addrspace(1) %ac.rel
 }
 
-; A gc.relocate of a value that lowers to undefin a landing pad must
+; A gc.relocate of a value that lowers to undef in a landing pad must
 ; also materialize at the relocate, not read a cross-block vreg with
 ; no definition.
 define ptr addrspace(1) @relocate_poison_in_landing_pad() gc "statepoint-example" personality ptr null {
