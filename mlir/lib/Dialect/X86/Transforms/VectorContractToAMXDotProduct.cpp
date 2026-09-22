@@ -34,8 +34,7 @@ static bool isZeroVectorConstant(Operation *op) {
   if (!constantOp)
     return false;
 
-  auto vectorType = dyn_cast<VectorType>(constantOp.getType());
-  if (!vectorType)
+  if (!isa<VectorType>(constantOp.getType()))
     return false;
 
   auto denseAttr = dyn_cast<DenseElementsAttr>(constantOp.getValue());
