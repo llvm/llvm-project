@@ -59,8 +59,8 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 ; GFX906-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX906-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX906-NEXT:  ; %bb.2:
-; GFX906-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX906-NEXT:    s_mov_b64 exec, s[2:3]
+; GFX906-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX906-NEXT:    s_cselect_b32 s5, 0x3ff00000, 0
 ; GFX906-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
 ; GFX906-NEXT:    s_mov_b32 s5, s4

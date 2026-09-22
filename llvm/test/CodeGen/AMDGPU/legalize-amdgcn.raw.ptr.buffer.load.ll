@@ -50,7 +50,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -100,7 +100,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -155,7 +155,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__sgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -205,7 +205,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__sgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -260,7 +260,7 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -310,7 +310,7 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -365,7 +365,7 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffset(ptr
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -415,7 +415,7 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffset(ptr
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -470,7 +470,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -520,7 +520,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 1)
@@ -575,7 +575,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -625,7 +625,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 2)
@@ -680,7 +680,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -730,7 +730,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 4)
@@ -785,7 +785,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -835,7 +835,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 6)
@@ -890,7 +890,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -940,7 +940,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 5)
@@ -995,7 +995,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -1045,7 +1045,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 7)
@@ -1100,7 +1100,7 @@ define <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
   ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
@@ -1153,7 +1153,7 @@ define <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub0
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub1
   ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
@@ -1210,7 +1210,7 @@ define <3 x float> @raw_ptr_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub0
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub1
   ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub2
@@ -1265,7 +1265,7 @@ define <3 x float> @raw_ptr_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub0
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub1
   ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_OFFEN]].sub2
@@ -1324,7 +1324,7 @@ define <4 x float> @raw_ptr_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub1
   ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub2
@@ -1381,7 +1381,7 @@ define <4 x float> @raw_ptr_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub0
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub1
   ; GFX1250-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_OFFEN]].sub2
@@ -1442,7 +1442,7 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
@@ -1493,7 +1493,7 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
   ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
@@ -1548,7 +1548,7 @@ define <2 x half> @raw_ptr_buffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -1598,7 +1598,7 @@ define <2 x half> @raw_ptr_buffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -1652,7 +1652,7 @@ define <4 x half> @raw_ptr_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
   ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
   ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
@@ -1705,7 +1705,7 @@ define <4 x half> @raw_ptr_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub0
   ; GFX1250-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_OFFEN]].sub1
   ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
@@ -1762,7 +1762,7 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zext
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -1812,7 +1812,7 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zext
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -1868,7 +1868,7 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sext
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SBYTE_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -1918,7 +1918,7 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sext
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SBYTE_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -1974,7 +1974,7 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zex
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2024,7 +2024,7 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zex
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -2080,7 +2080,7 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sex
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SSHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2130,7 +2130,7 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sex
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SSHORT_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -2187,7 +2187,7 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
@@ -2238,7 +2238,7 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[BUFFER_LOAD_USHORT_VBUFFER_OFFEN]].lo16
   ; GFX1250-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
@@ -2294,7 +2294,7 @@ define float @raw_ptr_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2344,7 +2344,7 @@ define float @raw_ptr_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -2399,7 +2399,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2448,7 +2448,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
@@ -2501,7 +2501,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2550,7 +2550,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 4095, i32 %soffset, i32 0)
@@ -2604,7 +2604,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2653,7 +2653,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFSET]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 4096, i32 %soffset, i32 0)
@@ -2704,7 +2704,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soffset0(ptr a
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2751,7 +2751,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__voffset67108860_soffset0(ptr a
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 67108860, i32 0, i32 0)
@@ -2805,7 +2805,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2857,7 +2857,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 16
@@ -2912,7 +2912,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -2964,7 +2964,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 4095
@@ -3021,7 +3021,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3073,7 +3073,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 4096
@@ -3125,7 +3125,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3173,7 +3173,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 4095, i32 0)
@@ -3224,7 +3224,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3272,7 +3272,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 4096, i32 0)
@@ -3328,7 +3328,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3380,7 +3380,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 16
@@ -3437,7 +3437,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3489,7 +3489,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 4095
@@ -3546,7 +3546,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3598,7 +3598,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 4096
@@ -3656,7 +3656,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3708,7 +3708,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 5000
@@ -3766,7 +3766,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
-  ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX908-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
@@ -3818,7 +3818,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX1250-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX1250-NEXT: {{  $}}
   ; GFX1250-NEXT: bb.3:
-  ; GFX1250-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; GFX1250-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; GFX1250-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_VBUFFER_OFFEN]]
   ; GFX1250-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 5000

@@ -41,7 +41,7 @@ define void @test() {
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[S_MOV_B32_2]], %bb.1, [[S_MOV_B32_3]], %bb.2
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_32 = nofpexcept V_CMP_EQ_F32_e64 0, [[PHI]], 0, [[S_MOV_B32_4]], 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32 = SI_IF [[V_CMP_EQ_F32_e64_]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
@@ -59,7 +59,7 @@ define void @test() {
   ; CHECK-NEXT: bb.5.Flow:
   ; CHECK-NEXT:   successors: %bb.6(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.bb5:
   ; CHECK-NEXT:   SI_RETURN

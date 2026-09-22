@@ -44,7 +44,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY3]]
   bb.0:
@@ -76,6 +76,6 @@ body:             |
 
   bb.5:
     %6:vreg_64 = PHI undef %7:vreg_64, %bb.3, %1, %bb.4
-    SI_END_CF killed %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0, implicit %6
 ...

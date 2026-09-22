@@ -27,7 +27,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
   ; CHECK-NEXT:   [[V_SET_INACTIVE_B32_:%[0-9]+]]:vgpr_32 = V_SET_INACTIVE_B32 0, [[COPY]], 0, 0, killed [[DEF]], implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -48,7 +48,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %8:vgpr_32 = COPY %7
     %9:sreg_64_xexec = IMPLICIT_DEF
     %10:vgpr_32 = V_SET_INACTIVE_B32 0, %8, 0, 0, killed %9, implicit $exec
@@ -87,7 +87,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY2]], 1, 0, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD_U32_e64_]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -114,7 +114,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %11:vgpr_32 = V_ADD_U32_e64 %9, 1, 0, implicit $exec
     $vgpr0 = COPY %11
     SI_RETURN implicit $vgpr0
@@ -150,7 +150,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY2]], 1, 0, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD_U32_e64_]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
@@ -177,7 +177,7 @@ body:             |
     S_BRANCH %bb.2
 
   bb.2:
-    SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %11:vgpr_32 = COPY %9
     %12:vgpr_32 = V_ADD_U32_e64 %11, 1, 0, implicit $exec
     $vgpr0 = COPY %12

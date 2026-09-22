@@ -231,12 +231,15 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    s_cbranch_vccnz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[92:95], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v2, off, s[92:95], 0 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[92:95], 0 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
-; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[92:95], 0 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s8, v0, 56
 ; GCN-NEXT:    v_readlane_b32 s9, v0, 57
 ; GCN-NEXT:    v_readlane_b32 s10, v0, 58
@@ -301,7 +304,6 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    v_readlane_b32 s73, v0, 5
 ; GCN-NEXT:    v_readlane_b32 s74, v0, 6
 ; GCN-NEXT:    v_readlane_b32 s75, v0, 7
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s76, v1, 56
 ; GCN-NEXT:    v_readlane_b32 s77, v1, 57
 ; GCN-NEXT:    v_readlane_b32 s78, v1, 58
@@ -326,9 +328,6 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    v_readlane_b32 s5, v1, 5
 ; GCN-NEXT:    v_readlane_b32 s6, v1, 6
 ; GCN-NEXT:    v_readlane_b32 s7, v1, 7
-; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v2, off, s[92:95], 0 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[0:7]
 ; GCN-NEXT:    ;;#ASMEND
@@ -387,7 +386,6 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[0:7]
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s0, v2, 0
 ; GCN-NEXT:    v_readlane_b32 s1, v2, 1
 ; GCN-NEXT:    v_readlane_b32 s2, v2, 2
@@ -601,12 +599,12 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
-; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[28:29]
-; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[28:29]
-; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[28:29]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s16, v0, 8
 ; GCN-NEXT:    v_readlane_b32 s17, v0, 9
 ; GCN-NEXT:    v_readlane_b32 s20, v0, 0
@@ -617,7 +615,6 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    v_readlane_b32 s25, v0, 5
 ; GCN-NEXT:    v_readlane_b32 s26, v0, 6
 ; GCN-NEXT:    v_readlane_b32 s27, v0, 7
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s36, v1, 32
 ; GCN-NEXT:    v_readlane_b32 s37, v1, 33
 ; GCN-NEXT:    v_readlane_b32 s38, v1, 34
@@ -853,6 +850,9 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_cbranch_vccnz .LBB2_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v32, off, s[52:55], 0 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GCN-NEXT:    buffer_load_dword v31, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -904,9 +904,6 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    v_readlane_b32 s29, v31, 13
 ; GCN-NEXT:    v_readlane_b32 s30, v31, 14
 ; GCN-NEXT:    v_readlane_b32 s31, v31, 15
-; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v32, off, s[52:55], 0 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s[16:31]
 ; GCN-NEXT:    ;;#ASMEND
@@ -929,7 +926,6 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    v_readlane_b32 s17, v31, 61
 ; GCN-NEXT:    v_readlane_b32 s18, v31, 62
 ; GCN-NEXT:    v_readlane_b32 s19, v31, 63
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s0, v32, 0
 ; GCN-NEXT:    v_readlane_b32 s1, v32, 1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -1095,6 +1091,9 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    s_cbranch_vccnz .LBB3_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GCN-NEXT:    buffer_load_dword v32, off, s[52:55], 0 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[34:35]
+; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GCN-NEXT:    buffer_load_dword v31, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -1146,9 +1145,6 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    v_readlane_b32 s29, v31, 13
 ; GCN-NEXT:    v_readlane_b32 s30, v31, 14
 ; GCN-NEXT:    v_readlane_b32 s31, v31, 15
-; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
-; GCN-NEXT:    buffer_load_dword v32, off, s[52:55], 0 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def v0
 ; GCN-NEXT:    ;;#ASMEND
@@ -1174,7 +1170,6 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    v_readlane_b32 s17, v31, 61
 ; GCN-NEXT:    v_readlane_b32 s18, v31, 62
 ; GCN-NEXT:    v_readlane_b32 s19, v31, 63
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s0, v32, 0
 ; GCN-NEXT:    v_readlane_b32 s1, v32, 1
 ; GCN-NEXT:    ;;#ASMSTART

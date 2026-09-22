@@ -36,7 +36,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
   ; CHECK-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
   bb.0:
     successors: %bb.1(0x80000000)
@@ -57,7 +57,7 @@ body:             |
   bb.2:
     liveins: $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
     S_SETPC_B64_return undef $sgpr30_sgpr31
 ...
 
@@ -85,7 +85,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
   ; CHECK-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
   bb.0:
     successors: %bb.1(0x80000000)
@@ -106,7 +106,7 @@ body:             |
   bb.2:
     liveins: $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
     S_SETPC_B64_return undef $sgpr30_sgpr31
 ...
 

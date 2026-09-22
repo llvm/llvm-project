@@ -31,7 +31,7 @@ define amdgpu_ps void @global_atomic_fadd_f64_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.3.atomicrmw.end:
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: global_atomic_fadd_f64_no_rtn_atomicrmw
@@ -79,7 +79,7 @@ define amdgpu_ps double @global_atomic_fadd_f64_rtn_atomicrmw(ptr addrspace(1) %
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.3.atomicrmw.end:
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[SI_IF_BREAK]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]].sub0
   ; GFX90A-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_ATOMIC_CMPSWAP_X2_RTN]].sub1
   ; GFX90A-NEXT:   $vgpr0 = COPY [[COPY4]]

@@ -28,7 +28,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr6, $sgpr9, $sgpr0_sgpr1
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr4_sgpr5 = bb-prolog S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.2
@@ -55,7 +55,7 @@ body:             |
     successors: %bb.2(0x40000000), %bb.8(0x40000000)
     liveins: $sgpr6, $sgpr9, $sgpr0_sgpr1
 
-    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr4_sgpr5 = bb-prolog S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
     S_CBRANCH_EXECZ %bb.8, implicit $exec
     S_BRANCH %bb.2
@@ -96,7 +96,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr6, $sgpr9, $sgpr0_sgpr1
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr4_sgpr5 = bb-prolog S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.2
@@ -123,7 +123,7 @@ body:             |
     successors: %bb.2(0x40000000), %bb.8(0x40000000)
     liveins: $sgpr6, $sgpr9, $sgpr0_sgpr1
 
-    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr4_sgpr5 = bb-prolog S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
     S_CBRANCH_EXECZ %bb.8, implicit $exec
     S_BRANCH %bb.2
@@ -164,8 +164,8 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr6, $sgpr8, $sgpr0_sgpr1, $sgpr2_sgpr3
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $sgpr2 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GFX10-NEXT:   $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr2 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr4_sgpr5 = bb-prolog S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; GFX10-NEXT:   S_NOP 0, implicit $sgpr2_sgpr3
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
@@ -193,8 +193,8 @@ body:             |
     successors: %bb.2(0x40000000), %bb.8(0x40000000)
     liveins: $sgpr6, $sgpr8, $sgpr0_sgpr1, $sgpr2_sgpr3
 
-    $sgpr2 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
-    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr2 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr4_sgpr5 = bb-prolog S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
     S_NOP 0, implicit $sgpr2_sgpr3
     S_CBRANCH_EXECZ %bb.8, implicit $exec
@@ -226,7 +226,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.7(0x40000000), %bb.2(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr8, $vgpr0
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $sgpr4 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr4 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   renamable $sgpr4 = S_XOR_B32 $exec_lo, killed renamable $sgpr4, implicit-def dead $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.7, implicit $exec
   ; GFX10-NEXT: {{  $}}
@@ -238,7 +238,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.5(0x40000000), %bb.4(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr8, $vgpr0
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $sgpr5 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr5 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   renamable $sgpr5 = S_XOR_B32 $exec_lo, killed renamable $sgpr5, implicit-def dead $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
@@ -262,7 +262,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.3(0x80000000)
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr8, $vgpr0, $vgpr1
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
+  ; GFX10-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
   ; GFX10-NEXT:   INLINEASM &"", sideeffect attdialect, implicit killed renamable $vgpr1
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
@@ -270,7 +270,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.1(0x40000000), %bb.8(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr8, $vgpr0
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $exec_lo = S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
+  ; GFX10-NEXT:   $exec_lo = bb-prolog S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.8:
@@ -290,7 +290,7 @@ body:             |
   bb.1:
     liveins: $sgpr8, $vgpr0
 
-    $sgpr4 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr4 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr4 = S_XOR_B32 $exec_lo, killed renamable $sgpr4, implicit-def dead $scc
     S_CBRANCH_EXECZ %bb.6, implicit $exec
 
@@ -301,7 +301,7 @@ body:             |
   bb.2:
     liveins: $sgpr4, $sgpr8, $vgpr0
 
-    $sgpr5 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr5 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr5 = S_XOR_B32 $exec_lo, killed renamable $sgpr5, implicit-def dead $scc
     S_CBRANCH_EXECZ %bb.4, implicit $exec
     S_BRANCH %bb.3
@@ -324,14 +324,14 @@ body:             |
   bb.5:
     liveins: $sgpr4, $sgpr5, $sgpr8, $vgpr0, $vgpr1
 
-    $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
     INLINEASM &"", sideeffect attdialect, implicit killed renamable $vgpr1
     S_BRANCH %bb.2
 
   bb.6:
     liveins: $sgpr4, $sgpr8, $vgpr0
 
-    $exec_lo = S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
+    $exec_lo = bb-prolog S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
 
   bb.10:
@@ -358,7 +358,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.7(0x40000000), %bb.2(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr8, $sgpr9
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $sgpr4 = S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr4 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   renamable $sgpr4 = S_XOR_B32 $exec_lo, killed renamable $sgpr4, implicit-def dead $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.7, implicit $exec
   ; GFX10-NEXT: {{  $}}
@@ -370,7 +370,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.5(0x40000000), %bb.4(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr8, $sgpr9
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $sgpr5 = S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr5 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   renamable $sgpr5 = S_XOR_B32 $exec_lo, killed renamable $sgpr5, implicit-def dead $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.5, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
@@ -395,7 +395,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.3(0x80000000)
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr8, $sgpr9
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
+  ; GFX10-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
   ; GFX10-NEXT:   INLINEASM &"", sideeffect attdialect, implicit killed renamable $sgpr6
   ; GFX10-NEXT:   S_BRANCH %bb.3
   ; GFX10-NEXT: {{  $}}
@@ -403,7 +403,7 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.1(0x40000000), %bb.8(0x40000000)
   ; GFX10-NEXT:   liveins: $sgpr4, $sgpr8, $sgpr9
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   $exec_lo = S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
+  ; GFX10-NEXT:   $exec_lo = bb-prolog S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.8:
@@ -424,7 +424,7 @@ body:             |
   bb.1:
     liveins: $sgpr8, $sgpr9
 
-    $sgpr4 = S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr4 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr4 = S_XOR_B32 $exec_lo, killed renamable $sgpr4, implicit-def dead $scc
     S_CBRANCH_EXECZ %bb.6, implicit $exec
 
@@ -435,7 +435,7 @@ body:             |
   bb.2:
     liveins: $sgpr4, $sgpr8, $sgpr9
 
-    $sgpr5 = S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr5 = bb-prolog S_AND_SAVEEXEC_B32 $sgpr9, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr5 = S_XOR_B32 $exec_lo, killed renamable $sgpr5, implicit-def dead $scc
     S_CBRANCH_EXECZ %bb.4, implicit $exec
     S_BRANCH %bb.3
@@ -458,14 +458,14 @@ body:             |
   bb.5:
     liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr8, $sgpr9
 
-    $exec_lo = S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, killed renamable $sgpr5, implicit-def $scc
     INLINEASM &"", sideeffect attdialect, implicit killed renamable $sgpr6
     S_BRANCH %bb.2
 
   bb.6:
     liveins: $sgpr4, $sgpr8, $sgpr9
 
-    $exec_lo = S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
+    $exec_lo = bb-prolog S_ANDN2_B32 $exec_lo, killed renamable $sgpr4, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec
 
   bb.10:

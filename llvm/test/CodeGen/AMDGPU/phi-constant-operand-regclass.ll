@@ -42,7 +42,7 @@ define i64 @if_break_mask_shares_constant_with_divergent_phi(i1 %cond) {
   ; GFX900-NEXT: {{  $}}
   ; GFX900-NEXT:   [[PHI2:%[0-9]+]]:vreg_64 = PHI [[COPY5]], %bb.1
   ; GFX900-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX900-NEXT:   SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX900-NEXT:   bb-prolog SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX900-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[PHI2]]
   ; GFX900-NEXT:   S_BRANCH %bb.3
   ; GFX900-NEXT: {{  $}}
@@ -91,7 +91,7 @@ define i64 @if_break_mask_shares_constant_with_divergent_phi(i1 %cond) {
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[PHI2:%[0-9]+]]:av_64_align2 = PHI [[COPY5]], %bb.1
   ; GFX90A-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX90A-NEXT:   SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:av_64_align2 = COPY [[PHI2]]
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:vreg_64_align2 = COPY [[COPY6]], implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.3
@@ -155,7 +155,7 @@ define i64 @divergent_loop_with_bypass(i1 %cond, i64 %val) {
   ; GFX900-NEXT:   successors: %bb.3(0x80000000)
   ; GFX900-NEXT: {{  $}}
   ; GFX900-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX900-NEXT:   SI_END_CF [[PHI1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX900-NEXT:   bb-prolog SI_END_CF [[PHI1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX900-NEXT:   S_BRANCH %bb.3
   ; GFX900-NEXT: {{  $}}
   ; GFX900-NEXT: bb.3.join:
@@ -202,7 +202,7 @@ define i64 @divergent_loop_with_bypass(i1 %cond, i64 %val) {
   ; GFX90A-NEXT:   successors: %bb.3(0x80000000)
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX90A-NEXT:   SI_END_CF [[PHI1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[PHI1]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vreg_64_align2 = COPY [[COPY3]], implicit $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}

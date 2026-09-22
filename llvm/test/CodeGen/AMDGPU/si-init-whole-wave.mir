@@ -16,7 +16,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = bb-prolog S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; CHECK-NEXT:   undef [[COPY1:%[0-9]+]].sub0:ccr_sgpr_64 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]].sub1:ccr_sgpr_64 = COPY $sgpr2
@@ -33,7 +33,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 5, [[COPY2]], 0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[COPY3]], implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, [[COPY3]], implicit-def $scc
   ; CHECK-NEXT:   $vgpr8 = COPY [[COPY2]]
   ; CHECK-NEXT:   $sgpr0 = COPY [[COPY]]
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr0
@@ -56,7 +56,7 @@ body:             |
     %37:vgpr_32 = V_ADD_U32_e64 5, %37:vgpr_32, 0, implicit $exec
 
   bb.2:
-    $exec_lo = S_OR_B32 $exec_lo, %16:sreg_32_xm0_xexec, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %16:sreg_32_xm0_xexec, implicit-def $scc
     $vgpr8 = COPY %37:vgpr_32
     $sgpr0 = COPY %9:sreg_32
     %2:sreg_32 = COPY $sgpr0
@@ -76,7 +76,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr8, $vgpr9
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_OR_SAVEEXEC_B32_:%[0-9]+]]:sreg_32 = bb-prolog S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; CHECK-NEXT:   undef [[COPY1:%[0-9]+]].sub0:ccr_sgpr_64 = COPY $sgpr1
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]].sub1:ccr_sgpr_64 = COPY $sgpr2

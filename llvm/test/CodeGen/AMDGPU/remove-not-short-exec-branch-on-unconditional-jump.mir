@@ -27,7 +27,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr1, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.4, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -41,12 +41,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr1, $sgpr0_sgpr1, $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   liveins: $vgpr1, $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
   ; CHECK-NEXT:   renamable $vgpr0 = V_CVT_F32_U32_e32 killed $vgpr1, implicit $mode, implicit $exec
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG killed $vgpr0
   bb.0:
@@ -66,7 +66,7 @@ body:             |
   bb.2:
     liveins: $vgpr1, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
 
-    $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
     S_CBRANCH_EXECZ %bb.4, implicit $exec
 
   bb.3:
@@ -78,12 +78,12 @@ body:             |
   bb.4:
     liveins: $vgpr1, $sgpr0_sgpr1, $sgpr2_sgpr3
 
-    $exec = S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
 
   bb.5:
     liveins: $vgpr1, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
     renamable $vgpr0 = V_CVT_F32_U32_e32 killed $vgpr1, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG killed $vgpr0
 

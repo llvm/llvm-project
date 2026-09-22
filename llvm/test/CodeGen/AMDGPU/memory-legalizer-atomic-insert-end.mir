@@ -105,7 +105,7 @@ body:             |
   ; CHECK-NEXT: bb.2.exit:
   ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0 (%ir-block.0):
     successors: %bb.1.atomic(0x40000000), %bb.2.exit(0x40000000)
@@ -140,7 +140,7 @@ body:             |
   bb.2.exit:
     liveins: $sgpr2_sgpr3
 
-    $exec = S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr2_sgpr3, implicit-def $scc
     S_ENDPGM 0
 
 ...
