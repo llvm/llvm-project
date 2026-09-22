@@ -16259,18 +16259,21 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
         InstructionCost VecCost = VectorCost(CommonCost);
         // Check if the current node must be resized, if the parent node is not
-        // resized.
+        // resized. Nodes without a parent (roots of the splat gather
+        // subtrees) are resized back to their original type when the reusing
+        // gather nodes are emitted.
         if (It != MinBWs.end() && !UnaryInstruction::isCast(E->getOpcode()) &&
             E->Idx != 0 &&
             (E->getOpcode() != Instruction::Load || E->UserTreeIndex)) {
           const EdgeInfo &EI = E->UserTreeIndex;
-          if (!EI.UserTE->hasState() ||
+          if (!EI.UserTE || !EI.UserTE->hasState() ||
               EI.UserTE->getOpcode() != Instruction::Select ||
               EI.EdgeIdx != 0) {
             auto UserBWIt = MinBWs.find(EI.UserTE);
             Type *UserScalarTy =
-                (EI.UserTE->isGather() ||
-                 EI.UserTE->State == TreeEntry::SplitVectorize)
+                !EI.UserTE ? OrigScalarTy
+                : (EI.UserTE->isGather() ||
+                   EI.UserTE->State == TreeEntry::SplitVectorize)
                     ? EI.UserTE->Scalars.front()->getType()
                     : EI.UserTE->getOperand(EI.EdgeIdx).front()->getType();
             if (UserBWIt != MinBWs.end())
