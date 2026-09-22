@@ -1488,8 +1488,8 @@ static bool legalizeGExtload(MachineInstr &MI, MachineIRBuilder &B) {
   return true;
 }
 
-static bool legalizeGLoad(MachineInstr &MI, MachineIRBuilder &B,
-                          LegalizerHelper &Helper) {
+static bool legalizeGLoadStore(MachineInstr &MI, MachineIRBuilder &B,
+                               LegalizerHelper &Helper) {
   llvm::MachineRegisterInfo &MRI = *B.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;
   llvm::MachineOperand &ValMO = MI.getOperand(0);
@@ -3479,7 +3479,7 @@ bool PISALegalizerInfo::legalizeCustom(
     return legalizeGItofp(MI, B);
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_LOAD:
-    return legalizeGLoad(MI, B, Helper);
+    return legalizeGLoadStore(MI, B, Helper);
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
     return legalizeGExtload(MI, B);
