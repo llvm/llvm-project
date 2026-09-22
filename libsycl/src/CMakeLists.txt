@@ -98,6 +98,7 @@ set(LIBSYCL_SOURCES
     "detail/event_impl.cpp"
     "detail/device_image_wrapper.cpp"
     "detail/device_impl.cpp"
+    "detail/device_kernel_info.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
     "detail/program_manager.cpp"

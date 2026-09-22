@@ -169,6 +169,11 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
     DeviceImpl &Device) {
   assert(Context && "Context can't be nullptr");
 
+  if (ol_symbol_handle_t CachedKernel =
+          KernelInfo.tryGetCachedKernel(Context.get(), Device.getOLHandle())) {
+    return CachedKernel;
+  }
+
   std::lock_guard<std::mutex> KernelGuard(MDataCollectionMutex);
 
   DeviceImageManager &DeviceImage = KernelInfo.getDeviceImage();
@@ -183,8 +188,10 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
   trackContext(Context);
 
   // Lock order is MDataCollectionMutex -> ContextImpl::MProgramCacheMutex.
-  return Context->getOrCreateKernel(DeviceImage, Device.getOLHandle(),
-                                    KernelInfo.getName());
+  ol_symbol_handle_t Kernel = Context->getOrCreateKernel(
+      DeviceImage, Device.getOLHandle(), KernelInfo.getName());
+  KernelInfo.cacheKernel(Context.get(), Device.getOLHandle(), Kernel);
+  return Kernel;
 }
 
 bool ProgramAndKernelManager::hasCompatibleImage(const DeviceImpl &Device) {
