@@ -21,10 +21,6 @@ class TestStepThroughLazyLibrary(TestBase):
         self.lazy_test()
 
     def lazy_test(self):
-        # This function starts a process, "a.out" by default, sets a source
-        # breakpoint, runs to it, and returns the thread, process & target.
-        # It optionally takes an SBLaunchOption argument if you want to pass
-        # arguments or environment variables.
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Stop here", self.main_source_file
         )

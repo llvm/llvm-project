@@ -1,5 +1,4 @@
-//===-- ThreadPlanRunToBreakpoint.cpp
-//----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,8 +18,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-// ThreadPlanRunToBreakpoint: Use this plan to run to a breakpoint.
 
 ThreadPlanRunToBreakpoint::ThreadPlanRunToBreakpoint(Thread &thread,
                                                      BreakpointSP bkpt_sp,
@@ -50,7 +47,6 @@ ThreadPlanRunToBreakpoint::ThreadPlanRunToBreakpoint(
 ThreadPlanRunToBreakpoint::~ThreadPlanRunToBreakpoint() {
   for (auto bkpt_sp : m_breakpoints)
     GetTarget().RemoveBreakpointByID(bkpt_sp->GetID());
-  m_breakpoints.clear();
 }
 
 void ThreadPlanRunToBreakpoint::GetDescription(Stream *s,
@@ -125,8 +121,8 @@ bool ThreadPlanRunToBreakpoint::MischiefManaged() {
     LLDB_LOGF(log, "Completed run to breakpoint plan.");
     ThreadPlan::MischiefManaged();
     return true;
-  } else
-    return false;
+  }
+  return false;
 }
 
 bool ThreadPlanRunToBreakpoint::AtOurBreakpoint() {
