@@ -12447,10 +12447,11 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  TemplateSpecCandidateSetKind CandidateSetKind =
                                      TemplateSpecCandidateSetKind::Normal) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
-  NamedDecl *ParamD;
-  (ParamD = dyn_cast_if_present<TemplateTypeParmDecl *>(Param)) ||
-      (ParamD = dyn_cast_if_present<NonTypeTemplateParmDecl *>(Param)) ||
-      (ParamD = dyn_cast_if_present<TemplateTemplateParmDecl *>(Param));
+  NamedDecl *ParamD = dyn_cast_if_present<TemplateTypeParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<NonTypeTemplateParmDecl *>(Param);
+  if (!ParamD)
+    ParamD = dyn_cast_if_present<TemplateTemplateParmDecl *>(Param);
   switch (DeductionFailure.getResult()) {
   case TemplateDeductionResult::Success:
     llvm_unreachable(
