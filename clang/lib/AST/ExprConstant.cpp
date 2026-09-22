@@ -20633,6 +20633,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfmin:
+  case Builtin::BIfminf:
+  case Builtin::BIfminl:
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:
