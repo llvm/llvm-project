@@ -3903,6 +3903,16 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
         return true;
     }
 
+    // Trivial default constructors might never be implicitly defined by the
+    // AST, so we need to special-case them here.
+    if (Ctor->isTrivial() && Ctor->isDefaultConstructor()) {
+      if (!this->emitDefaultInit(Ctor, E))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
+    }
+
     // Avoid materializing a temporary for an elidable copy/move constructor.
     if (!ZeroInit && E->isElidable()) {
       const Expr *SrcObj = E->getArg(0);
@@ -6064,6 +6074,25 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   // TODO: Other types.
 
   return false;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
+  if (P.getGlobal(VD))
+    return true;
+
+  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  if (!GlobalIndex) {
+    llvm_unreachable("Why didn't that work?");
+  }
+
+  assert(canClassify(VD->getType()) &&
+         "registerRedecl should only be called with primitive values");
+
+  PrimType T = classifyPrim(VD->getType());
+  if (!visitAPValue(Val, T, VD))
+    return false;
+  return this->emitInitGlobal(T, *GlobalIndex, {});
 }
 
 template <class Emitter>
