@@ -44,6 +44,18 @@ column_major float4x4 Col2Row(row_major float4x4 M) {
 
 void bar(row_major float4x4 M, column_major float4x4 M2) {}
 
+// Layout metadata does not create distinct overloads.
+void same_overload(row_major float2x2 M);
+void same_overload(column_major float2x2 M);
+
+template <typename T>
+T preserve_layout(T M) {
+  return M;
+}
+
+row_major float2x3 substitution_source;
+row_major float2x3 substituted = preserve_layout(substitution_source);
+
 //Invalid: 
 // expected-error@+1 {{'row_major' attribute can only be applied to a matrix type}}
 void foo(column_major float4x4 mat, row_major int i) {}

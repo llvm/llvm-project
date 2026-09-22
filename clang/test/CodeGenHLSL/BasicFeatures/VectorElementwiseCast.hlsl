@@ -133,9 +133,14 @@ export void call6(Derived D) {
 // CHECK-NEXT:    [[V:%.*]] = alloca <4 x float>, align 4
 // CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x float>, align 4
-// CHECK-NEXT:    store <4 x float> %M, ptr [[M_ADDR]], align 4
+// COL-CHECK-NEXT:    store <4 x float> %M, ptr [[M_ADDR]], align 4
+// ROW-CHECK-NEXT:    [[M_ROW:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> %M, i32 2, i32 2)
+// ROW-CHECK-NEXT:    store <4 x float> [[M_ROW]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[HLSL_EWCAST_SRC]], align 4
+// COL-CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[HLSL_EWCAST_SRC]], align 4
+// ROW-CHECK-NEXT:    [[TMP0_COL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP0]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    [[TMP0_ROW:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP0_COL]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    store <4 x float> [[TMP0_ROW]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <4 x float>, ptr [[HLSL_EWCAST_SRC]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[MATRIX_GEP]], align 4
@@ -166,9 +171,14 @@ export void call7(float2x2 M) {
 // COL-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [1 x <3 x i32>], align 4
 // ROW-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [3 x <1 x i32>], align 4
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <3 x i32>, align 4
-// CHECK-NEXT:    store <3 x i32> %M, ptr [[M_ADDR]], align 4
+// COL-CHECK-NEXT:    store <3 x i32> %M, ptr [[M_ADDR]], align 4
+// ROW-CHECK-NEXT:    [[M_ROW:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> %M, i32 3, i32 1)
+// ROW-CHECK-NEXT:    store <3 x i32> [[M_ROW]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[HLSL_EWCAST_SRC]], align 4
+// COL-CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[HLSL_EWCAST_SRC]], align 4
+// ROW-CHECK-NEXT:    [[TMP0_COL:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP0]], i32 1, i32 3)
+// ROW-CHECK-NEXT:    [[TMP0_ROW:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP0_COL]], i32 3, i32 1)
+// ROW-CHECK-NEXT:    store <3 x i32> [[TMP0_ROW]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <3 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr [[MATRIX_GEP]], align 4
@@ -194,10 +204,15 @@ export void call8(int3x1 M) {
 // COL-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x <1 x i32>], align 4
 // ROW-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [1 x <2 x i32>], align 4
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i1>, align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> %M to <2 x i32>
+// COL-CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> %M to <2 x i32>
+// ROW-CHECK-NEXT:    [[M_ROW:%.*]] = call <2 x i1> @llvm.matrix.transpose.v2i1(<2 x i1> %M, i32 1, i32 2)
+// ROW-CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> [[M_ROW]] to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
+// COL-CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
+// ROW-CHECK-NEXT:    [[TMP1_COL:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP1]], i32 2, i32 1)
+// ROW-CHECK-NEXT:    [[TMP1_ROW:%.*]] = call <2 x i32> @llvm.matrix.transpose.v2i32(<2 x i32> [[TMP1_COL]], i32 1, i32 2)
+// ROW-CHECK-NEXT:    store <2 x i32> [[TMP1_ROW]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <2 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4

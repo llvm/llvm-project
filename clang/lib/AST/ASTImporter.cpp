@@ -2108,7 +2108,7 @@ ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
     return ToElementTypeOrErr.takeError();
 
   return Importer.getToContext().getConstantMatrixType(
-      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns());
+      *ToElementTypeOrErr, T->getNumRows(), T->getNumColumns(), T->getLayout());
 }
 
 ExpectedType clang::ASTNodeImporter::VisitDependentAddressSpaceType(

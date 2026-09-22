@@ -1259,13 +1259,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     bool IsMat0 = QTy0->isConstantMatrixType();
     bool IsMat1 = QTy1->isConstantMatrixType();
 
-    // The matrix multiply intrinsic only operates on column-major order
-    // matrices. Therefore matrix memory layout transforms must be inserted
-    // before and after matrix multiply intrinsics.
-    // Use whichever operand is a matrix to discover its declared layout.
-    bool IsRowMajorMat0 = IsMat0 && isMatrixRowMajor(getLangOpts(), QTy0);
-    bool IsRowMajorMat1 = IsMat1 && isMatrixRowMajor(getLangOpts(), QTy1);
-
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
       unsigned N = QTy0->castAs<VectorType>()->getNumElements();
@@ -1273,8 +1266,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
       assert(N == Rows && "vector length must match matrix row count");
-      if (IsRowMajorMat1)
-        Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
     if (IsMat0 && IsVec1) {
@@ -1283,8 +1274,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Cols = MatTy->getNumColumns();
       assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
              "vector length must match matrix column count");
-      if (IsRowMajorMat0)
-        Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
     assert(IsMat0 && IsMat1);
@@ -1296,18 +1285,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Cols1 = MatTy1->getNumColumns();
     assert(Cols0 == Rows1 &&
            "inner matrix dimensions must match for multiplication");
-    if (IsRowMajorMat0)
-      Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
-    if (IsRowMajorMat1)
-      Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
-
-    Value *Result =
-        MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
-
-    bool IsResultRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
-    if (IsResultRowMajor)
-      Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
-    return Result;
+    return MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
   }
   case Builtin::BI__builtin_hlsl_transpose: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -1315,18 +1293,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Rows = MatTy->getNumRows();
     unsigned Cols = MatTy->getNumColumns();
     llvm::MatrixBuilder MB(Builder);
-    // The correct lowering of a transpose depends on both the source layout
-    // and the result layout.
-    bool SrcRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
-    bool DstRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
-    //  When the source & result layouts differ, the operand already holds the
-    //  transposed result, ie transpose is a no-op on the underlying vector.
-    if (SrcRowMajor != DstRowMajor)
-      return Op0;
-    // When the source and result share a layout, emit a transpose.
-    if (SrcRowMajor)
-      // For row-major operands the dimensions are swapped
-      return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {

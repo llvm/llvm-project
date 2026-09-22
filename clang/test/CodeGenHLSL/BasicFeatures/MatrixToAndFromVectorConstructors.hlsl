@@ -7,20 +7,28 @@
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <4 x float>, align 4
-// CHECK-NEXT:    store <4 x float> [[M]], ptr [[M_ADDR]], align 4
+// COL-CHECK-NEXT:    store <4 x float> [[M]], ptr [[M_ADDR]], align 4
+// ROW-CHECK-NEXT:    [[M_ROW:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[M]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    store <4 x float> [[M_ROW]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
+// COL-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
+// ROW-CHECK-NEXT:    [[TMP0_COL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP0]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x float> [[TMP0_COL]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x float> poison, float [[MATRIXEXT]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
 // COL-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
-// ROW-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+// ROW-CHECK-NEXT:    [[TMP1_COL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP1]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP1_COL]], i32 2
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x float> [[VECINIT]], float [[MATRIXEXT1]], i32 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
 // COL-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
-// ROW-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
+// ROW-CHECK-NEXT:    [[TMP2_COL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP2]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <4 x float> [[TMP2_COL]], i32 1
 // CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x float> [[VECINIT2]], float [[MATRIXEXT3]], i32 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT5:%.*]] = extractelement <4 x float> [[TMP3]], i32 3
+// COL-CHECK-NEXT:    [[MATRIXEXT5:%.*]] = extractelement <4 x float> [[TMP3]], i32 3
+// ROW-CHECK-NEXT:    [[TMP3_COL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> [[TMP3]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    [[MATRIXEXT5:%.*]] = extractelement <4 x float> [[TMP3_COL]], i32 3
 // CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x float> [[VECINIT4]], float [[MATRIXEXT5]], i32 3
 // CHECK-NEXT:    store <4 x float> [[VECINIT6]], ptr [[V]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[V]], align 4
@@ -43,18 +51,20 @@ float4 fn(float2x2 m) {
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i32> poison, i32 [[VECEXT]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
-// COL-CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 2
-// ROW-CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[VECEXT1]], i32 2
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
-// COL-CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 1
-// ROW-CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 2
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x i32> [[VECINIT2]], i32 [[VECEXT3]], i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT5:%.*]] = extractelement <4 x i32> [[TMP3]], i64 3
 // CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <4 x i32> [[VECINIT4]], i32 [[VECEXT5]], i32 3
-// CHECK-NEXT:    store <4 x i32> [[VECINIT6]], ptr [[M]], align 4
+// COL-CHECK-NEXT:    store <4 x i32> [[VECINIT6]], ptr [[M]], align 4
+// ROW-CHECK-NEXT:    [[M_ROW:%.*]] = call <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32> [[VECINIT6]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    store <4 x i32> [[M_ROW]], ptr [[M]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr [[M]], align 4
-// CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// COL-CHECK-NEXT:    ret <4 x i32> [[TMP4]]
+// ROW-CHECK-NEXT:    [[TMP4_COL:%.*]] = call <4 x i32> @llvm.matrix.transpose.v4i32(<4 x i32> [[TMP4]], i32 2, i32 2)
+// ROW-CHECK-NEXT:    ret <4 x i32> [[TMP4_COL]]
 //
 int2x2 fn(int4 v) {
     int2x2 m = v;
@@ -110,16 +120,24 @@ bool3x1 fn2(bool3 b) {
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // COL-CHECK-NEXT:    [[B_ADDR:%.*]] = alloca [3 x <1 x i32>], align 4
 // ROW-CHECK-NEXT:    [[B_ADDR:%.*]] = alloca [1 x <3 x i32>], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[B]] to <3 x i32>
+// COL-CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[B]] to <3 x i32>
+// ROW-CHECK-NEXT:    [[B_ROW:%.*]] = call <3 x i1> @llvm.matrix.transpose.v3i1(<3 x i1> [[B]], i32 1, i32 3)
+// ROW-CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[B_ROW]] to <3 x i32>
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
+// COL-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
+// ROW-CHECK-NEXT:    [[TMP1_COL:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP1]], i32 3, i32 1)
+// ROW-CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i32> [[TMP1_COL]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> poison, i32 [[MATRIXEXT]], i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i32> [[TMP2]], i32 1
+// COL-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i32> [[TMP2]], i32 1
+// ROW-CHECK-NEXT:    [[TMP2_COL:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP2]], i32 3, i32 1)
+// ROW-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i32> [[TMP2_COL]], i32 1
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 [[MATRIXEXT1]], i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i32> [[TMP3]], i32 2
+// COL-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i32> [[TMP3]], i32 2
+// ROW-CHECK-NEXT:    [[TMP3_COL:%.*]] = call <3 x i32> @llvm.matrix.transpose.v3i32(<3 x i32> [[TMP3]], i32 3, i32 1)
+// ROW-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i32> [[TMP3_COL]], i32 2
 // CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <3 x i32> [[VECINIT2]], i32 [[MATRIXEXT3]], i32 2
 // CHECK-NEXT:    ret <3 x i32> [[VECINIT4]]
 //
