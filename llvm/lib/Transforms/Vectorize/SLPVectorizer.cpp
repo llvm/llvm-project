@@ -22675,6 +22675,27 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       GatherShuffles =
           isGatherShuffledEntry(E, GatheredScalars, Mask, Entries, NumParts);
     }
+    // The splat gather subtrees are speculative: the keep/drop check may
+    // delete them and does not track reuse of their internal gathers by other
+    // gathers.
+    if (!GatherShuffles.empty() && !SplatGatheredScalarsRoots.empty()) {
+      auto IsSplatSubtreeGather = [&](const TreeEntry *MTE) {
+        if (!MTE->isGather())
+          return false;
+        for (const TreeEntry *U = MTE; U && U->UserTreeIndex;
+             U = U->UserTreeIndex.UserTE)
+          if (is_contained(SplatGatheredScalarsRoots, U->UserTreeIndex.UserTE))
+            return true;
+        return false;
+      };
+      if (any_of(Entries, [&](ArrayRef<const TreeEntry *> TEs) {
+            return any_of(TEs, IsSplatSubtreeGather);
+          })) {
+        GatherShuffles.clear();
+        Entries.clear();
+        std::fill(Mask.begin(), Mask.end(), PoisonMaskElem);
+      }
+    }
     if (!GatherShuffles.empty()) {
       if (std::optional<ResTy> Delayed =
               ShuffleBuilder.needToDelay(E, Entries)) {
