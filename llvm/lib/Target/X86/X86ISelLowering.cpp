@@ -43224,18 +43224,48 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
                                             DAG.getBitcast(OpVT, RHS)));
         }
       }
-      if (SrcOpcode == ISD::SINT_TO_FP && IsSafeToMoveShuffle(N0, SrcOpcode) &&
-          OpVT.getScalarSizeInBits() ==
-              N0.getOperand(0).getScalarValueSizeInBits()) {
-        SDValue Res = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
-        if (Opc == X86ISD::VPERMV)
-          Res = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Res);
-        else if (N.getNumOperands() == 2)
-          Res = DAG.getNode(Opc, DL, ShuffleVT, Res, N.getOperand(1));
-        else
-          Res = DAG.getNode(Opc, DL, ShuffleVT, Res);
-        Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
-        return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res));
+      switch (SrcOpcode) {
+      case ISD::SINT_TO_FP:
+        if (IsSafeToMoveShuffle(N0, SrcOpcode) &&
+            OpVT.getScalarSizeInBits() ==
+                N0.getOperand(0).getScalarValueSizeInBits()) {
+          SDValue Res = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+          if (Opc == X86ISD::VPERMV)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Res);
+          else if (N.getNumOperands() == 2)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res, N.getOperand(1));
+          else
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res);
+          Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
+          return DAG.getBitcast(ShuffleVT,
+                                DAG.getNode(SrcOpcode, DL, OpVT, Res));
+        }
+        break;
+      case X86ISD::VSHL:
+      case X86ISD::VSRL:
+      case X86ISD::VSRA:
+      case X86ISD::VSHLI:
+      case X86ISD::VSRLI:
+      case X86ISD::VSRAI:
+      case X86ISD::VROTLI:
+      case X86ISD::VROTRI:
+        // Move shuffle through shifts as it might help load folding.
+        // TODO: Relax shuffle constraint.
+        if ((Opc == X86ISD::PSHUFD || Opc == X86ISD::PSHUFLW ||
+             Opc == X86ISD::PSHUFHW) &&
+            IsSafeToMoveShuffle(N0, SrcOpcode)) {
+          SDValue Res = DAG.getBitcast(ShuffleVT, N0.getOperand(0));
+          if (Opc == X86ISD::VPERMV)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, N.getOperand(0), Res);
+          else if (N.getNumOperands() == 2)
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res, N.getOperand(1));
+          else
+            Res = DAG.getNode(Opc, DL, ShuffleVT, Res);
+          Res = DAG.getBitcast(N0.getOperand(0).getValueType(), Res);
+          return DAG.getBitcast(ShuffleVT, DAG.getNode(SrcOpcode, DL, OpVT, Res,
+                                                       N0.getOperand(1)));
+        }
+        break;
       }
     }
     break;
@@ -44018,32 +44048,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFLW:
   case X86ISD::PSHUFHW: {
-    SDValue N0 = N.getOperand(0);
-    SDValue N1 = N.getOperand(1);
-    if (N0->hasOneUse()) {
-      SDValue V = peekThroughOneUseBitcasts(N0);
-      switch (V.getOpcode()) {
-      case X86ISD::VSHL:
-      case X86ISD::VSRL:
-      case X86ISD::VSRA:
-      case X86ISD::VSHLI:
-      case X86ISD::VSRLI:
-      case X86ISD::VSRAI:
-      case X86ISD::VROTLI:
-      case X86ISD::VROTRI: {
-        MVT InnerVT = V.getSimpleValueType();
-        if (InnerVT.getScalarSizeInBits() <= VT.getScalarSizeInBits()) {
-          SDValue Res = DAG.getNode(Opcode, DL, VT,
-                                    DAG.getBitcast(VT, V.getOperand(0)), N1);
-          Res = DAG.getBitcast(InnerVT, Res);
-          Res = DAG.getNode(V.getOpcode(), DL, InnerVT, Res, V.getOperand(1));
-          return DAG.getBitcast(VT, Res);
-        }
-        break;
-      }
-      }
-    }
-
     Mask = getPSHUFShuffleMask(N);
     assert(Mask.size() == 4);
     break;
