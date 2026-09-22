@@ -104,21 +104,29 @@ bool isUnselectedRootStmtCandidate(const Node *N) {
   return N->ASTNode.get<DeclStmt>() || N->ASTNode.get<CXXOperatorCallExpr>();
 }
 
-// Whether Child is the condition, init-statement, increment, or
-// condition-variable declaration of a control-flow Parent, as opposed to its
-// "body" (then/else/loop-body/switch-body) -- the only slot(s) that behave
-// like genuine statement positions. The value of a condition (or the side
-// effect of an init/increment clause) is consumed by the construct itself,
-// so treating it as a discardable statement and replacing it with a call to
-// an extracted function would either not compile (if a value is expected,
-// e.g. an `if` condition) or silently change what the code does.
-bool isConditionOrInitClause(const Stmt *Parent, const Stmt *Child) {
+// Whether Child is the condition (or condition-variable declaration) of a
+// control-flow Parent, or the range-expression of a range-based for. These
+// are the only slots whose *value* is actually consumed by the construct
+// itself -- to decide whether to keep looping/branching, or to build the
+// hidden begin/end iterators -- so replacing them with a call to a
+// void-returning extracted function would not compile. Other slots, like a
+// loop's init-statement or increment expression, have their value discarded
+// just like an ordinary expression-statement (and any hazard from
+// extracting a declaration that's used later is already caught by
+// ExtractionZone::requiresHoisting), so they remain extractable.
+//
+// For CXXForRangeStmt, only RangeInit is ever reachable here: clangd's
+// SelectionTree has a custom traversal for range-based for loops (see
+// TraverseCXXForRangeStmt in Selection.cpp) that visits only the
+// init-statement, loop variable, range-expression, and body -- the
+// compiler-synthesized condition/increment/begin/end never become
+// SelectionTree nodes at all.
+bool isConditionClause(const Stmt *Parent, const Stmt *Child) {
   if (const auto *If = llvm::dyn_cast<IfStmt>(Parent))
-    return Child == If->getCond() || Child == If->getInit() ||
+    return Child == If->getCond() ||
            Child == If->getConditionVariableDeclStmt();
   if (const auto *For = llvm::dyn_cast<ForStmt>(Parent))
-    return Child == For->getCond() || Child == For->getInit() ||
-           Child == For->getInc() ||
+    return Child == For->getCond() ||
            Child == For->getConditionVariableDeclStmt();
   if (const auto *While = llvm::dyn_cast<WhileStmt>(Parent))
     return Child == While->getCond() ||
@@ -126,13 +134,10 @@ bool isConditionOrInitClause(const Stmt *Parent, const Stmt *Child) {
   if (const auto *Do = llvm::dyn_cast<DoStmt>(Parent))
     return Child == Do->getCond();
   if (const auto *Switch = llvm::dyn_cast<SwitchStmt>(Parent))
-    return Child == Switch->getCond() || Child == Switch->getInit() ||
+    return Child == Switch->getCond() ||
            Child == Switch->getConditionVariableDeclStmt();
   if (const auto *ForRange = llvm::dyn_cast<CXXForRangeStmt>(Parent))
-    return Child == ForRange->getInit() || Child == ForRange->getCond() ||
-           Child == ForRange->getInc() || Child == ForRange->getBeginStmt() ||
-           Child == ForRange->getEndStmt() ||
-           Child == ForRange->getLoopVarStmt();
+    return Child == ForRange->getRangeInit();
   return false;
 }
 
@@ -150,7 +155,7 @@ bool isRootStmt(const Node *N) {
       !isUnselectedRootStmtCandidate(N))
     return false;
   if (const Stmt *Parent = N->Parent ? N->Parent->ASTNode.get<Stmt>() : nullptr)
-    if (isConditionOrInitClause(Parent, S))
+    if (isConditionClause(Parent, S))
       return false;
   return true;
 }
