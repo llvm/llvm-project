@@ -494,6 +494,7 @@ exit:
   ret i64 %res
 }
 
+<<<<<<< HEAD
 ; Unsupported: reduction backedge value has more than one use in the loop.
 define i64 @smax_i32_idx_backedge_multi_use_bad(ptr %src, i64 %n) {
 ; CHECK-LABEL: define i64 @smax_i32_idx_backedge_multi_use_bad(
@@ -541,6 +542,8 @@ exit:
   ret i64 %res
 }
 
+=======
+>>>>>>> becddd654919 ([LV] Allow for vectorizing parrallel def-use chains)
 ; Currently scalarized: FP multi-use argmax reaches VPlan but is not costed profitable.
 define void @fmax_f32_val_and_idx(ptr readonly %src, i32 %n, ptr %out.val, ptr %out.idx) {
 ; CHECK-LABEL: define void @fmax_f32_val_and_idx(
@@ -785,3 +788,7 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> becddd654919 ([LV] Allow for vectorizing parrallel def-use chains)
