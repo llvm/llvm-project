@@ -7673,8 +7673,8 @@
 #    ifndef __cpp_lib_is_within_lifetime
 #      error "__cpp_lib_is_within_lifetime should be defined in c++26"
 #    endif
-#    if __cpp_lib_is_within_lifetime != 202306L
-#      error "__cpp_lib_is_within_lifetime should have the value 202306L in c++26"
+#    if __cpp_lib_is_within_lifetime != 202603L
+#      error "__cpp_lib_is_within_lifetime should have the value 202603L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_is_within_lifetime
@@ -8862,8 +8862,8 @@
 #  ifndef __cpp_lib_bitops
 #    error "__cpp_lib_bitops should be defined in c++29"
 #  endif
-#  if __cpp_lib_bitops != 201907L
-#    error "__cpp_lib_bitops should have the value 201907L in c++29"
+#  if __cpp_lib_bitops != 202606L
+#    error "__cpp_lib_bitops should have the value 202606L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_bitset
@@ -9759,8 +9759,8 @@
 #    ifndef __cpp_lib_is_within_lifetime
 #      error "__cpp_lib_is_within_lifetime should be defined in c++29"
 #    endif
-#    if __cpp_lib_is_within_lifetime != 202306L
-#      error "__cpp_lib_is_within_lifetime should have the value 202306L in c++29"
+#    if __cpp_lib_is_within_lifetime != 202603L
+#      error "__cpp_lib_is_within_lifetime should have the value 202603L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_is_within_lifetime

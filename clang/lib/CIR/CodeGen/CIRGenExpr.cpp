@@ -31,6 +31,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include <optional>
 
 using namespace clang;
@@ -503,7 +504,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   }
 
   assert(currSrcLoc && "must pass in source location");
-  builder.createStore(*currSrcLoc, value, addr, isVolatile, isNontemporal);
+  builder.createStore(getLoc(*currSrcLoc), value, addr, isVolatile,
+                      isNontemporal);
 
   assert(!cir::MissingFeatures::opTBAA());
 }
@@ -521,7 +523,7 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
 
   assert(currSrcLoc && "must pass in source location");
 
-  return builder.createSetBitfield(*currSrcLoc, resLTy, ptr,
+  return builder.createSetBitfield(getLoc(*currSrcLoc), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
                                    dst.isVolatileQualified(), useVoaltile);
 }
@@ -1299,15 +1301,6 @@ static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
   return arrayAlign.alignmentOfArrayElement(eltSize);
 }
 
-static QualType getFixedSizeElementType(const ASTContext &astContext,
-                                        const VariableArrayType *vla) {
-  QualType eltType;
-  do {
-    eltType = vla->getElementType();
-  } while ((vla = astContext.getAsVariableArrayType(eltType)));
-  return eltType;
-}
-
 static mlir::Value emitArraySubscriptPtr(CIRGenFunction &cgf,
                                          mlir::Location beginLoc,
                                          mlir::Location endLoc, mlir::Value ptr,
@@ -1331,7 +1324,7 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
   // the thing that the indices are expressed in terms of.
   if (const VariableArrayType *vla =
           cgf.getContext().getAsVariableArrayType(eltType)) {
-    eltType = getFixedSizeElementType(cgf.getContext(), vla);
+    eltType = CodeGenUtils::getFixedSizeElementType(cgf.getContext(), vla);
   }
 
   // We can use that to compute the best alignment of the element.
@@ -2172,7 +2165,7 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     RValue rv = emitAnyExpr(e->getRHS());
     LValue lv = emitLValue(e->getLHS());
 
-    SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
+    SourceLocRAIIObject loc{*this, e->getSourceRange()};
     if (lv.isBitField())
       emitStoreThroughBitfieldLValue(rv, lv);
     else
@@ -2217,16 +2210,6 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
   llvm_unreachable("bad evaluation kind");
 }
 
-// Detect the unusual situation where an inline version is shadowed by a
-// non-inline version. In that case we should pick the external one
-// everywhere. That's GCC behavior too.
-static bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *fd) {
-  for (const FunctionDecl *pd = fd; pd; pd = pd->getPreviousDecl())
-    if (!pd->isInlineBuiltinDeclaration())
-      return false;
-  return true;
-}
-
 CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
 
@@ -2248,7 +2231,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
     // name to make it clear it's not the actual builtin.
     if (auto fn = dyn_cast<cir::FuncOp>(curFn);
         (!fn || fn.getName() != fdInlineName) &&
-        onlyHasInlineBuiltinDeclaration(fd)) {
+        CodeGenUtils::onlyHasInlineBuiltinDeclaration(fd)) {
       cir::FuncOp clone =
           mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
 
@@ -2414,7 +2397,7 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
-                               e == mustTailCall, getLoc(e->getExprLoc()));
+                               e == mustTailCall, e->getSourceRange());
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 

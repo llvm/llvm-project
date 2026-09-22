@@ -201,6 +201,8 @@ def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
 def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
 def LLVM_MinimumOp : LLVM_BinarySameArgsIntrOpF<"minimum">;
+def LLVM_MaximumNumOp : LLVM_BinarySameArgsIntrOpF<"maximumnum">;
+def LLVM_MinimumNumOp : LLVM_BinarySameArgsIntrOpF<"minimumnum">;
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
@@ -222,6 +224,16 @@ def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
 def LLVM_SincosOp : LLVM_TwoResultIntrOp<"sincos", [], [0],
+  [Pure], /*requiresFastmath=*/1> {
+  let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
+  let hasVerifier = 1;
+}
+def LLVM_ModfOp : LLVM_TwoResultIntrOp<"modf", [], [0],
   [Pure], /*requiresFastmath=*/1> {
   let arguments =
       (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
@@ -523,8 +535,17 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
         $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
                                roundingModeAttr));
     }], true : "") # [{
+    $_qualCppClassName::Properties properties{};
+    $_qualCppClassName::populateDefaultProperties(
+        OperationName($_qualCppClassName::getOperationName(),
+                      $_builder.getContext()), properties);
+    if (failed($_qualCppClassName::setPropertiesFromAttr(
+          properties, $_builder.getDictionaryAttr(mlirAttrs),
+          [&]() { return emitError($_location); }))) {
+      return failure();
+    }
     auto op = $_qualCppClassName::create($_builder, $_location,
-      $_resultType, mlirOperands, mlirAttrs);
+      $_resultType, mlirOperands, properties, {});
     moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];
@@ -1263,6 +1284,8 @@ def LLVM_vector_reduce_fmax : LLVM_VecReductionF<"fmax">;
 def LLVM_vector_reduce_fmin : LLVM_VecReductionF<"fmin">;
 def LLVM_vector_reduce_fmaximum : LLVM_VecReductionF<"fmaximum">;
 def LLVM_vector_reduce_fminimum : LLVM_VecReductionF<"fminimum">;
+def LLVM_vector_reduce_fmaximumnum : LLVM_VecReductionF<"fmaximumnum">;
+def LLVM_vector_reduce_fminimumnum : LLVM_VecReductionF<"fminimumnum">;
 
 def LLVM_vector_reduce_fadd : LLVM_VecReductionAccF<"fadd">;
 def LLVM_vector_reduce_fmul : LLVM_VecReductionAccF<"fmul">;
@@ -1735,10 +1758,17 @@ def LLVM_vector_insert
   let assemblyFormat = "$srcvec `,` $dstvec `[` $pos `]` attr-dict `:` "
     "type($srcvec) `into` type($res)";
   let extraClassDeclaration = [{
+    /// Returns the vector bit width. For scalable vectors, the dimension is the
+    /// known minimum element count. Returns the maximum uint64_t on overflow.
     uint64_t getVectorBitWidth(Type vector) {
-      return getVectorNumElements(vector).getKnownMinValue() *
-             ::llvm::cast<VectorType>(vector).getElementType()
-                .getIntOrFloatBitWidth();
+      auto vectorType = ::llvm::cast<VectorType>(vector);
+      uint64_t minNumElements = vectorType.getDimSize(0);
+      uint64_t elementBitWidth =
+          vectorType.getElementType().getIntOrFloatBitWidth();
+      if (minNumElements >
+          std::numeric_limits<uint64_t>::max() / elementBitWidth)
+        return std::numeric_limits<uint64_t>::max();
+      return minNumElements * elementBitWidth;
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1769,10 +1799,17 @@ def LLVM_vector_extract
   let assemblyFormat = "$srcvec `[` $pos `]` attr-dict `:` "
     "type($res) `from` type($srcvec)";
   let extraClassDeclaration = [{
+    /// Returns the vector bit width. For scalable vectors, the dimension is the
+    /// known minimum element count. Returns the maximum uint64_t on overflow.
     uint64_t getVectorBitWidth(Type vector) {
-      return getVectorNumElements(vector).getKnownMinValue() *
-             ::llvm::cast<VectorType>(vector).getElementType()
-                .getIntOrFloatBitWidth();
+      auto vectorType = ::llvm::cast<VectorType>(vector);
+      uint64_t minNumElements = vectorType.getDimSize(0);
+      uint64_t elementBitWidth =
+          vectorType.getElementType().getIntOrFloatBitWidth();
+      if (minNumElements >
+          std::numeric_limits<uint64_t>::max() / elementBitWidth)
+        return std::numeric_limits<uint64_t>::max();
+      return minNumElements * elementBitWidth;
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1850,6 +1887,8 @@ def LLVM_VPReduceFAddOp : LLVM_VPReductionF<"fadd">;
 def LLVM_VPReduceFMulOp : LLVM_VPReductionF<"fmul">;
 def LLVM_VPReduceFMaxOp : LLVM_VPReductionF<"fmax">;
 def LLVM_VPReduceFMinOp : LLVM_VPReductionF<"fmin">;
+def LLVM_VPReduceFMaximumOp : LLVM_VPReductionF<"fmaximum">;
+def LLVM_VPReduceFMinimumOp : LLVM_VPReductionF<"fminimum">;
 
 def LLVM_VPMergeMinOp  : LLVM_VPSelectBase<"merge">;
 
