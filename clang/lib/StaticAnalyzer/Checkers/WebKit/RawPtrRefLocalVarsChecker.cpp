@@ -351,9 +351,13 @@ public:
         [&](const clang::Decl *D) {
           return Model->isSafeDecl(D, BR->getSourceManager());
         },
-        [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
-          if (!InitArgOrigin || IsSafe)
+        [&](const clang::Expr *InitArgOrigin, bool IsSafe,
+            bool OriginDependsOnFullExpressionTemporary) {
+          if (!InitArgOrigin)
             return true;
+
+          if (IsSafe)
+            return !OriginDependsOnFullExpressionTemporary;
 
           if (isa<CXXThisExpr>(InitArgOrigin))
             return true;

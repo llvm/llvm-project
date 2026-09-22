@@ -27,9 +27,9 @@ void test() {
 
   constexpr long sz = std::size(arr);
 
-  using CapIter = std::__capacity_aware_iterator<Iter, decltype(arr), sz>;
+  using CapIter = std::__capacity_aware_iterator<Iter, sz>;
 
-  CapIter it = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(arr));
+  CapIter it = std::__make_capacity_aware_iterator<Iter, sz>(Iter(arr));
 
   TEST_LIBCPP_ASSERT_FAILURE(
       it += (sz + 1),

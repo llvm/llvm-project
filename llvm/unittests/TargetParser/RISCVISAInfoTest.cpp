@@ -404,6 +404,19 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_EQ(InfoRV64GCV.getMaxELenFp(), 64U);
 }
 
+TEST(RISCVISAInfoTest, CanonicalExtensionOrderVP) {
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64i_p0p21_v", true);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+
+  RISCVISAInfo &Info = **MaybeISAInfo;
+
+  // The canonical string should place 'v' before 'p'
+  EXPECT_EQ(
+      Info.toString(),
+      "rv64i2p1_f2p2_d2p2_v1p0_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0_zve32f1p0_"
+      "zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0");
+}
+
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
   EXPECT_EQ(
       toString(

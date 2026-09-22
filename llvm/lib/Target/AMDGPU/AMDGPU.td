@@ -1319,6 +1319,10 @@ defm TensorCvtLutInsts : AMDGPUSubtargetFeature<"tensor-cvt-lut-insts",
   "Has v_perm_pk16* instructions"
 >;
 
+defm TDMInsts : AMDGPUSubtargetFeature<"tdm-insts",
+  "Has tensor_load_to_lds/tensor_store_from_lds instructions"
+>;
+
 defm TransposeLoadF4F6Insts : AMDGPUSubtargetFeature<"transpose-load-f4f6-insts",
   "Has ds_load_tr4/tr6 and global_load_tr4/tr6 instructions"
 >;
@@ -2453,6 +2457,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
+   FeatureTDMInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -3309,9 +3314,10 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureQsadInsts, FeatureSMemRealTime, FeatureSMemTimeInst,
   FeatureSWMMACGfx1200Insts, FeatureSWMMACGfx1250Insts, FeatureSWakeupBarrier,
   FeatureSadInsts, FeatureSetPrioIncWgInst, FeatureSmemPrefetchInsts,
-  FeatureTanhInsts, FeatureTensorCvtLutInsts, FeatureTransposeLoadF4F6Insts,
-  FeatureVMemToLDSLoad, FeatureVmemPrefInsts, FeatureWMMA128bInsts,
-  FeatureWMMA256bInsts, FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureXF32Insts,
+  FeatureTDMInsts, FeatureTanhInsts, FeatureTensorCvtLutInsts,
+  FeatureTransposeLoadF4F6Insts, FeatureVMemToLDSLoad, FeatureVmemPrefInsts,
+  FeatureWMMA128bInsts, FeatureWMMA256bInsts, FeatureWMMAN16Insts,
+  FeatureWMMAF4Insts, FeatureXF32Insts,
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,

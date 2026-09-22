@@ -531,6 +531,10 @@ LLVM_ABI void getUnderlyingObjects(const Value *V,
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
+///
+/// Return true if each of the underlying objects is identified. \p Objects is
+/// never cleared, so may contain unidentified objects when the return value is
+/// false.
 LLVM_ABI bool getUnderlyingObjectsForCodeGen(const Value *V,
                                              SmallVectorImpl<Value *> &Objects);
 
