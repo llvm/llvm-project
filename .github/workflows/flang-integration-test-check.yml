@@ -15,6 +15,7 @@ jobs:
   check-for-full-pipeline-tests:
     if: github.repository == 'llvm/llvm-project'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check for new full-pipeline test invocations
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
