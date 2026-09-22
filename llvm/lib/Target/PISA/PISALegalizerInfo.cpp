@@ -421,8 +421,7 @@ PISALegalizerInfo::PISALegalizerInfo(const PISASubtarget &ST) {
             llvm::LLT EltTy = Query.Types[0];
             uint16_t NumElts = EltTy.getNumElements();
             uint64_t NewNumElts = PowerOf2Ceil(NumElts) / 2;
-            return std::make_pair(
-                0, LLT::fixed_vector(NewNumElts, EltTy.getScalarType()));
+            return {0, LLT::fixed_vector(NewNumElts, EltTy.getScalarType())};
           })
       // split up vectors of non-standard size elements
       .fewerElementsIf(
@@ -433,7 +432,7 @@ PISALegalizerInfo::PISALegalizerInfo(const PISASubtarget &ST) {
           },
           [=](const LegalityQuery &Query) -> std::pair<unsigned, LLT> {
             llvm::LLT EltTy = Query.Types[0];
-            return std::make_pair(0, EltTy.getScalarType());
+            return {0, EltTy.getScalarType()};
           })
       // cast non-^2 scalars to vectors of i8
       .bitcastIf(
