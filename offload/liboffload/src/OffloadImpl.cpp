@@ -268,6 +268,7 @@ struct OffloadContext {
   // Partitioned list of memory base addresses. Each element in this list is a
   // key in AllocInfoMap
   SmallVector<void *> AllocBases{};
+  SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> InactivePlatforms{};
   SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms{};
   size_t RefCount;
 
@@ -307,37 +308,50 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
 
-Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
-  SmallSet<ol_platform_backend_t, 0> Requested;
-  if (InitArgs && InitArgs->NumPlatforms > 0)
-    for (uint32_t I = 0; I < InitArgs->NumPlatforms; I++)
-      Requested.insert(InitArgs->Platforms[I]);
-
-  // Attempt to create an instance of each supported plugin, skipping
-  // unrequested backends. The host plugin is always created.
-#define PLUGIN_TARGET(Name)                                                    \
-  do {                                                                         \
-    auto Backend = pluginNameToBackend(#Name);                                 \
-    if (Requested.empty() || Backend == OL_PLATFORM_BACKEND_HOST ||            \
-        Requested.contains(Backend)) {                                         \
-      Context.Platforms.emplace_back(std::make_unique<ol_platform_impl_t>(     \
-          std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
-    }                                                                          \
-  } while (false);
-#include "Shared/Targets.def"
-
-  // Eagerly initialize all of the plugins and devices. We need to make sure
-  // that the platform is initialized at a consistent point to maintain the
-  // expected teardown order in the vendor libraries.
-  for (auto &Platform : Context.Platforms) {
-    if (Error Err = Platform->init())
-      return Err;
-  }
-
+void initOffloadContext(OffloadContext &Context,
+                        const ol_init_args_t *InitArgs) {
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 
-  return Plugin::success();
+  // Attempt to create an instance of each supported plugin.
+#define PLUGIN_TARGET(Name)                                                    \
+  do {                                                                         \
+    auto Backend = pluginNameToBackend(#Name);                                 \
+    Context.InactivePlatforms.emplace_back(                                    \
+        std::make_unique<ol_platform_impl_t>(                                  \
+            std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),           \
+            Backend));                                                         \
+  } while (false);
+#include "Shared/Targets.def"
+}
+
+Error initPlugins(OffloadContext &Context, uint32_t NumPlatforms,
+                  const ol_platform_backend_t *Platforms) {
+  SmallSet<ol_platform_backend_t, 0> Requested;
+  if (NumPlatforms > 0)
+    for (uint32_t I = 0; I < NumPlatforms; I++)
+      Requested.insert(Platforms[I]);
+
+  SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> StillInactive;
+  Error Result = Error::success();
+
+  for (auto &Platform : Context.InactivePlatforms) {
+    auto Backend = Platform->BackendType;
+    if (!(Requested.empty() || Backend == OL_PLATFORM_BACKEND_HOST ||
+          Requested.contains(Backend))) {
+      StillInactive.emplace_back(std::move(Platform));
+      continue;
+    }
+    if (Error Err = Platform->init()) {
+      Result = joinErrors(std::move(Result), std::move(Err));
+      StillInactive.emplace_back(std::move(Platform));
+      continue;
+    }
+    Context.Platforms.emplace_back(std::move(Platform));
+  }
+  Context.InactivePlatforms = std::move(StillInactive);
+
+  return Result;
 }
 
 Error olInit_impl(const ol_init_args_t *InitArgs) {
@@ -360,11 +374,23 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
   // Use a temporary to ensure that entry points querying OffloadContextVal do
   // not get a partially initialized context
   auto *NewContext = new OffloadContext{};
-  Error InitResult = initPlugins(*NewContext, InitArgs);
+  initOffloadContext(*NewContext, InitArgs);
+
+  Error InitResult =
+      InitArgs != nullptr && !InitArgs->InitPlatforms
+          ? Plugin::success()
+          : initPlugins(*NewContext, InitArgs ? InitArgs->NumPlatforms : 0,
+                        InitArgs ? InitArgs->Platforms : nullptr);
   OffloadContextVal.store(NewContext);
   OffloadContext::get().RefCount++;
 
   return InitResult;
+}
+
+Error olInitPlatforms_impl(uint32_t NumPlatforms,
+                           const ol_platform_backend_t *Platforms) {
+  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  return initPlugins(OffloadContext::get(), NumPlatforms, Platforms);
 }
 
 Error olShutDown_impl() {
