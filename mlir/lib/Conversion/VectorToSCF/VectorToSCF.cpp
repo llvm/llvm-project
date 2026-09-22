@@ -205,7 +205,7 @@ static Value generateInBoundsCheck(
     Value nonNegative =
         arith::CmpIOp::create(lb, arith::CmpIPredicate::sge, memrefIdx, zero);
     Value inRange = arith::CmpIOp::create(lb, arith::CmpIPredicate::slt,
-                                           memrefIdx, memrefDim);
+                                          memrefIdx, memrefDim);
     cond = arith::AndIOp::create(lb, nonNegative, inRange);
   }
 
