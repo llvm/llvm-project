@@ -145,8 +145,8 @@ static void printStubsEntries(
 static void printObjCStubsEntries(raw_fd_ostream &os,
                                   const ObjCStubsSection *osec) {
   for (const Defined *sym : osec->getSymbols())
-    os << format("0x%08llX\t0x%08llX\t[  0] %s\n", sym->getVA(), sym->size,
-                 sym->getName().str().data());
+    os << format("0x%08llX\t0x%08llX\t[  0] ", sym->getVA(), sym->size)
+       << sym->getName() << '\n';
 }
 
 static void printNonLazyPointerSection(raw_fd_ostream &os,
