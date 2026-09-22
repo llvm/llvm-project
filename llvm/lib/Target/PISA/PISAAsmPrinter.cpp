@@ -309,10 +309,9 @@ void PISAAsmPrinter::FlattenGlobal::process(const Constant *C) {
       ConstantInt *CI = dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
           ConstantExpr::getBitCast(const_cast<ConstantVector *>(CV), IntT),
           DL));
-      if (!CI) {
+      if (!CI)
         reportFatalUsageError(
-            "Cannot lower vector global with unusual element type");
-      }
+            "cannot lower vector global with unusual element type");
       emitGlobalConstantLargeInt(CI);
       uint64_t EmittedSize = DL.getTypeStoreSize(CV->getType());
       if (unsigned Padding = Size - EmittedSize)
