@@ -10,12 +10,15 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
+#include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <array>
 #include <utility>
 
 using namespace cir;
@@ -1061,6 +1064,12 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   call->erase();
 }
 
+/// Whether \p ty, a type the classifier named for one register of a
+/// coercion, is carried in a vector register.
+bool isSSERegisterClass(mlir::Type ty) {
+  return mlir::isa<cir::VectorType, cir::FPTypeInterface>(ty);
+}
+
 } // namespace
 
 void CIRABIRewriteContext::normalizeParameterSlotAlignments(
@@ -1510,4 +1519,405 @@ void CIRABIRewriteContext::rewriteFunctionAddress(cir::GetGlobalOp addrOp,
   auto bitcast = cir::CastOp::create(builder, addrOp.getLoc(), oldPtrTy,
                                      cir::CastKind::bitcast, addrOp.getAddr());
   addrOp.getAddr().replaceAllUsesExcept(bitcast.getResult(), bitcast);
+}
+
+namespace {
+
+/// What one `va_arg` expansion needs from the op it rewrites.  The x86-64
+/// cursor fields are reached through `vaFields` by index: 0 gp_offset,
+/// 1 fp_offset, 2 overflow_arg_area, 3 reg_save_area.
+struct VAArgFetch {
+  VAArgFetch(mlir::Location loc, mlir::Value valist,
+             llvm::ArrayRef<mlir::Type> vaFields, mlir::Type resultTy,
+             const ArgClassification &ac, const mlir::DataLayout &dl,
+             mlir::ModuleOp module)
+      : loc(loc), valist(valist), vaFields(vaFields), resultTy(resultTy),
+        ac(ac), dl(dl), module(module) {
+    assert(vaFields.size() == 4 &&
+           "the x86-64 va_list is a four-field cursor, checked by the caller");
+  }
+
+  mlir::Location loc;
+  mlir::Value valist;
+  llvm::ArrayRef<mlir::Type> vaFields;
+  mlir::Type resultTy;
+  const ArgClassification &ac;
+  const mlir::DataLayout &dl;
+  mlir::ModuleOp module;
+};
+
+/// The cursor fields a register fetch reads, and the predicate saying every
+/// class it needs still has room.  An offset is null when the fetch needs no
+/// register of that class.
+struct RegisterCursor {
+  mlir::Value gpOffsetP;
+  mlir::Value fpOffsetP;
+  mlir::Value gpOffset;
+  mlir::Value fpOffset;
+  mlir::Value inRegs;
+};
+
+mlir::LogicalResult reportVAArgNYI(cir::VAArgOp op, llvm::StringRef what) {
+  op->emitOpError() << "va_arg of " << what
+                    << " not yet implemented in CallConvLowering";
+  return mlir::failure();
+}
+
+/// Sets \p isRegPair when a two-register argument is a coerced pair, one
+/// register per member, rather than a single wide scalar, and records in
+/// \p pairIsSse which element is SSE class.  Fails on a coercion that is not
+/// two eightbytes.
+mlir::LogicalResult classifyRegisterPair(cir::VAArgOp op,
+                                         const ArgClassification &ac,
+                                         std::array<bool, 2> &pairIsSse,
+                                         bool &isRegPair) {
+  auto pairTy = mlir::dyn_cast<cir::RecordType>(ac.coercedType);
+  if (!pairTy)
+    return mlir::success();
+
+  if (pairTy.getNumElements() != 2)
+    return reportVAArgNYI(op, "a register coercion that is not two eightbytes");
+
+  assert(!ac.directOffset &&
+         "a pair already spans both eightbytes, so it cannot also start "
+         "partway into the value");
+  for (auto [i, memberTy] : llvm::enumerate(pairTy.getMembers()))
+    pairIsSse[i] = isSSERegisterClass(memberTy);
+  isRegPair = true;
+  return mlir::success();
+}
+
+/// The alignment an argument is placed at.  A record can require more than
+/// the types of its members imply, from an `aligned` attribute on the record
+/// or on one of its fields, and neither raises the alignment of any type.
+/// Only the record layout knows, so the member-derived value alone can be too
+/// small.
+uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp,
+                           const mlir::DataLayout &dl) {
+  uint64_t align = dl.getTypeABIAlignment(ty);
+  if (auto recTy = mlir::dyn_cast<cir::RecordType>(ty))
+    if (auto layout = cir::tryGetRecordLayout(modOp, recTy.getName()))
+      align = std::max<uint64_t>(align, layout.getRecordAlign());
+  return align;
+}
+
+mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
+                                      mlir::Value bytePtr, uint64_t align,
+                                      const mlir::DataLayout &dl) {
+  assert(mlir::cast<cir::PointerType>(bytePtr.getType()).getPointee() ==
+             b.getUIntNTy(8) &&
+         "the bump strides in bytes, so the pointee must be u8");
+  assert(llvm::isPowerOf2_64(align) &&
+         "mask rounding needs a power-of-two alignment");
+  mlir::Value bumped =
+      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, align - 1, 32));
+  std::optional<uint64_t> indexWidth =
+      dl.getTypeIndexBitwidth(bytePtr.getType());
+  assert(indexWidth && "a pointer in the argument area has an index width");
+  mlir::Value mask = b.getSignedInt(loc, -static_cast<int64_t>(align),
+                                    static_cast<unsigned>(*indexWidth));
+  return cir::PtrMaskOp::create(b, loc, bytePtr.getType(), bumped, mask);
+}
+
+/// Reads the argument's address out of the overflow area, which also advances
+/// the cursor past the argument.
+mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
+                                        const VAArgFetch &f) {
+  cir::IntType byteTy = b.getUIntNTy(8);
+  mlir::Value overflowP = b.createGetMember(
+      f.loc, b.getPointerTo(f.vaFields[2]), f.valist, "overflow_arg_area", 2);
+  mlir::Value overflow = b.createLoad(f.loc, overflowP);
+  mlir::Value bytePtr = b.createPtrBitcast(overflow, byteTy);
+
+  uint64_t tyAlign = argumentAreaAlign(f.resultTy, f.module, f.dl);
+  if (tyAlign > 8)
+    bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
+
+  uint64_t tySize = f.dl.getTypeSize(f.resultTy).getFixedValue();
+  uint64_t stride = (tySize + 7) & ~UINT64_C(7);
+  mlir::Value strideVal = b.getSignedInt(f.loc, stride, 32);
+  mlir::Value next = b.createPtrStride(f.loc, bytePtr, strideVal);
+  b.createStore(f.loc, next, overflowP);
+  return bytePtr;
+}
+
+/// Loads the cursor offsets and builds the predicate that sends the fetch to
+/// the register-save area.  Both offsets count from the start of that area, so
+/// the integer limit is the six GP registers at 48 and the vector limit is
+/// those plus the eight SSE registers at 176.
+RegisterCursor buildRegisterGate(CIRBaseBuilderTy &b, const VAArgFetch &f,
+                                 unsigned neededInt, unsigned neededSse) {
+  RegisterCursor cursor;
+  if (neededInt) {
+    cursor.gpOffsetP = b.createGetMember(f.loc, b.getPointerTo(f.vaFields[0]),
+                                         f.valist, "gp_offset", 0);
+    cursor.gpOffset = b.createLoad(f.loc, cursor.gpOffsetP);
+    mlir::Value limit =
+        b.getConstantInt(f.loc, cursor.gpOffset.getType(), 48 - neededInt * 8);
+    cursor.inRegs =
+        b.createCompare(f.loc, cir::CmpOpKind::le, cursor.gpOffset, limit);
+  }
+  if (neededSse) {
+    cursor.fpOffsetP = b.createGetMember(f.loc, b.getPointerTo(f.vaFields[1]),
+                                         f.valist, "fp_offset", 1);
+    cursor.fpOffset = b.createLoad(f.loc, cursor.fpOffsetP);
+    mlir::Value limit = b.getConstantInt(f.loc, cursor.fpOffset.getType(),
+                                         176 - neededSse * 16);
+    mlir::Value fitsInFp =
+        b.createCompare(f.loc, cir::CmpOpKind::le, cursor.fpOffset, limit);
+    cursor.inRegs = cursor.inRegs
+                        ? b.createLogicalAnd(f.loc, cursor.inRegs, fitsInFp)
+                        : fitsInFp;
+  }
+  return cursor;
+}
+
+/// Copies each half of a non-contiguous pair out of the register-save area
+/// into \p regPairTemp, laid out as the coerced pair.
+void reassembleRegisterPair(CIRBaseBuilderTy &b, mlir::Location loc,
+                            const ArgClassification &ac,
+                            const RegisterCursor &cursor,
+                            const std::array<bool, 2> &pairIsSse,
+                            mlir::Value regSaveArea, mlir::Value regPairTemp) {
+  auto pairTy = mlir::cast<cir::RecordType>(ac.coercedType);
+  // Both halves of an all-SSE pair sit in 16-byte slots, which classic
+  // CodeGen tells the load about.  It leaves a mixed pair to the element's
+  // own alignment, so match that rather than claiming the slot there.
+  bool bothSse = pairIsSse[0] && pairIsSse[1];
+  // Track how many of each class came before, since a slot is reached from
+  // its class's own cursor.
+  unsigned seenOfClass[2] = {0, 0};
+  for (unsigned i = 0; i < 2; ++i) {
+    bool isSse = pairIsSse[i];
+    mlir::Value base = isSse ? cursor.fpOffset : cursor.gpOffset;
+    unsigned regSize = isSse ? 16 : 8;
+    unsigned prior = seenOfClass[isSse];
+    ++seenOfClass[isSse];
+    mlir::Value off = base;
+    if (prior) {
+      off = b.createAdd(loc, base,
+                        b.getConstantInt(loc, base.getType(), prior * regSize));
+    }
+    mlir::Value src = b.createPtrStride(loc, regSaveArea, off);
+    mlir::Type elemTy = pairTy.getElementType(i);
+    mlir::Value elemPtr = b.createPtrBitcast(src, elemTy);
+    mlir::Value val = bothSse ? b.createAlignedLoad(loc, elemPtr, 16)
+                              : b.createLoad(loc, elemPtr);
+    b.createStore(
+        loc, val,
+        b.createGetMember(loc, b.getPointerTo(elemTy), regPairTemp, "", i));
+  }
+}
+
+/// The bytes carried by the registers of this fetch's one class.
+uint64_t registerSlotSize(unsigned neededInt, unsigned neededSse) {
+  assert(!(neededInt && neededSse) &&
+         "a fetch needing both classes is a pair, reassembled elsewhere");
+  return neededSse ? neededSse * 16 : neededInt * 8;
+}
+
+/// Whether the register cannot be read in place, either because it carries
+/// less than the whole result or because its slot is under-aligned for it.
+bool needsTempCopy(const VAArgFetch &f, unsigned neededInt,
+                   unsigned neededSse) {
+  uint64_t tySize = f.dl.getTypeSize(f.resultTy).getFixedValue();
+  if (f.ac.coercedType &&
+      (f.ac.directOffset || registerSlotSize(neededInt, neededSse) < tySize))
+    return true;
+  // A slot is only as aligned as its class, 8 for a GP register and 16 for an
+  // SSE one, so a fetch the ABI places more strictly is copied through a temp.
+  uint64_t slotAlign = neededSse ? 16 : 8;
+  return argumentAreaAlign(f.resultTy, f.module, f.dl) > slotAlign;
+}
+
+/// Copies what the registers carry into \p temp, which is the size of the
+/// whole result, and returns the address to read the result from.
+mlir::Value copyRegisterToTemp(CIRBaseBuilderTy &b, mlir::Location loc,
+                               const VAArgFetch &f, mlir::Value regAddr,
+                               mlir::Value temp, unsigned neededInt,
+                               unsigned neededSse) {
+  cir::IntType byteTy = b.getUIntNTy(8);
+  uint64_t tySize = f.dl.getTypeSize(f.resultTy).getFixedValue();
+
+  if (f.ac.coercedType &&
+      (f.ac.directOffset || registerSlotSize(neededInt, neededSse) < tySize)) {
+    // The registers carry less than the whole result, either because the
+    // eightbytes below directOffset hold no field or because the result is
+    // wider than the registers carrying it.  Copy only what they carry, so
+    // that reading the temp cannot run on into the neighboring slot.
+    mlir::Value val = b.createAlignedLoad(
+        loc, b.createPtrBitcast(regAddr, f.ac.coercedType), 8);
+    mlir::Value dst = temp;
+    if (f.ac.directOffset) {
+      dst = b.createPtrStride(loc, b.createPtrBitcast(temp, byteTy),
+                              b.getSignedInt(loc, f.ac.directOffset, 32));
+    }
+    b.createStore(loc, val, b.createPtrBitcast(dst, f.ac.coercedType));
+    return b.createPtrBitcast(temp, byteTy);
+  }
+
+  mlir::Value val =
+      b.createAlignedLoad(loc, b.createPtrBitcast(regAddr, f.resultTy), 8);
+  b.createStore(loc, val, temp);
+  return b.createPtrBitcast(temp, byteTy);
+}
+
+void advanceRegisterCursors(CIRBaseBuilderTy &b, mlir::Location loc,
+                            const RegisterCursor &cursor, unsigned neededInt,
+                            unsigned neededSse) {
+  if (neededInt) {
+    b.createStore(loc,
+                  b.createAdd(loc, cursor.gpOffset,
+                              b.getConstantInt(loc, cursor.gpOffset.getType(),
+                                               neededInt * 8)),
+                  cursor.gpOffsetP);
+  }
+  if (neededSse) {
+    b.createStore(loc,
+                  b.createAdd(loc, cursor.fpOffset,
+                              b.getConstantInt(loc, cursor.fpOffset.getType(),
+                                               neededSse * 16)),
+                  cursor.fpOffsetP);
+  }
+}
+
+} // namespace
+
+mlir::LogicalResult
+CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
+                                   const ArgClassification &ac,
+                                   mlir::OpBuilder &opBuilder) {
+  auto op = mlir::cast<cir::VAArgOp>(vaArgOp);
+  CIRBaseBuilderTy builder(opBuilder);
+  mlir::Location loc = op.getLoc();
+  mlir::Type resultTy = op.getType();
+  mlir::Value valist = op.getArgList();
+
+  // An ignored type travels in no register and no stack slot, so the fetch
+  // reads nothing and must leave the cursor unchanged.  The value holds no
+  // bytes, so poison stands in for it.
+  if (ac.kind == ArgKind::Ignore) {
+    builder.setInsertionPoint(op);
+    op.getResult().replaceAllUsesWith(
+        createIgnoredValue(builder, loc, resultTy));
+    op->erase();
+    return mlir::success();
+  }
+
+  if (ac.kind == ArgKind::Indirect && !ac.byVal)
+    return reportVAArgNYI(op, "a non-trivially-copyable type");
+
+  // neededInt counts 8-byte integer slots and neededSse counts 16-byte vector
+  // slots.  Zero of both means the type travels in memory and is read
+  // straight from the overflow area.
+  unsigned neededInt = ac.neededIntRegs;
+  unsigned neededSse = ac.neededSseRegs;
+
+  // Which coerced-pair element (0 = low eightbyte, 1 = high) is SSE rather
+  // than INTEGER class.  Only meaningful when isRegPair is set.
+  std::array<bool, 2> pairIsSse = {false, false};
+  bool isRegPair = false;
+  if (ac.kind == ArgKind::Direct && neededInt + neededSse == 2 &&
+      ac.coercedType) {
+    if (classifyRegisterPair(op, ac, pairIsSse, isRegPair).failed())
+      return mlir::failure();
+  }
+
+  auto vaListRecTy = mlir::dyn_cast<cir::RecordType>(
+      mlir::cast<cir::PointerType>(valist.getType()).getPointee());
+  if (!vaListRecTy || vaListRecTy.getNumElements() != 4) {
+    return reportVAArgNYI(op,
+                          "a va_list that is not the four-field gp_offset / "
+                          "fp_offset / overflow_arg_area / reg_save_area "
+                          "cursor");
+  }
+
+  const VAArgFetch fetch{loc, valist, vaListRecTy.getMembers(), resultTy, ac,
+                         dl,  module};
+  cir::IntType byteTy = builder.getUIntNTy(8);
+
+  builder.setInsertionPoint(op);
+
+  mlir::Value addr;
+  if (neededInt == 0 && neededSse == 0) {
+    addr = buildOverflowAddrAndAdvance(builder, fetch);
+  } else {
+    RegisterCursor cursor =
+        buildRegisterGate(builder, fetch, neededInt, neededSse);
+
+    // A two-eightbyte pair that is purely INTEGER class is contiguous in the
+    // register-save area, since GP slots are 8-byte packed, so the address of
+    // its low eightbyte is already the address of the whole value.  A pure
+    // SSE pair or a mixed pair is not contiguous, since SSE slots are 16-byte
+    // spaced and a mixed pair's halves live in disjoint areas, so each half is
+    // copied into a temp laid out as the coerced pair.
+    bool pairNeedsReassembly = isRegPair && neededSse != 0;
+
+    // Both temps are allocated here, since a ternary arm yields their address.
+    mlir::Value regPairTemp;
+    if (pairNeedsReassembly) {
+      // The temp is written one member at a time through the coerced pair, so
+      // it has to meet that type's alignment, and read back as the result, so
+      // it has to meet the result's alignment too.
+      regPairTemp = builder.createAlloca(
+          loc, builder.getPointerTo(ac.coercedType), "vaarg.reg",
+          clang::CharUnits::fromQuantity(
+              std::max(dl.getTypeABIAlignment(ac.coercedType),
+                       argumentAreaAlign(resultTy, module, dl))));
+    }
+
+    mlir::Value regTemp;
+    bool copyThroughTemp =
+        !pairNeedsReassembly && needsTempCopy(fetch, neededInt, neededSse);
+    if (copyThroughTemp) {
+      regTemp =
+          builder.createAlloca(loc, builder.getPointerTo(resultTy), "vaarg.reg",
+                               clang::CharUnits::fromQuantity(
+                                   argumentAreaAlign(resultTy, module, dl)));
+    }
+
+    addr = cir::TernaryOp::create(
+               builder, loc, cursor.inRegs,
+               /*trueBuilder=*/
+               [&](mlir::OpBuilder &ob, mlir::Location l) {
+                 CIRBaseBuilderTy b(ob);
+                 mlir::Value regSaveArea = b.createLoad(
+                     l, b.createGetMember(l, b.getPointerTo(fetch.vaFields[3]),
+                                          valist, "reg_save_area", 3));
+                 regSaveArea = b.createPtrBitcast(regSaveArea, byteTy);
+
+                 mlir::Value regAddr;
+                 if (pairNeedsReassembly) {
+                   reassembleRegisterPair(b, l, ac, cursor, pairIsSse,
+                                          regSaveArea, regPairTemp);
+                   regAddr = b.createPtrBitcast(regPairTemp, byteTy);
+                 } else {
+                   mlir::Value off =
+                       neededSse ? cursor.fpOffset : cursor.gpOffset;
+                   regAddr = b.createPtrStride(l, regSaveArea, off);
+                   if (copyThroughTemp) {
+                     regAddr = copyRegisterToTemp(b, l, fetch, regAddr, regTemp,
+                                                  neededInt, neededSse);
+                   }
+                 }
+
+                 advanceRegisterCursors(b, l, cursor, neededInt, neededSse);
+                 cir::YieldOp::create(b, l, regAddr);
+               },
+               /*falseBuilder=*/
+               [&](mlir::OpBuilder &ob, mlir::Location l) {
+                 CIRBaseBuilderTy b(ob);
+                 mlir::Value memAddr = buildOverflowAddrAndAdvance(b, fetch);
+                 cir::YieldOp::create(b, l, memAddr);
+               })
+               .getResult();
+  }
+
+  // Every path above places the result at least this well aligned.
+  mlir::Value result =
+      builder.createAlignedLoad(loc, builder.createPtrBitcast(addr, resultTy),
+                                argumentAreaAlign(resultTy, module, dl));
+  op.getResult().replaceAllUsesWith(result);
+  op->erase();
+  return mlir::success();
 }

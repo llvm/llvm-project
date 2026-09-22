@@ -152,6 +152,7 @@ enum class AArch64ABIKind {
 struct AArch64ABIOptions {
   AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
   bool IsILP32 = false;
+  bool IsCXX = false;
   bool IsMicrosoftCXXABI = false;
   ABICompatInfo CompatInfo;
 
