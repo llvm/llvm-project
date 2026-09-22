@@ -201,6 +201,13 @@ public:
       else
         m_bp_opts.GetCondition().SetLanguage(language);
     } break;
+    case 'Z': {
+      auto condition_mode =
+          static_cast<BreakpointConditionMode>(OptionArgParser::ToOptionEnum(
+              option_arg, GetDefinitions()[option_idx].enum_values,
+              lldb::eBreakpointConditionModeDWIM, error));
+      m_bp_opts.GetCondition().SetMode(condition_mode);
+    } break;
     default:
       llvm_unreachable("Unimplemented option");
     }

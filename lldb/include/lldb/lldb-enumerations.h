@@ -712,6 +712,7 @@ enum CommandArgumentType {
   eArgTypeAliasOptions,
   eArgTypeArchitecture,
   eArgTypeBoolean,
+  eArgTypeBreakpointConditionMode,
   eArgTypeBreakpointID,
   eArgTypeBreakpointIDRange,
   eArgTypeBreakpointName,
@@ -1630,6 +1631,13 @@ FLAGS_ENUM(BreakpointResolverType){
 constexpr unsigned BreakpointResolverAllResolversMask =
     eResolverFileAndLine | eResolverAddress | eResolverName |
     eResolverFileRegex | eResolverPython | eResolverException;
+
+/// Modes for evaluating breakpoint conditions.
+enum BreakpointConditionMode {
+  eBreakpointConditionModeDIL,
+  eBreakpointConditionModeExpr,
+  eBreakpointConditionModeDWIM
+};
 
 } // namespace lldb
 

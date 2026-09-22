@@ -141,13 +141,21 @@ let Command = "breakpoint modify" in {
         Group<1>,
         Arg<"Expression">,
         Desc<"The breakpoint stops only if this ${c}ondition expression "
-             "evaluates to true.">;
+             "evaluates to true. By default, DIL is used to evaluate the "
+             "expression, and if it fails, the evaluation falls back to "
+             "UserExpression. Use -Z <condition-mode> to change this behavior.">;
+  def breakpoint_modify_condition_mode
+      : Option<"condition-mode", "Z">,
+        Group<1>,
+        EnumArg<"BreakpointConditionMode">,
+        Desc<"Specifies the mode to use when evaluating the breakpoint's "
+             "condition expression. Default: dwim.">;
   def breakpoint_modify_condition_language
       : Option<"condition-language", "Y">,
         Group<1>,
         Arg<"Language">,
         Desc<"Specifies the Language to use when executing the breakpoint's "
-             "condition expression.">;
+             "condition expression using UserExpression.">;
   def breakpoint_modify_auto_continue
       : Option<"auto-continue", "G">,
         Group<1>,

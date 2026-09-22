@@ -235,7 +235,8 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   }
 
   // Attempt to parse the condition using Data Inspection Language (DIL).
-  if (condition.GetHash() != m_condition_hash && exe_ctx.HasFrameScope()) {
+  if (condition.GetHash() != m_condition_hash && exe_ctx.HasFrameScope() &&
+      condition.GetMode() != lldb::eBreakpointConditionModeExpr) {
     // Lex the expression.
     auto lex_or_err = dil::DILLexer::Create(condition.GetText(), eDILModeFull);
     if (lex_or_err) {
@@ -287,9 +288,11 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     m_dil_expr_tree.reset();
     m_condition_hash = 0;
   }
-  // If DIL failed at any point, the condition evaluation falls back to
-  // UserExpression.
+  // DIL evaluation failed, trigger the breakpoint and return the error.
+  if (condition.GetMode() == lldb::eBreakpointConditionModeDIL)
+    return true;
 
+  // The condition evaluation proceeds to UserExpression here.
   error.Clear();
 
   DiagnosticManager diagnostics;

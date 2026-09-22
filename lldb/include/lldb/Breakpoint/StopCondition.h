@@ -39,6 +39,10 @@ public:
 
   void SetLanguage(lldb::LanguageType language) { m_language = language; }
 
+  lldb::BreakpointConditionMode GetMode() const { return m_condition_mode; }
+
+  void SetMode(lldb::BreakpointConditionMode mode) { m_condition_mode = mode; }
+
 private:
   /// The condition to test.
   std::string m_text;
@@ -48,6 +52,10 @@ private:
 
   /// The language for this condition.
   lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
+
+  /// The evaluation mode for this condition.
+  lldb::BreakpointConditionMode m_condition_mode =
+      lldb::eBreakpointConditionModeDWIM;
 };
 
 } // namespace lldb_private
