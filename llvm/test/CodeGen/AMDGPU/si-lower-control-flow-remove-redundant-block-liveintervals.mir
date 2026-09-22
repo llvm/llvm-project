@@ -34,7 +34,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = S_OR_B64 $exec, [[COPY3]], implicit-def dead $scc
+  ; CHECK-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY3]], implicit-def dead $scc
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -70,7 +70,7 @@ body:             |
     S_BRANCH %bb.3
 
   bb.2:
-    SI_END_CF killed %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     %7:vreg_64 = REG_SEQUENCE killed %2, %subreg.sub0, killed %1, %subreg.sub1
     S_BRANCH %bb.5
 
@@ -86,7 +86,7 @@ body:             |
     S_BRANCH %bb.4
 
   bb.4:
-    SI_END_CF killed %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF killed %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.2
 
   bb.5:

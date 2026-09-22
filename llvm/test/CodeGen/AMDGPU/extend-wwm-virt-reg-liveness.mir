@@ -176,7 +176,7 @@ body:             |
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   liveins: $sgpr6_sgpr7
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $exec = S_OR_B64 $exec, $sgpr6_sgpr7, implicit-def $scc
+  ; GCN-NEXT:   $exec = bb-prolog S_OR_B64 $exec, $sgpr6_sgpr7, implicit-def $scc
   ; GCN-NEXT:   SI_RETURN
   bb.0:
     liveins: $sgpr4, $sgpr10_sgpr11
@@ -208,7 +208,7 @@ body:             |
     S_BRANCH %bb.3
   bb.5:
     liveins: $sgpr6_sgpr7
-    $exec = S_OR_B64 $exec, $sgpr6_sgpr7, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, $sgpr6_sgpr7, implicit-def $scc
     SI_RETURN
 ...
 

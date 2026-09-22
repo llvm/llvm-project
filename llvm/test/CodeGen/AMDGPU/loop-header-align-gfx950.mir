@@ -36,7 +36,7 @@ body:             |
   bb.2:
     liveins: $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
     S_SETPC_B64_return undef $sgpr30_sgpr31
 ...
 
@@ -69,6 +69,6 @@ body:             |
   bb.2:
     liveins: $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
     S_SETPC_B64_return undef $sgpr30_sgpr31
 ...

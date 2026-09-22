@@ -571,7 +571,7 @@ body:             |
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; CHECK-NEXT:   $exec = bb-prolog S_MOV_B64 [[S_MOV_B64_]]
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -595,7 +595,7 @@ body:             |
     SI_WATERFALL_LOOP %bb.1, implicit $exec
 
   bb.2:
-    $exec = S_MOV_B64 %3
+    $exec = bb-prolog S_MOV_B64 %3
     SI_RETURN
 
 ...

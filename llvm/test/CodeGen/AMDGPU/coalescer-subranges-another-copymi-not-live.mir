@@ -88,7 +88,7 @@ body:             |
 
   bb.10:
     successors: %bb.12(0x80000000)
-    $exec = S_OR_B64 $exec, killed %22, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed %22, implicit-def $scc
     S_BRANCH %bb.12
 
   bb.11:
