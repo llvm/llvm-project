@@ -461,6 +461,10 @@ let CategoryName = "Inline Assembly Issue" in {
     "empty symbolic operand name in inline assembly string">;
   def err_asm_invalid_operand_number : Error<
     "invalid operand number in inline asm string">;
+  def err_asm_nested_dialect_alternatives : Error<
+    "nested assembler dialect alternatives in inline assembly string">;
+  def err_asm_unterminated_dialect_alternative : Error<
+    "unterminated assembler dialect alternative in inline assembly string">;
 }
 
 // vtable related.
