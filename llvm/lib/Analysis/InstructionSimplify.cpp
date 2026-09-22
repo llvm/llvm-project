@@ -6952,10 +6952,10 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    if (!Q.getFunction())
+    const Function *F = Q.getFunction();
+    if (!F)
       break;
 
-    const Function *F = Q.getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
     Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
