@@ -257,6 +257,7 @@ public:
 /// Represents a C++ struct/union/class.
 class CXXRecordDecl : public RecordDecl {
   friend class ASTDeclMerger;
+  friend class ASTDeclUnmerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
@@ -264,7 +265,6 @@ class CXXRecordDecl : public RecordDecl {
   friend class ASTRecordWriter;
   friend class ASTWriter;
   friend class DeclContext;
-  friend class IncrementalParser;
   friend class LambdaExpr;
   friend class ODRDiagsEmitter;
 

@@ -66,4 +66,37 @@ using Deep::g; int e9 = undeclared_thing;
 g();
 // CHECK-DAG: Deep::g
 
+// A member of a re-opened namespace is a redeclaration on its own.
+namespace ns { class Foo; }
+namespace ns { class Foo { public: int v; }; int e10 = undeclared_thing; }
+// CHECK-DAG: error: use of undeclared identifier 'undeclared_thing'
+ns::Foo *fp = nullptr; printf("ns::Foo reachable %d\n", fp == nullptr);
+// CHECK-DAG: ns::Foo reachable 1
+namespace ns { class Foo { public: int v; int w; }; }
+ns::Foo foo; foo.v = 1; foo.w = 2; printf("foo = %d %d\n", foo.v, foo.w);
+// CHECK-DAG: foo = 1 2
+
+namespace ns { void h(); }
+namespace ns { void h() { printf("h discarded\n"); } int e11 = undeclared_thing; }
+// CHECK-DAG: error: use of undeclared identifier 'undeclared_thing'
+namespace ns { void h() { printf("h kept\n"); } }
+ns::h();
+// CHECK-DAG: h kept
+// NEG-NOT: {{^}}h discarded
+
+// The same, one namespace deeper: the inner namespace is itself a member of
+// the outer one.
+namespace outer { namespace inner { class Bar; } }
+namespace outer { namespace inner { class Bar { public: int v; }; } int e12 = undeclared_thing; }
+// CHECK-DAG: error: use of undeclared identifier 'undeclared_thing'
+outer::inner::Bar *bp = nullptr; printf("outer::inner::Bar reachable %d\n", bp == nullptr);
+// CHECK-DAG: outer::inner::Bar reachable 1
+
+// Anonymous namespace
+namespace { int anon_v = 11; } int e13 = undeclared_thing;
+// CHECK-DAG: error: use of undeclared identifier 'undeclared_thing'
+namespace { int anon_v = 22; }
+printf("anon_v = %d\n", anon_v);
+// CHECK-DAG: anon_v = 22
+
 %quit
