@@ -1092,13 +1092,6 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
                Tok.getKind());
 }
 
-bool Parser::isHLSLQualifier(const Token &Tok) const {
-  return Tok.is(tok::kw_groupshared) || Tok.is(tok::kw_row_major) ||
-         Tok.is(tok::kw_column_major) ||
-         Tok.isOneOf(tok::kw_nointerpolation, tok::kw_linear, tok::kw_centroid,
-                     tok::kw_noperspective, tok::kw_sample, tok::kw_center);
-}
-
 void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
   IdentifierInfo *AttrName = Tok.getIdentifierInfo();
   auto Kind = Tok.getKind();
