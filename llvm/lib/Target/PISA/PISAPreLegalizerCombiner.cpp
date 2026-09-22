@@ -521,15 +521,14 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
                  : NextPowerOf2(SizeAfterModificationOp)) == LoadSize)
           return false;
 
-        // If the G_SEXT source size equals the load size and the source is
-        // byte-aligned, applying this transformation would reconstruct the
-        // same G_SEXT(G_LOAD) pattern, causing an infinite loop. When the
-        // source size is not byte-aligned, the apply inserts in-place
-        // shl/ashr to align it first, producing a different pattern.
+        // When the G_SEXT source size equals the load size, this rewrite
+        // cannot eliminate the load or the extension. For non-byte-aligned
+        // loads, generic combines can also fold the inserted shifts back to
+        // G_SEXT(G_LOAD), causing an infinite loop.
         unsigned SextSrcSize =
             MRI.getType(SizeModificationOp->getOperand(1).getReg())
                 .getScalarSizeInBits();
-        if (LoadSize == SextSrcSize && SextSrcSize % 8 == 0)
+        if (LoadSize == SextSrcSize)
           return false;
 
         // TODO: revisit
