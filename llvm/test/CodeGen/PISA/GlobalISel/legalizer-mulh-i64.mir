@@ -9,15 +9,6 @@
 # upper 64 bits.  A buggy implementation that shifts each cross-term
 # independently (P_hh + (P_lh>>32) + (P_hl>>32)) drops this carry.
 
---- |
-  define i64 @test_umulh_i64(i64 %a, i64 %b) {
-    ret i64 0
-  }
-  define i64 @test_smulh_i64(i64 %a, i64 %b) {
-    ret i64 0
-  }
-...
-
 # --- G_UMULH i64 ---
 # Verify that the legalized sequence includes carry-aware cross-term
 # accumulation: the adds feeding the final result must include the

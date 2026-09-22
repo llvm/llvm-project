@@ -6,15 +6,6 @@
 #   select(trunc(wide -> i1), N 1, N 0) => trunc(and(wide, 1), N)
 # to avoid introducing an illegal i1 compare when lowering bool-to-int.
 
---- |
-  define i16 @test_select_trunc_one_zero_match(i32 %wide) { ret i16 0 }
-  define i16 @test_no_fold_cond_from_icmp(i32 %a) { ret i16 0 }
-  define i16 @test_no_fold_wrong_true_val(i32 %wide) { ret i16 0 }
-  define i16 @test_no_fold_wrong_false_val(i32 %wide) { ret i16 0 }
-  define i32 @test_no_fold_dst_geq_wide(i16 %wide) { ret i32 0 }
-  define i16 @test_no_fold_nonconstant_true(i32 %wide, i16 %t) { ret i16 0 }
-...
-
 # ============================================================================
 # Positive test: condition is i1 from G_TRUNC, true=1, false=0, DstTy < WideTy.
 # Expected transform: select(trunc(i32 to i1), i16 1, i16 0) => trunc(i32 & 1, i16)
