@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 # Test that the PostLegalizer does not infinite-loop on shl(or x, const), const.
 #

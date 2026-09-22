@@ -1,5 +1,5 @@
-# RUN: llc -march=pisa -run-pass=postrapseudos -verify-machineinstrs %s -o -   | FileCheck -check-prefix=PSEUDO %s
-# RUN-CRASHES: llc -march=pisa -start-before=postrapseudos -verify-machineinstrs %s -o - | FileCheck -check-prefix=ASM  %s
+# RUN: llc -mtriple=pisa -run-pass=postrapseudos -verify-machineinstrs %s -o -   | FileCheck -check-prefix=PSEUDO %s
+# RUN-CRASHES: llc -mtriple=pisa -start-before=postrapseudos %s -o - | FileCheck -check-prefix=ASM  %s
 --- |
   define i32 @test_copy_pred(i32 %arg) {
     ret i32 %arg

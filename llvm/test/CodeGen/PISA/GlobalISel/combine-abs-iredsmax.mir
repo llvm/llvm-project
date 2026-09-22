@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   define i32 @combine_abs_max_i32(i32 %data, i32 %mask, i32 %passthru) {
     %a = call i32 @llvm.abs.i32(i32 %data, i1 false)

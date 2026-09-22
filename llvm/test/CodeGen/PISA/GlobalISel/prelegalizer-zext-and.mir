@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=pisa-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=pisa-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
   define i64 @zext_and_mask_rhs(i32 %x) {
