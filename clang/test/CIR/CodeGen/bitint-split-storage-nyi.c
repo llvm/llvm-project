@@ -54,12 +54,12 @@ struct HasWide129Array g_array;
 // A split-storage width passed by value classifies Indirect, so the width
 // appears as the byval pointee.
 void take_param(signed _BitInt(129) x) {}
-// PARAM: NYI: lowering a byval/sret argument whose pointee type has no memory representation
+// PARAM: NYI: lowering a byval/sret/byref argument whose pointee type has no memory representation
 #endif
 
 #ifdef RETURN
 // Returned by value it classifies Indirect too, so the width appears as the
 // sret pointee.
 signed _BitInt(129) ret_wide(void) { return 1; }
-// RETURN: NYI: lowering a byval/sret argument whose pointee type has no memory representation
+// RETURN: NYI: lowering a byval/sret/byref argument whose pointee type has no memory representation
 #endif

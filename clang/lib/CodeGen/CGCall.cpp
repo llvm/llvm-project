@@ -1027,9 +1027,14 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = getTypes().ConvertType(Type);
+    unsigned DirectAlign = 0;
+    if (llvm::MaybeAlign Align = AbiInfo.getDirectAlign())
+      DirectAlign = Align->value();
+    // TODO: Move Padding into the ABIArgInfo struct when we add support for
+    //       targets that need a different setting than we have here.
     return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset(),
                                  /*Padding=*/nullptr,
-                                 AbiInfo.getCanBeFlattened());
+                                 AbiInfo.getCanBeFlattened(), DirectAlign);
   }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
@@ -2799,17 +2804,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       AddAttributesFromFunctionProtoType(
           getContext(), FuncAttrs, Fn->getType()->getAs<FunctionProtoType>());
       if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
-        // A sane operator new returns a non-aliasing pointer and does not
-        // read or write accessible memory.
+        // A sane operator new returns a non-aliasing pointer.
         if (getCodeGenOpts().AssumeSaneOperatorNew &&
-            Fn->getDeclName().isAnyOperatorNew()) {
+            Fn->getDeclName().isAnyOperatorNew())
           RetAttrs.addAttribute(llvm::Attribute::NoAlias);
-          // FIXME: inaccessiblemem could cause issues if LTO makes the
-          // previously inaccessible memory accessible after linking.
-          FuncAttrs.addMemoryAttr(
-              llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
-                  llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
-        }
       }
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
       const bool IsVirtualCall = MD && MD->isVirtual();
@@ -6450,9 +6448,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             // unprototyped calls.
             for (const CallArg &Arg : CallArgs)
               ParamTypes.push_back(Arg.getType());
-            FunctionProtoType::ExtProtoInfo EPI;
-            CST = getContext().getFunctionType(FNPT->getReturnType(),
-                                               ParamTypes, EPI);
+            CST = CGM.ReconstructCallGraphPrototype(FNPT, ParamTypes);
           }
 
           llvm::Metadata *MD =
@@ -6640,17 +6636,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               diag::err_musttail_noexcept_mismatch);
         break;
       }
-      EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
-      // Fake uses can be safely emitted immediately prior to the tail call, so
-      // we choose to emit them just before the call here.
-      if (Cleanup && Cleanup->isFakeUse()) {
-        CGBuilderTy::InsertPointGuard IPG(Builder);
-        Builder.SetInsertPoint(CI);
-        Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
-      } else if (!(Cleanup &&
-                   Cleanup->getCleanup()->isRedundantBeforeReturn())) {
-        CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
+      if (auto *Cleanup = dyn_cast<EHCleanupScope>(&*it)) {
+        // Fake uses can be safely emitted immediately prior to the tail call,
+        // so we choose to emit them just before the call here.
+        if (Cleanup->isFakeUse()) {
+          CGBuilderTy::InsertPointGuard IPG(Builder);
+          Builder.SetInsertPoint(CI);
+          Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
+          continue;
+        }
+        if (Cleanup->isRedundantBeforeReturn())
+          continue;
       }
+      CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
     }
     if (CI->getType()->isVoidTy())
       Builder.CreateRetVoid();
