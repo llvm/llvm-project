@@ -914,17 +914,41 @@ static LValue emitCapturedFieldLValue(CIRGenFunction &cgf, const FieldDecl *fd,
 LValue CIRGenFunction::emitLValueForLambdaField(const FieldDecl *field,
                                                 mlir::Value thisValue) {
   bool hasExplicitObjectParameter = false;
-  const auto *methD = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
+  const auto *md = dyn_cast_if_present<CXXMethodDecl>(curCodeDecl);
   LValue lambdaLV;
-  if (methD) {
-    hasExplicitObjectParameter = methD->isExplicitObjectMemberFunction();
-    assert(methD->getParent()->isLambda());
-    assert(methD->getParent() == field->getParent());
+  if (md) {
+    hasExplicitObjectParameter = md->isExplicitObjectMemberFunction();
+    assert(md->getParent()->isLambda());
+    assert(md->getParent() == field->getParent());
   }
+
   if (hasExplicitObjectParameter) {
-    cgm.errorNYI(field->getSourceRange(), "ExplicitObjectMemberFunction");
+    const VarDecl *d = cast<CXXMethodDecl>(curCodeDecl)->getParamDecl(0);
+    auto it = localDeclMap.find(d);
+    assert(it != localDeclMap.end() && "explicit parameter not loaded?");
+    Address addrOfExplicitObject = it->second;
+    if (d->getType()->isReferenceType())
+      lambdaLV = emitLoadOfReferenceLValue(addrOfExplicitObject,
+                                           getLoc(field->getSourceRange()),
+                                           d->getType(), AlignmentSource::Decl);
+    else
+      lambdaLV = makeAddrLValue(addrOfExplicitObject,
+                                d->getType().getNonReferenceType());
+
+    // Make sure we have an lvalue to the lambda itself and not a derived class.
+    auto *thisTy = d->getType().getNonReferenceType()->getAsCXXRecordDecl();
+    auto *lambdaTy = cast<CXXRecordDecl>(field->getParent());
+    if (thisTy != lambdaTy) {
+      const CXXCastPath &basePathArray = getContext().LambdaCastPaths.at(md);
+      Address base = getAddressOfBaseClass(
+          lambdaLV.getAddress(), thisTy,
+          llvm::make_range(basePathArray.begin(), basePathArray.end()),
+          /*nullCheckValue=*/false, SourceLocation());
+      CanQualType t = getContext().getCanonicalTagType(lambdaTy);
+      lambdaLV = makeAddrLValue(base, t);
+    }
   } else {
-    QualType lambdaTagType =
+    CanQualType lambdaTagType =
         getContext().getCanonicalTagType(field->getParent());
     lambdaLV = makeNaturalAlignAddrLValue(thisValue, lambdaTagType);
   }
