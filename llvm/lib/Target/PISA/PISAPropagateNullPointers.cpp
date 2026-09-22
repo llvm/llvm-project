@@ -72,7 +72,7 @@ static bool isPtrKnownNonNull(const Value *Src, const DataLayout &DL) {
   if (isa<GlobalValue, AllocaInst>(Src))
     return true;
 
-  if (const auto *Arg = dyn_cast<Argument>(Src)) {
+  if (const Argument *Arg = dyn_cast<Argument>(Src)) {
     if (Arg->hasNonNullAttr())
       return true;
     if (Arg->getParent()->getCallingConv() == CallingConv::PISA_KERNEL) {
@@ -111,20 +111,20 @@ static bool processASC(AddrSpaceCastInst &ASC, const DataLayout &DL) {
   if (!isCandidate(ASC))
     return false;
 
-  auto *Src = ASC.getPointerOperand();
+  Value *Src = ASC.getPointerOperand();
   SmallVector<const Value *, 4> WorkList;
   getUnderlyingObjects(Src, WorkList);
   if (all_of(WorkList,
              [&DL](const Value *V) { return isPtrKnownNonNull(V, DL); }))
     return false;
 
-  auto *SrcNull = createNullPtr(cast<PointerType>(Src->getType()), DL);
-  auto *DstNull = createNullPtr(cast<PointerType>(ASC.getType()), DL);
+  Constant *SrcNull = createNullPtr(cast<PointerType>(Src->getType()), DL);
+  Constant *DstNull = createNullPtr(cast<PointerType>(ASC.getType()), DL);
 
   IRBuilder<> IRB(&ASC);
-  auto *ASCCopy = IRB.CreateAddrSpaceCast(Src, ASC.getType(), ASC.getName());
-  auto *IsNonNull = IRB.CreateICmpNE(Src, SrcNull);
-  auto *Select = IRB.CreateSelect(IsNonNull, ASCCopy, DstNull);
+  Value *ASCCopy = IRB.CreateAddrSpaceCast(Src, ASC.getType(), ASC.getName());
+  Value *IsNonNull = IRB.CreateICmpNE(Src, SrcNull);
+  Value *Select = IRB.CreateSelect(IsNonNull, ASCCopy, DstNull);
   ASC.replaceAllUsesWith(Select);
   ASC.eraseFromParent();
   return true;
@@ -134,16 +134,16 @@ static bool processASC(AddrSpaceCastInst &ASC, const DataLayout &DL) {
 // to shared/private address spaces with inttoptr expressions. Only casts from
 // generic to shared/private address spaces are processed.
 static bool updateConstExprCasts(LLVMContext &Ctx, const DataLayout &DL) {
-  auto *NullGeneric = ConstantPointerNull::get(
+  ConstantPointerNull *NullGeneric = ConstantPointerNull::get(
       PointerType::get(Ctx, static_cast<unsigned>(AddressSpace::GENERIC)));
-  auto *NullPrivate = ConstantPointerNull::get(
+  ConstantPointerNull *NullPrivate = ConstantPointerNull::get(
       PointerType::get(Ctx, static_cast<unsigned>(AddressSpace::PRIVATE)));
-  auto *NullShared = ConstantPointerNull::get(
+  ConstantPointerNull *NullShared = ConstantPointerNull::get(
       PointerType::get(Ctx, static_cast<unsigned>(AddressSpace::SHARED)));
 
-  auto *GenericToPrivateCast =
+  Constant *GenericToPrivateCast =
       ConstantExpr::getAddrSpaceCast(NullGeneric, NullPrivate->getType());
-  auto *GenericToSharedCast =
+  Constant *GenericToSharedCast =
       ConstantExpr::getAddrSpaceCast(NullGeneric, NullShared->getType());
 
   bool Changed =
@@ -157,9 +157,9 @@ static bool updateConstExprCasts(LLVMContext &Ctx, const DataLayout &DL) {
 
 bool PISAPropagateNullPointers::runOnModule(Module &M) {
   bool Changed = false;
-  for (auto &F : M)
-    for (auto &I : make_early_inc_range(instructions(F)))
-      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+  for (Function &F : M)
+    for (Instruction &I : make_early_inc_range(instructions(F)))
+      if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(&I))
         Changed |= processASC(*ASC, M.getDataLayout());
 
   Changed |= updateConstExprCasts(M.getContext(), M.getDataLayout());

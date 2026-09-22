@@ -1,6 +1,6 @@
 # A convergent instruction without the NoMerge flag should have it set by the pass.
 # A function with no convergent instructions should pass through unchanged.
-# RUN: llc -march=pisa -run-pass=pisa-mark-convergent-no-merge \
+# RUN: llc -mtriple=pisa -run-pass=pisa-mark-convergent-no-merge \
 # RUN:     -verify-machineinstrs -o - %s | FileCheck %s
 
 # Test 1: A convergent ired instruction without NoMerge should get NoMerge set.

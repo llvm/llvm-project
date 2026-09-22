@@ -65,11 +65,11 @@ const StringMap<unsigned> ScopeName2Encoding = {
 bool PISAScopeSelector::runOnMachineFunction(MachineFunction &MF) {
   // SyncScopeID are dynamically assigned during parsing, so
   // we need to map them back to AtomicScopeControl definitions
-  auto &Ctx = MF.getFunction().getContext();
+  LLVMContext &Ctx = MF.getFunction().getContext();
   DenseMap<SyncScope::ID, unsigned> ScopeID2Encoding;
-  for (const auto &[Name, Encoding] : ScopeName2Encoding) {
-    auto ID = Ctx.getOrInsertSyncScopeID(Name);
-    ScopeID2Encoding.emplace_or_assign(ID, Encoding);
+  for (const StringMapEntry<unsigned> &Entry : ScopeName2Encoding) {
+    SyncScope::ID ID = Ctx.getOrInsertSyncScopeID(Entry.getKey());
+    ScopeID2Encoding.emplace_or_assign(ID, Entry.getValue());
   }
   ScopeID2Encoding.emplace_or_assign(SyncScope::System,
                                      AtomicScopeControl_SYSTEM);
@@ -79,11 +79,11 @@ bool PISAScopeSelector::runOnMachineFunction(MachineFunction &MF) {
       if (MI.memoperands_empty())
         continue;
 
-      auto *MMO = *MI.memoperands_begin();
+      MachineMemOperand *MMO = *MI.memoperands_begin();
       if (!(MMO->isLoad() || MMO->isStore()))
         continue;
 
-      auto Ordering = MMO->getSuccessOrdering();
+      AtomicOrdering Ordering = MMO->getSuccessOrdering();
       // Catch inconsistent atomic ordering
       if (!isValidAtomicOrdering(static_cast<unsigned>(Ordering))) {
         MI.emitGenericError("invalid atomic ordering in MachineMemOperand");
@@ -93,18 +93,21 @@ bool PISAScopeSelector::runOnMachineFunction(MachineFunction &MF) {
       if (!isStrongerThanMonotonic(Ordering))
         continue;
 
-      auto OpName = PISA::OpName::scope;
-      auto OpIdx = PISA::getNamedOperandIdx(MI.getOpcode(), OpName);
+      PISA::OpName OpName = PISA::OpName::scope;
+      int OpIdx = PISA::getNamedOperandIdx(MI.getOpcode(), OpName);
       if (OpIdx == -1)
         continue;
 
       if (MI.getOperand(OpIdx).getImm() != AtomicScopeControl_NONE)
         continue; // skip if already set (pisa2pisa)
 
-      auto ScopeID = MMO->getSyncScopeID();
-      auto Entry = ScopeID2Encoding.find(ScopeID);
-      if (Entry == ScopeID2Encoding.end())
-        llvm_unreachable("unsupported syncscope");
+      SyncScope::ID ScopeID = MMO->getSyncScopeID();
+      DenseMap<SyncScope::ID, unsigned>::iterator Entry =
+          ScopeID2Encoding.find(ScopeID);
+      if (Entry == ScopeID2Encoding.end()) {
+        MI.emitGenericError("atomic syncscope is not supported on PISA");
+        continue;
+      }
       MI.getOperand(OpIdx).setImm(Entry->second);
     }
   }

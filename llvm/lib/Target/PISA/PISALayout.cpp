@@ -21,6 +21,9 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/PISAAddrSpace.h"
 
+#include <functional>
+#include <iterator>
+
 #define DEBUG_TYPE "pisa-layout"
 #define DEBUG_NAME "PISA layout"
 
@@ -88,7 +91,9 @@ static void pushSucc(BasicBlock *BB, std::function<bool(BasicBlock *)> Cond,
   }
 }
 
-inline static auto sizeWithoutDebug(const BasicBlock *BB) { return BB->size(); }
+inline static size_t sizeWithoutDebug(const BasicBlock *BB) {
+  return BB->size();
+}
 
 void PISALayout::getAnalysisUsage(AnalysisUsage &AU) const {
   // Doesn't change the IR at all, it just move the blocks so no changes in the
@@ -113,7 +118,7 @@ bool PISALayout::runOnFunction(Function &Func) {
 
 // check if the instruction is atomic write (xchg or cmpxchng)
 bool PISALayout::isAtomicWrite(Instruction *Inst, bool OnlyLocalMem) {
-  auto MemCond = [Inst, OnlyLocalMem]() {
+  std::function<bool()> MemCond = [Inst, OnlyLocalMem]() {
     Value *Ptr = Inst->getOperand(0);
     bool IsLocalMem = Ptr->getType()->getPointerAddressSpace() ==
                       static_cast<unsigned>(PISAAS::AddressSpace::SHARED);
@@ -123,10 +128,10 @@ bool PISALayout::isAtomicWrite(Instruction *Inst, bool OnlyLocalMem) {
   if (isa<AtomicCmpXchgInst>(Inst) && MemCond())
     return true;
 
-  if (auto *AtomicRMW = dyn_cast<AtomicRMWInst>(Inst))
+  if (AtomicRMWInst *AtomicRMW = dyn_cast<AtomicRMWInst>(Inst))
     return AtomicRMW->getOperation() == AtomicRMWInst::Xchg && MemCond();
 
-  if (auto *CI = dyn_cast<CallInst>(Inst)) {
+  if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
     Function *F = CI->getCalledFunction();
     if (!F)
       return false;
@@ -141,13 +146,13 @@ bool PISALayout::isAtomicWrite(Instruction *Inst, bool OnlyLocalMem) {
 
 // check if the instruction is atomic read (ATOMIC_OR with src == 0)
 bool PISALayout::isAtomicRead(Instruction *Inst, bool OnlyLocalMem) {
-  auto LocalMemCond = [Inst, OnlyLocalMem]() {
+  std::function<bool()> LocalMemCond = [Inst, OnlyLocalMem]() {
     return !OnlyLocalMem ||
            Inst->getOperand(0)->getType()->getPointerAddressSpace() ==
                static_cast<unsigned>(PISAAS::AddressSpace::SHARED);
   };
 
-  auto *AtomicRMW = dyn_cast<AtomicRMWInst>(Inst);
+  AtomicRMWInst *AtomicRMW = dyn_cast<AtomicRMWInst>(Inst);
   if (AtomicRMW && AtomicRMW->getOperation() == AtomicRMWInst::Or &&
       LocalMemCond()) {
     ConstantInt *Src = dyn_cast<ConstantInt>(AtomicRMW->getValOperand());
@@ -163,7 +168,7 @@ Value *PISALayout::getMemoryOperand(Instruction *Inst, bool OnlyLocalMem) {
     return nullptr;
 
   Value *DstAddr = Inst->getOperand(0);
-  if (auto *PTI = dyn_cast<PtrToIntInst>(DstAddr))
+  if (PtrToIntInst *PTI = dyn_cast<PtrToIntInst>(DstAddr))
     return PTI->getPointerOperand();
 
   return DstAddr;
@@ -183,8 +188,7 @@ bool PISALayout::tryMovingWrite(Instruction *Write, Loop *LP, LoopInfo &LI) {
   SmallVector<BasicBlock *> BlocksToMove;
 
   if (Loop *WritingLoop = LI.getLoopFor(Write->getParent())) {
-    auto Blocks = WritingLoop->getBlocks();
-    for (auto &BB : Blocks) {
+    for (BasicBlock *BB : WritingLoop->getBlocks()) {
       if (isReturnBlock(BB))
         return false;
       BlocksToMove.push_back(BB);
@@ -215,7 +219,7 @@ bool PISALayout::tryMovingWrite(Instruction *Write, Loop *LP, LoopInfo &LI) {
       }
     }
     if (PredsInLoop == 1) {
-      for (auto *BB : BlocksToMove)
+      for (BasicBlock *BB : BlocksToMove)
         BB->moveAfter(InsertPoint);
       return true;
     }
@@ -279,7 +283,7 @@ void PISALayout::moveAtomicWrites2Loop(Function &F, LoopInfo &LI,
                                        bool OnlyLocalMem) {
   SmallVector<Instruction *> Writes;
   SmallVector<Instruction *> Reads;
-  for (auto &I : instructions(F)) {
+  for (Instruction &I : instructions(F)) {
     if (isAtomicWrite(&I, OnlyLocalMem))
       Writes.push_back(&I);
     else if (isAtomicRead(&I, OnlyLocalMem))
@@ -289,8 +293,8 @@ void PISALayout::moveAtomicWrites2Loop(Function &F, LoopInfo &LI,
   // write: LoopWhereToMove mapping
   MapVector<Instruction *, Loop *> WritesToMove;
 
-  for (auto *Read : Reads)
-    for (auto *Write : Writes)
+  for (Instruction *Read : Reads)
+    for (Instruction *Write : Writes)
       if (getMemoryOperand(Read, OnlyLocalMem) ==
           getMemoryOperand(Write, OnlyLocalMem)) {
         Loop *ReadLoop = LI.getLoopFor(Read->getParent());
@@ -300,7 +304,8 @@ void PISALayout::moveAtomicWrites2Loop(Function &F, LoopInfo &LI,
           WritesToMove[Write] = LI.getLoopFor(Read->getParent());
       }
 
-  for (const auto &Pair : WritesToMove) {
+  for (const MapVector<Instruction *, Loop *>::value_type &Pair :
+       WritesToMove) {
     Instruction *Write = Pair.first;
     Loop *Loop = Pair.second;
 
@@ -316,8 +321,8 @@ static bool hasThreadGroupBarrierInBlock(BasicBlock *BB) {
 
     Intrinsic::ID IntrID = F.getIntrinsicID();
     if (IntrID == Intrinsic::pisa_workgroup_barrier)
-      for (auto *U : F.users()) {
-        auto *Inst = dyn_cast<Instruction>(U);
+      for (User *U : F.users()) {
+        Instruction *Inst = dyn_cast<Instruction>(U);
         if (Inst && Inst->getParent() == BB)
           return true;
       }
@@ -330,7 +335,8 @@ BasicBlock *PISALayout::getLastReturnBlock(Function &F) {
   // otherwise, return the last BB that has no succ;
   //     or nullptr if every BB has Succ (infinite looping)
   BasicBlock *NoRetAndNoSucc = nullptr; // for func that never returns
-  for (auto RI = std::make_reverse_iterator(F.end()),
+  for (std::reverse_iterator<Function::iterator>
+            RI = std::make_reverse_iterator(F.end()),
             RE = std::make_reverse_iterator(F.begin());
        RI != RE; ++RI) {
     BasicBlock *BB = &*RI;
@@ -361,7 +367,7 @@ BasicBlock *PISALayout::selectSucc(BasicBlock *CurrBlk, bool SelectNoInstBlk,
   for (succ_iterator SI = succ_begin(CurrBlk), SE = succ_end(CurrBlk); SI != SE;
        ++SI) {
     BasicBlock *Succ = *SI;
-    auto Size = sizeWithoutDebug(Succ);
+    size_t Size = sizeWithoutDebug(Succ);
     if (VisitSet.count(Succ) == 0 &&
         ((SelectNoInstBlk && Size <= 1) || (!SelectNoInstBlk && Size > 1)))
       Succs.push_back(Succ);
@@ -434,16 +440,15 @@ void PISALayout::layoutBlocks(Function &F, LoopInfo &LI) {
     BasicBlock *BB = VisitVec.back();
     Loop *CurLoop = LI.getLoopFor(BB);
     if (CurLoop) {
-      auto *HD = CurLoop->getHeader();
+      BasicBlock *HD = CurLoop->getHeader();
       if (BB == HD && InsPos.find(HD) == InsPos.end())
         InsPos[BB] = BB;
     }
 
     // push: time for DFS visit
-    auto PushHasInstCond = [](BasicBlock *Succ) -> bool {
-      return sizeWithoutDebug(Succ) > 1;
-    };
-    pushSucc(BB, PushHasInstCond, VisitVec, VisitSet);
+    pushSucc(BB,
+             [](BasicBlock *Succ) { return sizeWithoutDebug(Succ) > 1; },
+             VisitVec, VisitSet);
     if (BB != VisitVec.back())
       continue;
     // push: time for DFS visit
@@ -457,10 +462,10 @@ void PISALayout::layoutBlocks(Function &F, LoopInfo &LI) {
     if (BB == VisitVec.back()) {
       VisitVec.pop_back();
       if (CurLoop) {
-        auto *HD = CurLoop->getHeader();
+        BasicBlock *HD = CurLoop->getHeader();
         if (BB != HD) {
           // move the block to the beginning of the loop
-          auto *Insp = InsPos[HD];
+          BasicBlock *Insp = InsPos[HD];
           assert(Insp);
           if (BB != Insp) {
             BB->moveBefore(Insp);
@@ -469,11 +474,11 @@ void PISALayout::layoutBlocks(Function &F, LoopInfo &LI) {
         } else {
           // move the entire loop to the beginning of
           // the parent loop
-          auto *LoopStart = InsPos[HD];
+          BasicBlock *LoopStart = InsPos[HD];
           assert(LoopStart);
-          auto *PaLoop = CurLoop->getParentLoop();
-          auto *PaHd = PaLoop ? PaLoop->getHeader() : Entry;
-          auto *Insp = InsPos[PaHd];
+          Loop *PaLoop = CurLoop->getParentLoop();
+          BasicBlock *PaHd = PaLoop ? PaLoop->getHeader() : Entry;
+          BasicBlock *Insp = InsPos[PaHd];
           if (LoopStart == HD)
             // single-block loop
             HD->moveBefore(Insp);
@@ -487,7 +492,7 @@ void PISALayout::layoutBlocks(Function &F, LoopInfo &LI) {
           InsPos[PaHd] = HD;
         }
       } else {
-        auto *Insp = InsPos[Entry];
+        BasicBlock *Insp = InsPos[Entry];
         if (BB != Insp) {
           BB->moveBefore(Insp);
           InsPos[Entry] = BB;
@@ -558,15 +563,13 @@ void PISALayout::layoutBlocks(Function &F) {
   while (!VisitVec.empty()) {
     BasicBlock *BB = VisitVec.back();
     // push in the empty successor
-    auto PushNoInstCond = [](BasicBlock *Succ) -> bool {
-      return sizeWithoutDebug(Succ) <= 1;
-    };
-    pushSucc(BB, PushNoInstCond, VisitVec, VisitSet);
+    pushSucc(BB,
+             [](BasicBlock *Succ) { return sizeWithoutDebug(Succ) <= 1; },
+             VisitVec, VisitSet);
     if (BB != VisitVec.back())
       continue;
     // push in all the same-loop successors
-    auto PushAnyCond = [](BasicBlock *Succ) -> bool { return true; };
-    pushSucc(BB, PushAnyCond, VisitVec, VisitSet);
+    pushSucc(BB, [](BasicBlock *) { return true; }, VisitVec, VisitSet);
     //  pop
     if (BB == VisitVec.back()) {
       VisitVec.pop_back();

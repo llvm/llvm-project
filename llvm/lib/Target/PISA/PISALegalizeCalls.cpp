@@ -27,6 +27,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PISAAddrSpace.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -77,13 +78,13 @@ bool PISALegalizeCalls::needsModification(Type *Ty, const DataLayout &DL) {
   if (Ty->isVoidTy() || Ty->isPointerTy())
     return false;
 
-  if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
-    auto NumElts = VecTy->getNumElements();
-    auto EltSize = VecTy->getScalarSizeInBits();
+  if (FixedVectorType *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+    unsigned NumElts = VecTy->getNumElements();
+    unsigned EltSize = VecTy->getScalarSizeInBits();
     if (EltSize == 0) {
       // vectors of pointers are treated as underlying integer
       assert(VecTy->getElementType()->isPointerTy());
-      auto AS = VecTy->getElementType()->getPointerAddressSpace();
+      unsigned AS = VecTy->getElementType()->getPointerAddressSpace();
       EltSize = DL.getPointerSizeInBits(AS);
     }
     switch (EltSize) {
@@ -105,11 +106,10 @@ bool PISALegalizeCalls::needsModification(Type *Ty, const DataLayout &DL) {
                                   (NumElts != 32) && (NumElts != 64));
       break;
     }
-  } else if (auto *IntTy = dyn_cast<IntegerType>(Ty)) {
+  } else if (IntegerType *IntTy = dyn_cast<IntegerType>(Ty)) {
     switch (IntTy->getScalarSizeInBits()) {
     default:
-      llvm_unreachable("unsupported integer type");
-      break;
+      reportFatalUsageError("unsupported PISA call integer type");
     case 1:
     case 4:
     case 128:
@@ -124,8 +124,7 @@ bool PISALegalizeCalls::needsModification(Type *Ty, const DataLayout &DL) {
   } else if (Ty->isFloatingPointTy()) {
     switch (Ty->getScalarSizeInBits()) {
     default:
-      llvm_unreachable("unsupported fp type");
-      break;
+      reportFatalUsageError("unsupported PISA call floating-point type");
     case 16:
     case 32:
     case 64:
@@ -134,7 +133,7 @@ bool PISALegalizeCalls::needsModification(Type *Ty, const DataLayout &DL) {
   } else if (isa<StructType>(Ty)) {
     Modify = true;
   } else {
-    llvm_unreachable("unsupported type");
+    reportFatalUsageError("unsupported PISA call type");
   }
   return Modify;
 }
@@ -147,16 +146,16 @@ Type *PISALegalizeCalls::getModifiedType(Type *Ty, const DataLayout &DL,
       if (Ty->getScalarSizeInBits() == 1 || Ty->getScalarSizeInBits() == 4) {
         NewTy = IntegerType::get(Ctx, 16); // i{1, 4} => i16
       } else if (Ty->getScalarSizeInBits() == 128) {
-        auto *EltTy = IntegerType::get(Ctx, 64);
+        IntegerType *EltTy = IntegerType::get(Ctx, 64);
         NewTy = FixedVectorType::get(EltTy, 2); // i128 => v2i64
       } else {
-        llvm_unreachable("unsupported type to be modified");
+        reportFatalUsageError("unsupported PISA call type conversion");
       }
-    } else if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+    } else if (FixedVectorType *VecTy = dyn_cast<FixedVectorType>(Ty)) {
       if (VecTy->getNumElements() == 1) { // <1 x i?> => i?
         NewTy = VecTy->getElementType();
       } else if (VecTy->getScalarSizeInBits() == 1) { // <? x i1> => i16
-        auto NewSize =
+        unsigned NewSize =
             std::max((unsigned)PowerOf2Ceil(VecTy->getNumElements()), 16u);
         NewTy = IntegerType::get(Ctx, NewSize);
       } else { // e.g. <8 x i8>
@@ -179,8 +178,8 @@ Type *PISALegalizeCalls::getModifiedType(Type *Ty, const DataLayout &DL,
 
 // record all call instructions that will require modification
 void PISALegalizeCalls::visitCallInst(CallInst &CI) {
-  auto *Caller = CI.getFunction();
-  auto *Callee = CI.getCalledFunction();
+  Function *Caller = CI.getFunction();
+  Function *Callee = CI.getCalledFunction();
 
   if (!Callee)
     Callee = dyn_cast<Function>(CI.getCalledOperand());
@@ -199,7 +198,7 @@ void PISALegalizeCalls::visitCallInst(CallInst &CI) {
     return;
 
   bool ArgNeedModification = llvm::any_of(CI.args(), [&](Value *Arg) {
-    auto *SType = Arg->getType();
+    Type *SType = Arg->getType();
     return needsModification(SType, Caller->getParent()->getDataLayout());
   });
   if (ArgNeedModification ||
@@ -215,12 +214,12 @@ void PISALegalizeCalls::visitIntrinsicInst(IntrinsicInst &I) {
 
 // record all return instructions that will require modification
 void PISALegalizeCalls::visitReturnInst(ReturnInst &RI) {
-  auto *F = RI.getFunction();
+  Function *F = RI.getFunction();
 
   if (F->getCallingConv() == CallingConv::PISA_KERNEL)
     return;
 
-  if (auto *RV = RI.getReturnValue()) {
+  if (Value *RV = RI.getReturnValue()) {
     if (needsModification(RV->getType(), F->getParent()->getDataLayout())) {
       Returns.push_back(&RI);
     }
@@ -232,11 +231,11 @@ void PISALegalizeCalls::collectFuncs(Function &F) {
     return;
 
   bool ToAdd = false;
-  for (auto &Arg : F.args()) {
+  for (Argument &Arg : F.args()) {
     if (needsModification(Arg.getType(), F.getParent()->getDataLayout()))
       ToAdd = true;
   }
-  auto *Ty = F.getFunctionType()->getReturnType();
+  Type *Ty = F.getFunctionType()->getReturnType();
   if (needsModification(Ty, F.getParent()->getDataLayout()))
     ToAdd = true;
 
@@ -245,27 +244,27 @@ void PISALegalizeCalls::collectFuncs(Function &F) {
 }
 
 void PISALegalizeCalls::modifyFunctionSignature(Function &F) {
-  auto &DL = F.getParent()->getDataLayout();
-  auto &Ctx = F.getContext();
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  LLVMContext &Ctx = F.getContext();
 
   AttributeList AL = F.getAttributes();
   SmallVector<Type *> NewArgTys;
   for (unsigned I = 0, E = F.arg_size(); I < E; ++I) {
-    auto *NewTy = getModifiedType(F.getArg(I)->getType(), DL, Ctx);
+    Type *NewTy = getModifiedType(F.getArg(I)->getType(), DL, Ctx);
     NewArgTys.push_back(NewTy);
     AL = AL.removeParamAttributes(
         Ctx, I,
         AttributeFuncs::typeIncompatible(NewTy, F.getArg(I)->getAttributes()));
   }
-  auto *RetTy = F.getFunctionType()->getReturnType();
-  auto *NewRetTy = getModifiedType(RetTy, DL, Ctx);
+  Type *RetTy = F.getFunctionType()->getReturnType();
+  Type *NewRetTy = getModifiedType(RetTy, DL, Ctx);
   if (RetTy != NewRetTy) {
     // return via hidden memory arg
     if (NewRetTy->isPointerTy()) {
       NewArgTys.push_back(NewRetTy);
       NewRetTy = Type::getVoidTy(Ctx);
       // void functions cannot return any argument value
-      for (const auto &Arg : F.args())
+      for (const Argument &Arg : F.args())
         AL = AL.removeParamAttribute(Ctx, Arg.getArgNo(), Attribute::Returned);
     }
     AL = AL.removeRetAttributes(
@@ -281,7 +280,7 @@ void PISALegalizeCalls::modifyFunctionSignature(Function &F) {
   // map args 1:1, but types will be different.
   // modify actual references to args below.
   for (unsigned I = 0; I < F.arg_size(); I++) {
-    auto *SArg = F.getArg(I);
+    Argument *SArg = F.getArg(I);
     VMap[SArg] = SArg;
   }
 
@@ -294,37 +293,37 @@ void PISALegalizeCalls::modifyFunctionSignature(Function &F) {
   // transform new arg types into ones expected within function
   IRBuilder<> IRB(Ctx);
   if (!NewF->isDeclaration()) {
-    auto FirstBB = NewF->begin();
+    Function::iterator FirstBB = NewF->begin();
     IRB.SetInsertPoint(FirstBB->begin());
   }
   for (unsigned I = 0; I < F.arg_size(); I++) {
-    auto *SArg = F.getArg(I);
-    auto *DArg = NewF->getArg(I);
-    auto *SType = SArg->getType(); // type to change from
-    auto *DType = DArg->getType(); // type to change to
+    Argument *SArg = F.getArg(I);
+    Argument *DArg = NewF->getArg(I);
+    Type *SType = SArg->getType(); // type to change from
+    Type *DType = DArg->getType(); // type to change to
     if (!NewF->isDeclaration()) {
       if (SType != DType) {
         if (DType->isPointerTy()) { // value passed via memory
-          auto *Load = IRB.CreateLoad(SType, DArg);
+          LoadInst *Load = IRB.CreateLoad(SType, DArg);
           SArg->replaceAllUsesWith(Load);
         } else {
-          auto SSize = DL.getTypeSizeInBits(SType);
-          auto DSize = DL.getTypeSizeInBits(DType);
+          TypeSize SSize = DL.getTypeSizeInBits(SType);
+          TypeSize DSize = DL.getTypeSizeInBits(DType);
           if (SSize == DSize) { // <1 x i?> => i?
-            auto *DCast = IRB.CreateBitCast(DArg, SType);
+            Value *DCast = IRB.CreateBitCast(DArg, SType);
             SArg->replaceAllUsesWith(DCast);
           } else if (SType->isIntegerTy(1) ||
                      SType->isIntegerTy(4)) { // i8 => i{1, 4}
-            auto *Trunc = IRB.CreateTrunc(DArg, SType);
+            Value *Trunc = IRB.CreateTrunc(DArg, SType);
             SArg->replaceAllUsesWith(Trunc);
           } else if (SType->isVectorTy()) { // i16 => <? x i1>
             assert(SType->getScalarSizeInBits() == 1);
-            auto *ScalarType = IntegerType::get(Ctx, SSize);
-            auto *Trunc = IRB.CreateTrunc(DArg, ScalarType);
-            auto *Cast = IRB.CreateBitCast(Trunc, SType);
+            IntegerType *ScalarType = IntegerType::get(Ctx, SSize);
+            Value *Trunc = IRB.CreateTrunc(DArg, ScalarType);
+            Value *Cast = IRB.CreateBitCast(Trunc, SType);
             SArg->replaceAllUsesWith(Cast);
           } else {
-            llvm_unreachable("unsupported argument type");
+            reportFatalUsageError("unsupported PISA function argument type");
           }
         }
       } else {
@@ -341,42 +340,42 @@ void PISALegalizeCalls::modifyFunctionSignature(Function &F) {
 }
 
 void PISALegalizeCalls::modifyReturnInst(ReturnInst *RI) {
-  auto *F = RI->getFunction();
-  auto &Ctx = F->getContext();
+  Function *F = RI->getFunction();
+  LLVMContext &Ctx = F->getContext();
   assert(F->getCallingConv() != CallingConv::PISA_KERNEL &&
          "return instruction in kernel");
 
-  auto &DL = F->getParent()->getDataLayout();
-  auto *RV = RI->getReturnValue();
-  auto *SType = RV->getType();                         // type to change from
-  auto *DType = F->getFunctionType()->getReturnType(); // type to change to
+  const DataLayout &DL = F->getParent()->getDataLayout();
+  Value *RV = RI->getReturnValue();
+  Type *SType = RV->getType();                         // type to change from
+  Type *DType = F->getFunctionType()->getReturnType(); // type to change to
   if (!SType->isVoidTy() && (SType != DType)) {
     IRBuilder<> IRB(dyn_cast<Instruction>(RI));
     if (DType->isVoidTy()) {
       // return via hidden memory arg
-      auto *Ptr = F->getArg(F->arg_size() - 1);
+      Argument *Ptr = F->getArg(F->arg_size() - 1);
       IRB.CreateStore(RV, Ptr);
       IRB.CreateRet(nullptr);
     } else {
-      auto SSize = DL.getTypeSizeInBits(SType);
-      auto DSize = DL.getTypeSizeInBits(DType);
+      TypeSize SSize = DL.getTypeSizeInBits(SType);
+      TypeSize DSize = DL.getTypeSizeInBits(DType);
       if (SSize == DSize) { // <1 x i?> => i?
-        auto *DCast = IRB.CreateBitCast(RV, DType);
+        Value *DCast = IRB.CreateBitCast(RV, DType);
         IRB.CreateRet(DCast);
       } else if (SType->isIntegerTy(1) ||
                  SType->isIntegerTy(4)) { // i{1, 4} => i8
-        auto SExt = F->hasRetAttribute(Attribute::SExt);
-        auto *Extend =
+        bool SExt = F->hasRetAttribute(Attribute::SExt);
+        Value *Extend =
             SExt ? IRB.CreateSExt(RV, DType) : IRB.CreateZExt(RV, DType);
         IRB.CreateRet(Extend);
       } else if (SType->isVectorTy()) { // <? x i1> => i16
         assert(SType->getScalarSizeInBits() == 1);
-        auto *ScalarType = IntegerType::get(Ctx, SSize);
-        auto *Cast = IRB.CreateBitCast(RV, ScalarType);
-        auto *Extend = IRB.CreateZExt(Cast, DType);
+        IntegerType *ScalarType = IntegerType::get(Ctx, SSize);
+        Value *Cast = IRB.CreateBitCast(RV, ScalarType);
+        Value *Extend = IRB.CreateZExt(Cast, DType);
         IRB.CreateRet(Extend);
       } else {
-        llvm_unreachable("unsupported return type");
+        reportFatalUsageError("unsupported PISA function return type");
       }
     }
     RI->eraseFromParent();
@@ -384,41 +383,41 @@ void PISALegalizeCalls::modifyReturnInst(ReturnInst *RI) {
 }
 
 void PISALegalizeCalls::modifyCallInst(CallInst *CI) {
-  auto *F = CI->getFunction();
-  auto &Ctx = F->getContext();
-  auto &DL = F->getParent()->getDataLayout();
+  Function *F = CI->getFunction();
+  LLVMContext &Ctx = F->getContext();
+  const DataLayout &DL = F->getParent()->getDataLayout();
 
-  auto *Callee = CI->getCalledOperand();
+  Value *Callee = CI->getCalledOperand();
   SmallVector<Value *, 8> NewArgs;
   SmallVector<Type *, 8> NewArgTys;
 
   IRBuilder<> IRB(dyn_cast<Instruction>(CI));
   for (unsigned I = 0; I < CI->arg_size(); I++) {
-    auto *Arg = CI->getArgOperand(I);
-    auto *SType = Arg->getType();                  // type to change from
-    auto *DType = getModifiedType(SType, DL, Ctx); // type to change to
+    Value *Arg = CI->getArgOperand(I);
+    Type *SType = Arg->getType();                  // type to change from
+    Type *DType = getModifiedType(SType, DL, Ctx); // type to change to
     Value *NewV = nullptr;
     if (SType != DType) {
       if (DType->isPointerTy()) { // pass via memory
         NewV = IRB.CreateAlloca(SType);
         IRB.CreateStore(Arg, NewV);
       } else {
-        auto SSize = DL.getTypeSizeInBits(SType);
-        auto DSize = DL.getTypeSizeInBits(DType);
+        TypeSize SSize = DL.getTypeSizeInBits(SType);
+        TypeSize DSize = DL.getTypeSizeInBits(DType);
         if (SSize == DSize) { // <1 x i?> => i?
           NewV = IRB.CreateBitCast(Arg, DType);
         } else if (SType->isIntegerTy(1) ||
                    SType->isIntegerTy(4)) { // i{1, 4} => i8
-          auto SExt = CI->getParamAttr(I, Attribute::SExt).getKindAsEnum() ==
+          bool SExt = CI->getParamAttr(I, Attribute::SExt).getKindAsEnum() ==
                       Attribute::SExt;
           NewV = SExt ? IRB.CreateSExt(Arg, DType) : IRB.CreateZExt(Arg, DType);
         } else if (SType->isVectorTy()) { // <? x i1> => i16
           assert(SType->getScalarSizeInBits() == 1);
-          auto *ScalarType = IntegerType::get(Ctx, SSize);
-          auto *Cast = IRB.CreateBitCast(Arg, ScalarType);
+          IntegerType *ScalarType = IntegerType::get(Ctx, SSize);
+          Value *Cast = IRB.CreateBitCast(Arg, ScalarType);
           NewV = IRB.CreateZExt(Cast, DType);
         } else {
-          llvm_unreachable("unsupported call argument type");
+          reportFatalUsageError("unsupported PISA call argument type");
         }
       }
     }
@@ -431,8 +430,8 @@ void PISALegalizeCalls::modifyCallInst(CallInst *CI) {
     }
   }
 
-  auto *RetTy = CI->getType();
-  auto *NewRetTy = RetTy;
+  Type *RetTy = CI->getType();
+  Type *NewRetTy = RetTy;
   Value *RetAlloca = nullptr;
   NewRetTy = getModifiedType(RetTy, DL, Ctx);
   if ((RetTy != NewRetTy) && NewRetTy->isPointerTy()) {
@@ -442,33 +441,35 @@ void PISALegalizeCalls::modifyCallInst(CallInst *CI) {
     NewArgTys.push_back(NewRetTy);
     NewRetTy = Type::getVoidTy(Ctx);
   }
-  auto *FTy = FunctionType::get(NewRetTy, NewArgTys, false);
-  auto *NewCI = IRB.CreateCall(FTy, Callee, NewArgs);
+  FunctionType *FTy = FunctionType::get(NewRetTy, NewArgTys, false);
+  CallInst *NewCI = IRB.CreateCall(FTy, Callee, NewArgs);
   NewCI->setCallingConv(CI->getCallingConv());
 
   // handle return value
   if (RetTy != NewRetTy) {
-    auto SSize = DL.getTypeSizeInBits(RetTy);
-    auto DSize = NewRetTy->isVoidTy() ? 0u : DL.getTypeSizeInBits(NewRetTy);
+    TypeSize SSize = DL.getTypeSizeInBits(RetTy);
+    TypeSize DSize = NewRetTy->isVoidTy()
+                         ? TypeSize::getFixed(0)
+                         : DL.getTypeSizeInBits(NewRetTy);
     if (SSize == DSize) { // i? => <1 x i?>
-      auto *Bitcast = IRB.CreateBitCast(NewCI, RetTy);
+      Value *Bitcast = IRB.CreateBitCast(NewCI, RetTy);
       CI->replaceAllUsesWith(Bitcast);
     } else if (RetTy->isIntegerTy(1) ||
                RetTy->isIntegerTy(4)) { // i8 => i{1, 4}
-      auto *Trunc = IRB.CreateTrunc(NewCI, RetTy);
+      Value *Trunc = IRB.CreateTrunc(NewCI, RetTy);
       CI->replaceAllUsesWith(Trunc);
     } else if (DSize == 0) {
       // return via hidden memory arg
-      auto *Load = IRB.CreateLoad(RetTy, RetAlloca);
+      LoadInst *Load = IRB.CreateLoad(RetTy, RetAlloca);
       CI->replaceAllUsesWith(Load);
     } else if (RetTy->isVectorTy()) { // i16 => <? x i1>
       assert(RetTy->getScalarSizeInBits() == 1);
-      auto *ScalarType = IntegerType::get(Ctx, SSize);
-      auto *Trunc = IRB.CreateTrunc(NewCI, ScalarType);
-      auto *Cast = IRB.CreateBitCast(Trunc, RetTy);
+      IntegerType *ScalarType = IntegerType::get(Ctx, SSize);
+      Value *Trunc = IRB.CreateTrunc(NewCI, ScalarType);
+      Value *Cast = IRB.CreateBitCast(Trunc, RetTy);
       CI->replaceAllUsesWith(Cast);
     } else {
-      llvm_unreachable("unsupported return type");
+      reportFatalUsageError("unsupported PISA call return type");
     }
   } else {
     CI->replaceAllUsesWith(NewCI);
@@ -478,23 +479,23 @@ void PISALegalizeCalls::modifyCallInst(CallInst *CI) {
 
 bool PISALegalizeCalls::runOnModule(Module &M) {
   // record functions to be modified
-  for (auto &F : M) {
+  for (Function &F : M) {
     collectFuncs(F);
   }
   // modify function signatures
-  for (auto &F : Funcs) {
+  for (Function *F : Funcs) {
     modifyFunctionSignature(*F);
   }
 
   // record call/return instructions
-  for (auto &F : M) {
+  for (Function &F : M) {
     visit(F);
   }
   // modify call/return instructions
-  for (auto &I : Returns) {
+  for (ReturnInst *I : Returns) {
     modifyReturnInst(I);
   }
-  for (auto &I : Calls) {
+  for (CallInst *I : Calls) {
     modifyCallInst(I);
   }
   return !(Calls.empty() && Returns.empty() && Funcs.empty());

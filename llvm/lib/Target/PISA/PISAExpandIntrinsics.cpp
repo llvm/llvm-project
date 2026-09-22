@@ -49,14 +49,14 @@ INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(PISAExpandIntrinsics, DEBUG_TYPE, DEBUG_NAME, false, false)
 
 bool PISAExpandIntrinsics::runOnFunction(Function &F) {
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  auto &TM = TPC.getTM<TargetMachine>();
-  const auto *ST = TM.getSubtargetImpl(F);
-  const auto *TLI = ST->getTargetLowering();
+  TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  PISATargetMachine &TM = TPC.getTM<PISATargetMachine>();
+  const PISASubtarget *ST = TM.getSubtargetImpl(F);
+  const PISATargetLowering *TLI = ST->getTargetLowering();
 
   SmallVector<MemIntrinsic *> MemIntrs;
-  for (auto &I : instructions(F)) {
-    auto *II = dyn_cast<IntrinsicInst>(&I);
+  for (Instruction &I : instructions(F)) {
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
     if (!II)
       continue;
     if (II->getIntrinsicID() == Intrinsic::memset ||
@@ -88,11 +88,11 @@ bool PISAExpandIntrinsics::runOnFunction(Function &F) {
   const TargetTransformInfo &TTI =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   for (MemIntrinsic *MemCall : MemIntrs) {
-    if (auto *Memcpy = dyn_cast<MemCpyInst>(MemCall))
+    if (MemCpyInst *Memcpy = dyn_cast<MemCpyInst>(MemCall))
       expandMemCpyAsLoop(Memcpy, TTI);
-    else if (auto *Memmove = dyn_cast<MemMoveInst>(MemCall))
+    else if (MemMoveInst *Memmove = dyn_cast<MemMoveInst>(MemCall))
       expandMemMoveAsLoop(Memmove, TTI);
-    else if (auto *Memset = dyn_cast<MemSetInst>(MemCall))
+    else if (MemSetInst *Memset = dyn_cast<MemSetInst>(MemCall))
       expandMemSetAsLoop(Memset);
     Changed = true;
     MemCall->eraseFromParent();

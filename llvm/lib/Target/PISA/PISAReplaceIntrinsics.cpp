@@ -60,19 +60,20 @@ bool PISAReplaceIntrinsics::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   SmallVector<MachineInstr *, 8> Delete;
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() == TargetOpcode::G_INTRINSIC) {
-        auto ID = cast<GIntrinsic>(MI).getIntrinsicID();
+        Intrinsic::ID ID = cast<GIntrinsic>(MI).getIntrinsicID();
         switch (ID) {
         case Intrinsic::pisa_sbfe:
         case Intrinsic::pisa_ubfe: {
           // Res = pisa_[su]bfe (Base,Width,Offset)
           // Res = G_[SU]BFX (Base,LSB,Width)
-          auto Opcode = (ID == Intrinsic::pisa_sbfe) ? TargetOpcode::G_SBFX
-                                                     : TargetOpcode::G_UBFX;
+          unsigned Opcode = (ID == Intrinsic::pisa_sbfe)
+                                ? TargetOpcode::G_SBFX
+                                : TargetOpcode::G_UBFX;
           DebugLoc DL = MI.getDebugLoc();
-          auto &Dst = MI.getOperand(0);
+          MachineOperand &Dst = MI.getOperand(0);
           BuildMI(MBB, &MI, DL, TII->get(Opcode))
               .addDef(Dst.getReg()) // Operand(0) is actual intrinsic
               .add(MI.getOperand(2))
@@ -87,7 +88,7 @@ bool PISAReplaceIntrinsics::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
-  for (auto *MI : Delete) {
+  for (MachineInstr *MI : Delete) {
     MI->eraseFromParent();
   }
 
