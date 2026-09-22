@@ -108,12 +108,12 @@ LLVM_ABI extern bool VerifySCEV;
 /// at runtime.  A SCEV being defined does not require the existence of any
 /// instruction within the defined scope.
 enum class SCEVNoWrapFlags {
-  FlagAnyWrap = 0,    // No guarantee.
+  FlagNone = 0,       // No guarantee.
   FlagNW = (1 << 0),  // No self-wrap.
   FlagNUW = (1 << 1), // No unsigned wrap.
   FlagNSW = (1 << 2), // No signed wrap.
-  NoWrapMask = (1 << 3) - 1,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoWrapMask)
+  FlagsMask = (1 << 3) - 1,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FlagsMask)
 };
 
 class SCEV;
@@ -152,7 +152,7 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   /// Return the no-wrap flags for this SCEVUse, which is the union of the
   /// use-specific flags and the underlying SCEV's flags, masked by \p Mask.
   SCEVNoWrapFlags
-  getNoWrapFlags(SCEVNoWrapFlags Mask = SCEVNoWrapFlags::NoWrapMask) const;
+  getNoWrapFlags(SCEVNoWrapFlags Mask = SCEVNoWrapFlags::FlagsMask) const;
 
   /// Return only the use-specific no-wrap flags (NUW/NSW) without the
   /// underlying SCEV's flags.
@@ -202,8 +202,8 @@ struct SCEVFlags {
   /// Flags only applied to a SCEVUse.
   SCEVNoWrapFlags UseFlags;
 
-  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagAnyWrap,
-                      SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagAnyWrap)
+  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagNone,
+                      SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagNone)
       : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
 };
 
@@ -294,11 +294,11 @@ protected:
 
 public:
   using NoWrapFlags = SCEVNoWrapFlags;
-  static constexpr auto FlagAnyWrap = SCEVNoWrapFlags::FlagAnyWrap;
+  static constexpr auto FlagNone = SCEVNoWrapFlags::FlagNone;
   static constexpr auto FlagNW = SCEVNoWrapFlags::FlagNW;
   static constexpr auto FlagNUW = SCEVNoWrapFlags::FlagNUW;
   static constexpr auto FlagNSW = SCEVNoWrapFlags::FlagNSW;
-  static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
+  static constexpr auto FlagsMask = SCEVNoWrapFlags::FlagsMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize, Type *Ty)
@@ -747,7 +747,7 @@ public:
   LLVM_ABI const SCEV *getVScale(Type *Ty);
   LLVM_ABI const SCEV *
   getElementCount(Type *Ty, ElementCount EC,
-                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
+                  SCEV::NoWrapFlags Flags = SCEV::FlagNone);
   LLVM_ABI const SCEV *getZeroExtendExpr(SCEVUse Op, Type *Ty,
                                          unsigned Depth = 0);
   LLVM_ABI const SCEV *getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
@@ -865,7 +865,7 @@ public:
 
   /// Return the SCEV object corresponding to -V.
   LLVM_ABI const SCEV *
-  getNegativeSCEV(const SCEV *V, SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap);
+  getNegativeSCEV(const SCEV *V, SCEV::NoWrapFlags Flags = SCEV::FlagNone);
 
   /// Return the SCEV object corresponding to ~V.
   LLVM_ABI const SCEV *getNotSCEV(const SCEV *V);
@@ -878,7 +878,7 @@ public:
   /// explicitly convert the arguments using getPtrToAddrExpr(), for pointer
   /// types that support it.
   LLVM_ABI const SCEV *getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
-                                    SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                    SCEV::NoWrapFlags Flags = SCEV::FlagNone,
                                     unsigned Depth = 0);
 
   /// Compute ceil(N / D). N and D are treated as unsigned values.
