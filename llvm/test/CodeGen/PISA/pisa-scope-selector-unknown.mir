@@ -1,0 +1,22 @@
+# RUN: not llc -mtriple=pisa -run-pass=pisa-scope-selector -filetype=null \
+# RUN:     -o /dev/null %s 2>&1 | FileCheck %s
+
+# CHECK: error: <unknown>:0:0: atomic syncscope is not supported on PISA
+
+---
+name: unknown_scope
+legalized: true
+regBankSelected: true
+selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: reg64b }
+  - { id: 1, class: reg32b }
+  - { id: 2, class: reg32b }
+body: |
+  bb.0:
+    %0:reg64b = functionParameter_i64 0
+    %1:reg32b = functionParameter_i32 1
+    %2:reg32b = atomic_load_add_impl_i32_global_acq_rel_add_ri %0, 0, %1, 255, 0 :: (load store syncscope("foo") acq_rel (i32) on `ptr addrspace(1) poison`, addrspace 1)
+    ret
+...

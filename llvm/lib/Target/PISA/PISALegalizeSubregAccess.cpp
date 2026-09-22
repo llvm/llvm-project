@@ -14,6 +14,7 @@
 #include "PISA.h"
 #include "PISAMCInstLower.h"
 #include "PISASubtarget.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "pisa-legalize-subreg-access"
@@ -50,33 +51,35 @@ PISALegalizeSubregAccess::PISALegalizeSubregAccess() : MachineFunctionPass(ID) {
 }
 
 bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
-  auto &ST = MF.getSubtarget<PISASubtarget>();
-  auto *TII = ST.getInstrInfo();
-  auto *TRI = ST.getRegisterInfo();
-  auto &MRI = MF.getRegInfo();
+  const PISASubtarget &ST = MF.getSubtarget<PISASubtarget>();
+  const PISAInstrInfo *TII = ST.getInstrInfo();
+  const PISARegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   bool Changed = false;
   SmallVector<MachineInstr *, 8> FnArgs;
   SmallVector<MachineInstr *> CopyV3Insts;
   SmallVector<MachineInstr *> LargeCopyInsts;
   SmallVector<MachineInstr *> NonCopyXYInsts;
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       if (TII->isFunctionParamInstr(MI))
         FnArgs.push_back(&MI);
       else if (MI.isCopy()) {
-        auto &Dst = MI.getOperand(0);
-        auto &Src = MI.getOperand(1);
+        MachineOperand &Dst = MI.getOperand(0);
+        MachineOperand &Src = MI.getOperand(1);
         if (Dst.getReg().isVirtual() && Src.getReg().isVirtual()) {
-          auto *DstRC = TRI->getSubRegisterClass(MRI.getRegClass(Dst.getReg()),
-                                                 Dst.getSubReg());
-          auto *SrcRC = TRI->getSubRegisterClass(MRI.getRegClass(Src.getReg()),
-                                                 Src.getSubReg());
+          const TargetRegisterClass *DstRC =
+              TRI->getSubRegisterClass(MRI.getRegClass(Dst.getReg()),
+                                       Dst.getSubReg());
+          const TargetRegisterClass *SrcRC =
+              TRI->getSubRegisterClass(MRI.getRegClass(Src.getReg()),
+                                       Src.getSubReg());
           // If either subreg isn't directly named on its RC, this COPY isn't
           // a candidate for V3 or large-copy legalization; skip classification.
           if (DstRC && SrcRC) {
-            auto DstNumElts = TRI->getNumEltsFromRegClass(DstRC);
-            auto DstEltSize = TRI->getBitSizeFromRegClass(DstRC);
-            auto SrcNumElts = TRI->getNumEltsFromRegClass(SrcRC);
+            unsigned DstNumElts = TRI->getNumEltsFromRegClass(DstRC);
+            unsigned DstEltSize = TRI->getBitSizeFromRegClass(DstRC);
+            unsigned SrcNumElts = TRI->getNumEltsFromRegClass(SrcRC);
             if (((DstNumElts == 3) && (Dst.getSubReg() == 0)) &&
                 ((SrcNumElts == 3) && (Src.getSubReg() == 0))) {
               CopyV3Insts.push_back(&MI);
@@ -88,10 +91,10 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
       } else {
         bool NeedsLegalization = false;
         for (unsigned I = 0; I < MI.getNumOperands(); I++) {
-          auto Opnd = MI.getOperand(I);
+          MachineOperand Opnd = MI.getOperand(I);
           if (!Opnd.isReg() || !Opnd.getSubReg())
             continue;
-          auto Swizzle = TRI->getSwizzle(Opnd.getSubReg());
+          PISA::Swizzle Swizzle = TRI->getSwizzle(Opnd.getSubReg());
           if (TRI->isSelectorSwizzle(Swizzle))
             continue;
 
@@ -117,9 +120,12 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
           // still needs legalization.
           bool IsLegal = false;
           if (Opnd.getReg().isVirtual()) {
-            auto *SuperRC = MRI.getRegClass(Opnd.getReg());
-            auto *SubRC = TRI->getSubRegisterClass(SuperRC, Opnd.getSubReg());
-            auto *ExpectedRC = TII->getRegClass(TII->get(MI.getOpcode()), I);
+            const TargetRegisterClass *SuperRC =
+                MRI.getRegClass(Opnd.getReg());
+            const TargetRegisterClass *SubRC =
+                TRI->getSubRegisterClass(SuperRC, Opnd.getSubReg());
+            const TargetRegisterClass *ExpectedRC =
+                TII->getRegClass(TII->get(MI.getOpcode()), I);
             if (SubRC && ExpectedRC) {
               IsLegal = (TRI->getNumEltsFromRegClass(SubRC) ==
                          TRI->getNumEltsFromRegClass(ExpectedRC)) &&
@@ -138,15 +144,16 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  for (auto *MI : reverse(FnArgs)) {
-    auto &Dst = MI->getOperand(0);
+  for (MachineInstr *MI : reverse(FnArgs)) {
+    MachineOperand &Dst = MI->getOperand(0);
     unsigned Subreg = Dst.getSubReg();
     if (Subreg == 0 && !TRI->isSpecialReg(Dst.getReg()))
       continue;
 
     Changed = true;
 
-    auto *RC = TII->getRegClass(TII->get(MI->getOpcode()), 0);
+    const TargetRegisterClass *RC =
+        TII->getRegClass(TII->get(MI->getOpcode()), 0);
     Register NewDstReg = MRI.createVirtualRegister(RC);
 
     MachineInstr *CopyMI =
@@ -154,7 +161,7 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
             .add(Dst)
             .addReg(NewDstReg);
 
-    auto *InsertPt = FnArgs[FnArgs.size() - 1];
+    MachineInstr *InsertPt = FnArgs[FnArgs.size() - 1];
 
     Dst.setReg(NewDstReg);
     Dst.setSubReg(0);
@@ -162,26 +169,27 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
     MI->getParent()->insertAfter(InsertPt, CopyMI);
   }
 
-  for (auto *MI : CopyV3Insts) {
+  for (MachineInstr *MI : CopyV3Insts) {
     // .v3.16b A = mov .v3.16b B
     // => .v3.16b A.x = mov .v3.16b B.x
     // => .v3.16b A.y = mov .v3.16b B.y
     // => .v3.16b A.z = mov .v3.16b B.z
-    auto &Dst = MI->getOperand(0);
-    auto &Src = MI->getOperand(1);
-    auto *DstRC = TRI->getSubRegisterClass(MRI.getRegClass(Dst.getReg()),
-                                           Dst.getSubReg());
-    auto NumElts = TRI->getNumEltsFromRegClass(DstRC);
-    auto EltSize = TRI->getBitSizeFromRegClass(DstRC);
+    MachineOperand &Dst = MI->getOperand(0);
+    MachineOperand &Src = MI->getOperand(1);
+    const TargetRegisterClass *DstRC =
+        TRI->getSubRegisterClass(MRI.getRegClass(Dst.getReg()),
+                                 Dst.getSubReg());
+    unsigned NumElts = TRI->getNumEltsFromRegClass(DstRC);
+    unsigned EltSize = TRI->getBitSizeFromRegClass(DstRC);
 
     DebugLoc DL = MI->getDebugLoc();
-    auto DstReg = Dst.getReg();
-    auto SrcReg = Src.getReg();
+    Register DstReg = Dst.getReg();
+    Register SrcReg = Src.getReg();
     for (unsigned I = 0; I < NumElts; I++) {
-      auto NewMI =
+      MachineInstrBuilder NewMI =
           BuildMI(*MI->getParent(), MI, DL, TII->get(TargetOpcode::COPY));
-      auto SubRegIdx = TRI->getSubRegIdx(EltSize, I);
-      auto Undef = (I == 0) ? RegState::Undef : RegState::NoFlags;
+      unsigned SubRegIdx = TRI->getSubRegIdx(EltSize, I);
+      RegState Undef = (I == 0) ? RegState::Undef : RegState::NoFlags;
       NewMI.addDef(DstReg, Undef, SubRegIdx);
       NewMI.addReg(SrcReg, {}, SubRegIdx);
     }
@@ -189,7 +197,7 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
     MI->eraseFromParent();
   }
 
-  for (auto *MI : LargeCopyInsts) {
+  for (MachineInstr *MI : LargeCopyInsts) {
     // (#1).v?.64b A = mov .v?.64b B
     // => .v?.64b A.x = mov .v?.64b B.x
     // => .v?.64b A.y = mov .v?.64b B.y
@@ -212,20 +220,22 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
     // => .v4.32b A.y = mov .v2.32b Lo.y
     // => .v4.32b A.z = mov .v2.32b Lo.z
     // => .v4.32b A.w = mov .v2.32b Lo.w
-    auto &Dst = MI->getOperand(0);
-    auto &Src = MI->getOperand(1);
-    auto *DstRC = TRI->getSubRegisterClass(MRI.getRegClass(Dst.getReg()),
-                                           Dst.getSubReg());
-    auto *SrcRC = TRI->getSubRegisterClass(MRI.getRegClass(Src.getReg()),
-                                           Src.getSubReg());
-    auto DstNumElts = TRI->getNumEltsFromRegClass(DstRC);
-    auto DstEltSize = TRI->getBitSizeFromRegClass(DstRC);
-    auto SrcNumElts = TRI->getNumEltsFromRegClass(SrcRC);
-    auto SrcEltSize = TRI->getBitSizeFromRegClass(SrcRC);
+    MachineOperand &Dst = MI->getOperand(0);
+    MachineOperand &Src = MI->getOperand(1);
+    const TargetRegisterClass *DstRC =
+        TRI->getSubRegisterClass(MRI.getRegClass(Dst.getReg()),
+                                 Dst.getSubReg());
+    const TargetRegisterClass *SrcRC =
+        TRI->getSubRegisterClass(MRI.getRegClass(Src.getReg()),
+                                 Src.getSubReg());
+    unsigned DstNumElts = TRI->getNumEltsFromRegClass(DstRC);
+    unsigned DstEltSize = TRI->getBitSizeFromRegClass(DstRC);
+    unsigned SrcNumElts = TRI->getNumEltsFromRegClass(SrcRC);
+    unsigned SrcEltSize = TRI->getBitSizeFromRegClass(SrcRC);
 
     DebugLoc DL = MI->getDebugLoc();
-    auto DstReg = Dst.getReg();
-    auto SrcReg = Src.getReg();
+    Register DstReg = Dst.getReg();
+    Register SrcReg = Src.getReg();
     if (SrcEltSize == DstEltSize) { // (#1)
       if (DstNumElts > 4) {
         // large vector support
@@ -259,8 +269,7 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
             Opcode = PISA::extract_0_v64i32_v64i32_r;
             break;
           default:
-            assert(0 && "implement");
-            break;
+            reportFatalUsageError("unsupported large PISA vector copy size");
           }
           BuildMI(*MI->getParent(), MI, DL, TII->get(Opcode))
               .addDef(DstReg)
@@ -269,20 +278,20 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
       } else {
         // copy using swizzle
         for (unsigned I = 0; I < DstNumElts; I++) {
-          auto NewMI =
+          MachineInstrBuilder NewMI =
               BuildMI(*MI->getParent(), MI, DL, TII->get(TargetOpcode::COPY));
-          auto SubRegIdx = TRI->getSubRegIdx(DstEltSize, I);
-          auto Undef = (I == 0) ? RegState::Undef : RegState::NoFlags;
+          unsigned SubRegIdx = TRI->getSubRegIdx(DstEltSize, I);
+          RegState Undef = (I == 0) ? RegState::Undef : RegState::NoFlags;
           NewMI.addDef(DstReg, Undef, SubRegIdx);
           NewMI.addReg(SrcReg, {}, SubRegIdx);
         }
       }
     } else {
-      auto *SmallVecRC =
+      const TargetRegisterClass *SmallVecRC =
           (DstEltSize > SrcEltSize)
               ? TRI->getVectorRegClass(SrcNumElts / 2, SrcEltSize)
               : TRI->getVectorRegClass(DstNumElts / 2, DstEltSize); // .v2.32b
-      auto *LargeEltRC =
+      const TargetRegisterClass *LargeEltRC =
           (DstEltSize > SrcEltSize)
               ? TRI->getSubRegisterClass(MRI.getRegClass(DstReg),
                                          TRI->getSubRegIdx(DstEltSize, 0))
@@ -294,10 +303,10 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
       Register Lo64Reg = MRI.createVirtualRegister(LargeEltRC);
       Register Hi64Reg = MRI.createVirtualRegister(LargeEltRC);
       if (DstEltSize > SrcEltSize) { // (#2)
-        auto IdX = TRI->getSubRegIdx(SrcEltSize, 0);
-        auto IdY = TRI->getSubRegIdx(SrcEltSize, 1);
-        auto IdZ = TRI->getSubRegIdx(SrcEltSize, 2);
-        auto IdW = TRI->getSubRegIdx(SrcEltSize, 3);
+        unsigned IdX = TRI->getSubRegIdx(SrcEltSize, 0);
+        unsigned IdY = TRI->getSubRegIdx(SrcEltSize, 1);
+        unsigned IdZ = TRI->getSubRegIdx(SrcEltSize, 2);
+        unsigned IdW = TRI->getSubRegIdx(SrcEltSize, 3);
         BuildMI(*MI->getParent(), MI, DL, TII->get(TargetOpcode::COPY))
             .addDef(LoReg, RegState::Undef, IdX)
             .addReg(SrcReg, {}, IdX);
@@ -323,10 +332,10 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
             .addDef(DstReg, {}, TRI->getSubRegIdx(DstEltSize, 1))
             .addReg(Hi64Reg);
       } else { // (#3)
-        auto IdX = TRI->getSubRegIdx(DstEltSize, 0);
-        auto IdY = TRI->getSubRegIdx(DstEltSize, 1);
-        auto IdZ = TRI->getSubRegIdx(DstEltSize, 2);
-        auto IdW = TRI->getSubRegIdx(DstEltSize, 3);
+        unsigned IdX = TRI->getSubRegIdx(DstEltSize, 0);
+        unsigned IdY = TRI->getSubRegIdx(DstEltSize, 1);
+        unsigned IdZ = TRI->getSubRegIdx(DstEltSize, 2);
+        unsigned IdW = TRI->getSubRegIdx(DstEltSize, 3);
         BuildMI(*MI->getParent(), MI, DL, TII->get(TargetOpcode::COPY))
             .addDef(Lo64Reg)
             .addReg(SrcReg, {}, TRI->getSubRegIdx(SrcEltSize, 0));
@@ -357,7 +366,7 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
     MI->eraseFromParent();
   }
 
-  for (auto *MI : NonCopyXYInsts) {
+  for (MachineInstr *MI : NonCopyXYInsts) {
     // A = add B.xy, C.zw
     // => mov B', B.xy
     // => mov C', C.zw
@@ -365,24 +374,25 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
     DebugLoc DL = MI->getDebugLoc();
     SmallVector<MachineOperand, 4> NewOperands;
     for (unsigned I = 0; I < MI->getNumOperands(); I++) {
-      auto Opnd = MI->getOperand(I);
+      MachineOperand Opnd = MI->getOperand(I);
       if (Opnd.isReg() && Opnd.getSubReg() &&
           (!TRI->isSelectorSwizzle(TRI->getSwizzle(Opnd.getSubReg())))) {
-        auto SubReg = Opnd.getSubReg();
-        auto Reg = Opnd.getReg();
+        unsigned SubReg = Opnd.getSubReg();
+        Register Reg = Opnd.getReg();
         // Prefer the register class the instruction declares for this operand
         // (always allocatable). Fall back to the operand's sub-register class;
         // if that is a non-allocatable structural sub-class (e.g. the .zw half
         // Reg16bx2H), substitute the equivalent allocatable vector class so the
         // temporary register can be created.
-        auto *RC = TII->getRegClass(TII->get(MI->getOpcode()), I);
+        const TargetRegisterClass *RC =
+            TII->getRegClass(TII->get(MI->getOpcode()), I);
         if (!RC) {
           RC = TRI->getSubRegisterClass(MRI.getRegClass(Reg), SubReg);
           if (RC && !RC->isAllocatable())
             RC = TRI->getVectorRegClass(TRI->getNumEltsFromRegClass(RC),
                                         TRI->getBitSizeFromRegClass(RC));
         }
-        auto NewReg = MRI.createVirtualRegister(RC);
+        Register NewReg = MRI.createVirtualRegister(RC);
         if (!Opnd.isDef() || Opnd.isTied())
           BuildMI(*MI->getParent(), MI, DL, TII->get(TargetOpcode::COPY))
               .addDef(NewReg)
@@ -392,13 +402,14 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
         NewOperands.push_back(Opnd);
       }
     }
-    auto NewMI = BuildMI(*MI->getParent(), MI, DL, TII->get(MI->getOpcode()));
+    MachineInstrBuilder NewMI =
+        BuildMI(*MI->getParent(), MI, DL, TII->get(MI->getOpcode()));
     for (unsigned I = 0; I < MI->getNumOperands(); I++) {
-      auto OldOpnd = MI->getOperand(I);
-      auto IsTied = OldOpnd.isReg() && OldOpnd.isTied();
-      auto NewOpnd = NewOperands[I];
+      MachineOperand OldOpnd = MI->getOperand(I);
+      bool IsTied = OldOpnd.isReg() && OldOpnd.isTied();
+      MachineOperand NewOpnd = NewOperands[I];
       if (IsTied && (I >= MI->getNumDefs())) {
-        auto TiedIdx = MI->findTiedOperandIdx(I);
+        unsigned TiedIdx = MI->findTiedOperandIdx(I);
         // for originally tied register, specifying same
         // register number will generate 'tied-def' entry
         NewMI.addReg(NewOperands[TiedIdx].getReg(), {},
@@ -408,14 +419,14 @@ bool PISALegalizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
       }
     }
     for (unsigned I = 0; I < MI->getNumOperands(); I++) {
-      auto Opnd = MI->getOperand(I);
+      MachineOperand Opnd = MI->getOperand(I);
       if (Opnd.isReg() && Opnd.getSubReg() &&
           (!TRI->isSelectorSwizzle(TRI->getSwizzle(Opnd.getSubReg())))) {
-        auto SubReg = Opnd.getSubReg();
-        auto Reg = Opnd.getReg();
-        auto NewReg = NewOperands[I].getReg();
+        unsigned SubReg = Opnd.getSubReg();
+        Register Reg = Opnd.getReg();
+        Register NewReg = NewOperands[I].getReg();
         if (Opnd.isDef()) {
-          auto Undef = (I == 0) ? RegState::Undef : RegState::NoFlags;
+          RegState Undef = (I == 0) ? RegState::Undef : RegState::NoFlags;
           BuildMI(*MI->getParent(), MI, DL, TII->get(TargetOpcode::COPY))
               .addDef(Reg, Undef, SubReg)
               .addReg(NewReg);

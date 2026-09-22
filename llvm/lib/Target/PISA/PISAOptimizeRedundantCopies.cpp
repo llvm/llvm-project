@@ -29,6 +29,9 @@ using namespace llvm;
 
 namespace {
 
+using RegKey = std::pair<Register, unsigned>;
+using RegMapTy = SmallDenseMap<RegKey, RegKey>;
+
 class PISAOptimizeRedundantCopies : public MachineFunctionPass {
 public:
   static char ID;
@@ -60,13 +63,11 @@ INITIALIZE_PASS(PISAOptimizeRedundantCopies, DEBUG_TYPE, DEBUG_NAME, false,
 //   C = COPY A
 //   => cannot replace C = COPY B
 static void eraseRegMapEntriesForDef(
-    const MachineInstr &MI,
-    SmallDenseMap<std::pair<Register, unsigned>, std::pair<Register, unsigned>>
-        &RegMap) {
+    const MachineInstr &MI, RegMapTy &RegMap) {
   for (const MachineOperand &Op : MI.operands()) {
     if (Op.isReg() && Op.isDef()) {
       Register WrittenReg = Op.getReg();
-      RegMap.remove_if([WrittenReg](const auto &Entry) {
+      RegMap.remove_if([WrittenReg](const RegMapTy::value_type &Entry) {
         return Entry.second.first == WrittenReg;
       });
     }
@@ -81,9 +82,7 @@ static void eraseRegMapEntriesForDef(
 //   D = COPY A
 //   => cannot replace D = COPY B
 static void eraseRegMapEntriesForOverlap(
-    const MachineInstr &MI,
-    SmallDenseMap<std::pair<Register, unsigned>, std::pair<Register, unsigned>>
-        &RegMap) {
+    const MachineInstr &MI, RegMapTy &RegMap) {
   const static SmallDenseMap<unsigned, unsigned> OverLap = {
       {PISA::sub8_0, PISA::sub8_xy},   {PISA::sub8_1, PISA::sub8_xy},
       {PISA::sub8_2, PISA::sub8_zw},   {PISA::sub8_3, PISA::sub8_zw},
@@ -98,27 +97,22 @@ static void eraseRegMapEntriesForOverlap(
   if (MI.getNumOperands() == 0 || !MI.getOperand(0).isReg())
     return;
 
-  auto Dst = MI.getOperand(0);
-  auto DstReg = Dst.getReg();
-  auto DstSubReg = Dst.getSubReg();
-
-  auto EraseOverlapReg = [&RegMap](Register DstReg, unsigned DstSubReg) {
-    auto Key = std::make_pair(DstReg, DstSubReg);
-    RegMap.erase(Key);
-  };
+  const MachineOperand &Dst = MI.getOperand(0);
+  Register DstReg = Dst.getReg();
+  unsigned DstSubReg = Dst.getSubReg();
 
   if (DstSubReg) {
-    EraseOverlapReg(DstReg, DstSubReg);
-    if (auto It = OverLap.find(DstSubReg); It != OverLap.end())
-      EraseOverlapReg(DstReg, It->second); // overlap subreg
+    RegMap.erase(RegKey{DstReg, DstSubReg});
+    if (SmallDenseMap<unsigned, unsigned>::const_iterator It =
+            OverLap.find(DstSubReg);
+        It != OverLap.end())
+      RegMap.erase(RegKey{DstReg, It->second}); // overlap subreg
   }
-  EraseOverlapReg(DstReg, 0); // overlap full reg
+  RegMap.erase(RegKey{DstReg, 0}); // overlap full reg
 }
 
 static void processInterveningInsts(
-    const MachineInstr &MI,
-    SmallDenseMap<std::pair<Register, unsigned>, std::pair<Register, unsigned>>
-        &RegMap) {
+    const MachineInstr &MI, RegMapTy &RegMap) {
   eraseRegMapEntriesForDef(MI, RegMap);
   eraseRegMapEntriesForOverlap(MI, RegMap);
 }
@@ -135,19 +129,19 @@ PISAOptimizeRedundantCopies::PISAOptimizeRedundantCopies()
 
 bool PISAOptimizeRedundantCopies::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
-  for (auto &MBB : MF) {
-    SmallDenseMap<std::pair<Register, unsigned>, std::pair<Register, unsigned>>
-        RegMap;
-    for (auto &MI : make_early_inc_range(MBB)) {
+  for (MachineBasicBlock &MBB : MF) {
+    RegMapTy RegMap;
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
       processInterveningInsts(MI, RegMap);
       if (!MI.isCopy())
         continue;
 
-      auto Dst = MI.getOperand(0);
-      auto Opnd = MI.getOperand(1);
-      auto Key = std::make_pair(Opnd.getReg(), Opnd.getSubReg());
-      if (auto It = RegMap.find(Key); It != RegMap.end()) {
-        auto [SrcReg, SrcSubReg] = It->second;
+      const MachineOperand &Dst = MI.getOperand(0);
+      const MachineOperand &Opnd = MI.getOperand(1);
+      RegKey Key{Opnd.getReg(), Opnd.getSubReg()};
+      if (RegMapTy::iterator It = RegMap.find(Key); It != RegMap.end()) {
+        Register SrcReg = It->second.first;
+        unsigned SrcSubReg = It->second.second;
         MachineIRBuilder B(MI);
         B.buildInstr(TargetOpcode::COPY)
             .addDef(Dst.getReg(), getRegState(Dst), Dst.getSubReg())
@@ -157,8 +151,8 @@ bool PISAOptimizeRedundantCopies::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      auto DKey = std::make_pair(Dst.getReg(), Dst.getSubReg());
-      RegMap[DKey] = std::make_pair(Opnd.getReg(), Opnd.getSubReg());
+      RegKey DKey{Dst.getReg(), Dst.getSubReg()};
+      RegMap[DKey] = {Opnd.getReg(), Opnd.getSubReg()};
     }
   }
   return Changed;

@@ -40,7 +40,7 @@ public:
   bool run();
 
 private:
-  static constexpr auto ByRefAddressSpace =
+  static constexpr unsigned ByRefAddressSpace =
       static_cast<unsigned>(AddressSpace::CONSTANT);
 
   AttributeList getNewAttributes(const AttributeList &Attrs) const;
@@ -51,7 +51,7 @@ private:
 };
 
 bool PISAKernelByValArgsLowering::run() {
-  if (none_of(F.args(), [](auto &Arg) { return Arg.hasByValAttr(); }))
+  if (none_of(F.args(), [](Argument &Arg) { return Arg.hasByValAttr(); }))
     return false;
 
   LLVM_DEBUG(dbgs() << "Lowering kernel aggregate arguments for " << F.getName()
@@ -61,14 +61,15 @@ bool PISAKernelByValArgsLowering::run() {
 
   SmallVector<Type *> NewArgTypes;
   transform(F.args(), std::back_inserter(NewArgTypes),
-            [this](auto &Arg) -> Type * {
+            [this](Argument &Arg) -> Type * {
               if (Arg.hasByValAttr())
                 return PointerType::get(Ctx, ByRefAddressSpace);
               return Arg.getType();
             });
 
-  auto *NewFTy = FunctionType::get(Type::getVoidTy(Ctx), NewArgTypes, false);
-  auto *NewF = Function::Create(NewFTy, F.getLinkage());
+  FunctionType *NewFTy =
+      FunctionType::get(Type::getVoidTy(Ctx), NewArgTypes, false);
+  Function *NewF = Function::Create(NewFTy, F.getLinkage());
   NewF->takeName(&F);
   NewF->setAttributes(NewAttrs);
   NewF->setCallingConv(CallingConv::PISA_KERNEL);
@@ -76,7 +77,7 @@ bool PISAKernelByValArgsLowering::run() {
   F.getParent()->getFunctionList().insert(F.getIterator(), NewF);
 
   // Transfer debug info to the new function
-  auto *DISubprog = F.getSubprogram();
+  DISubprogram *DISubprog = F.getSubprogram();
   NewF->setSubprogram(DISubprog);
   F.setSubprogram(nullptr);
 
@@ -96,14 +97,15 @@ AttributeList PISAKernelByValArgsLowering::getNewAttributes(
   AttributeList NewAttrs;
 
   // Copy function attributes.
-  if (auto FunctionAttrs = Attrs.getFnAttrs(); FunctionAttrs.hasAttributes()) {
+  if (AttributeSet FunctionAttrs = Attrs.getFnAttrs();
+      FunctionAttrs.hasAttributes()) {
     AttrBuilder AB(Ctx, FunctionAttrs);
     NewAttrs = NewAttrs.addFnAttributes(Ctx, AB);
   }
 
-  for (const auto &Arg : F.args()) {
-    const auto Index = Arg.getArgNo();
-    auto ArgAttrs = Attrs.getParamAttrs(Index);
+  for (const Argument &Arg : F.args()) {
+    const unsigned Index = Arg.getArgNo();
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(Index);
     AttrBuilder AB(Ctx, ArgAttrs);
 
     if (ArgAttrs.hasAttribute(Attribute::ByVal)) {
@@ -112,7 +114,7 @@ AttributeList PISAKernelByValArgsLowering::getNewAttributes(
                  static_cast<unsigned>(AddressSpace::PRIVATE) &&
              "Expected private address space");
 
-      auto *ByValTy = ArgAttrs.getByValType();
+      Type *ByValTy = ArgAttrs.getByValType();
 
       AB.removeAttribute(Attribute::ByVal).addByRefAttr(ByValTy);
       NewAttrs = NewAttrs.addParamAttributes(Ctx, Index, AB);
@@ -128,7 +130,9 @@ AttributeList PISAKernelByValArgsLowering::getNewAttributes(
 void PISAKernelByValArgsLowering::transferArgumentUses(Function &NewF) {
   IRBuilder<> Builder(Ctx);
 
-  for (auto [OldArg, NewArg] : zip_equal(F.args(), NewF.args())) {
+  for (unsigned I = 0, E = F.arg_size(); I != E; ++I) {
+    Argument &OldArg = *F.getArg(I);
+    Argument &NewArg = *NewF.getArg(I);
     NewArg.takeName(&OldArg);
 
     if (!OldArg.hasByValAttr()) {
@@ -149,31 +153,31 @@ void PISAKernelByValArgsLowering::transferArgumentUses(Function &NewF) {
     // new address space. A GEP/memop chain can later be combined into a single
     // ld.param PISA instruction.
     while (!Stack.empty()) {
-      auto *V = Stack.back();
+      Value *V = Stack.back();
       Stack.pop_back();
-      for (auto *U : V->users()) {
-        if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+      for (User *U : V->users()) {
+        if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(U)) {
           assert(GEP->getPointerOperand() == V);
           Stack.push_back(GEP);
           Builder.SetInsertPoint(GEP->getIterator());
-          auto *NewGEP = Builder.CreateGEP(
+          Value *NewGEP = Builder.CreateGEP(
               GEP->getSourceElementType(), Map[V],
               SmallVector<Value *, 4>(GEP->indices()),
               GEP->getName() + ".byref", GEP->getNoWrapFlags());
           LLVM_DEBUG(dbgs() << "Created getelementptr: " << *NewGEP << "\n");
           Map[GEP] = NewGEP;
-        } else if (auto *Load = dyn_cast<LoadInst>(U)) {
+        } else if (LoadInst *Load = dyn_cast<LoadInst>(U)) {
           Builder.SetInsertPoint(Load->getIterator());
-          auto *NewLoad = Builder.CreateAlignedLoad(
+          LoadInst *NewLoad = Builder.CreateAlignedLoad(
               Load->getType(), Map[Load->getPointerOperand()], Load->getAlign(),
               Load->isVolatile(), Load->getName() + ".byref");
           LLVM_DEBUG(dbgs() << "Created load: " << *NewLoad << "\n");
           Load->replaceAllUsesWith(NewLoad);
           ToDelete.push_back(Load);
-        } else if (auto *MemCpy = dyn_cast<MemCpyInst>(U)) {
+        } else if (MemCpyInst *MemCpy = dyn_cast<MemCpyInst>(U)) {
           if (MemCpy && MemCpy->getSource() == V) {
             Builder.SetInsertPoint(MemCpy);
-            auto *NewMemCpy = Builder.CreateMemCpy(
+            CallInst *NewMemCpy = Builder.CreateMemCpy(
                 MemCpy->getDest(), MemCpy->getDestAlign(),
                 Map[MemCpy->getSource()], MemCpy->getSourceAlign(),
                 MemCpy->getLength(), MemCpy->isVolatile());
@@ -196,16 +200,16 @@ void PISAKernelByValArgsLowering::transferArgumentUses(Function &NewF) {
 
     // Perform cleanup: erase replaced memory operations and the chain of GEPs
     // between them and the argument.
-    for (auto *Inst : ToDelete) {
+    for (Instruction *Inst : ToDelete) {
       Value *Ptr = nullptr;
-      if (auto *Load = dyn_cast<LoadInst>(Inst)) {
+      if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
         Ptr = Load->getPointerOperand();
-      } else if (auto *MemCpy = dyn_cast<MemCpyInst>(Inst)) {
+      } else if (MemCpyInst *MemCpy = dyn_cast<MemCpyInst>(Inst)) {
         Ptr = MemCpy->getSource();
       }
       assert(Ptr);
       Inst->eraseFromParent();
-      while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+      while (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
         Ptr = GEP->getPointerOperand();
         if (GEP->getNumUses() > 0)
           break;
@@ -222,14 +226,14 @@ void PISAKernelByValArgsLowering::transferArgumentUses(Function &NewF) {
     // remaining users.
     Builder.SetInsertPoint(NewF.getEntryBlock().getFirstInsertionPt());
     unsigned AS = static_cast<unsigned>(AddressSpace::PRIVATE);
-    auto *ByValTy = OldArg.getAttribute(Attribute::ByVal).getValueAsType();
-    auto *Alloca = Builder.CreateAlloca(ByValTy, AS, nullptr,
-                                        OldArg.getName() + ".private");
+    Type *ByValTy = OldArg.getAttribute(Attribute::ByVal).getValueAsType();
+    AllocaInst *Alloca = Builder.CreateAlloca(
+        ByValTy, AS, nullptr, OldArg.getName() + ".private");
     LLVM_DEBUG(dbgs() << "Created alloca: " << *Alloca << "\n");
-    const auto &DL = F.getParent()->getDataLayout();
-    auto *MemCpy = Builder.CreateMemCpy(Alloca, Alloca->getAlign(), &NewArg,
-                                        NewArg.getPointerAlignment(DL),
-                                        DL.getTypeStoreSize(ByValTy));
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    CallInst *MemCpy = Builder.CreateMemCpy(
+        Alloca, Alloca->getAlign(), &NewArg, NewArg.getPointerAlignment(DL),
+        DL.getTypeStoreSize(ByValTy));
     LLVM_DEBUG(dbgs() << "Created memcpy: " << *MemCpy << "\n");
     (void)MemCpy;
     OldArg.replaceAllUsesWith(Alloca);
@@ -246,7 +250,7 @@ public:
 
   bool runOnModule(Module &M) override {
     bool Changed = false;
-    for (auto FI = M.begin(), FE = M.end(); FI != FE;) {
+    for (Module::iterator FI = M.begin(), FE = M.end(); FI != FE;) {
       Function &F = *FI++;
       if (F.isDeclaration() || F.getCallingConv() != CallingConv::PISA_KERNEL)
         continue;
@@ -277,7 +281,7 @@ PreservedAnalyses KernelByValArgsLoweringPass::run(Module &M,
                                                    ModuleAnalysisManager &) {
   SmallVector<Function *> ToErase;
 
-  for (auto &F : M) {
+  for (Function &F : M) {
     if (F.isDeclaration() || F.getCallingConv() != CallingConv::PISA_KERNEL)
       continue;
 
@@ -288,7 +292,7 @@ PreservedAnalyses KernelByValArgsLoweringPass::run(Module &M,
   if (ToErase.empty())
     return PreservedAnalyses::all();
 
-  for (auto *F : ToErase)
+  for (Function *F : ToErase)
     F->eraseFromParent();
 
   return PreservedAnalyses::none();
