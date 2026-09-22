@@ -8282,6 +8282,8 @@ private:
              SourceRange SR, SourceLocation SL);
   /// Helper to set loop increment.
   bool setStep(Expr *NewStep, bool Subtract);
+  /// Diagnose a statement expression in a bound of a non-rectangular loop.
+  bool checkNonRectangularBound(const Expr *E, bool IsInitializer) const;
 };
 
 bool OpenMPIterationSpaceChecker::dependent() const {
@@ -8292,6 +8294,32 @@ bool OpenMPIterationSpaceChecker::dependent() const {
   return LCDecl->getType()->isDependentType() ||
          (LB && LB->isValueDependent()) || (UB && UB->isValueDependent()) ||
          (Step && Step->isValueDependent());
+}
+
+/// Find a statement expression in \p E.
+static const StmtExpr *findStmtExpr(const Expr *E) {
+  SmallVector<const Stmt *, 8> Worklist{E};
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+    if (const auto *SE = dyn_cast<StmtExpr>(S))
+      return SE;
+    llvm::append_range(Worklist, S->children());
+  }
+  return nullptr;
+}
+
+bool OpenMPIterationSpaceChecker::checkNonRectangularBound(
+    const Expr *E, bool IsInitializer) const {
+  // Such a bound is emitted at every use, its declarations cannot be.
+  const StmtExpr *SE = findStmtExpr(E);
+  if (!SE)
+    return false;
+  SemaRef.Diag(SE->getBeginLoc(),
+               diag::err_omp_stmt_expr_in_non_rectangular_loop)
+      << (IsInitializer ? 0 : 1);
+  return true;
 }
 
 bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
@@ -8311,8 +8339,11 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
           CE->getNumArgs() > 0 && CE->getArg(0) != nullptr)
         NewLB = CE->getArg(0)->IgnoreParenImpCasts();
   LB = NewLB;
-  if (EmitDiags)
+  if (EmitDiags) {
     InitDependOnLC = doesDependOnLoopCounter(LB, /*IsInitializer=*/true);
+    if (InitDependOnLC && checkNonRectangularBound(LB, /*IsInitializer=*/true))
+      return true;
+  }
   return false;
 }
 
@@ -8331,6 +8362,10 @@ bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB, std::optional<bool> LessOp,
   ConditionSrcRange = SR;
   ConditionLoc = SL;
   CondDependOnLC = doesDependOnLoopCounter(UB, /*IsInitializer=*/false);
+  // The condition is also emitted as the body guard of a non-rectangular loop.
+  if ((InitDependOnLC || CondDependOnLC) &&
+      checkNonRectangularBound(UB, /*IsInitializer=*/false))
+    return true;
   return false;
 }
 
@@ -8853,7 +8888,10 @@ tryBuildCapture(Sema &SemaRef, Expr *Capture,
                 StringRef Name = ".capture_expr.") {
   if (SemaRef.CurContext->isDependentContext() || Capture->containsErrors())
     return Capture;
-  if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
+  // A statement expression must be captured even if it is constant, since the
+  // declarations inside it can only be emitted once.
+  if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects) &&
+      !findStmtExpr(Capture))
     return SemaRef.PerformImplicitConversion(Capture->IgnoreImpCasts(),
                                              Capture->getType(),
                                              AssignmentAction::Converting,
