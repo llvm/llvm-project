@@ -29,3 +29,31 @@ entry:
   %value = load volatile i32, ptr addrspace(5) %gep
   ret i32 %value
 }
+
+; Do not unfold the address-space cast for volatile accesses. The shared
+; select/cast is smaller than duplicating the address calculation per field.
+define i32 @select_gep_addrspace_volatile_as5_to_as0(i1 %cond) {
+; CHECK-LABEL: @select_gep_addrspace_volatile_as5_to_as0(
+; CHECK:       [[ALLOC0:%.*]] = alloca %pair, align 8, addrspace(5)
+; CHECK-NEXT:  [[ALLOC1:%.*]] = alloca %pair, align 8, addrspace(5)
+; CHECK:       [[SELECT:%.*]] = select i1 [[COND:%.*]], ptr addrspace(5) [[ALLOC0]], ptr addrspace(5) [[ALLOC1]]
+; CHECK-NEXT:  [[CAST:%.*]] = addrspacecast ptr addrspace(5) [[SELECT]] to ptr
+; CHECK-NEXT:  [[GEP0:%.*]] = getelementptr inbounds %pair, ptr [[CAST]], i32 0, i32 0
+; CHECK-NEXT:  [[GEP1:%.*]] = getelementptr inbounds %pair, ptr [[CAST]], i32 0, i32 1
+; CHECK-NEXT:  [[VAL0:%.*]] = load volatile i32, ptr [[GEP0]], align 4
+; CHECK-NEXT:  [[VAL1:%.*]] = load volatile i32, ptr [[GEP1]], align 4
+;
+entry:
+  %alloc0 = alloca %pair, align 8, addrspace(5)
+  %alloc1 = alloca %pair, align 8, addrspace(5)
+  store %pair { i32 0, i32 1 }, ptr addrspace(5) %alloc0, align 8
+  store %pair { i32 2, i32 3 }, ptr addrspace(5) %alloc1, align 8
+  %select = select i1 %cond, ptr addrspace(5) %alloc0, ptr addrspace(5) %alloc1
+  %cast = addrspacecast ptr addrspace(5) %select to ptr
+  %gep0 = getelementptr inbounds %pair, ptr %cast, i32 0, i32 0
+  %gep1 = getelementptr inbounds %pair, ptr %cast, i32 0, i32 1
+  %val0 = load volatile i32, ptr %gep0, align 4
+  %val1 = load volatile i32, ptr %gep1, align 4
+  %sum = add i32 %val0, %val1
+  ret i32 %sum
+}

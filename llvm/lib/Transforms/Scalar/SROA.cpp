@@ -4472,8 +4472,8 @@ private:
   bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
-    Instruction *Sel =
-        dyn_cast<SelectInst>(GEPI.getPointerOperand()->stripPointerCasts());
+    Value *PtrOp = GEPI.getPointerOperand();
+    Instruction *Sel = dyn_cast<SelectInst>(PtrOp->stripPointerCasts());
     unsigned SelOpNum = 0;
     for (auto& Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<SelectInst>(Op)) {
@@ -4502,6 +4502,18 @@ private:
     }
 
     if (!Sel)
+      return false;
+
+    // Do not duplicate address-space casts for volatile accesses. Unfolding the
+    // GEP can increase code size and register pressure.
+    bool CrossesAddressSpace =
+        Sel && PtrOp->getType()->getPointerAddressSpace() !=
+                   Sel->getType()->getPointerAddressSpace();
+    if (CrossesAddressSpace &&
+        any_of(GEPI.users(), [](User *U) {
+          auto *I = dyn_cast<Instruction>(U);
+          return I && I->isVolatile();
+        }))
       return false;
 
     LLVM_DEBUG(dbgs() << "  Rewriting gep(select) -> select(gep):\n";
