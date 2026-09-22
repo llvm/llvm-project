@@ -32,6 +32,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/Utils/IndexingUtils.h>
@@ -720,33 +721,57 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   }
 
   rewriter.setInsertionPoint(targetOp);
-  SmallVector<Value> innerMapInfos;
+  // Pre-sized so inner clones stay aligned with the inner target's block args.
+  SmallVector<Value> innerMapInfos(mapInfos.size());
   SmallVector<Value> outerMapInfos;
-  // Create new mapinfo ops for the inner target region
-  for (auto mapInfo : mapInfos) {
-    mlir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
-    auto originalCaptureType = mapInfo.getMapCaptureType();
-    mlir::omp::ClauseMapFlags newMapType;
-    mlir::omp::VariableCaptureKind newCaptureType;
-    // For bycopy, we keep the same map type and capture type
-    // For byref, we change the map type to none and keep the capture type
-    if (originalCaptureType == mlir::omp::VariableCaptureKind::ByCopy) {
-      newMapType = originalMapType;
-      newCaptureType = originalCaptureType;
-    } else if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
-      newMapType = mlir::omp::ClauseMapFlags::storage;
-      newCaptureType = originalCaptureType;
-      outerMapInfos.push_back(mapInfo);
-    } else {
-      emitError(targetOp->getLoc(), "Unhandled case");
-      return failure();
+
+  // A mapinfo's "members" may point at another mapinfo in this set (an
+  // allocatable's descriptor map references its data map). Cloning with
+  // outerToInner retargets those operands to the inner clones, so a member must
+  // be cloned before the parent that references it. The pending set plus
+  // fixed-point loop is a topological sort without an explicit graph.
+  mlir::IRMapping outerToInner;
+  llvm::SmallPtrSet<Operation *, 8> pending;
+  for (auto mapInfo : mapInfos)
+    pending.insert(mapInfo);
+  for (bool progress = true; progress;) {
+    progress = false;
+    for (auto [idx, mapInfo] : llvm::enumerate(mapInfos)) {
+      if (!pending.contains(mapInfo))
+        continue;
+      // Defer until every member also being split has been cloned.
+      if (llvm::any_of(mapInfo.getMembers(), [&](Value member) {
+            return pending.contains(member.getDefiningOp());
+          }))
+        continue;
+
+      mlir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
+      auto originalCaptureType = mapInfo.getMapCaptureType();
+      mlir::omp::ClauseMapFlags newMapType = originalMapType;
+      // ByRef is split: inner target keeps only storage, outer data region
+      // keeps the original map. ByCopy is unchanged.
+      if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
+        newMapType = mlir::omp::ClauseMapFlags::storage;
+        outerMapInfos.push_back(mapInfo);
+      } else if (originalCaptureType !=
+                 mlir::omp::VariableCaptureKind::ByCopy) {
+        emitError(targetOp->getLoc(), "Unhandled case");
+        return failure();
+      }
+
+      // clone(op, outerToInner) remaps "members" to sibling inner clones.
+      auto innerMapInfo =
+          cast<omp::MapInfoOp>(rewriter.clone(*mapInfo, outerToInner));
+      innerMapInfo.setMapTypeAttr(
+          rewriter.getAttr<omp::ClauseMapFlagsAttr>(newMapType));
+      innerMapInfos[idx] = innerMapInfo.getResult();
+      pending.erase(mapInfo);
+      progress = true;
     }
-    auto innerMapInfo = cast<omp::MapInfoOp>(rewriter.clone(*mapInfo));
-    innerMapInfo.setMapTypeAttr(
-        rewriter.getAttr<omp::ClauseMapFlagsAttr>(newMapType));
-    innerMapInfo.setMapCaptureType(newCaptureType);
-    innerMapInfos.push_back(innerMapInfo.getResult());
   }
+  // Loop stalls with maps still pending only if their members form a cycle.
+  assert(pending.empty() &&
+         "cyclic mapinfo members: cannot topologically order clones");
 
   rewriter.setInsertionPoint(targetOp);
   auto device = targetOp.getDevice();
