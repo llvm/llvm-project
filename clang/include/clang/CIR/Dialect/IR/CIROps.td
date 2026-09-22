@@ -4808,19 +4808,24 @@ def CIR_CoroutineOp : CIR_Op<"coroutine", [
       `cir.co_return` operations inside this region mark coroutine exit
       points and introduce structured control flow that transfers
       execution to `final_suspend`.
+
     - `final_suspend`: exactly one `cir.await`, marked `final`. Nothing
       else. Corresponds to `co_await promise.final_suspend()`. Resuming
       past this point is undefined behavior in valid programs, so its
       `resume` edge is expected to be dead in practice, but is kept for
       structural symmetry with the other two suspend regions.
+
     - `gro`: TODO.
+
     - `unwind`: TODO.
+
     - `destroy`: destroys the coroutine frame (`coro.free` + `delete`).
       Reached by an explicit `destroy()` call on a suspended handle, by
       normal completion through `final_suspend`, or by an exception
       escaping the coroutine. Falls through to `exit` except when reached
       due to an escaping exception, where it continues propagating that
       exception instead.
+
     - `exit`: the shared return-to-caller path. Reached directly from any
       suspend point that isn't being destroyed (the coroutine is just
       pausing), and from `destroy` when it was entered via ordinary

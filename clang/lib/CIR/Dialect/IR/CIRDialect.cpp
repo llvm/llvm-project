@@ -3543,6 +3543,8 @@ void cir::AwaitOp::getSuccessorRegions(
 LogicalResult cir::AwaitOp::verify() {
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
+  if (this->getSuspend().empty())
+    return emitOpError("suspend region must not be empty");
   if (!isa<CoroSuspendPoint>(this->getSuspend().back().getTerminator()))
     return emitOpError("suspend region must end with cir.coro.suspend_point");
   return success();
@@ -3555,13 +3557,9 @@ LogicalResult cir::AwaitOp::verify() {
 LogicalResult cir::CoReturnOp::verify() {
   mlir::Operation *coRet = getOperation();
   auto coroutine = coRet->getParentOfType<CoroutineOp>();
-  mlir::Region &coroBody = coroutine.getBody();
-  for (Operation *current = coRet; current; current = current->getParentOp()) {
-    if (current->getParentRegion() == &coroBody)
-      return success();
-  }
-
-  return emitOpError("must be inside the cir.coroutine body region");
+  if (!coroutine.getBody().isAncestor(getOperation()->getParentRegion()))
+    return emitOpError("must be inside the cir.coroutine body region");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3742,14 +3740,29 @@ LogicalResult cir::CoroutineOp::verify() {
   // own control flow, body ends in a cir.co_return (or a plain yield if
   // some path never reaches one), and exit actually returns from the
   // function.
+  if (initialSuspend.empty() || initialSuspend.back().empty())
+    return emitOpError("initial_suspend region must not be empty");
   if (!isa<YieldOp>(initialSuspend.back().back()))
     return emitOpError("'initial_suspend' must end with cir.yield");
+
+  if (body.empty() || body.back().empty())
+    return emitOpError("'body' region must not be empty");
   if (!isa<YieldOp, CoReturnOp>(body.back().back()))
     return emitOpError("'body' must end with cir.yield or cir.co_return");
+
+  if (finalSuspend.empty() || finalSuspend.back().empty())
+    return emitOpError("'final_suspend' region must not be empty");
   if (!isa<YieldOp>(finalSuspend.back().back()))
     return emitOpError("'final_suspend' must end with cir.yield");
+
+  if (destroy.empty() || destroy.back().empty())
+    return emitOpError("'destroy' region must not be empty");
   if (!isa<YieldOp>(destroy.back().back()))
     return emitOpError("'destroy' must end with cir.yield");
+
+
+  if (exit.empty() || exit.back().empty())
+    return emitOpError("'exit' region must not be empty");
   if (!isa<ReturnOp>(exit.back().back()))
     return emitOpError("'exit' must end with cir.return");
 
