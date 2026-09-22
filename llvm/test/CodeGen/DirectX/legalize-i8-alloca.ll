@@ -50,11 +50,12 @@ define void @var_i8_store(i1 %cmp.i8) {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[CMP_I8]], i32 1, i32 2
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 255
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[GEP]], align 4
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [1 x i32], align 4
@@ -74,20 +75,21 @@ define void @conflicting_cast(i1 %cmp.i8) {
 ; CHECK-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[CMP_I8]], i32 1, i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 255
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i16
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i16, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-NEXT:    store i16 [[TMP7]], ptr [[GEP1]], align 2
+; CHECK-NEXT:    store i16 [[TMP8]], ptr [[GEP1]], align 2
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[ACCUM_I_FLAT]], i32 1
-; CHECK-NEXT:    store i16 [[TMP7]], ptr [[GEP2]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 255
+; CHECK-NEXT:    store i16 [[TMP8]], ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i16 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[TMP9]], 255
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 1
-; CHECK-NEXT:    store i32 [[TMP9]], ptr [[GEP3]], align 4
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[GEP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %accum.i.flat = alloca [2 x i32], align 4
@@ -121,5 +123,26 @@ define i16 @signed_i8_load() {
   store i8 -1, ptr %slot, align 2
   %value = load i8, ptr %slot, align 2
   %result = sext i8 %value to i16
+  ret i16 %result
+}
+
+define i16 @store_truncated_i8(i32 %value) {
+; CHECK-LABEL: define i16 @store_truncated_i8(
+; CHECK-SAME: i32 [[VALUE:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[VALUE]], 255
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i16
+; CHECK-NEXT:    ret i16 [[TMP7]]
+;
+  %slot = alloca i8, align 2
+  %narrow = trunc i32 %value to i8
+  store i8 %narrow, ptr %slot, align 2
+  %loaded = load i8, ptr %slot, align 2
+  %result = zext i8 %loaded to i16
   ret i16 %result
 }

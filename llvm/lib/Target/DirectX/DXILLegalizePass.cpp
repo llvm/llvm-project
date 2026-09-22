@@ -17,6 +17,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -236,8 +237,12 @@ legalizeNonStandardIntegerSelect(SelectInst &Select,
   if (!True || !False)
     return false;
 
-  ReplacedValues[&Select] = Builder.CreateSelect(
-      Select.getCondition(), True, False, Select.getName(), &Select);
+  Value *Replacement = Builder.CreateSelect(Select.getCondition(), True, False,
+                                            Select.getName(), &Select);
+  if (auto *NewSelect = dyn_cast<SelectInst>(Replacement);
+      NewSelect && !NewSelect->getMetadata(LLVMContext::MD_prof))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*NewSelect, DEBUG_TYPE);
+  ReplacedValues[&Select] = Replacement;
   ToRemove.push_back(&Select);
   return true;
 }
@@ -421,6 +426,7 @@ static bool legalizeI8MemoryUses(Instruction &I,
     if (!StorageTy || !StorageTy->isIntegerTy())
       return false;
 
+    StoredValue = maskToIntegerWidth(StoredValue, 8, Builder);
     StoredValue = Builder.CreateZExtOrTrunc(StoredValue, StorageTy);
     Value *NewStore = Builder.CreateStore(StoredValue, Pointer);
     ReplacedValues[Store] = NewStore;

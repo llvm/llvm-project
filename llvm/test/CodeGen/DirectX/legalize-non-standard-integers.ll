@@ -153,6 +153,20 @@ define i32 @weighted_select(i1 %condition, i32 %lhs, i32 %rhs) {
   ret i32 %result
 }
 
+define i32 @profiled_unweighted_select(i1 %condition, i32 %lhs, i32 %rhs) !prof !1 {
+; CHECK-LABEL: define i32 @profiled_unweighted_select(
+; CHECK: [[SELECT:%.*]] = select i1 %condition, i32 %lhs, i32 %rhs, !prof [[UNKNOWN:![0-9]+]]
+; CHECK: [[RESULT:%.*]] = and i32 [[SELECT]], 7
+; CHECK: ret i32 [[RESULT]]
+  %lhs.i3 = trunc i32 %lhs to i3
+  %rhs.i3 = trunc i32 %rhs to i3
+  %selected = select i1 %condition, i3 %lhs.i3, i3 %rhs.i3
+  %result = zext i3 %selected to i32
+  ret i32 %result
+}
+
 ; CHECK: [[PROF]] = !{!"branch_weights", i32 1, i32 2}
+; CHECK: [[UNKNOWN]] = !{!"unknown", !"dxil-legalize"}
 
 !0 = !{!"branch_weights", i32 1, i32 2}
+!1 = !{!"function_entry_count", i64 10}
