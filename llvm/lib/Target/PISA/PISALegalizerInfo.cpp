@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/IntrinsicsPISA.h"
 #include "llvm/IR/PISAIntrinsicUtils.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/PISAAddrSpace.h"
 
 using namespace llvm;
@@ -2164,7 +2165,7 @@ static bool legalizeGFpow(MachineInstr &MI, MachineIRBuilder &B) {
   // can only do approximation of pow()
   bool AllowApprox = MI.getFlag(MachineInstr::FmAfn);
   if (!AllowApprox)
-    llvm_unreachable("not implemented (fpow)");
+    reportFatalUsageError("G_FPOW without afn is not supported on PISA");
 
   llvm::Register LogReg = MRI.createGenericVirtualRegister(DstTy);
   llvm::Register MulReg = MRI.createGenericVirtualRegister(DstTy);
