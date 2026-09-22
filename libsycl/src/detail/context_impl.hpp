@@ -122,6 +122,12 @@ public:
   /// This method is thread-safe.
   void trackKernelInfoCache(DeviceKernelInfo *Info);
 
+  /// Removes \p Info from the set of tracked caches, e.g. because \p Info is
+  /// about to be destroyed (its owning device image is being unregistered).
+  /// No-op if \p Info was not tracked.
+  /// This method is thread-safe.
+  void forgetKernelInfoCache(DeviceKernelInfo *Info);
+
 private:
   const async_handler MAsyncHandler;
   const std::vector<DeviceImpl *> MDevices;

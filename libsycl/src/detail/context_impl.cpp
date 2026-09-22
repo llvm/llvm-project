@@ -46,7 +46,7 @@ ContextImpl::~ContextImpl() {
   {
     std::lock_guard<std::mutex> Guard(MTrackedKernelInfosMutex);
     for (DeviceKernelInfo *Info : MTrackedKernelInfos) {
-      Info->removeContext(this);
+      Info->removeCachedKernelsFor(this);
     }
   }
   // liboffload does not reference-count contexts: every resource tied to a
@@ -113,6 +113,11 @@ void ContextImpl::releaseAllPrograms() {
 void ContextImpl::trackKernelInfoCache(DeviceKernelInfo *Info) {
   std::lock_guard<std::mutex> Guard(MTrackedKernelInfosMutex);
   MTrackedKernelInfos.insert(Info);
+}
+
+void ContextImpl::forgetKernelInfoCache(DeviceKernelInfo *Info) {
+  std::lock_guard<std::mutex> Guard(MTrackedKernelInfosMutex);
+  MTrackedKernelInfos.erase(Info);
 }
 
 } // namespace detail

@@ -38,8 +38,14 @@ void ProgramAndKernelManager::releaseResources() {
   // platform cache, which is static. Programs must not be left for
   // their destructors to release, because olShutDown() follows this call.
   for (const std::weak_ptr<ContextImpl> &WeakContext : MContextsWithPrograms) {
-    if (std::shared_ptr<ContextImpl> Context = WeakContext.lock())
+    if (std::shared_ptr<ContextImpl> Context = WeakContext.lock()) {
+      // Every DeviceKernelInfo below is about to be destroyed: make sure this
+      // context, if it outlives this call, does not keep pointers to them.
+      for (auto &[Name, Info] : MDeviceKernelInfoMap) {
+        Context->forgetKernelInfoCache(&Info);
+      }
       Context->releaseAllPrograms();
+    }
   }
   MContextsWithPrograms.clear();
   MDeviceKernelInfoMap.clear();
@@ -142,6 +148,14 @@ void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
     llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
       if (auto KernelIt = MDeviceKernelInfoMap.find(std::string_view(Name));
           KernelIt != MDeviceKernelInfoMap.end()) {
+        // Remove this DeviceKernel info from every live context tracking it
+        DeviceKernelInfo *Info = &KernelIt->second;
+        for (const std::weak_ptr<ContextImpl> &WeakContext :
+             MContextsWithPrograms) {
+          if (std::shared_ptr<ContextImpl> Context = WeakContext.lock()) {
+            Context->forgetKernelInfoCache(Info);
+          }
+        }
         // Clear kernel specific data by destroying its kernel info object.
         MDeviceKernelInfoMap.erase(KernelIt);
       }
@@ -190,7 +204,7 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
   // Lock order is MDataCollectionMutex -> ContextImpl::MProgramCacheMutex.
   ol_symbol_handle_t Kernel = Context->getOrCreateKernel(
       DeviceImage, Device.getOLHandle(), KernelInfo.getName());
-  KernelInfo.cacheKernel(Context.get(), Device.getOLHandle(), Kernel);
+  KernelInfo.addCachedKernel(Context.get(), Device.getOLHandle(), Kernel);
   return Kernel;
 }
 

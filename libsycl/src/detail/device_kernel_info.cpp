@@ -23,9 +23,9 @@ DeviceKernelInfo::tryGetCachedKernel(ContextImpl *Context,
   return nullptr;
 }
 
-void DeviceKernelInfo::cacheKernel(ContextImpl *Context,
-                                   ol_device_handle_t Device,
-                                   ol_symbol_handle_t Kernel) {
+void DeviceKernelInfo::addCachedKernel(ContextImpl *Context,
+                                       ol_device_handle_t Device,
+                                       ol_symbol_handle_t Kernel) {
   CacheKeyT Key = {Context, Device};
   {
     std::lock_guard<std::mutex> Guard(MCacheMutex);
@@ -34,7 +34,7 @@ void DeviceKernelInfo::cacheKernel(ContextImpl *Context,
   Context->trackKernelInfoCache(this);
 }
 
-void DeviceKernelInfo::removeContext(ContextImpl *Context) {
+void DeviceKernelInfo::removeCachedKernelsFor(ContextImpl *Context) {
   std::lock_guard<std::mutex> Guard(MCacheMutex);
   for (auto It = MCache.begin(); It != MCache.end();) {
     CacheKeyT Key = It->first;
