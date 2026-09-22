@@ -514,6 +514,10 @@ public:
   /// of different SDKs, we try to pick the most appropriate one
   /// using \ref XcodeSDKAndSysroot::Merge.
   ///
+  /// Note that a Module's CompileUnits may have been built against
+  /// different SDKs, so this merged result is inherently lossy; use the
+  /// \ref GetSDKPathFromDebugInfo(CompileUnit&) overload for accuracy.
+  ///
   /// \param[in] module Module whose debug-info CUs to parse for
   ///                   which SDK they were compiled against.
   ///
