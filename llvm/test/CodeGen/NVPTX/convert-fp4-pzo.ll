@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_107f -mattr=+ptx94 | FileCheck %s
 ; RUN: %if ptxas-sm_107f && ptxas-isa-9.4 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_107f -mattr=+ptx94 | %ptxas-verify -arch=sm_107f %}
 
-; E2M1X2 conversions from f32
+; E2M1X2 conversions from f32 with pzo
 
 define i16 @cvt_rn_pzo_e2m1x2_f32(float %f1, float %f2) {
 ; CHECK-LABEL: cvt_rn_pzo_e2m1x2_f32(
@@ -88,7 +88,7 @@ define i16 @cvt_rz_relu_pzo_e2m1x2_f32(float %f1, float %f2) {
   ret i16 %val
 }
 
-; E2M1X2 conversions from f16x2
+; E2M1X2 conversions from f16x2 with pzo
 
 define i16 @cvt_rn_pzo_e2m1x2_f16x2(<2 x half> %a) {
 ; CHECK-LABEL: cvt_rn_pzo_e2m1x2_f16x2(
@@ -170,7 +170,7 @@ define i16 @cvt_rz_relu_pzo_e2m1x2_f16x2(<2 x half> %a) {
   ret i16 %val
 }
 
-; E2M1X2 conversions from bf16x2
+; E2M1X2 conversions from bf16x2 with pzo
 
 define i16 @cvt_rn_pzo_e2m1x2_bf16x2(<2 x bfloat> %a) {
 ; CHECK-LABEL: cvt_rn_pzo_e2m1x2_bf16x2(

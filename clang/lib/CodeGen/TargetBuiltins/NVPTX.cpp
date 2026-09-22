@@ -1077,6 +1077,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     PZO_CVT(bf16x2_to_e3m2x2_rn_relu_satfinite);
     PZO_CVT(bf16x2_to_e3m2x2_rz_satfinite);
     PZO_CVT(bf16x2_to_e3m2x2_rz_relu_satfinite);
+    
     PZO_CVT(ff_to_e2m1x2_rn_satfinite);
     PZO_CVT(ff_to_e2m1x2_rn_relu_satfinite);
     PZO_CVT(ff_to_e2m1x2_rz_satfinite);
