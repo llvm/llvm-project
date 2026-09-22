@@ -556,8 +556,9 @@ features cannot lower the translation-unit ABI level;
   inside a member function call synthesized by ``__builtin_invoke``. (#GH185241)
 - Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
   format warnings to errors. (#GH211943)
-- Fixed a wrong code generation in `__builtin_clear_padding` wherein the
-  wrong bits of the `_BitInt` type were cleared in big-endian mode.
+- Fixed wrong code generation in `__builtin_clear_padding` wherein the wrong
+  bits of the following types were cleared: `_BitInt`, struct bitfields, and
+  packed boolean vectors. (#GH215809), (#GH216063), (#GH224033)
 - Fixed an assertion failure when `__builtin_vectorelements` is applied to a
   reference to a vector type; `vec_step` (in C++ for OpenCL) and
   `__builtin_ptrauth_type_discriminator` similarly no longer accept reference
