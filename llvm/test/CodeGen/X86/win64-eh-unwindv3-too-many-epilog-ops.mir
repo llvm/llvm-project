@@ -23,39 +23,39 @@ body:             |
   bb.0.entry:
     frame-setup SEH_PushReg 51
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_StackAlloc 8
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_StackAlloc 8
+    frame-destroy SEH_EndEpilogue
     RET64
 ...

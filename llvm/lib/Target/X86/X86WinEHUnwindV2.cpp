@@ -418,7 +418,8 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
       MachineBasicBlock &MBB = *Info.UnwindV2StartLocation->getParent();
       const DebugLoc &DL = Info.UnwindV2StartLocation->getDebugLoc();
       BuildMI(MBB, Info.UnwindV2StartLocation, DL,
-              TII->get(X86::SEH_UnwindV2Start));
+              TII->get(X86::SEH_UnwindV2Start))
+          .setMIFlag(MachineInstr::FrameDestroy);
 
       if ((LastUnwindInfoEndPosition - Info.ApproximateInstructionPosition >=
            InstructionCountThreshold) ||
@@ -438,7 +439,8 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
   MachineBasicBlock &FirstMBB = MF.front();
   BuildMI(FirstMBB, FirstMBB.front(), findDebugLoc(FirstMBB),
           TII->get(X86::SEH_UnwindVersion))
-      .addImm(2);
+      .addImm(2)
+      .setMIFlag(MachineInstr::FrameSetup);
 
   return true;
 }

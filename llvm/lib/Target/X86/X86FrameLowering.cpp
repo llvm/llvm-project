@@ -2753,7 +2753,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     }
 
     // For V3, SEH_BeginEpilogue must be emitted before any epilog SEH pseudos.
-    BuildMI(MBB, EpilogStart, DL, TII.get(X86::SEH_BeginEpilogue));
+    BuildMI(MBB, EpilogStart, DL, TII.get(X86::SEH_BeginEpilogue))
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 
   // If dynamic alloca is used, then reset esp to point to the last callee-saved
@@ -2816,7 +2817,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   // For V1/V2, emit SEH_BeginEpilogue after stack restore code.
   if (!IsWin64UnwindV3 && NeedsWin64CFI && MF.hasWinCFI())
-    BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_BeginEpilogue));
+    BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_BeginEpilogue))
+        .setMIFlag(MachineInstr::FrameDestroy);
 
   if (!HasFP && NeedsDwarfCFI) {
     MBBI = FirstCSPop;
@@ -2863,7 +2865,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
 
   if (NeedsWin64CFI && MF.hasWinCFI())
-    BuildMI(MBB, Terminator, DL, TII.get(X86::SEH_EndEpilogue));
+    BuildMI(MBB, Terminator, DL, TII.get(X86::SEH_EndEpilogue))
+        .setMIFlag(MachineInstr::FrameDestroy);
 }
 
 StackOffset X86FrameLowering::getFrameIndexReference(const MachineFunction &MF,

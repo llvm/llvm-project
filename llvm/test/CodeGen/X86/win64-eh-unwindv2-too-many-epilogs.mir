@@ -17,8 +17,10 @@
 # RUN:    -check-prefixes=ALLOWMORE,CHECK
 
 # CHECK-LABEL: too_many_epilogs
-# CHECK: SEH_UnwindVersion 2
-# CHECK: SEH_UnwindV2Start
+# CHECK: frame-setup SEH_UnwindVersion 2
+# CHECK: frame-destroy SEH_BeginEpilogue
+# CHECK-NEXT: frame-destroy SEH_UnwindV2Start
+# CHECK-NEXT: frame-destroy SEH_EndEpilogue
 
 # If we restricted the number of unwind codes, then we expect to use chained
 # infos.
@@ -52,40 +54,40 @@ name:            too_many_epilogs
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !10
   bb.1:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.2:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.3:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.4:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.5:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.6:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.7:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
   bb.8:
-    SEH_BeginEpilogue
-    SEH_EndEpilogue
+    frame-destroy SEH_BeginEpilogue
+    frame-destroy SEH_EndEpilogue
     RET64 debug-location !11
 
 ...
