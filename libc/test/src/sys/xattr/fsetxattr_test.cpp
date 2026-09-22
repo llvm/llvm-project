@@ -15,6 +15,7 @@
 #include "hdr/sys_xattr_macros.h"
 #include "hdr/types/ssize_t.h"
 #include "src/__support/CPP/scope.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/creat.h"
@@ -124,6 +125,8 @@ TEST_F(LlvmLibcFsetxattrTest, SetAttributeWithNonzeroFlags) {
 #if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST_F(LlvmLibcFsetxattrTest, CrashOnNullAttributeName) {
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/fsetxattr_null_attribute.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {
@@ -135,12 +138,15 @@ TEST_F(LlvmLibcFsetxattrTest, CrashOnNullAttributeName) {
       [fd] {
         constexpr size_t BUFFER_SIZE = 32;
         char buffer[BUFFER_SIZE] = {};
-        LIBC_NAMESPACE::fsetxattr(fd, nullptr, buffer, BUFFER_SIZE);
+        LIBC_NAMESPACE::fsetxattr(fd, nullptr, buffer, BUFFER_SIZE,
+                                  /* flags = */ 0);
       },
       WITH_SIGNAL(-1));
 }
 
 TEST_F(LlvmLibcFsetxattrTest, CrashOnNullBufferNonZeroSize) {
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/fsetxattr_null_buffer.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {
@@ -149,7 +155,10 @@ TEST_F(LlvmLibcFsetxattrTest, CrashOnNullBufferNonZeroSize) {
   });
 
   EXPECT_DEATH(
-      [fd] { LIBC_NAMESPACE::fsetxattr(fd, "user.attr", nullptr, 32); },
+      [fd] {
+        LIBC_NAMESPACE::fsetxattr(fd, "user.attr", nullptr, 32,
+                                  /* flags = */ 0);
+      },
       WITH_SIGNAL(-1));
 }
 

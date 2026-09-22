@@ -13,6 +13,7 @@
 
 #include "hdr/sys_stat_macros.h"
 #include "src/__support/CPP/scope.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/creat.h"
@@ -89,6 +90,8 @@ TEST_F(LlvmLibcFgetxattrTest, WithUserExtendedAttribute) {
 #if defined(LIBC_ADD_NULL_CHECKS)
 
 TEST_F(LlvmLibcFgetxattrTest, CrashOnNullAttributeName) {
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/fgetxattr_null_attribute.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {
@@ -106,6 +109,8 @@ TEST_F(LlvmLibcFgetxattrTest, CrashOnNullAttributeName) {
 }
 
 TEST_F(LlvmLibcFgetxattrTest, CrashOnNullBufferNonZeroSize) {
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/fgetxattr_null_buffer.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {

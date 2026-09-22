@@ -220,6 +220,8 @@ add_header_library(
   HDRS
     fgetxattr.h
   DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -232,6 +234,8 @@ add_header_library(
   HDRS
     getxattr.h
   DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -244,6 +248,8 @@ add_header_library(
   HDRS
     lgetxattr.h
   DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -256,6 +262,7 @@ add_header_library(
   HDRS
     fsetxattr.h
   DEPENDS
+    libc.hdr.types.size_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -268,6 +275,7 @@ add_header_library(
   HDRS
     setxattr.h
   DEPENDS
+    libc.hdr.types.size_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
@@ -280,6 +288,7 @@ add_header_library(
   HDRS
     lsetxattr.h
   DEPENDS
+    libc.hdr.types.size_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or

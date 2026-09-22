@@ -64,7 +64,7 @@ functions:
       - linux
     return_type: int
     arguments:
-      - type: const char *
+      - type: int
       - type: const char *
       - type: const void *
       - type: size_t

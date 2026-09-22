@@ -10,6 +10,7 @@ add_libc_test(
     libc.hdr.sys_stat_macros
     libc.include.sys_xattr
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno
@@ -31,6 +32,7 @@ add_libc_test(
     libc.hdr.sys_stat_macros
     libc.include.sys_xattr
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno
@@ -53,6 +55,7 @@ add_libc_test(
     libc.hdr.sys_stat_macros
     libc.include.sys_xattr
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno
@@ -75,6 +78,7 @@ add_libc_test(
     libc.hdr.sys_stat_macros
     libc.include.sys_xattr
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno
@@ -98,6 +102,7 @@ add_libc_test(
     libc.hdr.types.ssize_t
     libc.include.sys_xattr
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno
@@ -122,6 +127,7 @@ add_libc_test(
     libc.hdr.types.ssize_t
     libc.include.sys_xattr
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno
@@ -144,6 +150,7 @@ add_libc_test(
     libc.hdr.sys_xattr_macros
     libc.include.sys_xattr
     libc.src.__support.CPP.scope
+    libc.src.__support.CPP.string_view
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno

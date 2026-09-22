@@ -13,6 +13,7 @@
 
 #include "hdr/sys_stat_macros.h"
 #include "src/__support/CPP/scope.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/creat.h"
@@ -53,13 +54,15 @@ TEST_F(LlvmLibcLgetxattrTest, WithUserExtendedAttribute) {
 
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
+  scope_exit unlink_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
+  });
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   ASSERT_THAT(recreate_test_symlink(TEST_SYMLINK_TARGET, TEST_SYMLINK_NAME),
               Succeeds(0));
-  scope_exit cleanup([&] {
+  scope_exit unlink_symlink([&] {
     ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_SYMLINK_NAME), Succeeds(0));
-    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
   });
 
   string_view XATTR_NAME = "user.test_attr";

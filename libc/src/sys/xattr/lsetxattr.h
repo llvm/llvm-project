@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_XATTR_LINUX_LSETXATTR_H
-#define LLVM_LIBC_SRC_SYS_XATTR_LINUX_LSETXATTR_H
+#ifndef LLVM_LIBC_SRC_SYS_XATTR_LSETXATTR_H
+#define LLVM_LIBC_SRC_SYS_XATTR_LSETXATTR_H
 
 #include "hdr/types/size_t.h"
 #include "src/__support/macros/config.h"
@@ -24,4 +24,4 @@ int lsetxattr(const char *path, const char *name, const void *value,
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SYS_XATTR_LINUX_LSETXATTR_H
+#endif // LLVM_LIBC_SRC_SYS_XATTR_LSETXATTR_H

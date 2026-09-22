@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_XATTR_LINUX_LGETXATTR_H
-#define LLVM_LIBC_SRC_SYS_XATTR_LINUX_LGETXATTR_H
+#ifndef LLVM_LIBC_SRC_SYS_XATTR_LGETXATTR_H
+#define LLVM_LIBC_SRC_SYS_XATTR_LGETXATTR_H
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/ssize_t.h"
@@ -24,4 +24,4 @@ ssize_t lgetxattr(const char *path, const char *name, void *value, size_t size);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SYS_XATTR_LINUX_LGETXATTR_H
+#endif // LLVM_LIBC_SRC_SYS_XATTR_LGETXATTR_H

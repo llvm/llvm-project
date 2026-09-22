@@ -15,6 +15,7 @@
 #include "hdr/sys_xattr_macros.h"
 #include "hdr/types/ssize_t.h"
 #include "src/__support/CPP/scope.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/creat.h"
@@ -55,13 +56,15 @@ TEST_F(LlvmLibcSetxattrTest, SetAttributeDefaultFlags) {
 
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
+  scope_exit unlink_file([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
+  });
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   ASSERT_THAT(recreate_test_symlink(TEST_SYMLINK_TARGET, TEST_SYMLINK_NAME),
               Succeeds(0));
-  scope_exit cleanup([&] {
+  scope_exit unlink_symlink([&] {
     ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_SYMLINK_NAME), Succeeds(0));
-    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
   });
 
   // Set an attribute through the test file name.
@@ -111,6 +114,9 @@ TEST_F(LlvmLibcSetxattrTest, SetAttributeWithNonzeroFlags) {
       libc_make_test_file_path("testdata/setxattr_nonzero_flags.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
+  scope_exit cleanup([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
+  });
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   string_view XATTR_NAME = "user.test_attr";
@@ -163,7 +169,8 @@ TEST_F(LlvmLibcSetxattrTest, CrashOnNullPath) {
       [] {
         constexpr size_t BUFFER_SIZE = 32;
         char buffer[BUFFER_SIZE] = {};
-        LIBC_NAMESPACE::setxattr(nullptr, "user.attr", buffer, BUFFER_SIZE);
+        LIBC_NAMESPACE::setxattr(nullptr, "user.attr", buffer, BUFFER_SIZE,
+                                 /* flags = */ 0);
       },
       WITH_SIGNAL(-1));
 }
@@ -174,7 +181,7 @@ TEST_F(LlvmLibcSetxattrTest, CrashOnNullAttributeName) {
         constexpr size_t BUFFER_SIZE = 32;
         char buffer[BUFFER_SIZE] = {};
         LIBC_NAMESPACE::setxattr("testdata/file.txt", nullptr, buffer,
-                                 BUFFER_SIZE);
+                                 BUFFER_SIZE, /* flags = */ 0);
       },
       WITH_SIGNAL(-1));
 }
@@ -182,7 +189,8 @@ TEST_F(LlvmLibcSetxattrTest, CrashOnNullAttributeName) {
 TEST_F(LlvmLibcSetxattrTest, CrashOnNullBufferNonZeroSize) {
   EXPECT_DEATH(
       [] {
-        LIBC_NAMESPACE::setxattr("testdata/file.txt", "user.attr", nullptr, 32);
+        LIBC_NAMESPACE::setxattr("testdata/file.txt", "user.attr", nullptr, 32,
+                                 /* flags = */ 0);
       },
       WITH_SIGNAL(-1));
 }
