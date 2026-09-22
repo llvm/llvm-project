@@ -35,7 +35,7 @@
 "`P2301R1 <https://wg21.link/P2301R1>`__","Add a ``pmr`` alias for ``std::stacktrace``","2021-10 (Virtual)","","","`#105167 <https://github.com/llvm/llvm-project/issues/105167>`__",""
 "`P2321R2 <https://wg21.link/P2321R2>`__","``zip``","2021-10 (Virtual)","|Complete|","22","`#105169 <https://github.com/llvm/llvm-project/issues/105169>`__",""
 "`P2340R1 <https://wg21.link/P2340R1>`__","Clarifying the status of the 'C headers'","2021-10 (Virtual)","|Nothing To Do|","","`#105170 <https://github.com/llvm/llvm-project/issues/105170>`__",""
-"`P2393R1 <https://wg21.link/P2393R1>`__","Cleaning up ``integer``-class types","2021-10 (Virtual)","","","`#105171 <https://github.com/llvm/llvm-project/issues/105171>`__",""
+"`P2393R1 <https://wg21.link/P2393R1>`__","Cleaning up ``integer``-class types","2021-10 (Virtual)","|Complete|","22","`#105171 <https://github.com/llvm/llvm-project/issues/105171>`__",""
 "`P2401R0 <https://wg21.link/P2401R0>`__","Add a conditional ``noexcept`` specification to ``std::exchange``","2021-10 (Virtual)","|Complete|","14","`#105172 <https://github.com/llvm/llvm-project/issues/105172>`__",""
 "","","","","","",""
 "`P0323R12 <https://wg21.link/P0323R12>`__","``std::expected``","2022-02 (Virtual)","|Complete|","16","`#105173 <https://github.com/llvm/llvm-project/issues/105173>`__",""
