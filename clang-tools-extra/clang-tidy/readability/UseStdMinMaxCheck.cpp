@@ -60,23 +60,27 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
 }
 
 static QualType getNonTemplateAlias(QualType QT) {
+  bool DesugaredRecordAlias = false;
   while (true) {
     // cast to a TypedefType
     if (const auto *TT = dyn_cast<TypedefType>(QT)) {
       const TypedefNameDecl *TD = TT->getDecl();
-      // Check if the typedef is a template and if it is dependent. A class
-      // member typedef (e.g. std::string::size_type) is not usable by its
-      // bare name at the location of the fix, so keep desugaring in that case.
+      // Check if the typedef is a template and if it is dependent.
       if (!TD->getDescribedTemplate() &&
           !TD->getDeclContext()->isDependentContext() &&
           !TD->getDeclContext()->isRecord())
         return QT;
+      DesugaredRecordAlias |= TD->getDeclContext()->isRecord();
       QT = TT->desugar();
     } else {
       break;
     }
   }
-  return QT;
+  // A class member typedef (e.g. std::string::size_type) is not usable by its
+  // bare name at the location of the fix. If desugaring it did not reveal a
+  // usable non-member alias, use the canonical type to also remove dependent
+  // member types exposed by its implementation.
+  return DesugaredRecordAlias ? QT.getCanonicalType() : QT;
 }
 
 static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,

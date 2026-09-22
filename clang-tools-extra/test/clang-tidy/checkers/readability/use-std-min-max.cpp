@@ -274,7 +274,30 @@ struct S : B {
   typedef B::bsize size_type;
   size_type size() const;
 };
+template <class T>
+struct MakeUnsigned {
+  typedef unsigned long type;
+};
+template <class Allocator, class DifferenceType>
+struct SizeType : MakeUnsigned<DifferenceType> {};
+template <class Allocator>
+struct AllocatorTraits {
+  typedef Allocator allocator_type;
+  typedef long difference_type;
+  typedef typename SizeType<allocator_type, difference_type>::type size_type;
+};
+struct StringLike {
+  typedef AllocatorTraits<int> traits_type;
+  typedef typename traits_type::size_type size_type;
+  size_type size() const;
+};
 void f(const S &s, unsigned &n) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
+  // CHECK-FIXES: n = std::max<unsigned long>(s.size(), n);
+  if (s.size() > n)
+    n = s.size();
+}
+void f(const StringLike &s, unsigned &n) {
   // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `>` [readability-use-std-min-max]
   // CHECK-FIXES: n = std::max<unsigned long>(s.size(), n);
   if (s.size() > n)
