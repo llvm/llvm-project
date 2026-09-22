@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple xtensa -O0 -emit-llvm %s -o - | FileCheck %s
 
-#include <stddef.h>
-#include <stdint.h>
+typedef signed char int8_t;
+typedef short int16_t;
+typedef int int32_t;
+typedef long long int int64_t;
 
 // Test scalar arguments
 
@@ -27,16 +29,15 @@ _Bool f_scalar_i1(_Bool x) { return x; }
 //
 int8_t f_scalar_i8(int8_t x) { return x; }
 
-// CHECK-LABEL: define dso_local zeroext i8 @f_scalar_i16(
+// CHECK-LABEL: define dso_local signext i16 @f_scalar_i16(
 // CHECK-SAME: i16 noundef signext [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i16, align 2
 // CHECK-NEXT:    store i16 [[X]], ptr [[X_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X_ADDR]], align 2
-// CHECK-NEXT:    [[CONV:%.*]] = trunc i16 [[TMP0]] to i8
-// CHECK-NEXT:    ret i8 [[CONV]]
+// CHECK-NEXT:    ret i16 [[TMP0]]
 //
-uint8_t f_scalar_i16(int16_t x) { return x; }
+int16_t f_scalar_i16(int16_t x) { return x; }
 
 // CHECK-LABEL: define dso_local i32 @f_scalar_i32(
 // CHECK-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
