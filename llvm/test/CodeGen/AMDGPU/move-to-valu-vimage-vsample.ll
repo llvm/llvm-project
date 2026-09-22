@@ -52,7 +52,7 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX11-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3:
-  ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX11-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_LOAD_V1_V2_nsa_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -105,7 +105,7 @@ define amdgpu_ps float @vimage_move_to_valu(<8 x i32> %rsrc) {
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.3:
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX12-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX12-NEXT:   $vgpr0 = COPY [[IMAGE_LOAD_V1_V2_gfx12_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 bb:
@@ -168,7 +168,7 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX11-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3:
-  ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX11-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -226,7 +226,7 @@ define amdgpu_ps float @vsample_move_to_valu_rsrc(<8 x i32> %rsrc, <4 x i32> inr
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.3:
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX12-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX12-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx12_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 main_body:
@@ -281,7 +281,7 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX11-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.3:
-  ; GFX11-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX11-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX11-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx11_]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -331,7 +331,7 @@ define amdgpu_ps float @vsample_move_to_valu_samp(<8 x i32> inreg %rsrc, <4 x i3
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.3:
-  ; GFX12-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; GFX12-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; GFX12-NEXT:   $vgpr0 = COPY [[IMAGE_SAMPLE_V1_V1_gfx12_]]
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 main_body:

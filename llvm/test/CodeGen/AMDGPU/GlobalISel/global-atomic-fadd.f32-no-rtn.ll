@@ -97,10 +97,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT: bb.4.Flow:
   ; GFX908-NEXT:   successors: %bb.5(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX908-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.5 (%ir-block.19):
-  ; GFX908-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX908-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -146,10 +146,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A-NEXT: bb.4.Flow:
   ; GFX90A-NEXT:   successors: %bb.5(0x80000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.5 (%ir-block.19):
-  ; GFX90A-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX90A-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX90A-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -195,10 +195,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX942-NEXT: bb.4.Flow:
   ; GFX942-NEXT:   successors: %bb.5(0x80000000)
   ; GFX942-NEXT: {{  $}}
-  ; GFX942-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX942-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT: {{  $}}
   ; GFX942-NEXT: bb.5 (%ir-block.19):
-  ; GFX942-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX942-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-LABEL: name: global_atomic_fadd_f32_saddr_no_rtn_atomicrmw
@@ -239,10 +239,10 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11-NEXT: bb.4.Flow:
   ; GFX11-NEXT:   successors: %bb.5(0x80000000)
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX11-NEXT:   bb-prolog SI_END_CF [[SI_IF1]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.5 (%ir-block.15):
-  ; GFX11-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX11-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX11-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void

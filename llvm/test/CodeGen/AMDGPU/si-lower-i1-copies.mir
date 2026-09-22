@@ -33,11 +33,11 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   bb-prolog SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   [[PHI2:%[0-9]+]]:sreg_64 = PHI [[DEF2]], %bb.0, [[S_ANDN2_B64_]], %bb.2
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     %0:sreg_64 = S_MOV_B64 0
@@ -57,11 +57,11 @@ body:             |
 
   bb.2:
     %6:vreg_1 = PHI %5, %bb.1
-    SI_END_CF %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     %7:vreg_1 = PHI %6, %bb.2, %8, %bb.0
-    SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %11, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...

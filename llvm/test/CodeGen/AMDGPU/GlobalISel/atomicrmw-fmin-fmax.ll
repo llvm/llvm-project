@@ -158,7 +158,7 @@ define void @atomicrmw_fmax_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   S_BRANCH %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5.atomicrmw.phi:
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX10-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   SI_RETURN
   %old = atomicrmw fmax ptr %ptr, double %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -224,7 +224,7 @@ define double @atomicrmw_fmax_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   successors: %bb.6(0x80000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:vreg_64 = PHI [[PHI]], %bb.2, [[REG_SEQUENCE2]], %bb.3
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX10-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6.atomicrmw.end:
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub0
@@ -454,7 +454,7 @@ define void @atomicrmw_fmin_flat_f64_vv_noret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   S_BRANCH %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5.atomicrmw.phi:
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX10-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   SI_RETURN
   %old = atomicrmw fmin ptr %ptr, double %val seq_cst, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -520,7 +520,7 @@ define double @atomicrmw_fmin_flat_f64_vv_ret(ptr %ptr, double %val) {
   ; GFX10-NEXT:   successors: %bb.6(0x80000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:vreg_64 = PHI [[PHI]], %bb.2, [[REG_SEQUENCE2]], %bb.3
-  ; GFX10-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX10-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.6.atomicrmw.end:
   ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[PHI1]].sub0

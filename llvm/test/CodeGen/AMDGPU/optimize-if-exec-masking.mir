@@ -156,7 +156,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -193,7 +193,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -230,7 +230,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -271,7 +271,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -309,7 +309,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec
@@ -351,7 +351,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr0 = S_MOV_B32 0
     $sgpr1 = S_MOV_B32 1
     $sgpr2 = S_MOV_B32 -1
@@ -392,7 +392,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -431,7 +431,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -468,7 +468,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -505,7 +505,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
@@ -544,7 +544,7 @@ body:             |
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec

@@ -36,7 +36,7 @@ define amdgpu_ps float @else1(i32 %z, float %v) #0 {
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.4.end:
   ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[V_ADD_F32_e64_]], %bb.2
-  ; SI-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY [[PHI2]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 main_body:
@@ -92,7 +92,7 @@ define amdgpu_ps float @else2(i32 %z, float %v) #0 {
   ; SI-NEXT: bb.4.end:
   ; SI-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.1, [[V_ADD_F32_e64_]], %bb.2
   ; SI-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[V_ADD_F32_e64_]], %bb.2
-  ; SI-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[PHI1]], 0, [[PHI2]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_1]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
@@ -165,7 +165,7 @@ define amdgpu_ps float @else3(i32 %z, float %v, i32 inreg %bound, i32 %x0) #0 {
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[PHI5:%[0-9]+]]:vgpr_32 = PHI [[PHI3]], %bb.2, [[V_MUL_F32_e64_]], %bb.3
   ; SI-NEXT:   [[PHI6:%[0-9]+]]:vgpr_32 = PHI [[PHI2]], %bb.2, [[V_ADD_U32_e64_]], %bb.3
-  ; SI-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 1, [[PHI6]], 0, implicit $exec
   ; SI-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[PHI]], 1, implicit-def dead $scc
   ; SI-NEXT:   S_CMP_LT_I32 [[S_ADD_I32_]], [[COPY1]], implicit-def $scc
@@ -273,7 +273,7 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT: bb.5:
   ; SI-NEXT:   successors: %bb.10(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; SI-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; SI-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; SI-NEXT:   S_BRANCH %bb.10
   ; SI-NEXT: {{  $}}
@@ -311,13 +311,13 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
   ; SI-NEXT: bb.9:
   ; SI-NEXT:   successors: %bb.1(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; SI-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; SI-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; SI-NEXT:   S_BRANCH %bb.1
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.10.end:
   ; SI-NEXT:   [[PHI10:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[COPY8]], %bb.5
-  ; SI-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY [[PHI10]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
 main_body:
@@ -396,7 +396,7 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT: bb.5:
   ; SI-NEXT:   successors: %bb.10(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; SI-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; SI-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY7]]
   ; SI-NEXT:   S_BRANCH %bb.10
   ; SI-NEXT: {{  $}}
@@ -433,13 +433,13 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
   ; SI-NEXT: bb.9:
   ; SI-NEXT:   successors: %bb.1(0x80000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; SI-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; SI-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[COPY10]]
   ; SI-NEXT:   S_BRANCH %bb.1
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.10.end:
   ; SI-NEXT:   [[PHI7:%[0-9]+]]:vgpr_32 = PHI [[PHI]], %bb.1, [[COPY8]], %bb.5
-  ; SI-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[PHI7]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
   ; SI-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_]]
   ; SI-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
@@ -518,7 +518,7 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT:   S_BRANCH %bb.5
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.7.UnifiedReturnBlock:
-  ; SI-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; SI-NEXT:   bb-prolog SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; SI-NEXT:   S_ENDPGM 0
 entry:
   %i2 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -635,13 +635,13 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT: bb.6:
   ; SI-NEXT:   successors: %bb.2(0x40000000), %bb.7(0x40000000)
   ; SI-NEXT: {{  $}}
-  ; SI-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_1]]
+  ; SI-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_1]]
   ; SI-NEXT:   [[S_ANDN2_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_ANDN2_B32 [[PHI]], $exec_lo, implicit-def dead $scc
   ; SI-NEXT:   $exec_lo = S_MOV_B32_term [[S_ANDN2_B32_1]]
   ; SI-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.7:
-  ; SI-NEXT:   $exec_lo = S_MOV_B32 [[S_MOV_B32_]]
+  ; SI-NEXT:   $exec_lo = bb-prolog S_MOV_B32 [[S_MOV_B32_]]
   ; SI-NEXT:   GLOBAL_STORE_DWORD undef %35:vreg_64, [[IMAGE_SAMPLE_V1_V2_nsa_gfx10_]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; SI-NEXT:   S_ENDPGM 0
 entry:

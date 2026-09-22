@@ -1080,7 +1080,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -1160,7 +1160,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -1237,7 +1237,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc
@@ -4188,7 +4188,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -4269,7 +4269,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -4346,7 +4346,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc
@@ -4435,7 +4435,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -4522,7 +4522,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -4605,7 +4605,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc
@@ -4700,7 +4700,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -4793,7 +4793,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -4882,7 +4882,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc
@@ -4983,7 +4983,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -5082,7 +5082,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -5177,7 +5177,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc
@@ -5826,7 +5826,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -5967,7 +5967,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -6104,7 +6104,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc
@@ -6269,7 +6269,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -6440,7 +6440,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -6607,7 +6607,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc
@@ -6826,7 +6826,7 @@ body:             |
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -7063,7 +7063,7 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT: bb.3:
   ; GFX908-GCNTRACKERS-NEXT:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
-  ; GFX908-GCNTRACKERS-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GFX908-GCNTRACKERS-NEXT:   $exec = bb-prolog S_OR_B64 $exec, [[COPY2]], implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = S_ADD_I32 [[S_MOV_B32_]].sub0, -1, implicit-def dead $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CMP_LG_U32 [[S_MOV_B32_]].sub0, 0, implicit-def $scc
   ; GFX908-GCNTRACKERS-NEXT:   S_CBRANCH_SCC0 %bb.5, implicit killed $scc
@@ -7296,7 +7296,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x04000000), %bb.5(0x7c000000)
 
-    $exec = S_OR_B64 $exec, %6, implicit-def $scc
+    $exec = bb-prolog S_OR_B64 $exec, %6, implicit-def $scc
     %5.sub0:sreg_64 = S_ADD_I32 %5.sub0, -1, implicit-def dead $scc
     S_CMP_LG_U32 %5.sub0, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.4, implicit killed $scc

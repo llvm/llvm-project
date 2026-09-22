@@ -83,7 +83,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; DAGISEL-NEXT: {{  $}}
   ; DAGISEL-NEXT: bb.2.if.end:
   ; DAGISEL-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[V_ADD_U32_e64_]], %bb.1
-  ; DAGISEL-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; DAGISEL-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[COPY2]]
   ; DAGISEL-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI]], 0, [[COPY1]], [[COPY3]], implicit $exec
   ; DAGISEL-NEXT:   $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
@@ -110,7 +110,7 @@ define amdgpu_gfx_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.3.if.end:
   ; GISEL-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY1]], %bb.1, [[V_ADD_U32_e64_]], %bb.2
-  ; GISEL-NEXT:   SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GISEL-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GISEL-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[PHI]], 0, [[COPY]], [[SI_WHOLE_WAVE_FUNC_SETUP]], implicit $exec
   ; GISEL-NEXT:   $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
   ; GISEL-NEXT:   SI_WHOLE_WAVE_FUNC_RETURN [[SI_WHOLE_WAVE_FUNC_SETUP]], implicit $vgpr0

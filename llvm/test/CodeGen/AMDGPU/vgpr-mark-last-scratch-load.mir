@@ -155,7 +155,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, %mask, implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, %mask, implicit-def $scc
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -202,7 +202,7 @@ body:             |
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_OR_B32 $exec_lo, %mask2, implicit-def $scc
+  ; CHECK-NEXT:   $exec_lo = bb-prolog S_OR_B32 $exec_lo, %mask2, implicit-def $scc
   ; CHECK-NEXT:   SI_SPILL_V32_SAVE [[V_MOV_B32_e32_4]], %stack.16, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.16, addrspace 5)
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -270,7 +270,7 @@ body:             |
   bb.2: ; flow
     successors: %bb.5(0x80000000)
 
-    $exec_lo = S_OR_B32 $exec_lo, %mask, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %mask, implicit-def $scc
     S_BRANCH %bb.5
 
   bb.3: ; loop
@@ -298,7 +298,7 @@ body:             |
   bb.4: ; flow
     successors: %bb.2(0x80000000)
 
-    $exec_lo = S_OR_B32 $exec_lo, %mask2, implicit-def $scc
+    $exec_lo = bb-prolog S_OR_B32 $exec_lo, %mask2, implicit-def $scc
     S_BRANCH %bb.2
 
   bb.5: ; exit

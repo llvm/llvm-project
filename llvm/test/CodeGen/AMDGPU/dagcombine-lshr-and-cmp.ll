@@ -24,7 +24,7 @@ define i32 @divergent_lshr_and_cmp(i32 %x) {
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.UnifiedReturnBlock:
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[V_LSHLREV_B32_e64_]], %bb.1
-  ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   $vgpr0 = COPY [[PHI]]
   ; GCN-NEXT:   SI_RETURN implicit $vgpr0
 entry:

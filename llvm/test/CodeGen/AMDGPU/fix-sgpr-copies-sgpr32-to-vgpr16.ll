@@ -43,7 +43,7 @@ define i32 @test_cvt_pk_fp8_f32(float %x, float %y) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.UnifiedReturnBlock:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[S_MOV_B32_3]], %bb.0, [[S_MOV_B32_4]], %bb.1
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[PHI]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
 entry:
@@ -101,7 +101,7 @@ define i32 @test_cvt_pk_fp8_f32_e5m3(float %x, float %y) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.UnifiedReturnBlock:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[S_MOV_B32_3]], %bb.0, [[S_MOV_B32_4]], %bb.1
-  ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   bb-prolog SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[PHI]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
 entry:
