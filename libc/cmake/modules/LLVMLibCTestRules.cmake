@@ -756,17 +756,21 @@ function(add_libc_hermetic test_name)
   get_fq_target_name(${test_name}.libc fq_libc_target_name)
 
   set(startup_target libc.startup.${LIBC_TARGET_OS}.crt1)
-  set(startup_deps "")
+  set(startup_target_dep "")
   if(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
     if(NOT TARGET ${startup_target})
-      message(VERBOSE "Skipping ${fq_target_name} as ${startup_target} is not available on ${LIBC_TARGET_OS}.")
+      if(LIBC_CMAKE_VERBOSE_LOGGING)
+        message(STATUS "Skipping ${fq_target_name} as ${startup_target} is not available on ${LIBC_TARGET_OS}.")
+      endif()
       return()
     endif()
-    list(APPEND startup_deps ${startup_target})
+    set(startup_target_dep ${startup_target})
   endif()
 
-  if(NOT startup_deps AND NOT LIBC_TEST_LINK_OPTIONS_DEFAULT)
-    message(VERBOSE "Skipping ${fq_target_name} as it has no startup provider.")
+  if(NOT startup_target_dep AND NOT LIBC_TEST_LINK_OPTIONS_DEFAULT)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "Skipping ${fq_target_name} as it has no startup provider.")
+    endif()
     return()
   endif()
 
@@ -787,7 +791,7 @@ function(add_libc_hermetic test_name)
 
   get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
   list(APPEND fq_deps_list
-      ${startup_deps}
+      ${startup_target_dep}
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
       libc.src.__support.StringUtil.error_to_string
@@ -937,7 +941,7 @@ function(add_libc_hermetic test_name)
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
-      ${startup_deps}
+      ${startup_target_dep}
       ${link_libraries}
       LibcHermeticTestSupport.hermetic
       ${fq_target_name}.__libc__
