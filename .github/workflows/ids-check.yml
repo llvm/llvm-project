@@ -99,4 +99,4 @@ jobs:
 
       - name: Build and test libLLVM.so
         run: |
-          ninja -C build check-llvm
+          ninja -C ./llvm-project/build check-llvm
