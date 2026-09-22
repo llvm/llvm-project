@@ -401,11 +401,11 @@ public:
   }
 
   void popLastConstraint(bool Signed) {
-    DecomposeCache.clear();
+    assert(DecomposeCache.empty() && "Cache must be cleared");
     getCS(Signed).popLastConstraint();
   }
   void popLastNVariables(bool Signed, unsigned N) {
-    DecomposeCache.clear();
+    assert(DecomposeCache.empty() && "Cache must be cleared");
     getCS(Signed).popLastNVariables(N);
   }
 
@@ -2100,6 +2100,7 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
                      SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
                      SmallVectorImpl<StackEntry> &DFSInStack) {
+  getDecomposeCache().clear();
   Info.popLastConstraint(E.IsSigned);
   // Remove variables in the system that went out of scope.
   auto &Mapping = Info.getValue2Index(E.IsSigned);
