@@ -183,6 +183,10 @@ public:
     }
   }
 
+  bool isDisabled(TailFoldingOpts DefaultBits) const {
+    return getBits(DefaultBits) == TailFoldingOpts::Disabled;
+  }
+
   bool satisfies(TailFoldingOpts DefaultBits, TailFoldingOpts Required) const {
     return (getBits(DefaultBits) & Required) == Required;
   }
@@ -7349,7 +7353,8 @@ unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
 }
 
 bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
-  if (!ST->hasSVE())
+  TailFoldingOpts DefaultOpts = ST->getSVETailFoldingDefaultOpts();
+  if (!ST->hasSVE() || TailFoldingOptionLoc.isDisabled(DefaultOpts))
     return false;
 
   // We don't currently support vectorisation with interleaving for SVE - with
@@ -7374,8 +7379,7 @@ bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (Required == TailFoldingOpts::Disabled)
     Required |= TailFoldingOpts::Simple;
 
-  if (!TailFoldingOptionLoc.satisfies(ST->getSVETailFoldingDefaultOpts(),
-                                      Required))
+  if (!TailFoldingOptionLoc.satisfies(DefaultOpts, Required))
     return false;
 
   // Don't tail-fold for tight loops where we would be better off interleaving
