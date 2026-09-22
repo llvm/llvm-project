@@ -45,8 +45,8 @@
 
 // Verifies CIR emits correct address spaces for CUDA globals.
 
-// CIR-DEVICE: cir.global "private" internal dso_local @_ZZ2fnvE1j = #cir.undef
-// LLVM-DEVICE: @_ZZ2fnvE1j = internal global i32 undef
+// CIR-DEVICE: cir.global "private" internal dso_local target_address_space(3) @_ZZ2fnvE1j = #cir.undef
+// LLVM-DEVICE: @_ZZ2fnvE1j = internal addrspace(3) global i32 undef
 
 // CIR-PRE: cir.global external  lang_address_space(offload_global) @i = #cir.int<0>
 // CIR-POST: cir.global external  target_address_space(1) @i = #cir.int<0>
@@ -161,16 +161,16 @@ __global__ void fn() {
 // CIR-DEVICE:   %[[ALLOCA:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR-DEVICE:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-DEVICE:   cir.store {{.*}}%[[ZERO]], %[[ALLOCA]] : !s32i, !cir.ptr<!s32i>
-// CIR-DEVICE:   %[[J:.*]] = cir.get_global @_ZZ2fnvE1j : !cir.ptr<!s32i>
+// CIR-DEVICE:   %[[J:.*]] = cir.get_global @_ZZ2fnvE1j : !cir.ptr<!s32i, target_address_space(3)>
 // CIR-DEVICE:   %[[VAL:.*]] = cir.load {{.*}}%[[ALLOCA]] : !cir.ptr<!s32i>, !s32i
-// CIR-DEVICE:   cir.store {{.*}}%[[VAL]], %[[J]] : !s32i, !cir.ptr<!s32i>
+// CIR-DEVICE:   cir.store {{.*}}%[[VAL]], %[[J]] : !s32i, !cir.ptr<!s32i, target_address_space(3)>
 // CIR-DEVICE:   cir.return
 
 // LLVM-DEVICE: define dso_local ptx_kernel void @_Z2fnv()
 // LLVM-DEVICE:   %[[ALLOCA:.*]] = alloca i32, align 4
 // LLVM-DEVICE:   store i32 0, ptr %[[ALLOCA]], align 4
 // LLVM-DEVICE:   %[[VAL:.*]] = load i32, ptr %[[ALLOCA]], align 4
-// LLVM-DEVICE:   store i32 %[[VAL]], ptr @_ZZ2fnvE1j, align 4
+// LLVM-DEVICE:   store i32 %[[VAL]], ptr addrspace(3) @_ZZ2fnvE1j, align 4
 // LLVM-DEVICE:   ret void
 
 // OGCG-DEVICE: define dso_local ptx_kernel void @_Z2fnv()
