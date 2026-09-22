@@ -2481,7 +2481,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
             insertRank = order[reducedDim - 1];
           // Add as an outer dim to the inner neighbor if no left neighbor
           // exists.
-          else if (reducedDim + 1 < srcRank)
+          else if (srcRank > 1)
             insertRank = order[reducedDim + 1] + 1;
           for (int otherDim = 0; otherDim < srcRank; otherDim++)
             if (order[otherDim] >= insertRank)

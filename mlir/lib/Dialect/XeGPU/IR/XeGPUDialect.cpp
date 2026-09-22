@@ -611,6 +611,11 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
     int64_t curr = sortedDimGroup[dimIdx];
 
     if (hasExplicitWalkOrder) {
+      // Walk order matters if dims are not trivially collapsible
+      if ((sgLayout.empty() || (sgLayout[prev] == 1 && sgLayout[curr] == 1)) &&
+          (laneLayout.empty() ||
+           (laneLayout[prev] == 1 && laneLayout[curr] == 1)))
+        continue;
       if (std::abs(origOrder[prev] - origOrder[curr]) != 1)
         llvm::report_fatal_error(
             "dimensions being collapsed must be adjacent in order");
