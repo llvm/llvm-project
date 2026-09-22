@@ -5961,9 +5961,12 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
             name->symbol->Rank() > 0) {
           return context_.Analyze(*name);
         }
-      } else if (result->Rank() == 0) {
-        // Named-constant array element (or array component of a scalar
-        // named constant of derived type), e.g. a(1) or pt%arr(1).
+      } else {
+        // Named-constant array element or section (or array component of a
+        // scalar named constant of derived type), e.g. a(1), a(1:3), a(2:*),
+        // pt%arr(1).  A section with a vector subscript or a component of a
+        // section is retained too; those are not contiguous, and lowering
+        // copies them like any other actual argument that needs a copy.
         if (const auto *ae{
                 parser::Unwrap<parser::ArrayElement>(designator->value())}) {
           const auto &baseName{parser::GetFirstName(ae->Base())};

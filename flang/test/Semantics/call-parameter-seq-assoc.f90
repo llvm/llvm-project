@@ -184,3 +184,31 @@ subroutine implied_shape()
   !ERROR: Actual argument has fewer elements remaining in storage sequence (4) than dummy argument 'x=' array (6)
   call expl6i(ip2(0, 2))
 end subroutine
+
+subroutine section_shapes()
+  ! Sections of named constants are retained too: the ordinary array checks
+  ! apply to them (element counts, definability), and a section passed to a
+  ! VALUE array dummy is a complete element sequence copied as a whole.
+  use m
+  interface
+    subroutine expl5(x)
+      integer, intent(in) :: x(5)
+    end subroutine
+    subroutine inout5(x)
+      integer, intent(inout) :: x(5)
+    end subroutine
+    subroutine byval2(x)
+      integer, value :: x(2)
+    end subroutine
+  end interface
+  integer, parameter :: gp10(10) = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  call expl5(gp10(1:5))       ! conforming
+  call expl5(gp10(6:10))      ! conforming (exactly 5)
+  call expl5(gp10(1:10:2))    ! conforming (5 elements, noncontiguous: copied)
+  call byval2(gp(1:2))        ! section to a VALUE array dummy: whole-section copy
+  !ERROR: Actual argument array has fewer elements (3) than dummy argument 'x=' array (5)
+  call expl5(gp10(8:10))
+  !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' is not definable
+  !ERROR: 'gp10' is not a variable
+  call inout5(gp10(1:5))
+end subroutine
