@@ -35,7 +35,8 @@ enum class GCNSchedStageID : unsigned {
   ClusteredLowOccupancyReschedule = 3,
   PreRARematerialize = 4,
   ILPInitialSchedule = 5,
-  MemoryClauseInitialSchedule = 6
+  MemoryClauseInitialSchedule = 6,
+  UnpackPKOps = 7
 };
 
 #ifndef NDEBUG
@@ -266,6 +267,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
   friend class ILPInitialScheduleStage;
+  friend class UnpackPKOpsStage;
   friend class RegionPressureMap;
 
   const GCNSubtarget &ST;
@@ -792,6 +794,19 @@ public:
   MemoryClauseInitialScheduleStage(GCNSchedStageID StageID,
                                    GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
+};
+
+/// Unpack V_PK_ADD/MUL/FMA_F32 into scalar ops in regions where VGPR
+/// pressure exceeds the architectural limit, reducing peak register usage.
+class UnpackPKOpsStage : public GCNSchedStage {
+public:
+  bool initGCNSchedStage() override;
+
+  UnpackPKOpsStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+
+private:
+  bool unpackPKOpsForPressure();
 };
 
 class GCNPostScheduleDAGMILive final : public ScheduleDAGMI {

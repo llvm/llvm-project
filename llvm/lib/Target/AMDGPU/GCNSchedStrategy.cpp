@@ -1055,6 +1055,8 @@ GCNScheduleDAGMILive::createSchedStage(GCNSchedStageID SchedStageID) {
   case GCNSchedStageID::MemoryClauseInitialSchedule:
     return std::make_unique<MemoryClauseInitialScheduleStage>(SchedStageID,
                                                               *this);
+  case GCNSchedStageID::UnpackPKOps:
+    return std::make_unique<UnpackPKOpsStage>(SchedStageID, *this);
   }
 
   llvm_unreachable("Unknown SchedStageID.");
@@ -1297,6 +1299,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const GCNSchedStageID &StageID) {
   case GCNSchedStageID::MemoryClauseInitialSchedule:
     OS << "Max memory clause Initial Schedule";
     break;
+  case GCNSchedStageID::UnpackPKOps:
+    OS << "Unpack PK Ops";
+    break;
   }
 
   return OS;
@@ -1377,11 +1382,255 @@ void RewriteMFMAFormStage::findReachingUses(
   }
 }
 
+bool UnpackPKOpsStage::initGCNSchedStage() {
+  unpackPKOpsForPressure();
+  return false;
+}
+
+// Split V_PK_ADD/MUL/FMA_F32 into pairs of scalar V_ADD/MUL/FMA_F32_e64 in
+// regions where VGPR pressure exceeds the architectural limit.
+//
+// A packed op like V_PK_MUL_F32 computes two f32 multiplies and writes a
+// vreg_64 result. When many such results are live simultaneously, the wide
+// live ranges inflate VGPR pressure. Splitting into two independent vgpr_32
+// results lets the register allocator schedule their lifetimes independently,
+// reducing peak pressure at the cost of more instructions.
+//
+// The transformation rewrites all users of the original vreg_64:
+//   - Subreg users (.sub0/.sub1): rewritten directly to use LoReg/HiReg.
+//   - Full vreg_64 users: a pair of COPYs reconstructs the vreg_64 right
+//     before the user instruction.
+//   - Other defs of the same vreg_64 (partial subreg redefs like
+//     %dst.sub0 = COPY ...): rewritten to define LoReg/HiReg instead.
+//
+// If any other def of the destination is a full-register def (not a subreg
+// def), the split is skipped for that instruction since we cannot redirect
+// a full-reg def to two independent registers.
+bool UnpackPKOpsStage::unpackPKOpsForPressure() {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineRegisterInfo &MRI = DAG.MRI;
+  unsigned ArchVGPRLimit = ST.getAddressableNumArchVGPRs();
+  bool Changed = false;
+
+  for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
+    // Only unpack in regions where pressure exceeds the VGPR budget.
+    if (DAG.Pressure[Region].getArchVGPRNum() <= ArchVGPRLimit)
+      continue;
+
+    auto [Begin, End] = DAG.Regions[Region];
+
+    // Collect all packed f32 ops in this region.
+    SmallVector<MachineInstr *, 16> ToUnpack;
+    for (auto I = Begin; I != End; ++I) {
+      unsigned Opc = I->getOpcode();
+      if (Opc != AMDGPU::V_PK_ADD_F32 && Opc != AMDGPU::V_PK_MUL_F32 &&
+          Opc != AMDGPU::V_PK_FMA_F32)
+        continue;
+      MachineOperand &Dst = I->getOperand(0);
+      if (!Dst.getReg().isVirtual())
+        continue;
+      ToUnpack.push_back(&*I);
+    }
+
+    for (MachineInstr *MI : ToUnpack) {
+      unsigned Opc = MI->getOpcode();
+      unsigned ScalarOpc;
+      if (Opc == AMDGPU::V_PK_ADD_F32)
+        ScalarOpc = AMDGPU::V_ADD_F32_e64;
+      else if (Opc == AMDGPU::V_PK_MUL_F32)
+        ScalarOpc = AMDGPU::V_MUL_F32_e64;
+      else
+        ScalarOpc = AMDGPU::V_FMA_F32_e64;
+
+      Register DstReg = MI->getOperand(0).getReg();
+      const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+      // Only split vreg_64 results — wider register classes would need
+      // more complex handling.
+      if (TII->getRegisterInfo().getRegSizeInBits(*DstRC) != 64)
+        continue;
+
+      MachineOperand *Src0 = TII->getNamedOperand(*MI, AMDGPU::OpName::src0);
+      MachineOperand *Src1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src1);
+      MachineOperand *Src0Mods =
+          TII->getNamedOperand(*MI, AMDGPU::OpName::src0_modifiers);
+      MachineOperand *Src1Mods =
+          TII->getNamedOperand(*MI, AMDGPU::OpName::src1_modifiers);
+      MachineOperand *Clamp = TII->getNamedOperand(*MI, AMDGPU::OpName::clamp);
+      if (!Src0 || !Src1 || !Src0Mods || !Src1Mods || !Clamp)
+        continue;
+
+      // Check that all other defs of DstReg are subreg defs (sub0/sub1).
+      // A full-register def elsewhere would need to write both LoReg and
+      // HiReg simultaneously, which we can't express after splitting.
+      bool CanSplit = true;
+      SmallVector<MachineOperand *, 8> OtherDefs;
+      for (MachineOperand &DefMO : MRI.def_operands(DstReg)) {
+        if (DefMO.getParent() == MI)
+          continue;
+        unsigned SubIdx = DefMO.getSubReg();
+        if (SubIdx != AMDGPU::sub0 && SubIdx != AMDGPU::sub1) {
+          CanSplit = false;
+          break;
+        }
+        OtherDefs.push_back(&DefMO);
+      }
+      if (!CanSplit) {
+        LLVM_DEBUG(dbgs() << "UnpackPK: skip (non-subreg other def) " << *MI);
+        continue;
+      }
+
+      MachineBasicBlock &MBB = *MI->getParent();
+      DebugLoc DL = MI->getDebugLoc();
+
+      // Create two independent vgpr_32 destinations — one for each lane
+      // of the original packed result.
+      Register LoReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      Register HiReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+      // Build one scalar op for either the lo (sub0) or hi (sub1) lane.
+      // Translates packed source modifiers (NEG/NEG_HI, OP_SEL) into the
+      // corresponding scalar modifier for the selected lane. For virtual
+      // register sources, adds a subreg index to select the right 32-bit
+      // half of the 64-bit source.
+      auto BuildScalar = [&](Register OutReg, bool IsHi) {
+        unsigned S0Mods = Src0Mods->getImm();
+        unsigned S1Mods = Src1Mods->getImm();
+        // In packed encoding, NEG applies to lo elements, NEG_HI to hi.
+        unsigned S0Neg = IsHi ? SISrcMods::NEG_HI : SISrcMods::NEG;
+        unsigned S1Neg = IsHi ? SISrcMods::NEG_HI : SISrcMods::NEG;
+        // OP_SEL selects which 32-bit half of the source to use.
+        unsigned OpSel = IsHi ? SISrcMods::OP_SEL_1 : SISrcMods::OP_SEL_0;
+
+        unsigned NewS0Mods = (S0Mods & S0Neg) ? (unsigned)SISrcMods::NEG : 0u;
+        unsigned NewS1Mods = (S1Mods & S1Neg) ? (unsigned)SISrcMods::NEG : 0u;
+
+        // For virtual register sources, extract the right 32-bit half via
+        // subreg. If the source already has a subreg (e.g., %r.sub6_sub7 from
+        // a vreg_512), compose it with the lane subreg to get the correct
+        // element (e.g., sub6_sub7 + sub0 = sub6).
+        // For immediates and physical regs, use the operand as-is.
+        const SIRegisterInfo &TRI = TII->getRegisterInfo();
+        auto GetSrcOp = [&](const MachineOperand &MO,
+                            unsigned Mods) -> MachineOperand {
+          if (MO.isImm())
+            return MachineOperand::CreateImm(MO.getImm());
+          Register Reg = MO.getReg();
+          if (Reg.isVirtual()) {
+            unsigned LaneSubIdx = (Mods & OpSel) ? AMDGPU::sub1 : AMDGPU::sub0;
+            unsigned OrigSubIdx = MO.getSubReg();
+            unsigned FinalSubIdx =
+                OrigSubIdx ? TRI.composeSubRegIndices(OrigSubIdx, LaneSubIdx)
+                           : LaneSubIdx;
+            return MachineOperand::CreateReg(Reg, false, false, false, false,
+                                             false, false, FinalSubIdx);
+          }
+          return MO;
+        };
+
+        MachineInstrBuilder NewMI =
+            BuildMI(MBB, MI, DL, TII->get(ScalarOpc), OutReg);
+        NewMI.addImm(NewS0Mods);
+        NewMI.add(GetSrcOp(*Src0, S0Mods));
+        NewMI.addImm(NewS1Mods);
+        NewMI.add(GetSrcOp(*Src1, S1Mods));
+
+        // V_PK_FMA_F32 has a third source operand.
+        if (Opc == AMDGPU::V_PK_FMA_F32) {
+          MachineOperand *Src2 =
+              TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+          MachineOperand *Src2Mods =
+              TII->getNamedOperand(*MI, AMDGPU::OpName::src2_modifiers);
+          unsigned S2Neg = IsHi ? SISrcMods::NEG_HI : SISrcMods::NEG;
+          unsigned NewS2Mods =
+              (Src2Mods->getImm() & S2Neg) ? (unsigned)SISrcMods::NEG : 0u;
+          NewMI.addImm(NewS2Mods);
+          NewMI.add(GetSrcOp(*Src2, Src2Mods->getImm()));
+        }
+
+        NewMI.addImm(Clamp->getImm());
+        NewMI.addImm(0);
+        NewMI->setFlags(MI->getFlags());
+      };
+
+      BuildScalar(LoReg, /*IsHi=*/false);
+      BuildScalar(HiReg, /*IsHi=*/true);
+
+      // Redirect partial subreg redefs of the original vreg_64 to the
+      // corresponding split register (sub0 → LoReg, sub1 → HiReg).
+      for (MachineOperand *DefMO : OtherDefs) {
+        if (DefMO->getSubReg() == AMDGPU::sub0) {
+          DefMO->setReg(LoReg);
+          DefMO->setSubReg(0);
+          DefMO->setIsUndef(false);
+        } else {
+          DefMO->setReg(HiReg);
+          DefMO->setSubReg(0);
+          DefMO->setIsUndef(false);
+        }
+      }
+
+      // Collect all uses before rewriting — iterating while modifying the
+      // use list is not safe.
+      SmallVector<MachineOperand *, 16> AllUses;
+      for (MachineOperand &UseMO : MRI.use_operands(DstReg))
+        if (UseMO.getParent() != MI)
+          AllUses.push_back(&UseMO);
+
+      for (MachineOperand *UseMO : AllUses) {
+        unsigned SubIdx = UseMO->getSubReg();
+        if (SubIdx == AMDGPU::sub0) {
+          // Subreg use of the lo half — directly use LoReg.
+          UseMO->setReg(LoReg);
+          UseMO->setSubReg(0);
+        } else if (SubIdx == AMDGPU::sub1) {
+          // Subreg use of the hi half — directly use HiReg.
+          UseMO->setReg(HiReg);
+          UseMO->setSubReg(0);
+        } else {
+          // Full vreg_64 use — reconstruct the pair right before this user
+          // via two subreg COPYs into a fresh vreg_64.
+          MachineInstr *UserMI = UseMO->getParent();
+          MachineBasicBlock &UserMBB = *UserMI->getParent();
+          Register NewFull = MRI.createVirtualRegister(MRI.getRegClass(DstReg));
+          auto &LoCopy = *BuildMI(UserMBB, UserMI, UserMI->getDebugLoc(),
+                                  TII->get(TargetOpcode::COPY))
+                              .addReg(NewFull, RegState::Define, AMDGPU::sub0)
+                              .addReg(LoReg);
+          LoCopy.getOperand(0).setIsUndef(true);
+          BuildMI(UserMBB, UserMI, UserMI->getDebugLoc(),
+                  TII->get(TargetOpcode::COPY))
+              .addReg(NewFull, RegState::Define, AMDGPU::sub1)
+              .addReg(HiReg);
+          UseMO->setReg(NewFull);
+        }
+      }
+
+      LLVM_DEBUG(dbgs() << "UnpackPK: split " << *MI);
+      MI->eraseFromParent();
+      Changed = true;
+    }
+  }
+
+  if (Changed) {
+    // Rebuild slot indexes and live intervals since we inserted/removed
+    // instructions. Then recompute region pressures with the new schedule.
+    DAG.getLIS()->getSlotIndexes()->reanalyze(DAG.MF);
+    DAG.getLIS()->reanalyze(DAG.MF);
+    for (unsigned I = 0; I < DAG.Regions.size(); ++I)
+      DAG.Pressure[I] = DAG.getRealRegPressure(I);
+    LLVM_DEBUG(dbgs() << "UnpackPK: done, reanalyzed\n");
+  }
+
+  return Changed;
+}
+
 bool RewriteMFMAFormStage::initGCNSchedStage() {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
   // We only need to run this pass if the architecture supports AGPRs.
   // Additionally, we don't use AGPRs at occupancy levels above 1 so there
   // is no need for this pass in that case, either.
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
     return false;
 
