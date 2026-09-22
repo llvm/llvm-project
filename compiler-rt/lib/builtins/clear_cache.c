@@ -94,7 +94,7 @@ void __clear_cache(void *start, void *end) {
 #elif defined(__mips__)
   const uintptr_t start_int = (uintptr_t)start;
   const uintptr_t end_int = (uintptr_t)end;
-#if __mips_isa_rev >= 6 && defined(__linux__)
+#if defined(__linux__) && __mips_isa_rev >= 6
   uintptr_t synci_step;
   __asm__ volatile("rdhwr %0, $1" : "=r"(synci_step));
   if (synci_step != 0) {
