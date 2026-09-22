@@ -138,19 +138,19 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
     }
 
     if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
-      // Function that contain tail calls don't have unique PseudoSourceValue
-      // objects. Two PseudoSourceValues might refer to the same or
-      // overlapping locations. The client code calling this function assumes
-      // this is not the case. So return a conservative answer of no known
-      // object.
-      if (MFI.hasTailCall())
+      if (MFI.hasTailCall()) {
+        // Function that contain tail calls don't have unique PseudoSourceValue
+        // objects. Two PseudoSourceValues might refer to the same or
+        // overlapping locations. The client code calling this function assumes
+        // this is not the case. So return a conservative answer of no known
+        // object.
         AllObjectsIdentified = false;
-
-      // For now, ignore PseudoSourceValues which may alias LLVM IR values
-      // because the code that uses this function has no way to cope with
-      // such aliases.
-      else if (PSV->isAliased(&MFI))
+      } else if (PSV->isAliased(&MFI)) {
+        // For now, ignore PseudoSourceValues which may alias LLVM IR values
+        // because the code that uses this function has no way to cope with such
+        // aliases.
         AllObjectsIdentified = false;
+      }
 
       Objects.push_back(PSV);
     } else if (const Value *V = MMO->getValue()) {
