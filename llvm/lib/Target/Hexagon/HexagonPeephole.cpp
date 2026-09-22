@@ -57,7 +57,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
-#include <iterator>
 
 using namespace llvm;
 
@@ -331,9 +330,8 @@ bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
       unsigned SiblingOpc =
           Opc == Hexagon::A2_vminub ? Hexagon::C2_cmpgtup : Hexagon::A2_vminub;
       MachineInstr *Sibling = nullptr;
-      auto It = std::next(MI.getIterator());
-      auto E = MBB.end();
-      for (; It != E; ++It)
+      auto It = MI.getIterator();
+      for (++It; It != MBB.end(); ++It)
         if (!DeadMIs.count(&*It) && It->getOpcode() == SiblingOpc &&
             hasCommonInputOps(&MI, &*It)) {
           Sibling = &*It;
