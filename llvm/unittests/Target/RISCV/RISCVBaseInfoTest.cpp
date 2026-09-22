@@ -56,6 +56,27 @@ TEST(ComputeTargetABI, SelectsExpectedABI) {
   EXPECT_EQ(computeTargetABI("riscv64", "+f"), RISCVABI::ABI_LP64F);
   EXPECT_EQ(computeTargetABI("riscv64", "+f,+d"), RISCVABI::ABI_LP64D);
 
+  // RVY targets default to the capability ABI.
+  EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y"),
+            RISCVABI::ABI_IL32PC64);
+  EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y,+f"),
+            RISCVABI::ABI_IL32PC64F);
+  EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y,+f,+d"),
+            RISCVABI::ABI_IL32PC64D);
+  EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y"),
+            RISCVABI::ABI_L64PC128);
+  EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f"),
+            RISCVABI::ABI_L64PC128F);
+  EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d"),
+            RISCVABI::ABI_L64PC128D);
+
+  // An explicit ABI overrides the default.
+  EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y", /*ABIName=*/"ilp32"),
+            RISCVABI::ABI_ILP32);
+  EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d",
+                             /*ABIName=*/"lp64d"),
+            RISCVABI::ABI_LP64D);
+
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(computeTargetABI("riscv32", "+xcheriot"), RISCVABI::ABI_CHERIOT);
 }
@@ -85,6 +106,16 @@ TEST(ComputeTargetABI, ReportsInvalidExplicitABI) {
             "only the cheriot ABI is supported for XCheriot");
   EXPECT_EQ(computeTargetABIError("riscv64", "+e", "lp64"),
             "only the lp64e ABI is supported for RV64E");
+  EXPECT_EQ(
+      computeTargetABIError("riscv32", "+experimental-y,+f,+d", "l64pc128d"),
+      "64-bit ABIs are not supported for 32-bit targets");
+  EXPECT_EQ(
+      computeTargetABIError("riscv64", "+experimental-y,+f,+d", "il32pc64f"),
+      "32-bit ABIs are not supported for 64-bit targets");
+  EXPECT_EQ(computeTargetABIError("riscv32", "", "il32pc64"),
+            "'il32pc64' ABI is only supported for RVY targets");
+  EXPECT_EQ(computeTargetABIError("riscv64", "+f,+d", "l64pc128d"),
+            "'l64pc128d' ABI is only supported for RVY targets");
 }
 
 } // namespace

@@ -52,20 +52,11 @@ cl::opt<bool> WebAssembly::WasmDisableExplicitLocals(
 
 // Exception handling & setjmp-longjmp handling related options.
 
-// Emscripten's asm.js-style exception handling
-cl::opt<bool> WebAssembly::WasmEnableEmEH(
-    "enable-emscripten-cxx-exceptions",
-    cl::desc("WebAssembly Emscripten-style exception handling"),
-    cl::init(false));
 // Emscripten's asm.js-style setjmp/longjmp handling
 cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
     "enable-emscripten-sjlj",
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));
-// Exception handling using wasm EH instructions
-cl::opt<bool>
-    WebAssembly::WasmEnableEH("wasm-enable-eh",
-                              cl::desc("WebAssembly exception handling"));
 // setjmp/longjmp handling using wasm EH instructions
 cl::opt<bool> WebAssembly::WasmEnableSjLj(
     "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
@@ -134,51 +125,39 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 }
 
 using WebAssembly::WasmDisableExplicitLocals;
-using WebAssembly::WasmEnableEH;
-using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
 using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
-  // You can't enable two modes of EH at the same time
-  if (WasmEnableEmEH && WasmEnableEH)
-    report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
+
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
     report_fatal_error(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
   // You can't mix Emscripten EH with Wasm SjLj.
-  if (WasmEnableEmEH && WasmEnableSjLj)
+  if (EnableEmEH && WasmEnableSjLj)
     report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
 
-  if (TM->Options.ExceptionModel == ExceptionHandling::None) {
-    // FIXME: These flags should be removed in favor of directly using the
-    // generically configured ExceptionsType
-    if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
+  if (TM->Options.ExceptionModel == ExceptionHandling::Default) {
+    // FIXME: This flag should be removed in favor of directly using the
+    // generically configured ExceptionsType.
+    if (WebAssembly::WasmEnableSjLj)
       TM->Options.ExceptionModel = ExceptionHandling::Wasm;
   }
 
   // Basic Correctness checking related to -exception-model
-  if (TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
-  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model=wasm not allowed with "
-                       "-enable-emscripten-cxx-exceptions");
-  if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+  if (TM->Options.ExceptionModel != ExceptionHandling::Default &&
+      TM->Options.ExceptionModel != ExceptionHandling::None &&
+      TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
+      TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
     report_fatal_error(
-        "-wasm-enable-eh only allowed with -exception-model=wasm");
+        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
   if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
     report_fatal_error(
         "-wasm-enable-sjlj only allowed with -exception-model=wasm");
-  if ((!WasmEnableEH && !WasmEnableSjLj) &&
-      TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error(
-        "-exception-model=wasm only allowed with at least one of "
-        "-wasm-enable-eh or -wasm-enable-sjlj");
 
   // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
   // measure, but some code will error out at compile time in this combination.
@@ -191,7 +170,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()),
@@ -224,15 +203,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
 WebAssemblyTargetMachine::~WebAssemblyTargetMachine() = default; // anchor.
 
-const WebAssemblySubtarget *WebAssemblyTargetMachine::getSubtargetImpl() const {
-  return getSubtargetImpl(std::string(getTargetCPU()),
-                          std::string(getTargetFeatureString()));
-}
-
 const WebAssemblySubtarget *
-WebAssemblyTargetMachine::getSubtargetImpl(std::string CPU,
-                                           std::string FS) const {
-  auto &I = SubtargetMap[CPU + FS];
+WebAssemblyTargetMachine::getSubtargetImpl(StringRef CPU, StringRef FS) const {
+  auto &I = SubtargetMap[CPU.str() + FS.str()];
   if (!I) {
     I = std::make_unique<WebAssemblySubtarget>(TargetTriple, CPU, FS, *this);
   }
@@ -244,10 +217,8 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
-  std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  StringRef CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString() : TargetCPU;
+  StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
 
   return getSubtargetImpl(CPU, FS);
 }
@@ -337,7 +308,9 @@ void WebAssemblyPassConfig::addIRPasses() {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  if (!WasmEnableEmEH && !WasmEnableEH) {
+  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
+  bool EnableWasmEH = TM->Options.ExceptionModel == ExceptionHandling::Wasm;
+  if (!EnableEmEH && !EnableWasmEH) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -348,8 +321,8 @@ void WebAssemblyPassConfig::addIRPasses() {
   // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass());
+  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
+    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
@@ -362,6 +335,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {
+  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    addPass(createWasmEHPass());
+
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
   addPass(createWebAssemblyRefTypeMem2LocalLegacyPass());

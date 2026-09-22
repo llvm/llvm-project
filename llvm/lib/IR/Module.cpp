@@ -717,6 +717,15 @@ void Module::setThreadModel(ThreadModel Model) {
                 MDString::get(getContext(), getThreadModelName(Model)));
 }
 
+ExceptionHandling Module::getExceptionModel() const {
+  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("exception-model")))
+    return *parseExceptionModel(Val->getString());
+
+  // TODO: Return getDefaultExceptionHandling when TargetOptions field is
+  // deleted.
+  return ExceptionHandling::Default;
+}
+
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
   auto *Val =
       cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));
