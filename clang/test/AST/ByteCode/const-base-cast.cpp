@@ -22,3 +22,7 @@ unsigned char n0 = ((char*)(B*)(C*)0) - (char*)0;
 
 unsigned char n1 = ((char*)(A*)(C*)0) - (char*)0;
 // CHECK: @n1 = {{(dso_local )?}}global i8 0
+
+struct F {};
+unsigned char n2 = ((char*)(F*)(C*)0) - (char*)0;
+// CHECK: @n2 = {{(dso_local )?}}global i8 0
