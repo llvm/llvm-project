@@ -11,9 +11,9 @@
 // All eight variants compose the same per-call setup (a sanitizer-specific
 // stack-trace acquisition) with one of the two chain-handling templates from
 // sanitizer_new_handler.h and two sanitizer-supplied lambdas: an Alloc that
-// invokes the sanitizer's internal allocator (returning nullptr on failure)
-// and an OnExhausted that calls the sanitizer's "abort with diagnostic"
-// handler.
+// invokes the sanitizer's internal allocator (returning nullptr only when
+// storage cannot be obtained) and an OnExhausted that calls the sanitizer's
+// "abort with diagnostic" handler.
 //
 // This file is included after the consuming TU has defined the prerequisite
 // macros listed below. Names reference symbols (e.g. `stack`, `size`) that
@@ -40,9 +40,10 @@
 //   SANITIZER_NEW_ALIGNED(size, align)
 //   SANITIZER_NEW_ARRAY_ALIGNED(size, align)
 //       The sanitizer's four internal alloc helpers. Each must return nullptr
-//       on OOM (so the chain-handling templates can drive the
-//       std::get_new_handler() loop).  Other failure modes (e.g. invalid
-//       alignment) should cause the helper to abort with a diagnostic.
+//       only when storage cannot be obtained: every nullptr return is treated
+//       as a storage failure by the std::get_new_handler() loop. Other failure
+//       modes (e.g. invalid alignment) must cause the helper to abort with a
+//       diagnostic.
 //
 //===----------------------------------------------------------------------===//
 
