@@ -309,7 +309,8 @@ protected:
 public:
   virtual ~type_info();
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const char* name() const _NOEXCEPT {
-    return __impl::__type_name_to_string(__type_name);
+    const char* __str = __impl::__type_name_to_string(__type_name);
+    return __str[0] == '*' ? __str + 1 : __str;
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool before(const type_info& __arg) const _NOEXCEPT {
