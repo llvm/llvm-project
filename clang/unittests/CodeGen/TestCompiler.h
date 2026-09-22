@@ -78,15 +78,10 @@ struct TestCompiler {
         llvm::MemoryBuffer::getMemBuffer(TestProgram), clang::SrcMgr::C_User));
   }
 
-  llvm::Module *compileModule() {
-    clang::ParseAST(compiler.getSema(), false, false);
-    M = static_cast<clang::CodeGenerator &>(compiler.getASTConsumer())
-            .GetModule();
-    return M;
-  }
-
   const BasicBlock *compile() {
-    compileModule();
+    clang::ParseAST(compiler.getSema(), false, false);
+    M =
+      static_cast<clang::CodeGenerator&>(compiler.getASTConsumer()).GetModule();
 
     // Do not expect more than one function definition.
     auto FuncPtr = M->begin();
