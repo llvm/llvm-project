@@ -297,10 +297,8 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T,
-                               TT.computeDataLayout(Options.MCOptions.ABIName),
-                               TT, CPU, computeFSAdditions(FS, OL, TT), Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, TT, CPU, computeFSAdditions(FS, OL, TT),
+                               Options, getEffectiveRelocModel(TT, RM),
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
       Endianness(TT.isLittleEndian() ? Endian::LITTLE : Endian::BIG) {
@@ -517,15 +515,9 @@ void PPCPassConfig::addPreRegAlloc() {
                &PPCVSXFMAMutateID);
   }
 
-  // FIXME: We probably don't need to run these for -fPIE.
-  if (getPPCTargetMachine().isPositionIndependent()) {
-    // FIXME: LiveVariables should not be necessary here!
-    // PPCTLSDynamicCallPass uses LiveIntervals which previously dependent on
-    // LiveVariables. This (unnecessary) dependency has been removed now,
-    // however a stage-2 clang build fails without LiveVariables computed here.
-    addPass(&LiveVariablesID);
+  // FIXME: We probably don't need to run this for -fPIE.
+  if (getPPCTargetMachine().isPositionIndependent())
     addPass(createPPCTLSDynamicCallPass());
-  }
   if (EnableExtraTOCRegDeps)
     addPass(createPPCTOCRegDepsPass());
 

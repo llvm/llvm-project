@@ -265,11 +265,29 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         Returns true if the pointer points to device data.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
+      /*methodName=*/"isDeviceAccessible",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isInDeviceMemory",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::cast<::mlir::acc::PointerLikeType>($_type)
+            .isDeviceAccessible(var);
       }]
     >,
   ];
@@ -547,11 +565,29 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         Returns true if the variable represents device data.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"isDeviceData",
+      /*methodName=*/"isDeviceAccessible",
       /*args=*/(ins "::mlir::Value":$var),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to memory that is residing in the
+        current device. This is a subset of `isDeviceAccessible`: memory that
+        is accessible from the device but is physically shared with the host
+        (and so may migrate on demand) is accessible but not in guaranteed to
+        be in device memory, and therefore must still be mapped or attached
+        rather than treated as already resident.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isInDeviceMemory",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::cast<::mlir::acc::MappableType>($_type)
+            .isDeviceAccessible(var);
       }]
     >,
   ];
