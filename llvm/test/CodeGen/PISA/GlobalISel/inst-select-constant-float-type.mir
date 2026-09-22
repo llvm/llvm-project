@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=instruction-select %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=instruction-select %s -o - | FileCheck %s
 
 # Verify that G_CONSTANT with an integer type bitcast to a floating-point type
 # (e.g. f64, f32) is selected correctly. This can occur when the post-legalizer
