@@ -646,7 +646,8 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
-  if (ABI->ignoreFunction(CB->getCalledFunction()))
+  Function *CalledFunction = CB->getCalledFunction();
+  if (CalledFunction && ABI->ignoreFunction(CalledFunction))
     return Changed;
 
   if (!expansionApplicableToFunctionCall(CB)) {
