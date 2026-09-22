@@ -1985,23 +1985,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!AccumUser)
       break;
 
-    unsigned Opcode = AccumUser->getOpcode();
-    if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
-      break;
-
-    // C - dot cannot be folded without negating the dot product.
-    if (Opcode == Instruction::Sub && AccumUser->getOperand(0) != &II)
-      break;
-
     const APInt *AccumDelta;
-    Value *ConstOp =
-        AccumUser->getOperand(AccumUser->getOperand(0) == &II ? 1 : 0);
-    if (!match(ConstOp, m_APInt(AccumDelta)))
+    Constant *NewAcc;
+    if (match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+      NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+    else
       break;
 
-    Constant *NewAcc = ConstantInt::get(II.getType(), Opcode == Instruction::Add
-                                                          ? *Acc + *AccumDelta
-                                                          : *Acc - *AccumDelta);
     IC.replaceInstUsesWith(*AccumUser, &II);
     IC.eraseInstFromFunction(*AccumUser);
     return IC.replaceOperand(II, 2, NewAcc);
