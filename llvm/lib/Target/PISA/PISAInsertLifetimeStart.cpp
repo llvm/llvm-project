@@ -75,6 +75,7 @@
 #include "PISA.h"
 #include "PISAInstrInfo.h"
 #include "PISARegisterInfo.h"
+#include "PISASubtarget.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -86,8 +87,6 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -167,7 +166,7 @@ public:
 
 private:
   MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
+  const PISAInstrInfo *TII = nullptr;
   MachineDominatorTree *MDT = nullptr;
   MachinePostDominatorTree *MPDT = nullptr;
   // Every predicated branch in the function. Control-dependence is a whole-CFG
@@ -211,9 +210,9 @@ private:
 // Pick the typed marker variant for R's register class; 0 if none (then the
 // caller skips R). The register-class -> opcode mapping is generated from
 // VTs.LifetimeTypes (see LifetimeStartTable in PISAInstrInfo.td).
-static unsigned pickLifetimeStartOpcode(const TargetRegisterInfo &TRI,
+static unsigned pickLifetimeStartOpcode(const PISARegisterInfo &TRI,
                                         const TargetRegisterClass *RC) {
-  const auto *Entry =
+  const PISA::LifetimeStartEntry *Entry =
       PISA::lookupLifetimeStartByRegClass(TRI.getRegClassName(RC));
   return Entry ? Entry->Opcode : 0;
 }
@@ -221,7 +220,7 @@ static unsigned pickLifetimeStartOpcode(const TargetRegisterInfo &TRI,
 // True if MI only repacks its operand bits -- copy / undef / insert / extract /
 // mov -- so the value flows through it without being observed.
 static bool isForwardingOpcode(const MachineInstr &MI,
-                               const TargetInstrInfo &TII) {
+                               const PISAInstrInfo &TII) {
   if (MI.isCopy() || MI.isImplicitDef())
     return true;
   StringRef Name = TII.getName(MI.getOpcode());
@@ -328,14 +327,14 @@ bool PISAInsertLifetimeStart::isBackEdgeLive(Register R, const MachineLoop *L,
                                              const LiveMap &LiveOut) const {
   const unsigned I = R.virtRegIndex();
   const MachineBasicBlock *H = L->getHeader();
-  auto HIt = LiveIn.find(H);
+  LiveMap::const_iterator HIt = LiveIn.find(H);
   if (HIt == LiveIn.end() || !HIt->second.test(I))
     return false; // not live-in to the header
 
   SmallVector<MachineBasicBlock *, 4> Latches;
   L->getLoopLatches(Latches);
   for (const MachineBasicBlock *Latch : Latches) {
-    auto LIt = LiveOut.find(Latch);
+    LiveMap::const_iterator LIt = LiveOut.find(Latch);
     if (LIt != LiveOut.end() && LIt->second.test(I))
       return true; // live across the latch -> header back-edge
   }
@@ -351,7 +350,7 @@ bool PISAInsertLifetimeStart::isLiveOutOfLoop(Register R, const MachineLoop *L,
   SmallVector<MachineBasicBlock *, 4> ExitBlocks;
   L->getExitBlocks(ExitBlocks);
   for (const MachineBasicBlock *S : ExitBlocks) {
-    auto It = LiveIn.find(S);
+    LiveMap::const_iterator It = LiveIn.find(S);
     if (It != LiveIn.end() && It->second.test(I))
       return true; // value escapes the loop -> observed after the loop
   }
@@ -440,10 +439,11 @@ PISAInsertLifetimeStart::transitiveCtrlSet(const MachineBasicBlock *B) const {
   DenseSet<const MachineBasicBlock *> Seen{B};
   while (!Work.empty()) {
     const MachineBasicBlock *X = Work.pop_back_val();
-    for (auto [Site, Key] : directCtrlDeps(X)) {
-      S.insert(Key);
-      if (Seen.insert(Site).second)
-        Work.push_back(Site);
+    for (const std::pair<const MachineBasicBlock *, PredKey> &Dep :
+         directCtrlDeps(X)) {
+      S.insert(Dep.second);
+      if (Seen.insert(Dep.first).second)
+        Work.push_back(Dep.first);
     }
   }
   return S;
@@ -701,8 +701,9 @@ bool PISAInsertLifetimeStart::run(MachineFunction &MF, MachineLoopInfo &MLI) {
                              "preceding def (transitive)\n");
         continue;
       }
-      unsigned Opc = pickLifetimeStartOpcode(*MRI->getTargetRegisterInfo(),
-                                             MRI->getRegClass(R));
+      const PISARegisterInfo *TRI =
+          MF.getSubtarget<PISASubtarget>().getRegisterInfo();
+      unsigned Opc = pickLifetimeStartOpcode(*TRI, MRI->getRegClass(R));
       if (!Opc) {
         LLVM_DEBUG(dbgs() << "[" DEBUG_TYPE "] skip " << printReg(R, nullptr)
                           << ": no lifetime.start variant for its reg class\n");
@@ -728,7 +729,7 @@ bool PISAInsertLifetimeStart::runOnMachineFunction(MachineFunction &MF) {
     return false; // default: insert nothing
 
   MRI = &MF.getRegInfo();
-  TII = MF.getSubtarget().getInstrInfo();
+  TII = MF.getSubtarget<PISASubtarget>().getInstrInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();

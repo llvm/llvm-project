@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PISA.h"
-#include "PISATargetMachine.h"
-
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstVisitor.h"
@@ -39,7 +36,6 @@ public:
   StringRef getPassName() const override { return DEBUG_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetPassConfig>();
     AU.setPreservesAll();
   }
 
@@ -64,24 +60,14 @@ private:
     Ctx->diagnose(DiagnosticInfoGeneric({Twine("PISA Verifier: ") + Message}));
   }
 
-  void warning(Twine Message) {
-    assert(Ctx);
-    Ctx->diagnose(DiagnosticInfoGeneric(
-        {Twine("PISA Verifier: ") + Message, DS_Warning}));
-  }
-
   SmallSet<StringRef, 4> HostAccessNamesSeen;
   LLVMContext *Ctx = nullptr;
-  const TargetMachine *TM = nullptr;
-  const Function *CurrFunc = nullptr;
 };
 
 } // namespace
 
 char PISAVerifier::ID = 0;
-INITIALIZE_PASS_BEGIN(PISAVerifier, DEBUG_TYPE, DEBUG_NAME, false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(PISAVerifier, DEBUG_TYPE, DEBUG_NAME, false, false)
+INITIALIZE_PASS(PISAVerifier, DEBUG_TYPE, DEBUG_NAME, false, false)
 
 void PISAVerifier::verifyKernelArg(Argument &Arg) {
   // According to PISA spec:
@@ -113,9 +99,9 @@ void PISAVerifier::verifyKernelArg(Argument &Arg) {
 
 void PISAVerifier::verifyRoundingMode(IntrinsicInst &I, bool HasSaturation) {
   const llvm::Function *F = I.getCalledFunction();
-  auto RndOpndIdx =
+  unsigned RndOpndIdx =
       HasSaturation ? I.getNumOperands() - 3 : I.getNumOperands() - 2;
-  auto RndValue = static_cast<llvm::RoundingMode>(
+  llvm::RoundingMode RndValue = static_cast<llvm::RoundingMode>(
       cast<ConstantInt>(I.getOperand(RndOpndIdx))->getZExtValue());
   switch (RndValue) {
   case llvm::RoundingMode::TowardZero:
@@ -135,14 +121,14 @@ void PISAVerifier::verifyRoundingMode(IntrinsicInst &I, bool HasSaturation) {
 void PISAVerifier::verifyEnumArg(IntrinsicInst &I, unsigned ArgIdx,
                                  unsigned MaxVal, StringRef ArgName) {
   const llvm::Function *F = I.getCalledFunction();
-  auto Val = cast<ConstantInt>(I.getArgOperand(ArgIdx))->getZExtValue();
+  uint64_t Val = cast<ConstantInt>(I.getArgOperand(ArgIdx))->getZExtValue();
   if (Val > MaxVal)
     illegal("Intrinsic " + F->getName() + " has invalid " + ArgName +
             " value " + std::to_string(Val));
 }
 
 void PISAVerifier::visitIntrinsicInst(IntrinsicInst &I) {
-  auto IID = I.getIntrinsicID();
+  Intrinsic::ID IID = I.getIntrinsicID();
   switch (IID) {
   case Intrinsic::log:
   case Intrinsic::log2:
@@ -221,9 +207,8 @@ void PISAVerifier::visitAtomicRMWInst(AtomicRMWInst &I) {
 }
 
 void PISAVerifier::verifyFunction(Function &F) {
-  CurrFunc = &F;
   if (F.getCallingConv() == CallingConv::PISA_KERNEL)
-    for (auto &Arg : F.args())
+    for (Argument &Arg : F.args())
       verifyKernelArg(Arg);
 
   visit(F);
@@ -248,25 +233,14 @@ void PISAVerifier::verifyHostAccessMetadata(const GlobalVariable &GV,
     return;
   }
 
-  auto VerifyFirstOp = [&]() -> bool {
-    auto *HostAccessVal = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
-    if (!HostAccessVal)
-      return false;
-
-    if (HostAccessVal->getBitWidth() != 32)
-      return false;
-
-    if (HostAccessVal->getZExtValue() > 3)
-      return false;
-
-    return true;
-  };
-
-  if (!VerifyFirstOp())
+  ConstantInt *HostAccessVal =
+      mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+  if (!HostAccessVal || HostAccessVal->getBitWidth() != 32 ||
+      HostAccessVal->getZExtValue() > 3)
     illegal("Host access mode (first operand) of !intel_host_access metadata "
             "must be a 32-bit integer in the range [0, 3].");
 
-  auto *NameMD = dyn_cast<MDString>(MD->getOperand(1));
+  MDString *NameMD = dyn_cast<MDString>(MD->getOperand(1));
   if (!NameMD) {
     illegal(
         "Host name (second operand) of !intel_host_access metadata must be a "
@@ -289,8 +263,6 @@ void PISAVerifier::verifyGlobalVariable(GlobalVariable &GV) {
 
 bool PISAVerifier::runOnModule(Module &M) {
   Ctx = &M.getContext();
-  auto &TPC = getAnalysis<TargetPassConfig>();
-  TM = &TPC.getTM<TargetMachine>();
   for (Function &F : M)
     verifyFunction(F);
   for (GlobalVariable &GV : M.globals())

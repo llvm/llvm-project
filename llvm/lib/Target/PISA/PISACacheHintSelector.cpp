@@ -77,7 +77,7 @@ bool PISACacheHintSelector::runOnMachineFunction(MachineFunction &MF) {
       if (CacheHintIdx == -1)
         continue;
 
-      auto *MMO = *MI.memoperands_begin();
+      MachineMemOperand *MMO = *MI.memoperands_begin();
       if (!(MMO->isLoad() || MMO->isStore()))
         continue;
 

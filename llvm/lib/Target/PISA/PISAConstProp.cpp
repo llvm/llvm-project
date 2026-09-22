@@ -16,7 +16,7 @@ namespace PISA {
 namespace ConstProp {
 
 Constant *foldFrcp(ConstantFP *C0) {
-  auto APF = C0->getValueAPF();
+  APFloat APF = C0->getValueAPF();
   double C0value = C0->getType()->isFloatTy()
                        ? static_cast<double>(APF.convertToFloat())
                        : APF.convertToDouble();
@@ -29,7 +29,7 @@ Constant *foldFrcp(ConstantFP *C0) {
 }
 
 Constant *foldFrsqrt(ConstantFP *C0) {
-  auto APF = C0->getValueAPF();
+  APFloat APF = C0->getValueAPF();
   double C0value = C0->getType()->isFloatTy()
                        ? static_cast<double>(APF.convertToFloat())
                        : APF.convertToDouble();
@@ -42,7 +42,7 @@ Constant *foldFrsqrt(ConstantFP *C0) {
 }
 
 Constant *foldFtanh(ConstantFP *C0) {
-  auto APF = C0->getValueAPF();
+  APFloat APF = C0->getValueAPF();
   double C0value = C0->getType()->isFloatTy()
                        ? static_cast<double>(APF.convertToFloat())
                        : APF.convertToDouble();

@@ -12,6 +12,8 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsPISA.h"
 
+#include <optional>
+
 #define DEBUG_TYPE "pisa-emit-intrinsics"
 #define DEBUG_NAME "PISA emit intrinsics"
 
@@ -69,13 +71,13 @@ class SNaNPayloadAnalysis {
       return false;
 
     // Constants: check the bit pattern directly.
-    if (const auto *CFP = dyn_cast<ConstantFP>(V))
+    if (const ConstantFP *CFP = dyn_cast<ConstantFP>(V))
       return !CFP->getValueAPF().isSignaling();
 
-    if (const auto *C = dyn_cast<Constant>(V)) {
+    if (const Constant *C = dyn_cast<Constant>(V)) {
       if (isa<UndefValue>(C) || isa<PoisonValue>(C))
         return true;
-      if (auto *VTy = dyn_cast<FixedVectorType>(C->getType())) {
+      if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(C->getType())) {
         for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
           const Constant *Elt = C->getAggregateElement(I);
           // getAggregateElement may return null for constants it can't split
@@ -90,18 +92,18 @@ class SNaNPayloadAnalysis {
     }
 
     // Function arguments / call results with a `nofpclass(snan)` attribute.
-    if (const auto *Arg = dyn_cast<Argument>(V))
+    if (const Argument *Arg = dyn_cast<Argument>(V))
       return (Arg->getNoFPClass() & fcSNan) == fcSNan;
-    if (const auto *CB = dyn_cast<CallBase>(V))
+    if (const CallBase *CB = dyn_cast<CallBase>(V))
       if ((CB->getRetNoFPClass() & fcSNan) == fcSNan)
         return true;
 
     // nnan implies no NaN at all, hence no signaling NaN.
-    if (const auto *FPOp = dyn_cast<FPMathOperator>(V))
+    if (const FPMathOperator *FPOp = dyn_cast<FPMathOperator>(V))
       if (FPOp->hasNoNaNs())
         return true;
 
-    const auto *I = dyn_cast<Instruction>(V);
+    const Instruction *I = dyn_cast<Instruction>(V);
     if (!I)
       return false;
 
@@ -131,7 +133,7 @@ class SNaNPayloadAnalysis {
       return cannotBeSNaN(I->getOperand(0), Depth + 1) &&
              cannotBeSNaN(I->getOperand(1), Depth + 1);
     case Instruction::Call: {
-      const auto *II = dyn_cast<IntrinsicInst>(I);
+      const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
       if (!II)
         return false;
       switch (II->getIntrinsicID()) {
@@ -202,7 +204,7 @@ class SNaNPayloadAnalysis {
       // No observable users at all - vacuously insensitive.
       return true;
     for (const User *U : V->users()) {
-      const auto *I = dyn_cast<Instruction>(U);
+      const Instruction *I = dyn_cast<Instruction>(U);
       if (!I || !isUserInsensitive(*I, Depth + 1))
         return false;
     }
@@ -218,7 +220,7 @@ class SNaNPayloadAnalysis {
     case Instruction::ShuffleVector:
       return allUsesAreSNaNInsensitive(&I, Depth);
     case Instruction::Call: {
-      const auto *II = dyn_cast<IntrinsicInst>(&I);
+      const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (!II)
         return false;
       switch (II->getIntrinsicID()) {
@@ -237,8 +239,9 @@ class SNaNPayloadAnalysis {
       case Intrinsic::experimental_constrained_maxnum:
       case Intrinsic::experimental_constrained_minnum:
       case Intrinsic::experimental_constrained_fcmp: {
-        const auto *CFP = cast<ConstrainedFPIntrinsic>(II);
-        auto EB = CFP->getExceptionBehavior();
+        const ConstrainedFPIntrinsic *CFP =
+            cast<ConstrainedFPIntrinsic>(II);
+        std::optional<fp::ExceptionBehavior> EB = CFP->getExceptionBehavior();
         return EB && *EB == fp::ebIgnore;
       }
       // Sign-only operations are bit-preserving on the payload, so the
@@ -264,7 +267,7 @@ class SNaNPayloadAnalysis {
 public:
   // Query whether V is provably never a signaling NaN. Result is cached.
   bool cannotBeSNaN(const Value *V, unsigned Depth = 0) {
-    auto &Slot = Cache[V];
+    CachedResult &Slot = Cache[V];
     if (Slot.CannotBeSNaN)
       return *Slot.CannotBeSNaN;
     bool Result = computeCannotBeSNaN(V, Depth);
@@ -277,7 +280,7 @@ public:
   // Query whether all transitive users of V are SNaN-payload-insensitive.
   // Result is cached.
   bool allUsesAreSNaNInsensitive(const Value *V, unsigned Depth = 0) {
-    auto &Slot = Cache[V];
+    CachedResult &Slot = Cache[V];
     if (Slot.AllUsesInsensitive)
       return *Slot.AllUsesInsensitive;
     bool Result = computeAllUsesInsensitive(V, Depth);
@@ -345,10 +348,10 @@ static void replaceIntrinsicWith(IntrinsicInst *II, Intrinsic::ID IID,
   IRBuilder<> IRB(II);
 
   SmallVector<Value *, 4> Args;
-  // NOLINTNEXTLINE(llvm-qualified-auto)
-  for (auto It = II->arg_begin(); It != (II->arg_end() - IgnoreLast); ++It)
+  for (User::op_iterator It = II->arg_begin();
+       It != (II->arg_end() - IgnoreLast); ++It)
     Args.push_back(*It);
-  auto *NewI = IRB.CreateIntrinsic(II->getType(), IID, Args,
+  Value *NewI = IRB.CreateIntrinsic(II->getType(), IID, Args,
                                    isa<FPMathOperator>(II) ? II : nullptr);
   II->replaceAllUsesWith(NewI);
   II->eraseFromParent();
@@ -358,15 +361,16 @@ static void replaceIntrinsicWith(IntrinsicInst *II, Intrinsic::ID IID,
 static void replaceRoundingModeMD(IntrinsicInst *II, Intrinsic::ID IID,
                                   bool IsConstrained) {
   IRBuilder<> IRB(II);
-  auto *ImmTy = Type::getInt8Ty(II->getContext());
+  IntegerType *ImmTy = Type::getInt8Ty(II->getContext());
 
   // constrained have roundmode, exception on the end
   // non-constrained only have roundmode on the end
-  auto IgnoreLast = IsConstrained ? 2 : 1;
-  auto *MD =
+  unsigned IgnoreLast = IsConstrained ? 2 : 1;
+  Metadata *MD =
       cast<MetadataAsValue>(II->getArgOperand(II->arg_size() - IgnoreLast))
           ->getMetadata();
-  auto RoundMode = convertStrToRoundingMode(cast<MDString>(MD)->getString());
+  std::optional<RoundingMode> RoundMode =
+      convertStrToRoundingMode(cast<MDString>(MD)->getString());
   // PISA has no runtime rounding-mode control. Map round.dynamic to the
   // IEEE 754 default (round-to-nearest-even).
   if (!RoundMode || *RoundMode == RoundingMode::Dynamic)
@@ -374,8 +378,8 @@ static void replaceRoundingModeMD(IntrinsicInst *II, Intrinsic::ID IID,
   Constant *RoundVal = ConstantInt::get(ImmTy, (unsigned)*RoundMode);
 
   SmallVector<Value *, 4> Args;
-  // NOLINTNEXTLINE(llvm-qualified-auto)
-  for (auto It = II->arg_begin(); It != (II->arg_end() - IgnoreLast); ++It)
+  for (User::op_iterator It = II->arg_begin();
+       It != (II->arg_end() - IgnoreLast); ++It)
     Args.push_back(*It);
   Args.push_back(RoundVal);
   switch (IID) {
@@ -391,7 +395,7 @@ static void replaceRoundingModeMD(IntrinsicInst *II, Intrinsic::ID IID,
     Args.push_back(ConstantInt::getFalse(II->getContext())); // saturation
     break;
   }
-  auto *NewI = IRB.CreateIntrinsic(II->getType(), IID, Args,
+  Value *NewI = IRB.CreateIntrinsic(II->getType(), IID, Args,
                                    isa<FPMathOperator>(II) ? II : nullptr);
   II->replaceAllUsesWith(NewI);
   II->eraseFromParent();
@@ -399,7 +403,7 @@ static void replaceRoundingModeMD(IntrinsicInst *II, Intrinsic::ID IID,
 
 void PISAEmitIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
   IRB->SetInsertPoint(&I);
-  auto II = I.getIntrinsicID();
+  Intrinsic::ID II = I.getIntrinsicID();
   switch (II) {
 // intrinsics with rounding mode (e.g. llvm.experimental.constrained*) are
 // mapped into PISA equivalents, with rounding mode MD being mapped to an
@@ -477,39 +481,41 @@ void PISAEmitIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
 #undef REPLACE_INTRINSIC
   case Intrinsic::experimental_constrained_fptosi: {
     // exceptions are not supported
-    auto *NewI = IRB->CreateFPToSI(I.getOperand(0), I.getType());
+    Value *NewI = IRB->CreateFPToSI(I.getOperand(0), I.getType());
     I.replaceAllUsesWith(NewI);
     I.eraseFromParent();
     Changed = true;
   } break;
   case Intrinsic::experimental_constrained_fptoui: {
     // exceptions are not supported
-    auto *NewI = IRB->CreateFPToUI(I.getOperand(0), I.getType());
+    Value *NewI = IRB->CreateFPToUI(I.getOperand(0), I.getType());
     I.replaceAllUsesWith(NewI);
     I.eraseFromParent();
     Changed = true;
   } break;
   case Intrinsic::experimental_constrained_fpext: {
     // exceptions are not supported
-    auto *NewI = IRB->CreateFPExt(I.getOperand(0), I.getType());
+    Value *NewI = IRB->CreateFPExt(I.getOperand(0), I.getType());
     I.replaceAllUsesWith(NewI);
     I.eraseFromParent();
     Changed = true;
   } break;
   case Intrinsic::experimental_constrained_fcmp: {
     // exceptions are not supported
-    auto *MD = cast<MetadataAsValue>(I.getOperand(2))->getMetadata();
-    auto Predicate = getPredicateFromName(cast<MDString>(MD)->getString());
-    auto *NewI = IRB->CreateFCmp(Predicate, I.getOperand(0), I.getOperand(1));
+    Metadata *MD = cast<MetadataAsValue>(I.getOperand(2))->getMetadata();
+    CmpInst::Predicate Predicate =
+        getPredicateFromName(cast<MDString>(MD)->getString());
+    Value *NewI = IRB->CreateFCmp(Predicate, I.getOperand(0), I.getOperand(1));
     I.replaceAllUsesWith(NewI);
     I.eraseFromParent();
     Changed = true;
   } break;
   case Intrinsic::experimental_constrained_fcmps: {
     // exceptions are not supported
-    auto *MD = cast<MetadataAsValue>(I.getOperand(2))->getMetadata();
-    auto Predicate = getPredicateFromName(cast<MDString>(MD)->getString());
-    auto *NewI = IRB->CreateFCmpS(Predicate, I.getOperand(0), I.getOperand(1));
+    Metadata *MD = cast<MetadataAsValue>(I.getOperand(2))->getMetadata();
+    CmpInst::Predicate Predicate =
+        getPredicateFromName(cast<MDString>(MD)->getString());
+    Value *NewI = IRB->CreateFCmpS(Predicate, I.getOperand(0), I.getOperand(1));
     I.replaceAllUsesWith(NewI);
     I.eraseFromParent();
     Changed = true;
@@ -517,8 +523,8 @@ void PISAEmitIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
   case Intrinsic::experimental_constrained_frem: {
     // https://llvm.org/docs/LangRef.html#llvm-experimental-constrained-frem-intrinsic
     // ... rounding mode argument has no effect ...
-    auto *NewI = IRB->CreateFRem(I.getOperand(0), I.getOperand(1));
-    if (auto *CastedNewI = dyn_cast<Instruction>(NewI))
+    Value *NewI = IRB->CreateFRem(I.getOperand(0), I.getOperand(1));
+    if (Instruction *CastedNewI = dyn_cast<Instruction>(NewI))
       CastedNewI->setFastMathFlags(I.getFastMathFlags());
     I.replaceAllUsesWith(NewI);
     I.eraseFromParent();
