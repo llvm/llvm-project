@@ -1441,16 +1441,30 @@ void ScopBuilder::addUserAssumptions(
       NewParams.insert(Param);
     }
 
-    size_t NumAssumptions = RecordedAssumptions.size();
     SmallVector<isl_set *, 2> ConditionSets;
     auto *TI = InScop ? CI->getParent()->getTerminator() : nullptr;
     BasicBlock *BB = InScop ? CI->getParent() : R.getEntry();
     auto *Dom = InScop ? isl_set_copy(scop->getDomainConditions(BB).get())
                        : isl_set_copy(scop->getContext().get());
     assert(Dom && "Cannot propagate a nullptr.");
-    bool Valid = buildConditionSets(BB, Val, TI, L, Dom, InvalidDomainMap,
-                                    ConditionSets);
+
+    // Collect the invalid domain of this assumption on its own to determine
+    // whether its translation depends on preconditions (such as a truncation
+    // not overflowing). Checking for newly recorded assumptions is not
+    // sufficient: SCEVAffinator caches translated expressions, so a
+    // precondition shared with an earlier assumption is only recorded once.
+    isl::set &BBInvalidDomain = InvalidDomainMap[BB];
+    assert(!BBInvalidDomain.is_null() && "Cannot propagate a nullptr.");
+    DenseMap<BasicBlock *, isl::set> AssumptionInvalidDomainMap;
+    AssumptionInvalidDomainMap[BB] =
+        isl::set::empty(BBInvalidDomain.get_space());
+    bool Valid = buildConditionSets(BB, Val, TI, L, Dom,
+                                    AssumptionInvalidDomainMap, ConditionSets);
     isl_set_free(Dom);
+
+    isl::set AssumptionInvalidDomain = AssumptionInvalidDomainMap[BB];
+    bool HasPreconditions = !AssumptionInvalidDomain.is_empty();
+    BBInvalidDomain = BBInvalidDomain.unite(AssumptionInvalidDomain);
 
     if (!Valid)
       continue;
@@ -1487,7 +1501,7 @@ void ScopBuilder::addUserAssumptions(
     // correctness of AssumptionCtx. Using DefinedBehaviorContext which does not
     // gist the other contexts.
     // TODO: Use recordAssumption() for adding context/assumptions
-    if (NumAssumptions == RecordedAssumptions.size()) {
+    if (!HasPreconditions) {
       isl::set newContext =
           scop->getContext().intersect(isl::manage(AssumptionCtx));
       scop->setContext(newContext);
