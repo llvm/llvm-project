@@ -903,18 +903,23 @@ public:
     return const_cast<MachineBasicBlock *>(this)->getFirstNonPHI();
   }
 
-  /// Return the first instruction in MBB after I that is not a PHI or a label.
-  /// This is the correct point to insert lowered copies at the beginning of a
-  /// basic block that must be before any debugging information.
+  /// Return the first instruction in MBB after I that is not a PHI, a label or
+  /// a block prolog instruction. This is the correct point to insert lowered
+  /// copies at the beginning of a basic block that must be before any debugging
+  /// information.
   LLVM_ABI iterator SkipPHIsAndLabels(iterator I);
 
-  /// Return the first instruction in MBB after I that is not a PHI, label or
-  /// debug.  This is the correct point to insert copies at the beginning of a
-  /// basic block. \p Reg is the register being used by a spill or defined for a
-  /// restore/split during register allocation.
+  /// Return the first instruction in MBB after I that is not a PHI, label,
+  /// debug or block prolog instruction. This is the correct point to insert
+  /// copies at the beginning of a basic block.
   LLVM_ABI iterator SkipPHIsLabelsAndDebug(iterator I,
-                                           Register Reg = Register(),
                                            bool SkipPseudoOp = true);
+
+  /// Instructions [\p Begin, \p End) were inserted in front of \p End. If that
+  /// is inside the block prolog (the next instruction that is not a label,
+  /// debug instruction or pseudo probe is a prolog instruction), mark them as
+  /// prolog instructions too.
+  LLVM_ABI void inheritBBProlog(iterator Begin, iterator End);
 
   /// Returns an iterator to the first terminator instruction of this basic
   /// block. If a terminator does not exist, it returns end().

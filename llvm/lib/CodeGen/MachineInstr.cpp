@@ -1920,6 +1920,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "lr-split ";
   if (getFlag(MachineInstr::NonNull))
     OS << "nonnull ";
+  if (getFlag(MachineInstr::BBProlog))
+    OS << "bb-prolog ";
 
   // Print the opcode name.
   if (TII)
