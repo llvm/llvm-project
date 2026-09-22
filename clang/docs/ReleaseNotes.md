@@ -547,6 +547,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
 - Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
+- Fixed an assertion failure when a constant statement expression that declares a variable is used as a bound of an OpenMP loop. A statement expression in a bound of a non-rectangular loop is now diagnosed. (#GH153987)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -580,9 +581,14 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed lambdas with specifiers or attributes after the capture list being
+  misparsed as function declarations in direct-initialization contexts under
+  `-fms-extensions` or in HLSL mode.
+
 - Fixed the destruction timing of temporaries created by default member
   initializers during aggregate initialization. Such an initializer is part of
   the full-expression containing the aggregate initialization. (#GH85601)
+
 - Fixed false-positive module ODR diagnostics when a type is found through a
   using-declaration in one definition and directly in another. ODR hashing also
   now distinguishes differently qualified uses of types found through
@@ -727,6 +733,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed ambiguous overload where two non-static member functions with
   different signatures could be incorrectly considered equivalent. (#GH224499)
 
+- Fixed an assertion failure when explicitly instantiating a nested member with 
+  an ill-formed template argument. Clang now checks for a failed declaration 
+  lookup before asserting that the name is not dependent, avoiding an assertion 
+  after an earlier diagnostic has caused the declaration to be unavailable. (#GH220525)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -827,6 +838,11 @@ features cannot lower the translation-unit ABI level;
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
+
+- `loongarch32-*-none-elf` and `loongarch64-*-none-elf` targets now use the
+  bare-metal toolchain, like other bare-metal targets. The linker is run
+  directly instead of through `gcc`, and host include directories are no
+  longer searched.
 
 #### RISC-V Support
 

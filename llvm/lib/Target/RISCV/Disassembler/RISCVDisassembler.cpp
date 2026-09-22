@@ -443,6 +443,15 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint32_t Imm, int64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeCVInsertIs2Operand(MCInst &Inst, uint32_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
+  const int64_t Is3 = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
+  if (Is3 + Imm >= 32)
+    return MCDisassembler::Fail;
+  return decodeUImmOperand<5>(Inst, Imm, Address, Decoder);
+}
+
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
@@ -595,6 +604,9 @@ static constexpr DecoderListEntry DecoderList16[]{
     {DecoderTableXqccmp16,
      {RISCV::FeatureVendorXqccmp},
      "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)"},
+    {DecoderTableXqccmi16,
+     {RISCV::FeatureVendorXqccmi},
+     "Xqccmi (Qualcomm 16-bit Instruction Lookup Table)"},
     {DecoderTableXqccmt16,
      {RISCV::FeatureVendorXqccmt},
      "Xqccmt (Qualcomm 16-bit Table Jump Instructions)"},

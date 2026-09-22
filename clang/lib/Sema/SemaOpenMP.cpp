@@ -8282,6 +8282,8 @@ private:
              SourceRange SR, SourceLocation SL);
   /// Helper to set loop increment.
   bool setStep(Expr *NewStep, bool Subtract);
+  /// Diagnose a statement expression in a bound of a non-rectangular loop.
+  bool checkNonRectangularBound(const Expr *E, bool IsInitializer) const;
 };
 
 bool OpenMPIterationSpaceChecker::dependent() const {
@@ -8292,6 +8294,32 @@ bool OpenMPIterationSpaceChecker::dependent() const {
   return LCDecl->getType()->isDependentType() ||
          (LB && LB->isValueDependent()) || (UB && UB->isValueDependent()) ||
          (Step && Step->isValueDependent());
+}
+
+/// Find a statement expression in \p E.
+static const StmtExpr *findStmtExpr(const Expr *E) {
+  SmallVector<const Stmt *, 8> Worklist{E};
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+    if (const auto *SE = dyn_cast<StmtExpr>(S))
+      return SE;
+    llvm::append_range(Worklist, S->children());
+  }
+  return nullptr;
+}
+
+bool OpenMPIterationSpaceChecker::checkNonRectangularBound(
+    const Expr *E, bool IsInitializer) const {
+  // Such a bound is emitted at every use, its declarations cannot be.
+  const StmtExpr *SE = findStmtExpr(E);
+  if (!SE)
+    return false;
+  SemaRef.Diag(SE->getBeginLoc(),
+               diag::err_omp_stmt_expr_in_non_rectangular_loop)
+      << (IsInitializer ? 0 : 1);
+  return true;
 }
 
 bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
@@ -8311,8 +8339,11 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
           CE->getNumArgs() > 0 && CE->getArg(0) != nullptr)
         NewLB = CE->getArg(0)->IgnoreParenImpCasts();
   LB = NewLB;
-  if (EmitDiags)
+  if (EmitDiags) {
     InitDependOnLC = doesDependOnLoopCounter(LB, /*IsInitializer=*/true);
+    if (InitDependOnLC && checkNonRectangularBound(LB, /*IsInitializer=*/true))
+      return true;
+  }
   return false;
 }
 
@@ -8331,6 +8362,10 @@ bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB, std::optional<bool> LessOp,
   ConditionSrcRange = SR;
   ConditionLoc = SL;
   CondDependOnLC = doesDependOnLoopCounter(UB, /*IsInitializer=*/false);
+  // The condition is also emitted as the body guard of a non-rectangular loop.
+  if ((InitDependOnLC || CondDependOnLC) &&
+      checkNonRectangularBound(UB, /*IsInitializer=*/false))
+    return true;
   return false;
 }
 
@@ -8853,7 +8888,10 @@ tryBuildCapture(Sema &SemaRef, Expr *Capture,
                 StringRef Name = ".capture_expr.") {
   if (SemaRef.CurContext->isDependentContext() || Capture->containsErrors())
     return Capture;
-  if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
+  // A statement expression must be captured even if it is constant, since the
+  // declarations inside it can only be emitted once.
+  if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects) &&
+      !findStmtExpr(Capture))
     return SemaRef.PerformImplicitConversion(Capture->IgnoreImpCasts(),
                                              Capture->getType(),
                                              AssignmentAction::Converting,
@@ -10200,7 +10238,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   if (CollapseLoopCountExpr) {
     // Found 'collapse' clause - calculate collapse number.
     Expr::EvalResult Result;
-    if (!CollapseLoopCountExpr->isValueDependent() &&
+    if (!CollapseLoopCountExpr->isInstantiationDependent() &&
         CollapseLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext())) {
       NestedLoopCount = Result.Val.getInt().getLimitedValue();
 
@@ -10215,7 +10253,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   if (OrderedLoopCountExpr) {
     // Found 'ordered' clause - calculate collapse number.
     Expr::EvalResult EVResult;
-    if (!OrderedLoopCountExpr->isValueDependent() &&
+    if (!OrderedLoopCountExpr->isInstantiationDependent() &&
         OrderedLoopCountExpr->EvaluateAsInt(EVResult,
                                             SemaRef.getASTContext())) {
       llvm::APSInt Result = EVResult.Val.getInt();
@@ -15940,7 +15978,7 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
   SourceLocation FactorLoc;
   if (Expr *FactorVal = PartialClause->getFactor();
       FactorVal && !FactorVal->containsErrors()) {
-    Factor = FactorVal->getIntegerConstantExpr(Context)->getZExtValue();
+    Factor = FactorVal->getIntegerConstantExpr(Context)->getLimitedValue();
     FactorLoc = FactorVal->getExprLoc();
   } else {
     // TODO: Use a better profitability model.
@@ -16366,7 +16404,7 @@ StmtResult SemaOpenMP::ActOnOpenMPSplitDirective(ArrayRef<OMPClause *> Clauses,
     if (!OptVal || OptVal->isNegative())
       return OMPSplitDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                        NumLoops, AStmt, nullptr, nullptr);
-    CountValues[I] = OptVal->getZExtValue();
+    CountValues[I] = OptVal->getLimitedValue();
   }
 
   Expr *NumIterExpr = LoopHelper.NumIterations;
@@ -16566,7 +16604,7 @@ StmtResult SemaOpenMP::ActOnOpenMPInterchangeDirective(
           PermArg->getIntegerConstantExpr(Context);
       if (!PermCstExpr)
         continue;
-      uint64_t PermInt = PermCstExpr->getZExtValue();
+      uint64_t PermInt = PermCstExpr->getLimitedValue();
       assert(1 <= PermInt && PermInt <= NumLoops &&
              "Must be a permutation; diagnostic emitted in "
              "ActOnOpenMPPermutationClause");
@@ -16757,8 +16795,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                                                uint64_t &CountVal) {
     llvm::APSInt FirstInt = First->EvaluateKnownConstInt(Context);
     llvm::APSInt CountInt = Count->EvaluateKnownConstInt(Context);
-    FirstVal = FirstInt.getZExtValue();
-    CountVal = CountInt.getZExtValue();
+    FirstVal = FirstInt.getLimitedValue();
+    CountVal = CountInt.getLimitedValue();
   };
 
   // OpenMP [6.0, Restrictions]
@@ -18589,7 +18627,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPPermutationClause(ArrayRef<Expr *> PermExprs,
 
 OMPClause *SemaOpenMP::ActOnOpenMPFullClause(SourceLocation StartLoc,
                                              SourceLocation EndLoc) {
-  return OMPFullClause::Create(getASTContext(), StartLoc, EndLoc);
+  return new (getASTContext()) OMPFullClause(StartLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPPartialClause(Expr *FactorExpr,
@@ -18606,8 +18644,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPPartialClause(Expr *FactorExpr,
     FactorExpr = FactorResult.get();
   }
 
-  return OMPPartialClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
-                                  FactorExpr);
+  return new (getASTContext())
+      OMPPartialClause(StartLoc, LParenLoc, EndLoc, FactorExpr);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPLoopRangeClause(
@@ -18631,8 +18669,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPLoopRangeClause(
   // loop sequence length of the associated canonical loop sequence.
   // This check must be performed afterwards due to the delayed
   // parsing and computation of the associated loop sequence
-  return OMPLoopRangeClause::Create(getASTContext(), StartLoc, LParenLoc,
-                                    FirstLoc, CountLoc, EndLoc, First, Count);
+  return new (getASTContext()) OMPLoopRangeClause(
+      StartLoc, LParenLoc, FirstLoc, CountLoc, EndLoc, First, Count);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPAlignClause(Expr *A, SourceLocation StartLoc,
@@ -18642,8 +18680,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPAlignClause(Expr *A, SourceLocation StartLoc,
   AlignVal = VerifyPositiveIntegerConstantInClause(A, OMPC_align);
   if (AlignVal.isInvalid())
     return nullptr;
-  return OMPAlignClause::Create(getASTContext(), AlignVal.get(), StartLoc,
-                                LParenLoc, EndLoc);
+  return new (getASTContext())
+      OMPAlignClause(AlignVal.get(), StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
@@ -22427,8 +22465,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDepobjClause(Expr *Depobj,
         << 1 << Depobj->getSourceRange();
   }
 
-  return OMPDepobjClause::Create(getASTContext(), StartLoc, LParenLoc, EndLoc,
-                                 Depobj);
+  return new (getASTContext())
+      OMPDepobjClause(StartLoc, LParenLoc, EndLoc, Depobj);
 }
 
 namespace {
@@ -26481,8 +26519,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPBindClause(OpenMPBindClauseKind Kind,
     return nullptr;
   }
 
-  return OMPBindClause::Create(getASTContext(), Kind, KindLoc, StartLoc,
-                               LParenLoc, EndLoc);
+  return new (getASTContext())
+      OMPBindClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPXDynCGroupMemClause(Expr *Size,
