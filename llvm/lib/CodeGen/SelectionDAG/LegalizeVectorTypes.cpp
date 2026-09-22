@@ -555,8 +555,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FPOp_MultiType(SDNode *N) {
   SDValue LHS = GetScalarizedVector(N->getOperand(0));
   SDValue RHS = N->getOperand(1);
   EVT RHSVT = RHS.getValueType();
-  // The second operand has its own type and may not need scalarizing itself,
-  // e.g. v1i1 is legal under AVX-512. See ScalarizeVecRes_UnaryOp.
+  // The exponent has its own type action and may not have been scalarized:
+  // v1i1 is legal on AVX-512, v1i32 is widened on AArch64.
   if (RHSVT.isVector()) {
     if (getTypeAction(RHSVT) == TargetLowering::TypeScalarizeVector)
       RHS = GetScalarizedVector(RHS);
