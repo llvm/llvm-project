@@ -1,18 +1,19 @@
 """
 Test that we can step through the stubs implementing the
-Darwin linker's lazy_loading feature.
+Darwin linker's lazy_library feature.
 """
 
 
 import lldb
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
-
-class TestStepThroughLazyLoading(TestBase):
+class TestStepThroughLazyLibrary(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_step_through_lazy_load(self):
+    @skipIf(macos_version=["<", "27"])
+    def test_step_through_lazy_library(self):
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.lazy_test()
