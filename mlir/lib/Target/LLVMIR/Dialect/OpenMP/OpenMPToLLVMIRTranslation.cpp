@@ -2838,9 +2838,17 @@ public:
       upperBounds[d] = ub;
       steps[d] = st;
 
+      // The span may need one more bit than the range type, and an inclusive
+      // range can contain 2^N values. Widen only the trip-count calculation;
+      // the iterator body's physical induction value retains its source type.
+      llvm::Type *countTy =
+          builder.getIntNTy(lb->getType()->getIntegerBitWidth() + 1);
+      llvm::Value *countLb = builder.CreateSExt(lb, countTy);
+      llvm::Value *countUb = builder.CreateSExt(ub, countTy);
+      llvm::Value *countSt = builder.CreateSExt(st, countTy);
       llvm::Value *tripCount = ompBuilder.calculateCanonicalLoopTripCount(
-          loc, lb, ub, st, /*IsSigned=*/true, itersOp.getLoopInclusive(),
-          "iterator");
+          loc, countLb, countUb, countSt, /*IsSigned=*/true,
+          itersOp.getLoopInclusive(), "iterator");
       trips[d] = builder.CreateZExtOrTrunc(tripCount, builder.getInt64Ty());
     }
 

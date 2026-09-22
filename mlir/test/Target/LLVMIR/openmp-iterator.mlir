@@ -260,14 +260,16 @@ llvm.func @task_affinity_iterator_dynamic_tripcount(
 }
 
 // CHECK-LABEL: define internal void @task_affinity_iterator_dynamic_tripcount
-// CHECK: [[INCR:%.*]] = select i1 {{.*}}, i64 {{.*}}, i64 {{.*}}
-// CHECK-NEXT: [[BEGIN:%.*]] = select i1 {{.*}}, i64 {{.*}}, i64 {{.*}}
-// CHECK-NEXT: [[END:%.*]] = select i1 {{.*}}, i64 {{.*}}, i64 {{.*}}
-// CHECK-NEXT: {{.*}} = sub nsw i64 [[END]], [[BEGIN]]
-// CHECK-NEXT: [[EMPTY:%.*]] = icmp slt i64 [[END]], [[BEGIN]]
-// CHECK: [[COUNT:%.*]] = add i64 {{.*}}, 1
-// CHECK: [[TRIPS:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[COUNT]]
-// CHECK: [[SCALED:%.*]] = mul i64 1, [[TRIPS]]
+// CHECK: sext i64 {{.*}} to i65
+// CHECK: [[INCR:%.*]] = select i1 {{.*}}, i65 {{.*}}, i65 {{.*}}
+// CHECK-NEXT: [[BEGIN:%.*]] = select i1 {{.*}}, i65 {{.*}}, i65 {{.*}}
+// CHECK-NEXT: [[END:%.*]] = select i1 {{.*}}, i65 {{.*}}, i65 {{.*}}
+// CHECK-NEXT: {{.*}} = sub nsw i65 [[END]], [[BEGIN]]
+// CHECK-NEXT: [[EMPTY:%.*]] = icmp slt i65 [[END]], [[BEGIN]]
+// CHECK: [[COUNT:%.*]] = add i65 {{.*}}, 1
+// CHECK: [[TRIPS:%.*]] = select i1 [[EMPTY]], i65 0, i65 [[COUNT]]
+// CHECK: [[TRIPS_I64:%.*]] = trunc i65 [[TRIPS]] to i64
+// CHECK: [[SCALED:%.*]] = mul i64 1, [[TRIPS_I64]]
 // CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 [[SCALED]]
 
 llvm.func @task_affinity_iterator_negative_step(%arr: !llvm.ptr {llvm.nocapture}) {
@@ -444,15 +446,19 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_dynamic
 //
-// Tripcount computation from dynamic bounds
-// CHECK: %[[INCR:.*]] = select i1 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}
-// CHECK-NEXT: %[[BEGIN:.*]] = select i1 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}
-// CHECK-NEXT: %[[END:.*]] = select i1 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}
-// CHECK-NEXT: %{{.*}} = sub nsw i64 %[[END]], %[[BEGIN]]
-// CHECK-NEXT: %[[EMPTY:.*]] = icmp slt i64 %[[END]], %[[BEGIN]]
-// CHECK: %[[COUNT:.*]] = add i64 %{{.*}}, 1
-// CHECK: %[[TRIPS:.*]] = select i1 %[[EMPTY]], i64 0, i64 %[[COUNT]]
-// CHECK: %[[SCALED:.*]] = mul i64 1, %[[TRIPS]]
+// A dynamic range can have a span wider than signed i64. For example,
+// lb=2^62, ub=-2^63+1, step=-2^62 has three iterations. Compute the span
+// after sign extension so the nsw subtraction cannot become poison.
+// CHECK: sext i64 {{.*}} to i65
+// CHECK: %[[INCR:.*]] = select i1 %{{.*}}, i65 %{{.*}}, i65 %{{.*}}
+// CHECK-NEXT: %[[BEGIN:.*]] = select i1 %{{.*}}, i65 %{{.*}}, i65 %{{.*}}
+// CHECK-NEXT: %[[END:.*]] = select i1 %{{.*}}, i65 %{{.*}}, i65 %{{.*}}
+// CHECK-NEXT: %{{.*}} = sub nsw i65 %[[END]], %[[BEGIN]]
+// CHECK-NEXT: %[[EMPTY:.*]] = icmp slt i65 %[[END]], %[[BEGIN]]
+// CHECK: %[[COUNT:.*]] = add i65 %{{.*}}, 1
+// CHECK: %[[TRIPS:.*]] = select i1 %[[EMPTY]], i65 0, i65 %[[COUNT]]
+// CHECK: %[[TRIPS_I64:.*]] = trunc i65 %[[TRIPS]] to i64
+// CHECK: %[[SCALED:.*]] = mul i64 1, %[[TRIPS_I64]]
 // Dynamic total = 0 + scaled trip count
 // CHECK: %[[TOTAL:.*]] = add i64 0, %[[SCALED]]
 //
@@ -537,6 +543,29 @@ llvm.func @omp_task_depend_iterator_exclusive(%addr : !llvm.ptr) {
 // CHECK-SAME: ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr %{{[^,]+}},
 // CHECK-SAME: i32 4, ptr %[[EXCLUSIVE_DEP_ARR]], i32 0, ptr null)
 
+// An inclusive i8 range may need 256 entries. Its trip count must not wrap
+// when one is added to the span in the range's own type.
+llvm.func @omp_taskwait_iterator_full_i8_range(%addr : !llvm.ptr) {
+  %lo = llvm.mlir.constant(-128 : i8) : i8
+  %hi = llvm.mlir.constant(127 : i8) : i8
+  %step = llvm.mlir.constant(1 : i8) : i8
+  %it = omp.iterator(%iv: i8) = (%lo to %hi step %step) {
+    %element = llvm.getelementptr %addr[%iv]
+        : (!llvm.ptr, i8) -> !llvm.ptr, i8
+    omp.yield(%element : !llvm.ptr)
+  } inclusive -> !omp.iterated<!llvm.ptr>
+  omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_taskwait_iterator_full_i8_range
+// CHECK: omp_dep_iterator.cond:
+// CHECK: icmp ult i64 %omp_dep_iterator.iv, 256
+// CHECK: omp_dep_iterator.body:
+// CHECK: getelementptr i8, ptr %{{.*}}, i8 %{{.*}}
+// CHECK: call void @__kmpc_omp_taskwait_deps_51(
+// CHECK-SAME: i32 256, ptr
+
 llvm.func @omp_task_depend_iterator_wide(
     %addr : !llvm.ptr, %lb : i128, %ub : i128, %step : i128) {
   %it = omp.iterator(%iv: i128) = (%lb to %ub step %step) {
@@ -552,8 +581,8 @@ llvm.func @omp_task_depend_iterator_wide(
 }
 
 // CHECK-LABEL: define void @omp_task_depend_iterator_wide
-// CHECK: %[[WIDE_TRIPS:.*]] = select i1 {{.*}}, i128 0, i128 {{.*}}
-// CHECK: %[[WIDE_TRIPS_I64:.*]] = trunc i128 %[[WIDE_TRIPS]] to i64
+// CHECK: %[[WIDE_TRIPS:.*]] = select i1 {{.*}}, i129 0, i129 {{.*}}
+// CHECK: %[[WIDE_TRIPS_I64:.*]] = trunc i129 %[[WIDE_TRIPS]] to i64
 // CHECK: omp_dep_iterator.body:
 // CHECK: %[[WIDE_IDX:.*]] = zext i64 {{.*}} to i128
 // CHECK: %[[WIDE_STEP:.*]] = mul i128 %[[WIDE_IDX]], %{{.*}}
