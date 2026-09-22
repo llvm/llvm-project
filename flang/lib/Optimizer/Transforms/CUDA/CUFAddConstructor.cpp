@@ -534,18 +534,21 @@ struct CUFAddConstructor
     // The extra constructors are defined in a runtime library, so they are
     // only declared here and called from the constructor: an entry in
     // llvm.mlir.global_ctors requires a function with a definition.
-    for (const auto &[funcName, onlyWithProgramEntry] : extraConstructors) {
-      if (onlyWithProgramEntry && !hasProgramEntry)
-        continue;
+    auto addExtraConstructor = [&](const std::string &funcName) {
       if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName)) {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToEnd(mod.getBody());
         auto extraFuncOp =
             mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, funcTy);
-        extraFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
       }
       mlir::LLVM::CallOp::create(builder, loc, funcTy,
                                  mlir::SymbolRefAttr::get(ctx, funcName));
+    };
+    for (const auto &funcName : extraConstructors)
+      addExtraConstructor(funcName);
+    for (const auto &funcName : entryOnlyConstructors) {
+      if (hasProgramEntry)
+        addExtraConstructor(funcName);
     }
 
     mlir::LLVM::ReturnOp::create(builder, loc, mlir::ValueRange{});

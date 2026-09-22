@@ -636,11 +636,14 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "Declare an undefined cuda_compiled symbol so linking without the "
            "CUDA Fortran runtime fails with a clear diagnostic.">,
     ListOption<"extraConstructors", "extra-constructors",
-               "std::pair<std::string, bool>",
+               "std::string",
                "Extra functions to declare and call from the CUDA Fortran "
-               "constructor. Entries use <name>:<if-main>, where if-main is "
-               "true to call the function only when the module contains the "
-               "Fortran program entry.">
+               "constructor.">,
+   ListOption<"entryOnlyConstructors", "entry-only-constructors",
+               "std::string",
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor only if the entry function is present.">
+
   ];
 }
 
