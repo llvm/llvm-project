@@ -1414,7 +1414,7 @@ struct TargetSparcV9 : public GenericTarget<TargetSparcV9> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-// RISCV64 calling convention specification:
+// RISC-V RV64 calling convention specification:
 // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#procedure-calling-convention
 struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
   using GenericTarget::GenericTarget;
@@ -1461,7 +1461,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       return true;
     if (abi == "lp64")
       return false;
-    TODO(loc, "RISCV64 BIND(C) support for " + abi);
+    TODO(loc, "RISC-V RV64 BIND(C) support for " + abi);
   }
 
   CodeGenSpecifics::Marshalling
@@ -1490,7 +1490,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
           if (floatTy.getWidth() <= 64)
             flatTypes.push_back(floatTy);
           else
-            TODO(loc, "128 bit float is not supported by RISCV64");
+            TODO(loc, "128 bit float is not supported by RISC-V RV64");
         })
         .Case([&](mlir::ComplexType cmplx) {
           const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
