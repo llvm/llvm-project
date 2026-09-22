@@ -59,7 +59,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
 
   // mixed-type promotions testing
   {
-    using lim = std::numeric_limits<T>;
+    using lim = std::numeric_limits<double>;
     assert(std::fmax(1, 2.0) == 2.0);            // int and double
     assert(std::fmax(2.0f, 1) == 2.0);           // float and int
     assert(std::fmax(1.0L, 0.0f) == 1.0L);       // long double and float
