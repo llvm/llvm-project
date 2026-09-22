@@ -216,6 +216,18 @@ public:
     *this << attrOrType;
   }
 
+  /// Print `uint8_t`/`int8_t` parameters numerically. Streaming them through
+  /// `operator<<` would reach `raw_ostream`'s `char` overloads and emit the
+  /// byte as a glyph.
+  void printStrippedAttrOrType(uint8_t value) { printInteger(value); }
+  void printStrippedAttrOrType(int8_t value) { printInteger(value); }
+  /// Print a plain `char` parameter as a bare keyword for identifier characters
+  /// (e.g. `A`) or as a quoted+escaped string for everything else, so that all
+  /// 256 byte values round-trip correctly.
+  void printStrippedAttrOrType(char value) {
+    printKeywordOrString(StringRef(&value, 1));
+  }
+
   /// Print the given attribute without its type. The corresponding parser must
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
