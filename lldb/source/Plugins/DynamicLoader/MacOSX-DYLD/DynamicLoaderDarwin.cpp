@@ -987,13 +987,14 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     // target library is loaded at the point where we hit the stub.  So we
     // have to use a symbol name breakpoint rather than an address one.
     if (current_name && target_symbol_name.consume_back(g_lazy_stub_name)) {
-      auto bkpt_sp = target_sp->CreateBreakpoint(nullptr, nullptr,
-          target_symbol_name.str().c_str(),eFunctionNameTypeFull,
-          eLanguageTypeUnknown, /*offset=*/ 0, /*is_insn_count=*/ false,
-          /*skip_prologue=*/ eLazyBoolNo, /*internal=*/ true,
-          /* hardware=*/ false);
+      auto bkpt_sp = target_sp->CreateBreakpoint(
+          nullptr, nullptr, target_symbol_name.str().c_str(),
+          eFunctionNameTypeFull, eLanguageTypeUnknown, /*offset=*/0,
+          /*is_insn_count=*/false,
+          /*skip_prologue=*/eLazyBoolNo, /*internal=*/true,
+          /* hardware=*/false);
       return std::make_shared<ThreadPlanRunToBreakpoint>(thread, bkpt_sp,
-          stop_others);
+                                                         stop_others);
     }
 
     if (current_symbol->IsTrampoline()) {

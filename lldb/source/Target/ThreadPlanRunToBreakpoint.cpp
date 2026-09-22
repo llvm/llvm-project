@@ -1,4 +1,5 @@
-//===-- ThreadPlanRunToBreakpoint.cpp ----------------------------------------===//
+//===-- ThreadPlanRunToBreakpoint.cpp
+//----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Target/ThreadPlanRunToBreakpoint.h"
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -36,7 +37,7 @@ ThreadPlanRunToBreakpoint::ThreadPlanRunToBreakpoint(
     bool stop_others)
     : ThreadPlan(ThreadPlan::eKindRunToBreakpoint, "Run to breakpoint plan",
                  thread, eVoteNoOpinion, eVoteNoOpinion),
-      m_stop_others(stop_others)  {
+      m_stop_others(stop_others) {
   for (auto bkpt_sp : breakpoints) {
     // Make the breakpoints thread specific:
     if (bkpt_sp) {
@@ -53,7 +54,7 @@ ThreadPlanRunToBreakpoint::~ThreadPlanRunToBreakpoint() {
 }
 
 void ThreadPlanRunToBreakpoint::GetDescription(Stream *s,
-                                            lldb::DescriptionLevel level) {
+                                               lldb::DescriptionLevel level) {
   size_t num_bkpts = m_breakpoints.size();
   if (level == lldb::eDescriptionLevelBrief) {
     if (num_bkpts == 0) {

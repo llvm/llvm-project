@@ -65,7 +65,7 @@ void StreamString::FillLastLineToColumn(uint32_t column, char fill_char) {
 }
 
 void llvm::format_provider<StreamString>::format(const StreamString &stream,
-                                                llvm::raw_ostream &os,
-                                                llvm::StringRef options) {
+                                                 llvm::raw_ostream &os,
+                                                 llvm::StringRef options) {
   format_provider<StringRef>::format(stream.GetString(), os, options);
 }

@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
+
 class TestStepThroughLazyLibrary(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -28,4 +29,3 @@ class TestStepThroughLazyLibrary(TestBase):
         )
 
         frame = thread.GetFrameAtIndex(0)
-

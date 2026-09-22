@@ -58,8 +58,8 @@ protected:
 
 namespace llvm {
 template <> struct format_provider<lldb_private::StreamString> {
-  static void format(const lldb_private::StreamString &label,
-                     raw_ostream &OS, StringRef Style);
+  static void format(const lldb_private::StreamString &label, raw_ostream &OS,
+                     StringRef Style);
 };
 } // end namespace llvm
 
