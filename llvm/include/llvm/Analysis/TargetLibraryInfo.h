@@ -469,10 +469,9 @@ public:
                                           const Triple &T) {
     ShouldZExtBoolParam = ShouldZExtBoolReturn = false;
 
-    if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-        T.getArch() == Triple::systemz || T.isLoongArch() || T.isMIPS() ||
-        T.isRISCV64()) {
-      ShouldZExtBoolParam = ShouldZExtBoolReturn = true;
+    if (!T.isAArch64() && !T.isOSDarwin()) {
+      ShouldZExtBoolParam = true;
+      ShouldZExtBoolReturn = true;
     }
   }
 
