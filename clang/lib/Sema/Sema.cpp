@@ -1285,6 +1285,12 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
   {
     llvm::TimeTraceScope TimeScope("PerformPendingInstantiations");
     PerformPendingInstantiations();
+
+    // PerformPendingInstantiations can serialize more definitions
+    while (!VTableUses.empty() || !PendingInstantiations.empty()) {
+      DefineUsedVTables();
+      PerformPendingInstantiations();
+    }
   }
 
   emitDeferredDiags();
