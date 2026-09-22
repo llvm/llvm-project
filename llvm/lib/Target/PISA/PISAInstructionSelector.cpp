@@ -1408,8 +1408,10 @@ bool PISAInstructionSelector::selectG_FENCE(MachineInstr &MI) const {
 
   DenseMap<SyncScope::ID, unsigned>::const_iterator Entry =
       SSI.ID2Opcode.find(Ord);
-  if (Entry == SSI.ID2Opcode.end())
-    reportFatalUsageError("G_FENCE syncscope is not supported on PISA");
+  if (Entry == SSI.ID2Opcode.end()) {
+    MI.emitGenericError("G_FENCE syncscope is not supported on PISA");
+    return false;
+  }
 
   if (Entry->second == PISA::fence_subgroup)
     BuildMI(*BB, &MI, DL, TII.get(Entry->second));
