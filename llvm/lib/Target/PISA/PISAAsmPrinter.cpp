@@ -511,9 +511,9 @@ void PISAAsmPrinter::updateFuncParamIdxs(PISA::DataTypes &DTs) {
 
     // Sanity check that all function parameter indexes are < the total
     // number of function parameters of that type (recorded in DTs)
-    [[maybe_unused]] bool ValidIdx =
-        Info.Idx < DTs.getInfo(NumElts, BitWidth, Info.Type).RegCounter;
-    assert(ValidIdx && "function parameter index out of range!");
+    assert((Info.Idx <
+            DTs.getInfo(NumElts, BitWidth, Info.Type).RegCounter) &&
+           "function parameter index out of range!");
   }
 }
 
