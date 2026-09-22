@@ -209,6 +209,8 @@ X86TargetMachine::X86TargetMachine(const Target &T, const Triple &TT,
   // x86 supports the debug entry values.
   setSupportsDebugEntryValues(true);
 
+  setEnableTiedFastRegAlloc(true);
+
   initAsmInfo();
 }
 
