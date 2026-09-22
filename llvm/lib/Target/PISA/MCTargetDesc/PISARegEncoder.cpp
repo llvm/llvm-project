@@ -177,7 +177,7 @@ RegEncoder::decodeVirtualRegister(MCRegister Reg) {
   unsigned BankBits = (Reg >> NumRegBits) & ((1U << NumBankBits) - 1);
   const char *Prefix = getPrefixFromBank(getRegBank(BankBits));
   unsigned Num = Reg & ((1U << NumRegBits) - 1);
-  return std::make_pair(Prefix, Num);
+  return {Prefix, Num};
 }
 
 bool RegEncoder::isVirtualRegNo(unsigned RegNo) {

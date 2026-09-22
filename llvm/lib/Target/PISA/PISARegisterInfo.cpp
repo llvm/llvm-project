@@ -99,10 +99,9 @@ PISARegisterInfo::PISARegisterInfo() : PISAGenRegisterInfo(PISA::DummyReg) {
       RCD->NumElements = RC->LaneMask.getNumLanes();
       RCD->ScalarBitSize = getScalarBitSize(RC, RCD->NumElements);
     }
-    std::pair<unsigned, unsigned> Key =
-        std::make_pair(RCD->NumElements, RCD->ScalarBitSize);
+    std::pair<unsigned, unsigned> Key{RCD->NumElements, RCD->ScalarBitSize};
     if (!VecRegClassMap[Key])
-      VecRegClassMap[std::make_pair(RCD->NumElements, RCD->ScalarBitSize)] = RC;
+      VecRegClassMap[Key] = RC;
     RegClassMap[RC] = std::move(RCD);
   }
 
@@ -266,7 +265,7 @@ PISARegisterInfo::getBitSizeFromRegClass(const TargetRegisterClass *RC) const {
 
 const TargetRegisterClass *
 PISARegisterInfo::getVectorRegClass(unsigned NumElts, unsigned BitSize) const {
-  std::pair<unsigned, unsigned> P = std::make_pair(NumElts, BitSize);
+  std::pair<unsigned, unsigned> P{NumElts, BitSize};
   DenseMap<std::pair<unsigned, unsigned>,
            const TargetRegisterClass *>::const_iterator I =
       VecRegClassMap.find(P);

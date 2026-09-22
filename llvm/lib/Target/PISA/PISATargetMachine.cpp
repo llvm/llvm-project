@@ -108,22 +108,19 @@ std::pair<const Value *, unsigned>
 PISATargetMachine::getPredicatedAddrSpace(const Value *V) const {
   const IntrinsicInst *II = dyn_cast<IntrinsicInst>(V);
   if (!II)
-    return std::make_pair(nullptr, -1);
+    return {nullptr, ~0U};
 
   switch (II->getIntrinsicID()) {
   case Intrinsic::pisa_isaddr_private:
-    return std::make_pair(II->getArgOperand(0),
-                          unsigned(PISAAS::AddressSpace::PRIVATE));
+    return {II->getArgOperand(0), unsigned(PISAAS::AddressSpace::PRIVATE)};
   case Intrinsic::pisa_isaddr_global:
-    return std::make_pair(II->getArgOperand(0),
-                          unsigned(PISAAS::AddressSpace::GLOBAL));
+    return {II->getArgOperand(0), unsigned(PISAAS::AddressSpace::GLOBAL)};
   case Intrinsic::pisa_isaddr_shared:
-    return std::make_pair(II->getArgOperand(0),
-                          unsigned(PISAAS::AddressSpace::SHARED));
+    return {II->getArgOperand(0), unsigned(PISAAS::AddressSpace::SHARED)};
   default:
     break;
   }
-  return std::make_pair(nullptr, -1);
+  return {nullptr, ~0U};
 }
 
 TargetTransformInfo
