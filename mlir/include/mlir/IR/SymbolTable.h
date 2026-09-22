@@ -415,10 +415,7 @@ public:
                                      : ArrayRef<Operation *>();
   }
 
-  /// Return true if all uses of the symbol are visible within this map's scope.
-  /// Public symbols can have users outside the IR, and nested symbols can have
-  /// users outside the scope. Return false if the symbol's table is not in the
-  /// map. Changes to symbol visibility or table nesting invalidate this query.
+  /// Return true if all uses of the symbol are known to be within this scope.
   bool areAllUsesVisible(Operation *symbol) const {
     return symbolsWithAllUsesVisible.contains(symbol);
   }
