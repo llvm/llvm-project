@@ -1053,11 +1053,6 @@ bool kmp_topology_t::restrict_to_mask(const kmp_affin_mask_t *mask) {
     _discover_uniformity();
     _set_globals();
     _set_last_level_cache();
-#if KMP_OS_WINDOWS
-    // Copy filtered full mask if topology has single processor group
-    if (__kmp_num_proc_groups <= 1)
-#endif
-      __kmp_affin_origMask->copy(__kmp_affin_fullMask);
   }
   return affected;
 }
@@ -4825,10 +4820,6 @@ static void __kmp_aux_affinity_initialize_masks(kmp_affinity_t &affinity) {
       __kmp_avail_proc =
           __kmp_affinity_entire_machine_mask(__kmp_affin_fullMask);
 #if KMP_OS_WINDOWS
-      if (__kmp_num_proc_groups <= 1) {
-        // Copy expanded full mask if topology has single processor group
-        __kmp_affin_origMask->copy(__kmp_affin_fullMask);
-      }
       // Set the process affinity mask since threads' affinity
       // masks must be subset of process mask in Windows* OS
       __kmp_affin_fullMask->set_process_affinity(true);
@@ -6064,13 +6055,13 @@ extern "C"
     return -1;
   }
   KA_TRACE(30, ("kmp_set_thread_affinity_mask_initial: "
-                "set full mask for thread %d\n",
+                "set orig mask for thread %d\n",
                 gtid));
-  KMP_DEBUG_ASSERT(__kmp_affin_fullMask != NULL);
+  KMP_DEBUG_ASSERT(__kmp_affin_origMask != NULL);
 #if KMP_OS_AIX
   return bindprocessor(BINDTHREAD, thread_self(), PROCESSOR_CLASS_ANY);
 #else
-  return __kmp_set_system_affinity(__kmp_affin_fullMask, FALSE);
+  return __kmp_set_system_affinity(__kmp_affin_origMask, FALSE);
 #endif
 }
 #endif
