@@ -2136,32 +2136,34 @@ class VOP_EXCLUSIVE_SCAN_fake16<VOPProfile p, VOP3Features f = VOP3_OPSEL_ONLY> 
 }
 
 // Derives the asm name from the record name.
-multiclass V_EXCLUSIVE_SCAN<VOPProfile p, VOP3Features f = VOP3_REGULAR> {
-  defm NAME : VOP3Inst<!tolower(NAME), VOP_EXCLUSIVE_SCAN<p, f>>;
+multiclass V_EXCLUSIVE_SCAN<VOPProfile p, SDPatternOperator node,
+                            VOP3Features f = VOP3_REGULAR> {
+  defm NAME : VOP3Inst<!tolower(NAME), VOP_EXCLUSIVE_SCAN<p, f>, node>;
 }
 
 // Generates _t16 and _fake16 variants with correctly suffixed asm/PseudoInstr names.
-multiclass V_EXCLUSIVE_SCAN_t16<VOPProfile p, VOP3Features f = VOP3_OPSEL_ONLY> {
+multiclass V_EXCLUSIVE_SCAN_t16<VOPProfile p, SDPatternOperator node,
+                                VOP3Features f = VOP3_OPSEL_ONLY> {
   let True16Predicate = UseRealTrue16Insts in
-    defm _t16   : VOP3Inst<!tolower(NAME#"_t16"),   VOP_EXCLUSIVE_SCAN_t16<p, f>>;
+    defm _t16   : VOP3Inst<!tolower(NAME#"_t16"),   VOP_EXCLUSIVE_SCAN_t16<p, f>, node>;
   let True16Predicate = UseFakeTrue16Insts in
-    defm _fake16 : VOP3Inst<!tolower(NAME#"_fake16"), VOP_EXCLUSIVE_SCAN_fake16<p, f>>;
+    defm _fake16 : VOP3Inst<!tolower(NAME#"_fake16"), VOP_EXCLUSIVE_SCAN_fake16<p, f>, node>;
 }
 
 let isConvergent = 1, SubtargetPredicate = HasExclusiveScanInsts in {
-  defm V_EXCLUSIVE_SCAN_SUM_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, VOP3_CLAMP>;
-  defm V_EXCLUSIVE_SCAN_SUM_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, VOP3_CLAMP>;
-  defm V_EXCLUSIVE_SCAN_XOR_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-  defm V_EXCLUSIVE_SCAN_OR_B32  : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-  defm V_EXCLUSIVE_SCAN_AND_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-  defm V_EXCLUSIVE_SCAN_MIN_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-  defm V_EXCLUSIVE_SCAN_MIN_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
-  defm V_EXCLUSIVE_SCAN_MAX_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-  defm V_EXCLUSIVE_SCAN_MAX_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
-  defm V_EXCLUSIVE_SCAN_MIN_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-  defm V_EXCLUSIVE_SCAN_MIN_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
-  defm V_EXCLUSIVE_SCAN_MAX_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32>;
-  defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32>;
+  defm V_EXCLUSIVE_SCAN_SUM_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_sum_i32, VOP3_CLAMP>;
+  defm V_EXCLUSIVE_SCAN_SUM_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_sum_u32, VOP3_CLAMP>;
+  defm V_EXCLUSIVE_SCAN_XOR_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_xor_b32>;
+  defm V_EXCLUSIVE_SCAN_OR_B32  : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_or_b32>;
+  defm V_EXCLUSIVE_SCAN_AND_B32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_and_b32>;
+  defm V_EXCLUSIVE_SCAN_MIN_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_min_i32>;
+  defm V_EXCLUSIVE_SCAN_MIN_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_i16>;
+  defm V_EXCLUSIVE_SCAN_MAX_I32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_i32>;
+  defm V_EXCLUSIVE_SCAN_MAX_I16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_i16>;
+  defm V_EXCLUSIVE_SCAN_MIN_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_min_u32>;
+  defm V_EXCLUSIVE_SCAN_MIN_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_min_u16>;
+  defm V_EXCLUSIVE_SCAN_MAX_U32 : V_EXCLUSIVE_SCAN<VOP_I32_I32_I32, int_amdgcn_exclusive_scan_max_u32>;
+  defm V_EXCLUSIVE_SCAN_MAX_U16 : V_EXCLUSIVE_SCAN_t16<VOP_I16_I16_I32, int_amdgcn_exclusive_scan_max_u16>;
 }
 
 //===----------------------------------------------------------------------===//

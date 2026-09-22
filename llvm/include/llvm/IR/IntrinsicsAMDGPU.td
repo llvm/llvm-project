@@ -908,6 +908,73 @@ def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
   [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrNoCreateUndefOrPoison]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
 
+let TargetFeatures = "exclusive-scan-insts" in {
+// i32 @llvm.amdgcn.exclusive.scan.sum.i32 <src0> <src1> <clamp>
+def int_amdgcn_exclusive_scan_sum_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty], [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_sum_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.sum.u32 <src0> <src1> <clamp>
+def int_amdgcn_exclusive_scan_sum_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i1_ty], [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<2>>]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_sum_u32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.xor.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_xor_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_xor_b32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.or.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_or_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_or_b32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.and.b32 <src0> <src1>
+def int_amdgcn_exclusive_scan_and_b32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_and_b32">;
+
+// i16 @llvm.amdgcn.exclusive.scan.min.i16 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_i16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_i16">;
+
+// i16 @llvm.amdgcn.exclusive.scan.min.u16 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_u16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_u16">;
+
+// i32 @llvm.amdgcn.exclusive.scan.min.i32 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.min.u32 <src0> <src1>
+def int_amdgcn_exclusive_scan_min_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_min_u32">;
+
+// i16 @llvm.amdgcn.exclusive.scan.max.i16 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_i16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_i16">;
+
+// i16 @llvm.amdgcn.exclusive.scan.max.u16 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_u16 :
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u16">;
+
+// i32 @llvm.amdgcn.exclusive.scan.max.i32 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_i32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_i32">;
+
+// i32 @llvm.amdgcn.exclusive.scan.max.u32 <src0> <src1>
+def int_amdgcn_exclusive_scan_max_u32 :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_exclusive_scan_max_u32">;
+} // TargetFeatures = "exclusive-scan-insts"
+
 def int_amdgcn_bitop3 :
   PureIntrinsic<[llvm_anyint_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
