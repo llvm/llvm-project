@@ -64,7 +64,7 @@ define i32 @fence_partial_noalias(ptr %p) {
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"arg_scope"}
-!2 = distinct !{!2, !"kernel_domain"}
+!2 = distinct !{!2, i1 false, !"kernel_domain"}
 !3 = !{!4}
 !4 = distinct !{!4, !2, !"other_arg_scope"}
 !5 = !{!1, !4}

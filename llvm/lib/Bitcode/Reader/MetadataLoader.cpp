@@ -335,6 +335,65 @@ Metadata *BitcodeReaderMetadataList::resolveTypeArray(Metadata *MaybeTuple) {
   return MDTuple::get(Context, Ops);
 }
 
+/// Rebuild the alias scope or domain \p Old with \p Ops, keeping its identity:
+/// a self reference has to point at the replacement, and a distinct node must
+/// not be uniqued. The first operand of both a scope and a domain is its name,
+/// which is either a string or a self reference.
+static MDNode *rebuildScopeOrDomainNode(MDNode *Old,
+                                        SmallVectorImpl<Metadata *> &Ops) {
+  LLVMContext &Context = Old->getContext();
+  if (Ops[0] != Old)
+    return Old->isDistinct() ? MDNode::getDistinct(Context, Ops)
+                             : MDNode::get(Context, Ops);
+
+  Ops[0] = nullptr;
+  MDNode *New = MDNode::getDistinct(Context, Ops);
+  New->replaceOperandWith(0, New);
+  return New;
+}
+
+static MDNode *upgradeAliasScopeDomain(MDNode *Domain,
+                                       DenseMap<MDNode *, MDNode *> &Upgraded) {
+  unsigned NumOperands = Domain->getNumOperands();
+  bool HadDescription = NumOperands == 2;
+  // Already upgraded, or invalid and left to the verifier.
+  if (NumOperands == 0 || NumOperands > 2 ||
+      (HadDescription && mdconst::hasa<ConstantInt>(Domain->getOperand(1))))
+    return Domain;
+
+  MDNode *&Upgrade = Upgraded[Domain];
+  if (Upgrade)
+    return Upgrade;
+
+  LLVMContext &Context = Domain->getContext();
+  SmallVector<Metadata *, 3> Ops = {
+      Domain->getOperand(0),
+      ConstantAsMetadata::get(ConstantInt::getFalse(Context))};
+  if (HadDescription)
+    Ops.push_back(Domain->getOperand(1));
+
+  Upgrade = rebuildScopeOrDomainNode(Domain, Ops);
+  return Upgrade;
+}
+
+static MDNode *upgradeAliasScope(MDNode *Scope,
+                                 DenseMap<MDNode *, MDNode *> &Upgraded) {
+  if (MDNode *Upgrade = Upgraded.lookup(Scope))
+    return Upgrade;
+
+  auto *Domain = cast<MDNode>(Scope->getOperand(1));
+
+  MDNode *UpgradedDomain = upgradeAliasScopeDomain(Domain, Upgraded);
+  if (UpgradedDomain == Domain)
+    return Scope;
+
+  SmallVector<Metadata *, 3> Ops(Scope->op_begin(), Scope->op_end());
+  Ops[1] = UpgradedDomain;
+  MDNode *Upgrade = rebuildScopeOrDomainNode(Scope, Ops);
+  Upgraded[Scope] = Upgrade;
+  return Upgrade;
+}
+
 namespace {
 
 class PlaceholderQueue {
@@ -460,6 +519,10 @@ class MetadataLoader::MetadataLoaderImpl {
 
   bool StripTBAA = false;
   bool HasSeenOldLoopTags = false;
+
+  /// Rebuilt alias scopes and domains, so that upgraded domains get reused
+  /// correctly and to memoize.
+  DenseMap<MDNode *, MDNode *> UpgradedAliasScopes;
   bool NeedUpgradeToDIGlobalVariableExpression = false;
   bool NeedDeclareExpressionUpgrade = false;
 
@@ -797,6 +860,29 @@ public:
   }
 
   bool hasSeenOldLoopTags() const { return HasSeenOldLoopTags; }
+
+  /// Mark any domains in \p ScopeList that don't have a disjointness
+  /// flag as non-disjoint. Returns the original list if there are no changes.
+  MDNode *upgradeAliasScopeList(MDNode *ScopeList) {
+    if (MDNode *Upgrade = UpgradedAliasScopes.lookup(ScopeList))
+      return Upgrade;
+
+    SmallVector<Metadata *, 4> Ops;
+    bool Changed = false;
+    for (const MDOperand &Op : ScopeList->operands()) {
+      Metadata *Scope = Op;
+      if (auto *ScopeNode = dyn_cast<MDNode>(Op))
+        Scope = upgradeAliasScope(ScopeNode, UpgradedAliasScopes);
+      Changed |= Scope != Op.get();
+      Ops.push_back(Scope);
+    }
+    if (!Changed)
+      return ScopeList;
+
+    MDNode *Upgrade = MDNode::get(ScopeList->getContext(), Ops);
+    UpgradedAliasScopes[ScopeList] = Upgrade;
+    return Upgrade;
+  }
 
   Error parseMetadataAttachment(Function &F,
                                 ArrayRef<Instruction *> InstructionList);
@@ -2648,6 +2734,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
           assert(!MD->isTemporary() && "should load MDs before attachments");
           MD = UpgradeTBAANode(*MD);
         }
+
+        if (I->second == LLVMContext::MD_alias_scope ||
+            I->second == LLVMContext::MD_noalias)
+          MD = upgradeAliasScopeList(MD);
+
         Inst->setMetadata(I->second, MD);
       }
       break;
@@ -2764,4 +2855,8 @@ void MetadataLoader::shrinkTo(unsigned N) { return Pimpl->shrinkTo(N); }
 
 void MetadataLoader::upgradeDebugIntrinsics(Function &F) {
   return Pimpl->upgradeDebugIntrinsics(F);
+}
+
+MDNode *MetadataLoader::upgradeAliasScopeList(MDNode *ScopeList) {
+  return Pimpl->upgradeAliasScopeList(ScopeList);
 }

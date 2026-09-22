@@ -3,7 +3,7 @@
 
 ; Ensure the scoped AA metadata is still retained after store merging.
 
-; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 ; MIR-DAG: ![[SCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"scope 0"}
 ; MIR-DAG: ![[SCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"scope 1"}
 ; MIR-DAG: ![[SCOPE2:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"scope 2"}
@@ -60,7 +60,7 @@ define void @blam1(ptr %g0, ptr %g1) {
 !1 = !{!3}
 !2 = !{!2, !4, !"scope 0"}
 !3 = !{!3, !4, !"scope 1"}
-!4 = !{!4, !"domain"}
+!4 = !{!4, i1 false, !"domain"}
 !5 = !{!7}
 !6 = !{!8}
 !7 = !{!7, !4, !"scope 2"}
