@@ -6990,12 +6990,9 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   Type *IndexTy = DL->getIndexType(CommonBase->getType());
   auto *StartByteOffsetValue = ConstantInt::get(IndexTy, StartByteOffset);
   APInt ByteOffsetFromFirstLoad = StartByteOffset - FirstLoadByteOffset;
-  unsigned AlignOffsetBits =
-      std::min<unsigned>(ByteOffsetFromFirstLoad.getBitWidth(), 64);
-  uint64_t ByteOffsetFromFirstLoadForAlign =
-      ByteOffsetFromFirstLoad.getLoBits(AlignOffsetBits).getZExtValue();
   Align NewAlign =
-      commonAlignment(FirstLI->getAlign(), ByteOffsetFromFirstLoadForAlign);
+      commonAlignment(FirstLI->getAlign(),
+                      ByteOffsetFromFirstLoad.zextOrTrunc(64).getZExtValue());
   // Step 4: Model the replacement: one vector load from the adjusted alignment
   // and the byte-offset GEP that CreatePtrAdd will emit.
   InstructionCost NewCost =
