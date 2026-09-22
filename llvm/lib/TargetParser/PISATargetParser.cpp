@@ -19,6 +19,6 @@ void llvm::PISA::fillFeatureMap(StringRef CPU, StringMap<bool> &Features) {
     return;
   if (std::optional<StringMap<bool>> Default = getCPUDefaultTargetFeatures(
           Info.Name, BasicPISASubTypeKV, BasicPISAFeatureKV))
-    for (const auto &KV : *Default)
+    for (const StringMapEntry<bool> &KV : *Default)
       Features[KV.first()] = KV.second;
 }
