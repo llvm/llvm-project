@@ -757,13 +757,6 @@ public:
                              EvalResult &Result,
                              bool IsConstantInitializer) const;
 
-  /// EvaluateAsConstantInitializer - Evaluate an expression as if it were the
-  /// initializer of an object with static storage duration: in place, so that
-  /// no temporary is materialized, and with a glvalue yielding the address it
-  /// binds a reference to. Undefined behavior is allowed, side effects are not.
-  bool EvaluateAsConstantInitializer(EvalResult &Result,
-                                     const ASTContext &Ctx) const;
-
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
   /// of a call to the given function with the given arguments, inside an
   /// unevaluated context. Returns true if the expression could be folded to a
@@ -786,6 +779,10 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// The initializer of an object with static storage duration. The object
+    /// is not destroyed, and undefined behavior is folded through like
+    /// isConstantInitializer allows.
+    Initializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does

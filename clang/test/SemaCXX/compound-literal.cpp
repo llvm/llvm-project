@@ -149,4 +149,15 @@ namespace GH212106 {
   // CHECK-NEXT: ConstantExpr {{.*}} 'int'
   // CHECK-NEXT: value: Int 0
   // CHECK-NEXT: CallExpr {{.*}} 'int'
+
+#if __cplusplus >= 201103L
+  // A class with a constructor is initialized by one expression.
+  struct C { constexpr C(int v) : v(v) {} int v; };
+  C c = (C){__builtin_constant_p(z.x)};
+  // CHECK-CXX11: CompoundLiteralExpr {{.*}} '{{(GH212106::)?}}C'
+  // CHECK-CXX11-NEXT: ConstantExpr {{.*}} '{{(GH212106::)?}}C'
+  // CHECK-CXX11-NEXT: value: Struct
+  // CHECK-CXX11-NEXT: field: Int 0
+  // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr
+#endif
 }

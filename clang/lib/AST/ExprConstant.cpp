@@ -158,6 +158,7 @@ namespace {
     case ConstantExprKind::Normal:
     case ConstantExprKind::ClassTemplateArgument:
     case ConstantExprKind::ImmediateInvocation:
+    case ConstantExprKind::Initializer:
       // Note that non-type template arguments of class type are emitted as
       // template parameter objects.
       return false;
@@ -172,6 +173,7 @@ namespace {
     switch (Kind) {
     case ConstantExprKind::Normal:
     case ConstantExprKind::ImmediateInvocation:
+    case ConstantExprKind::Initializer:
       return false;
 
     case ConstantExprKind::ClassTemplateArgument:
@@ -22088,12 +22090,15 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
-  EvaluationMode EM = EvaluationMode::ConstantExpression;
+  EvaluationMode EM = Kind == ConstantExprKind::Initializer
+                          ? EvaluationMode::IgnoreSideEffects
+                          : EvaluationMode::ConstantExpression;
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
   if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val, Kind))
+    if (!Info.Ctx.getInterpContext().evaluate(Info, this, Result.Val, Kind) ||
+        Result.HasSideEffects)
       return false;
     return CheckConstantExpression(Info, getExprLoc(),
                                    getStorageType(Ctx, this), Result.Val, Kind);
@@ -22118,14 +22123,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   // So we need to make sure temporary objects are destroyed after having
   // evaluating the expression (per C++23 [class.temporary]/p4).
   FullExpressionRAII Scope(Info);
-  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
-      Result.HasSideEffects || !Scope.destroy())
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) || !Scope.destroy())
     return false;
 
   if (!Info.discardCleanups())
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
-  if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
+  if (Result.HasSideEffects ||
+      !CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))
     return false;
   if (!CheckMemoryLeaks(Info))
@@ -22207,52 +22212,6 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
 
   return CheckConstantExpression(Info, DeclLoc, DeclTy, EStatus.Val,
                                  ConstantExprKind::Normal) &&
-         CheckMemoryLeaks(Info);
-}
-
-bool Expr::EvaluateAsConstantInitializer(EvalResult &Result,
-                                         const ASTContext &Ctx) const {
-  assert(!isValueDependent() &&
-         "Expression evaluator can't be called on a dependent expression.");
-  bool IsConst;
-  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
-      Result.Val.hasValue())
-    return true;
-
-  ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantInitializer");
-  // Fold through undefined behavior, as isConstantInitializer allows.
-  EvalInfo Info(Ctx, Result, EvaluationMode::IgnoreSideEffects);
-  Info.InConstantContext = true;
-
-  if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = Info.Ctx.getInterpContext();
-    // Keep a glvalue's address; do not destroy a prvalue's result object.
-    if (isGLValue() ? !InterpCtx.evaluate(Info, this, Result.Val,
-                                          ConstantExprKind::Normal)
-                    : !InterpCtx.evaluateAsRValue(Info, this, Result.Val))
-      return false;
-    return !Result.HasSideEffects &&
-           CheckConstantExpression(Info, getExprLoc(),
-                                   getStorageType(Ctx, this), Result.Val,
-                                   ConstantExprKind::Normal);
-  }
-
-  // Initialize a stand-in for the object in place, as EvaluateAsConstantExpr
-  // does, rather than a temporary whose destruction counts as a side effect.
-  MaterializeTemporaryExpr BaseMTE(getType(), const_cast<Expr *>(this), true);
-  APValue::LValueBase Base(&BaseMTE);
-  Info.setEvaluatingDecl(Base, Result.Val);
-
-  LValue LVal;
-  LVal.set(Base);
-  FullExpressionRAII Scope(Info);
-  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) || !Scope.destroy() ||
-      !Info.discardCleanups() || Result.HasSideEffects)
-    return false;
-
-  // A glvalue is checked as the reference it binds to.
-  return CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
-                                 Result.Val, ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
 }
 
