@@ -84,7 +84,7 @@ public:
   /// slot another such parameter also spills to, consumed other than as a
   /// call argument, spilled where the incoming pointer cannot replace the
   /// storage, or read where the spill does not dominate it gets a diagnostic
-  /// on \p funcOp and failure.
+  /// on the operation at fault and failure.
   ///
   /// Not an override, since this has no counterpart in the generic contract.
   mlir::LogicalResult

@@ -1065,12 +1065,13 @@ void rewriteIndirectReturnCall(cir::CallOp call,
 
 /// Bring \p funcOp's non-byval indirect parameter \p argNo into the shape the
 /// rest of the rewrite assumes.  \p claimedSlots carries the slots \p funcOp's
-/// earlier non-byval indirect parameters took.  See prepareNonByvalParameters.
-static mlir::LogicalResult
-prepareNonByvalParameter(cir::FuncOp funcOp, unsigned argNo,
-                         const ArgClassification &ac,
-                         mlir::BlockArgument blockArg, mlir::DominanceInfo &dom,
-                         SmallPtrSetImpl<mlir::Operation *> &claimedSlots) {
+/// earlier non-byval indirect parameters took.  The shape itself, and the
+/// cases reported rather than repaired, are documented on
+/// CIRABIRewriteContext::prepareNonByvalParameters in the header.
+static mlir::LogicalResult prepareOneNonByvalParameter(
+    cir::FuncOp funcOp, unsigned argNo, const ArgClassification &ac,
+    mlir::BlockArgument blockArg, mlir::DominanceInfo &dom,
+    SmallPtrSetImpl<mlir::Operation *> &claimedSlots) {
   // The spill is the store that writes the parameter itself.  Any other use
   // consumes the record value.  At -O1 and above such a use comes from
   // cir-simplify: CIRGen marks a const-qualified parameter's slot const, so
@@ -1214,8 +1215,8 @@ mlir::LogicalResult CIRABIRewriteContext::prepareNonByvalParameters(
       continue;
     assert(idx < entry.getNumArguments() &&
            "classification count must not exceed entry block arguments");
-    if (failed(prepareNonByvalParameter(funcOp, idx, ac, entry.getArgument(idx),
-                                        dom, claimedSlots)))
+    if (failed(prepareOneNonByvalParameter(
+            funcOp, idx, ac, entry.getArgument(idx), dom, claimedSlots)))
       return mlir::failure();
   }
   return mlir::success();
