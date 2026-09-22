@@ -1,0 +1,100 @@
+# REQUIRES: asserts
+# RUN: llc --run-pass=x86-expand-pseudo --verify-machineinstrs %s -o /dev/null
+
+--- |
+  target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-pc-windows-msvc19.33.0"
+
+  define dso_local void @"?dump@FileSystem@@QEBAXXZ"(ptr noundef nonnull align 8 dereferenceable(16) %this) local_unnamed_addr align 2 {
+  entry:
+    %call = tail call noundef nonnull align 4 dereferenceable(4) ptr @"?dbgs@@YAAEAHXZ"()
+    %print_Type = getelementptr inbounds nuw i8, ptr %this, i64 8
+    %0 = load i32, ptr %print_Type, align 8
+    %vtable = load ptr, ptr %this, align 8
+    %1 = load ptr, ptr %vtable, align 8
+    tail call void %1(ptr noundef nonnull align 8 dereferenceable(16) %this, ptr noundef nonnull align 4 dereferenceable(4) %call, i32 noundef %0, i32 noundef 0)
+    ret void
+  }
+
+  declare dso_local noundef nonnull align 4 dereferenceable(4) ptr @"?dbgs@@YAAEAHXZ"() local_unnamed_addr
+...
+---
+name:            '?dump@FileSystem@@QEBAXXZ'
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   true
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$rcx', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       40
+  offsetAdjustment: -40
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  framePointerPolicy: none
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 32
+  cvBytesOfCalleeSavedRegisters: 8
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     true
+  isCalleeSavedInfoValid: true
+  localFrameSize:  0
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$rsi', callee-saved-restored: true, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    liveins: $rcx, $rsi
+
+    frame-setup PUSH64r killed $rsi, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 60
+    $rsp = frame-setup SUB64ri32 $rsp, 32, implicit-def dead $eflags
+    frame-setup SEH_StackAlloc 32
+    frame-setup SEH_EndPrologue
+    $rsi = MOV64rr $rcx
+    CALL64pcrel32 @"?dbgs@@YAAEAHXZ", csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    renamable $r8d = MOV32rm renamable $rsi, 1, $noreg, 8, $noreg :: (load (s32) from %ir.print_Type, align 8)
+    renamable $r10 = MOV64rm renamable $rsi, 1, $noreg, 0, $noreg :: (load (s64) from %ir.this)
+    $rcx = MOV64rr killed $rsi
+    $rdx = MOV64rr killed $rax
+    $r9d = XOR32rr undef $r9d, undef $r9d, implicit-def dead $eflags
+    SEH_BeginEpilogue
+    $rsp = frame-destroy ADD64ri32 $rsp, 32, implicit-def dead $eflags
+    $rsi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    SEH_EndEpilogue
+    TCRETURN_WINmi64 killed renamable $r10, 1, $noreg, 0, $noreg, 0, csr_win64, implicit $rsp, implicit $ssp, implicit $rcx, implicit $rdx, implicit $r8d, implicit $r9d :: (load (s64) from %ir.vtable)
+...
