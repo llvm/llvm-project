@@ -429,3 +429,104 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
   let PrimaryKeyEarlyOut = 1;
 }
+
+// DMA transfers between global memory and LDS.
+class LDSDMAIntrinsic<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def LDSDMAIntrinsics : GenericTable {
+  let FilterClass = "LDSDMAIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupLDSDMAIntrinsic";
+}
+
+def : LDSDMAIntrinsic<int_amdgcn_raw_buffer_load_lds>;
+def : LDSDMAIntrinsic<int_amdgcn_raw_ptr_buffer_load_lds>;
+def : LDSDMAIntrinsic<int_amdgcn_struct_buffer_load_lds>;
+def : LDSDMAIntrinsic<int_amdgcn_struct_ptr_buffer_load_lds>;
+def : LDSDMAIntrinsic<int_amdgcn_load_to_lds>;
+def : LDSDMAIntrinsic<int_amdgcn_global_load_lds>;
+
+// DMA transfers between global memory and LDS tracked with asyncmarks.
+class AsyncLDSDMAIntrinsic<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def AsyncLDSDMAIntrinsics : GenericTable {
+  let FilterClass = "AsyncLDSDMAIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupAsyncLDSDMAIntrinsic";
+}
+
+def : AsyncLDSDMAIntrinsic<int_amdgcn_raw_buffer_load_async_lds>;
+def : AsyncLDSDMAIntrinsic<int_amdgcn_raw_ptr_buffer_load_async_lds>;
+def : AsyncLDSDMAIntrinsic<int_amdgcn_struct_buffer_load_async_lds>;
+def : AsyncLDSDMAIntrinsic<int_amdgcn_struct_ptr_buffer_load_async_lds>;
+def : AsyncLDSDMAIntrinsic<int_amdgcn_load_async_to_lds>;
+def : AsyncLDSDMAIntrinsic<int_amdgcn_global_load_async_lds>;
+
+// Operations tracked by ASYNCcnt.
+class AsyncIntrinsic<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def AsyncIntrinsics : GenericTable {
+  let FilterClass = "AsyncIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupAsyncIntrinsic";
+}
+
+def : AsyncIntrinsic<int_amdgcn_cluster_load_async_to_lds_b8>;
+def : AsyncIntrinsic<int_amdgcn_cluster_load_async_to_lds_b32>;
+def : AsyncIntrinsic<int_amdgcn_cluster_load_async_to_lds_b64>;
+def : AsyncIntrinsic<int_amdgcn_cluster_load_async_to_lds_b128>;
+def : AsyncIntrinsic<int_amdgcn_global_load_async_to_lds_b8>;
+def : AsyncIntrinsic<int_amdgcn_global_load_async_to_lds_b32>;
+def : AsyncIntrinsic<int_amdgcn_global_load_async_to_lds_b64>;
+def : AsyncIntrinsic<int_amdgcn_global_load_async_to_lds_b128>;
+def : AsyncIntrinsic<int_amdgcn_global_store_async_from_lds_b8>;
+def : AsyncIntrinsic<int_amdgcn_global_store_async_from_lds_b32>;
+def : AsyncIntrinsic<int_amdgcn_global_store_async_from_lds_b64>;
+def : AsyncIntrinsic<int_amdgcn_global_store_async_from_lds_b128>;
+def : AsyncIntrinsic<int_amdgcn_ds_atomic_async_barrier_arrive_b64>;
+def : AsyncIntrinsic<int_amdgcn_s_wait_asynccnt>;
+
+// Operations tracked by TENSORcnt.
+class TensorIntrinsic<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def TensorIntrinsics : GenericTable {
+  let FilterClass = "TensorIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupTensorIntrinsic";
+}
+
+def : TensorIntrinsic<int_amdgcn_tensor_load_to_lds>;
+def : TensorIntrinsic<int_amdgcn_tensor_store_from_lds>;
+def : TensorIntrinsic<int_amdgcn_s_wait_tensorcnt>;
+
+// Asyncmark production and consumption.
+class AsyncMarkIntrinsic<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def AsyncMarkIntrinsics : GenericTable {
+  let FilterClass = "AsyncMarkIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupAsyncMarkIntrinsic";
+}
+
+def : AsyncMarkIntrinsic<int_amdgcn_asyncmark>;
+def : AsyncMarkIntrinsic<int_amdgcn_wait_asyncmark>;
