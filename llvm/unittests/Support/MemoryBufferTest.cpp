@@ -170,10 +170,11 @@ TEST_F(MemoryBufferTest, copy) {
 
 #if LLVM_ENABLE_THREADS
 TEST_F(MemoryBufferTest, createFromPipe) {
-  int pipes[2];
 #if LLVM_ON_UNIX
+  int pipes[2];
   ASSERT_EQ(::pipe(pipes), 0) << strerror(errno);
 #else
+  HANDLE pipes[2];
   ASSERT_TRUE(::CreatePipe(&pipes[0], &pipes[1], nullptr, 0))
       << ::GetLastError();
 #endif
