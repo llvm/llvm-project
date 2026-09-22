@@ -7320,6 +7320,12 @@ void BoUpSLP::reorderTopToBottom() {
     });
     // Do an actual reordering, if profitable.
     for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+      // The splat-gather subtree load roots stay in memory order: the reusing
+      // gathers fetch lanes by value.
+      if (TE->State == TreeEntry::Vectorize &&
+          TE->getOpcode() == Instruction::Load &&
+          is_contained(SplatGatheredScalarsRoots, TE.get()))
+        continue;
       // Just do the reordering for the nodes with the given VF.
       if (TE->Scalars.size() != VF) {
         if (TE->ReuseShuffleIndices.size() == VF &&
@@ -11524,6 +11530,11 @@ void BoUpSLP::tryToVectorizeSplatGatheredScalars() {
         VectorizableTree.pop_back();
         continue;
       }
+      // The root has no users, the gathers reuse its lanes by value: keep the
+      // loads in memory order instead of permuting them into the group order.
+      if (NewRoot->State == TreeEntry::Vectorize &&
+          NewRoot->getOpcode() == Instruction::Load)
+        NewRoot->ReorderIndices.clear();
       SplatGatheredScalarsRoots.push_back(NewRoot);
     }
   };
