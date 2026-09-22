@@ -155,6 +155,9 @@ private:
                                        Instruction *UseInst, int OpIdx0,
                                        int OpIdx1) const;
 
+  bool allOpsAreDerivedFromSameAlloca(Value *Alloca, Value *Val,
+                                      Instruction *Inst) const;
+
   /// Check whether we have enough local memory for promotion.
   bool hasSufficientLocalMem(const Function &F);
 
@@ -316,7 +319,8 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
             return RejectUser(Inst, "phi from mixed objects");
           break;
         default:
-          return RejectUser(Inst, "phi with too many operands");
+          if (!allOpsAreDerivedFromSameAlloca(AA.Alloca, Cur, Phi))
+            return RejectUser(Inst, "phi with too many operands");
         }
 
         WorkList.push_back(Inst);
@@ -1377,6 +1381,18 @@ bool AMDGPUPromoteAllocaImpl::binaryOpIsDerivedFromSameAlloca(
     return false;
   }
 
+  return true;
+}
+
+bool AMDGPUPromoteAllocaImpl::allOpsAreDerivedFromSameAlloca(
+    Value *Alloca, Value *Val, Instruction *Inst) const {
+  for (int i = 0; i < Inst->getNumOperands(); i++) {
+    Value *Op = Inst->getOperand(i);
+    if (Op == Val)
+      continue;
+    if (!binaryOpIsDerivedFromSameAlloca(Alloca, Op, Inst, i, i))
+      return false;
+  }
   return true;
 }
 
