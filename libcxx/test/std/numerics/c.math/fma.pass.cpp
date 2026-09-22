@@ -1,0 +1,78 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// floating-point-type fma(floating-point-type x, floating-point-type y, floating-point-type z); // constexpr since C++23
+
+#include <cassert>
+#include <cmath>
+#include <limits>
+#include <type_traits>
+
+#include "test_macros.h"
+#include "type_algorithms.h"
+
+struct TestFloat {
+  template <class T>
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim = std::numeric_limits<T>;
+    TEST_CONSTEXPR_CXX23 T inf = lim::infinity();
+    TEST_CONSTEXPR_CXX23 T nan = lim::quiet_NaN();
+
+    assert(std::fma(T(1), T(1), T(1)) == T(2));
+    assert(std::fma(T(1), T(2), T(3)) == T(5));
+    assert(std::fma(T(-1), T(2), T(2)) == T(0));
+
+    assert(std::fmax(inf, T(1), T(0)) == inf);
+    assert(std::fmax(T(1), inf, T(0)) == inf);
+    assert(std::fmax(-inf, T(1), T(0)) == -inf);
+    assert(std::fmax(T(1), -inf, T(0)) == -inf);
+
+    assert(std::isnan(std::fma(nan, T(1), T(0))));
+    assert(std::isnan(std::fma(T(1), nan, T(0))));
+    assert(std::isnan(std::fma(T(1), T(0), nan)));
+    assert(std::isnan(std::fma(nan, nan, nan)));
+  }
+};
+
+struct TestInt {
+  template <class T>
+  TEST_CONSTEXPR_CXX23 void operator()() const {
+    using lim = std::numeric_limits<T>;
+
+    assert(std::fma(T(0), T(1), T(1)) == T(1));
+    assert(std::fma(T(1), T(2), T(3)) == T(5));
+
+    if (std::is_signed<T>::value) {
+      assert(std::fma(T(-1), T(2), T(3)) == T(1));
+    }
+  }
+};
+
+TEST_CONSTEXPR_CXX23 bool test() {
+  types::for_each(types::floating_point_types(), TestFloat());
+  types::for_each(types::integral_types(), TestInt());
+
+  // mixed-type promotions testing
+  {
+    using lim = std::numeric_limits<T>;
+    assert(std::fma(1, 2.0, 3) == 5.0);                 // int and double
+    assert(std::fma(2.0f, 1, 1.0f) == 3.0);             // float and int
+    assert(std::fma(1.0L, 0.0f, 1) == 1.0L);            // long double and float
+    assert(std::isnan(std::fma(lim::quiet_NaN(), 1, 0)))); // NaN and int
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
+  return 0;
+}
