@@ -99,6 +99,13 @@ public:
 
   bool useIPRA() const override { return true; }
 
+  // TODO: just return true when GIsel passes are ported to NPM.
+  bool shouldDefaultToNewPM() const override {
+    return !Options.EnableGlobalISel &&
+           (getCGPassBuilderOption().EnableGlobalISelOption !=
+            cl::boolOrDefault::BOU_TRUE);
+  }
+
   Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
                              raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,

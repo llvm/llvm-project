@@ -1,5 +1,5 @@
-# RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -vgpr-regalloc=basic -sgpr-regalloc=basic -start-before=regallocbasic,0 -stop-after=virtregrewriter,2 -verify-regalloc -o - %s 2> %t.basic.err | FileCheck -check-prefix=BASIC %s
-# RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -start-before=greedy,0 -stop-after=virtregrewriter,2 -verify-regalloc -o - %s 2> %t.greedy.err | FileCheck -check-prefix=GREEDY %s
+# RUN: not llc -enable-new-pm=0 -mtriple=amdgpu9.00-amd-amdhsa -vgpr-regalloc=basic -sgpr-regalloc=basic -start-before=regallocbasic,0 -stop-after=virtregrewriter,2 -verify-regalloc -o - %s 2> %t.basic.err | FileCheck -check-prefix=BASIC %s
+# RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -start-before=greedy,1 -stop-after=virt-reg-rewriter,3 -verify-regalloc -o - %s 2> %t.greedy.err | FileCheck -check-prefix=GREEDY %s
 
 # RUN: FileCheck -check-prefix=ERR -implicit-check-not=error %s < %t.basic.err
 # RUN: FileCheck -check-prefix=ERR -implicit-check-not=error %s < %t.greedy.err

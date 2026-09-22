@@ -5337,6 +5337,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // TODO: remove this once GlobalISel is supported in NewPM.
+  if (getToolChain().getTriple().isAMDGCN()) {
+    if (const Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                                       options::OPT_fno_global_isel)) {
+      if (A->getOption().matches(options::OPT_fglobal_isel)) {
+        CmdArgs.push_back(
+            Args.MakeArgString("-fenable-new-pm-codegen=force-disable"));
+      }
+    }
+  }
+
   if (IsCuda && !IsCudaDevice && !UsesLLVMOffloading) {
     // We need to figure out which CUDA version we're compiling for, as that
     // determines how we load and launch GPU kernels.
@@ -9985,12 +9996,24 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(
             "--device-linker=" + TC->getTripleString() + "=" + Arg));
 
+      // TODO: remove this once GlobalISel is supported in NewPM.
+      if (TC->getTriple().isAMDGCN()) {
+        if (const Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                                           options::OPT_fno_global_isel)) {
+          if (A->getOption().matches(options::OPT_fglobal_isel)) {
+            CmdArgs.push_back(Args.MakeArgString(
+                "--device-linker=" + TC->getTripleString() +
+                "=-plugin-opt=-enable-npm-for-backend=force-disable"));
+          }
+        }
+      }
+
       // Forward the LTO mode for this toolchain.
       auto DeviceLTOMode = TC->getLTOMode(ToolChainArgs, Kind);
-      if (DeviceLTOMode == LTOK_Full)
+      if (DeviceLTOMode == LTOK_Full) {
         CmdArgs.push_back(Args.MakeArgString(
             "--device-compiler=" + TC->getTripleString() + "=-flto=full"));
-      else if (DeviceLTOMode == LTOK_Thin) {
+      } else if (DeviceLTOMode == LTOK_Thin) {
         CmdArgs.push_back(Args.MakeArgString(
             "--device-compiler=" + TC->getTripleString() + "=-flto=thin"));
         if (TC->getTriple().isAMDGPU()) {

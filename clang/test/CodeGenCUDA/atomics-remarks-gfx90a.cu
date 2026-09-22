@@ -2,6 +2,10 @@
 // RUN: -Rpass=atomic-expand -S -o - 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=GFX90A-CAS
 
+// RUN: %clang_cc1 %s -triple=amdgpu9.0a-amd-amdhsa -fenable-new-pm-codegen=force-on -fcuda-is-device \
+// RUN: -Rpass=atomic-expand -S -o - 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=GFX90A-CAS
+
 // REQUIRES: amdgpu-registered-target
 
 #include "Inputs/cuda.h"
@@ -11,6 +15,7 @@
 // GFX90A-CAS-LABEL: _Z14atomic_add_casPf
 // GFX90A-CAS:  flat_atomic_cmpswap
 // GFX90A-CAS:  s_cbranch_execnz
+
 __device__ float atomic_add_cas(float *p) {
   return __atomic_fetch_add(p, 1.0f, memory_order_relaxed);
 }

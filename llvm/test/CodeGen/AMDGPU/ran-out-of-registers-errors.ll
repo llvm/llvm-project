@@ -1,9 +1,9 @@
-; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=greedy -filetype=null %s 2>&1 | FileCheck -check-prefixes=CHECK,GREEDY -implicit-check-not=error %s
-; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=basic -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=CHECK,BASIC %s
-; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=fast -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=CHECK,FAST %s
+; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc-npm=greedy -filetype=null %s 2>&1 | FileCheck -check-prefixes=CHECK,GREEDY -implicit-check-not=error %s
+; RUN: not llc -enable-new-pm=0 -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=basic -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=CHECK,BASIC %s
+; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc-npm=fast -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=CHECK,FAST %s
 ; RUN: opt -passes=debugify -o %t.bc %s
-; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=greedy -filetype=null %t.bc 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=DBGINFO-CHECK,DBGINFO-GREEDY %s
-; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=basic -filetype=null %t.bc 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=DBGINFO-CHECK,DBGINFO-BASIC %s
+; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc-npm=greedy -filetype=null %t.bc 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=DBGINFO-CHECK,DBGINFO-GREEDY %s
+; RUN: not llc -enable-new-pm=0 -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -vgpr-regalloc=basic -filetype=null %t.bc 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=DBGINFO-CHECK,DBGINFO-BASIC %s
 
 ; FIXME: Asserts when using -O2 + -vgpr-regalloc=fast
 ; RUN: not llc -mtriple=amdgpu9.08-amd-amdhsa -stress-regalloc=1 -O0 -filetype=null %t.bc 2>&1 | FileCheck -implicit-check-not=error -check-prefixes=DBGINFO-CHECK,DBGINFO-FAST %s

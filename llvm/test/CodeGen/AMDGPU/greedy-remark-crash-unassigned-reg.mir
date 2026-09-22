@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=amdgpu9.00-amd-amdhsa \
-# RUN:   -start-before=greedy,0 -stop-after=virtregrewriter,0 -pass-remarks='.*' -pass-remarks-output=%t.yaml -filetype=null %s
+# RUN:   -start-before=greedy,1 -stop-after=virt-reg-rewriter,1 -pass-remarks='.*' -pass-remarks-output=%t.yaml -filetype=null %s
 # RUN: FileCheck %s < %t.yaml
 
 # RUN: llc -mtriple=amdgpu9.00-amd-amdhsa \
