@@ -7,7 +7,8 @@ func.func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
 
   // CHECK:      %[[RANGE:.*]] = arith.subi %[[UB]], %[[LB]]
-  // CHECK:      %[[TRIP_CNT:.*]] = arith.ceildivsi %[[RANGE]], %[[STEP]]
+  // CHECK:      %[[RAW_TRIP_CNT:.*]] = arith.ceildivsi %[[RANGE]], %[[STEP]]
+  // CHECK:      %[[TRIP_CNT:.*]] = arith.maxsi %[[RAW_TRIP_CNT]], %[[C0]]
   // CHECK:      %[[IS_NOOP:.*]] = arith.cmpi eq, %[[TRIP_CNT]], %[[C0]] : index
 
   // CHECK:      scf.if %[[IS_NOOP]] {
@@ -112,8 +113,9 @@ func.func @empty_2d_dynamic(%lb: index, %ub: index, %step: index, %arg0: memref<
 
 // CHECK-LABEL: @empty_2d_static
 func.func @empty_2d_static(%arg0: memref<8x8xi32>) {
-  // CHECK:      %[[TRUE:.*]] = arith.constant true
-  // CHECK:      scf.if %[[TRUE]] {
+  // CHECK:      %[[PROD:.*]] = arith.muli %c0, %c0 : index
+  // CHECK:      %[[IS_ZERO:.*]] = arith.cmpi eq, %[[PROD]], %c0 : index
+  // CHECK:      scf.if %[[IS_ZERO]] {
   // CHECK-NEXT: } else {
   %c5 = arith.constant 5 : index
   %c0 = arith.constant 0 : index
