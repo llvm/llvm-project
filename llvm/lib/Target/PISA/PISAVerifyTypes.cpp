@@ -63,15 +63,15 @@ bool PISAVerifyTypes::runOnMachineFunction(MachineFunction &MF) {
   assert(LLT::getUseExtended() &&
          "PISAVerifyTypes only works with extended LLT");
   // verify that we do not have any scalar types
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
       if (!MI.isPreISelOpcode())
         continue;
       for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
-        auto &MO = MI.getOperand(I);
+        MachineOperand &MO = MI.getOperand(I);
         if (!MO.isReg())
           continue;
-        auto RegTy = MF.getRegInfo().getType(MO.getReg());
+        LLT RegTy = MF.getRegInfo().getType(MO.getReg());
         if (RegTy.getScalarType().getKind() == LLT::Kind::ANY_SCALAR)
           MI.emitGenericError("use of scalar types in " +
                               MI.getMF()->getName() +

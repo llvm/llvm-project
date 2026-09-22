@@ -93,84 +93,86 @@ int PISAOptimizeSubregAccess::getCombineSubreg(unsigned RegSize,
 }
 
 bool PISAOptimizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
-  auto &ST = MF.getSubtarget<PISASubtarget>();
-  auto *TII = ST.getInstrInfo();
-  auto *TRI = ST.getRegisterInfo();
-  auto &MRI = MF.getRegInfo();
+  const PISASubtarget &ST = MF.getSubtarget<PISASubtarget>();
+  const PISAInstrInfo *TII = ST.getInstrInfo();
+  const PISARegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   bool Changed = false;
   SmallVector<MachineInstr *> DeleteMIs;
   MachineInstr *LastMI = nullptr;
-  for (auto &MBB : MF) {
+  for (MachineBasicBlock &MBB : MF) {
     LastMI = nullptr;
-    for (auto &MI : MBB) {
+    for (MachineInstr &MI : MBB) {
       if (!LastMI || !MI.isCopy() || !LastMI->isCopy()) {
         LastMI = &MI;
         continue;
       }
-      auto &Dst = MI.getOperand(0);
-      auto DstReg = Dst.getReg();
-      auto DstSubreg = Dst.getSubReg();
+      MachineOperand &Dst = MI.getOperand(0);
+      Register DstReg = Dst.getReg();
+      unsigned DstSubreg = Dst.getSubReg();
       if (!(DstReg.isVirtual() && DstSubreg)) {
         LastMI = &MI;
         continue;
       }
-      auto LDst = LastMI->getOperand(0);
-      auto LDstReg = LDst.getReg();
-      auto LDstSubreg = LDst.getSubReg();
+      const MachineOperand &LDst = LastMI->getOperand(0);
+      Register LDstReg = LDst.getReg();
+      unsigned LDstSubreg = LDst.getSubReg();
       if (!(LDstReg.isVirtual() && LDstSubreg && (LDstReg == DstReg))) {
         LastMI = &MI;
         continue;
       }
-      auto *DstRC =
+      const TargetRegisterClass *DstRC =
           TRI->getSubRegisterClass(MRI.getRegClass(DstReg), DstSubreg);
-      auto *LDstRC =
+      const TargetRegisterClass *LDstRC =
           TRI->getSubRegisterClass(MRI.getRegClass(LDstReg), LDstSubreg);
       if (!DstRC || !LDstRC) {
         LastMI = &MI;
         continue;
       }
-      auto DstRegSize = TRI->getRegSizeInBits(*MRI.getRegClass(DstReg));
-      auto DstSubRegSize = TRI->getSubRegIdxSize(DstSubreg);
-      auto LDstSubRegSize = TRI->getSubRegIdxSize(LDstSubreg);
+      TypeSize DstRegSize = TRI->getRegSizeInBits(*MRI.getRegClass(DstReg));
+      unsigned DstSubRegSize = TRI->getSubRegIdxSize(DstSubreg);
+      unsigned LDstSubRegSize = TRI->getSubRegIdxSize(LDstSubreg);
       if ((DstSubRegSize + LDstSubRegSize) > 128) { // exceed max 'mov' size
         LastMI = &MI;
         continue;
       }
-      auto NewDstIdx =
+      int NewDstIdx =
           getCombineSubreg(DstRegSize, DstSubRegSize, LDstSubreg, DstSubreg);
       if (NewDstIdx >= 0) {
-        auto &Src = MI.getOperand(1);
-        auto SrcReg = Src.getReg();
-        auto SrcSubreg = Src.getSubReg();
+        MachineOperand &Src = MI.getOperand(1);
+        Register SrcReg = Src.getReg();
+        unsigned SrcSubreg = Src.getSubReg();
         if (!(SrcReg.isVirtual() && SrcSubreg)) {
           LastMI = &MI;
           continue;
         }
-        auto LSrc = LastMI->getOperand(1);
-        auto LSrcReg = LSrc.getReg();
-        auto LSrcSubreg = LSrc.getSubReg();
+        const MachineOperand &LSrc = LastMI->getOperand(1);
+        Register LSrcReg = LSrc.getReg();
+        unsigned LSrcSubreg = LSrc.getSubReg();
         if (!(LSrcReg.isVirtual() && LSrcSubreg && (LSrcReg == SrcReg))) {
           LastMI = &MI;
           continue;
         }
-        auto *SrcRC =
+        const TargetRegisterClass *SrcRC =
             TRI->getSubRegisterClass(MRI.getRegClass(SrcReg), SrcSubreg);
         if (!SrcRC) {
           LastMI = &MI;
           continue;
         }
-        auto SrcRegSize = TRI->getRegSizeInBits(*MRI.getRegClass(SrcReg));
-        auto SrcSubRegSize = TRI->getSubRegIdxSize(SrcSubreg);
-        auto NewSrcIdx =
+        TypeSize SrcRegSize = TRI->getRegSizeInBits(*MRI.getRegClass(SrcReg));
+        unsigned SrcSubRegSize = TRI->getSubRegIdxSize(SrcSubreg);
+        int NewSrcIdx =
             getCombineSubreg(SrcRegSize, SrcSubRegSize, LSrcSubreg, SrcSubreg);
         if (NewSrcIdx >= 0) {
           DebugLoc DL = MI.getDebugLoc();
-          auto NewMI =
+          MachineInstrBuilder NewMI =
               BuildMI(*MI.getParent(), MI, DL, TII->get(TargetOpcode::COPY));
-          auto DstUndef = NewDstIdx == 0 ? RegState::NoFlags : RegState::Undef;
-          auto SrcUndef = (Src.isUndef() && LSrc.isUndef()) ? RegState::Undef
-                                                            : RegState::NoFlags;
+          RegState DstUndef =
+              NewDstIdx == 0 ? RegState::NoFlags : RegState::Undef;
+          RegState SrcUndef = (Src.isUndef() && LSrc.isUndef())
+                                  ? RegState::Undef
+                                  : RegState::NoFlags;
           NewMI.addDef(DstReg, DstUndef, NewDstIdx);
           NewMI.addReg(SrcReg, SrcUndef, NewSrcIdx);
           DeleteMIs.push_back(LastMI);
@@ -183,7 +185,7 @@ bool PISAOptimizeSubregAccess::runOnMachineFunction(MachineFunction &MF) {
       LastMI = &MI;
     }
   }
-  for (auto *MI : DeleteMIs)
+  for (MachineInstr *MI : DeleteMIs)
     MI->eraseFromParent();
   return Changed;
 }

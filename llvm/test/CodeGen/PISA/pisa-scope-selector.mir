@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=pisa-scope-selector -verify-machineinstrs \
+# RUN: llc -mtriple=pisa -run-pass=pisa-scope-selector -verify-machineinstrs \
 # RUN:     -o - %s | FileCheck %s
 
 # Test 1: an atomic with scope already set to workgroup (value 2) must not be
