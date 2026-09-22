@@ -1515,8 +1515,8 @@ void VPlanTransforms::addMemoryRuntimeChecks(
       VPValue *Start = Expander.expand(CG->Low);
       VPValue *End = Expander.expand(CG->High);
       if (CG->NeedsFreeze) {
-        Start = Builder.createScalarFreeze(Start, DL);
-        End = Builder.createScalarFreeze(End, DL);
+        Start = Builder.createFreeze(Start, DL);
+        End = Builder.createFreeze(End, DL);
       }
       GroupToBounds.try_emplace(CG, Start, End);
     }
