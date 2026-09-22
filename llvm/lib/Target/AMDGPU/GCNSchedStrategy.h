@@ -60,10 +60,6 @@ protected:
                      unsigned VGPRPressure, unsigned AGPRPressure,
                      bool IsBottomUp);
 
-  /// Estimate how many cycles \p SU must wait due to structural hazards at the
-  /// current boundary cycle. Returns zero when no stall is required.
-  unsigned getStructuralStallCycles(SchedBoundary &Zone, SUnit *SU) const;
-
   /// Evaluates instructions in the pending queue using a subset of scheduling
   /// heuristics.
   ///
@@ -612,14 +608,6 @@ private:
     /// one target region.
     bool maybeBeneficial(const BitVector &TargetRegions,
                          ArrayRef<GCNRPTarget> RPTargets) const;
-
-    /// Rematerializes the candidate and returns the new MI. This removes the
-    /// rematerialized register from live-in/out lists in the \p DAG and updates
-    /// \p RPTargets in all affected regions. Regions in which RP savings are
-    /// not guaranteed are set in \p RecomputeRP.
-    MachineInstr *rematerialize(BitVector &RecomputeRP,
-                                SmallVectorImpl<GCNRPTarget> &RPTargets,
-                                GCNScheduleDAGMILive &DAG) const;
 
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.
     /// \p RegionFreq indicates the frequency of each region.
