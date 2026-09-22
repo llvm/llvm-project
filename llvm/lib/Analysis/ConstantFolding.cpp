@@ -1779,6 +1779,7 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_partial_reduce_add:
   case Intrinsic::vector_extract:
   case Intrinsic::vector_insert:
   case Intrinsic::vector_interleave2:
@@ -1803,6 +1804,9 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_and:
   case Intrinsic::amdgcn_wave_reduce_or:
+  case Intrinsic::amdgcn_wave_reduce_xor:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub:
   case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::amdgcn_s_quadmask:
   case Intrinsic::amdgcn_s_bitreplicate:
@@ -2413,6 +2417,48 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   }
 
   return ConstantInt::get(Op->getContext(), Acc);
+}
+
+/// Fold a vector partial reduction add using the deterministic grouping
+/// chosen by TargetLowering::expandPartialReduceMLA. Although the
+/// LangRef leaves the grouping unspecified, input element I is accumulated
+/// into result lane I % NumAccElts, with each accumulator element seeding
+/// its corresponding result lane. Returns nullptr if any element cannot be
+/// folded.
+static Constant *constantFoldVectorPartialReduceAdd(Constant *Acc,
+                                                    Constant *Input,
+                                                    const DataLayout &DL) {
+  auto *AccTy = cast<FixedVectorType>(Acc->getType());
+  // A fixed result type does not guarantee a fixed input type.
+  auto *InputTy = dyn_cast<FixedVectorType>(Input->getType());
+  if (!InputTy)
+    return nullptr;
+
+  unsigned NumAccElts = AccTy->getNumElements();
+  unsigned NumInputElts = InputTy->getNumElements();
+
+  SmallVector<Constant *> ResultElts(NumAccElts);
+  for (unsigned I = 0; I < NumAccElts; ++I) {
+    ResultElts[I] = Acc->getAggregateElement(I);
+    if (!ResultElts[I])
+      return nullptr;
+  }
+
+  for (unsigned I = 0; I < NumInputElts; ++I) {
+    Constant *InputElt = Input->getAggregateElement(I);
+    if (!InputElt)
+      return nullptr;
+
+    unsigned ResultIdx = I % NumAccElts;
+    Constant *Folded = ConstantFoldBinaryOpOperands(
+        Instruction::Add, ResultElts[ResultIdx], InputElt, DL);
+    if (!Folded)
+      return nullptr;
+
+    ResultElts[ResultIdx] = Folded;
+  }
+
+  return ConstantVector::get(ResultElts);
 }
 
 /// Attempt to fold an SSE floating point to integer conversion of a constant
@@ -3908,6 +3954,13 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
       return ConstantInt::get(Ty, APIntOps::mulhu(*C0, *C1));
+    case Intrinsic::amdgcn_wave_reduce_add:
+    case Intrinsic::amdgcn_wave_reduce_sub:
+    case Intrinsic::amdgcn_wave_reduce_xor: {
+      if (C0 && C0->isZero())
+        return Constant::getNullValue(Ty);
+      return nullptr;
+    }
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_umax:
     case Intrinsic::amdgcn_wave_reduce_max:
@@ -4464,6 +4517,8 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     return ConstantVector::get(Result);
   }
+  case Intrinsic::vector_partial_reduce_add:
+    return constantFoldVectorPartialReduceAdd(Operands[0], Operands[1], DL);
   case Intrinsic::wasm_dot: {
     unsigned NumElements =
         cast<FixedVectorType>(Operands[0]->getType())->getNumElements();

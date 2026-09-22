@@ -181,9 +181,6 @@ public:
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (isAllocInit(E))
           return;
-        auto SelectorName = E->getSelector().getNameForSlot(0);
-        if (SelectorName == "isEqual" || SelectorName == "isEqualToString")
-          return;
         reportBugOnReceiver(E->getMethodDecl(), Receiver, D);
       }
     }
@@ -255,7 +252,10 @@ public:
         [&](const clang::Decl *D) {
           return Model->isSafeDecl(D, BR->getSourceManager());
         },
-        [&](const clang::Expr *ArgOrigin, bool IsSafe) {
+        // A temporary on the path to an argument's origin is safe: the full
+        // expression does not end until the call returns.
+        [&](const clang::Expr *ArgOrigin, bool IsSafe,
+            bool /*OriginDependsOnFullExpressionTemporary*/) {
           if (IsSafe)
             return true;
           if (isNullPtr(ArgOrigin))
