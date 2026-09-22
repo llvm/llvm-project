@@ -59,6 +59,10 @@ public:
   void cacheKernel(ContextImpl *Context, ol_device_handle_t Device,
                    ol_symbol_handle_t Kernel);
 
+  /// Removes every cache entry keyed by \p Context, regardless of device.
+  /// Called by ContextImpl when it is being destroyed.
+  void removeContext(ContextImpl *Context);
+
 private:
   std::string_view MName;
   DeviceImageManager &MDeviceImage;

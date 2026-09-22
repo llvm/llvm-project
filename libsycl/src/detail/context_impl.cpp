@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <detail/context_impl.hpp>
+#include <detail/device_kernel_info.hpp>
 #include <detail/platform_impl.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -40,6 +41,14 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
 
 ContextImpl::~ContextImpl() {
   assert(MOffloadContext && "Context must be created in ctor");
+  // Drop this context's entries from every DeviceKernelInfo cache that holds
+  // one, before the programs those entries point into are destroyed below.
+  {
+    std::lock_guard<std::mutex> Guard(MTrackedKernelInfosMutex);
+    for (DeviceKernelInfo *Info : MTrackedKernelInfos) {
+      Info->removeContext(this);
+    }
+  }
   // liboffload does not reference-count contexts: every resource tied to a
   // context must be released before olDestroyContext, otherwise it is left in
   // an undefined state. MPrograms is a member, so it would be destroyed only
@@ -99,6 +108,11 @@ void ContextImpl::releaseProgramsForImage(
 void ContextImpl::releaseAllPrograms() {
   std::lock_guard<std::mutex> Guard(MProgramCacheMutex);
   MPrograms.clear();
+}
+
+void ContextImpl::trackKernelInfoCache(DeviceKernelInfo *Info) {
+  std::lock_guard<std::mutex> Guard(MTrackedKernelInfosMutex);
+  MTrackedKernelInfos.insert(Info);
 }
 
 } // namespace detail
