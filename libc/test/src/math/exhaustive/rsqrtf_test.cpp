@@ -10,8 +10,6 @@
 #include "src/math/rsqrtf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcRsqrtfTest = LIBC_NAMESPACE::testing::FPTest<float>;
-
 using LlvmLibcRsqrtfExhaustiveTest =
     LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Rsqrt,
                                       LIBC_NAMESPACE::rsqrtf>;

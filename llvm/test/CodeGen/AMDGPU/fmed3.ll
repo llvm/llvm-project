@@ -5692,9 +5692,10 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
 ; GFX11-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f32_e32 v4, v1, v2
-; GFX11-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
+; GFX11-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX11-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX11-NEXT:    v_minmax_f32 v1, v1, v2, v4
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -5894,8 +5895,9 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; GFX11-SDAG-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_dual_max_f32 v3, v3, v3 :: v_dual_max_f32 v4, v1, v2
+; GFX11-SDAG-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_max_f32_e32 v4, v1, v2
 ; GFX11-SDAG-NEXT:    v_min_f32_e32 v3, v4, v3
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_minmax_f32 v1, v1, v2, v3
@@ -5918,9 +5920,10 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use1(ptr addrspace(1)
 ; GFX11-GISEL-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_min_f32_e32 v4, v1, v2
-; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX11-GISEL-NEXT:    v_minmax_f32 v2, v1, v2, v4
 ; GFX11-GISEL-NEXT:    global_store_b32 v[0:1], v1, off dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -6330,9 +6333,10 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0(ptr addrspace(1) %out, ptr 
 ; GFX11-GISEL-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_min_f32_e32 v4, v1, v2
-; GFX11-GISEL-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v1, v1, v2
+; GFX11-GISEL-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX11-GISEL-NEXT:    v_minmax_f32 v1, v1, v2, v4
 ; GFX11-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm
@@ -9384,16 +9388,16 @@ define float @med3_fmin_legacy(float %a, float %b) #3 {
   ret float %med
 }
 
-; With no-NaN inputs med3 still forms directly.
-define float @med3_fmin_legacy_nnan(float %a, float %b) #3 {
-; SI-SDAG-LABEL: med3_fmin_legacy_nnan:
+; With no-NaN, no-signed-zero inputs med3 still forms directly.
+define float @med3_fmin_legacy_nnan_nsz(float %a, float %b) #3 {
+; SI-SDAG-LABEL: med3_fmin_legacy_nnan_nsz:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_min_legacy_f32_e32 v0, v0, v1
+; SI-SDAG-NEXT:    v_min_f32_e32 v0, v0, v1
 ; SI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SI-GISEL-LABEL: med3_fmin_legacy_nnan:
+; SI-GISEL-LABEL: med3_fmin_legacy_nnan_nsz:
 ; SI-GISEL:       ; %bb.0:
 ; SI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_min_legacy_f32_e32 v0, v0, v1
@@ -9401,18 +9405,14 @@ define float @med3_fmin_legacy_nnan(float %a, float %b) #3 {
 ; SI-GISEL-NEXT:    v_min_legacy_f32_e64 v0, v0, 4.0
 ; SI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SDAG-LABEL: med3_fmin_legacy_nnan:
+; VI-SDAG-LABEL: med3_fmin_legacy_nnan_nsz:
 ; VI-SDAG:       ; %bb.0:
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; VI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
-; VI-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, 4.0, v0
-; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, 4.0, v0, vcc
+; VI-SDAG-NEXT:    v_min_f32_e32 v0, v0, v1
+; VI-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; VI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-GISEL-LABEL: med3_fmin_legacy_nnan:
+; VI-GISEL-LABEL: med3_fmin_legacy_nnan_nsz:
 ; VI-GISEL:       ; %bb.0:
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
@@ -9423,34 +9423,49 @@ define float @med3_fmin_legacy_nnan(float %a, float %b) #3 {
 ; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 4.0, v0, vcc
 ; VI-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: med3_fmin_legacy_nnan:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
-; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 4.0, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, 4.0, v0, vcc
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-SDAG-LABEL: med3_fmin_legacy_nnan_nsz:
+; GFX9-SDAG:       ; %bb.0:
+; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    v_min_f32_e32 v0, v0, v1
+; GFX9-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: med3_fmin_legacy_nnan:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v1
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
-; GFX11-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 4.0, v0
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 4.0, v0, vcc_lo
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-GISEL-LABEL: med3_fmin_legacy_nnan_nsz:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, 2.0, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GFX9-GISEL-NEXT:    v_cmp_gt_f32_e32 vcc, 4.0, v0
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v0, 4.0, v0, vcc
+; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: med3_fmin_legacy_nnan_nsz:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_min_f32_e32 v0, v0, v1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: med3_fmin_legacy_nnan_nsz:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v1
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v0
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 4.0, v0
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v0, 4.0, v0, vcc_lo
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %cmp0 = fcmp nnan olt float %a, %b
-  %inner = select nnan i1 %cmp0, float %a, float %b
+  %inner = select nnan nsz i1 %cmp0, float %a, float %b
   %cmp1 = fcmp nnan ogt float %inner, 2.0
-  %max = select nnan i1 %cmp1, float %inner, float 2.0
+  %max = select nnan nsz i1 %cmp1, float %inner, float 2.0
   %cmp2 = fcmp nnan olt float %max, 4.0
-  %med = select nnan i1 %cmp2, float %max, float 4.0
+  %med = select nnan nsz i1 %cmp2, float %max, float 4.0
   ret float %med
 }
 

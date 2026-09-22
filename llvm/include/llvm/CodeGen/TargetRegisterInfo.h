@@ -715,14 +715,6 @@ public:
   getCommonSubClass(const TargetRegisterClass *A,
                     const TargetRegisterClass *B) const;
 
-  /// Returns a TargetRegisterClass used for pointer values.
-  /// If a target supports multiple different pointer register classes,
-  /// kind specifies which one is indicated.
-  virtual const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const {
-    llvm_unreachable("Target didn't implement getPointerRegClass!");
-  }
-
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using
   /// a cross register class copy, return the specified RC. Returns NULL if it
@@ -1090,8 +1082,8 @@ public:
       ArrayRef<MCPhysReg> Exceptions = ArrayRef<MCPhysReg>()) const;
 
   virtual const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                   const MachineRegisterInfo &MRI) const {
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const {
     return nullptr;
   }
 

@@ -44,7 +44,7 @@ namespace Fortran::parser {
 // R601 alphanumeric-character -> letter | digit | underscore
 // R603 name -> letter [alphanumeric-character]...
 constexpr auto nonDigitIdChar{letter || otherIdChar};
-constexpr auto rawName{nonDigitIdChar >> many(nonDigitIdChar || digit)};
+constexpr auto rawName{nonDigitIdChar >> skipMany(nonDigitIdChar || digit)};
 TYPE_PARSER(space >> sourced(rawName >> construct<Name>()))
 
 // R608 intrinsic-operator ->

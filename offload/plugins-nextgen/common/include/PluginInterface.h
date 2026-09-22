@@ -288,7 +288,11 @@ private:
             else if constexpr (std::is_same_v<T, std::monostate>) {
               // Do nothing
             } else
-              static_assert(false, "doPrint visit not exhaustive");
+              // Use a type-dependent condition so the assert only fires when
+              // this branch is actually instantiated. GCC < 13 does not
+              // implement CWG2518 and rejects a non-dependent
+              // static_assert(false) even in a discarded constexpr branch.
+              static_assert(!sizeof(T *), "doPrint visit not exhaustive");
           },
           Value);
       llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
@@ -961,6 +965,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  virtual uint32_t getDriverId() const { return 0; }
+
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
 
@@ -983,11 +989,14 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
-  /// Load the binary image into the device and return the target table.
+  /// Load the binary image into the device and return the target table. When
+  /// \p Context is null the plugin's driver-scoped default context is used.
   Expected<DeviceImageTy *> loadBinary(GenericPluginTy &Plugin,
-                                       StringRef TgtImage);
+                                       StringRef TgtImage,
+                                       PluginContextTy *Context);
   virtual Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId) = 0;
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy *Context) = 0;
 
   /// Unload a previously loaded Image from the device
   Error unloadBinary(DeviceImageTy *Image);
@@ -1297,7 +1306,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   virtual Expected<omp_interop_val_t *>
   createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
-    return nullptr;
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
   }
 
   virtual Error releaseInterop(omp_interop_val_t *Interop) {

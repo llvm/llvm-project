@@ -366,7 +366,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI) {
   // Remove all uses of stackified registers to bring the instruction format
-  // into its final stack form used thruout MC, and transition opcodes to
+  // into its final stack form used throughout MC, and transition opcodes to
   // their _S variant.
   // We do this separate from the above code that still may need these
   // registers for e.g. call_indirect signatures.

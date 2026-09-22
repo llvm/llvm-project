@@ -6,13 +6,13 @@
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[VARET:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], i32
-// CHECK-NEXT:    store i32 [[TMP1]], ptr [[VARET]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VARET]], align 4
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int get_int(va_list *args) {
   return va_arg(*args, int);
@@ -20,68 +20,98 @@ int get_int(va_list *args) {
 
 enum RGB { R = 1, G = 2, B = 3 };
 
+// Enums are passed like integers.
 // CHECK-LABEL: define dso_local i32 @get_enum(
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[VARET:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], i32
-// CHECK-NEXT:    store i32 [[TMP1]], ptr [[VARET]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VARET]], align 4
-// CHECK-NEXT:    ret i32 [[TMP2]]
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    ret i32 [[TMP1]]
 //
 enum RGB get_enum(va_list *args) {
   return va_arg(*args, enum RGB);
 }
 
+// long long is passed directly, note how ARGP_CUR is advanced by 8.
+// The read is under-aligned however, the ARGP_CUR is only aligned to a slot.
 // CHECK-LABEL: define dso_local i64 @get_long_long(
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[VARET:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], i64
-// CHECK-NEXT:    store i64 [[TMP1]], ptr [[VARET]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VARET]], align 8
-// CHECK-NEXT:    ret i64 [[TMP2]]
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    ret i64 [[TMP1]]
 //
 long long get_long_long(va_list *args) {
   return va_arg(*args, long long);
 }
 
-struct Foo {
+struct Large {
   long long x;
 };
 
-// CHECK-LABEL: define dso_local void @get_struct(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOO:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// Aggregates are passed indirectly, note how ARGP_CUR is advanced by 4.
+// CHECK-LABEL: define dso_local void @get_struct_long_long(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_LARGE:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], ptr
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[AGG_RESULT]], ptr align 8 [[TMP1]], i32 8, i1 false)
 // CHECK-NEXT:    ret void
 //
-struct Foo get_struct(va_list *args) {
- return va_arg(*args, struct Foo);
+struct Large get_struct_long_long(va_list *args) {
+ return va_arg(*args, struct Large);
 }
 
+struct Tiny {
+  char x;
+};
+
+// CHECK-LABEL: define dso_local void @get_struct_char(
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TINY:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_RESULT]], ptr align 1 [[TMP1]], i32 1, i1 false)
+// CHECK-NEXT:    ret void
+//
+struct Tiny get_struct_char(va_list *args) {
+ return va_arg(*args, struct Tiny);
+}
+
+// long double is passed indirectly, note how ARGP_CUR is advanced by 4.
 // CHECK-LABEL: define dso_local void @get_long_double(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret(fp128) align 8 [[AGG_RESULT:%.*]], ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[VARET:%.*]] = alloca fp128, align 8
 // CHECK-NEXT:    store ptr [[AGG_RESULT]], ptr [[RESULT_PTR]], align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], fp128
-// CHECK-NEXT:    store fp128 [[TMP1]], ptr [[VARET]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load fp128, ptr [[VARET]], align 8
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load fp128, ptr [[TMP1]], align 8
 // CHECK-NEXT:    store fp128 [[TMP2]], ptr [[AGG_RESULT]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load fp128, ptr [[AGG_RESULT]], align 8
 // CHECK-NEXT:    store fp128 [[TMP3]], ptr [[AGG_RESULT]], align 8
@@ -93,15 +123,19 @@ long double get_long_double(va_list *args) {
 
 _Complex char complex_char_sink;
 
+// _Complex char is passed in the right-most bytes of the slot, note the getelementptr with a value of 2.
 // CHECK-LABEL: define dso_local void @get_complex_char(
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], ptr
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 2
 // CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { i8, i8 }, ptr [[TMP1]], i32 0, i32 0
-// CHECK-NEXT:    [[DOTREAL:%.*]] = load i8, ptr [[DOTREALP]], align 1
+// CHECK-NEXT:    [[DOTREAL:%.*]] = load i8, ptr [[DOTREALP]], align 2
 // CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { i8, i8 }, ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    [[DOTIMAG:%.*]] = load i8, ptr [[DOTIMAGP]], align 1
 // CHECK-NEXT:    store i8 [[DOTREAL]], ptr @complex_char_sink, align 1
@@ -114,19 +148,22 @@ void get_complex_char(va_list *args) {
 
 _Complex int complex_int_sink;
 
+// _Complex int is passed directly, note how ARGP_CUR is advanced by 8.
 // CHECK-LABEL: define dso_local void @get_complex_int(
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], ptr
-// CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TMP1]], i32 0, i32 0
-// CHECK-NEXT:    [[DOTREAL:%.*]] = load i32, ptr [[DOTREALP]], align 4
-// CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[TMP1]], i32 0, i32 1
-// CHECK-NEXT:    [[DOTIMAG:%.*]] = load i32, ptr [[DOTIMAGP]], align 4
-// CHECK-NEXT:    store i32 [[DOTREAL]], ptr @complex_int_sink, align 4
-// CHECK-NEXT:    store i32 [[DOTIMAG]], ptr getelementptr inbounds nuw (i8, ptr @complex_int_sink, i32 4), align 4
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_CUR_REALP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[ARGP_CUR]], i32 0, i32 0
+// CHECK-NEXT:    [[ARGP_CUR_REAL:%.*]] = load i32, ptr [[ARGP_CUR_REALP]], align 4
+// CHECK-NEXT:    [[ARGP_CUR_IMAGP:%.*]] = getelementptr inbounds nuw { i32, i32 }, ptr [[ARGP_CUR]], i32 0, i32 1
+// CHECK-NEXT:    [[ARGP_CUR_IMAG:%.*]] = load i32, ptr [[ARGP_CUR_IMAGP]], align 4
+// CHECK-NEXT:    store i32 [[ARGP_CUR_REAL]], ptr @complex_int_sink, align 4
+// CHECK-NEXT:    store i32 [[ARGP_CUR_IMAG]], ptr getelementptr inbounds nuw (i8, ptr @complex_int_sink, i32 4), align 4
 // CHECK-NEXT:    ret void
 //
 void get_complex_int(va_list *args) {
@@ -135,13 +172,17 @@ void get_complex_int(va_list *args) {
 
 _Complex long long complex_long_long_sink;
 
+// _Complex long long is passed indirectly, note how ARGP_CUR is advanced by 4.
 // CHECK-LABEL: define dso_local void @get_complex_long_long(
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], ptr
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
 // CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[DOTREAL:%.*]] = load i64, ptr [[DOTREALP]], align 8
 // CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[TMP1]], i32 0, i32 1
@@ -156,13 +197,17 @@ void get_complex_long_long (va_list *args) {
 
 _Complex long double complex_long_double_sink;
 
+// _Complex long double is passed indirectly, note how ARGP_CUR is advanced by 4.
 // CHECK-LABEL: define dso_local void @get_complex_long_double(
 // CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = va_arg ptr [[TMP0]], ptr
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
 // CHECK-NEXT:    [[DOTREALP:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[DOTREAL:%.*]] = load fp128, ptr [[DOTREALP]], align 8
 // CHECK-NEXT:    [[DOTIMAGP:%.*]] = getelementptr inbounds nuw { fp128, fp128 }, ptr [[TMP1]], i32 0, i32 1
@@ -173,4 +218,153 @@ _Complex long double complex_long_double_sink;
 //
 void get_complex_long_double(va_list *args) {
   complex_long_double_sink = va_arg(*args, _Complex long double);
+}
+
+typedef float float2 __attribute__((vector_size(8)));
+float2 float2_sink;
+
+// Floating-point vectors are passed indirectly, note how ARGP_CUR is advanced
+// by 4.
+// CHECK-LABEL: define dso_local void @get_float2(
+// CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
+// CHECK-NEXT:    store <2 x float> [[TMP2]], ptr @float2_sink, align 8
+// CHECK-NEXT:    ret void
+//
+void get_float2(va_list *args) {
+  float2_sink = va_arg(*args, float2);
+}
+
+typedef int int4 __attribute__((vector_size(16)));
+int4 int4_sink;
+
+// Integer vectors larger than 8 bytes are also passed indirectly.
+// CHECK-LABEL: define dso_local void @get_int4(
+// CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 16
+// CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr @int4_sink, align 16
+// CHECK-NEXT:    ret void
+//
+void get_int4(va_list *args) {
+  int4_sink = va_arg(*args, int4);
+}
+
+extern void variadic_vector_sink(int, ...);
+
+// Verify that call lowering uses the same indirect convention as va_arg.
+// CHECK-LABEL: define dso_local void @pass_float2(
+// CHECK-SAME: ptr noundef byval(<2 x float>) align 8 [[TMP0:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <2 x float>, align 8
+// CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca <2 x float>, align 8
+// CHECK-NEXT:    [[VALUE:%.*]] = load <2 x float>, ptr [[TMP0]], align 8
+// CHECK-NEXT:    store <2 x float> [[VALUE]], ptr [[VALUE_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[VALUE_ADDR]], align 8
+// CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[BYVAL_TEMP]], align 8
+// CHECK-NEXT:    call void (i32, ...) @variadic_vector_sink(i32 noundef 0, ptr noundef byval(<2 x float>) align 8 [[BYVAL_TEMP]])
+// CHECK-NEXT:    ret void
+//
+void pass_float2(float2 value) {
+  variadic_vector_sink(0, value);
+}
+
+// CHECK-LABEL: define dso_local void @pass_int4(
+// CHECK-SAME: ptr noundef byval(<4 x i32>) align 16 [[TMP0:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[VALUE:%.*]] = load <4 x i32>, ptr [[TMP0]], align 16
+// CHECK-NEXT:    store <4 x i32> [[VALUE]], ptr [[VALUE_ADDR]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[VALUE_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[BYVAL_TEMP]], align 16
+// CHECK-NEXT:    call void (i32, ...) @variadic_vector_sink(i32 noundef 0, ptr noundef byval(<4 x i32>) align 16 [[BYVAL_TEMP]])
+// CHECK-NEXT:    ret void
+//
+void pass_int4(int4 value) {
+  variadic_vector_sink(0, value);
+}
+
+typedef int int2 __attribute__((vector_size(8)));
+int2 int2_sink;
+
+// Integer vectors up to 8 bytes remain direct.
+// CHECK-LABEL: define dso_local void @get_int2(
+// CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr @int2_sink, align 8
+// CHECK-NEXT:    ret void
+//
+void get_int2(va_list *args) {
+  int2_sink = va_arg(*args, int2);
+}
+
+// CHECK-LABEL: define dso_local void @pass_int2(
+// CHECK-SAME: <2 x i32> noundef [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <2 x i32>, align 8
+// CHECK-NEXT:    store <2 x i32> [[VALUE]], ptr [[VALUE_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[VALUE_ADDR]], align 8
+// CHECK-NEXT:    call void (i32, ...) @variadic_vector_sink(i32 noundef 0, <2 x i32> noundef [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+void pass_int2(int2 value) {
+  variadic_vector_sink(0, value);
+}
+
+typedef signed char char2 __attribute__((vector_size(2)));
+char2 char2_sink;
+
+// Sub-slot integer vectors remain direct.
+// CHECK-LABEL: define dso_local void @get_char2(
+// CHECK-SAME: ptr noundef [[ARGS:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARGS_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[ARGS]], ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGS_ADDR]], align 4
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[TMP0]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 2
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[TMP1]], align 2
+// CHECK-NEXT:    store <2 x i8> [[TMP2]], ptr @char2_sink, align 2
+// CHECK-NEXT:    ret void
+//
+void get_char2(va_list *args) {
+  char2_sink = va_arg(*args, char2);
+}
+
+// CHECK-LABEL: define dso_local void @pass_char2(
+// CHECK-SAME: <2 x i8> noundef [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <2 x i8>, align 2
+// CHECK-NEXT:    store <2 x i8> [[VALUE]], ptr [[VALUE_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[VALUE_ADDR]], align 2
+// CHECK-NEXT:    call void (i32, ...) @variadic_vector_sink(i32 noundef 0, <2 x i8> noundef [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+void pass_char2(char2 value) {
+  variadic_vector_sink(0, value);
 }

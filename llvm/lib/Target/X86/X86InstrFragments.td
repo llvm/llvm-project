@@ -563,6 +563,11 @@ def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 def i64timmSExt32 : TImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 
+def GetLo32XForm : SDNodeXForm<imm, [{
+  // Transformation function: get the low 32 bits.
+  return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
+}]>;
+
 def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
   return isSExtAbsoluteSymbolRef(8, N);
 }]>;
@@ -837,22 +842,9 @@ def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
 }]>;
 
 // Any instruction that defines a 32-bit result leaves the high half of the
-// register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
-// be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
-// anything about the upper 32 bits, they're probably just qualifying a
-// CopyFromReg. FREEZE may be coming from a a truncate. BitScan fall through
-// values may not zero the upper bits correctly.
-// Any other 32-bit operation will zero-extend up to 64 bits.
+// register zeroed, so a zero-extension to 64 bits is free.
 def def32 : PatLeaf<(i32 GR32:$src), [{
-  return N->getOpcode() != ISD::TRUNCATE &&
-         N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
-         N->getOpcode() != ISD::CopyFromReg &&
-         N->getOpcode() != ISD::AssertSext &&
-         N->getOpcode() != ISD::AssertZext &&
-         N->getOpcode() != ISD::AssertAlign &&
-         N->getOpcode() != ISD::FREEZE &&
-         !((N->getOpcode() == X86ISD::BSF || N->getOpcode() == X86ISD::BSR) &&
-           (!N->getOperand(0).isUndef() && !isa<ConstantSDNode>(N->getOperand(0))));
+  return isDef32(N);
 }]>;
 
 def shiftMask8 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{

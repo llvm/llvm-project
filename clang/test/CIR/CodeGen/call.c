@@ -75,14 +75,13 @@ void f7(void) {
 // CIR:         %[[B:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_Big>, !rec_Big
 // CIR-NEXT:    %[[SLOT:.+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    cir.store %[[B]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
-// CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> ()
+// CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f7(){{.*}} {
 // LLVM:         %[[B:.+]] = load %struct.Big, ptr %{{.+}}, align 4
 // LLVM-NEXT:    %[[SLOT:.+]] = alloca %struct.Big, align 8
 // LLVM-NEXT:    store %struct.Big %[[B]], ptr %[[SLOT]], align 4
-// TODO(cir): CIR adds noalias to a byval argument where classic does not.
-// LLVM-NEXT:    call void @f5(ptr noalias noundef byval(%struct.Big) align 8 %[[SLOT]])
+// LLVM-NEXT:    call void @f5(ptr noundef byval(%struct.Big) align 8 %[[SLOT]])
 
 // OGCG-LABEL: define{{.*}} void @f7() #0 {
 // OGCG:         %[[B:.+]] = alloca %struct.Big, align 8
@@ -151,9 +150,9 @@ int f12(void) {
 
 // CIR-LABEL: cir.func{{.*}} @f12() -> !s32i{{.*}} {
 // CIR:         %[[A:.+]] = cir.const #cir.int<1> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) side_effect(pure) : (!s32i {llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) nounwind willreturn {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} : (!s32i {llvm.noundef}) -> !s32i
 // CIR-NEXT:    %[[B:.+]] = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) side_effect(const) : (!s32i {llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) nounwind willreturn {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!s32i {llvm.noundef}) -> !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @f12(){{.*}}
 // LLVM:         %{{.+}} = call i32 @f10(i32 noundef 1) #[[ATTR0:.+]]

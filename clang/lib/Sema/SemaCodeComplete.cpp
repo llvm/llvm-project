@@ -2111,6 +2111,7 @@ static PrintingPolicy getCompletionPrintingPolicy(const ASTContext &Context,
   Policy.SuppressStrongLifetime = true;
   Policy.SuppressUnwrittenScope = true;
   Policy.CleanUglifiedParameters = true;
+  Policy.ResolveDecltype = true;
   return Policy;
 }
 
@@ -5992,7 +5993,8 @@ private:
   static QualType deduceType(const TypeConstraint &T) {
     // Assume a same_as<T> return type constraint is std::same_as or equivalent.
     // In this case the return type is T.
-    DeclarationName DN = T.getNamedConcept().getAsTemplateDecl()->getDeclName();
+    DeclarationName DN =
+        T.getConceptReference()->getConceptNameInfo().getName();
     if (DN.isIdentifier() && DN.getAsIdentifierInfo()->isStr("same_as"))
       if (const auto *Args = T.getTemplateArgsAsWritten())
         if (Args->getNumTemplateArgs() == 1) {

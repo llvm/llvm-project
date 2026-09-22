@@ -9,7 +9,10 @@
 #include "../lldb-python.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/ThreadPlan.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "../SWIGPythonBridge.h"
@@ -36,18 +39,16 @@ ScriptedStackFrameRecognizerPythonInterface::CreatePluginObject(
 lldb::ValueObjectListSP
 ScriptedStackFrameRecognizerPythonInterface::GetRecognizedArguments(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  return Dispatch<lldb::ValueObjectListSP>("get_recognized_arguments", error,
-                                           frame_sp);
+  return LogAndDefault(
+      Dispatch<lldb::ValueObjectListSP>("get_recognized_arguments", frame_sp),
+      LLVM_PRETTY_FUNCTION);
 }
 
 bool ScriptedStackFrameRecognizerPythonInterface::ShouldHide(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("should_hide", error, frame_sp);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("should_hide", frame_sp), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
 
   return obj->GetBooleanValue();
@@ -56,26 +57,63 @@ bool ScriptedStackFrameRecognizerPythonInterface::ShouldHide(
 lldb::StackFrameSP
 ScriptedStackFrameRecognizerPythonInterface::SelectMostRelevantFrame(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  return Dispatch<lldb::StackFrameSP>("select_most_relevant_frame", error,
-                                      frame_sp);
+  return LogAndDefault(
+      Dispatch<lldb::StackFrameSP>("select_most_relevant_frame", frame_sp),
+      LLVM_PRETTY_FUNCTION);
 }
 
 lldb::ValueObjectSP ScriptedStackFrameRecognizerPythonInterface::GetException(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  return Dispatch<lldb::ValueObjectSP>("get_exception", error, frame_sp);
+  return LogAndDefault(Dispatch<lldb::ValueObjectSP>("get_exception", frame_sp),
+                       LLVM_PRETTY_FUNCTION);
 }
 
 std::string ScriptedStackFrameRecognizerPythonInterface::GetStopDescription(
     lldb::StackFrameSP frame_sp) {
-  Status error;
-  StructuredData::ObjectSP obj =
-      Dispatch("get_stop_description", error, frame_sp);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("get_stop_description", frame_sp), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return "";
+
   return obj->GetStringValue().str();
+}
+
+lldb::ThreadPlanSP
+ScriptedStackFrameRecognizerPythonInterface::GetStepThroughPlan(
+    lldb::ThreadSP thread_sp) {
+  StructuredData::DictionarySP dict_sp =
+      LogAndDefault(Dispatch<StructuredData::DictionarySP>(
+                        "get_step_through_plan", thread_sp),
+                    LLVM_PRETTY_FUNCTION);
+
+  // The return value is an StructuredData::Dictionary with the class name and
+  // the extra args for the call:
+  if (!dict_sp || !dict_sp->IsValid())
+    return {};
+
+  StructuredData::ObjectSP obj = dict_sp->GetValueForKey("class_name");
+  if (!obj)
+    return {};
+
+  llvm::StringRef class_string = obj->GetStringValue();
+  if (class_string.empty())
+    return {};
+
+  // Look for extra args, this is optional:
+  StructuredData::Dictionary *extra_args_ptr = nullptr;
+  StructuredData::DictionarySP extra_args_sp;
+  if (dict_sp->GetValueForKeyAsDictionary("extra_args", extra_args_ptr))
+    extra_args_sp = std::static_pointer_cast<StructuredData::Dictionary>(
+        extra_args_ptr->shared_from_this());
+
+  // Now make a new thread plan for stepping using the provided class name and
+  // extra args.
+  ScriptedMetadata plan_metadata(class_string, extra_args_sp);
+  ThreadPlanSP step_through_plan_sp(
+      new ScriptedThreadPlan(*thread_sp.get(), plan_metadata));
+  step_through_plan_sp->SetStopOthers(true);
+
+  return step_through_plan_sp;
 }
 
 void ScriptedStackFrameRecognizerPythonInterface::Initialize() {
