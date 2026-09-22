@@ -1412,9 +1412,9 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
   {
     AttributeList AL;
     AL = AL.addParamAttribute(M.getContext(), 0, Attribute::ZExt);
-    DFSanMemShadowOriginConditionalExchangeFn =
-      Mod->getOrInsertFunction("__dfsan_mem_shadow_origin_conditional_exchange",
-                               DFSanMemShadowOriginConditionalExchangeFnTy, AL);
+    DFSanMemShadowOriginConditionalExchangeFn = Mod->getOrInsertFunction(
+        "__dfsan_mem_shadow_origin_conditional_exchange",
+        DFSanMemShadowOriginConditionalExchangeFnTy, AL);
   }
 
   {
@@ -3197,13 +3197,13 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
     for (unsigned I = 0; I < FT->getNumParams(); ++I) {
       AttrBuilder AttrB(CI->getContext(), F.getAttributes().getParamAttrs(I));
       if (AttrB.hasAttributes())
-        CombinedAttrs = CombinedAttrs.addParamAttributes(CI->getContext(), I,
-                                                         AttrB);
+        CombinedAttrs =
+            CombinedAttrs.addParamAttributes(CI->getContext(), I, AttrB);
     }
     CallInst *CustomCI = IRB.CreateCall(CustomF, Args);
     CustomCI->setCallingConv(CI->getCallingConv());
-    CustomCI->setAttributes(transformFunctionAttributes(
-        CustomFn, CI->getContext(), CombinedAttrs));
+    CustomCI->setAttributes(
+        transformFunctionAttributes(CustomFn, CI->getContext(), CombinedAttrs));
 
     // Update the parameter attributes of the custom call instruction to
     // zero extend the shadow parameters. This is required for targets
@@ -3368,10 +3368,10 @@ void DFSanVisitor::visitLibAtomicCompareExchange(CallBase &CB) {
   // If original call returned true, copy Desired to Target.
   // If original call returned false, copy Target to Expected.
   CallInst *CI = NextIRB.CreateCall(
-                     DFSF.DFS.DFSanMemShadowOriginConditionalExchangeFn,
-                     {NextIRB.CreateIntCast(&CB, NextIRB.getInt8Ty(), false),
-                      TargetPtr, ExpectedPtr, DesiredPtr,
-                      NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
+      DFSF.DFS.DFSanMemShadowOriginConditionalExchangeFn,
+      {NextIRB.CreateIntCast(&CB, NextIRB.getInt8Ty(), false), TargetPtr,
+       ExpectedPtr, DesiredPtr,
+       NextIRB.CreateIntCast(Size, DFSF.DFS.IntptrTy, false)});
   CI->addParamAttr(0, Attribute::ZExt);
 }
 
