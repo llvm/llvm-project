@@ -270,30 +270,28 @@ class BreakpointConditionsTestCase(TestBase):
         """Test evaluating breakpoint conditions with Data Inspection Language."""
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-        self.runCmd(
-            "settings set target.experimental.use-DIL-for-breakpoint-conditions true"
-        )
 
-        def break_on_symbol_with_condition(symbol, condition):
+        def break_on_symbol_with_condition(symbol, condition, mode):
             lldbutil.run_break_set_by_symbol(
                 self,
                 symbol,
-                extra_options=" -c '{}' -Y c++".format(condition),
+                extra_options=" -c '{}' -Z {} -Y C++".format(condition, mode),
                 num_expected_locations=1,
                 sym_exact=True,
             )
 
-        # Create a breakpoint with a condition that can be evaluated by DIL.
-        break_on_symbol_with_condition("a", "val == 1")
+        # Create a breakpoint with a valid condition.
+        break_on_symbol_with_condition("a", "val == 1", "dwim")
         # Create a breakpoint with a condition where DIL fails during lexing.
-        break_on_symbol_with_condition("b", "val # 1")
+        break_on_symbol_with_condition("b", "val # 1", "dwim")
         # Create a breakpoint with a condition where DIL fails during parsing.
-        break_on_symbol_with_condition("b", "val == ?")
+        break_on_symbol_with_condition("b", "val == ?", "dwim")
         # Create a breakpoint with a condition where DIL fails during evaluating.
-        break_on_symbol_with_condition("b", "val == no_such_variable")
-        # Create a breakpoint with a condition where DIL fails during evaluating
-        # and successfully falls back to UserExpression.
-        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)")
+        break_on_symbol_with_condition("b", "val == no_such_variable", "dwim")
+        # Create a breakpoint with a valid condition where DIL fails during evaluating.
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)", "dil")
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)", "expr")
+        break_on_symbol_with_condition("c", "val == static_cast<int>(1.0)", "dwim")
 
         # Enable logging
         log_file = self.getBuildArtifact("log-file.txt")
@@ -320,16 +318,24 @@ class BreakpointConditionsTestCase(TestBase):
         ## the evaluation falls back to UserExpression, which should also fail.
         ## condition: "val # 1"
         # CHECK: Lexing condition with DIL failed
-        # CHECK: Error evaluating condition
+        # CHECK: error: <user expression
         ## condition: "val == ?"
         # CHECK: Parsing condition with DIL failed
-        # CHECK: Error evaluating condition
+        # CHECK: error: <user expression
         ## condition: "val == no_such_variable"
         # CHECK: DIL successfully parsed the condition
         # CHECK: Evaluating condition with DIL failed
-        # CHECK: Error evaluating condition
+        # CHECK: error: <user expression
 
-        ## Check that when DIL fails evaluating at breakpoint "c",
+        ## Check that when DIL fails evaluating at breakpoint "c" with "dil" mode,
+        ## the evaluation does not fall back to UserExpression.
+        # CHECK: Evaluating condition with DIL failed
+        # CHECK: Error evaluating condition
+        ## Check that the breakpoint "c" with "expr" mode was not attempted by DIL
+        ## and was successfully evaluated by UserExpression.
+        # CHECK-NOT: DIL
+        # CHECK: Condition successfully evaluated by UserExpression, result is true
+        ## Check that when DIL fails evaluating at breakpoint "c" with "dwim" mode,
         ## the evaluation falls back to UserExpression and succeeds.
         # CHECK: DIL successfully parsed the condition: val == static_cast<int>(1.0)
         # CHECK: Evaluating condition with DIL failed
