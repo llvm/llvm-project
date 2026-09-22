@@ -1,6 +1,6 @@
 # REQUIRES: asserts
-# RUN: llc -march=pisa -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -march=pisa -run-pass=instruction-select -debug-only=pisa-isel %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRACE
+# RUN: llc -mtriple=pisa -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=instruction-select -debug-only=pisa-isel %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRACE
 
 # Selecting a G_ANYEXT (i32 -> i64) drives the generated PISA match table. This
 # test pins down two things at once:
@@ -16,9 +16,6 @@
 #      table switching on the incoming opcode and then, on the matching rule,
 #      mutating the opcode in place and constraining the selected operands.
 
---- |
-  define i64 @sel_debug_trace(i32 %0) { ret i64 0 }
-...
 ---
 name:            sel_debug_trace
 legalized:       true
