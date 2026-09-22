@@ -2378,7 +2378,13 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
       cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, gv.getSymName());
 
   // Replace store with copy.
-  builder.createCopy(op.getAddr(), globalPtr);
+  cir::CopyOp copyOp = builder.createCopy(op.getAddr(), globalPtr);
+
+  cir::CIRDataLayout dataLayout(mlirModule);
+  if (alloca.getAlignment() != dataLayout.getABITypeAlign(ty).value()) {
+    copyOp.setDstAlignment(alloca.getAlignment());
+    copyOp.setSrcAlignment(alloca.getAlignment());
+  }
 
   // Erase the original store.
   op.erase();
