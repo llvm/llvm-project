@@ -754,11 +754,13 @@ unsigned BranchFolder::ComputeSameTails(unsigned CurHash,
     for (MPIterator I = std::prev(CurMPIter); I->getHash() == CurHash; --I) {
       unsigned CommonTailLen;
       if (ProfitableToMerge(CurMPIter->getBlock(), I->getBlock(),
-                            MinCommonTailLength,
-                            CommonTailLen, TrialBBI1, TrialBBI2,
-                            SuccBB, PredBB,
-                            EHScopeMembership,
-                            AfterBlockPlacement, MBBFreqInfo, PSI)) {
+                            MinCommonTailLength, CommonTailLen, TrialBBI1,
+                            TrialBBI2, SuccBB, PredBB, EHScopeMembership,
+                            AfterBlockPlacement, MBBFreqInfo, PSI) &&
+          // Check both tails even if one is an entire block: replacing the
+          // other tail can introduce a branch at its start.
+          TII->isLegalToSplitMBBAt(*CurMPIter->getBlock(), TrialBBI1) &&
+          TII->isLegalToSplitMBBAt(*I->getBlock(), TrialBBI2)) {
         if (CommonTailLen > maxCommonTailLength) {
           SameTails.clear();
           maxCommonTailLength = CommonTailLen;

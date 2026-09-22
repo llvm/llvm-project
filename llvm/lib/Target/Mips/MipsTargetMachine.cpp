@@ -191,11 +191,6 @@ class MipsPassConfig : public TargetPassConfig {
 public:
   MipsPassConfig(MipsTargetMachine &TM, PassManagerBase &PM)
       : TargetPassConfig(TM, PM) {
-    // The current implementation of long branch pass requires a scratch
-    // register ($at) to be available before branch instructions. Tail merging
-    // can break this requirement, so disable it when long branch pass is
-    // enabled.
-    EnableTailMerge = !getMipsSubtarget().enableLongBranchPass();
     EnableLoopTermFold = true;
   }
 

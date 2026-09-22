@@ -16,12 +16,14 @@
 #include "Mips.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -55,6 +57,23 @@ const MipsInstrInfo *MipsInstrInfo::create(MipsSubtarget &STI) {
     return createMips16InstrInfo(STI);
 
   return createMipsSEInstrInfo(STI);
+}
+
+bool MipsInstrInfo::isLegalToSplitMBBAt(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
+  // Keep tail merging disabled for MIPS16, whose far branches clobber $ra.
+  if (Subtarget.inMips16Mode())
+    return false;
+
+  // Long branch expansion clobbers $at. Do not let tail merging introduce a
+  // branch while $at (or its 64-bit super-register) is live.
+  if (!MBB.getParent()->getRegInfo().tracksLiveness())
+    return false;
+  LivePhysRegs LiveRegs(*Subtarget.getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (auto I = MBB.end(); I != MBBI;)
+    LiveRegs.stepBackward(*--I);
+  return !LiveRegs.contains(Mips::AT);
 }
 
 bool MipsInstrInfo::isZeroImm(const MachineOperand &op) const {
