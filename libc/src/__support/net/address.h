@@ -25,7 +25,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace net {
 
-int inet_addr(cpp::string_view src, void *dst);
+cpp::optional<in_addr_t> inet_addr(cpp::string_view src);
 
 /// Writes a string representation (including the terminating \0) of the
 /// provided address into the destination buffer. In case of error, returns
