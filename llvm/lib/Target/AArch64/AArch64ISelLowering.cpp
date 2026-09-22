@@ -2541,10 +2541,14 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
 
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
-  // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
-  if (!Subtarget->isSVEorStreamingSVEAvailable() ||
-      ResVT.getVectorElementType() != MVT::i1)
-    return true;
+  if (!Subtarget->isSVEorStreamingSVEAvailable() &&
+      ResVT.isFixedLengthVector()) {
+    // Without SVE support only allow promotable result types.
+    if (!is_contained({2u, 4u, 8u, 16u}, ResVT.getVectorNumElements()))
+      return true;
+    if (OpVT != MVT::i32 && OpVT != MVT::i64)
+      return true;
+  }
 
   // Expand 1 length fixed length vector.
   if (ResVT.isFixedLengthVector() && ResVT.getVectorNumElements() == 1)
@@ -16978,6 +16982,8 @@ static SDValue NormalizeBuildVector(SDValue Op,
     } else if (Lane.getOpcode() == ISD::UNDEF) {
       Lane = DAG.getUNDEF(MVT::i32);
     } else {
+      if (Lane.getValueType() == MVT::i64)
+        Lane = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Lane);
       assert(Lane.getValueType() == MVT::i32 &&
              "Unexpected BUILD_VECTOR operand type");
     }
@@ -17373,6 +17379,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (!isConstant) {
       LLVM_DEBUG(
           dbgs() << "LowerBUILD_VECTOR: use DUP for non-constant splats\n");
+      if (Value.getValueType() == MVT::i64 && VT.getScalarSizeInBits() <= 32)
+        Value = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Value);
       return DAG.getNode(AArch64ISD::DUP, DL, VT, Value);
     }
 

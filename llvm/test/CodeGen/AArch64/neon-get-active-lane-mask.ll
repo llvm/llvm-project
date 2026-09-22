@@ -57,27 +57,15 @@ define void @lane_mask_v32i1_i32(i32 %index, i32 %TC) {
 define <16 x i1> @lane_mask_v16i1_i32(i32 %index, i32 %TC) {
 ; CHECK-LABEL: lane_mask_v16i1_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w9, w1, w0
+; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    csel w9, wzr, w9, lo
+; CHECK-NEXT:    cmp w9, #255
+; CHECK-NEXT:    csel w8, w9, w8, lo
+; CHECK-NEXT:    dup v0.16b, w8
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NEXT:    dup v1.4s, w0
-; CHECK-NEXT:    adrp x9, .LCPI1_1
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    adrp x8, .LCPI1_3
-; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI1_1]
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI1_3]
-; CHECK-NEXT:    adrp x8, .LCPI1_2
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI1_2]
-; CHECK-NEXT:    uqadd v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uqadd v3.4s, v1.4s, v3.4s
-; CHECK-NEXT:    uqadd v2.4s, v1.4s, v2.4s
-; CHECK-NEXT:    uqadd v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    dup v4.4s, w1
-; CHECK-NEXT:    cmhi v2.4s, v4.4s, v2.4s
-; CHECK-NEXT:    cmhi v3.4s, v4.4s, v3.4s
-; CHECK-NEXT:    cmhi v0.4s, v4.4s, v0.4s
-; CHECK-NEXT:    cmhi v1.4s, v4.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v3.8h
-; CHECK-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
+; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %index, i32 %TC)
   ret <16 x i1> %active.lane.mask
@@ -86,18 +74,15 @@ define <16 x i1> @lane_mask_v16i1_i32(i32 %index, i32 %TC) {
 define <8 x i1> @lane_mask_v8i1_i32(i32 %index, i32 %TC) {
 ; CHECK-LABEL: lane_mask_v8i1_i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs w9, w1, w0
+; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    csel w9, wzr, w9, lo
+; CHECK-NEXT:    cmp w9, #255
+; CHECK-NEXT:    csel w8, w9, w8, lo
+; CHECK-NEXT:    dup v0.8b, w8
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    dup v0.4s, w0
-; CHECK-NEXT:    adrp x9, .LCPI2_1
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI2_1]
-; CHECK-NEXT:    uqadd v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    uqadd v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    dup v2.4s, w1
-; CHECK-NEXT:    cmhi v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    cmhi v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    cmhi v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %TC)
   ret <8 x i1> %active.lane.mask
@@ -236,47 +221,15 @@ define void @lane_mask_v32i1_i64(i64 %index, i64 %TC) {
 define <16 x i1> @lane_mask_v16i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_v16i1_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x9, .LCPI7_1
+; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    csel x9, xzr, x9, lo
+; CHECK-NEXT:    cmp x9, #255
+; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    dup v0.16b, w8
 ; CHECK-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NEXT:    adrp x10, .LCPI7_6
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI7_1]
-; CHECK-NEXT:    adrp x9, .LCPI7_3
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI7_0]
-; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI7_3]
-; CHECK-NEXT:    adrp x9, .LCPI7_7
-; CHECK-NEXT:    dup v1.2d, x0
-; CHECK-NEXT:    adrp x8, .LCPI7_2
-; CHECK-NEXT:    ldr q4, [x10, :lo12:.LCPI7_6]
-; CHECK-NEXT:    adrp x10, .LCPI7_4
-; CHECK-NEXT:    ldr q5, [x9, :lo12:.LCPI7_7]
-; CHECK-NEXT:    adrp x9, .LCPI7_5
-; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI7_2]
-; CHECK-NEXT:    ldr q7, [x10, :lo12:.LCPI7_4]
-; CHECK-NEXT:    ldr q16, [x9, :lo12:.LCPI7_5]
-; CHECK-NEXT:    uqadd v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    uqadd v4.2d, v1.2d, v4.2d
-; CHECK-NEXT:    uqadd v5.2d, v1.2d, v5.2d
-; CHECK-NEXT:    uqadd v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    uqadd v7.2d, v1.2d, v7.2d
-; CHECK-NEXT:    uqadd v16.2d, v1.2d, v16.2d
-; CHECK-NEXT:    uqadd v2.2d, v1.2d, v2.2d
-; CHECK-NEXT:    uqadd v1.2d, v1.2d, v6.2d
-; CHECK-NEXT:    dup v17.2d, x1
-; CHECK-NEXT:    cmhi v5.2d, v17.2d, v5.2d
-; CHECK-NEXT:    cmhi v4.2d, v17.2d, v4.2d
-; CHECK-NEXT:    cmhi v6.2d, v17.2d, v16.2d
-; CHECK-NEXT:    cmhi v7.2d, v17.2d, v7.2d
-; CHECK-NEXT:    cmhi v3.2d, v17.2d, v3.2d
-; CHECK-NEXT:    cmhi v1.2d, v17.2d, v1.2d
-; CHECK-NEXT:    cmhi v2.2d, v17.2d, v2.2d
-; CHECK-NEXT:    cmhi v0.2d, v17.2d, v0.2d
-; CHECK-NEXT:    uzp1 v4.4s, v4.4s, v5.4s
-; CHECK-NEXT:    uzp1 v5.4s, v7.4s, v6.4s
-; CHECK-NEXT:    uzp1 v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    uzp1 v2.8h, v5.8h, v4.8h
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    cmhi v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %index, i64 %TC)
   ret <16 x i1> %active.lane.mask
@@ -285,28 +238,15 @@ define <16 x i1> @lane_mask_v16i1_i64(i64 %index, i64 %TC) {
 define <8 x i1> @lane_mask_v8i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_v8i1_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    csel x9, xzr, x9, lo
+; CHECK-NEXT:    cmp x9, #255
+; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    dup v0.8b, w8
 ; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    dup v1.2d, x0
-; CHECK-NEXT:    adrp x9, .LCPI8_1
-; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    adrp x8, .LCPI8_3
-; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI8_1]
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_3]
-; CHECK-NEXT:    adrp x8, .LCPI8_2
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI8_2]
-; CHECK-NEXT:    uqadd v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    uqadd v3.2d, v1.2d, v3.2d
-; CHECK-NEXT:    uqadd v2.2d, v1.2d, v2.2d
-; CHECK-NEXT:    uqadd v1.2d, v1.2d, v4.2d
-; CHECK-NEXT:    dup v4.2d, x1
-; CHECK-NEXT:    cmhi v2.2d, v4.2d, v2.2d
-; CHECK-NEXT:    cmhi v3.2d, v4.2d, v3.2d
-; CHECK-NEXT:    cmhi v0.2d, v4.2d, v0.2d
-; CHECK-NEXT:    cmhi v1.2d, v4.2d, v1.2d
-; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    uzp1 v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    cmhi v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 %index, i64 %TC)
   ret <8 x i1> %active.lane.mask
@@ -315,18 +255,15 @@ define <8 x i1> @lane_mask_v8i1_i64(i64 %index, i64 %TC) {
 define <4 x i1> @lane_mask_v4i1_i64(i64 %index, i64 %TC) {
 ; CHECK-LABEL: lane_mask_v4i1_i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs x9, x1, x0
+; CHECK-NEXT:    mov w8, #65535 // =0xffff
+; CHECK-NEXT:    csel x9, xzr, x9, lo
+; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    dup v0.4h, w8
 ; CHECK-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NEXT:    dup v0.2d, x0
-; CHECK-NEXT:    adrp x9, .LCPI9_1
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
-; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI9_1]
-; CHECK-NEXT:    uqadd v1.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uqadd v0.2d, v0.2d, v2.2d
-; CHECK-NEXT:    dup v2.2d, x1
-; CHECK-NEXT:    cmhi v0.2d, v2.2d, v0.2d
-; CHECK-NEXT:    cmhi v1.2d, v2.2d, v1.2d
-; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI9_0]
+; CHECK-NEXT:    cmhi v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %index, i64 %TC)
   ret <4 x i1> %active.lane.mask
@@ -455,12 +392,9 @@ define <1 x i1> @lane_mask_v1i1_i8(i8 %index, i8 %TC) {
 
 define <8 x i1> @lane_mask_v8i1_imm3() {
 ; CHECK-LABEL: lane_mask_v8i1_imm3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #257 // =0x101
-; CHECK-NEXT:    movk w8, #1, lsl #16
-; CHECK-NEXT:    fmov d0, x8
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d0, #0x00000000ffffff
 ; CHECK-NEXT:    ret
-entry:
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 0, i64 3)
   ret <8 x i1> %active.lane.mask
 }
