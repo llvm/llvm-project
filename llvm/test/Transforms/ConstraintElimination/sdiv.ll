@@ -9,8 +9,7 @@ define i1 @sdiv_sge_zero(i32 noundef %x) {
 ; CHECK-NEXT:    [[NNEG:%.*]] = icmp sge i32 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], 4
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[Q]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nneg = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %nneg)
@@ -25,8 +24,7 @@ define i1 @sdiv_sle_dividend(i32 noundef %x) {
 ; CHECK-NEXT:    [[NNEG:%.*]] = icmp sge i32 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], 2
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[Q]], [[X]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nneg = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %nneg)
@@ -41,8 +39,7 @@ define i1 @sdiv_slt_dividend(i32 noundef %x) {
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i32 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], 2
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[Q]], [[X]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pos = icmp sgt i32 %x, 0
   call void @llvm.assume(i1 %pos)
@@ -59,8 +56,7 @@ define i1 @sdiv_slt_dividend_bound(i32 noundef %x, i32 noundef %limit) {
 ; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[X]], [[LIMIT]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[Q]], [[LIMIT]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pos = icmp sgt i32 %x, 0
   call void @llvm.assume(i1 %pos)
@@ -79,8 +75,7 @@ define i1 @sdiv_positive_divisor(i32 noundef %x, i32 noundef %n) {
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i32 [[N]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[Q]], [[X]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nneg = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %nneg)
@@ -99,8 +94,7 @@ define i1 @sdiv_slt_dividend_divisor_gt_one(i32 noundef %x, i32 noundef %n) {
 ; CHECK-NEXT:    [[GT1:%.*]] = icmp sgt i32 [[N]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[GT1]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[Q]], [[X]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pos = icmp sgt i32 %x, 0
   call void @llvm.assume(i1 %pos)
@@ -117,8 +111,7 @@ define i1 @sdiv_ult_dividend_via_transfer(i32 noundef %x) {
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i32 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POS]])
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], 4
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[Q]], [[X]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pos = icmp sgt i32 %x, 0
   call void @llvm.assume(i1 %pos)
@@ -132,8 +125,7 @@ define i1 @sdiv_nneg_dividend_from_valuetracking(i32 noundef %y) {
 ; CHECK-SAME: i32 noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[Y]], 255
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 [[X]], 2
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[Q]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x = and i32 %y, 255
   %q = sdiv i32 %x, 2
@@ -144,8 +136,7 @@ define i1 @sdiv_nneg_dividend_from_valuetracking(i32 noundef %y) {
 define i1 @sdiv_const_dividend() {
 ; CHECK-LABEL: define i1 @sdiv_const_dividend() {
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv i32 42, 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[Q]], 42
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %q = sdiv i32 42, 4
   %c = icmp slt i32 %q, 42
@@ -185,8 +176,7 @@ define i1 @sdiv_binary_search_midpoint_lower(i32 noundef %low, i32 noundef %high
 ; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 [[HIGH]], [[LOW]]
 ; CHECK-NEXT:    [[HALF:%.*]] = sdiv i32 [[D]], 2
 ; CHECK-NEXT:    [[MID:%.*]] = add nsw i32 [[LOW]], [[HALF]]
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[MID]], [[LOW]]
-; CHECK-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[TRAP:.*]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[TRAP:.*]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
@@ -220,8 +210,7 @@ define i1 @sdiv_binary_search_midpoint_upper(i32 noundef %low, i32 noundef %high
 ; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 [[HIGH]], [[LOW]]
 ; CHECK-NEXT:    [[HALF:%.*]] = sdiv i32 [[D]], 2
 ; CHECK-NEXT:    [[MID:%.*]] = add nsw i32 [[LOW]], [[HALF]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[MID]], [[HIGH]]
-; CHECK-NEXT:    br i1 [[C]], label %[[EXIT]], label %[[TRAP:.*]]
+; CHECK-NEXT:    br i1 true, label %[[EXIT]], label %[[TRAP:.*]]
 ; CHECK:       [[TRAP]]:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
@@ -252,7 +241,7 @@ define i64 @sdiv_add_nuw_from_quotient_bounds(i64 noundef %x) {
 ; CHECK-NEXT:    [[NNEG:%.*]] = icmp sge i64 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[X]], 2
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[DIV]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[DIV]], [[X]]
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %nneg = icmp sge i64 %x, 0
@@ -268,7 +257,7 @@ define i32 @sdiv_sub_nuw_from_quotient_bounds(i32 noundef %x) {
 ; CHECK-NEXT:    [[NNEG:%.*]] = icmp sge i32 [[X]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[X]], 2
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[DIV]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[X]], [[DIV]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %nneg = icmp sge i32 %x, 0
@@ -283,8 +272,7 @@ define <2 x i1> @sdiv_vector(<2 x i32> noundef %y) {
 ; CHECK-SAME: <2 x i32> noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X:%.*]] = and <2 x i32> [[Y]], splat (i32 255)
 ; CHECK-NEXT:    [[Q:%.*]] = sdiv <2 x i32> [[X]], splat (i32 2)
-; CHECK-NEXT:    [[C:%.*]] = icmp sge <2 x i32> [[Q]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[C]]
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %x = and <2 x i32> %y, splat (i32 255)
   %q = sdiv <2 x i32> %x, splat (i32 2)
