@@ -2262,6 +2262,13 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                               KnownFPClass KnownLHS, KnownFPClass KnownRHS,
                               const Function &F, bool NSZ) {
   bool OrderedZeroSign = !NSZ;
+  Type *EltTy = CI->getType()->getScalarType();
+  DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+  // Prevent folding of the operand if a subnormal output/input could flush to
+  // zero.
+  bool CanReturnOperand =
+      Mode == DenormalMode::getIEEE() ||
+      (KnownLHS.isKnownNeverSubnormal() && KnownRHS.isKnownNeverSubnormal());
 
   KnownFPClass::MinMaxKind OpKind;
   switch (IID) {
@@ -2270,13 +2277,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     // If one operand is known greater than the other, it must be that
     // operand unless the other is a nan.
-    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
                                 KnownRHS.getKnownFPClasses(),
                                 OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
                                    KnownRHS.getKnownFPClasses(),
                                    OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
@@ -2289,13 +2298,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     // If one operand is known less than the other, it must be that operand
     // unless the other is a nan.
-    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
                                    KnownRHS.getKnownFPClasses(),
                                    OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
                                 KnownRHS.getKnownFPClasses(),
                                 OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
@@ -2308,13 +2319,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     OpKind = IID == Intrinsic::maxnum ? KnownFPClass::MinMaxKind::maxnum
                                       : KnownFPClass::MinMaxKind::maximumnum;
 
-    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
                                 KnownRHS.getKnownFPClasses(),
                                 OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
                                    KnownRHS.getKnownFPClasses(),
                                    OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
@@ -2327,13 +2340,15 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     OpKind = IID == Intrinsic::minnum ? KnownFPClass::MinMaxKind::minnum
                                       : KnownFPClass::MinMaxKind::minimumnum;
 
-    if (cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.getKnownFPClasses(),
                                    KnownRHS.getKnownFPClasses(),
                                    OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.getKnownFPClasses(),
                                 KnownRHS.getKnownFPClasses(),
                                 OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
@@ -2345,8 +2360,6 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     llvm_unreachable("not a min/max intrinsic");
   }
 
-  Type *EltTy = CI->getType()->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
   Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, OpKind, Mode);
   Known.knownNot(~DemandedMask);
 
@@ -3310,6 +3323,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven: {
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
       FPClassTest DemandedSrcMask = DemandedMask;
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
@@ -3318,8 +3334,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcNegZero)
         DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
 
-      if (DemandedMask & fcPosZero)
+      if (DemandedMask & fcPosZero) {
         DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+        if (Mode.inputsMayBePositiveZero())
+          DemandedSrcMask |= fcNegSubnormal;
+      }
+
+      // Rounding a subnormal away from zero may produce a normal value.
+      if (DemandedMask & fcNegNormal)
+        DemandedSrcMask |= fcNegSubnormal;
+      if (DemandedMask & fcPosNormal)
+        DemandedSrcMask |= fcPosSubnormal;
 
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(CI, 0, DemandedSrcMask, KnownSrc, SQ,
@@ -3350,9 +3375,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          VTy->getScalarType()->isMultiUnitFPType());
+      const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
+
+      const bool IsTrunc = IID == Intrinsic::trunc;
+      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
+                                            IsMultiUnitFPType, Mode);
 
       Known.knownNot(~DemandedMask);
 
@@ -3530,12 +3557,24 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         switch (IID) {
         case Intrinsic::frexp: {
           FPClassTest SrcDemandedMask = fcNone;
+
           if (DemandedMask & fcNan)
             SrcDemandedMask |= fcNan;
-          if (DemandedMask & fcNegFinite)
-            SrcDemandedMask |= fcNegFinite;
-          if (DemandedMask & fcPosFinite)
-            SrcDemandedMask |= fcPosFinite;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (DemandedMask & fcPosZero)
+            SrcDemandedMask |= fcPosZero | fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (DemandedMask & fcNegZero)
+            SrcDemandedMask |= fcNegZero | fcNegSubnormal;
+
+          if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+            SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+          if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+            SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+
           if (DemandedMask & fcPosInf)
             SrcDemandedMask |= fcPosInf;
           if (DemandedMask & fcNegInf)
@@ -3557,7 +3596,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                      /*IsCanonicalizing=*/true))
             return SingleVal;
 
-          if (Known.isKnownAlways(fcInf | fcNan))
+          // frexp returns zero, infinity, and NaN inputs unchanged.
+          if (KnownSrc.isKnownAlways(fcZero | fcInf | fcNan))
             return II->getArgOperand(0);
 
           return nullptr;

@@ -160,6 +160,12 @@ struct KnownFPClass {
     return isKnownNever(fcPositive) && isKnownNeverLogicalNegZero(Mode);
   }
 
+  LLVM_ABI static KnownFPClass applyInputDenormalMode(const KnownFPClass &Src,
+                                                      DenormalMode Mode);
+
+  LLVM_ABI static KnownFPClass applyOutputDenormalMode(const KnownFPClass &Src,
+                                                       DenormalMode Mode);
+
   KnownFPClass intersectWith(const KnownFPClass &RHS) const {
     return KnownFPClass(getKnownFPClasses() | RHS.getKnownFPClasses(),
                         getSignBit() == RHS.getSignBit() ? getSignBit()
@@ -442,13 +448,17 @@ struct KnownFPClass {
   // operand signs, such as multiply and divide. This only rules out possible
   // non-NaN sign classes. NaNs do not have a constrained sign class here.
   void propagateXorSign(const KnownFPClass &LHS, const KnownFPClass &RHS) {
+    const bool LHSCannotHavePositiveInput = LHS.isKnownNever(fcPositive);
+    const bool RHSCannotHavePositiveInput = RHS.isKnownNever(fcPositive);
     if ((LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcPositive)))
+        (LHSCannotHavePositiveInput && RHSCannotHavePositiveInput))
       knownNot(fcNegative);
 
-    if ((LHS.isKnownNever(fcPositive) && RHS.isKnownNever(fcNegative)) ||
-        (LHS.isKnownNever(fcNegative) && RHS.isKnownNever(fcPositive)))
-      knownNot(fcPositive);
+    if ((LHSCannotHavePositiveInput && RHS.isKnownNever(fcNegative)) ||
+        (LHS.isKnownNever(fcNegative) && RHSCannotHavePositiveInput)) {
+      knownNot(fcPosInf | fcPosNormal | fcPosSubnormal);
+      knownNot(fcPosZero);
+    }
   }
 
   /// Propagate knowledge from a source value that could be a denormal or
@@ -479,9 +489,9 @@ struct KnownFPClass {
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
   /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
-  LLVM_ABI static KnownFPClass roundToIntegral(const KnownFPClass &Src,
-                                               bool IsTrunc,
-                                               bool IsMultiUnitFPType);
+  LLVM_ABI static KnownFPClass
+  roundToIntegral(const KnownFPClass &Src, bool IsTrunc, bool IsMultiUnitFPType,
+                  DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for mantissa component of frexp
   LLVM_ABI static KnownFPClass

@@ -552,7 +552,7 @@ define float @fadd_known_positive_nzero(float nofpclass(ninf nsub nnorm nzero) %
 }
 
 define float @fadd_known_positive_nzero_ftz_daz(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm nzero) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @fadd_known_positive_nzero_ftz_daz(
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fadd_known_positive_nzero_ftz_daz(
 ; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -562,7 +562,7 @@ define float @fadd_known_positive_nzero_ftz_daz(float nofpclass(ninf nsub nnorm 
 }
 
 define float @fadd_known_positive_nzero_ftz(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm nzero) %arg1) #1 {
-; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @fadd_known_positive_nzero_ftz(
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fadd_known_positive_nzero_ftz(
 ; CHECK-SAME: float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -814,7 +814,7 @@ define float @fadd_double_no_nopsub_pzero__ieee_daz(float noundef nofpclass(psub
 }
 
 define float @fadd_double_no_nopsub_pzero__ftz_daz(float noundef nofpclass(psub pzero) %arg) #0 {
-; CHECK-LABEL: define noundef nofpclass(pzero) float @fadd_double_no_nopsub_pzero__ftz_daz(
+; CHECK-LABEL: define noundef float @fadd_double_no_nopsub_pzero__ftz_daz(
 ; CHECK-SAME: float noundef nofpclass(pzero psub) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1231,7 +1231,7 @@ define float @fadd_double_no_zero_or_psub__output_only_is_ftpz(float noundef nof
 }
 
 define float @fadd_double_no_zero_or_sub__output_only_is_ftpz(float noundef nofpclass(zero sub) %arg) #4 {
-; CHECK-LABEL: define noundef nofpclass(zero) float @fadd_double_no_zero_or_sub__output_only_is_ftpz(
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_double_no_zero_or_sub__output_only_is_ftpz(
 ; CHECK-SAME: float noundef nofpclass(zero sub) [[ARG:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[ADD]]
