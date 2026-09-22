@@ -45,6 +45,10 @@ private:
                               uint32_t register_byte_size,
                               lldb::TypeSystemClangSP type_system);
 
+  CompilerType BuildVectorType(const RegisterTypeVector *vector_type,
+                               uint32_t expected_byte_size,
+                               lldb::TypeSystemClangSP type_system);
+
   Target &m_target;
 
   // A cache of previously created types. We do not cache by element ID because

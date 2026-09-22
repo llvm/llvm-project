@@ -43,8 +43,11 @@ let cppNamespace = "::cir" in {
           "mlir::Value", "getIndirectCall", (ins)>,
       InterfaceMethod<"Return whether the callee is nothrow",
                       "bool", "getNothrow", (ins)>,
-      InterfaceMethod<"Return the side effects of the call operation",
-                      "cir::SideEffect", "getSideEffect", (ins)>,
+      InterfaceMethod<
+          "Return the memory effects of the call operation, or null when the "
+          "operation carries no memory-effects attribute.  Null means the "
+          "effects are unknown, not that the callee touches no memory",
+          "cir::MemoryEffectsAttr", "getMemoryEffectsAttr", (ins)>,
       InterfaceMethod<[{"Set the inline-kind of a call operation"}],
                       "void", "setInlineKind", 
                       (ins "std::optional<cir::InlineKind>":$kind), [{}], 
@@ -55,13 +58,13 @@ let cppNamespace = "::cir" in {
                       "std::optional<cir::InlineKind>", "getInlineKind", 
                       (ins), [{}], 
                       /*defaultImplementation=*/[{
-                        $_op.getInlineKind();
+                        return $_op.getInlineKind();
                       }]>,
       InterfaceMethod<[{"Get the inline-kind attribute name"}], 
                       "mlir::StringAttr", "getInlineKindAttrName",
                       (ins), [{}],
                       /*defaultImplementation=*/[{
-                        $_op.getInlineKindAttrName();
+                        return $_op.getInlineKindAttrName();
                       }]>,
     ];
   }

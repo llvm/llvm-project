@@ -37,6 +37,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -88,22 +89,6 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 /// a scalar and static/fixed for all the padded values. Returns an empty value
 /// otherwise.
 static Value getStaticPadVal(Operation *op);
-
-/// Return the unique instance of OpType in `block` if it is indeed unique.
-/// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
-  OpType res;
-  block.walk([&](OpType op) {
-    if (res) {
-      res = nullptr;
-      return WalkResult::interrupt();
-    }
-    res = op;
-    return WalkResult::advance();
-  });
-  return res;
-}
 
 /// Helper function to extract the input slices after filter is unrolled along
 /// kw.
@@ -650,10 +635,12 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
       .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
       .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MaximumNumFOp op) { return CombiningKind::MAXIMUMNUMF; })
       .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
       .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
       .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
       .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::MinimumNumFOp op) { return CombiningKind::MINIMUMNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
@@ -977,39 +964,52 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
                           [](int64_t dimSize) { return dimSize > 1; }) == 1)) &&
          "n-D vectors are not yet supported");
 
-  // Blocks outside _this_ linalg.generic are effectively loop invariant.
-  // However, analysing block arguments for _this_ linalg.generic Op is a bit
-  // tricky. Just bail out in the latter case.
-  // TODO: We could try analysing the corresponding affine map here.
   auto *block = linalgOp.getBlock();
-  if (isa<BlockArgument>(val))
-    return !llvm::is_contained(block->getArguments(), val);
 
-  Operation *defOp = val.getDefiningOp();
-  assert(defOp && "This is neither a block argument nor an operation result");
+  // A shared DAG has exponentially many paths; a revisit adds nothing.
+  SmallPtrSet<Operation *, 8> visited;
+  SmallVector<Value> worklist{val};
 
-  // IndexOp is loop invariant as long as its result remains constant across
-  // iterations. Note that for dynamic shapes, the corresponding dim will also
-  // be conservatively treated as != 1.
-  if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
-    return linalgOp.getStaticLoopRanges()[indexOp.getDim()] == 1;
+  while (!worklist.empty()) {
+    Value v = worklist.pop_back_val();
+
+    // Blocks outside _this_ linalg.generic are effectively loop invariant.
+    // However, analysing block arguments for _this_ linalg.generic Op is a bit
+    // tricky. Just bail out in the latter case.
+    // TODO: We could try analysing the corresponding affine map here.
+    if (isa<BlockArgument>(v)) {
+      if (llvm::is_contained(block->getArguments(), v))
+        return false;
+      continue;
+    }
+
+    Operation *defOp = v.getDefiningOp();
+    assert(defOp && "This is neither a block argument nor an operation result");
+
+    // IndexOp is loop invariant as long as its result remains constant across
+    // iterations. Note that for dynamic shapes, the corresponding dim will also
+    // be conservatively treated as != 1.
+    if (auto indexOp = dyn_cast<linalg::IndexOp>(defOp)) {
+      if (linalgOp.getStaticLoopRanges()[indexOp.getDim()] != 1)
+        return false;
+      continue;
+    }
+
+    auto *ancestor = block->findAncestorOpInBlock(*defOp);
+
+    // Values define outside `linalgOp` are loop invariant.
+    if (!ancestor)
+      continue;
+
+    // Values defined inside `linalgOp`, which are constant, are loop invariant.
+    if (isa<arith::ConstantOp>(ancestor))
+      continue;
+
+    if (visited.insert(ancestor).second)
+      llvm::append_range(worklist, ancestor->getOperands());
   }
 
-  auto *ancestor = block->findAncestorOpInBlock(*defOp);
-
-  // Values define outside `linalgOp` are loop invariant.
-  if (!ancestor)
-    return true;
-
-  // Values defined inside `linalgOp`, which are constant, are loop invariant.
-  if (isa<arith::ConstantOp>(ancestor))
-    return true;
-
-  bool result = true;
-  for (auto op : ancestor->getOperands())
-    result &= isLoopInvariantIdx(linalgOp, op, resType);
-
-  return result;
+  return true;
 }
 
 /// Check whether `val` could be used for calculating the trailing index for a
@@ -2205,10 +2205,12 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;
@@ -3721,10 +3723,10 @@ public:
     else
       dstType = dstElementType;
 
-    return rewriter
-        .create(loc, castOp->getName().getIdentifier(), val, dstType,
-                castOp->getAttrs())
-        ->getResult(0);
+    OperationState state(loc, castOp->getName().getIdentifier(), val, dstType,
+                         castOp->getDiscardableAttrDictionary().getValue());
+    state.propertiesAttr = castOp->getPropertiesAsAttribute();
+    return rewriter.create(state)->getResult(0);
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}

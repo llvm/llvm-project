@@ -340,20 +340,24 @@ def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
     per-function stack budget, and whether the allocation is a user variable or
     a compiler temporary. Heap-to-stack conversions are only performed where the
     allocation is provably freed on all paths through the function.
+
+    The policy normally comes from the fir.allocation_policy module attribute.
+    These options override it field by field, and only when set explicitly.
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect",
     "mlir::arith::ArithDialect"
   ];
   let options = [
-    Option<"stackArrays", "stack-arrays", "bool", /*default=*/"false",
+    Option<"stackArrays", "stack-arrays", "bool",
+           /*default=*/"fir::AllocationPolicy::stackArraysDefault",
            "Place all array allocations on the stack (-fstack-arrays); "
-           "otherwise use the size/kind-based placement policy.">,
-    Option<"smallArrayThresholdBytes", "small-array-threshold", "std::size_t",
-           /*default=*/"64",
+           "otherwise use the size-based placement policy.">,
+    Option<"smallArrayThresholdBytes", "small-array-threshold", "uint64_t",
+           /*default=*/"fir::AllocationPolicy::smallArrayThresholdBytesDefault",
            "Constant-size arrays up to this many bytes are considered small.">,
-    Option<"totalStackLimitBytes", "total-stack-limit", "std::size_t",
-           /*default=*/"4194304",
+    Option<"totalStackLimitBytes", "total-stack-limit", "uint64_t",
+           /*default=*/"fir::AllocationPolicy::totalStackLimitBytesDefault",
            "Per-function budget (bytes) for small arrays placed on the stack.">
   ];
 }
@@ -519,6 +523,10 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               /*default=*/"false",
               "Set the use-sample-profile attribute on functions in the "
               "module.">,
+       Option<"disableTailCalls", "disable-tail-calls", "bool",
+              /*default=*/"false",
+              "Set the disable-tail-calls attribute on functions to prevent "
+              "tail call optimization.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
        Option<"setNoCapture", "set-nocapture", "bool", /*default=*/"false",
@@ -531,6 +539,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Set LLVM readonly attribute on INTENT(IN) by-reference "
               "function arguments, if possible">,
   ];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
@@ -605,7 +614,8 @@ def CUFDeviceGlobal :
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
-    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
+    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect",
+    "mlir::LLVM::LLVMDialect"
   ];
   let options = [
     Option<"allocatorRegistrationFunction",
@@ -620,7 +630,20 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
            "time and HMM/ATS handles migration.">,
     Option<"priority", "priority", "int32_t", /*default=*/"0",
            "Priority for the CUDA Fortran global constructor in "
-           "llvm.mlir.global_ctors.">
+           "llvm.mlir.global_ctors.">,
+    Option<"emitCudaCompiled", "emit-cuda-compiled", "bool",
+           /*default=*/"false",
+           "Declare an undefined cuda_compiled symbol so linking without the "
+           "CUDA Fortran runtime fails with a clear diagnostic.">,
+    ListOption<"extraConstructors", "extra-constructors",
+               "std::string",
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor.">,
+   ListOption<"entryOnlyConstructors", "entry-only-constructors",
+               "std::string",
+               "Extra functions to declare and call from the CUDA Fortran "
+               "constructor only if the entry function is present.">
+
   ];
 }
 
@@ -645,6 +668,22 @@ def CUFComputeSharedMemoryOffsetsAndSize
     "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
     "mlir::DLTIDialect"
   ];
+}
+
+def CUFDuplicateDeviceFunc
+    : Pass<"cuf-duplicate-device-func", "::mlir::ModuleOp"> {
+  let summary = "Give host_device procedures a device copy before optimization";
+  let description = [{
+    Creates the device copy of every attributes(host,device) procedure, and of
+    every procedure without a device attribute that device code calls, as a
+    func.func in the host module. The copy carries the device proc attribute,
+    the device allocation policy and a cuf.device_copy_of marker naming the
+    original, and device code is redirected to it while host code keeps the
+    original. Running before the FIR optimizer lets each copy be optimized for
+    its own target; cuf-transform-device-func later moves the copies into the
+    GPU module under their original name.
+  }];
+  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
 }
 
 def CUFDeviceFuncTransform

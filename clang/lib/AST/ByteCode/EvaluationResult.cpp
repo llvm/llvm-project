@@ -55,8 +55,7 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
       PtrView ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckFieldsInitialized(S, Loc, ElemPtr, R);
     }
-  } else {
-    assert(ElemDesc->isArray());
+  } else if (ElemDesc->isArray()) {
     for (size_t I = 0; I != NumElems; ++I) {
       PtrView ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckArrayInitialized(S, Loc, ElemPtr);
@@ -179,8 +178,8 @@ static void collectBlocks(PtrView Ptr,
            P.isDereferencable() && !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
-  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isDummy() ||
-      Ptr.isUnknownSizeArray() || Ptr.isOnePastEnd())
+  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isUnknownSizeArray() ||
+      Ptr.isOnePastEnd())
     return;
 
   Blocks.insert(Ptr.Pointee);

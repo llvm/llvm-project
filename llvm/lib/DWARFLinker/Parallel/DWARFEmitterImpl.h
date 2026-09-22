@@ -92,16 +92,6 @@ public:
   void emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table);
 
 private:
-  // Enumerate all string patches and write them into the destination section.
-  // Order of patches is the same as in original input file. To avoid emitting
-  // the same string twice we accumulate NextOffset value. Thus if string
-  // offset smaller than NextOffset value then the patch is skipped (as that
-  // string was emitted earlier).
-  template <typename PatchTy>
-  void emitStringsImpl(ArrayList<PatchTy> &StringPatches,
-                       const StringEntryToDwarfStringPoolEntryMap &Strings,
-                       uint64_t &NextOffset, MCSection *OutSection);
-
   /// \defgroup MCObjects MC layer objects constructed by the streamer
   /// @{
   MCTargetOptions MCOptions;

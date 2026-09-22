@@ -24,8 +24,8 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
 
   // Root statements should have common parent.
   EXPECT_EQ(apply("for(;;) [[1+2; 1+2;]]"), "unavailable");
-  // Expressions aren't extracted.
-  EXPECT_EQ(apply("int x = 0; [[x++;]]"), "unavailable");
+  // Single expression-statements can be extracted.
+  EXPECT_THAT(apply("int x = 0; [[x++;]]"), HasSubstr("extracted"));
   // We don't support extraction from lambdas.
   EXPECT_EQ(apply("auto lam = [](){ [[int x;]] }; "), "unavailable");
   // Partial statements aren't extracted.
@@ -36,9 +36,17 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
   // lead to break being included in the extraction zone.
   EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
-  // FIXME: ExtractFunction should be unavailable inside loop construct
-  // initializer/condition.
+  // A loop's initializer has its value discarded just like an ordinary
+  // statement, so it remains extractable (unlike the condition; see
+  // ControlFlowConditions below).
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
+  // ...but if the declared name is used later (in the condition,
+  // increment, or body), extraction is unavailable regardless -- not
+  // because of any condition/init-specific logic, but because
+  // requiresHoisting() (checked in ExtractFunction::prepare(), independent
+  // of what kind of statement is being extracted) catches it.
+  EXPECT_EQ(apply("void use(int); for([[int i = 0;]] i < 10; ++i) use(i);"),
+            "unavailable");
   // Extract certain return
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return
@@ -192,16 +200,16 @@ F (extracted();)
   EXPECT_EQ(apply(CompoundFailInput), "unavailable");
 
   ExtraArgs.push_back("-std=c++14");
-  // FIXME: Expressions are currently not extracted
-  EXPECT_EQ(apply(R"cpp(
+  // A bare expression-statement can be extracted (the semicolon isn't part
+  // of the selection either way, since it isn't owned by any AST node).
+  EXPECT_THAT(apply(R"cpp(
                 void call() { [[1+1]]; }
             )cpp"),
-            "unavailable");
-  // FIXME: Single expression statements are currently not extracted
-  EXPECT_EQ(apply(R"cpp(
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply(R"cpp(
                 void call() { [[1+1;]] }
             )cpp"),
-            "unavailable");
+              HasSubstr("extracted"));
 }
 
 TEST_F(ExtractFunctionTest, DifferentHeaderSourceTest) {
@@ -628,6 +636,116 @@ int main() {
                 extracted();
               })cpp";
   EXPECT_EQ(apply(Before), After);
+}
+
+TEST_F(ExtractFunctionTest, SingleStatement) {
+  Context = File;
+  // https://github.com/clangd/clangd/issues/698
+  // A single call-expression-statement can be extracted.
+  EXPECT_THAT(apply(R"cpp(
+    void foo(int, int);
+    void bar() {
+      [[foo(1, 2);]]
+    })cpp"),
+              HasSubstr("extracted"));
+  // https://github.com/clangd/clangd/issues/1254
+  // A single statement consisting of an overloaded binary operator call can
+  // be extracted, even though the SelectionTree marks the
+  // CXXOperatorCallExpr itself as Unselected (its operands claim all the
+  // characters).
+  EXPECT_THAT(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, const char *);
+    Stream stream;
+    int main() {
+      [[stream << "x";]]
+    })cpp"),
+              HasSubstr("extracted"));
+  // Selecting a subexpression of an operator call (rather than the whole
+  // statement) must not be extracted: it is not a standalone statement, and
+  // "extracting" it would replace only part of the expression.
+  EXPECT_EQ(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, int);
+    Stream stream;
+    void test() {
+      stream << [[3]];
+    })cpp"),
+            "unavailable");
+  // Same as above, but the selected subexpression is itself an
+  // (Unselected-but-fully-covered) CXXOperatorCallExpr nested as an argument
+  // of an outer call, rather than a Complete leaf expression.
+  EXPECT_EQ(apply(R"cpp(
+    struct Stream {};
+    Stream &operator<<(Stream &, int);
+    void foo(Stream &, int);
+    Stream stream;
+    void test() {
+      foo([[stream << 3]], 4);
+    })cpp"),
+            "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, ControlFlowConditions) {
+  Context = File;
+  // The condition of an `if` is not a discardable statement -- its value is
+  // consumed by the `if` itself.
+  EXPECT_EQ(apply(R"cpp(
+    int example(int event1, bool event2, double event3) {
+      if ([[event1 == 2 && event2 && event3 == 10.3]])
+        return 1;
+      return 0;
+    })cpp"),
+            "unavailable");
+  // Same, but for other control-flow constructs' conditions.
+  EXPECT_EQ(apply("void f(int x) { while ([[x > 0]]) --x; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { do {} while ([[x > 0]]); }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { for (; [[x > 0]];) ; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { switch ([[x + 1]]) {} }"), "unavailable");
+  // A condition-variable declaration (`if (T x = ...)`) is likewise not a
+  // discardable statement: its truthiness *is* the condition.
+  EXPECT_EQ(apply("bool cond(); void f() { if ([[bool b = cond()]]) ; }"),
+            "unavailable");
+  // Unlike the condition, a loop's initializer and increment clauses have
+  // their value discarded just like an ordinary statement, so they remain
+  // extractable (any hazard from extracting a declaration used later is
+  // already caught by ExtractionZone::requiresHoisting, independently of
+  // this).
+  EXPECT_THAT(apply("void f(int x) { for ([[x = 0]]; x < 10; ++x) ; }"),
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply("void f(int x) { for (;; [[--x]]) ; }"),
+              HasSubstr("extracted"));
+  // Likewise, an `if`/`switch` init-statement (C++17) is extractable.
+  ExtraArgs.push_back("-std=c++17");
+  EXPECT_THAT(apply("void f(int x) { if ([[x = 0]]; x > 0) ; }"),
+              HasSubstr("extracted"));
+  EXPECT_THAT(apply("void f(int x) { switch ([[x = 0]]; x) {} }"),
+              HasSubstr("extracted"));
+  // Sanity check: extraction from the *body* of these constructs (as opposed
+  // to their condition) is unaffected.
+  EXPECT_THAT(apply("void f(int x) { if (x > 0) [[x = x * 2;]] }"),
+              HasSubstr("extracted"));
+}
+
+TEST_F(ExtractFunctionTest, RangeBasedFor) {
+  Context = File;
+  // The range-expression of a range-based for is consumed to build the
+  // hidden begin/end iterators, so it's not a discardable statement either
+  // (same category as an ordinary condition).
+  EXPECT_EQ(apply(R"cpp(
+    struct Vec { int *begin(); int *end(); };
+    Vec V;
+    void f() { for (auto X : [[V]]) {} }
+  )cpp"),
+            "unavailable");
+  // Extraction from the body is unaffected.
+  EXPECT_THAT(apply(R"cpp(
+    struct Vec { int *begin(); int *end(); };
+    Vec V;
+    void foo(int);
+    void f() { for (auto X : V) { [[foo(X);]] } }
+  )cpp"),
+              HasSubstr("extracted"));
 }
 
 } // namespace

@@ -412,23 +412,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  mkstemp
-  SRCS
-    mkstemp.cpp
-  HDRS
-    mkstemp.h
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fcntl_macros
-    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
-    libc.src.__support.OSUtil.linux.syscall_wrappers.open
-    libc.src.__support.common
-    libc.src.__support.libc_errno
-    libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
-)
-
-add_entrypoint_object(
   mbtowc
   SRCS
     mbtowc.cpp
@@ -615,6 +598,27 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.getloadavg
 )
 
+add_entrypoint_object(
+  mkdtemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkdtemp
+)
+
+add_entrypoint_object(
+  mkostemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkostemp
+)
+
+add_entrypoint_object(
+  mkstemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkstemp
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -694,6 +698,13 @@ add_entrypoint_object(
   DEPENDS
     libc.src.errno.errno
     libc.src.__support.str_to_integer
+)
+
+add_entrypoint_object(
+  secure_getenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.secure_getenv
 )
 
 add_entrypoint_object(

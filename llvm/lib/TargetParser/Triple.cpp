@@ -191,6 +191,8 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       return "arm64ec";
     if (SubArch == AArch64SubArch_arm64e)
       return "arm64e";
+    if (SubArch == AArch64SubArch_arm64e_x1)
+      return "arm64e.x1";
     if (SubArch == AArch64SubArch_lfi)
       return "aarch64_lfi";
     break;
@@ -612,6 +614,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Case("arm64", Triple::aarch64)
           .Case("arm64_32", Triple::aarch64_32)
           .Case("arm64e", Triple::aarch64)
+          .Case("arm64e.x1", Triple::aarch64)
           .Case("arm64ec", Triple::aarch64)
           .Case("arm", Triple::arm)
           .Case("armeb", Triple::armeb)
@@ -739,6 +742,8 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "arm64e")
     return Triple::AArch64SubArch_arm64e;
+  if (SubArchName == "arm64e.x1")
+    return Triple::AArch64SubArch_arm64e_x1;
 
   if (SubArchName == "arm64ec")
     return Triple::AArch64SubArch_arm64ec;
@@ -2538,6 +2543,12 @@ FloatABI::ABIType Triple::getDefaultFloatABI() const {
   return FloatABI::Hard;
 }
 
+ThreadModel Triple::getDefaultThreadModel() const {
+  if (isWasm())
+    return ThreadModel::Single;
+  return ThreadModel::POSIX;
+}
+
 LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   switch (getArch()) {
   case loongarch64:
@@ -2545,13 +2556,17 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case riscv64:
   case riscv32be:
   case riscv64be:
-  case sparc:
-  case sparcel:
   case sparcv9:
   case systemz:
   case ve:
   case wasm32:
   case wasm64:
+    return LongDoubleFormat::IEEEquad;
+  case sparc:
+  case sparcel:
+    // GCC uses IEEE double for bare-metal and RTEMS SPARC V8 targets.
+    if (getOS() == UnknownOS || getOS() == RTEMS)
+      return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case ppc:
   case ppcle:
