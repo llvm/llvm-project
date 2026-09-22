@@ -4260,7 +4260,6 @@ int64_t test_mulsu_w11_i64(int32x2_t a, uint32x2_t b) {
   return __riscv_mulsu_w11_i64(a, b);
 }
 
-
 // CHECK-LABEL: test_pmulh_b0_i16x2:
 // CHECK:       pmulh.h.b0
 int16x2_t test_pmulh_b0_i16x2(int16x2_t a, int8x4_t b) {

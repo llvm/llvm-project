@@ -17596,8 +17596,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
                                 N->getOperand(1), Undef);
       SDValue Src2 = N->getOperand(2);
-      SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8,
-                                Src2, DAG.getUNDEF(Src2.getValueType()));
+      SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Src2,
+                                DAG.getUNDEF(Src2.getValueType()));
       SDValue Res = DAG.getNode(getRVPMulHighPartsOpcode(IntNo), DL, MVT::v4i16,
                                 Rs1, Rs2);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
@@ -17624,7 +17624,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
         return;
       }
-      reportFatalUsageError("unsupported llvm.riscv multiply-high-parts intrinsic");
+      reportFatalUsageError(
+          "unsupported llvm.riscv multiply-high-parts intrinsic");
     }
     case Intrinsic::riscv_macc_00:
     case Intrinsic::riscv_macc_01:
