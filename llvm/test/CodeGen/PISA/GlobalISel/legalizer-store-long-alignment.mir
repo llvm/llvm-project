@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o -   | FileCheck -check-prefix=LEGAL %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o -   | FileCheck -check-prefix=LEGAL %s
 
 # Check that alignment too large to store in 32-bit value isn't truncated.
 --- |

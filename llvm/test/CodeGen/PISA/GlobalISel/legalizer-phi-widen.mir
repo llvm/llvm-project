@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
 # Check that i24 operands in phi inst are extended to i32.
 
 --- |
