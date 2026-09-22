@@ -55,7 +55,7 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }
 
   // Legality analysis has already established this shape.
-  const SCEV *IndVarSCEV = SE.getSCEV(LS->getInductionVariable());
+  const SCEV *IndVarSCEV = SE.getSCEV(L->getInductionVariable(SE));
   const SCEV *Start;
   const APInt *StepC;
   [[maybe_unused]] bool Matched =

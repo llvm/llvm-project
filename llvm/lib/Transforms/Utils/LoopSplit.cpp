@@ -95,14 +95,20 @@ using namespace llvm::SCEVPatternMatch;
 
 /// Per-split() scratch shared by the phase helpers; lives for one split() call.
 /// Everything derived from the induction lives on LoopSplit itself, filled in
-/// by legality analysis; this holds only what the transform creates.
+/// by legality analysis; this holds only what the transform creates. Partition
+/// 0 reuses the original loop's blocks, which live in Partitions[0].
 struct LoopSplit::SplitState {
-  // Partition 0 reuses the original loop's preheader, exit, and entry guard;
-  // those blocks live in Partitions[0] rather than being duplicated here.
-  BasicBlock *FinalExit = nullptr; // where the partition chain converges.
-  Loop *OuterLoop = nullptr;       // parent of the new blocks, if any.
-  PHINode *Induction = nullptr;    // the loop's induction variable.
-  MDNode *OrigLoopID = nullptr;    // !llvm.loop on the loop before splitting.
+  // Where the partition chain converges.
+  BasicBlock *FinalExit = nullptr;
+
+  // Parent of the new blocks, if any.
+  Loop *OuterLoop = nullptr;
+
+  // The loop's induction variable.
+  PHINode *Induction = nullptr;
+
+  // !llvm.loop on the loop before splitting.
+  MDNode *OrigLoopID = nullptr;
 };
 
 // Record a new partition with the given inclusive iteration range.
@@ -123,14 +129,9 @@ void LoopSplit::addPartition(const SCEV *Start, const SCEV *End) {
 }
 
 // Return the induction's add-recurrence, or null unless the induction is an
-// integer with a unit step that the latch compares.
-static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE) {
-  ICmpInst *LatchCmp = L->getLatchCmpInst();
-
-  // SCEV's induction variable, restricted to a unit-step affine recurrence.
-  PHINode *Induction = L->getInductionVariable(*SE);
-  if (!Induction)
-    return nullptr;
+// integer with a unit step.
+static const SCEVAddRecExpr *analyzeInduction(PHINode *Induction,
+                                              ScalarEvolution *SE) {
   // Partition bounds are integer arithmetic on the induction type, so a loop
   // whose only induction is a pointer is out of scope.
   if (!Induction->getType()->isIntegerTy())
@@ -143,20 +144,7 @@ static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE) {
     return nullptr;
   if (!Step->isOne() && !Step->isAllOnes())
     return nullptr;
-  const auto *AR = cast<SCEVAddRecExpr>(IndSCEV);
-
-  // The induction's "next" value (i + 1), produced in the latch.
-  auto *StepInst = dyn_cast<Instruction>(
-      Induction->getIncomingValueForBlock(L->getLoopLatch()));
-  if (!StepInst)
-    return nullptr;
-
-  // One compare operand must be the induction, either the PHI or its step. The
-  // rebuilt latch always compares the PHI, so which operand it was is not used.
-  if (any_of(LatchCmp->operands(),
-             [&](Value *Op) { return Op == Induction || Op == StepInst; }))
-    return AR;
-  return nullptr;
+  return cast<SCEVAddRecExpr>(IndSCEV);
 }
 
 // Decide whether the iteration ordering is signed or unsigned; returns the
@@ -171,11 +159,6 @@ static std::optional<bool> computeSignedness(ScalarEvolution &SE, Loop *L,
   if (IndAR->hasNoSignedWrap() && IndAR->hasNoUnsignedWrap()) {
     const ConstantRange UR = SE.getUnsignedRange(IndAR);
     const ConstantRange SR = SE.getSignedRange(IndAR);
-    if (UR.isFullSet() && SR.isFullSet()) {
-      LLVM_DEBUG(dbgs() << DEBUG_TYPE
-                 ": ambiguous iteration ordering with both nsw and nuw\n");
-      return std::nullopt;
-    }
     if (!SR.isFullSet())
       return true;
     if (!UR.isFullSet())
@@ -198,8 +181,9 @@ static std::optional<bool> computeSignedness(ScalarEvolution &SE, Loop *L,
 static bool isEntryGuardedByCond(ScalarEvolution &SE, Loop *L,
                                  ICmpInst::Predicate Pred, const SCEV *LHS,
                                  const SCEV *RHS) {
-  return SE.isLoopEntryGuardedByCond(L, Pred, SE.applyLoopGuards(LHS, L),
-                                     SE.applyLoopGuards(RHS, L));
+  auto Guards = ScalarEvolution::LoopGuards::collect(L, SE);
+  return SE.isLoopEntryGuardedByCond(L, Pred, SE.applyLoopGuards(LHS, Guards),
+                                     SE.applyLoopGuards(RHS, Guards));
 }
 
 // Latch "keep iterating" predicate, comparing the induction PHI against the
@@ -268,14 +252,14 @@ analyzeLegality(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
     return std::nullopt;
   }
 
-  const SCEVAddRecExpr *IndAR = analyzeInduction(L, SE);
+  PHINode *Induction = L->getInductionVariable(*SE);
+  const SCEVAddRecExpr *IndAR =
+      Induction ? analyzeInduction(Induction, SE) : nullptr;
   if (!IndAR) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
                ": no unique unit-step integer induction\n");
     return std::nullopt;
   }
-
-  PHINode *Induction = L->getInductionVariable(*SE);
 
   // Loop-carried values are unsupported: a later partition would have to resume
   // the previous one's value, which needs SSA reconstruction. The induction is
@@ -293,14 +277,7 @@ analyzeLegality(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
   const bool Descending =
       cast<SCEVConstant>(IndAR->getStepRecurrence(*SE))->getAPInt().isAllOnes();
 
-  // Start and end must share the induction type; reject any width mismatch.
-  // evaluateAtIteration coerces to the start's type for an affine recurrence,
-  // so this is defensive rather than reachable.
   const SCEV *InductionEnd = IndAR->evaluateAtIteration(BTC, *SE);
-  if (InductionEnd->getType() != IndAR->getStart()->getType()) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": induction end/start type mismatch\n");
-    return std::nullopt;
-  }
 
   // Partition bounds and entry guards assume the space runs monotonically from
   // start to end, so refuse one that wraps past the type extreme. A no-wrap
@@ -447,10 +424,7 @@ void LoopSplit::expandPartitionBounds(SplitState &S, SCEVExpander &Expander) {
 
   // Expand all partition bounds in the entry guard, which dominates the whole
   // chain (a skipped partition bypasses the original preheader).
-  const unsigned N = getNumPartitions();
-  for (unsigned I = 0; I < N; ++I) {
-    PartitionInfo &P = Partitions[I];
-
+  for (PartitionInfo &P : Partitions) {
     P.StartVal = Expander.expandCodeFor(P.StartExpr, IndTy, EntryGuardTerm);
 
     // Clamp the end to the induction end (min ascending, max descending) so a

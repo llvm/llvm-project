@@ -47,11 +47,6 @@ public:
   LLVM_ABI static std::optional<LoopSplit>
   get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT);
 
-  /// Return the loop's induction variable. Valid only on a legal LoopSplit.
-  LLVM_ABI PHINode *getInductionVariable() const {
-    return L->getInductionVariable(*SE);
-  }
-
   /// The induction value on the last iteration, which the final partition must
   /// end at. Valid only on a legal LoopSplit.
   LLVM_ABI const SCEV *getInductionEnd() const { return InductionEnd; }
