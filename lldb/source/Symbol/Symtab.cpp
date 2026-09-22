@@ -1234,7 +1234,7 @@ constexpr uint32_t CURRENT_CACHE_VERSION = 2;
 // CURRENT_CACHE_VERSION number will need to be incremented.
 #if __SIZEOF_POINTER__ == 8
 static_assert(
-    sizeof(lldb_private::Symbol) == 80,
+    sizeof(lldb_private::Symbol) == 72,
     "Symbol size has changed, DataFileCache version likely needs updating");
 #endif
 
