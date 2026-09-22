@@ -1758,9 +1758,9 @@ template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genCast(
 
 /// Check CUDA attributes on a function argument, testing the attribute
 /// with the provided predicate (e.g. device-data vs device-resident).
-static bool hasCUDADataAttrOnFuncArg(
-    mlir::BlockArgument blockArg,
-    llvm::function_ref<bool(cuf::DataAttribute)> matches) {
+static bool
+hasCUDADataAttrOnFuncArg(mlir::BlockArgument blockArg,
+                         llvm::function_ref<bool(cuf::DataAttribute)> matches) {
   auto *owner = blockArg.getOwner();
   if (!owner)
     return false;
@@ -1786,10 +1786,8 @@ static bool hasCUDADataAttrOnFuncArg(
 /// interest, e.g.:
 ///   - device accessibility: cuf::isDeviceDataAttribute
 ///   - device memory (physically resident): device-data minus managed/unified
-static bool
-underlyingStorageHasDataAttr(mlir::Value var,
-                             llvm::function_ref<bool(cuf::DataAttribute)>
-                                 matches) {
+static bool underlyingStorageHasDataAttr(
+    mlir::Value var, llvm::function_ref<bool(cuf::DataAttribute)> matches) {
   // Strip casts to find the underlying value.
   mlir::Value currentVal =
       fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
@@ -1889,8 +1887,9 @@ template bool OpenACCPointerLikeModel<fir::ReferenceType>::isInDeviceMemory(
     mlir::Type, mlir::Value) const;
 template bool OpenACCPointerLikeModel<fir::PointerType>::isInDeviceMemory(
     mlir::Type, mlir::Value) const;
-template bool OpenACCPointerLikeModel<fir::HeapType>::isInDeviceMemory(
-    mlir::Type, mlir::Value) const;
+template bool
+    OpenACCPointerLikeModel<fir::HeapType>::isInDeviceMemory(mlir::Type,
+                                                             mlir::Value) const;
 template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isInDeviceMemory(
     mlir::Type, mlir::Value) const;
 
@@ -1900,14 +1899,17 @@ bool OpenACCMappableModel<Ty>::isInDeviceMemory(mlir::Type type,
   return isInDeviceMemoryImpl(var);
 }
 
-template bool OpenACCMappableModel<fir::BaseBoxType>::isInDeviceMemory(
-    mlir::Type, mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::BaseBoxType>::isInDeviceMemory(mlir::Type,
+                                                             mlir::Value) const;
 template bool OpenACCMappableModel<fir::ReferenceType>::isInDeviceMemory(
     mlir::Type, mlir::Value) const;
-template bool OpenACCMappableModel<fir::HeapType>::isInDeviceMemory(
-    mlir::Type, mlir::Value) const;
-template bool OpenACCMappableModel<fir::PointerType>::isInDeviceMemory(
-    mlir::Type, mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::HeapType>::isInDeviceMemory(mlir::Type,
+                                                          mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::PointerType>::isInDeviceMemory(mlir::Type,
+                                                             mlir::Value) const;
 
 std::optional<mlir::arith::AtomicRMWKind>
 OpenACCReducibleLogicalModel::getAtomicRMWKind(

@@ -462,8 +462,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
   // `deviceptr` asserts the value's storage is already in device memory; no
   // runtime mapping or attach is performed. Storage that is device-accessible
   // but physically shared with the host may migrate on demand, so it is not
-  // guaranteed to be in device memory and must still be mapped rather than treated
-  // as deviceptr.
+  // guaranteed to be in device memory and must still be mapped rather than
+  // treated as deviceptr.
   if (acc::isInDeviceMemoryValue(var)) {
     // If the variable is in device memory, use deviceptr clause.
     LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
