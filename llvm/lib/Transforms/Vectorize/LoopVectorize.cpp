@@ -3426,6 +3426,8 @@ static EpilogueLowering getEpilogueTailLowering(
 
   // The epilogue reuses the main loop's interleave groups, so it can't be
   // tail-folded if the target can't mask interleaved accesses.
+  // TODO: Add support once the epilogue has its own IAI, separate from the main
+  // loop's.
   if (MainCM.InterleaveInfo.hasGroups() &&
       !useMaskedInterleavedAccesses(*TTI)) {
     reportVectorizationInfo(
