@@ -328,109 +328,36 @@ static void invertScalarCompareInstr(MachineInstr &MI) {
     llvm_unreachable("Invalid SETP instruction");
 }
 
-static void swapSelpOperands(MachineOperand &Src0, MachineOperand &Src1) {
-  if (Src0.isReg() && Src1.isReg()) {
-    Register Reg0 = Src0.getReg();
-    Register Reg1 = Src1.getReg();
-    bool IsKill0 = Src0.isKill();
-    bool IsKill1 = Src1.isKill();
-    bool IsUndef0 = Src0.isUndef();
-    bool IsUndef1 = Src1.isUndef();
-
-    Src0.setReg(Reg1);
-    Src1.setReg(Reg0);
-    Src0.setIsKill(IsKill1);
-    Src1.setIsKill(IsKill0);
-    Src0.setIsUndef(IsUndef1);
-    Src1.setIsUndef(IsUndef0);
-    return;
-  }
-
-  auto SwapRegAndNonReg = [](MachineOperand &RegOp, MachineOperand &NonRegOp) {
-    Register Reg = RegOp.getReg();
-    bool IsKill = RegOp.isKill();
-    bool IsUndef = RegOp.isUndef();
-
-    if (NonRegOp.isImm())
-      RegOp.ChangeToImmediate(NonRegOp.getImm());
-    else if (NonRegOp.isFPImm())
-      RegOp.ChangeToFPImmediate(NonRegOp.getFPImm());
-    else
-      llvm_unreachable("Unexpected SELP operand");
-
-    NonRegOp.ChangeToRegister(Reg, /*isDef=*/false, /*isImp=*/false, IsKill,
-                              /*isDead=*/false, IsUndef, /*isDebug=*/false);
-  };
-
-  if (Src0.isReg()) {
-    SwapRegAndNonReg(Src0, Src1);
-    return;
-  }
-
-  if (Src1.isReg()) {
-    SwapRegAndNonReg(Src1, Src0);
-    return;
-  }
-
-  if (Src0.isImm() && Src1.isImm()) {
-    int64_t Imm0 = Src0.getImm();
-    Src0.setImm(Src1.getImm());
-    Src1.setImm(Imm0);
-  } else if (Src0.isFPImm() && Src1.isFPImm()) {
-    const ConstantFP *FPImm0 = Src0.getFPImm();
-    Src0.setFPImm(Src1.getFPImm());
-    Src1.setFPImm(FPImm0);
-  } else {
-    llvm_unreachable("Unexpected SELP operand pair");
-  }
-}
-
-static void invertSelpInstr(MachineInstr &MI, const NVPTXInstrInfo &TII) {
-  unsigned NewOpcode = MI.getOpcode();
-
-  switch (NewOpcode) {
+static unsigned getInvertedSelpOpcode(unsigned Opcode) {
+  switch (Opcode) {
   case NVPTX::SELP_b16ri:
-    NewOpcode = NVPTX::SELP_b16ir;
-    break;
+    return NVPTX::SELP_b16ir;
   case NVPTX::SELP_b16ir:
-    NewOpcode = NVPTX::SELP_b16ri;
-    break;
+    return NVPTX::SELP_b16ri;
   case NVPTX::SELP_b32ri:
-    NewOpcode = NVPTX::SELP_b32ir;
-    break;
+    return NVPTX::SELP_b32ir;
   case NVPTX::SELP_b32ir:
-    NewOpcode = NVPTX::SELP_b32ri;
-    break;
+    return NVPTX::SELP_b32ri;
   case NVPTX::SELP_b64ri:
-    NewOpcode = NVPTX::SELP_b64ir;
-    break;
+    return NVPTX::SELP_b64ir;
   case NVPTX::SELP_b64ir:
-    NewOpcode = NVPTX::SELP_b64ri;
-    break;
+    return NVPTX::SELP_b64ri;
   case NVPTX::SELP_f16ri:
-    NewOpcode = NVPTX::SELP_f16ir;
-    break;
+    return NVPTX::SELP_f16ir;
   case NVPTX::SELP_f16ir:
-    NewOpcode = NVPTX::SELP_f16ri;
-    break;
+    return NVPTX::SELP_f16ri;
   case NVPTX::SELP_f32ri:
-    NewOpcode = NVPTX::SELP_f32ir;
-    break;
+    return NVPTX::SELP_f32ir;
   case NVPTX::SELP_f32ir:
-    NewOpcode = NVPTX::SELP_f32ri;
-    break;
+    return NVPTX::SELP_f32ri;
   case NVPTX::SELP_f64ri:
-    NewOpcode = NVPTX::SELP_f64ir;
-    break;
+    return NVPTX::SELP_f64ir;
   case NVPTX::SELP_f64ir:
-    NewOpcode = NVPTX::SELP_f64ri;
-    break;
+    return NVPTX::SELP_f64ri;
   case NVPTX::SELP_bf16ri:
-    NewOpcode = NVPTX::SELP_bf16ir;
-    break;
+    return NVPTX::SELP_bf16ir;
   case NVPTX::SELP_bf16ir:
-    NewOpcode = NVPTX::SELP_bf16ri;
-    break;
+    return NVPTX::SELP_bf16ri;
   case NVPTX::SELP_b16rr:
   case NVPTX::SELP_b16ii:
   case NVPTX::SELP_b32rr:
@@ -445,12 +372,17 @@ static void invertSelpInstr(MachineInstr &MI, const NVPTXInstrInfo &TII) {
   case NVPTX::SELP_f64ii:
   case NVPTX::SELP_bf16rr:
   case NVPTX::SELP_bf16ii:
-    break;
+    return Opcode;
   default:
     llvm_unreachable("Unexpected select instruction");
   }
-  MI.setDesc(TII.get(NewOpcode));
-  swapSelpOperands(MI.getOperand(1), MI.getOperand(2));
+}
+
+static void invertSelpInstr(MachineInstr &MI, const NVPTXInstrInfo &TII) {
+  MI.setDesc(TII.get(getInvertedSelpOpcode(MI.getOpcode())));
+  MachineOperand Src0 = MI.getOperand(1);
+  MI.removeOperand(1);
+  MI.insert(MI.operands_begin() + 2, {Src0});
 }
 
 bool NVPTXInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
@@ -487,11 +419,9 @@ MachineInstr *NVPTXInstrInfo::commuteInstructionImpl(MachineInstr &MI,
 
   invertScalarCompareInstr(MI);
 
-  auto Failed = llvm::find_if(
-      BranchMBBs,
-      [this](MachineBasicBlock *MBB) { // NOLINT(llvm-qualified-auto)
-        return !invertPredicateBranchInstr(*MBB);
-      });
+  auto *Failed = llvm::find_if(BranchMBBs, [this](MachineBasicBlock *MBB) {
+    return !invertPredicateBranchInstr(*MBB);
+  });
 
   if (Failed != BranchMBBs.end()) {
     // Couldn't invert one of the branches. Roll back the prefix we
