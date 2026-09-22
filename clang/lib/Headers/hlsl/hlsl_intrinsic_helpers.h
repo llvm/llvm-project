@@ -85,10 +85,10 @@ template <typename T, typename U> constexpr T refract_impl(T I, T N, U Eta) {
 }
 
 template <typename T> constexpr T fmod_impl(T X, T Y) {
-#if defined(__SPIRV__)
+#if defined(__DIRECTX__)
   T Div = X / Y;
   T Frc = frac(abs(Div));
-  return select(Div >= 0, Frc, static_cast<T>(-Frc)) * Y;
+  return select(Div >= 0, Frc, (T)-Frc) * Y;
 #else
   return __builtin_elementwise_fmod(X, Y);
 #endif
