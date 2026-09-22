@@ -56,8 +56,10 @@ class OSVersionAtLeast<int major, int minor>
                      # [{, }] # !cast<string>(minor) # [{)}]>;
 
 def IsAAPCS_ABI : LibcallPredicate<[{isAAPCS_ABI(TT, ABIName)}]>;
-def IsEABI4 : LibcallPredicate<[{EABIVersion == EABI::EABI4}]>;
-def IsEABI5 : LibcallPredicate<[{EABIVersion == EABI::EABI5}]>;
+
+// A numbered EABI (4/5) rather than GNU, i.e. not GNU/Musl AEABI.
+def IsEABIVersion
+  : LibcallPredicate<[{!TT.isTargetGNUAEABI() && !TT.isTargetMuslAEABI()}]>;
 
 def IsLongDoubleF128 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::IEEEquad}]>;
 def IsLongDoubleX87 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::X87DoubleExtended}]>;
@@ -2608,6 +2610,10 @@ def isNotMachOAndNotTargetAEABI
     : RuntimeLibcallAvailability<(all_of (not IsOSBinFormatMachO),
                                             (not IsTargetAEABI))>;
 
+// Note that these actually pass and return int and short rather than float and
+// _Float16. This happens to work with the AAPCS calling convention where they
+// are treated equally, but may not work on other platforms. __extendhfsf2 and
+// __truncsfhf2 should be used instead on non-GNUEABIHF targets anyway.
 def GNUEABIHalfConvertCalls :
   LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
     isNotMachOAndNotTargetAEABI> {
@@ -2722,7 +2728,7 @@ def AEABI45MemCalls : LibcallImpls<
        __aeabi_memset, __aeabi_memset4, __aeabi_memset8,
        __aeabi_memclr, __aeabi_memclr4, __aeabi_memclr8),
   RuntimeLibcallAvailability<
-    (all_of (any_of IsEABI4, IsEABI5),
+    (all_of IsEABIVersion,
             (any_of IsTargetAEABI, IsTargetGNUAEABI, IsTargetMuslAEABI,
                     IsOSFuchsia, IsAndroid),
             IsAAPCS_ABI)>> {
@@ -4578,6 +4584,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_acosf : RuntimeLibcallImpl<ACOS_V8F32>;
   def amd_vrs8_asinf : RuntimeLibcallImpl<ASIN_V8F32>;
   def amd_vrs8_atanf : RuntimeLibcallImpl<ATAN_V8F32>;
+  def amd_vrs8_cbrtf : RuntimeLibcallImpl<CBRT_V8F32>;
   def amd_vrs8_cosf : RuntimeLibcallImpl<COS_V8F32>;
   def amd_vrs8_coshf : RuntimeLibcallImpl<COSH_V8F32>;
   def amd_vrs8_erff : RuntimeLibcallImpl<ERF_V8F32>;

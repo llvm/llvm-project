@@ -303,11 +303,6 @@ public:
     return getGeneration() <= SEA_ISLANDS ? 1 : 2;
   }
 
-  /// Return the amount of LDS that can be used that will not restrict the
-  /// occupancy lower than WaveCount.
-  unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
-                                           const Function &) const;
-
   bool supportsMinMaxDenormModes() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;
   }
@@ -349,9 +344,7 @@ public:
     return HasUnalignedScratchAccess && HasUnalignedAccessMode;
   }
 
-  bool isXNACKEnabled() const {
-    return enableXNACK() || TargetID.isXnackOnOrAny();
-  }
+  bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
@@ -365,6 +358,11 @@ public:
   }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
+
+  /// \returns Whether a work-group runs on all of the block's SIMDs.
+  bool isFullSIMDMode() const {
+    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+  }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
@@ -530,6 +528,8 @@ public:
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }
 
+  bool hasBufferTFEFormatD16() const { return !HasGFX90AInsts; }
+
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
@@ -623,6 +623,10 @@ public:
   bool hasVALUPartialForwardingHazard() const {
     return getGeneration() == GFX11;
   }
+
+  /// GFX11 VOPD dest-buffer forwarding can drop the interlock when SRC0 or
+  /// SRC1 X/Y are distinct VGPRs with the same parity.
+  bool hasGFX11VOPDInterlockHazard() const { return getGeneration() == GFX11; }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 
@@ -858,7 +862,7 @@ public:
 
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumVGPRs(*this);
+    return AMDGPU::getTotalNumVGPRs(getTargetID().getGPUKind(), isWave32());
   }
 
   /// \returns Addressable number of architectural VGPRs supported by the
@@ -869,7 +873,14 @@ public:
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this, DynamicVGPRBlockSize);
+    // Dynamic VGPR mode is a per-kernel mode, so it is not covered by the
+    // TargetParser query.
+    if (DynamicVGPRBlockSize != 0) {
+      return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this,
+                                                     DynamicVGPRBlockSize);
+    }
+    return AMDGPU::getAddressableNumVGPRs(getTargetID().getGPUKind(),
+                                          isWave32());
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
@@ -1015,6 +1026,10 @@ public:
   bool requiresWaitXCntForSingleAccessInstructions() const {
     return HasGFX1250Insts;
   }
+
+  /// True if VALU pipe occupancy is modeled with GFX1250BlockingCycles
+  /// (gfx1250 pipeline property, not gfx1250 ISA feature).
+  bool hasGFX1250VALUBlockingCycles() const { return AMDGPU::isGFX1250(*this); }
 
   /// \returns the number of significant bits in the immediate field of the
   /// S_NOP instruction.

@@ -874,6 +874,8 @@ public:
   void verifyAnalysis() const;
 };
 
+extern template class LLVM_TEMPLATE_ABI RegionNodeBase<RegionTraits<Function>>;
+
 class RegionNode : public RegionNodeBase<RegionTraits<Function>> {
 public:
   inline RegionNode(Region *Parent, BasicBlock *Entry, bool isSubRegion = false)
@@ -883,6 +885,8 @@ public:
     return this == reinterpret_cast<const RegionNode *>(&RN);
   }
 };
+
+extern template class LLVM_TEMPLATE_ABI RegionBase<RegionTraits<Function>>;
 
 class Region : public RegionBase<RegionTraits<Function>> {
 public:
@@ -895,8 +899,6 @@ public:
   }
 };
 
-extern template class LLVM_TEMPLATE_ABI RegionBase<RegionTraits<Function>>;
-extern template class LLVM_TEMPLATE_ABI RegionNodeBase<RegionTraits<Function>>;
 extern template class LLVM_TEMPLATE_ABI RegionInfoBase<RegionTraits<Function>>;
 
 class LLVM_ABI RegionInfo : public RegionInfoBase<RegionTraits<Function>> {

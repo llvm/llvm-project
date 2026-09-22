@@ -1196,16 +1196,16 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
         VA.isMemLoc()) {
       switch (VA.getLocMemOffset()) {
       case 0:
-        VA.convertToReg(Mips::A0);
+        VA.convertToReg(getABI().getArgReg(0, false));
         break;
       case 4:
-        VA.convertToReg(Mips::A1);
+        VA.convertToReg(getABI().getArgReg(1, false));
         break;
       case 8:
-        VA.convertToReg(Mips::A2);
+        VA.convertToReg(getABI().getArgReg(2, false));
         break;
       case 12:
-        VA.convertToReg(Mips::A3);
+        VA.convertToReg(getABI().getArgReg(3, false));
         break;
       default:
         break;
@@ -1341,8 +1341,7 @@ bool MipsFastISel::fastLowerArguments() {
     return false;
   }
 
-  std::array<MCPhysReg, 4> GPR32ArgRegs = {{Mips::A0, Mips::A1, Mips::A2,
-                                           Mips::A3}};
+  ArrayRef<MCPhysReg> GPR32ArgRegs = getABI().getArgRegs(false);
   std::array<MCPhysReg, 2> FGR32ArgRegs = {{Mips::F12, Mips::F14}};
   std::array<MCPhysReg, 2> AFGR64ArgRegs = {{Mips::D6, Mips::D7}};
   auto NextGPR32 = GPR32ArgRegs.begin();
@@ -1567,10 +1566,11 @@ bool MipsFastISel::fastLowerCall(CallLoweringInfo &CLI) {
     DestAddress = materializeExternalCallSym(Symbol);
   else
     DestAddress = materializeGV(Addr.getGlobalValue(), MVT::i32);
-  emitInst(TargetOpcode::COPY, Mips::T9).addReg(DestAddress);
-  MachineInstrBuilder MIB =
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Mips::JALR),
-              Mips::RA).addReg(Mips::T9);
+  emitInst(TargetOpcode::COPY, getABI().getTempReg(9, false))
+      .addReg(DestAddress);
+  MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                                    TII.get(Mips::JALR), Mips::RA)
+                                .addReg(getABI().getTempReg(9, false));
 
   // Add implicit physical register uses to the call.
   for (auto Reg : CLI.OutRegs)

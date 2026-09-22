@@ -247,7 +247,7 @@ if(WIN32)
   set(LLVM_ON_UNIX 0)
 elseif(FUCHSIA OR UNIX OR CYGWIN)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX|Emscripten")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
@@ -578,7 +578,7 @@ endif()
 
 # set stack reserved size to ~10MB
 set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
-if(MSVC)
+if(MSVC OR (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
