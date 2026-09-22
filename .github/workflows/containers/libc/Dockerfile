@@ -151,7 +151,7 @@ RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar
     mkdir gcc-7 && \
     cd gcc-7 && \
     ../gcc-7.5.0/configure --prefix=/usr/local/gcc7 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -168,7 +168,7 @@ RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar
     mkdir gcc-8 && \
     cd gcc-8 && \
     ../gcc-8.5.0/configure --prefix=/usr/local/gcc8 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
@@ -185,7 +185,7 @@ RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-9.5.0/gcc-9.5.0.tar
     mkdir gcc-9 && \
     cd gcc-9 && \
     ../gcc-9.5.0/configure --prefix=/usr/local/gcc9 --enable-languages=c,c++ \
-    --disable-multilib --disable-libsanitizer && \
+    --disable-multilib --disable-libsanitizer --disable-bootstrap && \
     make -j8 && \
     sudo make install && \
     cd .. && \
