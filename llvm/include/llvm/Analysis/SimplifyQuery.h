@@ -76,6 +76,7 @@ struct SimplifyQuery {
   const Instruction *CxtI = nullptr;
   const DomConditionCache *DC = nullptr;
   const CondContext *CC = nullptr;
+  const Function *CxtF = nullptr;
 
   // Wrapper to query additional information for instructions like metadata or
   // keywords like nsw, which provides conservative results if those cannot
@@ -89,7 +90,10 @@ struct SimplifyQuery {
   bool AllowEphemerals = false;
 
   SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
-      : DL(DL), CxtI(CXTI) {}
+      : DL(DL), CxtI(CXTI) {
+    if (CxtI)
+      CxtF = CxtI->getFunction();
+  }
 
   SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
                 const DominatorTree *DT = nullptr,
@@ -97,18 +101,31 @@ struct SimplifyQuery {
                 const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
                 bool CanUseUndef = true, const DomConditionCache *DC = nullptr)
       : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), DC(DC), IIQ(UseInstrInfo),
-        CanUseUndef(CanUseUndef) {}
+        CanUseUndef(CanUseUndef) {
+    if (CxtI)
+      CxtF = CxtI->getFunction();
+  }
 
   SimplifyQuery(const DataLayout &DL, const DominatorTree *DT,
                 AssumptionCache *AC = nullptr,
                 const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
                 bool CanUseUndef = true)
       : DL(DL), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
-        CanUseUndef(CanUseUndef) {}
+        CanUseUndef(CanUseUndef) {
+    if (CxtI)
+      CxtF = CxtI->getFunction();
+  }
 
   SimplifyQuery getWithInstruction(const Instruction *I) const {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;
+    if (I)
+      Copy.CxtF = I->getFunction();
+    return Copy;
+  }
+  SimplifyQuery getWithFunction(const Function *F) const {
+    SimplifyQuery Copy(*this);
+    Copy.CxtF = F;
     return Copy;
   }
   SimplifyQuery getWithoutUndef() const {
