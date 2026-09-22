@@ -2125,6 +2125,32 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     return std::nullopt;
   }
+  case Intrinsic::amdgcn_sudot4:
+  case Intrinsic::amdgcn_sudot8: {
+    // Reassociating across a saturating accumulate is not valid.
+    if (!II.hasOneUse() || !match(II.getArgOperand(5), m_Zero()))
+      break;
+
+    const APInt *Acc;
+    if (!match(II.getArgOperand(4), m_APInt(Acc)))
+      break;
+
+    auto *AccumUser = dyn_cast<BinaryOperator>(II.user_back());
+    if (!AccumUser)
+      break;
+
+    const APInt *AccumDelta;
+    Constant *NewAcc;
+    if (match(AccumUser, m_c_Add(m_Specific(&II), m_APInt(AccumDelta))))
+      NewAcc = ConstantInt::get(II.getType(), *Acc + *AccumDelta);
+    else
+      break;
+
+    IC.replaceOperand(II, 4, NewAcc);
+    IC.replaceInstUsesWith(*AccumUser, &II);
+    IC.eraseInstFromFunction(*AccumUser);
+    return &II;
+  }
   case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
   case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
     Value *Src0 = II.getArgOperand(0);
