@@ -160,10 +160,11 @@ bool VFSelectionContext::isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy,
 }
 
 bool VFSelectionContext::isLegalExpandLoadOrCompressStore(
-    bool IsLoad, Type *ScalarTy, Align Alignment) const {
+    bool IsLoad, Type *ScalarTy, Align Alignment, ElementCount VF) const {
+  Type *VectorTy = toVectorTy(ScalarTy, VF);
   return ForceTargetSupportsMaskedMemoryOps ||
-         (IsLoad ? TTI.isLegalMaskedExpandLoad(ScalarTy, Alignment)
-                 : TTI.isLegalMaskedCompressStore(ScalarTy, Alignment));
+         (IsLoad ? TTI.isLegalMaskedExpandLoad(VectorTy, Alignment)
+                 : TTI.isLegalMaskedCompressStore(VectorTy, Alignment));
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {
