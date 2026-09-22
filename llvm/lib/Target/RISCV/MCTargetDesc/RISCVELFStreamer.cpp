@@ -139,7 +139,7 @@ void RISCVTargetELFStreamer::finish() {
     EFlags |= ELF::EF_RISCV_RVE;
     break;
   case RISCVABI::ABI_Unknown:
-    llvm_unreachable("Improperly initialised target ABI");
+    break;
   }
 
   W.setELFHeaderEFlags(EFlags);
