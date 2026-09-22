@@ -72,6 +72,10 @@ public:
 
   [[nodiscard]] constexpr uint32_t Reference() const { return reference; }
 
+  friend constexpr bool operator==(var_ref_t lhs, var_ref_t rhs) {
+    return lhs.AsUInt32() == rhs.AsUInt32();
+  }
+
   // We should be able to store at least 8 million variables for each store
   // type at every stopped state.
   static constexpr uint32_t k_variables_reference_threshold = 8'000'000;

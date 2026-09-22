@@ -359,7 +359,6 @@ bool ValuePointsToCode(lldb::SBValue v) {
   return line_entry.IsValid();
 }
 
-
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
