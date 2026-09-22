@@ -8,7 +8,8 @@
 
 ; Elementwise d = c + a * b, where the fmul is operand 1 of the fadd. These
 ; targets halve the cost of a packed fmul, so SLP is tempted to vectorize and
-; break the scalar fma chain. The 14 runs sit at the cost boundary. The 12 runs
+; break the scalar fma chain. The scalar fmul is costed as free once the fma
+; fusion context is visible, so the 14 runs stay scalar. The 12 runs
 ; vectorize either way and guard against the fmuladd marking landing on the load
 ; at operand 0 after the fma detection picked the fmul at operand 1, which
 ; asserts. axpy4_mixed_reassoc carries reassoc on one lane only, so the whole
