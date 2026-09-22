@@ -538,8 +538,7 @@ struct CUFAddConstructor
       if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName)) {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToEnd(mod.getBody());
-        auto extraFuncOp =
-            mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, funcTy);
+        mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, funcTy);
       }
       mlir::LLVM::CallOp::create(builder, loc, funcTy,
                                  mlir::SymbolRefAttr::get(ctx, funcName));

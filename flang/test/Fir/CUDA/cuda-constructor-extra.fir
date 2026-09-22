@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --cuf-add-constructor="extra-constructors=foo:false,bar:true" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-add-constructor="extra-constructors=foo entry-only-constructors=bar" %s | FileCheck %s
 
 // extra-constructors is a list of <name>:<if-main> pairs. The functions are
 // declared and called from __cudaFortranConstructor, since they are defined
@@ -13,7 +13,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK-NOT: llvm.call @bar()
 // CHECK:   llvm.return
 // CHECK: }
-// CHECK: llvm.func @foo() attributes {sym_visibility = "private"}
+// CHECK: llvm.func @foo()
 // CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor], priorities = [0 : i32], data = [#llvm.zero]
 
 // -----
@@ -29,8 +29,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK:   llvm.call @bar() : () -> ()
 // CHECK:   llvm.return
 // CHECK: }
-// CHECK-DAG: llvm.func @foo() attributes {sym_visibility = "private"}
-// CHECK-DAG: llvm.func @bar() attributes {sym_visibility = "private"}
+// CHECK-DAG: llvm.func @foo()
+// CHECK-DAG: llvm.func @bar()
 // CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor], priorities = [0 : i32], data = [#llvm.zero]
 
 // -----
