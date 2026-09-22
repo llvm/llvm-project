@@ -1109,6 +1109,8 @@ bool MachineOutliner::outline(
       MachineBasicBlock::iterator StartIt = C.begin();
       MachineBasicBlock::iterator EndIt = std::prev(C.end());
 
+      // Use the first non-debug instruction with a non-zero source line as the
+      // location for the replacement call sequence.
       DebugLoc CallLoc;
       for (MachineInstr &MI : C) {
         const DebugLoc &DL = MI.getDebugLoc();
