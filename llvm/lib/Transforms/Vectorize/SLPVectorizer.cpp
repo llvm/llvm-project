@@ -28621,9 +28621,11 @@ void BoUpSLP::computeMinimumValueSizes() {
         MaxBitWidth >=
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
-      if (UserIgnoreList)
+      if (UserIgnoreList) {
+        unsigned Sz = getTreeSizeExcludingGathers();
         for (Value *V : TreeRoot)
-          AnalyzedMinBWVals.insert_or_assign(V, getTreeSizeExcludingGathers());
+          AnalyzedMinBWVals.insert_or_assign(V, Sz);
+      }
       NodesToKeepBWs.insert_range(ToDemote);
       continue;
     }
