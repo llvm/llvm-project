@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
 
 # Verify G_UMULH lowering on non-power-of-2 type.
 

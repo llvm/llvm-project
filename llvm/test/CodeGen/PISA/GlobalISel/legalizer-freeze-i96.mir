@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
 
 # Verify that G_FREEZE is legalized successfully into two i64 parts.
 # NOTE: The intermediate widening to i128 is an internal step, and does not appear in the final output.

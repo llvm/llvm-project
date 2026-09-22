@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 # Regression test to make sure truncating double into i8 doesn't try to produce an 8 bit float.
 --- |
   target triple = "pisa"

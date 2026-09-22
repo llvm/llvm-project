@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 --- |
   define void @test_extract_build_vector(ptr %addr, ptr %addr2) {
     %rv = load <4 x i32>, ptr %addr, align 32
