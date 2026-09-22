@@ -980,38 +980,6 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
   return true;
 }
 
-static bool UpdateCPSRDef(MachineInstr &MI, bool LiveCPSR, bool &DefCPSR) {
-  bool HasDef = false;
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || MO.isUndef() || MO.isUse())
-      continue;
-    if (MO.getReg() != ARM::CPSR)
-      continue;
-
-    DefCPSR = true;
-    if (!MO.isDead())
-      HasDef = true;
-  }
-
-  return HasDef || LiveCPSR;
-}
-
-static bool UpdateCPSRUse(MachineInstr &MI, bool LiveCPSR) {
-  for (const MachineOperand &MO : MI.operands()) {
-    if (!MO.isReg() || MO.isUndef() || MO.isDef())
-      continue;
-    if (MO.getReg() != ARM::CPSR)
-      continue;
-    assert(LiveCPSR && "CPSR liveness tracking is wrong!");
-    if (MO.isKill()) {
-      LiveCPSR = false;
-      break;
-    }
-  }
-
-  return LiveCPSR;
-}
-
 bool Thumb2SizeReduce::ReduceMI(MachineBasicBlock &MBB, MachineInstr *MI,
                                 bool LiveCPSR, bool IsSelfLoop,
                                 bool SkipPrologueEpilogue) {
@@ -1045,9 +1013,22 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
                                  bool SkipPrologueEpilogue) {
   bool Modified = false;
 
-  // Yes, CPSR could be livein.
-  bool LiveCPSR = MBB.isLiveIn(ARM::CPSR);
-  MachineInstr *BundleMI = nullptr;
+  // Narrowing to a flag-setting form is only legal where CPSR is dead.
+  bool LiveCPSR = any_of(MBB.successors(), [](const MachineBasicBlock *Succ) {
+    return Succ->isLiveIn(ARM::CPSR);
+  });
+
+  DenseMap<const MachineInstr *, bool> CPSRLiveAfter;
+  for (MachineInstr &MI : reverse(MBB.instrs())) {
+    if (MI.isBundle() || MI.isDebugInstr())
+      continue;
+    if (ReduceOpcodeMap.contains(MI.getOpcode()))
+      CPSRLiveAfter[&MI] = LiveCPSR;
+    if (MI.definesRegister(ARM::CPSR, /*TRI=*/nullptr))
+      LiveCPSR = false;
+    if (MI.readsRegister(ARM::CPSR, /*TRI=*/nullptr))
+      LiveCPSR = true;
+  }
 
   CPSRDef = nullptr;
   HighLatencyCPSR = false;
@@ -1059,6 +1040,7 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
       // Since blocks are visited in RPO, this must be a back-edge.
       continue;
     }
+
     if (PInfo.HighLatencyCPSR) {
       HighLatencyCPSR = true;
       break;
@@ -1074,14 +1056,10 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
     NextMII = std::next(MII);
 
     MachineInstr *MI = &*MII;
-    if (MI->isBundle()) {
-      BundleMI = MI;
-      continue;
-    }
-    if (MI->isDebugInstr())
+    if (MI->isBundle() || MI->isDebugInstr())
       continue;
 
-    LiveCPSR = UpdateCPSRUse(*MI, LiveCPSR);
+    LiveCPSR = CPSRLiveAfter.lookup(MI);
 
     // Does NextMII belong to the same bundle as MI?
     bool NextInSameBundle = NextMII != E && NextMII->isBundledWithPred();
@@ -1096,30 +1074,15 @@ bool Thumb2SizeReduce::ReduceMBB(MachineBasicBlock &MBB,
         NextMII->bundleWithPred();
     }
 
-    if (BundleMI && !NextInSameBundle && MI->isInsideBundle()) {
-      // FIXME: Since post-ra scheduler operates on bundles, the CPSR kill
-      // marker is only on the BUNDLE instruction. Process the BUNDLE
-      // instruction as we finish with the bundled instruction to work around
-      // the inconsistency.
-      if (BundleMI->killsRegister(ARM::CPSR, /*TRI=*/nullptr))
-        LiveCPSR = false;
-      MachineOperand *MO =
-          BundleMI->findRegisterDefOperand(ARM::CPSR, /*TRI=*/nullptr);
-      if (MO && !MO->isDead())
-        LiveCPSR = true;
-      MO = BundleMI->findRegisterUseOperand(ARM::CPSR, /*TRI=*/nullptr);
-      if (MO && !MO->isKill())
-        LiveCPSR = true;
-    }
-
-    bool DefCPSR = false;
-    LiveCPSR = UpdateCPSRDef(*MI, LiveCPSR, DefCPSR);
+    // Maintain CPSRDef as the most recent CPSR-defining instruction in program
+    // order, so canAddPseudoFlagDep can consult it. MI is inspected after
+    // reduction, so a candidate just narrowed to a flag-setting form counts.
     if (MI->isCall()) {
       // Calls don't really set CPSR.
       CPSRDef = nullptr;
       HighLatencyCPSR = false;
       IsSelfLoop = false;
-    } else if (DefCPSR) {
+    } else if (MI->definesRegister(ARM::CPSR, /*TRI=*/nullptr)) {
       // This is the last CPSR defining instruction.
       CPSRDef = MI;
       HighLatencyCPSR = isHighLatencyCPSR(CPSRDef);

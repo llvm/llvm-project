@@ -20,6 +20,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/IR/Value.h"
 #include <cstdint>
 
@@ -27,73 +28,6 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
-// FIXME(cir): This should be a common helper between CIRGen
-// and traditional CodeGen
-/// Is the value of the given expression possibly a reference to or
-/// into a __block variable?
-static bool isBlockVarRef(const Expr *e) {
-  // Make sure we look through parens.
-  e = e->IgnoreParens();
-
-  // Check for a direct reference to a __block variable.
-  if (const DeclRefExpr *dre = dyn_cast<DeclRefExpr>(e)) {
-    const VarDecl *var = dyn_cast<VarDecl>(dre->getDecl());
-    return (var && var->hasAttr<BlocksAttr>());
-  }
-
-  // More complicated stuff.
-
-  // Binary operators.
-  if (const BinaryOperator *op = dyn_cast<BinaryOperator>(e)) {
-    // For an assignment or pointer-to-member operation, just care
-    // about the LHS.
-    if (op->isAssignmentOp() || op->isPtrMemOp())
-      return isBlockVarRef(op->getLHS());
-
-    // For a comma, just care about the RHS.
-    if (op->getOpcode() == BO_Comma)
-      return isBlockVarRef(op->getRHS());
-
-    // FIXME: pointer arithmetic?
-    return false;
-
-    // Check both sides of a conditional operator.
-  } else if (const AbstractConditionalOperator *op =
-                 dyn_cast<AbstractConditionalOperator>(e)) {
-    return isBlockVarRef(op->getTrueExpr()) ||
-           isBlockVarRef(op->getFalseExpr());
-
-    // OVEs are required to support BinaryConditionalOperators.
-  } else if (const OpaqueValueExpr *op = dyn_cast<OpaqueValueExpr>(e)) {
-    if (const Expr *src = op->getSourceExpr())
-      return isBlockVarRef(src);
-
-    // Casts are necessary to get things like (*(int*)&var) = foo().
-    // We don't really care about the kind of cast here, except
-    // we don't want to look through l2r casts, because it's okay
-    // to get the *value* in a __block variable.
-  } else if (const CastExpr *cast = dyn_cast<CastExpr>(e)) {
-    if (cast->getCastKind() == CK_LValueToRValue)
-      return false;
-    return isBlockVarRef(cast->getSubExpr());
-
-    // Handle unary operators.  Again, just aggressively look through
-    // it, ignoring the operation.
-  } else if (const UnaryOperator *uop = dyn_cast<UnaryOperator>(e)) {
-    return isBlockVarRef(uop->getSubExpr());
-
-    // Look into the base of a field access.
-  } else if (const MemberExpr *mem = dyn_cast<MemberExpr>(e)) {
-    return isBlockVarRef(mem->getBase());
-
-    // Look into the base of a subscript.
-  } else if (const ArraySubscriptExpr *sub = dyn_cast<ArraySubscriptExpr>(e)) {
-    return isBlockVarRef(sub->getBase());
-  }
-
-  return false;
-}
-
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
 
   CIRGenFunction &cgf;
@@ -172,7 +106,7 @@ public:
                                                    e->getRHS()->getType()) &&
            "Invalid assignment");
 
-    if (isBlockVarRef(e->getLHS()) &&
+    if (CodeGenUtils::isBlockVarRef(e->getLHS()) &&
         e->getRHS()->HasSideEffects(cgf.getContext())) {
       cgf.cgm.errorNYI(e->getSourceRange(),
                        "block var reference with side effects");
@@ -729,26 +663,6 @@ public:
 
 } // namespace
 
-static bool isTrivialFiller(Expr *e) {
-  if (!e)
-    return true;
-
-  if (isa<ImplicitValueInitExpr>(e))
-    return true;
-
-  if (auto *ile = dyn_cast<InitListExpr>(e)) {
-    if (ile->getNumInits())
-      return false;
-    return isTrivialFiller(ile->getArrayFiller());
-  }
-
-  if (const auto *cons = dyn_cast_or_null<CXXConstructExpr>(e))
-    return cons->getConstructor()->isDefaultConstructor() &&
-           cons->getConstructor()->isTrivial();
-
-  return false;
-}
-
 /// Given an expression with aggregate type that represents a value lvalue, this
 /// method emits the address of the lvalue, then loads the result into DestPtr.
 void AggExprEmitter::emitAggLoadOfLValue(const Expr *e) {
@@ -863,7 +777,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const uint64_t numArrayElements = arrayTy.getSize();
 
   // Check whether there's a non-trivial array-fill expression.
-  const bool hasTrivialFiller = isTrivialFiller(arrayFiller);
+  const bool hasTrivialFiller = CodeGenUtils::isTrivialFiller(arrayFiller);
 
   // Any remaining elements need to be zero-initialized, possibly
   // using the filler expression.  We can skip this if the we're
