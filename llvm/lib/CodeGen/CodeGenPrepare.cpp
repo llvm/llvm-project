@@ -5359,24 +5359,24 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
 
       if (EnableGEPOffsetSplit && isa<GetElementPtrInst>(AddrInst) &&
           TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
-          ConstantOffset > 0) {
-          // Record GEPs with non-zero offsets as candidates for splitting in
-          // the event that the offset cannot fit into the r+i addressing mode.
-          // Simple and common case that only one GEP is used in calculating the
-          // address for the memory access.
-          Value *Base = AddrInst->getOperand(0);
-          auto *BaseI = dyn_cast<Instruction>(Base);
-          auto *GEP = cast<GetElementPtrInst>(AddrInst);
-          if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
-              (BaseI && !isa<CastInst>(BaseI) &&
-               !isa<GetElementPtrInst>(BaseI))) {
-            // Make sure the parent block allows inserting non-PHI instructions
-            // before the terminator.
-            BasicBlock *Parent = BaseI ? BaseI->getParent()
-                                       : &GEP->getFunction()->getEntryBlock();
-            if (!Parent->getTerminator()->isEHPad())
+          ConstantOffset != 0) {
+        // Record GEPs with non-zero offsets as candidates for splitting in
+        // the event that the offset cannot fit into the r+i addressing mode.
+        // Simple and common case that only one GEP is used in calculating the
+        // address for the memory access.
+        Value *Base = AddrInst->getOperand(0);
+        auto *BaseI = dyn_cast<Instruction>(Base);
+        auto *GEP = cast<GetElementPtrInst>(AddrInst);
+        if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
+            (BaseI && !isa<CastInst>(BaseI) &&
+             !isa<GetElementPtrInst>(BaseI))) {
+          // Make sure the parent block allows inserting non-PHI instructions
+          // before the terminator.
+          BasicBlock *Parent =
+              BaseI ? BaseI->getParent() : &GEP->getFunction()->getEntryBlock();
+          if (!Parent->getTerminator()->isEHPad())
             LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
-          }
+        }
       }
 
       return false;

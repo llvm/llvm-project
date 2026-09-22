@@ -20321,12 +20321,14 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 int64_t
 AArch64TargetLowering::getPreferredLargeGEPBaseOffset(int64_t MinOffset,
                                                       int64_t MaxOffset) const {
+  // Rebase to a 4096-byte-aligned high part so the residual fits LDR/STR's
+  // 12-bit unsigned scaled immediate. This works for both positive and
+  // negative offsets: for negative MinOffset, HighPart is the next lower
+  // 4096-aligned address, and all residuals (Offset - HighPart) are
+  // non-negative and bounded by 4096.
   int64_t HighPart = MinOffset & ~0xfffULL;
-  if (MinOffset >> 12 == MaxOffset >> 12 && isLegalAddImmediate(HighPart)) {
-    // Rebase the value to an integer multiple of imm12.
+  if (MinOffset >> 12 == MaxOffset >> 12 && isLegalAddImmediate(HighPart))
     return HighPart;
-  }
-
   return 0;
 }
 
