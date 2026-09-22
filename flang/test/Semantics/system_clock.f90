@@ -1,24 +1,24 @@
-! RUN: %flang -fsyntax-only %s 2>&1 | FileCheck --check-prefix=STRICT %s
-! RUN: %flang -fsyntax-only -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
-! RUN: %flang -fsyntax-only -Wsystem-clock-strict %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -Wsystem-clock-strict %s 2>&1 | FileCheck --check-prefix=STRICT %s
 
-! RUN: %flang -fsyntax-only -Wno-system-clock-strict -Wsystem-clock-strict %s 2>&1 | FileCheck --check-prefix=STRICT %s
-! RUN: %flang -fsyntax-only -Wsystem-clock-strict -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -Wno-system-clock-strict -Wsystem-clock-strict %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -Wsystem-clock-strict -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
 
-! RUN: %flang -fsyntax-only -fdefault-integer-8 %s 2>&1 | FileCheck --check-prefix=STRICT-8 %s
-! RUN: %flang -fsyntax-only -fdefault-integer-8 -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 %s 2>&1 | FileCheck --check-prefix=STRICT-8 %s
+! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
 
-! RUN: %flang -fsyntax-only -std=f2018 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
-! RUN: %flang -fsyntax-only -std=f2023 %s 2>&1 | FileCheck --check-prefix=STRICT %s
-! RUN: %flang -fsyntax-only -std=f2028 %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -std=f2018 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -std=f2023 %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -std=f2028 %s 2>&1 | FileCheck --check-prefix=STRICT %s
 
-! RUN: %flang -fsyntax-only -std=f2023 -std=f2018 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
-! RUN: %flang -fsyntax-only -std=f2018 -std=f2023 %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -std=f2023 -std=f2018 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -std=f2018 -std=f2023 %s 2>&1 | FileCheck --check-prefix=STRICT %s
 
-! RUN: %flang -fsyntax-only -std=f2023 -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
-! RUN: %flang -fsyntax-only -Wno-system-clock-strict -std=f2023 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
-! RUN: %flang -fsyntax-only -std=f2018 -Wsystem-clock-strict %s 2>&1 | FileCheck --check-prefix=STRICT %s
-! RUN: %flang -fsyntax-only -Wsystem-clock-strict -std=f2018 %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -std=f2023 -Wno-system-clock-strict %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -Wno-system-clock-strict -std=f2023 %s 2>&1 | FileCheck --allow-empty --check-prefix=CLEAN %s
+! RUN: %flang_fc1 -fsyntax-only -std=f2018 -Wsystem-clock-strict %s 2>&1 | FileCheck --check-prefix=STRICT %s
+! RUN: %flang_fc1 -fsyntax-only -Wsystem-clock-strict -std=f2018 %s 2>&1 | FileCheck --check-prefix=STRICT %s
 
 ! Tests for SYSTEM_CLOCK argument warnings
 
