@@ -26,10 +26,19 @@
 //     ...
 //     JMP_cNot killed %15, <%bb.1>, implicit dead %pc;
 //
-// Note: The peephole pass makes the instrucstions like
+// 3. Fuse the A2_vminub/C2_cmpgtup intrinsic pair, which share inputs, into the
+//    dual-output A6_vminub_RdP hardware instruction.
+//    %1 = A2_vminub %a, %b
+//    %2 = C2_cmpgtup %a, %b
+// turning it into
+//    %3, %4 = A6_vminub_RdP %a, %b
+// (Hexagon has no multi-output intrinsics, so the two results are produced by
+// separate intrinsics that this pass recombines.)
+//
+// Note: The first two transformations make instructions like
 // %170 = SXTW %166 or %16 = NOT_p killed %15
-// redundant and relies on some form of dead removal instructions, like
-// DCE or DIE to actually eliminate them.
+// redundant. A dead-instruction removal pass, such as DCE or DIE, eliminates
+// them.
 
 //===----------------------------------------------------------------------===//
 
@@ -78,8 +87,7 @@ static cl::opt<bool>
 
 namespace {
   struct HexagonPeephole : public MachineFunctionPass {
-    const HexagonInstrInfo    *QII;
-    const HexagonRegisterInfo *QRI;
+    const HexagonInstrInfo *QII;
     MachineRegisterInfo *MRI;
 
   public:
@@ -87,7 +95,7 @@ namespace {
     HexagonPeephole() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
-    bool fuseIntrinsicVMinUB(MachineFunction &MF);
+    void fuseIntrinsicVMinUB(MachineFunction &MF);
 
     StringRef getPassName() const override {
       return "Hexagon optimize redundant zero and size extends";
@@ -109,7 +117,6 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   QII = static_cast<const HexagonInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  QRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();
 
   DenseMap<unsigned, unsigned> PeepholeMap;
@@ -290,6 +297,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
+// Return true if both instructions have identical input operands in order.
 static bool hasCommonInputOps(const MachineInstr *I1, const MachineInstr *I2) {
   if (I1->getNumOperands() != I2->getNumOperands())
     return false;
@@ -302,9 +310,7 @@ static bool hasCommonInputOps(const MachineInstr *I1, const MachineInstr *I2) {
   return true;
 }
 
-bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
-  bool Changed = false;
-
+void HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     SmallPtrSet<MachineInstr *, 8> DeadMIs;
 
@@ -349,14 +355,11 @@ bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
 
       DeadMIs.insert(&MI);
       DeadMIs.insert(Sibling);
-      Changed = true;
     }
 
     for (MachineInstr *MI : DeadMIs)
       MI->eraseFromParent();
   }
-
-  return Changed;
 }
 
 FunctionPass *llvm::createHexagonPeephole() {

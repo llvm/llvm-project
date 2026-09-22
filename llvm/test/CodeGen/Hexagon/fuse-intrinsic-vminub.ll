@@ -5,8 +5,8 @@
 @r = external global i32
 
 ; FUSE-LABEL: fused:
-; FUSE: [[V:r[0-9]+:[0-9]+]],[[P:p[0-3]]] = vminub(
 ; FUSE-NOT: cmp.gtu
+; FUSE: [[V:r[0-9]+:[0-9]+]],[[P:p[0-3]]] = vminub(
 define i32 @fused(i64 %a, i64 %b) {
 entry:
   %p = tail call i32 @llvm.hexagon.C2.cmpgtup(i64 %a, i64 %b)
@@ -25,8 +25,8 @@ entry:
 ; NOFUSE-NOT: {{r[0-9]+:[0-9]+}},{{p[0-3]}} = vminub(
 
 ; FUSE-LABEL: only_vmin:
-; FUSE: {{r[0-9]+:[0-9]+}} = vminub(
 ; FUSE-NOT: cmp.gtu
+; FUSE: {{r[0-9]+:[0-9]+}} = vminub(
 define i64 @only_vmin(i64 %a, i64 %b) {
   %v = tail call i64 @llvm.hexagon.A2.vminub(i64 %a, i64 %b)
   ret i64 %v
@@ -40,9 +40,9 @@ define i32 @only_cmp(i64 %a, i64 %b) {
 }
 
 ; FUSE-LABEL: mismatch:
+; FUSE-NOT: {{r[0-9]+:[0-9]+}},{{p[0-3]}} = vminub(
 ; FUSE-DAG: {{r[0-9]+:[0-9]+}} = vminub(
 ; FUSE-DAG: {{p[0-3]}} = cmp.gtu(
-; FUSE-NOT: {{r[0-9]+:[0-9]+}},{{p[0-3]}} = vminub(
 define i32 @mismatch(i64 %a, i64 %b) {
   %p = tail call i32 @llvm.hexagon.C2.cmpgtup(i64 %a, i64 %b)
   %v = tail call i64 @llvm.hexagon.A2.vminub(i64 %b, i64 %a)
