@@ -68,6 +68,15 @@ TEST_F(LlvmLibcInetPtonTest, InvalidFormats) {
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "192.168.1.1a", &addr));
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "abc.def.ghi.jkl", &addr));
   EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "127.0.0.1 ", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, ".", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "0", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, ".1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "1.1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "1.1.", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "1.1.1", &addr));
+  EXPECT_EQ(0, LIBC_NAMESPACE::inet_pton(AF_INET, "1.1.1.", &addr));
   ASSERT_ERRNO_SUCCESS();
 }
 

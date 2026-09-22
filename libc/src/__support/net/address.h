@@ -26,12 +26,12 @@ namespace LIBC_NAMESPACE_DECL {
 namespace net {
 
 int inet_addr(cpp::string_view src, void *dst);
-int inet_pton_v4(cpp::string_view src, void *dst);
 
 /// Writes a string representation (including the terminating \0) of the
 /// provided address into the destination buffer. In case of error, returns
 /// false and does not modify the buffer.
 [[nodiscard]] bool ipv4_to_str(const struct in_addr &src, cpp::span<char> dst);
+[[nodiscard]] int str_to_ipv4(cpp::string_view src, void *dst);
 
 /// Writes a string representation (including the terminating \0) of the
 /// provided address into the destination buffer. In case of error, returns

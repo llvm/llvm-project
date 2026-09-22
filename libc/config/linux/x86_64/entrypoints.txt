@@ -1666,10 +1666,6 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
-      # arpa/inet.h entrypoints
-
-      libc.src.arpa.inet.inet_pton
-
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
 
@@ -1680,6 +1676,7 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
       libc.src.net.if_nameindex
+      libc.src.arpa.inet.inet_pton
 
       # netdb.h entrypoints
       libc.src.netdb.freeaddrinfo

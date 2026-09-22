@@ -30,7 +30,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace net {
 
-int inet_pton_v4(cpp::string_view src, void *dst) {
+[[nodiscard]] int str_to_ipv4(cpp::string_view src, void *dst) {
   uint8_t bytes[4];
   size_t idx = 0;
   uint32_t current_val = 0;
@@ -63,9 +63,8 @@ int inet_pton_v4(cpp::string_view src, void *dst) {
     return 0;
 
   bytes[3] = static_cast<uint8_t>(current_val);
-
-  auto addr = reinterpret_cast<struct in_addr *>(dst);
-  __builtin_memcpy(&addr->s_addr, bytes, 4);
+  auto *addr = reinterpret_cast<struct in_addr *>(dst);
+  inline_memcpy(&addr->s_addr, bytes, 4);
   return 1;
 }
 

@@ -32,7 +32,7 @@ LLVM_LIBC_FUNCTION(int, inet_pton,
     libc_errno = EAFNOSUPPORT;
     return -1;
   }
-  return net::inet_pton_v4(src, dst);
+  return net::str_to_ipv4(src, dst);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
