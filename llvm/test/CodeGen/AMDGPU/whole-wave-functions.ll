@@ -3705,8 +3705,8 @@ define amdgpu_gfx_whole_wave <2 x half> @call_gfx_from_whole_wave(i1 %active, <2
 ; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v40, s33 nv ; 4-byte Folded Spill
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s0, 3
-; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0xe50
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s4, 0
+; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0xe50
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s30, 1
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v40, s31, 2
 ; GFX1250-DAGISEL-NEXT:    v_mov_b32_e32 v2, v0
@@ -10187,8 +10187,8 @@ define amdgpu_gfx_whole_wave void @call_from_whole_wave(i1 %unused, <8 x float> 
 ; GFX1250-DAGISEL-NEXT:    scratch_store_b32 off, v41, s33 offset:168 nv
 ; GFX1250-DAGISEL-NEXT:    s_wait_xcnt 0x2
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v42, s0, 3
-; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0xe50
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v42, s4, 0
+; GFX1250-DAGISEL-NEXT:    s_addk_co_i32 s32, 0xe50
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v42, s30, 1
 ; GFX1250-DAGISEL-NEXT:    v_writelane_b32 v42, s31, 2
 ; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[0:1], callee@abs64
