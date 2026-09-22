@@ -613,50 +613,113 @@ TEST_F(CIRControlFlowTest, TryOpWithCatchAll) {
   // have block arguments, so verifyControlFlowInterfaceConsistency fails.
 }
 
-TEST_F(CIRControlFlowTest, CoroBodyOp) {
-  // A coroutine body must contain at least one cir.await.
+TEST_F(CIRControlFlowTest, CoroutineOp) {
   OwningOpRef<ModuleOp> module = parse(R"CIR(
     cir.func coroutine @f(%arg0 : !cir.bool) {
-      cir.coro.body {
-        cir.await(user, ready : {
+      cir.coroutine initialSuspend : {
+        cir.await(init, ready : {
           cir.condition(%arg0)
         }, suspend : {
-          cir.yield
+          cir.coro.suspend_point
         }, resume : {
           cir.yield
         },)
         cir.yield
+      }, body : {
+        cir.yield
+      }, finalSuspend : {
+        cir.yield
+      }, destroy : {
+        cir.yield
+      }, exit : {
+        cir.return
       }
-      cir.return
+      cir.trap
     }
   )CIR");
-  auto coroBodyOp = findFirstOp<cir::CoroBodyOp>(*module);
+  auto coroOp = findFirstOp<cir::CoroutineOp>(*module);
 
-  expectSuccessors(coroBodyOp, RegionBranchPoint::parent(),
-                   {&coroBodyOp.getBody()});
-  expectTerminatorSuccessors(coroBodyOp.getBody(), {nullptr});
+  // The parent only ever enters through initial_suspend.
+  expectSuccessors(coroOp, RegionBranchPoint::parent(),
+                   {&coroOp.getInitialSuspend()});
 
-  RegionBranchOpInterface coroBranch = asRegionBranch(coroBodyOp);
+  // initial_suspend: falls into body once resumed, exits directly on a
+  // plain suspend, or reaches destroy on an explicit destroy() call.
+  RegionBranchTerminatorOpInterface initTerm =
+      getTerminator(coroOp.getInitialSuspend());
+  ASSERT_TRUE(initTerm);
+  expectSuccessors(
+      coroOp, RegionBranchPoint(initTerm),
+      {&coroOp.getBody(), &coroOp.getExit(), &coroOp.getDestroy()});
+  expectTerminatorSuccessors(
+      coroOp.getInitialSuspend(),
+      {&coroOp.getBody(), &coroOp.getExit(), &coroOp.getDestroy()});
+
+  // body: falls through to final_suspend, exits directly on a plain
+  // suspend, or reaches destroy
+  RegionBranchTerminatorOpInterface bodyTerm = getTerminator(coroOp.getBody());
+  ASSERT_TRUE(bodyTerm);
+  expectSuccessors(
+      coroOp, RegionBranchPoint(bodyTerm),
+      {&coroOp.getFinalSuspend(), &coroOp.getExit(), &coroOp.getDestroy()});
+  expectTerminatorSuccessors(
+      coroOp.getBody(),
+      {&coroOp.getFinalSuspend(), &coroOp.getExit(), &coroOp.getDestroy()});
+
+  // final_suspend: exits or destroy.
+  // Should always be destroy in practice, a real suspend after
+  // final_suspend is UB, so the exit edge is never actually taken by a
+  // valid program. Keeping exit here anyway for now.
+  RegionBranchTerminatorOpInterface finalTerm =
+      getTerminator(coroOp.getFinalSuspend());
+  ASSERT_TRUE(finalTerm);
+  expectSuccessors(coroOp, RegionBranchPoint(finalTerm),
+                   {&coroOp.getExit(), &coroOp.getDestroy()});
+  expectTerminatorSuccessors(coroOp.getFinalSuspend(),
+                             {&coroOp.getExit(), &coroOp.getDestroy()});
+
+  // destroy: ordinary dispatch falls through to exit;
+  RegionBranchTerminatorOpInterface destroyTerm =
+      getTerminator(coroOp.getDestroy());
+  ASSERT_TRUE(destroyTerm);
+  expectSuccessors(coroOp, RegionBranchPoint(destroyTerm), {&coroOp.getExit()});
+  expectTerminatorSuccessors(coroOp.getDestroy(), {&coroOp.getExit()});
+
+  // exit always terminates the op.
+  RegionBranchTerminatorOpInterface exitTerm = getTerminator(coroOp.getExit());
+  ASSERT_TRUE(exitTerm);
+  expectSuccessors(coroOp, RegionBranchPoint(exitTerm), {nullptr});
+  expectTerminatorSuccessors(coroOp.getExit(), {nullptr});
+
+  RegionBranchOpInterface coroBranch = asRegionBranch(coroOp);
   EXPECT_FALSE(coroBranch.isRepetitiveRegion(0));
   EXPECT_FALSE(coroBranch.hasLoop());
 
-  verifyControlFlowInterfaceConsistency(coroBodyOp);
+  verifyControlFlowInterfaceConsistency(coroOp);
 }
 
 TEST_F(CIRControlFlowTest, AwaitOp) {
   OwningOpRef<ModuleOp> module = parse(R"CIR(
     cir.func coroutine @f(%arg0 : !cir.bool) {
-      cir.coro.body {
-        cir.await(user, ready : {
+      cir.coroutine initialSuspend : {
+        cir.await(init, ready : {
           cir.condition(%arg0)
         }, suspend : {
-          cir.yield
+          cir.coro.suspend_point
         }, resume : {
           cir.yield
         },)
         cir.yield
+      }, body : {
+        cir.yield
+      }, finalSuspend : {
+        cir.yield
+      }, destroy : {
+        cir.yield
+      }, exit : {
+        cir.return
       }
-      cir.return
+      cir.trap
     }
   )CIR");
   auto awaitOp = findFirstOp<cir::AwaitOp>(*module);
