@@ -7246,7 +7246,7 @@ EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, bool IsOpLenient0,
                      : ToBits <= NarrowBits ? NarrowBits
                                             : ToBits;
   EVT OpVT = Op0.getValueType().changeVectorElementType(
-      *DAG.getContext(), MVT::getIntegerVT(IntBits));
+      *DAG.getContext(), EVT::getIntegerVT(*DAG.getContext(), IntBits));
   Op0 = adjustMaskToType(Op0, OpVT);
   Op1 = adjustMaskToType(Op1, OpVT);
   return OpVT;
