@@ -2430,7 +2430,7 @@ UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
   return UnsupportedSelectorFeature::None;
 }
 
-void AppendConstructTraitsForDirective(
+static void AppendConstructTraitsForDirective(
     llvm::omp::Directive dir, llvm::omp::VariantMatchInfo &vmi) {
   auto add = [&](llvm::omp::TraitProperty prop) {
     vmi.addTrait(prop, llvm::omp::getOpenMPContextTraitPropertyName(prop, ""));

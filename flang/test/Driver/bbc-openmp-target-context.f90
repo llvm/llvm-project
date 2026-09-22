@@ -1,3 +1,5 @@
+! REQUIRES: x86-registered-target
+
 ! RUN: not bbc -target x86_64-unknown-linux-gnu -fopenmp \
 ! RUN:   -fopenmp-version=52 -emit-hlfir %s -o /dev/null 2>&1 \
 ! RUN:   | FileCheck %s

@@ -251,11 +251,6 @@ private:
 void AppendDirectiveContextTraits(llvm::omp::Directive directive,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
-/// Add the construct traits implied by an OpenMP directive to \p vmi.
-/// Combined and composite directives contribute each of their leaf traits.
-void AppendConstructTraitsForDirective(
-    llvm::omp::Directive, llvm::omp::VariantMatchInfo &vmi);
-
 /// Add the traits implied by a construct selector without properties.
 void AppendConstructTraitsForSelector(
     const parser::OmpTraitSelectorName &, llvm::omp::VariantMatchInfo &vmi);

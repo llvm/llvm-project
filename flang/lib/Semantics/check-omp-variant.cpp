@@ -757,29 +757,8 @@ OmpStructureChecker::ConstructTraitSequence
 OmpStructureChecker::GetConstructTraitsForPath(
     const EffectiveDirectivePath &path) const {
   ConstructTraitSequence constructTraits;
-  for (auto directive{path.rbegin()}; directive != path.rend(); ++directive) {
-    // The construct trait set starts at the innermost target construct.
-    if (llvm::omp::allTargetSet.test(*directive)) {
-      constructTraits.clear();
-    }
-    for (llvm::omp::Directive leaf :
-        llvm::omp::getLeafConstructsOrSelf(*directive)) {
-      if (leaf == llvm::omp::Directive::OMPD_nothing ||
-          leaf == llvm::omp::Directive::OMPD_unknown) {
-        continue;
-      }
-      llvm::omp::VariantMatchInfo leafVMI;
-      AppendConstructTraitsForDirective(leaf, leafVMI);
-      if (leafVMI.ConstructTraits.empty()) {
-        // Source constructs without selector traits still occupy positions
-        // in the scoring context, including leaves of combined directives.
-        constructTraits.push_back(llvm::omp::TraitProperty::invalid);
-      } else {
-        constructTraits.append(
-            leafVMI.ConstructTraits.begin(), leafVMI.ConstructTraits.end());
-      }
-    }
-  }
+  for (auto directive{path.rbegin()}; directive != path.rend(); ++directive)
+    AppendDirectiveContextTraits(*directive, constructTraits);
   return constructTraits;
 }
 

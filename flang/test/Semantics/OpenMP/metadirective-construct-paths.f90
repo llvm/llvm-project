@@ -450,3 +450,74 @@ subroutine simd_first(flag, n, a)
     end do
   end do
 end subroutine
+
+! TILE is executable and contributes a context position. That raises the CPU
+! score above the vendor score and makes the invalid SIMD reachable.
+subroutine tile_source_context(n, a)
+  integer :: n, a(n, n), i, j
+  !$omp tile sizes(2)
+  do i = 1, n
+    !$omp metadirective &
+    !$omp& when(implementation={vendor(score(1): llvm)}: nothing) &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+    !$omp& when(device={kind(cpu)}: simd collapse(2)) default(nothing)
+    do j = 1, n
+      a(j, i) = j
+    end do
+  end do
+end subroutine
+
+! UNROLL follows the same executable loop-transformation rule as TILE.
+subroutine unroll_source_context(n, a)
+  integer :: n, a(n, n), i, j
+  !$omp unroll partial(2)
+  do i = 1, n
+    !$omp metadirective &
+    !$omp& when(implementation={vendor(score(1): llvm)}: nothing) &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+    !$omp& when(device={kind(cpu)}: simd collapse(2)) default(nothing)
+    do j = 1, n
+      a(j, i) = j
+    end do
+  end do
+end subroutine
+
+! ASSUME is informational and contributes no context position. The vendor
+! candidate therefore wins the tie and makes the invalid SIMD reachable.
+subroutine assume_source_context(n, a)
+  integer :: n, a(n), i
+  !$omp assume holds(.true.)
+    !$omp metadirective &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+    !$omp& when(implementation={vendor(score(1): llvm)}: simd collapse(2)) &
+    !$omp& when(device={kind(cpu)}: nothing) default(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+  !$omp end assume
+end subroutine
+
+! Combined constructs retain source order. PARALLEL is at position two and
+! beats the vendor score, making the invalid SIMD reachable.
+subroutine combined_source_context(n, a)
+  integer :: n, a(n, n), i, j
+  !$omp teams distribute parallel do
+  do i = 1, n
+    !$omp metadirective &
+    !$omp& when(implementation={vendor(score(3): llvm)}: nothing) &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+    !$omp& when(construct={parallel}: simd collapse(2)) default(nothing)
+    do j = 1, n
+      a(j, i) = j
+    end do
+  end do
+  !$omp end teams distribute parallel do
+end subroutine
