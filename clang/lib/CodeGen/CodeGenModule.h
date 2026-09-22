@@ -1521,6 +1521,7 @@ public:
   /// contribute to the function attributes and calling convention.
   /// \param Attrs [out] - On return, the attribute list to use.
   /// \param CallingConv [out] - On return, the LLVM calling convention to use.
+  /// \param AttrOnCallSite - Whether or not the attributes are on a call site.
   void ConstructAttributeList(StringRef Name, const CGFunctionInfo &Info,
                               CGCalleeInfo CalleeInfo,
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
