@@ -29,9 +29,9 @@ const SymbolNameSpec DispatchCtxName =
 
 const MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
-        SymbolNameSpec::verbatim(
+        SymbolNameSpec::c(
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections"),
-        SymbolNameSpec::verbatim(
+        SymbolNameSpec::c(
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections")};
 
 } // end namespace rt
