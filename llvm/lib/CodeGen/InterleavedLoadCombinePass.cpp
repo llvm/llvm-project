@@ -730,7 +730,7 @@ public:
   ///
   /// \returns true if this is possible and false if not
   bool isInterleaved(unsigned Factor, const DataLayout &DL) const {
-    uint64_t Size = DL.getTypeAllocSize(VTy->getElementType());
+    TypeSize Size = DL.getTypeAllocSize(VTy->getElementType());
     for (unsigned i = 1; i < getDimension(); i++) {
       if (!EI[i].Ofs.isProvenEqualTo(EI[0].Ofs + i * Size * Factor)) {
         return false;
@@ -782,8 +782,8 @@ public:
       return false;
 
     unsigned Factor = Result.VTy->getNumElements() / VTy->getNumElements();
-    uint64_t NewSize = DL.getTypeAllocSize(Result.VTy->getElementType());
-    uint64_t OldSize = DL.getTypeAllocSize(VTy->getElementType());
+    TypeSize NewSize = DL.getTypeAllocSize(Result.VTy->getElementType());
+    TypeSize OldSize = DL.getTypeAllocSize(VTy->getElementType());
 
     if (NewSize * Factor != OldSize)
       return false;
