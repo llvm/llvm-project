@@ -9,11 +9,6 @@
 #   - inserting G_TRUNC if the amount type is wider than i32 (e.g. i64)
 #   - inserting G_ZEXT  if the amount type is narrower than i32 (e.g. i16)
 
---- |
-  define i64 @test_shl_i64_i64_amt(i64 %val, i64 %amt) { ret i64 0 }
-  define i32 @test_ashr_i32_i16_amt(i32 %val, i16 %amt) { ret i32 0 }
-...
-
 # ============================================================================
 # Trunc path: shift amount is i64 (>32 bits) -> G_TRUNC inserted to i32.
 # Covers applyFixIllegalShiftAmt line 1673: MIB.buildTrunc(I32, ShAmtReg)

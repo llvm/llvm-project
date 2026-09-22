@@ -19,13 +19,6 @@
 # commute_shift is therefore excluded from the PostLegalizer
 # (pisa_post_removed_combines).
 
---- |
-  define i32 @shl_or_const(i32 %x) {
-    %or = or i32 %x, 4
-    %shl = shl i32 %or, 2
-    ret i32 %shl
-  }
-...
 ---
 name:            shl_or_const
 legalized:       true

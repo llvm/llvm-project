@@ -1,14 +1,5 @@
 # RUN: llc -mtriple=pisa -run-pass=pisa-prelegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
---- |
-  define i64 @zext_and_mask_rhs(i32 %x) {
-    ret i64 0
-  }
-  define i64 @zext_and_mask_lhs(i32 %x) {
-    ret i64 0
-  }
-...
-
 # --- canonical: G_AND (G_ZEXT x), C ---
 ---
 name:            zext_and_mask_rhs
