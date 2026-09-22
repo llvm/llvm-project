@@ -39,14 +39,23 @@ jobs:
               if (!file.filename.startsWith("flang/test/") || !file.patch)
                 continue;
 
-              // Only report newly added uses. Existing full-pipeline tests do
-              // not need to be justified again when an unrelated line changes.
-              const addsEmitLLVM = file.patch.split("\n").some(
-                line => /^\+(?!\+\+)/.test(line) && /\bRUN:/.test(line) &&
-                  /(^|\s)-emit-llvm(?=\s|=|$)/.test(line),
-              );
-              if (addsEmitLLVM)
-                findings.push(`- \`${file.filename}\``);
+              // Count full-pipeline flag tokens across lit directives on both
+              // sides of the diff. Only report a net increase, so reindentation,
+              // option changes and moves into substitutions do not cause reminders.
+              // This is a heuristic, not a count of expanded invocations: a new
+              // use can be offset by a removed one elsewhere in the same file.
+              const directive = /\b(RUN|DEFINE|REDEFINE):/;
+              const fullPipeline = /(^|\s)(-emit-llvm(-bc)?|-emit-obj)(?=\s|=|$)/g;
+              const countFlags = line =>
+                directive.test(line) ? (line.match(fullPipeline) || []).length : 0;
+              const lines = file.patch.split("\n");
+              const total = sign => lines.filter(line => sign.test(line))
+                .reduce((n, line) => n + countFlags(line), 0);
+              if (total(/^\+(?!\+\+)/) > total(/^-(?!--)/)) {
+                // Keep filenames inside a single Markdown code span.
+                const filename = file.filename.replace(/[`\r\n]/g, "'");
+                findings.push(`- \`${filename}\``);
+              }
             }
 
             const comments = await github.paginate(
@@ -68,7 +77,7 @@ jobs:
             if (findings.length === 0) {
               const resolved = previous ? [{
                 id: previous.id,
-                body: marker + "\n\nNo newly added `-emit-llvm` RUN lines remain " +
+                body: marker + "\n\nNo additional full-pipeline test invocations were detected " +
                   "under `flang/test/`.",
               }] : [];
               fs.writeFileSync("comments", JSON.stringify(resolved));
@@ -77,8 +86,8 @@ jobs:
 
             const body = [
               marker,
-              "This pull request adds a Flang test invocation that exercises the compiler " +
-                "pipeline through LLVM IR generation:",
+              "This pull request adds Flang test commands that exercise the compiler " +
+                "pipeline through LLVM IR generation or later stages:",
               "",
               findings.join("\n"),
               "",
