@@ -61,6 +61,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -4572,26 +4573,26 @@ struct NegcOpConversion : public fir::FIROpConversion<fir::NegcOp> {
   }
 };
 
-/// Normalize a logical value to i1 by comparing with zero.
+/// Normalize a logical value, or a vector thereof, to i1 by comparing with
+/// zero.
 static mlir::Value
 normalizeLogicalToI1(mlir::ConversionPatternRewriter &rewriter,
                      mlir::Location loc, mlir::Value value) {
   mlir::Type ty = value.getType();
-  auto i1Ty = mlir::IntegerType::get(rewriter.getContext(), 1);
-  if (ty == i1Ty)
+  if (mlir::getElementTypeOrSelf(ty).isSignlessInteger(1))
     return value;
-  mlir::Value zero = fir::genConstantIndex(loc, ty, rewriter, 0);
+  mlir::Value zero = mlir::LLVM::ConstantOp::create(rewriter, loc, ty,
+                                                    rewriter.getZeroAttr(ty));
   return mlir::LLVM::ICmpOp::create(rewriter, loc,
                                     mlir::LLVM::ICmpPredicate::ne, value, zero);
 }
 
-/// Extend an i1 value to the given integer type. Returns the value unchanged
-/// if it is already the target type.
+/// Extend an i1 value, or a vector thereof, to the given integer type. Returns
+/// the value unchanged if it is already the target type.
 static mlir::Value extendI1ToType(mlir::ConversionPatternRewriter &rewriter,
                                   mlir::Location loc, mlir::Value i1Val,
                                   mlir::Type toTy) {
-  auto i1Ty = mlir::IntegerType::get(rewriter.getContext(), 1);
-  if (toTy == i1Ty)
+  if (toTy == i1Val.getType())
     return i1Val;
   return mlir::LLVM::ZExtOp::create(rewriter, loc, toTy, i1Val);
 }
