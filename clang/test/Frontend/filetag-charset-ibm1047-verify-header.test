@@ -1,0 +1,11 @@
+// Test filetag-based charset conversion with `-verify` and an early explicit
+// reference to a header file.
+
+// REQUIRES: system-zos
+
+// RUN: rm -rf %t && mkdir -p %t/InputCharsetIBM1047
+// RUN: cp %S/Inputs/InputCharsetIBM1047/verify-header.c %t/InputCharsetIBM1047/verify-header.c
+// RUN: chtag -tc 1047 %t/InputCharsetIBM1047/verify-header.c
+// RUN: cp %S/Inputs/InputCharsetIBM1047/warn.h %t/InputCharsetIBM1047/warn.h
+// RUN: chtag -tc 1047 %t/InputCharsetIBM1047/warn.h
+// RUN: %clang_cc1 -verify -I %t %t/InputCharsetIBM1047/verify-header.c
