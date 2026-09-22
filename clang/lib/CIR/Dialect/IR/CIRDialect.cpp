@@ -1483,16 +1483,31 @@ static void printCallCommon(mlir::Operation *op,
   if (op->hasAttr(CIRDialect::getWillReturnAttrName()))
     printer << " willreturn";
 
-  llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
+  llvm::StringRef elidedAttrs[] = {
       CIRDialect::getCalleeAttrName(),
       CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getNoUnwindAttrName(),
       CIRDialect::getWillReturnAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),
-      llvm::StringRef("res_attrs"),
-      llvm::StringRef("arg_attrs")};
-  printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
+      "res_attrs",
+      "arg_attrs",
+  };
+  // TODO: Split inherent and discardable attribute printing instead of
+  // materializing a single dictionary that mixes the two storage classes.
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
+  for (mlir::NamedAttribute attr : op->getDiscardableAttrs())
+    if (!llvm::is_contained(elidedAttrs, attr.getName()))
+      attrs.push_back(attr);
+  op->getName().walkInherentAttrs(op, [&](llvm::StringRef name,
+                                          mlir::Attribute &attr) {
+    if (!llvm::is_contained(elidedAttrs, name))
+      attrs.emplace_back(mlir::StringAttr::get(op->getContext(), name), attr);
+  });
+  llvm::sort(attrs, [](mlir::NamedAttribute lhs, mlir::NamedAttribute rhs) {
+    return lhs.getName().strref() < rhs.getName().strref();
+  });
+  printer.printOptionalAttrDict(attrs);
   printer << " : ";
   if (calleeSym || !argAttrs) {
     call_interface_impl::printFunctionSignature(
@@ -1734,7 +1749,8 @@ void cir::IfOp::print(OpAsmPrinter &p) {
                   /*printBlockTerminators=*/!omitRegionTerm(elseRegion));
   }
 
-  p.printOptionalAttrDict(getOperation()->getAttrs());
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 }
 
 /// Default callback for IfOp builders.
@@ -4436,11 +4452,8 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   if (getSideEffects())
     p << " side_effects";
 
-  std::array elidedAttrs{
-      llvm::StringRef("asm_flavor"),        llvm::StringRef("asm_string"),
-      llvm::StringRef("constraints"),       llvm::StringRef("operand_attrs"),
-      llvm::StringRef("operands_segments"), llvm::StringRef("side_effects")};
-  p.printOptionalAttrDict(getOperation()->getAttrs(), elidedAttrs);
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 
   if (auto v = getRes())
     p << " -> " << v.getType();
