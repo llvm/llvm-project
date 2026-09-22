@@ -7100,6 +7100,34 @@ static bool isConcreteSPIRVType(SPIRVTypeInst Ty,
   return true;
 }
 
+static bool containsStorageBufferPointer(SPIRVTypeInst Ty,
+                                         const SPIRVGlobalRegistry &GR,
+                                         SmallSet<Register, 8> &Visited) {
+  Register TypeReg = Ty->getOperand(0).getReg();
+  if (!Visited.insert(TypeReg).second)
+    return false;
+
+  switch (Ty->getOpcode()) {
+  case SPIRV::OpTypePointer:
+    if (Ty->getOperand(1).getImm() == SPIRV::StorageClass::StorageBuffer)
+      return true;
+    return containsStorageBufferPointer(
+        GR.getSPIRVTypeForVReg(Ty->getOperand(2).getReg()), GR, Visited);
+  case SPIRV::OpTypeArray:
+  case SPIRV::OpTypeRuntimeArray:
+    return containsStorageBufferPointer(
+        GR.getSPIRVTypeForVReg(Ty->getOperand(1).getReg()), GR, Visited);
+  case SPIRV::OpTypeStruct:
+    for (unsigned I = 1; I < Ty->getNumOperands(); ++I)
+      if (containsStorageBufferPointer(
+              GR.getSPIRVTypeForVReg(Ty->getOperand(I).getReg()), GR, Visited))
+        return true;
+    return false;
+  default:
+    return false;
+  }
+}
+
 bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
   assert(I.getNumExplicitOperands() == 2);
 
@@ -7158,6 +7186,18 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
       ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
   unsigned Opcode =
       UseUntypedPointers ? SPIRV::OpUntypedVariableKHR : SPIRV::OpVariable;
+
+  if (!UseUntypedPointers) {
+    SmallSet<Register, 8> Visited;
+    if (containsStorageBufferPointer(ResType, GR, Visited)) {
+      MachineIRBuilder MIRBuilder(I);
+      if (!STI.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+        MIRBuilder.buildInstr(SPIRV::OpExtension)
+            .addImm(SPIRV::Extension::SPV_KHR_variable_pointers);
+      MIRBuilder.buildInstr(SPIRV::OpCapability)
+          .addImm(SPIRV::Capability::VariablePointersStorageBuffer);
+    }
+  }
 
   auto MIB = BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
@@ -7645,13 +7685,6 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
   if (IsStructuredBuffer) {
     VarType = GR.getPointeeType(ResType);
     SC = GR.getPointerStorageClass(ResType);
-    if (SC == SPIRV::StorageClass::StorageBuffer) {
-      if (!STI.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-        MIRBuilder.buildInstr(SPIRV::OpExtension)
-            .addImm(SPIRV::Extension::SPV_KHR_variable_pointers);
-      MIRBuilder.buildInstr(SPIRV::OpCapability)
-          .addImm(SPIRV::Capability::VariablePointersStorageBuffer);
-    }
   }
 
   // ArraySize 0 means an unbounded array and we need to set to required
