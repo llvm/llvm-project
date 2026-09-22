@@ -5847,9 +5847,44 @@ struct FoldPresentAbsentIfOp : public mlir::OpRewritePattern<fir::IfOp> {
   }
 };
 
+/// Inline \p region in place of \p ifOp, forwarding the operands of its
+/// fir.result terminator as the results of \p ifOp.
+static void replaceIfOpWithRegion(mlir::PatternRewriter &rewriter,
+                                  fir::IfOp ifOp, mlir::Region &region) {
+  mlir::Block &block = region.front();
+  mlir::Operation *terminator = block.getTerminator();
+  llvm::SmallVector<mlir::Value> results(terminator->getOperands());
+  rewriter.inlineBlockBefore(&block, ifOp);
+  rewriter.replaceOp(ifOp, results);
+  rewriter.eraseOp(terminator);
+}
+
+// Fold away a fir.if with a constant condition by inlining the region that is
+// taken. A constant false condition with no else region leaves nothing behind.
+struct FoldConstantConditionIfOp : public mlir::OpRewritePattern<fir::IfOp> {
+  using mlir::OpRewritePattern<fir::IfOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::IfOp ifOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (mlir::matchPattern(ifOp.getCondition(), mlir::m_One())) {
+      replaceIfOpWithRegion(rewriter, ifOp, ifOp.getThenRegion());
+      return mlir::success();
+    }
+    if (!mlir::matchPattern(ifOp.getCondition(), mlir::m_Zero()))
+      return mlir::failure();
+
+    if (ifOp.getElseRegion().empty())
+      rewriter.eraseOp(ifOp);
+    else
+      replaceIfOpWithRegion(rewriter, ifOp, ifOp.getElseRegion());
+    return mlir::success();
+  }
+};
+
 void fir::IfOp::getCanonicalizationPatterns(mlir::RewritePatternSet &patterns,
                                             mlir::MLIRContext *context) {
-  patterns.add<FoldPresentAbsentIfOp>(context);
+  patterns.add<FoldPresentAbsentIfOp, FoldConstantConditionIfOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
