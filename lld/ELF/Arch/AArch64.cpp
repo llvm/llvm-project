@@ -218,7 +218,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     auto handleTlsDescAuth = [&sym, &sec, type, offset,
                               addend](RelExpr tlsdescExpr) {
       if (sym.isUndefined() && !sym.isPreemptible) {
-        // Resolves statically to null. Handle in
+        // Resolves to `addend`. Handle in
         // relaxAuthTlsDescForNonPreemptibleUndefined
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       } else {
@@ -673,9 +673,8 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_AUTH_ABS64:
     if (rel.sym->isUndefined() && !rel.sym->isPreemptible) {
-      // Undefined non-preemptible symbols are statically resolved to the
-      // addend. No dynamic relocation and corresponding signing schema encoding
-      // is needed.
+      // Resolve to the addend. No dynamic relocation and corresponding signing
+      // schema encoding is needed.
       write64(ctx, loc, val);
     } else {
       // This is used for the addend of a .relr.auth.dyn entry,
