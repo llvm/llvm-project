@@ -15917,13 +15917,15 @@ private:
 
     const uint64_t DeclaredSizeInBits = Field->getBitWidthValue();
 
-    // Handle over-sized bitfields:
-    //   unsigned char a : 12;
-    // In this case, DeclaredSizeInBits is 12, but the actually occupied bit
-    // size is 8, while the remaining 4 bits are padding.
-    const uint64_t OccupiedSizeInBits =
-        std::min(DeclaredSizeInBits,
-                 static_cast<uint64_t>(Ctx.getIntWidth(Field->getType())));
+    // Oversized bit-fields (declared width larger than the field type) keep
+    // only the type's width as the value container. The extra declared bits
+    // are padding and follow that container (Itanium C++ ABI 2.4).
+    // getIntWidth may be narrower still (bool, _BitInt); those occupied bits
+    // are the low-order bits of the value container.
+    const uint64_t ValueFieldBits =
+        std::min(DeclaredSizeInBits, Ctx.getTypeSize(Field->getType()));
+    const uint64_t OccupiedSizeInBits = std::min(
+        ValueFieldBits, static_cast<uint64_t>(Ctx.getIntWidth(Field->getType())));
 
     if (Ctx.getTargetInfo().isLittleEndian()) {
       OccuppiedIntervals.push_back(
@@ -15941,14 +15943,11 @@ private:
     // the partially occupied bytes in either end, if present, their bit
     // intervals need to be adjusted so that they count from the MSB instead.
     //
-    // FIXME: For over-sized bitfields in BE, Clang allocates padding bits
-    // before the occupied bits. This violates the ABI rules, which say that
-    // padding should be allocated after, regardless of endianness (Itanium C++
-    // ABI §2.4, II.1(b)). The current code accommodates for Clang's current
-    // behaviour though, and bumps Start forward to skip the leading padding
-    // bits.
+    // Within the value container, occupied bits are its low-order bits, which
+    // are allocated last. Padding from an oversized declared width follows
+    // the container.
     const uint64_t Start =
-        StartBitOffset + DeclaredSizeInBits - OccupiedSizeInBits;
+        StartBitOffset + ValueFieldBits - OccupiedSizeInBits;
     const uint64_t End = Start + OccupiedSizeInBits;
     const uint64_t CharWidth = Ctx.getCharWidth();
 
