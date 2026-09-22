@@ -1114,6 +1114,12 @@ public:
     return EpilogueLoweringStatus == CM_EpilogueAllowed;
   }
 
+  /// Returns true if tail-folding is preferred over an epilogue.
+  bool preferTailFoldedLoop() const {
+    return EpilogueLoweringStatus == CM_EpilogueNotNeededFoldTail ||
+           EpilogueLoweringStatus == CM_EpilogueNotAllowedFoldTail;
+  }
+
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle() const {
     return ChosenTailFoldingStyle;
@@ -5465,9 +5471,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 }
 
 bool LoopVectorizationPlanner::planForEpilogueTF() {
-  EpilogueLowering EpilogueTailLoweringStatus =
-      getEpilogueTailLowering(*CM, OrigLoop, ORE, *Legal, Config.getHints(),
-                              &TTI);
+  EpilogueLowering EpilogueTailLoweringStatus = getEpilogueTailLowering(
+      *CM, OrigLoop, ORE, *Legal, Config.getHints(), &TTI);
   if (EpilogueTailLoweringStatus !=
       EpilogueLowering::CM_EpilogueNotNeededFoldTail)
     return false;
@@ -7664,9 +7669,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       // already processed.
       VPBuilder EntryBuilder(Plan.getVectorPreheader());
       auto *EntryALM = EntryBuilder.createNaryOp(
-          VPInstruction::ActiveLaneMask,
-          {VPV, Plan.getTripCount()}, R.getDebugLoc(),
-          "active.lane.mask.entry");
+          VPInstruction::ActiveLaneMask, {VPV, Plan.getTripCount()},
+          R.getDebugLoc(), "active.lane.mask.entry");
       cast<VPHeaderPHIRecipe>(&R)->setStartValue(EntryALM);
       continue;
     } else {
