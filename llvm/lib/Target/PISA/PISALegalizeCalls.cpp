@@ -479,25 +479,21 @@ void PISALegalizeCalls::modifyCallInst(CallInst *CI) {
 
 bool PISALegalizeCalls::runOnModule(Module &M) {
   // record functions to be modified
-  for (Function &F : M) {
+  for (Function &F : M)
     collectFuncs(F);
-  }
-  // modify function signatures
-  for (Function *F : Funcs) {
-    modifyFunctionSignature(*F);
-  }
 
-  // record call/return instructions
-  for (Function &F : M) {
+  for (Function *F : Funcs)
+    modifyFunctionSignature(*F);
+
+  // record return/call instructions
+  for (Function &F : M)
     visit(F);
-  }
-  // modify call/return instructions
-  for (ReturnInst *I : Returns) {
+
+  // modify return/call instructions
+  for (ReturnInst *I : Returns)
     modifyReturnInst(I);
-  }
-  for (CallInst *I : Calls) {
+  for (CallInst *I : Calls)
     modifyCallInst(I);
-  }
   return !(Calls.empty() && Returns.empty() && Funcs.empty());
 }
 
