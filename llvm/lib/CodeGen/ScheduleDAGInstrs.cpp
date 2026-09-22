@@ -120,10 +120,10 @@ ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
   SchedModel.init(&ST, EnableSchedModel, EnableSchedItins);
 }
 
-/// If this machine instr has memory reference information and it can be
-/// tracked to a normal reference to a known object, return the Value
-/// for that object. This function returns false the memory location is
-/// unknown or may alias anything.
+/// If this machine instruction has memory reference information, collect the
+/// list of underlying objects in \p Objects. If any of these objects are
+/// unknown or may alias anything, return false. Atomic and volatile memory
+/// operands are skipped.
 static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
@@ -149,7 +149,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
       // For now, ignore PseudoSourceValues which may alias LLVM IR values
       // because the code that uses this function has no way to cope with
       // such aliases.
-      if (PSV->isAliased(&MFI))
+      else if (PSV->isAliased(&MFI))
         AllObjectsIdentified = false;
 
       Objects.push_back(PSV);
