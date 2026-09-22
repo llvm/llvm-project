@@ -286,6 +286,7 @@
 // CHECK-NEXT:     ssip                 0.20      'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level)
 // CHECK-NEXT:     ssnip                0.20      'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level)
 // CHECK-NEXT:     svukte               1.0       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
+// CHECK-NEXT:     xqccmi               0.2       'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table)
 // CHECK-NEXT:     xqccmt               0.1       'Xqccmt' (Qualcomm 16-bit Table Jump)
 // CHECK-NEXT:     xsfmclic             0.1       'XSfmclic' (SiFive CLIC Machine-mode CSRs)
 // CHECK-NEXT:     xsfsclic             0.1       'XSfsclic' (SiFive CLIC Supervisor-mode CSRs)
