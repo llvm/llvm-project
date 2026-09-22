@@ -472,7 +472,7 @@ PISATargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
 
     if (RC)
-      return std::make_pair(0u, RC);
+      return {0u, RC};
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
