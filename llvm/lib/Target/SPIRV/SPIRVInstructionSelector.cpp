@@ -7645,6 +7645,13 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
   if (IsStructuredBuffer) {
     VarType = GR.getPointeeType(ResType);
     SC = GR.getPointerStorageClass(ResType);
+    if (SC == SPIRV::StorageClass::StorageBuffer) {
+      if (!STI.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+        MIRBuilder.buildInstr(SPIRV::OpExtension)
+            .addImm(SPIRV::Extension::SPV_KHR_variable_pointers);
+      MIRBuilder.buildInstr(SPIRV::OpCapability)
+          .addImm(SPIRV::Capability::VariablePointersStorageBuffer);
+    }
   }
 
   // ArraySize 0 means an unbounded array and we need to set to required
