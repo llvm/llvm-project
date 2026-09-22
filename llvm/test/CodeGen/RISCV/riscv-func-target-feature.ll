@@ -2,20 +2,21 @@
 ; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -filetype=obj < %s \
 ; RUN:   | llvm-objdump -d --show-all-symbols --no-show-raw-insn - | FileCheck %s --check-prefix=OBJ
 
-;; TODO: emitTargetFeaturePush does not call setArchString(), so per-function
-;; target-features are not reflected in the $x<arch> mapping symbols.
 ; OBJ-LABEL: Disassembly of section .text:
 ; OBJ-EMPTY:
-; OBJ-NEXT:  0000000000000000 <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0>:
+; OBJ-NEXT:  0000000000000000 <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0>:
 ; OBJ-NEXT:  0000000000000000 <test1>:
 ; OBJ-NEXT:         0:      	ret
 ; OBJ-EMPTY:
+; OBJ-NEXT:  0000000000000002 <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zihintntl1p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0>:
 ; OBJ-NEXT:  0000000000000002 <test2>:
 ; OBJ-NEXT:         2:      	ret
 ; OBJ-EMPTY:
+; OBJ-NEXT:  0000000000000004 <$xrv64i2p1_a2p1_c2p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0>:
 ; OBJ-NEXT:  0000000000000004 <test3>:
 ; OBJ-NEXT:         4:      	ret
 ; OBJ-EMPTY:
+; OBJ-NEXT:  0000000000000006 <$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0>:
 ; OBJ-NEXT:  0000000000000006 <test4>:
 ; OBJ-NEXT:         6:      	ret
 ; OBJ-EMPTY:

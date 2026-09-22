@@ -562,6 +562,8 @@ bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
     RTS.emitDirectiveOptionArch(NeedEmitStdOptionArgs);
+    RTS.setArchString(
+        cantFail(RISCVFeatures::parseFeatureBits(STI))->toString());
     return true;
   }
 
