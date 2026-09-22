@@ -302,7 +302,6 @@ template <typename Ty> struct EnumTraits {};
 
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
 REGISTER_ENUM_TYPE(VisibilityKind);
-REGISTER_ENUM_TYPE(SideEffect);
 REGISTER_ENUM_TYPE(CallingConv);
 } // namespace
 
@@ -1309,6 +1308,29 @@ parseTryCallDestinations(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
+/// Reject an effect attribute of the wrong kind in an explicit attribute
+/// dictionary.  Where these are declared they are stored as properties, so a
+/// value of the wrong kind would be dropped without a diagnostic.
+static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
+                                        llvm::SMLoc loc,
+                                        const mlir::NamedAttrList &attrs) {
+  if (mlir::Attribute effects =
+          attrs.get(CIRDialect::getMemoryEffectsAttrName()))
+    if (!mlir::isa<cir::MemoryEffectsAttr>(effects))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getMemoryEffectsAttrName()
+             << "' must be a #cir.memory_effects attribute";
+
+  for (llvm::StringRef name :
+       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName()})
+    if (mlir::Attribute flag = attrs.get(name))
+      if (!mlir::isa<mlir::UnitAttr>(flag))
+        return parser.emitError(loc, "attribute '")
+               << name << "' must be a unit attribute";
+
+  return mlir::success();
+}
+
 static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
                                          mlir::OperationState &result,
                                          bool hasDestinationBlocks = false) {
@@ -1350,19 +1372,19 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     result.addAttribute(CIRDialect::getNoThrowAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
 
-  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
-    if (parser.parseLParen().failed())
-      return failure();
-    cir::SideEffect sideEffect;
-    if (parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed())
-      return failure();
-    if (parser.parseRParen().failed())
-      return failure();
-    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
-    result.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
-  }
+  if (parser.parseOptionalKeyword("nounwind").succeeded())
+    result.addAttribute(CIRDialect::getNoUnwindAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
 
+  if (parser.parseOptionalKeyword("willreturn").succeeded())
+    result.addAttribute(CIRDialect::getWillReturnAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
+
+  llvm::SMLoc attrsLoc = parser.getCurrentLocation();
   if (parser.parseOptionalAttrDict(result.attributes))
+    return ::mlir::failure();
+
+  if (checkEffectAttrKinds(parser, attrsLoc, result.attributes).failed())
     return ::mlir::failure();
 
   if (parser.parseColon())
@@ -1417,12 +1439,13 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-static void
-printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
-                mlir::Value indirectCallee, mlir::OpAsmPrinter &printer,
-                bool isNothrow, cir::SideEffect sideEffect, ArrayAttr argAttrs,
-                ArrayAttr resAttrs, mlir::Block *normalDest = nullptr,
-                mlir::Block *unwindDest = nullptr) {
+static void printCallCommon(mlir::Operation *op,
+                            mlir::FlatSymbolRefAttr calleeSym,
+                            mlir::Value indirectCallee,
+                            mlir::OpAsmPrinter &printer, bool isNothrow,
+                            ArrayAttr argAttrs, ArrayAttr resAttrs,
+                            mlir::Block *normalDest = nullptr,
+                            mlir::Block *unwindDest = nullptr) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -1454,17 +1477,18 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
   if (isNothrow)
     printer << " nothrow";
 
-  if (sideEffect != cir::SideEffect::All) {
-    printer << " side_effect(";
-    printer << stringifySideEffect(sideEffect);
-    printer << ")";
-  }
+  if (op->hasAttr(CIRDialect::getNoUnwindAttrName()))
+    printer << " nounwind";
+
+  if (op->hasAttr(CIRDialect::getWillReturnAttrName()))
+    printer << " willreturn";
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
       CIRDialect::getCalleeAttrName(),
       CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
-      CIRDialect::getSideEffectAttrName(),
+      CIRDialect::getNoUnwindAttrName(),
+      CIRDialect::getWillReturnAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),
       llvm::StringRef("res_attrs"),
       llvm::StringRef("arg_attrs")};
@@ -1497,9 +1521,8 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getArgAttrsAttr(), getResAttrsAttr());
+                  getArgAttrsAttr(), getResAttrsAttr());
 }
 
 static LogicalResult
@@ -1613,10 +1636,9 @@ mlir::ParseResult cir::TryCallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getArgAttrsAttr(), getResAttrsAttr(),
-                  getNormalDest(), getUnwindDest());
+                  getArgAttrsAttr(), getResAttrsAttr(), getNormalDest(),
+                  getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2870,18 +2892,6 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
-  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
-    cir::SideEffect sideEffect;
-
-    if (parser.parseLParen().failed() ||
-        parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed() ||
-        parser.parseRParen().failed())
-      return failure();
-
-    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
-    state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
-  }
-
   // Parse optional annotations attribute (an ArrayAttr of AnnotationAttr).
   mlir::StringAttr annotationsNameAttr = getAnnotationsAttrName(state.name);
   mlir::ArrayAttr annotationsAttr;
@@ -2891,15 +2901,24 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
+  llvm::SMLoc attrsLoc = parser.getCurrentLocation();
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
     return failure();
 
+  // Every other declared attribute has dedicated syntax above, so
+  // memory_effects is the only one the explicit list may carry.  Without the
+  // exception cir.func could not parse back what it prints.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
+    if (disallowed == CIRDialect::getMemoryEffectsAttrName())
+      continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
              << disallowed
              << "' should not be specified in the explicit attribute list";
   }
+
+  if (checkEffectAttrKinds(parser, attrsLoc, parsedAttrs).failed())
+    return failure();
 
   state.attributes.append(parsedAttrs);
 
@@ -3072,20 +3091,18 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       p << "(" << globalDtorPriority.value() << ")";
   }
 
-  if (std::optional<cir::SideEffect> sideEffect = getSideEffect();
-      sideEffect && *sideEffect != cir::SideEffect::All) {
-    p << " side_effect(";
-    p << stringifySideEffect(*sideEffect);
-    p << ")";
-  }
-
   if (mlir::ArrayAttr annotations = getAnnotationsAttr()) {
     p << ' ';
     p.printAttribute(annotations);
   }
 
-  function_interface_impl::printFunctionAttributes(
-      p, *this, cir::FuncOp::getAttributeNames());
+  // Every declared attribute is printed by the syntax above, except
+  // memory_effects, which has none and so must reach the dictionary.
+  llvm::SmallVector<llvm::StringRef> elidedAttrs;
+  for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
+    if (name != CIRDialect::getMemoryEffectsAttrName())
+      elidedAttrs.push_back(name);
+  function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);

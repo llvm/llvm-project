@@ -95,6 +95,24 @@ void permissive() noexcept {
 // LLVM-NOT:     __clang_call_terminate
 // LLVM:         ret void
 
+void tailToNothrow() noexcept {
+  [[clang::musttail]] return harmless();
+}
+
+// A musttail call replaces this function's frame, and with it the terminate
+// handler, which is why the callee has to be non-throwing. A throwing callee
+// is diagnosed, in attr-musttail-noexcept-mismatch.cpp.
+// CIR-LABEL: cir.func{{.*}} @_Z13tailToNothrowv()
+// CIR:         cir.try {
+// CIR:           cir.call @_Z8harmlessv() musttail nothrow : () -> ()
+// CIR-NEXT:      cir.return
+
+// LLVM-LABEL: define{{.*}} void @_Z13tailToNothrowv()
+// LLVM:         musttail call void @_Z8harmlessv()
+// LLVM-NEXT:    ret void
+// LLVM-NOT:     landingpad
+// LLVM-NOT:     __clang_call_terminate
+
 void outer() noexcept {
   try {
     inner();

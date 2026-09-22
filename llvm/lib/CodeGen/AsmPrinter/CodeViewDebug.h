@@ -206,9 +206,6 @@ private:
     /// Number of bytes allocated in the prologue for all local stack objects.
     unsigned FrameSize = 0;
 
-    /// Number of bytes of parameters on the stack.
-    unsigned ParamSize = 0;
-
     /// Number of bytes pushed to save CSRs.
     unsigned CSRSize = 0;
 

@@ -50,7 +50,7 @@ enum ID {
 
 class SizeOptTable : public opt::OptTable {
 public:
-  SizeOptTable() : OptTable(OptionTables) { setGroupedShortOptions(true); }
+  SizeOptTable() : OptTable(optionTables()) { setGroupedShortOptions(true); }
 };
 
 enum OutputFormatTy { berkeley, sysv, darwin };

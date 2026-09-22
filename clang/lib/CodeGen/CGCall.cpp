@@ -1060,6 +1060,14 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                    AbiInfo.getIndirectByVal(),
                                    AbiInfo.getIndirectRealign());
   }
+  case llvm::abi::ArgInfo::IndirectAliased: {
+    // Aliased indirect carries an address space but never byval.
+    CharUnits Alignment =
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign().value());
+    return ABIArgInfo::getIndirectAliased(Alignment,
+                                          AbiInfo.getIndirectAddrSpace(),
+                                          AbiInfo.getIndirectRealign());
+  }
   case llvm::abi::ArgInfo::Ignore:
     return ABIArgInfo::getIgnore();
   }
@@ -2804,17 +2812,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       AddAttributesFromFunctionProtoType(
           getContext(), FuncAttrs, Fn->getType()->getAs<FunctionProtoType>());
       if (AttrOnCallSite && Fn->isReplaceableGlobalAllocationFunction()) {
-        // A sane operator new returns a non-aliasing pointer and does not
-        // read or write accessible memory.
+        // A sane operator new returns a non-aliasing pointer.
         if (getCodeGenOpts().AssumeSaneOperatorNew &&
-            Fn->getDeclName().isAnyOperatorNew()) {
+            Fn->getDeclName().isAnyOperatorNew())
           RetAttrs.addAttribute(llvm::Attribute::NoAlias);
-          // FIXME: inaccessiblemem could cause issues if LTO makes the
-          // previously inaccessible memory accessible after linking.
-          FuncAttrs.addMemoryAttr(
-              llvm::MemoryEffects::inaccessibleOrErrnoMemOnly(
-                  llvm::ModRefInfo::ModRef, llvm::ModRefInfo::Mod));
-        }
       }
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
       const bool IsVirtualCall = MD && MD->isVirtual();
@@ -6643,17 +6644,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               diag::err_musttail_noexcept_mismatch);
         break;
       }
-      EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
-      // Fake uses can be safely emitted immediately prior to the tail call, so
-      // we choose to emit them just before the call here.
-      if (Cleanup && Cleanup->isFakeUse()) {
-        CGBuilderTy::InsertPointGuard IPG(Builder);
-        Builder.SetInsertPoint(CI);
-        Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
-      } else if (!(Cleanup &&
-                   Cleanup->getCleanup()->isRedundantBeforeReturn())) {
-        CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
+      if (auto *Cleanup = dyn_cast<EHCleanupScope>(&*it)) {
+        // Fake uses can be safely emitted immediately prior to the tail call,
+        // so we choose to emit them just before the call here.
+        if (Cleanup->isFakeUse()) {
+          CGBuilderTy::InsertPointGuard IPG(Builder);
+          Builder.SetInsertPoint(CI);
+          Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
+          continue;
+        }
+        if (Cleanup->isRedundantBeforeReturn())
+          continue;
       }
+      CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
     }
     if (CI->getType()->isVoidTy())
       Builder.CreateRetVoid();

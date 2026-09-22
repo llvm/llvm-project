@@ -430,45 +430,46 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
-void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
-                              cir::SideEffect sideEffect,
-                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn,
-                              bool &noReturn) {
-  using mlir::LLVM::ModRefInfo;
-
-  switch (sideEffect) {
-  case cir::SideEffect::All:
-    memoryEffect = {};
-    noUnwind = isNothrow;
-    willReturn = false;
-    break;
-
-  case cir::SideEffect::Pure:
-    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
-        callOp->getContext(), /*other=*/ModRefInfo::Ref,
-        /*argMem=*/ModRefInfo::Ref,
-        /*inaccessibleMem=*/ModRefInfo::Ref,
-        /*errnoMem=*/ModRefInfo::Ref,
-        /*targetMem0=*/ModRefInfo::Ref,
-        /*targetMem1=*/ModRefInfo::Ref);
-    noUnwind = true;
-    willReturn = true;
-    break;
-
-  case cir::SideEffect::Const:
-    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
-        callOp->getContext(), /*other=*/ModRefInfo::NoModRef,
-        /*argMem=*/ModRefInfo::NoModRef,
-        /*inaccessibleMem=*/ModRefInfo::NoModRef,
-        /*errnoMem=*/ModRefInfo::NoModRef,
-        /*targetMem0=*/ModRefInfo::NoModRef,
-        /*targetMem1=*/ModRefInfo::NoModRef);
-    noUnwind = true;
-    willReturn = true;
-    break;
+static mlir::LLVM::ModRefInfo convertModRefInfo(cir::ModRefInfo info) {
+  switch (info) {
+  case cir::ModRefInfo::NoModRef:
+    return mlir::LLVM::ModRefInfo::NoModRef;
+  case cir::ModRefInfo::Ref:
+    return mlir::LLVM::ModRefInfo::Ref;
+  case cir::ModRefInfo::Mod:
+    return mlir::LLVM::ModRefInfo::Mod;
+  case cir::ModRefInfo::ModRef:
+    return mlir::LLVM::ModRefInfo::ModRef;
   }
+  llvm_unreachable("unhandled cir::ModRefInfo");
+}
 
+/// A null input stays null, which is how both dialects spell unknown effects.
+static mlir::LLVM::MemoryEffectsAttr
+convertMemoryEffects(mlir::MLIRContext *ctx, cir::MemoryEffectsAttr effects) {
+  if (!effects)
+    return {};
+
+  return mlir::LLVM::MemoryEffectsAttr::get(
+      ctx, convertModRefInfo(effects.getOther()),
+      convertModRefInfo(effects.getArgMem()),
+      convertModRefInfo(effects.getInaccessibleMem()),
+      convertModRefInfo(effects.getErrnoMem()),
+      convertModRefInfo(effects.getTargetMem0()),
+      convertModRefInfo(effects.getTargetMem1()));
+}
+
+static void convertCallEffects(mlir::Operation *callOp, bool isNothrow,
+                               cir::MemoryEffectsAttr effects,
+                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                               bool &noUnwind, bool &willReturn,
+                               bool &noReturn) {
+  memoryEffect = convertMemoryEffects(callOp->getContext(), effects);
+  // CIR spells two separate cannot-unwind facts, nothrow for a callee
+  // declared not to throw and nounwind for one whose effects rule out
+  // unwinding.  LLVM has only nounwind, so either one sets it.
+  noUnwind = isNothrow || callOp->hasAttr(CIRDialect::getNoUnwindAttrName());
+  willReturn = callOp->hasAttr(CIRDialect::getWillReturnAttrName());
   noReturn = callOp->hasAttr(CIRDialect::getNoReturnAttrName());
 }
 
@@ -1882,8 +1883,8 @@ static mlir::Value convertToIndexTy(mlir::ConversionPatternRewriter &rewriter,
   auto sub = dyn_cast<mlir::LLVM::SubOp>(indexOp);
   bool rewriteSub = false;
   if (sub) {
-    if (auto lhsConst =
-            dyn_cast<mlir::LLVM::ConstantOp>(sub.getLhs().getDefiningOp())) {
+    if (auto lhsConst = dyn_cast_if_present<mlir::LLVM::ConstantOp>(
+            sub.getLhs().getDefiningOp())) {
       auto lhsConstInt = mlir::dyn_cast<mlir::IntegerAttr>(lhsConst.getValue());
       if (lhsConstInt && lhsConstInt.getValue() == 0) {
         index = sub.getRhs();
@@ -2160,9 +2161,10 @@ lowerCallAttributes(cir::CIRCallOpInterface op,
                     SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
     if (attr.getName() == CIRDialect::getCalleeAttrName() ||
-        attr.getName() == CIRDialect::getSideEffectAttrName() ||
+        attr.getName() == CIRDialect::getMemoryEffectsAttrName() ||
         attr.getName() == CIRDialect::getNoThrowAttrName() ||
         attr.getName() == CIRDialect::getNoUnwindAttrName() ||
+        attr.getName() == CIRDialect::getWillReturnAttrName() ||
         attr.getName() == CIRDialect::getNoReturnAttrName() ||
         attr.getName() == op.getInlineKindAttrName() ||
         attr.getName() == CIRDialect::getMustTailAttrName())
@@ -2205,8 +2207,8 @@ static mlir::LogicalResult rewriteCallOrInvoke(
   bool noUnwind = false;
   bool willReturn = false;
   bool noReturn = false;
-  convertSideEffectForCall(op, call.getNothrow(), call.getSideEffect(),
-                           memoryEffects, noUnwind, willReturn, noReturn);
+  convertCallEffects(op, call.getNothrow(), call.getMemoryEffectsAttr(),
+                     memoryEffects, noUnwind, willReturn, noReturn);
 
   SmallVector<mlir::NamedAttribute, 4> attributes;
   if (mlir::failed(
@@ -2267,6 +2269,7 @@ static mlir::LogicalResult rewriteCallOrInvoke(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   if (landingPadBlock) {
+    assert(!cir::MissingFeatures::opCallInvokeAttrs());
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
         op, llvmFnTy, calleeAttr, callOperands, continueBlock,
         mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
@@ -2691,9 +2694,14 @@ static bool shouldDropFuncAttribute(cir::FuncOp func, mlir::NamedAttribute attr,
          attr.getName() == func.getCallingConvAttrName() ||
          attr.getName() == func.getDsoLocalAttrName() ||
          attr.getName() == func.getInlineKindAttrName() ||
-         attr.getName() == func.getSideEffectAttrName() ||
+         attr.getName() == func.getMemoryEffectsAttrName() ||
          attr.getName() == CIRDialect::getNoReturnAttrName() ||
+         attr.getName() == CIRDialect::getNoUnwindAttrName() ||
+         attr.getName() == CIRDialect::getWillReturnAttrName() ||
          attr.getName() == CIRDialect::getStrictFPAttrName() ||
+         attr.getName() == CIRDialect::getNoRecurseAttrName() ||
+         attr.getName() == CIRDialect::getMustProgressAttrName() ||
+         attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
          attr.getName() == func.getAnnotationsAttrName() ||
          attr.getName() == func.getComdatAttrName() ||
          attr.getName() == func.getAlignmentAttrName();
@@ -2814,47 +2822,36 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (std::optional<cir::SideEffect> sideEffectKind = op.getSideEffect()) {
-    switch (*sideEffectKind) {
-    case cir::SideEffect::All:
-      break;
-    case cir::SideEffect::Pure:
-      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
-          fn.getContext(),
-          /*other=*/mlir::LLVM::ModRefInfo::Ref,
-          /*argMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*errnoMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*targetMem0=*/mlir::LLVM::ModRefInfo::Ref,
-          /*targetMem1=*/mlir::LLVM::ModRefInfo::Ref));
-      fn.setNoUnwind(true);
-      fn.setWillReturn(true);
-      break;
-    case cir::SideEffect::Const:
-      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
-          fn.getContext(),
-          /*other=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*argMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef));
-      fn.setNoUnwind(true);
-      fn.setWillReturn(true);
-      break;
-    }
-  }
+  if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
+    fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
+
+  if (op->hasAttr(CIRDialect::getNoUnwindAttrName()))
+    fn.setNoUnwind(true);
+  if (op->hasAttr(CIRDialect::getWillReturnAttrName()))
+    fn.setWillReturn(true);
 
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
 
-  // The LLVM dialect's LLVMFuncOp has no dedicated field for the `strictfp`
-  // function attribute, so route it through the `passthrough` array. The MLIR
-  // LLVM IR translator forwards `passthrough` entries to LLVM IR as function
+  // Function attributes with no dedicated field on the LLVM dialect's
+  // LLVMFuncOp are routed through the `passthrough` array. The MLIR LLVM IR
+  // translator forwards `passthrough` entries to LLVM IR as function
   // attributes.
-  if (op->hasAttr(CIRDialect::getStrictFPAttrName()))
-    fn.setPassthroughAttr(rewriter.getArrayAttr(
-        {rewriter.getStringAttr(CIRDialect::getStrictFPAttrName())}));
+  SmallVector<mlir::Attribute> passthrough;
+  for (llvm::StringRef flagAttr :
+       {CIRDialect::getStrictFPAttrName(), CIRDialect::getNoRecurseAttrName(),
+        CIRDialect::getMustProgressAttrName()})
+    if (op->hasAttr(flagAttr))
+      passthrough.push_back(rewriter.getStringAttr(flagAttr));
+
+  if (auto moduleId = op->getAttrOfType<mlir::StringAttr>(
+          CIRDialect::getSYCLModuleIdAttrName()))
+    passthrough.push_back(rewriter.getArrayAttr(
+        {rewriter.getStringAttr(CIRDialect::getSYCLModuleIdAttrName()),
+         moduleId}));
+
+  if (!passthrough.empty())
+    fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);
