@@ -10841,6 +10841,13 @@ bool X86InstrInfo::isFunctionSafeToOutlineFrom(
   if (!OutlineFromLinkOnceODRs && F.hasLinkOnceODRLinkage())
     return false;
 
+  // FIXME: Teach the outliner to generate/handle Windows unwind info.
+  // Without this fence, outlining from WinEH/SEH-bearing code can corrupt
+  // .seh_* frame state (llvm/llvm-project#213862). AArch64 already refuses
+  // outlining when usesWindowsCFI() is true.
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+    return false;
+
   // This function is viable for outlining, so return true.
   return true;
 }
