@@ -33919,7 +33919,11 @@ private:
       SmallVector<Constant *> Vals;
       for (const auto [Idx, V] : enumerate(VL)) {
         unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig[Idx]);
-        Vals.push_back(ConstantInt::get(V->getType(), Cnt, /*IsSigned=*/false));
+        // The repeat count may not fit the element type (e.g. i1); the
+        // modular reduction arithmetic keeps the truncated count equivalent.
+        Vals.push_back(ConstantInt::get(
+            V->getType(), APInt(V->getType()->getIntegerBitWidth(), Cnt,
+                                /*isSigned=*/false, /*implicitTrunc=*/true)));
       }
       auto *Scale = ConstantVector::get(Vals);
       LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Scale << "of "
