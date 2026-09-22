@@ -5473,17 +5473,9 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     return false;
   LLVM_DEBUG(dbgs() << "LV: epilogue tail-folding is enabled\n");
 
-  bool UseInterleaved = TTI.enableInterleavedAccessVectorization();
-  if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
-    UseInterleaved = EnableInterleavedMemAccesses;
-
-  EpilogueTfIAI = std::make_unique<InterleavedAccessInfo>(
-      PSE, OrigLoop, DT, LI, Legal->getLAI(), Config.OptForSize);
-  if (UseInterleaved)
-    EpilogueTfIAI->analyzeInterleaving(useMaskedInterleavedAccesses(TTI));
   LoopVectorizationCostModel EpilogueTfCM(
       EpilogueTailLoweringStatus, OrigLoop, PSE, LI, Legal, TTI, TLI, CM->AC,
-      ORE, CM->GetBFI, CM->TheFunction, *EpilogueTfIAI, Config);
+      ORE, CM->GetBFI, CM->TheFunction, IAI, Config);
 
   assert(EpilogueTfCM.preferTailFoldedLoop() &&
          "Epilogue tail-folding is expected to be enabled");
@@ -5496,7 +5488,7 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
   FixedScalableVFPair MaxFactors =
       EpilogueTfCM.computeMaxVF(EpilogueVectorizationForceVF, /*UserIC*/ 1);
   if (!MaxFactors || !EpilogueTfCM.foldTailByMasking()) {
-    // Cases that should not to be vectorized or tail-folded.
+    // Cases that should not be vectorized or tail-folded.
     reportVectorizationInfo("This case of epilogue loop can't be tail-folded",
                             "InvalidTailFoldedEpilogue", ORE, OrigLoop);
     return false;
@@ -5512,20 +5504,10 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     reportVectorizationInfo(
         "Failed to build initial tail-folded epilogue VPlan",
         "InvalidTailFoldedEpilogue", ORE, OrigLoop);
-    assert(false && "Failed to build initial tail-folded epilogue VPlan");
+    llvm_unreachable("Failed to build initial tail-folded epilogue VPlan");
     return false;
   }
 
-  if (!useMaskedInterleavedAccesses(TTI)) {
-    LLVM_DEBUG(
-        dbgs() << "LV: Invalidate all interleaved groups due to fold-tail by "
-                  "masking which requires masked-interleaved support.\n");
-    if (EpilogueTfCM.InterleaveInfo.invalidateGroups())
-      // Invalidating interleave groups also requires invalidating all decisions
-      // based on them, which includes widening decisions and uniform and scalar
-      // values.
-      EpilogueTfCM.invalidateCostModelingDecisions();
-  }
   Legal->prepareToFoldTailByMasking();
 
   // Collect the instructions (and their associated costs) that will be more
@@ -5541,6 +5523,7 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
   if (VPlans.size() == NumPlansBefore) {
     reportVectorizationInfo("Failed to build tail-folded epilogue VPlan",
                             "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    llvm_unreachable("Failed to build tail-folded epilogue VPlan");
     return false;
   }
   if (VPlans.back()->getSingleVF() != EpilogueVectorizationForceVF ||
@@ -5548,6 +5531,7 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     reportVectorizationInfo(
         "Failed to build a valid tail-folded epilogue VPlan",
         "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    llvm_unreachable("Failed to build a valid tail-folded epilogue VPlan");
     VPlans.pop_back();
     return false;
   }
@@ -7679,14 +7663,9 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       // instead, so the mask reflects how many elements the main vector loop
       // already processed.
       VPBuilder EntryBuilder(Plan.getVectorPreheader());
-      Type *CanIVTy = VectorLoop->getCanonicalIVType();
-      VPValue *ALMMultiplier = Plan.getConstantInt(CanIVTy, 1);
-      auto *EntryIncrement = EntryBuilder.createOverflowingOp(
-          VPInstruction::CanonicalIVIncrementForPart, {VPV, &Plan.getVF()}, {},
-          R.getDebugLoc(), "index.part.next");
       auto *EntryALM = EntryBuilder.createNaryOp(
-          VPInstruction::WideActiveLaneMask,
-          {EntryIncrement, Plan.getTripCount(), ALMMultiplier}, R.getDebugLoc(),
+          VPInstruction::ActiveLaneMask,
+          {VPV, Plan.getTripCount()}, R.getDebugLoc(),
           "active.lane.mask.entry");
       cast<VPHeaderPHIRecipe>(&R)->setStartValue(EntryALM);
       continue;
@@ -7774,8 +7753,7 @@ fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, VPlan &BestEpiPlan,
 /// count check of the main loop, as well as updating various phis. \p
 /// InstsToMove contains instructions that need to be moved to the preheader of
 /// the epilogue vector loop.
-static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
-                                      DominatorTree *DT, LoopInfo *LI,
+static void connectEpilogueVectorLoop(VPlan &EpiPlan, DominatorTree *DT,
                                       GeneratedRTChecks &Checks,
                                       VPIRBasicBlock *VecEpilogueIterCheckVPBB,
                                       ArrayRef<Instruction *> InstsToMove,
@@ -8340,7 +8318,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LVP.executePlan(
         EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV, DT,
         LoopVectorizationPlanner::EpilogueVectorizationKind::Epilogue);
-    connectEpilogueVectorLoop(BestEpiPlan, L, DT, LI, Checks,
+    connectEpilogueVectorLoop(BestEpiPlan, DT, Checks,
                               EpilogILV.VecEpilogueIterationCountCheck,
                               InstsToMove, ResumeValues, IsTailFolded);
     ++LoopsEpilogueVectorized;

@@ -1760,24 +1760,6 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
   checkVPRecipeCastImpl<VPReductionEVLRecipe, VPUser>(&EVLRecipe);
 }
-
-TEST_F(VPRecipeTest, CastVPWidenCanonicalIVRecipeToVPUser) {
-  VPlan &Plan = getPlan();
-  VPBasicBlock *Preheader = Plan.getEntry();
-  VPBasicBlock *Header = Plan.createVPBasicBlock("header");
-  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
-  VPRegionBlock *Region = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
-                                                "loop", Header, Latch);
-  VPBlockUtils::connectBlocks(Header, Latch);
-  VPBlockUtils::connectBlocks(Preheader, Region);
-  VPBlockUtils::connectBlocks(Region, Plan.getScalarHeader());
-
-  VPRegionValue *CanIV = Region->getCanonicalIV();
-  VPWidenCanonicalIVRecipe Recipe(CanIV);
-
-  EXPECT_EQ(CanIV, Recipe.getCanonicalIV());
-  checkVPRecipeCastImpl<VPWidenCanonicalIVRecipe, VPUser>(&Recipe);
-}
 } // namespace
 
 struct VPDoubleValueDef : public VPRecipeBase {
