@@ -167,8 +167,6 @@ depends on context.
 
 ## High Level Structure
 
-(modulestructure)=
-
 ### Module Structure
 
 LLVM programs are composed of `Module`'s, each of which is a

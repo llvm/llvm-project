@@ -85,7 +85,9 @@ def check_markdown_doc_links(app: Sphinx, docname: str, source: list[str]) -> No
         location = (docname, line)
         if uri.startswith("project:"):
             destination = uri[len("project:") :]
-            if destination.startswith("#"):
+            parsed = urlsplit(destination)
+            source_suffix = Path(unquote(parsed.path)).suffix
+            if parsed.fragment and source_suffix != ".md":
                 advice = "use a Sphinx 'ref' role for an explicit label"
             else:
                 advice = f"use the relative source path {destination!r} instead"
@@ -106,6 +108,17 @@ def check_markdown_doc_links(app: Sphinx, docname: str, source: list[str]) -> No
             continue
         source_suffix = Path(app.env.doc2path(target_docname)).suffix
         parsed = urlsplit(uri)
+        if parsed.fragment and source_suffix != ".md":
+            logger.warning(
+                "Markdown link points to generated HTML for document %r; "
+                "use a Sphinx 'ref' role for the section instead: %s",
+                target_docname,
+                uri,
+                location=location,
+                type="llvm_sphinx",
+                subtype="nonportable-doc-link",
+            )
+            continue
         suggested = unquote(parsed.path)[: -len(".html")] + source_suffix
         if parsed.fragment:
             suggested += "#" + unquote(parsed.fragment)
@@ -244,6 +257,8 @@ def run_tests() -> None:
         "target.html#target-section",
         "project:target.md#target-document",
         "target.html#target-document",
+        "project:rest.rst#rest-section",
+        "rest.html#rest-section",
     )
     for link in expected_nonportable_links:
         if link not in warnings:
@@ -252,4 +267,6 @@ def run_tests() -> None:
         "Markdown link uses the nonportable 'project:' scheme"
     ) + warnings.count("Markdown link points to generated HTML")
     if nonportable_count != len(expected_nonportable_links):
+        raise AssertionError(f"unexpected Sphinx warnings:\n{warnings}")
+    if warnings.count("use a Sphinx 'ref' role for") != 2:
         raise AssertionError(f"unexpected Sphinx warnings:\n{warnings}")

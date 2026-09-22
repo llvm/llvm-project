@@ -236,7 +236,7 @@ in code, but not for signed pointers referenced by constants, in, e.g., global
 initializers.
 
 The latter are represented using a
-{ref}`ptrauth constant <ptrauth_constant>`,
+[`ptrauth` constant](LangRef.md#pointer-authentication-constants),
 which describes an authenticated relocation producing a signed pointer.
 
 ```llvm
@@ -299,8 +299,8 @@ operations that are not otherwise explicitly expressed in IR.
 
 ``ptrauth-indirect-gotos`` specifies that indirect gotos in this function
 should authenticate their target.  At the IR level, no other change is needed.
-When lowering {ref}`blockaddress constants <blockaddress>`,
-and {ref}`indirectbr instructions <i_indirectbr>`,
+When lowering [`blockaddress` constants](LangRef.md#addresses-of-basic-blocks),
+and [`indirectbr` instructions](LangRef.md#indirectbr-instruction),
 this tells the backend to respectively sign and authenticate the pointers.
 
 The specific scheme isn't ABI-visible.  Currently, the AArch64 backend

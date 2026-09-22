@@ -423,8 +423,6 @@ for info.
   from the list above.
 
 
-(discord)=
-
 ## Discord
 
 Users and developers of the LLVM project (including subprojects such as Clang)
