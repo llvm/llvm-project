@@ -1,0 +1,90 @@
+! Under -gpu=managed the compiler attributes unattributed ALLOCATABLE and
+! POINTER entities as managed on the user's behalf. A module file records that
+! it did so, with the (IMPLICIT) qualifier, so that a reader can tell such an
+! attribute from one the user wrote.
+
+! RUN: rm -rf %t && split-file %s %t
+! RUN: cd %t && bbc -emit-hlfir -fcuda -gpu=managed def.cuf -o /dev/null
+! RUN: cat %t/m.mod | FileCheck %s --check-prefix=MODFILE
+
+! The memory space the user asked for on an enclosing object wins over an
+! implicitly attributed component, even across the module file.
+! RUN: cd %t && bbc -emit-hlfir -fcuda -gpu=managed use_device.cuf -o - \
+! RUN:   | FileCheck %s --check-prefix=DEVICE
+
+! With no enclosing object asking for a space, the implicit attribute applies,
+! and it does so whether or not the consumer repeats -gpu=managed.
+! RUN: cd %t && bbc -emit-hlfir -fcuda -gpu=managed use_host.cuf -o - \
+! RUN:   | FileCheck %s --check-prefix=HOST
+! RUN: cd %t && bbc -emit-hlfir -fcuda use_host.cuf -o - \
+! RUN:   | FileCheck %s --check-prefix=HOST
+
+! An attribute the compiler applied does not make the module a definer of CUDA
+! symbols, so a consumer without CUDA Fortran enabled is not rejected.
+! RUN: cd %t && bbc -emit-hlfir -fopenacc use_acc.cuf -o /dev/null
+
+! The qualifier is spelled only in module files: the production is enabled by
+! a language feature that only the module-file reader turns on, so writing it
+! in user code is a syntax error.
+! RUN: cd %t && not bbc -emit-hlfir -fcuda -gpu=managed user_written.cuf -o - 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=NOTFORUSERS
+
+!--- def.cuf
+module m
+  ! Every component here was attributed by the compiler, so an enclosing
+  ! object's own memory space takes precedence over them.
+  type :: t
+    real, allocatable :: implicit_comp(:)
+  end type
+  ! A component the user attributed, kept apart so that it does not affect
+  ! where an object of type t is placed.
+  type :: t_explicit
+    real, allocatable, managed :: explicit_comp(:)
+  end type
+  real, allocatable :: implicit_var(:)
+end module
+
+! The compiler applied the attribute here, and the module file says so.
+! MODFILE: real(4),allocatable,managed(implicit)::implicit_comp(:)
+! The user wrote this one, so it is recorded without the qualifier.
+! MODFILE: real(4),allocatable,managed::explicit_comp(:)
+! The same distinction is kept for an entity in the module's own scope.
+! MODFILE: real(4),allocatable,managed(implicit)::implicit_var(:)
+
+!--- use_device.cuf
+subroutine device_object()
+  use m
+  type(t), device :: d
+  allocate(d%implicit_comp(10))
+  deallocate(d%implicit_comp)
+end subroutine
+
+! DEVICE-LABEL: func.func @_QPdevice_object()
+! DEVICE: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<device>
+! DEVICE: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! DEVICE: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! DEVICE: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+
+!--- use_host.cuf
+subroutine host_object()
+  use m
+  type(t) :: h
+  allocate(h%implicit_comp(10))
+end subroutine
+
+! HOST-LABEL: func.func @_QPhost_object()
+! HOST: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! HOST: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+
+!--- use_acc.cuf
+subroutine acc_only()
+  use m
+end subroutine
+
+!--- user_written.cuf
+subroutine writes_the_qualifier()
+  real, allocatable, managed(implicit) :: a(:)
+end subroutine
+
+! NOTFORUSERS: user_written.cuf:{{[0-9]+}}:{{[0-9]+}}: error: expected entity declarations
+! NOTFORUSERS-NEXT: real, allocatable, managed(implicit) :: a(:)
