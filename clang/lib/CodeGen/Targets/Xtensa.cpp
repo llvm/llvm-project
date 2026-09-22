@@ -45,8 +45,8 @@ void XtensaABIInfo::computeInfo(CGFunctionInfo &FI) const {
     FI.getReturnInfo() = classifyReturnType(RetTy);
 
   int ArgGPRsLeft = MaxNumArgGPRs;
-  for (auto &ArgInfo : FI.arguments()) {
-    ArgInfo.info = classifyArgumentType(ArgInfo.type, ArgGPRsLeft);
+  for (auto &[Type, Info] : FI.arguments()) {
+    Info = classifyArgumentType(Type, ArgGPRsLeft);
   }
 }
 
@@ -161,7 +161,7 @@ RValue XtensaABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   if (Align > 1) {
     ARIndex = Builder.CreateAdd(ARIndex, Builder.getInt32(Align - 1));
     ARIndex =
-        Builder.CreateAnd(ARIndex, Builder.getInt32((uint32_t) ~(Align - 1)));
+        Builder.CreateAnd(ARIndex, Builder.getInt32((uint32_t)~(Align - 1)));
   }
 
   llvm::Value *ARIndexNext = Builder.CreateAdd(ARIndex, Builder.getInt32(Size));
