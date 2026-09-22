@@ -2707,6 +2707,7 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getStrictFPAttrName() ||
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
+         attr.getName() == CIRDialect::getNoBuiltinAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName();
 }
 
@@ -2848,7 +2849,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   SmallVector<mlir::Attribute> passthrough;
   for (llvm::StringRef flagAttr :
        {CIRDialect::getStrictFPAttrName(), CIRDialect::getNoRecurseAttrName(),
-        CIRDialect::getMustProgressAttrName()})
+        CIRDialect::getMustProgressAttrName(),
+        CIRDialect::getNoBuiltinAttrName()})
     if (op->hasAttr(flagAttr))
       passthrough.push_back(rewriter.getStringAttr(flagAttr));
 
