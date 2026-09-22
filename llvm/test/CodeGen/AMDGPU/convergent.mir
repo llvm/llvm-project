@@ -45,7 +45,7 @@ body:             |
     %5:vreg_256 = COPY %3.sub1:vreg_256
 
   bb.2:
-    SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -81,7 +81,7 @@ body:             |
   bb.1:
     %vcopy:vgpr_32 = COPY %vdst.sub0
   bb.2:
-    SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -118,7 +118,7 @@ body:             |
   bb.1:
     %vcopy:vgpr_32 = COPY %vdst.sub0
   bb.2:
-    SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -153,7 +153,7 @@ body:             |
   bb.1:
     %vcopy:vgpr_32 = COPY %vdst.sub0
   bb.2:
-    SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -190,7 +190,7 @@ body:             |
   bb.1:
     %vcopy:vgpr_32 = COPY %vdst.sub0
   bb.2:
-    SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %sdst:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -233,7 +233,7 @@ body:             |
     %5:vgpr_32 = COPY %3:vgpr_32
 
   bb.2:
-    SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -271,7 +271,7 @@ body:             |
     %5:vgpr_32 = COPY %3:vgpr_32
 
   bb.2:
-    SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -309,7 +309,7 @@ body:             |
     %5:vgpr_32 = COPY %3:vgpr_32
 
   bb.2:
-    SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -347,7 +347,7 @@ body:             |
     %5:vgpr_32 = COPY %3:vgpr_32
 
   bb.2:
-    SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -385,7 +385,7 @@ body:             |
     %5:vgpr_32 = COPY %3:vgpr_32
 
   bb.2:
-    SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -421,7 +421,7 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -457,7 +457,7 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -493,7 +493,7 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -534,7 +534,7 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -570,7 +570,7 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -606,7 +606,7 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -642,7 +642,7 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -678,6 +678,6 @@ body:             |
     %4:vgpr_32 = COPY %2:vgpr_32
 
   bb.2:
-    SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %3:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 ...

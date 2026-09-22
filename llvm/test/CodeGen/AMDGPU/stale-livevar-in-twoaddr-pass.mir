@@ -21,7 +21,7 @@ body:             |
 
   bb.2:
     %4:vgpr_32 = PHI %5, %bb.3, %3, %bb.1
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     EXP_DONE 0, %4, %4, %4, %4, -1, 0, 15, implicit $exec
     S_ENDPGM 0
 
