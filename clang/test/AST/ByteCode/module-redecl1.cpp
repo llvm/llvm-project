@@ -1,4 +1,4 @@
-// RUN: rm -rf %t
+// RUN: rm -rf %t && mkdir %t
 // RUN: %clang_cc1 -x objective-c++ %s -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs -verify -std=c++11
 // RUN: %clang_cc1 -x objective-c++ %s -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs -verify -std=c++11 -fexperimental-new-constant-interpreter
 
