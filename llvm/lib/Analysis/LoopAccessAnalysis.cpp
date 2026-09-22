@@ -3231,9 +3231,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
     return;
   }
 
-  // Avoid adding the "Stride == 1" predicate when we know that
-  // Stride >= Trip-Count. Such a predicate will effectively optimize a single
-  // or zero iteration loop, as Trip-Count <= Stride == 1.
+  // Avoid unit-stride versioning if the predicate cannot hold on loop entry or
+  // would leave at most one iteration.
   //
   // TODO: We are currently not making a very informed decision on when it is
   // beneficial to apply stride versioning. It might make more sense that the
@@ -3244,39 +3243,33 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // of various possible stride specializations, considering the alternatives
   // of using gather/scatters (if available).
 
-  const SCEV *MaxBTC = PSE->getSymbolicMaxBackedgeTakenCount();
-
-  // Match the types so we can compare the stride and the MaxBTC.
-  // The Stride can be positive/negative, so we sign extend Stride;
-  // The backedgeTakenCount is non-negative, so we zero extend MaxBTC.
-  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
-  uint64_t StrideTypeSizeBits = DL.getTypeSizeInBits(StrideExpr->getType());
-  uint64_t BETypeSizeBits = DL.getTypeSizeInBits(MaxBTC->getType());
-  const SCEV *CastedStride = StrideExpr;
-  const SCEV *CastedBECount = MaxBTC;
   ScalarEvolution *SE = PSE->getSE();
-  if (BETypeSizeBits >= StrideTypeSizeBits)
-    CastedStride = SE->getNoopOrSignExtend(StrideExpr, MaxBTC->getType());
-  else
-    CastedBECount = SE->getZeroExtendExpr(MaxBTC, StrideExpr->getType());
-  const SCEV *StrideMinusBETaken = SE->getMinusSCEV(CastedStride, CastedBECount);
-  // Since TripCount == BackEdgeTakenCount + 1, checking:
-  // "Stride >= TripCount" is equivalent to checking:
-  // Stride - MaxBTC> 0
-  if (SE->isKnownPositive(StrideMinusBETaken)) {
-    LLVM_DEBUG(
-        dbgs() << "LAA: Stride>=TripCount; No point in versioning as the "
-                  "Stride==1 predicate will imply that the loop executes "
-                  "at most once.\n");
-    return;
-  }
-  LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
+  const SCEV *MaxBTC = PSE->getSymbolicMaxBackedgeTakenCount();
+  if (!LoopGuards)
+    LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(TheLoop, *SE));
+  MaxBTC = SE->applyLoopGuards(MaxBTC, *LoopGuards);
 
   // Strip back off the integer cast, and check that our result is a
   // SCEVUnknown as we expect.
   const SCEV *StrideBase = StrideExpr;
   if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
     StrideBase = C->getOperand();
+
+  // Evaluate the guarded trip count under the unit-stride predicate instead of
+  // comparing the stride and trip count, which may use different integer
+  // extensions. Keep the predicate local: we have not decided to version the
+  // access yet.
+  const SCEV *One = SE->getOne(StrideBase->getType());
+  const SCEVPredicate *StrideIsOne = SE->getEqualPredicate(StrideBase, One);
+  if (SE->isLoopEntryGuardedByCond(TheLoop, ICmpInst::ICMP_NE, StrideBase,
+                                   One) ||
+      SE->rewriteUsingPredicate(MaxBTC, TheLoop, *StrideIsOne)->isZero()) {
+    LLVM_DEBUG(dbgs() << "LAA: No point in versioning as the unit-stride path "
+                         "is unreachable or executes at most once.\n");
+    return;
+  }
+
+  LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
   assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
          "users of the map rely on the stride being loop invariant");
   SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
