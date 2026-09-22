@@ -547,11 +547,6 @@ public:
     return (SCEVWrapPredicate::IncrementWrapFlags)(Flags | OnFlags);
   }
 
-  /// Returns the set of SCEVWrapPredicate no wrap flags implied by a
-  /// SCEVAddRecExpr.
-  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
-  getImpliedFlags(const SCEVAddRecExpr *AR, ScalarEvolution &SE);
-
 private:
   const SCEVAddRecExpr *AR;
   IncrementWrapFlags Flags;
@@ -967,6 +962,18 @@ public:
 
   /// This is a convenience function which does getSCEVAtScope(getSCEV(V), L).
   LLVM_ABI SCEVUse getSCEVAtScope(Value *V, const Loop *L);
+
+  /// Return the SCEV expression at the specified loop exit. Returns the
+  /// original value if no more precise value can be computed.
+  LLVM_ABI SCEVUse getSCEVAtExit(const SCEV *S, const Loop *L,
+                                 const BasicBlock *ExitingBlock);
+
+  /// This is a convenience function which does
+  /// getSCEVAtExit(getSCEV(V), L, ExitingBlock).
+  LLVM_ABI SCEVUse getSCEVAtExit(Value *V, const Loop *L,
+                                 const BasicBlock *ExitingBlock) {
+    return getSCEVAtExit(getSCEV(V), L, ExitingBlock);
+  }
 
   /// Test whether entry to the loop is protected by a conditional between LHS
   /// and RHS.  This is used to help avoid max expressions in loop trip
@@ -2718,10 +2725,6 @@ public:
   LLVM_ABI const SCEVAddRecExpr *
   getAsAddRec(Value *V,
               SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
-
-  /// Returns true if we've statically proved that V doesn't wrap.
-  LLVM_ABI bool hasNoOverflow(Value *V,
-                              SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }

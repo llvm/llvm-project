@@ -998,7 +998,8 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
     if (isa<SCEVCouldNotCompute>(Coeff))
       return Coeff;
 
-    const SCEV *Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff);
+    SCEVUse Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff,
+                                {SCEV::FlagAnyWrap, UseFlags});
     Result = SE.getAddExpr(Result, Mul, {SCEV::FlagAnyWrap, UseFlags});
   }
   return Result;
@@ -10098,6 +10099,22 @@ SCEVUse ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
   return C;
 }
 
+SCEVUse ScalarEvolution::getSCEVAtExit(const SCEV *V, const Loop *L,
+                                       const BasicBlock *ExitingBlock) {
+  SCEVUse ExitValue = getSCEVAtScope(V, L->getParentLoop());
+  if (!isLoopInvariant(ExitValue, L)) {
+    // If we failed to evaluate it in the outer scope, try to evaluate an
+    // addrec for the specific exit.
+    // TODO: Generalize this to other expressions.
+    const SCEV *ExitCount = getExitCount(L, ExitingBlock);
+    if (!isa<SCEVCouldNotCompute>(ExitCount))
+      if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V))
+        if (AddRec->getLoop() == L)
+          ExitValue = AddRec->evaluateAtIteration(ExitCount, *this);
+  }
+  return ExitValue;
+}
+
 /// This builds up a Constant using the ConstantExpr interface.  That way, we
 /// will return Constants for objects which aren't represented by a
 /// SCEVConstant, because SCEVConstant is restricted to ConstantInt.
@@ -15504,27 +15521,6 @@ void SCEVWrapPredicate::print(raw_ostream &OS, unsigned Depth) const {
   OS << "\n";
 }
 
-SCEVWrapPredicate::IncrementWrapFlags
-SCEVWrapPredicate::getImpliedFlags(const SCEVAddRecExpr *AR,
-                                   ScalarEvolution &SE) {
-  IncrementWrapFlags ImpliedFlags = IncrementAnyWrap;
-  SCEV::NoWrapFlags StaticFlags = AR->getNoWrapFlags();
-
-  // We can safely transfer the NSW flag as NSSW.
-  if (ScalarEvolution::setFlags(StaticFlags, SCEV::FlagNSW) == StaticFlags)
-    ImpliedFlags = IncrementNSSW;
-
-  if (ScalarEvolution::setFlags(StaticFlags, SCEV::FlagNUW) == StaticFlags) {
-    // If the increment is positive, the SCEV NUW flag will also imply the
-    // WrapPredicate NUSW flag.
-    if (const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE)))
-      if (Step->getValue()->getValue().isNonNegative())
-        ImpliedFlags = setFlags(ImpliedFlags, IncrementNUSW);
-  }
-
-  return ImpliedFlags;
-}
-
 /// Union predicates don't get cached so create a dummy set ID for it.
 SCEVUnionPredicate::SCEVUnionPredicate(ArrayRef<const SCEVPredicate *> Preds,
                                        ScalarEvolution &SE)
@@ -15697,18 +15693,6 @@ void PredicatedScalarEvolution::updateGeneration() {
       II.second = {Generation, SE.rewriteUsingPredicate(Rewritten, &L, *Preds)};
     }
   }
-}
-
-bool PredicatedScalarEvolution::hasNoOverflow(
-    Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags) {
-  const auto *AR = dyn_cast<SCEVAddRecExpr>(getSCEV(V));
-  if (!AR)
-    return false;
-
-  Flags = SCEVWrapPredicate::clearFlags(
-      Flags, SCEVWrapPredicate::getImpliedFlags(AR, SE));
-
-  return Flags == SCEVWrapPredicate::IncrementAnyWrap;
 }
 
 const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(
