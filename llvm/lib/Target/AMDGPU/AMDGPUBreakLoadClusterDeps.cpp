@@ -329,18 +329,11 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
 
   // Find a free reg.
   //
-  // We track liveness by hand with LiveRegUnits rather than using
-  // RegScavenger.  RegScavenger is the wrong tool here: its defining feature is
-  // spilling a register to a scavenging slot when nothing is free, but this
-  // pass must never spill -- a spill would cost more than the memory-level
-  // parallelism the rename buys, and the whole point is to stay within the
-  // occupancy VGPR budget.  When no register is free we simply bail.
-  // RegScavenger also only reasons about liveness at a single point, whereas we
-  // need a register that is free across the entire [DefToRename, KillerIns]
-  // window and additionally excluded from over-budget register numbers and from
-  // BannedRegs (registers used by sibling cluster loads, which the scheduler
-  // will pack next to this one).  LiveRegUnits accumulated over the window
-  // expresses exactly that and composes cleanly with those two extra filters.
+  // We track liveness by hand with LiveRegUnits rather than using RegScavenger.
+  // RegScavenger is the wrong tool here because we have additional constraints
+  // on our search that RegScavenger does not support.  We need a register that
+  // is excluded from BannedRegs, which are the registers used by sibling
+  // cluster loads, and does not exceed our occupancy-derived VGPR limit.
   LiveRegUnits LRU(*TRI);
   LRU.addLiveOuts(MBB);
   for (MachineBasicBlock::reverse_iterator LiveRIt = MBB.rbegin();
@@ -480,11 +473,8 @@ bool AMDGPUBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
               ForwardIt->getOperand(getLoadDestIdx(*ForwardIt)).getReg());
         } else
           for (MachineOperand &Operand : ForwardIt->defs())
-            if (TRI->isVGPR(*MRI, Operand.getReg())) {
-              BitVector RAWHazardMask = getVGPR32Components(Operand.getReg());
-              RAWHazardMask.flip();
-              ClusterRAWHazards &= RAWHazardMask;
-            }
+            if (TRI->isVGPR(*MRI, Operand.getReg()))
+              ClusterRAWHazards.reset(getVGPR32Components(Operand.getReg()));
       }
       SingleLoadCluster = ClusterLoads.size() == 1;
     } else
