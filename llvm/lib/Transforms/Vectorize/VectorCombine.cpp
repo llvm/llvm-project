@@ -6063,6 +6063,7 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+/// Return the number of data operands of \p Inst.
 static unsigned getNumDataOperands(const Instruction *Inst) {
   if (auto *CB = dyn_cast<CallBase>(Inst))
     return CB->arg_size(); // Exclude callee operand and bundles.
@@ -6097,6 +6098,7 @@ static bool isSupportedElementwise(Instruction *Inst) {
   return true;
 }
 
+/// Return the common splat value of \p Values.
 static Value *getCommonSplatValue(ArrayRef<Value *> Values) {
   auto GetSplatOrScalar = [](Value *V) {
     return isa<VectorType>(V->getType()) ? getSplatValue(V) : V;
@@ -6123,20 +6125,21 @@ static IntrinsicInst *getDeinterleaveForMembers(ArrayRef<Value *> Members,
       return nullptr;
 
     auto *Current = dyn_cast<IntrinsicInst>(Extract->getAggregateOperand());
-    if (!Current || Current->hasOperandBundles() ||
-        getDeinterleaveIntrinsicFactor(Current->getIntrinsicID()) != Factor ||
-        (Deinterleave && Current != Deinterleave))
+    if (!Current || (Deinterleave && Current != Deinterleave))
       return nullptr;
     Deinterleave = Current;
   }
-
-  if (!Deinterleave || !Deinterleave->hasNUndroppableUses(Factor))
+  if (Deinterleave->hasOperandBundles() ||
+      getDeinterleaveIntrinsicFactor(Deinterleave->getIntrinsicID()) !=
+          Factor ||
+      !Deinterleave->hasNUndroppableUses(Factor))
     return nullptr;
   return Deinterleave;
 }
 
-static SmallVector<Value *, 8> getMemberOperands(ArrayRef<Value *> Members,
-                                                 unsigned OperandIndex) {
+/// Return the operand at \p OperandIndex of each \p Members.
+static SmallVector<Value *, 8>
+getDeinterleavedOperands(ArrayRef<Value *> Members, unsigned OperandIndex) {
   SmallVector<Value *, 8> Operands;
   for (Value *Member : Members)
     Operands.push_back(cast<Instruction>(Member)->getOperand(OperandIndex));
@@ -6145,8 +6148,9 @@ static SmallVector<Value *, 8> getMemberOperands(ArrayRef<Value *> Members,
 
 /// Check whether the tree of elementwise operations each feeding \p Members
 /// can be rebuilt at the interleaved width.
-static bool canWidenOperations(ArrayRef<Value *> Members, unsigned Factor,
-                               unsigned &NumScanned) {
+static bool canWidenDeinterleavedOperations(ArrayRef<Value *> Members,
+                                            unsigned Factor,
+                                            unsigned &NumScanned) {
   assert(Members.size() == Factor && "expected one member per field");
   if (getDeinterleaveForMembers(Members, Factor))
     return true;
@@ -6161,14 +6165,15 @@ static bool canWidenOperations(ArrayRef<Value *> Members, unsigned Factor,
 
   for (Value *Member : Members.drop_front()) {
     auto *Inst = dyn_cast<Instruction>(Member);
-    if (!Inst || !isSupportedElementwise(Inst) ||
-        !Inst->getSingleUndroppableUse() ||
+    if (!Inst || !Inst->getSingleUndroppableUse() ||
         !FirstInst->isSameOperationAs(Inst, Instruction::CompareCallTargets))
       return false;
   }
 
+  // Scalars operands should be equal among all members.
+  // Vector operands should be a common splat value or can be widened.
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
-    SmallVector<Value *, 8> Operands = getMemberOperands(Members, Op);
+    SmallVector<Value *, 8> Operands = getDeinterleavedOperands(Members, Op);
     if (!isa<VectorType>(Operands.front()->getType())) {
       if (!all_equal(Operands))
         return false;
@@ -6176,7 +6181,7 @@ static bool canWidenOperations(ArrayRef<Value *> Members, unsigned Factor,
     }
 
     if (!getCommonSplatValue(Operands) &&
-        !canWidenOperations(Operands, Factor, NumScanned))
+        !canWidenDeinterleavedOperations(Operands, Factor, NumScanned))
       return false;
   }
   return true;
@@ -6205,9 +6210,10 @@ static Value *createWideInstruction(Instruction *NarrowInst,
   llvm_unreachable("Unsupported instruction");
 }
 
-static Value *widenOperations(ArrayRef<Value *> Members, unsigned Factor,
-                              ElementCount WideEC,
-                              IRBuilder<InstSimplifyFolder> &Builder) {
+static Value *
+widenDeinterleavedOperations(ArrayRef<Value *> Members, unsigned Factor,
+                             ElementCount WideEC,
+                             IRBuilder<InstSimplifyFolder> &Builder) {
   if (auto *Deinterleave = getDeinterleaveForMembers(Members, Factor)) {
     Value *Source = Deinterleave->getArgOperand(0);
     assert(cast<VectorType>(Source->getType())->getElementCount() == WideEC &&
@@ -6220,14 +6226,15 @@ static Value *widenOperations(ArrayRef<Value *> Members, unsigned Factor,
   SmallVector<Value *, 4> NewOperands;
   NewOperands.reserve(NumOperands);
   for (unsigned Op = 0; Op != NumOperands; ++Op) {
-    SmallVector<Value *, 8> Operands = getMemberOperands(Members, Op);
+    SmallVector<Value *, 8> Operands = getDeinterleavedOperands(Members, Op);
     Value *NewOperand = Operands.front();
     if (isa<VectorType>(NewOperand->getType())) {
       if (Value *CommonValue = getCommonSplatValue(Operands)) {
         Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
         NewOperand = Builder.CreateVectorSplat(WideEC, CommonValue);
       } else {
-        NewOperand = widenOperations(Operands, Factor, WideEC, Builder);
+        NewOperand =
+            widenDeinterleavedOperations(Operands, Factor, WideEC, Builder);
       }
     }
     NewOperands.push_back(NewOperand);
@@ -6238,8 +6245,7 @@ static Value *widenOperations(ArrayRef<Value *> Members, unsigned Factor,
       VectorType::get(NarrowInst->getType()->getScalarType(), WideEC);
   Value *NewValue =
       createWideInstruction(NarrowInst, NewOperands, WideResultTy, Builder);
-  auto *NewInst = dyn_cast<Instruction>(NewValue);
-  if (NewInst) {
+  if (auto *NewInst = dyn_cast<Instruction>(NewValue)) {
     propagateIRFlags(NewInst, Members);
     propagateMetadata(NewInst, Members);
   }
@@ -6293,12 +6299,13 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
 
   SmallVector<Value *, 8> RootMembers(Interleave->args());
   unsigned NumScanned = 0;
-  if (!canWidenOperations(RootMembers, Factor, NumScanned))
+  if (!canWidenDeinterleavedOperations(RootMembers, Factor, NumScanned))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
   Builder.SetInsertPoint(Interleave);
-  Value *WideValue = widenOperations(RootMembers, Factor, WideEC, Builder);
+  Value *WideValue =
+      widenDeinterleavedOperations(RootMembers, Factor, WideEC, Builder);
   assert(WideValue->getType() == Interleave->getType());
   replaceValue(*Interleave, *WideValue);
   return true;
