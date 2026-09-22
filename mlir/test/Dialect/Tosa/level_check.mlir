@@ -1269,6 +1269,24 @@ func.func @test_rfft2d_tensor_size_invalid(%arg0: tensor<536870912x8x16xf32>) ->
 
 // -----
 
+func.func @test_matmul_rank_invalid(%arg0: tensor<1x1x1x1x1x3x4xf32>, %arg1: tensor<1x1x1x1x1x4x5xf32>) -> tensor<1x1x1x1x1x3x5xf32> {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<1x1x1x1x1x3x4xf32>, tensor<1x1x1x1x1x4x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x1x1x1x3x5xf32>
+  return %0 : tensor<1x1x1x1x1x3x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_rank_invalid(%arg0: tensor<1x1x1x1x1x3x4xf32>, %arg1: tensor<1x1x1x1x1x5x4xf32>) -> tensor<1x1x1x1x1x3x5xf32> {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand rank(shape) <= MAX_RANK}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<1x1x1x1x1x3x4xf32>, tensor<1x1x1x1x1x5x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x1x1x1x1x3x5xf32>
+  return %0 : tensor<1x1x1x1x1x3x5xf32>
+}
+
+// -----
+
 func.func @test_matmul_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, %arg1: tensor<23178x19x28xf32>) -> tensor<23178x20000x28xf32> {
   %zero = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   // expected-error@+1 {{'tosa.matmul' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
@@ -1283,6 +1301,24 @@ func.func @test_matmul_t_tensor_size_invalid(%arg0: tensor<23178x20000x19xf32>, 
   // expected-error@+1 {{'tosa.matmul_t' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<23178x20000x19xf32>, tensor<23178x28x19xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<23178x20000x28xf32>
   return %0 : tensor<23178x20000x28xf32>
+}
+
+// -----
+
+func.func @test_matmul_broadcast_output_size_invalid(%arg0: tensor<32768x1x1x1xf32>, %arg1: tensor<1x32768x1x1xf32>) {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.matmul %arg0, %arg1, %zero, %zero : (tensor<32768x1x1x1xf32>, tensor<1x32768x1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<32768x32768x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_matmul_t_broadcast_output_size_invalid(%arg0: tensor<32768x1x1x1xf32>, %arg1: tensor<1x32768x1x1xf32>) {
+  %zero = "tosa.const"() {values = dense<0.0> : tensor<1xf32>} : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul_t' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %0 = tosa.matmul_t %arg0, %arg1, %zero, %zero : (tensor<32768x1x1x1xf32>, tensor<1x32768x1x1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<32768x32768x1x1xf32>
+  return
 }
 
 // -----

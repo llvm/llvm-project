@@ -416,21 +416,28 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul", [NoMemoryEffect]> {
   let summary = "Matrix multiplication operator.";
 
   let description = [{
-    Performs two dimensional matrix multiplications.
+    Performs batched matrix multiplication of `A` with shape `[..., H, C]` and
+    `B` with shape `[..., C, W]`. Their leading batch dimensions are aligned
+    from the right. Missing leading dimensions are treated as size 1, and each
+    aligned pair must either match or include a dimension of size 1. The output
+    shape is the resulting broadcast batch shape followed by `[H, W]`.
+
+    Both inputs must have rank 2 or greater. Rank 1 inputs are not accepted
+    directly and must first be reshaped to rank 2.
 
     This operation is not pure. Undefined behaviour may occur if the accumulated
     result overflows.
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$a,
-    Tosa_Tensor3D:$b,
+    Tosa_TensorAtLeast2D:$a,
+    Tosa_TensorAtLeast2D:$b,
     Tosa_ScalarIntOrFloatTensor:$a_zp,
     Tosa_ScalarIntOrFloatTensor:$b_zp
   );
 
   let results = (outs
-    Tosa_Tensor3D:$output
+    Tosa_TensorAtLeast2D:$output
   );
 
   let extraClassDeclaration = [{
@@ -454,16 +461,21 @@ def Tosa_MatMulTOp : Tosa_InferShapedTypeOp<"matmul_t", [NoMemoryEffect]> {
   let summary = "Matrix multiplication with transposed B operator.";
 
   let description = [{
-    Performs two dimensional matrix multiplications. `A` matrix is of shape
-    `N x H x C`. `B` matrix is of shape `D x W x C`. This is effectively a
-    matrix multiply of `A` by the transposed `B` matrix. If the batched
-    dimension of input `B` is of size 1, the `B` matrix is broadcast.
+    Performs batched matrix multiplication of `A` with shape `[..., H, C]` and
+    `B` with shape `[..., W, C]`, implicitly transposing only the two innermost
+    dimensions of `B`. Their leading batch dimensions are aligned from the
+    right. Missing leading dimensions are treated as size 1, and each aligned
+    pair must either match or include a dimension of size 1. The output shape
+    is the resulting broadcast batch shape followed by `[H, W]`.
+
+    Both inputs must have rank 2 or greater. Rank 1 inputs are not accepted
+    directly and must first be reshaped to rank 2.
   }];
 
-  let arguments = (ins Tosa_Tensor3D:$a, Tosa_Tensor3D:$b,
+  let arguments = (ins Tosa_TensorAtLeast2D:$a, Tosa_TensorAtLeast2D:$b,
       Tosa_ScalarIntOrFloatTensor:$a_zp, Tosa_ScalarIntOrFloatTensor:$b_zp);
 
-  let results = (outs Tosa_Tensor3D:$output);
+  let results = (outs Tosa_TensorAtLeast2D:$output);
 
   let extraClassDeclaration = [{
     FailureOr<int64_t> getAZeroPoint();

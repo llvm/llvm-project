@@ -336,3 +336,23 @@ func.func @test_while_loop_body_not_isolated_from_above(%arg0: tensor<i32>, %arg
   }) : (tensor<i32>) -> (tensor<i32>)
   return
 }
+
+// -----
+
+func.func @test_matmul_rank3_lhs_broadcast_dynamic_rhs(%arg0: tensor<1x4x7xf32>, %arg1: tensor<?x7x5xf32>) -> tensor<2x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x4x7xf32>, tensor<?x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
+  return %0 : tensor<2x4x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_rank3_rhs_broadcast_dynamic_lhs(%arg0: tensor<?x4x7xf32>, %arg1: tensor<1x7x5xf32>) -> tensor<2x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<?x4x7xf32>, tensor<1x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
+  return %0 : tensor<2x4x5xf32>
+}
