@@ -186,6 +186,18 @@ static cl::opt<int> IsolateCompleteTileDims(
              "bound"),
     cl::Hidden, cl::init(0), cl::cat(PollyCategory));
 
+static cl::opt<bool> IsolateCompleteTiles2ndLevel(
+    "polly-isolate-complete-tiles-2nd-level",
+    cl::desc("Separate the complete tiles of the second level of tiling from "
+             "the partial ones"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
+static cl::opt<bool> IsolateCompleteRegisterTiles(
+    "polly-isolate-complete-register-tiles",
+    cl::desc("Separate the complete register tiles from the partial ones, so "
+             "that their unrolled point loops need no guards"),
+    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
 static cl::opt<bool> PragmaBasedOpts(
     "polly-pragma-based-opts",
     cl::desc("Apply user-directed transformation from metadata"),
@@ -592,19 +604,25 @@ bool ScheduleTreeOptimizer::isPMOptimizableBandNode(isl::schedule_node Node) {
   return Node.child(0).isa<isl::schedule_node_leaf>();
 }
 
+/// Resolve the tile size of every dimension of the band @p Node.
+static SmallVector<int, 4> resolveTileSizes(isl::schedule_node Node,
+                                            ArrayRef<int> TileSizes,
+                                            int DefaultTileSize) {
+  SmallVector<int, 4> Sizes;
+  isl::space Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
+  for (unsigned i : rangeIslSize(0, Space.dim(isl::dim::set)))
+    Sizes.push_back(i < TileSizes.size() ? TileSizes[i] : DefaultTileSize);
+  return Sizes;
+}
+
 __isl_give isl::schedule_node
 ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
   if (FirstLevelTiling) {
     // Resolve the tile size of every dimension before tiling splits the band.
     SmallVector<int, 4> Sizes;
-    if (IsolateCompleteTiles) {
-      isl::space Space =
-          isl::manage(isl_schedule_node_band_get_space(Node.get()));
-      for (unsigned i : rangeIslSize(0, Space.dim(isl::dim::set)))
-        Sizes.push_back(i < FirstLevelTileSizes.size()
-                            ? FirstLevelTileSizes[i]
-                            : FirstLevelDefaultTileSize.getValue());
-    }
+    if (IsolateCompleteTiles)
+      Sizes = resolveTileSizes(Node, FirstLevelTileSizes,
+                               FirstLevelDefaultTileSize);
 
     Node = tileNode(Node, "1st level tiling", FirstLevelTileSizes,
                     FirstLevelDefaultTileSize);
@@ -615,15 +633,27 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
   }
 
   if (SecondLevelTiling) {
+    SmallVector<int, 4> Sizes;
+    if (IsolateCompleteTiles2ndLevel)
+      Sizes = resolveTileSizes(Node, SecondLevelTileSizes,
+                               SecondLevelDefaultTileSize);
     Node = tileNode(Node, "2nd level tiling", SecondLevelTileSizes,
                     SecondLevelDefaultTileSize);
     SecondLevelTileOpts++;
+    if (IsolateCompleteTiles2ndLevel)
+      Node = isolateCompleteTiles(Node, Sizes);
   }
 
   if (RegisterTiling) {
+    SmallVector<int, 4> Sizes;
+    if (IsolateCompleteRegisterTiles)
+      Sizes =
+          resolveTileSizes(Node, RegisterTileSizes, RegisterDefaultTileSize);
     Node =
         applyRegisterTiling(Node, RegisterTileSizes, RegisterDefaultTileSize);
     RegisterTileOpts++;
+    if (IsolateCompleteRegisterTiles)
+      Node = isolateCompleteTiles(Node, Sizes);
   }
 
   return Node;
