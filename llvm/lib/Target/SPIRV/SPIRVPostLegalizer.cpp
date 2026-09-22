@@ -187,12 +187,12 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
         ResType = deduceTypeFromPointerOperand(&Use, Reg, GR, MIB);
       break;
     case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    case TargetOpcode::G_INTRINSIC_CONVERGENT:
     case TargetOpcode::G_INTRINSIC: {
       auto IntrinsicID = cast<GIntrinsic>(Use).getIntrinsicID();
-      if (IntrinsicID == Intrinsic::spv_insertelt) {
-        if (Reg == Use.getOperand(2).getReg())
-          ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
-      } else if (IntrinsicID == Intrinsic::spv_extractelt) {
+      if (IntrinsicID == Intrinsic::spv_wave_readlane_first ||
+          IntrinsicID == Intrinsic::spv_insertelt ||
+          IntrinsicID == Intrinsic::spv_extractelt) {
         if (Reg == Use.getOperand(2).getReg())
           ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
       }
@@ -296,10 +296,13 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, 3);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT:
   case TargetOpcode::G_INTRINSIC: {
     auto IntrinsicID = cast<GIntrinsic>(I)->getIntrinsicID();
     if (IntrinsicID == Intrinsic::spv_gep)
       return deduceGEPType(I, GR, MIB);
+    if (IntrinsicID == Intrinsic::spv_wave_readlane_first)
+      return deduceTypeFromSingleOperand(I, MIB, GR, 2);
     break;
   }
   case TargetOpcode::G_LOAD: {

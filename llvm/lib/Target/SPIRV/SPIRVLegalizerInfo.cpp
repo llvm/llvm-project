@@ -1040,6 +1040,19 @@ bool SPIRVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                            MachineInstr &MI) const {
   LLVM_DEBUG(dbgs() << "legalizeIntrinsic: " << MI);
   auto IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+
+  if (IntrinsicID == Intrinsic::spv_wave_readlane_first) {
+    MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    if (needsVectorLegalization(DstTy, *ST)) {
+      unsigned MaxVectorSize = ST->isShader() ? 4 : 16;
+      unsigned NumElts = llvm::bit_floor(
+          std::min<unsigned>(DstTy.getNumElements(), MaxVectorSize));
+      return Helper.fewerElementsVectorMultiEltType(
+                 cast<GIntrinsic>(MI), NumElts) == LegalizerHelper::Legalized;
+    }
+  }
+
   switch (IntrinsicID) {
   case Intrinsic::spv_bitcast:
     return legalizeSpvBitcast(Helper, MI, GR);

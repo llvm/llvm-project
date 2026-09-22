@@ -5230,8 +5230,11 @@ static bool hasSameNumEltsOnAllVectorOperands(
   if (!VecTy.isVector())
     return false;
   unsigned NumElts = VecTy.getNumElements();
+  unsigned IntrinsicIDOp = isa<GIntrinsic>(MI) ? MI.getNumExplicitDefs() : ~0U;
 
   for (unsigned OpIdx = 1; OpIdx < MI.getNumOperands(); ++OpIdx) {
+    if (OpIdx == IntrinsicIDOp)
+      continue;
     MachineOperand &Op = MI.getOperand(OpIdx);
     if (!Op.isReg()) {
       if (!is_contained(NonVecOpIndices, OpIdx))
@@ -5314,8 +5317,10 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
          "Non-compatible opcode or not specified non-vector operands");
   unsigned OrigNumElts = MRI.getType(MI.getReg(0)).getNumElements();
 
-  unsigned NumInputs = MI.getNumOperands() - MI.getNumDefs();
   unsigned NumDefs = MI.getNumDefs();
+  auto *GI = dyn_cast<GIntrinsic>(&MI);
+  unsigned FirstUse = NumDefs + (GI ? 1 : 0);
+  unsigned NumInputs = MI.getNumOperands() - FirstUse;
 
   // Create DstOps (sub-vectors with NumElts elts + Leftover) for each output.
   // Build instructions with DstOps to use instruction found by CSE directly.
@@ -5332,7 +5337,7 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
   // examples: compare predicate in icmp and fcmp (op 1), vector select with i1
   // scalar condition (op 1), immediate in sext_inreg (op 2).
   SmallVector<SmallVector<SrcOp, 8>, 3> InputOpsPieces(NumInputs);
-  for (unsigned UseIdx = NumDefs, UseNo = 0; UseIdx < MI.getNumOperands();
+  for (unsigned UseIdx = FirstUse, UseNo = 0; UseIdx < MI.getNumOperands();
        ++UseIdx, ++UseNo) {
     if (is_contained(NonVecOpIndices, UseIdx)) {
       broadcastSrcOp(InputOpsPieces[UseNo], OutputOpsPieces[0].size(),
@@ -5358,7 +5363,16 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
     for (unsigned InputNo = 0; InputNo < NumInputs; ++InputNo)
       Uses.push_back(InputOpsPieces[InputNo][i]);
 
-    auto I = MIRBuilder.buildInstr(MI.getOpcode(), Defs, Uses, MI.getFlags());
+    MachineInstrBuilder I;
+    if (GI) {
+      I = MIRBuilder.buildIntrinsic(GI->getIntrinsicID(), Defs,
+                                    GI->hasSideEffects(), GI->isConvergent());
+      I.setMIFlags(MI.getFlags());
+      for (SrcOp &Use : Uses)
+        Use.addSrcToMIB(I);
+    } else {
+      I = MIRBuilder.buildInstr(MI.getOpcode(), Defs, Uses, MI.getFlags());
+    }
     for (unsigned DstNo = 0; DstNo < NumDefs; ++DstNo)
       OutputRegs[DstNo].push_back(I.getReg(DstNo));
   }
