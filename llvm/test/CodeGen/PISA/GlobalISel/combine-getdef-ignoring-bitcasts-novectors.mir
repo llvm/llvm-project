@@ -17,15 +17,6 @@
 # The shifts_of_constants combine should fold the hinted shift into one constant.
 # The body-level CHECK lines below verify the folded G_CONSTANT result.
 
---- |
-  define <2 x i16> @build_vector_with_vector_bitcast_in_chain(i16 %a, i16 %b) {
-    ret <2 x i16> zeroinitializer
-  }
-
-  define i16 @shift_of_constants_via_assert_sext_hints(i16 %unused) {
-    ret i16 0
-  }
-...
 ---
 name:            build_vector_with_vector_bitcast_in_chain
 legalized:       true

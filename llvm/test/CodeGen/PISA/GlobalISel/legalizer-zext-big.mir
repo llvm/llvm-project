@@ -2,12 +2,6 @@
 # RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
 # Ensure that G_ZEXT with large destination types is handled without causing a crash.
 
---- |
-  define i128 @test_zext_big(i16 %arg) {
-    %ret = zext i16 %arg to i128
-    ret i128 %ret
-  }
-...
 ---
 name: test_zext_big
 tracksRegLiveness: true

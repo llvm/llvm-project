@@ -1,13 +1,6 @@
 # RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o -   | FileCheck -check-prefix=LEGAL %s
 
 # Check that alignment too large to store in 32-bit value isn't truncated.
---- |
-  define void @test_concat_clamp_elts(ptr %addr) {
-    %vec.expand = shufflevector <6 x i16> undef, <6 x i16> undef, <12 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-    store <12 x i16> %vec.expand, ptr addrspace(1) null, align 4294967296
-    ret void
-  }
-...
 ---
 name:            test_concat_clamp_elts
 tracksRegLiveness: true
