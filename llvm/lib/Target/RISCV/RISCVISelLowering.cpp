@@ -22389,8 +22389,7 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
     KnownBits VL0KB = DAG.computeKnownBits(VL0);
     KnownBits VL1KB = DAG.computeKnownBits(VL1);
     KnownBits Offset1KB = DAG.computeKnownBits(Offset1);
-    if (!KnownBits::uge(VL0KB, KnownBits::add(VL1KB, Offset1KB, /*NSW=*/false,
-                                              /*NUW=*/true))
+    if (!KnownBits::uge(VL0KB, KnownBits::add(VL1KB, Offset1KB))
              .value_or(false))
       return SDValue();
   }
