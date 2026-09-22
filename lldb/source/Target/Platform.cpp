@@ -120,6 +120,15 @@ bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
                                              dir_spec);
 }
 
+Timeout<std::micro> PlatformProperties::GetShellExpandTimeout() const {
+  const auto idx = ePropertyShellExpandTimeout;
+  uint64_t seconds = GetPropertyAtIndexAs<uint64_t>(
+      idx, g_platform_properties[idx].default_uint_value);
+  if (seconds == 0)
+    return std::nullopt;
+  return std::chrono::seconds(seconds);
+}
+
 void PlatformProperties::SetDefaultModuleCacheDirectory(
     const FileSpec &dir_spec) {
   auto f_spec_opt = m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(
@@ -1072,7 +1081,8 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
 Status Platform::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   if (IsHost())
-    return Host::ShellExpandArguments(launch_info);
+    return Host::ShellExpandArguments(
+        launch_info, GetGlobalPlatformProperties().GetShellExpandTimeout());
   return Status::FromErrorString(
       "base lldb_private::Platform class can't expand arguments");
 }
