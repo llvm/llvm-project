@@ -31,6 +31,10 @@ def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
 def cv_tuimm5 : TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]>;
 def cv_uimm10 : ImmLeaf<XLenVT, [{return isUInt<10>(Imm);}]>;
 
+def cv_insert_is2 : RISCVUImmOp<5> {
+  let DecoderMethod = "decodeCVInsertIs2Operand";
+}
+
 def CV_LO5: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 0x1f, SDLoc(N),
                                    N->getValueType(0));
@@ -354,7 +358,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
 
   let Constraints = "$rd = $rd_wb" in {
     def CV_INSERT : CVInstBitManipRII<0b10, 0b000, (outs GPR:$rd_wb),
-                             (ins GPR:$rd, GPR:$rs1, uimm5:$is3, uimm5:$is2),
+                             (ins GPR:$rd, GPR:$rs1, uimm5:$is3, cv_insert_is2:$is2),
                              "cv.insert", "$rd, $rs1, $is3, $is2">;
     let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
     def CV_INSERTR : RVInstR<0b0011010, 0b011, OPC_CUSTOM_1, (outs GPR:$rd_wb),
