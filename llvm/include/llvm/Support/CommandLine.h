@@ -2271,14 +2271,6 @@ public:
   LLVM_ABI Error expandResponseFiles(SmallVectorImpl<const char *> &Argv);
 };
 
-/// A convenience helper which concatenates the options specified by the
-/// environment variable EnvVar and command line options, then expands
-/// response files recursively.
-/// \return true if all @files were expanded successfully or there were none.
-LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv,
-                                  const char *EnvVar,
-                                  SmallVectorImpl<const char *> &NewArgv);
-
 /// A convenience helper which supports the typical use case of expansion
 /// function call.
 LLVM_ABI bool ExpandResponseFiles(StringSaver &Saver,

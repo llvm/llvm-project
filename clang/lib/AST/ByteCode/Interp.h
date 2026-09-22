@@ -3738,6 +3738,12 @@ inline bool StartInit(InterpState &S) {
   return true;
 }
 
+inline bool StartFieldInit(InterpState &S, uint32_t FieldOffset) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  S.InitializingPtrs.push_back(Ptr.view().atField(FieldOffset));
+  return true;
+}
+
 inline bool EndInit(InterpState &S) {
   S.InitializingPtrs.pop_back();
   return true;

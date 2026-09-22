@@ -4286,12 +4286,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     const unsigned Index = Op.getConstantOperandVal(1);
     const unsigned EltBitWidth = Op.getValueSizeInBits();
 
-    // Remove low part of known bits mask
-    Known.Zero = Known.Zero.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
-    Known.One = Known.One.getHiBits(Known.getBitWidth() - Index * EltBitWidth);
-
-    // Remove high part of known bit mask
-    Known = Known.trunc(EltBitWidth);
+    Known = Known.extractBits(EltBitWidth, Index * EltBitWidth);
     break;
   }
   case ISD::EXTRACT_VECTOR_ELT: {
