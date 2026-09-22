@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Endian.h"
 
 namespace llvm {
 namespace jitlink {
@@ -503,44 +504,19 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   // AArch64 BE8: data values follow target endianness, but instructions are
   // always encoded in LE byte order (the A64 ISA is word-invariant).
-  bool IsBE = !G.getTargetTriple().isLittleEndian();
-
-  auto writeData64 = [IsBE](char *Ptr, uint64_t Val) {
-    if (IsBE)
-      *(ubig64_t *)Ptr = Val;
-    else
-      *(ulittle64_t *)Ptr = Val;
-  };
-  auto writeData32 = [IsBE](char *Ptr, uint32_t Val) {
-    if (IsBE)
-      *(ubig32_t *)Ptr = Val;
-    else
-      *(ulittle32_t *)Ptr = Val;
-  };
-  auto writeDataS32 = [IsBE](char *Ptr, int32_t Val) {
-    if (IsBE)
-      *(big32_t *)Ptr = Val;
-    else
-      *(little32_t *)Ptr = Val;
-  };
-  auto writeDataS64 = [IsBE](char *Ptr, int64_t Val) {
-    if (IsBE)
-      *(big64_t *)Ptr = Val;
-    else
-      *(little64_t *)Ptr = Val;
-  };
+  llvm::endianness DataEndian = G.getEndianness();
 
   switch (E.getKind()) {
   case Pointer64: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    writeData64(FixupPtr, Value);
+    endian::write64(FixupPtr, Value, DataEndian);
     break;
   }
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (Value > std::numeric_limits<uint32_t>::max())
       return makeTargetOutOfRangeError(G, B, E);
-    writeData32(FixupPtr, Value);
+    endian::write32(FixupPtr, Value, DataEndian);
     break;
   }
   case Delta32:
@@ -557,9 +533,9 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
         return makeTargetOutOfRangeError(G, B, E);
-      writeDataS32(FixupPtr, Value);
+      endian::write32(FixupPtr, static_cast<uint32_t>(Value), DataEndian);
     } else
-      writeDataS64(FixupPtr, Value);
+      endian::write64(FixupPtr, static_cast<uint64_t>(Value), DataEndian);
     break;
   }
   case Branch26PCRel: {
