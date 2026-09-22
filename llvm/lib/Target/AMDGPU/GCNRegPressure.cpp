@@ -31,8 +31,10 @@ static cl::opt<bool> TrackPhysRegInGCNTrackers(
              "safety switch to control physical register pressure tracking."),
     cl::init(true));
 
+bool llvm::isPhysRegTrackingEnabled() { return TrackPhysRegInGCNTrackers; }
+
 bool GCNRPTracker::physRegTrackingEnabled() const {
-  return TrackPhysRegInGCNTrackers;
+  return isPhysRegTrackingEnabled();
 }
 
 bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,

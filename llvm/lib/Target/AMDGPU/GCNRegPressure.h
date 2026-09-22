@@ -453,13 +453,6 @@ public:
       initPhysLiveUnitsFromRegMaskPairs(SeedPhysMBB->liveouts());
   }
 
-  /// reset tracker to the end of the \p MBB and seed physical live-outs
-  /// from the MBB's successors.
-  void reset(const MachineBasicBlock &MBB) {
-    SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
-    reset(MBB.getParent()->getRegInfo(), MBBLastSlot, &MBB);
-  }
-
   /// reset tracker to the point just after \p MI (in program order).
   /// If \p SeedPhysMBB is non-null, also seed physical live-out state from
   /// that MBB's successors.
@@ -690,6 +683,8 @@ GCNRegPressure getVirtRegPressure(const MachineRegisterInfo &MRI,
 /// set in \p PhysLiveUnits.
 void addPhysRegPressure(GCNRegPressure &RP, const SIRegisterInfo &SRI,
                         const BitVector &PhysLiveUnits);
+
+bool isPhysRegTrackingEnabled();
 
 bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);

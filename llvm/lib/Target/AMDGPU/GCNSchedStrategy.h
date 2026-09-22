@@ -340,6 +340,13 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Compute and cache live-ins and pressure for all regions in block.
   void computeBlockPressure(unsigned RegionIdx, const MachineBasicBlock *MBB);
 
+  // Fill PhysLiveIns and PhysLiveOuts for regions \p FirstRegion through
+  // \p LastRegion of \p MBB, and return the physical register units live on
+  // entry to \p MBB.
+  BitVector computeBlockPhysLiveRegUnits(const MachineBasicBlock *MBB,
+                                         unsigned FirstRegion,
+                                         unsigned LastRegion);
+
   /// Makes the scheduler try to achieve an occupancy of \p TargetOccupancy.
   void setTargetOccupancy(unsigned TargetOccupancy);
 
