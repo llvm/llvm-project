@@ -639,12 +639,12 @@ struct VPlanTransforms {
 
   /// Replace truncates of a wide induction, or of that induction's increment,
   /// by a VPWidenIntOrFpInductionRecipe producing the truncated type directly.
-  /// \p PrimaryIV is narrowed even when the target reports the truncate as
-  /// free. If narrowing is only profitable for a subset of VFs in \p Range,
-  /// Range.End is updated.
+  /// The canonical induction is narrowed even when the target reports the
+  /// truncate as free. If narrowing is only profitable for a subset of VFs in
+  /// \p Range, Range.End is updated.
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                       VPCostContext &CostCtx,
-                                       PHINode *PrimaryIV);
+                                       const TargetTransformInfo &TTI,
+                                       PredicatedScalarEvolution &PSE);
 };
 
 } // namespace llvm

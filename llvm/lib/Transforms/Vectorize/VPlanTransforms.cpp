@@ -5887,8 +5887,8 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
 }
 
 void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                               VPCostContext &CostCtx,
-                                               PHINode *PrimaryIV) {
+                                               const TargetTransformInfo &TTI,
+                                               PredicatedScalarEvolution &PSE) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -5911,7 +5911,7 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       VPValue *Op = VPI.getOperand(0);
-      auto *WideIV = getOptimizableIVOf(Op, CostCtx.PSE);
+      auto *WideIV = getOptimizableIVOf(Op, PSE);
       if (!WideIV)
         continue;
 
@@ -5922,11 +5922,11 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
         continue;
 
       // Replacing a free truncate would add an induction update instruction to
-      // each iteration of the loop. The primary induction is exempt, as it
+      // each iteration of the loop. The canonical induction is exempt, as it
       // needs an update instruction regardless.
       auto IsNarrowingProfitable = [&](ElementCount VF) {
-        return WideIV->getPHINode() == PrimaryIV ||
-               !CostCtx.TTI.isTruncateFree(
+        return match(WideIV, m_CanonicalWidenIV()) ||
+               !TTI.isTruncateFree(
                    toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
                    toVectorTy(VPI.getScalarType(), VF));
       };
