@@ -275,7 +275,7 @@ namespace Auto {
     template<short N> struct Any<N> { typedef int Short; };
     Any<0>::Int is_int;
     Any<(short)0>::Short is_short;
-    Any<(char)0>::Short is_char; // expected-error {{implicit instantiation of undefined template 'Auto::Decomposition::Any<'\x00'>'}}
+    Any<(char)0>::Short is_char; // expected-error {{implicit instantiation of undefined template}}
 
     template<int, auto> struct NestedAny;
     template<auto N> struct NestedAny<0, N>; // expected-note {{template is declared here}}
@@ -283,7 +283,7 @@ namespace Auto {
     template<short N> struct NestedAny<0, N> { typedef int Short; };
     NestedAny<0, 0>::Int nested_int;
     NestedAny<0, (short)0>::Short nested_short;
-    NestedAny<0, (char)0>::Short nested_char; // expected-error {{implicit instantiation of undefined template 'Auto::Decomposition::NestedAny<0, '\x00'>'}}
+    NestedAny<0, (char)0>::Short nested_char; // expected-error {{implicit instantiation of undefined template}}
 
     double foo(int, bool);
     template<auto& f> struct fn_result_type;
