@@ -2359,8 +2359,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       }
       // x87 extended precision (fp80) has its natural alignment resist
       // reduction by #pragma pack in MSVC record layout.
-      if (&Target->getLongDoubleFormat() ==
-          &llvm::APFloat::x87DoubleExtended())
+      if (&Target->getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended())
         AlignRequirement = AlignRequirementKind::ResistPragmaPack;
       break;
     case BuiltinType::Float128:
