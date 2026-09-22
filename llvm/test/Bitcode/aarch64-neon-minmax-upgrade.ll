@@ -48,11 +48,3 @@ define <4 x i32> @umaxp_not_upgraded(<4 x i32> %a, <4 x i32> %b) {
   %r = call <4 x i32> @llvm.aarch64.neon.umaxp.v4i32(<4 x i32> %a, <4 x i32> %b)
   ret <4 x i32> %r
 }
-
-declare <4 x i32> @llvm.aarch64.neon.smin.v4i32(<4 x i32>, <4 x i32>)
-declare <8 x i16> @llvm.aarch64.neon.smax.v8i16(<8 x i16>, <8 x i16>)
-declare <16 x i8> @llvm.aarch64.neon.umin.v16i8(<16 x i8>, <16 x i8>)
-declare <2 x i32> @llvm.aarch64.neon.umax.v2i32(<2 x i32>, <2 x i32>)
-declare i32 @llvm.aarch64.neon.sminv.i32.v4i32(<4 x i32>)
-declare <4 x i32> @llvm.aarch64.neon.sminp.v4i32(<4 x i32>, <4 x i32>)
-declare <4 x i32> @llvm.aarch64.neon.umaxp.v4i32(<4 x i32>, <4 x i32>)
