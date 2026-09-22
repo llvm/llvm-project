@@ -1764,7 +1764,7 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.
 bool isDPALU_DPP32BitOpc(unsigned Opc);
 
-/// \returns true if an instruction is a DP ALU DPP
+/// \returns true if an instruction is a DP ALU DPP.
 bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
                  const MCSubtargetInfo &ST);
 
