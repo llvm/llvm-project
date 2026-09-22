@@ -33,8 +33,7 @@ define i1 @test2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i16 [[ADD_1]], 2
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i16 [[ADD_1]], 1
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[C_2]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], true
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
   %add = add nuw nsw i8 %x, %y

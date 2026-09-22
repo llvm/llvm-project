@@ -482,10 +482,9 @@ public:
                                         Depth);
   }
 
-  bool MaskedValueIsZero(const Value *V, const APInt &Mask,
-                         const Instruction *CxtI = nullptr,
-                         unsigned Depth = 0) const {
-    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI), Depth);
+  bool MaskedValueIsZero(const WithCache<const Value *> &V, const APInt &Mask,
+                         const Instruction *CxtI = nullptr) const {
+    return llvm::MaskedValueIsZero(V, Mask, SQ.getWithInstruction(CxtI));
   }
 
   unsigned ComputeNumSignBits(const Value *Op,

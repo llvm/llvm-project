@@ -312,9 +312,9 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
 static bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
                            const SimplifyQuery &Q, unsigned Depth);
 
-bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
-                              unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNonNegative();
+bool llvm::isKnownNonNegative(const WithCache<const Value *> &V,
+                              const SimplifyQuery &SQ) {
+  return V.getKnownBits(SQ).isNonNegative();
 }
 
 bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
@@ -329,9 +329,9 @@ bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
          (Known.isNonZero() || isKnownNonZero(V, SQ, Depth));
 }
 
-bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNegative();
+bool llvm::isKnownNegative(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ) {
+  return V.getKnownBits(SQ).isNegative();
 }
 
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
@@ -352,11 +352,9 @@ bool llvm::isKnownNonEqual(const Value *V1, const Value *V2,
   return ::isKnownNonEqual(V1, V2, DemandedElts, Q, Depth);
 }
 
-bool llvm::MaskedValueIsZero(const Value *V, const APInt &Mask,
-                             const SimplifyQuery &SQ, unsigned Depth) {
-  KnownBits Known(Mask.getBitWidth());
-  computeKnownBits(V, Known, SQ, Depth);
-  return Mask.isSubsetOf(Known.Zero);
+bool llvm::MaskedValueIsZero(const WithCache<const Value *> &V,
+                             const APInt &Mask, const SimplifyQuery &SQ) {
+  return Mask.isSubsetOf(V.getKnownBits(SQ).Zero);
 }
 
 static unsigned ComputeNumSignBits(const Value *V, const APInt &DemandedElts,

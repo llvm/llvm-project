@@ -190,8 +190,8 @@ LLVM_ABI bool isKnownNegation(const Value *X, const Value *Y,
 LLVM_ABI bool isKnownInversion(const Value *X, const Value *Y);
 
 /// Returns true if the give value is known to be non-negative.
-LLVM_ABI bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
-                                 unsigned Depth = 0);
+LLVM_ABI bool isKnownNonNegative(const WithCache<const Value *> &V,
+                                 const SimplifyQuery &SQ);
 
 /// Returns true if the given value is known be positive (i.e. non-negative
 /// and non-zero).
@@ -200,8 +200,8 @@ LLVM_ABI bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-LLVM_ABI bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                              unsigned Depth = 0);
+LLVM_ABI bool isKnownNegative(const WithCache<const Value *> &V,
+                              const SimplifyQuery &SQ);
 
 /// Return true if the given values are known to be non-equal when defined.
 /// Supports scalar integer types only.
@@ -217,8 +217,8 @@ LLVM_ABI bool isKnownNonEqual(const Value *V1, const Value *V2,
 /// where V is a vector, the mask, known zero, and known one values are the
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the elements in the vector.
-LLVM_ABI bool MaskedValueIsZero(const Value *V, const APInt &Mask,
-                                const SimplifyQuery &SQ, unsigned Depth = 0);
+LLVM_ABI bool MaskedValueIsZero(const WithCache<const Value *> &V,
+                                const APInt &Mask, const SimplifyQuery &SQ);
 
 /// Return the number of times the sign bit of the register is replicated into
 /// the other bits. We know that at least 1 bit is always equal to the sign
