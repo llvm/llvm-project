@@ -97,8 +97,18 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 } // namespace LoopVectorizationUtils
 
-/// VPlan-based builder utility analogous to IRBuilder.
-class VPBuilder {
+/// Default inserter for VPBuilderBase, inserting \p R at \p It in \p VPBB.
+struct VPBuilderDefaultInserter {
+  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                    VPBasicBlock::iterator It) {
+    VPBB->insert(R, It);
+  }
+};
+
+/// VPlan-based builder utility similar to IRBuilder. Recipes are inserted via
+/// \p InserterTy.
+template <typename InserterTy = VPBuilderDefaultInserter>
+class VPBuilderBase : private InserterTy {
 private:
   class VPInsertPoint {
     VPBasicBlock *Block = nullptr;
@@ -132,10 +142,11 @@ private:
 
   VPInsertPoint InsertPt;
 
+protected:
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
     if (InsertPt)
-      insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
+      InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
     return R;
   }
 
@@ -147,31 +158,24 @@ private:
         new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
   }
 
-protected:
-  virtual void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
-                            VPBasicBlock::iterator It) {
-    VPBB->insert(R, It);
-  }
-
 public:
   VPlan &getPlan() const {
     assert(InsertPt && "Insert block must be set");
     return *InsertPt.getBlock()->getPlan();
   }
 
-  VPBuilder() = default;
-  VPBuilder(const VPInsertPoint &IP) : InsertPt(IP) {}
-  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
+  VPBuilderBase() = default;
+  VPBuilderBase(const VPInsertPoint &IP) : InsertPt(IP) {}
+  VPBuilderBase(InserterTy Inserter) : InserterTy(Inserter) {}
+  VPBuilderBase(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
       : InsertPt(TheBB, IP) {}
-
-  virtual ~VPBuilder() = default;
 
   /// Get the recipe at the current insert point or nullptr if the insert point
   /// is the end of the block.
   VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
-  /// Create a VPBuilder to insert after \p R.
-  static VPBuilder getToInsertAfter(VPRecipeBase *R) {
+  /// Create a builder to insert after \p R.
+  static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
     return {R->getParent(), std::next(R->getIterator())};
   }
 
@@ -190,7 +194,7 @@ public:
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
+    InserterTy::insertHelper(R, InsertPt.getBlock(), InsertPt.getIterator());
     return R;
   }
 
@@ -344,12 +348,6 @@ public:
         new VPInstruction(Instruction::FCmp, {A, B},
                           VPIRFlags(Pred, FastMathFlags()), {}, DL, Name));
   }
-
-  /// Create an AnyOf reduction pattern: or-reduce \p ChainOp, freeze the
-  /// result, then select between \p TrueVal and \p FalseVal.
-  VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
-                                      VPValue *FalseVal,
-                                      DebugLoc DL = DebugLoc::getUnknown());
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
@@ -523,12 +521,6 @@ public:
         new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
   }
 
-  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
-  /// with element type \p SourceElementTy.
-  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
-                                                    Type *SourceElementTy,
-                                                    bool Reverse, DebugLoc DL);
-
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
       Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
@@ -564,17 +556,34 @@ public:
   /// RAII object that stores the current insertion point and restores it when
   /// the object is destroyed.
   class InsertPointGuard {
-    VPBuilder &Builder;
+    VPBuilderBase &Builder;
     VPInsertPoint InsertPt;
 
   public:
-    InsertPointGuard(VPBuilder &B) : Builder(B), InsertPt(B.InsertPt) {}
+    InsertPointGuard(VPBuilderBase &B) : Builder(B), InsertPt(B.InsertPt) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
     ~InsertPointGuard() { Builder.restoreIP(InsertPt); }
   };
+};
+
+class VPBuilder : public VPBuilderBase<> {
+public:
+  using VPBuilderBase::VPBuilderBase;
+
+  /// Create an AnyOf reduction pattern: or-reduce \p ChainOp, freeze the
+  /// result, then select between \p TrueVal and \p FalseVal.
+  VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
+                                      VPValue *FalseVal,
+                                      DebugLoc DL = DebugLoc::getUnknown());
+
+  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
+  /// with element type \p SourceElementTy.
+  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
+                                                    Type *SourceElementTy,
+                                                    bool Reverse, DebugLoc DL);
 };
 
 /// TODO: The following VectorizationFactor was pulled out of

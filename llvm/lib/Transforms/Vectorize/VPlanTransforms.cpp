@@ -1374,9 +1374,27 @@ static bool isAvailableAtEndOf(VPValue *V, const VPBasicBlock *VPBB) {
   return DefR ? DefR->getParent() == VPBB : isa<VPIRValue>(V);
 }
 
-/// Combine \p Def into a simpler recipe. May modify or create new recipes.
+namespace {
+/// Inserter for VPBuilderBase which appends all created recipes to a worklist,
+/// so they get combined as well.
+struct VPCombineInserter {
+  SmallVectorImpl<VPSingleDefRecipe *> &Worklist;
+
+  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                    VPBasicBlock::iterator It) {
+    VPBB->insert(R, It);
+    if (auto *Def = dyn_cast<VPSingleDefRecipe>(R))
+      Worklist.push_back(Def);
+  }
+};
+
+using VPCombineBuilder = VPBuilderBase<VPCombineInserter>;
+} // namespace
+
+/// Combine \p Def into a simpler recipe. May modify or create new recipes via
+/// \p Builder.
 static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
-                                        VPBuilder &Builder) {
+                                        VPCombineBuilder &Builder) {
   if (auto *V = simplifyRecipe(Plan, Def)) {
     Def->replaceAllUsesWith(V);
     return Def;
@@ -1702,25 +1720,6 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
   return nullptr;
 }
 
-namespace {
-/// Variant of VPBuilder that inserts newly created recipes to a worklist.
-class VPCombineBuilder : public VPBuilder {
-  SmallVectorImpl<VPSingleDefRecipe *> &Worklist;
-
-public:
-  VPCombineBuilder(SmallVectorImpl<VPSingleDefRecipe *> &Worklist)
-      : VPBuilder(), Worklist(Worklist) {}
-
-protected:
-  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
-                    VPBasicBlock::iterator It) override {
-    VPBuilder::insertHelper(R, VPBB, It);
-    if (auto *Def = dyn_cast<VPSingleDefRecipe>(R))
-      Worklist.push_back(Def);
-  }
-};
-} // namespace
-
 void VPlanTransforms::combineRecipes(VPlan &Plan) {
   SmallVector<VPSingleDefRecipe *, 256> Worklist;
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
@@ -1732,7 +1731,7 @@ void VPlanTransforms::combineRecipes(VPlan &Plan) {
 
   [[maybe_unused]] unsigned InitWorklistSize = Worklist.size();
 
-  VPCombineBuilder Builder(Worklist);
+  VPCombineBuilder Builder({Worklist});
   while (!Worklist.empty()) {
     assert(Worklist.size() < InitWorklistSize * 2 &&
            "Worklist is growing large, possible cycle?");
@@ -5142,7 +5141,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPInstruction *RdxResult = vputils::findComputeReductionResult(RdxPhi);
   assert(RdxResult && "Could not find reduction result");
 
-  VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
+  auto Builder = VPBuilder::getToInsertAfter(RdxResult);
   unsigned SubOpc = Chain.RK == RecurKind::FSub ? Instruction::BinaryOps::FSub
                                                 : Instruction::BinaryOps::Sub;
   VPInstruction *NewResult = Builder.createNaryOp(
