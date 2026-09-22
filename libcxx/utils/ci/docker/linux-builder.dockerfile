@@ -9,7 +9,7 @@
 # This file defines the base image we use for Linux testing using Github Actions.
 # From the root of the monorepo, this image can be built with:
 #
-#   $ docker build --file libcxx/utils/ci/docker/linux-builder-base.dockerfile \
+#   $ docker build --file libcxx/utils/ci/docker/linux-builder.dockerfile \
 #                  --build-arg GCC_HEAD_VERSION=<version> \
 #                  --build-arg LLVM_HEAD_VERSION=<version> .
 #
