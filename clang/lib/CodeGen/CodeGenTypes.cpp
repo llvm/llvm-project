@@ -90,7 +90,8 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
   Ty->setName(OS.str());
 }
 
-llvm::Type *CodeGenTypes::ConvertTypeForCoopMat(const CooperativeMatrixType *CMT) {
+llvm::Type *
+CodeGenTypes::ConvertTypeForCoopMat(const CooperativeMatrixType *CMT) {
   llvm::Type *ElementTy = ConvertType(CMT->getElementType());
   // Type arguments for TargetExtType
   llvm::Type *Tys[] = {ElementTy};
