@@ -7632,9 +7632,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       // already processed.
       VPBuilder EntryBuilder(Plan.getVectorPreheader());
       auto *EntryALM = EntryBuilder.createNaryOp(
-          VPInstruction::ActiveLaneMask,
-          {VPV, Plan.getTripCount()}, R.getDebugLoc(),
-          "active.lane.mask.entry");
+          VPInstruction::ActiveLaneMask, {VPV, Plan.getTripCount()},
+          R.getDebugLoc(), "active.lane.mask.entry");
       cast<VPHeaderPHIRecipe>(&R)->setStartValue(EntryALM);
       continue;
     } else {
