@@ -11534,6 +11534,9 @@ def err_ppc_invalid_arg_type : Error<
   "argument %0 must be of type %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
+def err_x86_builtin_reserved_vunpackb_imm : Error<
+  "argument value %0 is a reserved VUNPACKB encoding of size (bits [4:2]) and "
+  "start (bits [1:0])">;
 def err_x86_builtin_invalid_scale : Error<
   "scale argument must be 1, 2, 4, or 8">;
 def err_x86_builtin_tile_arg_duplicate : Error<
@@ -12167,6 +12170,15 @@ def err_omp_invalid_looprange
 def warn_omp_redundant_fusion : Warning<"looprange clause selects a single "
                                         "loop, resulting in redundant fusion">,
                                 InGroup<OpenMPClauses>;
+def warn_omp_flatten_omitted_depth : Warning<
+  "'flatten' without a 'depth' clause only combines 2 loops, but 3 or more "
+  "loops are perfectly nested">,
+  InGroup<OpenMPClauses>;
+def note_omp_flatten_insert_depth : Note<
+  "add 'depth(2)' to make it explicit that only the two outermost loops are "
+  "flattened and to silence this warning">;
+def err_omp_clause_not_supported_yet : Error<
+  "'%0' clause is not yet supported on '#pragma omp %1' directive">;
 def err_omp_not_for : Error<
   "%select{statement after '#pragma omp %1' must be a for loop|"
   "expected %2 for loops after '#pragma omp %1'%select{|, but found only %4}3}0">;
@@ -13755,6 +13767,8 @@ def err_hlsl_param_qualifier_mismatch :
 def err_hlsl_vector_compound_assignment_truncation : Error<
   "left hand operand of type %0 to compound assignment cannot be truncated "
   "when used with right hand operand of type %1">;
+def err_hlsl_long_vector_swizzle : Error<
+  "invalid swizzle %0 on vector of over 4 elements">;
 def err_hlsl_builtin_scalar_vector_mismatch
     : Error<
           "%select{all|second and third}0 arguments to %1 must be of scalar or "

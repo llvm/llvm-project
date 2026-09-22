@@ -1904,8 +1904,6 @@ static mlir::Value convertToIndexTy(mlir::ConversionPatternRewriter &rewriter,
         mlir::LLVM::ConstantOp::create(rewriter, index.getLoc(),
                                        index.getType(), 0),
         index);
-    // TODO: ensure sub is trivially dead now.
-    rewriter.eraseOp(sub);
   }
 
   return index;
@@ -2154,37 +2152,53 @@ static std::optional<mlir::ArrayAttr> convertTypedArgAttrs(
   return changed ? mlir::ArrayAttr::get(ctx, loweredArgAttrs) : argAttrs;
 }
 
-static mlir::LogicalResult
-lowerCallAttributes(cir::CIRCallOpInterface op,
-                    const mlir::TypeConverter &converter,
-                    const mlir::DataLayout &dataLayout,
-                    SmallVectorImpl<mlir::NamedAttribute> &result) {
-  for (mlir::NamedAttribute attr : op->getAttrs()) {
-    if (attr.getName() == CIRDialect::getCalleeAttrName() ||
-        attr.getName() == CIRDialect::getMemoryEffectsAttrName() ||
-        attr.getName() == CIRDialect::getNoThrowAttrName() ||
-        attr.getName() == CIRDialect::getNoUnwindAttrName() ||
-        attr.getName() == CIRDialect::getWillReturnAttrName() ||
-        attr.getName() == CIRDialect::getNoReturnAttrName() ||
-        attr.getName() == op.getInlineKindAttrName() ||
-        attr.getName() == CIRDialect::getMustTailAttrName())
-      continue;
+struct LoweredCallAttributes {
+  mlir::ArrayAttr argAttrs;
+  mlir::ArrayAttr resAttrs;
+  SmallVector<mlir::NamedAttribute> discardableAttrs;
+};
 
-    assert(!cir::MissingFeatures::opFuncExtraAttrs());
-    if (attr.getName() == CIRDialect::getArgAttrsAttrName()) {
-      auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
-      std::optional<mlir::ArrayAttr> lowered = convertTypedArgAttrs(
-          argAttrs, converter, dataLayout, op->getContext());
-      if (!lowered)
-        return op->emitError() << "NYI: lowering a byval/sret/byref call "
-                                  "argument whose pointee type has no "
-                                  "memory representation";
-      result.emplace_back(attr.getName(), *lowered);
+static mlir::LogicalResult lowerCallAttributes(
+    cir::CIRCallOpInterface op, const mlir::TypeConverter &converter,
+    const mlir::DataLayout &dataLayout, LoweredCallAttributes &result) {
+  if (auto argAttrs = mlir::dyn_cast_if_present<mlir::ArrayAttr>(
+          op->getInherentAttr(CIRDialect::getArgAttrsAttrName())
+              .value_or(mlir::Attribute{}))) {
+    std::optional<mlir::ArrayAttr> lowered =
+        convertTypedArgAttrs(argAttrs, converter, dataLayout, op->getContext());
+    if (!lowered)
+      return op->emitError() << "NYI: lowering a byval/sret/byref call "
+                                "argument whose pointee type has no "
+                                "memory representation";
+    result.argAttrs = *lowered;
+  }
+  result.resAttrs = mlir::dyn_cast_if_present<mlir::ArrayAttr>(
+      op->getInherentAttr(CIRDialect::getResAttrsAttrName())
+          .value_or(mlir::Attribute{}));
+
+  for (mlir::NamedAttribute attr : op->getDiscardableAttrs()) {
+    if (attr.getName() == CIRDialect::getNoUnwindAttrName() ||
+        attr.getName() == CIRDialect::getNoReturnAttrName())
       continue;
-    }
-    result.push_back(attr);
+    assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    result.discardableAttrs.push_back(attr);
   }
   return mlir::success();
+}
+
+template <typename CallLikeOp>
+static void setLoweredCallAttributes(CallLikeOp op,
+                                     const LoweredCallAttributes &attributes) {
+  if (attributes.argAttrs)
+    op.setArgAttrsAttr(attributes.argAttrs);
+  if (attributes.resAttrs)
+    op.setResAttrsAttr(attributes.resAttrs);
+  for (mlir::NamedAttribute attr : attributes.discardableAttrs) {
+    if (op->getInherentAttr(attr.getName()).has_value())
+      op->setInherentAttr(attr.getName(), attr.getValue());
+    else
+      op->setDiscardableAttr(attr.getName(), attr.getValue());
+  }
 }
 
 static mlir::LogicalResult rewriteCallOrInvoke(
@@ -2210,7 +2224,7 @@ static mlir::LogicalResult rewriteCallOrInvoke(
   convertCallEffects(op, call.getNothrow(), call.getMemoryEffectsAttr(),
                      memoryEffects, noUnwind, willReturn, noReturn);
 
-  SmallVector<mlir::NamedAttribute, 4> attributes;
+  LoweredCallAttributes attributes;
   if (mlir::failed(
           lowerCallAttributes(call, *converter, dataLayout, attributes)))
     return mlir::failure();
@@ -2273,11 +2287,11 @@ static mlir::LogicalResult rewriteCallOrInvoke(
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
         op, llvmFnTy, calleeAttr, callOperands, continueBlock,
         mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
-    newOp->setAttrs(attributes);
+    setLoweredCallAttributes(newOp, attributes);
   } else {
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         op, llvmFnTy, calleeAttr, callOperands);
-    newOp->setAttrs(attributes);
+    setLoweredCallAttributes(newOp, attributes);
     if (memoryEffects)
       newOp.setMemoryEffectsAttr(memoryEffects);
     newOp.setNoUnwind(noUnwind);
@@ -2685,26 +2699,15 @@ mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-/// Return true for attributes constructed by `LLVMFuncOp::build`.
-static bool shouldDropFuncAttribute(cir::FuncOp func, mlir::NamedAttribute attr,
-                                    mlir::StringRef linkageAttrName) {
-  return attr.getName() == func.getSymNameAttrName() ||
-         attr.getName() == func.getFunctionTypeAttrName() ||
-         attr.getName() == linkageAttrName ||
-         attr.getName() == func.getCallingConvAttrName() ||
-         attr.getName() == func.getDsoLocalAttrName() ||
-         attr.getName() == func.getInlineKindAttrName() ||
-         attr.getName() == func.getMemoryEffectsAttrName() ||
-         attr.getName() == CIRDialect::getNoReturnAttrName() ||
+/// Return true for discardable CIR markers handled explicitly below.
+static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
+  return attr.getName() == CIRDialect::getNoReturnAttrName() ||
          attr.getName() == CIRDialect::getNoUnwindAttrName() ||
          attr.getName() == CIRDialect::getWillReturnAttrName() ||
          attr.getName() == CIRDialect::getStrictFPAttrName() ||
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
-         attr.getName() == CIRDialect::getSYCLModuleIdAttrName() ||
-         attr.getName() == func.getAnnotationsAttrName() ||
-         attr.getName() == func.getComdatAttrName() ||
-         attr.getName() == func.getAlignmentAttrName();
+         attr.getName() == CIRDialect::getSYCLModuleIdAttrName();
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -2716,25 +2719,30 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool includeFunctionOnlyAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
   OpenCLFunctionMetadataLowering openCLMetadataLowering(func.getContext());
-  for (mlir::NamedAttribute attr : func->getAttrs()) {
-    if (shouldDropFuncAttribute(func, attr, getLinkageAttrNameString()))
+  for (mlir::NamedAttribute attr : func->getDiscardableAttrs()) {
+    if (isHandledDiscardableFuncAttr(attr))
       continue;
     if (openCLMetadataLowering.lower(attr, includeFunctionOnlyAttrs))
       continue;
-
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
-    if (attr.getName() == func.getArgAttrsAttrName()) {
-      auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
+    result.push_back(attr);
+  }
+
+  if (mlir::StringAttr visibility = func.getSymVisibilityAttr())
+    result.emplace_back(func.getSymVisibilityAttrName(), visibility);
+
+  if (includeFunctionOnlyAttrs) {
+    if (mlir::ArrayAttr argAttrs = func.getArgAttrsAttr()) {
       std::optional<mlir::ArrayAttr> lowered = convertTypedArgAttrs(
           argAttrs, *getTypeConverter(), dataLayout, getContext());
       if (!lowered)
         return func.emitError() << "NYI: lowering a byval/sret/byref "
                                    "argument whose pointee type has no "
                                    "memory representation";
-      result.emplace_back(attr.getName(), *lowered);
-      continue;
+      result.emplace_back(func.getArgAttrsAttrName(), *lowered);
     }
-    result.push_back(attr);
+    if (mlir::ArrayAttr resAttrs = func.getResAttrsAttr())
+      result.emplace_back(func.getResAttrsAttrName(), resAttrs);
   }
 
   if (includeFunctionOnlyAttrs)
@@ -4061,13 +4069,10 @@ static void buildCtorDtorList(
     mlir::ModuleOp module, StringRef globalXtorName, StringRef llvmXtorName,
     llvm::function_ref<std::pair<StringRef, int>(mlir::Attribute)> createXtor) {
   llvm::SmallVector<std::pair<StringRef, int>> globalXtors;
-  for (const mlir::NamedAttribute namedAttr : module->getAttrs()) {
-    if (namedAttr.getName() == globalXtorName) {
-      for (auto attr : mlir::cast<mlir::ArrayAttr>(namedAttr.getValue()))
-        globalXtors.emplace_back(createXtor(attr));
-      break;
-    }
-  }
+  if (auto attr =
+          module->getDiscardableAttrOfType<mlir::ArrayAttr>(globalXtorName))
+    for (mlir::Attribute element : attr)
+      globalXtors.emplace_back(createXtor(element));
 
   if (globalXtors.empty())
     return;
