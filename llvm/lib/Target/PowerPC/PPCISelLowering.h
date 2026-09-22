@@ -339,11 +339,11 @@ namespace llvm {
     }
 
     /// The Power ISA lets an implementation clear a reservation for reasons of
-    /// its own, and e500v2 does so for a sync between the lwarx and the
-    /// stwcx., which leaves a weak cmpxchg unable to ever succeed. Gating on
-    /// isE500() would miss generic powerpc builds, where nothing enables it;
-    /// the cost elsewhere is one fence on the comparison-failed path.
-    bool fenceClearsLoadLinkedReservation() const override { return true; }
+    /// its own, and e500v2 loses it when a fence sits between the lwarx and
+    /// the stwcx., which leaves a weak cmpxchg unable to ever succeed. Answer
+    /// true unless the subtarget has FeatureFenceKeepsReservation, so CPUs
+    /// without it, including ppc and ppc64, get the conservative placement.
+    bool fenceClearsLoadLinkedReservation() const override;
 
     Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                           AtomicOrdering Ord) const override;
