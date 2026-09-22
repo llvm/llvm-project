@@ -1895,28 +1895,25 @@ def riscv_pmulsu_halves_00
 def riscv_pmulsu_halves_11
     : RVSDNode<"PMULSU_HALVES_11", SDT_RISCVPackedWideningMulByHalves>;
 
-// Multiply high parts
+// Multiply high parts. The result and rs1 keep the full element width; rs2
+// is the vector of half-width elements selecting the part to multiply. The
+// scalar form keeps a single product (RV32 mulh.h0/h1).
 def SDT_RISCVMulHighParts
-    : SDTypeProfile<1, 2, [SDTCisVT<0, XLenVT>, SDTCisVT<1, XLenVT>,
-                           SDTCisVT<2, XLenVT>]>;
+    : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisVec<2>]>;
 def riscv_mulh_h0   : RVSDNode<"MULH_H0",   SDT_RISCVMulHighParts>;
 def riscv_mulh_h1   : RVSDNode<"MULH_H1",   SDT_RISCVMulHighParts>;
 def riscv_mulhsu_h0 : RVSDNode<"MULHSU_H0", SDT_RISCVMulHighParts>;
 def riscv_mulhsu_h1 : RVSDNode<"MULHSU_H1", SDT_RISCVMulHighParts>;
 
-def SDT_RISCVPackedMulHighParts
-    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
-                           SDTCisOpSmallerThanOp<2, 0>,
-                           SDTCisSameSizeAs<0, 2>]>;
-def riscv_pmulh_h_b0   : RVSDNode<"PMULH_H_B0",   SDT_RISCVPackedMulHighParts>;
-def riscv_pmulh_h_b1   : RVSDNode<"PMULH_H_B1",   SDT_RISCVPackedMulHighParts>;
-def riscv_pmulhsu_h_b0 : RVSDNode<"PMULHSU_H_B0", SDT_RISCVPackedMulHighParts>;
-def riscv_pmulhsu_h_b1 : RVSDNode<"PMULHSU_H_B1", SDT_RISCVPackedMulHighParts>;
+def riscv_pmulh_h_b0   : RVSDNode<"PMULH_H_B0",   SDT_RISCVMulHighParts>;
+def riscv_pmulh_h_b1   : RVSDNode<"PMULH_H_B1",   SDT_RISCVMulHighParts>;
+def riscv_pmulhsu_h_b0 : RVSDNode<"PMULHSU_H_B0", SDT_RISCVMulHighParts>;
+def riscv_pmulhsu_h_b1 : RVSDNode<"PMULHSU_H_B1", SDT_RISCVMulHighParts>;
 
-def riscv_pmulh_w_h0   : RVSDNode<"PMULH_W_H0",   SDT_RISCVPackedMulHighParts>;
-def riscv_pmulh_w_h1   : RVSDNode<"PMULH_W_H1",   SDT_RISCVPackedMulHighParts>;
-def riscv_pmulhsu_w_h0 : RVSDNode<"PMULHSU_W_H0", SDT_RISCVPackedMulHighParts>;
-def riscv_pmulhsu_w_h1 : RVSDNode<"PMULHSU_W_H1", SDT_RISCVPackedMulHighParts>;
+def riscv_pmulh_w_h0   : RVSDNode<"PMULH_W_H0",   SDT_RISCVMulHighParts>;
+def riscv_pmulh_w_h1   : RVSDNode<"PMULH_W_H1",   SDT_RISCVMulHighParts>;
+def riscv_pmulhsu_w_h0 : RVSDNode<"PMULHSU_W_H0", SDT_RISCVMulHighParts>;
+def riscv_pmulhsu_w_h1 : RVSDNode<"PMULHSU_W_H1", SDT_RISCVMulHighParts>;
 
 // Packed multiplication with widening horizontal addition.
 def SDT_RISCVPackedWideningHorizontalAdd
@@ -2478,15 +2475,14 @@ let append Predicates = [IsRV32] in {
   def : PatMulParts<int_riscv_mulsu_00, MULSU_H00, i32, v2i16>;
   def : PatMulParts<int_riscv_mulsu_11, MULSU_H11, i32, v2i16>;
 
-  // Scalar halfword multiply-high parts patterns. Both operands are plain
-  // GPR scalars; rs2's halfword pair is reinterpreted as a scalar.
-  def : Pat<(i32 (riscv_mulh_h0 (i32 GPR:$rs1), (i32 GPR:$rs2))),
+  // Scalar halfword multiply-high parts patterns.
+  def : Pat<(i32 (riscv_mulh_h0 (i32 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MULH_H0 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(i32 (riscv_mulh_h1 (i32 GPR:$rs1), (i32 GPR:$rs2))),
+  def : Pat<(i32 (riscv_mulh_h1 (i32 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MULH_H1 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(i32 (riscv_mulhsu_h0 (i32 GPR:$rs1), (i32 GPR:$rs2))),
+  def : Pat<(i32 (riscv_mulhsu_h0 (i32 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MULHSU_H0 GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(i32 (riscv_mulhsu_h1 (i32 GPR:$rs1), (i32 GPR:$rs2))),
+  def : Pat<(i32 (riscv_mulhsu_h1 (i32 GPR:$rs1), (v2i16 GPR:$rs2))),
             (MULHSU_H1 GPR:$rs1, GPR:$rs2)>;
 
   def : PatGpr<bitreverse, REV_RV32>;
