@@ -706,6 +706,52 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    InstructionCost MulCost =
+        getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+
+    // Wide types like i128 need every partial product of a wide multiply
+    // and the carry chain between them. This is a crude cost approximation.
+    if (RetTy->getScalarSizeInBits() > 64)
+      return 2 * MulCost;
+
+    auto LT = getTypeLegalizationCost(RetTy);
+    MVT MTy = LT.second;
+
+    // Per-register cost to extend the operands.
+    InstructionCost ExtraCost =
+        LT.first *
+        (MTy.getScalarSizeInBits() != RetTy->getScalarSizeInBits() ? 2 : 0);
+
+    // MULH and MUL lower similarly for 64-bit products. For vectors, they
+    // also share the reduced vector multiply bandwidth seen on some cores.
+    if (MTy.getScalarSizeInBits() == 64)
+      return MulCost + ExtraCost;
+
+    // Scalable vectors (and fixed-length vectors, when possible) use SVE.
+    if (MTy.isScalableVector() ||
+        (MTy.isFixedLengthVector() && ST->isSVEorStreamingSVEAvailable()))
+      return LT.first + ExtraCost;
+
+    static const CostTblEntry MulHighCostTbl[] = {
+        {ISD::MULHU, MVT::i32, 2}, // [su]mull + lsr
+
+        {ISD::MULHU, MVT::v8i8, 2},  // [su]mull + shrn
+        {ISD::MULHU, MVT::v4i16, 2}, // "
+        {ISD::MULHU, MVT::v2i32, 2}, // "
+
+        {ISD::MULHU, MVT::v16i8, 3}, // [su]mull + [su]mull2 + uzp2
+        {ISD::MULHU, MVT::v8i16, 3}, // "
+        {ISD::MULHU, MVT::v4i32, 3}, // "
+    };
+
+    // Currently we assume SMULH has the same cost as UMULH.
+    if (const auto *Entry = CostTableLookup(MulHighCostTbl, ISD::MULHU, MTy))
+      return LT.first * Entry->Cost + ExtraCost;
+
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
