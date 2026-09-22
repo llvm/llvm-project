@@ -235,7 +235,8 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   // Compute the induction variable value after loop execution, clamping the
   // trip count at zero so loops that never execute yield lb.
   rewriter.setInsertionPointAfter(newLoop);
-  Value one, zero;
+  Value one;
+  Value zero;
   if (isa<IndexType>(step.getType())) {
     one = arith::ConstantIndexOp::create(rewriter, loc, 1);
     zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
