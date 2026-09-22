@@ -91,11 +91,34 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // 32/64-bits needs support for s64/s128 to handle cases:
   // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
   // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
-  getActionDefinitionsBuilder(
-      {G_IMPLICIT_DEF, G_PHI, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
+  // Keep G_IMPLICIT_DEF/G_FREEZE able to materialize s64 even on i386, but do
+  // not treat multi-block G_PHI of s64 as legal there: the selector cannot
+  // EXTRACT/INSERT scalar subregs of an s64 GPR on 32-bit (#216648).
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
       .legalFor({p0, s1, s8, s16, s32, s64})
       .legalFor(UseX87, {s80})
       .legalFor(Is64Bit, {s128})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
+      .widenScalarOrEltToNextPow2(0, /*Min=*/8)
+      .clampScalarOrElt(0, s8, sMaxScalar)
+      .moreElementsToNextPow2(0)
+      .clampNumElements(0, v16s8, s8MaxVector)
+      .clampNumElements(0, v8s16, s16MaxVector)
+      .clampNumElements(0, v4s32, s32MaxVector)
+      .clampNumElements(0, v2s64, s64MaxVector)
+      .clampMaxNumElements(0, p0,
+                           Is64Bit ? s64MaxVector.getNumElements()
+                                   : s32MaxVector.getNumElements())
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
+
+  // On i386, keep s64 out of G_PHI: narrow to a pair of s32 PHIs instead of
+  // leaving an s64 value that later fails G_UNMERGE/G_EXTRACT selection.
+  getActionDefinitionsBuilder(G_PHI)
+      .legalFor({p0, s1, s8, s16, s32})
+      .legalFor(Is64Bit, {s64, s128})
+      .legalFor(UseX87, {s80})
       .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
       .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
       .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
