@@ -587,7 +587,8 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
 
   // Built in place of SmallLoad, so the access is neither duplicated nor
   // reordered. The merged-into value has to be available there.
-  if (!Helper.dominates(*MRI.getVRegDef(SrcReg32ToOverwriteD16), *SmallLoad))
+  MachineInstr *SrcDef = MRI.getVRegDef(SrcReg32ToOverwriteD16);
+  if (!SrcDef || !Helper.dominates(*SrcDef, *SmallLoad))
     return false;
 
   // Dst and Src for D16 load need to have same type.
