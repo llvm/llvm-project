@@ -96,9 +96,6 @@ struct OffloadTargetInfo {
 /// <kind>-<triple>[-<target id>[:target features]]
 /// <triple> := <arch>-<vendor>-<os>-<env>
 bool checkOffloadBundleID(const llvm::StringRef Str);
-/// Constructs the normalized triple string used in an offload bundle entry ID.
-std::string normalizeForBundler(const llvm::Triple &OrigT,
-                                llvm::StringRef BoundArch);
 } // namespace clang
 
 #endif // LLVM_CLANG_DRIVER_OFFLOADBUNDLER_H

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/OffloadBundler.h"
 #include "clang/Options/Options.h"
 #include "llvm/Support/Path.h"
 

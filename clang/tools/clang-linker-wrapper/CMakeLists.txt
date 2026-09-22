@@ -36,7 +36,6 @@ add_clang_tool(clang-linker-wrapper
 
 set(CLANG_LINKER_WRAPPER_LIB_DEPS
   clangBasic
-  clangDriver
   )
 
 target_link_libraries(clang-linker-wrapper

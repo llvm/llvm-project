@@ -16,7 +16,6 @@
 
 #include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
-#include "clang/Driver/OffloadBundler.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
