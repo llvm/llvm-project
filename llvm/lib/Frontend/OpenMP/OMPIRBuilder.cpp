@@ -8561,14 +8561,14 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
   return createRuntimeFunctionCall(Fn, Args);
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
+Constant *OpenMPIRBuilder::emitKernelEnvironment(
     const LocationDescription &Loc,
     const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs) {
   assert(!Attrs.MaxThreads.empty() && !Attrs.MaxTeams.empty() &&
          "expected num_threads and num_teams to be specified");
 
   if (!updateToLocation(Loc))
-    return Loc.IP;
+    return nullptr;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -8598,31 +8598,33 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     writeTeamsForKernel(T, *Kernel, Attrs.MinTeams.front(),
                         Attrs.MaxTeams.front());
 
-  // If MaxThreads is not set and needs adjustment, select the maximum between
-  // the default workgroup size and the MinThreads value.
+  // Don't derive or write thread bounds for Bare kernels.
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0 && UseDefaultMaxThreads) {
-    if (hasGridValue(T)) {
+  if (Attrs.ExecFlags != omp::OMP_TGT_EXEC_MODE_BARE) {
+    // If MaxThreads is not set and needs adjustment, select the maximum
+    // between the default workgroup size and the MinThreads value. This is
+    // only meaningful for targets with a known grid value (i.e. GPUs); for
+    // other targets (e.g. host kernels) leave it unset so the runtime falls
+    // back to its own device-specific default.
+    if (MaxThreadsVal < 0 && UseDefaultMaxThreads && hasGridValue(T))
       MaxThreadsVal =
           std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
                    Attrs.MinThreads.front());
-    } else {
-      MaxThreadsVal = Attrs.MinThreads.front();
-    }
+
+    // Generic mode runs the main thread on a warp of its own, past
+    // thread_limit. Reserve the widest warp any target has. Not on SPIR-V,
+    // causes problems with Level Zero.
+    if (MaxThreadsVal > 0 &&
+        Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC && hasGridValue(T) &&
+        !T.isSPIRV())
+      MaxThreadsVal = int32_t(
+          std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
+                            int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
+
+    if (MaxThreadsVal > 0)
+      writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
+                                 MaxThreadsVal);
   }
-
-  // Generic mode runs the main thread on a warp of its own, past thread_limit.
-  // Reserve the widest warp any target has. Not on SPIR-V, causes problems with
-  // Level Zero.
-  if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
-      hasGridValue(T) && !T.isSPIRV())
-    MaxThreadsVal = int32_t(
-        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
-                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
-
-  if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
-                               MaxThreadsVal);
 
   Constant *MinThreads =
       ConstantInt::getSigned(Int32, Attrs.MinThreads.front());
@@ -8632,9 +8634,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   Constant *ReductionDataSize =
       ConstantInt::getSigned(Int32, Attrs.ReductionDataSize);
 
-  Function *Fn = getOrCreateRuntimeFunctionPtr(
-      omp::RuntimeFunction::OMPRTL___kmpc_target_init);
-  const DataLayout &DL = Fn->getDataLayout();
+  const DataLayout &DL = M.getDataLayout();
 
   Twine DynamicEnvironmentName = KernelName + "_dynamic_environment";
   Constant *DynamicEnvironmentInitializer =
@@ -8678,11 +8678,26 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
       DL.getDefaultGlobalsAddressSpace());
   KernelEnvironmentGV->setVisibility(GlobalValue::ProtectedVisibility);
 
-  Constant *KernelEnvironment =
-      KernelEnvironmentGV->getType() == KernelEnvironmentPtr
-          ? KernelEnvironmentGV
-          : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
-                                           KernelEnvironmentPtr);
+  return KernelEnvironmentGV->getType() == KernelEnvironmentPtr
+             ? KernelEnvironmentGV
+             : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
+                                              KernelEnvironmentPtr);
+}
+
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
+    const LocationDescription &Loc,
+    const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs) {
+  Constant *KernelEnvironment = emitKernelEnvironment(Loc, Attrs);
+  if (!KernelEnvironment)
+    return Loc.IP;
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Function *DebugKernelWrapper = Builder.GetInsertBlock()->getParent();
+  Function *Fn = getOrCreateRuntimeFunctionPtr(
+      omp::RuntimeFunction::OMPRTL___kmpc_target_init);
+
   Value *KernelLaunchEnvironment =
       DebugKernelWrapper->getArg(DebugKernelWrapper->arg_size() - 1);
   Type *KernelLaunchEnvParamTy = Fn->getFunctionType()->getParamType(1);
@@ -9320,9 +9335,14 @@ static Expected<Function *> createOutlinedFunction(
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
   Builder.SetInsertPoint(EntryBB);
 
-  // Insert target init call in the device compilation pass.
+  // Insert target init call in the device compilation pass. On the host
+  // (e.g. a non-GPU offload target), there is no runtime init/deinit
+  // sequence, but the runtime still needs a '<kernel>_kernel_environment'
+  // global to know how the kernel was configured, so emit it directly.
   if (OMPBuilder.Config.isTargetDevice())
     Builder.restoreIP(OMPBuilder.createTargetInit(Builder, DefaultAttrs));
+  else
+    OMPBuilder.emitKernelEnvironment(Builder, DefaultAttrs);
 
   BasicBlock *UserCodeEntryBB = Builder.GetInsertBlock();
 

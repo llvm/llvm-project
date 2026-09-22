@@ -722,8 +722,6 @@ public:
   llvm::Instruction *CurrentFuncletPad = nullptr;
 
   class CallLifetimeEnd final : public EHScopeStack::Cleanup {
-    bool isRedundantBeforeReturn() override { return true; }
-
     llvm::Value *Addr;
 
   public:
