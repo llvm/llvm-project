@@ -83,7 +83,7 @@ jobs:
           mkdir build
           cat << 'EOF' > /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
           #!/bin/bash
-          qemu-${{ matrix.arch }}-static -L /usr/${{ matrix.target_triple }} "$@"
+          qemu-${{ matrix.arch }} -L /usr/${{ matrix.target_triple }} "$@"
           EOF
           chmod +x /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 
@@ -141,8 +141,8 @@ jobs:
             c_compiler: /usr/local/gcc8/bin/gcc
             cxx_compiler: /usr/local/gcc8/bin/g++
           - name: gcc-9
-            c_compiler: gcc-9
-            cxx_compiler: g++-9
+            c_compiler: /usr/local/gcc9/bin/gcc
+            cxx_compiler: /usr/local/gcc9/bin/g++
           - name: gcc-11
             c_compiler: gcc-11
             cxx_compiler: g++-11
