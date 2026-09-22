@@ -1924,7 +1924,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
-    auto Builder = VPBuilder::getToInsertAfter(PhiR);
+    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
     auto *MaskPHI = Builder.createWidenPhi(Plan.getFalse());
 
     // Add select for mask.

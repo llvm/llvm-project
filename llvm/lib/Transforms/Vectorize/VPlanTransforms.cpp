@@ -1375,8 +1375,8 @@ static bool isAvailableAtEndOf(VPValue *V, const VPBasicBlock *VPBB) {
 }
 
 namespace {
-/// Inserter for VPBuilderBase which appends all created recipes to a worklist,
-/// so they get combined as well.
+/// Inserter for VPBuilderBase which appends all created VPSingleDefRecipes to a
+/// worklist, so they get combined as well.
 struct VPCombineInserter {
   SmallVectorImpl<VPSingleDefRecipe *> &Worklist;
 
@@ -5141,7 +5141,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPInstruction *RdxResult = vputils::findComputeReductionResult(RdxPhi);
   assert(RdxResult && "Could not find reduction result");
 
-  auto Builder = VPBuilder::getToInsertAfter(RdxResult);
+  VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
   unsigned SubOpc = Chain.RK == RecurKind::FSub ? Instruction::BinaryOps::FSub
                                                 : Instruction::BinaryOps::Sub;
   VPInstruction *NewResult = Builder.createNaryOp(

@@ -25,6 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
+#include "VPlanUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
@@ -107,8 +108,7 @@ struct VPBuilderDefaultInserter {
 
 /// VPlan-based builder utility similar to IRBuilder. Recipes are inserted via
 /// \p InserterTy.
-template <typename InserterTy = VPBuilderDefaultInserter>
-class VPBuilderBase : private InserterTy {
+template <typename InserterTy> class VPBuilderBase : public InserterTy {
 private:
   class VPInsertPoint {
     VPBasicBlock *Block = nullptr;
@@ -349,6 +349,21 @@ public:
                           VPIRFlags(Pred, FastMathFlags()), {}, DL, Name));
   }
 
+  /// Create an AnyOf reduction pattern: or-reduce \p ChainOp, freeze the
+  /// result, then select between \p TrueVal and \p FalseVal.
+  VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
+                                      VPValue *FalseVal,
+                                      DebugLoc DL = DebugLoc::getUnknown()) {
+    assert(ChainOp->getScalarType()->isIntegerTy(1) &&
+           "ChainOp must be i1 for AnyOf reduction");
+    VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                    FastMathFlags());
+    auto *OrReduce = createNaryOp(VPInstruction::ComputeReductionResult,
+                                  {ChainOp}, Flags, DL);
+    auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
+    return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
+  }
+
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -521,6 +536,30 @@ public:
         new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
   }
 
+  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
+  /// with element type \p SourceElementTy.
+  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
+                                                    Type *SourceElementTy,
+                                                    bool Reverse, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
+    if (Reverse) {
+      // When folding the tail, we may compute an address that we don't in the
+      // original scalar loop: drop the GEP no-wrap flags in this case.
+      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
+      // emit negative indices.
+      GEPNoWrapFlags ReverseFlags = Plan.hasTailFolded()
+                                        ? GEPNoWrapFlags::none()
+                                        : Flags.withoutNoUnsignedWrap();
+      return tryInsertInstruction(
+          new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), SourceElementTy,
+                                       /*Stride=*/-1, ReverseFlags, DL));
+    }
+    Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+    VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+    return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
+  }
+
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
       Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
@@ -567,23 +606,6 @@ public:
 
     ~InsertPointGuard() { Builder.restoreIP(InsertPt); }
   };
-};
-
-class VPBuilder : public VPBuilderBase<> {
-public:
-  using VPBuilderBase::VPBuilderBase;
-
-  /// Create an AnyOf reduction pattern: or-reduce \p ChainOp, freeze the
-  /// result, then select between \p TrueVal and \p FalseVal.
-  VPInstruction *createAnyOfReduction(VPValue *ChainOp, VPValue *TrueVal,
-                                      VPValue *FalseVal,
-                                      DebugLoc DL = DebugLoc::getUnknown());
-
-  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
-  /// with element type \p SourceElementTy.
-  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
-                                                    Type *SourceElementTy,
-                                                    bool Reverse, DebugLoc DL);
 };
 
 /// TODO: The following VectorizationFactor was pulled out of
