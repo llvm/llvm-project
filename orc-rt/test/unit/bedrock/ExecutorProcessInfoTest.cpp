@@ -38,9 +38,9 @@ TEST(ExecutorProcessInfoTest, DetectPageSizeAtLeast4096) {
 
 TEST(ExecutorProcessInfoTest, DetectPageSizeMatchesSystem) {
   auto EPI = ExecutorProcessInfo::Detect();
-  ASSERT_TRUE(EPI);
+  ASSERT_TRUE(!!EPI);
 
-  EXPECT_EQ(EPI->PageSize, static_cast<uint64_t>(sysconf(_SC_PAGESIZE)));
+  EXPECT_EQ(EPI->pageSize(), static_cast<uint64_t>(sysconf(_SC_PAGESIZE)));
 }
 #endif
 

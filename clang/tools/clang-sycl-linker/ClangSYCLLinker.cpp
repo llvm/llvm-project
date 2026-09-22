@@ -972,9 +972,13 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
   StringRef OutputFileNameExt = ".spv";
 
   // Code generation step.
+  StringRef Stem = sys::path::filename(OutputFile).rsplit('.').first;
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
-    StringRef Stem = OutputFile.rsplit('.').first;
-    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+    auto CodeGenFileOrErr =
+        createTempFile(Args, Stem, OutputFileNameExt.drop_front());
+    if (!CodeGenFileOrErr)
+      return CodeGenFileOrErr.takeError();
+    StringRef CodeGenFile = *CodeGenFileOrErr;
 
     if (Error Err = runCodeGen(SplitModules[I].ModuleFilePath,
                                Result.TargetTriple, Args, CodeGenFile, C))
@@ -989,10 +993,15 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
 
     SplitModules[I].ModuleFilePath = CodeGenFile;
     if (IsAOTCompileNeeded) {
-      std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
-      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
+      // Reuse CodeGenFile's unique name so the AOT output can be correlated
+      // with the SPIR-V file it was compiled from.
+      SmallString<128> AOTFile(CodeGenFile);
+      sys::path::replace_extension(AOTFile, "out");
+      TempFiles.push_back(AOTFile);
+      StringRef AOTFileRef = TempFiles.back();
+      if (Error Err = runAOTCompile(CodeGenFile, AOTFileRef, Args))
         return Err;
-      SplitModules[I].ModuleFilePath = AOTFile;
+      SplitModules[I].ModuleFilePath = AOTFileRef;
     }
   }
 
