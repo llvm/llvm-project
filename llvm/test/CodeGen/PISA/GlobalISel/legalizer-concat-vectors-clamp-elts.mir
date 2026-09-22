@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o -   | FileCheck -check-prefix=LEGAL %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o -   | FileCheck -check-prefix=LEGAL %s
 
 # Check that G_CONCAT_VECTORS of vectors larger than 4 elts are legalized.
 --- |
