@@ -1149,6 +1149,14 @@ public:
   /// enforced. Null when the current function needs no such wrapper.
   cir::TryOp ehSpecTryOp;
 
+  /// Whether the wrapper opened by emitStartEHSpec is a terminate scope, whose
+  /// handler calls std::terminate() for any escaping exception, rather than the
+  /// filter of a dynamic exception specification.
+  bool inEHSpecTerminateScope() {
+    return ehSpecTryOp &&
+           mlir::isa<cir::CatchAllAttr>(ehSpecTryOp.getHandlerTypes()[0]);
+  }
+
   bool isCatchOrCleanupRequired();
 
   /// Takes the old cleanup stack size and emits the cleanup blocks

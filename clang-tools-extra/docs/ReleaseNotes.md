@@ -236,6 +236,10 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
   code with an unparsed exception specification.
 
+- Extend {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
+  `std::nullptr_t` from `<cstdef>`.
+
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
