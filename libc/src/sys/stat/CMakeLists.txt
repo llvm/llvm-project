@@ -31,6 +31,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fstatat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fstatat
+)
+
+add_entrypoint_object(
   lstat
   ALIAS
   DEPENDS
