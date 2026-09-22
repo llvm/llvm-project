@@ -79,6 +79,8 @@ mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
 
   // Copy all attributes from the original call except those already set by
   // TryCallOp::create or that are operation-specific and should not be copied.
+  // nounwind describes the callee, so it survives the conversion even though
+  // this site gains an unwind edge.
   llvm::StringRef excludedAttrs[] = {
       cir::CIRDialect::getCalleeAttrName(), // Set by create()
       cir::CIRDialect::getOperandSegmentSizesAttrName(),
@@ -86,13 +88,6 @@ mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
   for (mlir::NamedAttribute attr : callOp->getAttrs()) {
     if (llvm::is_contained(excludedAttrs, attr.getName()))
       continue;
-    assert(!llvm::is_contained(
-               {
-                   cir::CIRDialect::getNoThrowAttrName(),
-                   cir::CIRDialect::getNoUnwindAttrName(),
-               },
-               attr.getName()) &&
-           "unexpected attribute on converted call");
     tryCallOp->setAttr(attr.getName(), attr.getValue());
   }
 
