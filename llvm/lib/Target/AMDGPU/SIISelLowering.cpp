@@ -4712,7 +4712,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
                                   DAG.getConstant(StackAlignMask, dl, VT));
     BaseAddr = DAG.getNode(ISD::AND, dl, VT, TmpAddr,
-                           DAG.getSignedConstant(-ScaledAlignment, dl, VT));
+                           DAG.getConstant(~StackAlignMask, dl, VT));
   }
 
   assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");

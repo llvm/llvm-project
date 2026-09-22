@@ -170,8 +170,8 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
                   .Case("BFD_RELOC_NONE", ELF::R_AMDGPU_NONE)
                   .Case("BFD_RELOC_32", ELF::R_AMDGPU_ABS32)
                   .Case("BFD_RELOC_64", ELF::R_AMDGPU_ABS64)
-                  .Default(-1u);
-  if (Type != -1u)
+                  .Default(~0u);
+  if (Type != ~0u)
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   return std::nullopt;
 }
