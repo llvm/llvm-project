@@ -107,6 +107,17 @@ private:
   /// Tracks cycles until next VALU after multi-cycle VALU (CVT hazard).
   unsigned CyclesUntilVALU = 0;
 
+  /// Set when a V_PERM_PK16 has just been emitted, marking that its immediately
+  /// following instruction must be a "safe" instruction (see
+  /// SIInstrInfo::isVPermPk16SafeInstr) to clear the hazard; otherwise a
+  /// forced-EXEC V_NOP is inserted post-RA. Tracked as a cycle counter for
+  /// consistency with the TRANS and multi-cycle-VALU shadows, but only the
+  /// immediately following pick observes it (as 1). Consumed to bias a safe
+  /// instruction into the slot after a V_PERM_PK16: pre-RA the CoExec strategy
+  /// treats it as a soft cost (getHazardWaitStates), and post-RA the generic
+  /// scheduler treats it as a hard hazard (getHazardType).
+  unsigned CyclesUntilPermPk16Safety = 0;
+
   /// Debug: log of what was scheduled at each stage of the co-exec window.
   /// '.' = not yet reached, '-' = stall, else CoExecMask short char.
   std::array<char, AMDGPU::MaxCoExecStages> CoExecWindowLog;
@@ -133,6 +144,13 @@ private:
   /// instructions, return the number of stall cycles until one shadow clears.
   unsigned checkMultiShadowHazard(const MachineInstr &MI) const;
 
+  /// Check the V_PERM_PK16 hazard. Returns a nonzero stall count if a
+  /// V_PERM_PK16 was just emitted and \p MI is not a safe follower, biasing
+  /// the scheduler to place a safe instruction immediately after it. Pre-RA
+  /// this is consumed as a soft cost (getHazardWaitStates); post-RA it is
+  /// consumed as a hard hazard (getHazardType).
+  unsigned checkVPermPk16Hazard(const MachineInstr &MI) const;
+
   /// Update WMMA window state when a WMMA instruction is emitted.
   void updateWMMAWindowState(const MachineInstr &MI);
 
@@ -141,6 +159,9 @@ private:
 
   /// Update multi-cycle VALU state when an instruction is emitted.
   void updateMultiCycleVALUState(const MachineInstr &MI);
+
+  /// Update V_PERM_PK16 hazard state when an instruction is emitted.
+  void updateVPermPk16State(const MachineInstr &MI);
 
   /// Scheduler-mode part of EmitInstruction().
   void schedulerEmitInstruction(MachineInstr *MI);
