@@ -3065,6 +3065,8 @@ define void @spill_exec_to_vcc() #3 {
  ret void
 }
 
+;; Only the wave32 case is interesting here. Same set of clobbers as above, just
+;; including vcc_lo.
 define void @spill_exec_to_vcc_hi() #3 {
 ; WAVE64-LABEL: spill_exec_to_vcc_hi:
 ; WAVE64:       .Lfunc_begin9:
@@ -3213,7 +3215,7 @@ define void @spill_exec_to_vcc_hi() #3 {
 ; WAVE32-NEXT:    .cfi_undefined 1119
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    s_mov_b32 vcc_hi, exec_lo
-; WAVE32-NEXT:    .cfi_undefined 1
+; WAVE32-NEXT:    .cfi_register 1, 513
 ; WAVE32-NEXT:    ;;#ASMSTART
 ; WAVE32-NEXT:    ; clobber scratch SGPRs
 ; WAVE32-NEXT:    ;;#ASMEND
