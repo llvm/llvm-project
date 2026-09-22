@@ -3361,12 +3361,10 @@ static bool hasFindLastReductionPhi(VPlan &Plan) {
 /// Check if there are any conflicts that prevent tail-folding the epilogue.
 /// \return CM_EpilogueNotNeededFoldTail if epilogue tail-folding is possible,
 /// otherwise CM_EpilogueAllowed.
-static EpilogueLowering
-getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
-                        OptimizationRemarkEmitter *ORE,
-                        LoopVectorizationLegality &LVL,
-                        const LoopVectorizeHints &Hints,
-                        TargetTransformInfo *TTI) {
+static EpilogueLowering getEpilogueTailLowering(
+    const LoopVectorizationCostModel &MainCM, const Loop *L,
+    OptimizationRemarkEmitter *ORE, LoopVectorizationLegality &LVL,
+    const LoopVectorizeHints &Hints, TargetTransformInfo *TTI) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
       EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
@@ -3428,7 +3426,8 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
 
   // The epilogue reuses the main loop's interleave groups, so it can't be
   // tail-folded if the target can't mask interleaved accesses.
-  if (MainCM.InterleaveInfo.hasGroups() && !useMaskedInterleavedAccesses(*TTI)) {
+  if (MainCM.InterleaveInfo.hasGroups() &&
+      !useMaskedInterleavedAccesses(*TTI)) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported with interleaved accesses "
         "when masking them isn't supported",
