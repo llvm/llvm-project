@@ -335,6 +335,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 }
 
 void WebAssemblyPassConfig::addISelPrepare() {
+  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    addPass(createWasmEHPass());
+
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
   addPass(createWebAssemblyRefTypeMem2LocalLegacyPass());

@@ -2090,7 +2090,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 void ConstraintInfo::tightenBoundUsingNe(
     Value *A, Value *B, unsigned NumIn, unsigned NumOut,
     SmallVectorImpl<StackEntry> &DFSInStack) {
-  if (!A->getType()->isIntegerTy())
+  if (!A->getType()->isIntOrPtrTy())
     return;
 
   for (bool IsSigned : {false, true}) {
