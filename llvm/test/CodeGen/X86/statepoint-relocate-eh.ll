@@ -4,7 +4,7 @@
 
 ; A gc.relocate of a directly-lowered value (a constant, an alloca, or
 ; undef) in an invoke's landing pad must materialize the value at the
-; relocate, insert a def after the statepoint call in the invoke
+; relocate, not insert a def after the statepoint call in the invoke
 ; block.
 
 target triple = "x86_64-pc-linux-gnu"
