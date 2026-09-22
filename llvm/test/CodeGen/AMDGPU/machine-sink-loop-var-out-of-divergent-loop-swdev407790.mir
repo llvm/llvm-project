@@ -96,7 +96,7 @@ body:             |
 
   bb.5:
     %7:vgpr_32 = PHI %0, %bb.4
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     INLINEASM &"", 1, implicit %5
     S_BRANCH %bb.2
 
@@ -207,7 +207,7 @@ body:             |
 
   bb.5:
     %7:vgpr_32 = PHI %0, %bb.4
-    SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    bb-prolog SI_END_CF %6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     INLINEASM &"", 1, implicit %5
     S_BRANCH %bb.2
 
