@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
 # Check that i32 vectors with an illegal number of elements are extended to the nearest legal size before extracting the element using the G_EXTRACT_VECTOR_ELT instruction.
 
 --- |

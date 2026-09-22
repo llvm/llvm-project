@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer %s -o - | FileCheck %s
 
 ---
 name: insert_subvector_s64

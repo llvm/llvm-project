@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=pisa-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 # Tests the compare_select PostLegalizerCombiner rule:
 #   %cond = G_ICMP intpred(ne), %x(s32), 0

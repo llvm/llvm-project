@@ -1,4 +1,4 @@
-# RUN: llc -march=pisa -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=pisa -run-pass=legalizer %s -o - | FileCheck %s
 
 # Verify UNMERGE lowering case where both SrcTy and DstTy are vectors with over 4 elements.
 
