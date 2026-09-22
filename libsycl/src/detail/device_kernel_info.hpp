@@ -56,12 +56,12 @@ public:
                                         ol_device_handle_t Device);
 
   /// Adds \p Kernel to the cache by using the pair key \p Context & \p Device
-  void cacheKernel(ContextImpl *Context, ol_device_handle_t Device,
-                   ol_symbol_handle_t Kernel);
+  void addCachedKernel(ContextImpl *Context, ol_device_handle_t Device,
+                       ol_symbol_handle_t Kernel);
 
   /// Removes every cache entry keyed by \p Context, regardless of device.
   /// Called by ContextImpl when it is being destroyed.
-  void removeContext(ContextImpl *Context);
+  void removeCachedKernelsFor(ContextImpl *Context);
 
 private:
   std::string_view MName;
