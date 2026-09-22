@@ -2424,9 +2424,9 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
 /// access distinct addresses, penalizes a later vectorizer. Commoning needs a
 /// pointer PHI, so the result can only be widened as a gather or scatter, while
 /// separate blocks allow one independent masked load or store each.
-static bool sinkingMemOpsPenalizesVectorization(const TargetTransformInfo &TTI,
-                                                Instruction *I,
-                                                unsigned NumMemOps) {
+static bool
+sinkingMemOpCouldPenalizeVectorization(const TargetTransformInfo &TTI,
+                                       Instruction *I, unsigned NumMemOps) {
   bool IsLoad = isa<LoadInst>(I);
   assert((IsLoad || isa<StoreInst>(I)) && "Expected a load or store");
   Type *ScalarTy = getLoadStoreType(I);
@@ -2470,11 +2470,6 @@ static bool sinkingMemOpsPenalizesVectorization(const TargetTransformInfo &TTI,
             MemIntrinsicCostAttributes(MaskedID, VecTy, Alignment, AS),
             CostKind) *
         NumMemOps;
-
-    if (!GatherScatterCost.isValid())
-      return true;
-    if (!MaskedCost.isValid())
-      return false;
 
     LLVM_DEBUG(dbgs() << "SINK: " << (VF.isScalable() ? "scalable" : "fixed")
                       << " VF " << VF.getKnownMinValue() << ": "
@@ -2639,7 +2634,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB, DomTreeUpdater *DTU,
     auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
       ArrayRef<Instruction *> Insts = *LRI;
       if (isa<LoadInst, StoreInst>(Insts[0]) && !HaveSameMemAddress(Insts) &&
-          sinkingMemOpsPenalizesVectorization(TTI, Insts[0], Insts.size()))
+          sinkingMemOpCouldPenalizeVectorization(TTI, Insts[0], Insts.size()))
         return false;
 
       unsigned NumPHIInsts = 0;
