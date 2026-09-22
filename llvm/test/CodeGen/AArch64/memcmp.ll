@@ -51,9 +51,9 @@ define i32 @length2_const(ptr %X, ptr %Y) nounwind {
 ; CHECK-LABEL: length2_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w9, [x0]
-; CHECK-NEXT:    mov w8, #-12594 // =0xffffcece
+; CHECK-NEXT:    mov w8, #12594 // =0x3132
 ; CHECK-NEXT:    rev16 w9, w9
-; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    sub w0, w9, w8
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([513 x i8], ptr @.str, i32 0, i32 1), i64 2) nounwind
   ret i32 %m
@@ -63,9 +63,9 @@ define i1 @length2_gt_const(ptr %X, ptr %Y) nounwind {
 ; CHECK-LABEL: length2_gt_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w9, [x0]
-; CHECK-NEXT:    mov w8, #-12594 // =0xffffcece
+; CHECK-NEXT:    mov w8, #12594 // =0x3132
 ; CHECK-NEXT:    rev16 w9, w9
-; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    sub w8, w9, w8
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret

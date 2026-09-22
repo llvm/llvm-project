@@ -481,6 +481,7 @@ private:
                          SDValue &Offset, SDValue &SignExtend,
                          SDValue &DoShift);
   bool isWorthNegatingImm(SDValue V) const;
+  bool isWorthNegatingImmForAddSub(SDValue V) const;
   bool isWorthFoldingALU(SDValue V, bool LSL = false) const;
   bool isWorthFoldingAddr(SDValue V, unsigned Size) const;
   bool SelectExtendedSHL(SDValue N, unsigned Size, bool WantExtend,
@@ -1047,6 +1048,30 @@ bool AArch64DAGToDAGISel::isWorthNegatingImm(SDValue V) const {
   AArch64_IMM::expandMOVImm(Imm, BitSize, OrigCost);
   AArch64_IMM::expandMOVImm(-Imm, BitSize, NewCost);
   return NewCost.size() < OrigCost.size();
+}
+
+bool AArch64DAGToDAGISel::isWorthNegatingImmForAddSub(SDValue V) const {
+  assert(isa<ConstantSDNode>(V) && "invalid node");
+
+  EVT VT = V.getValueType();
+  assert((VT == MVT::i32 || VT == MVT::i64) && "invalid type");
+
+  if (!V.hasOneUse())
+    return false;
+
+  const APInt &ImmAP = cast<ConstantSDNode>(V)->getAPIntValue();
+  if (!ImmAP.isNegative())
+    return false;
+
+  if (-ImmAP == ImmAP)
+    return false;
+
+  uint64_t Imm = ImmAP.getZExtValue();
+  unsigned BitSize = VT.getSizeInBits();
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> OrigCost, NewCost;
+  AArch64_IMM::expandMOVImm(Imm, BitSize, OrigCost);
+  AArch64_IMM::expandMOVImm(-Imm, BitSize, NewCost);
+  return NewCost.size() == OrigCost.size();
 }
 
 /// Determine whether it is worth to fold V into an extended register of an

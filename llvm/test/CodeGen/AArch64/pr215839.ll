@@ -66,7 +66,7 @@ define i32 @original() {
 ; CHECK-NEXT:    ccmp x8, #0, #8, eq
 ; CHECK-NEXT:    adrp x8, g19
 ; CHECK-NEXT:    cset w9, mi
-; CHECK-NEXT:    mov w10, #-28618 // =0xffff9036
+; CHECK-NEXT:    mov w10, #28618 // =0x6fca
 ; CHECK-NEXT:  .LBB1_1: // %lbl_b59
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ext v1.8b, v0.8b, v0.8b, #6
@@ -86,7 +86,7 @@ define i32 @original() {
 ; CHECK-NEXT:    bfi x15, x14, #1, #2
 ; CHECK-NEXT:    str d0, [sp, #8]
 ; CHECK-NEXT:    ldrsh w15, [x15]
-; CHECK-NEXT:    add w14, w15, w10
+; CHECK-NEXT:    sub w14, w15, w10
 ; CHECK-NEXT:    cmp w15, #1
 ; CHECK-NEXT:    and w15, w14, #0xffff
 ; CHECK-NEXT:    cset w16, lt

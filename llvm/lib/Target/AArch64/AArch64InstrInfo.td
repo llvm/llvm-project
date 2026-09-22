@@ -2900,6 +2900,21 @@ def : Pat<(add GPR32:$Rn, neg_cheaper_imm32:$imm),
 def : Pat<(add GPR64:$Rn, neg_cheaper_imm64:$imm),
           (SUBSXrr GPR64:$Rn, (MOVi64imm neg_cheaper_imm64:$imm))>;
 
+def add_neg_tied_imm32 : PatFrag<(ops node:$Rn, node:$imm),
+                                  (add node:$Rn, node:$imm), [{
+  return N->getOperand(0).getOpcode() != ISD::MUL &&
+         isWorthNegatingImmForAddSub(N->getOperand(1));
+}]>;
+def add_neg_tied_imm64 : PatFrag<(ops node:$Rn, node:$imm),
+                                  (add node:$Rn, node:$imm), [{
+  return N->getOperand(0).getOpcode() != ISD::MUL &&
+         isWorthNegatingImmForAddSub(N->getOperand(1));
+}]>;
+def : Pat<(add_neg_tied_imm32 GPR32:$Rn, imm:$imm),
+          (SUBSWrr GPR32:$Rn, (MOVi32imm (negate_imm imm:$imm)))>;
+def : Pat<(add_neg_tied_imm64 GPR64:$Rn, imm:$imm),
+          (SUBSXrr GPR64:$Rn, (MOVi64imm (negate_imm imm:$imm)))>;
+
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];
   let GISelPredicateCode = [{ return isWorthFoldingIntoExtendedReg(MI, MRI, false); }];
