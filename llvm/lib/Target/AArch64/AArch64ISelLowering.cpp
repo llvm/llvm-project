@@ -29498,11 +29498,16 @@ static SDValue foldCSELofLASTB(SDNode *Op, SelectionDAG &DAG) {
 // (CSEL (CSEL a b !cc F) d cc F) => (CSEL b d cc F)
 // (CSEL d (CSEL a b  cc F) cc F) => (CSEL d b cc F)
 // (CSEL d (CSEL a b !cc F) cc F) => (CSEL d a cc F)
-// (CSEL (OP x.. (CSEL a b cc F) y..) d cc F) => (CSEL (OP x.. a y..) d cc F)
-// CSINC/CSINV/CSNEG absorb (ADD x 1), (XOR x -1), (SUB 0 x), repsectively.
+// (CSEL (OP x.. (CSEL a b  cc F) y..) d cc F) => (CSEL (OP x.. a y..) d cc F)
+// (CSEL (OP x.. (CSEL a b !cc F) y..) d cc F) => (CSEL (OP x.. b y..) d cc F)
+// (CSEL d (OP x.. (CSEL a b  cc F) y..) cc F) => (CSEL d (OP x.. b y..) cc F)
+// (CSEL d (OP x.. (CSEL a b !cc F) y..) cc F) => (CSEL d (OP x.. a y..) cc F)
+// CSINC/CSINV/CSNEG absorb (ADD x 1), (XOR x -1), (SUB 0 x), respectively.
 static SDValue foldCSELOfCSELSameFlags(SDNode *N, SelectionDAG &DAG) {
   SDValue Flags = N->getOperand(3);
   auto CC = static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+  // AArch64CC::getInvertedCondCode for AL returns NV and vice versa. Which may
+  // select the wrong value. So ignore those cases entirely as they rarely used.
   if (CC == AArch64CC::AL || CC == AArch64CC::NV)
     return SDValue();
 
