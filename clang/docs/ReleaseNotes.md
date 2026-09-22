@@ -201,11 +201,6 @@ features cannot lower the translation-unit ABI level;
   them to an enumeration type with a fixed `bool` underlying type. This
   resolves [CWG1094](https://wg21.link/cwg1094).
 
-- Clang now diagnoses an error if an `#embed` directive or `__has_embed`
-  statement uses a parameter name (i.e. `limit`, `prefix`, `suffix`, `if_empty`)
-  that has previously been defined as a macro. This resolves
-  [CWG3013](https://wg21.link/cwg3013), which marks such code as ill-formed.
-
 ### C Language Changes
 
 #### C2y Feature Support
