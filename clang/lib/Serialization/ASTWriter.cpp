@@ -5284,9 +5284,11 @@ void ASTWriter::WriteOpenMPRequiresDecls(Sema &SemaRef) {
   if (Decls.empty())
     return;
   RecordData Record;
-  for (const auto *D : Decls)
-    AddDeclRef(D, Record);
-  Stream.EmitRecord(OMP_REQUIRES_DECLS, Record);
+  for (const OMPRequiresDecl *D : Decls)
+    if (!D->isFromASTFile())
+      AddDeclRef(D, Record);
+  if (!Record.empty())
+    Stream.EmitRecord(OMP_REQUIRES_DECLS, Record);
 }
 
 void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
