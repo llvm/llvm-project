@@ -57,6 +57,19 @@ void collapse_stmt_expr_step() {
     ;
 }
 
+// CHECK-LABEL: define {{.*}}void @_Z33collapse_stmt_expr_lb_non_rect_ubv(
+// CHECK:         %c = alloca i32,
+// CHECK-NOT:     %c{{[0-9]+}} = alloca
+// CHECK:         store i32 0, ptr %c,
+// CHECK-NOT:     store i32 0, ptr %c,
+// CHECK:         ret void
+void collapse_stmt_expr_lb_non_rect_ub() {
+#pragma omp for collapse(2)
+  for (int i = 0; i < 10; i++)
+    for (int j = ({int c = 0; 0; }); j < 10 + i; j++)
+    ;
+}
+
 // CHECK-LABEL: define {{.*}}void @_Z14stmt_expr_initv(
 // CHECK:         %a = alloca i32,
 // CHECK-NOT:     %a{{[0-9]+}} = alloca
