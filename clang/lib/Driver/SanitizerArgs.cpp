@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
@@ -813,6 +815,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
         << "-ffixed-x18";
+  }
+
+  if ((Kinds & SanitizerKind::ShadowCallStack) && TC.getTriple().isRISCV() &&
+      Args.hasArg(options::OPT_msave_restore)) {
+    D.Diag(diag::warn_opt_unsupported_with_feature_on_target)
+        << lastArgumentForMask(D, Args, Kinds & SanitizerKind::ShadowCallStack)
+        << "-msave-restore" << "RISC-V";
   }
 
   if ((Kinds & SanitizerKind::ShadowCallStack) &&

@@ -134,10 +134,13 @@ public:
   void setLibCallStackSize(unsigned Size) { LibCallStackSize = Size; }
 
   bool useSaveRestoreLibCalls(const MachineFunction &MF) const {
+    bool HasShadowStack =
+        MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack) ||
+        MF.getFunction().hasFnAttribute("hw-shadow-stack");
+    bool HasSaveRestore = MF.getSubtarget<RISCVSubtarget>().enableSaveRestore();
     // We cannot use fixed locations for the callee saved spill slots if the
     // function uses a varargs save area, or is an interrupt handler.
-    return !isPushable(MF) &&
-           MF.getSubtarget<RISCVSubtarget>().enableSaveRestore() &&
+    return !isPushable(MF) && HasSaveRestore && !HasShadowStack &&
            VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall() &&
            !MF.getFunction().hasFnAttribute("interrupt");
   }
