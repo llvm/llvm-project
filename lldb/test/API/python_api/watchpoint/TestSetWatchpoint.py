@@ -37,11 +37,7 @@ class SetWatchpointAPITestCase(TestBase):
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "// local_value_breakpoint", lldb.SBFileSpec(self.source, False)
         )
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread, "Stopped at breakpoint inside watch_local()")
-        frame = thread.GetSelectedFrame()
+        frame = thread.selected_frame
 
         value: lldb.SBValue = frame.FindVariable("local_value")
         self.assertTrue(value.IsValid(), "Found stack-local 'local_value'")
@@ -57,7 +53,7 @@ class SetWatchpointAPITestCase(TestBase):
         # Continue to the read watchpoint.
         error = process.Continue()
         self.assertSuccess(error)
-        self.assertEqual(process.state, lldb.eStateStopped)
+        self.assertState(process.state, lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonWatchpoint)
         self.assertTrue(thread, "stopped at watchpoint read")
 
