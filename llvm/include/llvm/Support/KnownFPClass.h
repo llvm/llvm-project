@@ -469,12 +469,16 @@ struct KnownFPClass {
                                            DenormalMode Mode);
 
   /// Propagate known class for fpext.
-  LLVM_ABI static KnownFPClass fpext(const KnownFPClass &KnownSrc,
-                                     const fltSemantics &DstTy,
-                                     const fltSemantics &SrcTy);
+  LLVM_ABI static KnownFPClass
+  fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
+        const fltSemantics &SrcTy,
+        DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for fptrunc.
-  LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc);
+  LLVM_ABI static KnownFPClass
+  fptrunc(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
+          const fltSemantics &SrcTy,
+          DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p

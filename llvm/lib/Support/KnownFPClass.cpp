@@ -873,40 +873,93 @@ KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY,
   return Known;
 }
 
-KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
-                                 const fltSemantics &DstTy,
-                                 const fltSemantics &SrcTy) {
-  // Infinity, nan and zero propagate from source.
-  KnownFPClass Known = KnownSrc;
+static KnownFPClass fpconvert(const KnownFPClass &KnownSrc,
+                              const fltSemantics &DstSem,
+                              const fltSemantics &SrcSem, DenormalMode Mode) {
+  KnownFPClass Known;
+  APFloatBase::Semantics DstType = APFloatBase::SemanticsToEnum(DstSem);
+  APFloatBase::Semantics SrcType = APFloatBase::SemanticsToEnum(SrcSem);
+  auto isSupported = [](auto SemType) -> bool {
+    switch (SemType) {
+    case APFloatBase::S_IEEEhalf:
+    case APFloatBase::S_BFloat:
+    case APFloatBase::S_IEEEsingle:
+    case APFloatBase::S_IEEEdouble:
+    case APFloatBase::S_IEEEquad:
+    case APFloatBase::S_x87DoubleExtended:
+      return true;
+    default:
+      return false;
+    }
+  };
 
-  // All subnormal inputs should be in the normal range in the result type.
-  if (APFloat::isRepresentableAsNormalIn(SrcTy, DstTy)) {
-    if (Known.getKnownFPClasses() & fcPosSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcPosNormal);
-    if (Known.getKnownFPClasses() & fcNegSubnormal)
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | fcNegNormal);
+  // Return unknown for types we have not validated.
+  if (!isSupported(SrcType) || !isSupported(DstType))
+    return Known;
+
+  Known.propagateNonNaN(KnownSrc);
+
+  const bool NonZeroFiniteSrcIsNormalInDst =
+      APFloat::isRepresentableAsNormalIn(SrcSem, DstSem);
+
+  const bool NormalSrcIsFiniteDst = DstSem.maxExponent > SrcSem.maxExponent ||
+                                    (DstSem.maxExponent == SrcSem.maxExponent &&
+                                     DstSem.precision >= SrcSem.precision);
+
+  const bool KnownNeverNonZeroPosFinite =
+      KnownSrc.isKnownNever(fcPosNormal | fcPosSubnormal);
+  const bool KnownNeverNonZeroNegFinite =
+      KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal);
+
+  // Rule out infinity.
+  // We are assuming that subnormal values have a magnitude less than 1.0.
+  if (KnownSrc.isKnownNever(fcPosInf) &&
+      (KnownSrc.isKnownNever(fcPosNormal) || NormalSrcIsFiniteDst))
+    Known.knownNot(fcPosInf);
+  if (KnownSrc.isKnownNever(fcNegInf) &&
+      (KnownSrc.isKnownNever(fcNegNormal) || NormalSrcIsFiniteDst))
+    Known.knownNot(fcNegInf);
+
+  // Rule out normal.
+  if (KnownNeverNonZeroPosFinite)
+    Known.knownNot(fcPosNormal);
+  if (KnownNeverNonZeroNegFinite)
+    Known.knownNot(fcNegNormal);
+
+  // Rule out subnormal.
+  if (NonZeroFiniteSrcIsNormalInDst) {
     Known.knownNot(fcSubnormal);
+  } else {
+    if (KnownNeverNonZeroPosFinite)
+      Known.knownNot(fcPosSubnormal);
+    if (KnownNeverNonZeroNegFinite)
+      Known.knownNot(fcNegSubnormal);
   }
 
-  // Sign bit of a nan isn't guaranteed.
-  if (!Known.isKnownNeverNaN())
-    Known.setSignBit(std::nullopt);
+  // Rule out positive zero.
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode) &&
+      (KnownNeverNonZeroPosFinite || NonZeroFiniteSrcIsNormalInDst))
+    Known.knownNot(fcPosZero);
+
+  // Rule out negative zero.
+  if (KnownSrc.isKnownNeverLogicalNegZero(Mode) &&
+      (KnownNeverNonZeroNegFinite || NonZeroFiniteSrcIsNormalInDst))
+    Known.knownNot(fcNegZero);
 
   return Known;
 }
 
-KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
-  KnownFPClass Known;
+KnownFPClass KnownFPClass::fpext(const KnownFPClass &KnownSrc,
+                                 const fltSemantics &DstTy,
+                                 const fltSemantics &SrcTy, DenormalMode Mode) {
+  return fpconvert(KnownSrc, DstTy, SrcTy, Mode);
+}
 
-  // Sign should be preserved
-  // TODO: Handle cannot be ordered greater than zero
-  if (KnownSrc.cannotBeOrderedLessThanZero())
-    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-
-  Known.propagateNonNaN(KnownSrc);
-
-  // Infinity needs a range check.
-  return Known;
+KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc,
+                                   const fltSemantics &DstTy,
+                                   const fltSemantics &SrcTy,
+                                   DenormalMode Mode) {
+  return fpconvert(KnownSrc, DstTy, SrcTy, Mode);
 }
 
 KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,

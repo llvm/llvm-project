@@ -134,7 +134,7 @@ define float @ret_fptrunc_nonorm(double nofpclass(norm) %arg0) {
 }
 
 define float @ret_fptrunc_posonly(double nofpclass(ninf nnorm nsub nzero) %arg0) {
-; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @ret_fptrunc_posonly
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fptrunc_posonly
 ; CHECK-SAME: (double nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -164,7 +164,7 @@ define float @ret_fptrunc_posonly_zero_nan(double nofpclass(ninf nnorm nsub nan)
 }
 
 define float @ret_fptrunc_posonly_nan(double nofpclass(ninf nnorm nsub nzero nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan ninf nsub nnorm) float @ret_fptrunc_posonly_nan
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_fptrunc_posonly_nan
 ; CHECK-SAME: (double nofpclass(nan ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -174,7 +174,7 @@ define float @ret_fptrunc_posonly_nan(double nofpclass(ninf nnorm nsub nzero nan
 }
 
 define float @ret_fptrunc_negonly(double nofpclass(pinf pnorm psub pzero) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_negonly
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_fptrunc_negonly
 ; CHECK-SAME: (double nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -184,7 +184,7 @@ define float @ret_fptrunc_negonly(double nofpclass(pinf pnorm psub pzero) %arg0)
 }
 
 define float @ret_fptrunc_negonly_zero(double nofpclass(pinf pnorm psub) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_negonly_zero
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_fptrunc_negonly_zero
 ; CHECK-SAME: (double nofpclass(pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -194,7 +194,7 @@ define float @ret_fptrunc_negonly_zero(double nofpclass(pinf pnorm psub) %arg0) 
 }
 
 define float @ret_fptrunc_negonly_zero_nan(double nofpclass(pinf pnorm psub nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_fptrunc_negonly_zero_nan
+; CHECK-LABEL: define nofpclass(nan pinf psub pnorm) float @ret_fptrunc_negonly_zero_nan
 ; CHECK-SAME: (double nofpclass(nan pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -331,6 +331,86 @@ define float @ret_fptrunc_round_nonorm(double nofpclass(norm) %arg0) {
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
   ret float %ext
+}
+
+define bfloat @ret_fptrunc_f32_bf16__sub(float nofpclass(nan inf zero norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf) bfloat @ret_fptrunc_f32_bf16__sub
+; CHECK-SAME: (float nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define bfloat @ret_fptrunc_f32_bf16__psub(float nofpclass(nan inf zero nsub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) bfloat @ret_fptrunc_f32_bf16__psub
+; CHECK-SAME: (float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define bfloat @ret_fptrunc_f32_bf16__nsub(float nofpclass(nan inf zero psub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) bfloat @ret_fptrunc_f32_bf16__nsub
+; CHECK-SAME: (float nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define bfloat @ret_fptrunc_f32_bf16__norm(float nofpclass(nan inf zero sub) %arg0) {
+; CHECK-LABEL: define nofpclass(nan) bfloat @ret_fptrunc_f32_bf16__norm
+; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc float [[ARG0]] to bfloat
+; CHECK-NEXT:    ret bfloat [[EXT]]
+;
+  %ext = fptrunc float %arg0 to bfloat
+  ret bfloat %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__sub(fp128 nofpclass(nan inf zero norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf) x86_fp80 @ret_fptrunc_f128_f80__sub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__psub(fp128 nofpclass(nan inf zero nsub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) x86_fp80 @ret_fptrunc_f128_f80__psub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero nsub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__nsub(fp128 nofpclass(nan inf zero psub norm) %arg0) {
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) x86_fp80 @ret_fptrunc_f128_f80__nsub
+; CHECK-SAME: (fp128 nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
+}
+
+define x86_fp80 @ret_fptrunc_f128_f80__norm(fp128 nofpclass(nan inf zero sub) %arg0) {
+; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_fptrunc_f128_f80__norm
+; CHECK-SAME: (fp128 nofpclass(nan inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fptrunc fp128 [[ARG0]] to x86_fp80
+; CHECK-NEXT:    ret x86_fp80 [[EXT]]
+;
+  %ext = fptrunc fp128 %arg0 to x86_fp80
+  ret x86_fp80 %ext
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
