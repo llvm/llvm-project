@@ -1647,6 +1647,54 @@ define i32 @test_umin_sub1_nuw(i32 %x, i32 range(i32 1, 0) %w) {
   ret i32 %r
 }
 
+declare void @llvm.assume(i1)
+
+define i32 @test_umin_sub1_assume_nonzero(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umin_sub1_assume_nonzero(
+; CHECK:       call void @llvm.assume(i1
+; CHECK:       [[SUB:%.*]] = add i32 [[W:%.*]], -1
+; CHECK-NEXT:  [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:  ret i32 [[R]]
+  %nonzero = icmp ne i32 %w, 0
+  call void @llvm.assume(i1 %nonzero)
+  %cmp = icmp ult i32 %x, %w
+  %sub = add i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
+define i32 @test_umin_sub1_guard_nonzero(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umin_sub1_guard_nonzero(
+; CHECK:       use:
+; CHECK:       [[SUB:%.*]] = add i32 [[W:%.*]], -1
+; CHECK-NEXT:  [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:  ret i32 [[R]]
+entry:
+  %zero = icmp eq i32 %w, 0
+  br i1 %zero, label %zero.bb, label %use
+
+zero.bb:
+  ret i32 0
+
+use:
+  %cmp = icmp ult i32 %x, %w
+  %sub = add i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
+define i32 @test_umin_sub1_unknown_nonzero(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umin_sub1_unknown_nonzero(
+; CHECK:       [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:  [[SUB:%.*]] = add i32 [[W]], -1
+; CHECK-NEXT:  [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
+; CHECK-NEXT:  ret i32 [[R]]
+  %cmp = icmp ult i32 %x, %w
+  %sub = add i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
 define i32 @test_smin_sub1_nsw_swapped(i32 %x, i32 %w) {
 ; CHECK-LABEL: @test_smin_sub1_nsw_swapped(
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[W:%.*]], -1

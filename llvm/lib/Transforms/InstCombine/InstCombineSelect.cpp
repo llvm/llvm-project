@@ -732,7 +732,7 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // canonicalized to "add %x, -1" discarding the nuw flag.
   if (Pred == CmpInst::ICMP_ULT &&
       match(FVal, m_Add(m_Specific(CmpRHS), m_AllOnes())) &&
-      isKnownNonZero(CmpRHS, SQ)) {
+      isKnownNonZero(CmpRHS, SQ.getWithInstruction(Cmp))) {
     cast<Instruction>(FVal)->setHasNoSignedWrap(false);
     cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
     return Builder.CreateBinaryIntrinsic(Intrinsic::umin, TVal, FVal);
