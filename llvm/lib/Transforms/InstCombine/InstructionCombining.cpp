@@ -3810,7 +3810,6 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
             Users.emplace_back(I);
             continue;
           case Intrinsic::launder_invariant_group:
-          case Intrinsic::strip_invariant_group:
             Users.emplace_back(I);
             Worklist.push_back(I);
             continue;
