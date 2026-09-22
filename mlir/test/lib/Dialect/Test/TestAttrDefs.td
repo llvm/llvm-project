@@ -228,6 +228,20 @@ def TestAttrWithOptionalUnsigned : Test_Attr<"TestAttrWithOptionalUnsigned"> {
   let mnemonic = "attr_with_optional_unsigned";
 }
 
+def TestAttrWithInt8Params : Test_Attr<"TestAttrWithInt8Params"> {
+  let parameters = (ins "uint8_t":$unsigned8, "int8_t":$signed8);
+  let assemblyFormat = "`<` $unsigned8 `,` $signed8 `>`";
+  let mnemonic = "attr_with_int8_params";
+}
+
+// Test that plain `char` parameters print as bare keywords or quoted strings,
+// not as integers (unlike uint8_t/int8_t which are widened numerically).
+def TestAttrWithCharParam : Test_Attr<"TestAttrWithCharParam"> {
+  let parameters = (ins "char":$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_char_param";
+}
+
 def TestAttrWithOptionalEnum : Test_Attr<"TestAttrWithOptionalEnum"> {
   let parameters = (ins OptionalParameter<"std::optional<SimpleEnum>">:$value);
   let assemblyFormat = "`<` $value `>`";
