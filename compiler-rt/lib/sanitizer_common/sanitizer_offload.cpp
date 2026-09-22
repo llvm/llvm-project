@@ -102,7 +102,7 @@ bool Offload::Discover() {
                                   Out) == HSA_STATUS_SUCCESS;
   };
   auto Pool = [&](hsa_agent_t Agent) {
-    hsa_amd_memory_pool_t Found{};
+    hsa_amd_memory_pool_t Fine{};
     Iterate<hsa_amd_memory_pool_t>(
         Api.hsa_amd_agent_iterate_memory_pools, Agent,
         [&](hsa_amd_memory_pool_t Mem) {
@@ -118,10 +118,10 @@ bool Offload::Discover() {
               HSA_STATUS_SUCCESS)
             return HSA_STATUS_SUCCESS;
           if (Flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED)
-            Found = Mem;
+            Fine = Mem;
           return HSA_STATUS_SUCCESS;
         });
-    return Found;
+    return Fine;
   };
 
   CheckHsa(Iterate<hsa_agent_t>(Api.hsa_iterate_agents, [&](hsa_agent_t Agent) {
@@ -292,6 +292,49 @@ bool Offload::Alloc(const Device& D, uptr Bytes, void** Out) {
     Api.hsa_amd_memory_pool_free(P);
     return false;
   }
+  *Out = P;
+  return true;
+}
+
+bool Offload::GetMemoryPool(hsa_agent_t Agent, hsa_amd_memory_pool_t* Pool) {
+  Lock L(&OffloadMtx);
+  if (!Ready() || !Pool)
+    return false;
+  *Pool = {};
+  hsa_status_t Status = Iterate<hsa_amd_memory_pool_t>(
+      Api.hsa_amd_agent_iterate_memory_pools, Agent,
+      [&](hsa_amd_memory_pool_t Mem) {
+        hsa_amd_segment_t Segment;
+        u32 Flags = 0;
+        bool Allowed = false;
+        if (Api.hsa_amd_memory_pool_get_info(Mem,
+                                             HSA_AMD_MEMORY_POOL_INFO_SEGMENT,
+                                             &Segment) != HSA_STATUS_SUCCESS ||
+            Segment != HSA_AMD_SEGMENT_GLOBAL ||
+            Api.hsa_amd_memory_pool_get_info(
+                Mem, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &Flags) !=
+                HSA_STATUS_SUCCESS ||
+            !(Flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED) ||
+            Api.hsa_amd_memory_pool_get_info(
+                Mem, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
+                &Allowed) != HSA_STATUS_SUCCESS ||
+            !Allowed)
+          return HSA_STATUS_SUCCESS;
+        *Pool = Mem;
+        return HSA_STATUS_SUCCESS;
+      });
+  return Status == HSA_STATUS_SUCCESS && Pool->handle;
+}
+
+bool Offload::Allocate(hsa_amd_memory_pool_t Pool, uptr Bytes, void** Out) {
+  Lock L(&OffloadMtx);
+  if (!Ready() || !Pool.handle || !Bytes || !Out)
+    return false;
+  void* P = nullptr;
+  if (Api.hsa_amd_memory_pool_allocate(Pool, Bytes, 0, &P) !=
+          HSA_STATUS_SUCCESS ||
+      !P)
+    return false;
   *Out = P;
   return true;
 }

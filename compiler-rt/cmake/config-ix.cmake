@@ -768,7 +768,7 @@ if(COMPILER_RT_SUPPORTED_ARCH)
 endif()
 message(STATUS "Compiler-RT supported architectures: ${COMPILER_RT_SUPPORTED_ARCH}")
 
-set(ALL_SANITIZERS asan;rtsan;dfsan;msan;hwasan;tsan;tysan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;nsan;asan_abi)
+set(ALL_SANITIZERS asan;rtsan;dfsan;msan;hwasan;tsan;csan;tysan;safestack;cfi;scudo_standalone;ubsan_minimal;gwp_asan;nsan;asan_abi)
 set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
     "sanitizers to build if supported on the target (all;${ALL_SANITIZERS})")
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
@@ -895,6 +895,15 @@ if ((COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
   set(COMPILER_RT_HAS_UBSAN TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN FALSE)
+endif()
+
+if ((COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
+     OS_NAME MATCHES "Linux" AND NOT ANDROID)
+    OR (COMPILER_RT_GPU_BUILD AND COMPILER_RT_TARGET_AMDGPU AND
+        UBSAN_SUPPORTED_ARCH))
+  set(COMPILER_RT_HAS_CSAN TRUE)
+else()
+  set(COMPILER_RT_HAS_CSAN FALSE)
 endif()
 
 if (UBSAN_SUPPORTED_ARCH AND
