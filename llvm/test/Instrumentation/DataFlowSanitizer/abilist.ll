@@ -88,8 +88,8 @@ define ptr @g(i32) {
 
 ; CHECK: define linkonce_odr i32 @"dfsw$custom4"(i32 %0, ...)
 
-; CHECK: declare void @__dfsw_custom1(i32, i32, i8, i8)
-; CHECK: declare i32 @__dfsw_custom2(i32, i32, i8, i8, ptr)
+; CHECK: declare void @__dfsw_custom1(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext)
+; CHECK: declare i32 @__dfsw_custom2(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, ptr)
 
-; CHECK: declare void @__dfsw_custom3(i32, i8, ptr, ...)
-; CHECK: declare i32 @__dfsw_custom4(i32, i8, ptr, ptr, ...)
+; CHECK: declare void @__dfsw_custom3(i32 zeroext, i8 zeroext, ptr, ...)
+; CHECK: declare i32 @__dfsw_custom4(i32 zeroext, i8 zeroext, ptr, ptr, ...)

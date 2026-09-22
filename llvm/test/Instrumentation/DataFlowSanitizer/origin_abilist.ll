@@ -281,14 +281,14 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
 ; CHECK-NEXT:  call void @__dfso_custom_cb_without_ret(ptr %0, i32 %1, i32 %2, i8 zeroext [[CS]], i8 zeroext [[AS]], i8 zeroext [[BS]], i32 zeroext [[CO]], i32 zeroext [[AO]], i32 zeroext [[BO]])
 ; CHECK-NEXT:  ret void
 
-; CHECK: declare void @__dfso_custom_without_ret(i32, i32, i8, i8, i32, i32)
+; CHECK: declare void @__dfso_custom_without_ret(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, i32 zeroext, i32 zeroext)
 
-; CHECK: declare i32 @__dfso_custom_with_ret(i32, i32, i8, i8, ptr, i32, i32, ptr)
+; CHECK: declare i32 @__dfso_custom_with_ret(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, ptr, i32 zeroext, i32 zeroext, ptr)
 
-; CHECK: declare i32 @__dfso_custom_cb_with_ret(ptr, i32, i32, i8, i8, i8, ptr, i32, i32, i32, ptr)
+; CHECK: declare i32 @__dfso_custom_cb_with_ret(ptr, i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, i8 zeroext, ptr, i32 zeroext, i32 zeroext, i32 zeroext, ptr)
 
-; CHECK: declare void @__dfso_custom_cb_without_ret(ptr, i32, i32, i8, i8, i8, i32, i32, i32)
+; CHECK: declare void @__dfso_custom_cb_without_ret(ptr, i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, i8 zeroext, i32 zeroext, i32 zeroext, i32 zeroext)
 
-; CHECK: declare void @__dfso_custom_varg_without_ret(i32, i32, i8, i8, ptr, i32, i32, ptr, ...)
+; CHECK: declare void @__dfso_custom_varg_without_ret(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, ptr, i32 zeroext, i32 zeroext, ptr, ...)
 
-; CHECK: declare i32 @__dfso_custom_varg_with_ret(i32, i32, i8, i8, ptr, ptr, i32, i32, ptr, ptr, ...)
+; CHECK: declare i32 @__dfso_custom_varg_with_ret(i32 zeroext, i32 zeroext, i8 zeroext, i8 zeroext, ptr, ptr, i32 zeroext, i32 zeroext, ptr, ptr, ...)
