@@ -5,14 +5,12 @@
 ! the scope of the module, with a linkage name, and visible outside this compile
 ! unit.
 
-! Two DIFile name this file: the compile unit's, which keeps the path the
-! driver was given, and the one anything with a source location is described
-! in, which is that path split into a base name and a parent. Match them on
-! that difference rather than on the order they happen to be emitted in.
-! CHECK-DAG: ![[CUFILE:.*]] = !DIFile(filename: "{{.*}}/debug-module-constant.f90", directory: "{{.*}}")
-! CHECK-DAG: ![[FILE:.*]] = !DIFile(filename: "debug-module-constant.f90", directory: "{{.*}}")
-! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}}file: ![[CUFILE]]{{.*}})
-! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE]]{{.*}})
+! More than one DIFile can name this source, so take the one the module is
+! described in from the module itself rather than trying to tell them apart by
+! how each spells the path.
+! CHECK-DAG: ![[CU:.*]] = distinct !DICompileUnit({{.*}})
+! CHECK-DAG: ![[MOD:.*]] = !DIModule(scope: ![[CU]], name: "helper", file: ![[FILE:[0-9]+]]{{.*}})
+! CHECK-DAG: ![[FILE]] = !DIFile(filename: "debug-module-constant.f90"{{.*}})
 ! CHECK-DAG: ![[I4:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 ! CHECK-DAG: ![[R4:.*]] = !DIBasicType(name: "real(kind=4)", size: 32, encoding: DW_ATE_float)
 
