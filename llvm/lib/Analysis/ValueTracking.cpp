@@ -10050,11 +10050,8 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
 
   // (a - b) pred C -> a != b, if 0 pred C is false
   // (ptrtoint(a) - ptrtoint(b)) pred C -> a != b, if 0 pred C is false
-  const APInt *L1C;
   Value *A, *B;
-  if (ICmpInst::isEquality(RPred) && match(L1, m_APInt(L1C)) &&
-      !ConstantRange::makeExactICmpRegion(LPred, *L1C)
-           .contains(APInt::getZero(L1C->getBitWidth())) &&
+  if (ICmpInst::isEquality(RPred) && cmpExcludesZero(LPred, L1) &&
       match(L0, m_Sub(m_Value(A), m_Value(B))) &&
       ((A == R0 && B == R1) || (A == R1 && B == R0) ||
        (match(A, m_PtrToIntOrAddr(m_Specific(R0))) &&
