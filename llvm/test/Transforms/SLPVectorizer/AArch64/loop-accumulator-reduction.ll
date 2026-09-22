@@ -692,7 +692,7 @@ define double @dup_exit_edges_bypass(ptr %p, i64 %n, double %y, i32 %sw) {
 ; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LOOP]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = phi double [ poison, %[[LOOP]] ], [ [[Y]], %[[ENTRY]] ], [ [[Y]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP2]], double [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SLPRDX_FROMLOOP]], double [[TMP2]], double [[RES]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
 entry:
@@ -797,7 +797,7 @@ define double @early_exit_in_loop_value(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LATCH]] ], [ false, %[[LOOP]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = phi double [ poison, %[[LATCH]] ], [ [[TMP1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
-; CHECK-NEXT:    [[TMP2:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP3]], double [[RES]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[SLPRDX_FROMLOOP]], double [[TMP3]], double [[RES]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
 entry:
@@ -1323,7 +1323,7 @@ define double @bypass_from_sibling_loop(ptr %p, ptr %q, i64 %n, i64 %m, i1 %c) {
 ; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LOOP]] ], [ false, %[[LOOP2]] ]
 ; CHECK-NEXT:    [[RES1:%.*]] = phi double [ poison, %[[LOOP]] ], [ [[SUM2]], %[[LOOP2]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
-; CHECK-NEXT:    [[RES:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP1]], double [[RES1]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[SLPRDX_FROMLOOP]], double [[TMP1]], double [[RES1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
 entry:
