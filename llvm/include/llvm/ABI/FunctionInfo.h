@@ -72,10 +72,13 @@ private:
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
   bool CanBeFlattened : 1;
+  unsigned NeededIntRegs : 3;
+  unsigned NeededSseRegs : 3;
 
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false), CanBeFlattened(false) {}
+        IndirectRealign(false), CanBeFlattened(false), NeededIntRegs(0),
+        NeededSseRegs(0) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -161,6 +164,18 @@ public:
   unsigned getDirectOffset() const {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
     return DirectAttr.Offset;
+  }
+
+  /// How many integer and vector argument registers this argument occupies.
+  /// Both zero means it occupies none and travels in memory, which is also
+  /// what a target whose classifier does not record the demand reports.
+  unsigned getNeededIntRegs() const { return NeededIntRegs; }
+  unsigned getNeededSseRegs() const { return NeededSseRegs; }
+
+  void setNeededRegs(unsigned IntRegs, unsigned SseRegs) {
+    assert(IntRegs <= 7 && SseRegs <= 7 && "Register demand does not fit");
+    NeededIntRegs = IntRegs;
+    NeededSseRegs = SseRegs;
   }
 
   MaybeAlign getDirectAlign() const {

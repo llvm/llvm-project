@@ -53,7 +53,7 @@
 // --------
 // Before:
 //   %c128 = arith.constant 128 : index
-//   %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+//   %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
 //   acc.compute_region launch(%arg0 = %tx) {
 //     %c0 = arith.constant 0 : index
 //     %c1 = arith.constant 1 : index
@@ -529,6 +529,12 @@ private:
   /// Reserve \p bytes from the shared-memory budget.
   bool tryAllocateSharedMemory(int64_t bytes);
 
+  /// Record \p privateLocal as given per-thread storage, for the closing
+  /// remark. Whether that storage lands in registers or in local memory is
+  /// decided later, so the remark reports the allocation, not the placement.
+  /// Privates with no recoverable name or compiler temps are skipped.
+  void recordThreadPrivate(acc::PrivateLocalOp privateLocal);
+
   /// Element size in bytes for \p elementType .
   int64_t getElementSizeInBytes(Location loc, Type elementType) const;
 
@@ -701,6 +707,7 @@ private:
   acc::DefaultACCToGPUMappingPolicy defaultPolicy;
   SharedMemoryBudget sharedMemBudget;
   SmallVector<std::string> sharedMemPrivateVarNames;
+  SmallVector<std::string> threadPrivateVarNames;
   llvm::SmallVector<Operation *, 4> deferredBarrierSeqLoops;
 
   Value getThreadId(Location loc, gpu::Dimension dim) {
@@ -863,6 +870,16 @@ ACCCGToGPULowering::isEligibleForSharedMemory(acc::PrivateLocalOp privateLocal,
 
 bool ACCCGToGPULowering::tryAllocateSharedMemory(int64_t bytes) {
   return sharedMemBudget.tryAllocate(bytes);
+}
+
+void ACCCGToGPULowering::recordThreadPrivate(acc::PrivateLocalOp privateLocal) {
+  std::string varName = accSupport.getVariableName(privateLocal.getResult());
+  // A name that could not be recovered, or a compiler temp are skipped.
+  if (varName.empty())
+    return;
+  // The same variable reaches this point once per acc.private_local it has.
+  if (!llvm::is_contained(threadPrivateVarNames, varName))
+    threadPrivateVarNames.push_back(varName);
 }
 
 FailureOr<arith::AtomicRMWKind>
@@ -1249,6 +1266,14 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
   if (hasFailed)
     return failure();
+
+  if (!threadPrivateVarNames.empty()) {
+    accSupport.emitRemark(computeRegion, [&]() {
+      return (llvm::Twine("Thread-private storage used for ") +
+              llvm::join(threadPrivateVarNames, ","))
+          .str();
+    });
+  }
 
   if (!sharedMemPrivateVarNames.empty()) {
     accSupport.emitRemark(computeRegion, [&]() {
@@ -2577,6 +2602,8 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   }
   Operation *privatizeUser = getOnlyUser(tracked);
   assert(privatizeUser && "expected PrivateLocalOp user for privatize");
+  acc::PrivateLocalOp privateLocalUser =
+      dyn_cast<acc::PrivateLocalOp>(privatizeUser);
 
   std::pair<SmallVector<mlir::acc::GPUParallelDimAttr>,
             SmallVector<mlir::acc::GPUParallelDimAttr>>
@@ -2608,6 +2635,7 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
   if (threadXActive &&
       canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
     auto alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+    recordThreadPrivate(privateLocalUser);
     mapping.map(privatize.getResult(), alloca.getResult());
     return alloca.getResult();
   }
@@ -2666,6 +2694,7 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
       // Static sizes: use alloca (stack allocation)
       auto alloca =
           memref::AllocaOp::create(rewriter, privatize->getLoc(), baseTy);
+      recordThreadPrivate(privateLocalUser);
       mapping.map(privatize.getResult(), alloca.getResult());
       return alloca.getResult();
     }
@@ -2852,6 +2881,7 @@ void ACCCGToGPULowering::processPrivateLocal(
          (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+      recordThreadPrivate(privateLocal);
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);
@@ -2942,6 +2972,7 @@ void ACCCGToGPULowering::processPrivateLocal(
          (arrayAccum && storageHasThreadX(privateLocal, computeRegion))) &&
         canUseStackAlloca(baseTy, loc, options.maxThreadPrivateStack)) {
       Value alloca = memref::AllocaOp::create(rewriter, loc, baseTy);
+      recordThreadPrivate(privateLocal);
       if (arrayAccum) {
         FailureOr<arith::AtomicRMWKind> kind = getReductionKind(
             arrayAccum.getReductionOperator(), baseTy.getElementType(), loc);

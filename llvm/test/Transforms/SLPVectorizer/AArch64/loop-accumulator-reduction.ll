@@ -12,7 +12,7 @@ define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP24:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV3:%.*]] = mul nuw i64 [[IV]], 3
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV3]]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[P0]], i64 1
@@ -35,30 +35,30 @@ define double @loop_acc_fadd(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[C3]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[C6]], i64 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> poison, double [[L1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP11]], double [[ACC]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double poison, double poison>, double [[L1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C1]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[C4]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[C7]], i64 2
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul reassoc nsz arcp contract afn <4 x double> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP25:%.*]] = fadd reassoc nsz arcp contract afn <4 x double> [[TMP12]], [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd fast <4 x double> [[TMP11]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double poison, double poison>, double [[L2]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C2]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP15]], double [[C5]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[C8]], i64 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul fast <4 x double> [[TMP14]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = fadd reassoc nsz arcp contract afn <4 x double> [[TMP25]], [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd fast <4 x double> [[TMP12]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x double> [[TMP19]], [[TMP21]]
-; CHECK-NEXT:    [[TMP24]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP22]])
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP22]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP23:%.*]] = phi double [ [[TMP24]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x double> [ [[SLPRDX_ACC1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
 ; CHECK-NEXT:    ret double [[TMP23]]
 ;
 entry:
@@ -511,7 +511,7 @@ define double @two_exit_phis(ptr %p, i64 %n, i1 %c) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP25:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[OP_RDX:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV3:%.*]] = mul nuw i64 [[IV]], 3
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV3]]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[P0]], i64 1
@@ -534,31 +534,31 @@ define double @two_exit_phis(ptr %p, i64 %n, i1 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[C3]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[C6]], i64 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> poison, double [[L1]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP11]], double [[ACC]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double poison, double poison>, double [[L1]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C1]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[C4]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> [[TMP9]], double [[C7]], i64 2
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul reassoc nsz arcp contract afn <4 x double> [[TMP7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP26:%.*]] = fadd reassoc nsz arcp contract afn <4 x double> [[TMP12]], [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd fast <4 x double> [[TMP11]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> <double poison, double -0.000000e+00, double poison, double poison>, double [[L2]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, double [[C2]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x double> [[TMP15]], double [[C5]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x double> [[TMP16]], double [[C8]], i64 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul fast <4 x double> [[TMP14]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = fadd reassoc nsz arcp contract afn <4 x double> [[TMP26]], [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd fast <4 x double> [[TMP12]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> <double poison, double poison, double poison, double 1.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP20]], <4 x double> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP22:%.*]] = fmul <4 x double> [[TMP19]], [[TMP21]]
-; CHECK-NEXT:    [[TMP25]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP22]])
+; CHECK-NEXT:    [[TMP25:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP22]])
+; CHECK-NEXT:    [[OP_RDX]] = fadd fast double [[TMP25]], [[ACC]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP23:%.*]] = phi double [ [[TMP25]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP24:%.*]] = phi double [ [[TMP25]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi double [ [[OP_RDX]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP24:%.*]] = phi double [ [[OP_RDX]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[R:%.*]] = fadd double [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
@@ -622,21 +622,22 @@ define double @dup_preheader_edges(ptr %p, i64 %n, double %init, i32 %sw) {
 ; CHECK-LABEL: define double @dup_preheader_edges(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], double [[INIT:%.*]], i32 [[SW:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SLPRDX_INIT:%.*]] = insertelement <4 x double> zeroinitializer, double [[INIT]], i32 0
 ; CHECK-NEXT:    switch i32 [[SW]], label %[[LOOP:.*]] [
 ; CHECK-NEXT:      i32 1, label %[[LOOP]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ [[INIT]], %[[ENTRY]] ], [ [[INIT]], %[[ENTRY]] ], [ [[OP_RDX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ [[SLPRDX_INIT]], %[[ENTRY]] ], [ [[SLPRDX_INIT]], %[[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX]] = fadd fast double [[TMP2]], [[ACC]]
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[OP_RDX]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x double> [ [[SLPRDX_ACC1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
 entry:
@@ -679,16 +680,19 @@ define double @dup_exit_edges_bypass(ptr %p, i64 %n, double %y, i32 %sw) {
 ; CHECK-NEXT:    ]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[OP_RDX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX]] = fadd fast double [[TMP2]], [[ACC]]
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ [[OP_RDX]], %[[LOOP]] ], [ [[Y]], %[[ENTRY]] ], [ [[Y]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x double> [ [[SLPRDX_ACC1]], %[[LOOP]] ], [ poison, %[[ENTRY]] ], [ poison, %[[ENTRY]] ]
+; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LOOP]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi double [ poison, %[[LOOP]] ], [ [[Y]], %[[ENTRY]] ], [ [[Y]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP2]], double [[RES]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
 entry:
@@ -777,11 +781,10 @@ define double @early_exit_in_loop_value(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[OP_RDX:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], %[[LATCH]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX]] = fadd fast double [[TMP3]], [[ACC]]
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x double> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[EC:%.*]] = fcmp ogt double [[TMP1]], 1.000000e+10
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LATCH]]
@@ -790,7 +793,11 @@ define double @early_exit_in_loop_value(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi double [ [[OP_RDX]], %[[LATCH]] ], [ [[TMP1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x double> [ [[SLPRDX_ACC1]], %[[LATCH]] ], [ poison, %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LATCH]] ], [ false, %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi double [ poison, %[[LATCH]] ], [ [[TMP1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[TMP2:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP3]], double [[RES]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
 entry:
@@ -1295,11 +1302,10 @@ define double @bypass_from_sibling_loop(ptr %p, ptr %q, i64 %n, i64 %m, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP:.*]], label %[[LOOP2:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[OP_RDX:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <4 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX]] = fadd fast double [[TMP1]], [[ACC]]
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <4 x double> [[SLPRDX_ACC]], [[TMP0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
@@ -1313,7 +1319,11 @@ define double @bypass_from_sibling_loop(ptr %p, ptr %q, i64 %n, i64 %m, i1 %c) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[J_NEXT]], [[M]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[EXIT]], label %[[LOOP2]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi double [ [[OP_RDX]], %[[LOOP]] ], [ [[SUM2]], %[[LOOP2]] ]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <4 x double> [ [[SLPRDX_ACC1]], %[[LOOP]] ], [ poison, %[[LOOP2]] ]
+; CHECK-NEXT:    [[SLPRDX_FROMLOOP:%.*]] = phi i1 [ true, %[[LOOP]] ], [ false, %[[LOOP2]] ]
+; CHECK-NEXT:    [[RES1:%.*]] = phi double [ poison, %[[LOOP]] ], [ [[SUM2]], %[[LOOP2]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[SLPRDX_EXIT]])
+; CHECK-NEXT:    [[RES:%.*]] = select fast i1 [[SLPRDX_FROMLOOP]], double [[TMP1]], double [[RES1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
 entry:
