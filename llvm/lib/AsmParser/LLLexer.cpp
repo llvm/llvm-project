@@ -670,6 +670,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(ptx_device);
   KEYWORD(spir_kernel);
   KEYWORD(spir_func);
+  KEYWORD(pisa_kernel);
   KEYWORD(intel_ocl_bicc);
   KEYWORD(x86_64_sysvcc);
   KEYWORD(win64cc);
