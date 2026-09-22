@@ -9,6 +9,7 @@ add_mlir_unittest(MLIRExecutionEngineTests
   DynamicMemRef.cpp
   StridedMemRef.cpp
   Invoke.cpp
+  WindowsArm64.cpp
 )
 
 mlir_target_link_libraries(MLIRExecutionEngineTests
