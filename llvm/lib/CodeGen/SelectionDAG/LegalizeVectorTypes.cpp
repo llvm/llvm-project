@@ -6337,9 +6337,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_ADDRSPACECAST(SDNode *N) {
   // when it is illegal.
   SDValue InOp = N->getOperand(0);
   EVT InVT = InOp.getValueType();
-  if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+  TargetLowering::LegalizeTypeAction InAction = getTypeAction(InVT);
+  if (InAction == TargetLowering::TypeWidenVector) {
     InOp = GetWidenedVector(InOp);
-  } else if (getTypeAction(InVT) != TargetLowering::TypeLegal) {
+  } else if (InAction != TargetLowering::TypeLegal) {
     EVT InWidenVT = EVT::getVectorVT(*DAG.getContext(),
                                      InVT.getVectorElementType(), WidenEC);
     InOp = DAG.getInsertSubvector(DL, DAG.getPOISON(InWidenVT), InOp, 0);
