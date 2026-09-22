@@ -277,7 +277,7 @@ public:
 
   bool simplifyInstruction(MachineInstr &MI) const override;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   // MIR printer helper function to annotate Operands with a comment.
