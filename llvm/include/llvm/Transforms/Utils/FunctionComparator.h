@@ -242,7 +242,7 @@ protected:
   /// References to the functions being compared are equal. Used for
   /// corresponding call targets and blockaddress functions, which stay
   /// valid if MergeFunc replaces one body with a forwarding thunk.
-  int cmpValuesAllowingSelfRef(const Value *L, const Value *R) const;
+  LLVM_ABI int cmpValuesAllowingSelfRef(const Value *L, const Value *R) const;
 
   /// Compare two Instructions for equivalence, similar to
   /// Instruction::isSameOperationAs.

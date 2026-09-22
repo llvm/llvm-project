@@ -53,7 +53,7 @@ module {
 // CHECK:       entry:                                            ; preds = %[[VAL_3:.*]]
 // CHECK:         br label %[[VAL_4:.*]]
 // CHECK:       omp.private.init:                                 ; preds = %[[VAL_2]]
-// CHECK:         %[[VAL_5:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({ { ptr, i64, i32, i8, i8, i8, i8 }, { ptr, i64, i32, i8, i8, i8, i8 } }, ptr null, i32 1) to i64))
+// CHECK:         %[[VAL_5:.*]] = tail call ptr @malloc(i64 48)
 // CHECK:         %[[VAL_6:.*]] = getelementptr { { ptr, i64, i32, i8, i8, i8, i8 }, { ptr, i64, i32, i8, i8, i8, i8 } }, ptr %[[VAL_5]], i32 0, i32 0
 // CHECK:         %[[VAL_7:.*]] = getelementptr { { ptr, i64, i32, i8, i8, i8, i8 }, { ptr, i64, i32, i8, i8, i8, i8 } }, ptr %[[VAL_5]], i32 0, i32 1
 // ...

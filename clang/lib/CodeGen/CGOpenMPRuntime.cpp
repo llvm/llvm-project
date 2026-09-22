@@ -817,20 +817,20 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
   llvm::Value *Size;
   llvm::Value *SizeInChars;
   auto *ElemType = OrigAddresses[N].first.getAddress().getElementType();
-  auto *ElemSizeOf = llvm::ConstantExpr::getSizeOf(ElemType);
+  auto *ElemSizeOf = llvm::ConstantInt::get(
+      CGF.SizeTy, CGF.CGM.getDataLayout().getTypeAllocSize(ElemType));
   if (AsArraySection) {
-    Size = CGF.Builder.CreatePtrDiff(ElemType,
-                                     OrigAddresses[N].second.getPointer(CGF),
-                                     OrigAddresses[N].first.getPointer(CGF));
-    Size = CGF.Builder.CreateZExtOrTrunc(Size, ElemSizeOf->getType());
-    Size = CGF.Builder.CreateNUWAdd(
-        Size, llvm::ConstantInt::get(Size->getType(), /*V=*/1));
-    SizeInChars = CGF.Builder.CreateNUWMul(Size, ElemSizeOf);
+    SizeInChars =
+        CGF.Builder.CreatePtrDiff(OrigAddresses[N].second.getPointer(CGF),
+                                  OrigAddresses[N].first.getPointer(CGF));
+    SizeInChars = CGF.Builder.CreateNUWAdd(SizeInChars, ElemSizeOf);
   } else {
     SizeInChars =
         CGF.getTypeSize(OrigAddresses[N].first.getType().getNonReferenceType());
-    Size = CGF.Builder.CreateExactUDiv(SizeInChars, ElemSizeOf);
   }
+  Size = ElemSizeOf->isOne()
+             ? SizeInChars
+             : CGF.Builder.CreateExactUDiv(SizeInChars, ElemSizeOf);
   Sizes.emplace_back(SizeInChars, Size);
   CodeGenFunction::OpaqueValueMapping OpaqueMap(
       CGF,
@@ -1422,7 +1422,7 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
   // the clang invariants used below might be broken.
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     SmallString<128> Buffer;
-    OMPBuilder.updateToLocation(CGF.Builder.saveIP());
+    OMPBuilder.updateToLocation(CGF.Builder);
     uint32_t SrcLocStrSize;
     auto *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(
         getIdentStringFromSourceLocation(CGF, Loc, Buffer), SrcLocStrSize);
@@ -6256,11 +6256,14 @@ namespace {
 /// Cleanup action for uses_allocators support.
 class OMPUsesAllocatorsActionTy final : public PrePostActionTy {
   ArrayRef<std::pair<const Expr *, const Expr *>> Allocators;
+  const OMPExecutableDirective &D;
+  bool IsOffloadEntry;
 
 public:
   OMPUsesAllocatorsActionTy(
-      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators)
-      : Allocators(Allocators) {}
+      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators,
+      const OMPExecutableDirective &D, bool IsOffloadEntry)
+      : Allocators(Allocators), D(D), IsOffloadEntry(IsOffloadEntry) {}
   void Enter(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
       return;
@@ -6268,6 +6271,12 @@ public:
       CGF.CGM.getOpenMPRuntime().emitUsesAllocatorsInit(
           CGF, AllocatorData.first, AllocatorData.second);
     }
+    // This kernel does not go through the device-side runtime
+    // init/deinit sequence (that is GPU-only), but the runtime still
+    // needs a '<kernel>_kernel_environment' global to know how the
+    // kernel was configured, so emit it directly here.
+    if (IsOffloadEntry)
+      CGF.CGM.getOpenMPRuntime().emitHostKernelEnvironment(D, CGF);
   }
   void Exit(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
@@ -6279,6 +6288,14 @@ public:
   }
 };
 } // namespace
+
+void CGOpenMPRuntime::emitHostKernelEnvironment(const OMPExecutableDirective &D,
+                                                CodeGenFunction &CGF) {
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
+  OMPBuilder.emitKernelEnvironment(CGF.Builder, Attrs);
+}
 
 void CGOpenMPRuntime::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
@@ -6295,7 +6312,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
       Allocators.emplace_back(D.Allocator, D.AllocatorTraits);
     }
   }
-  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators);
+  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators, D, IsOffloadEntry);
   CodeGen.setAction(UsesAllocatorAction);
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);
@@ -11811,7 +11828,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
                          CGF.AllocaInsertPt->getIterator());
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
-  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
+  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CGF.Builder);
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createTargetData(
           OmpLoc, AllocaIP, CodeGenIP, /*DeallocBlocks=*/{}, DeviceID,

@@ -1027,12 +1027,13 @@ int PythonFile::TranslateFdToPython(int our_fd) {
   Py_XDECREF(open_osf);
   if (!fd_obj)
     return -1;
-  if (!PyLong_Check(fd_obj)) {
-    Py_XDECREF(fd_obj);
-    return -1;
-  }
+
   long theirs = PyLong_AsLong(fd_obj);
   Py_XDECREF(fd_obj);
+  if (PyErr_Occurred()) {
+    PyErr_Clear();
+    return -1;
+  }
   return (int)theirs;
 }
 
@@ -1048,12 +1049,14 @@ int PythonFile::TranslateFdFromPython(int their_fd) {
   Py_XDECREF(get_handle);
   if (!handle_obj)
     return -1;
-  if (!PyLong_Check(handle_obj)) {
-    Py_XDECREF(handle_obj);
-    return -1;
-  }
+
   size_t handle = PyLong_AsSize_t(handle_obj);
   Py_XDECREF(handle_obj);
+  if (PyErr_Occurred()) {
+    PyErr_Clear();
+    return -1;
+  }
+
   return _open_osfhandle((intptr_t)handle, 0);
 }
 #else

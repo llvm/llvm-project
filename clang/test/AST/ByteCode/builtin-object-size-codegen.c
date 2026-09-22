@@ -134,3 +134,15 @@ void f17(void) {
   // CHECK: store i32 8
   gi = __builtin_object_size(h0.s1, 0);
 }
+
+struct Parse {
+  int a;
+  char b;
+  short c;
+};
+struct Parse _P;
+void f18(void) {
+  int gi;
+  // CHECK: store i32 3
+  gi = __builtin_object_size((char*)&_P + 5, 0);
+}

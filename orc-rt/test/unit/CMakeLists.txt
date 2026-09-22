@@ -6,6 +6,10 @@ if (NOT TARGET llvm_gtest)
                   "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
   return ()
 endif ()
+# add_unittest from llvm toggles exceptions/rtti on windows so match
+# the libs settings
+set(LLVM_REQUIRES_RTTI ${ORC_RT_ENABLE_RTTI})
+set(LLVM_REQUIRES_EH ${ORC_RT_ENABLE_EXCEPTIONS})
 
 # Adds a unit test suite. Sources come first; LINK_LIBS names the object
 # libraries the suite links and must come last.
@@ -14,12 +18,21 @@ function(add_orc_rt_unittest test_name)
   add_unittest(OrcRTUnitTests ${test_name} ${ARG_UNPARSED_ARGUMENTS}
     DISABLE_LLVM_LINK_LLVM_DYLIB)
   target_compile_options(${test_name} PRIVATE ${ORC_RT_COMPILE_FLAGS})
+
   # Shared test helpers (CommonTestUtils.h, DirectCaller.h, ...) live at the
   # root of this directory, so tests in the layer subdirectories can include
   # them by bare name.
   target_include_directories(${test_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 endfunction()
+
+if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(ORC_RT_SUPPORT_TEST_SYS_SOURCES
+    support/sys/ErrnoTest.cpp
+  )
+else()
+  set(ORC_RT_SUPPORT_TEST_SYS_SOURCES)
+endif()
 
 # SupportTests links the Support objects and nothing else, so a new
 # support-to-bedrock dependency shows up here as a link error rather than going
@@ -41,8 +54,10 @@ add_orc_rt_unittest(SupportTests
   support/LockedAccessTest.cpp
   support/LoggingTest.cpp
   support/MacroUtilsTest.cpp
+  support/ManglingTest.cpp
   support/MemoryFlagsTest.cpp
   support/ProxyTest.cpp
+  support/RTTICrossDylibTest.cpp
   support/RTTITest.cpp
   support/StringExtrasTest.cpp
   support/StringPoolTest.cpp
@@ -60,12 +75,35 @@ add_orc_rt_unittest(SupportTests
   support/sps/SPSWrapperFunctionTest.cpp
   support/sps/SimplePackedSerializationTest.cpp
 
-  support/sys/ErrnoTest.cpp
+  ${ORC_RT_SUPPORT_TEST_SYS_SOURCES}
 
   tools/OptionParserTest.cpp
 
   LINK_LIBS orc-rt-support-objects
   )
+
+# Per-system test helpers, composed the way lib/ composes its per-system
+# implementations; see the note in lib/bedrock/CMakeLists.txt. Tests of portable
+# APIs stay in the shared list and reach the system through these.
+set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
+  bedrock/SocketHandleTest.cpp
+  bedrock/sys/posix/SocketTestUtils.cpp
+  )
+
+if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(ORC_RT_BEDROCK_TEST_SYS_SOURCES ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES})
+else()
+  # No list yet, so tests needing a socket will fail to link.
+  set(ORC_RT_BEDROCK_TEST_SYS_SOURCES)
+endif()
+
+if (APPLE)
+  set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES
+    bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
+    )
+else()
+  set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)
+endif()
 
 add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
@@ -76,7 +114,6 @@ add_orc_rt_unittest(BedrockTests
   bedrock/SessionTest.cpp
   bedrock/SimpleNativeMemoryMapTest.cpp
   bedrock/SimpleSymbolTableTest.cpp
-  bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
   bedrock/TaskGroupTest.cpp
   bedrock/ThreadPoolRunnerTest.cpp
 
@@ -89,6 +126,9 @@ add_orc_rt_unittest(BedrockTests
   bedrock/sys/CPUFeaturesTest.cpp
   bedrock/sys/TargetTripleTest.cpp
 
+  ${ORC_RT_BEDROCK_TEST_SYS_SOURCES}
+  ${ORC_RT_BEDROCK_TEST_APPLE_SOURCES}
+
   LINK_LIBS orc-rt-bedrock-objects orc-rt-support-objects
   )
 
@@ -96,7 +136,34 @@ add_orc_rt_unittest(BedrockTests
 add_library(NativeDylibManagerTestLib SHARED
   Inputs/NativeDylibManagerTestLib.cpp)
 set_target_properties(NativeDylibManagerTestLib PROPERTIES
-  PREFIX "")
+  PREFIX ""
+  FOLDER "orc-rt/Tests")
+target_compile_options(NativeDylibManagerTestLib PRIVATE
+  ${ORC_RT_COMPILE_FLAGS})
 target_compile_definitions(BedrockTests PRIVATE
   "NDM_TEST_LIB_PATH=\"$<TARGET_FILE:NativeDylibManagerTestLib>\"")
 add_dependencies(BedrockTests NativeDylibManagerTestLib)
+
+# Build a shared library for RTTICrossDylibTest. It links its own copy of the
+# runtime objects, giving it a LibraryID distinct from SupportTests's, so the
+# test exercises RTTI identity across a real library boundary rather than
+# simulating one within a single binary. SupportTests links it directly, the
+# same way any other consumer of orc-rt would.
+add_library(RTTICrossDylibTestLib SHARED
+  Inputs/RTTICrossDylibTestLib.cpp)
+
+set_target_properties(RTTICrossDylibTestLib PROPERTIES
+  PREFIX ""
+  CXX_VISIBILITY_PRESET hidden
+  VISIBILITY_INLINES_HIDDEN ON
+  FOLDER "orc-rt/Tests")
+
+target_compile_definitions(RTTICrossDylibTestLib PRIVATE
+  RTTI_CROSS_DYLIB_TEST_LIB_EXPORTS)
+
+target_compile_options(RTTICrossDylibTestLib PRIVATE ${ORC_RT_COMPILE_FLAGS})
+
+target_link_libraries(RTTICrossDylibTestLib
+  PRIVATE orc-rt-bedrock-objects orc-rt-support-objects)
+
+target_link_libraries(SupportTests PRIVATE RTTICrossDylibTestLib)
