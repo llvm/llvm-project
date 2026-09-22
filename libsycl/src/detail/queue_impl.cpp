@@ -16,6 +16,7 @@
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
+#include <cstdint>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -181,15 +182,13 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl(), *MContext);
-  if (NumBytes == 0) {
+  if (NumBytes == 0)
     return submitWait(DepEvents);
-  }
 
-  if (!Dest || !Src) {
+  if (!Dest || !Src)
     throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
                           sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
-  }
 
   ol_device_handle_t DestOLDevice = getAllocDevice(*MContext, Dest);
   ol_device_handle_t SrcOLDevice = getAllocDevice(*MContext, Src);
@@ -200,20 +199,40 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
   return createEvent();
 }
 
+EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
+                             std::size_t PatternSize, std::size_t Count,
+                             const std::vector<EventImplPtr> &DepEvents) {
+  assert(PatternSize > 0 && "Pattern size has to be greater than zero");
+  assert(MContext && "Context impl ptr can't be nullptr");
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl(), *MContext);
+  if (Count == 0)
+    return submitWait(DepEvents);
+
+  if (!Ptr)
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in fill/memset operation");
+  if (Count > SIZE_MAX / PatternSize)
+    throw sycl::exception(
+        sycl::make_error_code(sycl::errc::invalid),
+        "Total number of bytes to be filled exceeds SIZE_MAX");
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemFill, MOffloadQueue, Ptr, PatternSize, Pattern,
+               Count * PatternSize);
+  return createEvent();
+}
+
 EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   assert(MContext && "Context impl ptr can't be nullptr");
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl(), *MContext);
 
-  if (NumBytes == 0) {
-    handleEventDependencies(DepEvents);
-    return createEvent();
-  }
-  if (!Ptr) {
+  if (NumBytes == 0)
+    return submitWait(DepEvents);
+  if (!Ptr)
     throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
                           sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in prefetch operation");
-  }
 
   constexpr std::size_t Count = 1;
   const void *Mems[] = {Ptr};
@@ -225,7 +244,6 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
   handleEventDependencies(DepEvents);
   callAndThrow(*MContext, olMemPrefetch, MOffloadQueue, Count, Mems, Sizes,
                Flag);
-
   return createEvent();
 }
 

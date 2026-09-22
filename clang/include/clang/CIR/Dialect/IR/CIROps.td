@@ -4330,10 +4330,12 @@ def CIR_FuncOp : CIR_Op<"func", [
     >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
     UnitAttr:$comdat,
+    OptionalAttr<I64Attr>:$alignment,
+    OptionalAttr<I64Attr>:$preferred_alignment,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-    OptionalAttr<CIR_SideEffectAttr>:$side_effect,
+    OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
@@ -4422,6 +4424,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     matchAndRewriteAlias(cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty,
                          OpAdaptor adaptor,
                          mlir::ConversionPatternRewriter &rewriter) const;
+
+    mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+    mlir::SymbolRefAttr getComdatAttr(cir::FuncOp &op,
+                                      mlir::OpBuilder &builder) const;
   }];
 }
 
@@ -4635,9 +4641,11 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
+      UnitAttr:$nounwind,
+      UnitAttr:$willreturn,
       OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
       UnitAttr:$musttail,
-      DefaultValuedAttr<CIR_SideEffectAttr, "SideEffect::All">:$side_effect,
+      OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs
       );
@@ -4733,7 +4741,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$callOperands,
-               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+               CArg<"cir::MemoryEffectsAttr", "{}">:$memoryEffects), [{
       $_state.addOperands(callOperands);
 
       if (callee)
@@ -4741,8 +4749,8 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
 
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
+      if (memoryEffects)
+        $_state.addAttribute("memory_effects", memoryEffects);
 
       // Handle branches
       $_state.addSuccessors(normalDest);
@@ -4753,7 +4761,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$callOperands,
-               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+               CArg<"cir::MemoryEffectsAttr", "{}">:$memoryEffects), [{
       ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
       finalCallOperands.append(callOperands.begin(), callOperands.end());
       $_state.addOperands(finalCallOperands);
@@ -4761,8 +4769,8 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       if (!fn_type.hasVoidReturn())
         $_state.addTypes(fn_type.getReturnType());
 
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
+      if (memoryEffects)
+        $_state.addAttribute("memory_effects", memoryEffects);
 
       // Handle branches
       $_state.addSuccessors(normalDest);
@@ -8598,15 +8606,23 @@ def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
 def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
   Terminator
 ]> {
-  let summary = "Terminate due to exception thrown during cleanup";
+  let summary = "Terminate due to an exception that must not escape";
   let description = [{
-    `cir.eh.terminate` terminates program execution when an exception is thrown
-    while executing cleanup code during exception unwinding. The C++ standard
-    requires that `std::terminate()` be called in this scenario.
+    `cir.eh.terminate` terminates program execution when an exception reaches a
+    point from which the C++ standard does not allow it to propagate, and
+    requires `std::terminate()` to be called instead. That happens when an
+    exception is thrown while executing cleanup code during unwinding, and when
+    an exception tries to escape a function that cannot throw.
 
-    This operation takes an `!cir.eh_token` from a `cir.eh.initiate` operation
-    and acts as a terminator. It is produced during CFG flattening when throwing
-    calls are found in EH cleanup regions.
+    This operation takes an `!cir.eh_token` and acts as a terminator. In
+    high-level CIR it appears as the only operation in the catch-all handler
+    region of the `cir.try` that wraps the body of a function that cannot
+    throw, where the token comes from the handler region's block argument. The
+    handler is a catch-all because such a function terminates on any escaping
+    exception, and it has no `cir.begin_catch` because the runtime helper this
+    operation lowers to performs the catch. After CFG flattening the token
+    comes from a `cir.eh.initiate` operation; flattening also produces this
+    operation for throwing calls found in EH cleanup regions.
 
     During EH ABI lowering, this is replaced with target-specific termination
     code. For the Itanium ABI, the `cir.eh.initiate` is lowered to
@@ -8615,6 +8631,16 @@ def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
     pointer, followed by an unreachable operation.
 
     Example:
+
+    ```
+    cir.try {
+      ...
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.eh.terminate %eh_token : !cir.eh_token
+    }
+    ```
+
+    And after CFG flattening:
 
     ```
     ^terminate_unwind:

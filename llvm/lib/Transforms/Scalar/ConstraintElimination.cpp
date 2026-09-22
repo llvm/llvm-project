@@ -532,38 +532,28 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
-/// Returns true if \p V is known to not wrap in signed or unsigned, depending
-/// on \p Signed.
-static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
-  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+/// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
+/// is known to not wrap in signed or unsigned, depending on \p Signed.
+static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
+                          unsigned NoWrapFlags, const ConstraintInfo &Info,
+                          bool Signed) {
+  using OBO = OverflowingBinaryOperator;
+
+  if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
     return true;
 
-  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
-    if (Signed)
-      return Trunc->hasNoSignedWrap();
-    // A trunc nsw only truncates without unsigned wrap if its operand is
-    // non-negative.
-    return Trunc->hasNoUnsignedWrap() ||
-           (Trunc->hasNoSignedWrap() &&
-            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  if (Opcode == Instruction::Sub) {
+    // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
+    if (!Signed)
+      return Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
+
+    // Op0 - Op1 does not wrap signed if 0 <=s Op1 <=s Op0.
+    if (Info.isKnownNonNegative(Op1) &&
+        Info.doesHold(CmpInst::ICMP_SGE, Op0, Op1))
+      return true;
   }
 
-  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
-  if (!BO)
-    return false;
-
-  if (Signed ? BO->hasNoSignedWrap() : BO->hasNoUnsignedWrap())
-    return true;
-
-  Value *Op0 = BO->getOperand(0);
-  Value *Op1 = BO->getOperand(1);
-  auto Opcode = static_cast<Instruction::BinaryOps>(BO->getOpcode());
-
-  // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
-  if (Opcode == Instruction::Sub)
-    return !Signed && Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
-
-  if (!Signed && BO->hasNoSignedWrap() &&
+  if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
       Info.isKnownNonNegative(Op0))
     return true;
@@ -574,12 +564,39 @@ static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
   if (!C)
     return false;
 
-  using OBO = OverflowingBinaryOperator;
   return doesHoldInRange(Info, Op0,
                          ConstantRange::makeExactNoWrapRegion(
                              Opcode, C->getValue(),
                              Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
                          Signed);
+}
+
+/// Returns true if \p V is known to not wrap in signed or unsigned, depending
+/// on \p Signed.
+static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
+  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+    return true;
+
+  if (auto *WO = dyn_cast<WithOverflowInst>(V))
+    return isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
+                         /*NoWrapFlags=*/0, Info, Signed);
+
+  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Signed)
+      return Trunc->hasNoSignedWrap();
+
+    // A trunc nsw only truncates without unsigned wrap if its operand is
+    // non-negative.
+    return Trunc->hasNoUnsignedWrap() ||
+           (Trunc->hasNoSignedWrap() &&
+            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  }
+
+  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
+  return BO &&
+         isKnownNoWrap(static_cast<Instruction::BinaryOps>(BO->getOpcode()),
+                       BO->getOperand(0), BO->getOperand(1),
+                       BO->getNoWrapKind(), Info, Signed);
 }
 
 static Decomposition decomposeGEP(GEPOperator &GEP, const ConstraintInfo &Info,
@@ -758,15 +775,10 @@ static RowTy getRowForLessEqual(const Decomposition &ADec,
                                 const Decomposition &BDec,
                                 const DenseMap<Value *, unsigned> &Value2Index,
                                 SmallVectorImpl<Value *> &NewVariables) {
-  int64_t Offset1 = ADec.Offset;
-  int64_t Offset2 = BDec.Offset;
-  if (MulOverflow(Offset1, int64_t(-1), Offset1))
-    return {};
-
   // Build the row, by first adding all coefficients from A and then subtracting
   // all coefficients from B.
   int64_t OffsetSum;
-  if (AddOverflow(Offset1, Offset2, OffsetSum))
+  if (SubOverflow(BDec.Offset, ADec.Offset, OffsetSum))
     return {};
   RowTy R(1, Entry(OffsetSum, 0));
   auto GetCoefficient = [&R](unsigned Idx) -> int64_t & {
@@ -1389,9 +1401,11 @@ static bool canStrengthenFlags(Instruction *I) {
 
   switch (BO->getOpcode()) {
   case Instruction::Sub:
-    // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
-    // canonicalized to Add.
-    return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+    if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
+      return false;
+    // A - B does not wrap unsigned if A >=u B, and does not wrap signed if
+    // 0 <=s B <=s A. With a constant B, bounds on A can refine both flags.
+    return true;
   case Instruction::Add:
   case Instruction::Mul:
   case Instruction::Shl:
@@ -1495,8 +1509,12 @@ void State::addInfoFor(BasicBlock &BB) {
       break;
     }
     // Enqueue intrinsics for simplification.
+    case Intrinsic::uadd_with_overflow:
     case Intrinsic::sadd_with_overflow:
+    case Intrinsic::usub_with_overflow:
     case Intrinsic::ssub_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow:
     case Intrinsic::ucmp:
     case Intrinsic::scmp:
       WorkList.push_back(
@@ -2072,7 +2090,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 void ConstraintInfo::tightenBoundUsingNe(
     Value *A, Value *B, unsigned NumIn, unsigned NumOut,
     SmallVectorImpl<StackEntry> &DFSInStack) {
-  if (!A->getType()->isIntegerTy())
+  if (!A->getType()->isIntOrPtrTy())
     return;
 
   for (bool IsSigned : {false, true}) {
@@ -2168,11 +2186,9 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   }
 }
 
-/// Replace the uses of the overflow intrinsic \p II, which has been proven not
-/// to signed-overflow, by (Opcode A, B).
-static bool replaceOverflowUses(IntrinsicInst *II,
-                                Instruction::BinaryOps Opcode, Value *A,
-                                Value *B,
+/// Replace the uses of \p II, which is known not to overflow, by the
+/// corresponding plain binary operation and a false overflow flag.
+static bool replaceOverflowUses(WithOverflowInst *II,
                                 SmallVectorImpl<Instruction *> &ToRemove) {
   bool Changed = false;
   IRBuilder<> Builder(II->getParent(), II->getIterator());
@@ -2180,8 +2196,10 @@ static bool replaceOverflowUses(IntrinsicInst *II,
   for (User *U : make_early_inc_range(II->users())) {
     if (match(U, m_ExtractValue<0>(m_Value()))) {
       if (!Res)
-        Res = Builder.CreateNoWrapBinOp(Opcode, A, B, /*IsNUW=*/false,
-                                        /*IsNSW=*/true);
+        Res = Builder.CreateNoWrapBinOp(II->getBinaryOp(), II->getLHS(),
+                                        II->getRHS(),
+                                        /*IsNUW=*/!II->isSigned(),
+                                        /*IsNSW=*/II->isSigned());
       U->replaceAllUsesWith(Res);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {
@@ -2209,35 +2227,11 @@ static bool replaceOverflowUses(IntrinsicInst *II,
 }
 
 static bool
-tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
+tryToSimplifyOverflowMath(WithOverflowInst *II, ConstraintInfo &Info,
                           SmallVectorImpl<Instruction *> &ToRemove) {
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::ssub_with_overflow: {
-    // If A s>= B && B s>= 0, ssub.with.overflow(a, b) should not overflow and
-    // can be simplified to a regular sub.
-    Value *A = II->getArgOperand(0);
-    Value *B = II->getArgOperand(1);
-    if (!Info.doesHold(CmpInst::ICMP_SGE, A, B) ||
-        !Info.doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(A->getType(), 0)))
-      return false;
-    return replaceOverflowUses(II, Instruction::Sub, A, B, ToRemove);
-  }
-  case Intrinsic::sadd_with_overflow: {
-    Value *A = II->getArgOperand(0);
-    Value *B = II->getArgOperand(1);
-    auto *C = dyn_cast<ConstantInt>(B);
-    if (!C ||
-        !doesHoldInRange(Info, A,
-                         ConstantRange::makeGuaranteedNoWrapRegion(
-                             Instruction::Add, ConstantRange(C->getValue()),
-                             OverflowingBinaryOperator::NoSignedWrap),
-                         /*Signed=*/true))
-      return false;
-    return replaceOverflowUses(II, Instruction::Add, A, B, ToRemove);
-  }
-  default:
+  if (!isKnownNoWrap(II, Info, II->isSigned()))
     return false;
-  }
+  return replaceOverflowUses(II, ToRemove);
 }
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,

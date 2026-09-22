@@ -934,10 +934,12 @@ struct PluginContextTy {
   virtual Error initAsyncInfoImpl(GenericDeviceTy &Device,
                                   AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
-  /// Allocate Size bytes of Kind memory accessible from Device.
+  /// Allocate Size bytes of Kind memory accessible from Device. HostPtr is an
+  /// optional hint (e.g. for pinned-buffer registration); pass nullptr when
+  /// unused.
   virtual llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                                          TargetAllocTy Kind,
-                                          size_t Alignment = 0);
+                                          void *HostPtr, TargetAllocTy Kind,
+                                          size_t Alignment);
 
   /// Free a pointer returned by allocate; resolves owner/kind via
   /// getAllocInfo. Requires a non-empty device set, so this is only valid on

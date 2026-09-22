@@ -3988,7 +3988,8 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
   }
 
   Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            TargetAllocTy Kind, size_t Alignment) override;
+                            void *HostPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
   Error deallocate(GenericDeviceTy &Device, void *Ptr,
                    TargetAllocTy Kind) override;
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
@@ -4313,10 +4314,11 @@ private:
 };
 
 Expected<void *> AMDGPUPluginContextTy::allocate(GenericDeviceTy &Device,
-                                                 int64_t Size,
+                                                 int64_t Size, void *HostPtr,
                                                  TargetAllocTy Kind,
                                                  size_t Alignment) {
-  auto PtrOrErr = PluginContextTy::allocate(Device, Size, Kind, Alignment);
+  auto PtrOrErr =
+      PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
   if (!PtrOrErr || !*PtrOrErr)
     return PtrOrErr;
   std::lock_guard<std::mutex> Lock(AllocationsMutex);

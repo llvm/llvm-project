@@ -492,8 +492,10 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   }
 
   Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            TargetAllocTy Kind, size_t Alignment) override {
-    auto PtrOrErr = PluginContextTy::allocate(Device, Size, Kind, Alignment);
+                            void *HostPtr, TargetAllocTy Kind,
+                            size_t Alignment) override {
+    auto PtrOrErr =
+        PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
     if (!PtrOrErr)
       return PtrOrErr.takeError();
     void *Ptr = *PtrOrErr;

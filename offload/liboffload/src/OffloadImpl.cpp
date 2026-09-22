@@ -29,9 +29,9 @@
 #ifdef OMPT_SUPPORT
 namespace llvm::omp::target {
 namespace ompt {
-bool Initialized = false;
-ompt_get_callback_t lookupCallbackByCode = nullptr;
-ompt_function_lookup_t lookupCallbackByName = nullptr;
+LLVM_ATTRIBUTE_WEAK bool Initialized = false;
+LLVM_ATTRIBUTE_WEAK ompt_get_callback_t lookupCallbackByCode = nullptr;
+LLVM_ATTRIBUTE_WEAK ompt_function_lookup_t lookupCallbackByName = nullptr;
 } // namespace ompt
 } // namespace llvm::omp::target
 #endif
@@ -182,10 +182,11 @@ struct ol_context_impl_t {
   }
 
   llvm::Expected<void *> allocate(ol_device_handle_t Device, int64_t Size,
-                                  TargetAllocTy Kind, size_t Alignment = 0) {
+                                  TargetAllocTy Kind, size_t Alignment) {
     if (auto Err = requireDevice(Device))
       return std::move(Err);
-    return PluginCtx->allocate(*Device->Device, Size, Kind, Alignment);
+    return PluginCtx->allocate(*Device->Device, Size, /*HostPtr=*/nullptr, Kind,
+                               Alignment);
   }
 
   llvm::Error deallocate(void *Ptr) { return PluginCtx->deallocate(Ptr); }

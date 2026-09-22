@@ -2529,8 +2529,7 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   }
 
   // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
-  const NamedDecl *ND =
-      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
+  const NamedDecl *ND = dyn_cast<const NamedDecl *>(ConstrainedDeclOrNestedReq);
   auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
   if (CacheEntry == NormalizationCache.end()) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
