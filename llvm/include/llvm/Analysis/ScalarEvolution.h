@@ -116,6 +116,13 @@ enum class SCEVNoWrapFlags {
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoWrapMask)
 };
 
+enum class SCEVExactFlags {
+  FlagAnyExact = 0,
+  FlagExact = (1 << 0),
+  ExactMask = (1 << 1) - 1,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ExactMask)
+};
+
 class SCEV;
 
 template <typename SCEVPtrT = const SCEV *>
@@ -195,16 +202,29 @@ using SCEVUse = SCEVUseT<const SCEV *>;
 /// The no-wrap flags to apply when creating a SCEV expression, to the
 /// expression and use respectively.
 struct SCEVFlags {
-  /// Flags applied directly to a SCEV expression, must be valid wherever the
-  /// expression is valid.
-  SCEVNoWrapFlags ExprFlags;
+  /// The first components of each pair is Flags applied directly to a SCEV
+  /// expression, must be valid wherever the expression is valid. The second
+  /// component are only applied to SCEVUses.
+  std::pair<SCEVNoWrapFlags, SCEVNoWrapFlags> NWFlags = {
+      SCEVNoWrapFlags::FlagAnyWrap, SCEVNoWrapFlags::FlagAnyWrap};
+  std::pair<SCEVExactFlags, SCEVExactFlags> ExactFlags = {
+      SCEVExactFlags::FlagAnyExact, SCEVExactFlags::FlagAnyExact};
 
-  /// Flags only applied to a SCEVUse.
-  SCEVNoWrapFlags UseFlags;
-
-  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagAnyWrap,
+  constexpr SCEVFlags() = default;
+  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags,
                       SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagAnyWrap)
-      : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
+      : NWFlags(ExprFlags, UseFlags) {}
+  constexpr SCEVFlags(SCEVExactFlags ExprFlags,
+                      SCEVExactFlags UseFlags = SCEVExactFlags::FlagAnyExact)
+      : ExactFlags(ExprFlags, UseFlags) {}
+
+  constexpr SCEVNoWrapFlags
+  getNoWrapFlags(SCEVNoWrapFlags Mask = SCEVNoWrapFlags::NoWrapMask) {
+    return (NWFlags.first | NWFlags.second) & Mask;
+  }
+  constexpr bool isExact() {
+    return (ExactFlags.first | ExactFlags.second) == SCEVExactFlags::FlagExact;
+  }
 };
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
@@ -294,11 +314,13 @@ protected:
 
 public:
   using NoWrapFlags = SCEVNoWrapFlags;
+  using ExactFlags = SCEVExactFlags;
   static constexpr auto FlagAnyWrap = SCEVNoWrapFlags::FlagAnyWrap;
   static constexpr auto FlagNW = SCEVNoWrapFlags::FlagNW;
   static constexpr auto FlagNUW = SCEVNoWrapFlags::FlagNUW;
   static constexpr auto FlagNSW = SCEVNoWrapFlags::FlagNSW;
   static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
+  static constexpr auto FlagExact = SCEVExactFlags::FlagExact;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize, Type *Ty)
@@ -788,7 +810,8 @@ public:
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS);
+  LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS,
+                                   bool IsExact = false);
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI SCEVUse getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
@@ -2571,8 +2594,10 @@ private:
   const SCEV *getOrCreateAddRecExpr(ArrayRef<SCEVUse> Ops, const Loop *L,
                                     SCEV::NoWrapFlags Flags);
 
-  // Get UDiv expression already created or create a new one.
-  const SCEV *getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS);
+  /// Get UDiv expression already created or create a new one. Create an exact
+  /// one if \p IsExact.
+  const SCEV *getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS,
+                                  bool IsExact = false);
 
   /// Return x if \p Val is f(x) where f is a 1-1 function.
   const SCEV *stripInjectiveFunctions(const SCEV *Val) const;

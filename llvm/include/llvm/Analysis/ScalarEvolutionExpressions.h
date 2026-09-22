@@ -317,6 +317,16 @@ public:
 
   ArrayRef<SCEVUse> operands() const { return Operands; }
 
+  ExactFlags getExactFlags() const {
+    return static_cast<ExactFlags>(SubclassData);
+  }
+
+  bool isExact() const { return getExactFlags() == SCEV::FlagExact; }
+
+  void setIsExact() {
+    SubclassData = static_cast<unsigned short>(SCEV::FlagExact);
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUDivExpr; }
 };
