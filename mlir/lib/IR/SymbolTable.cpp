@@ -1053,8 +1053,11 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
   // Collect symbol users and visibility within each symbol table.
   SmallVector<Operation *> symbols;
   auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
-    this->allUsesVisible[symbolTableOp] = allUsesVisible;
     for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
+      if (auto symbol = dyn_cast<SymbolOpInterface>(nestedOp)) {
+        if (symbol.isPrivate() || (symbol.isNested() && allUsesVisible))
+          symbolsWithAllUsesVisible.insert(&nestedOp);
+      }
       auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
       assert(symbolUses && "expected uses to be valid");
 
@@ -1069,14 +1072,6 @@ SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
   };
   SymbolTable::walkSymbolTables(
       symbolTableOp, /*allSymUsesVisible=*/!symbolTableOp->getBlock(), walkFn);
-}
-
-bool SymbolUserMap::areAllUsesVisible(Operation *symbol) const {
-  auto it = allUsesVisible.find(symbol->getParentOp());
-  if (it == allUsesVisible.end())
-    return false;
-  auto symbolOp = cast<SymbolOpInterface>(symbol);
-  return symbolOp.isPrivate() || (symbolOp.isNested() && it->second);
 }
 
 void SymbolUserMap::replaceAllUsesWith(Operation *symbol,

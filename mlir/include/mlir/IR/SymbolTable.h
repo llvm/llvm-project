@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/RWMutex.h"
@@ -418,7 +419,9 @@ public:
   /// Public symbols can have users outside the IR, and nested symbols can have
   /// users outside the scope. Return false if the symbol's table is not in the
   /// map. Changes to symbol visibility or table nesting invalidate this query.
-  bool areAllUsesVisible(Operation *symbol) const;
+  bool areAllUsesVisible(Operation *symbol) const {
+    return symbolsWithAllUsesVisible.contains(symbol);
+  }
 
   /// Return true if the given symbol has no uses within this map's scope.
   bool useEmpty(Operation *symbol) const {
@@ -436,8 +439,8 @@ private:
   /// A map of symbol operations to symbol users.
   DenseMap<Operation *, SetVector<Operation *>> symbolToUsers;
 
-  /// Whether all uses of nested-visibility symbols in each table are visible.
-  DenseMap<Operation *, bool> allUsesVisible;
+  /// Symbols whose uses are all visible within this map's scope.
+  DenseSet<Operation *> symbolsWithAllUsesVisible;
 };
 
 //===----------------------------------------------------------------------===//
