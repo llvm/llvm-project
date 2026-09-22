@@ -5623,6 +5623,14 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           break;
         }
 
+        // Try to use CF produced by an LZCNT/TZCNT reading %SrcReg: it and
+        // "cmp $1, %SrcReg" both set CF iff %SrcReg is zero. The other flags
+        // differ, so all EFLAGS users need to read CF only (ADC/SBB/RCL/RCR).
+        // Example:
+        //     lzcntq %rdi, %rax
+        //     ...                 // EFLAGS not changed
+        //     cmpq $1, %rdi       // <-- can be removed
+        //     adcq $0, %rax       // reads CF only
         if (isCmpRedundantAfterLTZCNT(SrcReg, SrcReg2, CmpMask, CmpValue,
                                       Inst)) {
           LTZCNTInst = &Inst;
@@ -5837,6 +5845,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       break;
     }
   }
+
+  if (LTZCNTInst && !MI)
+    return false;
 
   // If we have to update users but EFLAGS is live-out abort, since we cannot
   // easily find all of the users.

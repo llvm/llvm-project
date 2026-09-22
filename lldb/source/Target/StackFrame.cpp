@@ -568,7 +568,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
   lldb::TargetSP target = this->CalculateTarget();
   dil::Interpreter interpreter(target, var_expr, *this, use_dynamic, options);
 
-  auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
+  auto valobj_or_error = interpreter.EvaluateTree(*tree_or_error);
   if (!valobj_or_error) {
     error = Status::FromError(valobj_or_error.takeError());
     return ValueObjectConstResult::Create(nullptr, error.Clone());
