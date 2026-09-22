@@ -184,7 +184,7 @@ func.func @enter_data_wait_all(%arg0: !llvm.ptr) {
 // CHECK-DAG: llvm.mlir.constant(1048576 : i64) : i64
 // CHECK-DAG: llvm.mlir.constant(8192 : i64) : i64
 // CHECK-DAG: llvm.mlir.constant(1024 : i64) : i64
-// CHECK-DAG: llvm.mlir.constant(16 : i64) : i64
+// CHECK-DAG: llvm.mlir.constant(8388624 : i64) : i64
 // CHECK-DAG: llvm.store %arg2, %{{.*}} : !llvm.ptr, !llvm.ptr
 // CHECK: llvm.call @__tgt_acc_data_begin
 // CHECK: llvm.call @__tgt_acc_data_end

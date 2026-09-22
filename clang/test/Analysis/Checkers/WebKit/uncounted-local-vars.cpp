@@ -759,3 +759,67 @@ namespace lambda_capture {
   }
 
 } // namespace lambda_capture
+
+namespace using_reexported_ref_deref {
+  class ProtectedRefBase {
+  protected:
+    void ref() const;
+    void deref() const;
+  };
+
+  class PublicUsing : private ProtectedRefBase {
+  public:
+    using ProtectedRefBase::ref;
+    using ProtectedRefBase::deref;
+    void method();
+  };
+
+  PublicUsing* provide_public_using();
+
+  void public_using() {
+    PublicUsing* a = provide_public_using();
+    // expected-warning@-1{{Local variable 'a' is a raw pointer to RefPtr-capable type 'using_reexported_ref_deref::PublicUsing' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    a->method();
+  }
+
+  class PrivateUsing : private ProtectedRefBase {
+    using ProtectedRefBase::ref;
+    using ProtectedRefBase::deref;
+  public:
+    void method();
+  };
+
+  PrivateUsing* provide_private_using();
+
+  void private_using() {
+    PrivateUsing* a = provide_private_using(); // no-warning
+    someFunction();
+    a->method();
+  }
+
+}
+
+namespace short_lived_temporaries {
+
+Ref<RefCountable> provide_ref();
+bool condition(const Ref<RefCountable> &);
+
+void dying_ref_temporary() {
+  RefCountable *bar = provide_ref().ptr();
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+  bar->method();
+}
+
+void unrelated_temporary_traces_to_guardian(RefCountable &obj) {
+  Ref<RefCountable> guardian(obj);
+  {
+    RefCountable *bar = condition(provide_ref()) ? guardian.ptr() : nullptr;
+    someFunction();
+    if (bar)
+      bar->method();
+  }
+}
+
+} // namespace short_lived_temporaries

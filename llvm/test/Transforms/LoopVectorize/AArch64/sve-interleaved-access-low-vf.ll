@@ -27,8 +27,7 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave(ptr noalias readonly %src, p
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP30:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP32:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP34:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP6]], 2

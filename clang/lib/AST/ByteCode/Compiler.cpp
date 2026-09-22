@@ -268,7 +268,9 @@ template <class Emitter> class InitStackScope final {
 public:
   InitStackScope(Compiler<Emitter> *Ctx, bool Active)
       : Ctx(Ctx), OldValue(Ctx->InitStackActive), Active(Active) {
-    Ctx->InitStackActive = Active;
+    // An explicit initializer nested in a default member initializer still
+    // needs the surrounding default initializer's `this` reconstruction.
+    Ctx->InitStackActive = OldValue || Active;
     if (Active)
       Ctx->InitStack.push_back(InitLink::DIE());
   }
@@ -2316,22 +2318,36 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->emitInvalid(E);
   }
 
-  // Handle discarding first.
-  if (DiscardResult) {
-    for (const Expr *Init : Inits) {
-      if (!this->discard(Init))
-        return false;
-    }
-    return true;
-  }
-
-  // Primitive values.
+  // Primitive values. A discarded one can simply discard each initializer;
+  // there is no object to establish.
   if (OptPrimType T = classify(QT)) {
-    assert(!DiscardResult);
+    if (DiscardResult) {
+      for (const Expr *Init : Inits) {
+        if (!this->discard(Init))
+          return false;
+      }
+      return true;
+    }
     if (Inits.size() == 0)
       return this->visitZeroInitializer(*T, QT, E);
     assert(Inits.size() == 1);
     return this->delegate(Inits[0]);
+  }
+
+  assert(!canClassify(E->getType()));
+
+  // A composite prvalue needs somewhere to live even when it is discarded: a
+  // default member initializer may read subobjects initialized earlier in this
+  // same list, so those have to actually be written and `this` has to denote
+  // the object. Materialize one and initialize into it.
+  if (DiscardResult && !Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+    InitLinkScope<Emitter> ILS2(this, InitLink::Temp(*LocalIndex));
+    return this->visitInitializerPop(E);
   }
 
   if (QT->isRecordType()) {
@@ -2346,8 +2362,16 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T,
                                   bool Activate = false) -> bool {
-      InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
+      bool DefaultInit = isa<CXXDefaultInitExpr>(Init);
+      InitStackScope<Emitter> ISS(this, DefaultInit);
+
+      if (DefaultInit && !this->emitStartFieldInit(FieldToInit->Offset, Init))
+        return false;
+
       if (!this->visit(Init))
+        return false;
+
+      if (DefaultInit && !this->emitEndInit(Init))
         return false;
 
       bool BitField = FieldToInit->isBitField();
@@ -2376,7 +2400,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (Activate && !this->emitActivate(E))
         return false;
 
-      return this->visitInitializerPop(Init);
+      if (!this->emitStartInit(Init))
+        return false;
+
+      return this->visitInitializerPop(Init) && this->emitEndInit(Init);
     };
 
     if (R->isUnion()) {
@@ -2904,8 +2931,12 @@ bool Compiler<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return this->discard(Base);
 
   if (const auto *VD = dyn_cast<VarDecl>(Member)) {
-    // I am almost confident in saying that a var decl must be static
-    // and therefore registered as a global variable.
+    // If the member is a VarDecl, this is a static variable.
+    // We need to try to lazily evaluate its initializer here since the
+    // variable might've been deserialized and not registered
+    // as a global variable yet.
+    if (VD->getInit() && !VD->getInit()->isValueDependent())
+      VD->evaluateValue();
     if (auto GlobalIndex = P.getGlobal(VD)) {
       if (!this->emitGetPtrGlobal(*GlobalIndex, E))
         return false;
@@ -3881,6 +3912,16 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
       // If the constructor is trivial anyway, we're done.
       if (Ctor->isTrivial())
         return true;
+    }
+
+    // Trivial default constructors might never be implicitly defined by the
+    // AST, so we need to special-case them here.
+    if (Ctor->isTrivial() && Ctor->isDefaultConstructor()) {
+      if (!this->emitDefaultInit(Ctor, E))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
     }
 
     // Avoid materializing a temporary for an elidable copy/move constructor.
@@ -6044,6 +6085,25 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   // TODO: Other types.
 
   return false;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::registerRedecl(const VarDecl *VD, const APValue &Val) {
+  if (P.getGlobal(VD))
+    return true;
+
+  UnsignedOrNone GlobalIndex = P.createGlobal(VD, /*Init=*/nullptr);
+  if (!GlobalIndex) {
+    llvm_unreachable("Why didn't that work?");
+  }
+
+  assert(canClassify(VD->getType()) &&
+         "registerRedecl should only be called with primitive values");
+
+  PrimType T = classifyPrim(VD->getType());
+  if (!visitAPValue(Val, T, VD))
+    return false;
+  return this->emitInitGlobal(T, *GlobalIndex, {});
 }
 
 template <class Emitter>

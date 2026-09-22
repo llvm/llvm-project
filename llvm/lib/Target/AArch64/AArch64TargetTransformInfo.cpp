@@ -6948,12 +6948,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
                                         BinOp, CostKind, FMF);
 }
 
-InstructionCost
-AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost AArch64TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -8012,4 +8011,38 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     return false;
   }
   return false;
+}
+
+bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
+                                                Align Alignment) const {
+  if (!(ST->isSVEAvailable() ||
+        (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
+    return false;
+
+  if (isa<FixedVectorType>(DataType) &&
+      DataType->getPrimitiveSizeInBits().getFixedValue() < 128)
+    return false;
+
+  if (!isa<VectorType>(DataType))
+    return isElementTypeLegalForScalableVector(DataType);
+
+  auto LT = getTypeLegalizationCost(DataType);
+  if (!LT.first.isValid())
+    return false;
+
+  // Use the i32 or i64 compact instructions for f16/bf16 unpacked types.
+  LLVMContext &Ctx = DataType->getContext();
+  switch (LT.second.SimpleTy) {
+  case MVT::nxv2f16:
+  case MVT::nxv2bf16:
+    return isElementTypeLegalForCompressStore(Type::getInt64Ty(Ctx));
+  case MVT::nxv4f16:
+  case MVT::nxv4bf16:
+    return isElementTypeLegalForCompressStore(Type::getInt32Ty(Ctx));
+  default:
+    break;
+  }
+
+  return isElementTypeLegalForCompressStore(
+      EVT(LT.second.getScalarType()).getTypeForEVT(Ctx));
 }

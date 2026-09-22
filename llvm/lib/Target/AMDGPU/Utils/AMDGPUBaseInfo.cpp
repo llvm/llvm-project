@@ -312,9 +312,11 @@ unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
-                  unsigned VDataDwords, unsigned VAddrDwords) {
+                  unsigned VDataDwords, unsigned VAddrDwords, bool IndexedRsrc,
+                  bool IndexedSamp) {
   const MIMGInfo *Info =
-      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords);
+      getMIMGOpcodeHelper(BaseOpcode, MIMGEncoding, VDataDwords, VAddrDwords,
+                          IndexedRsrc, IndexedSamp);
   return Info ? Info->Opcode : -1;
 }
 
@@ -325,9 +327,9 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcode(unsigned Opc) {
 
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels) {
   const MIMGInfo *OrigInfo = getMIMGInfo(Opc);
-  const MIMGInfo *NewInfo =
-      getMIMGOpcodeHelper(OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding,
-                          NewChannels, OrigInfo->VAddrDwords);
+  const MIMGInfo *NewInfo = getMIMGOpcodeHelper(
+      OrigInfo->BaseOpcode, OrigInfo->MIMGEncoding, NewChannels,
+      OrigInfo->VAddrDwords, OrigInfo->IndexedRsrc, OrigInfo->IndexedSamp);
   return NewInfo ? NewInfo->Opcode : -1;
 }
 
@@ -3661,20 +3663,6 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
     return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
 
   return hasAny64BitVGPROperands(OpDesc, MII, ST);
-}
-
-unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
-    return 64;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
-    return 128;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
-    return 256;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
-    return 320;
-  if (ST.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
-    return 512;
-  return 64; // In sync with getAddressableLocalMemorySize
 }
 
 bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
