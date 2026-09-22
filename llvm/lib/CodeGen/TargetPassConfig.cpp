@@ -227,10 +227,6 @@ static cl::opt<bool> MISchedPostRA(
     cl::desc(
         "Run MachineScheduler post regalloc (independent of preRA sched)"));
 
-// Experimental option to run live interval analysis early.
-static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
-    cl::desc("Run live interval analysis earlier in the pipeline"));
-
 static cl::opt<bool> DisableReplaceWithVecLib(
     "disable-replace-with-vec-lib", cl::Hidden,
     cl::desc("Disable replace with vector math call pass"));
@@ -527,7 +523,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
   SET_OPTION(EnableGCEmptyBlocks)
-  SET_OPTION(EarlyLiveIntervals)
   SET_OPTION(EnableBlockPlacementStats)
   SET_OPTION(EnableGlobalMergeFunc)
   SET_OPTION(EnableImplicitNullChecks)
