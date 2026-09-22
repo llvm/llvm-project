@@ -826,7 +826,7 @@ def reduce_predicates : GICombineRule<
 // %28:_(s8) = G_TRUNC %2:reg32b(s32)
 // %31:_(s32) = G_LSHR %2:reg32b, %23:_(s32)
 // %32:_(s8) = G_TRUNC %31:_(s32)
-///%149:_(<4 x s8>) = G_BUILD_VECTOR %17:_(s8), %25:_(s8), %28:_(s8), %32:_(s8)
+// %149:_(<4 x s8>) = G_BUILD_VECTOR %17:_(s8), %25:_(s8), %28:_(s8), %32:_(s8)
 // %141:_(s32) = G_BITCAST %149:_(<4 x s8>)
 // => %A = G_AND %1, 0xFFFF
 // => %B = G_SHL %2, 16
