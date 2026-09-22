@@ -6635,6 +6635,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   RUN_VPLAN_PASS(VPlanTransforms::makeCallWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
+  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
+                 PSE);
+
   // Convert remaining VPInstructions to widen or replicate recipes.
   // TODO: This legacy code should eventually be migrated to VPlan.
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
