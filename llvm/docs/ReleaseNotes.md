@@ -282,6 +282,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the X86 Backend
 
+* On 64-bit targets, returning a floating-point value when both SSE and x87 are
+  disabled is now an error. Previously this would silently fall back to the
+  soft-float ABI, producing a silent ABI mismatch.
+
 ### Changes to the OCaml bindings
 
 * Removed the `size_of` and `align_of` functions. Create a constant based on

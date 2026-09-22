@@ -843,6 +843,17 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       // not enabled.
       errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
       VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
+    } else if (Subtarget.is64Bit() && !Subtarget.useSoftFloat() &&
+               !Subtarget.hasX87()) {
+      // On 64-bit targets the hard-float ABI returns scalar FP in XMM
+      // registers. When both SSE and x87 are disabled the value is softened to
+      // a GPR here, silently degrading to the soft-float ABI.
+      EVT ArgVT = Outs[OutsIndex].ArgVT;
+      if (!Subtarget.hasSSE1() && ArgVT == MVT::f32)
+        errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
+      else if (!Subtarget.hasSSE2() &&
+               (ArgVT == MVT::f64 || ArgVT == MVT::f16 || ArgVT == MVT::bf16))
+        errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
     }
 
     // Returns in ST0/ST1 are handled specially: these are pushed as operands to
@@ -1187,6 +1198,17 @@ SDValue X86TargetLowering::LowerCallResult(
         VA.convertToReg(X86::FP1); // Set reg to FP1, avoid hitting asserts.
       else
         VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
+    } else if (Subtarget.is64Bit() && !Subtarget.useSoftFloat() &&
+               !Subtarget.hasX87()) {
+      // On 64-bit targets the hard-float ABI returns scalar FP in XMM
+      // registers. When both SSE and x87 are disabled the result is softened to
+      // a GPR here, silently degrading to the soft-float ABI.
+      EVT ArgVT = Ins[I].ArgVT;
+      if (!Subtarget.hasSSE1() && ArgVT == MVT::f32)
+        errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
+      else if (!Subtarget.hasSSE2() &&
+               (ArgVT == MVT::f64 || ArgVT == MVT::f16 || ArgVT == MVT::bf16))
+        errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
     }
 
     // If we prefer to use the value in xmm registers, copy it out as f80 and
