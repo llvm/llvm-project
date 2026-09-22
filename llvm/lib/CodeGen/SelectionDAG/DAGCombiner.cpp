@@ -8869,7 +8869,11 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
 
 // Fold an OR with a masked destination and a left-shifted
 // source into a shift + double-precision shift (SHRD):
-static SDValue combineOrOnSHLToFSHR(SDNode *N, SDLoc &DL, SelectionDAG &DAG) {
+//
+// fold: (or (and X, Mask), (shl Y, MaskBitNum)) -> (fshr X, (shl Y,
+// (MaxWideNumBits - MaskBitNum)))
+static SDValue combineOrOnSHLToFSHR(SDNode *N, const SDLoc &DL,
+                                    SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
   APInt Mask, ShiftAmount;
@@ -8890,12 +8894,13 @@ static SDValue combineOrOnSHLToFSHR(SDNode *N, SDLoc &DL, SelectionDAG &DAG) {
   //
   // (shl Y, ShiftAmount) fills the top (MaxMaskBitWidth - ShiftAmount) bits,
   // so X must keep exactly the low ShiftAmount.
+  if (!(ShiftAmount.ugt(0) && ShiftAmount.ult(MaxMaskBitWidth) &&
+        Mask.isMask(ShiftAmount.getZExtValue())))
+    return SDValue();
+
   APInt ExpectedMask =
       APInt::getLowBitsSet(MaxMaskBitWidth, ShiftAmount.getZExtValue());
-
-  if (!((ShiftAmount.getZExtValue() > 0) &&
-        (ShiftAmount.getZExtValue() < MaxMaskBitWidth) &&
-        (Mask == ExpectedMask)))
+  if (Mask != ExpectedMask)
     return SDValue();
 
   uint64_t InvShAmt = MaxMaskBitWidth - ShiftAmount.getZExtValue();
