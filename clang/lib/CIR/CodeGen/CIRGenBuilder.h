@@ -831,12 +831,14 @@ public:
         .getResult();
   }
 
+  template <typename... Operands>
   mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
                                   const mlir::Type &resTy,
-                                  mlir::ValueRange operands,
-                                  cir::FastMathFlagsAttr fastmath) {
+                                  cir::FastMathFlagsAttr fastmath,
+                                  Operands &&...op) {
     return cir::LLVMIntrinsicCallOp::create(
-               *this, loc, this->getStringAttr(str), resTy, operands, fastmath)
+               *this, loc, this->getStringAttr(str), resTy,
+               std::forward<Operands>(op)..., fastmath)
         .getResult();
   }
 };
