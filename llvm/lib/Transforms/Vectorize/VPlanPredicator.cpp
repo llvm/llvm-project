@@ -408,8 +408,6 @@ void VPPredicator::run() {
       Header);
   // Non-outer regions with VPBBs only are supported at the moment.
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
-  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
-      Frequencies = vputils::computeExecutionFrequencies(Blocks);
 
   for (VPBasicBlock *VPBB : Blocks) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
@@ -419,16 +417,15 @@ void VPPredicator::run() {
       createBlockInMask(VPBB);
 
     VPValue *BlockMask = getBlockInMask(VPBB);
-    if (!BlockMask)
-      continue;
-
-    // Mask all VPInstructions in the block and record the frequency with
-    // which the masked recipes execute.
-    std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
+    // Mask all VPInstructions in the block.
     for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB)) {
-      VPI.addMask(BlockMask);
-      if (VPI.isMasked())
-        VPI.setExecutionFrequency(Freq, Plan.getContext());
+      if (BlockMask)
+        VPI.addMask(BlockMask);
+
+      // Drop the execution frequency of unmasked VPInstructions, as they
+      // always execute.
+      if (!VPI.isMasked())
+        VPI.clearExecutionFrequency();
     }
   }
 

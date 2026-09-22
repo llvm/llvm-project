@@ -1945,11 +1945,13 @@ X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
   return InstructionCost::getInvalid();
 }
 
-InstructionCost X86TTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
-    TTI::VectorInstrContext VIC) const {
+InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -6101,13 +6103,15 @@ X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
-    // TODO: AVX2 is the current cut-off because we don't have correct
-    //       interleaving costs for prior ISA's.
-    if (!BaseT::isStridedAccess(Ptr))
-      return NumVectorInstToHideOverhead;
-    if (!BaseT::getConstantStrideStep(SE, Ptr))
+  if (PtrTy->isVectorTy() && SE) {
+    if (BaseT::isStridedAccess(Ptr) && !BaseT::getConstantStrideStep(SE, Ptr))
       return 1;
+    if (!ST->hasAVX2()) {
+      // TODO: AVX2 is the current cut-off because we don't have correct
+      //       interleaving costs for prior ISA's.
+      if (!BaseT::isStridedAccess(Ptr))
+        return NumVectorInstToHideOverhead;
+    }
   }
 
   return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);

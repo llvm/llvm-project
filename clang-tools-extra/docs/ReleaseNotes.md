@@ -176,6 +176,11 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
   checking an array new expression without a size expression.
 
+- Fixed a crash in {doc}`bugprone-misplaced-pointer-arithmetic-in-alloc
+  <clang-tidy/checks/bugprone/misplaced-pointer-arithmetic-in-alloc>` when
+  pointer arithmetic is applied to a non-array `new` expression whose
+  constructor has no arguments.
+
 - Fixed a crash in {doc}`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` when
   the pointer points to an incomplete (forward-declared) type.
@@ -205,6 +210,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed false positives when the pointee is written through a pointer
     assignment, such as `*(p = q) = 0`.
 
+  - No longer diagnoses variables declared with `decltype(auto)`, where the
+    suggested `const` does not compile.
+
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
@@ -220,9 +228,17 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Fixed a crash in {doc}`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
+  malformed code with nested classes and ambiguous initializer.
+
 - Fixed a crash in {doc}`modernize-use-noexcept
   <clang-tidy/checks/modernize/use-noexcept>` when analyzing malformed template
   code with an unparsed exception specification.
+
+- Extend {doc}`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` to turn `decltype(nullptr)` into
+  `std::nullptr_t` from `<cstdef>`.
 
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
@@ -277,6 +293,16 @@ infrastructure are described first, followed by tool-specific sections.
   `std::nothrow_t`, iterator tags, lock tags, etc.) that are used
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
+
+- Improved {doc}`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check by fixing false
+  positives on pointers passed to atomic builtins, whose operands may be
+  written to, such as the `expected` parameter of
+  `atomic_compare_exchange_strong()`.
+
+- Improved {doc}`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
+  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
 
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:

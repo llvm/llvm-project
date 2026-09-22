@@ -3059,19 +3059,23 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(const DWARFDIE &die,
   return type_sp;
 }
 
-/// Helper for the public \ref SymbolFileDWARF::GetDeclContextDIEContainingDIE
-/// API. Specifications and abstract origins the walk has already descended
-/// into are in \c seen and are not followed again.
-static DWARFDIE GetDeclContextDIEContainingDIE(
-    const DWARFDIE &orig_die,
-    llvm::SmallPtrSetImpl<const DWARFDebugInfoEntry *> &seen) {
-  DWARFDIE die = orig_die;
+DWARFDIE
+SymbolFileDWARF::GetDeclContextDIEContainingDIE(const DWARFDIE &orig_die) {
+  // Elaborations of the search DIE cannot be its declaration context.
+  llvm::SmallVector<std::pair<DWARFDIE, bool>, 4> worklist;
+  if (orig_die)
+    worklist.emplace_back(orig_die, /*is_elaboration=*/true);
 
-  while (die) {
-    // If this is the original DIE that we are searching for a declaration
-    // for, then don't look in the cache as we don't want our own decl
-    // context to be our decl context...
-    if (orig_die != die) {
+  // Bound the search on self-referential DWARF.
+  llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> seen;
+
+  while (!worklist.empty()) {
+    auto [die, is_elaboration] = worklist.pop_back_val();
+
+    if (is_elaboration) {
+      if (!seen.insert(die.GetDIE()).second)
+        continue;
+    } else {
       switch (die.Tag()) {
       case DW_TAG_compile_unit:
       case DW_TAG_partial_unit:
@@ -3082,45 +3086,25 @@ static DWARFDIE GetDeclContextDIEContainingDIE(
       case DW_TAG_lexical_block:
       case DW_TAG_subprogram:
         return die;
-      case DW_TAG_inlined_subroutine: {
-        DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin);
-        if (abs_die) {
+      case DW_TAG_inlined_subroutine:
+        if (DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin))
           return abs_die;
-        }
         break;
-      }
       default:
         break;
       }
     }
 
-    DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification);
-    if (spec_die && seen.insert(spec_die.GetDIE()).second) {
-      DWARFDIE decl_ctx_die = ::GetDeclContextDIEContainingDIE(spec_die, seen);
-      if (decl_ctx_die)
-        return decl_ctx_die;
-    }
-
-    DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin);
-    if (abs_die && seen.insert(abs_die.GetDIE()).second) {
-      DWARFDIE decl_ctx_die = ::GetDeclContextDIEContainingDIE(abs_die, seen);
-      if (decl_ctx_die)
-        return decl_ctx_die;
-    }
-
-    die = die.GetParent();
+    // Traverse specifications and abstract origins before parent contexts.
+    if (DWARFDIE parent = die.GetParent())
+      worklist.emplace_back(parent, /*is_elaboration=*/false);
+    if (DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin))
+      worklist.emplace_back(abs_die, /*is_elaboration=*/true);
+    if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification))
+      worklist.emplace_back(spec_die, /*is_elaboration=*/true);
   }
 
   return DWARFDIE();
-}
-
-DWARFDIE
-SymbolFileDWARF::GetDeclContextDIEContainingDIE(const DWARFDIE &orig_die) {
-  if (!orig_die)
-    return DWARFDIE();
-
-  llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> seen{orig_die.GetDIE()};
-  return ::GetDeclContextDIEContainingDIE(orig_die, seen);
 }
 
 Symbol *SymbolFileDWARF::GetObjCClassSymbol(ConstString objc_class_name) {

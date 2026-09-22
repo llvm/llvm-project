@@ -481,6 +481,7 @@ namespace {
     SDValue visitCTTZ(SDNode *N);
     SDValue visitCTTZ_ZERO_POISON(SDNode *N);
     SDValue visitCTPOP(SDNode *N);
+    SDValue visitPARITY(SDNode *N);
     SDValue visitSELECT(SDNode *N);
     SDValue visitVSELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
@@ -2036,6 +2037,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::CTTZ:               return visitCTTZ(N);
   case ISD::CTTZ_ZERO_POISON:   return visitCTTZ_ZERO_POISON(N);
   case ISD::CTPOP:              return visitCTPOP(N);
+  case ISD::PARITY:             return visitPARITY(N);
   case ISD::SELECT:             return visitSELECT(N);
   case ISD::VSELECT:            return visitVSELECT(N);
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
@@ -3970,9 +3972,12 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                                                     *DAG.getContext(), IntVT)))
     return SDValue();
 
-  // USUBO_CARRY's carry-in must be 0 or 1, which the matched pattern does not
-  // guarantee.
-  if (!DAG.MaskedValueIsZero(
+  // USUBO_CARRY's carry-in must match boolean contents, which the matched
+  // pattern does not guarantee.
+  // TODO: Extend to other boolean contents.
+  if (TLI.getBooleanContents(IntVT) !=
+          TargetLowering::ZeroOrOneBooleanContent ||
+      !DAG.MaskedValueIsZero(
           CarryIn,
           APInt::getBitsSetFrom(CarryIn.getScalarValueSizeInBits(), 1)))
     return SDValue();
@@ -4660,7 +4665,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ABDS, DL, VT, A, B);
 
   // smin(a,b) - smax(a,b) --> neg(abds(a,b))
-  if (hasOperation(ISD::ABDS, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::ABDS, VT)) &&
       sd_match(N0, &DAG, m_SMinLike(m_Value(A), m_Value(B))) &&
       sd_match(N1, &DAG, m_SMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDS, DL, VT, A, B), DL, VT);
@@ -4672,7 +4677,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ABDU, DL, VT, A, B);
 
   // umin(a,b) - umax(a,b) --> neg(abdu(a,b))
-  if (hasOperation(ISD::ABDU, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
       sd_match(N0, &DAG, m_UMinLike(m_Value(A), m_Value(B))) &&
       sd_match(N1, &DAG, m_UMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
@@ -4915,9 +4920,11 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::MUL, DL, VT, {N0, N1}))
     return C;
 
-  // canonicalize constant to RHS (vector doesn't have to splat)
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
+  // canonicalize constant to RHS (vector doesn't have to splat).  An opaque
+  // constant on the RHS is treated as non-constant so that a foldable constant
+  // still ends up on the RHS.
+  if (DAG.isConstantIntBuildVectorOrConstantInt(N0, /*AllowOpaques=*/false) &&
+      !DAG.isConstantIntBuildVectorOrConstantInt(N1, /*AllowOpaques=*/false))
     return DAG.getNode(ISD::MUL, DL, VT, N1, N0);
 
   bool N1IsConst = false;
@@ -6167,7 +6174,7 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
   // fold operation with constant operands.
   // TODO: Move this to FoldConstantArithmetic when it supports nodes with
   // multiple results.
-  if (N0C && N1C) {
+  if (N0C && N1C && !N0C->isOpaque() && !N1C->isOpaque()) {
     bool Overflow;
     APInt Result =
         IsSigned ? N0C->getAPIntValue().smul_ov(N1C->getAPIntValue(), Overflow)
@@ -12740,6 +12747,17 @@ SDValue DAGCombiner::visitCTTZ_ZERO_POISON(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitPARITY(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // fold (parity c1) -> c2
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::PARITY, SDLoc(N), VT, {N0}))
+    return C;
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -13883,12 +13901,47 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   return SDValue();
 }
 
+/// Check if Mask defines a known constant set of enabled lanes, where only the
+/// first N lanes are enabled. N is returned if so.
+static uint64_t calculateConstantLowMaskLanes(SDValue Mask) {
+  // We expect masks for masked load/store to be i1 predicates.
+  if (Mask.getValueType().getScalarSizeInBits() != 1)
+    return 0;
+
+  if (Mask.getOpcode() == ISD::BUILD_VECTOR) {
+    unsigned NumOnes = 0;
+    auto Op = Mask->op_begin();
+    for (; Op != Mask->op_end(); ++Op) {
+      if (!isOneConstant(*Op))
+        break;
+      ++NumOnes;
+    }
+
+    if (NumOnes == 0)
+      return 0;
+
+    for (; Op != Mask->op_end(); ++Op)
+      if (!isNullConstant(*Op))
+        return 0;
+    return NumOnes;
+  }
+
+  if (Mask.getOpcode() == ISD::GET_ACTIVE_LANE_MASK &&
+      isNullConstant(Mask.getOperand(0)) &&
+      isa<ConstantSDNode>(Mask.getOperand(1)) &&
+      Mask.getOperand(1).getValueType().getSizeInBits() <= 64)
+    return Mask.getConstantOperandVal(1);
+
+  return 0;
+}
+
 SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
   SDValue Chain = MST->getChain();
   SDValue Value = MST->getValue();
   SDValue Ptr = MST->getBasePtr();
+  EVT VT = Value.getValueType();
 
   // Zap masked stores with a zero mask.
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
@@ -13911,21 +13964,46 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
     }
   }
 
-  // If this is a masked load with an all ones mask, we can use a unmasked load.
+  // If this is a masked store with an all ones mask, we can use a unmasked
+  // store.
   // FIXME: Can we do this for indexed, compressing, or truncating stores?
-  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MST->isUnindexed() &&
-      !MST->isCompressingStore() && !MST->isTruncatingStore())
-    return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
-                        MST->getBasePtr(), MST->getPointerInfo(),
-                        MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
-                        MST->getAAInfo());
+  if (MST->isUnindexed() && !MST->isCompressingStore() &&
+      !MST->isTruncatingStore()) {
+    if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
+      return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
+                          MST->getBasePtr(), MST->getPointerInfo(),
+                          MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
+                          MST->getAAInfo());
+
+    // Convert a masked_store with constant getactivelanemask input mask to a
+    // standard store.
+    if (uint64_t Lanes = calculateConstantLowMaskLanes(Mask)) {
+      if (Lanes < VT.getVectorMinNumElements() && isPowerOf2_32(Lanes)) {
+        EVT SubVT = EVT::getVectorVT(*DAG.getContext(),
+                                     VT.getVectorElementType(), Lanes);
+        unsigned IsFast = 0;
+        if ((!LegalTypes || isTypeLegal(SubVT)) &&
+            TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                                   SubVT, MST->getAddressSpace(),
+                                   MST->getBaseAlign(),
+                                   MST->getMemOperand()->getFlags(), &IsFast) &&
+            IsFast) {
+          SDLoc DL(N);
+          SDValue Ext = DAG.getExtractSubvector(DL, SubVT, MST->getValue(), 0);
+          return DAG.getStore(MST->getChain(), DL, Ext, MST->getBasePtr(),
+                              MST->getPointerInfo(), MST->getBaseAlign(),
+                              MST->getMemOperand()->getFlags(),
+                              MST->getAAInfo());
+        }
+      }
+    }
+  }
 
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
     return SDValue(N, 0);
 
-  if (MST->isTruncatingStore() && MST->isUnindexed() &&
-      Value.getValueType().isInteger() &&
+  if (MST->isTruncatingStore() && MST->isUnindexed() && VT.isInteger() &&
       (!isa<ConstantSDNode>(Value) ||
        !cast<ConstantSDNode>(Value)->isOpaque())) {
     APInt TruncDemandedBits =
@@ -27817,6 +27895,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
 SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
+  unsigned Factor = N->getNumOperands();
 
   // Fold an interleave of fixed-length BUILD_VECTORs by rearranging their
   // scalar operands directly.
@@ -27826,7 +27905,6 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
           return Op.getOpcode() == ISD::BUILD_VECTOR &&
                  Op.getOperand(0).getValueType() == EltVT;
         })) {
-      unsigned Factor = N->getNumOperands();
       unsigned NumElts = VT.getVectorNumElements();
       SDLoc DL(N);
       SmallVector<SDValue, 4> Results;
@@ -27838,6 +27916,28 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
       for (unsigned I = 0; I < Factor; I++)
         Results.push_back(DAG.getBuildVector(
             VT, DL, ArrayRef(InterleavedElts).slice(I * NumElts, NumElts)));
+      return CombineTo(N, &Results);
+    }
+  }
+
+  // Fold interleave(splat(S[J]), ..., splat(S[J + Factor - 1])) to shuffles
+  // of S.
+  if (Op0.getOpcode() == ISD::VECTOR_SHUFFLE &&
+      VT.getVectorElementCount().isKnownMultipleOf(Factor)) {
+    int FirstIndex;
+    unsigned NumElts = VT.getVectorNumElements();
+    SDValue Source = DAG.getSplatSourceVector(Op0, FirstIndex);
+    if (Source && llvm::all_of(llvm::enumerate(N->op_values()), [&](auto Item) {
+          int SplatIndex;
+          return DAG.getSplatSourceVector(Item.value(), SplatIndex) == Source &&
+                 SplatIndex == FirstIndex + static_cast<int>(Item.index());
+        })) {
+      SmallVector<int, 16> Mask;
+      for (unsigned I = 0; I != NumElts; ++I)
+        Mask.push_back(FirstIndex + I % Factor);
+      SDValue Shuffle =
+          DAG.getVectorShuffle(VT, SDLoc(N), Source, DAG.getPOISON(VT), Mask);
+      SmallVector<SDValue, 4> Results(Factor, Shuffle);
       return CombineTo(N, &Results);
     }
   }

@@ -18,6 +18,7 @@
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_group.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
@@ -158,6 +159,10 @@ bool parse_group_line(cpp::span<char> line, struct group *grp,
 
 namespace {
 
+// Tracked alongside the database's own copy because the reentrant lookups open
+// their own scoped database rather than sharing the iteration stream.
+const char *group_file_path = LIBC_COPT_GROUP_FILE_PATH;
+
 LIBC_CONSTINIT pwd::FlatFileDatabase<struct group>
     db(LIBC_COPT_GROUP_FILE_PATH);
 // Note: These static buffers are process-global and NOT protected by a mutex
@@ -169,20 +174,22 @@ LIBC_CONSTINIT pwd::FlatFileDatabase<struct group>
 // pointers returned prior to endgrent() remain valid until the next
 // non-reentrant call.
 LIBC_CONSTINIT pwd::DynamicBuffer line_buffer;
-struct group grp_entry;
+LIBC_CONSTINIT struct group grp_entry = {};
 
 } // namespace
 
 void TESTONLY_set_group_path(const char *path) {
   close();
   line_buffer.release();
-  db.set_path(path ? path : LIBC_COPT_GROUP_FILE_PATH);
+  group_file_path = path ? path : LIBC_COPT_GROUP_FILE_PATH;
+  db.set_path(group_file_path);
 }
 
 void TESTONLY_reset_group_path() {
   close();
   line_buffer.release();
-  db.set_path(LIBC_COPT_GROUP_FILE_PATH);
+  group_file_path = LIBC_COPT_GROUP_FILE_PATH;
+  db.set_path(group_file_path);
 }
 
 ErrorOr<void> open() { return db.setdb(); }
@@ -196,6 +203,26 @@ ErrorOr<struct group *> read_next() {
   if (!res.value())
     return nullptr;
   return &grp_entry;
+}
+
+ErrorOr<bool> find_by_name(cpp::string_view name, struct group *grp,
+                           cpp::span<char> buffer, const char *path) {
+  pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
+                                                          : group_file_path);
+  const auto matcher = [name](const struct group &entry) {
+    return cpp::string_view(entry.gr_name) == name;
+  };
+  return local_db.lookup(matcher, grp, buffer);
+}
+
+ErrorOr<bool> find_by_gid(gid_t gid, struct group *grp, cpp::span<char> buffer,
+                          const char *path) {
+  pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
+                                                          : group_file_path);
+  const auto matcher = [gid](const struct group &entry) {
+    return entry.gr_gid == gid;
+  };
+  return local_db.lookup(matcher, grp, buffer);
 }
 
 } // namespace grp

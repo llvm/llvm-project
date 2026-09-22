@@ -5814,8 +5814,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   }
 
   case ISD::SCALAR_TO_VECTOR:
-    // Check upper (known undef) elements.
-    if (DemandedElts.ugt(1) && includesUndef(Kind))
+    // Check upper (known poison) elements.
+    if (DemandedElts.ugt(1) && includesPoison(Kind))
       return false;
     // Check element zero.
     if (DemandedElts[0] &&
@@ -6092,8 +6092,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
            !isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::SCALAR_TO_VECTOR:
-    // Check if we demand any upper (undef) elements.
-    return includesUndef(Kind) && DemandedElts.ugt(1);
+    // Check if we demand any upper (poison) elements.
+    return includesPoison(Kind) && DemandedElts.ugt(1);
 
   case ISD::INSERT_VECTOR_ELT:
   case ISD::EXTRACT_VECTOR_ELT: {
@@ -7124,6 +7124,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
+  case ISD::PARITY:
   case ISD::CTLS:
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:
@@ -7699,6 +7700,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
                            C->isOpaque());
       case ISD::CTPOP:
         return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::PARITY:
+        return getConstant(Val.popcount() & 1, DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLZ:
       case ISD::CTLZ_ZERO_POISON:
@@ -15151,7 +15155,8 @@ SDValue SelectionDAG::getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
     SDValue NegRHS = getNode(ISD::FNEG, DL, RHS.getValueType(), RHS);
     return getNode(Opc, DL, AccVT, Acc, LHS, NegRHS);
   }
-  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA) &&
+  assert((Opc == ISD::PARTIAL_REDUCE_UMLA || Opc == ISD::PARTIAL_REDUCE_SMLA ||
+          Opc == ISD::PARTIAL_REDUCE_SUMLA) &&
          "Unexpected opcode");
   SDValue NegAcc = getNegative(Acc, DL, AccVT);
   SDValue MLA = getNode(Opc, DL, AccVT, NegAcc, LHS, RHS);
