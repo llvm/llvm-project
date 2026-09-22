@@ -13,6 +13,7 @@ from lldbsuite.test.lldbtest import *
 class TestStepThroughLazyLibrary(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessDarwin
     @skipIf(macos_version=["<", "27"])
     def test_step_through_lazy_library(self):
         self.build()
