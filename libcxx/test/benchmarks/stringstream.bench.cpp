@@ -39,7 +39,7 @@ struct LocaleSelector {
   static std::mutex mutex;
 
   LocaleSelector(benchmark::State& state) {
-    std::lock_guard guard(mutex);
+    std::lock_guard<std::mutex> guard(mutex);
     switch (state.range(0)) {
     case 0: {
       old   = std::locale::global(std::locale::classic());
@@ -67,7 +67,7 @@ struct LocaleSelector {
   }
 
   ~LocaleSelector() {
-    std::lock_guard guard(mutex);
+    std::lock_guard<std::mutex> guard(mutex);
     std::locale::global(old);
   }
 };
