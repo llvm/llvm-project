@@ -581,19 +581,19 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
     assert(LatchBB && "Expected loop to have a latch");
     BasicBlock *NonLatchExitingBlock =
         (ExitingBlocks[0] == LatchBB) ? ExitingBlocks[1] : ExitingBlocks[0];
-    // On divergent targets a rarely-taken branch can still be divergent, and
-    // unrolling duplicates that divergent control flow across every copy. So
-    // branch probability isn't a safe proxy here; fall through to the deopt
-    // check.
-    if (!UI || !UI->hasDivergentTerminator(*NonLatchExitingBlock)) {
-      auto BranchProb =
-          llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
-      // If BranchProbability could not be extracted (returns unknown), then
-      // don't return and do the check for deopt block.
-      if (!BranchProb.isUnknown()) {
-        auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
-        return BranchProb < Threshold;
-      }
+    // On a divergent target, unrolling duplicates the divergent side-exit
+    // control flow across every copy. Neither branch probability nor the deopt
+    // heuristic is a safe proxy for profitability there, so never
+    // runtime-unroll a loop whose side exit is divergent.
+    if (UI && UI->hasDivergentTerminator(*NonLatchExitingBlock))
+      return false;
+    auto BranchProb =
+        llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
+    // If BranchProbability could not be extracted (returns unknown), then
+    // don't return and do the check for deopt block.
+    if (!BranchProb.isUnknown()) {
+      auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
+      return BranchProb < Threshold;
     }
   }
 

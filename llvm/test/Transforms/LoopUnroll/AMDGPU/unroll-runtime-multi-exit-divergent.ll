@@ -9,6 +9,7 @@
 ; NOT be unrolled, a uniform side exit still may.
 
 declare i32 @llvm.amdgcn.workitem.id.x()
+declare void @llvm.experimental.deoptimize.isVoid(...)
 
 ; The side-exit condition mixes in the (divergent) workitem id, so the exit is
 ; divergent even though its branch weights make it very unlikely. The loop must
@@ -238,9 +239,135 @@ exit:
   ret void
 }
 
+; The side exit is divergent, exits into a deoptimize block, AND its branch
+; weights make it non-rare (50/50). The branch-probability heuristic rejects a
+; non-rare side exit regardless of divergence, so it must not be reached via the
+; deopt fallback: the loop stays rolled.
+;
+define amdgpu_kernel void @divergent_deopt_nonrare(ptr addrspace(1) %p, i32 %n, i32 %bound) {
+; CHECK-LABEL: define amdgpu_kernel void @divergent_deopt_nonrare(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[N:%.*]], i32 [[BOUND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[ACC]], [[TID]]
+; CHECK-NEXT:    [[SIDECOND:%.*]] = icmp sgt i32 [[VAL]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[SIDECOND]], label %[[SIDEEXIT:.*]], label %[[BODY:.*]], !prof [[PROF3:![0-9]+]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[P]], i32 [[IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; CHECK-NEXT:    [[ACC_NEXT]] = add i32 [[ACC]], [[LD]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[HEADER]]
+; CHECK:       [[SIDEEXIT]]:
+; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  br label %header
+
+header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %latch ]
+  %val = add i32 %acc, %tid
+  %sidecond = icmp sgt i32 %val, %bound
+  br i1 %sidecond, label %sideexit, label %body, !prof !1
+
+body:
+  %gep = getelementptr i32, ptr addrspace(1) %p, i32 %iv
+  %ld = load i32, ptr addrspace(1) %gep
+  %acc.next = add i32 %acc, %ld
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %header
+
+sideexit:
+  call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
+  ret void
+
+exit:
+  ret void
+}
+
+; The side exit is divergent and rarely-taken, and it exits into a deoptimize
+; block. A divergent side exit is never runtime-unrolled: unrolling would widen
+; the granularity at which a warp can retire its diverged lanes, so neither the
+; rarity nor the deopt heuristic can justify it. The loop stays rolled.
+;
+define amdgpu_kernel void @divergent_rare_deopt(ptr addrspace(1) %p, i32 %n, i32 %bound) {
+; CHECK-LABEL: define amdgpu_kernel void @divergent_rare_deopt(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[N:%.*]], i32 [[BOUND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[ACC]], [[TID]]
+; CHECK-NEXT:    [[SIDECOND:%.*]] = icmp sgt i32 [[VAL]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[SIDECOND]], label %[[SIDEEXIT:.*]], label %[[BODY:.*]], !prof [[PROF0]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[P]], i32 [[IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; CHECK-NEXT:    [[ACC_NEXT]] = add i32 [[ACC]], [[LD]]
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[HEADER]]
+; CHECK:       [[SIDEEXIT]]:
+; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
+; CHECK-NEXT:    ret void
+; CHECK:       [[EXIT_UNR_LCSSA]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  br label %header
+
+header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %acc = phi i32 [ 0, %entry ], [ %acc.next, %latch ]
+  %val = add i32 %acc, %tid
+  %sidecond = icmp sgt i32 %val, %bound
+  br i1 %sidecond, label %sideexit, label %body, !prof !0
+
+body:
+  %gep = getelementptr i32, ptr addrspace(1) %p, i32 %iv
+  %ld = load i32, ptr addrspace(1) %gep
+  %acc.next = add i32 %acc, %ld
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %header
+
+sideexit:
+  call void (...) @llvm.experimental.deoptimize.isVoid() [ "deopt"() ]
+  ret void
+
+exit:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 1, i32 1000000}
+!1 = !{!"branch_weights", i32 1, i32 1}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1000000}
 ; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 1}
 ;.
