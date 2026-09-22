@@ -19,6 +19,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Location.h"
@@ -3138,23 +3139,6 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                              e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
-/// Return true if the specified expression is cheap enough and side-effect-free
-/// enough to evaluate unconditionally instead of conditionally.  This is used
-/// to convert control flow into selects in some cases.
-/// TODO(cir): can be shared with LLVM codegen.
-static bool isCheapEnoughToEvaluateUnconditionally(const Expr *e,
-                                                   CIRGenFunction &cgf) {
-  // Anything that is an integer or floating point constant is fine.
-  return e->IgnoreParens()->isEvaluatable(cgf.getContext());
-
-  // Even non-volatile automatic variables can't be evaluated unconditionally.
-  // Referencing a thread_local may cause non-trivial initialization work to
-  // occur. If we're inside a lambda and one of the variables is from the scope
-  // outside the lambda, that function may have returned already. Reading its
-  // locals is a bad idea. Also, these reads may introduce races there didn't
-  // exist in the source-level program.
-}
-
 mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *e) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
@@ -3250,8 +3234,10 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
   // select instead of as control flow.  We can only do this if it is cheap
   // and safe to evaluate the LHS and RHS unconditionally.
-  if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, cgf) &&
-      isCheapEnoughToEvaluateUnconditionally(rhsExpr, cgf)) {
+  if (CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(lhsExpr,
+                                                           cgf.getContext()) &&
+      CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(rhsExpr,
+                                                           cgf.getContext())) {
     bool lhsIsVoid = false;
     mlir::Value condV = cgf.evaluateExprAsBool(condExpr);
     assert(!cir::MissingFeatures::incrementProfileCounter());

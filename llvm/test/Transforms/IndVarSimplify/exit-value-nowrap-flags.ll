@@ -13,7 +13,7 @@ define i32 @nuw_kept(i32 %start, i32 %step, i32 %n) {
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N]], [[STEP]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[N]], [[STEP]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[START]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
@@ -48,7 +48,7 @@ define i32 @nsw_kept_same_sign(i32 %start.in, i32 %step.in, i32 %n) {
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N]], [[STEP]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[N]], [[STEP]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[TMP0]], [[START]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
@@ -332,9 +332,8 @@ exit.2:
   ret i32 %dv2
 }
 
-
-define ptr @exit_value_mul(ptr %first, ptr %last) {
-; CHECK-LABEL: define ptr @exit_value_mul(
+define ptr @ptr_step_mul_nuw(ptr %first, ptr %last) {
+; CHECK-LABEL: define ptr @ptr_step_mul_nuw(
 ; CHECK-SAME: ptr [[FIRST:%.*]], ptr [[LAST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[FIRST2:%.*]] = ptrtoaddr ptr [[FIRST]] to i64
@@ -354,7 +353,7 @@ define ptr @exit_value_mul(ptr %first, ptr %last) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[TMP3]], 24
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[UMIN]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 24
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 24
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[FIRST]], i64 [[TMP6]]
 ; CHECK-NEXT:    ret ptr [[SCEVGEP]]
 ; CHECK:       [[DONE]]:
