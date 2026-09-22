@@ -1,29 +1,26 @@
 name: Flang integration test check
 
 on:
-  # This workflow needs pull_request_target so it can comment on pull requests
-  # from forks. It only examines patches using the GitHub API and never checks
-  # out or executes code from the pull request branch.
-  pull_request_target: # zizmor: ignore[dangerous-triggers]
+  pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "flang/test/**"
+      - ".github/workflows/flang-integration-test-check.yml"
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   check-for-full-pipeline-tests:
     if: github.repository == 'llvm/llvm-project'
-    permissions:
-      contents: read
-      pull-requests: write
     runs-on: ubuntu-24.04
     steps:
       - name: Check for new full-pipeline test invocations
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
+            const fs = require("fs");
             const marker = "<!-- flang-integration-test-check -->";
             const pr = context.payload.pull_request;
 
@@ -62,17 +59,19 @@ jobs:
               },
             );
             const previous = comments.find(
-              comment => comment.user.type === "Bot" && comment.body.includes(marker),
+              comment => comment.user.login === "github-actions[bot]" &&
+                comment.body.includes(marker),
             );
 
+            // issue-write.yml creates or updates comments from this artifact.
+            // Resolve an existing reminder when its findings disappear.
             if (findings.length === 0) {
-              if (previous) {
-                await github.rest.issues.deleteComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: previous.id,
-                });
-              }
+              const resolved = previous ? [{
+                id: previous.id,
+                body: marker + "\n\nNo newly added `-emit-llvm` RUN lines remain " +
+                  "under `flang/test/`.",
+              }] : [];
+              fs.writeFileSync("comments", JSON.stringify(resolved));
               return;
             }
 
@@ -91,18 +90,13 @@ jobs:
               "_This is an informational reminder; it does not fail the workflow._",
             ].join("\n");
 
-            if (previous) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: previous.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: pr.number,
-                body,
-              });
-            }
+            const comment = { body };
+            if (previous)
+              comment.id = previous.id;
+            fs.writeFileSync("comments", JSON.stringify([comment]));
+
+      - name: Upload comment for issue-write.yml
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workflow-args
+          path: comments
