@@ -121,7 +121,6 @@ jobs:
           persist-credentials: false
           ref: ${{ needs.extract-info.outputs.pr_head }}
           fetch-depth: 0
-          fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
 
       - name: Install Python
         if: runner.os == 'Linux' # installed via Homebrew on macOS

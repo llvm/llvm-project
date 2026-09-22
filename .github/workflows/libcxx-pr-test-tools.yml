@@ -45,12 +45,6 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # some tools need full git history
 
-      - name: Print stuff
-        shell: bash
-        run: |
-          pwd
-          ls
-
       - name: Set up Python dependencies
         shell: bash
         run: |
