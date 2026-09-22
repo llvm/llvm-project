@@ -70,6 +70,8 @@ TEST_F(LlvmLibcGetgrgidTest, HighGid) {
   ASSERT_NE(grp, nullptr);
   EXPECT_STREQ(grp->gr_name, "nogroup");
   EXPECT_EQ(grp->gr_gid, static_cast<gid_t>(65534));
+  ASSERT_NE(grp->gr_mem, nullptr);
+  EXPECT_EQ(grp->gr_mem[0], nullptr);
 }
 
 TEST_F(LlvmLibcGetgrgidTest, NotFound) {

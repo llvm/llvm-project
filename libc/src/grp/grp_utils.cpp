@@ -168,13 +168,11 @@ LIBC_CONSTINIT pwd::FlatFileDatabase<struct group>
 // Note: These static buffers are process-global and NOT protected by a mutex
 // at this stage. POSIX getgrent is non-reentrant.
 //
-// A single static buffer and struct group are reused across getgrent,
-// getgrnam, and getgrgid per POSIX ("The return value may point to a static
-// area which is overwritten by a subsequent call to getgrent(), getgrgid(),
-// or getgrnam()"), growing only to the high-water mark of the largest record
-// seen. endgrent() closes the file stream without freeing the buffer so that
-// pointers returned prior to endgrent() remain valid until the next
-// non-reentrant call.
+// getgrent, getgrnam, and getgrgid share a single static buffer and struct
+// group, as allowed by POSIX. The buffer grows as needed to fit the largest
+// record read so far, and is reused without shrinking. endgrent() closes the
+// file stream without freeing the buffer so that pointers returned before
+// endgrent() remain valid until the next non-reentrant call.
 LIBC_CONSTINIT pwd::DynamicBuffer line_buffer;
 LIBC_CONSTINIT struct group grp_entry = {};
 

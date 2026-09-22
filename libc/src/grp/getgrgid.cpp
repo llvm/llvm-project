@@ -16,6 +16,7 @@
 #include "hdr/types/struct_group.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include "src/grp/grp_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -58,6 +58,8 @@ TEST_F(LlvmLibcGetgrnamTest, FirstAndLastEntries) {
   ASSERT_NE(grp, nullptr);
   EXPECT_STREQ(grp->gr_name, "first");
   EXPECT_EQ(grp->gr_gid, static_cast<gid_t>(100));
+  ASSERT_NE(grp->gr_mem, nullptr);
+  EXPECT_EQ(grp->gr_mem[0], nullptr);
 
   grp = LIBC_NAMESPACE::getgrnam("last");
   ASSERT_NE(grp, nullptr);
