@@ -38,6 +38,17 @@
 #include <something/something.h>
 #endif
 
+#undef something
+#define EMPTY
+#define HEADER something/something.h
+
+// An empty macro prevents header-name tokenization, allowing HEADER to expand.
+#if __has_include(EMPTY <HEADER>)
+#include EMPTY <HEADER>
+#else
+#error header not found after empty macro
+#endif
+
 //--- something/something.h
 
 //--- error.c
