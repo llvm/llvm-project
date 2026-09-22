@@ -867,8 +867,8 @@ TEST(ScudoSecondaryTest, ReleaseIntervalGreaterThanCurrentTime) {
   scudo::u64 CurTime = scudo::getMonotonicTimeFast();
   scudo::u64 CurTimeMs = CurTime / 1000000;
   if (CurTimeMs >= INT32_MAX) {
-    GTEST_SKIP()
-        << "Machine uptime too high to test release interval > current time";
+    TEST_SKIP(
+        "Machine uptime too high to test release interval > current time");
   }
 
   CacheInfoType<TestCacheConfig> Info;
