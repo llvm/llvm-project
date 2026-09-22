@@ -427,7 +427,7 @@ LLVM_ABI FunctionPass *createWinEHPass(bool DemoteCatchSwitchPHIOnly = false);
 /// createSjLjEHPreparePass - This pass adapts exception handling code to use
 /// the GCC-style builtin setjmp/longjmp (sjlj) to handling EH control flow.
 ///
-LLVM_ABI FunctionPass *createSjLjEHPreparePass(const TargetMachine *TM);
+LLVM_ABI FunctionPass *createSjLjEHPreparePass();
 
 /// createWasmEHPass - This pass adapts exception handling code to use
 /// WebAssembly's exception handling scheme.

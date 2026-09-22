@@ -28,7 +28,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
@@ -53,10 +53,8 @@ class SjLjEHPrepareImpl {
   Function *CallSiteFn = nullptr;
   Function *FuncCtxFn = nullptr;
   AllocaInst *FuncCtx = nullptr;
-  const TargetMachine *TM = nullptr;
 
 public:
-  explicit SjLjEHPrepareImpl(const TargetMachine *TM = nullptr) : TM(TM) {}
   bool doInitialization(Module &M);
   bool runOnFunction(Function &F);
 
@@ -74,8 +72,7 @@ class SjLjEHPrepare : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit SjLjEHPrepare(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), Impl(TM) {}
+  SjLjEHPrepare() : FunctionPass(ID) {}
   bool doInitialization(Module &M) override { return Impl.doInitialization(M); }
   bool runOnFunction(Function &F) override { return Impl.runOnFunction(F); };
 
@@ -88,7 +85,7 @@ public:
 
 PreservedAnalyses SjLjEHPreparePass::run(Function &F,
                                          FunctionAnalysisManager &FAM) {
-  SjLjEHPrepareImpl Impl(TM);
+  SjLjEHPrepareImpl Impl;
   Impl.doInitialization(*F.getParent());
   bool Changed = Impl.runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
@@ -99,9 +96,7 @@ INITIALIZE_PASS(SjLjEHPrepare, DEBUG_TYPE, "Prepare SjLj exceptions",
                 false, false)
 
 // Public Interface To the SjLjEHPrepare pass.
-FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
-  return new SjLjEHPrepare(TM);
-}
+FunctionPass *llvm::createSjLjEHPreparePass() { return new SjLjEHPrepare(); }
 
 // doInitialization - Set up decalarations and types needed to process
 // exceptions.
@@ -109,8 +104,7 @@ bool SjLjEHPrepareImpl::doInitialization(Module &M) {
   // Build the function context structure.
   // builtin_setjmp uses a five word jbuf
   Type *VoidPtrTy = PointerType::getUnqual(M.getContext());
-  unsigned DataBits =
-      TM ? TM->getSjLjDataSize() : TargetMachine::DefaultSjLjDataSize;
+  unsigned DataBits = M.getTargetTriple().getSjLjDataSizeInBits();
   DataTy = Type::getIntNTy(M.getContext(), DataBits);
   doubleUnderDataTy = ArrayType::get(DataTy, 4);
   doubleUnderJBufTy = ArrayType::get(VoidPtrTy, 5);

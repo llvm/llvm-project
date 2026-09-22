@@ -1476,6 +1476,10 @@ public:
 
   LLVM_ABI ExceptionHandling getDefaultExceptionHandling() const;
 
+  /// Returns the bit width of each word in the SjLj exception handling jump
+  /// buffer's data array for this target.
+  LLVM_ABI unsigned getSjLjDataSizeInBits() const;
+
   /// Compute the LLVM IR data layout string based on the triple. Some targets
   /// customize the layout based on the ABIName string.
   LLVM_ABI std::string computeDataLayout(StringRef ABIName = "") const;
