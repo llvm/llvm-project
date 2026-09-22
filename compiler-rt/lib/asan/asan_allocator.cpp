@@ -1216,8 +1216,6 @@ void* asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace* stack,
                        bool array) {
   if (UNLIKELY(alignment == 0 || !IsPowerOfTwo(alignment))) {
     errno = errno_EINVAL;
-    if (AllocatorMayReturnNull())
-      return nullptr;
     ReportInvalidAllocationAlignment(alignment, stack);
   }
   return SetErrnoOnNull(instance.Allocate(size, alignment, stack,
