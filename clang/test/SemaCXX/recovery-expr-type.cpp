@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++17 -fsyntax-only -verify=expected,ref
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -o - %s -std=gnu++20 -fsyntax-only -verify=expected,ref
 
 
 namespace test0 {
@@ -209,3 +209,16 @@ B x;
 
 int v = x.a.arr[0]; // Do not crash when evaluating a static reference with an invalid initializer.
 } // namespace test17
+
+namespace test18 {
+struct B {
+  static constexpr int &a = 0; // expected-error {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}} \
+                                 ref-note {{declared here}}
+};
+
+B x;
+// Diagnose why constant evaluation fails when reading a reference with an
+// invalid initializer.
+static_assert(x.a == 0); // expected-error {{static assertion expression is not an integral constant expression}} \
+                           ref-note {{read of non-constexpr variable 'a' is not allowed in a constant expression}}
+} // namespace test18

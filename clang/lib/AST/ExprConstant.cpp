@@ -3520,6 +3520,16 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // Used to be C++20 [expr.const]p5.12:
   //  ... reference has a preceding initialization and either ...
   if (Init && Init->isValueDependent()) {
+    if (!Info.checkingPotentialConstantExpression()) {
+      Info.FFDiag(E,
+                  Info.getLangOpts().CPlusPlus11
+                      ? diag::note_constexpr_ltor_non_constexpr
+                      : diag::note_constexpr_ltor_non_integral,
+                  1)
+          << VD << VD->getType();
+      NoteLValueLocation(Info, Base);
+    }
+
     // A recovery initializer can be value-dependent even when the expression
     // referring to the variable is not.
     if (Init->containsErrors())
@@ -3531,13 +3541,6 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     // type for use in a constant expression (otherwise the DeclRefExpr would
     // have been value-dependent too), so diagnose that.
     assert(!VD->mightBeUsableInConstantExpressions(Info.Ctx));
-    if (!Info.checkingPotentialConstantExpression()) {
-      Info.FFDiag(E, Info.getLangOpts().CPlusPlus11
-                         ? diag::note_constexpr_ltor_non_constexpr
-                         : diag::note_constexpr_ltor_non_integral, 1)
-          << VD << VD->getType();
-      NoteLValueLocation(Info, Base);
-    }
     return false;
   }
 
