@@ -174,11 +174,11 @@ bool PISAPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 }
 
 void PISAPreLegalizerCombinerImpl::applyTruncatedLoad(MachineInstr &MI) const {
-  auto *LoadMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
-  auto *MMO = LoadMI->memoperands()[0];
-  auto Dst = MI.getOperand(0);
-  auto Addr = LoadMI->getOperand(1);
-  auto *NewMMO = MI.getMF()->getMachineMemOperand(MMO, MMO->getOffset(),
+  llvm::MachineInstr *LoadMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  llvm::MachineMemOperand *MMO = LoadMI->memoperands()[0];
+  llvm::MachineOperand Dst = MI.getOperand(0);
+  llvm::MachineOperand Addr = LoadMI->getOperand(1);
+  llvm::MachineMemOperand *NewMMO = MI.getMF()->getMachineMemOperand(MMO, MMO->getOffset(),
                                                   MRI.getType(Dst.getReg()));
   B.buildLoad(Dst, Addr, *NewMMO);
   MI.eraseFromParent();
@@ -190,7 +190,7 @@ bool PISAPreLegalizerCombinerImpl::matchExpandNonPowerOf2LoadStore(
          MI.getOpcode() == TargetOpcode::G_STORE);
   GLoadStore &LS = cast<GLoadStore>(MI);
 
-  auto Size = LS.getMemSizeInBits().getValue();
+  llvm::TypeSize Size = LS.getMemSizeInBits().getValue();
 
   if (isPowerOf2_32(Size))
     return false;
@@ -201,8 +201,8 @@ bool PISAPreLegalizerCombinerImpl::matchExpandNonPowerOf2LoadStore(
   // Check if this is a load and only has zext uses that are handled by the
   // extended load pattern - if yes, we want to handle it via said pattern.
   if (MI.getOpcode() == TargetOpcode::G_LOAD) {
-    for (auto &Use : MRI.use_operands(MI.getOperand(0).getReg())) {
-      auto *Inst = Use.getParent();
+    for (llvm::MachineOperand &Use : MRI.use_operands(MI.getOperand(0).getReg())) {
+      llvm::MachineInstr *Inst = Use.getParent();
       if (Inst->getOpcode() != TargetOpcode::G_ZEXT ||
           !matchExtendedLoad(*Inst))
         return true;
@@ -219,9 +219,9 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
 
   GLoadStore &LS = cast<GLoadStore>(MI);
 
-  auto PointerReg = LS.getPointerReg();
-  auto ValueReg = LS.getOperand(0).getReg();
-  auto &MMO = LS.getMMO();
+  llvm::Register PointerReg = LS.getPointerReg();
+  llvm::Register ValueReg = LS.getOperand(0).getReg();
+  llvm::MachineMemOperand &MMO = LS.getMMO();
 
   /// The remaining size in Bits that still has to be loaded/stored
   ssize_t Size = LS.getMemSizeInBits().getValue();
@@ -230,14 +230,14 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
   Size = (Size + 7) & ~7;
 
   unsigned Offset = 0;
-  const auto SizeTy = LLT::integer(Size);
+  const llvm::LLT SizeTy = LLT::integer(Size);
 
   // If the size was changed to the next power of 8 and we are storing a value,
   // we need to modify the register's type as well.
   // A similar check is needed for loads, but this is done at the end
   if (MI.getOpcode() == TargetOpcode::G_STORE &&
       SizeTy != MRI.getType(ValueReg)) {
-    auto NewValueReg = MRI.createGenericVirtualRegister(SizeTy);
+    llvm::Register NewValueReg = MRI.createGenericVirtualRegister(SizeTy);
     B.buildZExt(NewValueReg, ValueReg);
     ValueReg = NewValueReg;
   }
@@ -245,24 +245,24 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
   /// The register holding the loaded value at the end
   Register LoadRes;
   while (Size > 0) {
-    auto OpSize = bit_floor(static_cast<size_t>(Size));
-    const auto ShiftAmount = Offset * 8;
+    uint64_t OpSize = bit_floor(static_cast<size_t>(Size));
+    const unsigned ShiftAmount = Offset * 8;
 
     const LLT OpTy = LLT::integer(OpSize);
 
-    auto *NewMMO =
+    llvm::MachineMemOperand *NewMMO =
         MI.getMF()->getMachineMemOperand(&MMO, MMO.getOffset() + Offset, OpTy);
 
     /// Stores the (potentially modified) pointer register
-    auto AddrReg = PointerReg;
+    llvm::Register AddrReg = PointerReg;
     // We might need to change the store offset
     if (Offset != 0) {
-      auto NewAddr = MRI.cloneVirtualRegister(AddrReg);
+      llvm::Register NewAddr = MRI.cloneVirtualRegister(AddrReg);
 
       // Get the pointer size from the pointer register type
       const LLT PtrTy = MRI.getType(AddrReg);
       const LLT IntTy = LLT::integer(PtrTy.getSizeInBits());
-      auto Const = MRI.createGenericVirtualRegister(IntTy);
+      llvm::Register Const = MRI.createGenericVirtualRegister(IntTy);
       B.buildConstant(Const, Offset);
       B.buildPtrAdd(NewAddr, AddrReg, Const);
 
@@ -270,11 +270,11 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
     }
 
     if (MI.getOpcode() == TargetOpcode::G_STORE) {
-      auto Res = ValueReg;
+      llvm::Register Res = ValueReg;
       // If we're not storing from the start, we need to shift our value first
       if (Offset != 0) {
-        auto ShrRes = MRI.createGenericVirtualRegister(SizeTy);
-        auto ShiftConst = MRI.createGenericVirtualRegister(SizeTy);
+        llvm::Register ShrRes = MRI.createGenericVirtualRegister(SizeTy);
+        llvm::Register ShiftConst = MRI.createGenericVirtualRegister(SizeTy);
         B.buildConstant(ShiftConst, ShiftAmount);
         B.buildLShr(ShrRes, ValueReg, ShiftConst);
         Res = ShrRes;
@@ -282,7 +282,7 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
 
       // Next, truncate it to the correct size, if needed
       if (SizeTy != OpTy) {
-        auto TruncRes = MRI.createGenericVirtualRegister(OpTy);
+        llvm::Register TruncRes = MRI.createGenericVirtualRegister(OpTy);
         B.buildTrunc(TruncRes, Res);
         Res = TruncRes;
       }
@@ -291,22 +291,22 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
     } else {
       // When loading, do the same thing but basically in reverse
       // First, load the value
-      auto LoadedValReg = MRI.createGenericVirtualRegister(OpTy);
+      llvm::Register LoadedValReg = MRI.createGenericVirtualRegister(OpTy);
       B.buildLoad(LoadedValReg, AddrReg, *NewMMO);
-      auto Res = LoadedValReg;
+      llvm::Register Res = LoadedValReg;
 
       // Extend it to the correct size, if needed
       if (SizeTy != OpTy) {
-        auto ZextRes = MRI.createGenericVirtualRegister(SizeTy);
+        llvm::Register ZextRes = MRI.createGenericVirtualRegister(SizeTy);
         B.buildZExt(ZextRes, LoadedValReg);
         Res = ZextRes;
       }
 
       // If we're not loading the first Bytes, then we need to shift it
       if (Offset != 0) {
-        auto ShiftRes = MRI.createGenericVirtualRegister(SizeTy);
+        llvm::Register ShiftRes = MRI.createGenericVirtualRegister(SizeTy);
 
-        auto ShiftConst = MRI.createGenericVirtualRegister(SizeTy);
+        llvm::Register ShiftConst = MRI.createGenericVirtualRegister(SizeTy);
         B.buildConstant(ShiftConst, ShiftAmount);
 
         B.buildShl(ShiftRes, Res, ShiftConst);
@@ -318,7 +318,7 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
         B.buildConstant(LoadRes, 0);
       }
 
-      auto NewLoadRes = MRI.createGenericVirtualRegister(SizeTy);
+      llvm::Register NewLoadRes = MRI.createGenericVirtualRegister(SizeTy);
       B.buildOr(NewLoadRes, LoadRes, Res);
       LoadRes = NewLoadRes;
     }
@@ -332,7 +332,7 @@ void PISAPreLegalizerCombinerImpl::applyExpandNonPowerOf2LoadStore(
     // not a multiple of 8), we need to truncate it to the correct size again,
     // in order not to break any following instructions
     if (SizeTy != MRI.getType(ValueReg)) {
-      auto TruncRes = MRI.createGenericVirtualRegister(MRI.getType(ValueReg));
+      llvm::Register TruncRes = MRI.createGenericVirtualRegister(MRI.getType(ValueReg));
       B.buildTrunc(TruncRes, LoadRes);
       LoadRes = TruncRes;
     }
@@ -387,7 +387,7 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
     MachineInstr *&SizeModificationOp) const {
   GLoadStore &StoreInst = cast<GLoadStore>(MI);
 
-  auto ValueReg = StoreInst.getOperand(0).getReg();
+  llvm::Register ValueReg = StoreInst.getOperand(0).getReg();
 
   /// This has the integer size at the beginning, and each individual load
   /// decreases the value by its load size. At the end, this must be zero.
@@ -468,7 +468,7 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
       if (PtrAddInst->getOpcode() != TargetOpcode::G_PTR_ADD)
         return false;
 
-      auto LoadOffset =
+      std::optional<llvm::APInt> LoadOffset =
           getIConstantVRegVal(PtrAddInst->getOperand(2).getReg(), MRI);
       if (!LoadOffset.has_value() || LoadOffset.value() != LoadShift / 8)
         return false;
@@ -487,14 +487,14 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
                                        LoadOffset.value().getZExtValue())});
     } else if (NextChainInst->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
                NextChainInst->getOpcode() == TargetOpcode::G_LOAD) {
-      const auto &LoadInst = cast<GLoadStore>(*NextChainInst);
+      const llvm::GLoadStore &LoadInst = cast<GLoadStore>(*NextChainInst);
       const LLT LoadTy = LoadInst.getMMO().getType();
       if (!LoadTy.isScalar())
         return false;
 
       // This is the last load instruction of the chain, so it must match the
       // remaining value in ValueSize
-      auto LoadSize = LoadTy.getScalarSizeInBits();
+      unsigned LoadSize = LoadTy.getScalarSizeInBits();
       if (ValueSize % 8 == 0 && LoadSize != ValueSize)
         return false;
 
@@ -510,7 +510,7 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
             SizeModificationOp->getOpcode() == TargetOpcode::G_TRUNC)
           return false;
 
-        auto SizeAfterModificationOp =
+        unsigned SizeAfterModificationOp =
             MRI.getType(SizeModificationOp->getOperand(0).getReg())
                 .getScalarSizeInBits();
 
@@ -526,7 +526,7 @@ bool PISAPreLegalizerCombinerImpl::matchSimplifyNonPowerOf2LoadStoreChain(
         // same G_SEXT(G_LOAD) pattern, causing an infinite loop. When the
         // source size is not byte-aligned, the apply inserts in-place
         // shl/ashr to align it first, producing a different pattern.
-        auto SextSrcSize =
+        unsigned SextSrcSize =
             MRI.getType(SizeModificationOp->getOperand(1).getReg())
                 .getScalarSizeInBits();
         if (LoadSize == SextSrcSize && SextSrcSize % 8 == 0)
@@ -556,13 +556,15 @@ void PISAPreLegalizerCombinerImpl::applySimplifyNonPowerOf2LoadStoreChain(
   // multiple G_STOREs using the individually loaded values
   GLoadStore &StoreInst = cast<GLoadStore>(MI);
 
-  auto PointerReg = StoreInst.getPointerReg();
-  auto &MMO = StoreInst.getMMO();
+  llvm::Register PointerReg = StoreInst.getPointerReg();
+  llvm::MachineMemOperand &MMO = StoreInst.getMMO();
 
   unsigned StoreSizeInBytes = StoreInst.getMemSize().getValue();
 
-  for (auto [Index, Pair] : enumerate(Loads)) {
-    auto [LoadMI, Offset] = Pair;
+  for (size_t Index = 0; Index < Loads.size(); ++Index) {
+    std::pair<MachineInstr *, unsigned> &Pair = Loads[Index];
+    MachineInstr *LoadMI = Pair.first;
+    unsigned Offset = Pair.second;
 
     Register Value = LoadMI->getOperand(0).getReg();
     LLT LoadTy = cast<GLoadStore>(LoadMI)->getMMO().getType();
@@ -581,7 +583,7 @@ void PISAPreLegalizerCombinerImpl::applySimplifyNonPowerOf2LoadStoreChain(
       // load was extended, so we need to sext/zext this value before
       // storing
       if (Index == 0 && SizeModificationOp != nullptr) {
-        auto Opcode = SizeModificationOp->getOpcode();
+        unsigned Opcode = SizeModificationOp->getOpcode();
         assert(Opcode == TargetOpcode::G_ZEXT ||
                Opcode == TargetOpcode::G_SEXT ||
                Opcode == TargetOpcode::G_SEXT_INREG);
@@ -599,22 +601,22 @@ void PISAPreLegalizerCombinerImpl::applySimplifyNonPowerOf2LoadStoreChain(
           // First, do we have to sign extend this value in-place using
           // shifts?
           if (OriginalSize % 8 != 0) {
-            auto ExtendBy = 8 - (OriginalSize % 8);
+            unsigned ExtendBy = 8 - (OriginalSize % 8);
 
-            auto ConstReg = MRI.createGenericVirtualRegister(LLT::integer(32));
+            llvm::Register ConstReg = MRI.createGenericVirtualRegister(LLT::integer(32));
             B.buildConstant(ConstReg, ExtendBy);
 
             if (LoadTy.getSizeInBits() < OriginalSize + ExtendBy) {
               LoadTy = LLT::integer(OriginalSize + ExtendBy);
-              auto ZExtRes = MRI.createGenericVirtualRegister(LoadTy);
+              llvm::Register ZExtRes = MRI.createGenericVirtualRegister(LoadTy);
               B.buildZExt(ZExtRes, Res);
               Res = ZExtRes;
             }
 
-            auto ShlRes = MRI.cloneVirtualRegister(Res);
+            llvm::Register ShlRes = MRI.cloneVirtualRegister(Res);
             B.buildShl(ShlRes, Res, ConstReg);
 
-            auto AShrRes = MRI.cloneVirtualRegister(ShlRes);
+            llvm::Register AShrRes = MRI.cloneVirtualRegister(ShlRes);
             B.buildAShr(AShrRes, ShlRes, ConstReg);
 
             Res = AShrRes;
@@ -625,18 +627,18 @@ void PISAPreLegalizerCombinerImpl::applySimplifyNonPowerOf2LoadStoreChain(
           // Second, do we still have to SEXT it further?
           if (StoreSizeInBits > OriginalSize) {
             LoadTy = LLT::integer(StoreSizeInBits);
-            auto SextRes = MRI.createGenericVirtualRegister(LoadTy);
+            llvm::Register SextRes = MRI.createGenericVirtualRegister(LoadTy);
             B.buildSExt(SextRes, Res);
 
             Res = SextRes;
           }
         } else {
           // G_ZEXT, simple
-          auto NewSize = StoreSizeInBytes - Offset;
+          unsigned NewSize = StoreSizeInBytes - Offset;
           assert(NewSize > LoadTy.getSizeInBytes());
 
           LoadTy = LLT::integer(NewSize * 8);
-          auto ExtRes = MRI.createGenericVirtualRegister(LoadTy);
+          llvm::Register ExtRes = MRI.createGenericVirtualRegister(LoadTy);
           B.buildZExt(ExtRes, Res);
 
           Res = ExtRes;
@@ -657,21 +659,21 @@ void PISAPreLegalizerCombinerImpl::applySimplifyNonPowerOf2LoadStoreChain(
       B.buildTrunc(Res, Value);
     }
 
-    auto *NewMMO = MI.getMF()->getMachineMemOperand(
+    llvm::MachineMemOperand *NewMMO = MI.getMF()->getMachineMemOperand(
         &MMO, MMO.getOffset() + Offset, LoadTy);
 
     /// Stores the (potentially modified) pointer register
-    auto AddrReg = PointerReg;
+    llvm::Register AddrReg = PointerReg;
 
     // Add the offset to the pointer reg if the offset is not zero
     if (Offset != 0) {
-      auto NewPointerReg =
+      llvm::Register NewPointerReg =
           MRI.createGenericVirtualRegister(MRI.getType(AddrReg));
 
       // Get the pointer size from the pointer register type
       const LLT PtrTy = MRI.getType(AddrReg);
       const LLT IntTy = LLT::integer(PtrTy.getSizeInBits());
-      auto CstReg = MRI.createGenericVirtualRegister(IntTy);
+      llvm::Register CstReg = MRI.createGenericVirtualRegister(IntTy);
       B.buildConstant(CstReg, Offset);
 
       B.buildPtrAdd(NewPointerReg, AddrReg, CstReg);
@@ -689,8 +691,8 @@ void PISAPreLegalizerCombinerImpl::applySimplifyNonPowerOf2LoadStoreChain(
 // (s24) = G_TRUNC (s32)
 // G_STORE (s24), ptr
 bool PISAPreLegalizerCombinerImpl::matchTruncatedStore(MachineInstr &MI) const {
-  auto &Store = cast<GStore>(MI);
-  auto *TruncMI = getDefIgnoringCopies(Store.getValueReg(), MRI);
+  llvm::GStore &Store = cast<GStore>(MI);
+  llvm::MachineInstr *TruncMI = getDefIgnoringCopies(Store.getValueReg(), MRI);
   if (!TruncMI)
     return false;
   if (TruncMI->getOpcode() != TargetOpcode::G_TRUNC)
@@ -699,17 +701,17 @@ bool PISAPreLegalizerCombinerImpl::matchTruncatedStore(MachineInstr &MI) const {
           MRI.getType(TruncMI->getOperand(1).getReg()).getSizeInBits()))
     return false;
 
-  auto Size = Store.getMemSizeInBits().getValue();
-  auto Align = Store.getMMO().getAlign().value();
+  llvm::TypeSize Size = Store.getMemSizeInBits().getValue();
+  uint64_t Align = Store.getMMO().getAlign().value();
 
   if (isPowerOf2_32(Size))
     return false;
 
-  auto NextPow2 = NextPowerOf2(Size);
-  auto TruncSize = MRI.getType(TruncMI->getOperand(1).getReg()).getSizeInBits();
+  uint64_t NextPow2 = NextPowerOf2(Size);
+  llvm::TypeSize TruncSize = MRI.getType(TruncMI->getOperand(1).getReg()).getSizeInBits();
   if (TruncSize != NextPow2)
     return false;
-  auto Remainder = NextPow2 - Size;
+  uint64_t Remainder = NextPow2 - Size;
   if (NextPow2 % Remainder != 0)
     return false;
 
@@ -721,7 +723,7 @@ bool PISAPreLegalizerCombinerImpl::matchTruncatedStore(MachineInstr &MI) const {
   if (Align % (Remainder / 8) != 0)
     return false;
 
-  auto VecSize = NextPow2 / Remainder;
+  uint64_t VecSize = NextPow2 / Remainder;
   if (VecSize > 4)
     return false;
 
@@ -731,27 +733,27 @@ bool PISAPreLegalizerCombinerImpl::matchTruncatedStore(MachineInstr &MI) const {
 // Changes the type of a non-power-of-2 store to a vector of smaller elements,
 // if it comes from a trunc instruction.
 void PISAPreLegalizerCombinerImpl::applyTruncatedStore(MachineInstr &MI) const {
-  auto &Store = cast<GStore>(MI);
+  llvm::GStore &Store = cast<GStore>(MI);
 
-  auto *TruncMI = getDefIgnoringCopies(Store.getValueReg(), MRI);
+  llvm::MachineInstr *TruncMI = getDefIgnoringCopies(Store.getValueReg(), MRI);
   assert(TruncMI && TruncMI->getOpcode() == TargetOpcode::G_TRUNC);
 
-  auto TruncVal = TruncMI->getOperand(1);
-  auto Size = Store.getMemSizeInBits().getValue();
-  auto NextPow2 = NextPowerOf2(Size);
-  auto Remainder = NextPow2 - Size;
-  auto VecSize = NextPow2 / Remainder;
-  auto VecSizeSmall = Size / Remainder;
-  auto VecType = LLT::fixed_vector(VecSize, LLT::integer(Remainder));
-  auto VecTypeSmall = LLT::fixed_vector(VecSizeSmall, LLT::integer(Remainder));
-  auto TmpDst = MRI.createGenericVirtualRegister(VecType);
-  auto TmpDstSmall = MRI.createGenericVirtualRegister(VecTypeSmall);
+  llvm::MachineOperand TruncVal = TruncMI->getOperand(1);
+  llvm::TypeSize Size = Store.getMemSizeInBits().getValue();
+  uint64_t NextPow2 = NextPowerOf2(Size);
+  uint64_t Remainder = NextPow2 - Size;
+  uint64_t VecSize = NextPow2 / Remainder;
+  uint64_t VecSizeSmall = Size / Remainder;
+  llvm::LLT VecType = LLT::fixed_vector(VecSize, LLT::integer(Remainder));
+  llvm::LLT VecTypeSmall = LLT::fixed_vector(VecSizeSmall, LLT::integer(Remainder));
+  llvm::Register TmpDst = MRI.createGenericVirtualRegister(VecType);
+  llvm::Register TmpDstSmall = MRI.createGenericVirtualRegister(VecTypeSmall);
   B.buildBitcast(TmpDst, TruncVal);
   B.buildShuffleVector(TmpDstSmall, TmpDst, B.buildUndef(VecType), {0, 1, 2});
 
-  auto Addr = Store.getPointerReg();
-  auto &MMO = Store.getMMO();
-  auto *NewMMO =
+  llvm::Register Addr = Store.getPointerReg();
+  llvm::MachineMemOperand &MMO = Store.getMMO();
+  llvm::MachineMemOperand *NewMMO =
       MI.getMF()->getMachineMemOperand(&MMO, MMO.getOffset(), VecTypeSmall);
   B.buildStore(TmpDstSmall, Addr, *NewMMO);
   MI.eraseFromParent();
@@ -762,20 +764,20 @@ void PISAPreLegalizerCombinerImpl::applyTruncatedStore(MachineInstr &MI) const {
 // This saves us from using second load instruction and few arithmetic
 // instructions (shl, and, or) to zero extend.
 bool PISAPreLegalizerCombinerImpl::matchExtendedLoad(MachineInstr &MI) const {
-  auto *DefMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  llvm::MachineInstr *DefMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
   if (!DefMI)
     return false;
   if (DefMI->getOpcode() != TargetOpcode::G_LOAD)
     return false;
   GLoad &Load = cast<GLoad>(*DefMI);
 
-  auto Size = Load.getMemSizeInBits().getValue();
-  auto Align = Load.getMMO().getAlign().value();
+  llvm::TypeSize Size = Load.getMemSizeInBits().getValue();
+  uint64_t Align = Load.getMMO().getAlign().value();
 
   if (isPowerOf2_32(Size))
     return false;
 
-  auto ZextSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  llvm::TypeSize ZextSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   if (!isPowerOf2_32(ZextSize))
     return false;
 
@@ -793,21 +795,21 @@ void PISAPreLegalizerCombinerImpl::applyExtendedLoad(MachineInstr &MI) const {
       cast<GLoad>(getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI));
   assert(LoadMI);
 
-  auto DestSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-  auto LoadSize = LoadMI->getMemSizeInBits().getValue();
+  llvm::TypeSize DestSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  llvm::TypeSize LoadSize = LoadMI->getMemSizeInBits().getValue();
 
   APInt Mask = APInt::getLowBitsSet(DestSize, LoadSize);
 
-  auto NewLoadSize = LLT::integer(DestSize);
-  auto LoadDst = MRI.createGenericVirtualRegister(NewLoadSize);
+  llvm::LLT NewLoadSize = LLT::integer(DestSize);
+  llvm::Register LoadDst = MRI.createGenericVirtualRegister(NewLoadSize);
 
-  auto Addr = LoadMI->getOperand(1);
-  auto &MMO = LoadMI->getMMO();
-  auto *NewMMO = MI.getMF()->getMachineMemOperand(&MMO, MMO.getOffset(),
+  llvm::MachineOperand Addr = LoadMI->getOperand(1);
+  llvm::MachineMemOperand &MMO = LoadMI->getMMO();
+  llvm::MachineMemOperand *NewMMO = MI.getMF()->getMachineMemOperand(&MMO, MMO.getOffset(),
                                                   MRI.getType(LoadDst));
 
   B.buildLoad(LoadDst, Addr, *NewMMO);
-  auto MaskReg = MRI.createGenericVirtualRegister(LLT::integer(DestSize));
+  llvm::Register MaskReg = MRI.createGenericVirtualRegister(LLT::integer(DestSize));
   B.buildConstant(MaskReg, Mask.getZExtValue());
   B.buildAnd(MI.getOperand(0).getReg(), LoadDst, MaskReg);
   MI.eraseFromParent();
@@ -820,19 +822,20 @@ void PISAPreLegalizerCombinerImpl::applyExtendedLoad(MachineInstr &MI) const {
 // => %lo = G_EXTRACT_VECTOR_ELT <2 x 16> %1, 0
 // => %hi = G_EXTRACT_VECTOR_ELT <2 x 16> %1, 1
 bool PISAPreLegalizerCombinerImpl::matchTruncatedShift(MachineInstr &MI) const {
-  auto &TruncMI = MI;
-  auto &LshMI = *getDefIgnoringCopies(TruncMI.getOperand(1).getReg(), MRI);
+  llvm::MachineInstr &TruncMI = MI;
+  llvm::MachineInstr &LshMI = *getDefIgnoringCopies(TruncMI.getOperand(1).getReg(), MRI);
   if (LshMI.getOpcode() == TargetOpcode::G_LSHR) {
-    auto WideTy = MRI.getType(TruncMI.getOperand(1).getReg());
-    auto NarrowTy = MRI.getType(TruncMI.getOperand(0).getReg());
-    auto WideSize = WideTy.getScalarSizeInBits();
-    auto NarrowSize = NarrowTy.getScalarSizeInBits();
+    llvm::LLT WideTy = MRI.getType(TruncMI.getOperand(1).getReg());
+    llvm::LLT NarrowTy = MRI.getType(TruncMI.getOperand(0).getReg());
+    unsigned WideSize = WideTy.getScalarSizeInBits();
+    unsigned NarrowSize = NarrowTy.getScalarSizeInBits();
     if (WideTy.isScalar() && NarrowTy.isScalar()) {
       if (isPowerOf2_32(WideSize) && isPowerOf2_32(NarrowSize)) {
-        auto ShiftReg = LshMI.getOperand(2).getReg();
-        if (auto Shift = getIConstantVRegValWithLookThrough(ShiftReg, MRI)) {
+        llvm::Register ShiftReg = LshMI.getOperand(2).getReg();
+        if (std::optional<llvm::ValueAndVReg> Shift =
+                getIConstantVRegValWithLookThrough(ShiftReg, MRI)) {
           if (Shift.has_value()) {
-            auto ShiftVal = Shift->Value.getZExtValue();
+            uint64_t ShiftVal = Shift->Value.getZExtValue();
             if ((NarrowSize + ShiftVal) == WideSize)
               return true;
           }
@@ -843,34 +846,34 @@ bool PISAPreLegalizerCombinerImpl::matchTruncatedShift(MachineInstr &MI) const {
   return false;
 }
 void PISAPreLegalizerCombinerImpl::applyTruncatedShift(MachineInstr &MI) const {
-  auto &TruncMI = MI;
-  auto &LshMI = *getDefIgnoringCopies(TruncMI.getOperand(1).getReg(), MRI);
-  auto WideTy = MRI.getType(TruncMI.getOperand(1).getReg());
-  auto NarrowTy = MRI.getType(TruncMI.getOperand(0).getReg());
-  auto WideSize = WideTy.getScalarSizeInBits();
-  auto NarrowSize = NarrowTy.getScalarSizeInBits();
+  llvm::MachineInstr &TruncMI = MI;
+  llvm::MachineInstr &LshMI = *getDefIgnoringCopies(TruncMI.getOperand(1).getReg(), MRI);
+  llvm::LLT WideTy = MRI.getType(TruncMI.getOperand(1).getReg());
+  llvm::LLT NarrowTy = MRI.getType(TruncMI.getOperand(0).getReg());
+  unsigned WideSize = WideTy.getScalarSizeInBits();
+  unsigned NarrowSize = NarrowTy.getScalarSizeInBits();
 
-  auto VecLen = WideSize / NarrowSize;
-  auto VecTy = LLT::fixed_vector(VecLen, NarrowTy);
-  auto VecReg = MRI.createGenericVirtualRegister(VecTy);
+  unsigned VecLen = WideSize / NarrowSize;
+  llvm::LLT VecTy = LLT::fixed_vector(VecLen, NarrowTy);
+  llvm::Register VecReg = MRI.createGenericVirtualRegister(VecTy);
 
   // trunc to extract high part
-  auto BitCast = B.buildBitcast(VecReg, LshMI.getOperand(1));
+  llvm::MachineInstrBuilder BitCast = B.buildBitcast(VecReg, LshMI.getOperand(1));
   B.buildExtractVectorElementConstant(TruncMI.getOperand(0), VecReg,
                                       VecLen - 1);
 
   // find trunc to extract low part (if any)
-  auto ShiftSrc = LshMI.getOperand(1).getReg();
-  for (auto &UseMI : MRI.use_instructions(ShiftSrc)) {
+  llvm::Register ShiftSrc = LshMI.getOperand(1).getReg();
+  for (llvm::MachineInstr &UseMI : MRI.use_instructions(ShiftSrc)) {
     if (UseMI.getOpcode() == TargetOpcode::G_TRUNC) {
-      auto DstSize = MRI.getType(UseMI.getOperand(0).getReg()).getSizeInBits();
+      llvm::TypeSize DstSize = MRI.getType(UseMI.getOperand(0).getReg()).getSizeInBits();
       if (DstSize == NarrowSize) {
         assert(MDT && "machine dominator pass must be available");
         if (!MDT->dominates(&UseMI, &TruncMI) &&
             !MDT->dominates(&TruncMI, &UseMI))
           continue; // can not optimize out low part
         MachineIRBuilder MIB(UseMI);
-        auto Lo = MIB.buildExtractVectorElementConstant(UseMI.getOperand(0),
+        llvm::MachineInstrBuilder Lo = MIB.buildExtractVectorElementConstant(UseMI.getOperand(0),
                                                         VecReg, 0);
         if (MDT->dominates(&UseMI, &TruncMI))
           BitCast->moveBefore(Lo);
@@ -888,20 +891,20 @@ void PISAPreLegalizerCombinerImpl::applyTruncatedShift(MachineInstr &MI) const {
 // => D(32) = COPY ARG(32)
 bool PISAPreLegalizerCombinerImpl::matchRedundantMovesPre(
     MachineInstr &MI) const {
-  auto &BitcastMI = MI;
-  auto DstReg = BitcastMI.getOperand(0).getReg();
-  auto SrcReg = BitcastMI.getOperand(1).getReg();
+  llvm::MachineInstr &BitcastMI = MI;
+  llvm::Register DstReg = BitcastMI.getOperand(0).getReg();
+  llvm::Register SrcReg = BitcastMI.getOperand(1).getReg();
   if (MRI.getType(DstReg).isVector() || !MRI.getType(SrcReg).isVector())
     return false;
 
-  auto &BuildVecMI = *getDefIgnoringCopies(SrcReg, MRI);
+  llvm::MachineInstr &BuildVecMI = *getDefIgnoringCopies(SrcReg, MRI);
   if (BuildVecMI.getOpcode() != TargetOpcode::G_BUILD_VECTOR)
     return false;
 
   unsigned Mask = 0;
   Register VecReg = 0;
   for (unsigned I = 1; I < BuildVecMI.getNumOperands(); I++) {
-    auto &ExtractMI =
+    llvm::MachineInstr &ExtractMI =
         *getDefIgnoringCopies(BuildVecMI.getOperand(I).getReg(), MRI);
     if (ExtractMI.getOpcode() != TargetOpcode::G_EXTRACT_VECTOR_ELT)
       return false;
@@ -911,8 +914,8 @@ bool PISAPreLegalizerCombinerImpl::matchRedundantMovesPre(
       // must extract indices from the same vector
       return false;
     }
-    auto IndexReg = ExtractMI.getOperand(2).getReg();
-    auto Index = getIConstantVRegValWithLookThrough(IndexReg, MRI);
+    llvm::Register IndexReg = ExtractMI.getOperand(2).getReg();
+    std::optional<llvm::ValueAndVReg> Index = getIConstantVRegValWithLookThrough(IndexReg, MRI);
     if (!Index.has_value())
       return false;
     // indices must be in the same order
@@ -933,13 +936,13 @@ bool PISAPreLegalizerCombinerImpl::matchRedundantMovesPre(
 }
 void PISAPreLegalizerCombinerImpl::applyRedundantMovesPre(
     MachineInstr &MI) const {
-  auto &BitcastMI = MI;
-  auto DstReg = BitcastMI.getOperand(0).getReg();
-  auto SrcReg = BitcastMI.getOperand(1).getReg();
-  auto &BuildVecMI = *getDefIgnoringCopies(SrcReg, MRI);
-  auto &ExtractMI =
+  llvm::MachineInstr &BitcastMI = MI;
+  llvm::Register DstReg = BitcastMI.getOperand(0).getReg();
+  llvm::Register SrcReg = BitcastMI.getOperand(1).getReg();
+  llvm::MachineInstr &BuildVecMI = *getDefIgnoringCopies(SrcReg, MRI);
+  llvm::MachineInstr &ExtractMI =
       *getDefIgnoringCopies(BuildVecMI.getOperand(1).getReg(), MRI);
-  auto VecReg = ExtractMI.getOperand(1).getReg();
+  llvm::Register VecReg = ExtractMI.getOperand(1).getReg();
 
   if (MRI.getType(DstReg) == MRI.getType(VecReg))
     B.buildCopy(DstReg, VecReg);
@@ -956,7 +959,7 @@ static MachineInstr *getReciprocalDivisor(MachineInstr *MI,
     // Check for 1.0 / x pattern. Avoid m_GFCstOrSplat because
     // getFConstantVRegValWithLookThrough loses bfloat16 semantics.
     Register Dividend = MI->getOperand(1).getReg();
-    auto *DivDefMI = getDefIgnoringCopies(Dividend, MRI);
+    llvm::MachineInstr *DivDefMI = getDefIgnoringCopies(Dividend, MRI);
     if (!DivDefMI || DivDefMI->getOpcode() != TargetOpcode::G_FCONSTANT)
       return nullptr;
     if (!DivDefMI->getOperand(1).getFPImm()->isExactlyValue(1.0))
@@ -964,7 +967,7 @@ static MachineInstr *getReciprocalDivisor(MachineInstr *MI,
     return getDefIgnoringCopies(MI->getOperand(2).getReg(), MRI);
   }
 
-  auto *GI = dyn_cast<GIntrinsic>(MI);
+  llvm::GIntrinsic *GI = dyn_cast<GIntrinsic>(MI);
   if (GI && GI->is(Intrinsic::pisa_frcp))
     return getDefIgnoringCopies(MI->getOperand(2).getReg(), MRI);
 
@@ -980,12 +983,14 @@ static MachineInstr *getReciprocalDivisor(MachineInstr *MI,
 bool PISAPreLegalizerCombinerImpl::matchRcpSqrtToRsqrt(
     MachineInstr &MI,
     std::function<void(MachineIRBuilder &)> &MatchInfo) const {
-  auto GetFrcpSrc = [=](MachineInstr *MI) -> MachineInstr * {
+  std::function<MachineInstr *(MachineInstr *)> GetFrcpSrc =
+      [=](MachineInstr *MI) -> MachineInstr * {
     if (!MI || !MI->getFlag(MachineInstr::FmContract))
       return nullptr;
     return getReciprocalDivisor(MI, MRI);
   };
-  auto GetSqrtSrc = [=](MachineInstr *MI) -> MachineInstr * {
+  std::function<MachineInstr *(MachineInstr *)> GetSqrtSrc =
+      [=](MachineInstr *MI) -> MachineInstr * {
     if (!MI || !MI->getFlag(MachineInstr::FmContract))
       return nullptr;
     if (MI->getOpcode() == TargetOpcode::G_FSQRT)
@@ -998,7 +1003,7 @@ bool PISAPreLegalizerCombinerImpl::matchRcpSqrtToRsqrt(
   if (Divisor) {
     // result of sqrt cannot be snan, so Intrinsic::fabs is replaced with
     // Intrinsic::pisa_fabs. We won't get G_FABS here.
-    auto *GI = dyn_cast<GIntrinsic>(Divisor);
+    llvm::GIntrinsic *GI = dyn_cast<GIntrinsic>(Divisor);
     if (GI && GI->is(Intrinsic::pisa_fabs)) {
       WrapInFAbs = true;
       Divisor = getDefIgnoringCopies(GI->getOperand(2).getReg(), MRI);
@@ -1023,7 +1028,7 @@ bool PISAPreLegalizerCombinerImpl::matchRcpSqrtToRsqrt(
       return;
     }
     // 1/|sqrt(x)| == |frsqrt(x)|
-    auto Frsqrt = B.buildIntrinsic(Intrinsic::pisa_frsqrt, {DstTy})
+    llvm::MachineInstrBuilder Frsqrt = B.buildIntrinsic(Intrinsic::pisa_frsqrt, {DstTy})
                       .addUse(Src)
                       .setMIFlags(MI.getFlags());
     B.buildIntrinsic(Intrinsic::pisa_fabs, {MI.getOperand(0)})
@@ -1045,10 +1050,10 @@ bool PISAPreLegalizerCombinerImpl::matchSubFloorToFrc(
   if (IsPlainFSub) {
     XReg = MI.getOperand(1).getReg();
     FloorReg = MI.getOperand(2).getReg();
-  } else if (auto *GI = dyn_cast<GIntrinsic>(&MI);
+  } else if (llvm::GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI);
              GI && GI->is(Intrinsic::pisa_fsub)) {
     unsigned NumOps = MI.getNumOperands();
-    auto Round = static_cast<RoundingMode>(MI.getOperand(NumOps - 2).getImm());
+    llvm::RoundingMode Round = static_cast<RoundingMode>(MI.getOperand(NumOps - 2).getImm());
     int64_t Sat = MI.getOperand(NumOps - 1).getImm();
     if (Round != RoundingMode::TowardZero || Sat)
       return false;
@@ -1058,7 +1063,7 @@ bool PISAPreLegalizerCombinerImpl::matchSubFloorToFrc(
     return false;
   }
 
-  auto BitWidth = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+  llvm::TypeSize BitWidth = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
   if (BitWidth != 32)
     return false;
 
@@ -1107,18 +1112,18 @@ bool PISAPreLegalizerCombinerImpl::matchLaneIdLeftShiftChain(
     return false;
   if (!mi_match(ZExt, MRI, m_GZExt(m_GShl(m_MInstr(Intr), m_ICst(ShiftImm2)))))
     return false;
-  auto *LaneId = dyn_cast<GIntrinsic>(Intr);
+  llvm::GIntrinsic *LaneId = dyn_cast<GIntrinsic>(Intr);
   if (!LaneId || LaneId->getIntrinsicID() != Intrinsic::pisa_lane_id)
     return false;
 
-  auto LaneIdTy = MRI.getType(LaneId->getOperand(0).getReg());
+  llvm::LLT LaneIdTy = MRI.getType(LaneId->getOperand(0).getReg());
   constexpr int MaxNumBitsInLaneId = 5;
   if ((ShiftImm1 + ShiftImm2) >=
       (static_cast<int>(LaneIdTy.getSizeInBits()) - MaxNumBitsInLaneId - 1))
     return false;
 
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    auto NewShlReg = MRI.createGenericVirtualRegister(LaneIdTy);
+    llvm::Register NewShlReg = MRI.createGenericVirtualRegister(LaneIdTy);
     B.buildShl(NewShlReg, LaneId->getOperand(0),
                B.buildConstant(LaneIdTy, ShiftImm1 + ShiftImm2), MI.getFlags());
     B.buildZExt(MI.getOperand(0), NewShlReg, ZExt->getFlags());
@@ -1134,8 +1139,8 @@ bool PISAPreLegalizerCombinerImpl::matchZExtAndToAndZExt(
     std::function<void(MachineIRBuilder &)> &MatchInfo) const {
   Register ZExtReg = MI.getOperand(1).getReg();
   Register MaskReg = MI.getOperand(2).getReg();
-  auto *ZExtMI = getDefIgnoringCopies(ZExtReg, MRI);
-  auto Mask = getIConstantVRegValWithLookThrough(MaskReg, MRI);
+  llvm::MachineInstr *ZExtMI = getDefIgnoringCopies(ZExtReg, MRI);
+  std::optional<llvm::ValueAndVReg> Mask = getIConstantVRegValWithLookThrough(MaskReg, MRI);
 
   if ((!ZExtMI || ZExtMI->getOpcode() != TargetOpcode::G_ZEXT ||
        !Mask.has_value())) {
@@ -1159,8 +1164,8 @@ bool PISAPreLegalizerCombinerImpl::matchZExtAndToAndZExt(
   APInt NarrowMask = Mask->Value.zextOrTrunc(SrcTy.getSizeInBits());
   unsigned ZExtFlags = ZExtMI->getFlags();
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto NarrowMaskReg = B.buildConstant(SrcTy, NarrowMask);
-    auto NarrowAnd = B.buildAnd(SrcTy, SrcReg, NarrowMaskReg);
+    llvm::MachineInstrBuilder NarrowMaskReg = B.buildConstant(SrcTy, NarrowMask);
+    llvm::MachineInstrBuilder NarrowAnd = B.buildAnd(SrcTy, SrcReg, NarrowMaskReg);
     B.buildZExt(DstReg, NarrowAnd, ZExtFlags);
   };
   return true;
@@ -1179,63 +1184,63 @@ bool PISAPreLegalizerCombinerImpl::matchZExtAndToAndZExt(
 // - bits of s32 (typeof(BaseReg)) written to by above - return value
 static uint64_t getCoveredBits(Register BaseReg, Register &SrcVecReg,
                                uint64_t *SrcVecIdx, MachineRegisterInfo &MRI) {
-  auto &SrcMI = *getDefIgnoringCopies(BaseReg, MRI);
+  llvm::MachineInstr &SrcMI = *getDefIgnoringCopies(BaseReg, MRI);
   switch (SrcMI.getOpcode()) {
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
-    auto VecReg = SrcMI.getOperand(1).getReg();
+    llvm::Register VecReg = SrcMI.getOperand(1).getReg();
     if (MRI.getType(VecReg).getNumElements() > 64)
       return 0; // not supported
-    auto IdxReg = SrcMI.getOperand(2).getReg();
+    llvm::Register IdxReg = SrcMI.getOperand(2).getReg();
     if (SrcVecReg && (SrcVecReg != VecReg))
       return 0; // extracting from different source vector ?
     SrcVecReg = VecReg;
-    auto Index = getIConstantVRegValWithLookThrough(IdxReg, MRI);
+    std::optional<llvm::ValueAndVReg> Index = getIConstantVRegValWithLookThrough(IdxReg, MRI);
     if (!Index.has_value())
       return 0; // not a constant
     *SrcVecIdx |= (1ull << Index->Value.getZExtValue());
     return ~0;
   } break;
   case TargetOpcode::G_ZEXT: {
-    auto SrcReg = SrcMI.getOperand(1).getReg();
-    auto &ExtractMI = *getDefIgnoringCopies(SrcReg, MRI);
+    llvm::Register SrcReg = SrcMI.getOperand(1).getReg();
+    llvm::MachineInstr &ExtractMI = *getDefIgnoringCopies(SrcReg, MRI);
     if (ExtractMI.getOpcode() != TargetOpcode::G_EXTRACT_VECTOR_ELT)
       return 0;
     if (getCoveredBits(SrcReg, SrcVecReg, SrcVecIdx, MRI))
       return (1ull << MRI.getType(SrcReg).getScalarSizeInBits()) - 1;
   } break;
   case TargetOpcode::G_SHL: {
-    auto SrcReg = SrcMI.getOperand(1).getReg();
-    auto ShiftReg = SrcMI.getOperand(2).getReg();
-    auto &ExtMI = *getDefIgnoringCopies(SrcReg, MRI);
+    llvm::Register SrcReg = SrcMI.getOperand(1).getReg();
+    llvm::Register ShiftReg = SrcMI.getOperand(2).getReg();
+    llvm::MachineInstr &ExtMI = *getDefIgnoringCopies(SrcReg, MRI);
     if (ExtMI.getOpcode() != TargetOpcode::G_ZEXT)
       return 0;
-    auto Shift = getIConstantVRegValWithLookThrough(ShiftReg, MRI);
+    std::optional<llvm::ValueAndVReg> Shift = getIConstantVRegValWithLookThrough(ShiftReg, MRI);
     if (!Shift.has_value())
       return 0; // not a constant
-    auto ShiftValue = Shift->Value.getZExtValue();
+    uint64_t ShiftValue = Shift->Value.getZExtValue();
     // make sure we are not swapping bits
-    auto OldSrcVecIdx = *SrcVecIdx;
-    auto Bits = getCoveredBits(SrcReg, SrcVecReg, SrcVecIdx, MRI);
-    auto BitSet = llvm::countr_zero(*SrcVecIdx & ~OldSrcVecIdx);
-    auto Offset = (BitSet * MRI.getType(SrcVecReg).getScalarSizeInBits()) %
+    uint64_t OldSrcVecIdx = *SrcVecIdx;
+    uint64_t Bits = getCoveredBits(SrcReg, SrcVecReg, SrcVecIdx, MRI);
+    int BitSet = llvm::countr_zero(*SrcVecIdx & ~OldSrcVecIdx);
+    uint64_t Offset = (BitSet * MRI.getType(SrcVecReg).getScalarSizeInBits()) %
                   MRI.getType(SrcReg).getSizeInBits();
     if (ShiftValue != Offset)
       return 0; // will not insert at proper offset
     return Bits << ShiftValue;
   } break;
   case TargetOpcode::G_OR: {
-    auto LHSReg = SrcMI.getOperand(1).getReg();
-    auto RHSReg = SrcMI.getOperand(2).getReg();
-    auto LHSOp = getDefIgnoringCopies(LHSReg, MRI)->getOpcode();
-    auto RHSOp = getDefIgnoringCopies(RHSReg, MRI)->getOpcode();
+    llvm::Register LHSReg = SrcMI.getOperand(1).getReg();
+    llvm::Register RHSReg = SrcMI.getOperand(2).getReg();
+    unsigned LHSOp = getDefIgnoringCopies(LHSReg, MRI)->getOpcode();
+    unsigned RHSOp = getDefIgnoringCopies(RHSReg, MRI)->getOpcode();
     if ((LHSOp != TargetOpcode::G_SHL) && (LHSOp != TargetOpcode::G_ZEXT) &&
         (LHSOp != TargetOpcode::G_OR))
       return 0;
     if ((RHSOp != TargetOpcode::G_SHL) && (RHSOp != TargetOpcode::G_ZEXT) &&
         (RHSOp != TargetOpcode::G_OR))
       return 0;
-    auto LHSBits = getCoveredBits(LHSReg, SrcVecReg, SrcVecIdx, MRI);
-    auto RHSBits = getCoveredBits(RHSReg, SrcVecReg, SrcVecIdx, MRI);
+    uint64_t LHSBits = getCoveredBits(LHSReg, SrcVecReg, SrcVecIdx, MRI);
+    uint64_t RHSBits = getCoveredBits(RHSReg, SrcVecReg, SrcVecIdx, MRI);
     if (LHSBits && RHSBits)
       return LHSBits | RHSBits;
   } break;
@@ -1247,28 +1252,28 @@ static uint64_t getCoveredBits(Register BaseReg, Register &SrcVecReg,
 
 bool PISAPreLegalizerCombinerImpl::matchExtractInsertToBitcast(
     MachineInstr &MI, Register &SaveReg) const {
-  auto &BuildVectorMI = MI;
-  auto DstReg = BuildVectorMI.getOperand(0).getReg();
-  auto BuildVectorTy = MRI.getType(DstReg);
-  auto NumElts = BuildVectorTy.getNumElements();
+  llvm::MachineInstr &BuildVectorMI = MI;
+  llvm::Register DstReg = BuildVectorMI.getOperand(0).getReg();
+  llvm::LLT BuildVectorTy = MRI.getType(DstReg);
+  uint16_t NumElts = BuildVectorTy.getNumElements();
 
   Register SrcVecReg;     // G_EXTRACT_VECTOR_ELT
   uint64_t SrcVecIdx = 0; // index of G_EXTRACT_VECTOR_ELT
   for (unsigned I = 0; I < NumElts; I++) {
-    auto BuildVectorEltReg = BuildVectorMI.getOperand(I + 1).getReg();
-    auto Bits = getCoveredBits(BuildVectorEltReg, SrcVecReg, &SrcVecIdx, MRI);
+    llvm::Register BuildVectorEltReg = BuildVectorMI.getOperand(I + 1).getReg();
+    uint64_t Bits = getCoveredBits(BuildVectorEltReg, SrcVecReg, &SrcVecIdx, MRI);
     if (!Bits)
       return false; // did not match
     if (BuildVectorTy.getSizeInBits() != MRI.getType(SrcVecReg).getSizeInBits())
       return false;
     if (!((1ull << I) & SrcVecIdx))
       return false; // indices are not in ascending order
-    auto EltSize = BuildVectorTy.getScalarSizeInBits();
+    unsigned EltSize = BuildVectorTy.getScalarSizeInBits();
     uint64_t Mask = (EltSize == 64) ? (uint64_t)-1ll : (1ull << EltSize) - 1;
     if (Mask != Bits)
       return false; // did not cover full element
   }
-  auto SrcVecTy = MRI.getType(SrcVecReg);
+  llvm::LLT SrcVecTy = MRI.getType(SrcVecReg);
   uint64_t Mask = (1ull << SrcVecTy.getNumElements()) - 1;
   if (Mask != SrcVecIdx)
     return false; // did not extract all indices
@@ -1278,7 +1283,7 @@ bool PISAPreLegalizerCombinerImpl::matchExtractInsertToBitcast(
 }
 void PISAPreLegalizerCombinerImpl::applyExtractInsertToBitcast(
     MachineInstr &MI, Register SrcVecReg) const {
-  auto DstReg = MI.getOperand(0).getReg();
+  llvm::Register DstReg = MI.getOperand(0).getReg();
   if (MRI.getType(DstReg) == MRI.getType(SrcVecReg))
     B.buildCopy(DstReg, SrcVecReg);
   else
@@ -1298,37 +1303,37 @@ void PISAPreLegalizerCombinerImpl::applyExtractInsertToBitcast(
 // => %19:_(<4 x s8>) = G_BITCAST %1:_(s32)
 bool PISAPreLegalizerCombinerImpl::matchExtractBuildVectorToBitcast(
     MachineInstr &MI, Register &SaveReg) const {
-  auto &BuildMI = MI;
-  auto DstTy = MRI.getType(BuildMI.getOperand(0).getReg());
+  llvm::MachineInstr &BuildMI = MI;
+  llvm::LLT DstTy = MRI.getType(BuildMI.getOperand(0).getReg());
 
   Register CastSrcReg; // G_BITCAST %1
   for (unsigned I = 1; I < BuildMI.getNumOperands(); I++) {
-    auto EltReg = BuildMI.getOperand(I).getReg();
-    auto &ExtMI = *getDefIgnoringCopies(EltReg, MRI);
+    llvm::Register EltReg = BuildMI.getOperand(I).getReg();
+    llvm::MachineInstr &ExtMI = *getDefIgnoringCopies(EltReg, MRI);
     if (ExtMI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
-      auto NumReg = ExtMI.getOperand(2).getReg();
-      auto NumValue = getIConstantVRegValWithLookThrough(NumReg, MRI);
+      llvm::Register NumReg = ExtMI.getOperand(2).getReg();
+      std::optional<llvm::ValueAndVReg> NumValue = getIConstantVRegValWithLookThrough(NumReg, MRI);
       if (!NumValue.has_value() || (NumValue->Value != (I - 1)))
         return false;
-      auto &CastMI = *getDefIgnoringCopies(ExtMI.getOperand(1).getReg(), MRI);
+      llvm::MachineInstr &CastMI = *getDefIgnoringCopies(ExtMI.getOperand(1).getReg(), MRI);
       if (CastMI.getOpcode() != TargetOpcode::G_BITCAST)
         return false;
-      auto CastReg = CastMI.getOperand(1).getReg();
+      llvm::Register CastReg = CastMI.getOperand(1).getReg();
       if (CastSrcReg && (CastSrcReg != CastReg))
         return false;
       if (DstTy.getSizeInBits() != MRI.getType(CastReg).getSizeInBits())
         return false;
       CastSrcReg = CastReg;
     } else if (ExtMI.getOpcode() == TargetOpcode::G_TRUNC) {
-      auto &ShiftMI = *getDefIgnoringCopies(ExtMI.getOperand(1).getReg(), MRI);
+      llvm::MachineInstr &ShiftMI = *getDefIgnoringCopies(ExtMI.getOperand(1).getReg(), MRI);
       if (ShiftMI.getOpcode() != TargetOpcode::G_LSHR)
         return false;
-      auto ShiftValue = getIConstantVRegValWithLookThrough(
+      std::optional<llvm::ValueAndVReg> ShiftValue = getIConstantVRegValWithLookThrough(
           ShiftMI.getOperand(2).getReg(), MRI);
       if (!ShiftValue.has_value() ||
           (ShiftValue->Value != ((I - 1) * DstTy.getScalarSizeInBits())))
         return false;
-      auto ShiftReg = ShiftMI.getOperand(1).getReg();
+      llvm::Register ShiftReg = ShiftMI.getOperand(1).getReg();
       if (CastSrcReg && (CastSrcReg != ShiftReg))
         return false;
       CastSrcReg = ShiftReg;
@@ -1340,7 +1345,7 @@ bool PISAPreLegalizerCombinerImpl::matchExtractBuildVectorToBitcast(
 }
 void PISAPreLegalizerCombinerImpl::applyExtractBuildVectorToBitcast(
     MachineInstr &MI, Register CastSrcReg) const {
-  auto DstReg = MI.getOperand(0).getReg();
+  llvm::Register DstReg = MI.getOperand(0).getReg();
   B.buildBitcast(DstReg, CastSrcReg);
   MI.eraseFromParent();
 }
@@ -1380,11 +1385,11 @@ bool PISAPreLegalizerCombinerImpl::matchReducePredicates(
     MachineInstr &MI,
     std::function<void(MachineIRBuilder &)> &MatchInfo) const {
 
-  auto DstReg = MI.getOperand(0).getReg();
+  llvm::Register DstReg = MI.getOperand(0).getReg();
   if (!MRI.hasOneUse(DstReg))
     return false;
 
-  auto DstTy = MRI.getType(DstReg);
+  llvm::LLT DstTy = MRI.getType(DstReg);
   if (!DstTy.isScalar() || (DstTy.getSizeInBits() == 32))
     return false;
 
@@ -1397,7 +1402,7 @@ bool PISAPreLegalizerCombinerImpl::matchReducePredicates(
 
   MachineInstr *VecCmpMI = nullptr;
   APInt Mask;
-  auto ReductionOpcode = MI.getOpcode();
+  unsigned ReductionOpcode = MI.getOpcode();
 
   std::function<bool(MachineInstr *)> Match = [&](MachineInstr *MI) {
     if (!MI)
@@ -1429,7 +1434,7 @@ bool PISAPreLegalizerCombinerImpl::matchReducePredicates(
                           m_GFCmp(m_Pred(), m_Reg(), m_Reg())))) {
       if (VecCmpMI)
         return VecCmpMI == MI;
-      auto VecType = MRI.getType(MI->getOperand(0).getReg());
+      llvm::LLT VecType = MRI.getType(MI->getOperand(0).getReg());
       if (!VecType.isFixedVector())
         return false;
       // Found cmp producing vector of predicates.
@@ -1448,7 +1453,7 @@ bool PISAPreLegalizerCombinerImpl::matchReducePredicates(
     const LLT S32 = LLT::integer(32);
 
     // Build reduction in s32.
-    auto ExtendedVector = MRI.createGenericVirtualRegister(
+    llvm::Register ExtendedVector = MRI.createGenericVirtualRegister(
         LLT::fixed_vector(Mask.getBitWidth(), S32));
     B.buildSExt(ExtendedVector, VecCmpMI->getOperand(0).getReg());
 
@@ -1457,8 +1462,8 @@ bool PISAPreLegalizerCombinerImpl::matchReducePredicates(
                                 B.buildConstant(S32, 0));
 
     for (unsigned I = 1; I < Mask.getBitWidth(); ++I) {
-      auto SecondSrc = MRI.createGenericVirtualRegister(S32);
-      auto Dst = MRI.createGenericVirtualRegister(S32);
+      llvm::Register SecondSrc = MRI.createGenericVirtualRegister(S32);
+      llvm::Register Dst = MRI.createGenericVirtualRegister(S32);
       B.buildExtractVectorElement(SecondSrc, ExtendedVector,
                                   B.buildConstant(S32, I));
       B.buildInstr(ReductionOpcode, {Dst}, {Reduction, SecondSrc});
@@ -1466,10 +1471,10 @@ bool PISAPreLegalizerCombinerImpl::matchReducePredicates(
     }
 
     // Replace next use if possible.
-    auto UseMI = MRI.use_instr_begin(DstReg);
+    llvm::MachineRegisterInfo::use_instr_iterator UseMI = MRI.use_instr_begin(DstReg);
     switch (UseMI->getOpcode()) {
     case TargetOpcode::G_ICMP: {
-      auto Pred = (CmpInst::Predicate)UseMI->getOperand(1).getPredicate();
+      llvm::CmpInst::Predicate Pred = (CmpInst::Predicate)UseMI->getOperand(1).getPredicate();
       if (mi_match(UseMI->getOperand(3).getReg(), MRI, m_SpecificICst(-1)))
         Pred = CmpInst::getInversePredicate(Pred);
       B.buildICmp(Pred, UseMI->getOperand(0).getReg(), Reduction,
@@ -1518,9 +1523,9 @@ bool PISAPreLegalizerCombinerImpl::matchCmpInt1(
   if (!PrevMI)
     return false;
 
-  auto DstReg = ICmpMI.getOperand(0).getReg();
+  llvm::Register DstReg = ICmpMI.getOperand(0).getReg();
   MatchInfo = [DstReg, PrevMI, IsTrue, this](MachineIRBuilder &B) {
-    auto PrevDstReg = PrevMI->getOperand(0).getReg();
+    llvm::Register PrevDstReg = PrevMI->getOperand(0).getReg();
 
     if (IsTrue) {
       if (MRI.hasOneUse(PrevDstReg))
@@ -1578,7 +1583,7 @@ bool PISAPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
           MachineFunctionProperties::Property::FailedISel))
     return false;
 
-  auto &TPC = getAnalysis<TargetPassConfig>();
+  llvm::TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
@@ -1592,7 +1597,7 @@ bool PISAPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   // Enable CSE.
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
+  llvm::GISelCSEInfo *CSEInfo = &Wrapper.get(TPC.getCSEConfig());
 
   const PISASubtarget &STI = MF.getSubtarget<PISASubtarget>();
   PISAPreLegalizerCombinerImpl Impl(MF, CInfo, *KB, CSEInfo, RuleConfig, STI,
@@ -1629,8 +1634,10 @@ bool PISAPreLegalizerCombinerImpl::matchSelectTruncOneZero(
     return false;
 
   // True value must be 1, false value must be 0.
-  auto TrueOpt = getIConstantVRegValWithLookThrough(Sel.getTrueReg(), MRI);
-  auto FalseOpt = getIConstantVRegValWithLookThrough(Sel.getFalseReg(), MRI);
+  std::optional<llvm::ValueAndVReg> TrueOpt =
+      getIConstantVRegValWithLookThrough(Sel.getTrueReg(), MRI);
+  std::optional<llvm::ValueAndVReg> FalseOpt =
+      getIConstantVRegValWithLookThrough(Sel.getFalseReg(), MRI);
   if (!TrueOpt || !FalseOpt)
     return false;
   if (!TrueOpt->Value.isOne() || !FalseOpt->Value.isZero())
@@ -1638,8 +1645,8 @@ bool PISAPreLegalizerCombinerImpl::matchSelectTruncOneZero(
 
   Register DstReg = Sel.getReg(0);
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto One = B.buildConstant(WideTy, 1);
-    auto And = B.buildAnd(WideTy, Wide, One);
+    llvm::MachineInstrBuilder One = B.buildConstant(WideTy, 1);
+    llvm::MachineInstrBuilder And = B.buildAnd(WideTy, Wide, One);
     B.buildTrunc(DstReg, And);
   };
   return true;

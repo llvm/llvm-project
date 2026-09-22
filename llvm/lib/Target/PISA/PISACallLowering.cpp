@@ -34,13 +34,13 @@ bool PISACallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   if (VRegs.size() > 1)
     return false;
   if (Val) {
-    auto &DL = MIRBuilder.getDataLayout();
-    const auto &STI = MIRBuilder.getMF().getSubtarget();
+    const DataLayout &DL = MIRBuilder.getDataLayout();
+    const TargetSubtargetInfo &STI = MIRBuilder.getMF().getSubtarget();
     unsigned Op = 0;
-    auto *Ty = Val->getType();
-    auto VReg = VRegs[0];
+    Type *Ty = Val->getType();
+    Register VReg = VRegs[0];
     if (Ty->isVectorTy()) {
-      auto *VTy = cast<FixedVectorType>(Ty);
+      FixedVectorType *VTy = cast<FixedVectorType>(Ty);
       unsigned NumElts = VTy->getNumElements();
       unsigned EltSize = DL.getTypeSizeInBits(Ty->getScalarType());
       switch (EltSize) {
@@ -139,16 +139,21 @@ bool PISACallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       case 1: // change i1 to i16 (see lowerCall())
       {
         const LLT I16 = LLT::integer(16);
-        auto Dst = MIRBuilder.getMRI()->createGenericVirtualRegister(I16);
-        auto &MF = MIRBuilder.getMF();
-        auto &F = MF.getFunction();
+        Register Dst =
+            MIRBuilder.getMRI()->createGenericVirtualRegister(I16);
+        MachineFunction &MF = MIRBuilder.getMF();
+        Function &F = MF.getFunction();
         const DataLayout &DL = MF.getDataLayout();
         ArgInfo RetInfo(VReg, *Val, 0);
         setArgFlags(RetInfo, AttributeList::ReturnIndex, DL, F);
-        auto Sext = llvm::any_of(
-            RetInfo.Flags, [](const auto &Flag) { return Flag.isSExt(); });
-        auto Zext = llvm::any_of(
-            RetInfo.Flags, [](const auto &Flag) { return Flag.isZExt(); });
+        bool Sext = llvm::any_of(RetInfo.Flags,
+                                 [](const ISD::ArgFlagsTy &Flag) {
+                                   return Flag.isSExt();
+                                 });
+        bool Zext = llvm::any_of(RetInfo.Flags,
+                                 [](const ISD::ArgFlagsTy &Flag) {
+                                   return Flag.isZExt();
+                                 });
         if (Sext) {
           MIRBuilder.buildSExt(Dst, VReg);
         } else if (Zext) {
@@ -185,8 +190,8 @@ bool PISACallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     // there is an expectation of no register class being assigned.
     // Having an extra copy here eliminates the problem; copy itself
     // will be removed during instruction selection.
-    auto *MRI = MIRBuilder.getMRI();
-    auto Tmp = MRI->createGenericVirtualRegister(MRI->getType(VReg));
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+    Register Tmp = MRI->createGenericVirtualRegister(MRI->getType(VReg));
     MIRBuilder.buildCopy(Tmp, VReg);
     MIRBuilder.buildInstr(Op).addUse(Tmp).constrainAllUses(
         MIRBuilder.getTII(), *STI.getRegisterInfo(), *STI.getRegBankInfo());
@@ -200,18 +205,19 @@ bool PISACallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                             const Function &F,
                                             ArrayRef<ArrayRef<Register>> VRegs,
                                             FunctionLoweringInfo &FLI) const {
-  auto *MRI = MIRBuilder.getMRI();
-  auto &MF = MIRBuilder.getMF();
-  auto &Ctx = F.getContext();
-  auto *MFInfo = MF.getInfo<PISAMachineFunctionInfo>();
-  auto &DL = F.getParent()->getDataLayout();
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  MachineFunction &MF = MIRBuilder.getMF();
+  LLVMContext &Ctx = F.getContext();
+  PISAMachineFunctionInfo *MFInfo = MF.getInfo<PISAMachineFunctionInfo>();
+  const DataLayout &DL = F.getParent()->getDataLayout();
   bool IsKernel = (F.getCallingConv() == CallingConv::PISA_KERNEL);
-  for (const auto [i, Arg] : llvm::enumerate(F.args())) {
+  for (const Argument &Arg : F.args()) {
+    unsigned i = Arg.getArgNo();
     assert(VRegs[i].size() == 1 && "Formal arg has multiple vregs");
 
     ArgInfo OrigArg{VRegs[i], Arg, static_cast<unsigned>(i)};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
-    auto *ArgType = OrigArg.OrigValue->getType();
+    Type *ArgType = OrigArg.OrigValue->getType();
     const bool IsByRef = ArgType->isPointerTy() && OrigArg.Flags[0].isByRef();
     const unsigned ArgSize = IsByRef
                                  ? OrigArg.Flags[0].getByRefSize()
@@ -228,11 +234,11 @@ bool PISACallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       loadParamWithOpcode(MIRBuilder, F, VRegs[i][0], ArgType, Op,
                           Arg.getArgNo(), 0);
     } else if (IsKernel && ArgType->isVectorTy()) {
-      auto *VectorTy = cast<FixedVectorType>(ArgType);
-      auto NumElts = VectorTy->getNumElements();
-      auto *EltTy = VectorTy->getElementType();
-      auto EltSize = DL.getTypeSizeInBits(EltTy);
-      auto Split = (NumElts > 4) || ((NumElts == 3) && (EltSize != 32)) ||
+      FixedVectorType *VectorTy = cast<FixedVectorType>(ArgType);
+      unsigned NumElts = VectorTy->getNumElements();
+      Type *EltTy = VectorTy->getElementType();
+      unsigned EltSize = DL.getTypeSizeInBits(EltTy);
+      bool Split = (NumElts > 4) || ((NumElts == 3) && (EltSize != 32)) ||
                    ((NumElts == 4) && (EltSize == 64)) || (NumElts == 1);
       if (Split) {
         // handle odd-sized and large kernel args, e.g.
@@ -241,17 +247,17 @@ bool PISACallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         //     loadParam_8b @[arg+1]       loadParam_v4_32b @[arg+16]
         //     loadParam_8b @[arg+2]       buildVector(<8 x i32>)
         //     buildVector(<3 x i8>)       bitcast(<16 x i16)
-        auto TargetReg = VRegs[i][0];
+        Register TargetReg = VRegs[i][0];
 
-        const auto *EltRegClass =
+        const TargetRegisterClass *EltRegClass =
             (EltSize == 8
                  ? &PISA::Reg8bRegClass
                  : (EltSize == 16 ? &PISA::Reg16bRegClass
                                   : (EltSize == 32 ? &PISA::Reg32bRegClass
                                                    : &PISA::Reg64bRegClass)));
-        auto TotalSize = NumElts * EltSize;
-        auto EltLLT = LLT::integer(EltSize);
-        auto I32 = LLT::integer(32);
+        unsigned TotalSize = NumElts * EltSize;
+        LLT EltLLT = LLT::integer(EltSize);
+        LLT I32 = LLT::integer(32);
         if (NumElts <= 4) {
           // do not group
         } else if (TotalSize % 128 == 0) { // 4 x i32
@@ -279,16 +285,16 @@ bool PISACallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
         SmallVector<Register, 4> Regs;
         for (unsigned I = 0; I < NumElts; I++) {
-          auto Reg = MRI->createGenericVirtualRegister(EltLLT);
+          Register Reg = MRI->createGenericVirtualRegister(EltLLT);
           MRI->setRegClass(Reg, EltRegClass);
           Op = getLoadParamOpcode(MIRBuilder, F, Reg, EltTy);
           loadParamWithOpcode(MIRBuilder, F, Reg, EltTy, Op, Arg.getArgNo(),
                               I * EltLLT.getSizeInBytes());
           if (EltTy->isPointerTy()) {
             // ld.param loads a scalar value, so convert to ptr here
-            auto AS = cast<PointerType>(EltTy)->getAddressSpace();
-            auto PtrLLT = LLT::pointer(AS, EltSize);
-            auto CastReg = MRI->createGenericVirtualRegister(PtrLLT);
+            unsigned AS = cast<PointerType>(EltTy)->getAddressSpace();
+            LLT PtrLLT = LLT::pointer(AS, EltSize);
+            Register CastReg = MRI->createGenericVirtualRegister(PtrLLT);
             MRI->setRegClass(CastReg, EltRegClass);
             MIRBuilder.buildIntToPtr(CastReg, Reg);
             Regs.push_back(CastReg);
@@ -296,11 +302,11 @@ bool PISACallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
             // ld.param loads an integer value; bitcast to float so that
             // G_BUILD_VECTOR element types match the result vector element
             // type.
-            auto FloatLLT = EltTy->isBFloatTy() ? LLT::bfloat16()
-                            : EltSize == 16     ? LLT::float16()
-                            : EltSize == 32     ? LLT::float32()
-                                                : LLT::float64();
-            auto CastReg = MRI->createGenericVirtualRegister(FloatLLT);
+            LLT FloatLLT = EltTy->isBFloatTy() ? LLT::bfloat16()
+                           : EltSize == 16     ? LLT::float16()
+                           : EltSize == 32     ? LLT::float32()
+                                               : LLT::float64();
+            Register CastReg = MRI->createGenericVirtualRegister(FloatLLT);
             MRI->setRegClass(CastReg, EltRegClass);
             MIRBuilder.buildBitcast(CastReg, Reg);
             Regs.push_back(CastReg);
@@ -339,18 +345,19 @@ void PISACallLowering::loadParamWithOpcode(MachineIRBuilder &MIRBuilder,
                                            const Register &VReg, Type *ArgType,
                                            unsigned Opcode, unsigned ArgNo,
                                            unsigned Offset) const {
-  auto *MRI = MIRBuilder.getMRI();
-  auto &DL = F.getParent()->getDataLayout();
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  const DataLayout &DL = F.getParent()->getDataLayout();
   bool IsKernel = (F.getCallingConv() == CallingConv::PISA_KERNEL);
-  const auto BitSize = DL.getTypeSizeInBits(ArgType->getScalarType());
+  const unsigned BitSize = DL.getTypeSizeInBits(ArgType->getScalarType());
 
-  auto VReg16 = VReg;
+  Register VReg16 = VReg;
   if (BitSize == 1) { // load arg into i16
     VReg16 = MRI->createGenericVirtualRegister(LLT::integer(16));
     MRI->setRegClass(VReg16, &PISA::Reg16bRegClass);
   }
 
-  auto MIB = MIRBuilder.buildInstr(Opcode).addDef(VReg16).addImm(ArgNo);
+  MachineInstrBuilder MIB =
+      MIRBuilder.buildInstr(Opcode).addDef(VReg16).addImm(ArgNo);
   if (IsKernel)
     MIB.addImm(Offset);
 
@@ -361,7 +368,7 @@ void PISACallLowering::loadParamWithOpcode(MachineIRBuilder &MIRBuilder,
   if (IsKernel)
     if (MDNode *MD = F.getMetadata("kernel_arg_name"))
       if (ArgNo < MD->getNumOperands())
-        if (auto *S = dyn_cast<MDString>(MD->getOperand(ArgNo)))
+        if (MDString *S = dyn_cast<MDString>(MD->getOperand(ArgNo)))
           if (!S->getString().empty())
             MIB.addExternalSymbol(
                 MIRBuilder.getMF().createExternalSymbolName(S->getString()));
@@ -375,14 +382,14 @@ unsigned PISACallLowering::getLoadParamOpcode(MachineIRBuilder &MIRBuilder,
                                               const Function &F,
                                               const Register &VReg,
                                               Type *ArgType) const {
-  auto *MRI = MIRBuilder.getMRI();
-  auto &MF = MIRBuilder.getMF();
-  const auto *TRI = static_cast<const PISARegisterInfo *>(
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  MachineFunction &MF = MIRBuilder.getMF();
+  const PISARegisterInfo *TRI = static_cast<const PISARegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
 
   bool IsKernel = (F.getCallingConv() == CallingConv::PISA_KERNEL);
   unsigned Op = 0;
-  auto &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getParent()->getDataLayout();
 
   const unsigned ParamScalar[2][4] = {
       // [isKernel][8/16/32/64]
@@ -407,7 +414,7 @@ unsigned PISACallLowering::getLoadParamOpcode(MachineIRBuilder &MIRBuilder,
        {PISA::loadParam_v2i32, PISA::loadParam_v3i32, PISA::loadParam_v4i32},
        {PISA::loadParam_v2i64, PISA::loadParam_v3i64, 0}}};
 
-  const auto BitSize = DL.getTypeSizeInBits(ArgType->getScalarType());
+  const unsigned BitSize = DL.getTypeSizeInBits(ArgType->getScalarType());
   // Calculate the argument size in bytes.
   if (ArgType->isIntegerTy()) {
     switch (BitSize) {
@@ -454,8 +461,8 @@ unsigned PISACallLowering::getLoadParamOpcode(MachineIRBuilder &MIRBuilder,
     MRI->setRegClass(VReg, &PISA::Reg64bRegClass);
     Op = ParamScalar[IsKernel][3];
   } else if (ArgType->isVectorTy()) {
-    auto *VectorTy = cast<FixedVectorType>(ArgType);
-    auto NumElts = VectorTy->getNumElements();
+    FixedVectorType *VectorTy = cast<FixedVectorType>(ArgType);
+    unsigned NumElts = VectorTy->getNumElements();
     assert(((((BitSize == 8) || (BitSize == 16) || (BitSize == 64)) &&
              ((NumElts >= 2) && (NumElts <= 4))) ||
             ((BitSize == 32) &&
@@ -533,12 +540,12 @@ bool PISACallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   MachineInstrBuilder MIB;
-  const auto *TRI = static_cast<const PISARegisterInfo *>(
+  const PISARegisterInfo *TRI = static_cast<const PISARegisterInfo *>(
       MIRBuilder.getMF().getSubtarget().getRegisterInfo());
 
   if (IsIndirectCall) {
     Register CalleeReg = Info.Callee.getReg();
-    auto *MRI = MIRBuilder.getMRI();
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
     LLT CalleeTy = MRI->getType(CalleeReg);
     Register CalleeI64Reg = MRI->createGenericVirtualRegister(LLT::integer(64));
 
@@ -553,18 +560,20 @@ bool PISACallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // promote i1 args to i16
   SmallVector<Register, 8> ArgRegs;
-  for (const auto &Arg : Info.OrigArgs) {
+  for (const ArgInfo &Arg : Info.OrigArgs) {
     // Currently call args should have single vregs.
     if (Arg.Regs.size() > 1)
       return false;
     if (Arg.Ty->getScalarSizeInBits() == 1) {
       const LLT I16 = LLT::integer(16);
-      auto Reg = MIRBuilder.getMRI()->createGenericVirtualRegister(I16);
+      Register Reg = MIRBuilder.getMRI()->createGenericVirtualRegister(I16);
       MIRBuilder.getMRI()->setRegClass(Reg, TRI->getRegClassFromLLT(I16));
-      auto Sext = llvm::any_of(Arg.Flags,
-                               [](const auto &Flag) { return Flag.isSExt(); });
-      auto Zext = llvm::any_of(Arg.Flags,
-                               [](const auto &Flag) { return Flag.isZExt(); });
+      bool Sext = llvm::any_of(Arg.Flags, [](const ISD::ArgFlagsTy &Flag) {
+        return Flag.isSExt();
+      });
+      bool Zext = llvm::any_of(Arg.Flags, [](const ISD::ArgFlagsTy &Flag) {
+        return Flag.isZExt();
+      });
       if (Sext) {
         MIRBuilder.buildSExt(Reg, Arg.Regs[0]);
       } else if (Zext) {
@@ -578,10 +587,10 @@ bool PISACallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     }
   }
 
-  auto MutateI1 = false;
+  bool MutateI1 = false;
   if (!Info.OrigRet.Ty->isVoidTy()) {
     // select the call op according to return type and build MI
-    auto RetLLT =
+    LLT RetLLT =
         llvm::getLLTForType(*Info.OrigRet.Ty, MIRBuilder.getDataLayout());
     unsigned CallOp = 0;
     if (RetLLT.isScalar() || RetLLT.isPointer()) {
@@ -612,8 +621,8 @@ bool PISACallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         break;
       }
     } else if (RetLLT.isVector()) {
-      auto TypeBitSize = RetLLT.getElementType().getSizeInBits();
-      auto NumElts = RetLLT.getNumElements();
+      uint64_t TypeBitSize = RetLLT.getElementType().getSizeInBits();
+      uint16_t NumElts = RetLLT.getNumElements();
       switch (TypeBitSize) {
       case 8:
         switch (NumElts) {
@@ -726,7 +735,7 @@ bool PISACallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // set Ret register class
     assert(!Info.OrigRet.Regs.empty());
     Register ResVReg = Info.OrigRet.Regs[0];
-    auto OrigRetLLT = RetLLT;
+    LLT OrigRetLLT = RetLLT;
     if (MutateI1) { // will return i16 (see lowerReturn())
       RetLLT = LLT::integer(16);
       ResVReg = MIRBuilder.getMRI()->createGenericVirtualRegister(RetLLT);
@@ -750,7 +759,7 @@ bool PISACallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   // add function args into MI if any
-  for (auto Reg : ArgRegs) {
+  for (Register Reg : ArgRegs) {
     MIB.addUse(Reg);
   }
 
