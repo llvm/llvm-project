@@ -1205,13 +1205,12 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
         N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
         N->getBasePtr(), N->getPointerInfo(),
         N->getMemoryVT().getVectorElementType(), N->getBaseAlign(),
-        N->getMemOperand()->getFlags(),
-        N->getNonRangeMMOMetadata());
+        N->getMemOperand()->getFlags(), N->getNonRangeMMOMetadata());
 
-  return DAG.getStore(
-      N->getChain(), dl, GetScalarizedVector(N->getOperand(1)), N->getBasePtr(),
-      N->getPointerInfo(), N->getBaseAlign(), N->getMemOperand()->getFlags(),
-      N->getNonRangeMMOMetadata());
+  return DAG.getStore(N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
+                      N->getBasePtr(), N->getPointerInfo(), N->getBaseAlign(),
+                      N->getMemOperand()->getFlags(),
+                      N->getNonRangeMMOMetadata());
 }
 
 /// If the value to store is a vector that needs to be scalarized, it must be
