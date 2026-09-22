@@ -7128,6 +7128,22 @@ static bool containsStorageBufferPointer(SPIRVTypeInst Ty,
   }
 }
 
+static bool containsStorageBufferPointer(SPIRVTypeInst Ty,
+                                         const SPIRVGlobalRegistry &GR) {
+  SmallSet<Register, 8> Visited;
+  return containsStorageBufferPointer(Ty, GR, Visited);
+}
+
+static bool hasCapability(const MachineFunction &MF,
+                          SPIRV::Capability::Capability Capability) {
+  return llvm::any_of(MF, [Capability](const MachineBasicBlock &MBB) {
+    return llvm::any_of(MBB, [Capability](const MachineInstr &MI) {
+      return MI.getOpcode() == SPIRV::OpCapability &&
+             MI.getOperand(0).getImm() == Capability;
+    });
+  });
+}
+
 bool SPIRVInstructionSelector::selectAbort(MachineInstr &I) const {
   assert(I.getNumExplicitOperands() == 2);
 
@@ -7187,16 +7203,16 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
   unsigned Opcode =
       UseUntypedPointers ? SPIRV::OpUntypedVariableKHR : SPIRV::OpVariable;
 
-  if (!UseUntypedPointers) {
-    SmallSet<Register, 8> Visited;
-    if (containsStorageBufferPointer(ResType, GR, Visited)) {
-      MachineIRBuilder MIRBuilder(I);
-      if (!STI.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-        MIRBuilder.buildInstr(SPIRV::OpExtension)
-            .addImm(SPIRV::Extension::SPV_KHR_variable_pointers);
-      MIRBuilder.buildInstr(SPIRV::OpCapability)
-          .addImm(SPIRV::Capability::VariablePointersStorageBuffer);
-    }
+  if (!UseUntypedPointers &&
+      !hasCapability(*I.getMF(),
+                     SPIRV::Capability::VariablePointersStorageBuffer) &&
+      containsStorageBufferPointer(ResType, GR)) {
+    MachineIRBuilder MIRBuilder(I);
+    if (!STI.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+      MIRBuilder.buildInstr(SPIRV::OpExtension)
+          .addImm(SPIRV::Extension::SPV_KHR_variable_pointers);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::VariablePointersStorageBuffer);
   }
 
   auto MIB = BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(Opcode))
