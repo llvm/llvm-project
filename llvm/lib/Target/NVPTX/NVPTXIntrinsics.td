@@ -2192,8 +2192,7 @@ foreach t = [F16RT, F16X2RT] in
     foreach sat = ["", "sat"] in
       def INT_NVVM_MUL_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
         F_MATH_2_RND_TY<StrJoin<".", ["mul.rn", ftz, sat, t.PtxType]>.ret, t,
-                        !cast<Intrinsic>(
-                            StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret),
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret),
                         fp_rnd_rn_imm>;
 
 // bf16/bf16x2
@@ -2206,15 +2205,12 @@ foreach t = [BF16RT, BF16X2RT] in
 foreach ftz = ["", "ftz"] in {
   foreach sat = ["", "sat"] in
     def StrJoin<"_", ["INT_NVVM_MUL", !toupper(ftz), !toupper(sat), "F"]>.ret :
-      F_MATH_2_RNDOP_TY<StrJoin<".", ["mul.${rnd}", ftz, sat, "f32"]>.ret,
-                        F32RT,
-                        !cast<Intrinsic>(
-                            StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret)>;
+      F_MATH_2_RNDOP_TY<StrJoin<".", ["mul.${rnd}", ftz, sat, "f32"]>.ret, F32RT,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret)>;
 
   def StrJoin<"_", ["INT_NVVM_MUL", !toupper(ftz), "F32X2"]>.ret :
     F_MATH_2_RNDOP_TY<StrJoin<".", ["mul.${rnd}", ftz, "f32x2"]>.ret, F32X2RT,
-                      !cast<Intrinsic>(
-                          StrJoin<"_", ["int_nvvm_fmul", ftz]>.ret),
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fmul", ftz]>.ret),
                       [hasF32x2Instructions]>;
 }
 

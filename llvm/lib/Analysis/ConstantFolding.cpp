@@ -1997,7 +1997,7 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
     return !IsStrictFP;
 
-  // NVVM add/mul intrinsics with explicit rounding modes
+  // NVVM fadd/fmul intrinsics with explicit rounding modes
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:
   case Intrinsic::nvvm_fmul:

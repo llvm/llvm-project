@@ -1347,28 +1347,34 @@ vectors is added to `%c` to produce the return.
 
 ##### Syntax:
 
-This is an overloaded intrinsic. The '`.ftz`' and '`.sat`' modifiers are
-optional.
+This is an overloaded intrinsic of the form:
 
 ```llvm
-declare half         @llvm.nvvm.fadd{.ftz}{.sat}.f16(half %a, half %b, i32 immarg %rnd)
-declare <2 x half>   @llvm.nvvm.fadd{.ftz}{.sat}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %rnd)
-declare bfloat       @llvm.nvvm.fadd.bf16(bfloat %a, bfloat %b, i32 immarg %rnd)
-declare <2 x bfloat> @llvm.nvvm.fadd.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 immarg %rnd)
-declare float        @llvm.nvvm.fadd{.ftz}{.sat}.f32(float %a, float %b, i32 immarg %rnd)
-declare <2 x float>  @llvm.nvvm.fadd{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, i32 immarg %rnd)
-declare double       @llvm.nvvm.fadd.f64(double %a, double %b, i32 immarg %rnd)
+declare <ty> @llvm.nvvm.fadd{.ftz}{.sat}.<sfx>(<ty> %a, <ty> %b, i32 immarg %flag_fp_rnd_mode)
+```
+
+where '`<sfx>`' is the mangled suffix of the overloaded type '`<ty>`' and the
+'`.ftz`' and '`.sat`' modifiers are optional. The supported variants are:
+
+```llvm
+declare half         @llvm.nvvm.fadd{.ftz}{.sat}.f16(half %a, half %b, i32 immarg %flag_fp_rnd_mode)
+declare <2 x half>   @llvm.nvvm.fadd{.ftz}{.sat}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %flag_fp_rnd_mode)
+declare bfloat       @llvm.nvvm.fadd.bf16(bfloat %a, bfloat %b, i32 immarg %flag_fp_rnd_mode)
+declare <2 x bfloat> @llvm.nvvm.fadd.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 immarg %flag_fp_rnd_mode)
+declare float        @llvm.nvvm.fadd{.ftz}{.sat}.f32(float %a, float %b, i32 immarg %flag_fp_rnd_mode)
+declare <2 x float>  @llvm.nvvm.fadd{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, i32 immarg %flag_fp_rnd_mode)
+declare double       @llvm.nvvm.fadd.f64(double %a, double %b, i32 immarg %flag_fp_rnd_mode)
 ```
 
 ##### Overview:
 
 The '`llvm.nvvm.fadd.*`' intrinsics add `%a` and `%b` using the rounding mode
-selected by `%rnd` and the modifiers present in the intrinsic name. They
-correspond directly to the `add` PTX instruction.
+selected by `%flag_fp_rnd_mode` and the modifiers present in the intrinsic
+name. They correspond directly to the `add` PTX instruction.
 
 ##### Semantics:
 
-`%rnd` selects the rounding mode applied to the result, see
+`%flag_fp_rnd_mode` selects the rounding mode applied to the result, see
 {ref}`fp-rounding-modes`.
 
 The '`.ftz`' modifier flushes subnormal inputs and results to sign-preserving
@@ -1407,28 +1413,34 @@ PTX instruction. The supported combinations are:
 
 ##### Syntax:
 
-This is an overloaded intrinsic. The '`.ftz`' and '`.sat`' modifiers are
-optional.
+This is an overloaded intrinsic of the form:
 
 ```llvm
-declare half         @llvm.nvvm.fmul{.ftz}{.sat}.f16(half %a, half %b, i32 immarg %rnd)
-declare <2 x half>   @llvm.nvvm.fmul{.ftz}{.sat}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %rnd)
-declare bfloat       @llvm.nvvm.fmul.bf16(bfloat %a, bfloat %b, i32 immarg %rnd)
-declare <2 x bfloat> @llvm.nvvm.fmul.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 immarg %rnd)
-declare float        @llvm.nvvm.fmul{.ftz}{.sat}.f32(float %a, float %b, i32 immarg %rnd)
-declare <2 x float>  @llvm.nvvm.fmul{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, i32 immarg %rnd)
-declare double       @llvm.nvvm.fmul.f64(double %a, double %b, i32 immarg %rnd)
+declare <ty> @llvm.nvvm.fmul{.ftz}{.sat}.<sfx>(<ty> %a, <ty> %b, i32 immarg %flag_fp_rnd_mode)
+```
+
+where '`<sfx>`' is the mangled suffix of the overloaded type '`<ty>`' and the
+'`.ftz`' and '`.sat`' modifiers are optional. The supported variants are:
+
+```llvm
+declare half         @llvm.nvvm.fmul{.ftz}{.sat}.f16(half %a, half %b, i32 immarg %flag_fp_rnd_mode)
+declare <2 x half>   @llvm.nvvm.fmul{.ftz}{.sat}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %flag_fp_rnd_mode)
+declare bfloat       @llvm.nvvm.fmul.bf16(bfloat %a, bfloat %b, i32 immarg %flag_fp_rnd_mode)
+declare <2 x bfloat> @llvm.nvvm.fmul.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 immarg %flag_fp_rnd_mode)
+declare float        @llvm.nvvm.fmul{.ftz}{.sat}.f32(float %a, float %b, i32 immarg %flag_fp_rnd_mode)
+declare <2 x float>  @llvm.nvvm.fmul{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, i32 immarg %flag_fp_rnd_mode)
+declare double       @llvm.nvvm.fmul.f64(double %a, double %b, i32 immarg %flag_fp_rnd_mode)
 ```
 
 ##### Overview:
 
 The '`llvm.nvvm.fmul.*`' intrinsics multiply `%a` and `%b` using the rounding
-mode selected by `%rnd` and the modifiers present in the intrinsic name. They
-correspond directly to the `mul` PTX instruction.
+mode selected by `%flag_fp_rnd_mode` and the modifiers present in the
+intrinsic name. They correspond directly to the `mul` PTX instruction.
 
 ##### Semantics:
 
-`%rnd` selects the rounding mode applied to the result, see
+`%flag_fp_rnd_mode` selects the rounding mode applied to the result, see
 {ref}`fp-rounding-modes`.
 
 The '`.ftz`' modifier flushes subnormal inputs and results to sign-preserving

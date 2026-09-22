@@ -3238,9 +3238,9 @@ void llvm::UpgradeInlineAsmString(std::string *AsmStr) {
 static Value *upgradeNVVMFPArithCall(IRBuilder<> &Builder, CallBase *CI,
                                      StringRef Name,
                                      const Intrinsic::ID IIDs[2][2]) {
-  auto Upgrade = getNVVMFPArithUpgrade(Name, IIDs);
-  assert(Upgrade && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
-  auto [IID, RoundingMode] = *Upgrade;
+  auto Result = getNVVMFPArithUpgrade(Name, IIDs);
+  assert(Result && "unsupported nvvm.add.*/nvvm.mul.* intrinsic");
+  auto [IID, RoundingMode] = *Result;
   Value *A = CI->getArgOperand(0);
   return Builder.CreateIntrinsic(
       A->getType(), IID,
