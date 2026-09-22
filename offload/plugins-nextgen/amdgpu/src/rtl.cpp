@@ -3986,6 +3986,24 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
     // TODO: Implement this function.
     return Plugin::success();
   }
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            void *HostPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
+  Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                   TargetAllocTy Kind) override;
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
+private:
+  // Track each allocation's Kind so we can tell HOST from SHARED — HSA
+  // backs both with the same host fine-grained pool.
+  // TODO: drop once TARGET_ALLOC_SHARED has its own backing pool.
+  struct AllocInfo {
+    TargetAllocTy Kind;
+    GenericDeviceTy *Device;
+  };
+  llvm::DenseMap<const void *, AllocInfo> Allocations;
+  std::mutex AllocationsMutex;
 };
 
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
@@ -4294,6 +4312,58 @@ private:
   /// The device representing all HSA host agents.
   AMDHostDeviceTy *HostDevice;
 };
+
+Expected<void *> AMDGPUPluginContextTy::allocate(GenericDeviceTy &Device,
+                                                 int64_t Size, void *HostPtr,
+                                                 TargetAllocTy Kind,
+                                                 size_t Alignment) {
+  auto PtrOrErr =
+      PluginContextTy::allocate(Device, Size, HostPtr, Kind, Alignment);
+  if (!PtrOrErr || !*PtrOrErr)
+    return PtrOrErr;
+  std::lock_guard<std::mutex> Lock(AllocationsMutex);
+  Allocations[*PtrOrErr] = {Kind, &Device};
+  return PtrOrErr;
+}
+
+Error AMDGPUPluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
+                                        TargetAllocTy Kind) {
+  // Erase before base deallocate: once Ptr returns to the MM freelist a
+  // concurrent alloc could reuse it and re-populate Allocations. On failure
+  // Ptr is in an undetermined state (maybe freed, maybe not) so we don't
+  // re-add it either.
+  {
+    std::lock_guard<std::mutex> Lock(AllocationsMutex);
+    Allocations.erase(Ptr);
+  }
+  return PluginContextTy::deallocate(Device, Ptr, Kind);
+}
+
+Expected<PluginAllocInfoTy>
+AMDGPUPluginContextTy::getAllocInfo(const void *Ptr) {
+  // HSA gives the base of the region containing Ptr, so interior pointers
+  // resolve to the same tracker entry.
+  hsa_amd_pointer_info_t HsaInfo{};
+  HsaInfo.size = sizeof(hsa_amd_pointer_info_t);
+  hsa_status_t Status = hsa_amd_pointer_info(
+      const_cast<void *>(Ptr), &HsaInfo, /*Allocator=*/nullptr,
+      /*num_agents_accessible=*/nullptr, /*accessible=*/nullptr);
+  if (auto Err = Plugin::check(Status, "error in hsa_amd_pointer_info: %s"))
+    return std::move(Err);
+
+  AllocInfo Info;
+  {
+    std::lock_guard<std::mutex> Lock(AllocationsMutex);
+    auto It = Allocations.find(HsaInfo.agentBaseAddress);
+    if (It == Allocations.end())
+      return Plugin::error(ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    Info = It->second;
+  }
+
+  return PluginAllocInfoTy{Info.Device, Info.Kind, HsaInfo.agentBaseAddress,
+                           HsaInfo.sizeInBytes};
+}
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],

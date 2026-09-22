@@ -496,7 +496,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     ```
     vector-type ::= !cir.vector<size x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | pointer-type
+    element-type ::= float-type | integer-type | bool-type
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized vectors are not
@@ -749,11 +749,6 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
       return offset;
     }
 
-    /// The size of the type this unit's bit-field was declared with, which
-    /// can exceed the storage type's size.  Returns nullopt when the unit
-    /// holds more than one bit-field.
-    std::optional<uint64_t>
-    getSoleDeclaredExtentInBits(const mlir::DataLayout &dataLayout) const;
   }];
 
   let genVerifyDecl = 1;
