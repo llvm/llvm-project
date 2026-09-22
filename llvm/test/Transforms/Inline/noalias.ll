@@ -56,9 +56,9 @@ entry:
 ; CHECK:   call void @llvm.experimental.noalias.scope.decl(metadata !6)
 ; CHECK:   [[TMP0:%.+]] = load float, ptr %c, align 4, !noalias !8
 ; CHECK:   %arrayidx.i = getelementptr inbounds float, ptr %a, i64 5
-; CHECK:   store float [[TMP0]], ptr %arrayidx.i, align 4, !alias.scope !3, !noalias !6
+; CHECK:   store float [[TMP0]], ptr %arrayidx.i, align 4, !alias.scope !3
 ; CHECK:   %arrayidx1.i = getelementptr inbounds float, ptr %b, i64 8
-; CHECK:   store float [[TMP0]], ptr %arrayidx1.i, align 4, !alias.scope !6, !noalias !3
+; CHECK:   store float [[TMP0]], ptr %arrayidx1.i, align 4, !alias.scope !6
 ; CHECK:   [[TMP1:%.+]] = load float, ptr %c, align 4
 ; CHECK:   %arrayidx = getelementptr inbounds float, ptr %a, i64 7
 ; CHECK:   store float [[TMP1]], ptr %arrayidx, align 4
@@ -69,10 +69,10 @@ attributes #0 = { nounwind uwtable }
 
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2, !"hello: %a"}
-; CHECK: !2 = distinct !{!2, i1 false, !"hello"}
+; CHECK: !2 = distinct !{!2, i1 true, !"hello"}
 ; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !5, !"hello2: %a"}
-; CHECK: !5 = distinct !{!5, i1 false, !"hello2"}
+; CHECK: !5 = distinct !{!5, i1 true, !"hello2"}
 ; CHECK: !6 = !{!7}
 ; CHECK: !7 = distinct !{!7, !5, !"hello2: %b"}
 ; CHECK: !8 = !{!4, !7}
