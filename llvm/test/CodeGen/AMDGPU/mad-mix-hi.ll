@@ -767,12 +767,14 @@ define <2 x half> @mixhi_fptrunc_f16_denormals(float %a, float %b, half %lo) #2 
 ; SDAG-GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v2
 ; SDAG-GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-LABEL: mixhi_fptrunc_f16_denormals:
-; GFX9:       ; %bb.0: ; %.entry
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mad_mixhi_f16 v2, v0, v1, neg(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, v2
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-GFX9-LABEL: mixhi_fptrunc_f16_denormals:
+; SDAG-GFX9:       ; %bb.0: ; %.entry
+; SDAG-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-GFX9-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SDAG-GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; SDAG-GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
+; SDAG-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: mixhi_fptrunc_f16_denormals:
 ; SDAG-VI:       ; %bb.0: ; %.entry
@@ -799,6 +801,14 @@ define <2 x half> @mixhi_fptrunc_f16_denormals(float %a, float %b, half %lo) #2 
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-GFX9-LABEL: mixhi_fptrunc_f16_denormals:
+; GISEL-GFX9:       ; %bb.0: ; %.entry
+; GISEL-GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX9-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-GFX9-NEXT:    v_cvt_f16_f32_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD
+; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: mixhi_fptrunc_f16_denormals:
 ; GISEL-VI:       ; %bb.0: ; %.entry
