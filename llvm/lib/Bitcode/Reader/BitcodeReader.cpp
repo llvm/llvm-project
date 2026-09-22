@@ -7210,6 +7210,18 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   }
 
   for (auto &I : make_early_inc_range(instructions(F))) {
+    // Older block uniformity profiles used an i1 payload instead of presence.
+    if (MDNode *MD = I.getMetadata(LLVMContext::MD_block_uniformity_profile)) {
+      if (MD->getNumOperands() == 1) {
+        auto *Uniform =
+            mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(0));
+        if (Uniform && Uniform->getType()->isIntegerTy(1))
+          I.setMetadata(LLVMContext::MD_block_uniformity_profile,
+                        Uniform->isOne() ? MDNode::get(I.getContext(), {})
+                                         : nullptr);
+      }
+    }
+
     // "Upgrade" older incorrect branch weights by dropping them.
     if (auto *MD = I.getMetadata(LLVMContext::MD_prof)) {
       if (MD->getOperand(0) != nullptr && isa<MDString>(MD->getOperand(0))) {
