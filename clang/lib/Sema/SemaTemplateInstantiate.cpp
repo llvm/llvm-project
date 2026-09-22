@@ -4129,7 +4129,7 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
   CXXRecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *PartialSpec =
-          Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+          dyn_cast<ClassTemplatePartialSpecializationDecl *>(Specialized)) {
     // Instantiate using the best class template partial specialization.
     while (PartialSpec->getInstantiatedFromMember()) {
       // If we've found an explicit specialization of this class template,

@@ -43,12 +43,13 @@ public:
   using SimpleRemoteCA::encodeResult;
   using SimpleRemoteCA::encodeSetup;
   using SimpleRemoteCA::handleMessage;
-  using SimpleRemoteCA::Opcode;
   using SimpleRemoteCA::PendingCallsMap;
   using SimpleRemoteCA::registerCall;
-  using SimpleRemoteCA::ResultKind;
   using SimpleRemoteCA::takeAllCalls;
   using SimpleRemoteCA::takeCall;
+
+  using Opcode = SimpleRemoteCA::Opcode;
+  using ResultKind = SimpleRemoteCA::ResultKind;
 
   TestCA(Session &S, TestCA **Self = nullptr) : SimpleRemoteCA(S) {
     if (Self)
