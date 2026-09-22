@@ -477,6 +477,12 @@ public:
                                              SourceLocation StartLoc,
                                              SourceLocation EndLoc);
 
+  /// Called on well-formed '#pragma omp flatten' after parsing of its
+  /// clauses and the associated statement.
+  StmtResult ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
+                                         Stmt *AStmt, SourceLocation StartLoc,
+                                         SourceLocation EndLoc);
+
   /// Called on well-formed '#pragma omp fuse' after parsing of its
   /// clauses and the associated statement.
   StmtResult ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
@@ -944,6 +950,10 @@ public:
   OMPClause *ActOnOpenMPPartialClause(Expr *FactorExpr, SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'depth' clause.
+  OMPClause *ActOnOpenMPDepthClause(Expr *DepthExpr, SourceLocation StartLoc,
+                                    SourceLocation LParenLoc,
+                                    SourceLocation EndLoc);
   /// Called on well-formed 'collapse' clause.
   OMPClause *ActOnOpenMPCollapseClause(Expr *NumForLoops,
                                        SourceLocation StartLoc,

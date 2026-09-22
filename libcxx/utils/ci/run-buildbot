@@ -306,10 +306,10 @@ test-tools)
     step "Running a benchmark through the benchmark tooling pipeline"
     "${MONOREPO_ROOT}/libcxx/utils/test-at-commit" \
         --git-repo "${MONOREPO_ROOT}" \
-        --libcxx-installation "${INSTALL_DIR}" \
+        --test-config "${MONOREPO_ROOT}/libcxx/test/configs/installed-libc++.cfg.in" \
         --build-dir "${BUILD_DIR}/benchmarks" \
         --compiler "${CXX}"                   \
-        -- -sv --param optimization=speed \
+        -- -sv --param optimization=speed --param "libcxx_installation=${INSTALL_DIR}" \
         "${MONOREPO_ROOT}/libcxx/test/benchmarks/hash.bench.cpp"
 
     step "Consolidate benchmark results"

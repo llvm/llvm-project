@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class InductionDescriptor;
 class Instruction;
 class Loop;
@@ -156,7 +157,12 @@ struct VPlanTransforms {
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
   LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr,
+              function_ref<const BranchProbabilityInfo &()> GetBPI = nullptr);
+
+  /// Add execution frequencies to each recipe in the loop body of \p Plan.
+  /// Frequencies are computed from the branch weights in \p Plan.
+  static void recordExecutionFrequencies(VPlan &Plan);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
@@ -229,6 +235,14 @@ struct VPlanTransforms {
                                  bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
+
+  /// Model the blocks the executed \p MainPlan generated for the main vector
+  /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
+  /// VPIRBasicBlock, with \p EnteredFrom the block \p EpiPlan is entered from.
+  /// Edges from blocks bypassing both vector loops are redirected to \p
+  /// EpiPlan's scalar preheader, all others are mirrored.
+  static void modelGeneratedMainLoopBlocks(VPlan &EpiPlan, VPlan &MainPlan,
+                                           VPIRBasicBlock *EnteredFrom);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -421,7 +435,7 @@ struct VPlanTransforms {
                                        VFRange &Range);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan.
-  static void simplifyRecipes(VPlan &Plan);
+  static void combineRecipes(VPlan &Plan);
 
   /// Cancel out redundant reverses in \p Plan, e.g. reverse(reverse(x)) -> x.
   static void simplifyReverses(VPlan &Plan);

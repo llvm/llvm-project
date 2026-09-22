@@ -43,15 +43,15 @@ Wrapper makeWrapper() {
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[AGG_TMP0:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E>
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[FLAG:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:     %[[FALSE:.*]] = cir.const #false
 // CIR:     cir.store %[[FALSE]], %[[CLEANUP_COND]]
+// CIR:     %[[FLAG:.*]] = cir.load{{.*}} %{{.*}}
 // CIR:     cir.if %[[FLAG]] {
 // CIR:       %[[SOURCE:.*]] = cir.call @_Z9getSourcev()
 // CIR:       cir.call @_ZNSt10unique_ptrI4BaseEC1EPS0_(%[[AGG_TMP0]], %[[SOURCE]])
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[CLEANUP_COND]]
-// CIR:       cir.call @_ZN7WrapperC1ESt10unique_ptrI4BaseE(%[[RETVAL]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E> {llvm.align = 1 : i64, llvm.byref = !rec_std3A3Aunique_ptr3CBase3E}) -> ()
+// CIR:       cir.call @_ZN7WrapperC1ESt10unique_ptrI4BaseE(%[[RETVAL]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:     } else {
 // CIR:       cir.call @_ZN7Wrapper5emptyEv(%[[RETVAL]])
 // CIR:     }
@@ -89,7 +89,7 @@ Wrapper makeWrapper() {
 // LLVM:                       to label %[[INVOKE_CONTINUE_2:.*]] unwind label %[[INVOKE_CLEANUP:.*]]
 // LLVM: [[INVOKE_CONTINUE_2]]:
 // LLVM:   store i8 1, ptr %[[CLEANUP_COND]]
-// LLVM:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr byref(%"struct.std::unique_ptr<Base>") align 1 %[[AGG_TMP0]])
+// LLVM:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP0]])
 // LLVM:                       to label %[[INVOKE_CONTINUE_3:.*]] unwind label %[[INVOKE_CLEANUP:.*]]
 // LLVM: [[INVOKE_CONTINUE_3]]:
 // LLVM:   br label %[[CONSTRUCT_CONTINUE:.*]]
@@ -136,7 +136,7 @@ Wrapper makeWrapper() {
 // OGCG:   %[[SOURCE:.*]] = call {{.*}} ptr @_Z9getSourcev()
 // OGCG:   call void @_ZNSt10unique_ptrI4BaseEC1EPS0_(ptr {{.*}} %[[AGG_TMP]], {{.*}} %[[SOURCE]])
 // OGCG:   store i1 true, ptr %[[CLEANUP_COND]]
-// OGCG:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr {{.*}} %[[AGG_TMP]])
+// OGCG:   invoke void @_ZN7WrapperC1ESt10unique_ptrI4BaseE(ptr {{.*}} %[[RETVAL]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP]])
 // OGCG:           to label %[[INVOKE_CONTINUE:.*]] unwind label %[[INVOKE_CLEANUP:.*]]
 // OGCG: [[INVOKE_CONTINUE]]:
 // OGCG:   br label %[[COND_END:.*]]
@@ -194,12 +194,12 @@ void APFixedPoint::add(int x) const {
 // CIR:       cir.if %[[X_BOOL]] {
 // CIR:         %[[AGG_TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_APInt>
 // CIR:         cir.cleanup.scope {
-// CIR:           %[[X2:.*]] = cir.load{{.*}} %[[X_ADDR]]
-// CIR:           %[[X2_BOOL:.*]] = cir.cast int_to_bool %[[X2]]
 // CIR:           %[[FALSE:.*]] = cir.const #false
 // CIR:           cir.store{{.*}} %[[FALSE]], %[[CLEANUP_COND_TRUE]]
 // CIR:           %[[FALSE:.*]] = cir.const #false
 // CIR:           cir.store{{.*}} %[[FALSE]], %[[CLEANUP_COND_FALSE]]
+// CIR:           %[[X2:.*]] = cir.load{{.*}} %[[X_ADDR]]
+// CIR:           %[[X2_BOOL:.*]] = cir.cast int_to_bool %[[X2]]
 // CIR:           cir.if %[[X2_BOOL]] {
 // CIR:             %[[TRUE:.*]] = cir.const #true
 // CIR:             cir.store %[[TRUE]], %[[CLEANUP_COND_TRUE]]
@@ -342,6 +342,16 @@ struct Entry {
 // (full-expr) cleanup scope, even though in the freshly emitted IR its
 // direct parent cleanup scope is the inner one created for the Iter
 // temporary.
+//
+// FIXME: The destruction order below is wrong, on both the normal and the
+// unwind path. Iter() is constructed first and the Path temporary second, so
+// reverse-of-construction order requires ~Path to run before ~Iter, as the
+// OGCG checks show. CIR emits them the other way around because an
+// unconditional cleanup goes on the EH stack and gets its own nested
+// cir.cleanup.scope, whose cleanup region fires when the inner body ends,
+// while a conditional cleanup is deferred to the enclosing full-expression
+// scope and fires later. Mixing the two therefore yields push order instead
+// of reverse-push order.
 void makeEntry() {
   Iter() ? Entry() : g_path;
 }
@@ -361,9 +371,11 @@ void makeEntry() {
 // CIR:         %{{.*}} = cir.get_global @g_path
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store %[[TRUE]], %[[CLEANUP_COND]]
-// CIR:         cir.call @_ZN5EntryC1E4Path(%[[ENSURED_F]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_Path> {llvm.align = 1 : i64, llvm.byref = !rec_Path}) -> ()
+// CIR:         cir.call @_ZN5EntryC1E4Path(%[[ENSURED_F]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_Path> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:       }
 // CIR:       cir.yield
+// FIXME: ~Iter runs here, when the inner scope's body ends, but it should run
+// after ~Path below.
 // CIR:     } cleanup all {
 // CIR:       cir.call @_ZN4IterD1Ev(%[[REF_TMP]])
 // CIR:       cir.yield
@@ -384,6 +396,7 @@ void makeEntry() {
 // LLVM:   %[[REF_TMP:.*]] = alloca %struct.Iter
 // LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   %[[AGG_TMP0:.*]] = alloca %struct.Path
+// LLVM:   store i8 0, ptr %[[CLEANUP_COND]]
 // LLVM:   %[[CALL:.*]] = invoke {{.*}} i1 @_ZN4ItercvbEv(ptr {{.*}} %[[REF_TMP]])
 // LLVM:                     to label %[[CALL_CONT:.*]] unwind label %[[LPAD:.*]]
 // LLVM: [[CALL_CONT]]:
@@ -395,7 +408,7 @@ void makeEntry() {
 // LLVM:   br label %[[COND_END:.*]]
 // LLVM: [[FALSE_BB]]:
 // LLVM:   store i8 1, ptr %[[CLEANUP_COND]]
-// LLVM:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr byref(%struct.Path) align 1 %[[AGG_TMP0]])
+// LLVM:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP0]])
 // LLVM:                     to label %[[FALSE_CONT:.*]] unwind label %[[LPAD]]
 // LLVM: [[FALSE_CONT]]:
 // LLVM:   br label %[[COND_END]]
@@ -412,7 +425,6 @@ void makeEntry() {
 // LLVM:   call void @_ZN4IterD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   br label %[[EH_OUTER:.*]]
 // LLVM: [[NORMAL_OUTER]]:
-// LLVM:   store i8 0, ptr %[[CLEANUP_COND]]
 // LLVM:   br label %[[CHECK_FLAG:.*]]
 // LLVM: [[CHECK_FLAG]]:
 // LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[CLEANUP_COND]]
@@ -455,7 +467,7 @@ void makeEntry() {
 // OGCG:   br label %[[COND_END:.*]]
 // OGCG: [[COND_FALSE]]:
 // OGCG:   store i1 true, ptr %[[CLEANUP_COND]]
-// OGCG:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr {{.*}} %[[AGG_TMP]])
+// OGCG:   invoke void @_ZN5EntryC1E4Path(ptr {{.*}} %[[ENSURED_F]], ptr nofreeobj noundef align 1 dereferenceable(1) %[[AGG_TMP]])
 // OGCG:           to label %[[FALSE_CONT:.*]] unwind label %[[LPAD2:.*]]
 // OGCG: [[FALSE_CONT]]:
 // OGCG:   br label %[[COND_END]]

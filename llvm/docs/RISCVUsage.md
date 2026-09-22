@@ -83,7 +83,14 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
+- `rva23p1s64`
+- `rvb23p1s64`
 - `rvm23u32`
+
+The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
+as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
+must be requested explicitly, for example
+`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
 
 (riscv-extensions)=
 
@@ -349,7 +356,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 : LLVM implements the [1.0 release specification](https://github.com/riscv/riscv-cfi/releases/tag/v1.0).
 
-`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`, `experimental-smip`, `experimental-ssip`
+`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`, `experimental-smip`, `experimental-ssip`, `experimental-smidctrl`, `experimental-ssidctrl`, `experimental-smnip`, `experimental-ssnip`
 
 : LLVM implements the [0.20 release specification](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.20).
 
@@ -379,7 +386,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 `experimental-zvzip`
 
-: LLVM implements the [0.1 draft specification](https://github.com/ved-rivos/riscv-isa-manual/blob/zvzip/src/zvzip.adoc).
+: LLVM implements the [0.3 draft specification](https://github.com/riscv/riscv-isa-manual/pull/3233).
 
 `experimental-zvvfmm`
 
@@ -465,10 +472,6 @@ The current vendor extensions supported are:
 
 : LLVM implements [version 1.0.0 of the THeadV-family custom instructions specification](https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf) by T-HEAD of Alibaba. All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
-`XVentanaCondOps`
-
-: LLVM implements [version 1.0.0 of the VTx-family custom instructions specification](https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf) by Ventana Micro Systems. All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for riscv64 at this time.
-
 `Xsfmm*`
 
 : LLVM implements [version 0.6 of the Xsfmm Family of Attached Matrix Extensions Specification](https://www.sifive.com/document-file/xsfmm-matrix-extensions-specification) by SiFive. All instructions are prefixed with `sf.` as described in the specification.
@@ -540,6 +543,10 @@ The current vendor extensions supported are:
 `Xwchc`
 
 : LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
+
+`experimental-Xqccmi`
+
+: LLVM implements [version 0.2 of the Qualcomm 16-bit Instruction Lookup Table extension specification](https://github.com/qualcomm/riscv-unified-db/releases#release-Xqccmi-0.2.0) by Qualcomm. All instructions are prefixed with `qc.` as described in the specification.
 
 `Xqccmp`
 

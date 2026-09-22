@@ -69,13 +69,14 @@ bool ScriptedCommandPythonInterface::RunRawCommand(
       debugger_sp, synchronicity);
 
   std::string args_str = args.str();
-  Dispatch("__call__", error, debugger_sp, args_str.c_str(), exe_ctx_ref_sp,
-           &cmd_retobj);
-
-  if (!error.Success() || cmd_retobj.GetStatus() == eReturnStatusFailed)
+  llvm::Expected<StructuredData::ObjectSP> obj_or_err = Dispatch(
+      "__call__", debugger_sp, args_str.c_str(), exe_ctx_ref_sp, &cmd_retobj);
+  if (!obj_or_err) {
+    error = Status::FromError(obj_or_err.takeError());
     return false;
+  }
 
-  return true;
+  return cmd_retobj.GetStatus() != eReturnStatusFailed;
 }
 
 bool ScriptedCommandPythonInterface::RunParsedCommand(
@@ -101,36 +102,35 @@ bool ScriptedCommandPythonInterface::RunParsedCommand(
     args_arr_sp->AddStringItem(entry.ref());
   StructuredDataImpl args_impl(args_arr_sp);
 
-  Dispatch("__call__", error, debugger_sp, args_impl, exe_ctx_ref_sp,
-           &cmd_retobj);
-
-  if (!error.Success() || cmd_retobj.GetStatus() == eReturnStatusFailed)
+  llvm::Expected<StructuredData::ObjectSP> obj_or_err =
+      Dispatch("__call__", debugger_sp, args_impl, exe_ctx_ref_sp, &cmd_retobj);
+  if (!obj_or_err) {
+    error = Status::FromError(obj_or_err.takeError());
     return false;
+  }
 
-  return true;
+  return cmd_retobj.GetStatus() != eReturnStatusFailed;
 }
 
 std::optional<std::string>
 ScriptedCommandPythonInterface::GetRepeatCommand(Args &args) {
   std::string command;
   args.GetQuotedCommandString(command);
-  Status error;
-  StructuredData::ObjectSP obj =
-      Dispatch("get_repeat_command", error, command.c_str());
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("get_repeat_command", command.c_str()), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
+
   return obj->GetStringValue().str();
 }
 
 StructuredData::DictionarySP
 ScriptedCommandPythonInterface::HandleArgumentCompletion(
     std::vector<std::string> &args, size_t args_pos, size_t char_in_arg) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("handle_argument_completion", error,
-                                          args, args_pos, char_in_arg);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("handle_argument_completion", args, args_pos, char_in_arg),
+      LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
   StructuredData::DictionarySP dict_sp(new StructuredData::Dictionary(obj));
   if (dict_sp->GetType() == lldb::eStructuredDataTypeInvalid)
@@ -141,13 +141,12 @@ ScriptedCommandPythonInterface::HandleArgumentCompletion(
 StructuredData::DictionarySP
 ScriptedCommandPythonInterface::HandleOptionArgumentCompletion(
     llvm::StringRef &long_option, size_t char_in_arg) {
-  Status error;
   std::string long_option_str = long_option.str();
   StructuredData::ObjectSP obj =
-      Dispatch("handle_option_argument_completion", error,
-               long_option_str.c_str(), char_in_arg);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+      LogAndDefault(Dispatch("handle_option_argument_completion",
+                             long_option_str.c_str(), char_in_arg),
+                    LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
   // A boolean return means: True means completion handled but no
@@ -168,10 +167,9 @@ ScriptedCommandPythonInterface::HandleOptionArgumentCompletion(
 
 bool ScriptedCommandPythonInterface::GetShortHelp(std::string &dest) {
   dest.clear();
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_short_help", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_short_help"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
   dest = obj->GetStringValue().str();
   return !dest.empty();
@@ -179,39 +177,36 @@ bool ScriptedCommandPythonInterface::GetShortHelp(std::string &dest) {
 
 bool ScriptedCommandPythonInterface::GetLongHelp(std::string &dest) {
   dest.clear();
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_long_help", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_long_help"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
   dest = obj->GetStringValue().str();
   return !dest.empty();
 }
 
 uint32_t ScriptedCommandPythonInterface::GetFlags() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_flags", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_flags"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return 0;
+
   return static_cast<uint32_t>(obj->GetUnsignedIntegerValue());
 }
 
 StructuredData::ObjectSP
 ScriptedCommandPythonInterface::GetOptionsDefinition() {
-  Status error;
-  return Dispatch("get_options_definition", error);
+  return LogAndDefault(Dispatch("get_options_definition"),
+                       LLVM_PRETTY_FUNCTION);
 }
 
 StructuredData::ObjectSP
 ScriptedCommandPythonInterface::GetArgumentsDefinition() {
-  Status error;
-  return Dispatch("get_args_definition", error);
+  return LogAndDefault(Dispatch("get_args_definition"), LLVM_PRETTY_FUNCTION);
 }
 
 void ScriptedCommandPythonInterface::OptionParsingStarted() {
-  Status error;
-  Dispatch("option_parsing_started", error);
+  LogAndDefault(Dispatch("option_parsing_started"), LLVM_PRETTY_FUNCTION);
 }
 
 bool ScriptedCommandPythonInterface::SetOptionValue(ExecutionContext *exe_ctx,
@@ -220,14 +215,13 @@ bool ScriptedCommandPythonInterface::SetOptionValue(ExecutionContext *exe_ctx,
   lldb::ExecutionContextRefSP exe_ctx_ref_sp;
   if (exe_ctx)
     exe_ctx_ref_sp = std::make_shared<ExecutionContextRef>(exe_ctx);
-  Status error;
   std::string long_option_str = long_option.str();
   std::string value_str = value.str();
   StructuredData::ObjectSP obj =
-      Dispatch("set_option_value", error, exe_ctx_ref_sp,
-               long_option_str.c_str(), value_str.c_str());
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+      LogAndDefault(Dispatch("set_option_value", exe_ctx_ref_sp,
+                             long_option_str.c_str(), value_str.c_str()),
+                    LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return false;
   return obj->GetBooleanValue();
 }
