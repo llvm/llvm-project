@@ -1,6 +1,7 @@
 
 set(ORC_RT_BEDROCK_SOURCES
   BootstrapInfo.cpp
+  ConnectionSpec.cpp
   ExecutorProcessInfo.cpp
   GDBJITRegistrar.cpp
   InProcessControllerAccess.cpp

@@ -279,7 +279,7 @@ infrastructure are described first, followed by tool-specific sections.
     typedef or type alias that provides the only name of an otherwise unnamed
     tag, such as `typedef enum {} MyEnum;`, against the style configured for
     that tag kind instead of the typedef or type alias style.
-    
+
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
@@ -303,6 +303,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {doc}`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
   positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+
+- Fixed {doc}`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
+  fixes when applying De Morgan's theorem to overloaded comparison operators.
 
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
