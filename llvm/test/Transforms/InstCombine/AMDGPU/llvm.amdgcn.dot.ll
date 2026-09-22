@@ -614,12 +614,3 @@ define i32 @udot8_clamp(i32 %a, i32 %b) {
   %r = add i32 %dot, 9
   ret i32 %r
 }
-
-declare i32 @llvm.amdgcn.sdot2(<2 x i16>, <2 x i16>, i32, i1 immarg) #0
-declare i32 @llvm.amdgcn.udot2(<2 x i16>, <2 x i16>, i32, i1 immarg) #0
-declare i32 @llvm.amdgcn.sdot4(i32, i32, i32, i1 immarg) #0
-declare i32 @llvm.amdgcn.udot4(i32, i32, i32, i1 immarg) #0
-declare i32 @llvm.amdgcn.sdot8(i32, i32, i32, i1 immarg) #0
-declare i32 @llvm.amdgcn.udot8(i32, i32, i32, i1 immarg) #0
-
-attributes #0 = { nounwind readnone speculatable }
