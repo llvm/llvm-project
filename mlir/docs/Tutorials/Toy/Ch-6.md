@@ -27,27 +27,29 @@ succeed.
 During lowering we can get, or build, the declaration for printf as so:
 
 ```c++
+/// Create a function declaration for printf, the signature is:
+///   * `i32 (ptr, ...)`
+static LLVM::LLVMFunctionType getPrintfType(MLIRContext *context) {
+  auto llvmI32Ty = IntegerType::get(context, 32);
+  auto llvmPtrTy = LLVM::LLVMPointerType::get(context);
+  auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmPtrTy,
+                                                /*isVarArg=*/true);
+  return llvmFnType;
+}
+
 /// Return a symbol reference to the printf function, inserting it into the
 /// module if necessary.
 static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
-                                           ModuleOp module,
-                                           LLVM::LLVMDialect *llvmDialect) {
+                                           ModuleOp module) {
   auto *context = module.getContext();
   if (module.lookupSymbol<LLVM::LLVMFuncOp>("printf"))
     return SymbolRefAttr::get(context, "printf");
 
-  // Create a function declaration for printf, the signature is:
-  //   * `i32 (i8*, ...)`
-  auto llvmI32Ty = IntegerType::get(context, 32);
-  auto llvmI8PtrTy =
-      LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
-  auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmI8PtrTy,
-                                                /*isVarArg=*/true);
-
   // Insert the printf function into the body of the parent module.
   PatternRewriter::InsertionGuard insertGuard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
-  LLVM::LLVMFuncOp::create(rewriter, module.getLoc(), "printf", llvmFnType);
+  LLVM::LLVMFuncOp::create(rewriter, module.getLoc(), "printf",
+                           getPrintfType(context));
   return SymbolRefAttr::get(context, "printf");
 }
 ```
@@ -59,11 +61,11 @@ components defined in the [previous chapter](Ch-5.md).
 ### Conversion Target
 
 For this conversion, aside from the top-level module, we will be lowering
-everything to the LLVM dialect.
+everything to the LLVM dialect. `LLVMConversionTarget` is a `ConversionTarget`
+that already marks the LLVM dialect as legal.
 
 ```c++
-  mlir::ConversionTarget target(getContext());
-  target.addLegalDialect<mlir::LLVMDialect>();
+  mlir::LLVMConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
 ```
 
@@ -85,20 +87,20 @@ enough for our use case.
 
 Now that the conversion target has been defined, we need to provide the patterns
 used for lowering. At this point in the compilation process, we have a
-combination of `toy`, `affine`, `arith`, and `std` operations. Luckily, the
-`affine`, `arith`, and `std` dialects already provide the set of patterns needed
-to transform them into LLVM dialect. These patterns allow for lowering the IR in
-multiple stages by relying on
+combination of `toy`, `affine`, `arith`, `memref`, and `func` operations.
+Luckily, the `affine`, `arith`, `memref`, and `func` dialects already provide
+the set of patterns needed to transform them into LLVM dialect. These patterns
+allow for lowering the IR in multiple stages by relying on
 [transitive lowering](../../../getting_started/Glossary.md/#transitive-lowering).
 
 ```c++
   mlir::RewritePatternSet patterns(&getContext());
-  mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
-  mlir::cf::populateSCFToControlFlowConversionPatterns(patterns, &getContext());
-  mlir::arith::populateArithToLLVMConversionPatterns(typeConverter,
-                                                          patterns);
+  mlir::populateAffineToStdConversionPatterns(patterns);
+  mlir::populateSCFToControlFlowConversionPatterns(patterns);
+  mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
+  mlir::populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
   mlir::populateFuncToLLVMConversionPatterns(typeConverter, patterns);
-  mlir::cf::populateControlFlowToLLVMConversionPatterns(patterns, &getContext());
 
   // The only remaining operation, to lower from the `toy` dialect, is the
   // PrintOp.
@@ -112,7 +114,8 @@ that only legal operations will remain after the conversion.
 
 ```c++
   mlir::ModuleOp module = getOperation();
-  if (mlir::failed(mlir::applyFullConversion(module, target, patterns)))
+  if (mlir::failed(
+          mlir::applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();
 ```
 
@@ -131,48 +134,50 @@ toy.func @main() {
 We can now lower down to the LLVM dialect, which produces the following code:
 
 ```mlir
-llvm.func @free(!llvm<"i8*">)
-llvm.func @printf(!llvm<"i8*">, ...) -> i32
-llvm.func @malloc(i64) -> !llvm<"i8*">
+llvm.func @free(!llvm.ptr)
+llvm.mlir.global internal constant @nl("\0A\00") {addr_space = 0 : i32}
+llvm.mlir.global internal constant @frmt_spec("%f \00") {addr_space = 0 : i32}
+llvm.func @printf(!llvm.ptr, ...) -> i32
+llvm.func @malloc(i64) -> !llvm.ptr
 llvm.func @main() {
-  %0 = llvm.mlir.constant(1.000000e+00 : f64) : f64
-  %1 = llvm.mlir.constant(2.000000e+00 : f64) : f64
+  %0 = llvm.mlir.constant(6.000000e+00 : f64) : f64
+  %1 = llvm.mlir.constant(5.000000e+00 : f64) : f64
+  %2 = llvm.mlir.constant(4.000000e+00 : f64) : f64
+  %3 = llvm.mlir.constant(3.000000e+00 : f64) : f64
+  %4 = llvm.mlir.constant(2.000000e+00 : f64) : f64
+  %5 = llvm.mlir.constant(1.000000e+00 : f64) : f64
 
-  ...
+...
 
-^bb16:
-  %221 = llvm.extractvalue %25[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
-  %222 = llvm.mlir.constant(0 : i64) : i64
-  %223 = llvm.mlir.constant(2 : i64) : i64
-  %224 = llvm.mul %214, %223 : i64
-  %225 = llvm.add %222, %224 : i64
-  %226 = llvm.mlir.constant(1 : i64) : i64
-  %227 = llvm.mul %219, %226 : i64
-  %228 = llvm.add %225, %227 : i64
-  %229 = llvm.getelementptr %221[%228] : (!llvm."double*">, i64) -> !llvm<"f64*">
-  %230 = llvm.load %229 : !llvm<"double*">
-  %231 = llvm.call @printf(%207, %230) : (!llvm<"i8*">, f64) -> i32
-  %232 = llvm.add %219, %218 : i64
-  llvm.br ^bb15(%232 : i64)
+^bb16:  // pred: ^bb15
+  %162 = llvm.extractvalue %22[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  %163 = llvm.mlir.constant(2 : i64) : i64
+  %164 = llvm.mul %155, %163 overflow<nsw, nuw> : i64
+  %165 = llvm.add %164, %160 overflow<nsw, nuw> : i64
+  %166 = llvm.getelementptr inbounds|nuw %162[%165] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+  %167 = llvm.load %166 : !llvm.ptr -> f64
+  %168 = llvm.call @printf(%148, %167) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64) -> i32
+  %169 = llvm.add %160, %159 : i64
+  llvm.br ^bb15(%169 : i64)
 
-  ...
+...
 
-^bb18:
-  %235 = llvm.extractvalue %65[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
-  %236 = llvm.bitcast %235 : !llvm<"double*"> to !llvm<"i8*">
-  llvm.call @free(%236) : (!llvm<"i8*">) -> ()
-  %237 = llvm.extractvalue %45[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
-  %238 = llvm.bitcast %237 : !llvm<"double*"> to !llvm<"i8*">
-  llvm.call @free(%238) : (!llvm<"i8*">) -> ()
-  %239 = llvm.extractvalue %25[0] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
-  %240 = llvm.bitcast %239 : !llvm<"double*"> to !llvm<"i8*">
-  llvm.call @free(%240) : (!llvm<"i8*">) -> ()
+^bb18:  // pred: ^bb13
+  %172 = llvm.extractvalue %56[0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  llvm.call @free(%172) : (!llvm.ptr) -> ()
+  %173 = llvm.extractvalue %39[0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  llvm.call @free(%173) : (!llvm.ptr) -> ()
+  %174 = llvm.extractvalue %22[0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
+  llvm.call @free(%174) : (!llvm.ptr) -> ()
   llvm.return
 }
 ```
 
-See [LLVM IR Target](../../TargetLLVMIR.md) for
-more in-depth details on lowering to the LLVM dialect.
+Each `memref` value has been lowered to an LLVM struct, the memref descriptor,
+holding the allocated pointer, the aligned pointer, an offset, and the size and
+stride of each dimension. See
+[LLVM IR Target](../../TargetLLVMIR.md/#ranked-memref-types) for more in-depth
+details on lowering to the LLVM dialect.
 
 ## CodeGen: Getting Out of MLIR
 
@@ -187,41 +192,48 @@ export to LLVM IR. To do this programmatically, we can invoke the following
 utility:
 
 ```c++
-  std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(module);
+  llvm::LLVMContext llvmContext;
+  std::unique_ptr<llvm::Module> llvmModule =
+      mlir::translateModuleToLLVMIR(module, llvmContext);
   if (!llvmModule)
     /* ... an error was encountered ... */
 ```
 
-Exporting our module to LLVM IR generates:
+Exporting our module to LLVM IR generates the following. The target triple,
+data layout, and debug location metadata have been elided for brevity:
 
 ```llvm
+@nl = internal constant [2 x i8] c"\0A\00"
+@frmt_spec = internal constant [4 x i8] c"%f \00"
+
+declare void @free(ptr)
+
+declare i32 @printf(ptr, ...)
+
+declare ptr @malloc(i64)
+
 define void @main() {
   ...
 
-102:
-  %103 = extractvalue { double*, i64, [2 x i64], [2 x i64] } %8, 0
-  %104 = mul i64 %96, 2
-  %105 = add i64 0, %104
-  %106 = mul i64 %100, 1
-  %107 = add i64 %105, %106
-  %108 = getelementptr double, double* %103, i64 %107
-  %109 = memref.load double, double* %108
-  %110 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double %109)
-  %111 = add i64 %100, 1
-  cf.br label %99
+87:                                               ; preds = %84
+  %88 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1
+  %89 = mul nuw nsw i64 %81, 2
+  %90 = add nuw nsw i64 %89, %85
+  %91 = getelementptr inbounds nuw double, ptr %88, i64 %90
+  %92 = load double, ptr %91, align 8
+  %93 = call i32 (ptr, ...) @printf(ptr @frmt_spec, double %92)
+  %94 = add i64 %85, 1
+  br label %84
 
   ...
 
-115:
-  %116 = extractvalue { double*, i64, [2 x i64], [2 x i64] } %24, 0
-  %117 = bitcast double* %116 to i8*
-  call void @free(i8* %117)
-  %118 = extractvalue { double*, i64, [2 x i64], [2 x i64] } %16, 0
-  %119 = bitcast double* %118 to i8*
-  call void @free(i8* %119)
-  %120 = extractvalue { double*, i64, [2 x i64], [2 x i64] } %8, 0
-  %121 = bitcast double* %120 to i8*
-  call void @free(i8* %121)
+98:                                               ; preds = %80
+  %99 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %24, 0
+  call void @free(ptr %99)
+  %100 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 0
+  call void @free(ptr %100)
+  %101 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 0
+  call void @free(ptr %101)
   ret void
 }
 ```
@@ -230,29 +242,42 @@ If we enable optimization on the generated LLVM IR, we can trim this down quite
 a bit:
 
 ```llvm
-define void @main()
-  %0 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 1.000000e+00)
-  %1 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 1.600000e+01)
+@frmt_spec = internal constant [4 x i8] c"%f \00"
+
+; Function Attrs: nofree nounwind
+declare noundef i32 @printf(ptr noundef readonly captures(none), ...) local_unnamed_addr #0
+
+; Function Attrs: nofree nounwind
+define void @main() local_unnamed_addr #0 {
+.preheader5:
+  %0 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @frmt_spec, double 1.000000e+00)
+  %1 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @frmt_spec, double 1.600000e+01)
   %putchar = tail call i32 @putchar(i32 10)
-  %2 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 4.000000e+00)
-  %3 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 2.500000e+01)
+  %2 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @frmt_spec, double 4.000000e+00)
+  %3 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @frmt_spec, double 2.500000e+01)
   %putchar.1 = tail call i32 @putchar(i32 10)
-  %4 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 9.000000e+00)
-  %5 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double 3.600000e+01)
+  %4 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @frmt_spec, double 9.000000e+00)
+  %5 = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @frmt_spec, double 3.600000e+01)
   %putchar.2 = tail call i32 @putchar(i32 10)
   ret void
 }
+
+; Function Attrs: nofree nounwind
+declare noundef i32 @putchar(i32 noundef) local_unnamed_addr #0
+
+attributes #0 = { nofree nounwind }
 ```
 
 The full code listing for dumping LLVM IR can be found in
 `examples/toy/Ch6/toyc.cpp` in the `dumpLLVMIR()` function:
 
 ```c++
+static int dumpLLVMIR(mlir::ModuleOp module) {
+  // Register the translation to LLVM IR with the MLIR context.
+  mlir::registerBuiltinDialectTranslation(*module->getContext());
+  mlir::registerLLVMDialectTranslation(*module->getContext());
 
-int dumpLLVMIR(mlir::ModuleOp module) {
-  // Translate the module, that contains the LLVM dialect, to LLVM IR. Use a
-  // fresh LLVM IR context. (Note that LLVM is not thread-safe and any
-  // concurrent use of a context requires external locking.)
+  // Convert the module to LLVM IR in a new LLVM IR context.
   llvm::LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
   if (!llvmModule) {
@@ -263,11 +288,25 @@ int dumpLLVMIR(mlir::ModuleOp module) {
   // Initialize LLVM targets.
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
-  mlir::ExecutionEngine::setupTargetTriple(llvmModule.get());
+
+  // Configure the LLVM Module
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  if (!tmBuilderOrError) {
+    llvm::errs() << "Could not create JITTargetMachineBuilder\n";
+    return -1;
+  }
+
+  auto tmOrError = tmBuilderOrError->createTargetMachine();
+  if (!tmOrError) {
+    llvm::errs() << "Could not create TargetMachine\n";
+    return -1;
+  }
+  mlir::ExecutionEngine::setupTargetTripleAndDataLayout(llvmModule.get(),
+                                                        tmOrError.get().get());
 
   /// Optionally run an optimization pipeline over the llvm module.
   auto optPipeline = mlir::makeOptimizingTransformer(
-      /*optLevel=*/EnableOpt ? 3 : 0, /*sizeLevel=*/0,
+      /*optLevel=*/enableOpt ? 3 : 0, /*sizeLevel=*/0,
       /*targetMachine=*/nullptr);
   if (auto err = optPipeline(llvmModule.get())) {
     llvm::errs() << "Failed to optimize LLVM IR " << err << "\n";
@@ -286,25 +325,31 @@ LLVM's JIT that accepts `.mlir` as input. The full code listing for setting up
 the JIT can be found in `Ch6/toyc.cpp` in the `runJit()` function:
 
 ```c++
-int runJit(mlir::ModuleOp module) {
+static int runJit(mlir::ModuleOp module) {
   // Initialize LLVM targets.
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
+  // Register the translation from MLIR to LLVM IR, which must happen before we
+  // can JIT-compile.
+  mlir::registerBuiltinDialectTranslation(*module->getContext());
+  mlir::registerLLVMDialectTranslation(*module->getContext());
+
   // An optimization pipeline to use within the execution engine.
   auto optPipeline = mlir::makeOptimizingTransformer(
-      /*optLevel=*/EnableOpt ? 3 : 0, /*sizeLevel=*/0,
+      /*optLevel=*/enableOpt ? 3 : 0, /*sizeLevel=*/0,
       /*targetMachine=*/nullptr);
 
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.
-  auto maybeEngine = mlir::ExecutionEngine::create(module,
-      /*llvmModuleBuilder=*/nullptr, optPipeline);
+  mlir::ExecutionEngineOptions engineOptions;
+  engineOptions.transformer = optPipeline;
+  auto maybeEngine = mlir::ExecutionEngine::create(module, engineOptions);
   assert(maybeEngine && "failed to construct an execution engine");
   auto &engine = maybeEngine.get();
 
   // Invoke the JIT-compiled function.
-  auto invocationResult = engine->invoke("main");
+  auto invocationResult = engine->invokePacked("main");
   if (invocationResult) {
     llvm::errs() << "JIT invocation failed\n";
     return -1;

@@ -256,6 +256,41 @@ jobs:
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
+    - name: Build libxml2 (Linux)
+      if: runner.os == 'Linux'
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
+      shell: bash
+      run: |
+        libxml2_prefix="$BUILD_PREFIX/libxml2-install"
+        libxml2_build_dir="$BUILD_PREFIX/libxml2-build"
+        libxml2_version=2.15.1
+        libxml2_archive="libxml2-$libxml2_version.tar.xz"
+        libxml2_checksum=c008bac08fd5c7b4a87f7b8a71f283fa581d80d80ff8d2efd3b26224c39bc54c
+
+        mkdir -p "$libxml2_build_dir" "$libxml2_prefix"
+        cd "$libxml2_build_dir" || exit
+        curl --fail --location --retry 3 \
+          "https://download.gnome.org/sources/libxml2/2.15/$libxml2_archive" -o "$libxml2_archive"
+        echo "$libxml2_checksum  $libxml2_archive" | sha256sum --check
+        tar -xf "$libxml2_archive"
+
+        cmake -G Ninja -S "libxml2-$libxml2_version" -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX="$libxml2_prefix" \
+          -DCMAKE_INSTALL_LIBDIR=lib \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DLIBXML2_WITH_ICU=OFF \
+          -DLIBXML2_WITH_ICONV=OFF \
+          -DLIBXML2_WITH_MODULES=OFF \
+          -DLIBXML2_WITH_PROGRAMS=OFF \
+          -DLIBXML2_WITH_TESTS=OFF \
+          -DLIBXML2_WITH_ZLIB=ON
+        cmake --build build --parallel
+        cmake --install build --component development
+
+        echo "PKG_CONFIG_PATH=$libxml2_prefix/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+
     - name: Configure Linux/MacOS
       id: build
       if: runner.os != 'Windows'
@@ -264,10 +299,22 @@ jobs:
         TARGET_CMAKE_FLAGS: ${{ needs.prepare.outputs.target-cmake-flags }}
       shell: bash
       run: |
+        libxml2_cmake_flags=()
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          libxml2_prefix="$BUILD_PREFIX/libxml2-install"
+          for stage in "" BOOTSTRAP_ BOOTSTRAP_BOOTSTRAP_; do
+            libxml2_cmake_flags+=(
+              "-D${stage}LIBXML2_INCLUDE_DIR=$libxml2_prefix/include/libxml2"
+              "-D${stage}LIBXML2_LIBRARY=$libxml2_prefix/lib/libxml2.a"
+              "-D${stage}LIBXML2_STATIC_LIBRARY=$libxml2_prefix/lib/libxml2.a"
+            )
+          done
+        fi
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B "$BUILD_PREFIX/build" \
             $TARGET_CMAKE_FLAGS \
+            "${libxml2_cmake_flags[@]}" \
             -C clang/cmake/caches/Release.cmake
 
     - name: Build Linux/MacOS

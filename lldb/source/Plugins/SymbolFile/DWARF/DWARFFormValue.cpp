@@ -463,13 +463,21 @@ void DWARFFormValue::Dump(Stream &s) const {
   }
 }
 
+/// PeekCStr only returns strings terminated within the section, so data() is
+/// always a valid C string.
+static const char *PeekCStr(const DWARFDataExtractor &data, uint64_t offset) {
+  if (std::optional<llvm::StringRef> str = data.PeekCStr(offset))
+    return str->data();
+  return nullptr;
+}
+
 const char *DWARFFormValue::AsCString() const {
   DWARFContext &context = m_unit->GetSymbolFileDWARF().GetDWARFContext();
 
   if (m_form == DW_FORM_string)
     return m_value.cstr;
   if (m_form == DW_FORM_strp)
-    return context.getOrLoadStrData().PeekCStr(m_value.uval);
+    return PeekCStr(context.getOrLoadStrData(), m_value.uval);
 
   if (m_form == DW_FORM_GNU_str_index || m_form == DW_FORM_strx ||
       m_form == DW_FORM_strx1 || m_form == DW_FORM_strx2 ||
@@ -479,11 +487,11 @@ const char *DWARFFormValue::AsCString() const {
         m_unit->GetStringOffsetSectionItem(m_value.uval);
     if (!offset)
       return nullptr;
-    return context.getOrLoadStrData().PeekCStr(*offset);
+    return PeekCStr(context.getOrLoadStrData(), *offset);
   }
 
   if (m_form == DW_FORM_line_strp)
-    return context.getOrLoadLineStrData().PeekCStr(m_value.uval);
+    return PeekCStr(context.getOrLoadLineStrData(), m_value.uval);
 
   return nullptr;
 }
