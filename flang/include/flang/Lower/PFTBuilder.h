@@ -278,6 +278,13 @@ struct Evaluation : EvaluationVariant {
     }});
   }
 
+  /// Return the predicate:  "This evaluation is linked into the lexical
+  /// successor chain."  FormatStmt and EntryStmt have no lexicalSuccessor.
+  constexpr bool isLexicallyLinked() const {
+    return isActionStmt() || isConstructStmt() || isEndStmt() ||
+           isExecutableDirective();
+  }
+
   /// Return the predicate:  "This is a non-initial, non-terminal construct
   /// statement."  For an IfConstruct, this is ElseIfStmt and ElseStmt.
   constexpr bool isIntermediateConstructStmt() const {

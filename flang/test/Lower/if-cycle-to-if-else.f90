@@ -160,3 +160,51 @@ subroutine named_outer_cycle(n, v)
            end do inner
          end do outer
 end subroutine named_outer_cycle
+
+! A FORMAT statement is not in the lexical chain, so the predecessor of the
+! CYCLE is the assignment ahead of it, and that is what falls through to the
+! synthesized ElseStmt.
+
+subroutine format_in_then(n, v)
+  integer :: n, i, v(n)
+
+  ! CHECK-LABEL: Subroutine format_in_then
+  ! CHECK: <<DoConstruct>>
+  ! CHECK-NOT: DoConstruct!
+  ! CHECK: IfThenStmt
+  ! CHECK-NOT: [negate]
+  ! CHECK: AssignmentStmt: v(i) = 7
+  ! CHECK: FormatStmt
+  ! CHECK: ElseStmt
+  ! CHECK: AssignmentStmt: v(i) = 2
+  ! CHECK: EndIfStmt
+  ! CHECK: <<End IfConstruct>>
+  ! CHECK: EndDoStmt
+  ! CHECK: <<End DoConstruct>>
+  ! CHECK-NOT: CycleStmt
+  do i = 1, n
+     if (v(i) == 1) then
+        v(i) = 7
+100     format(I5)
+        cycle
+     end if
+     v(i) = 2
+  end do
+end subroutine format_in_then
+
+! Everything between the construct and the EndDoStmt is a FORMAT, so there is
+! no statement for an ELSE branch and the CYCLE is left alone.
+
+subroutine format_only_after_if(n, v)
+  integer :: n, i, v(n)
+
+  ! CHECK-LABEL: Subroutine format_only_after_if
+  ! CHECK: CycleStmt
+  do i = 1, n
+     if (v(i) == 1) then
+        v(i) = 7
+        cycle
+     end if
+200  format(I5)
+  end do
+end subroutine format_only_after_if

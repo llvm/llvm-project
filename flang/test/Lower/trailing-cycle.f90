@@ -139,3 +139,25 @@ subroutine trailing_cycle(a, n)
     cycle
   end do
 end subroutine trailing_cycle
+
+! A FORMAT statement is not in the lexical chain, so the predecessor of the
+! CYCLE is the assignment ahead of it, and that is what gets relinked.
+
+! CHECK: Subroutine format_before_cycle
+subroutine format_before_cycle(a, n)
+  integer :: n, i
+  real :: a(n)
+
+  ! CHECK:   <<DoConstruct>> -> 5
+  ! CHECK:     1 NonLabelDoStmt -> 4: do i = 1, n
+  ! CHECK:     2 ^AssignmentStmt: a(i) = 1.0
+  ! CHECK:     FormatStmt
+  ! CHECK:     4 EndDoStmt -> 1: end do
+  ! CHECK:   <<End DoConstruct>>
+  ! CHECK-NOT: CycleStmt
+  do i = 1, n
+    a(i) = 1.0
+100 format(I5)
+    cycle
+  end do
+end subroutine format_before_cycle
