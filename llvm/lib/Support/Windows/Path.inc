@@ -1100,14 +1100,16 @@ std::error_code mapped_file_region::init(sys::fs::file_t OrigFileHandle,
   // are closed and the file is deleted, which may cause invalid data to be read
   // from the file.
   ::CloseHandle(FileMappingHandle);
+  HANDLE H;
   if (!::DuplicateHandle(::GetCurrentProcess(), OrigFileHandle.get(),
-                         ::GetCurrentProcess(), &FileHandle, 0, 0,
+                         ::GetCurrentProcess(), &H, 0, 0,
                          DUPLICATE_SAME_ACCESS)) {
     std::error_code ec = mapWindowsError(GetLastError());
     ::UnmapViewOfFile(Mapping);
     return ec;
   }
 
+  FileHandle = H;
   return std::error_code();
 }
 
@@ -1483,7 +1485,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
   if (!Result)
     return errorToErrorCode(Result.takeError());
 
-  return nativeFileToFd(Result, ResultFD, Flags);
+  return nativeFileToFd(std::move(Result), ResultFD, Flags);
 }
 
 static std::error_code directoryRealPath(const Twine &Name,
