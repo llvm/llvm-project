@@ -908,7 +908,8 @@ class LoopVectorizationPlanner {
   /// been retired.
   InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
 
-  /// Compute the scalar loop cost of InitialVPlan0.
+  /// Compute the scalar loop cost of InitialVPlan0, or using the legacy cost
+  /// model if -vplan-scalar-cost is disabled.
   InstructionCost computeScalarCost() const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The

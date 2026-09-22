@@ -404,6 +404,13 @@ static cl::opt<cl::boolOrDefault>
                       cl::desc("Override cost based masked intrinsic widening "
                                "for div/rem instructions"));
 
+// TODO: This is a temporary option to disable the VPlan code path in case any
+// regressions surface. Will be removed after a transition period.
+static cl::opt<bool> UseVPlanScalarCost(
+    "vplan-scalar-cost", cl::init(true), cl::Hidden,
+    cl::desc("Compute the cost of the scalar loop using the VPlan-based cost "
+             "model. If disabled, fall back to the legacy cost model."));
+
 static cl::opt<bool> EnableEarlyExitVectorization(
     "enable-early-exit-vectorization", cl::init(true), cl::Hidden,
     cl::desc(
@@ -1281,6 +1288,12 @@ public:
     Uniforms.clear();
     Scalars.clear();
   }
+
+  /// Returns the expected execution cost. The unit of the cost does
+  /// not matter because we use the 'cost' units to compare different
+  /// vector widths. The cost that is returned is *not* normalized by
+  /// the factor width.
+  InstructionCost expectedCost(ElementCount VF);
 
   /// Returns the execution time cost of an instruction for a given vector
   /// width. Vector width of one means scalar.
@@ -4227,6 +4240,42 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
   return Discount;
 }
 
+InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
+  InstructionCost Cost;
+  assert(VF.isScalar() && "must only be called for scalar VFs");
+
+  // For each block.
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    InstructionCost BlockCost;
+
+    // For each instruction in the old loop.
+    for (Instruction &I : *BB) {
+      // Skip ignored values.
+      if (ValuesToIgnore.count(&I) ||
+          (VF.isVector() && VecValuesToIgnore.count(&I)))
+        continue;
+
+      InstructionCost C = getInstructionCost(&I, VF);
+
+      // Check if we should override the cost.
+      if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0)
+        C = InstructionCost(ForceTargetInstructionCost);
+
+      BlockCost += C;
+      LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
+                        << VF << " For instruction: " << I << '\n');
+    }
+
+    // In the scalar loop, we may not always execute the predicated block, if it
+    // is an if-else block. Thus, scale the block's cost by the probability of
+    // executing it. getPredBlockCostDivisor will return 1 for blocks that are
+    // only predicated by the header mask when folding the tail.
+    Cost += BlockCost / getPredBlockCostDivisor(Config.CostKind, BB);
+  }
+
+  return Cost;
+}
+
 /// Gets the address access SCEV for Ptr, if it should be used for cost modeling
 /// according to isAddressSCEVForCost.
 ///
@@ -5559,6 +5608,9 @@ getRecordedExecutionFrequency(const VPBasicBlock *VPBB) {
 
 InstructionCost LoopVectorizationPlanner::computeScalarCost() const {
   ElementCount ScalarVF = ElementCount::getFixed(1);
+  if (!UseVPlanScalarCost)
+    return CM->expectedCost(ScalarVF);
+
   VPCostContext CostCtx(*TLI, *InitialVPlan0, *CM, Config);
   VPBasicBlock *Header =
       VPBlockUtils::getPlainCFGHeaderAndLatch(*InitialVPlan0).first;
