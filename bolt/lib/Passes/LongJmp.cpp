@@ -991,8 +991,6 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
             TrampolineBB = addTrampolineAfter(/*BB=*/nullptr, TargetSymbol,
                                               /*TargetBB=*/nullptr,
                                               /*Count=*/0);
-            if (MIB->isTailCall(Inst))
-              MIB->convertJmpToTailCall(*TrampolineBB->getLastNonPseudoInstr());
             SymbolTrampolines[TargetSymbol] = TrampolineBB;
             auto L = BC.scopeLock();
             MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(),
@@ -1380,11 +1378,6 @@ void ClusteredRelaxation::printStats() const {
 
 void ClusteredRelaxation::collectOutOfRangeReferences() {
   CallsByDistance.resize(Clusters.size());
-  auto isPrimaryEntryTarget = [&](const MCSymbol *TargetSymbol) {
-    uint64_t EntryID = 0;
-    const BinaryFunction *BF = BC.getFunctionForSymbol(TargetSymbol, &EntryID);
-    return BF && EntryID == 0;
-  };
 
   // Walk all instructions once and collect both branches and calls.
   for (BinaryFunction *BF : OutputFunctions) {
@@ -1404,7 +1397,6 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
           InstOffset += 4;
 
         const bool IsCall = BC.MIB->isCall(Inst);
-        const bool IsTailCall = BC.MIB->isTailCall(Inst);
         const bool IsUncondBranch = BC.MIB->isUnconditionalBranch(Inst);
         if (!IsCall && !IsUncondBranch)
           continue;
@@ -1425,15 +1417,14 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         const OutOfRangeRef Reference{&Inst,          TargetSymbol,
                                       SourceOffset,   Target.Offset,
                                       Source.Cluster, Target.Cluster};
-        const bool UseBranchChain =
-            Found && (IsUncondBranch ||
-                      (IsTailCall && !isPrimaryEntryTarget(TargetSymbol)));
-        if (UseBranchChain) {
-          // A direct B to a body entry may be annotated as a tail call. It is
-          // not an ABI call boundary, so use branch chains instead of call
-          // thunks that may clobber x16/x17.
-          if (IsTailCall)
-            BC.MIB->convertTailCallToJmp(Inst);
+        if (IsUncondBranch) {
+          if (!Found) {
+            BC.errs() << "BOLT-ERROR: cannot relax unconditional branch from "
+                      << BF->getPrintName() << " to out-of-layout target "
+                      << TargetSymbol->getName() << '\n';
+            BC.printInstruction(BC.errs(), Inst);
+            exit(1);
+          }
 
           Branches.push_back(Reference);
           continue;
