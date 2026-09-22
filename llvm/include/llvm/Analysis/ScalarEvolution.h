@@ -547,11 +547,6 @@ public:
     return (SCEVWrapPredicate::IncrementWrapFlags)(Flags | OnFlags);
   }
 
-  /// Returns the set of SCEVWrapPredicate no wrap flags implied by a
-  /// SCEVAddRecExpr.
-  [[nodiscard]] static SCEVWrapPredicate::IncrementWrapFlags
-  getImpliedFlags(const SCEVAddRecExpr *AR, ScalarEvolution &SE);
-
 private:
   const SCEVAddRecExpr *AR;
   IncrementWrapFlags Flags;
@@ -2730,10 +2725,6 @@ public:
   LLVM_ABI const SCEVAddRecExpr *
   getAsAddRec(Value *V,
               SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
-
-  /// Returns true if we've statically proved that V doesn't wrap.
-  LLVM_ABI bool hasNoOverflow(Value *V,
-                              SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
