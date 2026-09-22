@@ -1383,7 +1383,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
-    if (isa<VariableArrayType>(getContext().getAsArrayType(ty))) {
+    if (isa_and_nonnull<VariableArrayType>(getContext().getAsArrayType(ty))) {
       cgm.errorNYI(loc,
                    "emitNullInitialization for zero size VariableArrayType");
     } else {
