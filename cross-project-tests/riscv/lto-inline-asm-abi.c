@@ -22,15 +22,12 @@
 // RUN: llvm-objdump -d --show-all-symbols --no-show-raw-insn %t.thin.so | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -t %t.thin.so | FileCheck %s --check-prefix=SYMS --implicit-check-not='\$x'
 //
-/// TODO: LTO::addRegularLTO and IRLinker::run drop target_features and
-/// target_cpu when synthesizing .lto_discard and imported .symver directives.
-// REGULAR-IR:      module asm{{$}}
+// REGULAR-IR:      module asm(target_features: "+64bit,{{.*}}", target_cpu: "generic-rv64")
 // REGULAR-IR-NEXT:     ".lto_discard "
-// REGULAR-IR-NEXT: module asm(target_features: "+64bit,{{.*}}", target_cpu: "generic-rv64")
 // REGULAR-IR-NEXT:     "nop"
 // REGULAR-IR-NEXT:     ".symver symver_fn, symver_fn@VER_1.0"
 //
-// THIN-IR:      module asm{{$}}
+// THIN-IR:      module asm(target_features: "+64bit,{{.*}}", target_cpu: "generic-rv64")
 // THIN-IR-NEXT:     ".symver symver_fn, symver_fn@VER_1.0"
 //
 // FLAGS:      Flags [ (0x5)

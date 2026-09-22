@@ -1576,7 +1576,8 @@ Error IRLinker::run() {
         S += Name;
         S += ", ";
         S += Alias;
-        DstM.appendModuleInlineAsm(std::string(S));
+        DstM.appendModuleInlineAsm(
+            {std::string(S), SrcM->getModuleInlineAsm().front().Props});
       }
     });
   }
