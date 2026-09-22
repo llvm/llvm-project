@@ -95,6 +95,10 @@ private:
   PISA::DataTypes *DTs = nullptr;
   bool GlobalsEmitted = false;
 
+  // AsmPrinter::emitGlobalConstant writes values and padding directly to
+  // MCStreamer. PISA initializers belong inside a single .global or .const
+  // declaration, so collect their typed values, symbols, and zero runs for
+  // PISATargetStreamer instead.
   class FlattenGlobal {
   public:
     FlattenGlobal(const Constant *C, PISA::VariableInit &VI,
