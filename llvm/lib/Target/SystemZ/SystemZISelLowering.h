@@ -382,6 +382,7 @@ private:
   SDValue lowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   bool isVectorElementLoad(SDValue Op) const;
   SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
@@ -494,9 +495,11 @@ private:
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
-  MachineBasicBlock *emitTRWrapper(MachineInstr &MI,
-                                   MachineBasicBlock *MBB,
-                                   unsigned Opcode) const;
+  SDValue lowerTR(SDValue Op, SelectionDAG &DAG) const;
+  MachineBasicBlock *emitTRImm(MachineInstr &MI,
+                               MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitTRReg(MachineInstr &MI,
+                               MachineBasicBlock *MBB) const;
 
 private:
   bool isInternal(const Function *Fn) const;

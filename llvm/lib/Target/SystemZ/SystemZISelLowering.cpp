@@ -807,6 +807,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // Handle intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID,    MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
   // We're not using SJLJ for exception handling, but they're implemented
@@ -4207,6 +4208,36 @@ SDValue SystemZTargetLowering::lowerTLSGetOffset(GlobalAddressSDNode *Node,
   return DAG.getCopyFromReg(Chain, DL, SystemZ::R2D, PtrVT, Glue);
 }
 
+SDValue SystemZTargetLowering::lowerTR(SDValue Op,
+                                        SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  
+  SDValue Chain = Op.getOperand(0);
+  SDValue Src   = Op.getOperand(2);
+  SDValue Len   = Op.getOperand(3);
+  SDValue Tbl   = Op.getOperand(4);
+
+  // For compile-time constant lengths, validate range [1, 256].
+  // Variable lengths are handled (or rejected) by the instruction at runtime.
+  if(auto *C = dyn_cast<ConstantSDNode>(Len)) {
+    uint64_t LenVal = C->getZExtValue();
+    if(LenVal < 1 || LenVal > 256) {
+      DAG.getContext()->emitError(
+          "TRANSLATE length must be a compile-time constant between 1 and 256");
+      return DAG.getUNDEF(MVT::Other);
+    }
+  }
+
+ // Adjust the provided length to encode length-1. Both TR and EXRL
+ // instructions must carry the adjusted value.
+ SDValue AdjLen = DAG.getNode(ISD::ADD, DL, MVT::i64,
+                              DAG.getZExtOrTrunc(Len, DL, MVT::i64),
+                              DAG.getSignedConstant(-1, DL, MVT::i64));
+
+  SDValue Ops[] = { Chain, Src, AdjLen, Tbl };
+  return DAG.getNode(SystemZISD::TR, DL, MVT::Other, Ops);
+}
+
 SDValue SystemZTargetLowering::lowerThreadPointer(const SDLoc &DL,
                                                   SelectionDAG &DAG) const {
   SDValue Chain = DAG.getEntryNode();
@@ -5452,6 +5483,20 @@ SystemZTargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
     SDValue CC = getCCResult(DAG, SDValue(Node, 0));
     DAG.ReplaceAllUsesOfValueWith(SDValue(Op.getNode(), 0), CC);
     return SDValue();
+  }
+
+  return SDValue();
+}
+
+SDValue 
+SystemZTargetLowering::lowerINTRINSIC_VOID(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  unsigned Id = Op.getConstantOperandVal(1);
+  switch(Id) {
+    case Intrinsic::s390_translate:
+      return lowerTR(Op, DAG);
+    default:
+      break;
   }
 
   return SDValue();
@@ -7299,6 +7344,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerPREFETCH(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return lowerINTRINSIC_W_CHAIN(Op, DAG);
+  case ISD::INTRINSIC_VOID:
+    return lowerINTRINSIC_VOID(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return lowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::BUILD_VECTOR:
@@ -10525,39 +10572,59 @@ MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-SystemZTargetLowering::emitTRWrapper(MachineInstr &MI,
-                                     MachineBasicBlock *MBB,
-                                     unsigned Opcode) const {
-  MachineFunction &MF = *MBB->getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const SystemZInstrInfo *TII = 
-      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+SystemZTargetLowering::emitTRImm(MachineInstr &MI,
+                                 MachineBasicBlock *MBB) const {
+  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  Register SrcReg = MI.getOperand(0).getReg();
-  int64_t D1Imm   = MI.getOperand(1).getImm();
-  Register LenReg = MI.getOperand(2).getReg();
-  Register TblReg = MI.getOperand(3).getReg();
-  int64_t D2Imm   = MI.getOperand(4).getImm();
+  MachineOperand SrcBase = earlyUseOperand(MI.getOperand(0));
+  uint64_t SrcDisp       = MI.getOperand(1).getImm();
+  uint64_t SrcLen        = MI.getOperand(2).getImm();
+  MachineOperand TblBase = earlyUseOperand(MI.getOperand(3));
+  uint64_t TblDisp       = MI.getOperand(4).getImm();
 
-  MRI.constrainRegClass(SrcReg, &SystemZ::ADDR64BitRegClass);
-  MRI.constrainRegClass(TblReg, &SystemZ::ADDR64BitRegClass);
+  // TR instr expects the following format:
+  // - 1st op (source): (base, disp. length)
+  // - 2nd op (translation table): (base, disp.)
+  // Note: The provided length has alread been adjusted, so
+  //       passing the length op's immediate let TR's encoder
+  //       to leave it as-is and not subtract 1 a second time.
+  BuildMI(*MBB, MI, DL, TII->get(SystemZ::TR))
+   .add(SrcBase).addImm(SrcDisp).addImm(SrcLen) // BDL1
+   .add(TblBase).addImm(TblDisp);               // BDL2
 
-  Register Len32Reg = MRI.createVirtualRegister(&SystemZ::GR32BitRegClass);
-  BuildMI(*MBB, MI, DL, TII->get(SystemZ::AHI), Len32Reg)
-      .addReg(LenReg)
-      .addImm(-1);
-  
-  // Must constrain 32-bit length register to 64-bit for EXRL execution
-  Register Len64Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-  BuildMI(*MBB, MI, DL, TII->get(SystemZ::LLGFR), Len64Reg)
-      .addReg(Len32Reg);
-  
+  MI.eraseFromParent();
+  return MBB;
+}
+ 
+MachineBasicBlock *
+SystemZTargetLowering::emitTRReg(MachineInstr &MI,
+                                 MachineBasicBlock *MBB) const {
+  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  MachineOperand SrcBase = earlyUseOperand(MI.getOperand(0));
+  uint64_t SrcDisp       = MI.getOperand(1).getImm();
+  Register SrcLen        = MI.getOperand(2).getReg();
+  MachineOperand TblBase = earlyUseOperand(MI.getOperand(3));
+  uint64_t TblDisp       = MI.getOperand(4).getImm();
+
+  // To handle variable-length values, the TR pseudo must be
+  // lowered into EXRL_Pseudo. This way, EXRL will execute the TR
+  // instruction along w/ any addtl. instructions needed to compute
+  // the value of the provided length. Both address bases must be
+  // placed into dedicate virtual regs before sendoff to EXRL_Pseudo.
+  Register SrcReg = forceReg(MI, SrcBase, TII);
+  Register TblReg = forceReg(MI, TblBase, TII);
+
+  // Unlike the official TR instruction, EXRL_Pseudo already expects
+  // an adjusted length value to be provided, which at this point has
+  // already been done via lowerTR(), so no further adjustment needed.
   BuildMI(*MBB, MI, DL, TII->get(SystemZ::EXRL_Pseudo))
-      .addImm(Opcode)
-      .addReg(Len64Reg)
-      .addReg(SrcReg).addImm(D1Imm)
-      .addReg(TblReg).addImm(D2Imm);
+   .addImm(SystemZ::TR)
+   .addReg(SrcLen)
+   .addReg(SrcReg).addImm(SrcDisp)  // BDL1
+   .addReg(TblReg).addImm(TblDisp); // BD2
   
   MI.eraseFromParent();
   return MBB;
@@ -11370,8 +11437,10 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::CMP_STACKGUARD_DAG:
     return emitStackGuardPseudo(MI, MBB, SystemZ::CMP_STACKGUARD);
 
-  case SystemZ::TR_Pseudo:
-    return emitTRWrapper(MI, MBB, SystemZ::TR);
+  case SystemZ::TRImm:
+    return emitTRImm(MI, MBB);
+  case SystemZ::TRReg:
+    return emitTRReg(MI, MBB);
 
   default:
     llvm_unreachable("Unexpected instr type to insert");
