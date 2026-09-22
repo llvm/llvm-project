@@ -279,7 +279,7 @@ bool PISACallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           EltRegClass = &PISA::Reg32bRegClass;
           EltLLT = LLT::integer(32);
           TargetReg = MRI->createGenericVirtualRegister(
-              LLT::vector(ElementCount::getFixed(TotalSize / 32), I32));
+              LLT::scalarOrVector(ElementCount::getFixed(TotalSize / 32), I32));
           NumElts = TotalSize / 32;
         }
 
