@@ -269,6 +269,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
 * Updated the canonical order of one-letter RISC-V extensions to match the
   latest specification, placing ``p`` after ``v`` and removing unused ``n``.
+* Adds experimental assembler support for the `Xqccmi` (Qualcomm 16-bit Instruction Lookup Table) vendor extension.
 
 ### Changes to the WebAssembly Backend
 
