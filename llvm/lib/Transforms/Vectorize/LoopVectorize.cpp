@@ -1075,7 +1075,7 @@ public:
 
   /// Returns true if the target machine supports a masked expand load or masked
   /// compress store for \p I's data type and alignment.
-  bool isLegalExpandLoadOrCompressStore(Instruction *I) const;
+  bool isLegalExpandLoadOrCompressStore(Instruction *I, ElementCount VF) const;
 
   /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) const {
@@ -2391,10 +2391,10 @@ bool LoopVectorizationCostModel::isLegalGatherOrScatter(Instruction *I,
 }
 
 bool LoopVectorizationCostModel::isLegalExpandLoadOrCompressStore(
-    Instruction *I) const {
+    Instruction *I, ElementCount VF) const {
   assert(isa<LoadInst>(I) || isa<StoreInst>(I));
   return Config.isLegalExpandLoadOrCompressStore(
-      isa<LoadInst>(I), getLoadStoreType(I), getLoadStoreAlignment(I));
+      isa<LoadInst>(I), getLoadStoreType(I), getLoadStoreAlignment(I), VF);
 }
 
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
@@ -2423,7 +2423,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     bool IsConsecutive = Legal->isConsecutivePtr(ScalarTy, Ptr);
     return !(IsConsecutive && !IsCompressed &&
              isLegalMaskedLoadOrStore(I, VF)) &&
-           !(IsCompressed && isLegalExpandLoadOrCompressStore(I)) &&
+           !(IsCompressed && isLegalExpandLoadOrCompressStore(I, VF)) &&
            !isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
