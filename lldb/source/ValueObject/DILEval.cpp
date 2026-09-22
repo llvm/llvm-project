@@ -468,7 +468,7 @@ Interpreter::EvaluateTree(const ASTNodeUP &tree) {
     auto error = value_or_error.takeError();
     LLDB_LOG(GetLog(LLDBLog::Expressions),
              "[Interpreter::Evaluate] DIL interpreter failed:\n{0}",
-             llvm::toStringWithoutConsuming(error).c_str());
+             llvm::toStringWithoutConsuming(error));
     return error;
   }
 

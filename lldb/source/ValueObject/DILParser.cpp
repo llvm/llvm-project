@@ -106,7 +106,7 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
   if (error) {
     LLDB_LOG(GetLog(LLDBLog::Expressions),
              "[DILParser::Parse] DIL parser failed:\n{0}",
-             llvm::toStringWithoutConsuming(error).c_str());
+             llvm::toStringWithoutConsuming(error));
     return error;
   }
 
