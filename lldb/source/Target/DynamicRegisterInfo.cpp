@@ -56,7 +56,7 @@ void DynamicRegisterInfo::MoveFrom(DynamicRegisterInfo &&info) {
   if (m_finalized) {
     const size_t num_sets = m_sets.size();
     for (size_t set = 0; set < num_sets; ++set)
-      m_sets[set].registers = m_set_reg_nums[set].data();
+      m_sets[set].m_set.registers = m_set_reg_nums[set].data();
   }
 
   info.Clear();
@@ -208,8 +208,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
       std::optional<llvm::StringRef> maybe_set_name =
           sets->GetItemAtIndexAsString(i);
       if (maybe_set_name && !maybe_set_name->empty()) {
-        m_sets.push_back({ConstString(*maybe_set_name).AsCString(nullptr),
-                          nullptr, 0, nullptr});
+        m_sets.push_back({maybe_set_name->str(), std::string(), 0, nullptr});
       } else {
         Clear();
         printf("error: register sets must have valid names\n");
@@ -436,8 +435,8 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
 
       set_name_to_idx.insert({reg.set_name, next_idx++});
       m_set_reg_nums.resize(m_set_reg_nums.size() + 1);
-      RegisterSet new_set = {reg.set_name.GetCString(), nullptr, 0, nullptr};
-      m_sets.push_back(new_set);
+      m_sets.push_back(
+          {reg.set_name.GetStringRef().str(), std::string(), 0, nullptr});
     } else {
       set_idx = set_name_to_idx.lookup(reg.set_name);
     }
@@ -459,8 +458,8 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   const size_t num_sets = m_sets.size();
   for (size_t set = 0; set < num_sets; ++set) {
     assert(m_sets.size() == m_set_reg_nums.size());
-    m_sets[set].num_registers = m_set_reg_nums[set].size();
-    m_sets[set].registers = m_set_reg_nums[set].data();
+    m_sets[set].m_set.num_registers = m_set_reg_nums[set].size();
+    m_sets[set].m_set.registers = m_set_reg_nums[set].data();
   }
 
   // make sure value_regs are terminated with LLDB_INVALID_REGNUM
@@ -718,7 +717,7 @@ const RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(uint32_t kind,
 
 const RegisterSet *DynamicRegisterInfo::GetRegisterSet(uint32_t i) const {
   if (i < m_sets.size())
-    return &m_sets[i];
+    return &(m_sets[i].m_set);
   return nullptr;
 }
 
@@ -787,9 +786,9 @@ void DynamicRegisterInfo::Dump(Stream &s) const {
            static_cast<const void *>(this), static_cast<uint64_t>(num_sets));
   for (size_t i = 0; i < num_sets; ++i) {
     s.Printf("set[%" PRIu64 "] name = %s, regs = [", (uint64_t)i,
-             m_sets[i].name);
-    for (size_t idx = 0; idx < m_sets[i].num_registers; ++idx) {
-      s.Printf("%s ", m_regs[m_sets[i].registers[idx]].name);
+             m_sets[i].m_name.c_str());
+    for (size_t idx = 0; idx < m_sets[i].m_set.num_registers; ++idx) {
+      s.Printf("%s ", m_regs[m_sets[i].m_set.registers[idx]].name);
     }
     s.PutCString("]\n");
   }
