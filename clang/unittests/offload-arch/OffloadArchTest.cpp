@@ -261,7 +261,8 @@ TEST(KFDTopology, MultipleGPUsArePrintedInNodeOrder) {
 // ASIC revision is 0. Also tests to make sure other properties that look like
 // capability (like capability2) are not read instead.
 TEST(KFDTopology, GFX1250A0IsPrintedAsStrict) {
-  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", std::nullopt);
+  // A temporary patch in ROCr requires this env var to be 0
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "0");
   unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
   addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
                            /*Capability2=*/0xFFFFFFFF);
@@ -281,20 +282,20 @@ TEST(KFDTopology, GFX1250A0StrictSuppressedByEnvVar) {
   EXPECT_EQ(Output, "gfx1250\n");
 }
 
-// Only the exact value "1" disables the suffix.
+// Temporary test: Only the exact value "0" enables the suffix.
 TEST(KFDTopology, GFX1250A0StrictIgnoresOtherEnvValues) {
-  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "0");
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", std::nullopt);
   unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
   addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
                            /*Capability2=*/0xFFFFFFFF);
   std::string Output;
   EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
-  EXPECT_EQ(Output, "gfx1250-strict\n");
+  EXPECT_EQ(Output, "gfx1250\n");
 }
 
 // Make sure any other version of gfx1250 is printed as gfx1250.
 TEST(KFDTopology, GFX1250NonA0IsPrintedPlain) {
-  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", std::nullopt);
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "0");
   unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
   addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF877A280,
                            /*Capability2=*/0x00000000);
