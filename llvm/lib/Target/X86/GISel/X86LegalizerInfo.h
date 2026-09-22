@@ -39,6 +39,8 @@ public:
 private:
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            LegalizerHelper &Helper) const;
+  bool legalizeMul(MachineInstr &MI, MachineRegisterInfo &MRI,
+                   LegalizerHelper &Helper) const;
 
   bool legalizeFPTOUI(MachineInstr &MI, MachineRegisterInfo &MRI,
                       LegalizerHelper &Helper) const;
