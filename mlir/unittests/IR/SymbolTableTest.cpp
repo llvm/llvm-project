@@ -214,16 +214,17 @@ TEST(SymbolUserMap, AllUsesVisible) {
         "test.symbol"() <{sym_name = "public"}> : () -> ()
         "test.symbol"() <{sym_name = "private", sym_visibility = "private"}> : () -> ()
         "test.symbol"() <{sym_name = "nested", sym_visibility = "nested"}> : () -> ()
-        "test.symbol"() <{sym_name = "local_user"}> {use = @nested} : () -> ()
+        "test.symbol"() <{sym_name = "local_user"}> {use = [@nested, @public]} : () -> ()
         module @child attributes {sym_visibility = "nested"} {
           "test.symbol"() <{sym_name = "leaf", sym_visibility = "nested"}> : () -> ()
         }
         module @hidden attributes {sym_visibility = "private"} {
           "test.symbol"() <{sym_name = "leaf", sym_visibility = "nested"}> : () -> ()
+          "test.symbol"() <{sym_name = "public"}> : () -> ()
         }
       }
       "test.symbol"() <{sym_name = "outside", sym_visibility = "private"}>
-          {use = @exposed::@nested} : () -> ()
+          {use = [@exposed::@nested, @exposed::@public]} : () -> ()
     }
   )MLIR";
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(kInput, &context);
@@ -239,11 +240,13 @@ TEST(SymbolUserMap, AllUsesVisible) {
   Operation *childLeaf = SymbolTable::lookupSymbolIn(child, "leaf");
   Operation *hidden = SymbolTable::lookupSymbolIn(exposed, "hidden");
   Operation *hiddenLeaf = SymbolTable::lookupSymbolIn(hidden, "leaf");
+  Operation *hiddenPublic = SymbolTable::lookupSymbolIn(hidden, "public");
 
-  // A detached, named root contains all IR users. Public symbols can still have
-  // users outside the IR.
+  // A detached, named root contains all IR users, including public symbol
+  // users.
   SymbolUserMap wholeMap(tables, *module);
-  EXPECT_FALSE(wholeMap.areAllUsesVisible(publicSymbol));
+  EXPECT_TRUE(wholeMap.areAllUsesVisible(publicSymbol));
+  EXPECT_EQ(wholeMap.getUsers(publicSymbol).size(), 2u);
   EXPECT_TRUE(wholeMap.areAllUsesVisible(privateSymbol));
   EXPECT_TRUE(wholeMap.areAllUsesVisible(nested));
   EXPECT_TRUE(wholeMap.areAllUsesVisible(childLeaf));
@@ -253,6 +256,8 @@ TEST(SymbolUserMap, AllUsesVisible) {
   // A map of an exposed table omits outside users, even with local users.
   SymbolUserMap exposedMap(tables, exposed);
   EXPECT_FALSE(exposedMap.areAllUsesVisible(publicSymbol));
+  ASSERT_EQ(exposedMap.getUsers(publicSymbol).size(), 1u);
+  EXPECT_EQ(exposedMap.getUsers(publicSymbol).front(), localUser);
   EXPECT_TRUE(exposedMap.areAllUsesVisible(privateSymbol));
   EXPECT_FALSE(exposedMap.areAllUsesVisible(nested));
   ASSERT_EQ(exposedMap.getUsers(nested).size(), 1u);
@@ -260,12 +265,14 @@ TEST(SymbolUserMap, AllUsesVisible) {
   EXPECT_FALSE(exposedMap.areAllUsesVisible(childLeaf));
   EXPECT_TRUE(exposedMap.useEmpty(childLeaf));
   EXPECT_TRUE(exposedMap.areAllUsesVisible(hiddenLeaf));
+  EXPECT_TRUE(exposedMap.areAllUsesVisible(hiddenPublic));
   EXPECT_FALSE(exposedMap.areAllUsesVisible(outside));
   EXPECT_FALSE(exposedMap.areAllUsesVisible(exposed));
 
   // A private table hides its nested symbols even when it is the map root.
   SymbolUserMap hiddenMap(tables, hidden);
   EXPECT_TRUE(hiddenMap.areAllUsesVisible(hiddenLeaf));
+  EXPECT_TRUE(hiddenMap.areAllUsesVisible(hiddenPublic));
 }
 
 } // namespace
