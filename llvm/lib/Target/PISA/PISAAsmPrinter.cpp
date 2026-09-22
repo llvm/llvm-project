@@ -381,24 +381,6 @@ static bool isIgnoredIntrinsicGlobal(const GlobalVariable &GV) {
   if (GV.getSection() == "llvm.metadata")
     return true;
 
-  // Skip globals only used as annotation strings by llvm.ptr.annotation.
-  // These are metadata for the annotation intrinsic, not real data.
-  if (GV.hasPrivateLinkage() && GV.isConstant() &&
-      all_of(GV.users(), [](const User *U) {
-        if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(U))
-          return all_of(CE->users(), [](const User *UU) {
-            const CallInst *CI = dyn_cast<CallInst>(UU);
-            return CI && CI->getCalledFunction() &&
-                   CI->getCalledFunction()->getIntrinsicID() ==
-                       Intrinsic::ptr_annotation;
-          });
-        const CallInst *CI = dyn_cast<CallInst>(U);
-        return CI && CI->getCalledFunction() &&
-               CI->getCalledFunction()->getIntrinsicID() ==
-                   Intrinsic::ptr_annotation;
-      }))
-    return true;
-
   if (!GV.hasAppendingLinkage())
     return false;
 
