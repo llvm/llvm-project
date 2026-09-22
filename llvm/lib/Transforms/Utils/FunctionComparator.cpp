@@ -193,9 +193,8 @@ int FunctionComparator::cmpMetadata(const Metadata *L,
   // equal even though this is not correct.
   // We should structurally compare the metadata nodes to be perfect here.
 
-  // An operand is null if the value it referred to was deleted.
-  auto *MDStringL = dyn_cast_if_present<MDString>(L);
-  auto *MDStringR = dyn_cast_if_present<MDString>(R);
+  auto *MDStringL = dyn_cast<MDString>(L);
+  auto *MDStringR = dyn_cast<MDString>(R);
   if (MDStringL && MDStringR) {
     if (MDStringL == MDStringR)
       return 0;
@@ -206,8 +205,8 @@ int FunctionComparator::cmpMetadata(const Metadata *L,
   if (MDStringL)
     return 1;
 
-  auto *CL = dyn_cast_if_present<ConstantAsMetadata>(L);
-  auto *CR = dyn_cast_if_present<ConstantAsMetadata>(R);
+  auto *CL = dyn_cast<ConstantAsMetadata>(L);
+  auto *CR = dyn_cast<ConstantAsMetadata>(R);
   if (CL == CR)
     return 0;
   if (!CL)
@@ -735,11 +734,8 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       if (int Res = cmpNumbers(CI->getTailCallKind(),
                                cast<CallInst>(R)->getTailCallKind()))
         return Res;
-    if (int Res = cmpMDNode(L->getMetadata(LLVMContext::MD_range),
-                            R->getMetadata(LLVMContext::MD_range)))
-      return Res;
-    return cmpMDNode(L->getMetadata(LLVMContext::MD_callees),
-                     R->getMetadata(LLVMContext::MD_callees));
+    return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
+                     R->getMetadata(LLVMContext::MD_range));
   }
   if (const SwitchInst *SI = dyn_cast<SwitchInst>(L)) {
     for (auto [LCase, RCase] : zip(SI->cases(), cast<SwitchInst>(R)->cases()))
