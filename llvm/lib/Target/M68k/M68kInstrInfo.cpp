@@ -655,9 +655,13 @@ void M68kInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(M68k::CLR16d), Reg);
   else if (M68k::DR32RegClass.contains(Reg))
     BuildMI(MBB, Iter, DL, get(M68k::MOVQ), Reg).addImm(0);
-  else
-    llvm::reportFatalInternalError(
-        "buildClearRegister is not implemented for " + RI.getRegAsmName(Reg));
+  else {
+    std::string Msg;
+    raw_string_ostream MsgOS(Msg);
+    MsgOS << "buildClearRegister is not implemented for ";
+    RI.printRegAsmName(MsgOS, Reg);
+    llvm::reportFatalInternalError(Msg.c_str());
+  }
 }
 
 /// Expand a single-def pseudo instruction to a two-addr
@@ -778,7 +782,11 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         M68k::DR32RegClass.contains(DstReg)) {
       Opc = STI.isM68000() ? M68k::MOV16ds : M68k::MOV16dc;
     } else {
-      LLVM_DEBUG(dbgs() << "Cannot copy CCR to " << RI.getName(DstReg) << '\n');
+      LLVM_DEBUG({
+        dbgs() << "Cannot copy CCR to ";
+        RI.printName(dbgs(), DstReg);
+        dbgs() << '\n';
+      });
       llvm_unreachable("Invalid register for MOVE from CCR");
     }
   }
@@ -790,7 +798,11 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         M68k::DR32RegClass.contains(SrcReg)) {
       Opc = M68k::MOV16cd;
     } else {
-      LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to CCR\n");
+      LLVM_DEBUG({
+        dbgs() << "Cannot copy ";
+        RI.printName(dbgs(), SrcReg);
+        dbgs() << " to CCR\n";
+      });
       llvm_unreachable("Invalid register for MOVE to CCR");
     }
   }
@@ -801,8 +813,13 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   // We should now have our opcode
   if (!Opc) {
-    LLVM_DEBUG(dbgs() << "Cannot copy " << RI.getName(SrcReg) << " to "
-                      << RI.getName(DstReg) << '\n');
+    LLVM_DEBUG({
+      dbgs() << "Cannot copy ";
+      RI.printName(dbgs(), SrcReg);
+      dbgs() << " to ";
+      RI.printName(dbgs(), DstReg);
+      dbgs() << '\n';
+    });
     llvm_unreachable("Cannot emit physreg copy instruction");
   }
 
@@ -883,10 +900,12 @@ unsigned getLoadStoreRegOpcode(unsigned Reg, const TargetRegisterClass *RC,
                                const M68kSubtarget &STI, bool load) {
   switch (TRI->getSpillSize(*RC)) {
   default:
-    LLVM_DEBUG(
-        dbgs() << "Cannot determine appropriate opcode for load/store to/from "
-               << TRI->getName(Reg) << " of class " << TRI->getRegClassName(RC)
-               << " with spill size " << TRI->getSpillSize(*RC) << '\n');
+    LLVM_DEBUG({
+      dbgs() << "Cannot determine appropriate opcode for load/store to/from ";
+      TRI->printName(dbgs(), Reg);
+      dbgs() << " of class " << TRI->getRegClassName(RC) << " with spill size "
+             << TRI->getSpillSize(*RC) << '\n';
+    });
     llvm_unreachable("Unknown spill size");
   case 2:
     if (M68k::XR16RegClass.hasSubClassEq(RC))
