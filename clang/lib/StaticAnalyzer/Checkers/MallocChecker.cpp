@@ -3940,7 +3940,7 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
 
     if (const RefState *RS = State->get<RegionState>(sym))
       if (RS->isAllocated() || RS->isAllocatedOfSizeZero())
-        if (!IsConstPointerEscape || checkIfNewOrNewArrayFamily(RS))
+        if (!IsConstPointerEscape || checkIfNewOrNewArrayFamily(RS) || (Call && Call->argumentsMayEscape()))
           State = State->set<RegionState>(sym, RefState::getEscaped(RS));
   }
   return State;
