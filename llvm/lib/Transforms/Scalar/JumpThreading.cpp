@@ -571,12 +571,9 @@ static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
     auto *I = dyn_cast<Instruction>(V);
     return I && I->getParent() == BB;
   };
-  auto *PredBI = dyn_cast<CondBrInst>(PredBB->getTerminator());
-  if (!PredBI || PredBI->getSuccessor(0) == PredBI->getSuccessor(1) ||
-      DefinedInBB(LHS) || DefinedInBB(RHS))
+  if (DefinedInBB(LHS) || DefinedInBB(RHS))
     return std::nullopt;
-  return isImpliedCondition(PredBI->getCondition(), Pred, LHS, RHS, DL,
-                            /*LHSIsTrue=*/PredBI->getSuccessor(0) == BB);
+  return isImpliedByEdgeCondition(PredBB, BB, Pred, LHS, RHS, DL);
 }
 
 /// computeValueKnownInPredecessors - Given a basic block BB and a value V, see
