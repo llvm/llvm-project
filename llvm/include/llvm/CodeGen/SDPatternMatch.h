@@ -266,29 +266,23 @@ template <unsigned N> inline NUses_match<N, Value_match> m_NUses() {
   return NUses_match<N, Value_match>(m_Value());
 }
 
-template <typename PredPattern> struct Value_bind {
+struct Value_bind {
   SDValue &BindVal;
-  PredPattern Pred;
 
-  Value_bind(SDValue &N, const PredPattern &P) : BindVal(N), Pred(P) {}
+  Value_bind(SDValue &N) : BindVal(N) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (!Pred.match(Ctx, N))
-      return false;
-
     BindVal = N;
     return true;
   }
 };
 
-inline auto m_Value(SDValue &N) {
-  return Value_bind<Value_match>(N, m_Value());
-}
+inline auto m_Value(SDValue &N) { return Value_bind(N); }
 /// Conditionally bind an SDValue based on the predicate.
 template <typename PredPattern>
 inline auto m_Value(SDValue &N, const PredPattern &P) {
-  return Value_bind<PredPattern>(N, P);
+  return m_AllOf(P, Value_bind(N));
 }
 
 template <typename Pattern, typename PredFuncT> struct TLI_pred_match {
