@@ -8,7 +8,7 @@ analyzer's ability to find bugs.
 
 This page gives a practical overview of such annotations. For more technical
 specifics regarding Clang-specific annotations please see the Clang's list of
-{doc}`language extensions <../../LanguageExtensions>`.
+[language extensions](../../LanguageExtensions.md).
 Details of "standard" GCC attributes (that Clang also supports) can
 be found in the [GCC manual](https://gcc.gnu.org/onlinedocs/gcc/), with the
 majority of the relevant attributes being in the section on

@@ -61,7 +61,7 @@ acting as "hardened custom containers" to replace raw pointers.
 However, such approach would be very unergonomic in C, and safety guarantees
 will be lower due to lack of good encapsulation technology. A better approach
 to bounds safety for non-C++ programs,
-{doc}`-fbounds-safety <BoundsSafety>`,
+[-fbounds-safety](BoundsSafety.md),
 is currently in development.
 
 Technically, safety guarantees cannot be provided without hardening
