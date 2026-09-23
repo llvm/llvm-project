@@ -26,4 +26,5 @@ config.test_exec_root = os.path.join('@LIBCXX_BINARY_DIR@', 'test')
 
 # Add substitutions for bootstrapping the test suite configuration
 config.substitutions.append(('%{libcxx-dir}', '@LIBCXX_SOURCE_DIR@'))
+config.substitutions.append(('%{benchmark_flags}', '-I @LIBCXX_BINARY_DIR@/test/benchmarks/google-benchmark/include -L @LIBCXX_BINARY_DIR@/test/benchmarks/google-benchmark/lib -L @LIBCXX_BINARY_DIR@/test/benchmarks/google-benchmark/lib64 -l benchmark'))
 config.substitutions.append(("%{python}", shlex.quote(sys.executable)))
