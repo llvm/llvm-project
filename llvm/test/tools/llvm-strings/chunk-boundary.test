@@ -46,7 +46,7 @@
 # RUN: printf "%16383sS%.16384dE%4s" | tr " " "\0" > %t.6
 # RUN: printf "S%.16384dE\n" > %t.6.expected
 # RUN: llvm-strings %t.6 > %t.6.out
-# RUN: diff --strip-trailing-cr %t.6.expected %t.6.out
+# RUN: diff %t.6.expected %t.6.out
 
 ## Case 7: the minimum length is greater than the chunk size, so a candidate
 ## has to be buffered across more than one chunk before it is known to be long
@@ -55,7 +55,7 @@
 # RUN: printf "%8s%.20000d%4s" | tr " " "\0" > %t.7
 # RUN: printf "      8 %.20000d\n" > %t.7.expected
 # RUN: llvm-strings --radix=d --bytes=20000 %t.7 > %t.7.out
-# RUN: diff --strip-trailing-cr %t.7.expected %t.7.out
+# RUN: diff %t.7.expected %t.7.out
 
 ## Case 8: as case 7, but the run is one byte short of the minimum length, so
 ## the buffered candidate is discarded and nothing is printed.
