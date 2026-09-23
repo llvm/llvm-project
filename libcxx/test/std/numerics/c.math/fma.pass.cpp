@@ -27,10 +27,10 @@ struct TestFloat {
     assert(std::fma(T(1), T(2), T(3)) == T(5));
     assert(std::fma(T(-1), T(2), T(2)) == T(0));
 
-    assert(std::fmax(inf, T(1), T(0)) == inf);
-    assert(std::fmax(T(1), inf, T(0)) == inf);
-    assert(std::fmax(-inf, T(1), T(0)) == -inf);
-    assert(std::fmax(T(1), -inf, T(0)) == -inf);
+    assert(std::fma(inf, T(1), T(0)) == inf);
+    assert(std::fma(T(1), inf, T(0)) == inf);
+    assert(std::fma(-inf, T(1), T(0)) == -inf);
+    assert(std::fma(T(1), -inf, T(0)) == -inf);
 
     assert(std::isnan(std::fma(nan, T(1), T(0))));
     assert(std::isnan(std::fma(T(1), nan, T(0))));
