@@ -123,6 +123,10 @@ endif()
 
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
+set(LIBC_TEST_BUILTINS_TARGET "" CACHE STRING
+  "CMake target of compiler-rt builtins to link into libc tests")
+set(LIBC_TEST_BUILTINS_LIBRARY "" CACHE FILEPATH
+  "Compiler runtime builtins library to link into libc tests")
 set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})

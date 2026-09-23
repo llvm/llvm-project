@@ -116,6 +116,14 @@ jobs:
             cpp_compiler: clang++-23
             target: riscv32-unknown-elf
             testing: SKIP
+          - name: baremetal-hexagon
+            os: ubuntu-24.04
+            build_type: MinSizeRel
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            target: hexagon-unknown-none-elf
+            build_builtins: ON
+            testing: RUN
           - name: amd-gpu
             os: ubuntu-24.04
             build_type: Release
@@ -171,7 +179,7 @@ jobs:
           "
         fi
 
-        if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
+        if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" || "${{ matrix.build_builtins }}" == "ON" ]]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"
         fi
 
@@ -185,6 +193,9 @@ jobs:
 
         case "${{ matrix.name }}" in
           baremetal-* )
+            if [[ "${{ matrix.build_builtins }}" == "ON" ]]; then
+              export CMAKE_FLAGS="$CMAKE_FLAGS -DLLVM_ENABLE_RUNTIMES=$RUNTIMES"
+            fi
             cmake $CMAKE_FLAGS \
               -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
