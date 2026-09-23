@@ -32,7 +32,7 @@ using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMknodatTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcMknodatTest, CreateAndRemoveRegularFileWithAtFdcwd) {
-  constexpr const char *TEST_FILE = "testdata/mknodat_reg.test";
+  auto TEST_FILE = libc_make_test_file_path("mknodat_reg.test");
   constexpr mode_t FILE_MODE = S_IRUSR | S_IWUSR;
 
   mode_t old_mask = LIBC_NAMESPACE::umask(0);
@@ -51,7 +51,7 @@ TEST_F(LlvmLibcMknodatTest, CreateAndRemoveRegularFileWithAtFdcwd) {
 }
 
 TEST_F(LlvmLibcMknodatTest, CreateAndRemoveFifoWithAtFdcwd) {
-  constexpr const char *TEST_FIFO = "testdata/mknodat_fifo.test";
+  auto TEST_FIFO = libc_make_test_file_path("mknodat_fifo.test");
   constexpr mode_t FIFO_MODE = S_IRUSR | S_IWUSR;
 
   mode_t old_mask = LIBC_NAMESPACE::umask(0);
@@ -70,9 +70,9 @@ TEST_F(LlvmLibcMknodatTest, CreateAndRemoveFifoWithAtFdcwd) {
 }
 
 TEST_F(LlvmLibcMknodatTest, CreateAndRemoveWithDirFd) {
-  constexpr const char *TEST_DIR = "testdata";
+  auto TEST_DIR = libc_make_test_file_path("testdata");
   constexpr const char *TEST_FILE_BASENAME = "mknodat_dir.test";
-  constexpr const char *TEST_FILE_PATH = "testdata/mknodat_dir.test";
+  auto TEST_FILE_PATH = libc_make_test_file_path("testdata/mknodat_dir.test");
   constexpr mode_t FILE_MODE = S_IRUSR | S_IWUSR;
 
   int dirfd = LIBC_NAMESPACE::open(TEST_DIR, O_DIRECTORY);
@@ -102,8 +102,7 @@ TEST_F(LlvmLibcMknodatTest, BadDirFd) {
 }
 
 TEST_F(LlvmLibcMknodatTest, NonExistentPath) {
-  ASSERT_THAT(LIBC_NAMESPACE::mknodat(AT_FDCWD,
-                                      "testdata/non-existent-dir/mknodat.test",
-                                      S_IFREG | 0644, 0),
+  auto BAD_PATH = libc_make_test_file_path("non-existent-dir/mknodat.test");
+  ASSERT_THAT(LIBC_NAMESPACE::mknodat(AT_FDCWD, BAD_PATH, S_IFREG | 0644, 0),
               Fails(ENOENT));
 }
