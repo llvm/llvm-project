@@ -4318,7 +4318,7 @@ static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
   if (!TRI->isVGPR(MRI, Src0) || !TRI->isVGPR(MRI, Src1))
     return;
 
-  auto saveSiblings = [&](SmallVector<Register, 3> Regs) {
+  auto SaveSiblings = [&](SmallVector<Register, 3> Regs) {
     if (!is_contained(Regs, VirtReg))
       return;
     for (Register Reg : Regs) {
@@ -4327,34 +4327,28 @@ static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
     }
   };
 
-  // Src2 == Dst :=> 2 cycle penalty for bank convlict between src0, src1, src2
-  // Src2 != Dst :=> 1 cycle penalty for bank convlict between src0, src1
+  // Src2 == Dst => 2-cycle penalty for bank conflicts among src0, src1, src2.
+  // Src2 != Dst => 1-cycle penalty for a bank conflict between src0 and src1.
   const MachineOperand *MOSrc2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
   if (MOSrc2 && MOSrc2->isReg() && MOSrc2->getReg().isVirtual() &&
       MOSrc2->getReg() == Vdst) {
-    saveSiblings({Src0, Src1, Vdst});
+    SaveSiblings({Src0, Src1, Vdst});
     return;
   }
 
-  saveSiblings({Src0, Src1});
+  SaveSiblings({Src0, Src1});
 }
 
-// VGPR bank-conflict avoidance for v_wmma_* operands on gfx11/gfx12.
+// Avoid VGPR bank conflicts in v_wmma_* on gfx11/gfx12.
 //
-// A WMMA reads src0/src1/src2 through per-bank read ports (bank = first VGPR
-// % 4); when two operands share a bank the instruction pays an extra
-// issue-latency cycle. GCNPreRAOptimizations records, for each operand of a
-// bank-sensitive WMMA, that instruction's other operands (WMMABankSiblings).
-// Here, for the siblings that already have a physreg, append the candidates
-// from a not-yet-used bank so the allocator prefers them.
+// For example: v_wmma_f32_16x16x16_f16 v[1:8], v[9:16], v[17:24], v[1:8]
+// The source operands all start in bank 1:
+// 1 % 4 = 9 % 4 = 17 % 4 = 1.
 //
-// The bias is applied via the candidate list (not by recording an MRI
-// allocation hint) on purpose: an MRI hint feeds the allocation-priority
-// computation (VRM::hasKnownPreference) and can reorder allocation so the
-// result register displaces the live-in source operands, introducing copies.
-// Appending here happens after the copy hints emitted by the base
-// implementation, so coalescing keeps priority and only this register's
-// candidate order is affected (never the global allocation order).
+// This function adds hints from non-conflicting banks to help avoid
+// VGPR bank conflicts.
+//
+// Bank conflicts may still occur due to pre-allocation and register pressure.
 void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
                                               ArrayRef<MCPhysReg> Order,
                                               SmallVectorImpl<MCPhysReg> &Hints,
@@ -4365,6 +4359,8 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
   if (!VRM || !isVGPR(MRI, VirtReg))
     return;
 
+  // Collect the other registers in WMMA instructions that may have bank
+  // conflicts with VirtReg.
   const SIMachineFunctionInfo &FuncInfo = *MF.getInfo<SIMachineFunctionInfo>();
   SmallVector<Register, 3> Siblings;
   for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
@@ -4379,14 +4375,13 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
   // Banks already taken by allocated siblings.
   unsigned UsedBankMask = 0;
   for (Register Sibling : Siblings) {
-    Register Phys = Sibling;
-    if (Phys.isVirtual()) {
-      if (!VRM->hasPhys(Phys))
+    if (Sibling.isVirtual()) {
+      if (!VRM->hasPhys(Sibling))
         continue;
-      Phys = VRM->getPhys(Phys);
+      Sibling = VRM->getPhys(Sibling);
     }
-    if (Phys.isPhysical() && isVGPR(MRI, Phys))
-      UsedBankMask |= 1u << (getHWRegIndex(Phys) % 4);
+    if (Sibling.isPhysical() && isVGPR(MRI, Sibling))
+      UsedBankMask |= 1u << (getHWRegIndex(Sibling) % 4);
   }
 
   unsigned W = getRegSizeInBits(VirtReg, MRI) / 32;
@@ -4417,12 +4412,7 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
     });
   };
 
-  // Anchor the candidate window to the function's actual VGPR footprint: peak
-  // WMMA-region pressure, rounded up to the allocation granule and capped by
-  // the VGPR budget. Without this the window is the top of the whole VGPR file
-  // (~v256) for any function without an occupancy cap, so operands get steered
-  // to very high registers, inflating the footprint and dropping occupancy on
-  // low-pressure functions (and triggering MSG_DEALLOC_VGPRS).
+  // Calculate MaxVGPR.
   unsigned MaxVGPR = MaxIdx + W;
   if (unsigned Peak = FuncInfo.getPeakVGPRPressure()) {
     unsigned Gran = AMDGPU::IsaInfo::getVGPRAllocGranule(
@@ -4435,7 +4425,29 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
   }
   if (MaxVGPR < 4 * W + 3)
     return;
-  unsigned N = (MaxVGPR - 3) / (4 * W); // blocks per bank region
+
+  // Separate registers into blocks, each containing N allocatable register
+  // tuples. Assume VirtReg spans 4 VGPRs and N = 2:
+  //
+  // Block_1: v[0:3], v[4:7];
+  // Block_2: v[9:12], v[13:16];
+  // Block_3: v[18:21], v[22:25];
+  // Block_4: v[27:30], v[31:34];
+  //
+  // All register tuples in Block_i start in bank (i - 1).
+  // This leaves only three unused VGPRs ("holes"): v8, v17, and v26.
+  // In contrast, adding candidates in register-number order can result in:
+  //
+  // 1. src0 = v[0:3], src1 = v[5:8], src2 = v[10:13] for the first WMMA
+  // 2. src0 = v[14:17], src1 = v[19:22], src2 = v[24:27] for the second WMMA
+  //
+  // This leaves holes at v4, v9, v18, and v23 and can increase VGPR usage.
+  //
+  // Add candidates from non-conflicting blocks in round-robin order to avoid
+  // exhausting a single block first.
+  // If the non-conflicting blocks are 2, 3, and 4, the hint order is:
+  // {v[9:12], v[18:21], v[27:30], v[13:16], v[22:25], v[31:34]}.
+  unsigned N = (MaxVGPR - 3) / (4 * W);
   unsigned BankSize = N * W;
   for (unsigned n = 0; n < N; n++) {
     for (unsigned Bank = 0; Bank < 4; Bank++) {
