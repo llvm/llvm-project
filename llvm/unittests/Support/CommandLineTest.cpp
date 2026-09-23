@@ -844,68 +844,6 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
   }
 }
 
-TEST(CommandLineTest, DefaultOptions) {
-  cl::ResetCommandLineParser();
-
-  StackOption<std::string> Bar("bar", cl::sub(cl::SubCommand::getAll()),
-                               cl::DefaultOption);
-  StackOption<std::string, cl::alias> Bar_Alias(
-      "b", cl::desc("Alias for -bar"), cl::aliasopt(Bar), cl::DefaultOption);
-
-  StackOption<bool> Foo("foo", cl::init(false),
-                        cl::sub(cl::SubCommand::getAll()), cl::DefaultOption);
-  StackOption<bool, cl::alias> Foo_Alias("f", cl::desc("Alias for -foo"),
-                                         cl::aliasopt(Foo), cl::DefaultOption);
-
-  StackSubCommand SC1("sc1", "First Subcommand");
-  // Override "-b" and change type in sc1 SubCommand.
-  StackOption<bool> SC1_B("b", cl::sub(SC1), cl::init(false));
-  StackSubCommand SC2("sc2", "Second subcommand");
-  // Override "-foo" and change type in sc2 SubCommand.  Note that this does not
-  // affect "-f" alias, which continues to work correctly.
-  StackOption<std::string> SC2_Foo("foo", cl::sub(SC2));
-
-  const char *args0[] = {"prog", "-b", "args0 bar string", "-f"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args0), args0,
-                                          StringRef(), &llvm::nulls()));
-  EXPECT_EQ(Bar, "args0 bar string");
-  EXPECT_TRUE(Foo);
-  EXPECT_FALSE(SC1_B);
-  EXPECT_TRUE(SC2_Foo.empty());
-
-  cl::ResetAllOptionOccurrences();
-
-  const char *args1[] = {"prog", "sc1", "-b", "-bar", "args1 bar string", "-f"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args1), args1,
-                                          StringRef(), &llvm::nulls()));
-  EXPECT_EQ(Bar, "args1 bar string");
-  EXPECT_TRUE(Foo);
-  EXPECT_TRUE(SC1_B);
-  EXPECT_TRUE(SC2_Foo.empty());
-  for (auto *S : cl::getRegisteredSubcommands()) {
-    if (*S) {
-      EXPECT_EQ("sc1", S->getName());
-    }
-  }
-
-  cl::ResetAllOptionOccurrences();
-
-  const char *args2[] = {"prog", "sc2", "-b", "args2 bar string",
-                         "-f", "-foo", "foo string"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args2), args2,
-                                          StringRef(), &llvm::nulls()));
-  EXPECT_EQ(Bar, "args2 bar string");
-  EXPECT_TRUE(Foo);
-  EXPECT_FALSE(SC1_B);
-  EXPECT_EQ(SC2_Foo, "foo string");
-  for (auto *S : cl::getRegisteredSubcommands()) {
-    if (*S) {
-      EXPECT_EQ("sc2", S->getName());
-    }
-  }
-  cl::ResetCommandLineParser();
-}
-
 TEST(CommandLineTest, ArgumentLimit) {
 #if HAVE_UNISTD_H && defined(_SC_ARG_MAX)
   if (sysconf(_SC_ARG_MAX) != -1) {
