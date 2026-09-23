@@ -63,9 +63,8 @@ mlir::Attribute getBitIntStorageAttr(mlir::ConversionPatternRewriter &rewriter,
   unsigned numBytes = storageBits / 8;
   llvm::SmallVector<mlir::APInt> bytes;
   bytes.reserve(numBytes);
-  for (unsigned i = 0; i != numBytes; ++i) {
+  for (unsigned i = 0; i != numBytes; ++i)
     bytes.emplace_back(8, val.extractBitsAsZExtValue(8, i * 8));
-  }
 
   auto i8Ty = mlir::IntegerType::get(intTy.getContext(), 8);
   return mlir::DenseElementsAttr::get(
