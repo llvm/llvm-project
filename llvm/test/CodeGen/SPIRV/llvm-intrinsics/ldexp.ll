@@ -10,6 +10,8 @@
 ; CHECK-DAG: %[[#Int32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Float4:]] = OpTypeVector %[[#Float]] 4
 ; CHECK-DAG: %[[#Int4:]] = OpTypeVector %[[#Int32]] 4
+; CHECK-DAG: %[[#Float8:]] = OpTypeVector %[[#Float]] 8
+; CHECK-DAG: %[[#Int8:]] = OpTypeVector %[[#Int32]] 8
 
 define spir_func void @test_ldexp(ptr %xh, ptr %xf, ptr %xd, ptr %xv,
                                   half %h, float %f, double %d, <4 x float> %vf,
@@ -31,7 +33,17 @@ entry:
   ret void
 }
 
+define spir_func void @test_ldexp_v8(ptr %xv, <8 x float> %vf, i32 %k) {
+entry:
+  %0 = call <8 x float> @llvm.ldexp.v8f32.i32(<8 x float> %vf, i32 %k)
+  store <8 x float> %0, ptr %xv
+; CHECK: %[[#Splat8:]] = OpCompositeConstruct %[[#Int8]]
+; CHECK: %[[#]] = OpExtInst %[[#Float8]] %[[#ExtInstSetId]] ldexp %[[#]] %[[#Splat8]]
+  ret void
+}
+
 declare half @llvm.ldexp.f16.i32(half, i32)
 declare float @llvm.ldexp.f32.i32(float, i32)
 declare double @llvm.ldexp.f64.i32(double, i32)
 declare <4 x float> @llvm.ldexp.v4f32.i32(<4 x float>, i32)
+declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)

@@ -1685,8 +1685,8 @@ bool SPIRVInstructionSelector::selectLdexp(Register ResVReg,
     unsigned NumElts = ResType->getOperand(2).getImm();
     SPIRVTypeInst ExpVecType =
         GR.getOrCreateSPIRVVectorType(ExpType, NumElts, I, TII);
-    Register SplatReg =
-        createVirtualRegister(ExpVecType, &GR, MRI, MRI->getMF());
+    Register SplatReg = MRI->createVirtualRegister(GR.getRegClass(ExpVecType));
+    GR.assignSPIRVTypeToVReg(ExpVecType, SplatReg, MRI->getMF());
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpCompositeConstruct))
                    .addDef(SplatReg)
