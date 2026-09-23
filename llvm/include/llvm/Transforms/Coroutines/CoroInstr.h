@@ -236,7 +236,15 @@ public:
 /// This represents either the llvm.coro.id.retcon or
 /// llvm.coro.id.retcon.once instruction.
 class AnyCoroIdRetconInst : public AnyCoroIdInst {
-  enum { SizeArg, AlignArg, StorageArg, PrototypeArg, AllocArg, DeallocArg };
+  enum {
+    SizeArg,
+    AlignArg,
+    StorageArg,
+    PrototypeArg,
+    AllocArg,
+    DeallocArg,
+    TypeIdArg
+  };
 
 public:
   LLVM_ABI void checkWellFormed() const;
@@ -270,6 +278,17 @@ public:
     return cast<Function>(
         getArgOperand(DeallocArg)->stripPointerCastsAndAliases());
   }
+
+  /// Return the type ID to use when allocating typed memory.
+  ConstantInt *getTypeId() const {
+    if (arg_size() <= TypeIdArg)
+      return nullptr;
+    assert(hasTypeId() && "Invalid number of arguments");
+    return cast<ConstantInt>(getArgOperand(TypeIdArg));
+  }
+
+  /// Return whether a type ID is present in the argument list.
+  bool hasTypeId() const { return arg_size() == TypeIdArg + 1; }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
