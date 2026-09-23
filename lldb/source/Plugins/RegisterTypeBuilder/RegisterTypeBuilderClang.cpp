@@ -154,7 +154,7 @@ RegisterTypeBuilderClang::BuildVectorType(const RegisterTypeVector *vector_type,
     return *type;
 
   std::optional<uint32_t> element_size =
-      GetTargetByteSize(vector_type->GetElementType(), type_system);
+      GetExpectedByteSize(vector_type->GetElementType(), type_system);
   if (!element_size || *element_size > UINT32_MAX / vector_type->GetCount() ||
       *element_size * vector_type->GetCount() != expected_byte_size)
     return {};
@@ -208,9 +208,11 @@ RegisterTypeBuilderClang::BuildUnionType(const RegisterTypeUnion *union_type,
 
   std::vector<std::pair<llvm::StringRef, CompilerType>> fields;
   fields.reserve(union_type->GetFields().size());
+  // XML parsing restricts union fields to builtins, vectors, and unions.
+  // BuildType recursively constructs the vector and union cases.
   for (const RegisterTypeUnion::Field &field : union_type->GetFields()) {
     std::optional<uint32_t> field_size =
-        GetTargetByteSize(field.GetType(), type_system);
+        GetExpectedByteSize(field.GetType(), type_system);
     if (!field_size || *field_size > expected_byte_size)
       return {};
 
@@ -221,6 +223,9 @@ RegisterTypeBuilderClang::BuildUnionType(const RegisterTypeUnion *union_type,
     fields.emplace_back(field.GetName(), field_type);
   }
 
+  // XML type IDs are scoped to a feature and need not be unique or valid
+  // Clang identifiers. Keep the ID on RegisterTypeUnion for XML lookup and use
+  // the process-wide UID and instantiated size for a unique scratch AST tag.
   std::string type_name = "__lldb_register_union_" +
                           std::to_string(union_type->GetUID()) + "_" +
                           std::to_string(expected_byte_size);
@@ -263,7 +268,7 @@ RegisterTypeBuilderClang::BuildType(const RegisterType *register_type,
   }
 }
 
-std::optional<uint32_t> RegisterTypeBuilderClang::GetTargetByteSize(
+std::optional<uint32_t> RegisterTypeBuilderClang::GetExpectedByteSize(
     const RegisterType *register_type, lldb::TypeSystemClangSP type_system) {
   if (std::optional<uint64_t> fixed_size = register_type->GetByteSize()) {
     if (*fixed_size <= UINT32_MAX)
@@ -287,7 +292,7 @@ std::optional<uint32_t> RegisterTypeBuilderClang::GetTargetByteSize(
   case RegisterType::eRegisterTypeKindVector: {
     const auto *vector_type = llvm::cast<RegisterTypeVector>(register_type);
     std::optional<uint32_t> element_size =
-        GetTargetByteSize(vector_type->GetElementType(), type_system);
+        GetExpectedByteSize(vector_type->GetElementType(), type_system);
     if (!element_size || *element_size > UINT32_MAX / vector_type->GetCount())
       return std::nullopt;
     return *element_size * vector_type->GetCount();
@@ -297,7 +302,7 @@ std::optional<uint32_t> RegisterTypeBuilderClang::GetTargetByteSize(
     for (const RegisterTypeUnion::Field &field :
          llvm::cast<RegisterTypeUnion>(register_type)->GetFields()) {
       std::optional<uint32_t> field_size =
-          GetTargetByteSize(field.GetType(), type_system);
+          GetExpectedByteSize(field.GetType(), type_system);
       if (!field_size)
         return std::nullopt;
       byte_size = std::max(byte_size, *field_size);
@@ -345,7 +350,7 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
     return BuildType(reg_info.register_type, reg_info.byte_size, type_system);
   case RegisterType::eRegisterTypeKindUnion: {
     std::optional<uint32_t> byte_size =
-        GetTargetByteSize(reg_info.register_type, type_system);
+        GetExpectedByteSize(reg_info.register_type, type_system);
     if (!byte_size || *byte_size > reg_info.byte_size)
       return {};
     return BuildType(reg_info.register_type, *byte_size, type_system);
