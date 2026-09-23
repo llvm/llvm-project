@@ -2456,13 +2456,23 @@ public:
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
     CIRGenFunction &cgf;
-    mlir::OpBuilder::InsertPoint insertPt;
+
+    /// The insertion point that precedes the conditional, stored as the
+    /// enclosing block and the operation immediately before that point. Later
+    /// operations (the condition, cleanup scopes) can be appended without
+    /// moving this point. A null \c anchorAfter means the insertion point is
+    /// the start of \c anchorBlock.
+    mlir::Block *anchorBlock;
+    mlir::Operation *anchorAfter = nullptr;
 
   public:
     ConditionalEvaluation(CIRGenFunction &cgf)
-        : cgf(cgf), insertPt(cgf.builder.saveInsertionPoint()) {}
-    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip)
-        : cgf(cgf), insertPt(ip) {}
+        : cgf(cgf), anchorBlock(cgf.builder.getInsertionBlock()) {
+      assert(anchorBlock && "conditional evaluation needs an insertion point");
+      mlir::Block::iterator ip = cgf.builder.getInsertionPoint();
+      if (ip != anchorBlock->begin())
+        anchorAfter = &*std::prev(ip);
+    }
 
     void beginEvaluation() {
       assert(cgf.outermostConditional != this);
@@ -2476,10 +2486,20 @@ public:
         cgf.outermostConditional = nullptr;
     }
 
+    /// Records \p op as the last operation emitted at the pre-conditional
+    /// insertion point, so that a later emission lands after it rather than
+    /// ahead of it.
+    void advanceInsertPoint(mlir::Operation *op) { anchorAfter = op; }
+
     /// Returns the insertion point which will be executed prior to each
     /// evaluation of the conditional code. In LLVM OG, this method
     /// is called getStartingBlock.
-    mlir::OpBuilder::InsertPoint getInsertPoint() const { return insertPt; }
+    mlir::OpBuilder::InsertPoint getInsertPoint() const {
+      if (!anchorAfter)
+        return mlir::OpBuilder::InsertPoint(anchorBlock, anchorBlock->begin());
+      return mlir::OpBuilder::InsertPoint(
+          anchorAfter->getBlock(), std::next(anchorAfter->getIterator()));
+    }
   };
 
   struct ConditionalInfo {
@@ -2496,12 +2516,13 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
-      builder.createStore(
+      cir::StoreOp store = builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
           /*isNontemporal=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
+      outermostConditional->advanceInsertPoint(store);
     }
   }
 

@@ -297,10 +297,10 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
       op.getCopySizeInBytes(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
 
-  uint64_t dstTypeAlign = dataLayout.getTypeABIAlignment(convertTypeForMemory(
-      *getTypeConverter(), dataLayout, op.getDst().getType().getPointee()));
-  uint64_t srcTypeAlign = dataLayout.getTypeABIAlignment(convertTypeForMemory(
-      *getTypeConverter(), dataLayout, op.getSrc().getType().getPointee()));
+  uint64_t dstTypeAlign =
+      dataLayout.getTypeABIAlignment(op.getDst().getType().getPointee());
+  uint64_t srcTypeAlign =
+      dataLayout.getTypeABIAlignment(op.getSrc().getType().getPointee());
 
   mlir::NamedAttribute dstAlignAttr = rewriter.getNamedAttr(
       mlir::LLVM::LLVMDialect::getAlignAttrName(),
@@ -624,6 +624,14 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
   mlir::Location loc = parentOp->getLoc();
   mlir::DataLayout layout(parentOp->getParentOfType<mlir::ModuleOp>());
+
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(intAttr.getType());
+      intTy && intTy.isBitInt()) {
+    mlir::Type biTy = convertTypeForMemory(*converter, layout, intTy);
+    return mlir::LLVM::ConstantOp::create(
+        rewriter, loc, biTy, getBitIntStorageAttr(rewriter, intAttr, layout));
+  }
+
   // Materialize the value at its literal width, then widen to the in-memory
   // storage type (a no-op except for _BitInt) so aggregate members built here
   // match the iM struct/array fields produced by convertTypeForMemory.
@@ -1057,9 +1065,9 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
 // require region initialization.
 class GlobalInitAttrRewriter {
 public:
-  GlobalInitAttrRewriter(mlir::Type type,
+  GlobalInitAttrRewriter(mlir::Type type, mlir::DataLayout const &dataLayout,
                          mlir::ConversionPatternRewriter &rewriter)
-      : llvmType(type), rewriter(rewriter) {}
+      : llvmType(type), dataLayout(dataLayout), rewriter(rewriter) {}
 
   mlir::Attribute visit(mlir::Attribute attr) {
     return llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(attr)
@@ -1069,17 +1077,15 @@ public:
   }
 
   mlir::Attribute visitCirAttr(cir::IntAttr attr) {
-    // A _BitInt(N) global stores its value in a padded integer iM; sign/zero-
-    // extend the APInt to that width (a no-op for plain integers, whose value
-    // width already matches llvmType) so the IntegerAttr is well-typed.
+    // A split-storage _BitInt's memory representation is a byte array (see
+    // convertTypeForMemory), not a scalar, so its constant must be built as
+    // raw bytes rather than a single sign/zero-extended IntegerAttr.
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(attr.getType());
+        intTy && intTy.isBitInt())
+      return getBitIntStorageAttr(rewriter, attr, dataLayout);
     llvm::APInt val = attr.getValue();
-    auto destTy = mlir::cast<mlir::IntegerType>(llvmType);
-    if (val.getBitWidth() != destTy.getWidth()) {
-      cir::IntTypeInterface cirIntTy = attr.getType();
-      val = cirIntTy.isSigned() ? val.sext(destTy.getWidth())
-                                : val.zext(destTy.getWidth());
-    }
-    return rewriter.getIntegerAttr(llvmType, val);
+
+    return rewriter.getIntegerAttr(llvmType, attr.getValue());
   }
 
   mlir::Attribute visitCirAttr(cir::FPAttr attr) {
@@ -1092,6 +1098,7 @@ public:
 
 private:
   mlir::Type llvmType;
+  const mlir::DataLayout &dataLayout;
   mlir::ConversionPatternRewriter &rewriter;
 };
 
@@ -2372,7 +2379,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     cir::LoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type llvmTy =
-      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
+      convertTypeForLoadStore(*getTypeConverter(), dataLayout, op.getType());
   if (!llvmTy)
     return op.emitError()
            << "NYI: lowering load of a type with no memory representation";
@@ -2407,7 +2414,7 @@ cir::direct::CIRToLLVMVecMaskedLoadOpLowering::matchAndRewrite(
     cir::VecMaskedLoadOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type llvmResTy =
-      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
+      convertTypeForLoadStore(*getTypeConverter(), dataLayout, op.getType());
   if (!llvmResTy)
     return op.emitError()
            << "NYI: lowering masked load of a type with no memory "
@@ -2431,7 +2438,7 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   mlir::LLVM::AtomicOrdering memorder = getLLVMMemOrder(op.getMemOrder());
   mlir::Type valueType = op.getValue().getType();
   const mlir::Type llvmTy =
-      convertTypeForMemory(*getTypeConverter(), dataLayout, valueType);
+      convertTypeForLoadStore(*getTypeConverter(), dataLayout, valueType);
   if (!llvmTy)
     return op.emitError()
            << "NYI: lowering store of a type with no memory representation";
@@ -2707,6 +2714,7 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
          attr.getName() == CIRDialect::getStrictFPAttrName() ||
          attr.getName() == CIRDialect::getNoRecurseAttrName() ||
          attr.getName() == CIRDialect::getMustProgressAttrName() ||
+         attr.getName() == CIRDialect::getNoBuiltinAttrName() ||
          attr.getName() == CIRDialect::getSYCLModuleIdAttrName();
 }
 
@@ -2848,7 +2856,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   SmallVector<mlir::Attribute> passthrough;
   for (llvm::StringRef flagAttr :
        {CIRDialect::getStrictFPAttrName(), CIRDialect::getNoRecurseAttrName(),
-        CIRDialect::getMustProgressAttrName()})
+        CIRDialect::getMustProgressAttrName(),
+        CIRDialect::getNoBuiltinAttrName()})
     if (op->hasAttr(flagAttr))
       passthrough.push_back(rewriter.getStringAttr(flagAttr));
 
@@ -3083,7 +3092,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
-      GlobalInitAttrRewriter initRewriter(llvmType, rewriter);
+      GlobalInitAttrRewriter initRewriter(llvmType, dataLayout, rewriter);
       init = initRewriter.visit(init.value());
       // If initRewriter returned a null attribute, init will have a value but
       // the value will be null. If that happens, initRewriter didn't handle the
@@ -3315,7 +3324,9 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
       minusOne =
           mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, denseVec);
     } else {
-      minusOne = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, -1);
+      minusOne = mlir::LLVM::ConstantOp::create(
+          rewriter, loc, llvmType,
+          APInt::getAllOnes(cast<mlir::IntegerType>(llvmType).getWidth()));
     }
     rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, adaptor.getInput(),
                                                    minusOne);

@@ -22,22 +22,38 @@
 #include "flang/Support/default-kinds.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Path.h"
 #include <string>
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 namespace fir {
-/// Return the line of a location, or 1 if it does not carry one.
+/// Return the line of a location, or 1 if it does not carry one. The location
+/// can be a fused one, e.g. for something read from an INCLUDE'd file, so
+/// search it rather than expecting a bare FileLineColLoc.
 inline uint32_t getLineFromLoc(mlir::Location loc) {
   uint32_t line = 1;
-  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>())
     line = fileLoc.getLine();
   return line;
+}
+
+/// Return the file that \p loc names, or \p fallback if it names none.
+inline mlir::LLVM::DIFileAttr
+getFileAttrFromLoc(mlir::Location loc, mlir::LLVM::DIFileAttr fallback) {
+  auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>();
+  if (!fileLoc)
+    return fallback;
+  llvm::StringRef path = fileLoc.getFilename().getValue();
+  return mlir::LLVM::DIFileAttr::get(loc.getContext(),
+                                     llvm::sys::path::filename(path),
+                                     llvm::sys::path::parent_path(path));
 }
 
 /// Return the integer value of a arith::ConstantOp.

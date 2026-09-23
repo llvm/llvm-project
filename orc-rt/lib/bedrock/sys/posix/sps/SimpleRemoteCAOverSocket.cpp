@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cerrno>
 #include <chrono>
+#include <deque>
 #include <fcntl.h>
 #include <optional>
 #include <poll.h>

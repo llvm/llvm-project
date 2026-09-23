@@ -447,12 +447,8 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   return nullptr;
 }
 
-/// This function transforms launder.invariant.group and strip.invariant.group
-/// like:
+/// This function transforms launder.invariant.group like:
 /// launder(launder(%x)) -> launder(%x)       (the result is not the argument)
-/// launder(strip(%x)) -> launder(%x)
-/// strip(strip(%x)) -> strip(%x)             (the result is not the argument)
-/// strip(launder(%x)) -> strip(%x)
 /// This is legal because it preserves the most recent information about
 /// the presence or absence of invariant.group.
 static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
@@ -461,23 +457,15 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
   auto *StrippedArg = Arg->stripPointerCasts();
   auto *StrippedInvariantGroupsArg = StrippedArg;
   while (auto *Intr = dyn_cast<IntrinsicInst>(StrippedInvariantGroupsArg)) {
-    if (Intr->getIntrinsicID() != Intrinsic::launder_invariant_group &&
-        Intr->getIntrinsicID() != Intrinsic::strip_invariant_group)
+    if (Intr->getIntrinsicID() != Intrinsic::launder_invariant_group)
       break;
     StrippedInvariantGroupsArg = Intr->getArgOperand(0)->stripPointerCasts();
   }
   if (StrippedArg == StrippedInvariantGroupsArg)
-    return nullptr; // No launders/strips to remove.
+    return nullptr; // No launders to remove.
 
-  Value *Result = nullptr;
-
-  if (II.getIntrinsicID() == Intrinsic::launder_invariant_group)
-    Result = IC.Builder.CreateLaunderInvariantGroup(StrippedInvariantGroupsArg);
-  else if (II.getIntrinsicID() == Intrinsic::strip_invariant_group)
-    Result = IC.Builder.CreateStripInvariantGroup(StrippedInvariantGroupsArg);
-  else
-    llvm_unreachable(
-        "simplifyInvariantGroupIntrinsic only handles launder and strip");
+  Value *Result =
+      IC.Builder.CreateLaunderInvariantGroup(StrippedInvariantGroupsArg);
   if (Result->getType()->getPointerAddressSpace() !=
       II.getType()->getPointerAddressSpace())
     Result = IC.Builder.CreateAddrSpaceCast(Result, II.getType());
@@ -2644,7 +2632,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::masked_scatter:
     return simplifyMaskedScatter(*II);
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
     if (auto *SkippedBarrier = simplifyInvariantGroupIntrinsic(*II, *this))
       return replaceInstUsesWith(*II, SkippedBarrier);
     break;
