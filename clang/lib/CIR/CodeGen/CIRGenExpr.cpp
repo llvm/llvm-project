@@ -726,7 +726,7 @@ mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
                                        bool isInit) {
   if (lvalue.getType()->isConstantMatrixType()) {
-    assert(0 && "NYI: emitStoreOfScalar constant matrix type");
+    cgm.errorNYI("emitStoreOfScalar constant matrix type");
     return;
   }
 
@@ -784,13 +784,18 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
 /// returning the rvalue.
 RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
-  assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
 
   if (lv.isBitField())
     return emitLoadOfBitfieldLValue(lv, loc);
 
-  if (lv.isSimple())
+  if (lv.isSimple()) {
+    if (lv.getType()->isConstantMatrixType()) {
+      cgm.errorNYI(loc, "emitLoadOfLValue: constant matrix type");
+      return RValue::get(nullptr);
+    }
+
     return RValue::get(emitLoadOfScalar(lv, loc));
+  }
 
   if (lv.isVectorElt()) {
     const mlir::Value load =
@@ -2842,8 +2847,10 @@ Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
                        name, /*arraySize=*/nullptr, alloca, ip);
   if (ty->isConstantMatrixType()) {
     assert(!cir::MissingFeatures::matrixType());
-    cgm.errorNYI(loc, "temporary matrix value");
+    cgm.errorNYI(loc, "createMemTemp constant matrix type");
+    return Address::invalid();
   }
+
   return result;
 }
 
