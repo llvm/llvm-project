@@ -114,6 +114,7 @@ if config.llvm_profile_file:
     )
 
 if config.flang_standalone_build:
+    config.available_features.add("flang-standalone-build")
     # For builds with FIR, set path for tco and enable related tests
     if config.flang_llvm_tools_dir != "":
         config.available_features.add("fir")
@@ -131,6 +132,9 @@ config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 # Check for DEFAULT_SYSROOT, because when it is set -isysroot has no effect.
 if config.default_sysroot:
     config.available_features.add("default_sysroot")
+
+if config.clang_default_unwindlib:
+    config.available_features.add(f"default-unwindlib={config.clang_default_unwindlib}")
 
 host_triple = config.host_triple.split("-")
 config.available_features.add(f"{host_triple[0]}-host")
@@ -276,3 +280,7 @@ if config.flang_runtime_f128_math_lib:
     )
 else:
     config.substitutions.append(("%f128-lib", "NONE"))
+
+# Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
+if "system-aix" in config.available_features:
+    config.environment["OBJECT_MODE"] = "64"

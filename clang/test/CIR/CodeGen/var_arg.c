@@ -10,7 +10,7 @@
 // pipeline and OG CodeGen, so they only check IR that is common to both
 // pipelines.
 
-// CIR: !rec___va_list_tag = !cir.struct<"__va_list_tag" {!u32i, !u32i, !cir.ptr<!void>, !cir.ptr<!void>}
+// CIR: !rec___va_list_tag = !cir.struct<"__va_list_tag" {data !u32i, data !u32i, data !cir.ptr<!void>, data !cir.ptr<!void>}
 // LLVM: %struct.__va_list_tag = type { i32, i32, ptr, ptr }
 
 int varargs(int count, ...) {
