@@ -15,9 +15,12 @@
 
 #include "APIHelpers.h"
 #include "L0Compat.h"
+#include "L0Defs.h"
 #include "L0Event.h"
 #include "L0Memory.h"
 #include "level_zero/ze_api.h"
+
+#include <atomic>
 
 namespace llvm::omp::target::plugin {
 
@@ -39,44 +42,55 @@ public:
 
   [[nodiscard]]
   bool available() const {
-    if (FuncPtr != nullptr)
-      return true;
-
-    return api_helper::canCall<Fn>();
+    return api_helper::canCall<Fn>() || ExperimentalFallbackPtr != nullptr;
   }
 
   explicit operator bool() const { return available(); }
 
-  template <typename... Args>
-  decltype(auto) operator()(Args &&...ArgsList) const {
+  template <typename... Args> decltype(auto) operator()(Args &&...ArgsList) {
     // Need to cast the type to avoid mismatch of return type deduction
     using ReturnTy = std::invoke_result_t<decltype(Fn), Args...>;
-    if (FuncPtr != nullptr)
-      return FuncPtr(std::forward<Args>(ArgsList)...);
 
-    if (!api_helper::canCall<Fn>())
+    if (!api_helper::canCall<Fn>() ||
+        AvailableButUnsupported.load(std::memory_order_relaxed)) {
+      if (ExperimentalFallbackPtr != nullptr) {
+        return ExperimentalFallbackPtr(std::forward<Args>(ArgsList)...);
+      }
+
       return static_cast<ReturnTy>(UnsupportedValue);
+    }
 
-    return Fn(std::forward<Args>(ArgsList)...);
+    auto Ret = Fn(std::forward<Args>(ArgsList)...);
+
+    if (Ret == UnsupportedValue) {
+      AvailableButUnsupported.store(true, std::memory_order_relaxed);
+
+      if (ExperimentalFallbackPtr != nullptr)
+        return ExperimentalFallbackPtr(std::forward<Args>(ArgsList)...);
+    }
+
+    return Ret;
   }
 
   bool loadExperimental(ze_driver_handle_t zeDriver, const char *FuncName) {
-    assert(!api_helper::canCall<Fn>() &&
-           "ZeDispatcher::loadExperimental called without "
-           "ZeDispatcher::available check!");
-
     ze_result_t Result = ZE_RESULT_SUCCESS;
-    CALL_ZE_RET(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
-                reinterpret_cast<void **>(&FuncPtr));
+    CALL_ZE(Result, zeDriverGetExtensionFunctionAddress, zeDriver, FuncName,
+            reinterpret_cast<void **>(&ExperimentalFallbackPtr));
 
-    if (Result != ZE_RESULT_SUCCESS || FuncPtr == nullptr)
+    if (Result != ZE_RESULT_SUCCESS || ExperimentalFallbackPtr == nullptr) {
+      ODBG(OLDT_ZeDispather) << "Failed to load experimental variant of "
+                             << __PRETTY_FUNCTION__ << "using: " << FuncName;
       return false;
+    }
 
+    ODBG(OLDT_ZeDispather) << "Loaded experimental variant of "
+                           << __PRETTY_FUNCTION__ << " using: " << FuncName;
     return true;
   }
 
 private:
-  decltype(Fn) FuncPtr = nullptr;
+  std::atomic<bool> AvailableButUnsupported = false;
+  decltype(Fn) ExperimentalFallbackPtr = nullptr;
 };
 
 /// Driver and context-specific resources. We assume a single context per
