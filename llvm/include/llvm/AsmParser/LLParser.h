@@ -120,6 +120,7 @@ namespace llvm {
     SlotMapping *Slots;
 
     SmallVector<Instruction*, 64> InstsWithTBAATag;
+    SmallVector<Instruction *, 64> InstsWithTBAAStructTag;
 
     /// DIAssignID metadata does not support temporary RAUW so we cannot use
     /// the normal metadata forward reference resolution method. Instead,
