@@ -61,6 +61,11 @@ DEFINE_OPCODE(0x55, ">=", ge)
 
 DEFINE_OPCODE(0x60, "call", call)
 
+DEFINE_OPCODE(0x70, "dict", dict)
+DEFINE_OPCODE(0x71, "dict_set", dict_set)
+DEFINE_OPCODE(0x72, "dict_get", dict_get)
+DEFINE_OPCODE(0x73, "dict_has", dict_has)
+
 // Selectors.
 DEFINE_SELECTOR(0x00, summary)
 DEFINE_SELECTOR(0x01, type_summary)

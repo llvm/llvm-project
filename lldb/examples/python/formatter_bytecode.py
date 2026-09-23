@@ -89,6 +89,11 @@ define_opcode(0x55, ">=", "ge")
 
 define_opcode(0x60, "call", "call")
 
+define_opcode(0x70, "dict", "dict")
+define_opcode(0x71, "dict_set", "dict_set")
+define_opcode(0x72, "dict_get", "dict_get")
+define_opcode(0x73, "dict_has", "dict_has")
+
 # Function signatures
 sig_summary = 0
 sig_init = 1
@@ -745,6 +750,24 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             else:
                 print("not implemented: " + selector[sel])
                 assert False
+
+        # Dictionary operations.
+        elif b == op_dict:
+            data.append(dict())
+        elif b == op_dict_set:
+            value = data.pop()
+            key = data.pop()
+            d = data.pop()
+            d[key] = value
+            data.append(d)
+        elif b == op_dict_get:
+            key = data.pop()
+            d = data.pop()
+            data.append(d[key])
+        elif b == op_dict_has:
+            key = data.pop()
+            d = data.pop()
+            data.append(int(key in d))
     return data[-1]
 
 

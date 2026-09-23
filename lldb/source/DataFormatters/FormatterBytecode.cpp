@@ -79,6 +79,10 @@ std::string toString(const FormatterBytecode::DataStack &data) {
       os << '(' << type->GetTypeName(true) << ')';
     } else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&d)) {
       os << toString(*sel);
+    } else if (auto *dict =
+                   std::get_if<std::shared_ptr<FormatterBytecode::Dictionary>>(
+                       &d)) {
+      os << "dict(" << (*dict ? (*dict)->size() : 0) << ')';
     }
     os << ' ';
   }
@@ -132,6 +136,8 @@ static llvm::Error FormatImpl(DataStack &data) {
       format(FormatFunctor(type->GetDisplayTypeName()));
     else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
       format(FormatFunctor(toString(*sel)));
+    else if (auto dict = std::get_if<std::shared_ptr<Dictionary>>(&arg))
+      format(FormatFunctor("dict"));
   }
   data.Push(s);
   return llvm::Error::success();
@@ -173,6 +179,11 @@ static llvm::Error TypeCheck(llvm::ArrayRef<DataStackElement> data,
   case Integer:
     if (!std::holds_alternative<llvm::APSInt>(elem))
       return llvm::createStringError("expected Integer");
+    break;
+  case Dict:
+    if (!std::holds_alternative<std::shared_ptr<FormatterBytecode::Dictionary>>(
+            elem))
+      return llvm::createStringError("expected Dictionary");
     break;
   }
   return llvm::Error::success();
@@ -724,6 +735,37 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       default:
         return sel_error("selector not implemented");
       }
+      continue;
+    }
+
+    // Dictionary operations.
+    case op_dict:
+      data.Push(std::make_shared<Dictionary>());
+      continue;
+    case op_dict_set: {
+      TYPE_CHECK(Dict, String, Any);
+      auto value = data.PopAny();
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<std::shared_ptr<Dictionary>>();
+      (*dict_sp)[key] = std::move(value);
+      continue;
+    }
+    case op_dict_get: {
+      TYPE_CHECK(Dict, String);
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<std::shared_ptr<Dictionary>>();
+      auto it = dict_sp->find(key);
+      if (it == dict_sp->end())
+        return error("key not found in dictionary");
+      data.Push(it->second);
+      continue;
+    }
+    case op_dict_has: {
+      TYPE_CHECK(Dict, String);
+      auto key = data.Pop<std::string>();
+      auto dict_sp = data.Pop<std::shared_ptr<Dictionary>>();
+      bool found = dict_sp->find(key) != dict_sp->end();
+      data.Push(llvm::APSInt(llvm::APInt(1, found), /*isUnsigned=*/true));
       continue;
     }
     }

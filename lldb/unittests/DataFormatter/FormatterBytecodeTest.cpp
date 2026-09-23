@@ -490,3 +490,102 @@ TEST_F(FormatterBytecodeTest, CallOps) {
     ASSERT_FALSE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
   }
 }
+
+TEST_F(FormatterBytecodeTest, DictionaryOps) {
+  {
+    // Set key a, then read it back.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 42,
+                   op_dict_set, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(42));
+  }
+
+  {
+    // Add keys a and b, then read them back.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'a',
+                           op_lit_integer,
+                           1,
+                           op_dict_set,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'b',
+                           op_lit_integer,
+                           2,
+                           op_dict_set,
+                           op_dup,
+                           op_lit_string,
+                           1,
+                           'b',
+                           op_dict_get,
+                           op_swap,
+                           op_lit_string,
+                           1,
+                           'a',
+                           op_dict_get},
+                          data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+
+  {
+    // Set key a, reassign key a, then read it back.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_dup, op_lit_string, 1, 'a', op_lit_integer,
+                   2, op_dict_set, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(2));
+  }
+
+  // Error: get value of missing key.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_dict, op_lit_string, 1, 'a', op_dict_get}),
+      FailedWithMessage("key not found in dictionary(opcode=dict_get)"));
+  // Error: get value from a non-dictionary.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_integer, 0, op_lit_string, 1, 'a', op_dict_get}),
+      FailedWithMessage("expected Dictionary"));
+  // Error: check for key in a non-dictionary.
+  EXPECT_THAT_ERROR(
+      InterpretFail({op_lit_integer, 0, op_lit_string, 1, 'a', op_dict_has}),
+      FailedWithMessage("expected Dictionary"));
+
+  {
+    // Check a key, then get its value.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_dup, op_lit_string, 1, 'a', op_dict_has,
+                   op_swap, op_lit_string, 1, 'a', op_dict_get},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(1));
+    ASSERT_TRUE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Check for a non-existing key.
+    DataStack data;
+    ASSERT_TRUE(Interpret({op_dict, op_lit_string, 1, 'a', op_dict_has}, data));
+    ASSERT_FALSE(data.Pop<llvm::APSInt>().getBoolValue());
+  }
+
+  {
+    // Use dict_has in combination with `if`.
+    DataStack data;
+    ASSERT_TRUE(
+        Interpret({op_dict, op_dup, op_lit_string, 1, 'a', op_lit_integer, 1,
+                   op_dict_set, op_lit_string, 1, 'a', op_dict_has, op_begin, 2,
+                   op_lit_integer, 42, op_if},
+                  data));
+    ASSERT_EQ(data.Pop<llvm::APSInt>(), llvm::APSInt::get(42));
+  }
+}
