@@ -256,13 +256,10 @@ static bool haveNoCommonBitsSetFromAssume(const Value *LHS, const Value *RHS,
     assert(I->getFunction() == SQ.CxtI->getFunction() &&
            "Got assumption for the wrong function!");
 
-    CmpPredicate Pred;
-    Value *AndOp;
-    if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_Value(AndOp), m_Zero())) ||
-        Pred != ICmpInst::ICMP_EQ)
-      continue;
-
-    if (!match(AndOp, m_c_And(m_Specific(LHS), m_Specific(RHS))))
+    if (!match(I->getArgOperand(0),
+               m_SpecificICmp(ICmpInst::ICMP_EQ,
+                              m_c_And(m_Specific(LHS), m_Specific(RHS)),
+                              m_Zero())))
       continue;
 
     if (isValidAssumeForContext(I, SQ))

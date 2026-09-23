@@ -1175,7 +1175,7 @@ define <2 x i32> @xor_andn_commute1(<2 x i32> %a, <2 x i32> %b) {
 define i33 @xor_andn_commute2(i33 %a, i33 %pb) {
 ; CHECK-LABEL: @xor_andn_commute2(
 ; CHECK-NEXT:    [[B:%.*]] = udiv i33 42, [[PB:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = or i33 [[B]], [[A:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = or i33 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i33 [[Z]]
 ;
   %b = udiv i33 42, %pb ; thwart complexity-based canonicalization
