@@ -8,7 +8,7 @@
 
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -143,7 +143,7 @@ static bool allUsesHaveSourceMods(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool mayIgnoreSignedZero(MachineInstr &MI) {
+static bool mayIgnoreSignedZero(const MachineInstr &MI) {
   return MI.getFlag(MachineInstr::MIFlag::FmNsz);
 }
 
@@ -171,6 +171,15 @@ static bool isConstantCostlierToNegate(MachineInstr &MI, Register Reg,
       return true;
   }
   return false;
+}
+
+bool AMDGPUCombinerHelper::canIgnoreLegacyMinMaxTies(const MachineInstr &MI,
+                                                     Register LHS,
+                                                     Register RHS) const {
+  if (mayIgnoreSignedZero(MI))
+    return true;
+  return VT &&
+         (VT->isKnownNeverLogicalZero(LHS) || VT->isKnownNeverLogicalZero(RHS));
 }
 
 static unsigned inverseMinMax(unsigned Opc) {
@@ -216,14 +225,21 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   }
 
   switch (MatchInfo->getOpcode()) {
+  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
+  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
+    if (isConstantCostlierToNegate(*MatchInfo,
+                                   MatchInfo->getOperand(2).getReg(), MRI))
+      return false;
+    // Swapping min<->max flips which operand a signed zero tie selects.
+    return canIgnoreLegacyMinMaxTies(*MatchInfo,
+                                     MatchInfo->getOperand(1).getReg(),
+                                     MatchInfo->getOperand(2).getReg());
   case AMDGPU::G_FMINNUM:
   case AMDGPU::G_FMAXNUM:
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE:
   case AMDGPU::G_FMINIMUM:
   case AMDGPU::G_FMAXIMUM:
-  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
-  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     // 0 doesn't have a negated inline immediate.
     return !isConstantCostlierToNegate(*MatchInfo,
                                        MatchInfo->getOperand(2).getReg(), MRI);
@@ -428,14 +444,13 @@ void AMDGPUCombinerHelper::applyFoldFAbsFptrunc(MachineInstr &Fabs,
 // intermediate fptruncs in the apply function.
 static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
                                   Register Reg) {
-  const MachineInstr *Def = MRI.getVRegDef(Reg);
-  if (Def->getOpcode() == TargetOpcode::G_FPEXT) {
-    Register SrcReg = Def->getOperand(1).getReg();
+  Register SrcReg;
+  if (mi_match(Reg, MRI, m_GFPExt(m_Reg(SrcReg))))
     return MRI.getType(SrcReg) == LLT::float16();
-  }
 
-  if (Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
-    APFloat Val = Def->getOperand(1).getFPImm()->getValueAPF();
+  const ConstantFP *FPImm;
+  if (mi_match(Reg, MRI, m_GFCst(FPImm))) {
+    APFloat Val = FPImm->getValueAPF();
     bool LosesInfo = true;
     Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
     return !LosesInfo;

@@ -76,14 +76,15 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::GetChildAtIndex(
   lldb::addr_t first_address = m_map->GetValueAsUnsigned(0) +
                                first_idx * process_sp->GetAddressByteSize();
 
-  Status err;
-  lldb::addr_t second_base =
-      process_sp->ReadPointerFromMemory(first_address, err);
-  if (err.Fail())
+  llvm::Expected<lldb::addr_t> second_base =
+      process_sp->ReadPointerFromMemory(first_address);
+  if (!second_base) {
+    llvm::consumeError(second_base.takeError());
     return nullptr;
+  }
 
   size_t second_idx = (idx + m_offset) % m_block_size;
-  size_t second_address = second_base + second_idx * m_element_size;
+  size_t second_address = *second_base + second_idx * m_element_size;
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);

@@ -4,6 +4,7 @@
 // REQUIRES: gpu
 // clang-format on
 
+#include <omp.h>
 #include <ompx.h>
 
 #include <cassert>

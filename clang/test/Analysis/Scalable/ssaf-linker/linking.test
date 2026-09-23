@@ -40,3 +40,140 @@
 // RUN: cd %t && clang-ssaf-linker %S/Inputs/tu-1.json -o lu-1.json
 // RUN: diff %S/Outputs/lu-1.json %t/lu-1.json
 // RUN: rm %t/lu-1.json
+
+// ============================================================================
+// Static libraries are folded in as bundles of TU summaries
+//
+// The library below bundles tu-1 and tu-2, so linking it is equivalent to
+// passing those two TU summaries on the command line. Members are folded in TU
+// namespace order, which here matches the command line order above.
+// ============================================================================
+
+// Both libraries are derived from tu-1 and tu-2 rather than stored as fixtures:
+// static-library-create.test and multi-arch-create.test already pin what these
+// two commands produce, so a checked-in copy would duplicate them.
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-1.json %S/Inputs/tu-2.json --namespace libtwo -o %t/libtwo.json
+// RUN: clang-ssaf-linker multi-arch create %t/libtwo.json -o %t/libtwo-1arch.json
+
+// RUN: clang-ssaf-linker %t/libtwo.json -o %t/lu-1+2.json
+// RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
+// RUN: rm %t/lu-1+2.json
+
+// A static library with no members contributes nothing, exactly as an empty TU
+// summary does.
+// RUN: clang-ssaf-linker %S/Inputs/lib-arm64.json -o %t/lu-empty.json
+// RUN: diff %S/Outputs/lu-empty.json %t/lu-empty.json
+// RUN: rm %t/lu-empty.json
+
+// Members are folded in TU namespace order, not in the order they happen to
+// appear in the library file. Inputs/libord-reversed.json lists tu-b.cpp before
+// tu-a.cpp, yet tu-a.cpp's entity is assigned the first entity ID.
+// RUN: clang-ssaf-linker %S/Inputs/libord-reversed.json -o %t/lu-ord.json
+// RUN: FileCheck %s --check-prefix=FOLD-ORDER --input-file=%t/lu-ord.json
+// FOLD-ORDER: "id_table": [
+// FOLD-ORDER: "id": 0,
+// FOLD-ORDER: "name": "tu-a.cpp"
+// FOLD-ORDER: "id": 1,
+// FOLD-ORDER: "name": "tu-b.cpp"
+// RUN: rm %t/lu-ord.json
+
+// Libraries and bare TU summaries mix freely in one invocation.
+// RUN: clang-ssaf-linker %S/Inputs/tu-empty.json %t/libtwo.json -o %t/lu-1+2.json
+// RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
+// RUN: rm %t/lu-1+2.json
+
+// ============================================================================
+// Multi-arch static libraries contribute the member matching the link unit
+// ============================================================================
+
+// A single-member bundle names its target unambiguously, so no --target-triple
+// is needed and the result matches linking the member directly.
+// RUN: clang-ssaf-linker %t/libtwo-1arch.json -o %t/lu-1+2.json
+// RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
+// RUN: rm %t/lu-1+2.json
+
+// A bundle in a later position is resolved against the triple the first input
+// already fixed, rather than contributing one of its own.
+// RUN: clang-ssaf-linker %S/Inputs/tu-empty.json %t/libtwo-1arch.json -o %t/lu-1+2.json
+// RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
+// RUN: rm %t/lu-1+2.json
+
+// Only the selected member is folded in. Inputs/libtwo-2arch.json pairs an
+// empty arm64 member with an x86_64 member that has a member, so selecting arm64
+// must produce an empty link unit -- folding the wrong member, or both, would
+// pull x86.cpp in.
+// RUN: clang-ssaf-linker --target-triple arm64-apple-macosx %S/Inputs/libtwo-2arch.json -o %t/lu-empty.json
+// RUN: diff %S/Outputs/lu-empty.json %t/lu-empty.json
+// RUN: rm %t/lu-empty.json
+
+// Members are matched on the triple's canonical components, not its spelling:
+// "aarch64" selects the "arm64" member. The link unit records the spelling that
+// was requested rather than the member's own.
+// RUN: clang-ssaf-linker --target-triple aarch64-apple-macosx %S/Inputs/libtwo-2arch.json -o %t/lu-aarch64.json
+// RUN: FileCheck %s --check-prefix=ALIAS-MEMBER --input-file=%t/lu-aarch64.json
+// ALIAS-MEMBER: "target_triple": "aarch64-apple-macosx",
+// RUN: rm %t/lu-aarch64.json
+
+// An OS version does not distinguish a member either, and the link unit again
+// records the requested spelling.
+// RUN: clang-ssaf-linker --target-triple arm64-apple-macosx15.0 %S/Inputs/libtwo-2arch.json -o %t/lu-versioned.json
+// RUN: FileCheck %s --check-prefix=VERSIONED-MEMBER --input-file=%t/lu-versioned.json
+// VERSIONED-MEMBER: "target_triple": "arm64-apple-macosx15.0",
+// RUN: rm %t/lu-versioned.json
+
+// An explicit --target-triple agreeing with the inputs is accepted and does not
+// change the result.
+// RUN: clang-ssaf-linker --target-triple arm64-apple-macosx %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/lu-1+2.json
+// RUN: diff %S/Outputs/lu-1+2.json %t/lu-1+2.json
+// RUN: rm %t/lu-1+2.json
+
+// ============================================================================
+// Target triples are not restricted to Apple platforms
+//
+// "unknown" and "none" are the conventional spellings for an unspecified
+// vendor or OS, so a triple that uses them is well formed and takes part in
+// triple resolution like any other.
+// ============================================================================
+
+// Inference needs no flag off-Apple either: the link unit adopts the input's
+// own triple and records it.
+// RUN: clang-ssaf-linker %S/Inputs/tu-linux.json -o %t/lu-linux.json
+// RUN: FileCheck %s --check-prefix=LINUX-INFERRED --input-file=%t/lu-linux.json
+// LINUX-INFERRED: "target_triple": "x86_64-unknown-linux-gnu",
+// RUN: rm %t/lu-linux.json
+
+// RUN: not clang-ssaf-linker --target-triple wasm32-unknown-unknown %S/Inputs/libtwo-2arch.json -o %t/lu-wasm.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WASM-TRIPLE
+// WASM-TRIPLE: has no member for target triple 'wasm32-unknown-unknown' (available: arm64-apple-macosx, x86_64-apple-macosx)
+
+// A component that belongs in a later field is not mistaken for an
+// unrecognized OS: "elf" here names an object format, and the triple is
+// reported in the normalized spelling the link unit would record.
+// RUN: not clang-ssaf-linker --target-triple riscv64-unknown-elf %S/Inputs/lib-arm64.json -o %t/lu-riscv.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RISCV-TRIPLE
+// RISCV-TRIPLE: does not match link unit target triple 'riscv64-unknown-unknown-elf'
+
+// A component dropped off the end of the triple is absent rather than
+// malformed: arm64-apple names an architecture and a vendor but no OS.
+// RUN: not clang-ssaf-linker --target-triple arm64-apple %S/Inputs/lib-arm64.json -o %t/lu-no-os.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-OS-TRIPLE
+// NO-OS-TRIPLE: does not match link unit target triple 'arm64-apple'
+
+// Only the architecture is validated, so a vendor or OS spelled as something
+// llvm::Triple does not recognize is accepted too: it parses to Unknown, which
+// means "unspecified" rather than "invalid". These two guard against
+// re-introducing the component checks that once rejected every non-Apple
+// target -- the acceptances below use legitimate spellings a re-added check
+// would exempt, so they would not catch it.
+// RUN: not clang-ssaf-linker --target-triple arm64-bogus-macosx %S/Inputs/lib-arm64.json -o %t/lu-bogus-vendor.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ODD-VENDOR
+// ODD-VENDOR: does not match link unit target triple 'arm64-bogus-macosx'
+
+// RUN: not clang-ssaf-linker --target-triple arm64-apple-bogus %S/Inputs/lib-arm64.json -o %t/lu-bogus-os.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ODD-OS
+// ODD-OS: does not match link unit target triple 'arm64-apple-bogus'
+
+// "none" is likewise a conventional spelling for an unspecified component.
+// RUN: not clang-ssaf-linker --target-triple armv7-none-eabi %S/Inputs/lib-arm64.json -o %t/lu-eabi.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=EABI-TRIPLE
+// EABI-TRIPLE: does not match link unit target triple 'armv7-unknown-none-eabi'
