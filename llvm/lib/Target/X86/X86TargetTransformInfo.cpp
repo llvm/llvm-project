@@ -1945,13 +1945,11 @@ X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
   return InstructionCost::getInvalid();
 }
 
-InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<int> Mask, int Index,
-                                           VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost X86TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -4258,6 +4256,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v16i8,   {  2,  6, 11, 11 } },
     { ISD::CTTZ,       MVT::v32i8,   {  2,  6, 11, 11 } },
     { ISD::CTTZ,       MVT::v64i8,   {  3,  7, 11, 13 } },
+    { ISD::MULHS,      MVT::v32i16,  {  1,  5,  1,  1 } },
+    { ISD::MULHU,      MVT::v32i16,  {  1,  5,  1,  1 } },
     { ISD::ROTL,       MVT::v32i16,  {  2,  8,  6,  8 } },
     { ISD::ROTL,       MVT::v16i16,  {  2,  8,  6,  7 } },
     { ISD::ROTL,       MVT::v8i16,   {  2,  7,  6,  7 } },
@@ -4326,6 +4326,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v16i32,  {  2,  8,  6,  7 } },
     { ISD::CTTZ,       MVT::v32i16,  {  7, 17, 27, 27 } },
     { ISD::CTTZ,       MVT::v64i8,   {  6, 13, 21, 21 } },
+    { ISD::MULHS,      MVT::v16i32,  {  3, 10,  6,  7 } },
+    { ISD::MULHS,      MVT::v8i32,   {  3,  9,  6,  6 } },
+    { ISD::MULHS,      MVT::v32i16,  {  3,  7,  5,  5 } },
+    { ISD::MULHS,      MVT::v16i16,  {  1,  5,  1,  1 } },
+    { ISD::MULHU,      MVT::v16i32,  {  3, 10,  6,  7 } },
+    { ISD::MULHU,      MVT::v8i32,   {  3,  9,  6,  6 } },
+    { ISD::MULHU,      MVT::v32i16,  {  3,  7,  5,  5 } },
+    { ISD::MULHU,      MVT::v16i16,  {  1,  5,  1,  1 } },
     { ISD::ROTL,       MVT::v8i64,   {  1,  1,  1,  1 } },
     { ISD::ROTL,       MVT::v4i64,   {  1,  1,  1,  1 } },
     { ISD::ROTL,       MVT::v2i64,   {  1,  1,  1,  1 } },
@@ -4510,6 +4518,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v16i16,  {  6,  9, 14, 24 } },
     { ISD::CTTZ,       MVT::v16i8,   {  3,  7, 11, 11 } },
     { ISD::CTTZ,       MVT::v32i8,   {  5,  7, 11, 18 } },
+    { ISD::MULHS,      MVT::v8i32,   {  4,  9,  6, 12 } },
+    { ISD::MULHS,      MVT::v16i16,  {  2,  5,  1,  2 } },
+    { ISD::MULHU,      MVT::v8i32,   {  4,  9,  6, 12 } },
+    { ISD::MULHU,      MVT::v16i16,  {  2,  5,  1,  2 } },
     { ISD::SADDSAT,    MVT::v2i64,   {  4, 13,  8, 11 } },
     { ISD::SADDSAT,    MVT::v4i64,   {  3, 10,  8, 12 } },
     { ISD::SADDSAT,    MVT::v4i32,   {  2,  6,  7,  9 } },
@@ -4624,6 +4636,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v8i16,   {  9, 21, 14, 18 } },
     { ISD::CTTZ,       MVT::v32i8,   { 15, 18, 21, 30 } }, // 2 x 128-bit Op + extract/insert
     { ISD::CTTZ,       MVT::v16i8,   {  8, 16, 11, 15 } },
+    { ISD::MULHS,      MVT::v8i32,   {  9, 11, 14, 18 } },
+    { ISD::MULHS,      MVT::v16i16,  {  3,  7,  5,  6 } },
+    { ISD::MULHU,      MVT::v8i32,   {  9, 11, 14, 18 } },
+    { ISD::MULHU,      MVT::v16i16,  {  3,  7,  5,  6 } },
     { ISD::SADDSAT,    MVT::v2i64,   {  6, 13,  8, 11 } },
     { ISD::SADDSAT,    MVT::v4i64,   { 13, 20, 15, 25 } }, // 2 x 128-bit Op + extract/insert
     { ISD::SADDSAT,    MVT::v8i32,   { 12, 18, 14, 24 } }, // 2 x 128-bit Op + extract/insert
@@ -4740,6 +4756,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   };
   static const CostKindTblEntry SSE41CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  3,  4,  3,  5 } }, // BLENDVPD(X,PSUBQ(0,X),X)
+    { ISD::MULHS,      MVT::v4i32,   {  3,  9,  6,  7 } },
+    { ISD::MULHU,      MVT::v4i32,   {  3,  9,  6,  7 } },
     { ISD::SADDSAT,    MVT::v2i64,   { 10, 14, 17, 21 } },
     { ISD::SADDSAT,    MVT::v4i32,   {  5, 11,  8, 10 } },
     { ISD::SSUBSAT,    MVT::v2i64,   { 12, 19, 25, 29 } },
@@ -4817,6 +4835,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v4i32,   { 18, 31, 24, 26 } },
     { ISD::CTTZ,       MVT::v8i16,   { 16, 27, 21, 23 } },
     { ISD::CTTZ,       MVT::v16i8,   { 13, 23, 17, 19 } },
+    { ISD::MULHS,      MVT::v4i32,   {  5, 11, 15, 15 } },
+    { ISD::MULHS,      MVT::v8i16,   {  1,  5,  1,  1 } },
+    { ISD::MULHU,      MVT::v4i32,   {  3,  9,  7,  7 } },
+    { ISD::MULHU,      MVT::v8i16,   {  1,  5,  1,  1 } },
     { ISD::SADDSAT,    MVT::v2i64,   { 12, 14, 24, 24 } },
     { ISD::SADDSAT,    MVT::v4i32,   {  6, 11, 11, 12 } },
     { ISD::SADDSAT,    MVT::v8i16,   {  1,  2,  1,  1 } },
@@ -5084,6 +5106,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::smin:
     ISD = ISD::SMIN;
     break;
+  case Intrinsic::smulh:
+    ISD = ISD::MULHS;
+    break;
   case Intrinsic::ssub_sat:
     ISD = ISD::SSUBSAT;
     break;
@@ -5098,6 +5123,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::usub_sat:
     ISD = ISD::USUBSAT;
+    break;
+  case Intrinsic::umulh:
+    ISD = ISD::MULHU;
     break;
   case Intrinsic::sqrt:
     ISD = ISD::FSQRT;
@@ -5898,9 +5926,23 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // Sandybridge.
       // Sub-32-bit loads/stores will be slower either with PINSR*/PEXTR* or
       // will be scalarized.
+      //
+      // For a vector load, each non-0th 1/2/4-byte in-lane remainder chunk is
+      // materialized by a *single* folded PINSR*(mem) that both loads and
+      // inserts the lane (1B->PINSRB, 2B->PINSRW, 4B->PINSRD; the byte and
+      // dword folds need SSE4.1, the word fold only SSE2).
+      // When that fold is available the chunk is one instruction, so it must be
+      // priced once here (as a plain load) and the separate lane-insert charge
+      // below must be skipped - otherwise the folded insert is double-counted.
+      // Stores (the symmetric PEXTR*(mem) fold) are left unchanged here.
+      bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
+      bool FoldedInLaneInsert = IsLoad && !Is0thSubVec &&
+                                ((CurrOpSizeBytes == 1 && ST->hasSSE41()) ||
+                                 (CurrOpSizeBytes == 2 && ST->hasSSE2()) ||
+                                 (CurrOpSizeBytes == 4 && ST->hasSSE41()));
       if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
         Cost += 2;
-      else if (CurrOpSizeBytes < 4)
+      else if (CurrOpSizeBytes < 4 && !FoldedInLaneInsert)
         Cost += 2;
       else
         Cost += 1;
@@ -5909,8 +5951,6 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // loading just a single (widest) vector can be reused by all splits.
       if (IsLoad && OpInfo.isUniform())
         return Cost;
-
-      bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
 
       // If we have fully processed the previous reg, we need to replenish it.
       if (SubVecEltsLeft == 0) {
@@ -5927,7 +5967,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // for smaller widths (32/16/8) we have to insert/extract them separately.
       // Again, it's free for the 0'th subreg (if op is 32/64 bit wide,
       // but let's pretend that it is also true for 16/8 bit wide ops...)
-      if (CurrOpSizeBytes <= 32 / 8 && !Is0thSubVec) {
+      if (CurrOpSizeBytes <= 32 / 8 && !Is0thSubVec && !FoldedInLaneInsert) {
         int NumEltDoneInCurrXMM = NumEltDone() % NumEltPerXMM;
         assert(NumEltDoneInCurrXMM % CurrNumEltPerOp == 0 && "");
         int CoalescedVecEltIdx = NumEltDoneInCurrXMM / CurrNumEltPerOp;
@@ -6073,16 +6113,78 @@ X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
-    // TODO: AVX2 is the current cut-off because we don't have correct
-    //       interleaving costs for prior ISA's.
-    if (!BaseT::isStridedAccess(Ptr))
-      return NumVectorInstToHideOverhead;
-    if (!BaseT::getConstantStrideStep(SE, Ptr))
+  if (PtrTy->isVectorTy() && SE) {
+    if (BaseT::isStridedAccess(Ptr) && !BaseT::getConstantStrideStep(SE, Ptr))
       return 1;
+    if (!ST->hasAVX2()) {
+      // TODO: AVX2 is the current cut-off because we don't have correct
+      //       interleaving costs for prior ISA's.
+      if (!BaseT::isStridedAccess(Ptr))
+        return NumVectorInstToHideOverhead;
+    }
   }
 
   return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
+}
+
+InstructionCost X86TTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  auto ExpandCost = [&]() {
+    return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                          AccumType, VF, OpAExtend, OpBExtend,
+                                          BinOp, CostKind, FMF);
+  };
+
+  // The dot product instructions multiply-accumulate i8 x i8 -> i32,
+  // i16 x i16 -> i32, bf16 x bf16 -> f32 or f16 x f16 -> f32. Partial
+  // reductions may also multiply inputs extended from different types, which
+  // they can't handle.
+  if (VF.isScalable() || !BinOp || OpAExtend == TTI::PR_None ||
+      OpBExtend == TTI::PR_None || InputTypeA != InputTypeB)
+    return ExpandCost();
+
+  unsigned Opc;
+  if (Opcode == Instruction::Add && *BinOp == Instruction::Mul &&
+      AccumType->isIntegerTy(32) &&
+      (InputTypeA->isIntegerTy(8) || InputTypeA->isIntegerTy(16))) {
+    if (OpAExtend != OpBExtend)
+      Opc = ISD::PARTIAL_REDUCE_SUMLA;
+    else if (OpAExtend == TTI::PR_SignExtend)
+      Opc = ISD::PARTIAL_REDUCE_SMLA;
+    else
+      Opc = ISD::PARTIAL_REDUCE_UMLA;
+  } else if (Opcode == Instruction::FAdd && *BinOp == Instruction::FMul &&
+             AccumType->isFloatTy() &&
+             (InputTypeA->isBFloatTy() || InputTypeA->isHalfTy())) {
+    // VDPBF16PS and VDPPHPS, like the expansion, reassociate the additions and
+    // fuse the multiplications.
+    if (!FMF || !FMF->allowReassoc() || !FMF->allowContract())
+      return InstructionCost::getInvalid();
+    Opc = ISD::PARTIAL_REDUCE_FMLA;
+  } else {
+    return ExpandCost();
+  }
+
+  unsigned Ratio =
+      AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
+  if (!VF.isKnownMultipleOf(Ratio))
+    return ExpandCost();
+
+  // One dot product per legal accumulator vector. Accumulators narrower than
+  // a legal vector are widened by expanding the partial reduction instead.
+  auto *AccVecTy = VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
+  auto *InputVecTy = VectorType::get(InputTypeA, VF);
+  std::pair<InstructionCost, MVT> AccLT = getTypeLegalizationCost(AccVecTy);
+  std::pair<InstructionCost, MVT> InputLT = getTypeLegalizationCost(InputVecTy);
+  if (AccLT.second.getFixedSizeInBits() >
+          AccVecTy->getPrimitiveSizeInBits().getFixedValue() ||
+      !TLI->isPartialReduceMLALegalOrCustom(Opc, AccLT.second, InputLT.second))
+    return ExpandCost();
+
+  return AccLT.first;
 }
 
 InstructionCost

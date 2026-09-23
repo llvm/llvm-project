@@ -1,11 +1,11 @@
 ; RUN: llvm-mc -triple riscv32-apple-macho -filetype=obj %s -o %t.o
 ; RUN: llvm-objdump -dr --section __data --full-contents %t.o | FileCheck %s --check-prefix=CHECK
-; RUN: llvm-otool -Vtr %t.o | FileCheck %s --check-prefix=OTOOL
+; RUN: llvm-otool -Vtrd %t.o | FileCheck %s --check-prefix=OTOOL
 
 ; Data section relocations
         .data
 ; CHECK:  0000 2a000000 0c000000 00000000 04000000  *...............
-; CHECK-NEXT:  0010 00000000 02000000                    ........
+; CHECK-NEXT:  0010 00000000 02000000 b80b0000                  ........
 
 ; Plain integer, no relocation needed.
         .global _a
@@ -66,15 +66,31 @@ _sub_add:
 ; CHECK-NEXT:                   00000014:  RISCV_RELOC_UNSIGNED _ref
 ; CHECK-NEXT:       16: 0000            <unknown>
 .word _ref - _elsewhere + 2
+; Same as before, but with an offset that requires more than 12 bits.
+; Being data, the whole offset is stored in the 4 bytes at 18.
+        .global _sub_add_big_offset
+_sub_add_big_offset:
+; CHECK-LABEL: 00000018 <_sub_add_big_offset>:
+; CHECK-NEXT:       18: 0bb8            <unknown>
+; CHECK-NEXT:                   00000018:  RISCV_RELOC_SUBTRACTOR       _elsewhere
+; CHECK-NEXT:                   00000018:  RISCV_RELOC_UNSIGNED _ref
+; CHECK-NEXT:       1a: 0000            <unknown>
+.word _ref - _elsewhere + 3000
+
 ; CHECK-NOT: {{.}}
 
-; OTOOL-LABEL: Relocation information (__DATA,__data) 6 entries
+; OTOOL-LABEL: Relocation information (__DATA,__data) 8 entries
 ; OTOOL-NEXT:  address  pcrel length extern type    scattered symbolnum/value
+; OTOOL-NEXT:  00000018 False long   True   1       False     _elsewhere
+; OTOOL-NEXT:  00000018 False long   True   0       False     _ref
 ; OTOOL-NEXT:  00000014 False long   True   1       False     _elsewhere
 ; OTOOL-NEXT:  00000014 False long   True   0       False     _ref
 ; OTOOL-NEXT:  00000010 False long   True   1       False     _elsewhere
 ; OTOOL-NEXT:  00000010 False long   True   0       False     _ref
 ; OTOOL-NEXT:  0000000c False long   True   0       False     _b
 ; OTOOL-NEXT:  00000008 False long   True   0       False     _b
+; OTOOL-NEXT:  Contents of (__DATA,__data) section
+; OTOOL-NEXT:  00000000 0000002a 0000000c 00000000 00000004
+; OTOOL-NEXT:  00000010 00000000 00000002 00000bb8
 ; OTOOL-NEXT:  Contents of (__TEXT,__text) section
 ; OTOOL-NOT: {{.}}

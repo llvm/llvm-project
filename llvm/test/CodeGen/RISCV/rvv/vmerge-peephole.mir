@@ -247,17 +247,16 @@ body: |
     %merge:vrnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, %load, %mask, %avl, 5 /* e32 */
 ...
 ---
-# Negative test: VZIP applies its mask to 2 * VL output elements.
+# VZIP uses a result-sized mask, so fold the vmerge into masked VZIP.
 name: vzip_mask_length
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_mask_length
     ; CHECK: %passthru:vrm2nov0 = IMPLICIT_DEF
-    ; CHECK-NEXT: %x:vrm2nov0 = PseudoVZIP_VV_M1 $noreg, $noreg, $noreg, 1 /* vl */, 5 /* e32 */, 3 /* ta, ma */
     ; CHECK-NEXT: %mask:vmv0 = IMPLICIT_DEF
-    ; CHECK-NEXT: %y:vrm2nov0 = PseudoVMERGE_VVM_M2 %passthru, %passthru, %x, %mask, 1 /* vl */, 5 /* e32 */
+    ; CHECK-NEXT: early-clobber %y:vrm2nov0 = PseudoVZIP_VV_M2_MASK %passthru, $noreg, $noreg, %mask, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %passthru:vrm2nov0 = IMPLICIT_DEF
-    %x:vrm2nov0 = PseudoVZIP_VV_M1 $noreg, $noreg, $noreg, 1, 5, 3
+    %x:vrm2nov0 = PseudoVZIP_VV_M2 $noreg, $noreg, $noreg, 1, 5, 3
     %mask:vmv0 = IMPLICIT_DEF
     %y:vrm2nov0 = PseudoVMERGE_VVM_M2 %passthru, %passthru, %x, %mask, 1, 5
 ...

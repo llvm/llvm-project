@@ -74,7 +74,6 @@ bool MipsSubtarget::MSAWarningPrinted = false;
 bool MipsSubtarget::VirtWarningPrinted = false;
 bool MipsSubtarget::CRCWarningPrinted = false;
 bool MipsSubtarget::GINVWarningPrinted = false;
-bool MipsSubtarget::MIPS1WarningPrinted = false;
 
 void MipsSubtarget::anchor() {}
 
@@ -103,12 +102,6 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   if (MipsArchVersion == MipsDefault)
     MipsArchVersion = Mips32;
-
-  // MIPS-I has not been tested.
-  if (MipsArchVersion == Mips1 && !MIPS1WarningPrinted) {
-    errs() << "warning: MIPS-I support is experimental\n";
-    MIPS1WarningPrinted = true;
-  }
 
   // Don't even attempt to generate code for MIPS-V. It has not
   // been tested and currently exists for the integrated assembler only.
@@ -260,6 +253,11 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+
+  // O32 uses 32-bit GPRs even when the selected CPU supports a 64-bit ISA.
+  if (isABI_O32())
+    IsGP64bit = false;
+
   if (InMips16Mode && !IsSoftFloat)
     InMips16HardFloat = true;
 

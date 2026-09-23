@@ -171,7 +171,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       BasicBlock *OldDest = Cond->getZExtValue() ? Dest2 : Dest1;
 
       // Let the basic block know that we are letting go of it.  Based on this,
-      // it will adjust it's PHI nodes.
+      // it will adjust its PHI nodes.
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
@@ -254,8 +254,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       }
 
       // Otherwise, check to see if the switch only branches to one destination.
-      // We do this by reseting "TheOnlyDest" to null when we find two non-equal
-      // destinations.
+      // We do this by resetting "TheOnlyDest" to null when we find two
+      // non-equal destinations.
       if (It->getCaseSuccessor() != TheOnlyDest)
         TheOnlyDest = nullptr;
 
@@ -1204,7 +1204,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                       << " and " << Succ->getName() << " : "
                       << CommonPred->getName() << "\n");
 
-  // 'BB' and 'BB->Pred' are loop latches, bail out to presrve inner loop
+  // 'BB' and 'BB->Pred' are loop latches, bail out to preserve inner loop
   // metadata.
   //
   // FIXME: This is a stop-gap solution to preserve inner-loop metadata given
@@ -1231,7 +1231,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   //
   // CFG Before
   //
-  // BB is while.cond.exit, attached with loop metdata md2.
+  // BB is while.cond.exit, attached with loop metadata md2.
   // BB->Pred is for.body, attached with loop metadata md1.
   //
   //      entry
@@ -1256,7 +1256,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // for.body is attached with md2, and md1 is dropped.
   // If LoopSimplify runs later (as a part of loop pass), it could create
   // dedicated exits for inner-loop (essentially adding `while.cond.exit`
-  // back), but won't it won't see 'md1' nor restore it for the inner-loop.
+  // back), but it won't see 'md1' nor restore it for the inner-loop.
   //
   //       entry
   //         |
@@ -3529,7 +3529,7 @@ struct BitPart {
 /// bitnumber to bitnumber. It is the caller's responsibility to validate that
 /// the bitnumber to bitnumber mapping is correct for a bswap or bitreverse.
 ///
-/// For example, if the current subexpression if "(shl i32 %X, 24)" then we know
+/// For example, if the current subexpression is "(shl i32 %X, 24)" then we know
 /// that the expression deposits the low byte of %X into the high byte of the
 /// result and that all other bits are zero. This expression is accepted and a
 /// BitPart is returned with Provider set to %X and Provenance[24-31] set to
@@ -3543,8 +3543,8 @@ struct BitPart {
 /// provided map. To avoid unnecessary copying of BitParts, BitParts are
 /// constructed in-place in the \c BPS map. Because of this \c BPS needs to
 /// store BitParts objects, not pointers. As we need the concept of a nullptr
-/// BitParts (Value has been analyzed and the analysis failed), we an Optional
-/// type instead to provide the same functionality.
+/// BitParts (Value has been analyzed and the analysis failed), we use an
+/// Optional type instead to provide the same functionality.
 ///
 /// Because we pass around references into \c BPS, we must use a container that
 /// does not invalidate internal references (std::map instead of DenseMap).
@@ -3687,7 +3687,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BITREVERSE - most likely due to us previous matching a partial
+    // BITREVERSE - most likely due to us previously matching a partial
     // bitreverse.
     if (match(V, m_BitReverse(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
@@ -3701,7 +3701,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // BSWAP - most likely due to us previous matching a partial bswap.
+    // BSWAP - most likely due to us previously matching a partial bswap.
     if (match(V, m_BSwap(m_Value(X)))) {
       const auto &Res = collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS,
                                         Depth + 1, FoundRoot);
