@@ -52,6 +52,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
@@ -175,6 +176,10 @@ public:
                         [&](auto store) { return store.getMemref(); })
                     .Case<fir::BoxAddrOp>(
                         [&](auto boxAddr) { return boxAddr.getVal(); })
+                    .Case<cuf::AllocateOp>(
+                        [&](auto allocate) { return allocate.getBox(); })
+                    .Case<cuf::DeallocateOp>(
+                        [&](auto deallocate) { return deallocate.getBox(); })
                     .Case<fir::CallOp>([&](fir::CallOp call) -> Value {
                       if (auto callee = call.getCalleeAttr()) {
                         StringRef funcName =

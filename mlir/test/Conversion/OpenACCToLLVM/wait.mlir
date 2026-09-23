@@ -102,15 +102,15 @@ module {
 // The ident is a constant global whose source field points at the location
 // string. Call sites take the address of that ident, not of the string.
 
-// CHECK: llvm.mlir.global internal constant @[[$SRC:loc_5_3_[0-9]+]](";wait.mlir;test_wait_with_loc;5;3;;\00")
-// CHECK: llvm.mlir.global internal constant @[[$IDENT:ident_loc_5_3_[0-9]+]]() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
+// CHECK: llvm.mlir.global internal constant @acc.loc.[[$POS:5\.3\.[0-9]+]](";wait.mlir;test_wait_with_loc;5;3;;\00")
+// CHECK: llvm.mlir.global internal constant @acc.ident.[[$POS]]() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
 // CHECK: llvm.mlir.zero : !llvm.struct<(i32, i32, i32, i32, ptr)>
-// CHECK: llvm.mlir.addressof @[[$SRC]]
+// CHECK: llvm.mlir.addressof @acc.loc.[[$POS]]
 // CHECK: llvm.getelementptr
 // CHECK: llvm.insertvalue {{.*}}[4]
 // CHECK: llvm.return
 // CHECK-LABEL: llvm.func @test_wait_with_loc
-// CHECK: llvm.mlir.addressof @[[$IDENT]]
+// CHECK: llvm.mlir.addressof @acc.ident.[[$POS]]
 // CHECK: llvm.call @__tgt_acc_wait
 
 #loc = loc("wait.mlir":5:3)
@@ -125,15 +125,15 @@ module {
 
 // Operations without file:line information fall back to an unknown ident.
 
-// CHECK: llvm.mlir.global internal constant @loc__(";unknown;unknown;0;0;;\00")
-// CHECK: llvm.mlir.global internal constant @ident_loc__() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
+// CHECK: llvm.mlir.global internal constant @acc.loc.unknown(";unknown;unknown;0;0;;\00")
+// CHECK: llvm.mlir.global internal constant @acc.ident.unknown() {{.*}} : !llvm.struct<(i32, i32, i32, i32, ptr)> {
 // CHECK: llvm.mlir.zero : !llvm.struct<(i32, i32, i32, i32, ptr)>
-// CHECK: llvm.mlir.addressof @loc__
+// CHECK: llvm.mlir.addressof @acc.loc.unknown
 // CHECK: llvm.getelementptr
 // CHECK: llvm.insertvalue {{.*}}[4]
 // CHECK: llvm.return
 // CHECK-LABEL: llvm.func @test_wait_unknown_loc
-// CHECK: llvm.mlir.addressof @ident_loc__
+// CHECK: llvm.mlir.addressof @acc.ident.unknown
 // CHECK: llvm.call @__tgt_acc_wait
 
 module {
