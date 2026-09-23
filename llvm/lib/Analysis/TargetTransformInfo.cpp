@@ -316,6 +316,11 @@ unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }
 
+SmallVector<unsigned, 2>
+TargetTransformInfo::getRefinableAddressSpaces() const {
+  return TTIImpl->getRefinableAddressSpaces();
+}
+
 unsigned TargetTransformInfo::getAddressSpaceJoin(unsigned AS1,
                                                   unsigned AS2) const {
   assert(AS1 != AS2 && "Expected distinct address spaces");

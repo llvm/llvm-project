@@ -146,6 +146,13 @@ public:
 
   virtual unsigned getFlatAddressSpace() const { return -1; }
 
+  virtual SmallVector<unsigned, 2> getRefinableAddressSpaces() const {
+    unsigned FlatAS = getFlatAddressSpace();
+    if (FlatAS == ~0u)
+      return {};
+    return {FlatAS};
+  }
+
   virtual unsigned getAddressSpaceJoin(unsigned AS1, unsigned AS2) const {
     return getFlatAddressSpace();
   }
