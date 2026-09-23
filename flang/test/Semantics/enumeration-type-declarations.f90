@@ -128,3 +128,39 @@ subroutine test_constructor_errors_use()
   ! ERROR: Enumeration constructor value (4) for 'color' must be positive and less than or equal to the number of enumerators (3)
   c = color(4)
 end subroutine
+
+! A duplicate enumerator name within an enumeration type is diagnosed as a
+! clean semantic error (previously it aborted during name resolution).
+subroutine test_duplicate_enumerator()
+  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
+  enumeration type :: color
+    !ERROR: 'red' is already declared in this scoping unit
+    enumerator :: red, green, red
+  end enumeration type
+end subroutine
+
+! An enumeration type has no implicit conversion to or from INTEGER, and is not
+! numeric: assignment and arithmetic mixing an enumeration value with an
+! integer (or two enumeration values) must be rejected.
+subroutine test_assignment_and_arithmetic()
+  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
+  enumeration type :: color
+    enumerator :: red, green, blue
+  end enumeration type
+  type(color) :: c
+  integer :: i
+
+  ! No implicit enumeration -> integer conversion (use INT()).
+  !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types INTEGER(4) and TYPE(color)
+  i = red
+
+  ! No implicit integer -> enumeration conversion (use the constructor).
+  !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types TYPE(color) and INTEGER(4)
+  c = 1
+
+  ! Enumeration values are not numeric.
+  !ERROR: Operands of + must be numeric; have TYPE(color) and INTEGER(4)
+  i = red + 1
+  !ERROR: Operands of + must be numeric; have TYPE(color) and TYPE(color)
+  c = red + green
+end subroutine
