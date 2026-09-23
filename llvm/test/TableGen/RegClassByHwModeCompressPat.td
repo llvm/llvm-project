@@ -274,7 +274,9 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT: }
 
 // CHECK:      static bool isCompressibleInst(const MachineInstr &MI,
-// CHECK-NEXT:                                const MyTargetSubtarget &STI) {
+// CHECK-NEXT:                                const MyTargetSubtarget &STI,
+// CHECK-NEXT:                                unsigned *Size = nullptr) {
+// CHECK-NEXT:   if (Size) *Size = 0;
 // CHECK-NEXT:   {{\[\[}}maybe_unused]] unsigned HwModeId = STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);
 // CHECK-NEXT:   switch (MI.getOpcode()) {
 // CHECK-NEXT:   default: return false;
@@ -286,6 +288,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // ptr_mov.small $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
+// CHECK-NEXT:       if (Size) *Size = 1;
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
@@ -295,6 +298,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // ptr_mov.tied $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
+// CHECK-NEXT:       if (Size) *Size = 1;
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
@@ -303,6 +307,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:         getMyTargetMCRegisterClass(MyTargetRegClassByHwModeTables[HwModeId][MyTarget::PtrRC]).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // ptr_mov.zero $dst
 // CHECK-NEXT:       // Operand: dst
+// CHECK-NEXT:       if (Size) *Size = 1;
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     break;
@@ -315,6 +320,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // x_mov.small $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
+// CHECK-NEXT:       if (Size) *Size = 1;
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() && MI.getOperand(0).isReg() &&
@@ -324,6 +330,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:       // x_mov.tied $dst, $src
 // CHECK-NEXT:       // Operand: dst
 // CHECK-NEXT:       // Operand: src
+// CHECK-NEXT:       if (Size) *Size = 1;
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     if (MI.getOperand(1).isReg() &&
@@ -332,6 +339,7 @@ def : CompressPat<(PTR_MOV PtrRC:$dst, PtrRC:$src),
 // CHECK-NEXT:         getMyTargetMCRegisterClass(MyTarget::XRegsRegClassID).contains(MI.getOperand(0).getReg())) {
 // CHECK-NEXT:       // x_mov.zero $dst
 // CHECK-NEXT:       // Operand: dst
+// CHECK-NEXT:       if (Size) *Size = 1;
 // CHECK-NEXT:       return true;
 // CHECK-NEXT:     } // if
 // CHECK-NEXT:     break;

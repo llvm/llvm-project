@@ -2014,8 +2014,10 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInstBundleSize(MI);
 
   if (MI.getParent() && MI.getParent()->getParent()) {
-    if (isCompressibleInst(MI, STI))
-      return 2;
+    unsigned Size = 0;
+    if (isCompressibleInst(MI, STI, &Size)) {
+      return Size;
+    }
   }
 
   switch (Opcode) {

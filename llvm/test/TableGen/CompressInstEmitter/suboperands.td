@@ -233,6 +233,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    // small $dst, $addr
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: addr
+// CHECK-NEXT:    if (Size) *Size = 2;
 // CHECK-NEXT:    return true;
 // CHECK-NEXT: } // if
 // CHECK:  case Arch::BigInst2: {
@@ -246,6 +247,7 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: src
 // CHECK-NEXT:    // Operand: imm
+// CHECK-NEXT:    if (Size) *Size = 2;
 // CHECK-NEXT:    return true;
 // CHECK-NEXT: } // if
 // CHECK:  case Arch::BigInst3: {
@@ -258,5 +260,6 @@ def : CompressPat<(BigInst3 RegsC:$dst, RegsC:$src, simm6:$imm),
 // CHECK-NEXT:    // small $dst, $addr
 // CHECK-NEXT:    // Operand: dst
 // CHECK-NEXT:    // Operand: addr
+// CHECK-NEXT:    if (Size) *Size = 2;
 // CHECK-NEXT:    return true;
 // CHECK-NEXT: } // if
