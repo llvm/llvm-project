@@ -440,7 +440,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
 void Driver::updateFinalPhase(Compilation &C,
                               llvm::ArrayRef<InputTy> Inputs) const {
   Arg *FinalPhaseArg = nullptr;
-  phases ::ID FinalPhase = getFinalPhase(C.getArgs(), Inputs, &FinalPhaseArg);
+  phases::ID FinalPhase = getFinalPhase(C.getArgs(), Inputs, &FinalPhaseArg);
   C.setFinalPhase(FinalPhase, FinalPhaseArg);
 }
 
