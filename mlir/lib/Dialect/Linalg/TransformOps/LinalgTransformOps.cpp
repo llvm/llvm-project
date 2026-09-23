@@ -271,6 +271,11 @@ void transform::ApplySwapExtractSliceWithFillPatternsOp::populatePatterns(
   linalg::populateSwapExtractSliceWithFillPatterns(patterns);
 }
 
+void transform::ApplyEraseUnusedOperandsAndResultsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateEraseUnusedOperandsAndResultsPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
