@@ -573,6 +573,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_types_struct___pthread_cleanup_frame",
+    hdrs = ["include/llvm-libc-types/struct___pthread_cleanup_frame.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_macros_fcntl_macros",
     hdrs = ["include/llvm-libc-macros/linux/fcntl-macros.h"],
 )
@@ -1439,6 +1444,16 @@ libc_support_library(
     name = "types_struct_cmsghdr",
     hdrs = ["hdr/types/struct_cmsghdr.h"],
     deps = [":llvm_libc_types_struct_cmsghdr"],
+)
+
+libc_support_library(
+    name = "types_struct___pthread_cleanup_frame",
+    hdrs = ["hdr/types/struct___pthread_cleanup_frame.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [":llvm_libc_types_struct___pthread_cleanup_frame"],
 )
 
 libc_support_library(
@@ -4221,6 +4236,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread_attributes",
     hdrs = ["src/__support/threads/thread_attributes.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_cpp_atomic",
@@ -4229,6 +4248,7 @@ libc_support_library(
         ":__support_macros_properties_architectures",
         ":hdr_stdint_proxy",
         ":types_size_t",
+        ":types_struct___pthread_cleanup_frame",
     ],
 )
 
@@ -4372,6 +4392,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_tcb",
     hdrs = ["src/__support/threads/tcb.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     textual_hdrs = select({
         "@platforms//os:linux": [
             "src/__support/threads/linux/tcb.h",
@@ -4395,6 +4419,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread_headers",
     hdrs = ["src/__support/threads/thread.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_cpp_atomic",
         ":__support_cpp_optional",
@@ -4414,6 +4442,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_thread",
     srcs = ["src/__support/threads/thread.cpp"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_cpp_array",
         ":__support_cpp_mutex",
@@ -4434,7 +4466,7 @@ libc_support_library(
     srcs = ["src/__support/threads/linux/thread.cpp"],
     copt_sets = ["threading"],
     target_compatible_with = select({
-        "@platforms//os:linux": [],
+        ":full_build_linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
@@ -16679,6 +16711,10 @@ libc_function(
     name = "fork",
     srcs = ["src/unistd/linux/fork.cpp"],
     hdrs = ["src/unistd/fork.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_libc_errno",

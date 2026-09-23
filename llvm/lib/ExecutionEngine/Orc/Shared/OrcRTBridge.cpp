@@ -35,12 +35,5 @@ const MachOUnwindInfoRegistrarSymbolNames
             "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections")};
 
 } // end namespace rt
-namespace rt_alt {
-const SymbolNameSpec UnwindInfoManagerRegisterActionName =
-    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_register");
-const SymbolNameSpec UnwindInfoManagerDeregisterActionName =
-    SymbolNameSpec::verbatim("orc_rt_alt_UnwindInfoManager_deregister");
-
-} // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm
