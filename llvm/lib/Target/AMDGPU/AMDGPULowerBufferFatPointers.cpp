@@ -53,8 +53,9 @@
 // loads, stores, and allocas and, if the loaded or stored type contains `ptr
 // addrspace(7)`, rewrites it to use i160, `ptrtoint`ing before stores and
 // `inttoptr`ing after loads. Vectors of pointers work the same way. Since i160
-// and p7 differ in size and alignment, aggregates are split into one access per
-// leaf, and allocas and GEPs use byte offsets and sizes from the original type.
+// is less aligned than p7 (128 vs. 256 bits), aggregates containing them are
+// laid out differently, so aggregates are split into one access per leaf, and
+// allocas and GEPs use byte offsets and sizes from the original type.
 //
 // Such a transformation allows the later phases of the pass to not need
 // to handle buffer fat pointers moving to and from memory, where we load
@@ -540,8 +541,9 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitAllocaInst(AllocaInst &I) {
   Type *NewTy = TypeMap->remapType(Ty);
   if (Ty == NewTy)
     return false;
-  // i160 is smaller than ptr addrspace(7) (24 bytes vs. 32); fall back to a
-  // byte array of the original size so sizes computed from Ty stay in bounds.
+  // i160 is less aligned than ptr addrspace(7) (128 vs. 256 bits), so remapped
+  // aggregates can be smaller than the original; fall back to a byte array of
+  // the original size so sizes computed from Ty stay in bounds.
   TypeSize AllocSize = DL.getTypeAllocSize(Ty);
   if (AllocSize.isFixed() && DL.getTypeAllocSize(NewTy) != AllocSize)
     NewTy = ArrayType::get(IRB.getInt8Ty(), AllocSize.getFixedValue());

@@ -90,7 +90,7 @@ define amdgpu_kernel void @sgpr_operand_reversed(ptr addrspace(1) noalias %out, 
 define amdgpu_kernel void @test_sreg(ptr addrspace(1) noalias %out, i128 %a, i128 %b) {
 ; GCN-LABEL: test_sreg:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0xb
+; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0xd
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1

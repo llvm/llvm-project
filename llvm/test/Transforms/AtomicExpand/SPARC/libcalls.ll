@@ -67,10 +67,10 @@ define i16 @test_add_i16(ptr %arg, i16 %val) {
 ;; 32-bit i386.
 
 ; CHECK-LABEL: @test_load_i128(
-; CHECK:  %1 = alloca i128, align 8
+; CHECK:  %1 = alloca i128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
 ; CHECK:  call void @__atomic_load(i32 16, ptr %arg, ptr %1, i32 5)
-; CHECK:  %2 = load i128, ptr %1, align 8
+; CHECK:  %2 = load i128, ptr %1, align 16
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  ret i128 %2
 define i128 @test_load_i128(ptr %arg) {
@@ -79,9 +79,9 @@ define i128 @test_load_i128(ptr %arg) {
 }
 
 ; CHECK-LABEL: @test_store_i128(
-; CHECK:  %1 = alloca i128, align 8
+; CHECK:  %1 = alloca i128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
-; CHECK:  store i128 %val, ptr %1, align 8
+; CHECK:  store i128 %val, ptr %1, align 16
 ; CHECK:  call void @__atomic_store(i32 16, ptr %arg, ptr %1, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  ret void
@@ -91,14 +91,14 @@ define void @test_store_i128(ptr %arg, i128 %val) {
 }
 
 ; CHECK-LABEL: @test_exchange_i128(
-; CHECK:  %1 = alloca i128, align 8
+; CHECK:  %1 = alloca i128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
-; CHECK:  store i128 %val, ptr %1, align 8
-; CHECK:  %2 = alloca i128, align 8
+; CHECK:  store i128 %val, ptr %1, align 16
+; CHECK:  %2 = alloca i128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %2)
 ; CHECK:  call void @__atomic_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
-; CHECK:  %3 = load i128, ptr %2, align 8
+; CHECK:  %3 = load i128, ptr %2, align 16
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %2)
 ; CHECK:  ret i128 %3
 define i128 @test_exchange_i128(ptr %arg, i128 %val) {
@@ -107,15 +107,15 @@ define i128 @test_exchange_i128(ptr %arg, i128 %val) {
 }
 
 ; CHECK-LABEL: @test_cmpxchg_i128(
-; CHECK:  %1 = alloca i128, align 8
+; CHECK:  %1 = alloca i128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
-; CHECK:  store i128 %old, ptr %1, align 8
-; CHECK:  %2 = alloca i128, align 8
+; CHECK:  store i128 %old, ptr %1, align 16
+; CHECK:  %2 = alloca i128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %2)
-; CHECK:  store i128 %new, ptr %2, align 8
+; CHECK:  store i128 %new, ptr %2, align 16
 ; CHECK:  %3 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5, i32 0)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %2)
-; CHECK:  %4 = load i128, ptr %1, align 8
+; CHECK:  %4 = load i128, ptr %1, align 16
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  %5 = insertvalue { i128, i1 } poison, i128 %4, 0
 ; CHECK:  %6 = insertvalue { i128, i1 } %5, i1 %3, 1
@@ -132,24 +132,24 @@ define i128 @test_cmpxchg_i128(ptr %arg, i128 %old, i128 %new) {
 ; loop, which then itself expands into a libcall.
 
 ; CHECK-LABEL: @test_add_i128(
-; CHECK:  %1 = alloca i128, align 8
-; CHECK:  %2 = alloca i128, align 8
-; CHECK:  %3 = alloca i128, align 8
+; CHECK:  %1 = alloca i128, align 16
+; CHECK:  %2 = alloca i128, align 16
+; CHECK:  %3 = alloca i128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %3)
 ; CHECK:  call void @__atomic_load(i32 16, ptr %arg, ptr %3, i32 0)
-; CHECK:  %4 = load i128, ptr %3, align 8
+; CHECK:  %4 = load i128, ptr %3, align 16
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %3)
 ; CHECK:  br label %atomicrmw.start
 ; CHECK:atomicrmw.start:
 ; CHECK:  %loaded = phi i128 [ %4, %0 ], [ %newloaded, %atomicrmw.start ]
 ; CHECK:  %new = add i128 %loaded, %val
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
-; CHECK:  store i128 %loaded, ptr %1, align 8
+; CHECK:  store i128 %loaded, ptr %1, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %2)
-; CHECK:  store i128 %new, ptr %2, align 8
+; CHECK:  store i128 %new, ptr %2, align 16
 ; CHECK:  %5 = call zeroext i1 @__atomic_compare_exchange(i32 16, ptr %arg, ptr %1, ptr %2, i32 5, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %2)
-; CHECK:  %6 = load i128, ptr %1, align 8
+; CHECK:  %6 = load i128, ptr %1, align 16
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  %7 = insertvalue { i128, i1 } poison, i128 %6, 0
 ; CHECK:  %8 = insertvalue { i128, i1 } %7, i1 %5, 1
@@ -205,9 +205,9 @@ define ptr @test_cmpxchg_ptr(ptr %arg, ptr %old, ptr %new) {
 ;; ...and for a non-integer type of large size too.
 
 ; CHECK-LABEL: @test_store_fp128
-; CHECK:  %1 = alloca fp128, align 8
+; CHECK:  %1 = alloca fp128, align 16
 ; CHECK:  call void @llvm.lifetime.start.p0(ptr %1)
-; CHECK:  store fp128 %val, ptr %1, align 8
+; CHECK:  store fp128 %val, ptr %1, align 16
 ; CHECK:  call void @__atomic_store(i32 16, ptr %arg, ptr %1, i32 5)
 ; CHECK:  call void @llvm.lifetime.end.p0(ptr %1)
 ; CHECK:  ret void

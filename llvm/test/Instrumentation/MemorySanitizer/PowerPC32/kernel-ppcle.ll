@@ -229,12 +229,12 @@ define void @Store16(ptr %p, i128 %x) sanitize_memory {
 ; CHECK-NEXT:    [[TMP15:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_n(ptr [[P]], i32 16)
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { ptr, ptr } [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { ptr, ptr } [[TMP15]], 1
-; CHECK-NEXT:    store i128 [[TMP9]], ptr [[TMP16]], align 8
+; CHECK-NEXT:    store i128 [[TMP9]], ptr [[TMP16]], align 16
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB11:.*]], label %[[BB16:.*]], !prof [[PROF1]]
 ; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP12]])
-; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP17]], align 8
+; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP17]], align 16
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP17]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP17]], i32 2
@@ -243,7 +243,7 @@ define void @Store16(ptr %p, i128 %x) sanitize_memory {
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
-; CHECK-NEXT:    store i128 [[X]], ptr [[P]], align 8
+; CHECK-NEXT:    store i128 [[X]], ptr [[P]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -436,12 +436,12 @@ define i128 @Load16(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP3]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label %[[BB5]]
 ; CHECK:       [[BB5]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = load i128, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = load i128, ptr [[P]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_n(ptr [[P]], i32 16)
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, ptr } [[TMP10]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, ptr } [[TMP10]], 1
-; CHECK-NEXT:    [[_MSLD:%.*]] = load i128, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[_MSLD:%.*]] = load i128, ptr [[TMP11]], align 16
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 16
 ; CHECK-NEXT:    store i128 [[_MSLD]], ptr [[RETVAL_SHADOW]], align 8
 ; CHECK-NEXT:    store i32 [[TMP13]], ptr [[RETVAL_ORIGIN]], align 4
 ; CHECK-NEXT:    ret i128 [[TMP9]]

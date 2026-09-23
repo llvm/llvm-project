@@ -171,7 +171,7 @@ define void @f5_as2(i32 %x) nounwind {;
 
 define void @f6(i64 %x) nounwind {
 ; CHECK-LABEL: @f6(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -183,7 +183,7 @@ define void @f6(i64 %x) nounwind {
 define void @f7(i64 %x) nounwind {
 ; CHECK-LABEL: @f7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[X:%.*]], 16
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]], !nosanitize [[META0]]
@@ -203,8 +203,8 @@ define void @f7(i64 %x) nounwind {
 
 define void @f8() nounwind {
 ; CHECK-LABEL: @f8(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 undef, ptr [[TMP1]], ptr [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i128, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
@@ -218,7 +218,7 @@ define void @f8() nounwind {
 
 define void @f9(ptr %arg) nounwind {
 ; CHECK-LABEL: @f9(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca i128, align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 undef, ptr [[ARG:%.*]], ptr [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i128, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    ret void
@@ -232,9 +232,9 @@ define void @f9(ptr %arg) nounwind {
 define void @f10(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @f10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[X:%.*]], 16
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[Y:%.*]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca i128, i64 [[Y]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = alloca i128, i64 [[Y]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 undef, i64 [[TMP1]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 undef, ptr [[TMP2]], ptr [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP5]], 0, !nosanitize [[META0]]
@@ -532,14 +532,14 @@ define void @scalable_alloca2(i64 %y) nounwind {
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[Y:%.*]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 0, [[DOTIDX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <vscale x 4 x i64>, ptr [[TMP4]], i64 [[Y]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64(), !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 32, !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP2]], [[TMP7]], !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP2]], [[TMP7]], !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], [[TMP10]], !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]], !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i64 [[TMP7]], 0, !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[TMP14]], !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64(), !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP15]], 32, !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP2]], [[TMP7]], !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i64 [[TMP2]], [[TMP7]], !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP10]], [[TMP9]], !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]], !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i64 [[TMP7]], 0, !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[TMP13]], !nosanitize [[META0]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[TRAP:%.*]], label [[TMP17:%.*]]
 ; CHECK:       16:
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <vscale x 4 x i64>, ptr [[TMP8]], align 4

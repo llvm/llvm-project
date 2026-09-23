@@ -16,39 +16,41 @@ define void @foo1(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-NEXT:    addi 7, 1, 16
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwz 8, 0(4)
 ; CHECK-NEXT:    lwz 9, 4(4)
+; CHECK-NEXT:    lwz 8, 0(4)
 ; CHECK-NEXT:    lwz 10, 8(4)
 ; CHECK-NEXT:    lwz 11, 12(4)
 ; CHECK-NEXT:    lwz 12, 12(5)
+; CHECK-NEXT:    stw 9, 20(1)
+; CHECK-NEXT:    mr 9, 7
 ; CHECK-NEXT:    stw 6, 44(1)
+; CHECK-NEXT:    rlwimi 9, 12, 29, 28, 29
 ; CHECK-NEXT:    stw 6, 40(1)
 ; CHECK-NEXT:    stw 6, 36(1)
 ; CHECK-NEXT:    stw 6, 32(1)
 ; CHECK-NEXT:    stw 11, 28(1)
 ; CHECK-NEXT:    stw 10, 24(1)
 ; CHECK-NEXT:    clrlwi 10, 12, 27
-; CHECK-NEXT:    stw 9, 20(1)
 ; CHECK-NEXT:    stw 8, 16(1)
-; CHECK-NEXT:    rlwinm 8, 12, 29, 28, 29
-; CHECK-NEXT:    lwzux 9, 8, 7
-; CHECK-NEXT:    subfic 12, 10, 32
-; CHECK-NEXT:    lwz 11, 8(8)
-; CHECK-NEXT:    slw 9, 9, 10
-; CHECK-NEXT:    lwz 0, 4(8)
-; CHECK-NEXT:    lwz 8, 12(8)
-; CHECK-NEXT:    srw 30, 11, 12
-; CHECK-NEXT:    slw 29, 0, 10
-; CHECK-NEXT:    srw 0, 0, 12
-; CHECK-NEXT:    srw 12, 8, 12
-; CHECK-NEXT:    slw 11, 11, 10
+; CHECK-NEXT:    rlwinm 12, 12, 29, 28, 29
+; CHECK-NEXT:    lwz 8, 8(9)
+; CHECK-NEXT:    subfic 0, 10, 32
+; CHECK-NEXT:    lwz 11, 4(9)
+; CHECK-NEXT:    lwz 9, 12(9)
+; CHECK-NEXT:    srw 30, 8, 0
+; CHECK-NEXT:    lwzx 12, 7, 12
+; CHECK-NEXT:    slw 29, 11, 10
+; CHECK-NEXT:    srw 11, 11, 0
+; CHECK-NEXT:    srw 0, 9, 0
 ; CHECK-NEXT:    slw 8, 8, 10
-; CHECK-NEXT:    stw 8, 12(3)
-; CHECK-NEXT:    or 8, 11, 12
+; CHECK-NEXT:    slw 12, 12, 10
+; CHECK-NEXT:    or 8, 8, 0
 ; CHECK-NEXT:    stw 8, 8(3)
-; CHECK-NEXT:    or 8, 9, 0
+; CHECK-NEXT:    or 8, 12, 11
+; CHECK-NEXT:    slw 9, 9, 10
 ; CHECK-NEXT:    stw 8, 0(3)
 ; CHECK-NEXT:    or 8, 29, 30
+; CHECK-NEXT:    stw 9, 12(3)
 ; CHECK-NEXT:    stw 8, 4(3)
 ; CHECK-NEXT:    bdnz .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
@@ -77,11 +79,11 @@ for.end:                                          ; preds = %for.body
 define void @foo2(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-LABEL: foo2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    stwu 1, -48(1)
-; CHECK-NEXT:    stw 30, 40(1) # 4-byte Folded Spill
+; CHECK-NEXT:    stwu 1, -64(1)
+; CHECK-NEXT:    stw 30, 56(1) # 4-byte Folded Spill
 ; CHECK-NEXT:    li 6, 2048
 ; CHECK-NEXT:    mtctr 6
-; CHECK-NEXT:    addi 6, 1, 24
+; CHECK-NEXT:    addi 6, 1, 32
 ; CHECK-NEXT:  .LBB1_1: # %for.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwz 7, 0(4)
@@ -89,18 +91,18 @@ define void @foo2(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-NEXT:    lwz 11, 12(5)
 ; CHECK-NEXT:    lwz 9, 8(4)
 ; CHECK-NEXT:    lwz 10, 12(4)
-; CHECK-NEXT:    stw 8, 28(1)
+; CHECK-NEXT:    stw 8, 36(1)
 ; CHECK-NEXT:    rlwinm 8, 11, 29, 28, 29
-; CHECK-NEXT:    stw 7, 24(1)
+; CHECK-NEXT:    stw 7, 32(1)
 ; CHECK-NEXT:    srawi 7, 7, 31
-; CHECK-NEXT:    stw 10, 36(1)
+; CHECK-NEXT:    stw 10, 44(1)
 ; CHECK-NEXT:    clrlwi 10, 11, 27
-; CHECK-NEXT:    stw 9, 32(1)
+; CHECK-NEXT:    stw 9, 40(1)
 ; CHECK-NEXT:    subfic 12, 10, 32
+; CHECK-NEXT:    stw 7, 28(1)
+; CHECK-NEXT:    stw 7, 24(1)
 ; CHECK-NEXT:    stw 7, 20(1)
 ; CHECK-NEXT:    stw 7, 16(1)
-; CHECK-NEXT:    stw 7, 12(1)
-; CHECK-NEXT:    stw 7, 8(1)
 ; CHECK-NEXT:    sub 7, 6, 8
 ; CHECK-NEXT:    lwz 8, 4(7)
 ; CHECK-NEXT:    lwz 9, 0(7)
@@ -122,8 +124,8 @@ define void @foo2(ptr %a, ptr readonly %b, ptr readonly %c) #0 {
 ; CHECK-NEXT:    stw 7, 4(3)
 ; CHECK-NEXT:    bdnz .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
-; CHECK-NEXT:    lwz 30, 40(1) # 4-byte Folded Reload
-; CHECK-NEXT:    addi 1, 1, 48
+; CHECK-NEXT:    lwz 30, 56(1) # 4-byte Folded Reload
+; CHECK-NEXT:    addi 1, 1, 64
 ; CHECK-NEXT:    blr
 entry:
   br label %for.body

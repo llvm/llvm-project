@@ -43,7 +43,7 @@ define void @vector_copy(ptr %a, ptr %b) {
 define void @alloca(ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @alloca
 ; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [160 x i8], align 32, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [5 x i160], align 32, addrspace(5)
 ; CHECK-NEXT:    [[X:%.*]] = load i160, ptr [[A]], align 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[X]], 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128
@@ -260,8 +260,8 @@ define void @vector_alloca() {
   ret void
 }
 
-;; GEPs over p7 itself step by its 32-byte allocation size, not by the
-;; 24-byte allocation size of i160.
+;; GEPs over p7 itself are lowered to byte offsets using its 32-byte
+;; allocation size.
 define ptr addrspace(5) @gep_p7_stride(ptr addrspace(5) %p, i32 %i) {
 ; CHECK-LABEL: define ptr addrspace(5) @gep_p7_stride
 ; CHECK-SAME: (ptr addrspace(5) [[P:%.*]], i32 [[I:%.*]]) {

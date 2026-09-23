@@ -1740,19 +1740,19 @@ define i177 @lshr_out_of_range2(i177 %Y, ptr %A2, ptr %ptr) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=5032
 define void @ashr_out_of_range(ptr %A) {
 ; CHECK-LABEL: @ashr_out_of_range(
-; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i177, ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 -1, i64 -2
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr [24 x i8], ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[L7:%.*]] = load i177, ptr [[G11]], align 4
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr [32 x i8], ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[L7:%.*]] = load i177, ptr [[G11]], align 16
 ; CHECK-NEXT:    [[L7_FROZEN:%.*]] = freeze i177 [[L7]]
 ; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7_FROZEN]], 0
 ; CHECK-NEXT:    [[C17:%.*]] = and i1 [[TMP1]], [[C171]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C17]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr [24 x i8], ptr [[G11]], i64 [[TMP3]]
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr [32 x i8], ptr [[G11]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP4]], i177 0, i177 [[L7_FROZEN]]
-; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
+; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %L = load i177, ptr %A
@@ -1780,10 +1780,10 @@ define void @ashr_out_of_range_1(ptr %A) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i177 [[L_FROZEN]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [24 x i8], ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 -24
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [32 x i8], ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[G11:%.*]] = getelementptr i8, ptr [[TMP4]], i64 -32
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[G62:%.*]] = getelementptr [24 x i8], ptr [[G11]], i64 [[TMP5]]
+; CHECK-NEXT:    [[G62:%.*]] = getelementptr [32 x i8], ptr [[G11]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i177 [[L_FROZEN]], -1
 ; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP6]], i177 0, i177 [[L_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
