@@ -76,7 +76,7 @@ define {i1, i7} @call_custom_with_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
-  ; CHECK: [[R:%.*]] = call { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 } %a, [2 x i7] %b, i8 zeroext [[A01]], i8 zeroext [[B01]], ptr %labelreturn)
+  ; CHECK: [[R:%.*]] = call { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 } %a, [2 x i7] %b, i8 [[A01]], i8 [[B01]], ptr %labelreturn)
   ; CHECK: [[RE:%.*]] = load i8, ptr %labelreturn, align 1
   ; CHECK: [[RS0:%.*]] = insertvalue { i8, i8 } undef, i8 [[RE]], 0
   ; CHECK: [[RS1:%.*]] = insertvalue { i8, i8 } [[RS0]], i8 [[RE]], 1
@@ -97,7 +97,7 @@ define void @call_custom_without_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
-  ; CHECK: call void @__dfsw_custom_without_ret({ i32, i1 } %a, [2 x i7] %b, i8 zeroext [[A01]], i8 zeroext [[B01]])
+  ; CHECK: call void @__dfsw_custom_without_ret({ i32, i1 } %a, [2 x i7] %b, i8 [[A01]], i8 [[B01]])
 
   call void @custom_without_ret({i32, i1} %a, [2 x i7] %b)
   ret void
@@ -117,7 +117,7 @@ define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
   ; CHECK: store i8 [[B01]], ptr [[V0]], align 1
   ; CHECK: [[V:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
-  ; CHECK: call void ({ i32, i1 }, i8, ptr, ...) @__dfsw_custom_varg({ i32, i1 } %a, i8 zeroext [[A01]], ptr [[V]], [2 x i7] %b)
+  ; CHECK: call void ({ i32, i1 }, i8, ptr, ...) @__dfsw_custom_varg({ i32, i1 } %a, i8 [[A01]], ptr [[V]], [2 x i7] %b)
 
   call void ({i32, i1}, ...) @custom_varg({i32, i1} %a, [2 x i7] %b)
   ret void
@@ -134,7 +134,7 @@ define {i1, i7} @call_custom_cb({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
-  ; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb(ptr @cb.dfsan, { i32, i1 } %a, [2 x i7] %b, i8 zeroext 0, i8 zeroext [[A01]], i8 zeroext [[B01]], ptr %labelreturn)
+  ; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb(ptr @cb.dfsan, { i32, i1 } %a, [2 x i7] %b, i8 0, i8 [[A01]], i8 [[B01]], ptr %labelreturn)
   ; CHECK: [[RE:%.*]] = load i8, ptr %labelreturn, align 1
   ; CHECK: [[RS0:%.*]] = insertvalue { i8, i8 } undef, i8 [[RE]], 0
   ; CHECK: [[RS1:%.*]] = insertvalue { i8, i8 } [[RS0]], i8 [[RE]], 1
@@ -189,7 +189,7 @@ define ptr @ret_custom() {
 ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
 ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
 ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
-; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb(ptr %0, { i32, i1 } %1, [2 x i7] %2, i8 zeroext [[CB]], i8 zeroext [[A01]], i8 zeroext [[B01]], ptr %labelreturn)
+; CHECK: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb(ptr %0, { i32, i1 } %1, [2 x i7] %2, i8 [[CB]], i8 [[A01]], i8 [[B01]], ptr %labelreturn)
 ; CHECK: [[RE:%.*]] = load i8, ptr %labelreturn, align 1
 ; CHECK: [[RS0:%.*]] = insertvalue { i8, i8 } undef, i8 [[RE]], 0
 ; CHECK: [[RS1:%.*]] = insertvalue { i8, i8 } [[RS0]], i8 [[RE]], 1
@@ -206,7 +206,7 @@ define {i1, i7} @custom_with_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
-  ; CHECK: [[R:%.*]] = call { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 } %0, [2 x i7] %1, i8 zeroext [[A01]], i8 zeroext [[B01]], ptr %labelreturn)
+  ; CHECK: [[R:%.*]] = call { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 } %0, [2 x i7] %1, i8 [[A01]], i8 [[B01]], ptr %labelreturn)
   ; CHECK: [[RE:%.*]] = load i8, ptr %labelreturn, align 1
   ; CHECK: [[RS0:%.*]] = insertvalue { i8, i8 } undef, i8 [[RE]], 0
   ; CHECK: [[RS1:%.*]] = insertvalue { i8, i8 } [[RS0]], i8 [[RE]], 1
@@ -229,7 +229,7 @@ define void @custom_without_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
-  ; CHECK: call void @__dfsw_custom_without_ret({ i32, i1 } %0, [2 x i7] %1, i8 zeroext [[A01]], i8 zeroext [[B01]])
+  ; CHECK: call void @__dfsw_custom_without_ret({ i32, i1 } %0, [2 x i7] %1, i8 [[A01]], i8 [[B01]])
   ; CHECK: ret
   ret void
 }
@@ -241,8 +241,8 @@ define void @custom_varg({i32, i1} %a, ...) {
   ret void
 }
 
-; CHECK: declare { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext, ptr)
-; CHECK: declare void @__dfsw_custom_without_ret({ i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext)
-; CHECK: declare void @__dfsw_custom_varg({ i32, i1 }, i8 zeroext, ptr, ...)
+; CHECK: declare { i1, i7 } @__dfsw_custom_with_ret({ i32, i1 }, [2 x i7], i8, i8, ptr)
+; CHECK: declare void @__dfsw_custom_without_ret({ i32, i1 }, [2 x i7], i8, i8)
+; CHECK: declare void @__dfsw_custom_varg({ i32, i1 }, i8, ptr, ...)
 
-; CHECK: declare { i1, i7 } @__dfsw_custom_cb(ptr, { i32, i1 }, [2 x i7], i8 zeroext, i8 zeroext, i8 zeroext, ptr)
+; CHECK: declare { i1, i7 } @__dfsw_custom_cb(ptr, { i32, i1 }, [2 x i7], i8, i8, i8, ptr)
