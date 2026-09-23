@@ -12,6 +12,7 @@
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/bit.h"
 #include <algorithm>
@@ -694,7 +695,7 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
           ? MaxGeometryStreams
           : 1;
   SmallVector<SignatureRows, 1> Rows(StreamCount);
-  return packSignatureInOrder(Elements, seq<unsigned>(0, Elements.size()),
+  return packSignatureInOrder(Elements, llvm::seq<unsigned>(0, Elements.size()),
                               ShaderStage, IOTy, UseNative16BitTypes, Rows);
 }
 
