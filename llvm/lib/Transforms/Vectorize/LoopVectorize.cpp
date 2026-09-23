@@ -3090,7 +3090,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
     if (TC.getFixedValue() - MaxVFForTC <= 1 && MaxVFForTC / EffectiveIC > 1 &&
         MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
-        !Config.OptForSize) {
+        !Config.OptForSize &&
+        TheLoop->getExitingBlock() == TheLoop->getLoopLatch()) {
       unsigned NumOfInstructions = llvm::sum_of(
           llvm::map_range(TheLoop->blocks(),
                           [](BasicBlock *BB) { return BB->size(); }),
