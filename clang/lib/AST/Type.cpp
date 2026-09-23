@@ -310,6 +310,8 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
                     ? TypeDependence::DependentInstantiation
                     : TypeDependence::None)),
       ElementType(et) {
+  assert(!(tq & ~Qualifiers::CVRMask) &&
+         "only CVR index qualifiers are stored");
   ArrayTypeBits.IndexTypeQuals = tq;
   ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
