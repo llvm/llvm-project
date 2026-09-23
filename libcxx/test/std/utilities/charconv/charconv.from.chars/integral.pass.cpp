@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// FIXME: Enable this for all tests once possible
+// ADDITIONAL_COMPILE_FLAGS(ubsan): -fsanitize=unsigned-integer-overflow
+
 // <charconv>
 
 // constexpr from_chars_result from_chars(const char* first, const char* last,
@@ -128,6 +131,15 @@ struct test_signed
       assert(r.ptr == s);
       // the member ec is equal to errc::invalid_argument.
       assert(r.ec == std::errc::invalid_argument);
+    }
+
+    {
+      // Ensure "-0" does not trigger unsigned integer overflow.
+      char s[] = "-0";
+      r        = std::from_chars(s, s + sizeof(s), x);
+      assert(r.ec == std::errc{});
+      assert(r.ptr == s + 2);
+      assert(x == 0);
     }
   }
 };
