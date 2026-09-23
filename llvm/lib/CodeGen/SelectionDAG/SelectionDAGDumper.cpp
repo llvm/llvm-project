@@ -123,6 +123,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::PCMARKER:                   return "PCMarker";
   case ISD::READCYCLECOUNTER:           return "ReadCycleCounter";
   case ISD::READSTEADYCOUNTER:          return "ReadSteadyCounter";
+  case ISD::IS_DEBUGGING_ENABLED:       return "IsDebuggingEnabled";
   case ISD::SRCVALUE:                   return "SrcValue";
   case ISD::MDNODE_SDNODE:              return "MDNode";
   case ISD::EntryToken:                 return "EntryToken";
