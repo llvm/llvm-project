@@ -46,7 +46,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-#include <variant>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -1794,21 +1794,23 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
 // Exit values of an instruction's loop-variant operands, indexed by operand
 // number.
 using OperandExitValueList = SmallVector<std::pair<unsigned, SCEVUse>, 2>;
-using ExpansionValue = std::variant<SCEVUse, OperandExitValueList>;
 
 // Collect information about PHI nodes which can be transformed in
 // rewriteLoopExitValues.
 struct RewritePhi {
-  PHINode *PN;                  // For which PHI node is this replacement?
-  unsigned Ith;                 // For which incoming value?
-  ExpansionValue ValueToExpand; // The incoming value or its varying operands.
-  Instruction *ExpansionPoint;  // Where we'd like to expand that SCEV?
-  bool HighCost;                // Is this expansion a high-cost?
+  PHINode *PN;           // For which PHI node is this replacement?
+  unsigned Ith;          // For which incoming value?
+  SCEVUse ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
+  std::optional<OperandExitValueList> OperandExitValues;
+  Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
+  bool HighCost;               // Is this expansion a high-cost?
 
-  RewritePhi(PHINode *P, unsigned I, ExpansionValue Val,
-             Instruction *ExpansionPt, bool H)
-      : PN(P), Ith(I), ValueToExpand(std::move(Val)),
-        ExpansionPoint(ExpansionPt), HighCost(H) {}
+  RewritePhi(PHINode *P, unsigned I, SCEVUse Val, Instruction *ExpansionPt,
+             bool H,
+             std::optional<OperandExitValueList> OpExitValues = std::nullopt)
+      : PN(P), Ith(I), ExpansionSCEV(Val),
+        OperandExitValues(std::move(OpExitValues)), ExpansionPoint(ExpansionPt),
+        HighCost(H) {}
 };
 
 // Check whether it is possible to delete the loop after rewriting exit
@@ -2052,8 +2054,8 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         if (OperandExitValues.empty())
           RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
         else
-          RewritePhiSet.emplace_back(PN, i, std::move(OperandExitValues),
-                                     InsertPt, false);
+          RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, false,
+                                     std::move(OperandExitValues));
       }
     }
   }
@@ -2071,9 +2073,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     PHINode *PN = Phi.PN;
 
     // Only clone an instruction when doing so allows the loop to be deleted.
-    const auto *OperandExitValues =
-        std::get_if<OperandExitValueList>(&Phi.ValueToExpand);
-    if (OperandExitValues && !LoopCanBeDel)
+    if (Phi.OperandExitValues && !LoopCanBeDel)
       continue;
 
     // Only do the rewrite when the ExitValue can be expanded cheaply.
@@ -2085,13 +2085,13 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
     Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
     Value *ExitVal;
-    if (!OperandExitValues) {
-      ExitVal = Rewriter.expandCodeFor(std::get<SCEVUse>(Phi.ValueToExpand),
-                                       Phi.PN->getType(), Phi.ExpansionPoint);
+    if (!Phi.OperandExitValues) {
+      ExitVal = Rewriter.expandCodeFor(Phi.ExpansionSCEV, Phi.PN->getType(),
+                                       Phi.ExpansionPoint);
     } else {
       Instruction *Clone = Inst->clone();
       Clone->setName(Inst->getName() + ".exit");
-      for (auto [Idx, ExitSCEV] : *OperandExitValues)
+      for (auto [Idx, ExitSCEV] : *Phi.OperandExitValues)
         Clone->setOperand(Idx, Rewriter.expandCodeFor(
                                    ExitSCEV, Inst->getOperand(Idx)->getType(),
                                    Phi.ExpansionPoint));
