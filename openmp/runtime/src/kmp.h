@@ -1171,6 +1171,24 @@ __kmp_get_submemspace(omp_memspace_handle_t memspace, int num_resources,
 
 #if ENABLE_LIBOMPTARGET
 extern void __kmp_init_target_task();
+#if OMP_TASKGRAPH_EXPERIMENTAL
+// If the just-built taskgraph record contains target regions and the
+// libomptarget handoff ABI is available, stream its processed region tree to
+// libomptarget and store the resulting opaque graph handle in rec->tgt_graph.
+// No-op (leaves tgt_graph null) otherwise.  Defined in kmp_tasking.cpp.
+struct kmp_taskgraph_record;
+extern void
+__kmp_taskgraph_transmit_to_target(kmp_int32 gtid,
+                                   struct kmp_taskgraph_record *rec);
+// Accessors for a region's surviving mutexinoutset ("mutex set") membership,
+// exposed for the libomptarget handoff walk because the kmp_bitset layout is
+// private to kmp_taskdeps.cpp.  Return null / 0 when the region carries no set.
+struct kmp_taskgraph_region;
+extern const kmp_uint64 *
+__kmp_taskgraph_region_mutex_bits(struct kmp_taskgraph_region *region);
+extern kmp_int32
+__kmp_taskgraph_region_mutex_numbits(struct kmp_taskgraph_region *region);
+#endif
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -2859,6 +2877,9 @@ typedef struct kmp_taskgraph_record {
   struct kmp_taskgraph_exec_descr *exec_descrs = nullptr;
   kmp_size_t num_exec_descrs = 0;
   void *taskgraph_args = nullptr;
+  // Opaque libomptarget graph handle, set when a libomptarget offload plugin
+  // has claimed the graph for execution for itself.
+  void *tgt_graph = nullptr;
   // We need a taskgroup structure to keep track of recorded tasks.  This is
   // set to TRUE if the user requested "nogroup" on the taskgraph directive
   // (then we can avoid blocking at the end of the taskgraph region on replay,

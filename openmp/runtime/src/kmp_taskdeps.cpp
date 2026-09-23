@@ -414,6 +414,15 @@ static void __kmp_bitset_free(kmp_info_t *thread, kmp_bitset_t *bitset) {
   __kmp_fast_free(thread, bitset);
 }
 
+const kmp_uint64 *
+__kmp_taskgraph_region_mutex_bits(kmp_taskgraph_region_t *region) {
+  return region->mutexset ? region->mutexset->bits : nullptr;
+}
+
+kmp_int32 __kmp_taskgraph_region_mutex_numbits(kmp_taskgraph_region_t *region) {
+  return region->mutexset ? (kmp_int32)region->mutexset->bitsize : 0;
+}
+
 static void __kmp_bitset_set(kmp_bitset_t *bitset, kmp_size_t bitnum) {
   kmp_size_t chunk = bitnum / (8 * sizeof(kmp_uint64));
   if (bitnum < bitset->bitsize)
@@ -3317,6 +3326,14 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
 //__kmp_dump_taskgraph_regions(stderr, root_region);
 //__kmp_dump_raw_taskgraph_regions(stderr, thread, taskgraph,
 //                                 &initial_regions[0], numregions);
+#endif
+
+#if ENABLE_LIBOMPTARGET
+  // If this graph contains any target regions, offer the processed region tree
+  // to libomptarget before publishing it READY.  If the graph is successfully
+  // claimed by the current libomptarget plugin, the replay path will then call
+  // back to libomptarget/the plugin to handle execution of the graph.
+  __kmp_taskgraph_transmit_to_target(gtid, taskgraph);
 #endif
 
   KMP_ATOMIC_ST_REL(&taskgraph->status, KMP_TDG_READY);
