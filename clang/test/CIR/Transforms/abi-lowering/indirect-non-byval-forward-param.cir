@@ -393,3 +393,658 @@ module attributes {
   // CHECK:        cir.call @takes_two_expanded(%[[V0]], %[[V1]]) :
 
 }
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The parameter is handed on directly, with no load of its slot, which is
+  // what cir-simplify leaves at -O1 and above for a slot marked const.
+  cir.func @forwards_unloaded_param(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_unloaded_param(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The same with the callee declared first, so the call is reached before
+  // the caller's own definition is rewritten, and over a slot aligned for a
+  // local copy rather than for the parameter.
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  cir.func @forwards_unloaded_param_early_call(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(4) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_unloaded_param_early_call(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Two = !cir.struct<"Two" {data !s64i, data !s64i}>
+
+#non_byval_two = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#expand_two = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The unloaded parameter feeding an Expand callee.
+  cir.func private @takes_two_expand(%arg0: !rec_Two)
+      attributes { test_classify = #expand_two }
+
+  cir.func @unloaded_param_to_expand(%arg0: !rec_Two)
+      attributes { test_classify = #non_byval_two } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Two>
+    cir.store %arg0, %spill : !rec_Two, !cir.ptr<!rec_Two>
+    cir.call @takes_two_expand(%arg0) : (!rec_Two) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_to_expand(%[[PTR:.*]]: !cir.ptr<!rec_Two>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK:        %[[F0:.*]] = cir.get_member %[[PTR]][0]
+  // CHECK:        %[[V0:.*]] = cir.load %[[F0]]
+  // CHECK:        %[[F1:.*]] = cir.get_member %[[PTR]][1]
+  // CHECK:        %[[V1:.*]] = cir.load %[[F1]]
+  // CHECK:        cir.call @takes_two_expand(%[[V0]], %[[V1]]) :
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A byval callee gets its own copy, read out of the caller's storage.
+  cir.func private @takes_big_byval(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg }
+
+  cir.func @unloaded_param_to_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_to_byval(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NOT:    cir.load
+  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Two = !cir.struct<"Two" {data !s64i, data !s64i}>
+
+#non_byval_two = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#coerced_two = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !s64i } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A Direct argument with a coerced type reads the record into a register,
+  // out of the caller's storage.
+  cir.func private @takes_two_coerced(%arg0: !rec_Two)
+      attributes { test_classify = #coerced_two }
+
+  cir.func @unloaded_param_to_coerced_direct(%arg0: !rec_Two)
+      attributes { test_classify = #non_byval_two } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Two>
+    cir.store %arg0, %spill : !rec_Two, !cir.ptr<!rec_Two>
+    cir.call @takes_two_coerced(%arg0) : (!rec_Two) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_to_coerced_direct(%[[PTR:.*]]: !cir.ptr<!rec_Two>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_Two>
+  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Two>, !rec_Two
+  // CHECK:        cir.store %[[VAL]], %[[SLOT]] : !rec_Two, !cir.ptr<!rec_Two>
+  // CHECK:        %[[AS:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Two> -> !cir.ptr<!s64i>
+  // CHECK:        %[[COERCED:.*]] = cir.load %[[AS]] : !cir.ptr<!s64i>, !s64i
+  // CHECK:        cir.call @takes_two_coerced(%[[COERCED]]) : (!s64i) -> ()
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Two arguments taken from one parameter, one forwarded and one copied, so
+  // a second read of the slot would show up as a second load.
+  cir.func @unloaded_param_to_two_calls(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_to_two_calls(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  cir.func private @takes_big_byval(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The argument is in a later block, which the spill still dominates.
+  cir.func @unloaded_param_read_in_successor(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.br ^bb1
+  ^bb1:
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_read_in_successor(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.br ^bb1
+  // CHECK:      ^bb1:
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The body overwrites the slot before the argument is taken, so the copy the
+  // callee gets holds the parameter only if the read happens at the spill.
+  cir.func @unloaded_param_read_before_overwrite(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_read_before_overwrite(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        %[[ZERO:.*]] = cir.const #cir.zero : !rec_Big
+  // CHECK:        cir.store %[[ZERO]], %[[PTR]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
+
+  cir.func private @takes_big_byval(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#sret_and_non_byval = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // An sret return prepends a block argument, so the parameter is not at the
+  // index its classification sits at once the signature is rewritten.
+  cir.func @sret_with_unloaded_param(%arg0: !rec_Big) -> !rec_Big
+      attributes { test_classify = #sret_and_non_byval } {
+    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    %r = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @sret_with_unloaded_param
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     %[[PTR:[^:]*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca "arg0"
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Two = !cir.struct<"Two" {data !s64i, data !s64i}>
+
+#expand_then_non_byval = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" },
+             { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // An Expand parameter ahead of it becomes one block argument per field, so
+  // again the parameter moves off its classification's index.
+  cir.func @expand_ahead_of_unloaded_param(%arg0: !rec_Two, %arg1: !rec_Big)
+      attributes { test_classify = #expand_then_non_byval } {
+    %s0 = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Two>
+    %s1 = cir.alloca "arg1" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %s0 : !rec_Two, !cir.ptr<!rec_Two>
+    cir.store %arg1, %s1 : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_non_byval(%arg1) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @expand_ahead_of_unloaded_param(%{{[^:]*}}: !s64i,
+  // CHECK-SAME:     %{{[^:]*}}: !s64i,
+  // CHECK-SAME:     %[[PTR:[^:]*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca "arg1"
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The slot is aligned above what the parameter promises, so the read of it
+  // may only claim the promise.  A byval callee keeps the read alive to check.
+  cir.func @unloaded_param_over_overaligned_slot(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(16) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_over_overaligned_slot(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        cir.store %[[VAL]], %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
+
+  cir.func private @takes_big_byval(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A parameter with no uses at all, so there is no spill to prepare and
+  // nothing to read back.  The signature still becomes the incoming pointer.
+  cir.func @unused_non_byval_param(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unused_non_byval_param(%{{.*}}: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.return
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The body writes the slot but nothing takes the parameter as an argument,
+  // so there is nothing to read it back for.
+  cir.func @spilled_param_no_call_arg(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(4) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @spilled_param_no_call_arg(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.load
+  // CHECK:        %[[ZERO:.*]] = cir.const #cir.zero : !rec_Big
+  // CHECK:        cir.store %[[ZERO]], %[[PTR]] : !rec_Big, !cir.ptr<!rec_Big>
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The parameter has no spill of its own, so it already names the caller's
+  // storage and is handed on as it stands.
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  cir.func @forwards_unspilled_param(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_unspilled_param(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The same parameter handed to a callee that wants its own copy, which is
+  // read out of the caller's storage through the incoming pointer.
+  cir.func private @takes_big_byval(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg }
+
+  cir.func @unspilled_param_to_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unspilled_param_to_byval(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-NOT:    cir.alloca
+  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.call @takes_big_byval(%[[COPY]]) :
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The argument sits inside a nested region, which is where a full-expression
+  // scope puts it.  The read stays at the spill, outside the region.
+  cir.func @unloaded_param_read_in_scope(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg } {
+    %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    cir.scope {
+      cir.call @takes_big_byval(%arg0) : (!rec_Big) -> ()
+    }
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @unloaded_param_read_in_scope(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK:        %[[VAL:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        cir.scope {
+  // CHECK:          %[[COPY:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:          cir.store %[[VAL]], %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:          cir.call @takes_big_byval(%[[COPY]]) :
+
+  cir.func private @takes_big_byval(%arg0: !rec_Big)
+      attributes { test_classify = #byval_arg }
+
+}

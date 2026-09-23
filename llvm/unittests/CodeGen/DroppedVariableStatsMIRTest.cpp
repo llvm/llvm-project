@@ -55,7 +55,7 @@ std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,
   if (!Mod)
     return nullptr;
 
-  Mod->setDataLayout(TM.createDataLayout());
+  Mod->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
   if (MIR->parseMachineFunctions(*Mod, MMI)) {
     M.reset();

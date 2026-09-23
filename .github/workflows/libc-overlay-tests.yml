@@ -128,7 +128,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:b9c8ea74685ea46c86594428c41a1ba95bc6d33b28183c0ddac64414344950fd'
+      image: 'ghcr.io/llvm/libc-ubuntu-26.04:latest@sha256:fffa8d515b48be0367b0bd09ef8cf64c622367e3b0e3426e4c4f12c8fa667063'
       # We need to enable privileged containers so that certain libc tests
       # have the necessary permissions (like SYS_TIME). There are no security
       # implications as we are already running in an isolated VM.
@@ -166,7 +166,7 @@ jobs:
           mkdir build
           cat << 'EOF' > /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
           #!/bin/bash
-          qemu-${{ matrix.arch }}-static -L /usr/${{ matrix.target_triple }} "$@"
+          qemu-${{ matrix.arch }} -L /usr/${{ matrix.target_triple }} "$@"
           EOF
           chmod +x /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 

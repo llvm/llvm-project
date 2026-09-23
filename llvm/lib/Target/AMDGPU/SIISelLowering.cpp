@@ -7334,13 +7334,19 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       NeedClampOperand = true;
     }
 
+    bool VCCDead = MI.getOperand(3).isDead();
+
     auto I = BuildMI(*BB, MI, DL, TII->get(Opc), MI.getOperand(0).getReg());
-    if (TII->isVOP3(*I)) {
-      I.addReg(TRI->getVCC(), RegState::Define);
-    }
+    bool IsVOP3 = TII->isVOP3(*I);
+    if (IsVOP3)
+      I.addReg(TRI->getVCC(), RegState::Define | getDeadRegState(VCCDead));
+
     I.add(MI.getOperand(1)).add(MI.getOperand(2));
     if (NeedClampOperand)
       I.addImm(0); // clamp bit for e64 encoding
+
+    if (!IsVOP3 && VCCDead)
+      I.setOperandDead(3);
 
     TII->legalizeOperands(*I);
 
@@ -11144,6 +11150,12 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
     return SDValue();
 
   EVT DstVT = Op.getValueType();
+  // The custom action for a v2i8 source also reaches half conversions on
+  // targets which only have FP8-to-f32 instructions.
+  if (DstVT.getScalarType() == MVT::f16 &&
+      !Subtarget->hasFP8F16ConversionInsts())
+    return SDValue();
+
   if (IsE5M3) {
     if (DstVT.getScalarType() != MVT::f32)
       return SDValue();
