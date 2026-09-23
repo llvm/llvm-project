@@ -73,6 +73,7 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
 
   if (const auto *VT = Ty->getAs<VectorType>()) {
     uint64_t Size = getContext().getTypeSize(Ty);
+    // Return float vectors and larger integer vectors indirectly.
     if (VT->getElementType()->isRealFloatingType() || Size > 64)
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
