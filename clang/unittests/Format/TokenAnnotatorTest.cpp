@@ -1949,6 +1949,20 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
   RequiresTokenCount = 4;
   PrefixTokenCount = 5;
   TestRequires(__LINE__);
+
+  BaseCode = "template<typename T>\n"
+             "template<typename U>\n"
+             "  requires Bar<U>\n"
+             "void S<T>::f(U) {}";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires Foo<T> && Baz<T>\n"
+                    "template<typename U>\n"
+                    "  requires Bar<U>\n"
+                    "void S<T>::f(U) {}";
+  BaseTokenCount = 28;
+  RequiresTokenCount = 10;
+  PrefixTokenCount = 5;
+  TestRequires(__LINE__);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
