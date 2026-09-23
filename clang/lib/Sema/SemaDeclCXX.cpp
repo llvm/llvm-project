@@ -17504,6 +17504,13 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
     Invalid = true;
   }
 
+  // reject trowing of pointers with non-default address space cause runtimes
+  // dosn't have support for cross-address-space conversions yet;
+  if (!Invalid && Mode == 1 && BaseType.getAddressSpace() != LangAS::Default) {
+    Diag(Loc, diag::err_catch_address_space_qualified_ptr) << ExDeclType;
+    Invalid = true;
+  }
+
   if (!Invalid && Mode != 1 && BaseType->isSizelessType()) {
     Diag(Loc, diag::err_catch_sizeless) << (Mode == 2 ? 1 : 0) << BaseType;
     Invalid = true;

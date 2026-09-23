@@ -8907,7 +8907,10 @@ def warn_cdtor_function_try_handler_mem_expr : Warning<
   "%select{constructor|destructor}0 function try block">, InGroup<Exceptions>;
 def err_throw_object_throwing_dtor : Error<
   "cannot throw object of type %0 with a potentially-throwing destructor">;
-
+def err_throw_address_space_qualified_ptr : Error<
+  "cannot throw pointer with address space %0">;
+def err_catch_address_space_qualified_ptr : Error<  
+  "cannot catch pointer with address space">;  
 let CategoryName = "Lambda Issue" in {
   def err_capture_more_than_once : Error<
     "%0 can appear only once in a capture list">;

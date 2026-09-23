@@ -621,3 +621,5 @@ void test(int c) {
 }
 
 }
+
+// CHECK98: attributes [[NI_NR_NUW]] = { noinline noreturn nounwind {{.*}} }

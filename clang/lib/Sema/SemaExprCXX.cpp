@@ -981,6 +981,14 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
     isPointer = true;
   }
 
+  // reject trowing of pointers with Non-default address space cause runtimes
+  // dosen't have support for cross-address-space conversions yet;
+  if (isPointer && Ty.getAddressSpace() != LangAS::Default) {
+    Diag(ThrowLoc, diag::err_throw_address_space_qualified_ptr)
+        << E->getType() << E->getSourceRange();
+    return true;
+  }
+
   // Cannot throw WebAssembly reference type.
   if (Ty.isWebAssemblyReferenceType()) {
     Diag(ThrowLoc, diag::err_wasm_reftype_tc) << 0 << E->getSourceRange();
