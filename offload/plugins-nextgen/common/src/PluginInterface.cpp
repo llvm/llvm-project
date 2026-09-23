@@ -15,14 +15,12 @@
 #include "Shared/Environment.h"
 
 #include "ErrorReporting.h"
+#include "GenericProfiler.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 #include "omptarget.h"
-
-
-#include "GenericProfiler.h"
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -172,13 +170,13 @@ GenericKernelTy::getKernelLaunchEnvironment(
 
   // Temporarily suppress ProfilerData so the KLE upload is not traced as
   // a user data operation.
-  __tgt_async_info *AI = AsyncInfoWrapper;
-  void *SavedProfilerData = AI->ProfilerData;
-  AI->ProfilerData = nullptr;
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  void *SavedProfilerData = AsyncInfo->ProfilerData;
+  AsyncInfo->ProfilerData = nullptr;
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);
-  AI->ProfilerData = SavedProfilerData;
+  AsyncInfo->ProfilerData = SavedProfilerData;
   if (Err)
     return Err;
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
@@ -506,7 +504,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin,
                             GenericProfilerTy *ProfilerPtr) {
-  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
   if (auto Err = initImpl(Plugin, ProfilerPtr))
     return Err;
@@ -567,7 +564,6 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
 
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin,
                               GenericProfilerTy *ProfilerPtr) {
-  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
   // Run the global destructors first in case they required the RPC server.
   for (auto &I : LoadedImages) {
@@ -599,7 +595,6 @@ Expected<DeviceImageTy *>
 GenericDeviceTy::loadBinary(GenericPluginTy &Plugin, StringRef InputTgtImage,
                             PluginContextTy *Context,
                             GenericProfilerTy *ProfilerPtr) {
-  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
   ODBG(OLDT_Init) << "Load data from image "
                   << static_cast<const void *>(InputTgtImage.bytes_begin());
@@ -1367,7 +1362,7 @@ void GenericDeviceTy::setDeviceUidFromVendorUid(StringRef VendorUid) {
   DeviceUid = std::string(Plugin.getName()) + "-" + std::string(VendorUid);
 }
 
-Error GenericPluginTy::init() {
+Error GenericPluginTy::init(GenericProfilerTy *ProfilerPtr) {
   if (Initialized)
     return Plugin::success();
 
