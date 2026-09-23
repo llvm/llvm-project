@@ -9,13 +9,11 @@
 using namespace orc_rt;
 using orc_rt_test::CrossDylibTestError;
 
-extern "C" RTTI_TEST_EXPORT ErrorInfoBase *
-rttiCrossDylibTest_makeError(int Code) {
+extern "C" TEST_EXPORT ErrorInfoBase *rttiCrossDylibTest_makeError(int Code) {
   return new CrossDylibTestError(Code);
 }
 
-extern "C" RTTI_TEST_EXPORT void
-rttiCrossDylibTest_destroyError(ErrorInfoBase *E) {
+extern "C" TEST_EXPORT void rttiCrossDylibTest_destroyError(ErrorInfoBase *E) {
   delete E;
 }
 
@@ -23,7 +21,7 @@ rttiCrossDylibTest_destroyError(ErrorInfoBase *E) {
 // confirm the two libraries are genuinely using distinct identities (i.e.
 // that the test below exercises the cross-library strcmp path, not the
 // same-library pointer-equality fast path).
-extern "C" RTTI_TEST_EXPORT const void *rttiCrossDylibTest_libraryID() {
+extern "C" TEST_EXPORT const void *rttiCrossDylibTest_libraryID() {
   CrossDylibTestError E(0);
   return E.libraryID();
 }

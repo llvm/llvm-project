@@ -2323,3 +2323,25 @@ func.func @test_partially_foldable(%arg0: tensor<1x1x8x8xf32>, %arg1: tensor<1x2
   %2 = tosa.concat %0, %1 axis(1) : (tensor<1x2x8x8xf32>, tensor<1x2x8x8xf32>) -> tensor<1x4x8x8xf32>
   return %2 : tensor<1x4x8x8xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @reverse_block_scaled_splat
+func.func @reverse_block_scaled_splat() -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  // CHECK: %[[CST:.*]] = "tosa.const"
+  %0 = "tosa.const"() <{values = dense<tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.0, 2.0}>> : 1.0 : f8E4M3FN>}> : () -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  // CHECK: %[[REV:.*]] = tosa.reverse %[[CST]]
+  // CHECK: return %[[REV]]
+  %1 = tosa.reverse %0 {axis = 0 : i32} : (tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %1 : tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+// CHECK-LABEL: @reverse_block_scaled_unit_dim
+func.func @reverse_block_scaled_unit_dim(%arg0: tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  // CHECK-NOT: tosa.reverse
+  // CHECK: return %arg0
+  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %0 : tensor<1x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
