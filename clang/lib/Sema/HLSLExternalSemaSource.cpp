@@ -39,7 +39,7 @@ static NamespaceDecl *createImplicitNamespace(Sema &S, StringRef Name,
   IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
   LookupResult Result(S, &II, SourceLocation(), Sema::LookupNamespaceName);
   NamespaceDecl *PrevDecl = nullptr;
-  if (S.LookupQualifiedName(Result, AST.getTranslationUnitDecl()))
+  if (S.LookupQualifiedName(Result, DC))
     PrevDecl = Result.getAsSingle<NamespaceDecl>();
 
   NamespaceDecl *NS =
