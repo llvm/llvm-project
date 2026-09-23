@@ -1816,6 +1816,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       break;
 
     // If bound_ctrl = 1, row mask = bank mask = 0xf we can omit old value.
+    II.dropUBImplyingAttrsAndMetadata();
     return IC.replaceOperand(II, 0, PoisonValue::get(Old->getType()));
   }
   case Intrinsic::amdgcn_permlane16:
