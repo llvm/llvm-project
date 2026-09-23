@@ -39,7 +39,7 @@ void test_delete_array(OverAligned *a) {
 // CIR-AFTER:  cir.call @_ZdaPvmSt11align_val_t(%{{.*}}, %[[TOTAL_SIZE]], %[[ALIGN]]) nothrow : (!cir.ptr<!void>, !u64i, !u64i) -> ()
 
 // LLVM-LABEL: define {{.*}}@_Z17test_delete_arrayP11OverAligned(
-// LLVM: %[[A:.*]] = alloca ptr, align 8
+// LLVM: store ptr %{{.*}}, ptr %[[A:.*]], align 8
 // LLVM: %[[LOAD_A:.*]] = load ptr, ptr %[[A]], align 8
 // LLVM: %[[BEFORE_COOKIE:.*]] = getelementptr {{.*}}i8, ptr %[[LOAD_A]], i64 -64
 // LLVM: %[[AFTER_COUNT:.*]] = getelementptr {{.*}}i8, ptr %[[BEFORE_COOKIE]], i64 56
@@ -77,7 +77,7 @@ void test_not_aligned_new_but_need_cookie(NotAlignedNewButNeedCookie *a) {
 // CIR-AFTER:   cir.call @_ZdaPvm(%{{.*}}, %[[TOTAL_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
 
 // LLVM-LABEL: define {{.*}}@_Z36test_not_aligned_new_but_need_cookieP26NotAlignedNewButNeedCookie(
-// LLVM: %[[A:.*]] = alloca ptr, align 8
+// LLVM: store ptr %{{.*}}, ptr %[[A:.*]], align 8
 // LLVM: %[[LOAD_A:.*]] = load ptr, ptr %[[A]], align 8
 // LLVM: %[[BEFORE_COOKIE:.*]] = getelementptr {{.*}}i8, ptr %[[LOAD_A]], i64 -16
 // LLVM: %[[AFTER_COUNT:.*]] = getelementptr {{.*}}i8, ptr %[[BEFORE_COOKIE]], i64 8
