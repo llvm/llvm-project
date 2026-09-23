@@ -896,7 +896,9 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  /// Computes the cost of \p Plan for vectorization factor \p VF.
+  /// Computes the cost of \p Plan for vectorization factor \p VF, using
+  /// \p EnabledCM as the cost model (the main loop's cost model, or a
+  /// separate one when costing a tail-folded epilogue).
   ///
   /// The current implementation requires access to the
   /// LoopVectorizationLegality to handle inductions and reductions, which is
@@ -1033,7 +1035,9 @@ public:
 private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
-  /// be built.
+  /// be built. \p EnabledCM is the cost model to use for decisions made while
+  /// building the plan (the main loop's cost model, or a separate one when
+  /// building a tail-folded epilogue's plan).
   VPlanPtr tryToBuildVPlan1(LoopVectorizationCostModel &EnabledCM);
 
   /// Build a VPlan using VPRecipes according to the information gathered by
@@ -1043,13 +1047,17 @@ private:
   /// can be built for the input range, set the largest included VF to the
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
-  /// original scalar loop.
+  /// original scalar loop. \p EnabledCM is the cost model used for legality
+  /// and widening decisions while building the plan (the main loop's cost
+  /// model, or a separate one when building a tail-folded epilogue's plan).
   VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range,
                            LoopVectorizationCostModel &EnabledCM);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
-  /// when it checked if it is legal to vectorize the loop.
+  /// when it checked if it is legal to vectorize the loop. \p EnabledCM is
+  /// the cost model to build these VPlans (the main loop's cost model, or
+  /// a separate one when building a tail-folded epilogue's plans).
   void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF,
                    LoopVectorizationCostModel &EnabledCM);
 
