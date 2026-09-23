@@ -8,6 +8,7 @@
 target triple = "dxil-pc-shadermodel6.0-compute"
 
 @gs = external addrspace(3) global float
+@gsd = external addrspace(3) global double
 
 ; CHECK-LABEL: define float @gs_xchg_float
 define float @gs_xchg_float(float %val) {
@@ -17,6 +18,17 @@ define float @gs_xchg_float(float %val) {
   %old = atomicrmw xchg ptr addrspace(3) @gs, float %val syncscope("workgroup") monotonic
   ; CHECK: ret float [[RES]]
   ret float %old
+}
+
+; DXIL has a 64-bit atomic, so a double exchange becomes an i64 exchange.
+; CHECK-LABEL: define double @gs_xchg_double
+define double @gs_xchg_double(double %val) {
+  ; CHECK: [[CAST:%.*]] = bitcast double %val to i64
+  ; CHECK: [[OLD:%.*]] = atomicrmw xchg ptr addrspace(3) @gsd, i64 [[CAST]] syncscope("workgroup") monotonic
+  ; CHECK: [[RES:%.*]] = bitcast i64 [[OLD]] to double
+  %old = atomicrmw xchg ptr addrspace(3) @gsd, double %val syncscope("workgroup") monotonic
+  ; CHECK: ret double [[RES]]
+  ret double %old
 }
 
 ; An integer exchange must pass through with no bitcast.

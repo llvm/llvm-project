@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <functional>
@@ -372,8 +373,15 @@ legalizeFloatAtomicExchange(Instruction &I,
   if (!ValTy->isFloatingPointTy())
     return false;
 
+  // DXIL has 32-bit and 64-bit atomics only. A float of any other width has no
+  // integer exchange to lower to.
+  unsigned Width = ValTy->getPrimitiveSizeInBits();
+  if (Width != 32 && Width != 64)
+    reportFatalUsageError("DXIL atomic exchange requires a 32-bit or 64-bit "
+                          "floating-point value");
+
   IRBuilder<> Builder(AI);
-  Type *IntTy = Builder.getIntNTy(ValTy->getPrimitiveSizeInBits());
+  Type *IntTy = Builder.getIntNTy(Width);
   Value *Val = Builder.CreateBitCast(AI->getValOperand(), IntTy);
   AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Xchg, AI->getPointerOperand(), Val, AI->getAlign(),
