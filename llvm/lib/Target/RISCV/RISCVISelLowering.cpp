@@ -12352,6 +12352,25 @@ static unsigned getRVPMulHighOpcode(unsigned IntNo) {
   }
 }
 
+static unsigned getRVScalarMulHighOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V scalar multiply high intrinsic");
+  case Intrinsic::riscv_mulh_i32:
+    return ISD::MULHS;
+  case Intrinsic::riscv_mulhr_i32:
+    return RISCVISD::MULHR;
+  case Intrinsic::riscv_mulhu_u32:
+    return ISD::MULHU;
+  case Intrinsic::riscv_mulhru_u32:
+    return RISCVISD::MULHRU;
+  case Intrinsic::riscv_mulhsu_i32:
+    return RISCVISD::MULHSU;
+  case Intrinsic::riscv_mulhrsu_i32:
+    return RISCVISD::MULHRSU;
+  }
+}
+
 static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
   switch (IntNo) {
   default:
@@ -13185,29 +13204,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_mulhrsu_i32: {
     // RV32 maps the non-rounding forms onto the M extension and the rounding
     // forms onto the scalar P instructions. RV64 goes via ReplaceNodeResults.
-    unsigned Opc;
-    switch (IntNo) {
-    default:
-      llvm_unreachable("unexpected multiply high intrinsic");
-    case Intrinsic::riscv_mulh_i32:
-      Opc = ISD::MULHS;
-      break;
-    case Intrinsic::riscv_mulhu_u32:
-      Opc = ISD::MULHU;
-      break;
-    case Intrinsic::riscv_mulhsu_i32:
-      Opc = RISCVISD::MULHSU;
-      break;
-    case Intrinsic::riscv_mulhr_i32:
-      Opc = RISCVISD::MULHR;
-      break;
-    case Intrinsic::riscv_mulhru_u32:
-      Opc = RISCVISD::MULHRU;
-      break;
-    case Intrinsic::riscv_mulhrsu_i32:
-      Opc = RISCVISD::MULHRSU;
-      break;
-    }
+    unsigned Opc = getRVScalarMulHighOpcode(IntNo);
     return DAG.getNode(Opc, DL, MVT::i32, Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::riscv_pmhacc:
@@ -17634,29 +17631,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       MVT VT = N->getSimpleValueType(0);
       if (!Subtarget.is64Bit() || VT != MVT::i32)
         return;
-      unsigned Opc;
-      switch (IntNo) {
-      default:
-        llvm_unreachable("unexpected multiply high intrinsic");
-      case Intrinsic::riscv_mulh_i32:
-        Opc = ISD::MULHS;
-        break;
-      case Intrinsic::riscv_mulhu_u32:
-        Opc = ISD::MULHU;
-        break;
-      case Intrinsic::riscv_mulhsu_i32:
-        Opc = RISCVISD::MULHSU;
-        break;
-      case Intrinsic::riscv_mulhr_i32:
-        Opc = RISCVISD::MULHR;
-        break;
-      case Intrinsic::riscv_mulhru_u32:
-        Opc = RISCVISD::MULHRU;
-        break;
-      case Intrinsic::riscv_mulhrsu_i32:
-        Opc = RISCVISD::MULHRSU;
-        break;
-      }
+      unsigned Opc = getRVScalarMulHighOpcode(IntNo);
       SDValue Rd =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
       SDValue Rs =
