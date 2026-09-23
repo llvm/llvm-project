@@ -797,7 +797,7 @@ protected:
   const DeclTypeSpec *GetImplicitType(
       Symbol &, bool respectImplicitNoneType = true);
   void CheckEntryDummyUse(SourceName, Symbol *);
-  bool ConvertToObjectEntity(Symbol &, bool applyImplicitCUDA = true);
+  bool ConvertToObjectEntity(Symbol &);
   bool ConvertToProcEntity(Symbol &, std::optional<SourceName> = std::nullopt);
 
   const DeclTypeSpec &MakeNumericType(
@@ -3668,8 +3668,7 @@ void ScopeHandler::CheckEntryDummyUse(SourceName source, Symbol *symbol) {
 }
 
 // Convert symbol to be a ObjectEntity or return false if it can't be.
-bool ScopeHandler::ConvertToObjectEntity(
-    Symbol &symbol, bool applyImplicitCUDA) {
+bool ScopeHandler::ConvertToObjectEntity(Symbol &symbol) {
   if (symbol.has<ObjectEntityDetails>()) {
     // nothing to do
   } else if (symbol.has<UnknownDetails>()) {
@@ -3692,12 +3691,6 @@ bool ScopeHandler::ConvertToObjectEntity(
   } else {
     return false;
   }
-  // Scalar data pointers can still be EntityDetails during
-  // FinishSpecificationPart; they become objects here. Apply the implicit
-  // managed/pinned attribute after that conversion so they match arrays.
-  // Callers that are about to set an explicit CUDA attribute skip this.
-  if (applyImplicitCUDA)
-    ApplyImplicitCUDADataAttr(symbol);
   return true;
 }
 // Convert symbol to be a ProcEntity or return false if it can't be.
@@ -3859,25 +3852,35 @@ bool ScopeHandler::CheckDuplicatedAttrs(
 }
 
 void ScopeHandler::ApplyImplicitCUDADataAttr(Symbol &symbol) {
-  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!object || object->cudaDataAttr())
-    return;
-  if (!IsAllocatable(symbol) && !IsPointer(symbol))
-    return;
   // Only when CUDA Fortran is enabled; otherwise -gpu=mem:managed on a
   // non-CUDA-Fortran translation unit (e.g. pure OpenACC) would incorrectly
   // route every allocatable through the CUDA Fortran managed descriptor
   // pipeline.
   if (!context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA))
     return;
-  if (context().languageFeatures().IsEnabled(
-          common::LanguageFeature::CudaManaged)) {
+  if (!IsAllocatable(symbol) && !IsPointer(symbol))
+    return;
+  bool managed{context().languageFeatures().IsEnabled(
+      common::LanguageFeature::CudaManaged)};
+  // Implicit pinned remains allocatable-only.
+  bool pinned{!managed && IsAllocatable(symbol) &&
+      context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CudaPinned)};
+  if (!managed && !pinned)
+    return;
+  // A scalar data pointer can still be an EntityDetails at this point, since
+  // only some attributes force an early conversion; arrays are always
+  // objects. Convert it now so both get the attribute. A procedure pointer is
+  // not an object and is left alone.
+  if (!ConvertToObjectEntity(symbol))
+    return;
+  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!object || object->cudaDataAttr())
+    return;
+  if (managed) {
     object->set_cudaDataAttr(common::CUDADataAttr::Managed);
     object->set_cudaDataAttrIsImplicit();
-  } else if (IsAllocatable(symbol) &&
-      context().languageFeatures().IsEnabled(
-          common::LanguageFeature::CudaPinned)) {
-    // Implicit pinned remains allocatable-only.
+  } else {
     object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
   }
 }
@@ -3885,7 +3888,7 @@ void ScopeHandler::ApplyImplicitCUDADataAttr(Symbol &symbol) {
 void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
     std::optional<common::CUDADataAttr> attr, bool isImplicit) {
   if (attr) {
-    ConvertToObjectEntity(symbol, /*applyImplicitCUDA=*/false);
+    ConvertToObjectEntity(symbol);
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
       if (*attr != object->cudaDataAttr().value_or(*attr)) {
         Say(source,
