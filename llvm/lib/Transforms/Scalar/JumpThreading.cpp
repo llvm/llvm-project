@@ -779,7 +779,19 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     // Do not perform phi translation across a loop header phi, because this
     // may result in comparison of values from two different loop iterations.
     // FIXME: This check is broken if LoopHeaders is not populated.
-    if (PN && PN->getParent() == BB && !LoopHeaders.contains(BB)) {
+    // LoopHeaders is empty under -jump-threading-across-loop-headers,
+    // so in that mode detect a loop-header phi from a backedge into
+    // BB via the dominator tree.
+    auto BBIsLoopHeader = [&] {
+      if (!ThreadAcrossLoopHeaders)
+        return LoopHeaders.contains(BB);
+      const DominatorTree &DT = getDomTreeUpdater()->getDomTree();
+      return llvm::any_of(predecessors(BB), [&](BasicBlock *Pred) {
+        return DT.dominates(BB, Pred);
+      });
+    };
+
+    if (PN && PN->getParent() == BB && !BBIsLoopHeader()) {
       const DataLayout &DL = PN->getDataLayout();
       // We can do this simplification if any comparisons fold to true or false.
       // See if any do.
