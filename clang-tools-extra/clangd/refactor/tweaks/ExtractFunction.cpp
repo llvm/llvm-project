@@ -72,6 +72,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 #include <optional>
 
 namespace clang {
@@ -738,19 +739,32 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
   return Result;
 }
 
-// Whether VD is mutated anywhere within the extraction zone. If not, the
-// corresponding parameter can safely be made const, even though it's still
-// passed by reference.
-// FIXME: Pass non-mutated parameters of built-in type by value.
-bool isCapturedDeclMutated(const ValueDecl *VD, const ExtractionZone &ExtZone) {
-  ASTContext &Context = ExtZone.EnclosingFunction->getASTContext();
-  for (const Stmt *RootStmt : ExtZone.RootStmts) {
-    ExprMutationAnalyzer Analyzer(*RootStmt, Context);
-    if (Analyzer.isMutated(VD))
-      return true;
+// One ExprMutationAnalyzer per root statement of the extraction zone, built
+// once and reused for every captured variable: each analyzer keeps a
+// memoization cache keyed by Expr, which is only useful if it's actually
+// allowed to persist across the (typically many) isMutated() queries run
+// against the same statement.
+class ZoneMutationAnalyzer {
+public:
+  ZoneMutationAnalyzer(const ExtractionZone &ExtZone) {
+    ASTContext &Context = ExtZone.EnclosingFunction->getASTContext();
+    for (const Stmt *RootStmt : ExtZone.RootStmts)
+      Analyzers.push_back(
+          std::make_unique<ExprMutationAnalyzer>(*RootStmt, Context));
   }
-  return false;
-}
+
+  // Whether VD is mutated anywhere within the extraction zone. If not, the
+  // corresponding parameter can safely be made const, even though it's
+  // still passed by reference.
+  // FIXME: Pass non-mutated parameters of built-in type by value.
+  bool isMutated(const ValueDecl *VD) {
+    return llvm::any_of(
+        Analyzers, [VD](auto &Analyzer) { return Analyzer->isMutated(VD); });
+  }
+
+private:
+  std::vector<std::unique_ptr<ExprMutationAnalyzer>> Analyzers;
+};
 
 // Adds parameters to ExtractedFunc.
 // Returns true if able to find the parameters successfully and no hoisting
@@ -759,6 +773,7 @@ bool isCapturedDeclMutated(const ValueDecl *VD, const ExtractionZone &ExtZone) {
 bool createParameters(NewFunction &ExtractedFunc,
                       const CapturedZoneInfo &CapturedInfo,
                       const ExtractionZone &ExtZone) {
+  ZoneMutationAnalyzer MutationAnalyzer(ExtZone);
   for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
     const auto &DeclInfo = KeyVal.second;
     // If a Decl was Declared in zone and referenced in post zone, it
@@ -783,7 +798,7 @@ bool createParameters(NewFunction &ExtractedFunc,
     // Add const if it's not mutated in the zone: it's still passed by
     // reference to avoid a copy, but the reference doesn't need to be
     // mutable.
-    if (!isCapturedDeclMutated(VD, ExtZone))
+    if (!MutationAnalyzer.isMutated(VD))
       TypeInfo.addConst();
     bool IsPassedByReference = true;
     // We use the index of declaration as the ordering priority for parameters.
