@@ -899,17 +899,17 @@ __packed_reduction(predsumu_u32x2_u64, uint64_t, uint32x2_t, __builtin_riscv_pre
 
 /* Packed Merge (32-bit) */
 __packed_merge_builtin(pmerge_u8x4, uint8x4_t, uint8x4_t, __builtin_riscv_pmerge_u8x4)
-__packed_merge_builtin(pmerge_i8x4, int8x4_t, uint8x4_t, __builtin_riscv_pmerge_i8x4)
+__packed_merge_builtin(pmerge_i8x4, int8x4_t, uint8x4_t, __builtin_riscv_pmerge_u8x4)
 __packed_merge_builtin(pmerge_u16x2, uint16x2_t, uint16x2_t, __builtin_riscv_pmerge_u16x2)
-__packed_merge_builtin(pmerge_i16x2, int16x2_t, uint16x2_t, __builtin_riscv_pmerge_i16x2)
+__packed_merge_builtin(pmerge_i16x2, int16x2_t, uint16x2_t, __builtin_riscv_pmerge_u16x2)
 
 /* Packed Merge (64-bit) */
 __packed_merge_builtin(pmerge_u8x8, uint8x8_t, uint8x8_t, __builtin_riscv_pmerge_u8x8)
-__packed_merge_builtin(pmerge_i8x8, int8x8_t, uint8x8_t, __builtin_riscv_pmerge_i8x8)
+__packed_merge_builtin(pmerge_i8x8, int8x8_t, uint8x8_t, __builtin_riscv_pmerge_u8x8)
 __packed_merge_builtin(pmerge_u16x4, uint16x4_t, uint16x4_t, __builtin_riscv_pmerge_u16x4)
-__packed_merge_builtin(pmerge_i16x4, int16x4_t, uint16x4_t, __builtin_riscv_pmerge_i16x4)
+__packed_merge_builtin(pmerge_i16x4, int16x4_t, uint16x4_t, __builtin_riscv_pmerge_u16x4)
 __packed_merge_builtin(pmerge_u32x2, uint32x2_t, uint32x2_t, __builtin_riscv_pmerge_u32x2)
-__packed_merge_builtin(pmerge_i32x2, int32x2_t, uint32x2_t, __builtin_riscv_pmerge_i32x2)
+__packed_merge_builtin(pmerge_i32x2, int32x2_t, uint32x2_t, __builtin_riscv_pmerge_u32x2)
 
 /* Packed Multiply High (32-bit) */
 __packed_binary_builtin(pmulh_i16x2, int16x2_t, __builtin_riscv_pmulh_i16x2)
