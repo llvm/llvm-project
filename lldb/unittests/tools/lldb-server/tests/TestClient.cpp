@@ -31,6 +31,10 @@ static std::chrono::seconds GetDefaultTimeout() {
   return std::chrono::seconds{10};
 }
 
+static void LogInferiorOutput(StringRef output) {
+  GTEST_LOG_(INFO) << "Inferior output: " << output.str();
+}
+
 TestClient::TestClient(std::unique_ptr<Connection> Conn) {
   SetConnection(std::move(Conn));
   SetPacketTimeout(GetDefaultTimeout());
@@ -207,7 +211,8 @@ Error TestClient::SendMessage(StringRef message, std::string &response_string,
                               PacketResult expected_result) {
   StringExtractorGDBRemote response;
   GTEST_LOG_(INFO) << "Send Packet: " << message.str();
-  PacketResult result = SendPacketAndWaitForResponse(message, response);
+  PacketResult result = SendPacketAndReceiveResponseWithOutputSupport(
+      message, response, std::chrono::seconds(0), LogInferiorOutput);
   response.GetEscapedBinaryData(response_string);
   GTEST_LOG_(INFO) << "Read Packet: " << response_string;
   if (result != expected_result)
@@ -275,7 +280,8 @@ Error TestClient::Continue(StringRef message) {
   m_stop_reply = std::move(*StopReplyOr);
   if (!isa<StopReplyStop>(m_stop_reply)) {
     StringExtractorGDBRemote R;
-    PacketResult result = ReadPacket(R, GetPacketTimeout(), false);
+    PacketResult result = ReadPacketWithOutputSupport(R, GetPacketTimeout(),
+                                                      false, LogInferiorOutput);
     if (result != PacketResult::ErrorDisconnected) {
       return createStringErrorV("Expected connection close after sending {0}. "
                                 "Got {1}/{2} instead.",
