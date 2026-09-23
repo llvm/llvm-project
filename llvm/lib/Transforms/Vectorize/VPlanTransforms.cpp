@@ -41,6 +41,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
+using namespace LoopVectorizationUtils;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
@@ -59,22 +60,6 @@ static cl::opt<bool> UsePartialReductionsByDefault(
     cl::desc("Use partial reduction intrinsics for "
              "all supported unordered reductions."));
 
-/// If the pointer operand \p Addr of a memory access is an affine AddRec
-/// w.r.t. \p L with a constant stride, return the stride in units of
-/// \p AccessTy. Otherwise return std::nullopt.
-static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
-                                                PredicatedScalarEvolution &PSE,
-                                                const Loop *L) {
-  assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
-         "should not try to widen irregular types");
-  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
-  if (!AddRec)
-    return {};
-
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
-}
-
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
@@ -83,7 +68,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
   // consecutive vector access.
   auto IsConsecutiveAccess = [&](VPValue *Addr, Type *AccessTy) {
     return !hasIrregularType(AccessTy, Plan.getDataLayout()) &&
-           getConstantStride(Addr, AccessTy, PSE, OuterLoop) == 1;
+           vputils::getConstantStride(Addr, AccessTy, PSE, OuterLoop) == 1;
   };
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
@@ -3063,7 +3048,8 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   //   EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
   //   EMIT ir<%countable.cond> = icmp eq ir<%iv.next>, ir<20>
   //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
-  //   EMIT vp<%4> = any-of ir<%3>
+  //   EMIT vp<%freeze> = freeze ir<%3>
+  //   EMIT vp<%4> = any-of ir<%freeze>
   //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
   //   EMIT branch-on-two-conds vp<%4>, vp<%5>
   // Successor(s): middle.block, middle.block, for.body
@@ -3116,10 +3102,12 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
-                            m_VPValue(Op1)))) {
-      Worklist.push_back(Op1);
+    } else if (match(V, m_Freeze(m_VPValue(
+                            Op1, m_VPInstruction<VPInstruction::MaskedCond>(
+                                     m_VPValue(Op2)))))) {
+      Worklist.push_back(Op2);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
+      Recipes.push_back(cast<VPInstruction>(Op1->getDefiningRecipe()));
     } else
       return nullptr;
   }
@@ -3160,7 +3148,8 @@ struct EarlyExitInfo {
 ///   EMIT ir<%arrayidx5> = getelementptr inbounds nuw ir<@dst>, ir<%indvars.iv>
 ///   EMIT store ir<%add>, ir<%arrayidx5>
 ///   EMIT ir<%indvars.iv.next> = add nuw nsw ir<%indvars.iv>, ir<1>
-///   EMIT vp<%3> = any-of ir<%1>
+///   EMIT vp<%freeze> = freeze ir<%1>
+///   EMIT vp<%3> = any-of ir<%freeze>
 ///   EMIT ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<10000>
 ///   EMIT branch-on-two-conds vp<%3>, ir<%exitcond.not>
 /// Successor(s): middle.block, middle.block, for.body
@@ -3180,8 +3169,8 @@ struct EarlyExitInfo {
 static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
-    Loop *TheLoop, PredicatedScalarEvolution &PSE, DominatorTree &DT,
-    AssumptionCache *AC) {
+    OptimizationRemarkEmitter *ORE, Loop *TheLoop,
+    PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC) {
 
   // Disconnect early exiting blocks from successors, remove branches. We
   // currently don't support multiple uses for recipes involved in creating
@@ -3204,8 +3193,12 @@ static bool handleUncountableExitsWithSideEffects(
   SmallVector<VPInstruction *, 8> ConditionRecipes;
 
   VPValue *Cond = getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
-  if (!Cond)
+  if (!Cond) {
+    reportVectorizationFailure("Unable to determine early exit condition for "
+                               "loop with side effects",
+                               "EarlyExitSideEffectsCond", ORE, TheLoop);
     return false;
+  }
 
   // Find load contributing to condition.
   // At the moment LoopVectorizationLegality only supports a single
@@ -3239,8 +3232,14 @@ static bool handleUncountableExitsWithSideEffects(
     if (!isDereferenceableAndAlignedInLoop(
             PtrSCEV, cast<LoadInst>(Load->getUnderlyingInstr())->getAlign(),
             PSE.getSE()->getConstant(EltSize), TheLoop, *PSE.getSE(), DT, AC,
-            &Predicates))
+            &Predicates)) {
+      reportVectorizationFailure("Early exit loop with side effects contains "
+                                 "load used by the exit condition that may "
+                                 "fault",
+                                 "EarlyExitSideEffectsFaultingLoad", ORE,
+                                 TheLoop);
       return false;
+    }
   }
 
   // Check for a single GEP for the condition load to see if we can link it to
@@ -3248,11 +3247,24 @@ static bool handleUncountableExitsWithSideEffects(
   // accesses for the condition load right now.
   auto *IV = cast<VPWidenInductionRecipe>(&HeaderVPBB->front());
   if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
-      !match(IV->getStepValue(), m_SpecificInt(1)))
+      !match(IV->getStepValue(), m_SpecificInt(1))) {
+    reportVectorizationFailure("Early exit loop with side effects contains "
+                               "load used by the exit condition with an "
+                               "unsupported memory access pattern",
+                               "EarlyExitSideEffectsBadLoadAccessPattern", ORE,
+                               TheLoop);
     return false;
-  if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(m_LiveIn(),
-                                                              m_Specific(IV))))
+  }
+
+  if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(
+                      m_LiveIn(), m_Specific(IV)))) {
+    reportVectorizationFailure("Early exit loop with side effects contains "
+                               "load used by the exit condition with an "
+                               "unsupported memory access pattern",
+                               "EarlyExitSideEffectsBadLoadAccessPattern", ORE,
+                               TheLoop);
     return false;
+  }
 
   // We want to guarantee that the uncountable exit condition (and the mask
   // we will generate from it) are available for all operations in the loop
@@ -3284,8 +3296,13 @@ static bool handleUncountableExitsWithSideEffects(
     for (VPRecipeBase &R : *VPBB)
       if (R.mayReadOrWriteMemory() && &R != Load) {
         // TODO: Handle conditional memory operations in the loop.
-        if (!VPDT.dominates(R.getParent(), LatchVPBB))
+        if (!VPDT.dominates(R.getParent(), LatchVPBB)) {
+          reportVectorizationFailure(
+              "Early exit loop with side effects contains unsupported "
+              "conditional memory operations",
+              "EarlyExitSideEffectsUnsupportedConditionalMemOps", ORE, TheLoop);
           return false;
+        }
         cast<VPInstruction>(&R)->addMask(Mask);
       }
 
@@ -3308,8 +3325,13 @@ static bool handleUncountableExitsWithSideEffects(
   auto Phis = ScalarPH->phis();
   // TODO: Handle more than one Phi; re-derive from IV.
   // TODO: Handle reductions.
-  if (range_size(Phis) != 1)
+  if (range_size(Phis) != 1) {
+    reportVectorizationFailure(
+        "Early exit loop with side effects contains "
+        "unsupported reductions, inductions or recurrences",
+        "EarlyExitSideEffectsReductions", ORE, TheLoop);
     return false;
+  }
   VPPhi *ContinueIV = cast<VPPhi>(Phis.begin());
   // Make sure we're referring to the same IV.
   assert(
@@ -3321,8 +3343,9 @@ static bool handleUncountableExitsWithSideEffects(
 }
 
 bool VPlanTransforms::handleUncountableEarlyExits(
-    VPlan &Plan, Loop *TheLoop, PredicatedScalarEvolution &PSE,
-    DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style) {
+    VPlan &Plan, OptimizationRemarkEmitter *ORE, Loop *TheLoop,
+    PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
+    UncountableExitStyle Style) {
 #ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
 #endif
@@ -3334,8 +3357,13 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   // stores, as only the loads contributing to the exit condition need to
   // be checked.
   if (Style == UncountableExitStyle::ReadOnly &&
-      !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
+      !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC)) {
+    reportVectorizationFailure(
+        "Auto-vectorization of early exit loops with potentially "
+        "faulting loads is not supported",
+        "EarlyExitFaultingLoads", ORE, TheLoop);
     return false;
+  }
 
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
@@ -3400,8 +3428,15 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   for (const EarlyExitInfo &Info : drop_begin(Exits))
     Combined = LatchBuilder.createLogicalOr(Combined, Info.CondToExit);
 
-  VPValue *IsAnyExitTaken =
-      LatchBuilder.createNaryOp(VPInstruction::AnyOf, {Combined});
+  // Even though the logical or prevents posion propagation, we need to freeze
+  // Combined to prevent poisoning the entire AnyOf result:
+  //
+  // Exits[0].CondToExit = [0,1,0,0]
+  // Exits[1].CondToExit = [0,0,p,p]
+  //            Combined = [0,1,p,p]
+  //               AnyOf = 1
+  VPValue *IsAnyExitTaken = LatchBuilder.createNaryOp(
+      VPInstruction::AnyOf, LatchBuilder.createFreeze(Combined));
 
   // Create a comparison for the latch exit condition and replace the
   // BranchOnCond with a BranchOnTwoConds. The original BranchOnCond's condition
@@ -3424,8 +3459,9 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     LatchVPBB->setSuccessors({MiddleVPBB, MiddleVPBB, HeaderVPBB});
     MiddleVPBB->clearPredecessors();
     MiddleVPBB->setPredecessors({LatchVPBB, LatchVPBB});
-    return handleUncountableExitsWithSideEffects(
-        Plan, Exits, HeaderVPBB, LatchVPBB, MiddleVPBB, TheLoop, PSE, DT, AC);
+    return handleUncountableExitsWithSideEffects(Plan, Exits, HeaderVPBB,
+                                                 LatchVPBB, MiddleVPBB, ORE,
+                                                 TheLoop, PSE, DT, AC);
   }
 
   // Create the vector.early.exit blocks.
@@ -5626,7 +5662,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
         std::optional<int64_t> Stride =
-            getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
+            vputils::getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
         if (Stride != 1 && Stride != -1)
           return false;
         bool Reverse = Stride == -1;
@@ -5886,6 +5922,67 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
 
       Replacement->insertBefore(&VPI);
       VPI.replaceAllUsesWith(Replacement);
+      VPI.eraseFromParent();
+    }
+  }
+}
+
+void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
+                                               const TargetTransformInfo &TTI,
+                                               PredicatedScalarEvolution &PSE) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPInstruction &VPI :
+         make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+      // Only truncates are handled, as sext/zext may wrap, FP conversions lose
+      // precision and other casts depend on the pointer size.
+      if (VPI.getOpcode() != Instruction::Trunc)
+        continue;
+
+      // Underlying Trunc is necessary to create VPWidenIntOrFpInductionRecipe.
+      auto *Trunc = cast_or_null<TruncInst>(VPI.getUnderlyingValue());
+      if (!Trunc)
+        continue;
+
+      // A truncate that is not widened is left to the scalarization decisions
+      // made earlier.
+      if (vputils::onlyFirstLaneUsed(&VPI))
+        continue;
+
+      VPValue *Op = VPI.getOperand(0);
+      auto *WideIV = getOptimizableIVOf(Op, PSE);
+      if (!WideIV)
+        continue;
+
+      // getOptimizableIVOf also matches an add of the IV and its step, which
+      // is not handled here.
+      // TODO: Also narrow truncates of the incremented IV.
+      if (Op != WideIV)
+        continue;
+
+      // Replacing a free truncate would add an induction update instruction to
+      // each iteration of the loop. The canonical induction is exempt, as it
+      // needs an update instruction regardless.
+      auto IsNarrowingProfitable = [&](ElementCount VF) {
+        return match(WideIV, m_CanonicalWidenIV()) ||
+               !TTI.isTruncateFree(
+                   toVectorTy(VPI.getOperand(0)->getScalarType(), VF),
+                   toVectorTy(VPI.getScalarType(), VF));
+      };
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+              IsNarrowingProfitable, Range))
+        continue;
+
+      // Wrap flags of the original induction do not hold in the truncated
+      // type, so do not propagate them.
+      auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
+          WideIV->getPHINode(), WideIV->getStartValue(), WideIV->getStepValue(),
+          WideIV->getVFValue(), WideIV->getInductionDescriptor(), Trunc,
+          VPIRFlags::WrapFlagsTy(false, false), VPI.getDebugLoc());
+      NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+      VPI.replaceAllUsesWith(NarrowIV);
       VPI.eraseFromParent();
     }
   }
