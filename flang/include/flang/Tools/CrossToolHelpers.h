@@ -143,6 +143,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
       InstrumentFunctionExit = "__cyg_profile_func_exit";
     }
+    DisableTailCalls = opts.DisableTailCalls;
     DwarfVersion = opts.DwarfVersion;
     SplitDwarfFile = opts.SplitDwarfFile;
     DwarfDebugFlags = opts.DwarfDebugFlags;
@@ -172,11 +173,13 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenACC = false; ///< Enable OpenACC lowering.
+  bool EnableCUDA = false; ///< Enable CUDA Fortran lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool EnableOpenMPIsTargetDevice =
       false; ///< Compiling for an OpenMP target device.
   bool UseSampleProfile = false; ///< Enable sample based profiling
   bool DebugInfoForProfiling = false; ///< Enable extra debugging info
+  bool DisableTailCalls = false; ///< Disable tail call optimization
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
   std::string InstrumentFunctionEntry =
@@ -204,12 +207,6 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       Opts.OpenMPIsTargetDevice, Opts.OpenMPIsGPU, Opts.OpenMPForceUSM,
       Opts.OpenMPVersion, Opts.OMPHostIRFile, Opts.OMPTargetTriples,
       Opts.NoGPULib);
-}
-
-[[maybe_unused]] static void setOpenMPIntegerWrapAround(
-    mlir::ModuleOp module, bool value) {
-  module.getOperation()->setAttr("omp.integer_wrap_around",
-      mlir::omp::IntegerWrapAroundAttr::get(module.getContext(), value));
 }
 
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

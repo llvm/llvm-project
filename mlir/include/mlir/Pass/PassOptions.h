@@ -57,11 +57,11 @@ using has_stream_operator = llvm::is_detected<has_stream_operator_trait, T>;
 
 /// Utility methods for printing option values.
 template <typename ParserT>
-static void printOptionValue(raw_ostream &os, const bool &value) {
+void printOptionValue(raw_ostream &os, const bool &value) {
   os << (value ? StringRef("true") : StringRef("false"));
 }
 template <typename ParserT>
-static void printOptionValue(raw_ostream &os, const std::string &str) {
+void printOptionValue(raw_ostream &os, const std::string &str) {
   // Check if the string needs to be escaped before writing it to the ostream.
   const size_t spaceIndex = str.find_first_of(' ');
   const size_t escapeIndex =
@@ -75,7 +75,7 @@ static void printOptionValue(raw_ostream &os, const std::string &str) {
     os << "}";
 }
 template <typename ParserT, typename DataT>
-static void printOptionValue(raw_ostream &os, const DataT &value) {
+void printOptionValue(raw_ostream &os, const DataT &value) {
   if constexpr (has_stream_operator<DataT>::value)
     os << value;
   else
@@ -197,8 +197,7 @@ public:
     Option(PassOptions &parent, StringRef arg, Args &&...args)
         : llvm::cl::opt<DataType, /*ExternalStorage=*/false, OptionParser>(
               arg, llvm::cl::sub(parent), std::forward<Args>(args)...) {
-      assert(!this->isPositional() && !this->isSink() &&
-             "sink and positional options are not supported");
+      assert(!this->isPositional() && "positional options are not supported");
       parent.options.push_back(this);
 
       // Set a callback to track if this option has a value.
@@ -245,8 +244,7 @@ public:
         : llvm::cl::list<DataType, /*StorageClass=*/bool, OptionParser>(
               arg, llvm::cl::sub(parent), std::forward<Args>(args)...),
           elementParser(*this) {
-      assert(!this->isPositional() && !this->isSink() &&
-             "sink and positional options are not supported");
+      assert(!this->isPositional() && "positional options are not supported");
       assert(!(this->getMiscFlags() & llvm::cl::MiscFlags::CommaSeparated) &&
              "ListOption is implicitly comma separated, specifying "
              "CommaSeparated is extraneous");

@@ -54,3 +54,126 @@ define i32 @cmp_xor_i32_commute(i32 %a, i32 %b, i32 %c)
   ret i32 %sel
 }
 
+define zeroext i1 @xor_cmp_rmw_i32(ptr %x) {
+; X86-LABEL: xor_cmp_rmw_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl $7, (%eax)
+; X86-NEXT:    setne %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_cmp_rmw_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl $7, (%rdi)
+; X64-NEXT:    setne %al
+; X64-NEXT:    retq
+  %load = load i32, ptr %x
+  %xor = xor i32 %load, 7
+  store i32 %xor, ptr %x
+  %cmp = icmp ne i32 %load, 7
+  ret i1 %cmp
+}
+
+define i32 @xor_cmp_multiuse(i32 %a, i32 %b, ptr %p) {
+; X86-LABEL: xor_cmp_multiuse:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    je .LBB3_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB3_2:
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_cmp_multiuse:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %esi, %edi
+; X64-NEXT:    movl %edi, (%rdx)
+; X64-NEXT:    movl $42, %eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    retq
+  %xor = xor i32 %a, %b
+  store i32 %xor, ptr %p
+  %cmp = icmp eq i32 %a, %b
+  %sel = select i1 %cmp, i32 42, i32 %xor
+  ret i32 %sel
+}
+
+define zeroext i1 @xor_cmp_rmw_eq_i32(ptr %x) {
+; X86-LABEL: xor_cmp_rmw_eq_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl $7, (%eax)
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_cmp_rmw_eq_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl $7, (%rdi)
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+  %load = load i32, ptr %x
+  %xor = xor i32 %load, 7
+  store i32 %xor, ptr %x
+  %cmp = icmp eq i32 %load, 7
+  ret i1 %cmp
+}
+
+define zeroext i1 @xor_cmp_rmw_sgt_i32(ptr %x) {
+; X86-LABEL: xor_cmp_rmw_sgt_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    xorl $7, %edx
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    cmpl $8, %ecx
+; X86-NEXT:    setge %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_cmp_rmw_sgt_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    xorl $7, %ecx
+; X64-NEXT:    movl %ecx, (%rdi)
+; X64-NEXT:    cmpl $8, %eax
+; X64-NEXT:    setge %al
+; X64-NEXT:    retq
+  %load = load i32, ptr %x
+  %xor = xor i32 %load, 7
+  store i32 %xor, ptr %x
+  %cmp = icmp sgt i32 %load, 7
+  ret i1 %cmp
+}
+
+define zeroext i1 @xor_cmp_rmw_ult_i32(ptr %x) {
+; X86-LABEL: xor_cmp_rmw_ult_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    xorl $7, %edx
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    cmpl $7, %ecx
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_cmp_rmw_ult_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    xorl $7, %ecx
+; X64-NEXT:    movl %ecx, (%rdi)
+; X64-NEXT:    cmpl $7, %eax
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+  %load = load i32, ptr %x
+  %xor = xor i32 %load, 7
+  store i32 %xor, ptr %x
+  %cmp = icmp ult i32 %load, 7
+  ret i1 %cmp
+}

@@ -121,7 +121,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -140,11 +139,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-static cl::opt<bool> AssumeDefaultIsFlatAddressSpace(
-    "assume-default-is-flat-addrspace", cl::init(false), cl::ReallyHidden,
-    cl::desc("The default address space is assumed as the flat address space. "
-             "This is mainly for test purpose."));
 
 static const unsigned UninitializedAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -195,6 +189,11 @@ class InferAddressSpacesImpl {
   /// Target specific address space which uses of should be replaced if
   /// possible.
   unsigned FlatAddrSpace = 0;
+
+  /// The default address space is assumed as the flat address space. This is
+  /// mainly for test purpose.
+  const bool AssumeDefaultIsFlatAddressSpace = false;
+
   DenseMap<const Value *, Value *> PtrIntCastPairs;
 
   // Tries to find if the inttoptr instruction is derived from an pointer have
@@ -228,6 +227,15 @@ class InferAddressSpacesImpl {
   bool updateAddressSpace(const Value &V,
                           ValueToAddrSpaceMapTy &InferredAddrSpace,
                           PredicatedAddrSpaceMapTy &PredicatedAS) const;
+
+  // Adds the users of V whose address space may still change to Worklist.
+  void enqueueUsers(Value &V, const ValueToAddrSpaceMapTy &InferredAddrSpace,
+                    SetVector<Value *> &Worklist) const;
+
+  // Propagates address spaces out of Worklist until nothing changes.
+  void runToFixPoint(SetVector<Value *> &Worklist,
+                     ValueToAddrSpaceMapTy &InferredAddrSpace,
+                     PredicatedAddrSpaceMapTy &PredicatedAS) const;
 
   // Tries to infer the specific address space of each address expression in
   // Postorder.
@@ -285,8 +293,10 @@ class InferAddressSpacesImpl {
 
 public:
   InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
-                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace)
-      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace) {}
+                         const TargetTransformInfo *TTI, unsigned FlatAddrSpace,
+                         bool AssumeDefaultIsFlatAddressSpace)
+      : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace),
+        AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
   bool run(Function &F);
 };
 
@@ -1133,6 +1143,45 @@ bool InferAddressSpacesImpl::run(Function &CurFn) {
                                      PredicatedAS);
 }
 
+void InferAddressSpacesImpl::enqueueUsers(
+    Value &V, const ValueToAddrSpaceMapTy &InferredAddrSpace,
+    SetVector<Value *> &Worklist) const {
+  for (Value *User : V.users()) {
+    // Skip if User is already in the worklist.
+    if (Worklist.count(User))
+      continue;
+
+    ValueToAddrSpaceMapTy::const_iterator Pos = InferredAddrSpace.find(User);
+    // Our algorithm only updates the address spaces of flat address
+    // expressions, which are those in InferredAddrSpace.
+    if (Pos == InferredAddrSpace.end())
+      continue;
+
+    // Function updateAddressSpace moves the address space down a lattice path.
+    // Therefore, nothing to do if User is already inferred as flat (the bottom
+    // element in the lattice).
+    if (Pos->second == FlatAddrSpace)
+      continue;
+
+    Worklist.insert(User);
+  }
+}
+
+void InferAddressSpacesImpl::runToFixPoint(
+    SetVector<Value *> &Worklist, ValueToAddrSpaceMapTy &InferredAddrSpace,
+    PredicatedAddrSpaceMapTy &PredicatedAS) const {
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+
+    // Try to update the address space of the stack top according to the
+    // address spaces of its operands.
+    if (!updateAddressSpace(*V, InferredAddrSpace, PredicatedAS))
+      continue;
+
+    enqueueUsers(*V, InferredAddrSpace, Worklist);
+  }
+}
+
 // Constants need to be tracked through RAUW to handle cases with nested
 // constant expressions, so wrap values in WeakTrackingVH.
 void InferAddressSpacesImpl::inferAddressSpaces(
@@ -1144,34 +1193,25 @@ void InferAddressSpacesImpl::inferAddressSpaces(
   for (Value *V : Postorder)
     InferredAddrSpace[V] = UninitializedAddressSpace;
 
-  while (!Worklist.empty()) {
-    Value *V = Worklist.pop_back_val();
+  runToFixPoint(Worklist, InferredAddrSpace, PredicatedAS);
 
-    // Try to update the address space of the stack top according to the
-    // address spaces of its operands.
-    if (!updateAddressSpace(*V, InferredAddrSpace, PredicatedAS))
-      continue;
-
-    for (Value *User : V->users()) {
-      // Skip if User is already in the worklist.
-      if (Worklist.count(User))
-        continue;
-
-      auto Pos = InferredAddrSpace.find(User);
-      // Our algorithm only updates the address spaces of flat address
-      // expressions, which are those in InferredAddrSpace.
-      if (Pos == InferredAddrSpace.end())
-        continue;
-
-      // Function updateAddressSpace moves the address space down a lattice
-      // path. Therefore, nothing to do if User is already inferred as flat (the
-      // bottom element in the lattice).
-      if (Pos->second == FlatAddrSpace)
-        continue;
-
-      Worklist.insert(User);
+  // A value still uninitialized here is stuck in a cycle of uninitialized
+  // values and carries no address space information. Lower it to flat so its
+  // users join to flat, instead of being rewritten to reference an operand
+  // that rewriteWithNewAddressSpaces() never converts.
+  SmallVector<Value *, 4> Lowered;
+  for (Value *V : Postorder) {
+    ValueToAddrSpaceMapTy::iterator I = InferredAddrSpace.find(V);
+    if (I->second == UninitializedAddressSpace) {
+      I->second = FlatAddrSpace;
+      Lowered.push_back(V);
     }
   }
+
+  for (Value *V : Lowered)
+    enqueueUsers(*V, InferredAddrSpace, Worklist);
+
+  runToFixPoint(Worklist, InferredAddrSpace, PredicatedAS);
 }
 
 unsigned
@@ -1622,8 +1662,12 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     }
   }
 
-  for (Instruction *I : DeadInstructions)
-    RecursivelyDeleteTriviallyDeadInstructions(I);
+  // Deleting one instruction may recursively delete another queued
+  // instruction. Create handles before the first deletion so overlapping
+  // entries are nulled instead of leaving dangling pointers.
+  auto DeadInstructionHandles =
+      to_vector_of<WeakTrackingVH, 16>(DeadInstructions);
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInstructionHandles);
 
   return true;
 }
@@ -1637,7 +1681,7 @@ bool InferAddressSpaces::runOnFunction(Function &F) {
   return InferAddressSpacesImpl(
              getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), DT,
              &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F),
-             FlatAddrSpace)
+             FlatAddrSpace, /*AssumeDefaultIsFlatAddressSpace=*/false)
       .run(F);
 }
 
@@ -1645,17 +1689,22 @@ FunctionPass *llvm::createInferAddressSpacesPass(unsigned AddressSpace) {
   return new InferAddressSpaces(AddressSpace);
 }
 
-InferAddressSpacesPass::InferAddressSpacesPass()
-    : FlatAddrSpace(UninitializedAddressSpace) {}
-InferAddressSpacesPass::InferAddressSpacesPass(unsigned AddressSpace)
-    : FlatAddrSpace(AddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(UninitializedAddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
+InferAddressSpacesPass::InferAddressSpacesPass(
+    unsigned AddressSpace, bool AssumeDefaultIsFlatAddressSpace)
+    : FlatAddrSpace(AddressSpace),
+      AssumeDefaultIsFlatAddressSpace(AssumeDefaultIsFlatAddressSpace) {}
 
 PreservedAnalyses InferAddressSpacesPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   bool Changed =
       InferAddressSpacesImpl(AM.getResult<AssumptionAnalysis>(F),
                              AM.getCachedResult<DominatorTreeAnalysis>(F),
-                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace)
+                             &AM.getResult<TargetIRAnalysis>(F), FlatAddrSpace,
+                             AssumeDefaultIsFlatAddressSpace)
           .run(F);
   if (Changed) {
     PreservedAnalyses PA;
@@ -1663,4 +1712,12 @@ PreservedAnalyses InferAddressSpacesPass::run(Function &F,
     return PA;
   }
   return PreservedAnalyses::all();
+}
+
+void InferAddressSpacesPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<InferAddressSpacesPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (AssumeDefaultIsFlatAddressSpace)
+    OS << "<assume-default-is-flat-addrspace>";
 }
