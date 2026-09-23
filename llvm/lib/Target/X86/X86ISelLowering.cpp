@@ -34583,10 +34583,15 @@ static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG) {
   unsigned IsData = Op.getConstantOperandVal(4);
+  unsigned RW = Op.getConstantOperandVal(2);
+  unsigned Locality = Op.getConstantOperandVal(3);
 
-  // We don't support non-data prefetch without PREFETCHI.
-  // Just preserve the chain.
-  if (!IsData && !Subtarget.hasPREFETCHI())
+  // PREFETCHI only supports instruction read prefetch with T0 (locality 3)
+  // or T1 (locality 2) hints in 64-bit mode. If PREFETCHI is not supported,
+  // or if the instruction prefetch is a write or has locality not in {2, 3},
+  // drop it and preserve the chain.
+  if (!IsData && (!Subtarget.hasPREFETCHI() || !Subtarget.is64Bit() ||
+                  RW != 0 || (Locality != 2 && Locality != 3)))
     return Op.getOperand(0);
 
   return Op;

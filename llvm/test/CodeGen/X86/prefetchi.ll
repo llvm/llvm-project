@@ -24,3 +24,20 @@ entry:
 
 declare dso_local void @ext() nounwind
 declare void @llvm.prefetch(ptr, i32, i32, i32) nounwind
+
+define dso_local void @unsupported_prefetch(ptr %ptr) nounwind {
+; CHECK-LABEL: unsupported_prefetch:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    retq
+;
+; NOPREFETCHI-LABEL: unsupported_prefetch:
+; NOPREFETCHI:       # %bb.0: # %entry
+; NOPREFETCHI-NEXT:    retq
+entry:
+  ; Instruction prefetch with locality 0 or 1 is unsupported on x86, drop and preserve chain
+  tail call void @llvm.prefetch(ptr %ptr, i32 0, i32 0, i32 0)
+  tail call void @llvm.prefetch(ptr %ptr, i32 0, i32 1, i32 0)
+  ; Instruction prefetch with write (rw=1) is unsupported, drop and preserve chain
+  tail call void @llvm.prefetch(ptr %ptr, i32 1, i32 3, i32 0)
+  ret void
+}
