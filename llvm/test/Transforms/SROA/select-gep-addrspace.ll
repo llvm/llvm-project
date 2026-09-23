@@ -8,14 +8,38 @@ target datalayout = "e-p:64:64-p5:32:32"
 define i32 @select_gep_addrspace_widths(i1 %cond) {
 ; CHECK-LABEL: @select_gep_addrspace_widths(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 1, ptr [[ALLOC0]], align 4
-; CHECK-NEXT:    store i32 3, ptr [[ALLOC1]], align 4
-; CHECK-NEXT:    [[ALLOC1_SROA_1_0_GEP_SROA_CAST:%.*]] = addrspacecast ptr [[ALLOC1]] to ptr addrspace(5)
-; CHECK-NEXT:    [[ALLOC0_SROA_1_0_GEP_SROA_CAST:%.*]] = addrspacecast ptr [[ALLOC0]] to ptr addrspace(5)
-; CHECK-NEXT:    [[CAST:%.*]] = select i1 [[COND:%.*]], ptr addrspace(5) [[ALLOC0_SROA_1_0_GEP_SROA_CAST]], ptr addrspace(5) [[ALLOC1_SROA_1_0_GEP_SROA_CAST]]
-; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr addrspace(5) [[CAST]], align 4
+; CHECK-NEXT:    [[VALUE:%.*]] = select i1 [[COND:%.*]], i32 1, i32 3
+; CHECK-NEXT:    ret i32 [[VALUE]]
+;
+entry:
+  %alloc0 = alloca %pair, align 8
+  %alloc1 = alloca %pair, align 8
+  store %pair { i32 0, i32 1 }, ptr %alloc0
+  store %pair { i32 2, i32 3 }, ptr %alloc1
+  %select = select i1 %cond, ptr %alloc0, ptr %alloc1
+  %cast = addrspacecast ptr %select to ptr addrspace(5)
+  %gep = getelementptr inbounds %pair, ptr addrspace(5) %cast, i32 0, i32 1
+  %value = load i32, ptr addrspace(5) %gep
+  ret i32 %value
+}
+
+define i32 @select_gep_addrspace_volatile_as0_to_as5(i1 %cond) {
+; CHECK-LABEL: @select_gep_addrspace_volatile_as0_to_as5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[PAIR:%.*]], align 8
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR]], align 8
+; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, ptr [[DOTFCA_0_GEP1]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC0]], i32 0, i32 1
+; CHECK-NEXT:    store i32 1, ptr [[DOTFCA_1_GEP2]], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    store i32 2, ptr [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    store i32 3, ptr [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOC0]], ptr [[ALLOC1]]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[SELECT]] to ptr addrspace(5)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[CAST]], i32 0, i32 1
+; CHECK-NEXT:    [[VALUE:%.*]] = load volatile i32, ptr addrspace(5) [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[VALUE]]
 ;
 entry:
@@ -30,18 +54,27 @@ entry:
   ret i32 %value
 }
 
-; Do not unfold the address-space cast for volatile accesses. The shared
-; select/cast is smaller than duplicating the address calculation per field.
 define i32 @select_gep_addrspace_volatile_as5_to_as0(i1 %cond) {
 ; CHECK-LABEL: @select_gep_addrspace_volatile_as5_to_as0(
-; CHECK:       [[ALLOC0:%.*]] = alloca %pair, align 8, addrspace(5)
-; CHECK-NEXT:  [[ALLOC1:%.*]] = alloca %pair, align 8, addrspace(5)
-; CHECK:       [[SELECT:%.*]] = select i1 [[COND:%.*]], ptr addrspace(5) [[ALLOC0]], ptr addrspace(5) [[ALLOC1]]
-; CHECK-NEXT:  [[CAST:%.*]] = addrspacecast ptr addrspace(5) [[SELECT]] to ptr
-; CHECK-NEXT:  [[GEP0:%.*]] = getelementptr inbounds %pair, ptr [[CAST]], i32 0, i32 0
-; CHECK-NEXT:  [[GEP1:%.*]] = getelementptr inbounds %pair, ptr [[CAST]], i32 0, i32 1
-; CHECK-NEXT:  [[VAL0:%.*]] = load volatile i32, ptr [[GEP0]], align 4
-; CHECK-NEXT:  [[VAL1:%.*]] = load volatile i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOC0:%.*]] = alloca [[PAIR:%.*]], align 8, addrspace(5)
+; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca [[PAIR]], align 8, addrspace(5)
+; CHECK-NEXT:    [[DOTFCA_0_GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[ALLOC0]], i32 0, i32 0
+; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[DOTFCA_0_GEP1]], align 8
+; CHECK-NEXT:    [[DOTFCA_1_GEP2:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[ALLOC0]], i32 0, i32 1
+; CHECK-NEXT:    store i32 1, ptr addrspace(5) [[DOTFCA_1_GEP2]], align 4
+; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[ALLOC1]], i32 0, i32 0
+; CHECK-NEXT:    store i32 2, ptr addrspace(5) [[DOTFCA_0_GEP]], align 8
+; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds [[PAIR]], ptr addrspace(5) [[ALLOC1]], i32 0, i32 1
+; CHECK-NEXT:    store i32 3, ptr addrspace(5) [[DOTFCA_1_GEP]], align 4
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], ptr addrspace(5) [[ALLOC0]], ptr addrspace(5) [[ALLOC1]]
+; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(5) [[SELECT]] to ptr
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds [[PAIR]], ptr [[CAST]], i32 0, i32 0
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[PAIR]], ptr [[CAST]], i32 0, i32 1
+; CHECK-NEXT:    [[VAL0:%.*]] = load volatile i32, ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load volatile i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[VAL0]], [[VAL1]]
+; CHECK-NEXT:    ret i32 [[SUM]]
 ;
 entry:
   %alloc0 = alloca %pair, align 8, addrspace(5)
