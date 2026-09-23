@@ -67,8 +67,6 @@ class VEAsmParser : public MCTargetAsmParser {
   // Custom parse functions for VE specific operands.
   ParseStatus parseMEMOperand(OperandVector &Operands);
   ParseStatus parseMEMAsOperand(OperandVector &Operands);
-  ParseStatus parseCCOpOperand(OperandVector &Operands);
-  ParseStatus parseRDOpOperand(OperandVector &Operands);
   ParseStatus parseMImmOperand(OperandVector &Operands);
   ParseStatus parseOperand(OperandVector &Operands, StringRef Name);
   ParseStatus parseVEAsmOperand(std::unique_ptr<VEOperand> &Operand);

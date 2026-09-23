@@ -222,8 +222,7 @@ static cl::opt<bool> ClInstrumentWrites(
 
 static cl::opt<bool>
     ClUseStackSafety("asan-use-stack-safety", cl::Hidden, cl::init(true),
-                     cl::Hidden, cl::desc("Use Stack Safety analysis results"),
-                     cl::Optional);
+                     cl::Hidden, cl::desc("Use Stack Safety analysis results"));
 
 static cl::opt<bool> ClInstrumentAtomics(
     "asan-instrument-atomics",
@@ -1693,11 +1692,23 @@ bool AddressSanitizer::GlobalIsLinkerInitialized(GlobalVariable *G) {
   return true;
 }
 
+static bool isPointerPairOperand(Value *V, Type *IntptrTy) {
+  Type *Ty = V->getType();
+  if (Ty->isPtrOrPtrVectorTy())
+    return true;
+  return Ty->isIntOrIntVectorTy() &&
+         Ty->getScalarSizeInBits() == IntptrTy->getScalarSizeInBits();
+}
+
 bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     Instruction *I, RuntimeCallInserter &RTCI) {
+  Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
+  if (!isPointerPairOperand(Param[0], IntptrTy) ||
+      !isPointerPairOperand(Param[1], IntptrTy))
+    return false;
+
   IRBuilder<> IRB(I);
   FunctionCallee F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
-  Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
 
   if (const auto *Ty = Param[0]->getType(); Ty->isVectorTy()) {
     const auto *VTy = dyn_cast<FixedVectorType>(Ty);

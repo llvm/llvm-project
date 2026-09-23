@@ -1742,6 +1742,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (func.getUseSampleProfile())
     llvmFunc->addFnAttr("use-sample-profile");
 
+  if (auto disableTailCalls = func.getDisableTailCalls())
+    llvmFunc->addFnAttr("disable-tail-calls",
+                        llvm::toStringRef(*disableTailCalls));
+
+  if (auto sampleProfileSuffixElisionPolicy =
+          func.getSampleProfileSuffixElisionPolicy())
+    llvmFunc->addFnAttr("sample-profile-suffix-elision-policy",
+                        *sampleProfileSuffixElisionPolicy);
+
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
@@ -2579,6 +2588,16 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
   for (Value v : values)
     remapped.push_back(lookupValue(v));
   return remapped;
+}
+
+void ModuleTranslation::remapAllValuesWith(llvm::Value *oldValue,
+                                           llvm::Value *newValue) {
+  if (oldValue == newValue)
+    return;
+
+  for (auto &entry : valueMapping)
+    if (entry.second == oldValue)
+      entry.second = newValue;
 }
 
 llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {

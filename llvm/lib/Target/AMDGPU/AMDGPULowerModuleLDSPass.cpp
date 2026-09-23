@@ -931,16 +931,6 @@ public:
     for (auto &[F, Vars] : FunctionLDSUses)
       AllLDSUses[F].insert(Vars.begin(), Vars.end());
 
-    // Named barriers are handled by AMDGPULowerExecSync; filter them out.
-    for (auto &[F, Vars] : AllLDSUses) {
-      SmallVector<GlobalVariable *> Barriers;
-      for (GlobalVariable *V : Vars)
-        if (AMDGPU::isNamedBarrier(*V))
-          Barriers.push_back(V);
-      for (GlobalVariable *V : Barriers)
-        Vars.erase(V);
-    }
-
     // Build reverse map: LDS variable -> functions that use it.
     DenseMap<GlobalVariable *, SmallVector<Function *, 4>> VarToFuncs;
     for (auto &[F, Vars] : AllLDSUses) {
@@ -1403,7 +1393,8 @@ private:
     for (size_t I = 0; I < LocalVars.size(); I++) {
       GlobalVariable *GV = LocalVars[I];
       Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
-      Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx, true);
+      Constant *GEP = ConstantExpr::getGetElementPtr(
+          DL, LDSTy, SGV, GEPIdx, GEPNoWrapFlags::inBounds());
       if (IsPaddingField[I]) {
         assert(GV->use_empty());
         GV->eraseFromParent();

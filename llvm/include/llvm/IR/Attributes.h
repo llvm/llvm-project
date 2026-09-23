@@ -132,6 +132,7 @@ public:
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
+  static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
   static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
   static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
 
@@ -160,6 +161,9 @@ public:
   LLVM_ABI static bool intersectWithAnd(AttrKind Kind);
   LLVM_ABI static bool intersectWithMin(AttrKind Kind);
   LLVM_ABI static bool intersectWithCustom(AttrKind Kind);
+
+  /// Whether this is an ABI attribute (for returns or arguments).
+  LLVM_ABI static bool isABIAttr(AttrKind Kind);
 
 private:
   AttributeImpl *pImpl = nullptr;
@@ -715,6 +719,16 @@ public:
   [[nodiscard]] AttributeList addParamAttributes(LLVMContext &C, unsigned ArgNo,
                                                  const AttrBuilder &B) const {
     return addAttributesAtIndex(C, ArgNo + FirstArgIndex, B);
+  }
+
+  /// Add an argument attribute to the list. Returns a new list because
+  /// attribute lists are immutable.
+  [[nodiscard]] AttributeList
+  maybeAddParamAttribute(LLVMContext &C, unsigned ArgNo,
+                         Attribute::AttrKind Kind) const {
+    if (Kind != Attribute::AttrKind::None)
+      return addParamAttribute(C, ArgNo, Kind);
+    return *this;
   }
 
   /// Remove the specified attribute at the specified index from this

@@ -523,7 +523,7 @@ public:
     const SCEV *ScaledOffset = SE.getMulExpr(Step, SE.getConstant(Ty, Offset));
     const SCEV *NewStart =
         SE.getAddExpr(Expr->getStart(), SCEVUse(ScaledOffset));
-    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagAnyWrap);
+    return SE.getAddRecExpr(NewStart, NewStep, TheLoop, SCEV::FlagNone);
   }
 
   const SCEV *visit(const SCEV *S) {
@@ -1844,12 +1844,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
     return false;
   }
 
-  ICFLoopSafetyInfo SafetyInfo;
-  SafetyInfo.computeLoopSafetyInfo(TheLoop);
+  ICFLoopSafetyInfo SafetyInfo(TheLoop);
   LoadInst *Load = cast<LoadInst>(L);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
-  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT)) {
     reportVectorizationFailure(
         "Load for uncountable exit not guaranteed to execute",
         "ConditionalUncountableExitLoad", ORE, TheLoop);

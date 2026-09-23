@@ -33,6 +33,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticTrap.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/Argument.h"
@@ -2717,14 +2718,6 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         // Casting to pointer that could carry dynamic information (provided by
         // invariant.group) requires launder.
         Src = Builder.CreateLaunderInvariantGroup(Src);
-      } else if (SrcType.mayBeDynamicClass() && DestTy.mayBeNotDynamicClass()) {
-        // Casting to pointer that does not carry dynamic information (provided
-        // by invariant.group) requires stripping it.  Note that we don't do it
-        // if the source could not be dynamic type and destination could be
-        // dynamic because dynamic information is already laundered.  It is
-        // because launder(strip(src)) == launder(src), so there is no need to
-        // add extra strip before launder.
-        Src = Builder.CreateStripInvariantGroup(Src);
       }
     }
 
@@ -3007,18 +3000,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_PointerToIntegral: {
     assert(!DestTy->isBooleanType() && "bool should use PointerToBool");
-    auto *PtrExpr = Visit(E);
-
-    if (CGF.CGM.getCodeGenOpts().StrictVTablePointers) {
-      const QualType SrcType = E->getType();
-
-      // Casting to integer requires stripping dynamic information as it does
-      // not carries it.
-      if (SrcType.mayBeDynamicClass())
-        PtrExpr = Builder.CreateStripInvariantGroup(PtrExpr);
-    }
-
-    PtrExpr = CGF.authPointerToPointerCast(PtrExpr, E->getType(), DestTy);
+    auto *PtrExpr =
+        CGF.authPointerToPointerCast(Visit(E), E->getType(), DestTy);
     return Builder.CreatePtrToInt(PtrExpr, ConvertType(DestTy));
   }
   case CK_ToVoid: {
@@ -5008,11 +4991,21 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
   // Otherwise, this is a pointer subtraction.
 
-  // Do the raw subtraction part.
-  llvm::Value *LHS =
-      Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
-  llvm::Value *RHS =
-      Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  // Do the raw subtraction part. When pointer overflow is defined, use ptrtoint
+  // as the pointer difference can be used to obtain the pointer without basing
+  // it on one of the pointers (e.g. via -(nullptr - ptr)).
+  Value *LHS, *RHS;
+  if (CGF.getLangOpts().PointerOverflowDefined) {
+    LHS = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+    RHS = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  } else {
+    LHS = Builder.CreatePtrToAddr(op.LHS, "sub.ptr.lhs.cast");
+    RHS = Builder.CreatePtrToAddr(op.RHS, "sub.ptr.rhs.cast");
+    if (LHS->getType() != CGF.PtrDiffTy)
+      LHS = Builder.CreateZExtOrTrunc(LHS, CGF.PtrDiffTy, "sub.ptr.lhs.ext");
+    if (RHS->getType() != CGF.PtrDiffTy)
+      RHS = Builder.CreateZExtOrTrunc(RHS, CGF.PtrDiffTy, "sub.ptr.lhs.ext");
+  }
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
@@ -5370,23 +5363,6 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
       Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");
     } else {
       // Unsigned integers and pointers.
-
-      if (CGF.CGM.getCodeGenOpts().StrictVTablePointers &&
-          !isa<llvm::ConstantPointerNull>(LHS) &&
-          !isa<llvm::ConstantPointerNull>(RHS)) {
-
-        // Dynamic information is required to be stripped for comparisons,
-        // because it could leak the dynamic information.  Based on comparisons
-        // of pointers to dynamic objects, the optimizer can replace one pointer
-        // with another, which might be incorrect in presence of invariant
-        // groups. Comparison with null is safe because null does not carry any
-        // dynamic information.
-        if (LHSTy.mayBeDynamicClass())
-          LHS = Builder.CreateStripInvariantGroup(LHS);
-        if (RHSTy.mayBeDynamicClass())
-          RHS = Builder.CreateStripInvariantGroup(RHS);
-      }
-
       Result = Builder.CreateICmp(UICmpOpc, LHS, RHS, "cmp");
     }
 
@@ -5903,24 +5879,6 @@ Value *ScalarExprEmitter::VisitBinComma(const BinaryOperator *E) {
 //                             Other Operators
 //===----------------------------------------------------------------------===//
 
-/// isCheapEnoughToEvaluateUnconditionally - Return true if the specified
-/// expression is cheap enough and side-effect-free enough to evaluate
-/// unconditionally instead of conditionally.  This is used to convert control
-/// flow into selects in some cases.
-static bool isCheapEnoughToEvaluateUnconditionally(const Expr *E,
-                                                   CodeGenFunction &CGF) {
-  // Anything that is an integer or floating point constant is fine.
-  return E->IgnoreParens()->isEvaluatable(CGF.getContext());
-
-  // Even non-volatile automatic variables can't be evaluated unconditionally.
-  // Referencing a thread_local may cause non-trivial initialization work to
-  // occur. If we're inside a lambda and one of the variables is from the scope
-  // outside the lambda, that function may have returned already. Reading its
-  // locals is a bad idea. Also, these reads may introduce races there didn't
-  // exist in the source-level program.
-}
-
-
 Value *ScalarExprEmitter::
 VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   TestAndClearIgnoreResultAssign();
@@ -6026,8 +5984,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // select instead of as control flow.  We can only do this if it is cheap and
   // safe to evaluate the LHS and RHS unconditionally.
   if (!llvm::EnableSingleByteCoverage &&
-      isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
-      isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
+      CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(lhsExpr,
+                                                           CGF.getContext()) &&
+      CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(rhsExpr,
+                                                           CGF.getContext())) {
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
     llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
 
@@ -6351,37 +6311,20 @@ struct GEPOffsetAndOverflow {
   llvm::Value *OffsetOverflows;
 };
 
-/// Evaluate given GEPVal, which is either an inbounds GEP, or a constant,
-/// and compute the total offset it applies from it's base pointer BasePtr.
+/// Compute the total offset in bytes that indexing BasePtr with ElemTy and
+/// IdxList applies, using checked arithmetic.
 /// Returns offset in bytes and a boolean flag whether an overflow happened
 /// during evaluation.
-static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
-                                                 llvm::LLVMContext &VMContext,
-                                                 CodeGenModule &CGM,
-                                                 CGBuilderTy &Builder) {
+static GEPOffsetAndOverflow
+EmitGEPOffsetInBytes(Value *BasePtr, llvm::Type *ElemTy,
+                     ArrayRef<Value *> IdxList, llvm::LLVMContext &VMContext,
+                     CodeGenModule &CGM, CGBuilderTy &Builder) {
   const auto &DL = CGM.getDataLayout();
 
   // The total (signed) byte offset for the GEP.
   llvm::Value *TotalOffset = nullptr;
 
-  // Was the GEP already reduced to a constant?
-  if (isa<llvm::Constant>(GEPVal)) {
-    // Compute the offset by casting both pointers to integers and subtracting:
-    // GEPVal = BasePtr + ptr(Offset) <--> Offset = int(GEPVal) - int(BasePtr)
-    Value *BasePtr_int =
-        Builder.CreatePtrToInt(BasePtr, DL.getIntPtrType(BasePtr->getType()));
-    Value *GEPVal_int =
-        Builder.CreatePtrToInt(GEPVal, DL.getIntPtrType(GEPVal->getType()));
-    TotalOffset = Builder.CreateSub(GEPVal_int, BasePtr_int);
-    return {TotalOffset, /*OffsetOverflows=*/Builder.getFalse()};
-  }
-
-  auto *GEP = cast<llvm::GEPOperator>(GEPVal);
-  assert(GEP->getPointerOperand() == BasePtr &&
-         "BasePtr must be the base of the GEP.");
-  assert(GEP->isInBounds() && "Expected inbounds GEP");
-
-  auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
+  auto *IntPtrTy = DL.getAddressType(BasePtr->getType());
 
   // Grab references to the signed add/mul overflow intrinsics for intptr_t.
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
@@ -6419,7 +6362,8 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
   };
 
   // Determine the total byte offset by looking at each GEP operand.
-  for (auto GTI = llvm::gep_type_begin(GEP), GTE = llvm::gep_type_end(GEP);
+  for (auto GTI = llvm::gep_type_begin(ElemTy, IdxList),
+            GTE = llvm::gep_type_end(ElemTy, IdxList);
        GTI != GTE; ++GTI) {
     llvm::Value *LocalOffset;
     auto *Index = GTI.getOperand();
@@ -6483,10 +6427,10 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   auto CheckOrdinal = SanitizerKind::SO_PointerOverflow;
   auto CheckHandler = SanitizerHandler::PointerOverflow;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
-  llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
+  llvm::Type *IntPtrTy = DL.getAddressType(PtrTy);
 
-  GEPOffsetAndOverflow EvaluatedGEP =
-      EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
+  GEPOffsetAndOverflow EvaluatedGEP = EmitGEPOffsetInBytes(
+      Ptr, ElemTy, IdxList, getLLVMContext(), CGM, Builder);
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
@@ -6498,7 +6442,7 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
 
   // Now that we've computed the total offset, add it to the base pointer (with
   // wrapping semantics).
-  auto *IntPtr = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+  auto *IntPtr = Builder.CreatePtrToAddr(Ptr);
   auto *ComputedGEP = Builder.CreateAdd(IntPtr, EvaluatedGEP.TotalOffset);
 
   llvm::SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>,

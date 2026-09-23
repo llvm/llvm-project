@@ -417,12 +417,12 @@ public:
 protected:
   /// Initializes the visitor and returns the set of initial directives of
   /// interest to be matched the beginning of the pattern.
-  virtual llvm::omp::DirectiveSet initialize() = 0;
+  virtual llvm::omp::Directives initialize() = 0;
 
   /// Visits a single directive and, based on it, returns the set of other
   /// directives of interest that would be part of the pattern if nested inside.
-  virtual llvm::omp::DirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                                 llvm::omp::Directive dir) = 0;
+  virtual llvm::omp::Directives visitDirective(lower::pft::Evaluation &eval,
+                                               llvm::omp::Directive dir) = 0;
 
   /// Obtain the list of clauses of the given OpenMP block or loop construct
   /// evaluation. If it's not an OpenMP construct, no modifications are made to
@@ -479,14 +479,14 @@ private:
       return;
 
     const auto &ompEval{eval.get<parser::OpenMPConstruct>()};
-    llvm::omp::DirectiveSet visitNested{
+    llvm::omp::Directives visitNested{
         visitDirective(eval, parser::omp::GetOmpDirectiveName(ompEval).v)};
 
     if (visitNested.none())
       return;
 
     if (lower::pft::Evaluation *nestedEval = extractOnlyOmpNestedEval(eval)) {
-      llvm::omp::DirectiveSet prevDirs{directivesOfInterest};
+      llvm::omp::Directives prevDirs{directivesOfInterest};
       directivesOfInterest = visitNested;
       visitEval(*nestedEval);
       directivesOfInterest = prevDirs;
@@ -497,7 +497,7 @@ protected:
   semantics::SemanticsContext &semaCtx;
 
 private:
-  llvm::omp::DirectiveSet directivesOfInterest;
+  llvm::omp::Directives directivesOfInterest;
 };
 
 /// Helper pattern to navigate target SPMD.
@@ -507,12 +507,12 @@ public:
   virtual ~TargetSPMDVisitor() = default;
 
 protected:
-  virtual llvm::omp::DirectiveSet initialize() override {
+  virtual llvm::omp::Directives initialize() override {
     teamsVisited = false;
     return llvm::omp::allTargetSet;
   }
 
-  virtual llvm::omp::DirectiveSet
+  virtual llvm::omp::Directives
   visitDirective(lower::pft::Evaluation &eval,
                  llvm::omp::Directive dir) override {
     using namespace llvm::omp;
@@ -586,7 +586,7 @@ public:
   virtual ~HostEvalVisitor() = default;
 
 protected:
-  virtual llvm::omp::DirectiveSet
+  virtual llvm::omp::Directives
   visitDirective(lower::pft::Evaluation &eval,
                  llvm::omp::Directive dir) override {
     using namespace llvm::omp;
@@ -712,7 +712,7 @@ public:
   }
 
 protected:
-  virtual llvm::omp::DirectiveSet
+  virtual llvm::omp::Directives
   visitDirective(lower::pft::Evaluation &eval,
                  llvm::omp::Directive dir) override {
     using namespace llvm::omp;
@@ -1519,40 +1519,30 @@ static void getDeclareTargetInfo(
              "expected eval to have value when clauses is empty");
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval->get().getOwningProcedure();
-      bool owningProcNotMainProgram =
-          owningProc && !owningProc->isMainProgram();
-
-      const semantics::Symbol *owningSym =
-          owningProcNotMainProgram
-              ? &owningProc->getSubprogramSymbol()
-              : (owningProc ? owningProc->getMainProgramSymbol() : nullptr);
 
       // A bare '!$omp declare target' may appear in the specification part of
       // an interface body. In that case, the PFT records the directive as an
-      // evaluation of the enclosing program unit rather than of the interface
-      // body's subprogram, so eval.getOwningProcedure() points at the main
-      // program.
+      // evaluation of its enclosing procedure rather than the interface
+      // procedure itself, so owningProc points at the wrong program.
       //
-      // Detect this by comparing the program unit lexically containing
-      // the directive with the procedure currently being lowered; when they
-      // differ, it might be this case or it might be one of the entries of a
-      // multiple-entry subprogram. In the first case, the directive belongs to
-      // the interface-body subprogram; otherwise, the owning subprogram is the
-      // correct one.
+      // Detect this by looking at the program unit lexically containing the
+      // directive with the procedure currently being lowered. If it is an
+      // interface, then use its symbol instead.
       const semantics::Scope &progUnitScope =
           semantics::GetProgramUnitContaining(
               semaCtx.FindScope(construct.v.source));
-      const semantics::Symbol *lexicalSym = progUnitScope.symbol();
-
-      if (lexicalSym && lexicalSym != owningSym) {
-        // Interface subprogram capture or non-default subprogram entry.
+      const semantics::Symbol *progUnitSym = progUnitScope.symbol();
+      const auto *subpDetails =
+          progUnitSym ? progUnitSym->detailsIf<semantics::SubprogramDetails>()
+                      : nullptr;
+      if (progUnitSym && subpDetails && subpDetails->isInterface()) {
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     owningProcNotMainProgram ? *owningSym
-                                                              : *lexicalSym);
-      } else if (owningProcNotMainProgram) {
-        // Main programs are never device routines, so skip those here.
+                                     *progUnitSym);
+      } else {
+        assert(owningProc && !owningProc->isMainProgram() &&
+               "unexpected missing owning procedure or main program");
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     *owningSym);
+                                     owningProc->getSubprogramSymbol());
       }
     }
 
@@ -1764,10 +1754,12 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       }
     }
 
-    if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
-      if (declareTargetOp.getDeclareTargetCaptureClause() ==
+    mlir::omp::DeclareTargetAttr declareTargetAttr =
+        declareTargetOp ? declareTargetOp.getDeclareTarget() : nullptr;
+    if (declareTargetAttr) {
+      if (declareTargetAttr.getCaptureClause() ==
               mlir::omp::DeclareTargetCaptureClause::link &&
-          declareTargetOp.getDeclareTargetDeviceType() !=
+          declareTargetAttr.getDeviceType() !=
               mlir::omp::DeclareTargetDeviceType::nohost) {
         mapFlag |= mlir::omp::ClauseMapFlags::to;
         mapFlag |= mlir::omp::ClauseMapFlags::from;
@@ -1847,8 +1839,9 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   // likely through implicit capture (usage in another declare target
   // function/subroutine). It should be marked as any if it has been assigned
   // both host and nohost, else we skip, as there is no change
-  if (declareTargetOp.isDeclareTarget()) {
-    if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
+  if (mlir::omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetOp.getDeclareTarget()) {
+    if (declareTargetAttr.getDeviceType() != deviceType)
       declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
                                        captureClause, automap,
                                        /*implicit=*/false);
@@ -2415,6 +2408,18 @@ static void genDistributeClauses(lower::AbstractConverter &converter,
   cp.processOrder(clauseOps);
 }
 
+static void genDispatchClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               mlir::omp::DispatchOperands &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNowait(clauseOps);
+  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
+                 clause::Novariants, clause::Nocontext>(
+      loc, llvm::omp::Directive::OMPD_dispatch);
+}
+
 static void genFlushClauses(lower::AbstractConverter &converter,
                             semantics::SemanticsContext &semaCtx,
                             const ObjectList &objects,
@@ -2746,6 +2751,7 @@ static void genTaskClauses(lower::AbstractConverter &converter,
   cp.processInReduction(loc, clauseOps, inReductionObjects);
   cp.processMergeable(clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
+  cp.processThreadset(clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
 }
@@ -2779,6 +2785,7 @@ static void genTaskloopClauses(
   cp.processNumTasks(stmtCtx, clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects);
+  cp.processThreadset(clauseOps);
   cp.processUntied(clauseOps);
 }
 
@@ -2846,19 +2853,72 @@ static void genWsloopClauses(
 //===----------------------------------------------------------------------===//
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
-static mlir::omp::AllocateDirOp genAllocateDirOp(
-    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
-    lower::StatementContext &stmtCtx, lower::pft::Evaluation &eval,
-    mlir::Location loc, const ObjectList &objects, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item) {
+
+static bool
+allocateRequiresInitOrFinalization(const semantics::Symbol &ultimate) {
+  const semantics::DeclTypeSpec *declTypeSpec = ultimate.GetType();
+  if (!declTypeSpec)
+    return false;
+  const semantics::DerivedTypeSpec *derivedTypeSpec = declTypeSpec->AsDerived();
+  if (!derivedTypeSpec)
+    return false;
+  return derivedTypeSpec->HasDefaultInitialization(false, false) ||
+         semantics::MayRequireFinalization(*derivedTypeSpec);
+}
+
+static void genAllocateDirOp(lower::AbstractConverter &converter,
+                             semantics::SemanticsContext &semaCtx,
+                             lower::StatementContext &stmtCtx,
+                             lower::pft::Evaluation &eval, mlir::Location loc,
+                             const ObjectList &objects,
+                             const ConstructQueue &queue,
+                             ConstructQueue::const_iterator item) {
+  ObjectList supportedObjects;
+  supportedObjects.reserve(objects.size());
+  for (const Object &object : objects) {
+    const semantics::Symbol *sym = object.sym();
+    assert(sym && "Expected Symbol");
+    const semantics::Symbol &ultimate = sym->GetUltimate();
+    if (semantics::omp::IsCommonBlock(ultimate) ||
+        semantics::IsSaved(ultimate)) {
+      mlir::emitWarning(
+          loc, "TODO : OpenMP declarative ALLOCATE on SAVE variables or "
+               "COMMON blocks is not yet supported, ignoring the ALLOCATE "
+               "directive for '" +
+                   sym->name().ToString() + "'");
+      continue;
+    }
+    if (allocateRequiresInitOrFinalization(ultimate)) {
+      mlir::emitWarning(
+          loc, "TODO : OpenMP declarative ALLOCATE on derived-type "
+               "variables with initialization or finalization is not yet "
+               "supported, ignoring the ALLOCATE directive for '" +
+                   sym->name().ToString() + "'");
+      continue;
+    }
+    if (semantics::IsDummy(ultimate)) {
+      if (semaCtx.langOptions().OpenMPVersion < 60) {
+        mlir::emitWarning(
+            loc, "TODO : OpenMP declarative ALLOCATE on dummy arguments is "
+                 "not yet supported, ignoring the ALLOCATE directive for '" +
+                     sym->name().ToString() + "'");
+      }
+      continue;
+    }
+    supportedObjects.push_back(object);
+  }
+
+  if (supportedObjects.empty())
+    return;
+
   llvm::SmallVector<mlir::Value> operandRange;
   mlir::omp::AllocateDirOperands clauseOps;
-  genAllocateClauses(converter, semaCtx, stmtCtx, objects, item->clauses, loc,
-                     operandRange, clauseOps);
+  genAllocateClauses(converter, semaCtx, stmtCtx, supportedObjects,
+                     item->clauses, loc, operandRange, clauseOps);
 
-  auto allocDirOp = mlir::omp::AllocateDirOp::create(
-      converter.getFirOpBuilder(), loc, operandRange, clauseOps.align,
-      clauseOps.allocator);
+  mlir::omp::AllocateDirOp::create(converter.getFirOpBuilder(), loc,
+                                   operandRange, clauseOps.align,
+                                   clauseOps.allocator);
 
   // Register a cleanup at the Fortran scope exit.
   fir::FirOpBuilder *builder = &converter.getFirOpBuilder();
@@ -2867,8 +2927,6 @@ static mlir::omp::AllocateDirOp genAllocateDirOp(
                                        allocator]() {
     mlir::omp::AllocateFreeOp::create(*builder, loc, operandRange, allocator);
   });
-
-  return allocDirOp;
 }
 
 static mlir::omp::BarrierOp
@@ -2933,6 +2991,21 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_critical),
       queue, item, nameAttr);
+}
+
+static mlir::omp::DispatchOp genDispatchOp(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, mlir::Location loc,
+    const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+  mlir::omp::DispatchOperands clauseOps;
+  genDispatchClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                     clauseOps);
+
+  return genOpWithBody<mlir::omp::DispatchOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_dispatch),
+      queue, item, clauseOps);
 }
 
 static mlir::omp::FlushOp
@@ -4243,19 +4316,18 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
           if (!mapperIdName.empty()) {
             bool isPointer = semantics::IsPointer(sym);
-            bool isAllocatable = semantics::IsAllocatable(sym);
             bool hasDefaultMapper =
                 converter.getModuleOp().lookupSymbol(mapperIdName);
             // Avoid attaching implicit default mappers to pointer captures.
             // For large pointer-based derived aggregates this can over-map
             // nested payloads and conflict with explicit enter/exit maps.
             //
-            // For an allocatable capture, only synthesize an implicit default
-            // mapper when the type requires one; a flat record does not.
+            // For other captures, make sure we require a declare mapper to
+            // map the underlying record type, this is primarily for cases
+            // where the record type contains an allocatable.
             if (!isPointer &&
                 (hasDefaultMapper ||
-                 (isAllocatable &&
-                  requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
+                 (requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -5686,6 +5758,10 @@ genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
   case llvm::omp::Directive::OMPD_barrier:
     newOp = genBarrierOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
+  case llvm::omp::Directive::OMPD_dispatch:
+    newOp = genDispatchOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
+                          queue, item);
+    break;
   case llvm::omp::Directive::OMPD_distribute:
     newOp = genStandaloneDistribute(converter, symTable, stmtCtx, semaCtx, eval,
                                     loc, queue, item);
@@ -5828,12 +5904,11 @@ genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
       // statements or directives preventing them from being combined need the
       // attribute as well. Disallow block constructs that can only be outermost
       // leafs and loop transformation constructs.
-      llvm::omp::DirectiveSet combinableDirs =
+      llvm::omp::Directives combinableDirs =
           (llvm::omp::blockConstructSet &
-           ~llvm::omp::DirectiveSet{
-               llvm::omp::Directive::OMPD_ordered_blockassoc,
-               llvm::omp::Directive::OMPD_scope,
-               llvm::omp::Directive::OMPD_taskgroup}) |
+           ~llvm::omp::Directives{llvm::omp::Directive::OMPD_ordered_blockassoc,
+                                  llvm::omp::Directive::OMPD_scope,
+                                  llvm::omp::Directive::OMPD_taskgroup}) |
           (llvm::omp::loopConstructSet & ~llvm::omp::loopTransformationSet);
       const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
       llvm::omp::Directive nestedDir =
@@ -8145,6 +8220,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Simd>(clause.u) &&
         !std::holds_alternative<clause::ThreadLimit>(clause.u) &&
         !std::holds_alternative<clause::Threads>(clause.u) &&
+        !std::holds_alternative<clause::Threadset>(clause.u) &&
         !std::holds_alternative<clause::UseDeviceAddr>(clause.u) &&
         !std::holds_alternative<clause::UseDevicePtr>(clause.u) &&
         !std::holds_alternative<clause::InReduction>(clause.u) &&
@@ -8340,9 +8416,21 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPDispatchConstruct &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
+                   const parser::OpenMPDispatchConstruct &dispatchConstruct) {
+  const parser::OmpDirectiveSpecification &beginSpec =
+      dispatchConstruct.BeginDir();
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  if (auto &endSpec = dispatchConstruct.EndDir())
+    clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
+
+  llvm::omp::Directive directive = beginSpec.DirId();
+  mlir::Location currentLocation = converter.genLocation(beginSpec.source);
+
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, beginSpec.source, directive, clauses)};
+  genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
+                 queue.begin());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -8667,7 +8755,7 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    llvm::omp::ClauseSet reqs;
+    llvm::omp::Clauses reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {

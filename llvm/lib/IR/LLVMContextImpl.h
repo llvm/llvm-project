@@ -1624,6 +1624,10 @@ public:
   DenseMap<std::pair<ElementCount, APFloat>, std::unique_ptr<ConstantFP>>
       FPSplatConstants;
 
+  EnumAttributeImpl *EnumAttrs[Attribute::NumEnumAttrKinds] = {};
+  UniquingSet<IntAttributeImpl> IntAttrs;
+  UniquingSet<StringAttributeImpl> StringAttrs;
+  UniquingSet<TypeAttributeImpl> TypeAttrs;
   FoldingSet<AttributeImpl> AttrsSet;
   UniquingSet<AttributeListImpl> AttrsLists;
   UniquingSet<AttributeSetNode> AttrsSetNodes;
@@ -1759,11 +1763,6 @@ public:
   /// Number of currently unused metadata entries. Only used/updated in debug
   /// builds to ensure that all metadata attachments are properly freed.
   unsigned MetadataRecycleSize = 0;
-
-  /// Map DIAssignID -> Instructions with that attachment.
-  /// Managed by Instruction via Instruction::updateDIAssignIDMapping.
-  /// Query using the at:: functions defined in DebugInfo.h.
-  DenseMap<DIAssignID *, SmallVector<Instruction *, 1>> AssignmentIDToInstrs;
 
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;

@@ -16,6 +16,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Config/llvm-config.h"
@@ -532,6 +533,23 @@ namespace {
 
       APInt Mask = Val | CurDAG->computeKnownBits(N->getOperand(0)).Zero;
       return Mask.countr_one() >= Width;
+    }
+
+    // Any instruction that defines a 32-bit result zeroes the upper 32 bits of
+    // the 64-bit register. Truncate can be lowered to EXTRACT_SUBREG.
+    // CopyFromReg may be copying from a truncate. AssertSext/AssertZext/
+    // AssertAlign aren't saying anything about the upper 32 bits. FREEZE may
+    // be coming from a truncate. BitScan fall through values may not zero the
+    // upper bits correctly. Called from the def32 PatLeaf in tablegen.
+    bool isDef32(SDNode *N) const {
+      unsigned Opc = N->getOpcode();
+      return Opc != ISD::TRUNCATE && Opc != TargetOpcode::EXTRACT_SUBREG &&
+             Opc != ISD::CopyFromReg && Opc != ISD::AssertSext &&
+             Opc != ISD::AssertZext && Opc != ISD::AssertAlign &&
+             Opc != ISD::FREEZE &&
+             !((Opc == X86ISD::BSF || Opc == X86ISD::BSR) &&
+               !N->getOperand(0).isUndef() &&
+               !isa<ConstantSDNode>(N->getOperand(0)));
     }
 
     /// Return an SDNode that returns the value of the global base register.
@@ -3682,7 +3700,40 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
   return true;
 }
 
+/// Return true if \p Addr may be matched with a non-fixed frame index as base.
+static bool addrMayUseNonFixedFrameIndex(SDValue Addr,
+                                         const MachineFrameInfo &MFI,
+                                         unsigned Depth = 0) {
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(Addr))
+    return !MFI.isFixedObjectIndex(FI->getIndex());
+  // Assume the worst if we can't see the whole address expression.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return true;
+  switch (Addr.getOpcode()) {
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+    return addrMayUseNonFixedFrameIndex(Addr.getOperand(0), MFI, Depth + 1) ||
+           addrMayUseNonFixedFrameIndex(Addr.getOperand(1), MFI, Depth + 1);
+  case ISD::SUB:
+    return addrMayUseNonFixedFrameIndex(Addr.getOperand(0), MFI, Depth + 1);
+  default:
+    // Only add-like nodes and the LHS of a SUB can fold a frame index into the
+    // base; anything else is matched as a register or symbol base.
+    return false;
+  }
+}
+
 bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
+  assert(N->getOpcode() == X86ISD::TC_RETURN);
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+  const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
+
+  // The tail call executes after the epilogue, where only fixed stack objects
+  // can still be addressed (the stack may end up realigned).
+  if (addrMayUseNonFixedFrameIndex(BasePtr, MF->getFrameInfo()))
+    return false;
+
   // Check that there is enough volatile registers to load the callee address.
 
   const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
@@ -3711,13 +3762,9 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
   // The load's base and index need up to two registers.
   unsigned LoadGPRs = 2;
 
-  assert(N->getOpcode() == X86ISD::TC_RETURN);
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
-
   if (Subtarget->is32Bit()) {
     // FIXME: This was carried from X86tcret_1reg which was used for 32-bit,
     // but it could apply to 64-bit too.
-    const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
@@ -5165,6 +5212,10 @@ bool X86DAGToDAGISel::shrinkAndImmediate(SDNode *And) {
   // Check if the mask is -1. In that case, this is an unnecessary instruction
   // that escaped earlier analysis.
   if (NegMaskVal.isAllOnes()) {
+    // The already-selected users of a 32-bit 'and' may rely on it zeroing the
+    // upper 32 bits (def32), which a truncate operand doesn't guarantee.
+    if (VT == MVT::i32 && !isDef32(And0.getNode()))
+      return false;
     ReplaceNode(And, And0.getNode());
     return true;
   }

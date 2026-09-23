@@ -401,7 +401,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
-  // Otherwise do everything.
+    // Otherwise do everything.
   } else
     FinalPhase = phases::Link;
 

@@ -2548,6 +2548,39 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   return E;
 }
 
+// Diagnose when a macro cannot be expanded because it's a function-like macro
+// being used as a function-like macro. Returns true if a diagnostic is emitted.
+static bool diagnoseFunctionLikeMacro(Sema &SemaRef, DeclarationName Name,
+                                      SourceLocation TypoLoc) {
+
+  if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
+    if (II->hasMacroDefinition()) {
+      MacroInfo *MI = SemaRef.PP.getMacroInfo(II);
+      if (MI && MI->isFunctionLike()) {
+        // If the identifier is immediately followed by '(', the user did
+        // attempt to invoke it as a function-like macro; the failure is
+        // for some other reason (e.g. wrong argument count), which the
+        // preprocessor already diagnosed separately. Don't suggest adding
+        // parens in that case, since they're already there.
+        SourceManager &SM = SemaRef.getSourceManager();
+        const LangOptions &LangOpts = SemaRef.getLangOpts();
+        std::optional<Token> NextTok =
+            Lexer::findNextToken(TypoLoc, SM, LangOpts);
+        if (NextTok && NextTok->is(tok::l_paren))
+          return false;
+        SemaRef.Diag(TypoLoc,
+                     diag::err_undeclared_var_use_suggest_func_like_macro)
+            << II->getName();
+        SemaRef.Diag(MI->getDefinitionLoc(),
+                     diag::note_function_like_macro_requires_parens)
+            << II->getName();
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void
 Sema::DecomposeUnqualifiedId(const UnqualifiedId &Id,
                              TemplateArgumentListInfo &Buffer,
@@ -2783,6 +2816,9 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     }
   }
   R.clear();
+
+  if (diagnoseFunctionLikeMacro(SemaRef, Name, R.getNameLoc()))
+    return true;
 
   // Emit a special diagnostic for failed member lookups.
   // FIXME: computing the declaration context might fail here (?)
@@ -4742,6 +4778,17 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprType->isDependentType())
     return false;
 
+  // These builtins evaluate with the operand type as written; a reference is
+  // not looked through.
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
+                                               ExprRange);
+  if (ExprKind == UETT_VecStep)
+    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
+                                                    ExprRange);
+
   // C++ [expr.sizeof]p2:
   //     When applied to a reference or a reference type, the result
   //     is the size of the referenced type.
@@ -4763,17 +4810,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
       DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
-
-  if (ExprKind == UETT_VecStep)
-    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
-
-  if (ExprKind == UETT_VectorElements)
-    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
-                                               ExprRange);
-
-  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
-    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
-                                                    ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
@@ -5882,39 +5918,51 @@ static FieldDecl *FindFieldDeclInstantiationPattern(const ASTContext &Ctx,
   return cast<FieldDecl>(*Rng.begin());
 }
 
-ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
-  assert(Field->hasInClassInitializer());
-
-  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
-
+ExprResult Sema::BuildCXXDefaultInitInternal(SourceLocation Loc,
+                                             FieldDecl *Field,
+                                             const InitializedEntity &Entity,
+                                             bool NestedDefaultChecking,
+                                             bool NeedRebuild) {
   auto *ParentRD = cast<CXXRecordDecl>(Field->getParent());
 
-  std::optional<ExpressionEvaluationContextRecord::InitializationContext>
-      InitializationContext =
-          OutermostDeclarationWithDelayedImmediateInvocations();
-  if (!InitializationContext.has_value())
-    InitializationContext.emplace(Loc, Field, CurContext);
-
-  Expr *Init = nullptr;
-
-  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
-  bool NeedRebuild = needsRebuildOfDefaultArgOrInit();
-  EnterExpressionEvaluationContext EvalContext(
-      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
-
-  if (!Field->getInClassInitializer()) {
+  if (!Field->getInClassInitializer() &&
+      isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
     // Maybe we haven't instantiated the in-class initializer. Go check the
     // pattern FieldDecl to see if it has one.
-    if (isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
-      FieldDecl *Pattern =
-          FindFieldDeclInstantiationPattern(getASTContext(), Field);
-      assert(Pattern && "We must have set the Pattern!");
-      if (!Pattern->hasInClassInitializer() ||
-          InstantiateInClassInitializer(Loc, Field, Pattern,
-                                        getTemplateInstantiationArgs(Field))) {
-        return ExprError();
-      }
-    }
+    FieldDecl *Pattern =
+        FindFieldDeclInstantiationPattern(getASTContext(), Field);
+    assert(Pattern && "We must have set the Pattern!");
+    if (!Pattern->hasInClassInitializer() ||
+        InstantiateInClassInitializer(Loc, Field, Pattern,
+                                      getTemplateInstantiationArgs(Field)))
+      return ExprError();
+  }
+
+  Expr *InClassInit = Field->getInClassInitializer();
+  if (!InClassInit) {
+    // DR1351:
+    //   If the brace-or-equal-initializer of a non-static data member
+    //   invokes a defaulted default constructor of its class or of an
+    //   enclosing class in a potentially evaluated subexpression, the
+    //   program is ill-formed.
+    //
+    // This resolution is unworkable: the exception specification of the
+    // default constructor can be needed in an unevaluated context, in
+    // particular, in the operand of a noexcept-expression, and we can be
+    // unable to compute an exception specification for an enclosed class.
+    //
+    // Any attempt to resolve the exception specification of a defaulted default
+    // constructor before the initializer is lexically complete will ultimately
+    // come here at which point we can diagnose it.
+    RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
+    Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
+        << OutermostClass << Field;
+    Diag(Field->getEndLoc(),
+         diag::note_default_member_initializer_not_yet_parsed);
+    // Recover by marking the field invalid, unless we're in a SFINAE context.
+    if (!isSFINAEContext())
+      Field->setInvalidDecl();
+    return ExprError();
   }
 
   // CWG2631
@@ -5933,27 +5981,27 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   // expression is an ExprWithCleanups. Then make sure the normal lifetime
   // extension code recurses into the default initializer and does lifetime
   // extension when warranted.
-  bool ContainsAnyTemporaries =
-      isa_and_present<ExprWithCleanups>(Field->getInClassInitializer());
-  if (Field->getInClassInitializer() &&
-      !Field->getInClassInitializer()->containsErrors() &&
+  bool ContainsAnyTemporaries = isa<ExprWithCleanups>(InClassInit);
+  Expr *Init = InClassInit;
+  if (!InClassInit->containsErrors() &&
       (V.HasImmediateCalls || (NeedRebuild && ContainsAnyTemporaries))) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
         NestedDefaultChecking;
     // Pass down lifetime extending flag, and collect temporaries in
-    // CreateMaterializeTemporaryExpr when we rewrite the call argument.
+    // CreateMaterializeTemporaryExpr when we rewrite the initializer.
     currentEvaluationContext().InLifetimeExtendingContext =
         parentEvaluationContext().InLifetimeExtendingContext;
+
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
     runWithSufficientStackSpace(Loc, [&] {
-      Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
+      Res = Immediate.TransformInitializer(InClassInit,
                                            /*CXXDirectInit=*/false);
     });
     if (!Res.isInvalid())
-      Res = ConvertMemberDefaultInitExpression(Field, Res.get(), Loc);
+      Res = ConvertMemberDefaultInitExpression(Field, Entity, Res.get(), Loc);
     if (Res.isInvalid()) {
       Field->setInvalidDecl();
       return ExprError();
@@ -5961,52 +6009,106 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     Init = Res.get();
   }
 
-  if (Field->getInClassInitializer()) {
-    Expr *E = Init ? Init : Field->getInClassInitializer();
-    if (!NestedDefaultChecking)
-      runWithSufficientStackSpace(Loc, [&] {
-        MarkDeclarationsReferencedInExpr(E, /*SkipLocalVariables=*/false);
-      });
-    if (isInLifetimeExtendingContext())
-      DiscardCleanupsInEvaluationContext();
-    // C++11 [class.base.init]p7:
-    //   The initialization of each base and member constitutes a
-    //   full-expression.
-    ExprResult Res = ActOnFinishFullExpr(E, /*DiscardedValue=*/false);
-    if (Res.isInvalid()) {
-      Field->setInvalidDecl();
-      return ExprError();
-    }
-    Init = Res.get();
+  if (!NestedDefaultChecking)
+    runWithSufficientStackSpace(Loc, [&] {
+      MarkDeclarationsReferencedInExpr(Init, /*SkipLocalVariables=*/false);
+    });
+  return Init;
+}
 
-    return CXXDefaultInitExpr::Create(Context, InitializationContext->Loc,
-                                      Field, InitializationContext->Context,
-                                      Init);
-  }
+ExprResult Sema::BuildCXXCtorDefaultInitExpr(SourceLocation Loc,
+                                             FieldDecl *Field) {
+  assert(Field->hasInClassInitializer());
 
-  // DR1351:
-  //   If the brace-or-equal-initializer of a non-static data member
-  //   invokes a defaulted default constructor of its class or of an
-  //   enclosing class in a potentially evaluated subexpression, the
-  //   program is ill-formed.
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
+
+  // C++11 [class.base.init]p7:
+  //   The initialization of each base and member constitutes a
+  //   full-expression.
+  // So this initializer gets an evaluation context of its own, and is finished
+  // as a full-expression below.
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Field);
+  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
+
+  auto InitContext = OutermostDeclarationWithDelayedImmediateInvocations();
+  if (!InitContext)
+    InitContext.emplace(Loc, Field, CurContext);
+
+  // [class.temporary]/p7:
+  // If such a temporary object would otherwise be destroyed at the end of the
+  // for-range-initializer full-expression, the object persists for the lifetime
+  // of the reference initialized by the for-range-initializer.
   //
-  // This resolution is unworkable: the exception specification of the
-  // default constructor can be needed in an unevaluated context, in
-  // particular, in the operand of a noexcept-expression, and we can be
-  // unable to compute an exception specification for an enclosed class.
-  //
-  // Any attempt to resolve the exception specification of a defaulted default
-  // constructor before the initializer is lexically complete will ultimately
-  // come here at which point we can diagnose it.
-  RecordDecl *OutermostClass = ParentRD->getOuterLexicalRecordContext();
-  Diag(Loc, diag::err_default_member_initializer_not_yet_parsed)
-      << OutermostClass << Field;
-  Diag(Field->getEndLoc(),
-       diag::note_default_member_initializer_not_yet_parsed);
-  // Recover by marking the field invalid, unless we're in a SFINAE context.
-  if (!isSFINAEContext())
+  // A default member initializer used by a constructor is a separate
+  // full-expression, we don't need extend temporaries lifetime in this
+  // situation, the NeedRebuild will always false.
+  ExprResult Init = BuildCXXDefaultInitInternal(
+      Loc, Field,
+      InitializedEntity::InitializeMemberFromDefaultMemberInitializer(Field),
+      NestedDefaultChecking, /*NeedRebuild=*/false);
+  if (Init.isInvalid())
+    return ExprError();
+
+  Init = ActOnFinishFullExpr(Init.get(), /*DiscardedValue=*/false);
+  if (Init.isInvalid()) {
     Field->setInvalidDecl();
-  return ExprError();
+    return ExprError();
+  }
+
+  return CXXDefaultInitExpr::Create(
+      Context, InitContext->Loc, Field, InitContext->Context,
+      Init.get() == Field->getInClassInitializer() ? nullptr : Init.get());
+}
+
+ExprResult
+Sema::BuildCXXAggregateDefaultInitExpr(SourceLocation Loc, FieldDecl *Field,
+                                       const InitializedEntity &MemberEntity) {
+  assert(Field->hasInClassInitializer());
+
+  bool NestedDefaultChecking = isCheckingDefaultArgumentOrInitializer();
+
+  // Unlike a mem-initializer, this initializer is a subexpression of the
+  // full-expression containing the aggregate initialization. It is evaluated
+  // exactly as that full-expression is, so inherit the enclosing context kind
+  // rather than forcing a potentially evaluated one.
+  EnterExpressionEvaluationContext EvalContext(
+      *this, currentEvaluationContext().Context, Field);
+  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
+
+  auto InitContext = OutermostDeclarationWithDelayedImmediateInvocations();
+  if (!InitContext)
+    InitContext.emplace(Loc, Field, CurContext);
+
+  // [class.temporary]/p7:
+  // If such a temporary object would otherwise be destroyed at the end of the
+  // for-range-initializer full-expression, the object persists for the lifetime
+  // of the reference initialized by the for-range-initializer.
+  //
+  // A default member initializer used by an aggregate initialization belongs to
+  // the full-expression containing the aggregate initialization. we need extend
+  // temporaries lifetime in this situation, the NeedRebuild will always true.
+
+  // CWG1815: always rebuild, never share the AST built when the field was
+  // declared. Only a copy rebuilt here has its MaterializeTemporaryExprs
+  // collected in this context, which is what lets the aggregate initialization
+  // lifetime-extend them; sharing one AST would also make several uses of the
+  // same field fight over its extension. A mem-initializer has no such need,
+  // as its temporaries die at the end of the initializer itself.
+  ExprResult Init = BuildCXXDefaultInitInternal(
+      Loc, Field, MemberEntity, NestedDefaultChecking, /*NeedRebuild=*/true);
+  if (Init.isInvalid())
+    return ExprError();
+
+  // Deliberately not finished as a full-expression: leaving the temporaries it
+  // created on ExprCleanupObjects lets PopExpressionEvaluationContext merge
+  // them into the enclosing context, which eventually wraps them all in a
+  // single ExprWithCleanups. They are then destroyed at the end of the
+  // containing full-expression, in reverse construction order.
+
+  return CXXDefaultInitExpr::Create(
+      Context, InitContext->Loc, Field, InitContext->Context,
+      Init.get() == Field->getInClassInitializer() ? nullptr : Init.get());
 }
 
 VariadicCallType Sema::getVariadicCallType(FunctionDecl *FDecl,
@@ -7584,9 +7686,9 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                             NTCUK_Destruct);
 
     // Diagnose jumps that enter or exit the lifetime of the compound literal.
+    Cleanup.setExprNeedsCleanups(true);
+    ExprCleanupObjects.push_back(E);
     if (literalType.isDestructedType()) {
-      Cleanup.setExprNeedsCleanups(true);
-      ExprCleanupObjects.push_back(E);
       getCurFunction()->setHasBranchProtectedScope();
     }
   }
@@ -11932,6 +12034,35 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                                LHS.get(), RHS.get()))
         return QualType();
 
+      // For pointer subtraction, if the address spaces differ but overlap,
+      // convert both pointers to the composite (superset) address space.
+      // This is needed because address spaces may use different
+      // representations, such as a private offset vs a flat address.
+      LangAS LAddrSpace = lpointee.getAddressSpace();
+      LangAS RAddrSpace = rpointee.getAddressSpace();
+      if (LAddrSpace != RAddrSpace) {
+        Qualifiers LQual = lpointee.getQualifiers();
+        Qualifiers RQual = rpointee.getQualifiers();
+        LangAS ResultAddrSpace = LQual.isAddressSpaceSupersetOf(RQual, Context)
+                                     ? LAddrSpace
+                                     : RAddrSpace;
+
+        if (LAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              lpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          LHS =
+              ImpCastExprToType(LHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+        if (RAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              rpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          RHS =
+              ImpCastExprToType(RHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+      }
+
       bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
           Context, Expr::NPC_ValueDependentIsNotNull);
       bool RHSIsNullPtr = RHS.get()->IgnoreParenCasts()->isNullPointerConstant(
@@ -13801,7 +13932,7 @@ QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                           BinaryOperatorKind Opc) {
 
   if (!getLangOpts().HLSL) {
-    assert(false && "Logical operands are not supported in C\\C++");
+    SemaRef.Diag(Loc, diag::err_matrix_logical_operations_supported_for_hlsl);
     return QualType();
   }
 
@@ -14482,9 +14613,20 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
     llvm_unreachable("did not take early return for MLV_Valid");
   case Expr::MLV_InvalidExpression:
   case Expr::MLV_MemberFunction:
-  case Expr::MLV_ClassTemporary:
+  case Expr::MLV_ClassTemporary: {
+    if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E)) {
+      const Expr *Op = UnaryOp->getSubExpr()->IgnoreParens();
+      if (UnaryOp->getOpcode() == UO_Imag &&
+          !Op->getType()->isAnyComplexType()) {
+        DiagID = diag::err_typecheck_lvalue_imag_not_modifiable_lvalue;
+        NeedType = true;
+        break;
+      }
+    }
+
     DiagID = diag::err_typecheck_expression_not_modifiable_lvalue;
     break;
+  }
   case Expr::MLV_IncompleteType:
   case Expr::MLV_IncompleteVoidType:
     return S.RequireCompleteType(Loc, E->getType(),
@@ -19408,7 +19550,8 @@ void Sema::MarkCaptureUsedInEnclosingContext(ValueDecl *Capture,
 static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
                                                         SourceLocation loc,
                                                         ValueDecl *var) {
-  DeclContext *VarDC = var->getDeclContext();
+  DeclContext *VarDC =
+      var->getDeclContext()->getEnclosingNonExpansionStatementContext();
 
   //  If the parameter still belongs to the translation unit, then
   //  we're actually just using one parameter in the declaration of
@@ -19513,6 +19656,15 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
   bool IsBlock = isa<BlockScopeInfo>(CSI);
   bool IsLambda = isa<LambdaScopeInfo>(CSI);
 
+  // Reject bindings referenced from a lambda or block that wraps an OpenMP
+  // region.
+  if ((IsLambda || IsBlock) && S.getLangOpts().OpenMP &&
+      isa<DecompositionDecl>(Var)) {
+    if (Diagnose)
+      S.Diag(Loc, diag::err_omp_unsupported_on_binding) << 3;
+    return false;
+  }
+
   // Lambdas are not allowed to capture unnamed variables
   // (e.g. anonymous unions).
   // FIXME: The C++11 rule don't actually state this explicitly, but I'm
@@ -19564,7 +19716,23 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
     return false;
   }
 
-  if (isa<BindingDecl>(Var)) {
+  if (auto *BD = dyn_cast<BindingDecl>(Var)) {
+    if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
+      if (RSI->CapRegionKind == CR_OpenMP) {
+        if (BD->getHoldingVar()) {
+          if (Diagnose) {
+            S.Diag(Loc, diag::err_capture_tuple_binding_openmp) << Var;
+            S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+          }
+          return false;
+        }
+        if (Diagnose && S.getLangOpts().CPlusPlus) {
+          S.DiagCompat(Loc, diag_compat::capture_binding) << Var;
+          S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+        }
+        return true;
+      }
+    }
     if (!IsLambda || !S.getLangOpts().CPlusPlus) {
       if (Diagnose)
         diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
@@ -19654,23 +19822,46 @@ static bool captureInCapturedRegion(
     Sema &S, bool Invalid) {
   // By default, capture variables by reference.
   bool ByRef = true;
+  bool IsBindingDecl = isa<BindingDecl>(Var);
+  ValueDecl *DSAVar = Var;
   if (IsTopScope && Kind != TryCaptureKind::Implicit) {
     ByRef = (Kind == TryCaptureKind::ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
     // Using an LValue reference type is consistent with Lambdas (see below).
-    if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
+    if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(Var)) {
+      Var = VD; // Capture the DecompositionDecl.
       bool HasConst = DeclRefType.isConstQualified();
+      // Note: DeclRefType should remain the BindingDecl's type (e.g., int),
+      // not the DecompositionDecl's type (e.g., Point). The variable being
+      // captured is the DecompositionDecl, but expressions still reference
+      // the individual binding's type.
       DeclRefType = DeclRefType.getUnqualifiedType();
       // Don't lose diagnostics about assignments to const.
       if (HasConst)
         DeclRefType.addConst();
     }
-    // Do not capture firstprivates in tasks.
-    if (S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
-                                       RSI->OpenMPCaptureLevel) != OMPC_unknown)
+    // Do not capture firstprivates in tasks. For bindings the DSA is on the
+    // binding, not on the DecompositionDecl; the task firstprivate path still
+    // needs the DecompositionDecl capture, so skip only private.
+    OpenMPClauseKind PrivateKind = S.OpenMP().isOpenMPPrivateDecl(
+        IsBindingDecl ? DSAVar : Var, RSI->OpenMPLevel,
+        RSI->OpenMPCaptureLevel);
+    if (IsBindingDecl ? PrivateKind == OMPC_private
+                      : PrivateKind != OMPC_unknown)
       return true;
-    ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
+    ByRef = S.OpenMP().isOpenMPCapturedByRef(DSAVar, RSI->OpenMPLevel,
                                              RSI->OpenMPCaptureLevel);
+    // Bindings share the DecompositionDecl storage; a second capture with
+    // a different capture kind is not representable.
+    if (BuildAndDiagnose && IsBindingDecl) {
+      unsigned Idx = RSI->CaptureMap.lookup(Var);
+      if (Idx != 0 && RSI->Captures[Idx - 1].isReferenceCapture() != ByRef) {
+        S.Diag(Loc,
+               diag::err_omp_decomposition_bindings_different_capture_kinds)
+            << DSAVar;
+        return false;
+      }
+    }
   }
 
   if (ByRef)
@@ -19682,6 +19873,11 @@ static bool captureInCapturedRegion(
   if (BuildAndDiagnose)
     RSI->addCapture(Var, /*isBlock*/ false, ByRef, RefersToCapturedVariable,
                     Loc, SourceLocation(), CaptureType, Invalid);
+
+  if (BuildAndDiagnose && IsBindingDecl)
+    // Key the binding to its own capture entry so repeated uses hit the
+    // already-captured path.
+    RSI->CaptureMap[DSAVar] = RSI->Captures.size();
 
   return !Invalid;
 }
@@ -20069,14 +20265,6 @@ bool Sema::tryCaptureVariable(
         // just break here. Similarly, global variables that are captured in a
         // target region should not be captured outside the scope of the region.
         if (RSI->CapRegionKind == CR_OpenMP) {
-          // FIXME: We should support capturing structured bindings in OpenMP.
-          if (isa<BindingDecl>(Var)) {
-            if (BuildAndDiagnose) {
-              Diag(ExprLoc, diag::err_capture_binding_openmp) << Var;
-              Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-            }
-            return true;
-          }
           OpenMPClauseKind IsOpenMPPrivateDecl = OpenMP().isOpenMPPrivateDecl(
               Var, RSI->OpenMPLevel, RSI->OpenMPCaptureLevel);
           // If the variable is private (i.e. not captured) and has variably

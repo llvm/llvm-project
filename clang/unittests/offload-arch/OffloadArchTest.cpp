@@ -11,10 +11,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <algorithm>
+#include <cstdlib>
+#include <optional>
 #include <string>
 
 // Defined in AMDGPUArchByHIP.cpp (non-static, compiled into this test).
@@ -142,6 +145,19 @@ void addGPUNode(StringRef Dir, unsigned Node, StringRef GFXVersion) {
   addNode(Dir, Node, ("gfx_target_version " + GFXVersion + "\n").str());
 }
 
+// Write a node describing a GPU with the given gfx_target_version and
+// capabilities. Write capability2 before and after to catch accidental
+// reads of something other than "capability"
+void addGPUNodeWithCapability(StringRef Dir, unsigned Node,
+                              StringRef GFXVersion, uint64_t Capability,
+                              uint64_t Capability2) {
+  addNode(Dir, Node,
+          ("gfx_target_version " + GFXVersion + "\n" + "capability2 " +
+           Twine(Capability2) + "\n" + "capability " + Twine(Capability) +
+           "\n" + "capability2 " + Twine(Capability2) + "\n")
+              .str());
+}
+
 // Run printGPUsByKFD, collecting what it writes to stdout.
 int printGPUsByKFDCapturingStdout(StringRef NodePath, std::string &Output) {
   testing::internal::CaptureStdout();
@@ -150,6 +166,39 @@ int printGPUsByKFDCapturingStdout(StringRef NodePath, std::string &Output) {
   Output = testing::internal::GetCapturedStdout();
   return Result;
 }
+
+// RAII helper to set an environment variable for the duration of a test
+// Based on the class of the same name in llvm's Jobserver unit tests
+class ScopedEnvironment {
+  std::string Name;
+  std::optional<std::string> OldValue;
+
+  static void setEnv(const std::string &Name, std::optional<StringRef> Value) {
+#if defined(_WIN32)
+    // On Windows, setting an environment variable to the empty string
+    // unsets it, so getenv() returns NULL
+    _putenv_s(Name.c_str(), Value ? Value->str().c_str() : "");
+#else
+    if (Value)
+      setenv(Name.c_str(), Value->str().c_str(), 1);
+    else
+      unsetenv(Name.c_str());
+#endif
+  }
+
+public:
+  ScopedEnvironment(StringRef Name, std::optional<StringRef> Value)
+      : Name(Name.str()), OldValue(sys::Process::GetEnv(Name)) {
+    setEnv(this->Name, Value);
+  }
+
+  ~ScopedEnvironment() {
+    setEnv(Name, OldValue ? std::optional<StringRef>(*OldValue) : std::nullopt);
+  }
+
+  ScopedEnvironment(const ScopedEnvironment &) = delete;
+  ScopedEnvironment &operator=(const ScopedEnvironment &) = delete;
+};
 } // namespace
 
 // A topology directory that cannot be opened must be reported as a failure, so
@@ -206,4 +255,51 @@ TEST(KFDTopology, MultipleGPUsArePrintedInNodeOrder) {
   std::string Output;
   EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
   EXPECT_EQ(Output, "gfx1101\ngfx90a\n");
+}
+
+// Make sure that A0 of gfx1250 is printed as gfx1250-strict. Happens when
+// ASIC revision is 0. Also tests to make sure other properties that look like
+// capability (like capability2) are not read instead.
+TEST(KFDTopology, GFX1250A0IsPrintedAsStrict) {
+  // A temporary patch in ROCr requires this env var to be 0
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "0");
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
+                           /*Capability2=*/0xFFFFFFFF);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250-strict\n");
+}
+
+// HSA_DISABLE_GFX12_STRICT=1 suppresses the suffix on A0.
+TEST(KFDTopology, GFX1250A0StrictSuppressedByEnvVar) {
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "1");
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
+                           /*Capability2=*/0xFFFFFFFF);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250\n");
+}
+
+// Temporary test: Only the exact value "0" enables the suffix.
+TEST(KFDTopology, GFX1250A0StrictIgnoresOtherEnvValues) {
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", std::nullopt);
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF837A280,
+                           /*Capability2=*/0xFFFFFFFF);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250\n");
+}
+
+// Make sure any other version of gfx1250 is printed as gfx1250.
+TEST(KFDTopology, GFX1250NonA0IsPrintedPlain) {
+  ScopedEnvironment Env("HSA_DISABLE_GFX12_STRICT", "0");
+  unittest::TempDir Dir("kfd-topology", /*Unique=*/true);
+  addGPUNodeWithCapability(Dir.path(), 0, "120500", /*Capability=*/0xF877A280,
+                           /*Capability2=*/0x00000000);
+  std::string Output;
+  EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
+  EXPECT_EQ(Output, "gfx1250\n");
 }
