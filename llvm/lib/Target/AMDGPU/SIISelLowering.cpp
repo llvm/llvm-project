@@ -7325,6 +7325,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::V_ADD_CO_U32_e32:
   case AMDGPU::V_SUB_CO_U32_e32:
   case AMDGPU::V_SUBREV_CO_U32_e32:
+    // TODO: Remove usesCustomInserter from these instructions.
     return BB;
   case AMDGPU::V_ADDC_U32_e32:
   case AMDGPU::V_SUBB_U32_e32:
