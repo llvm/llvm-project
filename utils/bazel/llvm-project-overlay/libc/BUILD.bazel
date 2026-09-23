@@ -8510,6 +8510,7 @@ libc_support_library(
     name = "__support_math_erfcf",
     hdrs = ["src/__support/math/erfcf.h"],
     deps = [
+        ":__support_cpp_bit",
         ":__support_fputil_cast",
         ":__support_fputil_except_value_utils",
         ":__support_fputil_fenv_impl",

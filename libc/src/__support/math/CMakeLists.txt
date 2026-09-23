@@ -3030,6 +3030,7 @@ add_header_library(
   HDRS
     erfcf.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl

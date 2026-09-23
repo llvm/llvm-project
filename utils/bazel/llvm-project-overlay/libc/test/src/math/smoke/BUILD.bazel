@@ -484,9 +484,11 @@ math_test(
 
 math_test(name = "erff")
 
-math_test(name = "erfcf16")
-
 math_test(name = "erff16")
+
+math_test(name = "erfcf")
+
+math_test(name = "erfcf16")
 
 math_test(name = "exp")
 

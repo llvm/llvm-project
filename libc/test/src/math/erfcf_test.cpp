@@ -35,9 +35,10 @@ TEST_F(LlvmLibcErfcfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcErfcfTest, TrickyInputs) {
-  constexpr int N = 1;
+  constexpr int N = 2;
   constexpr uint32_t INPUTS[N] = {
       0x376c9f62U, // |x| = 0x1.d93ec4p-17f
+      0x39d693e4U, // |x| = 0x1.ad27c8p-12f, near a rounding boundary
   };
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
