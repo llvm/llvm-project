@@ -4,13 +4,22 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++17 -emit-llvm -O0 \
 // RUN:   -fdump-record-layouts-simple -o %t.le.ll %s | FileCheck %s --check-prefix=LAYOUT-LE
 // RUN: FileCheck %s --check-prefix=LE <%t.le.ll
+// RUN: %clang_cc1 -triple s390x-linux-gnu -std=c++17 -emit-llvm -O0 \
+// RUN:   -fdump-record-layouts-simple -o %t.s390x.ll %s | FileCheck %s --check-prefix=LAYOUT-BE
+// RUN: FileCheck %s --check-prefix=BE <%t.s390x.ll
+// RUN: %clang_cc1 -triple powerpc64-linux-gnu -std=c++17 -emit-llvm -O0 \
+// RUN:   -fdump-record-layouts-simple -o %t.ppc64.ll %s | FileCheck %s --check-prefix=LAYOUT-BE
+// RUN: FileCheck %s --check-prefix=BE <%t.ppc64.ll
+// RUN: %clang_cc1 -triple powerpc64le-linux-gnu -std=c++17 -emit-llvm -O0 \
+// RUN:   -fdump-record-layouts-simple -o %t.ppc64le.ll %s | FileCheck %s --check-prefix=LAYOUT-LE
+// RUN: FileCheck %s --check-prefix=LE <%t.ppc64le.ll
 
 // An oversized bit-field has a declared width larger than its type. Only the
 // type width is a value; the rest is padding, and the value bits come first.
-// On AArch64 big endian that places 0xAB in the high byte of the 16-bit
-// container (memory AB 00). A load therefore shifts the container right by 8.
-// Little endian keeps the value in the low byte (memory AB 00 as well, as the
-// integer 0x00AB).
+// Big endian (AArch64, SystemZ, PowerPC) places 0xAB in the high byte of the
+// 16-bit container (memory AB 00). A load therefore shifts the container right
+// by 8. Little endian keeps the value in the low byte (memory AB 00 as well,
+// as the integer 0x00AB) and masks instead of shifting.
 
 #pragma clang diagnostic ignored "-Wbitfield-width"
 
