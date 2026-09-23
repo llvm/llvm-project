@@ -236,7 +236,8 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
 
   TwoAddressInstructionImpl Impl(MF, MFAM, LIS);
-  if (MF.getFunction().hasOptNone())
+  if (MF.getFunction().hasOptNone() ||
+      shouldSkipOptimizationForOptBisect(MF.getFunction()))
     Impl.setOptLevel(CodeGenOptLevel::None);
 
   MFPropsModifier _(*this, MF);

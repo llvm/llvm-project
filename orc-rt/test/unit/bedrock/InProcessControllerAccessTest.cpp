@@ -17,12 +17,14 @@
 
 #include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
+#include "ErrorMatchers.h"
 
 #include <deque>
 #include <optional>
 #include <string>
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 namespace {
 
@@ -173,7 +175,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
   cantFail(std::move(Reported)); // force checked state
 
   Session S(mockExecutorProcessInfo(), noDispatch,
-            [&](Error E) { Reported = std::move(E); });
+            [&](Error E) noexcept { Reported = std::move(E); });
 
   S.attach<InProcessControllerAccess>(
       BootstrapInfo(S),
@@ -183,10 +185,8 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
         return make_error<StringError>("fake connect failure");
       });
 
-  if (Reported)
-    EXPECT_EQ(toString(std::move(Reported)), "fake connect failure");
-  else
-    ADD_FAILURE() << "Expected OnConnect error to be reported";
+  EXPECT_THAT_ERROR(std::move(Reported),
+                    FailedWithMessage("fake connect failure"));
 
   // A subsequent call to the controller should now fail with "no controller
   // attached" (i.e. the Session detached on the OnConnect error).

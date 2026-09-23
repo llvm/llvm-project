@@ -2107,7 +2107,7 @@ def CIR_DecOp
 //===----------------------------------------------------------------------===//
 
 def CIR_MinusOp
-    : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyIntOrVecOfIntType> {
+    : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyIntOrVecOfIntOrBoolType> {
   let summary = "Integer unary minus (negation)";
   let description = [{
     The `cir.minus` operation negates the operand. The operand and result
@@ -4335,7 +4335,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-    OptionalAttr<CIR_SideEffectAttr>:$side_effect,
+    OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
@@ -4547,6 +4547,10 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
 
     The `dtor_may_throw` unit property, when present, indicates that the
     element destructor may throw exceptions.
+
+    The `element_align` attribute gives the element type's preferred
+    alignment in bytes, which should be the same value the corresponding `new[]`
+    uses to size its array cookie.
   }];
 
   let arguments = (ins
@@ -4554,16 +4558,19 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     FlatSymbolRefAttr:$delete_fn,
     CIR_UsualDeleteParamsAttr:$delete_params,
     OptionalAttr<FlatSymbolRefAttr>:$element_dtor,
-    UnitProp:$dtor_may_throw
+    UnitProp:$dtor_may_throw,
+    I64Attr:$element_align
   );
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$address,
                    "mlir::FlatSymbolRefAttr":$delete_fn,
-                   "cir::UsualDeleteParamsAttr":$delete_params), [{
+                   "cir::UsualDeleteParamsAttr":$delete_params,
+                   "uint64_t":$element_align), [{
       build($_builder, $_state, address, delete_fn, delete_params,
             /*element_dtor=*/mlir::FlatSymbolRefAttr{},
-            /*dtor_may_throw=*/false);
+            /*dtor_may_throw=*/false,
+            $_builder.getI64IntegerAttr(element_align));
     }]>
   ];
 
@@ -4641,9 +4648,11 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
+      UnitAttr:$nounwind,
+      UnitAttr:$willreturn,
       OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
       UnitAttr:$musttail,
-      DefaultValuedAttr<CIR_SideEffectAttr, "SideEffect::All">:$side_effect,
+      OptionalAttr<CIR_MemoryEffectsAttr>:$memory_effects,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs
       );
@@ -4739,7 +4748,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$callOperands,
-               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+               CArg<"cir::MemoryEffectsAttr", "{}">:$memoryEffects), [{
       $_state.addOperands(callOperands);
 
       if (callee)
@@ -4747,8 +4756,8 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
 
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
+      if (memoryEffects)
+        $_state.addAttribute("memory_effects", memoryEffects);
 
       // Handle branches
       $_state.addSuccessors(normalDest);
@@ -4759,7 +4768,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
                "mlir::Block *":$normalDest,
                "mlir::Block *":$unwindDest,
                CArg<"mlir::ValueRange", "{}">:$callOperands,
-               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+               CArg<"cir::MemoryEffectsAttr", "{}">:$memoryEffects), [{
       ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
       finalCallOperands.append(callOperands.begin(), callOperands.end());
       $_state.addOperands(finalCallOperands);
@@ -4767,8 +4776,8 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       if (!fn_type.hasVoidReturn())
         $_state.addTypes(fn_type.getReturnType());
 
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
+      if (memoryEffects)
+        $_state.addAttribute("memory_effects", memoryEffects);
 
       // Handle branches
       $_state.addSuccessors(normalDest);

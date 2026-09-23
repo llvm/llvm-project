@@ -32,11 +32,6 @@ llvm::LogicalResult
 mlir::mlirQueryMain(int argc, char **argv, MLIRContext &context,
                     const mlir::query::matcher::Registry &matcherRegistry) {
 
-  // Override the default '-h' and use the default PrintHelpMessage() which
-  // won't print options in categories.
-  static llvm::cl::opt<bool> help("h", llvm::cl::desc("Alias for -help"),
-                                  llvm::cl::Hidden);
-
   static llvm::cl::OptionCategory mlirQueryCategory("mlir-query options");
 
   static llvm::cl::list<std::string> commands(
@@ -63,11 +58,6 @@ mlir::mlirQueryMain(int argc, char **argv, MLIRContext &context,
   llvm::InitLLVM y(argc, argv);
 
   llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR test case query tool.\n");
-
-  if (help) {
-    llvm::cl::PrintHelpMessage();
-    return mlir::success();
-  }
 
   // When reading from stdin and the input is a tty, it is often a user mistake
   // and the process "appears to be stuck". Print a message to let the user
