@@ -91,3 +91,36 @@ end subroutine
 ! CHECK: acc.data
 ! CHECK: fir.call @_QP__host_sub
 ! CHECK-NOT: fir.call @_QP__device_sub
+
+! A common member listed as a designator is a whole object, so it does get
+! a device binding and the DEVICE specific.
+subroutine test_common_member
+  use m
+  real(4) :: mapped(2,2,2)
+  common /blk2/ mapped
+  !$acc data copyin(mapped)
+  call doit(mapped)
+  !$acc end data
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_common_member
+! CHECK: acc.data
+! CHECK: fir.call @_QP__device_sub
+
+! A mapped component is not recorded as a whole-object device mapping, so the
+! host specific is selected and the host address is passed.
+subroutine test_component
+  use m
+  type t
+    real(4) :: c(2,2,2)
+  end type
+  type(t) :: x
+  !$acc data copyin(x%c)
+  call doit(x%c)
+  !$acc end data
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component
+! CHECK: acc.data
+! CHECK: fir.call @_QP__host_sub
+! CHECK-NOT: fir.call @_QP__device_sub
