@@ -23,7 +23,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
@@ -199,17 +199,6 @@ public:
   void propagateContextualMatrixLayout(Expr *E, QualType DestType);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
-  template <typename T>
-  T *createSemanticAttr(const AttributeCommonInfo &ACI,
-                        std::optional<unsigned> Location) {
-    return ::new (getASTContext())
-        T(getASTContext(), ACI, ACI.getAttrName()->getName(),
-          Location.value_or(0));
-  }
-
-  void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
-                                  llvm::dxbc::PSV::SemanticKind SemanticKind,
-                                  std::optional<unsigned> Index);
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
@@ -230,11 +219,6 @@ public:
 
   QualType ActOnTemplateShorthand(TemplateDecl *Template,
                                   SourceLocation NameLoc);
-
-  // Diagnose whether the index type is uint/unit2/uint3 type.
-  bool diagnoseIndexType(QualType T, const ParsedAttr &AL);
-  // Diagnose whether the type is float/float2/float3/float4 type.
-  bool diagnoseFloatType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
@@ -300,9 +284,9 @@ private:
     // Present if any semantic sharing the same IO type has an explicit or
     // implicit SPIR-V location index assigned.
     std::optional<bool> UsesExplicitVkLocations = std::nullopt;
-    // The set of semantics found to be active during flattening. Used to detect
-    // index collisions.
-    llvm::StringSet<> ActiveSemantics = {};
+    // Lowercased semantic names with indices, mapped to their first use for
+    // overlap diagnostics.
+    llvm::StringMap<SourceLocation> ActiveSemantics = {};
     // The IOType of this semantic set.
     llvm::hlsl::IOType CurrentIOType;
   };
@@ -314,7 +298,8 @@ private:
 
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAppliedSemanticAttr *SemanticAttr,
-                               const SemanticContext &SC);
+                               const SemanticContext &SC,
+                               unsigned ElementCount);
 
   bool determineActiveSemanticOnScalar(FunctionDecl *FD,
                                        DeclaratorDecl *OutputDecl,
@@ -339,6 +324,15 @@ private:
                                 llvm::Triple::EnvironmentType Stage,
                                 llvm::hlsl::IOType CurrentIOType,
                                 llvm::dxbc::PSV::SemanticKind SemanticKind);
+
+  // Check ElementCount consecutive indices for a system-value interpretation.
+  void diagnoseSemanticIndex(const HLSLAppliedSemanticAttr *A,
+                             llvm::dxbc::PSV::SemanticKind SemanticKind,
+                             unsigned ElementCount);
+
+  void diagnoseSystemSemanticType(const Decl *D,
+                                  const HLSLAppliedSemanticAttr *A,
+                                  llvm::dxbc::PSV::SemanticKind SemanticKind);
 
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
