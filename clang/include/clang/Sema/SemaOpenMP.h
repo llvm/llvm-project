@@ -564,6 +564,10 @@ public:
   /// Called on well-formed '\#pragma omp barrier'.
   StmtResult ActOnOpenMPBarrierDirective(SourceLocation StartLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed '\#pragma omp taskgraph'.
+  StmtResult ActOnOpenMPTaskgraphDirective(ArrayRef<OMPClause *> Clauses,
+                                           Stmt *AStmt, SourceLocation StartLoc,
+                                           SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp taskwait'.
   StmtResult ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
                                           SourceLocation StartLoc,
@@ -954,6 +958,15 @@ public:
   ActOnOpenMPOrderedClause(SourceLocation StartLoc, SourceLocation EndLoc,
                            SourceLocation LParenLoc = SourceLocation(),
                            Expr *NumForLoops = nullptr);
+  /// Called on well-formed 'graph_id' clause.
+  OMPClause *ActOnOpenMPGraphIdClause(Expr *Id, SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation EndLoc);
+  /// Called on well-formed 'graph_reset' clause.
+  OMPClause *ActOnOpenMPGraphResetClause(Expr *Condition,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc);
   /// Called on well-formed 'grainsize' clause.
   OMPClause *ActOnOpenMPGrainsizeClause(OpenMPGrainsizeClauseModifier Modifier,
                                         Expr *Size, SourceLocation StartLoc,
@@ -1162,6 +1175,12 @@ public:
   /// Called on well-formed 'self_maps' clause.
   OMPClause *ActOnOpenMPSelfMapsClause(SourceLocation StartLoc,
                                        SourceLocation EndLoc);
+
+  /// Called on well-formed 'replayable' clause.
+  OMPClause *ActOnOpenMPReplayableClause(SourceLocation StartLoc,
+                                         SourceLocation EndLoc,
+                                         SourceLocation LParenLoc,
+                                         Expr *Condition);
 
   /// Called on well-formed 'at' clause.
   OMPClause *ActOnOpenMPAtClause(OpenMPAtClauseKind Kind,
