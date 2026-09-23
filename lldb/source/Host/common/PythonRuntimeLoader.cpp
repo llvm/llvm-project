@@ -22,7 +22,9 @@
 #include <string>
 
 #if defined(_WIN32)
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Host/windows/windows.h"
+#include "llvm/Support/Windows/WindowsSupport.h"
 #else
 #include <dlfcn.h>
 #endif
@@ -30,6 +32,41 @@
 namespace lldb_private {
 
 namespace {
+
+#if defined(_WIN32)
+#ifndef LOAD_LIBRARY_SEARCH_DEFAULT_DIRS
+#define LOAD_LIBRARY_SEARCH_DEFAULT_DIRS 0x00001000
+#endif
+
+using SetDefaultDllDirectoriesFn = BOOL(WINAPI *)(DWORD);
+using AddDllDirectoryFn = PVOID(WINAPI *)(PCWSTR);
+
+/// Forwarded exports resolve lazily, at an arbitrary later GetProcAddress
+/// call, so the directory can never be safely removed once added.
+void RegisterDllSearchDirectory(llvm::StringRef path) {
+  llvm::StringRef dir = llvm::sys::path::parent_path(path);
+  if (dir.empty())
+    return;
+
+  static LazyImport<AddDllDirectoryFn> add_dll_directory{L"Kernel32.dll",
+                                                         "AddDllDirectory"};
+  if (!add_dll_directory)
+    return;
+
+  static llvm::once_flag opt_in_once;
+  llvm::call_once(opt_in_once, [] {
+    static LazyImport<SetDefaultDllDirectoriesFn> set_default_dll_directories{
+        L"Kernel32.dll", "SetDefaultDllDirectories"};
+    if (set_default_dll_directories)
+      (*set_default_dll_directories)(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+  });
+
+  llvm::SmallVector<wchar_t, MAX_PATH> wide_dir;
+  if (llvm::sys::windows::widenPath(dir, wide_dir))
+    return;
+  (*add_dll_directory)(wide_dir.data());
+}
+#endif // _WIN32
 
 /// True if libpython is currently mapped into the process. A single-symbol
 /// probe can match an incompatible runtime that happens to export it, so
@@ -47,6 +84,9 @@ bool IsPythonAlreadyLoaded() {
 }
 
 llvm::Error TryLoad(const char *path) {
+#if defined(_WIN32)
+  RegisterDllSearchDirectory(path);
+#endif
   std::string err_msg;
   llvm::sys::DynamicLibrary lib =
       llvm::sys::DynamicLibrary::getPermanentLibrary(path, &err_msg);
@@ -143,6 +183,7 @@ private:
 #else
         llvm::sys::path::append(stable_abi_path, "python3.dll");
 #endif
+        RegisterDllSearchDirectory(stable_abi_path);
         std::string err;
         llvm::sys::DynamicLibrary::getPermanentLibrary(stable_abi_path.c_str(),
                                                        &err);
