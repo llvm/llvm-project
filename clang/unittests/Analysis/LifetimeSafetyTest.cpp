@@ -40,6 +40,9 @@ public:
         View(const MyObj&);
         View();
       };
+
+      // `(void)v` is not a use in C++: no lvalue-to-rvalue conversion.
+      template <typename... Ts> void use(const Ts &...vs);
     )";
     FullCode += Code.str();
 
@@ -1332,7 +1335,7 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf) {
           p = a;
         }
         POINT(p4);
-        (void)p;
+        use(p);
         POINT(p5);
       }
     }
@@ -1364,8 +1367,8 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf2) {
         }
         
         POINT(p5);
-        (void)*p;
-        (void)*q;
+        use(*p);
+        use(*q);
         POINT(p6);
       }
     }
@@ -1397,7 +1400,7 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
         POINT(p1);
       }
       POINT(p2);
-      (void)*p;
+      use(*p);
     }
   )");
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
@@ -1413,7 +1416,7 @@ TEST_F(LifetimeAnalysisTest, TrivialDestructorsUAF) {
           ptr = &s;
       }
       POINT(p1);    
-      (void)*ptr;
+      use(*ptr);
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
@@ -1433,7 +1436,7 @@ TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
           ptr = &s;
       }
       POINT(p1);
-      (void)ptr;
+      use(ptr);
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));
@@ -2005,7 +2008,7 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChain) {
       }
 
       POINT(after_nested_merge);
-      (void)*s;
+      use(*s);
       int reset;
       s = &reset;
     }
