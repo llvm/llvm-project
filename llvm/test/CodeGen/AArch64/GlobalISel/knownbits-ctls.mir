@@ -9,12 +9,12 @@ body:             |
   ; so while we could get more accurate here, this is currently
   ; not possible.
   ; CHECK-LABEL: name: @CTLSConst8AmbigousMaxSignbitNum
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00110000 SignBits:2
-  ; CHECK-NEXT: %2:_ KnownBits:00001000 SignBits:4
-  ; CHECK-NEXT: %3:_ KnownBits:00??0000 SignBits:2
-  ; CHECK-NEXT: %4:_ KnownBits:00??1000 SignBits:2
-  ; CHECK-NEXT: %5:_ KnownBits:00000??? SignBits:5
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00110000 SignBits:2 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:00001000 SignBits:4 IsKnownNeverZero:1
+  ; CHECK-NEXT: %3:_ KnownBits:00??0000 SignBits:2 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:00??1000 SignBits:2 IsKnownNeverZero:1
+  ; CHECK-NEXT: %5:_ KnownBits:00000??? SignBits:5 IsKnownNeverZero:0
     %0:_(i8) = COPY $b0
     %1:_(i8) = G_CONSTANT i8 48
     %2:_(i8) = G_CONSTANT i8 8
@@ -28,8 +28,8 @@ name:            CTLSNoKnown8
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSNoKnown8
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:0000000000000??? SignBits:13
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000000??? SignBits:13 IsKnownNeverZero:0
     %0:_(i8) = COPY $b0
     %1:_(i16) = G_CTLS %0
 ...
@@ -39,8 +39,8 @@ name:            CTLSNoKnown16
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSNoKnown16
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:000000000000???? SignBits:12
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
     %0:_(i16) = COPY $h0
     %1:_(i16) = G_CTLS %0
 ...
@@ -50,8 +50,8 @@ name:            CTLSNoKnown32
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSNoKnown32
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00000000000????? SignBits:11
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000000000????? SignBits:11 IsKnownNeverZero:0
     %0:_(i32) = COPY $s0
     %1:_(i16) = G_CTLS %0
 ...
@@ -62,10 +62,10 @@ name:            CTLSHalfKnown8
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfKnown8
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %2:_ KnownBits:00000?00 SignBits:5
-  ; CHECK-NEXT: %3:_ KnownBits:000001?? SignBits:5
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:00000?00 SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:000001?? SignBits:5 IsKnownNeverZero:1
     %0:_(i8) = COPY $b0
     %1:_(i8) = G_CONSTANT i8 4
     %2:_(i8) = G_AND %0, %1
@@ -77,10 +77,10 @@ name:            CTLSHalfKnown16
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfKnown16
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:0000000001000000 SignBits:9
-  ; CHECK-NEXT: %2:_ KnownBits:000000000?000000 SignBits:9
-  ; CHECK-NEXT: %3:_ KnownBits:0000000000001??? SignBits:12
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000001000000 SignBits:9 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:000000000?000000 SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000001??? SignBits:12 IsKnownNeverZero:1
     %0:_(i16) = COPY $h0
     %1:_(i16) = G_CONSTANT i16 64
     %2:_(i16) = G_AND %0, %1
@@ -92,8 +92,8 @@ name:            CTLSHalfConst8Zero
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfConst8Zero
-  ; CHECK-NEXT: %0:_ KnownBits:00000000 SignBits:8
-  ; CHECK-NEXT: %1:_ KnownBits:00000111 SignBits:5
+  ; CHECK-NEXT: %0:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000111 SignBits:5 IsKnownNeverZero:1
     %0:_(i8) = G_CONSTANT i8 0
     %1:_(i8) = G_CTLS %0
 ...
@@ -103,8 +103,8 @@ name:            CTLSHalfConst16Zero
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfConst16Zero
-  ; CHECK-NEXT: %0:_ KnownBits:0000000000000000 SignBits:16
-  ; CHECK-NEXT: %1:_ KnownBits:0000000000001111 SignBits:12
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000001111 SignBits:12 IsKnownNeverZero:1
     %0:_(i16) = G_CONSTANT i16 0
     %1:_(i16) = G_CTLS %0
 ...
@@ -114,9 +114,9 @@ name:            VectorCTLSConst16Zero
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCTLSConst16Zero
-  ; CHECK-NEXT: %0:_ KnownBits:0000000000000000 SignBits:16
-  ; CHECK-NEXT: %1:_ KnownBits:0000000000000000 SignBits:16
-  ; CHECK-NEXT: %2:_ KnownBits:0000000000001111 SignBits:12
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
+  ; CHECK-NEXT: %2:_ KnownBits:0000000000001111 SignBits:12 IsKnownNeverZero:1
     %0:_(i16) = G_CONSTANT i16 0
     %1:_(<4 x i16>) = G_BUILD_VECTOR %0, %0, %0, %0
     %3:_(<4 x i16>) = G_CTLS %1
@@ -127,12 +127,12 @@ name:            VectorCTLSNoneKnown
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCTLSNoneKnown
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:0000000000001000 SignBits:12
-  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9
-  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %5:_ KnownBits:000000000000???? SignBits:12
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000001000 SignBits:12 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %5:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
     %0:_(i16) = COPY $h0
     %1:_(i16) = G_CONSTANT i16 8
     %2:_(i16) = G_ASHR %0, %1
@@ -146,14 +146,14 @@ name:            VectorCTLSHighBitKnown
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCTLSHighBitKnown
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:0000000000001000 SignBits:12
-  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9
-  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %4:_ KnownBits:0000000000001010 SignBits:12
-  ; CHECK-NEXT: %5:_ KnownBits:000000000000???? SignBits:12
-  ; CHECK-NEXT: %6:_ KnownBits:???????????????? SignBits:9
-  ; CHECK-NEXT: %7:_ KnownBits:0000000000001??? SignBits:12
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000001000 SignBits:12 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %4:_ KnownBits:0000000000001010 SignBits:12 IsKnownNeverZero:1
+  ; CHECK-NEXT: %5:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
+  ; CHECK-NEXT: %6:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %7:_ KnownBits:0000000000001??? SignBits:12 IsKnownNeverZero:1
     %0:_(i16) = COPY $h0
     %1:_(i16) = G_CONSTANT i16 8
     %2:_(i16) = G_ASHR %0, %1
@@ -169,10 +169,10 @@ name:            CTLSLargeEnough
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSLargeEnough
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000010000 SignBits:27
-  ; CHECK-NEXT: %2:_ KnownBits:???????????????????????????????? SignBits:17
-  ; CHECK-NEXT: %3:_ KnownBits:0000000000000000000000000001???? SignBits:27
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000010000 SignBits:27 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????????????????????? SignBits:17 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000000000000000001???? SignBits:27 IsKnownNeverZero:1
     %0:_(i32) = COPY $s0
     %1:_(i32) = G_CONSTANT i32 16
     %2:_(i32) = G_ASHR %0, %1
@@ -184,10 +184,10 @@ name:            CTLSTooSmallToTrigger
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSTooSmallToTrigger
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000001111 SignBits:28
-  ; CHECK-NEXT: %2:_ KnownBits:???????????????????????????????? SignBits:16
-  ; CHECK-NEXT: %3:_ KnownBits:000000000000000000000000000????? SignBits:27
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000001111 SignBits:28 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:???????????????????????????????? SignBits:16 IsKnownNeverZero:0
+  ; CHECK-NEXT: %3:_ KnownBits:000000000000000000000000000????? SignBits:27 IsKnownNeverZero:0
     %0:_(i32) = COPY $s0
     %1:_(i32) = G_CONSTANT i32 15
     %2:_(i32) = G_ASHR %0, %1

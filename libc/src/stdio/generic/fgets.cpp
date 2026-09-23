@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(char *, fgets,
 
   unsigned char c = '\0';
   auto stream = reinterpret_cast<LIBC_NAMESPACE::File *__restrict>(raw_stream);
-  stream->lock();
+  File::FileLock lock(stream);
 
   // i is an int because it's frequently compared to count, which is also int.
   int i = 0;
@@ -44,7 +44,6 @@ LLVM_LIBC_FUNCTION(char *, fgets,
 
   bool has_error = stream->error_unlocked();
   bool has_eof = stream->iseof_unlocked();
-  stream->unlock();
 
   // If the requested read size makes no sense, an error occurred, or no bytes
   // were read due to an EOF, then return nullptr and don't write the null byte.

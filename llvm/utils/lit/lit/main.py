@@ -118,13 +118,15 @@ def main(builtin_params={}):
 
     start = time.time()
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
+    if opts.rerunFailedSerially is not None:
+        rerun_failed_serially(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
     if not opts.skip_test_time_recording:
         record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
-        selected_tests, discovered_tests
+        selected_tests, discovered_tests, opts
     )
 
     if opts.time_tests:
@@ -258,8 +260,8 @@ def mark_excluded(discovered_tests, selected_tests):
         t.setResult(result)
 
 
-def run_tests(tests, lit_config, opts, discovered_tests):
-    workers = min(len(tests), opts.workers)
+def run_tests(tests, lit_config, opts, discovered_tests, workers=None):
+    workers = min(len(tests), opts.workers if workers is None else workers)
     display = lit.display.create_display(opts, tests, discovered_tests, workers)
 
     run = lit.run.Run(
@@ -285,6 +287,33 @@ def run_tests(tests, lit_config, opts, discovered_tests):
     display.clear(interrupted)
     if error:
         sys.stderr.write("%s, skipping remaining tests\n" % error)
+
+
+def rerun_failed_serially(tests, lit_config, opts, discovered_tests):
+    """Run the tests whose failure output matches, a second time, with a
+    single worker.
+
+    Tests that pass the second time are reported as flaky, which keeps them
+    out of the failure count and the exit status.
+    """
+    matching = opts.rerunFailedSerially
+    failed = [
+        t for t in tests if t.isFailure() and matching.search(t.result.output or "")
+    ]
+    if not failed:
+        return
+
+    lit_config.note("rerunning %d failed test(s) with a single worker" % len(failed))
+    previous_results = [t.resetResult() for t in failed]
+
+    run_tests(failed, lit_config, opts, discovered_tests, workers=1)
+
+    for test, previous in zip(failed, previous_results):
+        if test.result.code is lit.Test.SKIPPED:
+            # The rerun was cut short, e.g. by --max-failures or a timeout.
+            test.resetResult(previous)
+        elif test.result.code is lit.Test.PASS:
+            test.result.code = lit.Test.FLAKYPASS
 
 
 def execute_in_tmp_dir(run, lit_config):

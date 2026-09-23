@@ -55,12 +55,12 @@ namespace {
 static RoutineOp getFirstAccRoutineOp(FunctionOpInterface funcOp,
                                       const SymbolTable &symTab) {
   if (isSpecializedAccRoutine(funcOp)) {
-    auto attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
+    auto attr = funcOp->getDiscardableAttrOfType<SpecializedRoutineAttr>(
         getSpecializedRoutineAttrName());
     return symTab.lookup<RoutineOp>(attr.getRoutine().getLeafReference());
   }
-  auto routineInfo =
-      funcOp->getAttrOfType<RoutineInfoAttr>(getRoutineInfoAttrName());
+  auto routineInfo = funcOp->getDiscardableAttrOfType<RoutineInfoAttr>(
+      getRoutineInfoAttrName());
   assert(routineInfo && "expected acc.routine_info for acc routine function");
   auto accRoutines = routineInfo.getAccRoutines();
   assert(!accRoutines.empty() && "expected at least one acc routine");
@@ -111,7 +111,7 @@ public:
       if (!(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
         return;
 
-      if (auto routineInfo = callee->getAttrOfType<RoutineInfoAttr>(
+      if (auto routineInfo = callee->getDiscardableAttrOfType<RoutineInfoAttr>(
               getRoutineInfoAttrName())) {
         if (routineInfo.getAccRoutines().size() > 1) {
           (void)accSupport.emitNYI(callOp.getLoc(), "multiple `acc routine`s");

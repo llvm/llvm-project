@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
 
 namespace fir {
 #define GEN_PASS_DEF_CUFLAUNCHATTACHATTR
@@ -23,46 +22,19 @@ namespace {
 
 static constexpr llvm::StringRef cudaKernelInfix = "_cufk_";
 
-class CUFGPUAttachAttrPattern
-    : public OpRewritePattern<mlir::gpu::LaunchFuncOp> {
-  using OpRewritePattern<mlir::gpu::LaunchFuncOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(mlir::gpu::LaunchFuncOp op,
-                                PatternRewriter &rewriter) const override {
-    op->setAttr(cuf::getProcAttrName(),
-                cuf::ProcAttributeAttr::get(op.getContext(),
-                                            cuf::ProcAttribute::Global));
-    return mlir::success();
-  }
-};
-
 struct CUFLaunchAttachAttr
     : public fir::impl::CUFLaunchAttachAttrBase<CUFLaunchAttachAttr> {
 
   void runOnOperation() override {
-    auto *context = &this->getContext();
-
-    mlir::RewritePatternSet patterns(context);
-    patterns.add<CUFGPUAttachAttrPattern>(context);
-
-    mlir::ConversionTarget target(*context);
-    target.addIllegalOp<mlir::gpu::LaunchFuncOp>();
-    target.addDynamicallyLegalOp<mlir::gpu::LaunchFuncOp>(
-        [&](mlir::gpu::LaunchFuncOp op) -> bool {
-          if (op.getKernelName().getValue().contains(cudaKernelInfix)) {
-            if (op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-                    cuf::getProcAttrName()))
-              return true;
-            return false;
-          }
-          return true;
-        });
-
-    if (mlir::failed(mlir::applyPartialConversion(this->getOperation(), target,
-                                                  std::move(patterns)))) {
-      mlir::emitError(mlir::UnknownLoc::get(context),
-                      "Pattern conversion failed\n");
-      this->signalPassFailure();
-    }
+    getOperation()->walk([](gpu::LaunchFuncOp op) {
+      if (!op.getKernelName().getValue().contains(cudaKernelInfix))
+        return;
+      if (op->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName()))
+        return;
+      op->setAttr(cuf::getProcAttrName(),
+                  cuf::ProcAttributeAttr::get(op.getContext(),
+                                              cuf::ProcAttribute::Global));
+    });
   }
 };
 

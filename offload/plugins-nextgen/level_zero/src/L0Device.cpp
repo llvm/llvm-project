@@ -196,7 +196,6 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   if (!QueueGroupInfoOrErr)
     return QueueGroupInfoOrErr.takeError();
   QueueConfig = *QueueGroupInfoOrErr;
-  QueueCache.setCommandMode(getPlugin().getOptions().CommandMode);
 
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
@@ -209,15 +208,17 @@ Error L0DeviceTy::deinitImpl() {
   for (auto &PGM : Programs)
     if (auto Err = PGM.deinit())
       return Err;
-  if (auto Err = QueueCache.deinit())
-    return Err;
   return MemAllocator.deinit();
 }
 
 Expected<DeviceImageTy *>
 L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                           int32_t ImageId) {
-  auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef());
+                           int32_t ImageId, PluginContextTy *UserCtx) {
+  auto &Ctx = UserCtx ? static_cast<LevelZeroPluginContextTy &>(*UserCtx)
+                      : L0Context.getDefaultUserCtx();
+  auto ZeContext = Ctx.getZeContext();
+
+  auto *PGM = getProgramFromImage(TgtImage->getMemBufferRef(), ZeContext);
   if (PGM) {
     // Program already exists.
     return PGM;
@@ -237,7 +238,7 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
   CompilationOptions += " ";
   CompilationOptions += Options.InternalCompilationOptions;
 
-  L0ProgramBuilderTy Builder(*this, std::move(TgtImage));
+  L0ProgramBuilderTy Builder(*this, ZeContext, std::move(TgtImage));
   if (auto Err = Builder.buildModules(CompilationOptions))
     return std::move(Err);
 
@@ -258,11 +259,19 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
   return Plugin::success();
 }
 
+void L0DeviceTy::releaseQueue(L0QueueTy *Queue) {
+  if (!Queue)
+    return;
+  Queue->getUserCtx()->returnCachedQueue(Queue);
+}
+
 Expected<L0QueueTy *>
-L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
+L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                             LevelZeroPluginContextTy *UserCtx) {
   L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
-    auto NewQueueOrErr = QueueCache.getQueue();
+    auto &Ctx = UserCtx ? *UserCtx : L0Context.getDefaultUserCtx();
+    auto NewQueueOrErr = Ctx.takeCachedQueue(this);
     if (!NewQueueOrErr)
       return NewQueueOrErr.takeError();
     Queue = *NewQueueOrErr;
@@ -402,11 +411,6 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
   return Plugin::success();
 }
 
-Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
-  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
-}
-
 const char *L0DeviceTy::getArchCStr() const {
   switch (getDeviceArch()) {
   case DeviceArchTy::DeviceArch_Gen:
@@ -428,12 +432,6 @@ const char *L0DeviceTy::getArchCStr() const {
   }
 }
 
-static const char *DriverVersionToStrTable[] = {
-    "1.0", "1.1", "1.2", "1.3",  "1.4",  "1.5", "1.6",
-    "1.7", "1.8", "1.9", "1.10", "1.11", "1.12"};
-constexpr size_t DriverVersionToStrTableSize =
-    sizeof(DriverVersionToStrTable) / sizeof(DriverVersionToStrTable[0]);
-
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
@@ -442,12 +440,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);
-  auto DriverVersion = getDriverAPIVersion();
-  if (DriverVersion < DriverVersionToStrTableSize)
-    Info.add("Driver Version", DriverVersionToStrTable[DriverVersion], "",
-             DeviceInfo::DRIVER_VERSION);
-  else
-    Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
+  Info.add("Driver Version", L0Context.getDriverVersion(), "",
+           DeviceInfo::DRIVER_VERSION);
   Info.add("Device PCI ID", getPCIId());
   Info.add("Device UUID", getUuid().data());
   Info.add("Number of total EUs", getNumEUs(), "",
@@ -632,7 +626,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
-    auto CmdListOrErr = createImmCmdList(InOrder);
+    auto CmdListOrErr = createImmCmdList(getZeContext(), InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
     Ret->async_info->Queue = *CmdListOrErr;
@@ -738,7 +732,8 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 
 /// Create an immediate command list.
 Expected<ze_command_list_handle_t>
-L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
+L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index,
+                             ze_context_handle_t UserZeCtx, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
   if (getPlugin().getOptions().Flags.UseCopyOffloadHint)
     Flags |= ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
@@ -751,7 +746,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
-  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, getZeContext(), getZeDevice(),
+  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, UserZeCtx, getZeDevice(),
                     &Desc, &CmdList);
   ODBG(OLDT_Device) << "Created an immediate command list " << CmdList
                     << " (Ordinal: " << Ordinal << ", Index: " << Index
