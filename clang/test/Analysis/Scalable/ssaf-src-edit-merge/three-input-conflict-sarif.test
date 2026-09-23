@@ -1,0 +1,33 @@
+# Three inputs all conflict pairwise at (foo.cpp, 10) — drop-all removes
+# all three from the merged YAML; SARIF result lists three relatedLocations.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
+# RUN: cp %S/Inputs/conflict-text-z.tpl.yaml %t.dir/c.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" \
+# RUN:           %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml \
+# RUN:     --sarif-conflicts-out=%t.dir/conflicts.sarif \
+# RUN:     %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml 2> %t.dir/stderr.txt
+
+# Drop-all unchanged: all three candidates are removed at the conflict offset.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED-NOT: ReplacementText:
+
+# SARIF result lists three relatedLocations (one per cluster member).
+# RUN: FileCheck --input-file=%t.dir/conflicts.sarif --check-prefix=SARIF %s
+# SARIF: "results":
+# SARIF: "level": "error"
+# SARIF: "byteOffset": 10
+# SARIF: "relatedLocations":
+# SARIF: "id": 1
+# SARIF: "id": 2
+# SARIF: "id": 3
+# SARIF: "ruleId": "clang-reforge-replacement-conflict"
+# SARIF: "version": "2.1.0"

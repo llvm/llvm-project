@@ -1,6 +1,5 @@
 ; ModuleID = '/tmp/t.c'
 source_filename = "/tmp/t.c"
-target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; Function Attrs: noinline nounwind optnone ssp uwtable(sync)
 define void @f() #0 !dbg !9 {
