@@ -2629,11 +2629,9 @@ StringMap<bool> sys::getHostCPUFeatures() {
 #endif
     // Use the raw CSR number in case assembler doesn't know vlenb.
     __asm__ volatile("csrr %0, 0xc22" : "=r"(VLen));
-    if (VLen) {
-      VLen *= 8;
-      std::string ZvlFeature = (Twine("zvl") + Twine(VLen) + "b").str();
-      Features[ZvlFeature] = true;
-    }
+    VLen *= 8;
+    std::string ZvlFeature = (Twine("zvl") + Twine(VLen) + "b").str();
+    Features[ZvlFeature] = true;
   }
 
   return Features;
