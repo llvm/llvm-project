@@ -375,6 +375,21 @@ entry:
   ret void
 }
 
+define void @test_sincos(float %flt, double %dbl, ptr %psflt, ptr %pcflt,
+; CHECK-LABEL: define void @test_sincos(
+; CHECK-SAME: float [[FLT:%.*]], double [[DBL:%.*]], ptr [[PSFLT:%.*]], ptr [[PCFLT:%.*]], ptr [[PSDBL:%.*]], ptr [[PCDBL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call { float, float } @__hipstdpar_sincos_f32(float [[FLT]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call { double, double } @__hipstdpar_sincos_f64(double [[DBL]])
+; CHECK-NEXT:    ret void
+;
+  ptr %psdbl, ptr %pcdbl) {
+entry:
+  %0 = call {float, float} @llvm.sincos.f32(float %flt)
+  %1 = call {double, double} @llvm.sincos.f64(double %dbl)
+  ret void
+}
+
 define void @test_sinh(double %dbl, float %flt) {
 ; CHECK-LABEL: define void @test_sinh(
 ; CHECK-SAME: double [[DBL:%.*]], float [[FLT:%.*]]) {
