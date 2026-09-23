@@ -32102,6 +32102,15 @@ public:
           return Vals.size() >= ReductionLimit ||
                  (Vals.size() == 2 && Vals.front() != Vals.back());
         });
+    // Small sign-aware groups pay off only when paired via the vector fsub:
+    // each sign must have a group of at least 2 values.
+    auto HasGroupOfSign = [&](bool Negated) {
+      return any_of(ReducedVals, [&](ArrayRef<Value *> Vals) {
+        return Vals.size() >= 2 && IsNegated(Vals.front()) == Negated;
+      });
+    };
+    const bool CanPairSigns =
+        HasGroupOfSign(/*Negated=*/false) && HasGroupOfSign(/*Negated=*/true);
     // Same-size groups of the seed-level reduction get the profitability
     // ordering (cheap groups go last) when the minimum vector factor covers
     // the whole reduction.
@@ -32235,8 +32244,8 @@ public:
       const bool MinVFAllowed = IsSeedRoot && NoScalarLeftovers &&
                                 all_of(Candidates, UsedByReductionOnly);
       if (NumReducedVals < ReductionLimit &&
-          (NumReducedVals < 2 || (!isSplat(Candidates) &&
-                                  NegatedReducedVals.empty() && !MinVFAllowed)))
+          (NumReducedVals < 2 ||
+           (!isSplat(Candidates) && !CanPairSigns && !MinVFAllowed)))
         continue;
 
       // Check if we support repeated scalar values processing (optimization of
@@ -32379,7 +32388,7 @@ public:
       // Same small-group allowance for the vector width, if it covers the
       // whole group.
       const unsigned MinReduxWidth =
-          !NegatedReducedVals.empty() || (MinVFAllowed && NumReducedVals == 2)
+          CanPairSigns || (MinVFAllowed && NumReducedVals == 2)
               ? 2
               : ReductionLimit;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&
