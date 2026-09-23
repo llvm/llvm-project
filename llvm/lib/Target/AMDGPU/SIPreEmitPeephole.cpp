@@ -265,7 +265,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     MaskValue = M->getOperand(1).getImm();
     // First if sreg is only used in the AND instruction fold the immediate
     // into the AND.
-    if (!ReadsSreg && Op2.isKill()) {
+    if (SReg != ExecReg && !ReadsSreg && Op2.isKill()) {
       A->getOperand(2).ChangeToImmediate(MaskValue);
       M->eraseFromParent();
     }
@@ -278,7 +278,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // Invert mask for s_andn2
   assert(MaskValue == 0 || MaskValue == -1);
   if (A->getOpcode() == AndN2)
-    MaskValue = ~MaskValue;
+    MaskValue = SReg == ExecReg ? 0 : ~MaskValue;
 
   if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC, /*TRI=*/nullptr)) {
     if (!MI.killsRegister(CondReg, TRI)) {
@@ -296,14 +296,11 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   }
 
   bool IsVCCZ = MI.getOpcode() == AMDGPU::S_CBRANCH_VCCZ;
-  if (SReg == ExecReg) {
-    // EXEC is updated directly
-    if (IsVCCZ) {
-      MI.eraseFromParent();
-      return true;
-    }
-    MI.setDesc(TII->get(AMDGPU::S_BRANCH));
-  } else if (IsVCCZ && MaskValue == 0) {
+  // SReg == ExecReg means EXEC equals MaskValue, so the condition is constant.
+  bool CondIsZero = MaskValue == 0;
+  bool CondIsKnown = CondIsZero || SReg == ExecReg;
+
+  if (CondIsKnown && IsVCCZ == CondIsZero) {
     // Will always branch
     // Remove all successors shadowed by new unconditional branch
     MachineBasicBlock *Parent = MI.getParent();
@@ -333,7 +330,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
     // Rewrite to unconditional branch
     MI.setDesc(TII->get(AMDGPU::S_BRANCH));
-  } else if (!IsVCCZ && MaskValue == 0) {
+  } else if (CondIsKnown) {
     // Will never branch
     MachineOperand &Dst = MI.getOperand(0);
     assert(Dst.isMBB() && "destination is not basic block");
@@ -342,7 +339,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     Parent->removeSuccessor(Dst.getMBB());
     MI.eraseFromParent();
     return true;
-  } else if (MaskValue == -1) {
+  } else {
     // Depends only on EXEC
     MI.setDesc(
         TII->get(IsVCCZ ? AMDGPU::S_CBRANCH_EXECZ : AMDGPU::S_CBRANCH_EXECNZ));
