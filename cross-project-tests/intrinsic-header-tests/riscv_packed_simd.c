@@ -4981,3 +4981,59 @@ uint16x2_t test_pget_u16x4_u16x2(uint16x4_t v) {
 uint16x2_t test_pget_u16x4_u16x2_idx1(uint16x4_t v) {
   return __riscv_pget_u16x4_u16x2(v, 1);
 }
+
+// CHECK-LABEL: test_pset_i8x4_i8x8_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+int8x8_t test_pset_i8x4_i8x8_lo(int8x8_t v, int8x4_t s) {
+  return __riscv_pset_i8x4_i8x8(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_i8x4_i8x8_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+int8x8_t test_pset_i8x4_i8x8_hi(int8x8_t v, int8x4_t s) {
+  return __riscv_pset_i8x4_i8x8(v, s, 1);
+}
+
+// CHECK-LABEL: test_pset_u8x4_u8x8_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+uint8x8_t test_pset_u8x4_u8x8_lo(uint8x8_t v, uint8x4_t s) {
+  return __riscv_pset_u8x4_u8x8(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_u8x4_u8x8_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+uint8x8_t test_pset_u8x4_u8x8_hi(uint8x8_t v, uint8x4_t s) {
+  return __riscv_pset_u8x4_u8x8(v, s, 1);
+}
+
+// CHECK-LABEL: test_pset_i16x2_i16x4_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+int16x4_t test_pset_i16x2_i16x4_lo(int16x4_t v, int16x2_t s) {
+  return __riscv_pset_i16x2_i16x4(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_i16x2_i16x4_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+int16x4_t test_pset_i16x2_i16x4_hi(int16x4_t v, int16x2_t s) {
+  return __riscv_pset_i16x2_i16x4(v, s, 1);
+}
+
+// CHECK-LABEL: test_pset_u16x2_u16x4_lo:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         ppaireo.w{{[[:space:]]}}
+uint16x4_t test_pset_u16x2_u16x4_lo(uint16x4_t v, uint16x2_t s) {
+  return __riscv_pset_u16x2_u16x4(v, s, 0);
+}
+
+// CHECK-LABEL: test_pset_u16x2_u16x4_hi:
+// RV32:         mv{{[[:space:]]}}
+// RV64:         pack{{[[:space:]]}}
+uint16x4_t test_pset_u16x2_u16x4_hi(uint16x4_t v, uint16x2_t s) {
+  return __riscv_pset_u16x2_u16x4(v, s, 1);
+}
