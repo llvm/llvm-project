@@ -171,16 +171,6 @@ KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
       V, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo), Depth);
 }
 
-KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                 const DataLayout &DL, AssumptionCache *AC,
-                                 const Instruction *CxtI,
-                                 const DominatorTree *DT, bool UseInstrInfo,
-                                 unsigned Depth) {
-  return computeKnownBits(
-      V, DemandedElts,
-      SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo), Depth);
-}
-
 static NoCommonBitsSetResult
 haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
                                 const SimplifyQuery &SQ) {

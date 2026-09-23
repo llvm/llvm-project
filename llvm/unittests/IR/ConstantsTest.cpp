@@ -942,4 +942,59 @@ TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
   EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
 }
 
+TEST(ConstantsTest, GetElementPtrDataLayout) {
+  LLVMContext Context;
+  DataLayout DL;
+  Module M("", Context);
+
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I32 = Type::getInt32Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Type *I128 = Type::getInt128Ty(Context);
+  Type *A4I32 = ArrayType::get(I32, 4);
+  Constant *I32_10 = ConstantInt::get(I32, 10);
+  Constant *I64_1 = ConstantInt::get(I64, 1);
+  Constant *I64_10 = ConstantInt::get(I64, 10);
+  Constant *I64_40 = ConstantInt::get(I64, 40);
+  Constant *I128_10 = ConstantInt::get(I128, 10);
+  Constant *V2I64_10 =
+      ConstantVector::getSplat(ElementCount::getFixed(2), I64_10);
+  Constant *V2I64_40 =
+      ConstantVector::getSplat(ElementCount::getFixed(2), I64_40);
+
+  Constant *Ptr = M.getOrInsertGlobal("dummy", I8);
+  Constant *PtrVec = ConstantVector::getSplat(ElementCount::getFixed(2), Ptr);
+  Constant *PtrToInt64 = ConstantExpr::getPtrToInt(Ptr, I64);
+  Constant *PtrToInt32 = ConstantExpr::getPtrToInt(Ptr, I32);
+
+  // No-op.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I64_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  // Index type is canonicalized.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I32_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I128_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_10));
+  // Non-i8 base type.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_10),
+            ConstantExpr::getPtrAdd(Ptr, I64_40));
+  // Multiple indices.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, A4I32, Ptr, {I64_1, I64_10}),
+            ConstantExpr::getPtrAdd(Ptr, ConstantInt::get(I64, 56)));
+  // Vector base pointer, scalar index.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, I64_10),
+            ConstantExpr::getPtrAdd(PtrVec, I64_40));
+  // Scalar base pointer, vector index
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, V2I64_10),
+            ConstantExpr::getPtrAdd(Ptr, V2I64_40));
+  // Vector base pointer, vector index.
+  EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, V2I64_10),
+            ConstantExpr::getPtrAdd(PtrVec, V2I64_40));
+
+  // Can't represent scale * constexpr.
+  EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I32, Ptr, PtrToInt64));
+  // Can't represent sext(constexpr).
+  EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I8, Ptr, PtrToInt32));
+}
+
 } // end anonymous namespace
