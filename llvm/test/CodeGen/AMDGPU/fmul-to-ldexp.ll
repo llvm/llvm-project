@@ -6939,8 +6939,8 @@ define <2 x half> @v_mul_v2f16_select_n1_n64(<2 x i32> %arg, <2 x half> %x) {
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 6, 0, vcc
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 6, 0, vcc
+; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_e32 v0, v2, v0
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
@@ -7296,8 +7296,8 @@ define <2 x half> @v_mul_v2f16_select_n128_n16(<2 x i32> %arg, <2 x half> %x) {
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 4, 7, vcc
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 4, 7, vcc
+; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_e32 v0, v2, v0
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
@@ -7619,8 +7619,8 @@ define <2 x half> @v_contract_mul_add_v2f16_select_n64_n1(<2 x i32> %arg, <2 x h
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 6, vcc
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 6, vcc
+; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_e32 v0, v2, v0
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
@@ -7731,8 +7731,8 @@ define <2 x half> @v_contract_mul_add_v2f16_select_n1_n64(<2 x i32> %arg, <2 x h
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 6, 0, vcc
 ; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 6, 0, vcc
+; GFX9-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_e32 v0, v2, v0
 ; GFX9-GISEL-NEXT:    v_ldexp_f16_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
