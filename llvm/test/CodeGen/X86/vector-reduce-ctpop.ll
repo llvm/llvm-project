@@ -1065,12 +1065,12 @@ define i32 @reduce_ctpop_v8i32(<8 x i32> %a0) nounwind {
 ; X64-SSE4-NEXT:    movdqa %xmm2, %xmm4
 ; X64-SSE4-NEXT:    pshufb %xmm1, %xmm4
 ; X64-SSE4-NEXT:    paddb %xmm5, %xmm4
-; X64-SSE4-NEXT:    pxor %xmm1, %xmm1
-; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm5 = xmm4[0],zero,xmm4[1],zero
-; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm1[2],xmm4[3],xmm1[3]
-; X64-SSE4-NEXT:    psadbw %xmm1, %xmm4
-; X64-SSE4-NEXT:    psadbw %xmm1, %xmm5
-; X64-SSE4-NEXT:    packuswb %xmm4, %xmm5
+; X64-SSE4-NEXT:    pxor %xmm5, %xmm5
+; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm4[0],zero,xmm4[1],zero
+; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm5[2],xmm4[3],xmm5[3]
+; X64-SSE4-NEXT:    psadbw %xmm5, %xmm4
+; X64-SSE4-NEXT:    psadbw %xmm5, %xmm1
+; X64-SSE4-NEXT:    packuswb %xmm4, %xmm1
 ; X64-SSE4-NEXT:    movdqa %xmm0, %xmm4
 ; X64-SSE4-NEXT:    pand %xmm3, %xmm4
 ; X64-SSE4-NEXT:    movdqa %xmm2, %xmm6
@@ -1080,11 +1080,11 @@ define i32 @reduce_ctpop_v8i32(<8 x i32> %a0) nounwind {
 ; X64-SSE4-NEXT:    pshufb %xmm0, %xmm2
 ; X64-SSE4-NEXT:    paddb %xmm6, %xmm2
 ; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm2[0],zero,xmm2[1],zero
-; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; X64-SSE4-NEXT:    psadbw %xmm1, %xmm2
-; X64-SSE4-NEXT:    psadbw %xmm1, %xmm0
+; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm2 = xmm2[2],xmm5[2],xmm2[3],xmm5[3]
+; X64-SSE4-NEXT:    psadbw %xmm5, %xmm2
+; X64-SSE4-NEXT:    psadbw %xmm5, %xmm0
 ; X64-SSE4-NEXT:    packuswb %xmm2, %xmm0
-; X64-SSE4-NEXT:    paddd %xmm5, %xmm0
+; X64-SSE4-NEXT:    paddd %xmm1, %xmm0
 ; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-SSE4-NEXT:    paddd %xmm0, %xmm1
 ; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
@@ -1932,30 +1932,30 @@ define i32 @reduce_ctpop_v16i32(<16 x i32> %a0) nounwind {
 ; X64-SSE4-NEXT:    pshufb %xmm6, %xmm7
 ; X64-SSE4-NEXT:    psrlw $4, %xmm2
 ; X64-SSE4-NEXT:    pand %xmm5, %xmm2
-; X64-SSE4-NEXT:    movdqa %xmm4, %xmm6
-; X64-SSE4-NEXT:    pshufb %xmm2, %xmm6
-; X64-SSE4-NEXT:    paddb %xmm7, %xmm6
-; X64-SSE4-NEXT:    pxor %xmm2, %xmm2
-; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm7 = xmm6[0],zero,xmm6[1],zero
-; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm6 = xmm6[2],xmm2[2],xmm6[3],xmm2[3]
-; X64-SSE4-NEXT:    psadbw %xmm2, %xmm6
-; X64-SSE4-NEXT:    psadbw %xmm2, %xmm7
-; X64-SSE4-NEXT:    packuswb %xmm6, %xmm7
-; X64-SSE4-NEXT:    movdqa %xmm0, %xmm6
-; X64-SSE4-NEXT:    pand %xmm5, %xmm6
 ; X64-SSE4-NEXT:    movdqa %xmm4, %xmm8
-; X64-SSE4-NEXT:    pshufb %xmm6, %xmm8
+; X64-SSE4-NEXT:    pshufb %xmm2, %xmm8
+; X64-SSE4-NEXT:    paddb %xmm7, %xmm8
+; X64-SSE4-NEXT:    pxor %xmm2, %xmm2
+; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm6 = xmm8[0],zero,xmm8[1],zero
+; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm8 = xmm8[2],xmm2[2],xmm8[3],xmm2[3]
+; X64-SSE4-NEXT:    psadbw %xmm2, %xmm8
+; X64-SSE4-NEXT:    psadbw %xmm2, %xmm6
+; X64-SSE4-NEXT:    packuswb %xmm8, %xmm6
+; X64-SSE4-NEXT:    movdqa %xmm0, %xmm7
+; X64-SSE4-NEXT:    pand %xmm5, %xmm7
+; X64-SSE4-NEXT:    movdqa %xmm4, %xmm8
+; X64-SSE4-NEXT:    pshufb %xmm7, %xmm8
 ; X64-SSE4-NEXT:    psrlw $4, %xmm0
 ; X64-SSE4-NEXT:    pand %xmm5, %xmm0
-; X64-SSE4-NEXT:    movdqa %xmm4, %xmm6
-; X64-SSE4-NEXT:    pshufb %xmm0, %xmm6
-; X64-SSE4-NEXT:    paddb %xmm8, %xmm6
-; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm6[0],zero,xmm6[1],zero
-; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm6 = xmm6[2],xmm2[2],xmm6[3],xmm2[3]
-; X64-SSE4-NEXT:    psadbw %xmm2, %xmm6
+; X64-SSE4-NEXT:    movdqa %xmm4, %xmm7
+; X64-SSE4-NEXT:    pshufb %xmm0, %xmm7
+; X64-SSE4-NEXT:    paddb %xmm8, %xmm7
+; X64-SSE4-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm7[0],zero,xmm7[1],zero
+; X64-SSE4-NEXT:    punpckhdq {{.*#+}} xmm7 = xmm7[2],xmm2[2],xmm7[3],xmm2[3]
+; X64-SSE4-NEXT:    psadbw %xmm2, %xmm7
 ; X64-SSE4-NEXT:    psadbw %xmm2, %xmm0
-; X64-SSE4-NEXT:    packuswb %xmm6, %xmm0
-; X64-SSE4-NEXT:    paddd %xmm7, %xmm0
+; X64-SSE4-NEXT:    packuswb %xmm7, %xmm0
+; X64-SSE4-NEXT:    paddd %xmm6, %xmm0
 ; X64-SSE4-NEXT:    movdqa %xmm3, %xmm6
 ; X64-SSE4-NEXT:    pand %xmm5, %xmm6
 ; X64-SSE4-NEXT:    movdqa %xmm4, %xmm7

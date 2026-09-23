@@ -108,18 +108,16 @@ define i32 @bitselect_i32(i32 %a, i32 %b, i32 %m) nounwind {
 define i64 @bitselect_i64(i64 %a, i64 %b, i64 %m) nounwind {
 ; X86-LABEL: bitselect_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %esi, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl %edx, %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %ecx, %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %esi, %edx
-; X86-NEXT:    popl %esi
+; X86-NEXT:    xorl %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bitselect_i64:

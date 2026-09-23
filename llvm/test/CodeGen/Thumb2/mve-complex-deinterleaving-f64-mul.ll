@@ -34,16 +34,16 @@ define arm_aapcs_vfpcc <4 x double> @complex_mul_v4f64(<4 x double> %a, <4 x dou
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vmul.f64 d9, d7, d2
+; CHECK-NEXT:    vmov q4, q1
 ; CHECK-NEXT:    vmov q5, q0
-; CHECK-NEXT:    vmul.f64 d8, d3, d7
-; CHECK-NEXT:    vfma.f64 d9, d6, d3
-; CHECK-NEXT:    vfnms.f64 d8, d6, d2
 ; CHECK-NEXT:    vmul.f64 d1, d5, d10
-; CHECK-NEXT:    vmov q1, q4
 ; CHECK-NEXT:    vmul.f64 d0, d11, d5
+; CHECK-NEXT:    vmul.f64 d3, d7, d8
+; CHECK-NEXT:    vmul.f64 d2, d9, d7
 ; CHECK-NEXT:    vfma.f64 d1, d4, d11
 ; CHECK-NEXT:    vfnms.f64 d0, d4, d10
+; CHECK-NEXT:    vfma.f64 d3, d6, d9
+; CHECK-NEXT:    vfnms.f64 d2, d6, d8
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:

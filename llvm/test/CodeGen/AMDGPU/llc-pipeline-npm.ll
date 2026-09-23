@@ -341,6 +341,7 @@
 ; GCN-O2-SDAG-NEXT:       require<machine-loops>
 ; GCN-O2-SDAG-NEXT:       phi-node-elimination
 ; GCN-O2-SDAG-NEXT:       si-lower-control-flow
+; GCN-O2-SDAG-NEXT:       require<live-intervals>
 ; GCN-O2-SDAG-NEXT:       two-address-instruction
 ; GCN-O2-SDAG-NEXT:       register-coalescer
 ; GCN-O2-SDAG-NEXT:       rename-independent-subregs
@@ -535,6 +536,7 @@
 ; GCN-O2-GISEL-NEXT:       require<machine-loops>
 ; GCN-O2-GISEL-NEXT:       phi-node-elimination
 ; GCN-O2-GISEL-NEXT:       si-lower-control-flow
+; GCN-O2-GISEL-NEXT:       require<live-intervals>
 ; GCN-O2-GISEL-NEXT:       two-address-instruction
 ; GCN-O2-GISEL-NEXT:       register-coalescer
 ; GCN-O2-GISEL-NEXT:       rename-independent-subregs
@@ -722,6 +724,7 @@
 ; GCN-O3-SDAG-NEXT:       require<machine-loops>
 ; GCN-O3-SDAG-NEXT:       phi-node-elimination
 ; GCN-O3-SDAG-NEXT:       si-lower-control-flow
+; GCN-O3-SDAG-NEXT:       require<live-intervals>
 ; GCN-O3-SDAG-NEXT:       two-address-instruction
 ; GCN-O3-SDAG-NEXT:       register-coalescer
 ; GCN-O3-SDAG-NEXT:       rename-independent-subregs
@@ -916,6 +919,7 @@
 ; GCN-O3-GISEL-NEXT:       require<machine-loops>
 ; GCN-O3-GISEL-NEXT:       phi-node-elimination
 ; GCN-O3-GISEL-NEXT:       si-lower-control-flow
+; GCN-O3-GISEL-NEXT:       require<live-intervals>
 ; GCN-O3-GISEL-NEXT:       two-address-instruction
 ; GCN-O3-GISEL-NEXT:       register-coalescer
 ; GCN-O3-GISEL-NEXT:       rename-independent-subregs

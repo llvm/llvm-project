@@ -29,17 +29,17 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X86-NEXT:    .cfi_offset %esi, -20
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
-; X86-NEXT:    movl 32(%ebp), %ecx
-; X86-NEXT:    movl 40(%ebp), %edi
-; X86-NEXT:    movl 44(%ebp), %esi
-; X86-NEXT:    imull %ecx, %esi
-; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    mull %ecx
+; X86-NEXT:    movl 32(%ebp), %edx
+; X86-NEXT:    movl 40(%ebp), %eax
+; X86-NEXT:    movl 44(%ebp), %ecx
+; X86-NEXT:    imull %edx, %ecx
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    mull %edx
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl %edx, %ebx
-; X86-NEXT:    addl %esi, %ebx
+; X86-NEXT:    addl %ecx, %ebx
 ; X86-NEXT:    movl 36(%ebp), %eax
-; X86-NEXT:    imull %edi, %eax
+; X86-NEXT:    imull %esi, %eax
 ; X86-NEXT:    addl %eax, %ebx
 ; X86-NEXT:    movl 48(%ebp), %eax
 ; X86-NEXT:    movl %eax, %ecx

@@ -522,39 +522,39 @@ define amdgpu_kernel void @s_log2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 define amdgpu_kernel void @s_log2_v3f32(ptr addrspace(1) %out, <3 x float> %in) {
 ; SI-SDAG-LABEL: s_log2_v3f32:
 ; SI-SDAG:       ; %bb.0:
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xd
-; SI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0xd
+; SI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v0, 0x800000
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42000000
-; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s1, v0
-; SI-SDAG-NEXT:    s_and_b64 s[8:9], vcc, exec
+; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s9, v0
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
-; SI-SDAG-NEXT:    s_cselect_b32 s3, 32, 0
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s0, v0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v3, s3
-; SI-SDAG-NEXT:    s_and_b64 s[8:9], vcc, exec
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v3, s1, v3
-; SI-SDAG-NEXT:    s_cselect_b32 s1, 32, 0
+; SI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
+; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s8, v0
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 32, 0
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
-; SI-SDAG-NEXT:    v_mov_b32_e32 v5, s1
-; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v0
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v5, s0, v5
-; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-SDAG-NEXT:    s_cselect_b32 s0, 32, 0
-; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, s2, v0
+; SI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
+; SI-SDAG-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v3, s2
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 32, 0
+; SI-SDAG-NEXT:    s_and_b64 s[4:5], vcc, exec
+; SI-SDAG-NEXT:    v_mov_b32_e32 v5, s2
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 32, 0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; SI-SDAG-NEXT:    v_ldexp_f32_e32 v3, s9, v3
+; SI-SDAG-NEXT:    v_ldexp_f32_e32 v0, s10, v0
 ; SI-SDAG-NEXT:    v_log_f32_e32 v3, v3
+; SI-SDAG-NEXT:    v_ldexp_f32_e32 v5, s8, v5
 ; SI-SDAG-NEXT:    v_log_f32_e32 v7, v0
 ; SI-SDAG-NEXT:    v_log_f32_e32 v5, v5
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0, v1, vcc
-; SI-SDAG-NEXT:    s_mov_b32 s6, -1
+; SI-SDAG-NEXT:    s_mov_b32 s2, -1
 ; SI-SDAG-NEXT:    v_sub_f32_e32 v1, v3, v2
 ; SI-SDAG-NEXT:    v_sub_f32_e32 v2, v7, v6
 ; SI-SDAG-NEXT:    v_sub_f32_e32 v0, v5, v4
-; SI-SDAG-NEXT:    buffer_store_dword v2, off, s[4:7], 0 offset:8
-; SI-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-SDAG-NEXT:    buffer_store_dword v2, off, s[0:3], 0 offset:8
+; SI-SDAG-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-SDAG-NEXT:    s_endpgm
 ;
 ; SI-GISEL-LABEL: s_log2_v3f32:

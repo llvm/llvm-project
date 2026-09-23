@@ -3198,18 +3198,18 @@ define void @pr169691(ptr %p0, i64 %implicit, i1 zeroext %carry) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%eax), %esi
-; X86-NEXT:    addl %edx, %esi
-; X86-NEXT:    movl 4(%eax), %edi
-; X86-NEXT:    adcl %ecx, %edi
+; X86-NEXT:    movl (%eax), %edi
+; X86-NEXT:    addl %edx, %edi
+; X86-NEXT:    movl 4(%eax), %esi
+; X86-NEXT:    adcl %ecx, %esi
 ; X86-NEXT:    setb %bl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    addl %esi, %ebp
-; X86-NEXT:    adcl $0, %edi
+; X86-NEXT:    addl %edi, %ebp
+; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    setb %bh
 ; X86-NEXT:    orb %bl, %bh
 ; X86-NEXT:    movl %ebp, (%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    addl 8(%eax), %edx
 ; X86-NEXT:    adcl 12(%eax), %ecx
 ; X86-NEXT:    movzbl %bh, %esi

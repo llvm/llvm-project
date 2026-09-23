@@ -317,20 +317,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_virtual_agpr(ptr 
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
 ; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
-; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
-; GFX908-NEXT:    v_accvgpr_read_b32 v1, a25
-; GFX908-NEXT:    v_accvgpr_read_b32 v0, a24
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a31
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a27
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a31
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a26
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a25
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a24
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a30
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a29
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a28
 ; GFX908-NEXT:    v_accvgpr_read_b32 v8, a19
-; GFX908-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:96
 ; GFX908-NEXT:    v_accvgpr_read_b32 v12, a23
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a30
-; GFX908-NEXT:    v_accvgpr_read_b32 v2, a29
-; GFX908-NEXT:    v_accvgpr_read_b32 v1, a28
 ; GFX908-NEXT:    v_accvgpr_read_b32 v16, a11
 ; GFX908-NEXT:    v_accvgpr_read_b32 v20, a15
 ; GFX908-NEXT:    v_accvgpr_read_b32 v24, a3
+; GFX908-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:96
 ; GFX908-NEXT:    v_accvgpr_read_b32 v28, a7
 ; GFX908-NEXT:    v_accvgpr_read_b32 v7, a18
 ; GFX908-NEXT:    v_accvgpr_read_b32 v6, a17
@@ -350,7 +350,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_virtual_agpr(ptr 
 ; GFX908-NEXT:    v_accvgpr_read_b32 v27, a6
 ; GFX908-NEXT:    v_accvgpr_read_b32 v26, a5
 ; GFX908-NEXT:    v_accvgpr_read_b32 v25, a4
-; GFX908-NEXT:    global_store_dwordx4 v32, v[1:4], s[0:1] offset:112
+; GFX908-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:112
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[5:8], s[0:1] offset:64
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[9:12], s[0:1] offset:80
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[13:16], s[0:1] offset:32
@@ -423,20 +423,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_phys_agpr(ptr add
 ; GFX908-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
 ; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a27
-; GFX908-NEXT:    v_accvgpr_read_b32 v2, a26
-; GFX908-NEXT:    v_accvgpr_read_b32 v1, a25
-; GFX908-NEXT:    v_accvgpr_read_b32 v0, a24
-; GFX908-NEXT:    v_accvgpr_read_b32 v4, a31
+; GFX908-NEXT:    v_accvgpr_read_b32 v7, a27
+; GFX908-NEXT:    v_accvgpr_read_b32 v3, a31
+; GFX908-NEXT:    v_accvgpr_read_b32 v6, a26
+; GFX908-NEXT:    v_accvgpr_read_b32 v5, a25
+; GFX908-NEXT:    v_accvgpr_read_b32 v4, a24
+; GFX908-NEXT:    v_accvgpr_read_b32 v2, a30
+; GFX908-NEXT:    v_accvgpr_read_b32 v1, a29
+; GFX908-NEXT:    v_accvgpr_read_b32 v0, a28
 ; GFX908-NEXT:    v_accvgpr_read_b32 v8, a19
-; GFX908-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:96
 ; GFX908-NEXT:    v_accvgpr_read_b32 v12, a23
-; GFX908-NEXT:    v_accvgpr_read_b32 v3, a30
-; GFX908-NEXT:    v_accvgpr_read_b32 v2, a29
-; GFX908-NEXT:    v_accvgpr_read_b32 v1, a28
 ; GFX908-NEXT:    v_accvgpr_read_b32 v16, a11
 ; GFX908-NEXT:    v_accvgpr_read_b32 v20, a15
 ; GFX908-NEXT:    v_accvgpr_read_b32 v24, a3
+; GFX908-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:96
 ; GFX908-NEXT:    v_accvgpr_read_b32 v28, a7
 ; GFX908-NEXT:    v_accvgpr_read_b32 v7, a18
 ; GFX908-NEXT:    v_accvgpr_read_b32 v6, a17
@@ -456,7 +456,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_phys_agpr(ptr add
 ; GFX908-NEXT:    v_accvgpr_read_b32 v27, a6
 ; GFX908-NEXT:    v_accvgpr_read_b32 v26, a5
 ; GFX908-NEXT:    v_accvgpr_read_b32 v25, a4
-; GFX908-NEXT:    global_store_dwordx4 v32, v[1:4], s[0:1] offset:112
+; GFX908-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:112
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[5:8], s[0:1] offset:64
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[9:12], s[0:1] offset:80
 ; GFX908-NEXT:    global_store_dwordx4 v32, v[13:16], s[0:1] offset:32

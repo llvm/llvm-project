@@ -677,30 +677,30 @@ define <8 x i64> @bitselect_v8i64_rr(<8 x i64>, <8 x i64>) {
 define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, ptr nocapture readonly) {
 ; SSE-LABEL: bitselect_v8i64_rm:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [18446744065119617022,18446744073709551612]
+; SSE-NEXT:    movaps %xmm3, %xmm4
+; SSE-NEXT:    movaps {{.*#+}} xmm3 = [18446744065119617022,18446744073709551612]
 ; SSE-NEXT:    movaps 48(%rdi), %xmm8
-; SSE-NEXT:    andps %xmm4, %xmm8
+; SSE-NEXT:    andps %xmm3, %xmm8
 ; SSE-NEXT:    movaps 32(%rdi), %xmm9
-; SSE-NEXT:    andps %xmm4, %xmm9
+; SSE-NEXT:    andps %xmm3, %xmm9
 ; SSE-NEXT:    movaps 16(%rdi), %xmm7
-; SSE-NEXT:    andps %xmm4, %xmm7
+; SSE-NEXT:    andps %xmm3, %xmm7
 ; SSE-NEXT:    movaps (%rdi), %xmm6
-; SSE-NEXT:    andps %xmm4, %xmm6
-; SSE-NEXT:    movaps %xmm4, %xmm5
+; SSE-NEXT:    andps %xmm3, %xmm6
+; SSE-NEXT:    movaps %xmm3, %xmm5
 ; SSE-NEXT:    andnps %xmm0, %xmm5
 ; SSE-NEXT:    orps %xmm6, %xmm5
-; SSE-NEXT:    movaps %xmm4, %xmm6
+; SSE-NEXT:    movaps %xmm3, %xmm6
 ; SSE-NEXT:    andnps %xmm1, %xmm6
 ; SSE-NEXT:    orps %xmm7, %xmm6
-; SSE-NEXT:    movaps %xmm4, %xmm7
+; SSE-NEXT:    movaps %xmm3, %xmm7
 ; SSE-NEXT:    andnps %xmm2, %xmm7
 ; SSE-NEXT:    orps %xmm9, %xmm7
-; SSE-NEXT:    andnps %xmm3, %xmm4
-; SSE-NEXT:    orps %xmm8, %xmm4
+; SSE-NEXT:    andnps %xmm4, %xmm3
+; SSE-NEXT:    orps %xmm8, %xmm3
 ; SSE-NEXT:    movaps %xmm5, %xmm0
 ; SSE-NEXT:    movaps %xmm6, %xmm1
 ; SSE-NEXT:    movaps %xmm7, %xmm2
-; SSE-NEXT:    movaps %xmm4, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v8i64_rm:
@@ -740,30 +740,30 @@ define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, ptr nocapture readonly) {
 define <8 x i64> @bitselect_v8i64_mr(ptr nocapture readonly, <8 x i64>) {
 ; SSE-LABEL: bitselect_v8i64_mr:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [12884901890,4294967296]
+; SSE-NEXT:    movaps %xmm3, %xmm4
+; SSE-NEXT:    movaps {{.*#+}} xmm3 = [12884901890,4294967296]
 ; SSE-NEXT:    movaps 48(%rdi), %xmm8
-; SSE-NEXT:    andps %xmm4, %xmm8
+; SSE-NEXT:    andps %xmm3, %xmm8
 ; SSE-NEXT:    movaps 32(%rdi), %xmm9
-; SSE-NEXT:    andps %xmm4, %xmm9
+; SSE-NEXT:    andps %xmm3, %xmm9
 ; SSE-NEXT:    movaps 16(%rdi), %xmm7
-; SSE-NEXT:    andps %xmm4, %xmm7
+; SSE-NEXT:    andps %xmm3, %xmm7
 ; SSE-NEXT:    movaps (%rdi), %xmm6
-; SSE-NEXT:    andps %xmm4, %xmm6
-; SSE-NEXT:    movaps %xmm4, %xmm5
+; SSE-NEXT:    andps %xmm3, %xmm6
+; SSE-NEXT:    movaps %xmm3, %xmm5
 ; SSE-NEXT:    andnps %xmm0, %xmm5
 ; SSE-NEXT:    orps %xmm6, %xmm5
-; SSE-NEXT:    movaps %xmm4, %xmm6
+; SSE-NEXT:    movaps %xmm3, %xmm6
 ; SSE-NEXT:    andnps %xmm1, %xmm6
 ; SSE-NEXT:    orps %xmm7, %xmm6
-; SSE-NEXT:    movaps %xmm4, %xmm7
+; SSE-NEXT:    movaps %xmm3, %xmm7
 ; SSE-NEXT:    andnps %xmm2, %xmm7
 ; SSE-NEXT:    orps %xmm9, %xmm7
-; SSE-NEXT:    andnps %xmm3, %xmm4
-; SSE-NEXT:    orps %xmm8, %xmm4
+; SSE-NEXT:    andnps %xmm4, %xmm3
+; SSE-NEXT:    orps %xmm8, %xmm3
 ; SSE-NEXT:    movaps %xmm5, %xmm0
 ; SSE-NEXT:    movaps %xmm6, %xmm1
 ; SSE-NEXT:    movaps %xmm7, %xmm2
-; SSE-NEXT:    movaps %xmm4, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v8i64_mr:

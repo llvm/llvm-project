@@ -1269,17 +1269,17 @@ define void @store_abs_i64(ptr %p, ptr %r) nounwind {
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    pushl %esi
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movl 4(%ecx), %edx
-; X86-SSE41-NEXT:    movl %edx, %esi
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE41-NEXT:    movl 4(%edx), %ecx
+; X86-SSE41-NEXT:    movl %ecx, %esi
 ; X86-SSE41-NEXT:    sarl $31, %esi
-; X86-SSE41-NEXT:    xorl %esi, %edx
-; X86-SSE41-NEXT:    movl (%ecx), %ecx
 ; X86-SSE41-NEXT:    xorl %esi, %ecx
-; X86-SSE41-NEXT:    subl %esi, %ecx
-; X86-SSE41-NEXT:    sbbl %esi, %edx
-; X86-SSE41-NEXT:    movl %ecx, (%eax)
-; X86-SSE41-NEXT:    movl %edx, 4(%eax)
+; X86-SSE41-NEXT:    movl (%edx), %edx
+; X86-SSE41-NEXT:    xorl %esi, %edx
+; X86-SSE41-NEXT:    subl %esi, %edx
+; X86-SSE41-NEXT:    sbbl %esi, %ecx
+; X86-SSE41-NEXT:    movl %edx, (%eax)
+; X86-SSE41-NEXT:    movl %ecx, 4(%eax)
 ; X86-SSE41-NEXT:    popl %esi
 ; X86-SSE41-NEXT:    retl
 ;
@@ -1344,17 +1344,17 @@ define void @store_abs_i64_int_min_poison(ptr %p, ptr %r) nounwind {
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    pushl %esi
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movl 4(%ecx), %edx
-; X86-SSE41-NEXT:    movl %edx, %esi
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE41-NEXT:    movl 4(%edx), %ecx
+; X86-SSE41-NEXT:    movl %ecx, %esi
 ; X86-SSE41-NEXT:    sarl $31, %esi
-; X86-SSE41-NEXT:    xorl %esi, %edx
-; X86-SSE41-NEXT:    movl (%ecx), %ecx
 ; X86-SSE41-NEXT:    xorl %esi, %ecx
-; X86-SSE41-NEXT:    subl %esi, %ecx
-; X86-SSE41-NEXT:    sbbl %esi, %edx
-; X86-SSE41-NEXT:    movl %ecx, (%eax)
-; X86-SSE41-NEXT:    movl %edx, 4(%eax)
+; X86-SSE41-NEXT:    movl (%edx), %edx
+; X86-SSE41-NEXT:    xorl %esi, %edx
+; X86-SSE41-NEXT:    subl %esi, %edx
+; X86-SSE41-NEXT:    sbbl %esi, %ecx
+; X86-SSE41-NEXT:    movl %edx, (%eax)
+; X86-SSE41-NEXT:    movl %ecx, 4(%eax)
 ; X86-SSE41-NEXT:    popl %esi
 ; X86-SSE41-NEXT:    retl
 ;

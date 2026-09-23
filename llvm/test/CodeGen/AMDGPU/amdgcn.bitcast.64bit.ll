@@ -13671,18 +13671,18 @@ define inreg <4 x bfloat> @bitcast_v4i16_to_v4bf16_scalar(<4 x i16> inreg %a, i3
 ; SI-NEXT:    s_cmp_lg_u32 s18, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB93_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
-; SI-NEXT:    s_lshl_b32 s7, s16, 16
+; SI-NEXT:    s_lshl_b32 s8, s16, 16
 ; SI-NEXT:    s_lshl_b32 s9, s10, 16
 ; SI-NEXT:    s_lshl_b32 s6, s17, 16
-; SI-NEXT:    s_lshl_b32 s8, s11, 16
+; SI-NEXT:    s_lshl_b32 s7, s11, 16
 ; SI-NEXT:    s_mov_b64 s[4:5], 0
 ; SI-NEXT:    s_branch .LBB93_3
 ; SI-NEXT:  .LBB93_2:
 ; SI-NEXT:    s_mov_b64 s[4:5], -1
-; SI-NEXT:    ; implicit-def: $sgpr7
+; SI-NEXT:    ; implicit-def: $sgpr8
 ; SI-NEXT:    ; implicit-def: $sgpr9
 ; SI-NEXT:    ; implicit-def: $sgpr6
-; SI-NEXT:    ; implicit-def: $sgpr8
+; SI-NEXT:    ; implicit-def: $sgpr7
 ; SI-NEXT:  .LBB93_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; SI-NEXT:    s_cselect_b32 s4, 1, 0
@@ -13700,15 +13700,15 @@ define inreg <4 x bfloat> @bitcast_v4i16_to_v4bf16_scalar(<4 x i16> inreg %a, i3
 ; SI-NEXT:    s_add_i32 s4, s4, 0x30000
 ; SI-NEXT:    s_add_i32 s5, s5, 0x30000
 ; SI-NEXT:    s_and_b32 s9, s5, 0xffff0000
-; SI-NEXT:    s_lshl_b32 s7, s5, 16
-; SI-NEXT:    s_and_b32 s8, s4, 0xffff0000
+; SI-NEXT:    s_lshl_b32 s8, s5, 16
+; SI-NEXT:    s_and_b32 s7, s4, 0xffff0000
 ; SI-NEXT:    s_lshl_b32 s6, s4, 16
 ; SI-NEXT:  .LBB93_5: ; %end
 ; SI-NEXT:    v_mul_f32_e64 v0, 1.0, s9
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    v_mul_f32_e64 v0, 1.0, s7
+; SI-NEXT:    v_mul_f32_e64 v0, 1.0, s8
 ; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 16
-; SI-NEXT:    v_mul_f32_e64 v1, 1.0, s8
+; SI-NEXT:    v_mul_f32_e64 v1, 1.0, s7
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; SI-NEXT:    v_mul_f32_e64 v1, 1.0, s6
 ; SI-NEXT:    v_lshr_b64 v[1:2], v[1:2], 16
