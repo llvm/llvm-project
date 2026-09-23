@@ -27598,18 +27598,12 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     if (!Caller.hasStructRetAttr() || !CLI.CB || CLI.CB->arg_empty())
       return false;
 
-    // RISC-V psABI passes the sret pointer as the first argument. But under
-    // the Microsoft C++ ABI on Windows, the sret pointer is allowed as the
-    // second pointer after `this` pointer.
-    if (Subtarget.getTargetTriple().isKnownWindowsMSVCEnvironment()) {
-      auto *CallerSRetArg = Caller.getArg(0)->hasStructRetAttr()
-                                ? Caller.getArg(0)
-                                : Caller.getArg(1);
-      for (unsigned Idx = 0; Idx < 2 && Idx < CLI.CB->arg_size(); Idx++)
-        if (CLI.CB->paramHasAttr(Idx, Attribute::StructRet) &&
-            CLI.CB->getArgOperand(Idx) != CallerSRetArg)
-          return false;
-    } else if (CLI.CB->getArgOperand(0) != Caller.getArg(0))
+    // RISC-V psABI passes the sret pointer as the first argument. The Microsoft
+    // C++ ABI may instead pass it as the second argument after `this`, but that
+    // ABI is rarely used on RISC-V and is not supported here.
+    assert(Caller.getArg(0)->hasStructRetAttr() && Outs[0].Flags.isSRet() &&
+           "sret pointer must be argument 0");
+    if (CLI.CB->getArgOperand(0) != Caller.getArg(0))
       return false;
   }
 
