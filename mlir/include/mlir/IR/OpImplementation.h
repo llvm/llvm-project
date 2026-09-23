@@ -1824,6 +1824,15 @@ public:
                               SmallVectorImpl<UnresolvedOperand> &rhs) = 0;
 };
 
+namespace detail {
+/// Parse an optional operand or type into a generated parser's storage.
+ParseResult parseOptionalOperandInto(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands);
+ParseResult parseOptionalTypeInto(AsmParser &parser,
+                                  SmallVectorImpl<Type> &types);
+} // namespace detail
+
 //===--------------------------------------------------------------------===//
 // Custom printers and parsers.
 //===--------------------------------------------------------------------===//
