@@ -74,15 +74,6 @@ LLVM_ABI KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                                     bool UseInstrInfo = true,
                                     unsigned Depth = 0);
 
-/// Returns the known bits rather than passing by reference.
-LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                    const DataLayout &DL,
-                                    AssumptionCache *AC = nullptr,
-                                    const Instruction *CxtI = nullptr,
-                                    const DominatorTree *DT = nullptr,
-                                    bool UseInstrInfo = true,
-                                    unsigned Depth = 0);
-
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                                     const SimplifyQuery &Q, unsigned Depth = 0);
 
@@ -531,6 +522,10 @@ LLVM_ABI void getUnderlyingObjects(const Value *V,
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
+///
+/// Return true if each of the underlying objects is identified. \p Objects is
+/// never cleared, so may contain unidentified objects when the return value is
+/// false.
 LLVM_ABI bool getUnderlyingObjectsForCodeGen(const Value *V,
                                              SmallVectorImpl<Value *> &Objects);
 

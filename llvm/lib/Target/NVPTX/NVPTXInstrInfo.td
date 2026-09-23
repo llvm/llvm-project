@@ -258,6 +258,8 @@ def hasSetMaxNRegSupport : PredOr<[SM90a, SM100f, SM110f, SM120f]>;
 
 def hasLdStmatrixBlackwellSupport : PredOr<[SM100f, SM110f, SM120f]>;
 
+def hasLdmatrixS8S4Support : PredAnd<[PTX94, PredOr<[SM90a, SM100f, SM110f, SM120f]>]>;
+
 def hasConvertWithStochasticRounding
   : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM107a]>]>;
 

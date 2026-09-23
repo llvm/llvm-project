@@ -28,85 +28,85 @@ namespace llvm::orc::rt::sps_ci {
 
 struct MemWriteUInt8s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_write_uint8s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint8s");
   using SPSSig = void(shared::SPSSequence<shared::SPSMemoryAccessUInt8Write>);
 };
 
 struct MemWriteUInt16s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_write_uint16s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint16s");
   using SPSSig = void(shared::SPSSequence<shared::SPSMemoryAccessUInt16Write>);
 };
 
 struct MemWriteUInt32s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_write_uint32s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint32s");
   using SPSSig = void(shared::SPSSequence<shared::SPSMemoryAccessUInt32Write>);
 };
 
 struct MemWriteUInt64s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_write_uint64s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_write_uint64s");
   using SPSSig = void(shared::SPSSequence<shared::SPSMemoryAccessUInt64Write>);
 };
 
 struct MemWritePointers {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_write_pointers");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_write_pointers");
   using SPSSig = void(shared::SPSSequence<shared::SPSMemoryAccessPointerWrite>);
 };
 
 struct MemWriteBuffers {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_write_buffers");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_write_buffers");
   using SPSSig = void(shared::SPSSequence<shared::SPSMemoryAccessBufferWrite>);
 };
 
 struct MemReadUInt8s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_read_uint8s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_read_uint8s");
   using SPSSig = shared::SPSSequence<uint8_t>(
       shared::SPSSequence<shared::SPSExecutorAddr>);
 };
 
 struct MemReadUInt16s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_read_uint16s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_read_uint16s");
   using SPSSig = shared::SPSSequence<uint16_t>(
       shared::SPSSequence<shared::SPSExecutorAddr>);
 };
 
 struct MemReadUInt32s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_read_uint32s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_read_uint32s");
   using SPSSig = shared::SPSSequence<uint32_t>(
       shared::SPSSequence<shared::SPSExecutorAddr>);
 };
 
 struct MemReadUInt64s {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_read_uint64s");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_read_uint64s");
   using SPSSig = shared::SPSSequence<uint64_t>(
       shared::SPSSequence<shared::SPSExecutorAddr>);
 };
 
 struct MemReadPointers {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_read_pointers");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_read_pointers");
   using SPSSig = shared::SPSSequence<shared::SPSExecutorAddr>(
       shared::SPSSequence<shared::SPSExecutorAddr>);
 };
 
 struct MemReadBuffers {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_read_buffers");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_read_buffers");
   using SPSSig = shared::SPSSequence<shared::SPSSequence<uint8_t>>(
       shared::SPSSequence<shared::SPSExecutorAddrRange>);
 };
 
 struct MemReadStrings {
   static constexpr SymbolNameSpec Name =
-      SymbolNameSpec::verbatim("orc_rt_ci_sps_mem_read_strings");
+      SymbolNameSpec::c("orc_rt_ci_sps_mem_read_strings");
   using SPSSig = shared::SPSSequence<shared::SPSString>(
       shared::SPSSequence<shared::SPSExecutorAddr>);
 };
