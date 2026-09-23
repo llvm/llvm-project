@@ -5,18 +5,19 @@ if(NOT TARGET "omp")
 endif()
 
 add_library(omptarget SHARED
-  device.cpp
   interface.cpp
   omptarget.cpp
   OffloadRTL.cpp
   LegacyAPI.cpp
-  PluginManager.cpp
-  DeviceImage.cpp
 
   OpenMP/API.cpp
-  OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+
+  ../libompaccsupport/device.cpp
+  ../libompaccsupport/PluginManager.cpp
+  ../libompaccsupport/DeviceImage.cpp
+  ../libompaccsupport/Mapping.cpp
 
   KernelLanguage/API.cpp
 )
@@ -29,6 +30,8 @@ endif()
 target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
 target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
+  ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
 )
 
 if(LLVM_HAVE_LINK_VERSION_SCRIPT)
@@ -41,9 +44,7 @@ target_compile_definitions(omptarget PRIVATE
   DEBUG_PREFIX="omptarget"
 )
 
-foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
-  target_link_libraries(omptarget PRIVATE omptarget.rtl.${plugin})
-endforeach()
+target_link_libraries(omptarget PRIVATE LLVMOffloadStatic)
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})
@@ -52,7 +53,7 @@ target_link_options(omptarget PRIVATE ${offload_link_flags})
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
-                      INSTALL_RPATH "$ORIGIN"
+                      INSTALL_RPATH "${OFFLOAD_INSTALL_RPATH}"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 if(UNIX AND NOT APPLE)
   set_target_properties(omptarget PROPERTIES
