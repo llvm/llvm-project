@@ -110,3 +110,13 @@ jmp foo
 
 je foo
 // CHECK: je foo
+
+data16 jmp foo
+// CHECK:      data16
+// CHECK-NEXT: jmp foo
+
+data16 callq foo
+// CHECK:      data16
+// CHECK-NEXT: .bundle_lock align_to_end
+// CHECK-NEXT: callq foo
+// CHECK-NEXT: .bundle_unlock

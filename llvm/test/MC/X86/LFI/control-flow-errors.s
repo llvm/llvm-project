@@ -39,11 +39,31 @@ lret
 iretq
 // CHECK: error: unsupported return instruction
 
-// LFI only supports x86-64, so instructions in .code32 are rejected.
+// An absolute jump can target any address, so it cannot be sandboxed.
+
+jmpabs $0x123456789abcdef0
+// CHECK: error: unsupported branch instruction
+
+// LFI only supports x86-64, so instructions in .code32 and .code16 are
+// rejected, including direct branches that would otherwise pass through.
 .code32
 
 ret
-// CHECK: error: unsupported return instruction
+// CHECK: error: LFI only supports 64-bit mode
 
 jmp *%eax
-// CHECK: error: unsupported indirect branch
+// CHECK: error: LFI only supports 64-bit mode
+
+call foo
+// CHECK: error: LFI only supports 64-bit mode
+
+jecxz foo
+// CHECK: error: LFI only supports 64-bit mode
+
+.code16
+
+{disp32} jmp foo
+// CHECK: error: LFI only supports 64-bit mode
+
+{disp32} je foo
+// CHECK: error: LFI only supports 64-bit mode

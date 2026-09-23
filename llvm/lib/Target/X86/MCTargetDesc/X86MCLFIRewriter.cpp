@@ -37,13 +37,7 @@ static bool isSyscall(const MCInst &Inst) {
 }
 
 static bool isDirectCall(const MCInst &Inst) {
-  switch (Inst.getOpcode()) {
-  case X86::CALLpcrel32:
-  case X86::CALL64pcrel32:
-    return true;
-  default:
-    return false;
-  }
+  return Inst.getOpcode() == X86::CALL64pcrel32;
 }
 
 static bool isSupportedIndirectBranch(const MCInst &Inst) {
@@ -189,6 +183,7 @@ void X86::X86MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
     Mov.addReg(Target);
     for (unsigned I = 0; I < X86::AddrNumOperands; ++I)
       Mov.addOperand(Inst.getOperand(MemIdx + I));
+    Mov.setLoc(Inst.getLoc());
     doRewriteInst(Mov, Out, STI);
   } else {
     Target = Inst.getOperand(0).getReg();
@@ -254,7 +249,8 @@ void X86::X86MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
     doRewriteInst(MCInstBuilder(X86::ADD64ri32)
                       .addReg(X86::RSP)
                       .addReg(X86::RSP)
-                      .addOperand(Inst.getOperand(0)),
+                      .addOperand(Inst.getOperand(0))
+                      .setLoc(Inst.getLoc()),
                   Out, STI);
   }
 
@@ -382,6 +378,9 @@ void X86::X86MCLFIRewriter::rewriteFSAccess(const MCInst &Inst, MCStreamer &Out,
 
 void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
                                           const MCSubtargetInfo &STI) {
+  if (!STI.hasFeature(X86::Is64Bit))
+    return error(Inst, "LFI only supports 64-bit mode");
+
   if (mayModifyRegister(Inst, LFIBaseReg) || mayModifyRegister(Inst, LFITPReg))
     return error(Inst, "illegal modification of reserved LFI register");
 
@@ -393,6 +392,10 @@ void X86::X86MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
 
   if (isDirectCall(Inst))
     return rewriteDirectCall(Inst, Out, STI);
+
+  // jmpabs is disallowed since it jumps to an absolute address.
+  if (Inst.getOpcode() == X86::JMPABS64i)
+    return error(Inst, "unsupported branch instruction");
 
   if (isIndirectBranch(Inst) || isCall(Inst)) {
     if (!isSupportedIndirectBranch(Inst))
