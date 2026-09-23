@@ -1005,8 +1005,8 @@ bool FormatEntity::Formatter::DumpValue(Stream &s,
         subpath.size() > close_bracket_index) {
       llvm::StringRef additional_data(
           subpath.drop_front(close_bracket_index + 1));
-      special_directions_stream
-          << llvm::formatv("$\{{0}var{1}", do_deref_pointer ? "*" : "",
+      special_directions_stream << llvm::formatv(
+          "$\{{0}var{1}", do_deref_pointer ? "*" : "", additional_data);
 
       if (entry.fmt != eFormatDefault) {
         const char format_char =
