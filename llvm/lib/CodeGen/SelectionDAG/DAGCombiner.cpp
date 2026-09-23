@@ -10149,12 +10149,10 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     SourceValue = DAG.getNode(ISD::ROTR, DL, WideVT, SourceValue, RotAmt);
   }
 
-  const MDNode *MemCacheHint = Stores.front()->getMemCacheHint();
-  for (StoreSDNode *Store : drop_begin(Stores))
-    if (Store->getMemCacheHint() != MemCacheHint) {
-      MemCacheHint = nullptr;
-      break;
-    }
+  auto MemCacheHints = map_range(
+      Stores, [](StoreSDNode *Store) { return Store->getMemCacheHint(); });
+  const MDNode *MemCacheHint =
+      all_equal(MemCacheHints) ? Stores.front()->getMemCacheHint() : nullptr;
 
   SDValue NewStore =
       DAG.getStore(Chain, DL, SourceValue, FirstStore->getBasePtr(),
@@ -10363,12 +10361,10 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   if (!Allowed || !Fast)
     return SDValue();
 
-  const MDNode *MemCacheHint = FirstLoad->getMemCacheHint();
-  for (LoadSDNode *Load : Loads)
-    if (Load->getMemCacheHint() != MemCacheHint) {
-      MemCacheHint = nullptr;
-      break;
-    }
+  auto MemCacheHints = map_range(
+      Loads, [](LoadSDNode *Load) { return Load->getMemCacheHint(); });
+  const MDNode *MemCacheHint =
+      all_equal(MemCacheHints) ? FirstLoad->getMemCacheHint() : nullptr;
 
   SDValue NewLoad = DAG.getExtLoad(
       NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT, Chain,
@@ -24166,14 +24162,18 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     StMMOFlags |= TLI.getTargetMMOFlags(*StoreNodes[0].MemNode);
 
-    const MDNode *LoadMemCacheHint = FirstLoad->getMemCacheHint();
-    const MDNode *StoreMemCacheHint = FirstInChain->getMemCacheHint();
-    for (unsigned I = 1; I != NumElem; ++I) {
-      if (LoadNodes[I].MemNode->getMemCacheHint() != LoadMemCacheHint)
-        LoadMemCacheHint = nullptr;
-      if (StoreNodes[I].MemNode->getMemCacheHint() != StoreMemCacheHint)
-        StoreMemCacheHint = nullptr;
-    }
+    auto GetMemCacheHint = [](const MemOpLink &MemOp) {
+      return MemOp.MemNode->getMemCacheHint();
+    };
+    auto LoadMemCacheHints =
+        map_range(ArrayRef(LoadNodes).take_front(NumElem), GetMemCacheHint);
+    const MDNode *LoadMemCacheHint =
+        all_equal(LoadMemCacheHints) ? FirstLoad->getMemCacheHint() : nullptr;
+    auto StoreMemCacheHints =
+        map_range(ArrayRef(StoreNodes).take_front(NumElem), GetMemCacheHint);
+    const MDNode *StoreMemCacheHint = all_equal(StoreMemCacheHints)
+                                          ? FirstInChain->getMemCacheHint()
+                                          : nullptr;
 
     SDValue NewLoad, NewStore;
     if (UseVectorTy || !DoIntegerTruncate) {
