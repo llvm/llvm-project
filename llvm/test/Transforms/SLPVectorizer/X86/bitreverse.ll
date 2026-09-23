@@ -2,8 +2,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=SSE
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=corei7-avx -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver2 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver4 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver2 -mattr=-prefer-128-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=bdver4 -mattr=-prefer-128-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=XOP
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
