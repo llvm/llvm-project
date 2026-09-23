@@ -493,6 +493,7 @@ SetNumTeamsInParOrTeamsRegion "%1$s() called inside a parallel or teams region; 
 SetTeamsThreadLimitInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
 OmpTaskgraphBadCapture       "Cannot locate captured shared variable reference for taskgraph replay"
 OmpTaskgraphConcurrentRecord "%1$s: multiple threads attempting to re-record taskgraph concurrently for graph_id %2$d"
+OmpTaskgraphDetachableTask   "%1$s: a detachable task cannot be recorded for taskgraph replay"
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-
