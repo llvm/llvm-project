@@ -14,7 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINHBF16_H
 
-#include "sinhfcoshf_utils.h"
+#include "sinhbf16coshbf16_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
@@ -22,12 +22,11 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
-
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE bfloat16 sinhbf16(bfloat16 x) {
+LIBC_INLINE constexpr bfloat16 sinhbf16(bfloat16 x) {
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits x_bits(x);
   uint16_t x_u = x_bits.uintval();
@@ -85,8 +84,22 @@ LIBC_INLINE bfloat16 sinhbf16(bfloat16 x) {
   }
 
   float xf = static_cast<float>(x);
+
+  // |x| >= 6.875
+  // return e^x / 2
+  if (x_abs >= 0x40dc) {
+    uint32_t x_abs_bits = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
+    float x_abs_f = fputil::FPBits<float>(x_abs_bits).get_val();
+    float abs_result = math::sinhbf16coshbf16_internal::exp_half(x_abs_f);
+    if (x_u & 0x8000) {
+      abs_result = -abs_result;
+    }
+    return fputil::cast<bfloat16>(abs_result);
+  }
+
+  // sinh(x) = (e^x - e^(-x)) / 2.
   float result = static_cast<float>(
-      math::sinhfcoshf_internal::exp_pm_eval</*is_sinh*/ true>(xf));
+      math::sinhbf16coshbf16_internal::eval_sinh_or_cosh</*is_sinh*/ true>(xf));
 
   return fputil::cast<bfloat16>(result);
 }
