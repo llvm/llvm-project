@@ -3342,6 +3342,15 @@ static bool handleUncountableExitsWithSideEffects(
   return true;
 }
 
+/// Returns true if any non-branch recipe in the loop may have side effects.
+static bool loopHasSideEffects(VPBasicBlock *HeaderVPBB) {
+  for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
+    for (VPRecipeBase &R : *VPBB)
+      if (R.mayHaveSideEffects() && &R != VPBB->getTerminator())
+        return true;
+  return false;
+}
+
 bool VPlanTransforms::handleUncountableEarlyExits(
     VPlan &Plan, OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
@@ -3352,6 +3361,9 @@ bool VPlanTransforms::handleUncountableEarlyExits(
 
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+
+  if (loopHasSideEffects(HeaderVPBB))
+    Style = UncountableExitStyle::MaskedHandleExitInScalarLoop;
 
   // Dereferenceability is checked separately for uncountable exit loops with
   // stores, as only the loads contributing to the exit condition need to
