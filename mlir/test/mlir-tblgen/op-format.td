@@ -245,7 +245,7 @@ def DefaultEnumAttrPropDictOp : TestFormat_Op<"prop-dict attr-dict">,
 
 // Default-valued optional attributes have a non-optional getter.
 
-// CHECK-LABEL: DefaultOptionalEnumAttrOp::print
+// CHECK-LABEL: LLVM_ATTRIBUTE_MINSIZE void DefaultOptionalEnumAttrOp::print
 // CHECK: auto caseValue = getAttr();
 def DefaultOptionalEnumAttrOp : TestFormat_Op<"(enum($attr)^)? attr-dict">,
     Arguments<(ins DefaultValuedOptionalAttr<
