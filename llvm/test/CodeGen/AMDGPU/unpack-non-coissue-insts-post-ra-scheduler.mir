@@ -7,6 +7,9 @@
 name:            test_pk_mul_unpacking_f32
 tracksRegLiveness: true
 
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -96,6 +99,9 @@ body:             |
 ---
 name:            test_op_sel_selection_unpacking_f32
 tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5'}
 
 body:             |
   bb.0.entry:
@@ -187,6 +193,9 @@ body:             |
 name:            test_op_sel_hi_selection_unpacking_f32
 tracksRegLiveness: true
 
+liveins:
+  - { reg: '$sgpr4_sgpr5'}
+
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -276,6 +285,9 @@ body:             |
 ---
 name:            test_pk_add_unpacking_f32
 tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -431,6 +443,9 @@ body:             |
 name:            test_pk_fma_unpacking_f32
 tracksRegLiveness: true
 
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -512,6 +527,9 @@ body:             |
 ---
 name:            test_unpacking_does_not_introduce_rw_dependency
 tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -598,6 +616,9 @@ body:             |
 ---
 name:            test_opcodes_not_supported_for_unpacking_are_skipped
 tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -695,6 +716,9 @@ body:             |
 name:            test_opsel_register_is_correctly_marked_as_killed
 tracksRegLiveness: true
 
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -785,6 +809,9 @@ body:             |
 name:            test_inst_dependent_on_mfma_are_not_unpacked
 tracksRegLiveness: true
 
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -873,6 +900,9 @@ body:             |
 name:            test_mfma_def_using_instr_blocks_unpacking
 tracksRegLiveness: true
 
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
+
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
@@ -956,6 +986,9 @@ body:             |
 ---
 name:            test_unpacking_with_imm_input
 tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
@@ -1046,6 +1079,9 @@ body:             |
 ---
 name:            test_neg_lo_hi_post_unpacking
 tracksRegLiveness: true
+
+liveins:
+  - { reg: '$sgpr4_sgpr5' }
 
 body:             |
   bb.0.entry:
