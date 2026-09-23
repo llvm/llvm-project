@@ -104,20 +104,20 @@ protected:
   /// through an iterator pattern).
   class PointerBase {
   protected:
-    void *get() const { return I == -2u ? P : nullptr; }
+    void *get() const { return I == ~1u ? P : nullptr; }
 
   public:
     PointerBase() noexcept = default;
 
   private:
     friend class ThreadSafeTrieRawHashMapBase;
-    explicit PointerBase(void *Content) : P(Content), I(-2u) {}
+    explicit PointerBase(void *Content) : P(Content), I(~1u) {}
     PointerBase(void *P, unsigned I, unsigned B) : P(P), I(I), B(B) {}
 
-    bool isHint() const { return I != -1u && I != -2u; }
+    bool isHint() const { return I != ~0u && I != ~1u; }
 
     void *P = nullptr;
-    unsigned I = -1u;
+    unsigned I = ~0u;
     unsigned B = 0;
   };
 

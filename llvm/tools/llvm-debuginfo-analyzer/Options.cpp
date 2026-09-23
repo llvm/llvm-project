@@ -178,7 +178,7 @@ static cl::opt<unsigned, true>
     OutputLevel("output-level", cl::cat(OutputCategory),
                 cl::desc("Only print to a depth of N elements."),
                 cl::value_desc("N"), cl::Hidden,
-                cl::location(ReaderOptions.Output.Level), cl::init(-1U));
+                cl::location(ReaderOptions.Output.Level), cl::init(~0U));
 
 // --ouput=<value>[,<value>,...]
 cl::list<LVOutputKind> cmdline::OutputOptions(

@@ -378,7 +378,7 @@ private:
   /// operate on simultaneously, multiplied by the size of the element in bits.
   /// The size of the element is taken from the memory access that is most
   /// restrictive.
-  uint64_t MaxSafeVectorWidthInBits = -1U;
+  uint64_t MaxSafeVectorWidthInBits = ~0ULL;
 
   /// Maximum power-of-2 number of elements, which do not prevent store-load
   /// forwarding, multiplied by the size of the elements in bits.

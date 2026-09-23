@@ -587,11 +587,11 @@ private:
     /// Special partition numbers.
     enum : unsigned {
       /// A partition number has not yet been assigned to this global.
-      Unknown = -1u,
+      Unknown = ~0u,
 
       /// This global is either used by more than one partition or has an
       /// external reference, and therefore cannot be internalized.
-      External = -2u,
+      External = ~1u,
 
       /// The RegularLTO partition
       RegularLTO = 0,

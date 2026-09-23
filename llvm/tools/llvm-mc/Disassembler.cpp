@@ -138,7 +138,7 @@ static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
       Next = 2;
       unsigned C0 = hexDigitValue(Value[0]);
       unsigned C1 = hexDigitValue(Value[1]);
-      if (C0 == -1u || C1 == -1u) {
+      if (C0 == ~0u || C1 == ~0u) {
         SM.PrintMessage(SMLoc::getFromPointer(Value.data()),
                         SourceMgr::DK_Error, "invalid input token");
         Str = Str.substr(Next);
