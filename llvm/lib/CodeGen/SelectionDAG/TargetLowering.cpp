@@ -5086,7 +5086,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
             newVT, dl, Lod->getChain(), Ptr,
             Lod->getPointerInfo().getWithOffset(bestOffset),
             Lod->getBaseAlign(), MachineMemOperand::MONone,
-            MMOMetadata(Lod->getAAInfo(), nullptr, Lod->getMemCacheHint()));
+            Lod->getNonRangeMMOMetadata());
         SDValue And =
             DAG.getNode(ISD::AND, dl, newVT, NewLoad,
                         DAG.getConstant(bestMask.trunc(bestWidth), dl, newVT));
