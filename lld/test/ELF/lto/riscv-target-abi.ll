@@ -1,6 +1,18 @@
 ; REQUIRES: riscv
 ; RUN: rm -rf %t && split-file %s %t
 
+; WARN: note: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
+; NOWARN-NOT: ignoring target-abi
+
+; FLAGS-ABI-IGNORED:      Flags [ (0x4)
+; FLAGS-ABI-IGNORED-NEXT:   EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
+; FLAGS-ABI-IGNORED-NEXT: ]
+
+; FLAGS-MCPU:      Flags [ (0x5)
+; FLAGS-MCPU-NEXT:   EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
+; FLAGS-MCPU-NEXT:   EF_RISCV_RVC (0x1)
+; FLAGS-MCPU-NEXT: ]
+
 ;--- no-ext.ll
 ;; The module flag asks for lp64d, and _start() has no target-features attribute.
 ;; Without -mcpu we default to no D extension, so RISCVSubtarget prints a note
@@ -8,15 +20,11 @@
 ; RUN: llvm-as %t/no-ext.ll -o %t/no-ext.bc
 ; RUN: ld.lld -shared %t/no-ext.bc -o %t/no-ext.so 2>&1 | FileCheck %s --check-prefix=WARN \
 ; RUN:   --implicit-check-not="ignoring target-abi" --implicit-check-not="error:" --implicit-check-not="warning:"
-; WARN: note: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
 
 ;; TODO: This is inconsistent: RISCVAsmPrinter::emitStartOfAsmFile sets e_flags
 ;; based on the raw module flag not the ABI actually used for codegen.
 ;; This means we are setting EF_RISCV_FLOAT_ABI_DOUBLE on a file built for soft float ABI
 ; RUN: llvm-readobj --file-headers %t/no-ext.so | FileCheck %s --check-prefix=FLAGS-ABI-IGNORED
-; FLAGS-ABI-IGNORED: Flags [ (0x4)
-; FLAGS-ABI-IGNORED-NEXT: EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
-; FLAGS-ABI-IGNORED-NEXT: ]
 
 ;; Passing -mcpu that has D makes the ABI valid again, so no warning/note.
 ; RUN: ld.lld -mllvm -mcpu=sifive-u74 -shared %t/no-ext.bc -o %t/no-ext.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty \
@@ -25,11 +33,6 @@
 ; RUN: ld.lld -plugin-opt=mcpu=sifive-u74 -shared %t/no-ext.bc -o %t/no-ext.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty \
 ; RUN:   --implicit-check-not="error:" --implicit-check-not="warning:" --implicit-check-not="note:"
 ; RUN: llvm-readobj --file-headers %t/no-ext.so | FileCheck %s --check-prefix=FLAGS-MCPU
-; NOWARN-NOT: ignoring target-abi
-; FLAGS-MCPU: Flags [ (0x5)
-; FLAGS-MCPU-NEXT: EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
-; FLAGS-MCPU-NEXT: EF_RISCV_RVC (0x1)
-; FLAGS-MCPU-NEXT: ]
 
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64"
@@ -65,8 +68,8 @@ define void @_start() {
 !0 = !{i32 1, !"target-abi", !"lp64d"}
 
 ;--- module-asm-no-ext.ll
-;; Module-level inline asm without target_features (e.g. Rust global_asm!) should
-;; not warn when functions in the module have +f,+d.
+;; Module-level inline asm without target_features does not re-validate
+;; target-abi in RISCVAsmParser when functions in the module have +f,+d.
 ; RUN: llvm-as %t/module-asm-no-ext.ll -o %t/module-asm-no-ext.bc
 ; RUN: ld.lld -plugin-opt=mcpu=generic-rv64 -shared %t/module-asm-no-ext.bc -o %t/module-asm-no-ext.so 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NOWARN --allow-empty \
