@@ -27,7 +27,7 @@ define i64 @test_fmax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call nnan nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp oeq <4 x float> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -105,7 +105,7 @@ define i64 @test_fmax_last_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call nnan nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp oeq <4 x float> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -227,7 +227,7 @@ define i64 @test_fmin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call nnan nsz float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp oeq <4 x float> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -305,7 +305,7 @@ define i64 @test_fmin_last_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call nnan nsz float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp oeq <4 x float> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -776,7 +776,7 @@ define i64 @test_fminimumnum_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp oeq <4 x float> [[TMP2]], [[BROADCAST_SPLAT]]
@@ -986,7 +986,7 @@ define i64 @test_fmaximumnum_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp oeq <4 x float> [[TMP2]], [[BROADCAST_SPLAT]]
