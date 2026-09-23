@@ -74,15 +74,6 @@ LLVM_ABI KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                                     bool UseInstrInfo = true,
                                     unsigned Depth = 0);
 
-/// Returns the known bits rather than passing by reference.
-LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                                    const DataLayout &DL,
-                                    AssumptionCache *AC = nullptr,
-                                    const Instruction *CxtI = nullptr,
-                                    const DominatorTree *DT = nullptr,
-                                    bool UseInstrInfo = true,
-                                    unsigned Depth = 0);
-
 LLVM_ABI KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                                     const SimplifyQuery &Q, unsigned Depth = 0);
 
@@ -460,8 +451,8 @@ getArgumentAliasingToReturnedPointer(CallBase *Call, bool MustPreserveOffset,
       MustPreserveProvenance));
 }
 
-/// {launder,strip}.invariant.group returns pointer that aliases its argument,
-/// and it only captures pointer by returning it.
+/// launder.invariant.group and similar intrinsics return a pointer that
+/// aliases their argument, and only capture the pointer by returning it.
 /// These intrinsics are not marked as nocapture, because returning is
 /// considered as capture. The arguments are not marked as returned neither,
 /// because it would make it useless. See getArgumentAliasingToReturnedPointer()

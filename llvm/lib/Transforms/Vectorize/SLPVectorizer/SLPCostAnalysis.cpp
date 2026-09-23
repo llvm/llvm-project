@@ -438,4 +438,58 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   return NewCost;
 }
 
+InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
+                                   bool NeedMask, Type *NarrowScalarTy,
+                                   Type *WideTy, unsigned VF,
+                                   ArrayRef<int> PermMask, const Value *Root,
+                                   const TTI::TargetCostKind CostKind) {
+  auto *NarrowVecTy = cast<VectorType>(getWidenedType(NarrowScalarTy, VF));
+  Type *CmpTy = CmpInst::makeCmpResultType(NarrowVecTy);
+  auto *MaskTy = IntegerType::get(WideTy->getContext(), VF);
+  // The result cast inherits the uses of the reduction root.
+  TTI::CastContextHint CCH = getBoolReduxResultCCH(Root);
+  const auto *CxtI = cast<Instruction>(Root);
+  InstructionCost Cost = 0;
+  if (NeedMask)
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::And, NarrowVecTy, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  if (!ShuffleVectorInst::isIdentityMask(PermMask, VF))
+    Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, NarrowVecTy, CostKind,
+                           PermMask);
+  if (!NarrowScalarTy->isIntegerTy(1))
+    Cost += TTI.getCmpSelInstrCost(
+        Instruction::ICmp, NarrowVecTy, CmpTy, CmpInst::ICMP_NE, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_UniformConstantValue, TTI::OP_None});
+  // Only the final cast inherits the uses of the reduction root.
+  Cost += TTI.getCastInstrCost(
+      Instruction::BitCast, MaskTy, CmpTy,
+      MaskTy == WideTy ? CCH : TTI::CastContextHint::None, CostKind);
+  if (MaskTy != WideTy)
+    Cost +=
+        TTI.getCastInstrCost(Instruction::ZExt, WideTy, MaskTy, CCH, CostKind);
+  return Cost;
+}
+
+InstructionCost getNarrowedLeafOpsCost(
+    const TargetTransformInfo &TTI,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    VectorType *NarrowVecTy, VectorType *WideVecTy, const Instruction *CxtI,
+    const TTI::TargetCostKind CostKind) {
+  InstructionCost Cost = 0;
+  if (any_of(NarrowedLeafShifts,
+             [](const auto &P) { return P.second.Shift != 0; }))
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::Shl, WideVecTy, CostKind, {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  if (any_of(NarrowedLeafShifts,
+             [](const auto &P) { return !P.second.Mask.isAllOnes(); }))
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::And, NarrowVecTy, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  return Cost;
+}
 } // namespace llvm::slpvectorizer

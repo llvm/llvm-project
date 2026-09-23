@@ -80,11 +80,15 @@ public:
   /// store a derived object and return that as an ABICompatInfo reference.
   virtual const ABICompatInfo &getABICompatInfo() const = 0;
 
+  /// Address space in which indirect arguments are allocated (the target's
+  /// alloca/stack space).
+  virtual unsigned getAllocaAddrSpace() const { return 0; }
+
 protected:
   LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
   LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
   LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
-  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
+  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty, unsigned AddrSpace,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
