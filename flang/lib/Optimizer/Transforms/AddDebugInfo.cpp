@@ -327,8 +327,9 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
 
   // Create the debug attributes.
   unsigned line = fir::getLineFromLoc(global.getLoc());
-  mlir::LLVM::DICommonBlockAttr commonBlock =
-      getOrCreateCommonBlockAttr(commonName, fileAttr, scopeAttr, line);
+  mlir::LLVM::DICommonBlockAttr commonBlock = getOrCreateCommonBlockAttr(
+      commonName, fir::getFileAttrFromLoc(global.getLoc(), fileAttr), scopeAttr,
+      line);
 
   mlir::LLVM::DITypeAttr diType = typeGen.convertType(
       fir::unwrapRefType(declOp.getType()), fileAttr, scopeAttr, declOp);
@@ -336,7 +337,8 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   line = fir::getLineFromLoc(declOp.getLoc());
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, commonBlock, mlir::StringAttr::get(context, name),
-      declOp.getUniqName(), fileAttr, line, diType,
+      declOp.getUniqName(), fir::getFileAttrFromLoc(declOp.getLoc(), fileAttr),
+      line, diType,
       /*isLocalToUnit*/ false, /*isDefinition*/ true, /* alignInBits*/ 0);
 
   // Create DIExpression for offset if needed
