@@ -2377,6 +2377,8 @@ static void __kmp_taskgraph_gather_mutex_sets(kmp_info_t *thread,
   case TASKGRAPH_REGION_ENTRY:
   case TASKGRAPH_REGION_EXIT:
   case TASKGRAPH_REGION_WAIT:
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
+    // Target nodes carry no mutex set and have no children to recurse into.
     return;
   case TASKGRAPH_REGION_NODE: {
 #ifdef DEBUG_TASKGRAPH
@@ -2469,6 +2471,7 @@ static void __kmp_taskgraph_find_exclusive_regions(
   case TASKGRAPH_REGION_EXIT:
   case TASKGRAPH_REGION_NODE:
   case TASKGRAPH_REGION_WAIT:
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
     break;
   case TASKGRAPH_REGION_SEQUENTIAL:
   case TASKGRAPH_REGION_PARALLEL:
@@ -2646,6 +2649,7 @@ __kmp_taskgraph_strip_mutex_sets(kmp_info_t *thread,
   case TASKGRAPH_REGION_WAIT:
     assert(!region->mutexset);
     break;
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
   case TASKGRAPH_REGION_NODE:
     if (region->mutexset) {
       if (in_exclusive) {
@@ -2711,6 +2715,14 @@ __kmp_taskgraph_region_type_name(kmp_taskgraph_region_type type) {
     return "node";
   case TASKGRAPH_REGION_WAIT:
     return "wait";
+  case TASKGRAPH_REGION_TARGET:
+    return "target";
+  case TASKGRAPH_REGION_TARGET_ENTER_DATA:
+    return "target enter data";
+  case TASKGRAPH_REGION_TARGET_EXIT_DATA:
+    return "target exit data";
+  case TASKGRAPH_REGION_TARGET_UPDATE:
+    return "target update";
   case TASKGRAPH_REGION_PARALLEL:
     return "parallel";
   case TASKGRAPH_REGION_EXCLUSIVE:
@@ -2734,7 +2746,9 @@ static void __kmp_dump_taskgraph_regions(FILE *f,
             __kmp_taskgraph_region_type_name(region->type));
     break;
   case TASKGRAPH_REGION_NODE:
-  case TASKGRAPH_REGION_WAIT: {
+  case TASKGRAPH_REGION_WAIT:
+    // clang-format off
+  KMP_TASKGRAPH_REGION_TARGET_CASES: {
     char set_membership[40];
     if (region->mutexset)
       sprintf(set_membership, " [sets: 0x%llx]",
@@ -2746,6 +2760,7 @@ static void __kmp_dump_taskgraph_regions(FILE *f,
             set_membership);
     break;
   }
+  // clang-format on
   default: {
     char set_membership[40];
     if (region->mutexset)
@@ -3114,8 +3129,12 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   kmp_taskgraph_region_t *cfg_barrier = nullptr;
 
   for (kmp_int32 i = 0; i < numnodes; i++) {
+    // Target nodes have a null `task` (they would otherwise look like a
+    // taskwait); their region type comes from the recorded target kind.
     initial_regions[i].type =
-        nodes[i].task ? TASKGRAPH_REGION_NODE : TASKGRAPH_REGION_WAIT;
+        nodes[i].target
+            ? nodes[i].target->kind
+            : (nodes[i].task ? TASKGRAPH_REGION_NODE : TASKGRAPH_REGION_WAIT);
     initial_regions[i].task.node = &nodes[i];
     initial_regions[i].parent = nullptr;
     if (i < numnodes - 1) {
