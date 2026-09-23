@@ -1544,10 +1544,9 @@ public:
       // Keep track of the instruction stack as we recurse into the operands
       // during the look-ahead score exploration.
       int OpcodeScore;
-      int Score =
-          LookAhead.getScoreAtLevelRec(LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
-                                       /*CurrLevel=*/1, MainAltOps,
-                                       &OpcodeScore);
+      int Score = LookAhead.getScoreAtLevelRec(
+          LHS, RHS, /*U1=*/nullptr, /*U2=*/nullptr,
+          /*CurrLevel=*/1, MainAltOps, &OpcodeScore);
       if (OpcodeScore != LookAheadHeuristics::ScoreSameOpcode &&
           OpcodeScore != LookAheadHeuristics::ScoreAltOpcodes)
         OpcodeScore = 0;
@@ -1571,7 +1570,7 @@ public:
           // break ties before considering whether all users are vectorized.
           Score *= SF;
           Score += OpcodeScore;
-          Score *= SF;  // Scale Opcode as well
+          Score *= SF; // Scale Opcode as well
           Score += getExternalUseScore(Lane, OpIdx, Idx);
           IsUsed = true;
         }
