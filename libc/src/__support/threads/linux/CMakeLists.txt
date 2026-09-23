@@ -74,6 +74,7 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clone
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
@@ -90,10 +91,6 @@ add_object_library(
     libc.src.__support.threads.thread_attributes
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
-    -fno-omit-frame-pointer # This allows us to sniff out the thread args from
-    # the new thread's stack reliably.
-    -Wno-frame-address # Yes, calling __builtin_return_address with a
-  # value other than 0 is dangerous. We know.
 )
 
 add_header_library(
