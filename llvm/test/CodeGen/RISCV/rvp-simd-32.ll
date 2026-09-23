@@ -3829,76 +3829,46 @@ define i32 @test_maccsu_h11_i32(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 }
 
 define <2 x i16> @test_psati_i16x2(<2 x i16> %a) {
-; RV32-LABEL: test_psati_i16x2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    psati.h a0, a0, 8
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_psati_i16x2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
-; RV64-NEXT:    psati.h a0, a0, 8
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_psati_i16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psati.h a0, a0, 8
+; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psati.v2i16.i32(<2 x i16> %a, i32 8)
   ret <2 x i16> %res
 }
 
 define <2 x i16> @test_psati_i16x2_min_width(<2 x i16> %a) {
-; RV32-LABEL: test_psati_i16x2_min_width:
-; RV32:       # %bb.0:
-; RV32-NEXT:    psati.h a0, a0, 1
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_psati_i16x2_min_width:
-; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
-; RV64-NEXT:    psati.h a0, a0, 1
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_psati_i16x2_min_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psati.h a0, a0, 1
+; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psati.v2i16.i32(<2 x i16> %a, i32 1)
   ret <2 x i16> %res
 }
 
 define <2 x i16> @test_psati_i16x2_max_width(<2 x i16> %a) {
-; RV32-LABEL: test_psati_i16x2_max_width:
-; RV32:       # %bb.0:
-; RV32-NEXT:    psati.h a0, a0, 16
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_psati_i16x2_max_width:
-; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
-; RV64-NEXT:    psati.h a0, a0, 16
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_psati_i16x2_max_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psati.h a0, a0, 16
+; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.psati.v2i16.i32(<2 x i16> %a, i32 16)
   ret <2 x i16> %res
 }
 
 define <2 x i16> @test_pusati_u16x2(<2 x i16> %a) {
-; RV32-LABEL: test_pusati_u16x2:
-; RV32:       # %bb.0:
-; RV32-NEXT:    pusati.h a0, a0, 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_pusati_u16x2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
-; RV64-NEXT:    pusati.h a0, a0, 0
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_pusati_u16x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pusati.h a0, a0, 0
+; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 0)
   ret <2 x i16> %res
 }
 
 define <2 x i16> @test_pusati_u16x2_max_width(<2 x i16> %a) {
-; RV32-LABEL: test_pusati_u16x2_max_width:
-; RV32:       # %bb.0:
-; RV32-NEXT:    pusati.h a0, a0, 15
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_pusati_u16x2_max_width:
-; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
-; RV64-NEXT:    pusati.h a0, a0, 15
-; RV64-NEXT:    ret
+; CHECK-LABEL: test_pusati_u16x2_max_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pusati.h a0, a0, 15
+; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.riscv.pusati.v2i16.i32(<2 x i16> %a, i32 15)
   ret <2 x i16> %res
 }
