@@ -1373,6 +1373,10 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
   if (CurType.isNull() || !CurType->isRecordType())
     return *this;
 
+  // null pointers stay null during a cast, per conv.ptr
+  if (Value == 0)
+    return *this;
+
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
 
   // This iterates over bases and checks for the proper offset. That's
