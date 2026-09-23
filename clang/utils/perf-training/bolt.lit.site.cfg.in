@@ -14,6 +14,7 @@ config.clang_bolt_name = "@CLANG_BOLT_INSTRUMENTED@"
 config.cmake_exe = "@CMAKE_COMMAND@"
 config.llvm_src_dir ="@CMAKE_SOURCE_DIR@"
 config.cmake_generator ="@CMAKE_GENERATOR@"
+config.cmake_make_program ="@CMAKE_MAKE_PROGRAM@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CLANG_SOURCE_DIR@/utils/perf-training/bolt.lit.cfg")
