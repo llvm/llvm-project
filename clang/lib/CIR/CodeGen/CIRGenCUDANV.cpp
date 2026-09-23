@@ -357,6 +357,18 @@ void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
     globalOp->removeAttr("sym_visibility");
     globalOp->setAttr("alignment", builder.getI64IntegerAttr(
                                        cgm.getPointerAlign().getQuantity()));
+
+    // The handle must track the kernel stub's linkage/visibility, not the
+    // global-op default (external).
+    globalOp.setLinkage(fn.getLinkage());
+    mlir::SymbolTable::setSymbolVisibility(
+        globalOp, cgm.getMLIRVisibilityFromCIRLinkage(fn.getLinkage()));
+    globalOp.setDSOLocal(fn.isDSOLocal());
+    globalOp.setGlobalVisibility(fn.getGlobalVisibility());
+    auto *fd = cast<FunctionDecl>(cgf.curGD.getDecl());
+    FunctionTemplateDecl *ft = fd->getPrimaryTemplate();
+    if (!ft || ft->isThisDeclarationADefinition())
+      cgm.maybeSetTrivialComdat(*fd, globalOp);
   }
 
   // CUDA 9.0 changed the way to launch kernels.
