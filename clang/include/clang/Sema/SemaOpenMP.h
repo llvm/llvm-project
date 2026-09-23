@@ -1176,6 +1176,12 @@ public:
   OMPClause *ActOnOpenMPSelfMapsClause(SourceLocation StartLoc,
                                        SourceLocation EndLoc);
 
+  /// Called on well-formed 'replayable' clause.
+  OMPClause *ActOnOpenMPReplayableClause(SourceLocation StartLoc,
+                                         SourceLocation EndLoc,
+                                         SourceLocation LParenLoc,
+                                         Expr *Condition);
+
   /// Called on well-formed 'at' clause.
   OMPClause *ActOnOpenMPAtClause(OpenMPAtClauseKind Kind,
                                  SourceLocation KindLoc,

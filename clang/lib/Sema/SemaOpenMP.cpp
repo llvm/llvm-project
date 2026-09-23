@@ -6852,6 +6852,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_graph_id:
       case OMPC_graph_reset:
       case OMPC_nocontext:
+      case OMPC_replayable:
         // Do not analyze if no parent parallel directive.
         if (isOpenMPParallelDirective(Kind))
           break;
@@ -17270,6 +17271,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_graph_reset:
     Res = ActOnOpenMPGraphResetClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
+  case OMPC_replayable:
+    Res = ActOnOpenMPReplayableClause(StartLoc, EndLoc, LParenLoc, Expr);
+    break;
   case OMPC_novariants:
     Res = ActOnOpenMPNovariantsClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -19055,6 +19059,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_self_maps:
     Res = ActOnOpenMPSelfMapsClause(StartLoc, EndLoc);
     break;
+  case OMPC_replayable:
+    Res = ActOnOpenMPReplayableClause(StartLoc, EndLoc,
+                                      /*LParenLoc=*/SourceLocation(),
+                                      /*Condition=*/nullptr);
+    break;
   case OMPC_destroy:
     Res = ActOnOpenMPDestroyClause(/*InteropVar=*/nullptr, StartLoc,
                                    /*LParenLoc=*/SourceLocation(),
@@ -19290,6 +19299,26 @@ SemaOpenMP::ActOnOpenMPDynamicAllocatorsClause(SourceLocation StartLoc,
 OMPClause *SemaOpenMP::ActOnOpenMPSelfMapsClause(SourceLocation StartLoc,
                                                  SourceLocation EndLoc) {
   return new (getASTContext()) OMPSelfMapsClause(StartLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPReplayableClause(SourceLocation StartLoc,
+                                                   SourceLocation EndLoc,
+                                                   SourceLocation LParenLoc,
+                                                   Expr *Condition) {
+  Expr *ValExpr = Condition;
+  if (Condition && LParenLoc.isValid()) {
+    if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
+        !Condition->isInstantiationDependent() &&
+        !Condition->containsUnexpandedParameterPack()) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(StartLoc, Condition);
+      if (Val.isInvalid())
+        return nullptr;
+
+      ValExpr = Val.get();
+    }
+  }
+  return new (getASTContext())
+      OMPReplayableClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }
 
 StmtResult
