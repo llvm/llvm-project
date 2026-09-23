@@ -258,7 +258,7 @@ public:
   void print(raw_ostream &os,
              std::optional<int64_t> messagePartIndex = std::nullopt) const;
 
-  /// Converts the diagnostic to a string.
+  /// Converts the diagnostic to a string, concatenating all the parts if there are multiples.
   std::string str() const;
 
   /// Converts each message part to a separate string. Returns a single string
