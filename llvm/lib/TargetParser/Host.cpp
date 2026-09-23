@@ -1508,10 +1508,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VPOPCNTDQ);
 
-  if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
-    setFeature(X86::FEATURE_AVX5124VNNIW);
-  if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
-    setFeature(X86::FEATURE_AVX5124FMAPS);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VP2INTERSECT);
 
@@ -2279,6 +2275,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
   int AVX10Ver = HasLeaf24 ? (EBX & 0xff) : 0;
   Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
   Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
+
+  bool HasLeaf24Subleaf1 =
+      HasLeaf24 && EAX >= 1 &&
+      !getX86CpuIDAndInfoEx(0x24, 0x1, &EAX, &EBX, &ECX, &EDX);
+  Features["avx10v2aux"] = HasAVX10 && HasLeaf24Subleaf1 && ((ECX >> 3) & 1);
 
   return Features;
 }

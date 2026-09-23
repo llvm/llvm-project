@@ -111,6 +111,9 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
         return tc.isLegal(gva.getType()) &&
                isCXXABIAttributeLegal(tc, gva.getIndices());
       })
+      .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
+        return tc.isLegal(goa.getType());
+      })
       .Case<cir::VTableAttr>([&tc](cir::VTableAttr vta) {
         return tc.isLegal(vta.getType()) &&
                isCXXABIAttributeLegal(tc, vta.getData());
@@ -209,6 +212,10 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
             mlir::cast<mlir::ArrayAttr>(
                 rewriteAttribute(tc, ctx, gva.getIndices())));
       })
+      .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
+        return cir::GlobalOffsetAttr::get(tc.convertType(goa.getType()),
+                                          goa.getSymbol(), goa.getOffset());
+      })
       .Case<cir::VTableAttr>([&tc, ctx](cir::VTableAttr vta) {
         return cir::VTableAttr::get(
             tc.convertType(vta.getType()),
@@ -237,6 +244,16 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
                 rewriteAttribute(tc, ctx, cra.getMembers())));
       })
       .DefaultUnreachable("unrewritten illegal attribute kind");
+}
+
+bool areCXXABIInherentAttrsLegal(mlir::Operation *op,
+                                 const mlir::TypeConverter &typeConverter) {
+  bool legal = true;
+  op->getName().walkInherentAttrs(
+      op, [&](llvm::StringRef, mlir::Attribute &attr) {
+        legal &= isCXXABIAttributeLegal(typeConverter, attr);
+      });
+  return legal;
 }
 
 #define GET_ABI_LOWERING_PATTERNS
@@ -280,10 +297,7 @@ public:
                     [typeConverter](mlir::Region &region) {
                       return typeConverter->isLegal(&region);
                     });
-    bool attrsLegal =
-        llvm::all_of(op->getAttrs(), [typeConverter](mlir::NamedAttribute na) {
-          return isCXXABIAttributeLegal(*typeConverter, na.getValue());
-        });
+    bool attrsLegal = areCXXABIInherentAttrsLegal(op, *typeConverter);
 
     if (operandsAndResultsLegal && regionsLegal && attrsLegal) {
       // The operation does not have any CXXABI-dependent operands or results,
@@ -295,13 +309,9 @@ public:
     loweredOpState.addOperands(operands);
     loweredOpState.addSuccessors(op->getSuccessors());
 
-    // Lower all attributes.
-    llvm::SmallVector<mlir::NamedAttribute> attrs;
-    for (const mlir::NamedAttribute &na : op->getAttrs())
-      attrs.push_back(
-          {na.getName(),
-           rewriteAttribute(*typeConverter, op->getContext(), na.getValue())});
-    loweredOpState.addAttributes(attrs);
+    // Lower inherent attributes while preserving auxiliary metadata verbatim.
+    loweredOpState.propertiesAttr = op->getPropertiesAsAttribute();
+    loweredOpState.addAttributes(op->getDiscardableAttrDictionary().getValue());
 
     // Lower all result types
     llvm::SmallVector<mlir::Type> loweredResultTypes;
@@ -321,6 +331,10 @@ public:
 
     // Clone the operation with lowered operand types and result types
     mlir::Operation *loweredOp = rewriter.create(loweredOpState);
+    loweredOp->getName().walkInherentAttrs(
+        loweredOp, [&](llvm::StringRef, mlir::Attribute &attr) {
+          attr = rewriteAttribute(*typeConverter, op->getContext(), attr);
+        });
 
     rewriter.replaceOp(op, loweredOp);
     return mlir::success();
@@ -492,6 +506,10 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
                                       gva.getIndices());
 
+    if (auto goa = mlir::dyn_cast_if_present<cir::GlobalOffsetAttr>(initVal))
+      return cir::GlobalOffsetAttr::get(convertedTy, goa.getSymbol(),
+                                        goa.getOffset());
+
     if (auto blockAddr =
             mlir::dyn_cast_if_present<cir::BlockAddrInfoAttr>(initVal)) {
       assert(convertedTy == ptrTy && "BlockAddrInfo type should not change");
@@ -570,14 +588,10 @@ mlir::LogicalResult CIRFuncOpABILowering::matchAndRewrite(
   cir::FuncOp loweredFuncOp = rewriter.cloneWithoutRegions(op);
   loweredFuncOp.setFunctionType(loweredFuncType);
 
-  llvm::SmallVector<mlir::NamedAttribute> attrs;
-  for (const mlir::NamedAttribute &na : op->getAttrs())
-    attrs.push_back(
-        {na.getName(), rewriteAttribute(*getTypeConverter(), op->getContext(),
-                                        na.getValue())});
-
-  loweredFuncOp->setAttrs(attrs);
-
+  loweredFuncOp->getName().walkInherentAttrs(
+      loweredFuncOp, [&](llvm::StringRef, mlir::Attribute &attr) {
+        attr = rewriteAttribute(*getTypeConverter(), op->getContext(), attr);
+      });
   rewriter.inlineRegionBefore(op.getBody(), loweredFuncOp.getBody(),
                               loweredFuncOp.end());
   if (mlir::failed(rewriter.convertRegionTypes(
@@ -1002,10 +1016,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
         if (!typeConverter.isLegal(op))
           return false;
 
-        bool attrs = llvm::all_of(
-            op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
-              return isCXXABIAttributeLegal(typeConverter, a.getValue());
-            });
+        bool attrs = areCXXABIInherentAttrsLegal(op, typeConverter);
 
         return attrs &&
                std::all_of(op->getRegions().begin(), op->getRegions().end(),
@@ -1019,10 +1030,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
         if (!typeConverter.isLegal(op))
           return false;
 
-        bool attrs = llvm::all_of(
-            op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
-              return isCXXABIAttributeLegal(typeConverter, a.getValue());
-            });
+        bool attrs = areCXXABIInherentAttrsLegal(op, typeConverter);
 
         return attrs &&
                std::all_of(op->getRegions().begin(), op->getRegions().end(),
@@ -1033,10 +1041,7 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 
   // Some CIR ops needs special checking for legality
   target.addDynamicallyLegalOp<cir::FuncOp>([&typeConverter](cir::FuncOp op) {
-    bool attrs = llvm::all_of(
-        op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
-          return isCXXABIAttributeLegal(typeConverter, a.getValue());
-        });
+    bool attrs = areCXXABIInherentAttrsLegal(op, typeConverter);
 
     return attrs && typeConverter.isLegal(op.getFunctionType());
   });

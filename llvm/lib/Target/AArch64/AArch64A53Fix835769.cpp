@@ -192,7 +192,7 @@ static void insertNopBeforeInstruction(MachineBasicBlock &MBB, MachineInstr* MI,
                                        const TargetInstrInfo *TII) {
   // If we are the first instruction of the block, put the NOP at the end of
   // the previous fallthrough block
-  if (MI == &MBB.front()) {
+  if (MI == MBB.getFirstNonDebugInstr()) {
     MachineInstr *I = getLastNonPseudo(MBB, TII);
     assert(I && "Expected instruction");
     DebugLoc DL = I->getDebugLoc();

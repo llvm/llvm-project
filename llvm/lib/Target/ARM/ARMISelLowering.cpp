@@ -105,7 +105,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -13487,7 +13486,7 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
       !DCI.DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
 
-  if (CC == ISD::SETUGE) {
+  if (CC == ISD::SETUGT) {
     std::swap(Op0, Op1);
     CC = ISD::SETULT;
   }
@@ -13511,9 +13510,6 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
 
   unsigned Opc;
   switch (VT.getVectorNumElements()) {
-  case 2:
-    Opc = Intrinsic::arm_mve_vctp64;
-    break;
   case 4:
     Opc = Intrinsic::arm_mve_vctp32;
     break;
