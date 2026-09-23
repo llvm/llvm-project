@@ -23,8 +23,9 @@ namespace fir::runtime::cuda {
 /// Generate runtime call to synchronize the CUDA device.
 void genCUDADeviceSynchronize(fir::FirOpBuilder &builder, mlir::Location loc);
 
-/// Generate a call returning (as i1) whether the device's primary context is
-/// alive, to guard scope-exit frees against a user cudaDeviceReset().
+/// Generate a `cuf.device_is_active` query (i1) used to guard host-side
+/// scope-exit frees against a user cudaDeviceReset(). Converted later to a
+/// runtime call on the host and to false in device code.
 mlir::Value genDeviceIsActive(fir::FirOpBuilder &builder, mlir::Location loc);
 
 } // namespace fir::runtime::cuda
