@@ -20,6 +20,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 
 using namespace mlir;
 using namespace cir;
@@ -72,18 +73,11 @@ public:
     mlir::OperationState loweredOpState(op->getLoc(), op->getName());
     loweredOpState.addOperands(operands);
 
-    // Copy attributes, converting any TypeAttr through the type converter so
-    // that address-space-bearing types (e.g. AllocaOp's allocaType) stay in
-    // sync with the converted result types.
-    for (mlir::NamedAttribute attr : op->getAttrs()) {
-      if (auto typeAttr = mlir::dyn_cast<mlir::TypeAttr>(attr.getValue())) {
-        mlir::Type converted = typeConverter->convertType(typeAttr.getValue());
-        loweredOpState.addAttribute(attr.getName(),
-                                    mlir::TypeAttr::get(converted));
-      } else {
-        loweredOpState.addAttribute(attr.getName(), attr.getValue());
-      }
-    }
+    // Preserve auxiliary metadata verbatim. Convert only inherent TypeAttrs so
+    // address-space-bearing operation semantics (e.g. AllocaOp's allocaType)
+    // stay in sync with the converted result types.
+    loweredOpState.propertiesAttr = op->getPropertiesAsAttribute();
+    loweredOpState.addAttributes(op->getDiscardableAttrDictionary().getValue());
 
     loweredOpState.addSuccessors(op->getSuccessors());
 
@@ -102,6 +96,12 @@ public:
     }
 
     mlir::Operation *loweredOp = rewriter.create(loweredOpState);
+    loweredOp->getName().walkInherentAttrs(
+        loweredOp, [&](llvm::StringRef, mlir::Attribute &attr) {
+          if (auto typeAttr = mlir::dyn_cast<mlir::TypeAttr>(attr))
+            attr = mlir::TypeAttr::get(
+                typeConverter->convertType(typeAttr.getValue()));
+        });
     rewriter.replaceOp(op, loweredOp);
     return mlir::success();
   }
@@ -320,7 +320,11 @@ void TargetLoweringPass::runOnOperation() {
   mlir::ConversionTarget target(*mod.getContext());
   populateTargetLoweringConversionTarget(target, typeConverter);
 
-  if (failed(mlir::applyPartialConversion(mod, target, std::move(patterns))))
+  llvm::SmallVector<mlir::Operation *> ops;
+  ops.push_back(mod);
+  cir::collectUnreachable(mod, ops);
+
+  if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
 }
 

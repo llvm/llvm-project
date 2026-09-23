@@ -504,7 +504,8 @@ AMDGPUPostLegalizerCombinerPass::run(MachineFunction &MF,
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 
-  bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
+  bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None ||
+                   shouldSkipOptimizationForOptBisect(MF.getFunction());
 
   GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();

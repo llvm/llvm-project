@@ -22,30 +22,13 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
 #include <cassert>
 
 namespace clang::CIRGen {
-
-/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
-/// markers. Mirror of CodeGenFunction::shouldEmitLifetimeMarkers.
-static bool shouldEmitLifetimeMarkers(const CodeGenOptions &cgOpts,
-                                      const LangOptions &langOpts) {
-
-  if (cgOpts.DisableLifetimeMarkers)
-    return false;
-
-  // Sanitizers may use markers.
-  if (cgOpts.SanitizeAddressUseAfterScope ||
-      langOpts.Sanitize.has(SanitizerKind::HWAddress) ||
-      langOpts.Sanitize.has(SanitizerKind::Memory) ||
-      langOpts.Sanitize.has(SanitizerKind::MemtagStack))
-    return true;
-
-  return cgOpts.OptimizationLevel != 0;
-}
 
 /// Does the statement tree rooted at \p s contain a label, switch, or indirect
 /// goto that could bypass a local's initialization? A coarse stand-in for
@@ -66,7 +49,7 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
       curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
-  shouldEmitLifetimeMarkers = CIRGen::shouldEmitLifetimeMarkers(
+  shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
 }
 
@@ -552,10 +535,14 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     fn->setAttr(cir::CIRDialect::getStrictFPAttrName(),
                 mlir::UnitAttr::get(fn.getContext()));
   }
-  prologueCleanupDepth = ehStack.stable_begin();
-
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
+
+  // Wrap the rest of the function in a filter try when this declaration has
+  // a dynamic exception specification. Parameter cleanups are pushed after
+  // this so they nest inside the specification, matching classic codegen.
+  emitStartEHSpec(d);
+  prologueCleanupDepth = ehStack.stable_begin();
 
   // Determine the function body begin location for the prolog.
   // If fd is null or has no body, use startLoc as fallback.
@@ -600,22 +587,19 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
   }
 
-  // Only implicit-object member functions (without an explicit `this`
-  // parameter) receive an implicit `this` argument that the CXXABI prolog has
-  // to set up. C++23 explicit-object members (P0847R7) carry their object via a
-  // regular parameter and use the standard parameter prolog instead.
-  if (isa_and_nonnull<CXXMethodDecl>(d) &&
-      cast<CXXMethodDecl>(d)->isImplicitObjectMemberFunction()) {
-    cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+  if (const auto *md = dyn_cast_if_present<CXXMethodDecl>(d);
+      md && !md->isStatic()) {
+    bool isInLambda =
+        md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call;
 
-    const auto *md = cast<CXXMethodDecl>(d);
-    if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
-      // We're in a lambda.
-      auto fn = dyn_cast<cir::FuncOp>(curFn);
-      assert(fn && "lambda in non-function region");
+    if (md->isImplicitObjectMemberFunction())
+      cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+
+    if (isInLambda) {
+      // We're in a lambda; figure out the captures.
+      auto fn = cast<cir::FuncOp>(curFn);
       fn.setLambda(true);
 
-      // Figure out the captures.
       md->getParent()->getCaptureFields(lambdaCaptureFields,
                                         lambdaThisCaptureField);
       if (lambdaThisCaptureField) {
@@ -642,7 +626,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
         if (fd->hasCapturedVLAType())
           cgm.errorNYI(loc, "lambda captured VLA type");
       }
-    } else {
+    } else if (md->isImplicitObjectMemberFunction()) {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'? The fast
       // register allocator would be happier...
@@ -688,6 +672,8 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   assert(deferredConditionalCleanupStack.empty() &&
          "deferred conditional cleanups were not consumed by a "
          "FullExprCleanupScope");
+
+  emitEndEHSpec(curCodeDecl);
 }
 
 mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
@@ -825,10 +811,12 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       llvm_unreachable("no definition for normal function");
     }
 
+    // Finish the function (including closing a dynamic exception
+    // specification try) before verifying so the try body is terminated.
+    finishFunction(bodyRange.getEnd());
+
     if (mlir::failed(fn.verifyBody()))
       return nullptr;
-
-    finishFunction(bodyRange.getEnd());
   }
 
   if (getLangOpts().OpenCL && funcDecl->hasAttr<DeviceKernelAttr>())
@@ -1212,9 +1200,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::CXXRewrittenBinaryOperatorClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: CXXRewrittenBinaryOperator");
-    return LValue();
+    assert(!cir::MissingFeatures::addressIsKnownNonNull());
+    return emitLValue(cast<CXXRewrittenBinaryOperator>(e)->getSemanticForm());
   case Expr::VAArgExprClass:
     getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: VAArgExpr");
     return LValue();
@@ -1393,7 +1380,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
-    if (isa<VariableArrayType>(getContext().getAsArrayType(ty))) {
+    if (isa_and_nonnull<VariableArrayType>(getContext().getAsArrayType(ty))) {
       cgm.errorNYI(loc,
                    "emitNullInitialization for zero size VariableArrayType");
     } else {
