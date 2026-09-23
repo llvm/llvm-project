@@ -1583,22 +1583,19 @@ def : InstRW<[V2Write_3c_1V02], (instregex "^FCVTN(v2|v4)i32",
                                              "^FCVTXN(v2|v4)f32")>;
 
 // ASIMD FP convert, other, D-form F32 and Q-form F64
+// Includes the scalar H, S and D forms (SCVTFh, FCVTZSs, ...)
 def : InstRW<[V2Write_3c_1V02], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
                                            "^FCVT[AMNPZ][SU]v2i(32|64)_shift$",
                                            "^FCVT[AMNPZ][SU]v1i32$",
                                            "^FCVT[AMNPZ][SU]v1i64$",
                                            "^FCVT[AMNPZ][SU]v1f16$",
-                                           "^FCVTZ[SU]h$",
-                                           "^FCVTZ[SU]s$",
-                                           "^FCVTZ[SU]d$",
                                            "^[SU]CVTFv2f(32|64)$",
                                            "^[SU]CVTFv2i(32|64)_shift$",
                                            "^[SU]CVTFv1i16$",
                                            "^[SU]CVTFv1i32$",
                                            "^[SU]CVTFv1i64$",
-                                           "^[SU]CVTFh$",
-                                           "^[SU]CVTFs$",
-                                           "^[SU]CVTFd$")>;
+                                           "^FCVTZ[SU][hsd]$",
+                                           "^[SU]CVTF[hsd]$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
 def : InstRW<[V2Write_4c_2V02_1uop], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
