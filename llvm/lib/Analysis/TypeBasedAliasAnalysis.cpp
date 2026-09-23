@@ -471,6 +471,15 @@ static bool matchAccessTags(const MDNode *A, const MDNode *B,
 MDNode *MDNode::getMostGenericTBAA(MDNode *A, MDNode *B) {
   const MDNode *GenericTag;
   matchAccessTags(A, B, &GenericTag);
+  // The generic tag can be one of the given tags. It must hold for both
+  // accesses, so keep its immutable flag only if both tags have it.
+  if (GenericTag && TBAAStructTagNode(GenericTag).isTypeImmutable() &&
+      !(TBAAStructTagNode(A).isTypeImmutable() &&
+        TBAAStructTagNode(B).isTypeImmutable())) {
+    unsigned FlagOpNo = TBAAStructTagNode(GenericTag).isNewFormat() ? 4 : 3;
+    SmallVector<Metadata *, 4> Ops(GenericTag->operands().take_front(FlagOpNo));
+    GenericTag = MDNode::get(GenericTag->getContext(), Ops);
+  }
   return const_cast<MDNode*>(GenericTag);
 }
 
