@@ -1545,13 +1545,9 @@ OpenMPIRBuilder::createCancellationPoint(const LocationDescription &Loc,
   return Builder.saveIP();
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
-    const LocationDescription &Loc, InsertPointTy AllocaIP, Value *&Return,
-    Value *Ident, Value *DeviceID, Value *NumTeams, Value *NumThreads,
-    Value *HostPtr, ArrayRef<Value *> KernelArgs) {
-  if (!updateToLocation(Loc))
-    return Loc.IP;
-
+Value *OpenMPIRBuilder::emitKernelArgsStruct(const LocationDescription &Loc,
+                                             InsertPointTy AllocaIP,
+                                             ArrayRef<Value *> KernelArgs) {
   Builder.restoreIP(AllocaIP);
   auto *KernelArgsPtr =
       Builder.CreateAlloca(OpenMPIRBuilder::KernelArgs, nullptr, "kernel_args");
@@ -1564,6 +1560,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
         KernelArgs[I], Arg,
         M.getDataLayout().getPrefTypeAlign(KernelArgs[I]->getType()));
   }
+
+  return KernelArgsPtr;
+}
+
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
+    const LocationDescription &Loc, InsertPointTy AllocaIP, Value *&Return,
+    Value *Ident, Value *DeviceID, Value *NumTeams, Value *NumThreads,
+    Value *HostPtr, ArrayRef<Value *> KernelArgs) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Value *KernelArgsPtr = emitKernelArgsStruct(Loc, AllocaIP, KernelArgs);
 
   SmallVector<Value *> OffloadingArgs{Ident,      DeviceID, NumTeams,
                                       NumThreads, HostPtr,  KernelArgsPtr};
