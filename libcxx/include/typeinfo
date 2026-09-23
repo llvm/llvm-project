@@ -221,10 +221,19 @@ struct __non_unique_impl : __string_impl_base {
     return __hash;
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
-    return __lhs == __rhs || __builtin_strcmp(__lhs, __rhs) == 0;
+    // Internal linkage types (marked with '*') cannot compare equal via strcmp.
+    // They are only equal if they refer to the same RTTI object.
+    return __lhs == __rhs || (__lhs[0] != '*' && __builtin_strcmp(__lhs, __rhs) == 0);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
-    return __builtin_strcmp(__lhs, __rhs) < 0;
+    int __r = __builtin_strcmp(__lhs, __rhs);
+    if (__r != 0)
+      return __r < 0;
+    // Internal linkage types (marked with '*') are ordered via pointer address.
+    if (__lhs[0] == '*') {
+      return reinterpret_cast<uintptr_t>(__lhs) < reinterpret_cast<uintptr_t>(__rhs);
+    }
+    return false;
   }
 };
 

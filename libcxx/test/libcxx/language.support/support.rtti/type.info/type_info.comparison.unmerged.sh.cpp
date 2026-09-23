@@ -37,7 +37,7 @@ void register2();
     register2();
 
     assert(registry.size() == 2);
-    assert(registry[0] == registry[1]);
+    assert(registry[0] != registry[1]);
     return 0;
   }
 #else
