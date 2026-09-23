@@ -710,12 +710,15 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   fc.returnInfo = *retAc;
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = i < inputs.size() ? inputs[i] : mlir::Type();
+    const llvm::abi::ArgInfo &argInfo = fi->getArgInfo(i).Info;
     std::optional<ArgClassification> ac =
-        convertABIArgInfo(fi->getArgInfo(i).Info, ctx, origArg);
+        convertABIArgInfo(argInfo, ctx, origArg);
     if (!ac) {
       nyiCoercion(origArg);
       return std::nullopt;
     }
+    ac->neededIntRegs = argInfo.getNeededIntRegs();
+    ac->neededSseRegs = argInfo.getNeededSseRegs();
     fc.argInfos.push_back(*ac);
   }
   return fc;
@@ -761,6 +764,22 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                                  [&]() { return func.emitOpError(); });
 }
 
+/// Classify the single type fetched by a `cir.va_arg` as an unnamed argument
+/// (RequiredArgs(0)) with a full register budget.  Returns std::nullopt and
+/// emits an NYI error if the type is not one this bridge handles.
+static std::optional<ArgClassification> classifyX86_64VarArgType(
+    mlir::Type ty, MLIRContext *ctx, const DataLayout &dl,
+    mlir::abi::ABITypeMapper &typeMapper,
+    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+  std::optional<FunctionClassification> fc = classifyX86_64Signature(
+      cir::VoidType::get(ctx), mlir::TypeRange(ty), llvm::abi::RequiredArgs(0),
+      ctx, dl, typeMapper, targetInfo, modOp, emitError);
+  if (!fc)
+    return std::nullopt;
+  return fc->argInfos[0];
+}
+
 /// Classify a call that passes arguments through an ellipsis.  The callee's
 /// own classification covers only its declared parameters, but an ellipsis
 /// argument competes for the same argument registers as a declared one, so
@@ -779,6 +798,29 @@ static std::optional<FunctionClassification> classifyX86_64VariadicCall(
       calleeTy.getReturnType(), call.getArgOperands().getTypes(),
       requiredArgs(calleeTy), op->getContext(), dl, typeMapper, targetInfo,
       modOp, [&]() { return op->emitOpError(); });
+}
+
+/// Whether \p fc gives the callee access to memory through a pointer the ABI
+/// introduced: an sret slot for an indirect return, or an indirect argument.
+static bool hasIndirectSlot(const FunctionClassification &fc) {
+  if (fc.returnInfo.kind == ArgKind::Indirect)
+    return true;
+  return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+    return ac.kind == ArgKind::Indirect;
+  });
+}
+
+/// Record on \p op that the memory its pointer arguments address may be read
+/// and written.  Absent effects already allow that, since an absent attribute
+/// means the effects are unknown, so they are left absent.
+template <typename OpTy> static void widenForArgMemory(OpTy op) {
+  cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr();
+  if (!effects)
+    return;
+  op.setMemoryEffectsAttr(cir::MemoryEffectsAttr::get(
+      effects.getContext(), effects.getOther(), cir::ModRefInfo::ModRef,
+      effects.getInaccessibleMem(), effects.getErrnoMem(),
+      effects.getTargetMem0(), effects.getTargetMem1()));
 }
 
 #ifndef NDEBUG
@@ -1066,6 +1108,16 @@ void CallConvLoweringPass::runOnOperation() {
   for (auto &kv : classifications)
     rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
 
+  // An sret slot or an indirect argument is a pointer the source never
+  // wrote, and an ellipsis can carry one the declared parameters do not
+  // describe.  The callee reads and writes that memory whatever const or
+  // pure recorded about it, so the recorded effects have to widen.
+  for (auto &kv : classifications) {
+    cir::FuncOp func = kv.first;
+    if (hasIndirectSlot(kv.second) || func.getFunctionType().isVarArg())
+      widenForArgMemory(func);
+  }
+
   // Rewrite each function together with every direct call to it and every op
   // holding its address.  By the time we move on to function F+1, F's
   // signature and every reference to F have already been brought into
@@ -1094,6 +1146,8 @@ void CallConvLoweringPass::runOnOperation() {
                "a call site's declared parameters must be classified the same "
                "way as the callee's");
       }
+      if (hasIndirectSlot(*callFc))
+        widenForArgMemory(cast<cir::CIRCallOpInterface>(callOp));
       if (failed(rewriteCtx.rewriteCallSite(callOp, *callFc, builder))) {
         signalPassFailure();
         return;
@@ -1168,9 +1222,33 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
+    if (hasIndirectSlot(*fc))
+      widenForArgMemory(c);
     if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
+    }
+  }
+
+  if (isX86) {
+    // Collect the fetches before rewriting any, because rewriting one erases
+    // it, and a live walk holds the op it is about to visit next.
+    SmallVector<cir::VAArgOp> vaArgs;
+    moduleOp.walk([&](cir::VAArgOp v) { vaArgs.push_back(v); });
+    for (cir::VAArgOp v : vaArgs) {
+      cir::FuncOp enclosing = v->getParentOfType<cir::FuncOp>();
+      std::optional<ArgClassification> ac = classifyX86_64VarArgType(
+          v.getType(), ctx, dl, *x86TypeMapper,
+          x86TargetFor(avxLevelFor(enclosing)), moduleOp,
+          [&]() { return v->emitOpError(); });
+      if (!ac) {
+        signalPassFailure();
+        return;
+      }
+      if (failed(rewriteCtx.rewriteVAArg(v.getOperation(), *ac, builder))) {
+        signalPassFailure();
+        return;
+      }
     }
   }
 }
