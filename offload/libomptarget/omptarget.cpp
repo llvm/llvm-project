@@ -2391,6 +2391,24 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   return OFFLOAD_SUCCESS;
 }
 
+/// Resolve the device-side kernel entry for a host function pointer (see
+/// private.h).  Mirrors the table lookup target() performs before launch, but
+/// without touching any data mappings -- the taskgraph backend only needs the
+/// device entry handle at finalize.  getTableMap has internal linkage but is in
+/// scope here (same translation unit).
+void *getDeviceKernelEntry(int32_t DeviceId, void *HostPtr) {
+  TableMap *TM = getTableMap(HostPtr);
+  if (!TM)
+    return nullptr;
+  std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
+  if (TM->Table->TargetsTable.size() <= static_cast<size_t>(DeviceId))
+    return nullptr;
+  __tgt_target_table *TargetTable = TM->Table->TargetsTable[DeviceId];
+  if (!TargetTable)
+    return nullptr;
+  return TargetTable->EntriesBegin[TM->Index].Address;
+}
+
 /// Enables the record replay mechanism by pre-allocating MemorySize
 /// and informing the record-replayer of whether to store the output
 /// in some file.
