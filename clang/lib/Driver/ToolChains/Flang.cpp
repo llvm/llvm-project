@@ -358,6 +358,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
   Args.AddLastArg(CmdArgs, options::OPT_ffp_sum_reassociation,
                   options::OPT_fno_fp_sum_reassociation);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
+                    options::OPT_fno_unique_internal_linkage_names);
+
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
   handleVectorizeSLPArgs(Args, CmdArgs);
@@ -384,6 +387,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
        options::OPT_relaxed_c_loc});
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                     options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   addSeparateSectionFlags(Triple, Args, CmdArgs);
@@ -1376,6 +1382,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Initial floating-point exception halting mode. Handled separately so it is
   // not skipped by the -ffast-math fast path in addFloatingPointOptions().
   addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
+
+  // Integer MOD/MODULO zero-divisor check. Forwarded here with -ffpe-trap=
+  // rather than in addFloatingPointOptions() so -ffast-math does not drop it.
+  Args.AddLastArg(CmdArgs, options::OPT_fcheck_integer_mod_zero_divisor);
 
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),

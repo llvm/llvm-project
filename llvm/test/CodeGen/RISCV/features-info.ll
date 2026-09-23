@@ -23,6 +23,8 @@
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
+; CHECK-NEXT:   experimental-rva23p1s64          - RISC-V experimental-rva23p1s64 profile.
+; CHECK-NEXT:   experimental-rvb23p1s64          - RISC-V experimental-rvb23p1s64 profile.
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
 ; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
@@ -38,6 +40,7 @@
 ; CHECK-NEXT:   experimental-ssip                - 'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssnip               - 'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
+; CHECK-NEXT:   experimental-xqccmi              - 'Xqccmi' (Qualcomm 16-bit Instruction Lookup Table).
 ; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).

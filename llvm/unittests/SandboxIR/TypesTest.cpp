@@ -218,6 +218,9 @@ define void @foo(ptr %ptr) {
   // Check get(Ctx, AddressSpace).
   auto *NewPtrTy2 = sandboxir::PointerType::get(Ctx, 0u);
   EXPECT_EQ(NewPtrTy2, PtrTy);
+  // Check getAddressSpace().
+  auto *LLVMPtrTy = cast<llvm::PointerType>(LLVMF->getArg(0)->getType());
+  EXPECT_EQ(PtrTy->getAddressSpace(), LLVMPtrTy->getAddressSpace());
 }
 
 TEST_F(SandboxTypeTest, ArrayType) {

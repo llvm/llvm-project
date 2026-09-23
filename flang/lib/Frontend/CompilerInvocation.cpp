@@ -327,6 +327,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       args.hasFlag(clang::options::OPT_floop_interchange,
                    clang::options::OPT_fno_loop_interchange, true);
 
+  if (args.hasArg(clang::options::OPT_funique_internal_linkage_names))
+    opts.UniqueInternalLinkageNames = 1;
+
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
 
@@ -379,6 +382,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
+
+  if (args.hasArg(clang::options::OPT_fno_optimize_sibling_calls))
+    opts.DisableTailCalls = 1;
 
   // -fno-integrated-as: emit GNU Assembler compatible assembly.
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
@@ -1582,6 +1588,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     if (arg->getOption().matches(clang::options::OPT_fno_fast_real_mod))
       opts.FastRealMod = false;
   }
+
+  if (args.getLastArg(clang::options::OPT_fcheck_integer_mod_zero_divisor))
+    opts.CheckIntegerModZeroDivisor = true;
 
   // Set the initial IEEE floating point modes
   setIEEEFPModesArgs(opts, args);

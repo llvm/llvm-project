@@ -94,7 +94,7 @@ public:
   /// is used for elaborated-type-specifiers and, in C++0x, for
   /// arbitrary friend type declarations.
   TypeSourceInfo *getFriendType() const {
-    return Friend.dyn_cast<TypeSourceInfo*>();
+    return dyn_cast_if_present<TypeSourceInfo *>(Friend);
   }
 
   /// If this friend declaration doesn't name a type, return the inner

@@ -142,8 +142,6 @@ XcodeSDK::Type XcodeSDK::GetType() const {
 
 llvm::StringRef XcodeSDK::GetString() const { return m_name; }
 
-const FileSpec &XcodeSDK::GetSysroot() const { return m_sysroot; }
-
 bool XcodeSDK::Info::operator<(const Info &other) const {
   return std::tie(type, version, internal) <
          std::tie(other.type, other.version, other.internal);
@@ -167,17 +165,8 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
   else {
     // The Internal flag always wins.
     if (!l.internal && r.internal) {
-      if (llvm::StringRef(m_name).ends_with(".sdk")) {
+      if (llvm::StringRef(m_name).ends_with(".sdk"))
         m_name = add_internal_sdk_suffix(m_name);
-
-        // The internal SDK is a sibling of the public one, so the sysroot can
-        // be renamed along with the SDK. Leave a sysroot that doesn't name an
-        // SDK directory alone: the compiler may have remapped it, in which
-        // case it is only meaningful verbatim.
-        if (m_sysroot.GetFileNameExtension() == ".sdk")
-          m_sysroot.SetFilename(
-              add_internal_sdk_suffix(m_sysroot.GetFilename()));
-      }
     }
   }
 }
@@ -318,4 +307,32 @@ std::string XcodeSDK::FindXcodeContentsDirectoryInPath(llvm::StringRef path) {
   }
 
   return {};
+}
+
+void XcodeSDKAndSysroot::Merge(const XcodeSDKAndSysroot &other) {
+  std::string old_name = m_sdk.GetString().str();
+  m_sdk.Merge(other.m_sdk);
+  llvm::StringRef new_name = m_sdk.GetString();
+  if (old_name == new_name)
+    return;
+
+  // The other SDK won outright, so its sysroot comes along with it.
+  if (new_name == other.m_sdk.GetString()) {
+    m_sysroot = other.m_sysroot;
+    return;
+  }
+
+  // Otherwise merging only added the Internal suffix to our own SDK name. The
+  // internal SDK is a sibling of the public one, so the sysroot can be renamed
+  // along with it.
+  if (m_sysroot.GetFileNameExtension() == ".sdk")
+    m_sysroot.SetFilename(new_name);
+}
+
+bool XcodeSDKAndSysroot::operator==(const XcodeSDKAndSysroot &other) const {
+  return m_sdk == other.m_sdk && m_sysroot == other.m_sysroot;
+}
+
+bool XcodeSDKAndSysroot::operator!=(const XcodeSDKAndSysroot &other) const {
+  return !(*this == other);
 }
