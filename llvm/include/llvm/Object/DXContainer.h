@@ -490,7 +490,6 @@ private:
   Error parseHash(StringRef Part);
   Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
-  Error parseSignature(StringRef Part, DirectX::Signature &Array);
   Error parseCompilerVersionInfo(StringRef Part);
   Error parseSourceInfo(StringRef Part);
   Error parsePrivateData(StringRef Part);

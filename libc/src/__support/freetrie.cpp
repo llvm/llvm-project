@@ -57,8 +57,8 @@ void FreeTrie::replace_node(Node *node, Node *new_node) {
                 "no reference to child node found in parent");
     parent_child = new_node;
   } else {
-    LIBC_ASSERT(root == node && "non-root node had no parent");
-    root = new_node;
+    LIBC_ASSERT(root_ == node && "non-root node had no parent");
+    root_ = new_node;
   }
   if (node->lower)
     node->lower->parent = new_node;
@@ -76,7 +76,7 @@ void FreeTrie::integrity_check() const {
     self(self, node->lower);
     self(self, node->upper);
   };
-  integrity_check_trie_node(integrity_check_trie_node, root);
+  integrity_check_trie_node(integrity_check_trie_node, root());
 }
 
 } // namespace LIBC_NAMESPACE_DECL

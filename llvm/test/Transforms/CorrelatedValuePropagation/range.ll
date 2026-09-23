@@ -702,7 +702,7 @@ define i32 @test16(i8 %a) {
 ; CHECK-LABEL: define i32 @test16(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i32
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -748,7 +748,7 @@ define i8 @test17(i8 %a) {
 ; CHECK-LABEL: define i8 @test17(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -772,7 +772,7 @@ define i8 @test17_2(i8 %a) {
 ; CHECK-LABEL: define i8 @test17_2(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], [[A]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw i8 [[A]], [[A]]
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 93
@@ -817,7 +817,7 @@ define i32 @test18(i8 %a) {
 ; CHECK-LABEL: define i32 @test18(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i32
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    switch i8 [[A]], label %[[DISPATCH]] [
@@ -845,7 +845,7 @@ define i8 @test19(i8 %a) {
 ; CHECK-LABEL: define i8 @test19(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = add i8 [[A]], 3
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i8 [[A]], 3
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    switch i8 [[A]], label %[[DISPATCH]] [
@@ -1239,7 +1239,7 @@ define i16 @return_range_for_edge_value_zext(i8 %a) {
 ; CHECK-LABEL: define range(i16 0, 98) i16 @return_range_for_edge_value_zext(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[B:%.*]] = zext nneg i8 [[A]] to i16
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A]], 98
@@ -1287,7 +1287,7 @@ define i8 @return_range_for_edge_value_trunc(i16 %a) {
 ; CHECK-LABEL: define range(i8 0, 98) i8 @return_range_for_edge_value_trunc(
 ; CHECK-SAME: i16 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = trunc i16 [[A]] to i8
+; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw i16 [[A]] to i8
 ; CHECK-NEXT:    br label %[[DISPATCH:.*]]
 ; CHECK:       [[DISPATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[A]], 98
