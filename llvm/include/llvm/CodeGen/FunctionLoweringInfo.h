@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
 #define LLVM_CODEGEN_FUNCTIONLOWERINGINFO_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -42,8 +44,11 @@ class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
 class MVT;
+class SDLoc;
+class SDValue;
 class SelectionDAG;
 class TargetLowering;
+struct EVT;
 
 template <typename T> class GenericSSAContext;
 using SSAContext = GenericSSAContext<Function>;
@@ -95,6 +100,22 @@ public:
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, Register> CatchPadExceptionPointers;
 
+  /// A directly-lowered statepoint value (see willLowerDirectly): a leaf that
+  /// can be rebuilt at a gc.relocate in another block.
+  struct StatepointDirectLeaf {
+    enum LeafKind { FrameIndex, Constant, Undef };
+    LeafKind Kind;
+    APInt IntValue;      // Constant: the integer value.
+    int FrameIndexValue; // FrameIndex: the frame index.
+
+    /// Capture the leaf \p V, which must be a directly-lowered value.
+    LLVM_ABI explicit StatepointDirectLeaf(SDValue V);
+
+    /// Rebuild the captured leaf as a fresh SDValue of type \p VT.
+    LLVM_ABI SDValue rematerialize(SelectionDAG &DAG, const SDLoc &DL,
+                                   EVT VT) const;
+  };
+
   /// Helper object to track which of three possible relocation mechanisms are
   /// used for a particular value being relocated over a statepoint.
   struct StatepointRelocationRecord {
@@ -118,6 +139,10 @@ public:
       int FI;
       Register Reg;
     } payload;
+
+    // Set for a NoRelocate value whose gc.relocate is in another block; the
+    // directly-lowered leaf is rebuilt at the gc.relocate.
+    std::optional<StatepointDirectLeaf> RematLeaf;
   };
 
   /// Keep track of each value which was relocated and the strategy used to

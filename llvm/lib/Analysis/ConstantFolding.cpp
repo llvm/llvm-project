@@ -1181,7 +1181,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::FCmp: {
     auto *C = cast<CmpInst>(InstOrCE);
     return ConstantFoldCompareInstOperands(C->getPredicate(), Ops[0], Ops[1],
-                                           DL, TLI, C);
+                                           DL, TLI, C->getFunction());
   }
   case Instruction::Freeze:
     return isGuaranteedNotToBeUndefOrPoison(Ops[0]) ? Ops[0] : nullptr;
@@ -1327,9 +1327,11 @@ Constant *llvm::ConstantFoldInstOperands(const Instruction *I,
                                       AllowNonDeterministic);
 }
 
-Constant *llvm::ConstantFoldCompareInstOperands(
-    unsigned IntPredicate, Constant *Ops0, Constant *Ops1, const DataLayout &DL,
-    const TargetLibraryInfo *TLI, const Instruction *I) {
+Constant *llvm::ConstantFoldCompareInstOperands(unsigned IntPredicate,
+                                                Constant *Ops0, Constant *Ops1,
+                                                const DataLayout &DL,
+                                                const TargetLibraryInfo *TLI,
+                                                const Function *CxtF) {
   CmpInst::Predicate Predicate = (CmpInst::Predicate)IntPredicate;
   // fold: icmp (inttoptr x), null         -> icmp x, 0
   // fold: icmp null, (inttoptr x)         -> icmp 0, x
@@ -1430,10 +1432,10 @@ Constant *llvm::ConstantFoldCompareInstOperands(
   if (CmpInst::isFPPredicate(Predicate)) {
     // Flush any denormal constant float input according to denormal handling
     // mode.
-    Ops0 = FlushFPConstant(Ops0, I, /*IsOutput=*/false);
+    Ops0 = FlushFPConstant(Ops0, CxtF, /*IsOutput=*/false);
     if (!Ops0)
       return nullptr;
-    Ops1 = FlushFPConstant(Ops1, I, /*IsOutput=*/false);
+    Ops1 = FlushFPConstant(Ops1, CxtF, /*IsOutput=*/false);
     if (!Ops1)
       return nullptr;
   }
@@ -1482,29 +1484,27 @@ static ConstantFP *flushDenormalConstant(Type *Ty, const APFloat &APF,
 
 /// Return the denormal mode that can be assumed when executing a floating point
 /// operation at \p CtxI.
-static DenormalMode getInstrDenormalMode(const Instruction *CtxI, Type *Ty) {
-  if (!CtxI || !CtxI->getParent() || !CtxI->getFunction())
+static DenormalMode getInstrDenormalMode(const Function *CtxF, Type *Ty) {
+  if (!CtxF)
     return DenormalMode::getDynamic();
-  return CtxI->getFunction()->getDenormalMode(
-      Ty->getScalarType()->getFltSemantics());
+  return CtxF->getDenormalMode(Ty->getScalarType()->getFltSemantics());
 }
 
-static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
-                                           const Instruction *Inst,
-                                           bool IsOutput) {
+static ConstantFP *
+flushDenormalConstantFP(ConstantFP *CFP, const Function *CxtF, bool IsOutput) {
   const APFloat &APF = CFP->getValueAPF();
   if (!APF.isDenormal())
     return CFP;
 
-  DenormalMode Mode = getInstrDenormalMode(Inst, CFP->getType());
+  DenormalMode Mode = getInstrDenormalMode(CxtF, CFP->getType());
   return flushDenormalConstant(CFP->getType(), APF,
                                IsOutput ? Mode.Output : Mode.Input);
 }
 
-Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
+Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CxtF,
                                 bool IsOutput) {
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
-    return flushDenormalConstantFP(CFP, Inst, IsOutput);
+    return flushDenormalConstantFP(CFP, CxtF, IsOutput);
 
   if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
@@ -1513,7 +1513,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   VectorType *VecTy = dyn_cast<VectorType>(Ty);
   if (VecTy) {
     if (auto *Splat = dyn_cast_or_null<ConstantFP>(Operand->getSplatValue())) {
-      ConstantFP *Folded = flushDenormalConstantFP(Splat, Inst, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(Splat, CxtF, IsOutput);
       if (!Folded)
         return nullptr;
       return ConstantVector::getSplat(VecTy->getElementCount(), Folded);
@@ -1538,7 +1538,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       if (!CFP)
         return nullptr;
 
-      ConstantFP *Folded = flushDenormalConstantFP(CFP, Inst, IsOutput);
+      ConstantFP *Folded = flushDenormalConstantFP(CFP, CxtF, IsOutput);
       if (!Folded)
         return nullptr;
       NewElts.push_back(Folded);
@@ -1554,7 +1554,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
       if (!Elt.isDenormal()) {
         NewElts.push_back(ConstantFP::get(Ty, Elt));
       } else {
-        DenormalMode Mode = getInstrDenormalMode(Inst, Ty);
+        DenormalMode Mode = getInstrDenormalMode(CxtF, Ty);
         ConstantFP *Folded =
             flushDenormalConstant(Ty, Elt, IsOutput ? Mode.Output : Mode.Input);
         if (!Folded)
@@ -1575,10 +1575,12 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                            bool AllowNonDeterministic) {
   if (Instruction::isBinaryOp(Opcode)) {
     // Flush denormal inputs if needed.
-    Constant *Op0 = FlushFPConstant(LHS, I, /* IsOutput */ false);
+    Constant *Op0 =
+        FlushFPConstant(LHS, I->getFunction(), /* IsOutput */ false);
     if (!Op0)
       return nullptr;
-    Constant *Op1 = FlushFPConstant(RHS, I, /* IsOutput */ false);
+    Constant *Op1 =
+        FlushFPConstant(RHS, I->getFunction(), /* IsOutput */ false);
     if (!Op1)
       return nullptr;
 
@@ -1597,7 +1599,7 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
       return nullptr;
 
     // Flush denormal output if needed.
-    C = FlushFPConstant(C, I, /* IsOutput */ true);
+    C = FlushFPConstant(C, I->getFunction(), /* IsOutput */ true);
     if (!C)
       return nullptr;
 
@@ -1744,7 +1746,6 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::pdep:
   case Intrinsic::pext:
   case Intrinsic::launder_invariant_group:
-  case Intrinsic::strip_invariant_group:
   case Intrinsic::masked_load:
   case Intrinsic::get_active_lane_mask:
   case Intrinsic::abs:
@@ -1804,6 +1805,9 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_and:
   case Intrinsic::amdgcn_wave_reduce_or:
+  case Intrinsic::amdgcn_wave_reduce_xor:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub:
   case Intrinsic::amdgcn_s_wqm:
   case Intrinsic::amdgcn_s_quadmask:
   case Intrinsic::amdgcn_s_bitreplicate:
@@ -2629,15 +2633,13 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return Constant::getNullValue(Ty);
     if (IntrinsicID == Intrinsic::bswap ||
         IntrinsicID == Intrinsic::bitreverse ||
-        IntrinsicID == Intrinsic::launder_invariant_group ||
-        IntrinsicID == Intrinsic::strip_invariant_group)
+        IntrinsicID == Intrinsic::launder_invariant_group)
       return Operands[0];
   }
 
   if (isa<ConstantPointerNull>(Operands[0])) {
-    // launder(null) == null == strip(null) iff in addrspace 0
-    if (IntrinsicID == Intrinsic::launder_invariant_group ||
-        IntrinsicID == Intrinsic::strip_invariant_group) {
+    // launder(null) == null iff in addrspace 0
+    if (IntrinsicID == Intrinsic::launder_invariant_group) {
       // If instruction is not yet put in a basic block (e.g. when cloning
       // a function during inlining), Call's caller may not be available.
       // So check Call's BB first before querying Call->getCaller.
@@ -3951,6 +3953,13 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
       return ConstantInt::get(Ty, APIntOps::mulhu(*C0, *C1));
+    case Intrinsic::amdgcn_wave_reduce_add:
+    case Intrinsic::amdgcn_wave_reduce_sub:
+    case Intrinsic::amdgcn_wave_reduce_xor: {
+      if (C0 && C0->isZero())
+        return Constant::getNullValue(Ty);
+      return nullptr;
+    }
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_umax:
     case Intrinsic::amdgcn_wave_reduce_max:
@@ -4776,7 +4785,8 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
                                       ArrayRef<Constant *> Ops, Type *Ty,
-                                      const DataLayout &DL, Function *CxtF) {
+                                      const DataLayout &DL,
+                                      const Function *CxtF) {
   // In the absence of CxtF, assume strictfp conservatively.
   if (!canConstantFoldIntrinsic(ID, CxtF ? CxtF->isStrictFP() : true) ||
       (DisableFPCallFolding &&

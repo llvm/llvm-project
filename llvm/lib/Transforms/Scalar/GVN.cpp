@@ -2402,8 +2402,8 @@ std::optional<GVNPass::ReachingMemVal> GVNPass::scanMemoryAccessesUsers(
 /// Check if a given MemoryAccess (usually a MemoryDef) actually modifies a
 /// given location. Returns a ReachingMemVal describing the dependency.
 std::optional<GVNPass::ReachingMemVal> GVNPass::accessMayModifyLocation(
-    MemoryAccess *ClobberMA, const MemoryLocation &Loc, bool IsInvariantLoad,
-    BasicBlock *BB, MemorySSA &MSSA, BatchAAResults &AA) {
+    MemoryAccess *ClobberMA, const MemoryLocation &Loc, Align LoadAlign,
+    bool IsInvariantLoad, BasicBlock *BB, MemorySSA &MSSA, BatchAAResults &AA) {
   assert(ClobberMA->getBlock() == BB);
 
   // If the clobbering access is the entry memory state, we cannot say anything
@@ -2449,6 +2449,13 @@ std::optional<GVNPass::ReachingMemVal> GVNPass::accessMayModifyLocation(
     // Skip over volatile loads (the original load is non-volatile, non-atomic).
     if (!ClobberI->isAtomic() && isa<LoadInst>(ClobberI))
       return std::nullopt;
+
+    // A store that writes back a value already at the memory location leaves
+    // the latter unchanged.
+    if (auto *SI = dyn_cast<StoreInst>(ClobberI))
+      if (isStorePreservingMemoryLocation(SI, Loc, LoadAlign, AA,
+                                          MaxNumInsnsPerBlock))
+        return std::nullopt;
 
     if (AR == AliasResult::MayAlias ||
         (AR == AliasResult::PartialAlias &&
@@ -2648,8 +2655,9 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
       break;
 
     // Check if the clobber actually aliases the load location.
-    if (auto RMV = accessMayModifyLocation(ClobberMA, Loc, IsInvariantLoad,
-                                           StartBlock, MSSA, AA)) {
+    if (auto RMV =
+            accessMayModifyLocation(ClobberMA, Loc, L->getAlign(),
+                                    IsInvariantLoad, StartBlock, MSSA, AA)) {
       Values.emplace_back(*RMV);
       return true;
     }
@@ -2696,9 +2704,10 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
     // predecessors of this block further, continue with the blocks in the
     // worklist.
     if (Info.ClobberMA->getBlock() == BB && !isa<MemoryPhi>(Info.ClobberMA)) {
-      if (auto RMV = accessMayModifyLocation(
-              Info.ClobberMA, Loc.getWithNewPtr(Info.Addr.getAddr()),
-              IsInvariantLoad, BB, MSSA, AA)) {
+      const MemoryLocation BBLoc = Loc.getWithNewPtr(Info.Addr.getAddr());
+      if (auto RMV =
+              accessMayModifyLocation(Info.ClobberMA, BBLoc, L->getAlign(),
+                                      IsInvariantLoad, BB, MSSA, AA)) {
         Info.MemVal = RMV;
         continue;
       }
