@@ -98,7 +98,6 @@ private:
   ArgInfo getIndirectReturnResult(const Type *Ty) const;
   const Type *getFPTypeAtOffset(const Type *Ty, unsigned Offset) const;
 
-  const Type *isSingleElementStruct(const Type *Ty) const;
   const Type *getByteVectorType(const Type *Ty) const;
 
   const Type *createPairType(const Type *Lo, const Type *Hi) const;
@@ -1261,60 +1260,6 @@ const Type *X86_64TargetInfo::getByteVectorType(const Type *Ty) const {
                           ElementCount::getFixed(Size / 64), Align(Size / 8));
 }
 
-// Returns the single element if this is a single-element struct wrapper
-const Type *X86_64TargetInfo::isSingleElementStruct(const Type *Ty) const {
-  const auto *RT = dyn_cast<RecordType>(Ty);
-  if (!RT)
-    return nullptr;
-
-  if (RT->hasFlexibleArrayMember())
-    return nullptr;
-
-  const Type *Found = nullptr;
-
-  for (const auto &Base : RT->getBaseClasses()) {
-    const Type *BaseTy = Base.FieldType;
-    auto *BaseRT = dyn_cast<RecordType>(BaseTy);
-
-    if (!BaseRT || BaseRT->isEmpty())
-      continue;
-
-    const Type *Elem = isSingleElementStruct(BaseTy);
-    if (!Elem || Found)
-      return nullptr;
-    Found = Elem;
-  }
-
-  for (const auto &FI : RT->getFields()) {
-    if (FI.isEmpty())
-      continue;
-
-    const Type *FTy = FI.FieldType;
-
-    while (auto *AT = dyn_cast<ArrayType>(FTy)) {
-      if (AT->getNumElements() != 1)
-        break;
-      FTy = AT->getElementType();
-    }
-
-    const Type *Elem;
-    if (auto *InnerRT = dyn_cast<RecordType>(FTy))
-      Elem = isSingleElementStruct(InnerRT);
-    else
-      Elem = FTy;
-    if (!Elem || Found)
-      return nullptr;
-    Found = Elem;
-  }
-
-  if (!Found)
-    return nullptr;
-  if (Found->getSizeInBits() != Ty->getSizeInBits())
-    return nullptr;
-
-  return Found;
-}
-
 bool X86_64TargetInfo::isIllegalVectorType(const Type *Ty) const {
   if (const auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint64_t Size = VecTy->getSizeInBits().getFixedValue();
@@ -1354,8 +1299,9 @@ ArgInfo X86_64TargetInfo::getIndirectResult(const Type *Ty,
 
   // Check if this is a record type that needs special handling
   if (auto RecordRAA = getRecordArgABI(Ty))
-    return getNaturalAlignIndirect(Ty, RecordRAA ==
-                                           RecordArgABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, getAllocaAddrSpace(),
+                                   /*ByVal=*/RecordRAA ==
+                                       RecordArgABI::RAA_DirectInMemory);
 
   // Compute the byval alignment. We specify the alignment of the byval in all
   // cases so that the mid-level optimizer knows the alignment of the byval.
@@ -1405,14 +1351,14 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
     // Bit-precise integers are returned indirectly regardless of size.
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
       if (IntTy->isBitInt())
-        return getNaturalAlignIndirect(IntTy, /*ByVal=*/true);
+        return getNaturalAlignIndirect(IntTy, getAllocaAddrSpace());
       if (isPromotableInteger(IntTy))
         return ArgInfo::getExtend(Ty);
     }
     return ArgInfo::getDirect();
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
+  return getNaturalAlignIndirect(Ty, getAllocaAddrSpace());
 }
 
 void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
@@ -1460,9 +1406,11 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
     if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
       FreeIntRegs -= NeededInt;
       FreeSSERegs -= NeededSSE;
+      AI.setNeededRegs(NeededInt, NeededSSE);
       IT->Info = AI;
     } else {
-      // Not enough registers, pass on stack
+      // Not enough registers, pass on stack. The demand the classification
+      // reports is what the argument ends up occupying, which is nothing.
       IT->Info = getIndirectResult(ArgTy, FreeIntRegs);
     }
   }

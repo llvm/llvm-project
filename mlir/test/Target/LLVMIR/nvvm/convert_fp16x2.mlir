@@ -30,13 +30,13 @@ llvm.func @convert_f32x2_to_f16x2_rz(%srcA : f32, %srcB : f32) {
 
 // CHECK-LABEL: @convert_f32x2_to_f16x2_rs_stochastic
 llvm.func @convert_f32x2_to_f16x2_rs_stochastic(%srcA : f32, %srcB : f32, %rbits : i32) {
-  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res1 = nvvm.convert.f32x2.to.f16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> : vector<2xf16>
-  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res2 = nvvm.convert.f32x2.to.f16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> relu = true : vector<2xf16>
-  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res3 = nvvm.convert.f32x2.to.f16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> sat = <satfinite> : vector<2xf16>
-  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x half> @llvm.nvvm.ff2f16x2.rs.relu.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res4 = nvvm.convert.f32x2.to.f16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> sat = <satfinite> relu = true : vector<2xf16>
 
   llvm.return
@@ -74,13 +74,13 @@ llvm.func @convert_f32x2_to_bf16x2_rz(%srcA : f32, %srcB : f32) {
 
 // CHECK-LABEL: @convert_f32x2_to_bf16x2_rs_stochastic
 llvm.func @convert_f32x2_to_bf16x2_rs_stochastic(%srcA : f32, %srcB : f32, %rbits : i32) {
-  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res1 = nvvm.convert.f32x2.to.bf16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> : vector<2xbf16>
-  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs.relu(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs.relu(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res2 = nvvm.convert.f32x2.to.bf16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> relu = true : vector<2xbf16>
-  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res3 = nvvm.convert.f32x2.to.bf16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> sat = <satfinite> : vector<2xbf16>
-  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs.relu.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}}, i1 false)
+  // CHECK: %{{.*}} = call <2 x bfloat> @llvm.nvvm.ff2bf16x2.rs.relu.satfinite(float %{{.*}}, float %{{.*}}, i32 %{{.*}})
   %res4 = nvvm.convert.f32x2.to.bf16x2 %srcA, %srcB random_bits = %rbits rnd = <rs> sat = <satfinite> relu = true : vector<2xbf16>
 
   llvm.return

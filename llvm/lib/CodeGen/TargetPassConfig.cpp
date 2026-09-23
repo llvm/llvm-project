@@ -958,7 +958,6 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
-    addPass(createWasmEHPass());
     break;
   case ExceptionHandling::Default:
   case ExceptionHandling::None:

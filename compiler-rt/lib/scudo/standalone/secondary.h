@@ -384,11 +384,12 @@ public:
       // It is very likely that multiple threads trying to do a release at the
       // same time will not actually release any extra elements. Therefore,
       // let any other thread continue, skipping the release.
-      if (Mutex.tryLock()) {
+      const u64 IntervalTime = static_cast<u64>(Interval) * 1000000;
+      if (LIKELY(Time > IntervalTime) && Mutex.tryLock()) {
         SCUDO_SCOPED_TRACE(
             GetSecondaryReleaseToOSTraceName(ReleaseToOS::Normal));
 
-        releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
+        releaseOlderThan(Time - IntervalTime);
         Mutex.unlock();
       } else
         atomic_fetch_add(&ReleaseToOsSkips, 1U, memory_order_relaxed);

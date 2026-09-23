@@ -6112,9 +6112,9 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         llvm::StringRef name = section->GetName();
         segment_vmaddr seg_vmaddr;
         // This is the uncommon case where strncpy is exactly
-        // the right one, doesn't need to be nul terminated.
+        // the right one, doesn't need to be null-terminated.
         // The segment name in a Mach-O LC_SEGMENT/LC_SEGMENT_64 is char[16] and
-        // is not guaranteed to be nul-terminated if all 16 characters are
+        // is not guaranteed to be null-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
         strncpy(seg_vmaddr.segname, name.data(),
@@ -6466,9 +6466,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           char namebuf[16];
           memset(namebuf, 0, sizeof(namebuf));
           // This is the uncommon case where strncpy is exactly
-          // the right one, doesn't need to be nul terminated.
+          // the right one, doesn't need to be null-terminated.
           // LC_NOTE name field is char[16] and is not guaranteed to be
-          // nul-terminated.
+          // null-terminated.
           // coverity[buffer_size_warning]
           strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
           buffer.PutRawBytes(namebuf, sizeof(namebuf));
