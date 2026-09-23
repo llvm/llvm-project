@@ -216,6 +216,42 @@ add_header_library(
 )
 
 add_header_library(
+  flistxattr
+  HDRS
+    flistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  listxattr
+  HDRS
+    listxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  llistxattr
+  HDRS
+    llistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   read
   HDRS
     read.h
@@ -410,10 +446,12 @@ add_header_library(
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.__support.OSUtil.linux.syscall_wrappers.tgkill
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.hdr.signal_macros
+    libc.hdr.types.pid_t
     libc.hdr.types.sigset_t
     libc.include.sys_syscall
 )
@@ -464,7 +502,6 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
-    libc.hdr.types.off_t
     libc.include.sys_syscall
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
@@ -603,6 +640,20 @@ add_header_library(
 )
 
 add_header_library(
+  mknodat
+  HDRS
+    mknodat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.dev_t
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
   chmod
   HDRS
     chmod.h
@@ -634,12 +685,13 @@ add_header_library(
   HDRS
     fchmodat.h
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
-    libc.hdr.types.mode_t
-    libc.include.sys_syscall
 )
 
 add_header_library(
@@ -1098,6 +1150,28 @@ add_header_library(
     libc.include.sys_syscall
 )
 
+set(clone_arch_header "")
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}/clone.h)
+  set(clone_arch_header ${LIBC_TARGET_ARCHITECTURE}/clone.h)
+endif()
+
+add_header_library(
+  clone
+  HDRS
+    clone.h
+    ${clone_arch_header}
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+)
+
 add_header_library(
   clone3
   HDRS
@@ -1265,6 +1339,19 @@ add_header_library(
 )
 
 add_header_library(
+  tgkill
+  HDRS
+    tgkill.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   umask
   HDRS
     umask.h
@@ -1274,4 +1361,20 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  fallocate
+  HDRS
+    fallocate.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.common
+    libc.src.__support.OSUtil.osutil
+    libc.include.sys_syscall
+    libc.hdr.types.off_t
+    libc.hdr.errno_macros
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.bit
+    libc.src.__support.error_or
 )

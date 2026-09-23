@@ -1,4 +1,4 @@
-//===- TypesTest.cpp - ABI type emptiness unit tests ----------------------===//
+//===- TypesTest.cpp - ABI type unit tests --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,7 @@
 using llvm::Align;
 using llvm::ElementCount;
 using llvm::TypeSize;
+using llvm::abi::AtomicType;
 using llvm::abi::FieldInfo;
 using llvm::abi::RecordFlags;
 using llvm::abi::RecordType;
@@ -40,13 +41,29 @@ protected:
                                llvm::ArrayRef<FieldInfo> VBases = {},
                                Align Alignment = Align(1)) {
     return TB.getRecordType(Fields, TypeSize::getFixed(SizeBits), Alignment,
+                            /*UnadjustedAlign=*/Alignment,
                             StructPacking::Default, Bases, VBases, Flags);
   }
 };
 
+TEST_F(ABITypesTest, AtomicTypeProperties) {
+  const llvm::abi::Type *Value =
+      TB.getIntegerType(24, Align(1), /*Signed=*/false);
+  const AtomicType *Atomic = TB.getAtomicType(Value, 32, Align(4));
+
+  EXPECT_TRUE(Atomic->isAtomic());
+  EXPECT_EQ(Atomic->getKind(), llvm::abi::TypeKind::Atomic);
+  EXPECT_EQ(Atomic->getValueType(), Value);
+  EXPECT_EQ(Atomic->getSizeInBits(), TypeSize::getFixed(32));
+  EXPECT_EQ(Atomic->getAlignment(), Align(4));
+  EXPECT_TRUE(llvm::isa<AtomicType>(Atomic));
+  EXPECT_FALSE(Atomic->isEmptyRecord());
+}
+
 TEST_F(ABITypesTest, EmptyCRecord) {
   const RecordType *Empty = makeRecord({}, 0, RecordFlags::CanPassInRegisters);
   EXPECT_TRUE(Empty->isEmpty());
+  EXPECT_TRUE(Empty->isEmptyRecord());
 }
 
 TEST_F(ABITypesTest, NestedEmptyCRecordField) {
@@ -136,9 +153,11 @@ TEST_F(ABITypesTest, GenericVector) {
 
   EXPECT_EQ(V4I32->getVectorKind(), VectorKind::Generic);
   EXPECT_FALSE(V4I32->isSVEType());
+  EXPECT_FALSE(V4I32->isSVESizelessType());
   EXPECT_TRUE(V4I32->isFixedLength());
   EXPECT_FALSE(V4I32->isTuple());
   EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
+  EXPECT_EQ(V4I32->getFixedSizeInBitsOrZero(), 128u);
 }
 
 // svint32_t is <vscale x 4 x i32>.
@@ -149,9 +168,11 @@ TEST_F(ABITypesTest, SVEDataVector) {
 
   EXPECT_TRUE(SVInt32->isSVEData());
   EXPECT_TRUE(SVInt32->isSVEType());
+  EXPECT_TRUE(SVInt32->isSVESizelessType());
   EXPECT_TRUE(SVInt32->isScalable());
   EXPECT_FALSE(SVInt32->isTuple());
   EXPECT_EQ(SVInt32->getSizeInBits(), TypeSize::getScalable(128));
+  EXPECT_EQ(SVInt32->getFixedSizeInBitsOrZero(), 0u);
   EXPECT_EQ(SVInt32->getAlignment(), Align(16));
 }
 
@@ -163,6 +184,7 @@ TEST_F(ABITypesTest, SVEDataVectorTuple) {
   const TupleType *SVInt32x3 = TB.getTupleType(SVInt32, /*NumVectors=*/3);
 
   EXPECT_TRUE(SVInt32x3->isTuple());
+  EXPECT_TRUE(SVInt32x3->isSVESizelessType());
   EXPECT_EQ(SVInt32x3->getNumVectors(), 3u);
   EXPECT_EQ(SVInt32x3->getVectorType(), SVInt32);
   EXPECT_EQ(SVInt32x3->getAlignment(), Align(16));
@@ -181,6 +203,7 @@ TEST_F(ABITypesTest, SVEPredicateVector) {
 
   EXPECT_TRUE(SVBool->isSVEPredicate());
   EXPECT_FALSE(SVBool->isSVEData());
+  EXPECT_TRUE(SVBool->isSVESizelessType());
   EXPECT_TRUE(SVBool->isScalable());
   EXPECT_EQ(SVBool->getSizeInBits(), TypeSize::getScalable(16));
   EXPECT_EQ(SVBool->getAlignment(), Align(2));
@@ -191,6 +214,7 @@ TEST_F(ABITypesTest, SVECount) {
 
   EXPECT_TRUE(SVCount->isSVECount());
   EXPECT_TRUE(SVCount->isSVEType());
+  EXPECT_TRUE(SVCount->isSVESizelessType());
   EXPECT_FALSE(SVCount->isSVEPredicate());
   EXPECT_TRUE(SVCount->isScalable());
   EXPECT_FALSE(SVCount->isTuple());
@@ -204,6 +228,28 @@ TEST_F(ABITypesTest, ScalableVectorIsNotZeroSized) {
       I32, ElementCount::getScalable(4), Align(16), VectorKind::SVEData);
 
   EXPECT_FALSE(SVInt32->isZeroSize());
+}
+
+// Fixed-length SVE from arm_sve_vector_bits keeps the SVE kind but is not
+// a sizeless builtin type.
+TEST_F(ABITypesTest, FixedLengthSVEIsNotSizeless) {
+  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
+  const VectorType *FixedInt32 = TB.getVectorType(
+      I32, ElementCount::getFixed(4), Align(16), VectorKind::SVEData);
+  const llvm::abi::Type *I8 = TB.getIntegerType(8, Align(1), /*Signed=*/false);
+  const VectorType *FixedBool = TB.getVectorType(
+      I8, ElementCount::getFixed(16), Align(2), VectorKind::SVEPredicate);
+
+  EXPECT_TRUE(FixedInt32->isSVEData());
+  EXPECT_FALSE(FixedInt32->isSVESizelessType());
+  EXPECT_TRUE(FixedBool->isSVEPredicate());
+  EXPECT_FALSE(FixedBool->isSVESizelessType());
+}
+
+TEST_F(ABITypesTest, NonSVETypesAreNotSizelessSVE) {
+  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
+  EXPECT_FALSE(I32->isSVESizelessType());
+  EXPECT_FALSE(TB.getVoidType()->isSVESizelessType());
 }
 
 } // namespace

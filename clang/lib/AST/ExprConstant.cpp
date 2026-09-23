@@ -3520,19 +3520,27 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // Used to be C++20 [expr.const]p5.12:
   //  ... reference has a preceding initialization and either ...
   if (Init && Init->isValueDependent()) {
+    if (!Info.checkingPotentialConstantExpression()) {
+      Info.FFDiag(E,
+                  Info.getLangOpts().CPlusPlus11
+                      ? diag::note_constexpr_ltor_non_constexpr
+                      : diag::note_constexpr_ltor_non_integral,
+                  1)
+          << VD << VD->getType();
+      NoteLValueLocation(Info, Base);
+    }
+
+    // A recovery initializer can be value-dependent even when the expression
+    // referring to the variable is not.
+    if (Init->containsErrors())
+      return false;
+
     // The DeclRefExpr is not value-dependent, but the variable it refers to
     // has a value-dependent initializer. This should only happen in
     // constant-folding cases, where the variable is not actually of a suitable
     // type for use in a constant expression (otherwise the DeclRefExpr would
     // have been value-dependent too), so diagnose that.
     assert(!VD->mightBeUsableInConstantExpressions(Info.Ctx));
-    if (!Info.checkingPotentialConstantExpression()) {
-      Info.FFDiag(E, Info.getLangOpts().CPlusPlus11
-                         ? diag::note_constexpr_ltor_non_constexpr
-                         : diag::note_constexpr_ltor_non_integral, 1)
-          << VD << VD->getType();
-      NoteLValueLocation(Info, Base);
-    }
     return false;
   }
 
@@ -3697,12 +3705,12 @@ static void expandVector(APValue &Vec, unsigned NumElements) {
 /// is trivial. Note that this is never true for a union type with fields
 /// (because the copy always "reads" the active member) and always true for
 /// a non-class type.
-static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
-static bool isReadByLvalueToRvalueConversion(QualType T) {
+bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
+bool isReadByLvalueToRvalueConversion(QualType T) {
   CXXRecordDecl *RD = T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
   return !RD || isReadByLvalueToRvalueConversion(RD);
 }
-static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD) {
+bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD) {
   // FIXME: A trivial copy of a union copies the object representation, even if
   // the union is empty.
   if (RD->isUnion())

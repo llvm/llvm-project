@@ -131,6 +131,11 @@ public:
         TargetInstrInfo::getRegisterInfo());
   }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &ARM::GPRRegClass;
+  }
+
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
   ScheduleHazardRecognizer *
@@ -192,6 +197,15 @@ public:
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override {
+    // FIXME: These instructions report an incorrect size, but the ARM constant
+    // islands pass somehow depends on it being incorrect.
+    if (MI.getOpcode() == ARM::tTBB_JT || MI.getOpcode() == ARM::tTBH_JT)
+      return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
+  }
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;

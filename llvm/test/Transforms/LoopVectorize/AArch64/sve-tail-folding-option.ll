@@ -899,8 +899,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -944,8 +943,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-TF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-TF-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-TF-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-TF-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -989,8 +987,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-SIMPLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-SIMPLE:       [[VECTOR_BODY]]:
 ; CHECK-TF-SIMPLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-TF-SIMPLE-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-TF-SIMPLE-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -1037,8 +1034,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-DEFAULT:       [[VECTOR_BODY]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-TF-DEFAULT-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-TF-DEFAULT-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -1109,8 +1105,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NORED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NORED:       [[VECTOR_BODY]]:
 ; CHECK-TF-NORED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NORED-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-TF-NORED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-TF-NORED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-TF-NORED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-NORED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-TF-NORED-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -1154,8 +1149,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NOREC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NOREC:       [[VECTOR_BODY]]:
 ; CHECK-TF-NOREC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NOREC-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-TF-NOREC-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-TF-NOREC-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-TF-NOREC-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-NOREC-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-TF-NOREC-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -1199,8 +1193,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-NOREV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NOREV:       [[VECTOR_BODY]]:
 ; CHECK-TF-NOREV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NOREV-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-TF-NOREV-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-TF-NOREV-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-NOREV-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-TF-NOREV-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -1244,8 +1237,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-ONLYRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-ONLYRED:       [[VECTOR_BODY]]:
 ; CHECK-TF-ONLYRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-TF-ONLYRED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-TF-ONLYRED-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-TF-ONLYRED-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-TF-ONLYRED-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
@@ -1292,8 +1284,7 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEOVERSE-V1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NEOVERSE-V1:       [[VECTOR_BODY]]:
 ; CHECK-NEOVERSE-V1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 0
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], 1
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], [[TMP4]]
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDEX]], 1
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP5]], 1
