@@ -2,7 +2,7 @@
 ;
 ; Direct calls to declarations use attribute modeling; readnone must not
 ; block DSE, unknown decls and indirect calls stay conservative. Double call
-; covers DeclCallees dedup.
+; covers per-SCC decl dedup.
 
 @X = internal global i32 0
 

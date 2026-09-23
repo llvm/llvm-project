@@ -366,20 +366,6 @@ public:
       return populateSlow();
     }
 
-    /// Returns the deduplicated list of declaration functions directly called
-    /// by this node's function. Populated during populateSlow() at no
-    /// additional scan cost.
-    ArrayRef<Function *> getDeclarationCallees() const {
-      assert(Edges && "Node must be populated before querying decl callees!");
-      return DeclCallees;
-    }
-
-    /// Returns true if this function contains any indirect calls.
-    bool hasIndirectCalls() const {
-      assert(Edges && "Node must be populated before querying indirect calls!");
-      return HasIndirectCalls;
-    }
-
   private:
     LazyCallGraph *G;
     Function *F;
@@ -391,9 +377,6 @@ public:
     int LowLink = 0;
 
     std::optional<EdgeSequence> Edges;
-
-    SmallVector<Function *, 2> DeclCallees;
-    bool HasIndirectCalls = false;
 
     /// Basic constructor implements the scanning of F into Edges and
     /// EdgeIndexMap.
@@ -409,11 +392,7 @@ public:
     /// the other.
     void replaceFunction(Function &NewF);
 
-    void clear() {
-      Edges.reset();
-      DeclCallees.clear();
-      HasIndirectCalls = false;
-    }
+    void clear() { Edges.reset(); }
 
     /// Print the name of this node's function.
     friend raw_ostream &operator<<(raw_ostream &OS, const Node &N) {
@@ -880,7 +859,7 @@ public:
     ///
     /// It requires that the old function in the provided node have zero uses
     /// and the new function must have calls and references to it establishing
-    /// an equivalent graph, including DeclCallees/HasIndirectCalls.
+    /// an equivalent graph.
     LLVM_ABI void replaceNodeFunction(Node &N, Function &NewF);
 
     ///@}

@@ -688,24 +688,6 @@ void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
               KnowNothing = true;
           }
         }
-
-        // Decls/indirect have no LCG edges; reuse the decl attribute logic.
-        if (!KnowNothing) {
-          if (N.hasIndirectCalls()) {
-            KnowNothing = true;
-            break;
-          }
-
-          for (Function *DeclCallee : N.getDeclarationCallees()) {
-            if (FunctionInfo *CalleeFI = getFunctionInfo(DeclCallee)) {
-              FI.addFunctionInfo(*CalleeFI);
-            } else {
-              // Unknown declaration; be conservative.
-              KnowNothing = true;
-              break;
-            }
-          }
-        }
       }
 
       // If we can't say anything useful about this SCC, remove all SCC
@@ -716,10 +698,13 @@ void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
         continue;
       }
 
-      // Scan the function bodies for explicit loads or stores.
+      // Scan current IR directly for decl/indirect calls and loads/stores.
+      // Decls/indirect have no LCG edges, and caching them on LCG nodes
+      // would go stale across CGSCC updates (e.g. inlining).
+      SmallPtrSet<const Function *, 4> SeenCallees;
       for (LazyCallGraph::Node &N : C) {
-        if (isModAndRefSet(FI.getModRefInfo()))
-          break; // The mod/ref lattice saturates here.
+        if (KnowNothing)
+          break;
 
         // Don't prove any properties based on the implementation of an optnone
         // function. Function attributes were already used as a best
@@ -728,7 +713,43 @@ void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
         if (NF.hasOptNone())
           continue;
 
-        scanFunctionBodyForModRef(NF, FI);
+        for (Instruction &I : instructions(&NF)) {
+          auto *CB = dyn_cast<CallBase>(&I);
+          if (!CB) {
+            if (isModAndRefSet(FI.getModRefInfo()))
+              continue; // ModRef saturated, but later calls may still add
+                        // MayReadAnyGlobal/KnowNothing, so keep scanning.
+            if (I.mayReadFromMemory())
+              FI.addModRefInfo(ModRefInfo::Ref);
+            if (I.mayWriteToMemory())
+              FI.addModRefInfo(ModRefInfo::Mod);
+            continue;
+          }
+
+          if (Function *Callee = CB->getCalledFunction()) {
+            if (Callee->isDeclaration() && SeenCallees.insert(Callee).second) {
+              if (FunctionInfo *CalleeFI = getFunctionInfo(Callee)) {
+                FI.addFunctionInfo(*CalleeFI);
+              } else {
+                // Unknown declaration; be conservative.
+                KnowNothing = true;
+                break;
+              }
+            }
+            // Defined calls are handled via LCG call edges above.
+          } else {
+            // Indirect call (or inline asm): be conservative.
+            KnowNothing = true;
+            break;
+          }
+        }
+      }
+
+      // The body scan may have found an unknown declaration or indirect call.
+      if (KnowNothing) {
+        for (LazyCallGraph::Node &N : C)
+          FunctionInfos.erase(&N.getFunction());
+        continue;
       }
 
       if (!isModSet(FI.getModRefInfo()))
