@@ -1323,6 +1323,84 @@ static bool isParameterObjectOrSubObject(hlfir::Entity entity) {
   return foundParameter;
 }
 
+/// Does \p shape (a fir.shape or fir.shape_shift, possibly null) contain an
+/// assumed-size sentinel extent?
+static bool isAssumedSizeShape(mlir::Value shape) {
+  auto isAssumedSizeExtent = [](mlir::Value extent) {
+    while (auto convert = extent.getDefiningOp<fir::ConvertOp>())
+      extent = convert.getValue();
+    return extent.getDefiningOp<fir::AssumedSizeExtentOp>() != nullptr;
+  };
+  if (!shape)
+    return false;
+  if (auto shapeOp = shape.getDefiningOp<fir::ShapeOp>())
+    return llvm::any_of(shapeOp.getExtents(), isAssumedSizeExtent);
+  if (auto shapeShiftOp = shape.getDefiningOp<fir::ShapeShiftOp>())
+    return llvm::any_of(shapeShiftOp.getExtents(), isAssumedSizeExtent);
+  return false;
+}
+
+/// If \p element is the address of an array element, generate the number of
+/// elements in the storage sequence that starts at that element and runs to
+/// the end of its base array - or, for an element of an array component, to
+/// the end of that component (F'2023 15.5.2.12 point 3.). Return a null
+/// value when the base array or the element position cannot be identified,
+/// or when the base array is assumed-size (its extent is not a usable
+/// count).
+static mlir::Value genRemainingStorageSequenceExtent(mlir::Location loc,
+                                                     fir::FirOpBuilder &builder,
+                                                     hlfir::Entity element) {
+  auto designate = element.getDefiningOp<hlfir::DesignateOp>();
+  if (!designate || !designate.getSubstring().empty() ||
+      designate.getComplexPart() ||
+      llvm::is_contained(designate.getIsTriplet(), true))
+    return {};
+  hlfir::Entity base{designate.getMemref()};
+  llvm::SmallVector<std::pair<mlir::Value, mlir::Value>> bounds;
+  if (designate.getComponent()) {
+    // Element of an array component: the storage sequence is confined to
+    // the component of that object (F'2023 9.5.4 "simply contiguous").
+    mlir::Value componentShape = designate.getComponentShape();
+    if (base.getRank() != 0 || !componentShape)
+      return {};
+    bounds = hlfir::genBounds(loc, builder, componentShape);
+  } else {
+    if (base.getRank() == 0)
+      return {};
+    if (auto varIface = base.getDefiningOp<fir::FortranVariableOpInterface>()) {
+      if (isAssumedSizeShape(varIface.getShape()))
+        return {};
+    } else if (!mlir::isa<fir::BaseBoxType>(base.getType())) {
+      // Cannot prove the base array is not assumed-size.
+      return {};
+    }
+    bounds = hlfir::genBounds(loc, builder, base);
+  }
+  if (designate.getIndices().size() != bounds.size())
+    return {};
+  // The remaining length is the base array size minus the column-major
+  // offset of the element inside the base array.
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  mlir::Value stride = one;
+  mlir::Value offset = builder.createIntegerConstant(loc, idxTy, 0);
+  for (auto [dim, lbub] : llvm::enumerate(bounds)) {
+    mlir::Value lb = builder.createConvert(loc, idxTy, lbub.first);
+    mlir::Value ub = builder.createConvert(loc, idxTy, lbub.second);
+    mlir::Value index =
+        builder.createConvert(loc, idxTy, designate.getIndices()[dim]);
+    mlir::Value dimOffset =
+        mlir::arith::SubIOp::create(builder, loc, index, lb);
+    offset = mlir::arith::AddIOp::create(
+        builder, loc, offset,
+        mlir::arith::MulIOp::create(builder, loc, dimOffset, stride));
+    mlir::Value extent = mlir::arith::AddIOp::create(
+        builder, loc, mlir::arith::SubIOp::create(builder, loc, ub, lb), one);
+    stride = mlir::arith::MulIOp::create(builder, loc, stride, extent);
+  }
+  return mlir::arith::SubIOp::create(builder, loc, stride, offset);
+}
+
 /// When dummy is not ALLOCATABLE, POINTER and is not passed in register,
 /// prepare the actual argument according to the interface. Do as needed:
 /// - address element if this is an array argument in an elemental call.
@@ -1506,8 +1584,76 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         // generated writes in copy-out.
         isParameterObjectOrSubObject(entity)) {
       // Make a copy in a temporary.
-      auto copy = hlfir::AsExprOp::create(builder, loc, entity);
-      mlir::Type storageType = entity.getType();
+      //
+      // When a scalar array element is associated with an array dummy
+      // argument (storage sequence association, F'2023 15.5.2.12), the
+      // temporary must cover the whole sequence the dummy requires, not
+      // just the element. When the dummy extents are all known at the
+      // call site, view the storage sequence starting at the element as
+      // an array of the dummy's shape and copy that. Otherwise, copy the
+      // whole remaining storage sequence of the base array, mirroring the
+      // copy of the whole actual argument that is made when the actual
+      // argument is an array.
+      hlfir::Entity source = entity;
+      if (entity.getRank() == 0 && fir::isa_ref_type(entity.getType())) {
+        mlir::Type dummyBaseTy = fir::unwrapRefType(dummyType);
+        bool dummyIsBoxed = false;
+        if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(dummyBaseTy)) {
+          dummyIsBoxed = true;
+          dummyBaseTy = fir::unwrapRefType(boxTy.getEleTy());
+        }
+        mlir::Type eleTy = fir::unwrapRefType(entity.getType());
+        // A boxed (polymorphic) dummy may have a compatible declared element
+        // type that differs from the actual argument element type. The view
+        // and copy are made with the actual argument element type so that
+        // the sequence element size and the dynamic type are preserved; the
+        // descriptor with the dummy declared type is created over that copy
+        // below.
+        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(dummyBaseTy);
+            seqTy && (seqTy.getEleTy() == eleTy || dummyIsBoxed) &&
+            !mlir::isa<fir::CharacterType>(eleTy)) {
+          llvm::SmallVector<mlir::Value> extents;
+          mlir::Type viewTy;
+          if (!seqTy.hasDynamicExtents()) {
+            for (auto extent : seqTy.getShape())
+              extents.push_back(builder.createIntegerConstant(
+                  loc, builder.getIndexType(), extent));
+            viewTy = fir::SequenceType::get(seqTy.getShape(), eleTy);
+          } else if (mlir::Value remaining = genRemainingStorageSequenceExtent(
+                         loc, builder, entity)) {
+            extents.push_back(remaining);
+            viewTy = fir::SequenceType::get(
+                {fir::SequenceType::getUnknownExtent()}, eleTy);
+          }
+          if (!extents.empty()) {
+            // The view must keep the source memory qualification: dropping
+            // VOLATILE here would let the copy read the element sequence
+            // with non-volatile accesses.
+            mlir::Value seqRef = builder.createConvertWithVolatileCast(
+                loc,
+                fir::ReferenceType::get(
+                    viewTy, fir::isa_volatile_type(entity.getType())),
+                entity);
+            mlir::Value shape = builder.genShape(loc, extents);
+            auto declare = hlfir::DeclareOp::create(
+                builder, loc, seqRef, ".sequence.assoc", shape,
+                /*typeparams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr);
+            source = hlfir::Entity{declare.getBase()};
+            // The descriptor type prepared for a boxed dummy was derived
+            // from the scalar actual argument. Recompute it from the
+            // sequence view so that the copy is packaged with an array
+            // descriptor of matching rank (the sequence-association
+            // remapping uses it as source_box; a rank-changing type cast
+            // would corrupt the descriptor addendum).
+            if (auto baseBoxDummy =
+                    mlir::dyn_cast<fir::BaseBoxType>(dummyTypeWithActualRank))
+              dummyTypeWithActualRank = baseBoxDummy.getBoxTypeWithNewShape(
+                  hlfir::getFortranElementOrSequenceType(source.getType()));
+          }
+        }
+      }
+      auto copy = hlfir::AsExprOp::create(builder, loc, source);
+      mlir::Type storageType = source.getType();
       mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
       hlfir::AssociateOp associate = hlfir::genAssociateExpr(
           loc, builder, hlfir::Entity{copy}, storageType, "", byRefAttr);
