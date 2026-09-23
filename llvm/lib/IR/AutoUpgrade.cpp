@@ -988,18 +988,17 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
-      // Check for the trailing '.' to avoid matching sminv, sminp, etc.
-      if (Name.starts_with("smax.") || Name.starts_with("smin.") ||
-          Name.starts_with("umax.") || Name.starts_with("umin.")) {
+      Intrinsic::ID MinMaxID =
+          StringSwitch<Intrinsic::ID>(Name.split('.').first)
+              .Case("smax", Intrinsic::smax)
+              .Case("smin", Intrinsic::smin)
+              .Case("umax", Intrinsic::umax)
+              .Case("umin", Intrinsic::umin)
+              .Default(Intrinsic::not_intrinsic);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
         if (F->arg_size() != 2 || !F->getReturnType()->isIntOrIntVectorTy())
           return false; // Invalid IR.
-        Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name.take_front(4))
-                               .Case("smax", Intrinsic::smax)
-                               .Case("smin", Intrinsic::smin)
-                               .Case("umax", Intrinsic::umax)
-                               .Case("umin", Intrinsic::umin)
-                               .Default(Intrinsic::not_intrinsic);
-        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), MinMaxID,
                                                   F->getReturnType());
         return true;
       }
