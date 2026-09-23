@@ -7,7 +7,10 @@
 ; RUN:    -nozero-initialized-in-bss --filetype=obj -o %t/global-merge-aix-nosections.o < %s
 ; RUN: llvm-objdump --syms %t/global-merge-aix-nosections.o | FileCheck %s --check-prefix=OBJ
 
-%struct.Example = type { i32, i8 }
+;; Tests that we emit the symbol table information for symbols that
+;; are merged by the GlobalMerge pass. Use the option
+;; `nozero-initialized-in-bss` as bss symbols drop the extra information
+;; as there are no label defs in CSECTs mapped into the bss section.
 
 @a = internal global i32 1, align 4
 @b = internal global i32 2, align 4
