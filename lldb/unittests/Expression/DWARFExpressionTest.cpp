@@ -1389,6 +1389,18 @@ TEST(DWARFExpression, DW_OP_shra) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1s, static_cast<uint8_t>(-8),
                                  DW_OP_lit1, DW_OP_shra}),
                        ExpectScalar(static_cast<int32_t>(-4)));
+
+  // Generic values have unspecified signedness, but DW_OP_shra performs a
+  // signed arithmetic right shift.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const4u, 0xff, 0xff, 0xff, 0xff, DW_OP_const1u, 31,
+                DW_OP_shra, DW_OP_stack_value}),
+      ExpectScalar(32, 0xffffffff, false));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_const8u, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_const1u, 63, DW_OP_shra, DW_OP_stack_value},
+               {}, nullptr, nullptr, nullptr, /*address_size=*/8),
+      ExpectScalar(64, 0xffffffffffffffffULL, false));
 }
 
 TEST(DWARFExpression, DW_OP_shl_overflow_count) {
