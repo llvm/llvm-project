@@ -2706,6 +2706,8 @@ typedef struct kmp_taskgraph_node {
   } u;
 } kmp_taskgraph_node_t;
 
+struct kmp_taskgraph_exec_descr_list;
+
 typedef struct kmp_taskgraph_region {
   struct kmp_taskgraph_record *owner = nullptr;
   // Initially, the lexical "next" region (which doesn't have to be a
@@ -2715,9 +2717,25 @@ typedef struct kmp_taskgraph_region {
   struct kmp_taskgraph_region *parent = nullptr;
   kmp_taskgraph_region_dep_t *successors = nullptr;
   kmp_taskgraph_region_dep_t *predecessors = nullptr;
-  // Only valid while building the exec descr structure.  This could probably
-  // share storage with one of the other fields if we wanted to save space.
+  // Used during building of the exec_descr array, and ALSO for holding the
+  // base of the exec_descr array for subgraph replays (callbacks from target
+  // replay).
+  // If this is a subgraph, these describe the exec descr array for that
+  // subgraph.  These are persisted between replays, like top-level exec descrs.
+  // These uses are safe because they are temporally distinct, but there is
+  // potential for confusion here, so take care.
   struct kmp_taskgraph_exec_descr *exec_descr = nullptr;
+  // This is only set for subgraphs, so can be used to distinguish that case
+  // when freeing this region structure.
+  kmp_int32 num_exec_descrs = 0;
+  // The exec descrs this region resolves to when a dependency names it, i.e.
+  // the descrs that must all complete before the region has.  Only set while
+  // the enclosing IRREDUCIBLE region is being built, and only on its direct
+  // children: the members' edges point at each other, so a member's exit descrs
+  // have to stay readable until every sibling that names it has been built.
+  // This holds a *reference* on the list for that window, dropped (and the
+  // pointer cleared) once the region's members are all built.
+  struct kmp_taskgraph_exec_descr_list *exec_descrs_out = nullptr;
   // The next allocated block.
   struct kmp_taskgraph_region *alloc_chain;
   struct kmp_bitset *mutexset = nullptr;
@@ -4240,6 +4258,7 @@ void kmpc_set_blocktime(int arg);
 void ompc_set_nested(int flag);
 void ompc_set_dynamic(int flag);
 void ompc_set_num_threads(int arg);
+void kmpc_set_num_threads_8(kmp_int64 arg);
 
 extern void __kmp_push_current_task_to_thread(kmp_info_t *this_thr,
                                               kmp_team_t *team, int tid);
@@ -4453,6 +4472,10 @@ extern void __kmp_region_deplist_free(kmp_info_t *thread,
                                       kmp_taskgraph_region_dep_t *list);
 extern void __kmp_region_deplist_recycle(kmp_taskgraph_region_dep_t **recycled,
                                          kmp_taskgraph_region_dep_t *list);
+extern kmp_int32
+__kmp_taskgraph_topological_order(kmp_taskgraph_region_t *region,
+                                  kmp_taskgraph_region_t **order_out,
+                                  kmp_int32 *outidx);
 // True if the user asked for tracing of taskgraph structure and replay via the
 // KMP_TASKGRAPH_TRACE environment variable.
 extern bool __kmp_taskgraph_trace();

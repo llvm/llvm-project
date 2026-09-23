@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
@@ -233,9 +233,10 @@ ELFNixPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer,
 
   {
     // Add JIT dispatch reexports from bootstrap JITDylib.
+    MangleAndInterner Mangle(ES);
     auto Exports = buildSimpleReexportsAliasMap(
         ES.getBootstrapJITDylib(),
-        {{ES.intern(rt::DispatchName), ES.intern(rt::DispatchCtxName)}});
+        {{Mangle(rt::DispatchName), Mangle(rt::DispatchCtxName)}});
     if (!Exports)
       return Exports.takeError();
     if (auto Err =

@@ -126,7 +126,7 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
   endif()
 
-  if(LIBC_CONF_COPT_MEMCPY_X86_USE_NTA_STORES)
+  if(LIBC_CONF_MEMCPY_X86_USE_NTA_STORES)
     libc_add_definition(config_options "LIBC_COPT_MEMCPY_X86_USE_NTA_STORES")
   endif()
 

@@ -178,7 +178,7 @@ protected:
 
   template <AddrMode a_mode> bool EmulateLDRSTRImm(const uint32_t opcode);
 
-  bool EmulateB(const uint32_t opcode);
+  bool EmulateBOrBl(const uint32_t opcode);
 
   bool EmulateBcond(const uint32_t opcode);
 

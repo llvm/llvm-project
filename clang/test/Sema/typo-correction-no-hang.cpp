@@ -40,3 +40,10 @@ int Bar(const B &b) {
   return b.depar().longitude() + //expected-error{{no member named 'longitude' in 'A'}}
          b.depar().latitude();   //expected-error{{no member named 'latitude' in 'A'}}
 }
+
+#define BAZ() 1
+// expected-note@-1 {{'BAZ' defined here as a function-like macro}}
+
+void testFuncLikeMacroWithoutParens() {
+    int x = BAZ; // expected-error {{'BAZ' is defined as a function-like macro; did you mean 'BAZ(...)'?}}
+}

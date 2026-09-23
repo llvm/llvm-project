@@ -10,5 +10,5 @@
 
 #include "src/math/llrintf16.h"
 
-LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(float16, long long,
+LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(Llrintf16, float16, long long,
                                        LIBC_NAMESPACE::llrintf16)

@@ -11,11 +11,11 @@ define void @test_fmaxnum3(float %a, float %b, float %c, ptr addrspace(1) %outpu
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaxnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaxnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaxnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaxnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaxnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaxnum3_param_2];
 ; CHECK-NEXT:    max.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaxnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaxnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -32,11 +32,11 @@ define void @test_fminnum3(float %a, float %b, float %c, ptr addrspace(1) %outpu
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fminnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fminnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fminnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fminnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fminnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fminnum3_param_2];
 ; CHECK-NEXT:    min.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fminnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fminnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -53,11 +53,11 @@ define void @test_fmaximum3(float %a, float %b, float %c, ptr addrspace(1) %outp
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaximum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaximum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaximum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaximum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaximum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaximum3_param_2];
 ; CHECK-NEXT:    max.NaN.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaximum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaximum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -74,11 +74,11 @@ define void @test_fminimum3(float %a, float %b, float %c, ptr addrspace(1) %outp
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fminimum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fminimum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fminimum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fminimum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fminimum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fminimum3_param_2];
 ; CHECK-NEXT:    min.NaN.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fminimum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fminimum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -95,11 +95,11 @@ define void @test_fmaximumnum3(float %a, float %b, float %c, ptr addrspace(1) %o
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaximumnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaximumnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaximumnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaximumnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaximumnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaximumnum3_param_2];
 ; CHECK-NEXT:    max.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaximumnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaximumnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -116,11 +116,11 @@ define void @test_fminimumnum3(float %a, float %b, float %c, ptr addrspace(1) %o
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fminimumnum3_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fminimumnum3_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fminimumnum3_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fminimumnum3_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fminimumnum3_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fminimumnum3_param_2];
 ; CHECK-NEXT:    min.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fminimumnum3_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fminimumnum3_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -138,11 +138,11 @@ define void @test_fmaxnum3_commuted(float %a, float %b, float %c, ptr addrspace(
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_fmaxnum3_commuted_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_fmaxnum3_commuted_param_1];
-; CHECK-NEXT:    ld.param.b32 %r3, [test_fmaxnum3_commuted_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_fmaxnum3_commuted_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_fmaxnum3_commuted_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_fmaxnum3_commuted_param_2];
 ; CHECK-NEXT:    max.f32 %r4, %r1, %r2, %r3;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_fmaxnum3_commuted_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_fmaxnum3_commuted_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r4;
 ; CHECK-NEXT:    ret;
 entry:
@@ -160,12 +160,12 @@ define void @test_mixed_minmax_no_combine(float %a, float %b, float %c, ptr addr
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_mixed_minmax_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_mixed_minmax_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_mixed_minmax_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_mixed_minmax_no_combine_param_1];
 ; CHECK-NEXT:    min.f32 %r3, %r1, %r2;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_mixed_minmax_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r4, [test_mixed_minmax_no_combine_param_2];
 ; CHECK-NEXT:    max.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_mixed_minmax_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_mixed_minmax_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r5;
 ; CHECK-NEXT:    ret;
 entry:
@@ -183,12 +183,12 @@ define void @test_mixed_maxnum_maximum_no_combine(float %a, float %b, float %c, 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_mixed_maxnum_maximum_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_mixed_maxnum_maximum_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_mixed_maxnum_maximum_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_mixed_maxnum_maximum_no_combine_param_1];
 ; CHECK-NEXT:    max.f32 %r3, %r1, %r2;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_mixed_maxnum_maximum_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r4, [test_mixed_maxnum_maximum_no_combine_param_2];
 ; CHECK-NEXT:    max.NaN.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_mixed_maxnum_maximum_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_mixed_maxnum_maximum_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r5;
 ; CHECK-NEXT:    ret;
 entry:
@@ -206,12 +206,12 @@ define void @test_f16_no_combine(half %a, half %b, half %c, ptr addrspace(1) %ou
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_f16_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs2, [test_f16_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_f16_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs2, [test_f16_no_combine_param_1];
 ; CHECK-NEXT:    max.f16 %rs3, %rs1, %rs2;
-; CHECK-NEXT:    ld.param.b16 %rs4, [test_f16_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b16 %rs4, [test_f16_no_combine_param_2];
 ; CHECK-NEXT:    max.f16 %rs5, %rs3, %rs4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_f16_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_f16_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b16 [%rd1], %rs5;
 ; CHECK-NEXT:    ret;
 entry:
@@ -229,14 +229,14 @@ define void @test_multiple_uses_no_combine(float %a, float %b, float %c, ptr add
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [test_multiple_uses_no_combine_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_multiple_uses_no_combine_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_multiple_uses_no_combine_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_multiple_uses_no_combine_param_1];
 ; CHECK-NEXT:    max.f32 %r3, %r1, %r2;
-; CHECK-NEXT:    ld.param.b32 %r4, [test_multiple_uses_no_combine_param_2];
+; CHECK-NEXT:    ld.param::func.b32 %r4, [test_multiple_uses_no_combine_param_2];
 ; CHECK-NEXT:    max.f32 %r5, %r3, %r4;
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multiple_uses_no_combine_param_3];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multiple_uses_no_combine_param_3];
 ; CHECK-NEXT:    st.global.b32 [%rd1], %r3;
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_multiple_uses_no_combine_param_4];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_multiple_uses_no_combine_param_4];
 ; CHECK-NEXT:    st.global.b32 [%rd2], %r5;
 ; CHECK-NEXT:    ret;
 entry:
@@ -258,3 +258,144 @@ declare float @llvm.minimumnum.f32(float, float) #0
 declare half @llvm.maxnum.f16(half, half) #0
 
 attributes #0 = { nounwind readnone speculatable willreturn }
+
+declare float @llvm.fabs.f32(float)
+
+define float @test_maxnum3_fold_abs(float %a, float %b, float %c) {
+; CHECK-LABEL: test_maxnum3_fold_abs(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_maxnum3_fold_abs_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_maxnum3_fold_abs_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_maxnum3_fold_abs_param_2];
+; CHECK-NEXT:    max.abs.f32 %r4, %r1, %r2, %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %a_abs = call float @llvm.fabs.f32(float %a)
+  %b_abs = call float @llvm.fabs.f32(float %b)
+  %c_abs = call float @llvm.fabs.f32(float %c)
+  %ab = call float @llvm.maxnum.f32(float %a_abs, float %b_abs)
+  %abc = call float @llvm.maxnum.f32(float %ab, float %c_abs)
+  ret float %abc
+}
+
+define float @test_minnum3_fold_abs(float %a, float %b, float %c) {
+; CHECK-LABEL: test_minnum3_fold_abs(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_minnum3_fold_abs_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_minnum3_fold_abs_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_minnum3_fold_abs_param_2];
+; CHECK-NEXT:    min.abs.f32 %r4, %r1, %r2, %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %a_abs = call float @llvm.fabs.f32(float %a)
+  %b_abs = call float @llvm.fabs.f32(float %b)
+  %c_abs = call float @llvm.fabs.f32(float %c)
+  %ab = call float @llvm.minnum.f32(float %a_abs, float %b_abs)
+  %abc = call float @llvm.minnum.f32(float %ab, float %c_abs)
+  ret float %abc
+}
+
+define float @test_maximum3_fold_abs(float %a, float %b, float %c) {
+; CHECK-LABEL: test_maximum3_fold_abs(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_maximum3_fold_abs_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_maximum3_fold_abs_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_maximum3_fold_abs_param_2];
+; CHECK-NEXT:    max.NaN.abs.f32 %r4, %r1, %r2, %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %a_abs = call float @llvm.fabs.f32(float %a)
+  %b_abs = call float @llvm.fabs.f32(float %b)
+  %c_abs = call float @llvm.fabs.f32(float %c)
+  %ab = call float @llvm.maximum.f32(float %a_abs, float %b_abs)
+  %abc = call float @llvm.maximum.f32(float %ab, float %c_abs)
+  ret float %abc
+}
+
+define float @test_minimum3_fold_abs_ftz(float %a, float %b, float %c) denormal_fpenv(float: preservesign) {
+; CHECK-LABEL: test_minimum3_fold_abs_ftz(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_minimum3_fold_abs_ftz_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_minimum3_fold_abs_ftz_param_1];
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_minimum3_fold_abs_ftz_param_2];
+; CHECK-NEXT:    min.ftz.NaN.abs.f32 %r4, %r1, %r2, %r3;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %a_abs = call float @llvm.fabs.f32(float %a)
+  %b_abs = call float @llvm.fabs.f32(float %b)
+  %c_abs = call float @llvm.fabs.f32(float %c)
+  %ab = call float @llvm.minimum.f32(float %a_abs, float %b_abs)
+  %abc = call float @llvm.minimum.f32(float %ab, float %c_abs)
+  ret float %abc
+}
+
+define float @test_maxnum3_fold_abs_positive_constant(float %a, float %b) {
+; CHECK-LABEL: test_maxnum3_fold_abs_positive_constant(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_maxnum3_fold_abs_positive_constant_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [test_maxnum3_fold_abs_positive_constant_param_1];
+; CHECK-NEXT:    max.abs.f32 %r3, %r1, %r2, 0f3F800000;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %a_abs = call float @llvm.fabs.f32(float %a)
+  %b_abs = call float @llvm.fabs.f32(float %b)
+  %ab = call float @llvm.maxnum.f32(float %a_abs, float %b_abs)
+  %abc = call float @llvm.maxnum.f32(float %ab, float 1.000000e+00)
+  ret float %abc
+}
+
+define float @test_maxnum3_keep_abs_signed_input(float %a, float %b, float %c) {
+; CHECK-LABEL: test_maxnum3_keep_abs_signed_input(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_maxnum3_keep_abs_signed_input_param_0];
+; CHECK-NEXT:    abs.f32 %r2, %r1;
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_maxnum3_keep_abs_signed_input_param_1];
+; CHECK-NEXT:    abs.f32 %r4, %r3;
+; CHECK-NEXT:    ld.param::func.b32 %r5, [test_maxnum3_keep_abs_signed_input_param_2];
+; CHECK-NEXT:    max.f32 %r6, %r2, %r4, %r5;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ret;
+  %a_abs = call float @llvm.fabs.f32(float %a)
+  %b_abs = call float @llvm.fabs.f32(float %b)
+  %ab = call float @llvm.maxnum.f32(float %a_abs, float %b_abs)
+  %abc = call float @llvm.maxnum.f32(float %ab, float %c)
+  ret float %abc
+}
+
+define float @test_minimum3_keep_abs_negative_zero(float %a, float %b) {
+; CHECK-LABEL: test_minimum3_keep_abs_negative_zero(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_minimum3_keep_abs_negative_zero_param_0];
+; CHECK-NEXT:    abs.f32 %r2, %r1;
+; CHECK-NEXT:    ld.param::func.b32 %r3, [test_minimum3_keep_abs_negative_zero_param_1];
+; CHECK-NEXT:    abs.f32 %r4, %r3;
+; CHECK-NEXT:    min.NaN.f32 %r5, %r2, %r4, 0f80000000;
+; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ret;
+  %a_abs = call float @llvm.fabs.f32(float %a)
+  %b_abs = call float @llvm.fabs.f32(float %b)
+  %ab = call float @llvm.minimum.f32(float %a_abs, float %b_abs)
+  %abc = call float @llvm.minimum.f32(float %ab, float -0.000000e+00)
+  ret float %abc
+}
