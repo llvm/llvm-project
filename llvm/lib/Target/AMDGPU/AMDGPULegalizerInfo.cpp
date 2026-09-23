@@ -2256,6 +2256,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_READSTEADYCOUNTER).legalFor({S64});
 
+  if (ST.hasDebuggingEnabledQuery())
+    getActionDefinitionsBuilder(G_IS_DEBUGGING_ENABLED).customFor({S1});
+  else
+    getActionDefinitionsBuilder(G_IS_DEBUGGING_ENABLED).lower();
+
   getActionDefinitionsBuilder(G_FENCE)
     .alwaysLegal();
 
@@ -2432,6 +2437,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeTrap(Helper, MI);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
+  case TargetOpcode::G_IS_DEBUGGING_ENABLED:
+    return legalizeIsDebuggingEnabled(MI, B);
   default:
     return false;
   }
@@ -8331,6 +8338,19 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
                    /*HasSideEffects=*/true, /*isConvergent=*/false)
       .addImm(static_cast<int16_t>(FPEnvTrapBitField))
       .addReg(Unmerge.getReg(1));
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeIsDebuggingEnabled(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  // The instruction selector folds single-use branch conditions back into
+  // S_CBRANCH_CDBGSYS_OR_USER when there are no intervening observations.
+  auto Bits = B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
+                  .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
+  Bits->setFlag(MachineInstr::NoMerge);
+  B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), Bits.getReg(0),
+              B.buildConstant(LLT::scalar(32), 0));
   MI.eraseFromParent();
   return true;
 }

@@ -1183,6 +1183,10 @@ struct HwregSize : EncodingField<15, 11, 32> {
 
 using HwregEncoding = EncodingFields<HwregId, HwregOffset, HwregSize>;
 
+/// \returns the s_getreg immediate that reads the adjacent COND_DBG_USER and
+/// COND_DBG_SYS bits for \p STI.
+unsigned getDebuggingEnabledHwregImm(const MCSubtargetInfo &STI);
+
 } // namespace Hwreg
 
 namespace DepCtr {
