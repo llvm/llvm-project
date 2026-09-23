@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -1549,7 +1548,6 @@ void VPlanTransforms::addMemoryRuntimeChecks(
 
   auto *MemCheckVPBB = Plan.createVPBasicBlock("vector.memcheck");
   VPBuilder Builder(MemCheckVPBB);
-  insertCheckBlockBeforeVectorLoop(Plan, MemCheckVPBB);
   VPSCEVExpander Expander(Builder, SE, DL);
 
   // Expand each group's bounds once and up front.
@@ -1569,20 +1567,19 @@ void VPlanTransforms::addMemoryRuntimeChecks(
       GroupToBounds.try_emplace(CG, Start, End);
     }
 
-  VPValue *Cond = nullptr;
+  VPValue *Cond = Plan.getFalse();
   for (const auto &[A, B] : Checks) {
-    auto [AStart, AEnd] = GroupToBounds.at(A);
-    auto [BStart, BEnd] = GroupToBounds.at(B);
+    auto [AStart, AEnd] = GroupToBounds[A];
+    auto [BStart, BEnd] = GroupToBounds[B];
     VPValue *Bound0 =
         Builder.createICmp(CmpInst::ICMP_ULT, AStart, BEnd, DL, "bound0");
     VPValue *Bound1 =
         Builder.createICmp(CmpInst::ICMP_ULT, BStart, AEnd, DL, "bound1");
     VPValue *IsConflict =
         Builder.createAnd(Bound0, Bound1, DL, "found.conflict");
-    Cond = Cond ? Builder.createOr(Cond, IsConflict, DL, "conflict.rdx")
-                : IsConflict;
+    Cond = Builder.createOr(Cond, IsConflict, DL, "conflict.rdx");
   }
-  addBypassBranch(Plan, MemCheckVPBB, Cond, AddBranchWeights);
+  attachVPCheckBlock(Plan, Cond, MemCheckVPBB, AddBranchWeights);
 }
 
 void VPlanTransforms::addMinimumIterationCheck(
@@ -1591,6 +1588,7 @@ void VPlanTransforms::addMinimumIterationCheck(
     bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
     DebugLoc DL, PredicatedScalarEvolution &PSE, VPBasicBlock *CheckBlock) {
   // Generate code to check if the loop's trip count is less than VF * UF, or
+  // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
   // to the backedge-taken count overflowed leading to an incorrect trip count
   // of zero. In this case we will also jump to the scalar loop.
