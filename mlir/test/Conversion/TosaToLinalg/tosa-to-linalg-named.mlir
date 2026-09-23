@@ -106,6 +106,24 @@ func.func @max_pool(%arg0: tensor<1x6x34x62xf32>) -> () {
   return
 }
 
+// -----
+
+// Lower IGNORE mode with a NaN accumulator so an all-NaN window stays NaN.
+// CHECK-LABEL: @max_pool_ignore
+func.func @max_pool_ignore(%arg0: tensor<1x4x4x1xf32>) -> tensor<1x3x3x1xf32> {
+  // CHECK: arith.constant {{.*}} : f32
+  // CHECK: linalg.fill
+  // CHECK: linalg.generic
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: arith.select
+  // CHECK-NOT: tosa.max_pool2d
+  %0 = tosa.max_pool2d %arg0 kernel([2, 2]) stride([1, 1]) pad([0, 0, 0, 0]) nan_mode<IGNORE> :
+    (tensor<1x4x4x1xf32>) -> tensor<1x3x3x1xf32>
+  return %0 : tensor<1x3x3x1xf32>
+}
+
 // CHECK-LABEL: @max_pool_padded
 func.func @max_pool_padded(%arg0: tensor<1x6x34x62xf32>) -> () {
   // CHECK-DAG: [[CONST:%.+]] = arith.constant -3.40282347E+38 : f32
