@@ -8,7 +8,6 @@
 
 #include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 
 static constexpr llvm::StringRef kCudaDeviceSynchronizeName =
     "_QPcudadevicesynchronize";
@@ -30,9 +29,4 @@ void fir::runtime::cuda::genCUDADeviceSynchronize(fir::FirOpBuilder &builder,
   auto call = fir::CallOp::create(builder, loc, func, mlir::ValueRange{});
   call.setProcedureAttrsAttr(fir::FortranProcedureFlagsEnumAttr::get(
       builder.getContext(), fir::FortranProcedureFlagsEnum::intrinsic));
-}
-
-mlir::Value fir::runtime::cuda::genDeviceIsActive(fir::FirOpBuilder &builder,
-                                                  mlir::Location loc) {
-  return cuf::DeviceIsActiveOp::create(builder, loc);
 }
