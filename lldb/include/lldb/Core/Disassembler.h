@@ -51,6 +51,7 @@ class Disassembler;
 class Module;
 class StackFrame;
 class Stream;
+class StreamString;
 class SymbolContext;
 class SymbolContextList;
 class Target;
@@ -233,6 +234,21 @@ public:
 
   static const char *GetNameForInstructionControlFlowKind(
       lldb::InstructionControlFlowKind instruction_control_flow_kind);
+
+  struct DumpContext {
+    uint32_t max_opcode_byte_size = 0;
+    bool show_address = false;
+    bool show_bytes = false;
+    bool show_control_flow_kind = false;
+    const ExecutionContext *exe_ctx = nullptr;
+    const SymbolContext *sym_ctx = nullptr;
+    const SymbolContext *prev_sym_ctx = nullptr;
+    const FormatEntity::Entry *disassembly_addr_format = nullptr;
+    size_t max_address_text_size = 0;
+  };
+
+  virtual void DumpMnemonicOperandsAndComment(StreamString &ss,
+                                              const DumpContext &ctx);
 
   /// Get variable annotations for this instruction as structured data.
   /// Returns an array of dictionaries to be used in SBInstruction class.
