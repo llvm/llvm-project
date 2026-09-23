@@ -22,6 +22,9 @@ int neverok(int q) _diagnose_if(1, "oh no", "error"); // expected-note 5{{from '
 int alwayswarn(int q) _diagnose_if(1, "oh no", "warning"); // expected-note 5{{from 'diagnose_if' attribute}}
 int neverwarn(int q) _diagnose_if(0, "", "warning");
 
+[[clang::diagnose_if(1, "bad", "error")]]  // expected-note{{from 'diagnose_if' attribute}}
+int attr_syntax();
+
 void runConstant(void) {
   int m;
   alwaysok(0);
@@ -56,6 +59,8 @@ void runConstant(void) {
     int (*pok)(int) = neverwarn;
     pok = &neverwarn;
   }
+
+  attr_syntax();  // expected-error{{bad}}
 }
 
 int abs(int q) _diagnose_if(q >= 0, "redundant abs call", "error"); //expected-note{{from 'diagnose_if'}}

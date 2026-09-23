@@ -271,6 +271,8 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
 
+- Clang now recognizes the `[[clang::enable_if(...)]]` and `[[clang::diagnose_if(...)]]` attributes and treats them as equivalent to `__attribute__((enable_if(...)))` and `__attribute__((diagnose_if(...)))`.
+
 ### Improvements to Clang's diagnostics
 
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or

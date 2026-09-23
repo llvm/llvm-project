@@ -15,6 +15,9 @@ enum { TRUE = 1 };
 int open(const char *pathname, int flags) __attribute__((enable_if(!(flags & O_CREAT), "must specify mode when using O_CREAT"))) __attribute__((overloadable));  // expected-note{{candidate disabled: must specify mode when using O_CREAT}}
 int open(const char *pathname, int flags, mode_t mode) __attribute__((overloadable));  // expected-note{{candidate function not viable: requires 3 arguments, but 2 were provided}}
 
+[[clang::enable_if(1, "")]]
+char attr_syntax();
+
 void test1(void) {
 #ifndef CODEGEN
   open("path", O_CREAT);  // expected-error{{no matching function for call to 'open'}}
@@ -103,6 +106,10 @@ void test5(void) {
   int (*p2)(int) = isdigit2;
   void *p3 = (void *)&isdigit2;
   void *p4 = (void *)isdigit2;
+}
+
+void test_attr_syntax() {
+  int arr[sizeof(attr_syntax()) - 1];
 }
 
 #ifndef CODEGEN

@@ -1899,10 +1899,7 @@ def AllocSize : InheritableAttr {
 }
 
 def EnableIf : InheritableAttr {
-  // Does not have a [[]] spelling because this attribute requires the ability
-  // to parse function arguments but the attribute is not written in the type
-  // position.
-  let Spellings = [GNU<"enable_if">];
+  let Spellings = [Clang<"enable_if">];
   let Subjects = SubjectList<[Function]>;
   let Args = [ExprArgument<"Cond">, StringArgument<"Message">];
   let TemplateDependent = 1;
@@ -3780,7 +3777,7 @@ def DiagnoseIf : InheritableAttr {
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
   // position.
-  let Spellings = [GNU<"diagnose_if">];
+  let Spellings = [Clang<"diagnose_if">];
   let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
   let Args = [ExprArgument<"Cond">, StringArgument<"Message">,
               EnumArgument<"DefaultSeverity",
