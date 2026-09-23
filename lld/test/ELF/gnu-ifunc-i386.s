@@ -38,6 +38,24 @@
 // CHECK-NEXT:   Section: Undefined
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
+// CHECK-NEXT:   Name: bar
+// CHECK-NEXT:   Value: 0x4010E4
+// CHECK-NEXT:   Size: 0
+// CHECK-NEXT:   Binding: Local
+// CHECK-NEXT:   Type: GNU_IFunc
+// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Section: .text
+// CHECK-NEXT: }
+// CHECK-NEXT: Symbol {
+// CHECK-NEXT:   Name: foo
+// CHECK-NEXT:   Value: 0x4010E5
+// CHECK-NEXT:   Size: 0
+// CHECK-NEXT:   Binding: Local
+// CHECK-NEXT:   Type: GNU_IFunc
+// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Section: .text
+// CHECK-NEXT: }
+// CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: __rel_iplt_start
 // CHECK-NEXT:   Value: [[RELA]]
 // CHECK-NEXT:   Size: 0

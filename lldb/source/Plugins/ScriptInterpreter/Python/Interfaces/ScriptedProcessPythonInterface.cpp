@@ -53,6 +53,19 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetCapabilities() {
   return dict;
 }
 
+StructuredData::DictionarySP
+ScriptedProcessPythonInterface::GetAddressableBits() {
+  Status error;
+  StructuredData::DictionarySP dict =
+      Dispatch<StructuredData::DictionarySP>("get_addressable_bits", error);
+
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
+                                                    error))
+    return {};
+
+  return dict;
+}
+
 Status
 ScriptedProcessPythonInterface::Attach(const ProcessAttachInfo &attach_info) {
   lldb::ProcessAttachInfoSP attach_info_sp =

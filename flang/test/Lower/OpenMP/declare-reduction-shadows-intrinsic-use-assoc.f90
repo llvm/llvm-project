@@ -32,6 +32,6 @@ end program
 
 ! The op is owner-qualified to the module (_QQMm) and carries the mangled
 ! shadowing name (op.max). The USE-associated clause binds the same op.
-! CHECK: omp.declare_reduction @[[RED:_QQMmop.max_byref_rec__QMmTt]] : !fir.ref<!fir.type<{{[^>]*}}t{v:i32}>>
+! CHECK: omp.declare_reduction @[[RED:_QQMmop.max_byref_rec__QMmTt]] byref_element_type({{.*}}) : !fir.ref<!fir.type<{{[^>]*}}t{v:i32}>>
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
