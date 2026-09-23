@@ -12,6 +12,32 @@ body:             |
     %copy:_(s32) = COPY %def
 ...
 ---
+name:            FreezeNegZero
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FreezeNegZero
+  ; CHECK-NEXT: %neg0:_ FPClasses:(nzero) SignBitKnown:1
+  ; CHECK-NEXT: %fr:_ FPClasses:(nzero) SignBitKnown:1
+  ; CHECK-NEXT: %copy:_ FPClasses:(nzero) SignBitKnown:1
+    %neg0:_(s32) = G_FCONSTANT float -0.0
+    %fr:_(s32) = G_FREEZE %neg0
+    %copy:_(s32) = COPY %fr
+...
+---
+name:            FreezeFabsUndef
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FreezeFabsUndef
+  ; CHECK-NEXT: %def:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fabs:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %fr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %def:_(s32) = G_IMPLICIT_DEF
+    %fabs:_(s32) = G_FABS %def
+    %fr:_(s32) = G_FREEZE %fabs
+    %copy:_(s32) = COPY %fr
+...
+---
 name:            ScalableFAbs
 body:             |
   bb.0:
