@@ -32537,6 +32537,13 @@ public:
 
         Builder.setFastMathFlags(RdxFMF);
 
+        // Match the bitmask form of the first vector part before the
+        // vectorization, which drops the operands of the vectorized leaves.
+        BoolBitmask BitmaskMatch =
+            VectorValuesAndScales.empty()
+                ? isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL)
+                : BoolBitmask::None;
+
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
@@ -32608,8 +32615,8 @@ public:
             }
           }
           if (Value *Bitmask = tryEmitBoolBitmaskRdx(
-                  Builder, V, *TTI, DL, VectorizedRoot, VL, TrackedToOrig, Pos,
-                  MaskConsts, GroupRdxFMF)) {
+                  Builder, V, *TTI, BitmaskMatch, VectorizedRoot, VL,
+                  TrackedToOrig, Pos, MaskConsts, GroupRdxFMF)) {
             VectorizedRoot = Bitmask;
           } else {
             if (AnyMask) {
@@ -33311,7 +33318,7 @@ private:
   /// reduction sequence. Returns nullptr otherwise.
   Value *tryEmitBoolBitmaskRdx(IRBuilderBase &Builder, const BoUpSLP &R,
                                const TargetTransformInfo &TTI,
-                               const DataLayout &DL, Value *VectorizedRoot,
+                               BoolBitmask Match, Value *VectorizedRoot,
                                ArrayRef<Value *> VL,
                                ArrayRef<Value *> TrackedToOrig, unsigned Pos,
                                ArrayRef<Constant *> MaskConsts,
@@ -33327,7 +33334,6 @@ private:
         !VectorValuesAndScales.empty() ||
         !R.getRootNode().ReuseShuffleIndices.empty())
       return nullptr;
-    BoolBitmask Match = isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL);
     if (Match == BoolBitmask::None)
       return nullptr;
     SmallVector<int> PermMask =

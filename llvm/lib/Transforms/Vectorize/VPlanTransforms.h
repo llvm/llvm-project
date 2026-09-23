@@ -636,6 +636,15 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Replace truncates of a wide induction, or of that induction's increment,
+  /// by a VPWidenIntOrFpInductionRecipe producing the truncated type directly.
+  /// The canonical induction is narrowed even when the target reports the
+  /// truncate as free. If narrowing is only profitable for a subset of VFs in
+  /// \p Range, Range.End is updated.
+  static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
+                                       const TargetTransformInfo &TTI,
+                                       PredicatedScalarEvolution &PSE);
 };
 
 } // namespace llvm

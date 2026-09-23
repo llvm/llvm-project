@@ -1,4 +1,4 @@
-//===-- Implementation of tls for aarch64 ---------------------------------===//
+//===-- Implementation of tls for riscv -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,27 +12,14 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/tcb.h"
+#include "src/__support/threads/linux/tcb.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-
-#include <arm_acle.h>
 #include <sys/syscall.h>
-
-// Source documentation:
-// https://github.com/ARM-software/abi-aa/tree/main/sysvabi64
 
 namespace LIBC_NAMESPACE_DECL {
 
-void init_tls(TLSDescriptor &tls_descriptor) {
-  // aarch64 follows the variant 1 TLS layout:
-  //
-  // 1. First entry is the dynamic thread vector pointer
-  // 2. Second entry is a 8-byte reserved word (used for attrib).
-  // 3. Padding for alignment.
-  // 4. The TLS data from the ELF image.
-  //
-  // The thread pointer points to the first entry.
-
+[[gnu::flatten]] void init_tls(TLSDescriptor &tls_descriptor) {
+  // riscv follows the variant 1 TLS layout:
   const uintptr_t TCB_SIZE = sizeof(ThreadControlBlock);
   uintptr_t padding = 0;
   const uintptr_t ALIGNMENT_MASK = app.tls.align - 1;
@@ -54,7 +41,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
                 app.tls.init_size);
   tls_descriptor.size = alloc_size;
   tls_descriptor.addr = thread_ptr;
-  tls_descriptor.tp = thread_ptr;
+  tls_descriptor.tp = tls_addr;
 }
 
 void cleanup_tls(uintptr_t addr, uintptr_t size) {
@@ -64,18 +51,7 @@ void cleanup_tls(uintptr_t addr, uintptr_t size) {
 }
 
 bool set_thread_ptr(uintptr_t val) {
-// The PR for __arm_wsr64 support in GCC was merged on Dec 6, 2023, and it is
-// not yet usable in 13.3.0
-// https://github.com/gcc-mirror/gcc/commit/fc42900d21abd5eacb7537c3c8ffc5278d510195
-#if __has_builtin(__builtin_arm_wsr64)
-  __builtin_arm_wsr64("tpidr_el0", val);
-#elif __has_builtin(__builtin_aarch64_wsr64)
-  __builtin_aarch64_wsr64("tpidr_el0", val);
-#elif defined(__GNUC__)
-  asm volatile("msr tpidr_el0, %0" ::"r"(val));
-#else
-#error "Unsupported compiler"
-#endif
+  LIBC_INLINE_ASM("mv tp, %0\n\t" : : "r"(val));
   return true;
 }
 } // namespace LIBC_NAMESPACE_DECL

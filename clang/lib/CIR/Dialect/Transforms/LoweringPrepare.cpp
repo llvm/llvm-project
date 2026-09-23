@@ -2275,7 +2275,8 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
 
   // First, check globals we've already discovered for this base name.
   for (cir::GlobalOp gv : versions) {
-    if (gv.getSymType() == ty && gv.getInitialValue() == constant)
+    if (gv.getSymType() == ty && gv.getInitialValue() == constant &&
+        gv.getAlignment() == alignment)
       return gv;
   }
 
@@ -2298,7 +2299,8 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       break;
     versions.push_back(existingGv);
     if (existingGv.getSymType() == ty &&
-        existingGv.getInitialValue() == constant)
+        existingGv.getInitialValue() == constant &&
+        existingGv.getAlignment() == alignment)
       return existingGv;
     ++version;
   }
@@ -2378,7 +2380,15 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
       cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, gv.getSymName());
 
   // Replace store with copy.
-  builder.createCopy(op.getAddr(), globalPtr);
+  cir::CopyOp copyOp = builder.createCopy(op.getAddr(), globalPtr);
+
+  cir::CIRDataLayout dataLayout(mlirModule);
+  uint64_t naturalAlign = dataLayout.getABITypeAlign(ty).value();
+  if (alloca.getAlignment() != naturalAlign)
+    copyOp.setDstAlignment(alloca.getAlignment());
+  uint64_t srcAlign = gv.getAlignment().value_or(naturalAlign);
+  if (srcAlign != naturalAlign)
+    copyOp.setSrcAlignment(srcAlign);
 
   // Erase the original store.
   op.erase();
