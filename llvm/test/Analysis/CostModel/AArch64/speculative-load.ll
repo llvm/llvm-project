@@ -3,7 +3,7 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64 -mattr=+sve < %s | FileCheck %s --check-prefixes=COMMON,SVE
 
 define void @speculative_load_cost_fixed(ptr %p) {
-  ; Scalar types - all valid (<= 16 bytes)
+  ; Scalar types (<= 16 bytes)
 ; COMMON-LABEL: 'speculative_load_cost_fixed'
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call b8 (ptr, i1, ...) @llvm.speculative.load.b8.p0(ptr %p, i1 false, i64 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = call b16 (ptr, i1, ...) @llvm.speculative.load.b16.p0(ptr %p, i1 false, i64 0)
@@ -19,12 +19,12 @@ define void @speculative_load_cost_fixed(ptr %p) {
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <16 x i8> (ptr, i1, ...) @llvm.speculative.load.v16i8.p0(ptr %p, i1 false, i64 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i16> (ptr, i1, ...) @llvm.speculative.load.v4i16.p0(ptr %p, i1 false, i64 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = call <8 x i16> (ptr, i1, ...) @llvm.speculative.load.v8i16.p0(ptr %p, i1 false, i64 0)
-; COMMON-NEXT:  Cost Model: Invalid cost for instruction: %15 = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr %p, i1 false, i64 0)
-; COMMON-NEXT:  Cost Model: Invalid cost for instruction: %16 = call <4 x i64> (ptr, i1, ...) @llvm.speculative.load.v4i64.p0(ptr %p, i1 false, i64 0)
-; COMMON-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <32 x i8> (ptr, i1, ...) @llvm.speculative.load.v32i8.p0(ptr %p, i1 false, i64 0)
-; COMMON-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <16 x i16> (ptr, i1, ...) @llvm.speculative.load.v16i16.p0(ptr %p, i1 false, i64 0)
-; COMMON-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <8 x float> (ptr, i1, ...) @llvm.speculative.load.v8f32.p0(ptr %p, i1 false, i64 0)
-; COMMON-NEXT:  Cost Model: Invalid cost for instruction: %20 = call <4 x double> (ptr, i1, ...) @llvm.speculative.load.v4f64.p0(ptr %p, i1 false, i64 0)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %15 = call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr %p, i1 false, i64 0)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %16 = call <4 x i64> (ptr, i1, ...) @llvm.speculative.load.v4i64.p0(ptr %p, i1 false, i64 0)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %17 = call <32 x i8> (ptr, i1, ...) @llvm.speculative.load.v32i8.p0(ptr %p, i1 false, i64 0)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = call <16 x i16> (ptr, i1, ...) @llvm.speculative.load.v16i16.p0(ptr %p, i1 false, i64 0)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = call <8 x float> (ptr, i1, ...) @llvm.speculative.load.v8f32.p0(ptr %p, i1 false, i64 0)
+; COMMON-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %20 = call <4 x double> (ptr, i1, ...) @llvm.speculative.load.v4f64.p0(ptr %p, i1 false, i64 0)
 ; COMMON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call b8 (ptr, i1, ...) @llvm.speculative.load.b8.p0(ptr %p, i1 false, i64 0)
@@ -33,7 +33,7 @@ define void @speculative_load_cost_fixed(ptr %p) {
   call b64 (ptr, i1, ...) @llvm.speculative.load.b64.p0(ptr %p, i1 false, i64 0)
   call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %p, i1 false, i64 0)
 
-  ; Vector types <= 16 bytes - valid
+  ; Vector types <= 16 bytes
   call <2 x i32> (ptr, i1, ...) @llvm.speculative.load.v2i32.p0(ptr %p, i1 false, i64 0)
   call <4 x i32> (ptr, i1, ...) @llvm.speculative.load.v4i32.p0(ptr %p, i1 false, i64 0)
   call <2 x i64> (ptr, i1, ...) @llvm.speculative.load.v2i64.p0(ptr %p, i1 false, i64 0)
@@ -44,7 +44,7 @@ define void @speculative_load_cost_fixed(ptr %p) {
   call <4 x i16> (ptr, i1, ...) @llvm.speculative.load.v4i16.p0(ptr %p, i1 false, i64 0)
   call <8 x i16> (ptr, i1, ...) @llvm.speculative.load.v8i16.p0(ptr %p, i1 false, i64 0)
 
-  ; Vector types > 16 bytes - invalid
+  ; Vector types > 16 bytes
   call <8 x i32> (ptr, i1, ...) @llvm.speculative.load.v8i32.p0(ptr %p, i1 false, i64 0)
   call <4 x i64> (ptr, i1, ...) @llvm.speculative.load.v4i64.p0(ptr %p, i1 false, i64 0)
   call <32 x i8> (ptr, i1, ...) @llvm.speculative.load.v32i8.p0(ptr %p, i1 false, i64 0)
@@ -72,10 +72,9 @@ define void @speculative_load_cost_scalable(ptr %p) {
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = call <vscale x 16 x i8> (ptr, i1, ...) @llvm.speculative.load.nxv16i8.p0(ptr %p, i1 false, i64 0)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = call <vscale x 2 x double> (ptr, i1, ...) @llvm.speculative.load.nxv2f64.p0(ptr %p, i1 false, i64 0)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = call <vscale x 4 x float> (ptr, i1, ...) @llvm.speculative.load.nxv4f32.p0(ptr %p, i1 false, i64 0)
-; SVE-NEXT:  Cost Model: Invalid cost for instruction: %7 = call <vscale x 8 x float> (ptr, i1, ...) @llvm.speculative.load.nxv8f32.p0(ptr %p, i1 false, i64 0)
+; SVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %7 = call <vscale x 8 x float> (ptr, i1, ...) @llvm.speculative.load.nxv8f32.p0(ptr %p, i1 false, i64 0)
 ; SVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
-  ; Scalable vector types - invalid without SVE, valid with SVE if <= 16 bytes
   call <vscale x 2 x i64> (ptr, i1, ...) @llvm.speculative.load.nxv2i64.p0(ptr %p, i1 false, i64 0)
   call <vscale x 4 x i32> (ptr, i1, ...) @llvm.speculative.load.nxv4i32.p0(ptr %p, i1 false, i64 0)
   call <vscale x 8 x i16> (ptr, i1, ...) @llvm.speculative.load.nxv8i16.p0(ptr %p, i1 false, i64 0)

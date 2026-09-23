@@ -2051,9 +2051,6 @@ public:
       // The cost of materialising a constant integer vector.
       return TargetTransformInfo::TCC_Basic;
     }
-    case Intrinsic::speculative_load:
-      // Delegate to base; targets must opt-in with a valid cost.
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
     case Intrinsic::vector_extract: {
       // FIXME: Handle case where a scalable vector is extracted from a scalable
       // vector
@@ -2522,6 +2519,13 @@ public:
       Align TyAlign = thisT()->DL.getABITypeAlign(Ty);
       return thisT()->getMemIntrinsicInstrCost(
           MemIntrinsicCostAttributes(IID, Ty, TyAlign, 0), CostKind);
+    }
+    case Intrinsic::speculative_load: {
+      const IntrinsicInst *I = ICA.getInst();
+      Align Alignment = I ? I->getParamAlign(0).valueOrOne() : Align(1);
+      unsigned AS = Tys[0]->getPointerAddressSpace();
+      return thisT()->getMemIntrinsicInstrCost(
+          MemIntrinsicCostAttributes(IID, RetTy, Alignment, AS), CostKind);
     }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
@@ -3279,6 +3283,10 @@ public:
     }
     case Intrinsic::vp_load_ff:
       return InstructionCost::getInvalid();
+    case Intrinsic::speculative_load:
+      // Speculative loads are lowered to regular loads of the full type.
+      return thisT()->getMemoryOpCost(Instruction::Load, DataTy, Alignment,
+                                      MICA.getAddressSpace(), CostKind);
     default:
       llvm_unreachable("unexpected intrinsic");
     }

@@ -279,6 +279,9 @@ public:
 
   bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
 
+  bool isLegalSpeculativeLoad(Type *DataType,
+                              unsigned AddressSpace) const override;
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;

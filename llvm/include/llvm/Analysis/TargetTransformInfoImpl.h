@@ -368,6 +368,11 @@ public:
     return false;
   }
 
+  virtual bool isLegalSpeculativeLoad(Type *DataType,
+                                      unsigned AddressSpace) const {
+    return false;
+  }
+
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) const {
     // By default, assume nontemporal memory stores are available for stores
     // that are aligned and have a size that is a power of 2.
@@ -926,8 +931,6 @@ public:
     switch (ICA.getID()) {
     default:
       break;
-    case Intrinsic::speculative_load:
-      return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:
@@ -993,6 +996,7 @@ public:
     case Intrinsic::vp_gather:
     case Intrinsic::masked_compressstore:
     case Intrinsic::masked_expandload:
+    case Intrinsic::speculative_load:
       return 1;
     }
     return InstructionCost::getInvalid();
