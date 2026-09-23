@@ -2903,6 +2903,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("alwaysinline"),
     StringLiteral("cold"),
     StringLiteral("convergent"),
+    StringLiteral("disable-tail-calls"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
     StringLiteral("hot"),
@@ -2926,6 +2927,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("save-reg-params"),
     StringLiteral("target-features"),
     StringLiteral("trap-func-name"),
+    StringLiteral("sample-profile-suffix-elision-policy"),
     StringLiteral("tune-cpu"),
     StringLiteral("uniform-work-group-size"),
     StringLiteral("uwtable"),
@@ -3092,6 +3094,22 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
 
   if (func->hasFnAttribute("use-sample-profile"))
     funcOp.setUseSampleProfile(true);
+
+  if (llvm::Attribute attr = func->getFnAttribute("disable-tail-calls");
+      attr.isStringAttribute()) {
+    StringRef val = attr.getValueAsString();
+    if (val == "true")
+      funcOp.setDisableTailCalls(true);
+    else if (val != "false")
+      emitError(funcOp.getLoc())
+          << "unknown value '" << val << "' for 'disable-tail-calls' attribute";
+  }
+
+  if (llvm::Attribute attr =
+          func->getFnAttribute("sample-profile-suffix-elision-policy");
+      attr.isStringAttribute())
+    funcOp.setSampleProfileSuffixElisionPolicy(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())

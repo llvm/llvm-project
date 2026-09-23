@@ -271,11 +271,6 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
-  /// and return the resulting value.
-  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
-                                       const VPLane &Lane);
-
   /// Add the backedge (latch) incoming value to the canonical, reduction and
   /// first-order recurrence phis in all loop headers state's plan, after
   /// the loop body has been generated.
@@ -357,9 +352,9 @@ struct VPCostContext {
   /// transform replaced the original recipe.
   void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
-  /// \returns how much the cost of the block predicated by replicate region
-  /// \p Region should be divided by.
-  uint64_t getReplicateRegionCostDivisor(const VPRegionBlock *Region) const;
+  /// \returns how much the cost of a block executing with recorded frequency
+  /// \p Freq should be divided by.
+  uint64_t getCostDivisor(std::optional<VPExecutionFrequency> Freq) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;

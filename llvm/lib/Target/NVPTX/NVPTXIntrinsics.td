@@ -2614,9 +2614,38 @@ foreach ftz = ["", "ftz"] in {
 def INT_NVVM_ADD_D :
   F_MATH_2_RNDOP_TY<"add.${rnd}.f64", F64RT, int_nvvm_fadd>;
 
-// mixed precision
+// Mixed Precision
+
+// Match only when the fold removes at least one explicit conversion, and the
+// extended vector is not shared.
+class FoldableFPExtendV2F32<dag ops, dag frag>
+  : PatFrag<ops, frag, [{
+      return N->hasOneUse() && (N->getOperand(0)->hasOneUse() ||
+                                N->getOperand(1)->hasOneUse());
+    }]>;
+
+// FP_EXTEND to v2f32 is scalarized before ISEL, leaving one of two patterns
+// behind depending on whether the source lanes share a register.
+def fpextend_v2f32_from_packed
+  : FoldableFPExtendV2F32<(ops node:$a),
+                          (v2f32 (build_vector
+                            (f32 (fpextend (extractelt node:$a, 0))),
+                            (f32 (fpextend (extractelt node:$a, 1)))))>;
+
+def fpextend_v2f32_from_lanes
+  : FoldableFPExtendV2F32<(ops node:$a0, node:$a1),
+                          (v2f32 (build_vector
+                            (f32 (fpextend node:$a0)),
+                            (f32 (fpextend node:$a1))))>;
+
+// Fuse downconverting add/sub only when the result of the add/sub is solely
+// used for downconverting.
+def extractelt_only_for_cvt
+  : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
+            [{ return N->hasOneUse() && N->getOperand(0)->hasNUsesOfValue(2, 0); }]>;
+
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
 
   foreach sat = ["", "sat"] in
     foreach type = [f16, bf16] in
@@ -2628,6 +2657,27 @@ foreach rnd = FPRoundingModes in {
              (f32 (fpextend type:$a)),
              f32:$b, rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      def INT_NVVM_MIXED_ADD_ # rnd # _f32x2_ # t.PtxType :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b),
+          "add." # rnd # ".f32x2." # t.PtxType # ".f32x2">;
+
+      defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_" # rnd #
+                                       "_f32x2_" # t.PtxType);
+
+      def : Pat<(v2f32 (int_nvvm_fadd (fpextend_v2f32_from_packed t.Ty:$a),
+                                      v2f32:$b, rnd_imm)),
+                (Inst $a, $b)>;
+
+      def : Pat<(v2f32 (int_nvvm_fadd
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b, rnd_imm)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+    }
+  }
 }
 
 // Pattern for fadd when there is no FTZ flag
@@ -2637,6 +2687,45 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fadd (f32 (fpextend bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_rn_f32x2_" # t.PtxType);
+
+    def : Pat<(v2f32 (fadd (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+              (Inst $a, $b)>;
+
+    def : Pat<(v2f32 (fadd (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                      t.Ty.ElementType:$a1),
+                           v2f32:$b)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+  }
+
+// Mixed precision - Downconverting
+
+// f16x2 - rz rounding mode, only with ftz
+// bf16x2 - rz rounding mode, without ftz
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar AddOp = !cast<Intrinsic>("int_nvvm_fadd" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+    def INT_NVVM_MIXED_ADD_rz_ # t.PtxType # _f32x2 :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "add.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_rz_" # t.PtxType #
+                                     "_f32x2");
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt
+                       (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+                     (extractelt_only_for_cvt
+                       (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
 
 //
 // Sub
@@ -2698,9 +2787,10 @@ def INT_NVVM_SUB_D :
     (ins FPRoundingMode:$rnd), "sub.${rnd}.f64",
     [(set f64:$dst, (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), timm:$rnd))]>;
 
-// mixed precision
+// Mixed Precision
+
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
 
   foreach sat = ["", "sat"] in
     foreach type = [f16, bf16] in
@@ -2712,6 +2802,29 @@ foreach rnd = FPRoundingModes in {
              (f32 (fpextend type:$a)),
              (f32 (fneg f32:$b)), rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      // combineFAddWithNeg has already folded the fneg into a sub node.
+      defvar SubOp = !cast<SDNode>("sub_" # rnd);
+
+      def INT_NVVM_MIXED_SUB_ # rnd # _f32x2_ # t.PtxType :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b),
+          "sub." # rnd # ".f32x2." # t.PtxType # ".f32x2">;
+
+      defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_" # rnd #
+                                       "_f32x2_" # t.PtxType);
+
+      def : Pat<(v2f32 (SubOp (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+                (Inst $a, $b)>;
+
+      def : Pat<(v2f32 (SubOp
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+    }
+  }
 }
 
 // Pattern for fsub when there is no FTZ flag
@@ -2721,6 +2834,43 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fsub (f32 (fpextend bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_rn_f32x2_" # t.PtxType);
+
+    def : Pat<(v2f32 (fsub (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+              (Inst $a, $b)>;
+
+    def : Pat<(v2f32 (fsub (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                      t.Ty.ElementType:$a1),
+                           v2f32:$b)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+  }
+
+// Mixed precision - Downconverting
+
+// f16x2 - rz rounding mode, only with ftz
+// bf16x2 - rz rounding mode, without ftz
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar SubOp = !cast<SDNode>("sub_rz" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+    def INT_NVVM_MIXED_SUB_rz_ # t.PtxType # _f32x2 :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "sub.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_rz_" # t.PtxType #
+                                     "_f32x2");
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 1),
+                     (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
 
 //
 // BFIND
@@ -2877,28 +3027,21 @@ foreach rnd = ["rn", "rz"] in {
   }
 }
 
-foreach relu = ["", "_relu"] in {
-  defvar BaseMode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
-
-  foreach pzo = [0, 1] in {
-    defvar PZO = !if(pzo, -1, 0);
-    defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
-    defvar Preds =
-      !listconcat(
-        [hasConvertWithStochasticRounding]<Predicate>, 
-        !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
+let Predicates = [hasConvertWithStochasticRounding] in {
+  foreach relu = ["", "_relu"] in {
+    defvar Mode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
 
     defvar BF16X2 = ToCvtIntrinsics<"ff2bf16x2_rs" # relu>;
     defvar F16X2 = ToCvtIntrinsics<"ff2f16x2_rs" # relu>;
 
-    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c),
+              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>;
+    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c),
+              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>;
+    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c),
+              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>;
+    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c),
+              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>;
   }
 }
 
@@ -5754,6 +5897,7 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "",
     !eq(ptx_elt_type, "b8") : B32,
     !eq(ptx_elt_type, "b8x16.b6x16_p32") : B32,
     !eq(ptx_elt_type, "b8x16.b4x16_p64") : B32,
+    !eq(ptx_elt_type, "s8.s4") : B32,
     !eq(ptx_elt_type, "s8") : B32,
     !eq(ptx_elt_type, "u8") : B32,
     !eq(ptx_elt_type, "s4") : B32,
@@ -5902,6 +6046,10 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "",
     !and(!eq(op, "ldmatrix"),
          !eq(ptx_elt_type, "b8x16.b4x16_p64"),
          !eq(geom, "m8n16")) : [hasLdStmatrixBlackwellSupport],
+
+    !and(!eq(op, "ldmatrix"),
+         !eq(ptx_elt_type, "s8.s4"),
+         !eq(geom, "m8n16")) : [hasLdmatrixS8S4Support],
 
     !and(!eq(op, "stmatrix"),!eq(ptx_elt_type, "b16"),
          !eq(geom, "m8n8")) : [SM90],

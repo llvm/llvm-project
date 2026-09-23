@@ -16,6 +16,7 @@
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
+#include <cstdint>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -144,15 +145,19 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
-static ol_device_handle_t getAllocDevice(const void *ptr) {
+static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
+                                         const void *ptr) {
   // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
   [[maybe_unused]] ol_result_t Result =
-      callNoCheck(olGetMemInfo, ptr, OL_MEM_INFO_DEVICE,
+      callNoCheck(olGetMemInfo, Context, ptr, OL_MEM_INFO_DEVICE,
                   sizeof(ol_device_handle_t), &Device);
   if (detail::isFailed(Result)) {
-    // If liboffload could not find the allocation, assume it is a host one.
-    if (Result->Code == OL_ERRC_NOT_FOUND) {
+    // NOT_FOUND: the pointer isn't a liboffload allocation at all (plain host
+    // malloc). INVALID_ARGUMENT: it's a liboffload host allocation, which has
+    // no per-device affinity. Either way, route through the host device.
+    if (Result->Code == OL_ERRC_NOT_FOUND ||
+        Result->Code == OL_ERRC_INVALID_ARGUMENT) {
       return getHostOLDevice();
     }
     checkAndThrow(Result);
@@ -166,17 +171,17 @@ std::shared_ptr<EventImpl>
 QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
-  if (NumBytes == 0) {
+  if (NumBytes == 0)
     return submitWait(DepEvents);
-  }
 
-  if (!Dest || !Src) {
+  if (!Dest || !Src)
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
-  }
 
-  ol_device_handle_t DestOLDevice = getAllocDevice(Dest);
-  ol_device_handle_t SrcOLDevice = getAllocDevice(Src);
+  ol_device_handle_t DestOLDevice =
+      getAllocDevice(MContext->getOLHandleRef(), Dest);
+  ol_device_handle_t SrcOLDevice =
+      getAllocDevice(MContext->getOLHandleRef(), Src);
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
@@ -184,18 +189,37 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
   return createEvent();
 }
 
+EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
+                             std::size_t PatternSize, std::size_t Count,
+                             const std::vector<EventImplPtr> &DepEvents) {
+  assert(PatternSize > 0 && "Pattern size has to be greater than zero");
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  if (Count == 0)
+    return submitWait(DepEvents);
+
+  if (!Ptr)
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in fill/memset operation");
+  if (Count > SIZE_MAX / PatternSize)
+    throw sycl::exception(
+        sycl::make_error_code(sycl::errc::invalid),
+        "Total number of bytes to be filled exceeds SIZE_MAX");
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemFill, MOffloadQueue, Ptr, PatternSize, Pattern,
+               Count * PatternSize);
+  return createEvent();
+}
+
 EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
 
-  if (NumBytes == 0) {
-    handleEventDependencies(DepEvents);
-    return createEvent();
-  }
-  if (!Ptr) {
+  if (NumBytes == 0)
+    return submitWait(DepEvents);
+  if (!Ptr)
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in prefetch operation");
-  }
 
   constexpr std::size_t Count = 1;
   const void *Mems[] = {Ptr};
@@ -206,7 +230,6 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
-
   return createEvent();
 }
 

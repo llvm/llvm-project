@@ -258,12 +258,16 @@ def hasSetMaxNRegSupport : PredOr<[SM90a, SM100f, SM110f, SM120f]>;
 
 def hasLdStmatrixBlackwellSupport : PredOr<[SM100f, SM110f, SM120f]>;
 
+def hasLdmatrixS8S4Support : PredAnd<[PTX94, PredOr<[SM90a, SM100f, SM110f, SM120f]>]>;
+
 def hasConvertWithStochasticRounding
   : PredAnd<[PTX87, PredOr<[SM100a, SM103a, SM107a]>]>;
 
 def hasConvertWithPZOSupport : PredOr<[hasRubinFamilySupport]>;
 
 def hasMBarrierLayoutSupport : PredAnd<[PTX93, SM90]>;
+
+def hasFP16x2MixedPrecisionSupport : PredOr<[hasRubinFamilySupport]>;
 
 //===----------------------------------------------------------------------===//
 // Some Common Instruction Class Templates
@@ -737,13 +741,13 @@ let hasSideEffects = false in {
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}${mode:pzo}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}." # FromName # ".f32">;
 
     def _f32_rs_sf :
       BasicFlagsNVPTXInst<(outs RC:$dst),
                 (ins B32:$src1, B32:$src2, B32:$src3),
                 (ins CvtMode:$mode),
-                "cvt${mode:base}${mode:relu}.satfinite${mode:pzo}." # FromName # ".f32">;
+                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
   }
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;
@@ -1293,6 +1297,22 @@ defm FMIN3 : FMINIMUMMAXIMUM3<"min", /* NaN */ false, nvptx_fminnum3>;
 defm FMAX3 : FMINIMUMMAXIMUM3<"max", /* NaN */ false, nvptx_fmaxnum3>;
 defm FMINNAN3 : FMINIMUMMAXIMUM3<"min", /* NaN */ true, nvptx_fminimum3>;
 defm FMAXNAN3 : FMINIMUMMAXIMUM3<"max", /* NaN */ true, nvptx_fmaximum3>;
+
+def f32abs : ComplexPattern<f32, 1, "SelectFAbs">;
+
+multiclass FMINIMUMMAXIMUM_ABS<string OpcStr, bit NaN,
+                             SDPatternOperator Op3> {
+  def f32 : BasicFlagsNVPTXInst<(outs B32:$dst),
+              (ins RI32:$a, RI32:$b, RI32:$c), (ins FTZFlag:$ftz),
+              OpcStr # "$ftz" # !if(NaN, ".NaN", "") # ".abs.f32",
+              [(set f32:$dst, (Op3 f32abs:$a, f32abs:$b, f32abs:$c))]>,
+              Requires<[PTX88, SM100]>;
+}
+
+defm FMINABS : FMINIMUMMAXIMUM_ABS<"min", false, nvptx_fminnum3>;
+defm FMAXABS : FMINIMUMMAXIMUM_ABS<"max", false, nvptx_fmaxnum3>;
+defm FMINNANABS : FMINIMUMMAXIMUM_ABS<"min", true, nvptx_fminimum3>;
+defm FMAXNANABS : FMINIMUMMAXIMUM_ABS<"max", true, nvptx_fmaximum3>;
 
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;

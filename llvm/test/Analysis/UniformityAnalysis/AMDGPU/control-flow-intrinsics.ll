@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-mesa-mesa3d -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-mesa-mesa3d -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Tests control flow intrinsics that should be treated as uniform
 
