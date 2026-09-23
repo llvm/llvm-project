@@ -51,14 +51,13 @@ static cl::opt<std::string> DestinationPath(cl::Positional,
 
 static cl::opt<std::string> StopAfter("stop-diff-after",
                                       cl::desc("<topdown|bottomup>"),
-                                      cl::Optional, cl::init(""),
-                                      cl::cat(ClangDiffCategory));
+                                      cl::init(""), cl::cat(ClangDiffCategory));
 
-static cl::opt<int> MaxSize("s", cl::desc("<maxsize>"), cl::Optional,
-                            cl::init(-1), cl::cat(ClangDiffCategory));
+static cl::opt<int> MaxSize("s", cl::desc("<maxsize>"), cl::init(-1),
+                            cl::cat(ClangDiffCategory));
 
 static cl::opt<std::string> BuildPath("p", cl::desc("Build path"), cl::init(""),
-                                      cl::Optional, cl::cat(ClangDiffCategory));
+                                      cl::cat(ClangDiffCategory));
 
 static cl::list<std::string> ArgsAfter(
     "extra-arg",
