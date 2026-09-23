@@ -186,3 +186,58 @@ class MockAcceleratorPacketsTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
             connect_info["connect_url"],
         )
         self.assertTrue(connect_info["synchronous"])
+
+    @add_test_categories(["llgs"])
+    def test_jAcceleratorPluginGetDynamicLoaderLibraryInfo(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        self.prep_debug_monitor_and_inferior()
+
+        self.add_qSupported_packets()
+        self.expect_gdbremote_sequence()
+
+        # Only "full" is exercised. The mock could answer full=False, but what
+        # a delta contains is entirely up to the plugin, so doing so would only
+        # test the mock's own bookkeeping. That belongs with a real plugin.
+        dyld_args = {"plugin_name": "mock", "full": True}
+        dyld_json = json.dumps(dyld_args, separators=(",", ":"))
+        escaped_json = escape_binary(dyld_json)
+        response = self.send_and_decode_json(
+            "jAcceleratorPluginGetDynamicLoaderLibraryInfo:" + escaped_json
+        )
+
+        self.assertIn("library_infos", response)
+        libs = response["library_infos"]
+        self.assertGreater(len(libs), 0)
+
+        lib = libs[0]
+        self.assertEqual(lib["pathname"], "/path/to/lib.so")
+        self.assertTrue(lib["load"])
+        self.assertEqual(lib["load_address"], 0x7F000000)
+
+    @add_test_categories(["llgs"])
+    def test_jAcceleratorPluginGetDynamicLoaderLibraryInfo_unknown_plugin(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        self.prep_debug_monitor_and_inferior()
+
+        self.add_qSupported_packets()
+        self.expect_gdbremote_sequence()
+
+        dyld_args = {"plugin_name": "no-such-plugin", "full": True}
+        dyld_json = json.dumps(dyld_args, separators=(",", ":"))
+        escaped_json = escape_binary(dyld_json)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $jAcceleratorPluginGetDynamicLoaderLibraryInfo:%s#00"
+                % escaped_json,
+                {
+                    "direction": "send",
+                    "regex": r"^\$(E[0-9a-fA-F]{2}.*)#[0-9a-fA-F]{2}",
+                    "capture": {1: "error"},
+                },
+            ],
+            True,
+        )
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context.get("error"))

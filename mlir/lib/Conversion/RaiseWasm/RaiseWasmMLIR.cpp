@@ -40,6 +40,15 @@ using namespace mlir;
 using namespace mlir::wasmssa;
 namespace {
 
+template <typename OpTy>
+static typename OpTy::Properties getDefaultProperties(MLIRContext *context) {
+  typename OpTy::Properties properties{};
+  if constexpr (!std::is_same_v<typename OpTy::Properties, EmptyProperties>)
+    OpTy::populateDefaultProperties(
+        OperationName(OpTy::getOperationName(), context), properties);
+  return properties;
+}
+
 template <typename SourceOp, typename TargetIntOp, typename TargetFPOp>
 struct IntFPDispatchMappingConversion : OpConversionPattern<SourceOp> {
   using OpConversionPattern<SourceOp>::OpConversionPattern;
@@ -49,14 +58,18 @@ struct IntFPDispatchMappingConversion : OpConversionPattern<SourceOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Type type = srcOp.getRhs().getType();
     if (type.isInteger()) {
-      rewriter.replaceOpWithNewOp<TargetIntOp>(srcOp, srcOp->getResultTypes(),
-                                               adaptor.getOperands());
+      rewriter.replaceOpWithNewOp<TargetIntOp>(
+          srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+          getDefaultProperties<TargetIntOp>(rewriter.getContext()),
+          ArrayRef<NamedAttribute>{});
       return success();
     }
     if (!type.isFloat())
       return failure();
-    rewriter.replaceOpWithNewOp<TargetFPOp>(srcOp, srcOp->getResultTypes(),
-                                            adaptor.getOperands());
+    rewriter.replaceOpWithNewOp<TargetFPOp>(
+        srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+        getDefaultProperties<TargetFPOp>(rewriter.getContext()),
+        ArrayRef<NamedAttribute>{});
     return success();
   }
 };
@@ -77,8 +90,10 @@ struct OpMappingConversion : OpConversionPattern<SourceOp> {
   LogicalResult
   matchAndRewrite(SourceOp srcOp, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<TargetOp>(srcOp, srcOp->getResultTypes(),
-                                          adaptor.getOperands());
+    rewriter.replaceOpWithNewOp<TargetOp>(
+        srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+        getDefaultProperties<TargetOp>(rewriter.getContext()),
+        ArrayRef<NamedAttribute>{});
     return success();
   }
 };

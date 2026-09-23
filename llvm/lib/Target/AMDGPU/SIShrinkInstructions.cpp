@@ -11,11 +11,9 @@
 #include "SIShrinkInstructions.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 
@@ -40,8 +38,8 @@ class SIShrinkInstructions {
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
-  bool isKImmOperand(const MachineOperand &Src) const;
-  bool isKUImmOperand(const MachineOperand &Src) const;
+  bool isKImmOperand(const MachineInstr &MI, const MachineOperand &Src) const;
+  bool isKUImmOperand(const MachineInstr &MI, const MachineOperand &Src) const;
   bool isKImmOrKUImmOperand(const MachineOperand &Src, bool &IsUnsigned) const;
   void copyExtraImplicitOps(MachineInstr &NewMI, MachineInstr &MI) const;
   bool shrinkScalarCompare(MachineInstr &MI) const;
@@ -171,14 +169,16 @@ bool SIShrinkInstructions::shouldShrinkTrue16(MachineInstr &MI) const {
   return true;
 }
 
-bool SIShrinkInstructions::isKImmOperand(const MachineOperand &Src) const {
+bool SIShrinkInstructions::isKImmOperand(const MachineInstr &MI,
+                                         const MachineOperand &Src) const {
   return isInt<16>(SignExtend64(Src.getImm(), 32)) &&
-         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
+         !TII->isInlineConstant(MI, MI.getOperandNo(&Src));
 }
 
-bool SIShrinkInstructions::isKUImmOperand(const MachineOperand &Src) const {
+bool SIShrinkInstructions::isKUImmOperand(const MachineInstr &MI,
+                                          const MachineOperand &Src) const {
   return isUInt<16>(Src.getImm()) &&
-         !TII->isInlineConstant(*Src.getParent(), Src.getOperandNo());
+         !TII->isInlineConstant(MI, MI.getOperandNo(&Src));
 }
 
 bool SIShrinkInstructions::isKImmOrKUImmOperand(const MachineOperand &Src,
@@ -289,8 +289,8 @@ bool SIShrinkInstructions::shrinkScalarCompare(MachineInstr &MI) const {
 
   const MCInstrDesc &NewDesc = TII->get(SOPKOpc);
 
-  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(Src1)) ||
-      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(Src1))) {
+  if ((SIInstrInfo::sopkIsZext(SOPKOpc) && isKUImmOperand(MI, Src1)) ||
+      (!SIInstrInfo::sopkIsZext(SOPKOpc) && isKImmOperand(MI, Src1))) {
     if (!SIInstrInfo::sopkIsZext(SOPKOpc))
       Src1.setImm(SignExtend64(Src1.getImm(), 32));
     MI.setDesc(NewDesc);
@@ -952,7 +952,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           continue;
         }
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
-          if (Src1->isImm() && isKImmOperand(*Src1)) {
+          if (Src1->isImm() && isKImmOperand(MI, *Src1)) {
             unsigned Opc = (MI.getOpcode() == AMDGPU::S_MUL_I32)
                                ? AMDGPU::S_MULK_I32
                                : AMDGPU::S_ADDK_I32;
@@ -978,7 +978,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         if (Src.isImm() && Dst.getReg().isPhysical()) {
           unsigned ModOpc;
           int32_t ModImm;
-          if (isKImmOperand(Src)) {
+          if (isKImmOperand(MI, Src)) {
             MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
             Src.setImm(SignExtend64(Src.getImm(), 32));
             Changed = true;

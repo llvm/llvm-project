@@ -24,6 +24,7 @@ class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCRegister;
 class MCRegisterInfo;
 class MCStreamer;
 class MCSubtargetInfo;
@@ -60,6 +61,14 @@ namespace MIPS_MC {
 void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
+
+/// Match a symbolic name in RegClassID, or return an invalid register.
+MCRegister matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
+                             unsigned RegClassID, unsigned AltIdx);
+
+/// Return a GPR name's hardware index, or -1 if unknown.
+int getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
+                        unsigned AltIdx, bool *IsDeprecated = nullptr);
 }
 
 } // End llvm namespace

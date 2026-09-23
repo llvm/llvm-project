@@ -26,7 +26,7 @@ jobs:
     name: Test MLIR SPIR-V
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/llvm/ci-ubuntu-24.04:latest
+      image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:

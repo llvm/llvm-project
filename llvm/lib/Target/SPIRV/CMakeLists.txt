@@ -20,6 +20,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVAsmPrinter.cpp
   SPIRVBuiltins.cpp
   SPIRVCallLowering.cpp
+  SPIRVCodeGenPassBuilder.cpp
   SPIRVInlineAsmLowering.cpp
   SPIRVCommandLine.cpp
   SPIRVCtorDtorLowering.cpp
@@ -27,7 +28,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVGlobalRegistry.cpp
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
-  SPIRVLegalizeImplicitBinding.cpp
+  SPIRVLegalizeResourceBinding.cpp
   SPIRVLegalizeZeroSizeArrays.cpp
   SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
@@ -68,6 +69,7 @@ add_llvm_target(SPIRVCodeGen
   FrontendHLSL
   IPO
   MC
+  Passes
   SPIRVAnalysis
   SPIRVDesc
   SPIRVInfo

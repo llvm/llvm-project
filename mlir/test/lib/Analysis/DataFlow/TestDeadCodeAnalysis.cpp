@@ -19,7 +19,7 @@ using namespace mlir::dataflow;
 static void printAnalysisResults(DataFlowSolver &solver, Operation *op,
                                  raw_ostream &os) {
   op->walk([&](Operation *op) {
-    auto tag = op->getAttrOfType<StringAttr>("tag");
+    auto tag = op->getDiscardableAttrOfType<StringAttr>("tag");
     if (!tag)
       return;
     os << tag.getValue() << ":\n";
