@@ -13,9 +13,9 @@ namespace orc {
 namespace rt {
 
 const SymbolNameSpec RegisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::verbatim("llvm_orc_registerEHFrameAllocAction");
+    SymbolNameSpec::c("llvm_orc_registerEHFrameAllocAction");
 const SymbolNameSpec DeregisterEHFrameSectionAllocActionName =
-    SymbolNameSpec::verbatim("llvm_orc_deregisterEHFrameAllocAction");
+    SymbolNameSpec::c("llvm_orc_deregisterEHFrameAllocAction");
 
 const SymbolNameSpec RegisterJITLoaderGDBAllocActionName =
     SymbolNameSpec::c("orc_rt_ci_aa_sps_GDBJITRegistrar_register");
