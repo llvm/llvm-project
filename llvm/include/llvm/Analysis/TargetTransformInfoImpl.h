@@ -940,7 +940,6 @@ public:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
     case Intrinsic::is_constant:
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:

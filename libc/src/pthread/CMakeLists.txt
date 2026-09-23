@@ -1,3 +1,16 @@
+add_header_library(
+  pthread_attr
+  HDRS
+    pthread_attr.h
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.sched_macros
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.threads.thread
+)
+
 add_entrypoint_object(
   pthread_attr_init
   SRCS
@@ -5,13 +18,10 @@ add_entrypoint_object(
   HDRS
     pthread_attr_init.h
   DEPENDS
-    libc.hdr.pthread_macros
-    libc.hdr.sched_macros
-    libc.hdr.types.pthread_attr_t
+    .pthread_attr
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
-    libc.src.__support.threads.thread
 )
 
 add_entrypoint_object(
@@ -599,17 +609,15 @@ add_entrypoint_object(
   HDRS
     pthread_create.h
   DEPENDS
+    .pthread_attr
+    libc.hdr.errno_macros
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.hdr.types.pthread_t
     libc.include.pthread
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.threads.thread
-    libc.src.pthread.pthread_attr_destroy
-    libc.src.pthread.pthread_attr_init
-    libc.src.pthread.pthread_attr_getdetachstate
-    libc.src.pthread.pthread_attr_getguardsize
-    libc.src.pthread.pthread_attr_getstack
-    libc.src.errno.errno
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
-    -fno-omit-frame-pointer
 )
 
 add_entrypoint_object(

@@ -170,15 +170,21 @@ bool isRootStmt(const Node *N) {
 // VarDecls claim the entire selection range of the Declaration and DeclStmt
 // is always unselected.
 //
-// Returns null if the (possibly DeclStmt-adjusted) parent is an Expr: this
-// means Child is merely a subexpression of a larger expression rather than
-// a genuine standalone statement, e.g. selecting just the "3" in
-// `stream << 3;`, and extracting it would produce broken code.
+// Returns null if the (possibly DeclStmt-adjusted) parent isn't a "plain"
+// Stmt, or is an Expr: this means Child is merely a subexpression of a
+// larger expression or declaration rather than a genuine standalone
+// statement, and extracting it would produce broken code. This covers two
+// distinct cases:
+//  - Parent is an Expr, e.g. selecting just the "3" in `stream << 3;`
+//    (Child is a subexpression of a larger expression).
+//  - Parent isn't a Stmt at all, e.g. selecting just the "func()" in
+//    `auto A = func();` (Child is a VarDecl's initializer, so Parent is
+//    that VarDecl -- a Decl, not a Stmt).
 const Node *getEnclosingStmt(const Node *Child) {
   const Node *Parent = Child->Parent;
   if (Parent->ASTNode.get<DeclStmt>())
     Parent = Parent->Parent;
-  if (Parent->ASTNode.get<Expr>())
+  if (!Parent->ASTNode.get<Stmt>() || Parent->ASTNode.get<Expr>())
     return nullptr;
   return Parent;
 }
