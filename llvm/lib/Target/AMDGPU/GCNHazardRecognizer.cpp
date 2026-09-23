@@ -754,10 +754,9 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) const {
   if (isRWLane(MI->getOpcode()))
     WaitStates = std::max(WaitStates, checkRWLaneHazards(MI));
 
-  if ((SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true) ||
-       SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI) ||
-       SIInstrInfo::isEXP(*MI)) &&
-      checkMAIVALUHazards(MI) > 0)
+  if (SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true) ||
+      SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI) ||
+      SIInstrInfo::isEXP(*MI))
     WaitStates = std::max(WaitStates, checkMAIVALUHazards(MI));
 
   if (MI->isInlineAsm())
