@@ -1395,16 +1395,14 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // in contexts that do not use the copy-in/copy-out machinery.
   Fortran::evaluate::FoldingContext &foldingContext{
       callContext.converter.getFoldingContext()};
-  const bool suggestCopyIn{
-      Fortran::evaluate::ActualArgNeedsCopy(arg.entity, arg.characteristics,
-                                            foldingContext,
-                                            /*forCopyOut=*/false)
-          .value_or(true)};
-  const bool suggestCopyOut{
-      Fortran::evaluate::ActualArgNeedsCopy(arg.entity, arg.characteristics,
-                                            foldingContext,
-                                            /*forCopyOut=*/true)
-          .value_or(true)};
+  const bool suggestCopyIn{Fortran::evaluate::ActualArgNeedsCopy(
+                               arg.entity, arg.characteristics, foldingContext,
+                               /*forCopyOut=*/false)
+                               .value_or(true)};
+  const bool suggestCopyOut{Fortran::evaluate::ActualArgNeedsCopy(
+                                arg.entity, arg.characteristics, foldingContext,
+                                /*forCopyOut=*/true)
+                                .value_or(true)};
   bool mustDoCopyIn{false};
   bool mustDoCopyOut{false};
   if (callContext.doCopyIn) {
