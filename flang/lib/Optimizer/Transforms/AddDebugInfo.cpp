@@ -70,6 +70,8 @@ public:
 private:
   llvm::StringMap<mlir::LLVM::DIModuleAttr> moduleMap;
   llvm::StringMap<mlir::LLVM::DICommonBlockAttr> commonBlockMap;
+  /// Whether this module is being compiled for an OpenMP target device.
+  bool isTargetDevice = false;
   // List of GlobalVariableExpressionAttr that are attached to a given global
   // that represents the storage for common block.
   llvm::DenseMap<fir::GlobalOp, llvm::SmallVector<mlir::Attribute>>
@@ -744,7 +746,13 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Recursive;
 
   unsigned line = fir::getLineFromLoc(l);
-  if (fir::isInternalProcedure(funcOp)) {
+  // A target device module holds the internal procedures and the outlined
+  // target regions, but not the host procedure they are contained in, which
+  // only the host runs. Scoping them at it would leave a DW_TAG_subprogram
+  // with no code as their parent, and a debugger does not look inside such a
+  // subtree, so scope them at the file instead. Nothing on the device reads a
+  // variable through that scope, so only the name qualification is lost.
+  if (fir::isInternalProcedure(funcOp) && !isTargetDevice) {
     // For contained functions, the scope is the parent subroutine.
     mlir::SymbolRefAttr sym = mlir::cast<mlir::SymbolRefAttr>(
         funcOp->getAttr(fir::getHostSymbolAttrName()));
@@ -1131,6 +1139,9 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   mlir::SymbolTable symbolTable(module);
+  if (auto offloadMod =
+          mlir::dyn_cast<mlir::omp::OffloadModuleInterface>(*module))
+    isTargetDevice = offloadMod.getIsTargetDevice();
   buildModuleDebugImportsMap(module);
   buildDefinedModuleNames(module);
   llvm::StringRef fileName;

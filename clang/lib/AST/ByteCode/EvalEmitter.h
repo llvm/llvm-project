@@ -65,6 +65,9 @@ protected:
   EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
               FrameAllocator &FrameAlloc);
 
+  EvalEmitter(Context &Ctx, Program &P, Expr::EvalStatus &Status,
+              InterpStack &Stk, FrameAllocator &FrameAlloc);
+
   /// Define a label.
   void emitLabel(LabelTy Label);
   /// Create a label.
