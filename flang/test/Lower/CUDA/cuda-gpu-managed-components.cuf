@@ -1,0 +1,203 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s
+
+! Under -gpu=managed, ALLOCATABLE and POINTER components of derived types are
+! implicitly attributed as managed, exactly as allocatables and pointers
+! declared in an ordinary scope are (see cuda-gpu-managed.cuf).
+
+module mod_derived
+  type :: t
+     real, allocatable :: alc(:)
+     real, pointer :: ptr(:) => null()
+     real :: fixed(4)
+  end type t
+  type :: outer
+     type(t) :: inner
+  end type outer
+  type(t) :: mod_obj
+end module
+
+! -----------------------------------------------------------------------------
+! ALLOCATABLE component of a local derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_local()
+  use mod_derived
+  type(t) :: obj
+  allocate(obj%alc(100))
+  deallocate(obj%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_local()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+
+! -----------------------------------------------------------------------------
+! POINTER component of a local derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_pointer()
+  use mod_derived
+  type(t) :: obj
+  allocate(obj%ptr(100))
+  deallocate(obj%ptr)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_pointer()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>, pointer} -> i32
+
+! -----------------------------------------------------------------------------
+! ALLOCATABLE component of a module-scope derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_module()
+  use mod_derived
+  allocate(mod_obj%alc(100))
+  deallocate(mod_obj%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_module()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+
+! -----------------------------------------------------------------------------
+! ALLOCATABLE component reached through a nested derived type
+! -----------------------------------------------------------------------------
+subroutine test_component_nested()
+  use mod_derived
+  type(outer) :: o
+  allocate(o%inner%alc(100))
+  deallocate(o%inner%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_nested()
+! CHECK: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<managed>} -> i32
+
+! -----------------------------------------------------------------------------
+! An explicitly attributed component keeps its own allocator; the
+! implicit attribution must not override it.
+! -----------------------------------------------------------------------------
+module mod_explicit
+  type :: td
+     real, allocatable, device :: dev(:)
+  end type td
+end module
+
+subroutine test_component_explicit_device()
+  use mod_explicit
+  type(td) :: obj
+  allocate(obj%dev(100))
+  deallocate(obj%dev)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_explicit_device()
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+
+! -----------------------------------------------------------------------------
+! The implicit attribution must not override a memory space the user
+! asked for on the enclosing object. Allocating such a component is also not
+! diagnosed, since the user never attributed it (see cuf32.cuf for the
+! explicitly attributed case, which is still rejected).
+! -----------------------------------------------------------------------------
+subroutine test_component_in_device_object()
+  use mod_derived
+  type(t), device :: obj
+  allocate(obj%alc(100))
+  deallocate(obj%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_in_device_object()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "obj", data_attr = #cuf.cuda<device>
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+
+! -----------------------------------------------------------------------------
+! Same for a POINTER component.
+! -----------------------------------------------------------------------------
+subroutine test_pointer_component_in_device_object()
+  use mod_derived
+  type(t), device :: obj
+  allocate(obj%ptr(100))
+  deallocate(obj%ptr)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_pointer_component_in_device_object()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "obj", data_attr = #cuf.cuda<device>
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>, pointer} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>, pointer} -> i32
+
+! -----------------------------------------------------------------------------
+! The enclosing object is reached through an array element.
+! -----------------------------------------------------------------------------
+subroutine test_component_in_device_array_element()
+  use mod_derived
+  type(t), device, allocatable :: objs(:)
+  allocate(objs(2))
+  allocate(objs(1)%alc(100))
+  deallocate(objs(1)%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_in_device_array_element()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "objs", data_attr = #cuf.cuda<device>
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+! CHECK: cuf.allocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+! CHECK: cuf.deallocate {{.*}} {data_attr = #cuf.cuda<device>} -> i32
+
+! -----------------------------------------------------------------------------
+! Whether the enclosing object is relocated depends on all of its
+! device-allocatable ultimate components, not on whichever one is declared
+! first. The explicitly attributed component here is DEVICE rather than
+! MANAGED, so that allocating the implicit one in a DEVICE object is not
+! diagnosed and the object's own attribute stays observable.
+! -----------------------------------------------------------------------------
+module mod_order
+  type :: implicit_first
+     real, allocatable :: implicit_comp(:)
+     real, allocatable, device :: explicit_comp(:)
+  end type
+  type :: explicit_first
+     real, allocatable, device :: explicit_comp(:)
+     real, allocatable :: implicit_comp(:)
+  end type
+  type :: only_implicit
+     real, allocatable :: a(:)
+     real, allocatable :: b(:)
+  end type
+end module
+
+! A user-attributed component relocates the object, whichever order it is in.
+subroutine test_order_implicit_first()
+  use mod_order
+  type(implicit_first), device :: d
+  allocate(d%implicit_comp(100))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_order_implicit_first()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<managed>
+
+subroutine test_order_explicit_first()
+  use mod_order
+  type(explicit_first), device :: d
+  allocate(d%implicit_comp(100))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_order_explicit_first()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<managed>
+
+! With every component implicitly attributed, the object keeps the memory
+! space the user asked for.
+subroutine test_order_only_implicit()
+  use mod_order
+  type(only_implicit), device :: d
+  allocate(d%a(100))
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_order_only_implicit()
+! CHECK: cuf.alloc {{.*}} {bindc_name = "d", data_attr = #cuf.cuda<device>

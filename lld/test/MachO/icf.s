@@ -40,8 +40,8 @@
 # CHECK: [[#%x,HAS_UNWIND_4:]]              l     F __TEXT,__text _has_unwind_4
 # CHECK: [[#%x,HAS_ABS_PERSONALITY_1:]]     l     F __TEXT,__text _has_abs_personality_1
 # CHECK: [[#%x,HAS_ABS_PERSONALITY_2:]]     l     F __TEXT,__text _has_abs_personality_2
-# CHECK: [[#%x,HAS_EH_FRAME_1:]]            l     F __TEXT,__text _has_eh_frame_1
-# CHECK: [[#%x,HAS_EH_FRAME_2:]]            l     F __TEXT,__text _has_eh_frame_2
+# CHECK: [[#%x,HAS_EH_FRAME_2:]]            l     F __TEXT,__text _has_eh_frame_1
+# CHECK: [[#%x,HAS_EH_FRAME_2]]             l     F __TEXT,__text _has_eh_frame_2
 # CHECK: [[#%x,HAS_EH_FRAME_3:]]            l     F __TEXT,__text _has_eh_frame_3
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2:]]       l     F __TEXT,__text _mutually_recursive_1
 # CHECK: [[#%x,MUTALLY_RECURSIVE_2]]        l     F __TEXT,__text _mutually_recursive_2
@@ -55,8 +55,6 @@
 # CHECK: [[#%x,GCC_EXCEPT_0]]               l     O __TEXT,__gcc_except_tab GCC_except_table1
 # CHECK: [[#%x,GCC_EXCEPT_2:]]              l     O __TEXT,__gcc_except_tab GCC_except_table2
 
-## Check that we don't accidentally dedup distinct EH frames.
-# CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_1]]
 # CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_2]]
 # CHECK: FDE {{.*}} pc=[[#%x,HAS_EH_FRAME_3]]
 
@@ -89,7 +87,7 @@
 # CHECK: callq 0x[[#%x,HAS_UNWIND_4]]              <_has_unwind_4>
 # CHECK: callq 0x[[#%x,HAS_ABS_PERSONALITY_1]]     <_has_abs_personality_1>
 # CHECK: callq 0x[[#%x,HAS_ABS_PERSONALITY_2]]     <_has_abs_personality_2>
-# CHECK: callq 0x[[#%x,HAS_EH_FRAME_1]]            <_has_eh_frame_1>
+# CHECK: callq 0x[[#%x,HAS_EH_FRAME_2]]            <_has_eh_frame_2>
 # CHECK: callq 0x[[#%x,HAS_EH_FRAME_2]]            <_has_eh_frame_2>
 # CHECK: callq 0x[[#%x,HAS_EH_FRAME_3]]            <_has_eh_frame_3>
 # CHECK: callq 0x[[#%x,MUTALLY_RECURSIVE_2]]       <_mutually_recursive_2>
@@ -261,8 +259,6 @@ _has_abs_personality_2:
 _abs_personality_1 = 0x1
 _abs_personality_2 = 0x2
 
-## In theory _has_eh_frame_{1, 2} can be dedup'ed, but we don't support this
-## yet.
 _has_eh_frame_1:
   .cfi_startproc
   .cfi_def_cfa_offset 8

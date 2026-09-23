@@ -2181,7 +2181,7 @@ kmp_int32 __kmp_count_exec_descrs_1(kmp_taskgraph_region_t *region,
 
 void __kmp_count_exec_descrs(kmp_taskgraph_region_t *region,
                              kmp_int32 &successors, kmp_int32 &descrs) {
-  kmp_int32 npreds;
+  [[maybe_unused]] kmp_int32 npreds;
   npreds = __kmp_count_exec_descrs_1(region, 0, successors, descrs);
   // We want to reach the exit...
   assert(npreds > 0);
@@ -2351,7 +2351,6 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
     if (!preds_list)
       return;
     kmp_taskgraph_exec_descr_elem_t *pred = preds_list->head, *walk;
-    kmp_int32 succ_idx = 0;
     walk = pred;
     do {
       kmp_taskgraph_exec_descr_t *pred_descr = walk->exec_descr;
@@ -5823,23 +5822,6 @@ bool __kmpc_omp_has_task_team(kmp_int32 gtid) {
 
 #if OMP_TASKGRAPH_EXPERIMENTAL
 
-static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
-                                  kmp_intptr_t graph_id) {
-  rec->status = KMP_TDG_RECORDING;
-  rec->gtid = gtid;
-  rec->graph_id = graph_id;
-  rec->record_map = nullptr;
-  rec->alloc_root = nullptr;
-  rec->recycled_deps = nullptr;
-  rec->num_tasks = 0;
-  rec->nodes_allocated = 0;
-  rec->num_mutexes = 0;
-  rec->exec_descrs = nullptr;
-  rec->num_exec_descrs = 0;
-  rec->taskgraph_args = nullptr;
-  rec->next = nullptr;
-}
-
 static kmp_taskgraph_record_t *__kmp_taskgraph_alloc(kmp_int32 gtid,
                                                      kmp_intptr_t graph_id) {
   kmp_info_t *thread = __kmp_threads[gtid];
@@ -5857,7 +5839,6 @@ static kmp_taskgraph_record_t *__kmp_taskgraph_alloc(kmp_int32 gtid,
   new_rec->nodes_allocated = 0;
   new_rec->num_mutexes = 0;
   new_rec->exec_descrs = nullptr;
-  new_rec->exec_descr_size = 0;
   new_rec->next = nullptr;
   return new_rec;
 }
@@ -5913,7 +5894,7 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
                       void (*entry)(void *), void *args) {
   kmp_taskgraph_header_t *header =
       (kmp_taskgraph_header_t *)KMP_ATOMIC_LD_ACQ(tdg_handle);
-  kmp_taskgraph_record_t *record = nullptr, **record_p = nullptr;
+  kmp_taskgraph_record_t *record = nullptr;
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *taskgroup;
 
