@@ -198,7 +198,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
-  void addPreEmitPass() override;
+  void addPreEmitPass2() override;
   void addPreRegAlloc() override;
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -252,10 +252,9 @@ MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(
   return MipsFunctionInfo::create<MipsFunctionInfo>(Allocator, F, STI);
 }
 
-// Implemented by targets that want to run passes immediately before
-// machine code is emitted.
-void MipsPassConfig::addPreEmitPass() {
-  // Expand pseudo instructions that are sensitive to register allocation.
+void MipsPassConfig::addPreEmitPass2() {
+  // Expand LL/SC loops after passes that can insert stores, but before
+  // instruction size reduction, delay-slot filling and branch expansion.
   addPass(createMipsExpandPseudoPass());
 
   // The microMIPS size reduction pass performs instruction reselection for

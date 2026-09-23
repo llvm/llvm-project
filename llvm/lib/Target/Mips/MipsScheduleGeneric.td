@@ -1606,17 +1606,17 @@ def : InstRW<[GenericWriteFPULoad], (instregex "^LD_[BHWD]$")>;
 // Atomic instructions
 
 // FIXME: Define `WriteAtomic` in the MipsSchedule.td and
-// attach it to the Atomic2OpsPostRA, AtomicCmpSwapPostRA, ...
+// attach it to the PseudoAtomic
 // classes. Then just define resources for the `WriteAtomic` in each
 // machine models.
 def GenericAtomic : ProcResource<1> { let BufferSize = 1; }
 def GenericWriteAtomic : SchedWriteRes<[GenericAtomic]> { let Latency = 2; }
 
 def : InstRW<[GenericWriteAtomic],
-    (instregex "^ATOMIC_SWAP_I(8|16|32|64)_POSTRA$")>;
+    (instregex "^ATOMIC_SWAP_(I(32|64)|MASKED)$")>;
 def : InstRW<[GenericWriteAtomic],
-    (instregex "^ATOMIC_CMP_SWAP_I(8|16|32|64)_POSTRA$")>;
+    (instregex "^ATOMIC_CMP_SWAP_(I(32|64)|MASKED)$")>;
 def : InstRW<[GenericWriteAtomic],
     (instregex "^ATOMIC_LOAD_(ADD|SUB|AND|OR|XOR|NAND|MIN|MAX|UMIN|UMAX)"
-               "_I(8|16|32|64)_POSTRA$")>;
+               "_(I(32|64)|MASKED)$")>;
 }

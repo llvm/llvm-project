@@ -18,6 +18,34 @@ def mips_q31_ty: LLVMType<i32>;
 
 let TargetPrefix = "mips" in {  // All intrinsics start with "llvm.mips.".
 
+// Operands: 4-byte-aligned address, shifted value, mask.
+// Returns the old i32 word.
+class MipsMaskedAtomicRMW :
+    Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
+// The final operand is the shift used to sign-extend the positioned subword.
+class MipsMaskedAtomicMinMax :
+    Intrinsic<[llvm_i32_ty],
+              [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
+def int_mips_masked_atomicrmw_xchg : MipsMaskedAtomicRMW;
+def int_mips_masked_atomicrmw_add : MipsMaskedAtomicRMW;
+def int_mips_masked_atomicrmw_sub : MipsMaskedAtomicRMW;
+def int_mips_masked_atomicrmw_nand : MipsMaskedAtomicRMW;
+def int_mips_masked_atomicrmw_umin : MipsMaskedAtomicRMW;
+def int_mips_masked_atomicrmw_umax : MipsMaskedAtomicRMW;
+def int_mips_masked_atomicrmw_min : MipsMaskedAtomicMinMax;
+def int_mips_masked_atomicrmw_max : MipsMaskedAtomicMinMax;
+
+// Operands: 4-byte-aligned address, shifted compare and new values, mask.
+// Returns the old i32 word. Compare and new values must be zero outside the mask.
+def int_mips_masked_cmpxchg :
+    Intrinsic<[llvm_i32_ty],
+              [llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+
 //===----------------------------------------------------------------------===//
 // MIPS DSP Rev 1
 
