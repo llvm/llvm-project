@@ -61,6 +61,7 @@ def FeatureR700 : R600SubtargetFeatureGeneration<"R700", "r700",
 def FeatureEvergreen : R600SubtargetFeatureGeneration<"EVERGREEN", "evergreen",
   [FeatureFetchLimit16, FeatureAddressableLocalMemorySize32768,
    FeatureLDSAllocGranularity256,
+   FeatureLDSEncodingGranularity256,
    FeatureMadMacF32Insts]
 >;
 
@@ -69,6 +70,7 @@ def FeatureNorthernIslands : R600SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
   [FeatureFetchLimit16, FeatureWavefrontSize64,
    FeatureAddressableLocalMemorySize32768,
    FeatureLDSAllocGranularity256,
+   FeatureLDSEncodingGranularity256,
    FeatureMadMacF32Insts]
 >;
 
