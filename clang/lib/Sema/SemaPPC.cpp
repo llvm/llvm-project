@@ -614,8 +614,8 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
   auto &TargetInfo = getASTContext().getTargetInfo();
   bool HasDefault = false;
   bool HasComma = false;
-  bool HasNegativeCategory2 = false;
-  StringRef NegativeCategory2Feature;
+  bool HasNegativeDisablableFeature = false;
+  StringRef DisablableFeatureName;
   for (unsigned I = 0, E = Params.size(); I < E; ++I) {
     const StringRef Param = Params[I].trim();
     const SourceLocation &Loc = Locs[I];
@@ -661,12 +661,12 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
         if (llvm::PPC::canDisableFeatureOnAIX(FeatureName)) {
           if (IsNegated) {
             // Only one negative target-feature that can be disabled.
-            if (HasNegativeCategory2) {
+            if (HasNegativeDisablableFeature) {
               return Diag(CurLoc, diag::err_ppc_multiple_negative_category2)
-                     << LHS << NegativeCategory2Feature;
+                     << LHS << DisablableFeatureName;
             }
-            HasNegativeCategory2 = true;
-            NegativeCategory2Feature = LHS;
+            HasNegativeDisablableFeature = true;
+            DisablableFeatureName = LHS;
           }
           // Positive category 2 features are always allowed
         }
