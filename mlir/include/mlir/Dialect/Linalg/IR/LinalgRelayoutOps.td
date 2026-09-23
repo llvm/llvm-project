@@ -194,10 +194,10 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     //            expect tensor<2x8xf32> because CeilDiv(9, 8) = 2
     ```
 
-    Memref semantics: `source` and `dest` may be memrefs, but only as the
-    result of bufferization or of subsequent scalar lowering. Transformations
-    on `linalg.pack` operate on the tensor form only. See
-    #225650 for the reasoning.
+    Memref semantics: `source` and `dest` may be memrefs, but transformations
+    on the memref form are unsupported. The memref forms are mainly for
+    bufferization and scalar lowering purposes. Other uses are not
+    recommended. See #225650 for the reasoning.
   }];
   let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
       TensorOrMemRef<[AnyType]>:$dest, 
@@ -363,10 +363,10 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
     //          Outer Dims: 9x3x8   Inner Dims: 4x2
     ```
 
-    Memref semantics: `source` and `dest` may be memrefs, but only as the
-    result of bufferization or of subsequent scalar lowering. Transformations
-    on `linalg.unpack` operate on the tensor form only. See
-    #225650 for the reasoning.
+    Memref semantics: `source` and `dest` may be memrefs, but transformations
+    on the memref form are unsupported. The memref forms are mainly for
+    bufferization and scalar lowering purposes. Other uses are not
+    recommended. See #225650 for the reasoning.
   }];
   let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
       TensorOrMemRef<[AnyType]>:$dest,

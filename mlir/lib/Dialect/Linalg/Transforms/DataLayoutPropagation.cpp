@@ -572,9 +572,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // Pack/unpack transformations operate at tensor level. The memref form is
-    // only for inline bufferization and scalar lowering, see #225650 for
-    // details.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -601,9 +601,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // Pack/unpack transformations operate at tensor level. The memref form is
-    // only for inline bufferization and scalar lowering, see #225650 for
-    // details.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -776,8 +776,9 @@ static LogicalResult
 bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
                                    linalg::PackOp packOp,
                                    PatternRewriter &rewriter) {
-  // Pack/unpack transformations operate at tensor level. The memref form is
-  // only for inline bufferization and scalar lowering, see #225650 for details.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -886,8 +887,9 @@ static LogicalResult
 bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
                                  linalg::PackOp packOp,
                                  PatternRewriter &rewriter) {
-  // Pack/unpack transformations operate at tensor level. The memref form is
-  // only for inline bufferization and scalar lowering, see #225650 for details.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -974,9 +976,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::PackOp packOp,
                                 PatternRewriter &rewriter) const override {
-    // Pack/unpack transformations operate at tensor level. The memref form is
-    // only for inline bufferization and scalar lowering, see #225650 for
-    // details.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!packOp.hasPureTensorSemantics())
       return failure();
 
@@ -1030,8 +1032,9 @@ private:
 static LogicalResult pushDownUnPackOpThroughExpandShape(
     linalg::UnPackOp unPackOp, tensor::ExpandShapeOp expandOp,
     PatternRewriter &rewriter, ControlPropagationFn controlFn) {
-  // Pack/unpack transformations operate at tensor level. The memref form is
-  // only for inline bufferization and scalar lowering, see #225650 for details.
+  // Pack/unpack memref transformations are unsupported. The memref forms
+  // are mainly for bufferization and scalar lowering. Other uses are not
+  // recommended, see #225650 for details.
   if (!unPackOp.hasPureTensorSemantics())
     return failure();
 
@@ -1109,9 +1112,9 @@ public:
 
   LogicalResult matchAndRewrite(linalg::UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
-    // Pack/unpack transformations operate at tensor level. The memref form is
-    // only for inline bufferization and scalar lowering, see #225650 for
-    // details.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!unPackOp.hasPureTensorSemantics())
       return failure();
 
@@ -1314,9 +1317,9 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
     if (!unpackOp)
       return failure();
 
-    // Pack/unpack transformations operate at tensor level. The memref form is
-    // only for inline bufferization and scalar lowering, see #225650 for
-    // details.
+    // Pack/unpack memref transformations are unsupported. The memref forms
+    // are mainly for bufferization and scalar lowering. Other uses are not
+    // recommended, see #225650 for details.
     if (!unpackOp.hasPureTensorSemantics())
       return failure();
 
