@@ -3386,38 +3386,20 @@ struct AlwaysUniform {
 };
 const AlwaysUniform *lookupAlwaysUniform(unsigned Intr);
 
-struct LDSDMAIntrinsic {
+struct AsyncIntrinsic {
   unsigned Intr;
 };
-const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
+const AsyncIntrinsic *lookupAsyncIntrinsic(unsigned Intr);
 
 struct AsyncLDSDMAIntrinsic {
   unsigned Intr;
 };
 const AsyncLDSDMAIntrinsic *lookupAsyncLDSDMAIntrinsic(unsigned Intr);
 
-struct AsyncIntrinsic {
-  unsigned Intr;
-};
-const AsyncIntrinsic *lookupAsyncIntrinsic(unsigned Intr);
-
-struct TensorIntrinsic {
-  unsigned Intr;
-};
-const TensorIntrinsic *lookupTensorIntrinsic(unsigned Intr);
-
-struct AsyncMarkIntrinsic {
-  unsigned Intr;
-};
-const AsyncMarkIntrinsic *lookupAsyncMarkIntrinsic(unsigned Intr);
-
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
-#define GET_LDSDMAIntrinsics_IMPL
-#define GET_AsyncLDSDMAIntrinsics_IMPL
 #define GET_AsyncIntrinsics_IMPL
-#define GET_TensorIntrinsics_IMPL
-#define GET_AsyncMarkIntrinsics_IMPL
+#define GET_AsyncLDSDMAIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
 #define GET_Gfx11PlusBufferFormat_IMPL
@@ -3438,11 +3420,7 @@ bool isAsyncLDSDMAIntrinsic(unsigned IntrID) {
   return lookupAsyncLDSDMAIntrinsic(IntrID);
 }
 
-bool isAsyncIntrinsic(unsigned IntrID) {
-  return lookupLDSDMAIntrinsic(IntrID) || lookupAsyncLDSDMAIntrinsic(IntrID) ||
-         lookupAsyncIntrinsic(IntrID) || lookupTensorIntrinsic(IntrID) ||
-         lookupAsyncMarkIntrinsic(IntrID);
-}
+bool isAsyncIntrinsic(unsigned IntrID) { return lookupAsyncIntrinsic(IntrID); }
 
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
