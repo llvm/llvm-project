@@ -701,6 +701,12 @@ enum NodeType {
   /// If passthru is undef, ?s remain undefined.
   VECTOR_COMPRESS,
 
+  /// VECTOR_SHUFFLE_VAR(VEC, MASK) - Returns VEC permuted by MASK, an integer
+  /// vector with the same number of elements as VEC. Result element i is
+  /// VEC[MASK[i]], with MASK[i] treated as unsigned, or poison if MASK[i] is
+  /// out of range.
+  VECTOR_SHUFFLE_VAR,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
