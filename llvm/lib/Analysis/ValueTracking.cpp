@@ -525,11 +525,27 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   computeKnownBits(Op0, DemandedElts, Known2, Q, Depth + 1);
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 
-  if (!Add && NSW && !KnownOut.isNonNegative() &&
-      (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
-           .value_or(false) ||
-       match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))))
+  // Try to infer nonnegativity for subtraction with NSW.
+  if (!Add && NSW && !KnownOut.isNonNegative()) {
+    // X - Y is nonnegative if Y <= X (signed).
+    if (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+            .value_or(false) ||
+        match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))) {
+      KnownOut.makeNonNegative();
+    }
+    // X - 1 is nonnegative if X is known positive (nonnegative and nonzero).
+    else if (match(Op1, m_One()) && Known2.isNonNegative() &&
+             Known2.isNonZero()) {
+      KnownOut.makeNonNegative();
+    }
+  }
+
+  // Handle "add nsw X, -1" which is semantically "X - 1".
+  // X + (-1) is nonnegative if X is known positive.
+  if (Add && NSW && !KnownOut.isNonNegative() &&
+      match(Op1, m_AllOnes()) && Known2.isNonNegative() && Known2.isNonZero()) {
     KnownOut.makeNonNegative();
+  }
 
   if (Add)
     // Try to match lerp pattern and combine results
