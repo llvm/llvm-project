@@ -376,6 +376,24 @@ void test_bdev_ops_fail(struct BDevOps *ops, struct BDev *bdev) {
   ops->unlock(bdev); // expected-warning {{releasing mutex 'bdev->lock' that was not held}}
 }
 
+// A pointee parameter shadows a member of the same name, in both modes: the
+// release is of the argument, not of 'ops->mu'.
+struct ShadowOps {
+  void (*unlock)(struct Mutex *mu) UNLOCK_FUNCTION(mu);
+  struct Mutex mu;
+};
+
+void test_shadow_ops(struct ShadowOps *ops, struct Mutex *m) {
+  ops->unlock(m); // expected-warning {{releasing mutex 'm' that was not held}}
+}
+
+// Likewise a later parameter of the same name: 'release' releases its own
+// argument, leaving the enclosing function's 'mu' held.
+void shadow_param(void (*release)(struct Mutex *mu) UNLOCK_FUNCTION(mu),
+                  struct Mutex *mu) EXCLUSIVE_LOCKS_REQUIRED(mu) {
+  release(&mu1); // expected-warning {{releasing mutex 'mu1' that was not held}}
+}
+
 #ifdef LATE_PARSING
 // A requirement on a parameter may name another parameter declared later. The
 // deferred attribute has to end up on the parameter it was written on and stay

@@ -197,15 +197,18 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
       new LateParsedAttribute(this, *AttrName, AttrNameLoc);
 
   // Keep the innermost prototype's parameters available in case they are needed
-  // by late-parsing attributes.
-  if (D && !D->isFunctionDeclarator()) {
+  // by late-parsing attributes. A function keeps its own parameters in scope,
+  // so skip it; a parameter of function type is adjusted to a pointer, so keep
+  // it.
+  if (D && (!D->isFunctionDeclarator() || D->isPrototypeContext())) {
     for (unsigned I = 0, E = D->getNumTypeObjects(); I != E; ++I) {
       const DeclaratorChunk &Chunk = D->getTypeObject(I);
       if (Chunk.Kind != DeclaratorChunk::Function)
         continue;
       const DeclaratorChunk::FunctionTypeInfo &FTI = Chunk.Fun;
       for (unsigned P = 0, NumParams = FTI.NumParams; P != NumParams; ++P)
-        if (auto *Param = dyn_cast_or_null<ParmVarDecl>(FTI.Params[P].Param))
+        if (auto *Param = dyn_cast_or_null<ParmVarDecl>(FTI.Params[P].Param);
+            Param && Param->getIdentifier())
           LA->ProtoParams.push_back(Param);
       break;
     }
@@ -7604,15 +7607,11 @@ void Parser::ParseParameterDeclarationClause(
     AllowImplicitTypename = ImplicitTypenameContext::Yes;
   }
 
-  // A capability attribute on a parameter may name another parameter of the
-  // same prototype, declared later:
-  //
-  //   int kref_put_lock(struct kref *kref,
-  //                     void (*release)(struct kref *) RELEASE(lock),
-  //                     spinlock_t *lock);
-  //
-  // Defer those to the end of the clause, where every parameter is declared and
-  // the prototype scope is still open, so no scope need be re-entered.
+  // An attribute on a parameter may name another parameter of the same
+  // prototype that is declared later, such as a callback parameter whose
+  // attribute names a lock passed after it. Defer those to the end of the
+  // clause, where every parameter is declared and the prototype scope is still
+  // open, so no scope need be re-entered.
   LateParsedAttrList LateParamAttrs(/*PSoon=*/true,
                                     /*LateAttrParseExperimentalExtOnly=*/true);
 

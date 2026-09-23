@@ -1533,6 +1533,12 @@ private:
   /// attributes. Shared implementation used by both ParseLexedAttribute and
   /// ParseLexedTypeAttribute.
   ParsedAttributes ParseLexedAttributeTokens(LateParsedAttribute &LPA);
+  /// Diagnose a late-parsed attribute naming a parameter that it cannot, and
+  /// return true if it must be dropped.
+  bool checkLateAttributeParamRefs(const LateParsedAttribute &LPA,
+                                   const Decl *D,
+                                   ArrayRef<const DeclRefExpr *> ParamRefs,
+                                   bool ReenteredProtoParams);
 
   /// Helper function to move LateParsedTypeAttribute pointers from one list
   /// to another. Filters type attributes from \p From and appends them to \p

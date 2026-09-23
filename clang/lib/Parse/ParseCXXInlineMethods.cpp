@@ -12,10 +12,12 @@
 
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/ScopeExit.h"
 
@@ -715,6 +717,79 @@ void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
   LAs.clear();
 }
 
+/// Collect the references to parameters in \p Attrs' arguments.
+static void collectParamRefs(const ParsedAttributes &Attrs,
+                             SmallVectorImpl<const DeclRefExpr *> &Refs) {
+  SmallVector<const Stmt *, 8> Worklist;
+  for (const ParsedAttr &AL : Attrs)
+    for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I)
+      if (AL.isArgExpr(I))
+        Worklist.push_back(AL.getArgAsExpr(I));
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(S);
+        DRE && isa<ParmVarDecl>(DRE->getDecl()))
+      Refs.push_back(DRE);
+    llvm::append_range(Worklist, S->children());
+  }
+}
+
+bool Parser::checkLateAttributeParamRefs(
+    const LateParsedAttribute &LPA, const Decl *D,
+    ArrayRef<const DeclRefExpr *> ParamRefs, bool ReenteredProtoParams) {
+  auto IsPointeeParam = [&](const ParmVarDecl *PVD) {
+    return ReenteredProtoParams && llvm::is_contained(LPA.ProtoParams, PVD);
+  };
+
+  // In a C++ class, attributes were always late parsed and a pointee's
+  // parameters were not in scope, so a name that now binds to one used to bind
+  // to whatever else it names outside the prototype. Rather than silently
+  // change its meaning, reject the attribute as ambiguous.
+  if (getLangOpts().CPlusPlus && getCurScope()->isClassScope()) {
+    for (const DeclRefExpr *DRE : ParamRefs) {
+      const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
+      if (!IsPointeeParam(PVD))
+        continue;
+      LookupResult R(Actions, PVD->getDeclName(), DRE->getLocation(),
+                     Sema::LookupOrdinaryName);
+      if (!Actions.LookupName(R, getCurScope()) || R.isAmbiguous())
+        continue;
+      Diag(DRE->getLocation(), diag::err_ambiguous_reference)
+          << PVD->getDeclName();
+      Diag(PVD->getLocation(), diag::note_ambiguous_candidate) << PVD;
+      for (const NamedDecl *Other : R)
+        Diag(Other->getLocation(), diag::note_ambiguous_candidate) << Other;
+      return true;
+    }
+  }
+
+  // A name binds the same way in a template, but instantiation cannot yet map a
+  // pointee's parameters, which are instantiated with the declaration's type
+  // and not kept, nor a parameter declared after the one the attribute is on,
+  // which is instantiated after that parameter's attributes. Reject the
+  // attribute rather than instantiate it wrongly.
+  // FIXME: Map these parameters during template instantiation.
+  if (Actions.CurContext->isDependentContext() ||
+      getCurScope()->getTemplateParamParent() ||
+      Actions.getCurGenericLambda()) {
+    const SourceManager &SM = PP.getSourceManager();
+    for (const DeclRefExpr *DRE : ParamRefs) {
+      const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
+      bool Pointee = IsPointeeParam(PVD);
+      if (!Pointee &&
+          !(isa<ParmVarDecl>(D) &&
+            SM.isBeforeInTranslationUnit(D->getLocation(), PVD->getLocation())))
+        continue;
+      Diag(DRE->getLocation(), diag::err_late_attribute_param_in_template)
+          << &LPA.AttrName << !Pointee << PVD;
+      return true;
+    }
+  }
+  return false;
+}
+
 void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
                                  bool OnDefinition,
                                  ParsedAttributes *OutAttrs) {
@@ -745,21 +820,33 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
     }
 
     // For a function pointer field or variable, the arguments may name a
-    // parameter of the pointee. Add them to the current scope rather than a
-    // nested one: while late parsing a record's attributes, a member of that
-    // record resolves only if the record's scope is innermost, and the
-    // attribute could name either a member or a parameter.
+    // parameter of the pointee. Re-enter them in a prototype scope nested as it
+    // was when the attribute was written, so they shadow any outer declaration
+    // of the same name. In a C struct, ActOnIdExpression finds the struct's
+    // members only while its scope is innermost, so add the parameters to that
+    // scope instead; it lets them shadow a member of the same name.
     bool HasProtoParams = !HasFuncScope && !LPA.ProtoParams.empty();
+    bool InCStruct = !IsCPlusPlus && getCurScope()->isClassScope();
+    ParseScope ProtoScope(this,
+                          Scope::FunctionPrototypeScope | Scope::DeclScope,
+                          HasProtoParams && !InCStruct);
     if (HasProtoParams)
       Actions.ActOnReenterFunctionPrototypeParams(Actions.getCurScope(),
                                                   LPA.ProtoParams);
 
     ParsedAttributes Parsed = ParseLexedAttributeTokens(LPA);
-    Attrs.takeAllAppendingFrom(Parsed);
 
-    if (HasProtoParams)
+    if (HasProtoParams && InCStruct)
       Actions.ActOnExitFunctionPrototypeParams(Actions.getCurScope(),
                                                LPA.ProtoParams);
+    ProtoScope.Exit();
+
+    SmallVector<const DeclRefExpr *, 4> ParamRefs;
+    collectParamRefs(Parsed, ParamRefs);
+    if (!ParamRefs.empty() &&
+        checkLateAttributeParamRefs(LPA, D, ParamRefs, HasProtoParams))
+      Parsed.clear();
+    Attrs.takeAllAppendingFrom(Parsed);
 
     if (HasFuncScope)
       Actions.ActOnExitFunctionContext();
