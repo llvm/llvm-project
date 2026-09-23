@@ -3324,14 +3324,11 @@ define amdgpu_kernel void @v_test_umin_ult_i16_multi_use(ptr addrspace(1) %out0,
 ; GFX1250-NEXT:    s_load_b256 s[8:15], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_load_u16 s0, s[14:15], 0x0
-; GFX1250-NEXT:    s_load_u16 s1, s[12:13], 0x0
+; GFX1250-NEXT:    s_load_u16 s0, s[12:13], 0x0
+; GFX1250-NEXT:    s_load_u16 s1, s[14:15], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_and_b32 s2, 0xffff, s0
-; GFX1250-NEXT:    s_and_b32 s3, 0xffff, s1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_lt_u32 s3, s2
-; GFX1250-NEXT:    s_cselect_b32 s0, s1, s0
+; GFX1250-NEXT:    s_cmp_lt_u32 s0, s1
+; GFX1250-NEXT:    s_cselect_b32 s0, s0, s1
 ; GFX1250-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, s1

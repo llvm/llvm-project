@@ -126,9 +126,9 @@ define amdgpu_kernel void @d16_two_order_group(ptr addrspace(3) %in1, ptr %in2) 
 ; GFX12-NEXT:    flat_load_d16_b16 v0, v[1:2]
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v3, s0
-; GFX12-NEXT:    ds_load_u16_d16_hi v0, v3
+; GFX12-NEXT:    ds_load_u16 v3, v3
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    v_or_b16 v0.l, v0.h, v0.l
+; GFX12-NEXT:    v_or_b16 v0.l, v3.l, v0.l
 ; GFX12-NEXT:    flat_store_b16 v[1:2], v0
 ; GFX12-NEXT:    s_endpgm
   %i16a = load i16, ptr addrspace(3) %in1, align 2
