@@ -13158,6 +13158,26 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
                        Op.getOperand(1), ShAmt);
   }
+  case Intrinsic::riscv_pwsll:
+  case Intrinsic::riscv_pwsla: {
+    MVT VT = Op.getSimpleValueType();
+    SDValue Src = Op.getOperand(1);
+    MVT SrcVT = Src.getSimpleValueType();
+    if (!((VT == MVT::v4i16 && SrcVT == MVT::v4i8) ||
+          (VT == MVT::v2i32 && SrcVT == MVT::v2i16)))
+      reportFatalUsageError("unsupported packed widening shift intrinsic");
+
+    SDValue ShAmt = DAG.getAnyExtOrTrunc(Op.getOperand(2), DL, XLenVT);
+    bool IsSigned = IntNo == Intrinsic::riscv_pwsla;
+    if (!Subtarget.is64Bit()) {
+      unsigned Opc = IsSigned ? RISCVISD::PWSLA : RISCVISD::PWSLL;
+      return DAG.getNode(Opc, DL, VT, Src, ShAmt);
+    }
+
+    unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    SDValue Wide = DAG.getNode(ExtOpc, DL, VT, Src);
+    return DAG.getNode(RISCVISD::PSHL, DL, VT, Wide, ShAmt);
+  }
   case Intrinsic::riscv_psext_b:
   case Intrinsic::riscv_psext_h: {
     EVT VT = Op.getValueType();

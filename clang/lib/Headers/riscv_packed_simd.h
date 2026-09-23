@@ -730,6 +730,16 @@ __packed_widen_high4(pwcvth_u16x4, uint16x4_t, uint8x4_t)
 __packed_widen_high2(pwcvth_i32x2, int32x2_t, int16x2_t)
 __packed_widen_high2(pwcvth_u32x2, uint32x2_t, uint16x2_t)
 
+/* Packed Widening Shift */
+__packed_binary_builtin_mixed(pwsll_s_u16x4, uint16x4_t, uint8x4_t, unsigned,
+                              __builtin_riscv_pwsll_s_u16x4)
+__packed_binary_builtin_mixed(pwsll_s_u32x2, uint32x2_t, uint16x2_t, unsigned,
+                              __builtin_riscv_pwsll_s_u32x2)
+__packed_binary_builtin_mixed(pwsla_s_i16x4, int16x4_t, int8x4_t, unsigned,
+                              __builtin_riscv_pwsla_s_i16x4)
+__packed_binary_builtin_mixed(pwsla_s_i32x2, int32x2_t, int16x2_t, unsigned,
+                              __builtin_riscv_pwsla_s_i32x2)
+
 /* Packed Widening Addition and Subtraction */
 __packed_widen_binary_op(pwadd_i16x4, int16x4_t, int8x4_t, +)
 __packed_widen_binary_op(pwadd_i32x2, int32x2_t, int16x2_t, +)

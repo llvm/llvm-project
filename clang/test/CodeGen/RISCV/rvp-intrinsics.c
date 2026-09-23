@@ -8158,6 +8158,86 @@ uint32x2_t test_pwcvtu_u32x2(uint16x2_t rs1) {
   return __riscv_pwcvtu_u32x2(rs1);
 }
 
+// RV32-LABEL: define dso_local i64 @test_pwsll_s_u16x4(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.pwsll.v4i16.v4i8(<4 x i8> [[TMP0]], i32 [[SHAMT]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_pwsll_s_u16x4(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.pwsll.v4i16.v4i8(<4 x i8> [[TMP0]], i32 [[SHAMT]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint16x4_t test_pwsll_s_u16x4(uint8x4_t rs1, unsigned shamt) {
+  return __riscv_pwsll_s_u16x4(rs1, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pwsll_s_u32x2(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.riscv.pwsll.v2i32.v2i16(<2 x i16> [[TMP0]], i32 [[SHAMT]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_pwsll_s_u32x2(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.riscv.pwsll.v2i32.v2i16(<2 x i16> [[TMP0]], i32 [[SHAMT]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+uint32x2_t test_pwsll_s_u32x2(uint16x2_t rs1, unsigned shamt) {
+  return __riscv_pwsll_s_u32x2(rs1, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pwsla_s_i16x4(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.pwsla.v4i16.v4i8(<4 x i8> [[TMP0]], i32 [[SHAMT]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_pwsla_s_i16x4(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.pwsla.v4i16.v4i8(<4 x i8> [[TMP0]], i32 [[SHAMT]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+int16x4_t test_pwsla_s_i16x4(int8x4_t rs1, unsigned shamt) {
+  return __riscv_pwsla_s_i16x4(rs1, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pwsla_s_i32x2(
+// RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.riscv.pwsla.v2i32.v2i16(<2 x i16> [[TMP0]], i32 [[SHAMT]])
+// RV32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
+// RV32-NEXT:    ret i64 [[TMP2]]
+//
+// RV64-LABEL: define dso_local i64 @test_pwsla_s_i32x2(
+// RV64-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.riscv.pwsla.v2i32.v2i16(<2 x i16> [[TMP0]], i32 [[SHAMT]])
+// RV64-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
+// RV64-NEXT:    ret i64 [[TMP2]]
+//
+int32x2_t test_pwsla_s_i32x2(int16x2_t rs1, unsigned shamt) {
+  return __riscv_pwsla_s_i32x2(rs1, shamt);
+}
+
 // RV32-LABEL: define dso_local i64 @test_pwadd_i16x4(
 // RV32-SAME: i32 noundef [[RS1_COERCE:%.*]], i32 noundef [[RS2_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
