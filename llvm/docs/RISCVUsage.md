@@ -238,7 +238,6 @@ on support follow.
 | `Zvfbfwma` | Supported |
 | `Zvfh` | Supported |
 | `Zvfhmin` | Supported |
-| `Zvfofp8min` | Assembly Support |
 | `Zvkb` | Supported |
 | `Zvkg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkn` | Supported ([See note](#riscv-vector-crypto-note)) |
@@ -253,10 +252,6 @@ on support follow.
 | `Zvksg` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvksh` | Supported ([See note](#riscv-vector-crypto-note)) |
 | `Zvkt` | Supported |
-| `Zvvfmm` | Assembly Support |
-| `Zvvmm` | Assembly Support |
-| `Zvvmtls` | Assembly Support |
-| `Zvvmttls` | Assembly Support |
 | `Zvl32b` | ([Partially](#riscv-vlen-32-note)) Supported |
 | `Zvl64b` | Supported |
 | `Zvl128b` | Supported |
