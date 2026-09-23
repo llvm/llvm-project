@@ -58,3 +58,29 @@ end
 !PARSE-TREE: | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | bool = 'false'
 !PARSE-TREE: | Flags = {}
+
+
+! The block form of target data takes the clause too.
+subroutine f03(x)
+  implicit none
+  integer :: x
+  !$omp target data map(tofrom: x) replayable(.true.)
+  x = x + 1
+  !$omp end target data
+end
+
+!UNPARSE: SUBROUTINE f03 (x)
+!UNPARSE:  IMPLICIT NONE
+!UNPARSE:  INTEGER x
+!UNPARSE: !$OMP TARGET_DATA MAP(TOFROM: x) REPLAYABLE(.true._4)
+!UNPARSE: !$OMP END TARGET_DATA
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target data
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
+!PARSE-TREE: | | OmpClause -> Replayable -> OmpReplayableClause -> Scalar -> Logical -> Constant -> Expr = '.true._4'
+!PARSE-TREE: | | | LiteralConstant -> LogicalLiteralConstant
+!PARSE-TREE: | | | | bool = 'true'
+!PARSE-TREE: | | Flags = {}
