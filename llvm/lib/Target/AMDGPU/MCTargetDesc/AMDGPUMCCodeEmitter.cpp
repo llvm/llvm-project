@@ -57,6 +57,10 @@ public:
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
+  void getMachineOpValueRsrcRegOp(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -335,6 +339,9 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     // FIXME Is this correct? What do inline immediates do on SI for f16 src
     // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
+
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+    return 255;
 
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
@@ -679,6 +686,22 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
     return;
   }
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+}
+
+// Encode an indexed-resource (rsrcidx) operand into the 9-bit srsrc field:
+// bit 8 selects a VGPR (or AGPR) index register, bit 7 selects a 32-bit SGPR
+// index register, and bits 6-0 hold the register index.
+void AMDGPUMCCodeEmitter::getMachineOpValueRsrcRegOp(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  bool IsSReg32 =
+      MRI.getRegClass(AMDGPU::SReg_32RegClassID).contains(MO.getReg());
+  unsigned Enc = MRI.getEncodingValue(MO.getReg());
+  unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
+  bool IsVGPROrAGPR =
+      Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
+  Op = Idx | IsVGPROrAGPR << 8 | IsSReg32 << 7;
 }
 
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(

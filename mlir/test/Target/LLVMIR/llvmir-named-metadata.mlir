@@ -6,6 +6,7 @@
 // CHECK: !foo.language_version = !{![[LANG:[0-9]+]]}
 // CHECK: !foo.kernel = !{![[KERNEL:[0-9]+]]}
 // CHECK: !foo.global_refs = !{![[GLOBAL_REFS:[0-9]+]]}
+// CHECK: !foo.pointer_constants = !{![[PTR_CONSTS:[0-9]+]]}
 
 llvm.func @my_kernel() {
   llvm.return
@@ -74,3 +75,14 @@ llvm.named_metadata "foo.global_refs" [
     #llvm.md_global_value<@metadata_ifunc>>
 ]
 // CHECK-DAG: ![[GLOBAL_REFS]] = !{ptr @metadata_global, ptr @metadata_alias, ptr @metadata_ifunc}
+
+llvm.mlir.global external @md_addrspace_global(0 : i32) {addr_space = 1 : i32} : i32
+
+llvm.named_metadata "foo.pointer_constants" [
+  #llvm.md_node<
+    #llvm.md_null<0>,
+    #llvm.md_null<1>,
+    #llvm.md_addrspacecast<#llvm.md_global_value<@md_addrspace_global>, 0>,
+    #llvm.md_addrspacecast<#llvm.md_null<1>, 0>>
+]
+// CHECK-DAG: ![[PTR_CONSTS]] = !{ptr null, ptr addrspace(1) null, ptr addrspacecast (ptr addrspace(1) @md_addrspace_global to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)}
